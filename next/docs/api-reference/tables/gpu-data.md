@@ -1,0 +1,128 @@
+# GPUData
+
+[Overview](https://luma.gl/next/docs/api-reference/tables.md)[Structure](https://luma.gl/next/docs/api-reference/tables/gpu-table-structure.md)[Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md)[GPUTable](https://luma.gl/next/docs/api-reference/tables/gpu-table.md)[GPUConstant](https://luma.gl/next/docs/api-reference/tables/gpu-constant.md)[GPURecordBatch](https://luma.gl/next/docs/api-reference/tables/gpu-record-batch.md)[GPUVector](https://luma.gl/next/docs/api-reference/tables/gpu-vector.md)[GPUData](https://luma.gl/next/docs/api-reference/tables/gpu-data.md)[GPUDataView](https://luma.gl/next/docs/api-reference/tables/gpu-data-view.md)[GPUSchema](https://luma.gl/next/docs/api-reference/tables/gpu-schema.md)[GPUInputSchema](https://luma.gl/next/docs/api-reference/tables/gpu-input-schema.md)[Shader Bindings](https://luma.gl/next/docs/api-reference/tables/gpu-table-shader-bindings.md)[GPUVectorFormat](https://luma.gl/next/docs/api-reference/tables/gpu-vector-format.md)[Buffer Planner](https://luma.gl/next/docs/api-reference/tables/gpu-table-buffer-planner.md)
+
+![From: v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+
+`GPUData` describes one GPU buffer plus typed row metadata. It is the lowest-level storage object in `@luma.gl/tables`: each `GPUData` owns or borrows its own `Buffer` or `DynamicBuffer`, and higher-level table objects refer to buffers through `GPUData`.
+
+[`GPUDataView`](https://luma.gl/next/docs/api-reference/tables/gpu-data-view.md) is the non-owning physical counterpart: one fixed-width format, value count, byte offset, and byte stride over any buffer-like resource.
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+import {GPUData} from '@luma.gl/tables';
+
+const gpuData = new GPUData({
+  buffer,
+  format: 'float32x3',
+  length,
+  byteStride: 12,
+  ownsBuffer: true
+});
+```
+
+Interleaved rows can use a physical struct format. Field declarations use the same fixed-width format strings as `GPUVectorFormat`:
+
+```
+import {GPUData} from '@luma.gl/tables';
+
+const data = new GPUData({
+  buffer,
+  length,
+  format: {
+    a: 'sint32',
+    b: 'float32'
+  },
+  layout: 'packed'
+});
+const b = data.getChild('b'); // GPUDataView<'float32'> | null
+```
+
+`getChild()` follows the Apache Arrow-style child API. It creates a borrowed strided view of the selected field without allocating storage or copying bytes.
+
+When the input starts as Apache Arrow, prefer [`makeGPUDataFromArrowData()`](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md) from `@luma.gl/arrow`; it uploads Arrow values into GPU buffers and fills in the required format, layout, and readback metadata.
+
+## Struct Formats[​](#struct-formats "Direct link to Struct Formats")
+
+An object passed to `GPUData.format` describes several named fixed-width fields stored in each row. `GPUData` resolves the physical offsets and retains the canonical `GPUDataStructFormat` in its `format` property. The declaration describes bytes in the buffer and does not declare a parallel shader struct type.
+
+The supported `layout` strings are:
+
+| Layout         | Meaning                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `wgsl-storage` | Default. Aligns raw field carrier types using WGSL storage-struct rules. Compact formats such as `unorm8x4` use `u32` carriers. |
+| `packed`       | Applies the minimum padding required by WebGPU vertex-buffer layout rules.                                                      |
+
+For `packed`, each field offset is aligned to `min(4, byteLength(format))`, and the final `byteStride` is rounded up to four bytes. It therefore means minimally padded and vertex-valid, not unconditional byte concatenation. For example, `{tag: 'uint8', value: 'float32'}` uses offsets `0` and `4` with an eight-byte stride. These are [WebGPU vertex-buffer rules](https://gpuweb.github.io/gpuweb/#dom-gpuvertexbufferlayout-arraystride), not an additional WGSL memory layout, so there is no `wgsl-vertex` layout name.
+
+The returned format contains:
+
+| Property        | Meaning                                                                            |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `type`          | Always `struct`.                                                                   |
+| `layout`        | `wgsl-storage` or `packed`.                                                        |
+| `fields`        | Fields in declaration order, each with `format`, `byteOffset`, and `byteLength`.   |
+| `components`    | Total scalar components represented by one row.                                    |
+| `rowByteLength` | Bytes through the end of the final physical field, excluding trailing row padding. |
+| `byteStride`    | Bytes between adjacent rows, including required trailing padding.                  |
+
+For `wgsl-storage`, layout is based on raw carriers for the stored bytes, not decoded shader value types. For example, `unorm8x4` occupies a `u32` carrier; a storage shader must explicitly decode it, while vertex fetch exposes normalized values. The public format remains physical and does not publish a parallel shader struct declaration.
+
+Use `getBufferLayoutFromGPUDataStructFormat(name, format, options?)` to lower a struct format into an interleaved `BufferLayout`. The helper preserves field order, offsets, formats, row stride, and optional `stepMode`.
+
+## Constructor[​](#constructor "Direct link to Constructor")
+
+### `new GPUData(props)`[​](#new-gpudataprops "Direct link to new-gpudataprops")
+
+| Prop               | Type                                     | Default               | Meaning                                                                                                                       |
+| ------------------ | ---------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `buffer`           | `Buffer \| DynamicBuffer`                | Required              | GPU buffer containing this chunk's bytes.                                                                                     |
+| `format`           | `GPUVectorFormat \| GPUDataStructFields` | `undefined`           | A scalar/list format string or an inline record of named fixed-width field formats.                                           |
+| `layout`           | `wgsl-storage \| packed`                 | `wgsl-storage`        | Physical packing rules for an inline struct format. Invalid with a scalar/list format.                                        |
+| `length`           | `number`                                 | Required              | Number of logical rows in this chunk.                                                                                         |
+| `valueLength`      | `number`                                 | `length`              | Number of fixed rows or flattened vertex-list element values.                                                                 |
+| `stride`           | `number`                                 | Derived from `format` | Number of scalar values represented by one fixed row or flattened element.                                                    |
+| `byteOffset`       | `number`                                 | `0`                   | Byte offset of the first logical row in this chunk's buffer. Most adapters use `0` because chunks own their uploaded buffers. |
+| `byteStride`       | `number`                                 | Derived from `format` | Bytes between adjacent fixed rows or flattened elements.                                                                      |
+| `rowByteLength`    | `number`                                 | Derived from `format` | Bytes occupied by one fixed row or flattened element payload.                                                                 |
+| `ownsBuffer`       | `boolean`                                | `false`               | Whether `destroy()` releases the backing buffer.                                                                              |
+| `readbackMetadata` | `unknown`                                | `undefined`           | Producer-owned metadata retained for adapter-level readback.                                                                  |
+| `dataType`         | `unknown`                                | `undefined`           | Deprecated adapter-owned logical metadata retained during migration.                                                          |
+
+## Properties[​](#properties "Direct link to Properties")
+
+| Property           | Type                         | Meaning                                                                       |
+| ------------------ | ---------------------------- | ----------------------------------------------------------------------------- |
+| `buffer`           | `Buffer \| DynamicBuffer`    | GPU buffer containing this chunk's bytes.                                     |
+| `format`           | `GPUDataFormat \| undefined` | Canonical memory-layout descriptor when this chunk has a typed physical view. |
+| `type`             | `unknown`                    | Deprecated adapter-owned logical metadata.                                    |
+| `dataType`         | `unknown`                    | Deprecated adapter-owned logical metadata.                                    |
+| `length`           | `number`                     | Number of logical rows in this chunk.                                         |
+| `valueLength`      | `number`                     | Number of fixed rows or flattened vertex-list element values.                 |
+| `stride`           | `number`                     | Number of scalar values represented by one fixed row or flattened element.    |
+| `byteOffset`       | `number`                     | Byte offset of the first logical row.                                         |
+| `byteStride`       | `number`                     | Bytes between adjacent fixed rows or flattened elements.                      |
+| `rowByteLength`    | `number`                     | Bytes occupied by one fixed row or flattened element payload.                 |
+| `readbackMetadata` | `unknown`                    | Optional producer-owned metadata.                                             |
+| `ownsBuffer`       | `boolean`                    | Whether this data range currently owns its backing buffer.                    |
+
+## Methods[​](#methods "Direct link to Methods")
+
+### `getChild(name): GPUDataView | null`[​](#getchildname-gpudataview--null "Direct link to getchildname-gpudataview--null")
+
+Returns a borrowed, precisely typed field view for struct-formatted data. The view combines the parent byte offset with the field offset and preserves the parent row stride. Literal field names return the corresponding precise view type; a runtime `string` returns the union of the struct's child view types. Returns `null` for an unknown field or non-struct data.
+
+### `getChildAt(index): GPUDataView | null`[​](#getchildatindex-gpudataview--null "Direct link to getchildatindex-gpudataview--null")
+
+Returns a borrowed field view by declaration order, or `null` when the index is out of range or the data is not struct-formatted.
+
+### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
+
+Destroys the backing buffer only when `ownsBuffer` is true. Borrowed buffers are left alive.
+
+## Ownership[​](#ownership "Direct link to Ownership")
+
+`GPUData` is the storage-owning layer. `GPUVector`, `GPURecordBatch`, and `GPUTable` follow their ownership graph down to `GPUData`, but buffer destruction is controlled here.
+
+`GPUData` should not be used as a cheap view into a larger aggregate table buffer. If a streaming adapter receives a new source batch, it should create new `GPUData` objects with their own buffers and append those chunks to a `GPUVector`.

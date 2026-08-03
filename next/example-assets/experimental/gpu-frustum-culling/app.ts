@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, type RenderBundle} from '@luma.gl/core';
+import {Buffer, Texture, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Computation, CubeGeometry, Model} from '@luma.gl/engine';
 import {
@@ -10,9 +10,11 @@ import {
   DrawCommandBuffer,
   GPUCommandGraph,
   GPUIndexPickingTarget,
+  GPUReadbackRing,
   GPUVisibilityWorkflow,
   INDEX_PICKING_READBACK_BYTE_LENGTH,
-  type CompiledGPUCommandGraph
+  type CompiledGPUCommandGraph,
+  type GPUReadbackTicket
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
@@ -45,6 +47,8 @@ type CullingGraphResources = {
   compiled: CompiledGPUCommandGraph<CullingGraphParameters>;
   pickingCompiled: CompiledGPUCommandGraph<PickingGraphParameters>;
   pickingReadbackId: string;
+  frameColorId: string;
+  frameDepthId: string;
   pickingWidth: number;
   pickingHeight: number;
   drawCommands: DrawCommandBuffer;
@@ -75,6 +79,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   readonly pickingModel: Model;
   readonly uniformBuffer: Buffer;
   readonly overviewUniformBuffer: Buffer;
+  readonly pickingReadbackRing: GPUReadbackRing;
   readonly panels: ExamplePanelManager;
 
   private resources: CullingGraphResources | null = null;
@@ -90,7 +95,6 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   private sampledVisibleCount = 0;
   private countReadPending = false;
   private pickedObjectIndex: number | null = null;
-  private pickReadPendingCount = 0;
   private frameIndex = 0;
   private encodeTimeMilliseconds = 0;
   private compileTimeMilliseconds = 0;
@@ -121,6 +125,11 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       id: 'gpu-frustum-culling-overview-uniforms',
       byteLength: UNIFORM_BYTE_LENGTH,
       usage: Buffer.UNIFORM | Buffer.COPY_DST
+    });
+    this.pickingReadbackRing = new GPUReadbackRing(device, {
+      id: 'gpu-frustum-culling-pick-readback',
+      byteLength: INDEX_PICKING_READBACK_BYTE_LENGTH,
+      slotCount: 2
     });
     this.model = new Model(device, {
       id: 'gpu-frustum-culling-model',
@@ -211,20 +220,33 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     const viewports = getViewports(width, height, this.comparisonView);
     this.writeUniforms(viewports);
     const encodeStart = performance.now();
-    resources.compiled.encode(device.commandEncoder, {parameters: viewports});
-    if (_mousePosition && this.frameIndex % 4 === 0 && this.pickReadPendingCount < 2) {
-      const pixel = this.getPickingPixel(_mousePosition as [number, number], resources);
-      const readbackBuffer = device.createBuffer({
-        id: `gpu-frustum-culling-pick-${this.frameIndex}`,
-        byteLength: INDEX_PICKING_READBACK_BYTE_LENGTH,
-        usage: Buffer.COPY_DST | Buffer.MAP_READ
-      });
-      resources.pickingCompiled.encode(device.commandEncoder, {
-        parameters: {perspectiveViewport: viewports.perspectiveViewport, pixel},
-        buffers: {[resources.pickingReadbackId]: readbackBuffer}
-      });
-      this.pickReadPendingCount++;
-      queueMicrotask(() => void this.readPickingResult(readbackBuffer));
+    const frame = device
+      .getDefaultCanvasContext()
+      .getCurrentFramebuffer({depthStencilFormat: 'depth24plus'});
+    resources.compiled.encode(device.commandEncoder, {
+      parameters: viewports,
+      frameTextures: {
+        [resources.frameColorId]: {
+          texture: frame.colorAttachments[0].texture,
+          frameId: this.frameIndex
+        },
+        [resources.frameDepthId]: {
+          texture: frame.depthStencilAttachment!.texture,
+          frameId: this.frameIndex
+        }
+      }
+    });
+    if (_mousePosition && this.frameIndex % 4 === 0) {
+      const readbackTicket = this.pickingReadbackRing.tryAcquire();
+      if (readbackTicket) {
+        const pixel = this.getPickingPixel(_mousePosition as [number, number], resources);
+        resources.pickingCompiled.encode(device.commandEncoder, {
+          parameters: {perspectiveViewport: viewports.perspectiveViewport, pixel},
+          buffers: {[resources.pickingReadbackId]: readbackTicket.buffer}
+        });
+        readbackTicket.markEncoded({byteLength: 8});
+        queueMicrotask(() => void this.readPickingResult(readbackTicket));
+      }
     }
     this.encodeTimeMilliseconds = performance.now() - encodeStart;
     this.framesPerSecond = animationLoop.frameRate.getSampleHz();
@@ -249,6 +271,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     }
     this.panels.finalize();
     this.destroyResources();
+    this.pickingReadbackRing.destroy();
     this.pickingModel.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
@@ -288,17 +311,19 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       drawCommands,
       this.overviewUniformBuffer
     );
-    const compiled = this.createGraph(
+    const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
+    const pickingWidth = Math.max(1, deviceSize[0]);
+    const pickingHeight = Math.max(1, deviceSize[1]);
+    const renderGraph = this.createGraph(
       capacity,
+      pickingWidth,
+      pickingHeight,
       instances,
       visibleIds,
       drawCommands,
       perspectiveRenderBundle,
       overviewRenderBundle
     );
-    const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
-    const pickingWidth = Math.max(1, deviceSize[0]);
-    const pickingHeight = Math.max(1, deviceSize[1]);
     const picking = this.createPickingGraph(
       pickingWidth,
       pickingHeight,
@@ -307,7 +332,9 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       drawCommands
     );
     this.resources = {
-      compiled,
+      compiled: renderGraph.compiled,
+      frameColorId: renderGraph.frameColorId,
+      frameDepthId: renderGraph.frameDepthId,
       pickingCompiled: picking.compiled,
       pickingReadbackId: picking.readbackId,
       pickingWidth,
@@ -326,12 +353,18 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
 
   private createGraph(
     capacity: number,
+    width: number,
+    height: number,
     instancesBuffer: Buffer,
     visibleIdsBuffer: Buffer,
     drawCommands: DrawCommandBuffer,
     perspectiveRenderBundle: RenderBundle,
     overviewRenderBundle: RenderBundle
-  ): CompiledGPUCommandGraph<CullingGraphParameters> {
+  ): {
+    compiled: CompiledGPUCommandGraph<CullingGraphParameters>;
+    frameColorId: string;
+    frameDepthId: string;
+  } {
     const graph = new GPUCommandGraph<CullingGraphParameters>(this.device, {
       id: 'gpu-frustum-culling-command-graph'
     });
@@ -363,6 +396,20 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       },
       drawCommands.buffer
     );
+    const frameColor = graph.importFrameTexture({
+      id: 'frame-color',
+      format: this.device.preferredColorFormat,
+      width,
+      height,
+      usage: Texture.RENDER
+    });
+    const frameDepth = graph.importFrameTexture({
+      id: 'frame-depth',
+      format: 'depth24plus',
+      width,
+      height,
+      usage: Texture.RENDER
+    });
     const flagsBuffer = graph.createTransientBuffer({
       id: 'visibility-flags',
       byteLength: capacity * UINT32_BYTE_LENGTH,
@@ -421,6 +468,10 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
 
     graph.addRenderPass({
       id: 'render-visible-instances',
+      attachments: {
+        colorAttachments: [graph.createTextureView(frameColor)],
+        depthStencilAttachment: graph.createTextureView(frameDepth)
+      },
       resources: [
         {buffer: instances, usage: 'storage-read'},
         {buffer: visibleIds, usage: 'storage-read'},
@@ -446,7 +497,11 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       })
     });
 
-    return graph.compile();
+    return {
+      compiled: graph.compile(),
+      frameColorId: frameColor.id,
+      frameDepthId: frameDepth.id
+    };
   }
 
   private createPickingGraph(
@@ -668,14 +723,13 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     ];
   }
 
-  private async readPickingResult(readbackBuffer: Buffer): Promise<void> {
+  private async readPickingResult(readbackTicket: GPUReadbackTicket): Promise<void> {
     try {
-      const bytes = await readbackBuffer.readAsync(0, 8);
+      const bytes = await readbackTicket.read();
       this.pickedObjectIndex = decodeGPUIndexPickInfo(bytes).objectIndex;
       this.updateInspector();
-    } finally {
-      readbackBuffer.destroy();
-      this.pickReadPendingCount--;
+    } catch {
+      // Device loss and cancellation release the ring slot without updating interaction state.
     }
   }
 

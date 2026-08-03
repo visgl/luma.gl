@@ -1,0 +1,171 @@
+# GPU Table Structure
+
+[Overview](https://luma.gl/next/docs/api-reference/tables.md)[Structure](https://luma.gl/next/docs/api-reference/tables/gpu-table-structure.md)[Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md)[GPUTable](https://luma.gl/next/docs/api-reference/tables/gpu-table.md)[GPUConstant](https://luma.gl/next/docs/api-reference/tables/gpu-constant.md)[GPURecordBatch](https://luma.gl/next/docs/api-reference/tables/gpu-record-batch.md)[GPUVector](https://luma.gl/next/docs/api-reference/tables/gpu-vector.md)[GPUData](https://luma.gl/next/docs/api-reference/tables/gpu-data.md)[GPUDataView](https://luma.gl/next/docs/api-reference/tables/gpu-data-view.md)[GPUSchema](https://luma.gl/next/docs/api-reference/tables/gpu-schema.md)[GPUInputSchema](https://luma.gl/next/docs/api-reference/tables/gpu-input-schema.md)[Shader Bindings](https://luma.gl/next/docs/api-reference/tables/gpu-table-shader-bindings.md)[GPUVectorFormat](https://luma.gl/next/docs/api-reference/tables/gpu-vector-format.md)[Buffer Planner](https://luma.gl/next/docs/api-reference/tables/gpu-table-buffer-planner.md)
+
+![From: v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+
+This page describes the `@luma.gl/tables` object model used by Arrow adapters, table-backed rendering, and table-oriented compute helpers. The diagram is adapted from the loaders.gl ArrowJS table-structure docs, but the focus here is the GPU resource model: `GPUTable`, `GPURecordBatch`, `GPUVector`, and `GPUData`, plus table-wide `GPUConstant` columns.
+
+## GPUTable
+
+GPUTable
+
+numRows
+
+numCols
+
+schema
+
+selected GPU-facing fields
+
+bufferLayout
+
+model-ready buffer descriptions
+
+gpuVectors
+
+aggregate logical columns
+
+batches\[]
+
+preserved GPU batches
+
+## Batch and Column Matrix
+
+GPUVector
+
+positions
+
+GPUVector
+
+colors
+
+GPUVector
+
+timestamps
+
+GPURecordBatch 0
+
+GPUData
+
+GPUData
+
+GPUData
+
+GPURecordBatch 1
+
+GPUData
+
+GPUData
+
+GPUData
+
+GPURecordBatch 2
+
+GPUData
+
+GPUData
+
+GPUData
+
+## GPUData and Memory
+
+GPUData
+
+range metadata
+
+type
+
+length
+
+byteOffset
+
+byteStride
+
+ownsBuffer
+
+DynamicBuffer
+
+GPU allocation wrapper
+
+resize/write/read helpers
+
+destroy boundary
+
+readback metadata
+
+producer-specific
+
+optional
+
+adapter-owned
+
+## Ownership Chain
+
+GPUTable
+
+owns batches
+
+GPURecordBatch
+
+owns batch-local data chunks
+
+GPUVector
+
+table-level aggregate view
+
+GPUData
+
+owns or borrows DynamicBuffer
+
+## Core Objects[​](#core-objects "Direct link to Core Objects")
+
+| GPU object                                                                                  | Role                                                       | Important state                                                                                        |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`GPUTable`](https://luma.gl/next/docs/api-reference/tables/gpu-table.md)              | Logical table owner and mutation surface.                  | `schema`, `gpuColumns`, `gpuVectors`, `gpuConstants`, `batches[]`                                      |
+| [`GPUConstant`](https://luma.gl/next/docs/api-reference/tables/gpu-constant.md)        | One fixed-width value shared by every table row.           | `format`, `value`, `byteLength`                                                                        |
+| [`GPURecordBatch`](https://luma.gl/next/docs/api-reference/tables/gpu-record-batch.md) | One preserved GPU batch with one data chunk per column.    | `schema`, `numRows`, `bufferLayout`, `gpuData`                                                         |
+| [`GPUVector`](https://luma.gl/next/docs/api-reference/tables/gpu-vector.md)            | One logical typed column over one or more GPU data chunks. | `name`, `format`, `length`, `valueLength`, `stride`, `byteStride`, `data[]`                            |
+| [`GPUData`](https://luma.gl/next/docs/api-reference/tables/gpu-data.md)                | One GPU buffer plus typed row metadata.                    | `buffer`, `format`, `length`, `valueLength`, `byteOffset`, `byteStride`, `rowByteLength`, `ownsBuffer` |
+| [`GPUSchema`](https://luma.gl/next/docs/api-reference/tables/gpu-schema.md)            | Plain selected-column schema metadata.                     | `fields`, `metadata`                                                                                   |
+
+The table is intentionally batch-preserving. Constants live only at table level; they never become fake batch `GPUData`. When an Arrow table has multiple record batches, `makeGPUTableFromArrowTable()` creates one `GPURecordBatch` per source batch. Table-level `gpuVectors` aggregate the batch-local `gpuData` chunks so code can reason about one logical varying column, while batch-aware render and compute paths can still bind one physical batch at a time.
+
+## Arrow JS Mapping[​](#arrow-js-mapping "Direct link to Arrow JS Mapping")
+
+The API shape mirrors Arrow enough to make table adapters predictable, but the semantics are not identical.
+
+| Arrow JS object      | Similarity                                                                     | GPU table difference                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `Table`              | Like `GPUTable`, it is a schema plus row-aligned columns and batches.          | `GPUTable` is a GPU resource owner. It has no row-object API and must be destroyed or detached intentionally.                |
+| `RecordBatch`        | Like `GPURecordBatch`, it preserves one row range across all selected columns. | `GPURecordBatch` retains one GPU-resident `GPUData` chunk per selected column plus layout metadata.                          |
+| `Vector`             | Like `GPUVector`, it is one logical column that can span chunks.               | `GPUVector` may be backed by GPU buffers, dynamic appendable storage, interleaved rows, or aggregate chunk views.            |
+| `Data`               | Like `GPUData`, it is one typed chunk.                                         | `GPUData` owns or borrows a GPU buffer, not a CPU typed-array view. It can only be read back through adapter-specific paths. |
+| `Schema` and `Field` | Both models retain selected-column metadata.                                   | `GPUSchema` is a plain type with `GPUField.format`; Arrow-specific metadata is adapter-owned.                                |
+
+The strongest similarity is structural: a table is a matrix of batches by columns. In Arrow JS, each cell is a CPU `Data` chunk. In luma.gl, each cell is a `GPUData` chunk that describes a GPU buffer.
+
+The strongest difference is operational: Arrow JS optimizes for zero-copy CPU views and immutable columnar data, while `@luma.gl/tables` optimizes for GPU binding, explicit ownership, batch-local draw/dispatch, and deterministic resource release.
+
+## GPU Memory Management[​](#gpu-memory-management "Direct link to GPU Memory Management")
+
+Arrow JS memory is mostly ordinary JavaScript memory. Tables, vectors, and data chunks can share typed-array buffers, and the JavaScript garbage collector eventually releases those buffers when no views remain.
+
+GPU tables cannot rely on that model:
+
+* GPU buffers are explicit resources and should be released with `destroy()`.
+* `GPUData` is the storage-owning layer. It destroys its `Buffer` or `DynamicBuffer` only when `ownsBuffer` is true.
+* `GPUVector` owns or borrows ordered `GPUData[]` chunks. It does not own raw buffers directly.
+* `GPURecordBatch.destroy()` destroys the batch-local data chunks it retains.
+* `GPUTable.destroy()` destroys the preserved batches it still owns.
+* Borrowed external buffers are not destroyed unless ownership was explicitly requested or transferred.
+* `detachVector()` and `detachBatches()` remove live GPU objects from a table and return ownership to the caller instead of destroying them.
+* `packBatches()` allocates replacement packed buffers, swaps the table to those new batches, and destroys superseded owned batch storage.
+
+This ownership model is why `GPUTable` is a mutation and lifecycle surface, not just a data view. The application decides when to preserve source batches, pack them, detach live resources, or destroy the current GPU representation.
+
+## Single-Chunk Binding and Aggregate Vectors[​](#single-chunk-binding-and-aggregate-vectors "Direct link to Single-Chunk Binding and Aggregate Vectors")
+
+Buffers are reached through `GPUData`, not directly through `GPUVector`. Single-buffer consumers should explicitly require `vector.data.length === 1` and bind `vector.data[0].buffer`. Multi-batch aggregate vectors may contain many `GPUData` chunks, so batch-aware code should use `data[]` or dispatch/draw one `GPURecordBatch` at a time.
+
+This distinction is deliberate. It lets high-level code treat a column as one logical vector while render and compute paths still bind the exact GPU buffer ranges that belong to the current batch.

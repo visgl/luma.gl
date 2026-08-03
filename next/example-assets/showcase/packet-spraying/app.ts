@@ -640,6 +640,11 @@ const MAX_SWITCH_FLASH_LIGHTS = 6;
 const MAX_SWITCH_TRANSITION_WAVES = 12;
 const MAX_ENDPOINT_SIGNALS = CONVERSATIONS.length * 2;
 const MAX_STORY_PACKET_INSTANCES = 160;
+const REFLECTION_LAB_SWITCH_INDEX = 0;
+const REFLECTION_LAB_SPHERE_POSITION: Vector3 = [0, 0, 0];
+const REFLECTION_LAB_SPHERE_RADIUS = 1;
+const REFLECTION_LAB_PACKET_RADIUS = 0.085;
+const REFLECTION_LAB_PACKET_COLOR: Color = [1, 0.04, 0.025, 0.9];
 const NETWORK_PLANE_HIGHLIGHT_ATTACK = 2.9;
 const NETWORK_PLANE_HIGHLIGHT_DECAY = 2.25;
 const CONGESTED_SWITCH_COLOR: Color = [1, 0.42, 0.065, 0.56];
@@ -1930,6 +1935,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private readonly recoveryProbeCompletionTimes = new Map<number, number>();
   private readonly recoveryProbeConfirmations = new Map<number, NetworkPacketEvent>();
   private animationTime = 0;
+  private rawAnimationTime = 0;
+  private animationTimeOffset = 0;
+  private animationPausedAt: number | null = null;
+  private rawAnimationPausedAt: number | null = null;
   private droppedPacketCount = 0;
   private trimmedPacketCount = 0;
   private pickingInProgress = false;
@@ -1963,6 +1972,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     'highlightBoost' | 'visualIntensity'
   >;
   private dynamicRangeProfile: NetworkDynamicRangeProfile;
+  private readonly reflectionLab: boolean;
 
   transparencyMode: TransparencyMode;
   visualIntensity = DEFAULT_NETWORK_OPTICS_LEVEL;
@@ -2014,7 +2024,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   constructor({device, width, height}: AnimationProps) {
     super();
 
-    const requestedOrbit = new URLSearchParams(window.location.search).get('orbit');
+    const searchParams = new URLSearchParams(window.location.search);
+    this.reflectionLab = searchParams.get('lab') === 'reflection';
+    const requestedOrbit = searchParams.get('orbit');
     if (requestedOrbit !== null && Number.isFinite(Number(requestedOrbit))) {
       this.orbit = Math.max(0, Math.min(Number(requestedOrbit), 0.5));
     }
@@ -2085,8 +2097,12 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.links = new InstancedMesh(device, this.reflectiveShaderInputs, {
       id: 'packet-spraying-links',
       geometry: new CylinderGeometry({radius: 1, height: 1, nradial: 16, nvertical: 1}),
-      matrices: flattenMatrices(this.networkLinks.map(link => makeLinkMatrix(link, 0.09))),
-      colors: this.linkColors,
+      matrices: this.reflectionLab
+        ? makeHiddenMatrices(this.networkLinks.length)
+        : flattenMatrices(this.networkLinks.map(link => makeLinkMatrix(link, 0.09))),
+      colors: this.reflectionLab
+        ? makeTransparentColors(this.networkLinks.length)
+        : this.linkColors,
       transparent: true,
       reflective: true
     });
@@ -2094,14 +2110,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.hosts = new InstancedMesh(device, this.metallicShaderInputs, {
       id: 'packet-spraying-hosts',
       geometry: new CubeGeometry({indices: true}),
-      matrices: flattenMatrices(
-        HOST_POSITIONS.map(position => makeObjectMatrix(position, HOST_HALF_EXTENTS))
-      ),
-      colors: flattenColors(HOST_POSITIONS.map((_, hostIndex) => makeHostColor(hostIndex))),
+      matrices: this.reflectionLab
+        ? makeReflectionLabHostMatrices()
+        : flattenMatrices(
+            HOST_POSITIONS.map(position => makeObjectMatrix(position, HOST_HALF_EXTENTS))
+          ),
+      colors: this.reflectionLab
+        ? makeReflectionLabHostColors()
+        : flattenColors(HOST_POSITIONS.map((_, hostIndex) => makeHostColor(hostIndex))),
       reflective: true
     });
 
-    this.glassInstances = makeGlassInstances();
+    this.glassInstances = this.reflectionLab
+      ? makeReflectionLabGlassInstances()
+      : makeGlassInstances();
     this.originalGlassColors = this.glassInstances.map(instance => [...instance.color] as Color);
     this.pickableNodes = makePickableNetworkNodes();
     this.pickingManager = new PickingManager(device, {
@@ -2213,9 +2235,16 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       id: 'packet-spraying-packets',
       geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
       matrices: this.packetMatrices,
-      colors: flattenColors(
-        this.packetDefinitions.map(packet => makeBalancedEmissionColor(packet.color, packet.alpha))
-      ),
+      colors: this.reflectionLab
+        ? makeReflectionLabPacketColors(
+            this.packetDefinitions.length,
+            REFLECTION_LAB_PACKET_COLOR[3]
+          )
+        : flattenColors(
+            this.packetDefinitions.map(packet =>
+              makeBalancedEmissionColor(packet.color, packet.alpha)
+            )
+          ),
       emissive: true
     });
     this.packetTrails = new InstancedMesh(device, this.emissiveShaderInputs, {
@@ -2353,6 +2382,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingAdapterVendor = device.info.vendor;
       canvas.dataset.packetSprayingFallback = String(Boolean(device.info.fallback));
       canvas.dataset.packetSprayingDynamicRange = this.dynamicRangeProfile.displayMode;
+      canvas.dataset.packetSprayingLab = this.reflectionLab ? 'reflection' : '';
       canvas.dataset.packetSprayingSceneColorFormat = this.sceneColorFormat;
       canvas.dataset.packetSprayingEnvironmentMipLevels = String(this.environmentTexture.mipLevels);
       canvas.dataset.packetSprayingHighlightBoost =
@@ -2362,11 +2392,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingGlassGroups = this.glassGroups.map(group => group.id).join(',');
       this.nodePopup = new NetworkNodePopup(canvas);
       this.orbitControls = new OrbitControls(canvas, {
-        target: [0, -0.9, 0],
-        distance: 12.7,
-        yaw: 0.52,
-        pitch: 0.59,
-        minDistance: 6,
+        target: this.reflectionLab ? [0, -0.1, 0] : [0, -0.9, 0],
+        distance: this.reflectionLab ? 4.2 : 12.7,
+        yaw: this.reflectionLab ? 0.58 : 0.52,
+        pitch: this.reflectionLab ? 0.5 : 0.59,
+        minDistance: this.reflectionLab ? 2.4 : 6,
         maxDistance: 25,
         minPitch: 0.12,
         maxPitch: 1.3,
@@ -2409,6 +2439,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingVisualBloom = this.opticsProfile.bloom.toFixed(2);
       canvas.dataset.packetSprayingVisualCaustics = this.opticsProfile.caustics.toFixed(2);
       canvas.dataset.packetSprayingVisualRefraction = this.opticsProfile.refraction.toFixed(2);
+      canvas.dataset.packetSprayingAnimationPaused = 'false';
+      canvas.dataset.packetSprayingAnimationTime = this.animationTime.toFixed(3);
       this.updateGuidedStoryControls();
       this.updateNetworkTelemetry();
       this.updateFailureAccessibility();
@@ -2422,7 +2454,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   override onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.resizeSceneFramebuffer(width, height);
     this.updateVisualIntensity(time / 1000);
-    this.animationTime = (time / 1000) * this.speed;
+    this.updateAnimationClock((time / 1000) * this.speed);
     this.updateGuidedStory(this.animationTime);
     this.updateSwitchStoryState(this.animationTime);
     this.updateSwitchPressure(this.animationTime);
@@ -2898,6 +2930,33 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.setHighlightedPath(null);
   };
 
+  private updateAnimationClock(rawAnimationTime: number): void {
+    this.rawAnimationTime = rawAnimationTime;
+    this.animationTime = this.animationPausedAt ?? rawAnimationTime - this.animationTimeOffset;
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingAnimationPaused = String(this.animationPausedAt !== null);
+      this.canvas.dataset.packetSprayingAnimationTime = this.animationTime.toFixed(3);
+    }
+  }
+
+  private setAnimationClockPaused(isPaused: boolean): void {
+    if (isPaused) {
+      if (this.animationPausedAt === null) {
+        this.animationPausedAt = this.animationTime;
+        this.rawAnimationPausedAt = this.rawAnimationTime;
+      }
+      return;
+    }
+
+    if (this.animationPausedAt !== null && this.rawAnimationPausedAt !== null) {
+      this.animationTimeOffset += this.rawAnimationTime - this.rawAnimationPausedAt;
+      this.animationTime = this.rawAnimationTime - this.animationTimeOffset;
+    }
+    this.animationPausedAt = null;
+    this.rawAnimationPausedAt = null;
+  }
+
   private setGuidedStoryPlaying(isPlaying: boolean): void {
     if (isPlaying === this.guidedStoryPlaying) {
       return;
@@ -2905,6 +2964,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     this.guidedStoryPlaying = isPlaying;
     if (isPlaying) {
+      this.setAnimationClockPaused(false);
       this.orbitControls?.setAutoRotate(false);
       if (this.guidedStoryStarted) {
         this.guidedStoryChapterStartedAt = this.animationTime - this.guidedStoryElapsedAtPause;
@@ -2915,6 +2975,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     } else {
       this.guidedStoryElapsedAtPause = this.animationTime - this.guidedStoryChapterStartedAt;
       this.guidedStoryCameraTransitionEndsAt = this.animationTime;
+      this.setAnimationClockPaused(true);
       this.orbitControls?.setAutoRotate(this.orbit > 0);
     }
 
@@ -3688,6 +3749,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateEndpointSignals(animationTime: number): void {
     this.endpointSignalMatrices.fill(0);
     this.endpointSignalColors.fill(0);
+    if (this.reflectionLab) {
+      this.endpointSignalDefinitions = [];
+      if (this.canvas) {
+        this.canvas.dataset.packetSprayingEndpointSignals = '0';
+      }
+      return;
+    }
+
     const endpointSignalIntensity = this.endpointSignalIntensity * this.opticsProfile.motion;
     this.endpointSignalDefinitions =
       endpointSignalIntensity > 0.005
@@ -3756,6 +3825,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateLinkPulseVisuals(animationTime: number): void {
     this.linkPulseMatrices.fill(0);
     this.linkPulseColors.fill(0);
+    if (this.reflectionLab) {
+      if (this.canvas) {
+        this.canvas.dataset.packetSprayingLinkPulses = '0';
+      }
+      return;
+    }
+
     const linkPulseIntensity = this.linkPulseIntensity * this.opticsProfile.motion;
     if (linkPulseIntensity <= 0.005 || this.linkPulseLength <= 0) {
       if (this.canvas) {
@@ -3794,6 +3870,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateSwitchTransitionVisuals(animationTime: number): void {
     this.switchTransitionMatrices.fill(0);
     this.switchTransitionColors.fill(0);
+    if (this.reflectionLab) {
+      if (this.canvas) {
+        this.canvas.dataset.packetSprayingTransitionWaves = '0';
+      }
+      return;
+    }
+
     let activeWaveCount = 0;
 
     for (const wave of this.switchTransitionWaves.slice(0, MAX_SWITCH_TRANSITION_WAVES)) {
@@ -3837,6 +3920,18 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private updateLinkTraffic(animationTime: number): void {
+    if (this.reflectionLab) {
+      this.redLinkTrafficStrengths.fill(0);
+      this.greenLinkTrafficStrengths.fill(0);
+      this.links.updateColors(makeTransparentColors(this.networkLinks.length));
+      this.previousLinkTrafficTime = animationTime;
+      if (this.canvas) {
+        this.canvas.dataset.packetSprayingIlluminatedLinks = '0';
+        this.canvas.dataset.packetSprayingHighlightedPathLinks = '0';
+      }
+      return;
+    }
+
     const trafficByLink = makeLinkTraffic(this.packetDefinitions, animationTime);
     const elapsedTime = Math.min(
       Math.max(animationTime - (this.previousLinkTrafficTime ?? animationTime - 1 / 60), 0),
@@ -4196,9 +4291,56 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
+  private updateReflectionLabPacketVisuals(animationTime: number): void {
+    fillHiddenMatrices(this.packetMatrices);
+    fillHiddenMatrices(this.packetTrailMatrices);
+    this.packetTrailColors.fill(0);
+    fillHiddenMatrices(this.switchFlashMatrices);
+    this.switchFlashColors.fill(0);
+    fillHiddenMatrices(this.switchRippleMatrices);
+    this.switchRippleColors.fill(0);
+    this.switchRippleAges.fill(Number.POSITIVE_INFINITY);
+    this.switchFlashStrengths.fill(0);
+
+    const packetPosition = getReflectionLabPacketPosition(animationTime);
+    this.packetMatrices.set(
+      makeObjectMatrix(packetPosition, [
+        REFLECTION_LAB_PACKET_RADIUS,
+        REFLECTION_LAB_PACKET_RADIUS,
+        REFLECTION_LAB_PACKET_RADIUS
+      ]),
+      0
+    );
+
+    const previousPacketPosition = getReflectionLabPacketPosition(animationTime - 0.18);
+    const trailColor = makeBalancedEmissionColor(REFLECTION_LAB_PACKET_COLOR, 0.36);
+    this.packetTrailMatrices.set(
+      makeSegmentMatrix(previousPacketPosition, packetPosition, PACKET_TRAIL_RADIUS * 0.72),
+      0
+    );
+    this.packetTrailColors.set(
+      [
+        trailColor[0] * this.packetTrailIntensity * 0.75,
+        trailColor[1] * this.packetTrailIntensity * 0.75,
+        trailColor[2] * this.packetTrailIntensity * 0.75,
+        trailColor[3]
+      ],
+      0
+    );
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingSwitchRipples = '0';
+    }
+  }
+
   private updatePacketVisuals(animationTime: number): void {
     this.switchFlashStrengths.fill(0);
     this.switchRippleAges.fill(Number.POSITIVE_INFINITY);
+    if (this.reflectionLab) {
+      this.updateReflectionLabPacketVisuals(animationTime);
+      return;
+    }
+
     const packetTrailIntensity = this.packetTrailIntensity * this.opticsProfile.motion;
     const switchFlashIntensity = this.switchFlashIntensity * this.opticsProfile.motion;
     const switchRippleIntensity = this.switchRippleIntensity * this.opticsProfile.motion;
@@ -4331,6 +4473,22 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private makePacketLights(): OpticalPointLight[] {
+    if (this.reflectionLab) {
+      const packetPosition = getReflectionLabPacketPosition(this.animationTime);
+      return [
+        {
+          position: packetPosition,
+          color: [
+            REFLECTION_LAB_PACKET_COLOR[0],
+            REFLECTION_LAB_PACKET_COLOR[1],
+            REFLECTION_LAB_PACKET_COLOR[2]
+          ],
+          intensity: 1,
+          radius: this.packetLightRadius * 0.92
+        }
+      ];
+    }
+
     if (
       this.packetLightIntensity <= 0 ||
       this.packetLightRadius <= 0 ||
@@ -4390,8 +4548,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         const light = {
           position: candidate.position,
           color: candidate.color,
-          intensity: 0.22 + arrivalResponse * 0.78,
-          radius: this.packetLightRadius * (0.12 + arrivalResponse * 0.34)
+          intensity: 0.28 + arrivalResponse * 0.72,
+          radius: this.packetLightRadius * (0.32 + arrivalResponse * 0.38)
         };
         if (candidateIndex === 0) {
           lights.push(light);
@@ -4942,6 +5100,62 @@ function makeGlassInstances(): GlassInstance[] {
   ];
 }
 
+function makeReflectionLabGlassInstances(): GlassInstance[] {
+  return makeGlassInstances().map((instance, switchIndex) =>
+    switchIndex === REFLECTION_LAB_SWITCH_INDEX
+      ? {
+          position: REFLECTION_LAB_SPHERE_POSITION,
+          matrix: makeObjectMatrix(REFLECTION_LAB_SPHERE_POSITION, [
+            REFLECTION_LAB_SPHERE_RADIUS,
+            REFLECTION_LAB_SPHERE_RADIUS,
+            REFLECTION_LAB_SPHERE_RADIUS
+          ]),
+          color: [0.28, 0.5, 0.92, 0.34]
+        }
+      : {
+          position: instance.position,
+          matrix: makeHiddenMatrix(),
+          color: [0, 0, 0, 0]
+        }
+  );
+}
+
+function makeReflectionLabHostMatrices(): Float32Array {
+  return flattenMatrices(
+    HOST_POSITIONS.map((_, hostIndex) =>
+      hostIndex === 0 ? makeObjectMatrix([0, -1.55, 0.2], [0.45, 0.18, 0.34]) : makeHiddenMatrix()
+    )
+  );
+}
+
+function makeReflectionLabHostColors(): Float32Array {
+  return flattenColors(
+    HOST_POSITIONS.map((_, hostIndex) =>
+      hostIndex === 0 ? ([0.08, 0.18, 0.34, 1] as Color) : ([0, 0, 0, 0] as Color)
+    )
+  );
+}
+
+function makeReflectionLabPacketColors(packetCount: number, alpha: number): Float32Array {
+  return flattenColors(
+    Array.from({length: packetCount}, (_, packetIndex) =>
+      packetIndex === 0
+        ? makeBalancedEmissionColor(REFLECTION_LAB_PACKET_COLOR, alpha)
+        : ([0, 0, 0, 0] as Color)
+    )
+  );
+}
+
+function getReflectionLabPacketPosition(animationTime: number): Vector3 {
+  const progress = wrap(animationTime * 0.18, 1);
+  const easedProgress = progress * progress * (3 - 2 * progress);
+  return [
+    -1.08 + easedProgress * 2.16,
+    -1.04 + easedProgress * 1.92,
+    1.04 + Math.sin(progress * Math.PI * 2) * 0.045
+  ];
+}
+
 function makeBalancedEmissionColor(color: Color, alpha: number): Color {
   const luminance = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722;
   const brightnessScale = 0.45 / Math.max(luminance, 0.2);
@@ -5064,6 +5278,25 @@ function makeStudioEnvironmentTexture(device: Device): Texture {
 
 function makeObjectMatrix(position: Vector3, scale: Vector3): Matrix4 {
   return new Matrix4().translate(position).scale(scale);
+}
+
+function makeHiddenMatrix(): Matrix4 {
+  return makeObjectMatrix([0, -100, 0], [0.001, 0.001, 0.001]);
+}
+
+function makeHiddenMatrices(instanceCount: number): Float32Array {
+  return flattenMatrices(Array.from({length: instanceCount}, () => makeHiddenMatrix()));
+}
+
+function fillHiddenMatrices(matrices: Float32Array): void {
+  const hiddenMatrix = makeHiddenMatrix();
+  for (let matrixOffset = 0; matrixOffset < matrices.length; matrixOffset += 16) {
+    matrices.set(hiddenMatrix, matrixOffset);
+  }
+}
+
+function makeTransparentColors(instanceCount: number): Float32Array {
+  return new Float32Array(instanceCount * 4);
 }
 
 function makeLinkMatrix(link: NetworkLink, radius: number): Matrix4 {

@@ -1,0 +1,108 @@
+# GPUSchema
+
+[Overview](https://luma.gl/next/docs/api-reference/tables.md)[Structure](https://luma.gl/next/docs/api-reference/tables/gpu-table-structure.md)[Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md)[GPUTable](https://luma.gl/next/docs/api-reference/tables/gpu-table.md)[GPUConstant](https://luma.gl/next/docs/api-reference/tables/gpu-constant.md)[GPURecordBatch](https://luma.gl/next/docs/api-reference/tables/gpu-record-batch.md)[GPUVector](https://luma.gl/next/docs/api-reference/tables/gpu-vector.md)[GPUData](https://luma.gl/next/docs/api-reference/tables/gpu-data.md)[GPUDataView](https://luma.gl/next/docs/api-reference/tables/gpu-data-view.md)[GPUSchema](https://luma.gl/next/docs/api-reference/tables/gpu-schema.md)[GPUInputSchema](https://luma.gl/next/docs/api-reference/tables/gpu-input-schema.md)[Shader Bindings](https://luma.gl/next/docs/api-reference/tables/gpu-table-shader-bindings.md)[GPUVectorFormat](https://luma.gl/next/docs/api-reference/tables/gpu-vector-format.md)[Buffer Planner](https://luma.gl/next/docs/api-reference/tables/gpu-table-buffer-planner.md)
+
+![From: v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+
+`GPUSchema` is the structural schema type used by [`GPUTable`](https://luma.gl/next/docs/api-reference/tables/gpu-table.md) and [`GPURecordBatch`](https://luma.gl/next/docs/api-reference/tables/gpu-record-batch.md).
+
+It is a plain TypeScript type, not a class. GPU table core does not depend on Apache Arrow schema classes.
+
+For the required and optional `GPUVector` inputs accepted by a model, see [`GPUInputSchema`](https://luma.gl/next/docs/api-reference/tables/gpu-input-schema.md).
+
+## Types[​](#types "Direct link to Types")
+
+```
+import type {VertexFormat} from '@luma.gl/core';
+import type {GPUVectorFormat, VertexList} from '@luma.gl/tables';
+
+export type GPUTypeMap = Record<string, GPUVectorFormat>;
+
+export type GPUField<
+  Name extends string = string,
+  Format extends VertexFormat | VertexList<VertexFormat> = GPUVectorFormat
+> = {
+  name: Name;
+  format?: Format;
+  nullable?: boolean;
+  metadata?: Map<string, string>;
+};
+
+export type GPUSchema<T extends GPUTypeMap = GPUTypeMap> = {
+  fields: Array<GPUField<keyof T & string>>;
+  metadata: Map<string, string>;
+};
+```
+
+`GPUTypeMap` can be used to type table columns:
+
+```
+type PointTable = {
+  positions: 'float32x3';
+  colors: 'unorm8x4';
+};
+
+const table: GPUTable<PointTable> = new GPUTable({
+  vectors: {
+    positions,
+    colors
+  }
+});
+```
+
+Variable-length vertex-aligned fields use `VertexList`:
+
+```
+type PathTable = {
+  paths: VertexList<'float32x3'>;
+  vertexColors: VertexList<'unorm8x4'>;
+};
+```
+
+## Semantics[​](#semantics "Direct link to Semantics")
+
+`GPUSchema` describes selected GPU-facing columns, not necessarily every source column. A table adapter may read many source columns and publish only the ones that match a `ShaderLayout`, generated geometry plan, or model-specific storage path.
+
+`GPUField.format` is a memory format:
+
+* fixed vectors use core `VertexFormat` strings such as `float32x3`;
+* variable-length vertex lists use `vertex-list<format>`;
+* shader values remain in `ShaderLayout`, such as `vec3<f32>` or `vec4<f32>`.
+
+Compatibility between `GPUField.format` and shader values is checked separately with [`isGPUVectorFormatCompatibleWithShaderType()`](https://luma.gl/next/docs/api-reference/tables/gpu-vector-format.md).
+
+### Reserved `indices` Column[​](#reserved-indices-column "Direct link to reserved-indices-column")
+
+Table-backed indexed rendering reserves the GPU table column name `indices`. It is a draw column, not a shader attribute:
+
+* table-level `gpuVectors.indices` and batch-local `gpuData.indices` stay in the schema;
+* `indices` is excluded from synthesized `bufferLayout` entries;
+* `GPUTableModel` binds it through `Model.setIndexBuffer()` instead of matching it against `ShaderLayout.attributes`.
+
+The tables-core format is `vertex-list<uint32>`. The vector represents one batch-local flattened index payload: adapters that start from row-oriented data store that payload logically in row `0` of the batch, usually as `List<Uint32>` in Arrow, while `GPUVector.valueLength` records the flattened index count used for drawing. The backing `GPUData` must contain exactly one directly bindable buffer for that batch, and that buffer must be created with `Buffer.INDEX` usage.
+
+`nullable` and `metadata` are adapter-owned. Table core preserves them but does not interpret Arrow null bitmaps, temporal origins, matrix metadata, or text dictionary information.
+
+## Why A Type, Not A Class[​](#why-a-type-not-a-class "Direct link to Why A Type, Not A Class")
+
+`GPUSchema` has no behavior that needs identity, inheritance, or lifecycle management. The objects that need lifecycle management are GPU resource owners:
+
+* [`GPUData`](https://luma.gl/next/docs/api-reference/tables/gpu-data.md) owns or borrows one buffer.
+* [`GPUVector`](https://luma.gl/next/docs/api-reference/tables/gpu-vector.md) owns or borrows ordered `GPUData` chunks.
+* [`GPURecordBatch`](https://luma.gl/next/docs/api-reference/tables/gpu-record-batch.md) owns one batch-local `GPUData` chunk per selected column.
+* [`GPUTable`](https://luma.gl/next/docs/api-reference/tables/gpu-table.md) owns preserved batches.
+
+Keeping schema as plain data lets Arrow, gpgpu, generated-geometry, and application-specific adapters create schemas without depending on a shared class hierarchy.
+
+## Arrow Interop[​](#arrow-interop "Direct link to Arrow Interop")
+
+`@luma.gl/arrow` creates `GPUSchema` objects from selected Arrow fields. Arrow `DataType` values may still be retained on `GPUData` or `GPUVector` as adapter/readback metadata during migration, but tables and record batches expose `GPUSchema` instead of `arrow.Schema`.
+
+For example:
+
+```
+const gpuTable = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
+
+gpuTable.schema.fields[0].name; // shader/table column name
+gpuTable.schema.fields[0].format; // GPUVectorFormat, e.g. 'unorm8x4'
+```

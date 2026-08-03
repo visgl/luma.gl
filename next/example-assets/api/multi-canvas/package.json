@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-multi-canvas",
-  "version": "9.4.0-alpha.2",
+  "version": "9.4.0-alpha.3",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.0-alpha.2",
-    "@luma.gl/engine": "9.4.0-alpha.2",
-    "@luma.gl/shadertools": "9.4.0-alpha.2",
-    "@luma.gl/webgl": "9.4.0-alpha.2",
-    "@luma.gl/webgpu": "9.4.0-alpha.2",
+    "@luma.gl/core": "9.4.0-alpha.3",
+    "@luma.gl/engine": "9.4.0-alpha.3",
+    "@luma.gl/shadertools": "9.4.0-alpha.3",
+    "@luma.gl/webgl": "9.4.0-alpha.3",
+    "@luma.gl/webgpu": "9.4.0-alpha.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -20,7 +20,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^6.0.1",
-    "typescript": "^5.5.0",
+    "typescript": "^6.0.3",
     "vite": "^8.0.0"
   }
 }

@@ -1,0 +1,111 @@
+# @luma.gl/anari
+
+![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)![Private workspace](https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square)![From-v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)
+
+`@luma.gl/anari` provides a private, experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
+
+Experimental proof of concept
+
+This package follows concepts from the ANARI object model, but it is not an ANARI C binding, does not implement the full ANARI specification, and does not claim Khronos conformance. Its TypeScript API and supported feature set can change.
+
+## Reference pages[​](#reference-pages "Direct link to Reference pages")
+
+* [Device and object lifecycle](https://luma.gl/next/docs/api-reference/anari/anari-device.md): `ANARIDevice`, object creation, discovery, staged parameters, commits, and destruction.
+* [Arrays and geometry](https://luma.gl/next/docs/api-reference/anari/anari-geometry.md): `ANARIArray`, typed data, triangle meshes, spheres, cylinders, cones, and quads.
+* [Materials and lighting](https://luma.gl/next/docs/api-reference/anari/anari-materials-and-lights.md): matte and physically based materials; ambient, directional, point, and spot lights.
+* [Scene hierarchy](https://luma.gl/next/docs/api-reference/anari/anari-scene.md): surfaces, groups, transform instances, worlds, and instancing behavior.
+* [Cameras, renderers, and frames](https://luma.gl/next/docs/api-reference/anari/anari-rendering.md): camera projections, renderer controls, bloom, fog, frame rendering, and statistics.
+* [Scene schemas and JSON validation](https://luma.gl/next/docs/api-reference/anari/anari-schemas.md): optional Zod object schemas, retained-reference validation, generated JSON Schema, and editor integration.
+* [ANARI C API and THREE.js mapping](https://luma.gl/next/docs/api-reference/anari/anari-api-mapping.md): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
+* [ANARI developer guide](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
+* [JSON scene playground](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
+
+## Private workspace availability[​](#private-workspace-availability "Direct link to Private workspace availability")
+
+`@luma.gl/anari` is a private, unpublished luma.gl workspace. Install dependencies from a luma.gl checkout:
+
+```
+yarn install
+```
+
+Another workspace inside the same checkout can depend on it through `"@luma.gl/anari": "workspace:*"`. It cannot currently be installed from npm. Add `@luma.gl/webgl` to the consuming workspace if a WebGL 2 fallback is required.
+
+## Object model[​](#object-model "Direct link to Object model")
+
+```
+ANARIDevice
+  ├── ANARIArray
+  ├── ANARISampler → ANARIMaterial
+  ├── ANARIGeometry + ANARIMaterial → ANARISurface
+  ├── ANARISurface + ANARILight → ANARIGroup
+  ├── ANARIGroup + transform → ANARIInstance
+  ├── ANARISurface / ANARIInstance / ANARILight → ANARIWorld
+  ├── ANARICamera
+  ├── ANARIRenderer
+  └── ANARIWorld + ANARICamera + ANARIRenderer → ANARIFrame
+```
+
+Every scene object stores committed parameters. Reusing the same `ANARISurface` through multiple `ANARIInstance` objects lets the runtime compile one luma.gl model and issue one instanced draw for that surface.
+
+## Exported classes[​](#exported-classes "Direct link to Exported classes")
+
+```
+import {
+  ANARIDevice,
+  ANARIObject,
+  ANARIArray,
+  ANARIGeometry,
+  ANARISampler,
+  ANARIMaterial,
+  ANARISurface,
+  ANARIGroup,
+  ANARIInstance,
+  ANARIWorld,
+  ANARILight,
+  ANARICamera,
+  ANARIRenderer,
+  ANARIFrame
+} from '@luma.gl/anari';
+```
+
+The package also exports parameter interfaces, subtype unions, object metadata, frame statistics, and shared vector/matrix aliases. Each reference page documents its related exported types.
+
+## Supported object subtypes[​](#supported-object-subtypes "Direct link to Supported object subtypes")
+
+| Object type | Supported subtypes                                  |
+| ----------- | --------------------------------------------------- |
+| Array       | `array1D`                                           |
+| Geometry    | `triangle`, `sphere`, `cylinder`, `cone`, `quad`    |
+| Material    | `matte`, `physicallyBased`                          |
+| Sampler     | `image2D`                                           |
+| Surface     | `default`                                           |
+| Group       | `default`                                           |
+| Instance    | `transform`                                         |
+| World       | `default`                                           |
+| Light       | `ambient`, `directional`, `point`, `spot`           |
+| Camera      | `perspective`, `orthographic`                       |
+| Renderer    | `default`, `deferred`, `debugNormals`, `debugDepth` |
+| Frame       | `default`                                           |
+
+Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead of assuming future implementations expose the same set.
+
+## Compatibility[​](#compatibility "Direct link to Compatibility")
+
+| Capability                                     | WebGPU                                        | WebGL 2                                             |
+| ---------------------------------------------- | --------------------------------------------- | --------------------------------------------------- |
+| Retained scene objects and instanced surfaces  | Supported                                     | Supported                                           |
+| Matte and physically based materials           | Supported                                     | Supported                                           |
+| PBR image samplers and UV transforms           | Supported                                     | Supported                                           |
+| Ambient, directional, point, and spot lighting | Supported                                     | Supported                                           |
+| Deferred renderer                              | Supported                                     | WebGPU-only G-buffer plus direct deferred lighting. |
+| Debug normals and depth renderers              | Supported                                     | Supported                                           |
+| Bloom and fog                                  | Supported                                     | Supported                                           |
+| Extended-range, Display P3 presentation        | Supported on compatible displays and browsers | Not supported; SDR fallback                         |
+
+See [HDR and backend selection](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md#hdr-and-backend-selection) for capability detection and canvas setup.
+
+## Experimental JSON playground[​](#experimental-json-playground "Direct link to Experimental JSON playground")
+
+The private package includes a JSON scene playground at `examples/showcase/anari/playground.html`. Start it with `yarn workspace luma.gl-examples-showcase-anari start`, then open `/playground.html` on the reported development-server URL. The playground translates deck.gl-inspired `@@type` declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism meshes, starfield distributions, composable transform animations, lights following named instances, cameras, and optional renderer presets into the API documented on these pages. The active renderer subtype is selected as frame state outside the renderer-independent scene. The complete Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable JSON presets.
+
+The optional `@luma.gl/anari/schemas` entry point exports experimental Zod schemas and generated JSON Schema for editor integration. The scene format is not an official ANARI serialization format. See the [schema API reference](https://luma.gl/next/docs/api-reference/anari/anari-schemas.md) and the [JSON scene playground developer guide](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md#explore-the-json-scene-playground) for the full schema, animation vocabulary, and editing controls.

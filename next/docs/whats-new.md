@@ -1,0 +1,481 @@
+# What's New
+
+*This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](https://luma.gl/next/docs/legacy/legacy-upgrade-guide) page.*
+
+## Version 10.0[​](#version-100 "Direct link to Version 10.0")
+
+Target Release Date: Q3, 2026
+
+**General**
+
+* **TypeScript 6.0** - luma.gl package builds, website tooling, and supported example typechecks now use TypeScript 6.0.
+* **Precise raw binary64 coordinate deltas** - The WGSL `fp64arithmetic` module can split a binary64-rounded subtraction into normalized double-single limbs, normalize and compare those limbs with integer-controlled behavior in either arithmetic mode, and explicitly classify non-finite values. The existing direct-to-`f32` helper retains its single-round exact-delta contract.
+
+**AI-Assisted Development**
+
+* **Official `lumagl` Agent Skill** - luma.gl now ships an installable skill that teaches coding agents the framework architecture, WebGPU/WebGL portability boundaries, GPU debugging order, and contribution workflow.
+* **Agent-ready documentation** - [`llms.txt`](https://luma.gl/llms.txt) and page-level Markdown give agents fresh, linkable access to tutorials, API guides, API references, and developer guides instead of relying on stale training data.
+* **Evidence-driven agent workflows** - Browser-backed verification helps agents prove that generated GPU code actually renders instead of merely typechecking, while a checked-in evaluation corpus supports repeatable comparisons with and without the skill. See [Working with AI Coding Agents](https://luma.gl/next/docs/developer-guide/working-with-ai.md).
+
+**New Modules**
+
+* **`@luma.gl/tables`** - Generic GPU table/runtime, planning, transform, and compute helpers.
+* **`@luma.gl/arrow`** - New module for working with binary columnar data on the GPU.
+* **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
+* **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering, atlas construction, and Arrow text adapters.
+
+**@luma.gl/experimental**
+
+* **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
+* **OIT resolve pipelines** - A-buffer and weighted-blended order-independent transparency now resolve captured fragments through exported `ShaderPassPipeline` factories, allowing WBOIT to compose directly with the advanced effects stack.
+* **GPU command graphs** - Experimental WebGPU command graphs compile explicit buffer hazards, fixed capacities, node resources, and transient-buffer reuse while leaving encoding and submission under application control.
+* **Flat GPU scene records** - `GPUScene` owns or borrows a fixed-capacity, table-independent draw database with stable IDs, bounds, transforms, grouping, geometry references, command slots, and typed command-graph views. Validated mutation transactions add bounded insert, patch, removal, stable compaction, overflow, move reporting, and exact queue-write costs without introducing a CPU scene hierarchy.
+* **Reusable command-graph contributors** - `GPUCommandGraphContributor` gives small algorithm libraries a structural `addToGraph()` contract, while public aligned-view binding and typed transient-view helpers let those libraries extend command graphs without a runtime registry or hidden submission.
+* **Optional GPU geospatial kernels** - The side-effect-free `@luma.gl/experimental/geospatial` subpath contributes cuSpatial-compatible sinusoidal projection, haversine distance, and pairwise planar point and point-to-segment distance nodes to caller-owned command graphs, including chunk-preserving raw binary64 coordinate inputs.
+* **GPU scan, compaction, and indirect drawing** - Typed graph views compose hierarchical `uint32` scan, stable ID compaction, and GPU-written `DrawCommandBuffer` instance counts. Scan and compaction accept fixed-width `GPUVector` imports as one logical sequence while preserving chunk topology. The [GPU Trace Viewer](https://luma.gl/next/examples/experimental/gpu-trace-viewer) demonstrates the path over up to four million spans, while [GPU Frustum Culling](https://luma.gl/next/examples/experimental/gpu-frustum-culling) applies it to indexed indirect rendering of a 3D instance field.
+* **GPU virtual-geometry selection** - [`GPUVirtualGeometrySelection`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md) traverses breadth-level cluster forests with conservative sphere-frustum tests and pixel-scale geometric error, then reuses stable visibility compaction to publish a deterministic cluster frontier and capacity-safe indirect instance count without CPU readback.
+* **GPU trace manipulation primitives** - `GPUMask` composes chunk-preserving selection predicates; `GPUHierarchyLayout` computes scan-based process and thread expansion; `GPUGraphTraversal` expands bounded, cycle-safe CSR dependency frontiers; and `GPUAncestorProjection` reconnects hidden spans to their nearest visible canonical parent. The [GPU Hierarchical Trace Viewer](https://luma.gl/next/examples/experimental/gpu-trace-viewer) applies all four to live hierarchy controls, topology filters, dependency focusing, GPU picking, projected indirect edges, and collapsed-process activity.
+* **Graph-native GPU sort** - `GPUSort` stably orders one paired packed `uint32` domain, while `GPUBatchSort` independently orders aligned GPU vector chunks without hidden packing or lost batch boundaries. Bitonic or binary LSD radix selection occurs per work unit. The [GPU Sort example](https://luma.gl/next/examples/experimental/gpu-sort) contrasts packed global order with preserved Arrow batches and exposes graph compilation and transient reuse.
+* **Reusable 2D GPU FFT** - [`GPUFFT2D`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md) records bounded power-of-two complex transforms into caller-owned WebGPU command encoders. Forward and normalized inverse passes share one explicit scratch field without hidden submission or readback, providing a reusable spectral-simulation and signal-processing foundation.
+* **GPU spectral ocean simulation** - [`SpectralOceanSimulation`](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md) evolves a deterministic seeded Phillips spectrum, composes three inverse `GPUFFT2D` transforms, and emits render-ready displacement and normal/foam buffers. Surface normals come from the displaced field, whitecaps come from horizontal-displacement compression with bounded temporal history, and command submission remains application-owned. [Tempest Ocean](https://luma.gl/next/examples/showcase/tempest-ocean) binds those buffers directly to an independently tessellated HDR stormfront surface.
+* **Graph-native GPU data analysis** - `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, and `GPUGroupAggregation` add deterministic scalar aggregates, equal-width or irregular-edge histogram counts, filtered categorical counts and floating-point statistics, row-major spatial counts, and weighted floating-point sum/min/max/mean cell statistics. GPU-resident histogram edges and group-selection masks can change between encodings without CPU readback or graph recompilation. Analysis operations initialize once and accumulate fixed-width vector chunks without packing. The [GPU Data Analysis example](https://luma.gl/next/examples/experimental/gpu-data-analysis) composes the operations without hidden submission or readback.
+* **Semantic G-buffer targets** - `GBuffer` owns WebGPU MRT scene color, normal-roughness, velocity, and depth targets plus named extra channels, then exposes the standard depth, normal, and velocity bindings consumed by screen-space effect pipelines.
+* **Composable deferred lighting** - `deferredLighting` resolves Cook-Torrance opaque lighting from G-buffer material channels, reconstructed depth, one directional light, and a fixed-capacity WebGPU point-light storage buffer. The [Deferred Illumination Lab](https://luma.gl/next/examples/experimental/deferred-rendering) exposes the material channels and animated lights live.
+* **Hybrid shadows** - `ShadowMapRenderer`, the group-2 `shadow` WGSL module, and the contact-shadow shader-pass pipeline add WebGPU cascaded directional, spot, and point-light shadows with PCSS filtering. Visualization City demonstrates the complete ordered stack.
+* **Spectral caustics** - [`SpectralCausticsRenderer`](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md) captures a closed convex refractor, traces six wavelength bands with WebGPU compute, additively accumulates an HDR XYZ map, and exposes reusable planar-receiver shading without taking command-submission ownership.
+* **Clustered deferred lighting** - `ClusteredLightGrid` bins point lights into a configurable 3D screen-space grid and feeds the clustered deferred resolve pipeline.
+* **MLS-MPM fluid simulation** - [`MLSMPMFluidSimulation`](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md) adds a WebGPU-only two-dimensional weakly compressible fluid solver with deterministic fixed-point grid scatter, double-buffered particle state, caller-owned command encoding, and storage buffers that applications can render without hidden submission or readback.
+* **Volumetric fire simulation** - [`VolumetricFireSimulation`](https://luma.gl/next/docs/api-reference/experimental/volumetric-fire-simulation.md) records WebGPU-only dense 3D velocity, pressure, obstacle, and combustion work through a GPU command graph, then exposes the live velocity and combustion textures for HDR volume rendering without hidden submission or CPU readback. [Volumetric Fire Forge](https://luma.gl/next/examples/experimental/volumetric-fire-forge) demonstrates the live fields with obstacle-matched geometry, depth-aware emission and extinction, fixed exposure, HDR bloom, deterministic automatic and click-triggered burner flares, and synthesized spatial combustion audio.
+* **Orbit controls** - `OrbitControls` provides reusable pointer-driven orbit positioning for experimental scenes.
+* **WebXR** - Experimental animation-frame, camera-texture, and session helpers integrate immersive WebXR rendering with luma.gl.
+* **Visualization City** - The [Advanced Effects example](https://luma.gl/next/examples/experimental/advanced-effects) combines the private G-buffer, deferred-lighting, and shadow stack with the public screen-space effects in one v10 showcase.
+
+**@luma.gl/tables** NEW MODULE
+
+* **Composite GPU inputs** - `GPUInputSchema.attributeNames` maps one logical table column to several shader attributes, allowing a shared matrix buffer to feed portable vertex attributes or a WebGPU storage binding without repacking. Ordinary inputs retain the singular `attributeName`.
+* **Generic GPU tables** - Canonical `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable` runtime classes for reusable non-Arrow-specific GPU table ownership and batching.
+* **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
+* **Vertex storage planning** - `GPUTableBufferPlanner` now checks vertex-stage storage buffer limits before choosing storage-backed table attributes, allowing core WebGPU devices to fall back to vertex attributes when needed.
+* **Execution helpers** - `TableTransform`, `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` now live beside the generic table runtime instead of the Arrow adapter module.
+* **Physical GPU data structs** - Inline `GPUData` format records describe interleaved rows with `wgsl-storage` or minimally padded WebGPU vertex layouts, while `GPUData.getChild()` and `getChildAt()` expose typed zero-copy field views.
+
+**@luma.gl/gpgpu** NEW MODULE
+
+* **`GPUDataEvaluator`** lazy GPUData operations and **`GPUVectorEvaluator`** chunk-preserving GPUVector transforms with CPU/WebGL/WebGPU backends.
+* **Interleaved GPGPU inputs** - Borrowed `GPUDataView` values expose fixed-width strided attributes over shared buffers, allowing existing lazy operations to read interleaved data while continuing to produce packed outputs.
+
+**@luma.gl/arrow** NEW MODULE
+
+* **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
+* **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/tables` objects and preserve chunked UTF-8 GPU vector input for text workflows.
+* **Variable-length Arrow attribute lists** - `GPUVector` can retain chunked nested list columns whose elements contain one to four numeric components, covering scalar streams plus tuple-style data such as XY, XYZ, and XYZM coordinates for future path-rendering workflows.
+* **Closed Arrow path normalization** - `closeArrowPaths()` appends explicit closing vertices only for closed Float32 absolute or origin-relative delta path rows whose endpoints differ beyond an epsilon, using WebGPU compute when available with equivalent CPU fallback semantics.
+* **`ArrowPathModel`** - New attribute-backed path renderer consumes prepared Float32 XY, XYZ, and XYZM path props, expands path rows into packed per-segment render records, and supports Float64 source paths through CPU-prepared Float32 deltas plus CPU-updated view origins.
+* **`ArrowPathStorageModel`** - New WebGPU-only storage-backed path renderer expands nested prepared Float32 XY, XYZ, and XYZM rows through compute into compact 12-byte indexed segment records using GPU path values plus persistent per-row path ranges, keeps per-path color, width, and optional view-origin rows as storage bindings, can convert Float64 source paths into Float32 deltas with one `fp64arithmetic` compute pass, and can consume reusable `ArrowPathStorageState` objects built by `createArrowPathStorageState`.
+* **Mesh Arrow geometry** - New `ArrowTableGeometry` and `makeGPUGeometryFromArrow()` support loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
+* **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities now layer over reusable generic GPU table objects from `@luma.gl/tables`.
+* **[Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md) and [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
+* **[Apache Arrow GPU Tables examples](https://luma.gl/next/examples/arrow/arrow-points)** - Points: `FixedSizeList<Float32, 2 | 3 | 4>` and DenseUnion point rows, Lines: `List<FixedSizeList<Float32, 4>>`, DenseUnion LineStrings, and `List<Timestamp>`, GeoArrow: mixed DenseUnion geometry routing, Text: `Utf8`/`Dictionary<Utf8>`, Time: `Date`/`Time`/`Timestamp`/`Duration`, Starfield: `Timestamp`/`Duration`, Matrices: `FixedSizeList<Float32, 16>`, Particles: `FixedSizeList<Float32, 3>`, and Global Grids: `Uint64`, `Utf8` for geohash, quadkey, S2, A5, and H3 now live in the Apache Arrow section.
+* **[Points Example](https://luma.gl/next/examples/arrow/arrow-points)** - New ScatterplotLayer-style renderer consumes Arrow point vectors or DenseUnion point rows, supports M-coordinate or timestamp animation, and reports hover identity as full-table row index, batch, and batch-local row.
+* **[Time Columns Example](https://luma.gl/next/examples/arrow/arrow-time-columns)** - New showcase prepares aligned scalar `DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and `DurationMillisecond` rows into relative Float32 GPU vectors, then renders the same schedule through instanced attributes or WebGPU storage bindings.
+* **[Blinking Stars Example](https://luma.gl/next/examples/arrow/arrow-temporal-starfield)** - New showcase prepares aligned scalar `TimestampMillisecond` and `DurationMillisecond` rows into relative Float32 GPU vectors, then uses them as per-instance visibility windows and pulse periods through instanced attributes or WebGPU storage bindings.
+* **[Lines Example](https://luma.gl/next/examples/arrow/arrow-lines)** - New showcase expands nested Arrow XYZM line rows and DenseUnion LineString rows into styled GPU segment instances with attribute-backed and storage-backed models, then adds an `ArrowPathTripsStorageModel` mode that prepares aligned `List<Timestamp>` rows into relative Float32 milliseconds for storage-backed trail filtering.
+* **[GeoArrow Example](https://luma.gl/next/examples/arrow/arrow-geoarrow)** - New mixed-geometry showcase routes one GeoArrow-style DenseUnion column through Arrow point, line, and polygon renderers.
+* **[Instancing Example](https://luma.gl/next/examples/arrow/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
+
+**@luma.gl/text**
+
+* **GPU-only 2D text facade** - `TextRenderer` renders caller-owned `GPUTextData` while selecting attribute, WebGPU storage, or dictionary strategies automatically.
+* **Incremental text streaming** - Arrow chunks produce independent `GPUTextData` objects that append to a stable `TextRenderer` model without rebuilding earlier batches; `GPUTextResources` lets batches and renderers share one uploaded atlas texture.
+* **Experimental text strategies** - Specialized model classes and low-level shader/compute contracts remain available from `@luma.gl/text/experimental` for benchmarking.
+* **Arrow text conversion helpers** - `@luma.gl/arrow` exports `makeGPUTextDataFromArrow()` for automatic strategy selection, plus `ArrowTextRenderer`, source mapping, and low-level conversion helpers for specialized workflows.
+* **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
+* **MSDF text fonts** - `@luma.gl/text` can build or load prebuilt BMFont JSON MSDF atlases, including kerning and multi-page atlas metadata, through the same `FontAtlas` format used by generated bitmap and SDF atlases.
+* **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
+* **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
+
+## Version 9.4[​](#version-94 "Direct link to Version 9.4")
+
+Target Release Date: TBD
+
+**@luma.gl/core**
+
+* **[WebGPU render bundles](https://luma.gl/next/examples/api/render-bundles)** - Record reusable draw commands with `RenderBundleEncoder` and replay them from a `RenderPass`, reducing CPU command-recording time for repeated scenes.
+* **Render-pass draw commands** - `RenderPass` now owns pipeline, binding, vertex-array, direct-draw, indirect-draw, and render-bundle commands. The former `RenderPipeline` draw and binding APIs remain as deprecated compatibility paths.
+* **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.
+* **Stage-specific storage limits** - `device.limits` now reports storage buffer and storage texture availability separately for vertex and fragment stages, so applications can choose storage-backed rendering only where the requested device supports it.
+* **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper remains deferred with `@luma.gl/experimental` until v10.
+* **GPU data and buffer-layout utilities** - New exported helpers decode GPU data types, select native or emulated Float16 arrays, and resolve logical attributes over shared or composite buffer layouts.
+
+**@luma.gl/engine**
+
+* **[`DynamicBuffer`](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
+* **[`VideoTexture`](https://luma.gl/next/docs/api-reference/engine/video-texture.md)** - Stable live video binding source for caller-owned `HTMLVideoElement` and `VideoFrame` inputs. Portable shaders use copied textures on WebGL and WebGPU, while WGSL `texture_external` can opt into native WebGPU external-video sampling.
+* **`Animator`** - New generic `Animator` and `AnimationClipController` classes manage timeline-driven animation updates. `GLTFAnimator` now builds on the shared controller.
+* **Custom animation-frame providers** - `AnimationLoop` can consume a caller-provided animation-frame source and forward its frame payload, enabling integrations such as WebXR without changing the normal browser loop.
+* **Shader pass pipelines** - `ShaderPassRenderer` supports structured multi-pass effects such as bloom and depth of field.
+* **Temporal shader-pass targets** - `ShaderPassRenderer` supports persistent ping-pong history targets, explicit reset, safe same-target temporal reads and writes, and caller-selected output formats.
+* **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`. CPU attribute keys remain exactly as supplied; synthesized shader-facing layouts map supported glTF semantics such as `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0`.
+* **Interleaved geometry uploads** - `makeInterleavedGeometry()` packs CPU attributes into one buffer, and `makeGPUGeometry()` uses the packed representation by default for one vertex buffer plus an optional index buffer.
+* **Index-based color picking** - `indexColorPicking` encodes integer object indexes without application-provided picking colors. Picking also supports vertex indexes, redraw invalidation, and optional tooltips.
+* **Model layout updates** - `Model.setBufferLayout()` is idempotent, and explicit WGSL attribute layouts are merged with inferred bindings to support shader metadata without manually declaring uniform bindings.
+* **`ShaderInputs.addModules()`** - `ShaderInputs` can register shader modules and dependencies after construction, and it can carry deferred texture and buffer bindings until draw time.
+
+**@luma.gl/webgpu**
+
+* **WGSL depth sampler reflection** - `getShaderLayoutFromWGSL()` now recognizes comparison samplers and named depth texture samplers when building sampler layouts from reflected WGSL.
+* **WGSL external textures** - Reflected `texture_external` declarations now produce external-texture bindings for native video sampling.
+* **Texture default views** - WebGPU texture default views now preserve explicit `TextureProps.view` mip and array-layer ranges.
+* **Mapped buffer initialization** - WebGPU buffers can be initialized through mapped ranges without losing byte offsets or debug data.
+
+**@luma.gl/effects**
+
+* **`bloom`** - New bloom postprocessing effect and shader-pass pipeline.
+* **`dof`** - New depth-of-field postprocessing effect and shader-pass pipeline.
+* **`gaussianBlur`** - New gaussian blur postprocessing effect.
+* **`persistenceEffect`** - Moved into `@luma.gl/effects` as a first-class postprocessing effect.
+* **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, compact height fog, bounded clustered participating-media lighting with camera-aware history, GPU-driven adaptive exposure, and HDR-safe successively filtered multiscale bloom. The pipelines can consume application-provided depth, normal, velocity, and material textures without depending on the private v10 G-buffer implementation.
+
+**@luma.gl/shadertools**
+
+* **[`colors`, `floatColors`, and `storageColors`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/float-colors.md)** - Semantic color normalization now has a `colors` helper namespace, the legacy `floatColors` alias remains available, and WebGPU shaders can read packed RGBA storage rows through `storageColors`.
+* **[`dggs`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/dggs.md)** - New WGSL helpers decode compact Uint64 DGGS cell keys for storage-buffer and boundary-extraction workflows.
+* **Apple/Metal-safe fp64 arithmetic** - WGSL double-single arithmetic automatically uses integer-controlled `twoSum`, `twoProd`, and renormalization on Apple WebGPU adapters, avoiding Metal compiler reassociation while retaining the existing `vec2f` API. The `LUMA_FP64_INTEGER_ARITHMETIC` shader define can force or disable the mode.
+* **WGSL double-precision arithmetic** - The `fp64arithmetic` shader module can subtract packed IEEE 754 double-precision values directly in WGSL and convert the result to `f32`.
+* **[`ShaderPlugin`](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)** - Reusable shader assembly plugins group modules, defines, named injections, caller-owned vertex inputs, and generated cross-stage varyings.
+* **WGSL hooks and injections** - `ShaderAssembler` now applies registered hook functions and standard named injections such as `vs:#main-start` and `fs:#main-end` while assembling unified WGSL shaders.
+* **WGSL shader conditionals** - Shadertools preprocessing accepts simple boolean and numeric `#if` expressions, and assembled WGSL exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS` so inactive resource branches are removed before `@binding(auto)` assignment.
+* **`ShaderPassPipeline`** - New shader-pass pipeline type for structured multi-pass postprocessing.
+* **`waterMaterial`** - New water material shader module with GLSL and WGSL shaders.
+
+**@luma.gl/gltf**
+
+* **Animation controllers** - `GLTFAnimator` uses the shared engine `Animator` while retaining its existing `animations`, `animate()`, `setTime()`, and `getAnimations()` compatibility surface.
+* **Attribute identification** - PBR material setup recognizes both source glTF semantics and their shader-facing aliases.
+
+**@luma.gl/test-utils**
+
+* **Feature-level WebGPU devices** - `getWebGPUTestDevice()` accepts a WebGPU feature level, while `getWebGPUTestDevices()` returns the available requested profiles.
+
+## Version 9.3[​](#version-93 "Direct link to Version 9.3")
+
+Release Date: March 31, 2026
+
+**General**
+
+* **Typescript 5.9** - luma.gl code base is now TypeScript 5.9 clean.
+
+**New Examples**
+
+* **[Texture Tester Example](https://luma.gl/next/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
+* **[Multi-Canvas Example](https://luma.gl/next/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
+* **[External Context Example](https://luma.gl/next/examples/integrations/external-context)** - New example showing integration with external WebGL contexts.
+* **[React Strict Mode Example](https://luma.gl/next/examples/integrations/react-strict-mode)** - Improved resource cleanup for better compatibility when using luma.gl in React `<StrictMode>` apps
+
+**@luma.gl/core**
+
+* **Multi-canvas rendering** is now supported on both WebGL and WebGPU via [`device.createPresentationContext()`](https://luma.gl/next/docs/api-reference/core/presentation-context.md). See the [Multiple Canvases](https://luma.gl/next/docs/developer-guide/multiple-canvases.md) developer guide details.
+* **Composite shader block layouts** now support nested structs and fixed-size arrays in [`ShaderBlockLayout`](https://luma.gl/next/docs/api-reference/core/shader-block-layout.md) and [`UniformStore`](https://luma.gl/next/docs/api-reference/core/uniform-store.md), while preserving nested JavaScript values at the API boundary.
+* **Grouped bindings** now support `ShaderLayout.bindings[].group`, flat `bindings`, and grouped `bindGroups`, including sparse logical bind-group usage on both WebGPU and WebGL.
+
+**@luma.gl/engine**
+
+* New **`Material`** and **`MaterialFactory`** classes provide reusable material-owned group-3 bindings for `Scenegraph` models.
+* **WebGPU mipmap generation** now supported by [`DynamicTexture`](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md).
+* **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
+* **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
+* **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
+
+**@luma.gl/webgpu**
+
+* **compressed texture** support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).
+* **texture readback** improvements
+
+**@luma.gl/webgl**
+
+* **RenderPipeline optimization** - Compatible WebGL render pipelines now share linked `WebGLProgram`s, reducing pipeline creation overhead while preserving per-pipeline defaults.
+
+**@luma.gl/gltf**
+
+* **WebGPU support** - glTF models can now be rendered in WebGPU.
+* **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
+* **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file.
+* **Scenegraph materials** - glTF scenegraph creation now returns `materials` aligned with the source glTF `materials` array.
+* **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
+* **PBR material extensions** - the stock `pbrMaterial` shader now implements `KHR_materials_specular`, `KHR_materials_ior`, `KHR_materials_transmission`, `KHR_materials_volume`, `KHR_materials_clearcoat`, `KHR_materials_sheen`, `KHR_materials_iridescence`, and `KHR_materials_anisotropy`, using the parsed glTF extension uniforms and textures.
+* **Emissive materials** - the stock PBR shader now applies `KHR_materials_emissive_strength`, and core `emissiveFactor` values are preserved even when no emissive texture is present.
+* **`KHR_animation_pointer`** - `createScenegraphsFromGLTF()` and `GLTFAnimator` now animate supported node TRS targets, selected material factors, and animated `KHR_texture_transform` offset/rotation/scale targets on stock PBR material texture slots. Structural targets such as animated `texCoord`, morph weights, cameras, and material mode switches remain unsupported.
+* **Extension support docs** - the [`glTF Extension Support`](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md) table now documents the current built-in vs parsed-only extension coverage for `@luma.gl/gltf`.
+* **Extension support metadata** - `createScenegraphsFromGLTF()` now exposes an `extensionSupport` map so applications can inspect which extensions a model uses and whether `@luma.gl/gltf` supports them.
+
+**@luma.gl/shadertools**
+
+* **[`floatColors`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/float-colors.md)** - New shader module with shared semantic color normalization and premultiplied alpha helpers.
+* **Opt-in float semantic colors** - Byte-based semantic color APIs in `lighting`, shared `floatColors`, legacy `picking`, and glTF light parsing accept `useByteColors: false` for float and HDR-style color values while preserving current defaults.
+* **[`lighting`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/lighting.md)** shader module supports a new light type `SpotLight`.
+* **[`lambertMaterial`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/lambert-material.md)** A new shader module adds a diffuse-only matte material model, completing the material catalog
+* **Unlit Materials** All material shader modules now support `unlit` prop, allowing applications to disable lighting for materials that are already lit (e.g. photogrammetry).
+* `Composite uniformTypes` `uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md).
+* `WebGPU Shader modules` - ShaderModules now have WGSL variants.
+* `Shader module auto bindings` WGSL shader module now support `@binding(auto)` which eliminates binding conflicts. See [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md).
+
+**@luma.gl/effects**
+
+* **WebGPU/WGSL effects** - Effects now have WGSL shader implementations and work under WebGPU.
+* **`persistenceEffect`** - New temporal accumulation effect for fading trails and other history-based postprocessing workflows.
+
+## Version 9.2[​](#version-92 "Direct link to Version 9.2")
+
+Release Date: Sep 24, 2025
+
+Production quality WebGPU backend
+
+**General**
+
+* All luma.gl examples now run under both WebGPU and WebGL
+* API updates to cover [new Chrome WebGPU features](https://developer.chrome.com/docs/web-platform/webgpu/news)
+* TypeScript v5.7, and all `"strict"` TypeScript options are now enabled.
+* Documentation improvements
+
+**@luma.gl/core**
+
+* \[`Buffer`]
+
+  * \[`Buffer.mapAndReadAsync()`] New method that reads directly from buffer memory without performing a copy.
+  * \[`Buffer.mapAndWriteAsync()`] New method that writes directly to buffer memory.
+
+* \[`Texture`]
+
+  * `Texture` class refactors complete, see upgrade guide.
+
+* Shader type APIs have been improved.
+
+* `CommandEncoder`/`CommandBuffer` API improvements
+
+* `Fence` - New synchronization primitive created with `device.createFence()`
+
+* `CanvasContext` API simplifications (see upgrade guide).
+
+* [Texture Formats](https://luma.gl/next/docs/api-reference/core/texture-formats.md). Adds support for the new texture formats added in Chrome 132 (currently require setting chrome://flags/#enable-unsafe-webgpu)
+
+  * `'r16unorm'`, `'rg16unorm'`, `'rgba16unorm'` (feature `'chromium-experimental-unorm16-texture-formats'`)
+  * `'r16snorm'`, `'rg16snorm'`, `'rgba16snorm'` (feature `'chromium-experimental-snorm16-texture-formats'`)
+
+* [Vertex Formats](https://luma.gl/next/docs/api-reference/core/vertex-formats.md) (added in Chrome v133 and v119)
+
+  * Single component 8 and 16 bit formats are now supported by WebGPU: `'uint8'`, `'sint8'`, `'unorm8'`, `'snorm8'`, `'uint16'`, `'sint16'`, `'unorm16'`, `'snorm16'`, and `'float16'`.
+  * Note: 3 component formats are still missing in WebGPU.
+  * `'unorm8x4-bgra'` - WebGPU only. Simplifies working with BGRA data.
+  * `'unorm10-10-10-2` - Exposed since available in all WebGPU backends. Also supported by WebGL2.
+
+**@luma.gl/engine**
+
+* `DynamicTexture`
+
+  * now supports mipmap generation for WebGPU textures
+  * owns WebGPU mipmap generation for `2d`, `2d-array`, `cube`, `cube-array`, and `3d` textures
+  * throws explicit runtime errors when a WebGPU texture format does not support the required mipmap-generation capabilities
+
+**@luma.gl/effects**
+
+* More postprocessing effects ported to WGSL
+
+**@luma.gl/shadertools**
+
+* More shader modules ported to WGSL
+
+## Version 9.1[​](#version-91 "Direct link to Version 9.1")
+
+Target Date: Dec, 2024
+
+Enhanced WebGPU support.
+
+**Highlights**
+
+* GPU backend management is streamlined via the new `Adapter` API.
+* GPU connection to HTML DOM (via `canvas` elements) improved via `CanvasContext` API changes.
+* `Texture`s are now immutable, however a new `DynamicTexture` class offers a higher-level, mutable texture API.
+* `ShaderModule` type safety improvements (shader uniforms can now be strictly typed in JavaScript)
+
+**@luma.gl/core**
+
+* [`Adapter`](https://luma.gl/next/docs/api-reference/core/adapter.md)
+
+  * New class for singleton objects representing pluggable GPU backends.
+  * Singleton `Adapter` objects are exported by the `@luma.gl/webgpu` and `@luma.gl/webgl` modules.
+
+* [`luma`](https://luma.gl/next/docs/api-reference/core/luma.md)
+
+  * Now relies on `Adapter` instances to define which GPU backends are available.
+  * Adapter can be supplied during device creation, avoiding the need for global registration of GPU backends.
+  * `CreateDeviceProps.adapters` prop to supply list of GPU backend adapters to `luma.createDevice()`.
+  * [`luma.registerAdapters()`](https://luma.gl/next/docs/api-reference/core/luma.md#lumaregisteradapters) New method for global registration of adapters (in case it still desired).
+
+* `Device`
+
+  * `DeviceProps.createCanvasContext` - New prop for creating a default `CanvasContext`.
+  * `DeviceProps.onResize` - New callback tracking size changes to `CanvasContext`s.
+  * `DeviceProps.onVisibilityChange` - New callback tracking visibility to `CanvasContext`s.
+  * `DeviceProps.onDevicePixelRatioChange` - New callback tracking device pixel resolution (DPR) changes to `CanvasContext`s.
+  * `DeviceProps.debug*` - New debug options, please refer to `DeviceProps` documentation.
+
+* `CanvasContext`
+
+  * Now calculates exact "device pixel content box" size enabling pixel perfect sized drawing buffers (no moire etc).
+  * Now tracks size, visibility and DPR changes (see the new `DeviceProps` callbacks).
+
+* `Texture`
+
+  * Textures are now immutable and synchronous. See upgrade guide, and the new `DynamicTexture` class in `@luma.gl/engine`.
+  * `Texture.copyExternalImage()` New function that works on both WebGPU and WebGL.
+  * `Texture.copyImageData()` New function that works on both WebGPU and WebGL.
+
+* `Sampler`
+  * `SamplerProps.mipmapFilter` New value `'none'` providing more explicit control over mipmap filtering.
+
+* `RenderPipeline`
+  * `Parameters.blend` - New parameter that provides more explicit control over color blending activation.
+
+* `RenderPass`
+  * `RenderPassProps.clearColors` - New prop enables specification of clear colors for multiple color attachments.
+
+**@luma.gl/engine**
+
+* `makeAnimationLoopTemplate`
+  * Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
+* [`DynamicTexture`](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md)
+  * New class allows that applications to work withcreate textures from a Promise.
+* `ShaderPassRenderer`
+  * New class that helps applications apply a `ShaderPass` list to a texture.
+
+**@luma.gl/shadertools**
+
+* \[`ShaderModule](/docs/api-reference/shadertools/shader-module)`
+
+  * New improvements to type safety, in particular for uniforms and bindings.
+  * New simplified API, no longer required to instantiate modules into `ShaderModuleInstances`.
+
+* `getShaderModuleUniforms(module: ShaderModule, ...)` New function
+
+* `getShaderModuleDependencies(module: ShaderModule)` New function
+
+**@luma.gl/webgl**
+
+* `webglAdapter`
+
+  * New object representing the WebGL backend
+  * New: adds mock WEBGL1 extensions to WebGL2 contexts for better compatibility with old WebGL libraries
+  * Big texture refactor to align WebGL implementation with WebGPU APIs
+
+* `RenderPipeline`
+  * WebGL render pipelines now support frame buffers with multiple color attachments.
+
+* `RenderPass`
+  * Now supports framebuffers with multiple color attachments.
+
+**@luma.gl/webgpu**
+
+* `webgpuAdapter` New object representing the WebGPU backend
+* Numerous under-the-hood improvements and bug fixes
+
+## Version 9.0[​](#version-90 "Direct link to Version 9.0")
+
+Target Date: Feb 2024
+
+caution
+
+luma.gl v9 contains significant API changes and requires existing luma.gl v8 applications to be [upgraded](https://luma.gl/next/docs/upgrade-guide.md).
+
+luma.gl v9 is a major release that adds experimental WebGPU support to the luma.gl API.
+
+### WebGPU Support[​](#webgpu-support "Direct link to WebGPU Support")
+
+The biggest change is that the core API is now portable (no longer WebGL-specific), and plug-in backends are provided for WebGL 2 and WebGPU:
+
+* **Portable GPU API**: `@luma.gl/core` now provides a portable GPU resource management API.
+* **WebGL bindings**: `@luma.gl/webgl` now provides a WebGL backend for the core API.
+* **WebGPU bindings**: `@luma.gl/webgpu` provides a new experimental WebGPU backend for the core API.
+
+### WebGL Support[​](#webgl-support "Direct link to WebGL Support")
+
+luma.gl v9 drops support for WebGL 1 functionality.
+
+* **WebGL1** WebGL 1 support is dropped.
+* **GLSL 1.00** is no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
+* **headless-gl** The Node.js WebGL 1 integration is no longer supported
+
+On the upside this means that all features requiring WebGL 2 are now available and luma.gl also brings support for a range of new WebGL 2 extensions, see more below.
+
+### New module structure[​](#new-module-structure "Direct link to New module structure")
+
+| Module                     | Impact            | Description                                                                                                     |
+| -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| **`@luma.gl/core`**        | New API           | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
+| **`@luma.gl/engine`**      | Light API updates | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
+| **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
+| **`@luma.gl/shadertools`** | Light API updates | The shader assembler API and the shader module library.                                                         |
+| **`@luma.gl/webgl`**       | WebGL backend     | Optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s.       |
+| **`@luma.gl/webgpu`**      | WebGPU backend    | Experimental "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.    |
+
+### General improvements[​](#general-improvements "Direct link to General improvements")
+
+* **TypeScript**: All APIs now rigorously typed.
+* **ES modules** - Modern ES module and CommonJS entry points for maximum interoperability.
+* **Website** - New Docusaurus website with more embedded live examples and improved documentation.
+* **Debugging** - SpectorJS integration. Shader debugger UI.
+
+### New features[​](#new-features "Direct link to New features")
+
+**`@luma.gl/core`**
+
+* Exports the new `Device` class is the entry point to the luma.gl API, used to create other GPU resources.
+
+**`@luma.gl/engine`**
+
+* NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`, moved from `@luma.gl/experimental`.
+* NEW: `ShaderInputs` - Class that manages uniform buffers for a `Model`
+* NEW: `ShaderFactory` - Creates and caches reusable `Shader` resources
+* NEW: `AnimationLoopTemplate` - Helper class for writing cleaner demos and applications in TypeScript.
+* New `Computation` - Class that manages a `ComputePipeline` similar to `Model` and `Transform`.
+
+**`@luma.gl/gltf`**
+
+* New module that exports the glTF classes (moved from `@luma.gl/experimental`).
+
+**`@luma.gl/shadertools`**
+
+* All shader modules now use uniform buffers.
+* New `ShaderAssembler` class that provides a clean entry point to the shader module system.
+* New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
+* Shader assembly now supports WGSL and single shader source (compute or single vertex+fragment WGSL shaders)
+
+**`@luma.gl/webgl`**
+
+* The new bindings API now supports WebGL 2 Uniform Buffers.
+
+WebGL 2 Extension support: WebGL is not dead yet! Browsers (Chrome in particular) are actively developing "extensions" for WebGL 2, and luma.gl is exposing support for many of the new WebGL extensions through the [`DeviceFeatures`](https://luma.gl/next/docs/api-reference/core/device-features.md) API.
+
+New `Device.features` that improve application performance in WebGL:
+
+* `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically by luma.gl and significantly speeds up applications that create many `RenderPipelines`.
+
+New `Device.features` that enable additional color format support in WebGL:
+
+* `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` is renderable.
+* `snorm8-renderable-webgl`: `r,rg,rgba8snorm` are renderable.
+* `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable.
+* `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
+
+New `Device.features` that expose new GPU parameters in WebGL:
+
+* `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled.
+* `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading.
+* `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons.
+* `polygon-mode-webgl`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines.
+* `shader-clip-cull-distance-webgl`: `parameters.clipCullDistance0-7`, also see GLSL effects below.
+
+New `Device.features` that enable new GLSL syntax
+
+* `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
+* `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
+* `shader-clip-cull-distance-webgl`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.

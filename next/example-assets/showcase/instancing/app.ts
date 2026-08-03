@@ -48,6 +48,7 @@ struct AppUniforms {
   projectionMatrix: mat4x4<f32>,
   geometryScale: f32,
   time: f32,
+  highDynamicRange: f32,
 };
 
 @group(0) @binding(auto) var<uniform> app : AppUniforms;
@@ -66,8 +67,10 @@ struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) normal : vec3<f32>,
   @location(1) color : vec4<f32>,
+  @location(2) crestEnergy : f32,
+  @location(3) centerWeight : f32,
   @interpolate(flat, either)
-  @location(2) objectIndex : i32,
+  @location(4) objectIndex : i32,
 }
 
 struct PickingFragmentOutputs {
@@ -81,12 +84,15 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   let delta = length(inputs.instanceOffsets);
-  let offset = vec4<f32>(inputs.instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
+  let wave = sin((app.time + delta) * 0.1);
+  let offset = vec4<f32>(inputs.instanceOffsets, wave * 16.0, 0);
   let scaledPosition = vec4<f32>(inputs.positions.xyz * app.geometryScale, inputs.positions.w);
   outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
 
   outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
   outputs.color = inputs.instanceColors;
+  outputs.crestEnergy = smoothstep(-0.5, 1.0, wave) * app.highDynamicRange;
+  outputs.centerWeight = 1.0 - smoothstep(0.0, 450.0, delta);
   outputs.objectIndex = i32(inputs.instanceIndex);
 
   return outputs;
@@ -96,6 +102,18 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   var fragColor = inputs.color;
   fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal));
+  let luminance = dot(fragColor.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
+  let wideGamutColor = clamp(
+    vec3<f32>(luminance) + (fragColor.rgb - vec3<f32>(luminance)) * 1.28,
+    vec3<f32>(0.0),
+    vec3<f32>(1.0)
+  );
+  let crestIntensity = mix(1.5, 3.0, inputs.centerWeight);
+  fragColor = vec4<f32>(
+    mix(fragColor.rgb, wideGamutColor, app.highDynamicRange) *
+      (1.0 + inputs.crestEnergy * crestIntensity),
+    fragColor.a
+  );
   fragColor = picking_filterHighlightColor(fragColor, inputs.objectIndex);
   return fragColor;
 }
@@ -128,9 +146,12 @@ uniform appUniforms {
   mat4 projectionMatrix;
   float geometryScale;
   float time;
+  float highDynamicRange;
 } app;
 
 out vec3 color;
+out float crestEnergy;
+out float centerWeight;
 
 void main(void) {
   color = instanceColors;
@@ -141,7 +162,10 @@ void main(void) {
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
-  vec4 offset = vec4(instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
+  float wave = sin((app.time + delta) * 0.1);
+  vec4 offset = vec4(instanceOffsets, wave * 16.0, 0);
+  crestEnergy = smoothstep(-0.5, 1.0, wave) * app.highDynamicRange;
+  centerWeight = 1.0 - smoothstep(0.0, 450.0, delta);
   vec4 scaledPosition = vec4(positions * app.geometryScale, 1.0);
   gl_Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
 }
@@ -153,11 +177,22 @@ precision highp float;
 precision highp int;
 
 in vec3 color;
+in float crestEnergy;
+in float centerWeight;
 out vec4 fragColor;
 
 void main(void) {
   fragColor = vec4(color, 1.);
   fragColor = dirlight_filterColor(fragColor);
+  float luminance = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+  vec3 wideGamutColor = clamp(
+    vec3(luminance) + (fragColor.rgb - vec3(luminance)) * 1.28,
+    vec3(0.0),
+    vec3(1.0)
+  );
+  float crestIntensity = mix(1.5, 3.0, centerWeight);
+  fragColor.rgb = mix(fragColor.rgb, wideGamutColor, app.highDynamicRange) *
+    (1.0 + crestEnergy * crestIntensity);
   fragColor = picking_filterColor(fragColor);
 }
 `;
@@ -306,6 +341,7 @@ type AppUniforms = {
   projectionMatrix: Matrix4;
   geometryScale: number;
   time: number;
+  highDynamicRange: number;
 };
 
 const app: ShaderModule<AppUniforms> = {
@@ -315,7 +351,8 @@ const app: ShaderModule<AppUniforms> = {
     viewMatrix: 'mat4x4<f32>',
     projectionMatrix: 'mat4x4<f32>',
     geometryScale: 'f32',
-    time: 'f32'
+    time: 'f32',
+    highDynamicRange: 'f32'
   }
 };
 
@@ -328,6 +365,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cube: InstancedCube;
   pickingCube: Model | null = null;
   instanceSide = loadStoredInstanceSide();
+  highDynamicRange: boolean;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
   timeline: Timeline;
@@ -347,6 +385,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.device = device;
+    this.highDynamicRange = device.preferredColorFormat === 'rgba16float';
     this.timeline = new Timeline();
     animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
@@ -367,8 +406,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'showcase-instancing-settings',
-      schema: makeInstancingSettingsSchema(),
-      settings: {instanceSide: this.instanceSide},
+      schema: makeInstancingSettingsSchema(this.device.preferredColorFormat === 'rgba16float'),
+      settings: {
+        instanceSide: this.instanceSide,
+        highDynamicRange: this.highDynamicRange
+      },
       onSettingsChange: this.handleSettingsChange
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
@@ -383,6 +425,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       app: {
         geometryScale: getInstanceScale(this.instanceSide),
         time: this.timeline.getTime(timeChannel),
+        highDynamicRange: this.highDynamicRange ? 1 : 0,
         // Basic projection matrix
         projectionMatrix: new Matrix4().perspective({
           fovy: radians(60),
@@ -466,6 +509,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           title: '',
           html: `\
           <p>A luma.gl <code>Cube</code>, rendering up to 4,194,304 instances in a single GPU draw call using instanced vertex attributes.</p>
+          <p>${
+            this.device.preferredColorFormat === 'rgba16float'
+              ? 'HDR is available: wave crests use extended luminance and Display P3 color.'
+              : 'HDR presentation requires WebGPU and a compatible display. Standard rendering remains available everywhere.'
+          }</p>
           `
         }),
         this.settingsPanel.makePanel()
@@ -480,6 +528,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const instanceSide = getChangedSetting(changedSettings, 'instanceSide')?.nextValue;
     if (typeof instanceSide === 'number') {
       this.handleInstanceSideChange(instanceSide);
+    }
+    const highDynamicRange = getChangedSetting(changedSettings, 'highDynamicRange')?.nextValue;
+    if (typeof highDynamicRange === 'boolean') {
+      this.highDynamicRange = highDynamicRange;
     }
   };
 
@@ -497,7 +549,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-function makeInstancingSettingsSchema(): SettingsSchema {
+function makeInstancingSettingsSchema(highDynamicRangeAvailable: boolean): SettingsSchema {
   return {
     title: 'Settings',
     sections: [
@@ -515,7 +567,17 @@ function makeInstancingSettingsSchema(): SettingsSchema {
               label: `${instanceSide} x ${instanceSide} (${formatInstanceCount(instanceSide)} cubes)`,
               value: instanceSide
             }))
-          }
+          },
+          ...(highDynamicRangeAvailable
+            ? [
+                {
+                  name: 'highDynamicRange',
+                  label: 'HDR Highlights',
+                  type: 'boolean' as const,
+                  persist: 'none' as const
+                }
+              ]
+            : [])
         ]
       }
     ]

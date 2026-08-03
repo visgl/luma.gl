@@ -1,0 +1,131 @@
+# GPU Memory Layouts
+
+[GPU Memory](https://luma.gl/next/docs/api-guide/gpu/gpu-memory.md)[GPU Buffers](https://luma.gl/next/docs/api-guide/gpu/gpu-buffers.md)[Memory Layouts](https://luma.gl/next/docs/api-guide/gpu/gpu-memory-layouts.md)[Storage Buffers](https://luma.gl/next/docs/api-guide/gpu/gpu-storage-buffers.md)
+
+GPU buffers are byte ranges. A layout describes how shader-visible rows and columns are mapped onto those bytes.
+
+For the WGSL-facing difference between vertex-fetch layouts and storage-buffer layouts, see [Tabular Data in WGSL](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md).
+
+When one existing GPU buffer contains logical records with several named field views, an inline `GPUData` struct declaration retains the physical row description and exposes borrowed children through `GPUData.getChild()`. `getBufferLayoutFromGPUDataStructFormat()` lowers the canonical format into `BufferLayout.attributes`, their byte offsets, and a shared `byteStride`.
+
+This page uses three layout terms:
+
+* **Packed** - one logical column in one tightly packed buffer.
+* **Interleaved** - multiple columns share one buffer, with each row storing all columns together.
+* **Segmented** - multiple packed columns share one buffer, stored as separate contiguous byte ranges.
+
+## Layout Shapes[​](#layout-shapes "Direct link to Layout Shapes")
+
+### Packed[​](#packed "Direct link to Packed")
+
+A packed buffer stores one column with no unrelated data between rows.
+
+```
+positions buffer
+row 0: position
+row 1: position
+row 2: position
+```
+
+Use packed layout when a column is updated, transferred, or bound independently.
+
+### Interleaved[​](#interleaved "Direct link to Interleaved")
+
+An interleaved buffer stores multiple columns inside each row.
+
+```
+instance buffer
+row 0: position, color, radius
+row 1: position, color, radius
+row 2: position, color, radius
+```
+
+Use interleaved layout when columns are usually consumed together by a render or transform pipeline.
+
+### Segmented[​](#segmented "Direct link to Segmented")
+
+A segmented buffer stores multiple packed columns in one buffer.
+
+```
+table buffer
+segment 0: position row 0, position row 1, position row 2
+segment 1: color row 0, color row 1, color row 2
+segment 2: radius row 0, radius row 1, radius row 2
+```
+
+Use segmented layout when a table should have one allocation but columns should remain columnar for storage-buffer access.
+
+## Terminology[​](#terminology "Direct link to Terminology")
+
+| Term        | Columns per buffer | Row layout                                   | Column layout          | Typical use                                |
+| ----------- | ------------------ | -------------------------------------------- | ---------------------- | ------------------------------------------ |
+| Packed      | 1                  | One column value per row                     | Contiguous             | Independent attributes, storage arrays     |
+| Interleaved | Many               | All column values per row                    | Strided                | Vertex attributes consumed together        |
+| Segmented   | Many               | One column value per row inside each segment | Contiguous per segment | Storage-buffer tables, grouped allocations |
+
+`Packed` and `segmented` are both columnar. The difference is allocation: packed uses one buffer per column, while segmented stores several packed columns in one buffer.
+
+`Interleaved` and `segmented` both store multiple columns in one buffer. The difference is order: interleaved is row-major, while segmented is column-major.
+
+## GPU Pipeline Compatibility[​](#gpu-pipeline-compatibility "Direct link to GPU Pipeline Compatibility")
+
+| Layout      | Render vertex attributes                                    | WebGL transform feedback                | WebGPU compute storage buffers     | Buffer copy commands                     |
+| ----------- | ----------------------------------------------------------- | --------------------------------------- | ---------------------------------- | ---------------------------------------- |
+| Packed      | Direct                                                      | Direct                                  | Direct                             | Direct                                   |
+| Interleaved | Direct with `BufferLayout.attributes`                       | Direct as input or output, not in-place | Usable with explicit strided reads | Row ranges are not contiguous per column |
+| Segmented   | Usable as separate attribute bindings into one buffer range | Usable with explicit offsets            | Direct for columnar storage reads  | Column segments are contiguous           |
+
+Render pipelines use `BufferLayout` and vertex formats to interpret bytes. This supports normalized attributes such as `unorm8x4` because vertex fetch converts them to shader-visible values.
+
+The `packed` mode for an inline `GPUData` struct format follows WebGPU vertex layout requirements: field offsets are aligned to `min(4, format byte length)` and the row stride is a multiple of four. Small formats can therefore use one- or two-byte alignment, while the complete row can still be bound as a vertex buffer. These are WebGPU vertex-fetch rules rather than a `wgsl-vertex` memory layout.
+
+Compute pipelines use storage bindings. They read raw storage values, so normalized formats are not decoded unless the compute shader does that work explicitly.
+
+## luma.gl Concepts[​](#lumagl-concepts "Direct link to luma.gl Concepts")
+
+| Concept                                                                               | Packed                        | Interleaved                                        | Segmented                                      |
+| ------------------------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------- | ---------------------------------------------- |
+| `Buffer`                                                                              | One buffer per column         | One buffer for several columns                     | One buffer for several column segments         |
+| `BufferLayout`                                                                        | `name` plus `format`          | `attributes` with offsets and shared `byteStride`  | Multiple layouts or explicit segment metadata  |
+| `GPUData`                                                                             | One fixed-width format        | `GPUDataStructFormat` with named child views       | Explicit segment views                         |
+| [`GPUDataView`](https://luma.gl/next/docs/api-reference/tables/gpu-data-view.md) | Contiguous borrowed values    | Strided borrowed child or attribute values         | Contiguous borrowed values at a segment offset |
+| `GPUVector`                                                                           | One logical vector format     | Explicit interleaved construction                  | Numeric view plus segment metadata             |
+| `GPURecordBatch`                                                                      | Named packed `GPUData` chunks | Named chunks with producer-supplied `BufferLayout` | Named borrowed segment chunks                  |
+| `GPUTable`                                                                            | Multiple vectors              | Interleaved vector contributes multiple attributes | Future table layout can map names to segments  |
+
+`GPUDataView` describes physical fixed-width values without owning their buffer. `GPURecordBatch` groups named `GPUData` chunks and their layouts but does not choose or change the underlying memory layout.
+
+## Operation Patterns[​](#operation-patterns "Direct link to Operation Patterns")
+
+| Operation      | Packed input                   | Interleaved input                              | Segmented input                            |
+| -------------- | ------------------------------ | ---------------------------------------------- | ------------------------------------------ |
+| `add`          | Direct                         | Deinterleave or use strided shader reads       | Direct by segment                          |
+| `interleave`   | Produces an interleaved buffer | Appends or rebuilds interleaved rows           | Reads segments and writes row-major output |
+| `deinterleave` | No-op or copy                  | Extracts one attribute to a packed buffer      | Selects or copies one segment              |
+| `fround`       | Direct for packed `Float64`    | Requires attribute extraction or strided reads | Direct by segment                          |
+
+In-place operations require stricter ownership and aliasing rules. They are practical with WebGPU read-write storage buffers when the input and output have compatible byte layouts. They are not a good fit for WebGL transform feedback, where input and output buffers should not alias.
+
+## Choosing a Layout[​](#choosing-a-layout "Direct link to Choosing a Layout")
+
+| Need                                                             | Prefer                                  |
+| ---------------------------------------------------------------- | --------------------------------------- |
+| Bind one attribute independently                                 | Packed                                  |
+| Minimize vertex-buffer bindings for attributes consumed together | Interleaved                             |
+| Keep table columns in one allocation for compute                 | Segmented                               |
+| Use normalized vertex formats                                    | Packed or interleaved render attributes |
+| Run compute over raw storage values                              | Packed or segmented                     |
+| Extract one column frequently                                    | Packed or segmented                     |
+
+## Arrow Notes[​](#arrow-notes "Direct link to Arrow Notes")
+
+Arrow is naturally columnar. A normal Arrow column maps cleanly to a packed GPU vector.
+
+Interleaved GPU buffers do not map to a single numeric Arrow column. In luma.gl they are represented as `GPUVector<Binary>` with `bufferLayout` metadata describing the attributes inside each row.
+
+Segmented buffers are still columnar, but the columns share one GPU allocation. They need table-level segment metadata so each column name can resolve to a buffer, byte offset, row count, row stride, and Arrow type.
+
+## Related References[​](#related-references "Direct link to Related References")
+
+* [GPU Tables](https://luma.gl/next/docs/api-guide/gpu/gpu-tables.md)
+* [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md)

@@ -1,0 +1,162 @@
+# Shader Hooks
+
+[Modules](https://luma.gl/next/docs/tutorials/shader-modules.md)[Hooks](https://luma.gl/next/docs/tutorials/shader-hooks.md)[Plugins](https://luma.gl/next/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/next/docs/tutorials/lighting.md)
+
+Shader hooks let shader modules inject code into designated points in a shader. This example defines an `OFFSET_POSITION` hook that two modules use to shift geometry left or right.
+
+<!-- -->
+
+It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
+
+Hooks act like named callbacks within shader code. The base vertex shader calls `OFFSET_POSITION`, and modules supply implementations that modify the position. By attaching different modules to each model, one triangle is nudged left while the other is pushed right.
+
+The complete source for this example is shown below:
+
+```
+import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, Model, makeAnimationLoop} from '@luma.gl/engine';
+import {ShaderAssembler} from '@luma.gl/shadertools';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
+
+// Base vertex and fragment shader code
+const vs = `\
+#version 300 es
+
+in vec2 position;
+
+void main() {
+  gl_Position = vec4(position, 0.0, 1.0);
+  OFFSET_POSITION(gl_Position);
+}
+`;
+
+const fs = `\
+#version 300 es
+
+uniform appUniforms {  
+  vec3 color;
+} app;
+
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(app.color, 1.0);
+}
+`;
+
+const offsetLeftModule = {
+  name: 'offsetLeft',
+  inject: {
+    'vs:OFFSET_POSITION': 'position.x -= 0.5;'
+  }
+};
+
+const offsetRightModule = {
+  name: 'offsetRight',
+  inject: {
+    'vs:OFFSET_POSITION': 'position.x += 0.5;'
+  }
+};
+
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  model1: Model;
+  model2: Model;
+  positionBuffer: Buffer;
+  uniformBuffer1: Buffer;
+  uniformBuffer2: Buffer;
+
+  uniformStore = new UniformStore<{
+    app: {
+      color: NumberArray;
+    };
+  }>({
+    app: {
+      uniformTypes: {
+        color: 'vec3<f32>'
+      }
+    }
+  });
+
+  constructor({device, animationLoop}: AnimationProps) {
+    super();
+
+    if (device.type !== 'webgl') {
+      throw new Error('This demo is only implemented for WebGL2');
+    }
+
+    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+    shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+
+    this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+
+    this.uniformBuffer1 = this.uniformStore.createUniformBuffer(device, 'app', {
+      app: {
+        color: [1, 0, 0]
+      }
+    });
+
+    const uniformBufferData = this.uniformStore.getUniformBufferData('app');
+    this.uniformBuffer1.write(uniformBufferData);
+
+    this.uniformBuffer2 = this.uniformStore.createUniformBuffer(device, 'app', {
+      app: {
+        color: [0, 0, 1]
+      }
+    });
+
+    this.model1 = new Model(device, {
+      vs,
+      fs,
+      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
+      modules: [offsetLeftModule],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
+      attributes: {
+        position: this.positionBuffer
+      },
+      vertexCount: 3,
+      bindings: {
+        app: this.uniformBuffer1
+      }
+    });
+
+    this.model2 = new Model(device, {
+      vs,
+      fs,
+      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
+      modules: [offsetRightModule],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
+      vertexCount: 3,
+      attributes: {
+        position: this.positionBuffer
+      },
+      bindings: {
+        app: this.uniformBuffer2
+      }
+    });
+  }
+
+  onFinalize() {
+    this.model1.destroy();
+    this.model2.destroy();
+    this.positionBuffer.destroy();
+    this.uniformStore.destroy();
+    this.uniformBuffer1.destroy();
+    this.uniformBuffer2.destroy();
+  }
+
+  onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model1.draw(renderPass);
+    this.model2.draw(renderPass);
+    renderPass.end();
+  }
+}
+
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
+animationLoop.start();
+```
+
+The `ShaderAssembler` gathers hook implementations from attached modules and patches them into the base shader at build time. Hooks allow modules to customize behavior without modifying original shader sources.

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-experimental-shadow-map",
-  "version": "9.4.0-alpha.2",
+  "version": "9.4.0-alpha.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,15 +10,15 @@
   },
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@luma.gl/core": "9.4.0-alpha.2",
-    "@luma.gl/engine": "9.4.0-alpha.2",
-    "@luma.gl/experimental": "9.4.0-alpha.2",
-    "@luma.gl/shadertools": "9.4.0-alpha.2",
-    "@luma.gl/webgpu": "9.4.0-alpha.2",
+    "@luma.gl/core": "9.4.0-alpha.3",
+    "@luma.gl/engine": "9.4.0-alpha.3",
+    "@luma.gl/experimental": "9.4.0-alpha.3",
+    "@luma.gl/shadertools": "9.4.0-alpha.3",
+    "@luma.gl/webgpu": "9.4.0-alpha.3",
     "@math.gl/core": "^4.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vite": "^8.0.0"
   }
 }
