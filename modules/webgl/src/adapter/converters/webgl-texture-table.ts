@@ -118,7 +118,7 @@ function hasTextureFeature(
 
 /** Map a format to webgl and constants */
 type WebGLFormatInfo = {
-  gl?: GL;
+  gl?: number;
   /** compressed */
   x?: string;
   /** color-renderable capability gate. false means never color-renderable on WebGL. */
@@ -417,7 +417,7 @@ function isColorRenderableTextureFormat(
 
 /** Get parameters necessary to work with format in WebGL: internalFormat, dataFormat, type, compressed, */
 export function getTextureFormatWebGL(format: TextureFormat): {
-  internalFormat: GL;
+  internalFormat: number;
   format: GLTexelDataFormat;
   type: GLPixelType;
   compressed: boolean;
@@ -446,7 +446,7 @@ export function getTextureFormatWebGL(format: TextureFormat): {
 
 export function getDepthStencilAttachmentWebGL(
   format: TextureFormat
-): GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT {
+): typeof GL.DEPTH_ATTACHMENT | typeof GL.STENCIL_ATTACHMENT | typeof GL.DEPTH_STENCIL_ATTACHMENT {
   const formatInfo = textureFormatDecoder.getInfo(format);
   switch (formatInfo.attachment) {
     case 'depth':
@@ -472,7 +472,7 @@ export function getWebGLPixelDataFormat(
   channels: 'r' | 'rg' | 'rgb' | 'rgba' | 'bgra',
   integer: boolean,
   normalized: boolean,
-  format: GL
+  format: number
 ): GLTexelDataFormat {
   // WebGL1 formats use same internalFormat
   if (format === GL.RGBA || format === GL.RGB) {
@@ -492,7 +492,7 @@ export function getWebGLPixelDataFormat(
 /**
  * Map WebGPU style texture format strings to GL constants
  */
-function convertTextureFormatToGL(format: TextureFormat): GL {
+function convertTextureFormatToGL(format: TextureFormat): number {
   const formatInfo = WEBGL_TEXTURE_FORMATS[format];
   const webglFormat = formatInfo?.gl;
   if (webglFormat === undefined) {

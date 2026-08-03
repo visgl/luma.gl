@@ -46,14 +46,14 @@ export class WebGLDeviceLimits extends DeviceLimits {
   // PRIVATE
 
   protected gl: WebGL2RenderingContext;
-  protected limits: Partial<Record<GL, number>> = {};
+  protected limits: Partial<Record<number, number>> = {};
 
   constructor(gl: WebGL2RenderingContext) {
     super();
     this.gl = gl;
   }
 
-  protected getParameter(parameter: GL): number {
+  protected getParameter(parameter: number): number {
     if (this.limits[parameter] === undefined) {
       this.limits[parameter] = this.gl.getParameter(parameter);
     }

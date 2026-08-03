@@ -74,13 +74,13 @@ export function getVertexCount(options: {
 export function getGLDrawMode(
   topology: PrimitiveTopology
 ):
-  | GL.POINTS
-  | GL.LINES
-  | GL.LINE_STRIP
-  | GL.LINE_LOOP
-  | GL.TRIANGLES
-  | GL.TRIANGLE_STRIP
-  | GL.TRIANGLE_FAN {
+  | typeof GL.POINTS
+  | typeof GL.LINES
+  | typeof GL.LINE_STRIP
+  | typeof GL.LINE_LOOP
+  | typeof GL.TRIANGLES
+  | typeof GL.TRIANGLE_STRIP
+  | typeof GL.TRIANGLE_FAN {
   // biome-ignore format: preserve layout
   switch (topology) {
     case 'point-list': return GL.POINTS;
@@ -93,7 +93,9 @@ export function getGLDrawMode(
 }
 
 /** Get the primitive type for transform feedback */
-export function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.TRIANGLES {
+export function getGLPrimitive(
+  topology: PrimitiveTopology
+): typeof GL.POINTS | typeof GL.LINES | typeof GL.TRIANGLES {
   // biome-ignore format: preserve layout
   switch (topology) {
     case 'point-list': return GL.POINTS;

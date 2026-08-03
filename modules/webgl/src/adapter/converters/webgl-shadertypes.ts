@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {VariableShaderType, SignedDataType, VertexFormat, NormalizedDataType} from '@luma.gl/core';
-import {GL, GLUniformType, GLSamplerType, GLDataType} from '@luma.gl/webgl/constants';
+import {GL, GLSamplerType, GLDataType} from '@luma.gl/webgl/constants';
 
 export type TextureBindingInfo = {
   viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
@@ -17,21 +17,19 @@ export function convertDataTypeToGLDataType(normalizedType: NormalizedDataType):
 
 /** Convert a WebGL "compisite type (e.g. GL.VEC3) into the corresponding luma shader uniform type */
 export function convertGLUniformTypeToShaderVariableType(
-  glUniformType: GLUniformType
+  glUniformType: number
 ): VariableShaderType {
   return WEBGL_SHADER_TYPES[glUniformType];
 }
 
 /** Check if a WebGL "uniform:" is a texture binding */
-export function isGLSamplerType(type: GLUniformType | GLSamplerType): type is GLSamplerType {
+export function isGLSamplerType(type: number): type is GLSamplerType {
   // @ts-ignore TODO
   return Boolean(WEBGL_SAMPLER_TO_TEXTURE_BINDINGS[type]);
 }
 
 /* Get luma texture binding info (viewDimension and sampleType) from a WebGL "sampler" binding */
-export function getTextureBindingFromGLSamplerType(
-  glSamplerType: GLSamplerType
-): TextureBindingInfo {
+export function getTextureBindingFromGLSamplerType(glSamplerType: number): TextureBindingInfo {
   return WEBGL_SAMPLER_TO_TEXTURE_BINDINGS[glSamplerType];
 }
 
@@ -58,7 +56,7 @@ export function getVertexTypeFromGL(glType: GLDataType, normalized = false): Nor
 
 // Composite types table
 // @ts-ignore TODO - fix the type confusion here
-const WEBGL_SHADER_TYPES: Record<GLUniformType, VariableShaderType> = {
+const WEBGL_SHADER_TYPES: Record<number, VariableShaderType> = {
   [GL.FLOAT]: 'f32',
   [GL.FLOAT_VEC2]: 'vec2<f32>',
   [GL.FLOAT_VEC3]: 'vec3<f32>',
@@ -93,7 +91,7 @@ const WEBGL_SHADER_TYPES: Record<GLUniformType, VariableShaderType> = {
   [GL.FLOAT_MAT4]: 'mat4x4<f32>'
 };
 
-const WEBGL_SAMPLER_TO_TEXTURE_BINDINGS: Record<GLSamplerType, TextureBindingInfo> = {
+const WEBGL_SAMPLER_TO_TEXTURE_BINDINGS: Record<number, TextureBindingInfo> = {
   [GL.SAMPLER_2D]: {viewDimension: '2d', sampleType: 'float'},
   [GL.SAMPLER_CUBE]: {viewDimension: 'cube', sampleType: 'float'},
   [GL.SAMPLER_3D]: {viewDimension: '3d', sampleType: 'float'},

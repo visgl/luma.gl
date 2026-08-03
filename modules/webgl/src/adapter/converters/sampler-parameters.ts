@@ -58,7 +58,7 @@ export function convertSamplerParametersToWebGL(props: SamplerProps): GLSamplerP
 /** Convert address more */
 function convertAddressMode(
   addressMode: 'clamp-to-edge' | 'repeat' | 'mirror-repeat'
-): GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT {
+): typeof GL.CLAMP_TO_EDGE | typeof GL.REPEAT | typeof GL.MIRRORED_REPEAT {
   switch (addressMode) {
     case 'clamp-to-edge':
       return GL.CLAMP_TO_EDGE;
@@ -69,7 +69,9 @@ function convertAddressMode(
   }
 }
 
-function convertMaxFilterMode(maxFilter: 'nearest' | 'linear'): GL.NEAREST | GL.LINEAR {
+function convertMaxFilterMode(
+  maxFilter: 'nearest' | 'linear'
+): typeof GL.NEAREST | typeof GL.LINEAR {
   switch (maxFilter) {
     case 'nearest':
       return GL.NEAREST;
@@ -86,12 +88,12 @@ function convertMinFilterMode(
   minFilter: 'nearest' | 'linear',
   mipmapFilter: 'none' | 'nearest' | 'linear' = 'none'
 ):
-  | GL.NEAREST
-  | GL.LINEAR
-  | GL.NEAREST_MIPMAP_NEAREST
-  | GL.LINEAR_MIPMAP_NEAREST
-  | GL.NEAREST_MIPMAP_LINEAR
-  | GL.LINEAR_MIPMAP_LINEAR {
+  | typeof GL.NEAREST
+  | typeof GL.LINEAR
+  | typeof GL.NEAREST_MIPMAP_NEAREST
+  | typeof GL.LINEAR_MIPMAP_NEAREST
+  | typeof GL.NEAREST_MIPMAP_LINEAR
+  | typeof GL.LINEAR_MIPMAP_LINEAR {
   if (!mipmapFilter) {
     return convertMaxFilterMode(minFilter);
   }

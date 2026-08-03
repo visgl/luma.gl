@@ -310,7 +310,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   // const prevBuffer = gl.readBuffer(attachment);
 
   let texture: WEBGLTexture;
-  let textureTarget: GL;
+  let textureTarget: number;
   if (destinationTexture instanceof WEBGLTexture) {
     texture = destinationTexture;
     width = Number.isFinite(width) ? width : texture.width;
@@ -411,8 +411,17 @@ export function getWebGLCubeFaceTarget(
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
   level: number
 ): GLTextureTarget | GLTextureCubeMapTarget {
-  return dimension === 'cube' ? GL.TEXTURE_CUBE_MAP_POSITIVE_X + level : glTarget;
+  return dimension === 'cube' ? CUBE_MAP_FACES[level] : glTarget;
 }
+
+const CUBE_MAP_FACES = [
+  GL.TEXTURE_CUBE_MAP_POSITIVE_X,
+  GL.TEXTURE_CUBE_MAP_NEGATIVE_X,
+  GL.TEXTURE_CUBE_MAP_POSITIVE_Y,
+  GL.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+  GL.TEXTURE_CUBE_MAP_POSITIVE_Z,
+  GL.TEXTURE_CUBE_MAP_NEGATIVE_Z
+] as const;
 
 /** Wrap a texture in a framebuffer so that we can use WebGL APIs that work on framebuffers */
 function getFramebuffer(source: Texture | Framebuffer): {
@@ -437,7 +446,7 @@ function getFramebuffer(source: Texture | Framebuffer): {
  * Returns number of components in a specific readPixels WebGL format
  * @todo use shadertypes utils instead?
  */
-export function glFormatToComponents(format: GL): 1 | 2 | 3 | 4 {
+export function glFormatToComponents(format: number): 1 | 2 | 3 | 4 {
   switch (format) {
     case GL.ALPHA:
     case GL.R32F:
@@ -462,7 +471,7 @@ export function glFormatToComponents(format: GL): 1 | 2 | 3 | 4 {
  * Return byte count for given readPixels WebGL type
  * @todo use shadertypes utils instead?
  */
-export function glTypeToBytes(type: GL): 1 | 2 | 4 {
+export function glTypeToBytes(type: number): 1 | 2 | 4 {
   switch (type) {
     case GL.UNSIGNED_BYTE:
       return 1;

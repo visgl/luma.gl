@@ -6,14 +6,14 @@ import {GL} from '@luma.gl/webgl/constants';
 import {VertexFormat, NormalizedDataType} from '@luma.gl/core';
 
 type GLDataType =
-  | GL.UNSIGNED_BYTE
-  | GL.BYTE
-  | GL.UNSIGNED_SHORT
-  | GL.SHORT
-  | GL.UNSIGNED_INT
-  | GL.INT
-  | GL.HALF_FLOAT
-  | GL.FLOAT;
+  | typeof GL.UNSIGNED_BYTE
+  | typeof GL.BYTE
+  | typeof GL.UNSIGNED_SHORT
+  | typeof GL.SHORT
+  | typeof GL.UNSIGNED_INT
+  | typeof GL.INT
+  | typeof GL.HALF_FLOAT
+  | typeof GL.FLOAT;
 
 /** Get vertex format from GL constants */
 export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 4): VertexFormat {
@@ -51,14 +51,14 @@ export function getVertexTypeFromGL(type: GLDataType, normalized = false): Norma
 export function getGLFromVertexType(
   dataType: NormalizedDataType
 ):
-  | GL.UNSIGNED_BYTE
-  | GL.BYTE
-  | GL.UNSIGNED_SHORT
-  | GL.SHORT
-  | GL.UNSIGNED_INT
-  | GL.INT
-  | GL.HALF_FLOAT
-  | GL.FLOAT {
+  | typeof GL.UNSIGNED_BYTE
+  | typeof GL.BYTE
+  | typeof GL.UNSIGNED_SHORT
+  | typeof GL.SHORT
+  | typeof GL.UNSIGNED_INT
+  | typeof GL.INT
+  | typeof GL.HALF_FLOAT
+  | typeof GL.FLOAT {
   // biome-ignore format: preserve layout
   switch (dataType) {
     case 'uint8': return GL.UNSIGNED_BYTE;

@@ -81,7 +81,7 @@ export class WEBGLFramebuffer extends Framebuffer {
 
     /** Check the status */
     if (this.device.props.debug) {
-      const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
+      const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as number;
       if (status !== GL.FRAMEBUFFER_COMPLETE) {
         throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
       }
@@ -110,7 +110,7 @@ export class WEBGLFramebuffer extends Framebuffer {
    * @param layer = 0 - index into WEBGLTextureArray and Texture3D or face for `TextureCubeMap`
    * @param level = 0 - mipmapLevel
    */
-  protected _attachTextureView(attachment: GL, textureView: WEBGLTextureView): void {
+  protected _attachTextureView(attachment: number, textureView: WEBGLTextureView): void {
     const {gl} = this.device;
     const {texture} = textureView;
     const level = textureView.props.baseMipLevel;
@@ -156,7 +156,7 @@ export class WEBGLFramebuffer extends Framebuffer {
 // Helper functions
 
 // Map an index to a cube map face constant
-function mapIndexToCubeMapFace(layer: number | GL): GL {
+function mapIndexToCubeMapFace(layer: number): number {
   // TEXTURE_CUBE_MAP_POSITIVE_X is a big value (0x8515)
   // if smaller assume layer is index, otherwise assume it is already a cube map face constant
   return layer < (GL.TEXTURE_CUBE_MAP_POSITIVE_X as number)
@@ -166,7 +166,7 @@ function mapIndexToCubeMapFace(layer: number | GL): GL {
 
 // Helper METHODS
 // Get a string describing the framebuffer error if installed
-function _getFrameBufferStatus(status: GL) {
+function _getFrameBufferStatus(status: number) {
   switch (status) {
     case GL.FRAMEBUFFER_COMPLETE:
       return 'success';

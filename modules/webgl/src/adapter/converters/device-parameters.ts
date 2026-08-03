@@ -373,7 +373,7 @@ export function convertToCompareFunction(parameter: string, value: GLFunction): 
   });
 }
 
-function convertStencilOperation(parameter: string, value: StencilOperation): GL {
+function convertStencilOperation(parameter: string, value: StencilOperation): number {
   return map<StencilOperation, GLStencilOp>(parameter, value, {
     keep: GL.KEEP,
     zero: GL.ZERO,

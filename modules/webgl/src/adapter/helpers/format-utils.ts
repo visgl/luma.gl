@@ -5,7 +5,7 @@
 import {GL} from '@luma.gl/webgl/constants';
 
 // Returns number of components in a specific readPixels WebGL format
-export function glFormatToComponents(format: GL): 0 | 1 | 2 | 3 | 4 {
+export function glFormatToComponents(format: number): 0 | 1 | 2 | 3 | 4 {
   switch (format) {
     case GL.ALPHA:
     case GL.R32F:
@@ -33,7 +33,7 @@ export function glFormatToComponents(format: GL): 0 | 1 | 2 | 3 | 4 {
 }
 
 // Return byte count for given readPixels WebGL type
-export function glTypeToBytes(type: GL): 0 | 1 | 2 | 4 {
+export function glTypeToBytes(type: number): 0 | 1 | 2 | 4 {
   switch (type) {
     case GL.UNSIGNED_BYTE:
       return 1;

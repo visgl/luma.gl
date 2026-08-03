@@ -94,19 +94,19 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
 
 // SETTER TABLES - ENABLES SETTING ANY PARAMETER WITH A COMMON API
 
-const enable = (gl: WebGL2RenderingContext, value: unknown, key: GL) =>
+const enable = (gl: WebGL2RenderingContext, value: unknown, key: number) =>
   value ? gl.enable(key) : gl.disable(key);
-const hint = (gl: WebGL2RenderingContext, value: GL, key: GL) => gl.hint(key, value);
-const pixelStorei = (gl: WebGL2RenderingContext, value: number | boolean, key: GL) =>
+const hint = (gl: WebGL2RenderingContext, value: number, key: number) => gl.hint(key, value);
+const pixelStorei = (gl: WebGL2RenderingContext, value: number | boolean, key: number) =>
   gl.pixelStorei(key, value);
 
-const bindFramebuffer = (gl: WebGL2RenderingContext, value: unknown, key: GL) => {
+const bindFramebuffer = (gl: WebGL2RenderingContext, value: unknown, key: number) => {
   const target = key === GL.FRAMEBUFFER_BINDING ? GL.DRAW_FRAMEBUFFER : GL.READ_FRAMEBUFFER;
   return gl.bindFramebuffer(target, value as WebGLFramebuffer);
 };
 
-const bindBuffer = (gl: WebGL2RenderingContext, value: unknown, key: GL) => {
-  const bindingMap: Partial<Record<GL, GL>> = {
+const bindBuffer = (gl: WebGL2RenderingContext, value: unknown, key: number) => {
+  const bindingMap: Partial<Record<number, number>> = {
     [GL.ARRAY_BUFFER_BINDING]: GL.ARRAY_BUFFER,
     [GL.COPY_READ_BUFFER_BINDING]: GL.COPY_READ_BUFFER,
     [GL.COPY_WRITE_BUFFER_BINDING]: GL.COPY_WRITE_BUFFER,
@@ -402,19 +402,19 @@ type UpdateFunc = (params: Record<string, any>) => void;
 export const GL_HOOKED_SETTERS = {
   // GENERIC SETTERS
 
-  enable: (update: UpdateFunc, capability: GL) =>
+  enable: (update: UpdateFunc, capability: number) =>
     update({
       [capability]: true
     }),
-  disable: (update: UpdateFunc, capability: GL) =>
+  disable: (update: UpdateFunc, capability: number) =>
     update({
       [capability]: false
     }),
-  pixelStorei: (update: UpdateFunc, pname: GL, value) =>
+  pixelStorei: (update: UpdateFunc, pname: number, value) =>
     update({
       [pname]: value
     }),
-  hint: (update: UpdateFunc, pname: GL, value: GL) =>
+  hint: (update: UpdateFunc, pname: number, value: number) =>
     update({
       [pname]: value
     }),

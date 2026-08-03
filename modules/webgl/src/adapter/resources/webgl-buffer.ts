@@ -14,11 +14,14 @@ export class WEBGLBuffer extends Buffer {
   readonly handle: WebGLBuffer;
 
   /** Target in OpenGL defines the type of buffer */
-  readonly glTarget: GL.ARRAY_BUFFER | GL.ELEMENT_ARRAY_BUFFER | GL.UNIFORM_BUFFER;
+  readonly glTarget:
+    | typeof GL.ARRAY_BUFFER
+    | typeof GL.ELEMENT_ARRAY_BUFFER
+    | typeof GL.UNIFORM_BUFFER;
   /** Usage is a hint on how frequently the buffer will be updates */
-  readonly glUsage: GL.STATIC_DRAW | GL.DYNAMIC_DRAW;
+  readonly glUsage: typeof GL.STATIC_DRAW | typeof GL.DYNAMIC_DRAW;
   /** Index type is needed when issuing draw calls, so we pre-compute it */
-  readonly glIndexType: GL.UNSIGNED_SHORT | GL.UNSIGNED_INT = GL.UNSIGNED_SHORT;
+  readonly glIndexType: typeof GL.UNSIGNED_SHORT | typeof GL.UNSIGNED_INT = GL.UNSIGNED_SHORT;
 
   /** Number of bytes allocated on the GPU for this buffer */
   byteLength: number = 0;
@@ -214,7 +217,7 @@ export class WEBGLBuffer extends Buffer {
  */
 function getWebGLTarget(
   usage: number
-): GL.ARRAY_BUFFER | GL.ELEMENT_ARRAY_BUFFER | GL.UNIFORM_BUFFER {
+): typeof GL.ARRAY_BUFFER | typeof GL.ELEMENT_ARRAY_BUFFER | typeof GL.UNIFORM_BUFFER {
   if (usage & Buffer.INDEX) {
     return GL.ELEMENT_ARRAY_BUFFER;
   }
@@ -231,7 +234,7 @@ function getWebGLTarget(
 }
 
 /** @todo usage is not passed correctly */
-function getWebGLUsage(usage: number): GL.STATIC_DRAW | GL.DYNAMIC_DRAW {
+function getWebGLUsage(usage: number): typeof GL.STATIC_DRAW | typeof GL.DYNAMIC_DRAW {
   if (usage & Buffer.INDEX) {
     return GL.STATIC_DRAW;
   }

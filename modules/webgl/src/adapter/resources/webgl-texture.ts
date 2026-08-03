@@ -69,7 +69,7 @@ export class WEBGLTexture extends Texture {
   /** The WebGL data format - the type of each channel */
   glType: GLPixelType;
   /** The WebGL constant corresponding to the WebGPU style constant in format */
-  glInternalFormat: GL;
+  glInternalFormat: number;
   /** Whether the internal format is compressed */
   compressed: boolean;
 
@@ -597,7 +597,7 @@ export class WEBGLTexture extends Texture {
     };
 
     // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer.
-    const prevReadBuffer = this.gl.getParameter(GL.READ_BUFFER) as GL;
+    const prevReadBuffer = this.gl.getParameter(GL.READ_BUFFER) as number;
     const prevHandle = this.gl.bindFramebuffer(
       GL.FRAMEBUFFER,
       framebuffer.handle

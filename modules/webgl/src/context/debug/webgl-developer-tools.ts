@@ -88,9 +88,10 @@ function getDebugContext(
   );
 
   // Make sure we have all WebGL2 and extension constants (todo dynamic import to circumvent minification?)
-  for (const key in GLEnum) {
-    if (!(key in glDebug) && typeof GLEnum[key] === 'number') {
-      glDebug[key] = GLEnum[key];
+  const glDebugConstants = glDebug as unknown as Record<string, number>;
+  for (const [key, value] of Object.entries(GLEnum)) {
+    if (!(key in glDebug)) {
+      glDebugConstants[key] = value;
     }
   }
 

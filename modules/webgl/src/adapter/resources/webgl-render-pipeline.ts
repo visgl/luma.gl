@@ -232,7 +232,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           // Set buffer
           const {name} = binding;
           const location = gl.getUniformBlockIndex(this.handle, name);
-          if ((location as GL) === GL.INVALID_INDEX) {
+          if ((location as number) === GL.INVALID_INDEX) {
             throw new Error(`Invalid uniform block name ${name}`);
           }
           gl.uniformBlockBinding(this.handle, location, uniformBufferIndex);

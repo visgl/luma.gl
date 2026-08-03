@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 export {GL} from './webgl-constants';
+export type {GLConstant, GLValue} from './webgl-constants';
 
 export type {
   GLTextureTarget,

@@ -35,7 +35,7 @@ export type WebGLSetTextureOptions = {
   depth: number;
   mipLevel?: number;
   glTarget: GLTextureTarget;
-  glInternalFormat: GL;
+  glInternalFormat: number;
   glFormat: GLTexelDataFormat;
   glType: GLPixelType;
   compressed?: boolean;
@@ -72,9 +72,9 @@ export type WebGLCopyTextureOptions = {
   z?: number;
 
   glTarget: GLTextureTarget;
-  glInternalFormat: GL;
-  glFormat: GL;
-  glType: GL;
+  glInternalFormat: number;
+  glFormat: number;
+  glType: number;
   compressed?: boolean;
   byteOffset?: number;
   byteLength?: number;
@@ -329,7 +329,7 @@ export function readPixelsToBuffer(
 // eslint-disable-next-line complexity, max-statements
 export function copyToTexture(
   sourceTexture: Framebuffer | Texture,
-  destinationTexture: Texture | GL,
+  destinationTexture: Texture | number,
   options?: {
     sourceX?: number;
     sourceY?: number;
@@ -375,7 +375,7 @@ export function copyToTexture(
   // const prevBuffer = gl.readBuffer(attachment);
   // assert(target);
   let texture: WEBGLTexture | null = null;
-  let textureTarget: GL;
+  let textureTarget: number;
   if (destinationTexture instanceof WEBGLTexture) {
     texture = destinationTexture;
     width = Number.isFinite(width) ? width : texture.width;
@@ -472,7 +472,7 @@ export function toFramebuffer(texture: Texture, props?: FramebufferProps): WEBGL
 function getPixelArray(
   pixelArray,
   glType: GLDataType | GLPixelType,
-  glFormat: GL,
+  glFormat: number,
   width: number,
   height: number,
   depth?: number

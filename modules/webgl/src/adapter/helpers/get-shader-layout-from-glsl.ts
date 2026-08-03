@@ -216,7 +216,7 @@ function readUniformBlocks(
   gl: WebGL2RenderingContext,
   program: WebGLProgram
 ): UniformBlockBinding[] {
-  const getBlockParameter = (blockIndex: number, pname: GL): any =>
+  const getBlockParameter = (blockIndex: number, pname: number): any =>
     gl.getActiveUniformBlockParameter(program, blockIndex, pname);
 
   const uniformBlocks: UniformBlockBinding[] = [];
