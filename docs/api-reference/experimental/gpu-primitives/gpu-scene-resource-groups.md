@@ -87,6 +87,11 @@ The workflow groups existing renderer-owned indirect calls. It does not provide 
 selection, GPU-authored pipeline switches, portable multi-draw, or dynamic bind-group creation.
 The CPU still records the fixed group order and binds compatible resources at each boundary.
 
+Both group initialization and command classification split their work across bounded X, Y, and Z
+dispatch dimensions. Large but otherwise valid command buffers therefore remain usable when their
+required workgroups exceed the device's per-dimension limit; capacities beyond the complete 3D
+dispatch envelope are rejected before encoding.
+
 ## Usage
 
 ```ts

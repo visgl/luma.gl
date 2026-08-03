@@ -14,10 +14,36 @@ import {
   type GraphDataView
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getGPUSceneResourceGroupDispatchLayout} from '../../src/gpu-primitives/gpu-scene-resource-groups';
 
 const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const BOUNDS = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;
+
+test('GPUSceneResourceGroups plans bounded multidimensional command dispatches', t => {
+  t.deepEqual(getGPUSceneResourceGroupDispatchLayout(0, 4), {x: 1, y: 1, z: 1});
+  t.deepEqual(
+    getGPUSceneResourceGroupDispatchLayout(4 * 256, 4),
+    {x: 4, y: 1, z: 1},
+    'one-dimensional dispatch remains valid at its exact limit'
+  );
+  t.deepEqual(
+    getGPUSceneResourceGroupDispatchLayout(4 * 256 + 1, 4),
+    {x: 4, y: 2, z: 1},
+    'commands beyond the X workgroup limit spill into Y'
+  );
+  t.deepEqual(
+    getGPUSceneResourceGroupDispatchLayout(4 * 4 * 256 + 1, 4),
+    {x: 4, y: 4, z: 2},
+    'commands beyond the XY workgroup limit spill into Z'
+  );
+  t.throws(
+    () => getGPUSceneResourceGroupDispatchLayout((4 * 4 * 4 + 1) * 256, 4),
+    /dispatch limit/,
+    'capacities beyond all three supported dimensions fail before encoding'
+  );
+  t.end();
+});
 
 test('GPUSceneResourceGroups preserves binding order and classifies regrouped commands', async t => {
   const device = await getWebGPUTestDevice();

@@ -17,6 +17,8 @@ import {GPU_SCENE_INVALID_REFERENCE, type GPUSceneView} from './gpu-scene';
 const GROUP_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
+type DispatchLayout = {x: number; y: number; z: number};
+
 /** Renderer-owned pipeline/resource identity and its stable indirect-command window. */
 export type GPUSceneResourceGroup = {
   /** Scene groupId associated with one application-owned binding/pipeline configuration. */
@@ -135,7 +137,12 @@ function addInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   groups: GPUSceneResourceGroups
 ): void {
+  const dispatch = getGPUSceneResourceGroupDispatchLayout(
+    groups.groups.length,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const source = /* wgsl */ `
+${makeDispatchConstants(dispatch)}
 const GROUP_COUNT: u32 = ${groups.groups.length}u;
 const COUNTS_OFFSET: u32 = ${getViewElementOffset(groups.counts)}u;
 const OVERFLOWS_OFFSET: u32 = ${getViewElementOffset(groups.overflows)}u;
@@ -146,11 +153,12 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(groups.overflow)}u;
 @compute @workgroup_size(${GROUP_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3u
 ) {
-  if (globalId.x < GROUP_COUNT) {
-    counts[COUNTS_OFFSET + globalId.x] = 0u;
-    overflows[OVERFLOWS_OFFSET + globalId.x] = 0u;
+  let groupIndex = getLinearIndex(globalId);
+  if (groupIndex < GROUP_COUNT) {
+    counts[COUNTS_OFFSET + groupIndex] = 0u;
+    overflows[OVERFLOWS_OFFSET + groupIndex] = 0u;
   }
-  if (globalId.x == 0u) { overflow[OVERFLOW_OFFSET] = 0u; }
+  if (groupIndex == 0u) { overflow[OVERFLOW_OFFSET] = 0u; }
 }`;
   addComputationPass(graph, {
     id: `${groups.id}-initialize`,
@@ -161,7 +169,7 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(groups.overflow)}u;
       {buffer: groups.overflow, usage: 'storage-write'}
     ],
     bindings: {counts: groups.counts, overflows: groups.overflows, overflow: groups.overflow},
-    dispatchCount: Math.ceil(groups.groups.length / GROUP_WORKGROUP_SIZE)
+    dispatch
   });
 }
 
@@ -170,10 +178,15 @@ function addClassifyPass<Parameters>(
   groups: GPUSceneResourceGroups,
   records: GraphDataView<'uint32'>
 ): void {
+  const dispatch = getGPUSceneResourceGroupDispatchLayout(
+    groups.commands.capacity,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const recordWords = groups.commands.recordByteLength / UINT32_BYTE_LENGTH;
   const values = (project: (group: Readonly<GPUSceneResourceGroup>) => number): string =>
     groups.groups.map(group => `${project(group)}u`).join(', ');
   const source = /* wgsl */ `
+${makeDispatchConstants(dispatch)}
 const RECORD_COUNT: u32 = ${groups.scene.groupIds.length}u;
 const COMMAND_CAPACITY: u32 = ${groups.commands.capacity}u;
 const RECORD_WORDS: u32 = ${recordWords}u;
@@ -201,7 +214,7 @@ const COMMAND_COUNTS = array<u32, ${groups.groups.length}>(${values(group => gro
 @compute @workgroup_size(${GROUP_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3u
 ) {
-  let commandIndex = globalId.x;
+  let commandIndex = getLinearIndex(globalId);
   if (commandIndex >= COMMAND_CAPACITY) { return; }
   let commandOffset = COMMANDS_OFFSET + commandIndex * RECORD_WORDS;
   if (commands[commandOffset + 1u] == 0u) { return; }
@@ -250,7 +263,7 @@ const COMMAND_COUNTS = array<u32, ${groups.groups.length}>(${values(group => gro
       overflows: groups.overflows,
       overflow: groups.overflow
     },
-    dispatchCount: Math.ceil(groups.commands.capacity / GROUP_WORKGROUP_SIZE)
+    dispatch
   });
 }
 
@@ -261,7 +274,7 @@ function addComputationPass<Parameters>(
     source: string;
     resources: GraphBufferUse[];
     bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
+    dispatch: DispatchLayout;
   }
 ): void {
   graph.addComputePass({
@@ -287,12 +300,36 @@ function addComputationPass<Parameters>(
             bindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
+          computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
         },
         destroy: () => computation.destroy()
       };
     }
   });
+}
+
+/** Plans a bounded 3D dispatch for scene resource-group initialization or classification. @internal */
+export function getGPUSceneResourceGroupDispatchLayout(
+  elementCount: number,
+  maxComputeWorkgroupsPerDimension: number
+): DispatchLayout {
+  const maximum = Math.floor(maxComputeWorkgroupsPerDimension);
+  const workgroupCount = Math.max(1, Math.ceil(elementCount / GROUP_WORKGROUP_SIZE));
+  const x = Math.min(workgroupCount, maximum);
+  const y = Math.min(Math.ceil(workgroupCount / x), maximum);
+  const z = Math.ceil(workgroupCount / x / y);
+  if (z > maximum) {
+    throw new Error('GPU scene resource groups exceed the device dispatch limit');
+  }
+  return {x, y, z};
+}
+
+function makeDispatchConstants(dispatch: DispatchLayout): string {
+  return `const DISPATCH_X: u32 = ${dispatch.x * GROUP_WORKGROUP_SIZE}u;
+const DISPATCH_Y: u32 = ${dispatch.y}u;
+fn getLinearIndex(globalId: vec3<u32>) -> u32 {
+  return globalId.x + globalId.y * DISPATCH_X + globalId.z * DISPATCH_X * DISPATCH_Y;
+}`;
 }
 
 function validateScene(groups: GPUSceneResourceGroups): void {
