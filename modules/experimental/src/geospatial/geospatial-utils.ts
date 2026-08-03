@@ -268,12 +268,13 @@ fn geospatial_hypot_fp64(x: vec2f, y: vec2f) -> vec2f {
   if (scaleValue == 0.0) {
     return vec2f(0.0, 0.0);
   }
-  let scaledX = geospatial_div_fp64_f32(normalizedX, scaleValue);
-  let scaledY = geospatial_div_fp64_f32(normalizedY, scaleValue);
+  let scaleExponent = frexp(scaleValue).exp;
+  let scaledX = fp64_scale_fp64_integer(normalizedX, -scaleExponent);
+  let scaledY = fp64_scale_fp64_integer(normalizedY, -scaleExponent);
   let scaledLength = sqrt_fp64(
     sum_fp64(mul_fp64(scaledX, scaledX), mul_fp64(scaledY, scaledY))
   );
-  return geospatial_mul_fp64_f32(scaledLength, scaleValue);
+  return fp64_scale_fp64_integer(scaledLength, scaleExponent);
 }
 `;
 
