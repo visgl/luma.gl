@@ -20,7 +20,11 @@ import {
   type ProjectionBenchmarkOptions,
   type ProjectionBenchmarkReport
 } from './projection-benchmark';
-import {findProjectionPatch, PROJECTION_PATCH_WORD_LENGTH} from './projection-plan';
+import {
+  findProjectionPatch,
+  PROJECTION_PATCH_WORD_LENGTH,
+  PROJECTION_PLAN_BOUNDS_WORD_LENGTH
+} from './projection-plan';
 
 /** Physical coordinate representation evaluated by the GPU benchmark. */
 export type GPUProjectionBenchmarkInputFormat = 'float32x2' | 'uint32x4';
@@ -245,8 +249,9 @@ async function measureGPUProjectionBenchmarkPath(
         sourceBuffer.byteLength +
         outputBuffer.byteLength +
         (patchIdBuffer?.byteLength ?? 0) +
-        context.plan.patches.length * PROJECTION_PATCH_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT +
-        4 * Float64Array.BYTES_PER_ELEMENT,
+        (context.plan.patches.length * PROJECTION_PATCH_WORD_LENGTH +
+          PROJECTION_PLAN_BOUNDS_WORD_LENGTH) *
+          Uint32Array.BYTES_PER_ELEMENT,
       maxError,
       cpuEncodeTimeMilliseconds: summarizeProjectionBenchmarkSamples(
         executions.map(execution => execution.timing.cpuEncodeTimeMilliseconds)

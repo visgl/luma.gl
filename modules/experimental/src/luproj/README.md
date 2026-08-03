@@ -134,7 +134,9 @@ returns an absolute destination coordinate rather than a GPU-local offset.
 Non-finite input coordinates, rows outside the compiled source bounds, invalid
 patch IDs, and patch IDs that do not cover their assigned row produce a
 deterministic GPU output of `[0, 0]`. A valid row can also project to the local
-origin, so validate inputs separately when that distinction matters.
+origin, so validate inputs separately when that distinction matters. Patch
+lookup tolerates float32 normalization at shared seams and inclusive endpoints,
+but that tolerance never expands the plan's exterior source bounds.
 
 Graph vector inputs preserve their ordered source chunks, including empty
 chunks. Source positions, optional patch IDs, and output positions must share
@@ -142,15 +144,15 @@ the same row and chunk topology; `luproj` never concatenates or implicitly
 repacks application-owned vectors.
 
 `GPUProjection.updatePlan(nextPlan)` updates an equally sized packed plan
-without recompiling the surrounding command graph. Call
+without recompiling the surrounding command graph. Plans produced by
+`packProjectionPlan()` keep the exact outer bounds in the same storage as the
+patch records, so per-encoding plan-buffer replacements cannot separate domain
+validation from the polynomial data they accompany. Packed buffers created
+before the bounds trailer was added are not accepted; repack the plan with the
+current `packProjectionPlan()` result. Call
 `GPUProjection.destroy()` when the contributor is no longer needed; only its
-privately allocated plan and exact-boundary storage are destroyed, never
+privately allocated plan storage is destroyed, never
 caller-owned source, destination, or explicitly supplied `planBuffer` storage.
-
-The complete source domain is checked exactly before patch lookup. Interior
-patch seams retain a small Float32 normalization tolerance, but rows outside
-the active binary64 plan bounds always receive the documented `[0, 0]`
-sentinel.
 
 ## Benchmark CPU and GPU projection paths
 
