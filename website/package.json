@@ -10,7 +10,7 @@
     "lint": "npx tsc --noEmit",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
-    "check": "yarn docusaurus-mdx-checker ../docs",
+    "check": "yarn docusaurus-mdx-checker --cwd ../docs",
     "clear": "docusaurus clear",
     "clean": "docusaurus clear",
     "serve": "docusaurus serve",
@@ -22,7 +22,8 @@
   },
   "dependencies": {
     "@algolia/autocomplete-js": "^1.19.2",
-    "@docusaurus/core": "^3.9.2",
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/faster": "^3.10.2",
     "@probe.gl/stats": "^4.1.1",
     "@probe.gl/stats-widget": "^4.1.1",
     "@signalwire/docusaurus-plugin-llms-txt": "^1.2.2",
@@ -36,7 +37,7 @@
   },
   "devDependencies": {
     "@cmfcmf/docusaurus-search-local": "^2.0.0",
-    "@docusaurus/tsconfig": "^3.9.2",
+    "@docusaurus/tsconfig": "^3.10.2",
     "docusaurus-mdx-checker": "^3.0.0",
     "docusaurus-plugin-typedoc": "^1.4.2",
     "typedoc": "^0.28.19",

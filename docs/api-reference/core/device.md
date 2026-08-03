@@ -314,7 +314,7 @@ createPresentationContext(props?: PresentationContextProps): PresentationContext
 
 Creates a new [`PresentationContext`](./presentation-context) for multi-canvas presentation.
 
-:::caution Experimental
+:::caution[Experimental]
 `createPresentationContext()` is experimental and may change in a future release.
 :::
 

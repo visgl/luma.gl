@@ -11,7 +11,7 @@ format and generates a JSON Schema suitable for Monaco, VS Code, and other schem
 It is separate from the ordinary `@luma.gl/anari` entry point, so applications that only render
 scenes do not load Zod.
 
-:::caution Experimental scene format
+:::caution[Experimental scene format]
 These schemas describe the private luma.gl ANARI playground format. They are not an official ANARI
 serialization standard, and their structure can change with the experimental package.
 :::

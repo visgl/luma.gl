@@ -90,8 +90,8 @@ Start by identifying which artifact is aliasing:
     <div className="docs-antialiasing-flow__arrow" aria-hidden="true">←</div>
   </div>
   <p className="docs-antialiasing-flow__caption">
-    Depth participates in scene visibility during rasterization, then often becomes a separate
-    sampled input for later effects.
+    {'Depth participates in scene visibility during rasterization, then often becomes a separate ' +
+      'sampled input for later effects.'}
   </p>
 </div>
 
@@ -163,7 +163,7 @@ For WebGPU concepts and sample-count constraints, see the
 [WebGPU multisampling guide](https://webgpufundamentals.org/webgpu/lessons/webgpu-multisampling.html)
 and the [WebGPU specification](https://gpuweb.github.io/gpuweb/).
 
-:::caution Proposed API, not implemented
+:::caution[Proposed API, not implemented]
 
 [RFC #2741](https://github.com/visgl/luma.gl/issues/2741) proposes a framebuffer-level
 request for color-only offscreen MSAA:

@@ -117,7 +117,7 @@ When inactive, renders normal colors, with the exception of selected object whic
 - `isActive` - When true, renders picking colors. Set when rendering to off-screen "picking" buffer. When false, renders normal colors, with the exception of selected object which is rendered with highlight 
 - `useByteColors` defaults to byte-compatible highlight color behavior in Phase 1.
 
-<!---
+{/*
 - `pickingActive`=`false` (_boolean_) - Renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking.
 - `pickingSelectedColor`=`null` (_array|null_) - The picking color of the selected (highlighted) object.
 - `pickingHighlightColor`= `[0, 255, 255, 255]` (_array_) - Color used to highlight the currently selected object.
@@ -131,7 +131,7 @@ opts can contain following keys:
 - `pickingActive`=`false` (_boolean_) - When true, renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking. Default value is `false`.
 
 Note that the selected item will be rendered using `pickingHighlightColor`, if blending is enabled for the draw, alpha channel can be used to control the blending result.
--->
+*/}
 
 ## Vertex Shader Functions
 

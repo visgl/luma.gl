@@ -2,6 +2,10 @@ const {getDocusaurusConfig} = require('@vis.gl/docusaurus-website');
 const {OptionDefaults: typedocOptionDefaults} = require('typedoc');
 const path = require('path');
 
+const examplesDirectory = path.resolve(__dirname, '../examples');
+const modulesDirectory = path.resolve(__dirname, '../modules');
+const websiteExamplesPath = path.resolve(__dirname, 'src/examples.tsx');
+const websiteReactLumaDirectory = path.resolve(__dirname, 'src/react-luma');
 const websiteBaseUrl = process.env.WEBSITE_BASE_URL || '/';
 const websiteBasePathSegments = websiteBaseUrl.split('/').filter(Boolean);
 const websiteRoutePrefix =
@@ -69,13 +73,10 @@ const config = getDocusaurusConfig({
         createRedirects(existingPath) {
           // docs/examples/tutorials/*/api-reference <= /docs/tutorials
           if (existingPath.includes('/docs/examples/tutorials/')) {
-            return [
-              existingPath
-                .replace('/docs/examples/tutorials/', '/docs/tutorials/')
-            ];
+            return [existingPath.replace('/docs/examples/tutorials/', '/docs/tutorials/')];
           }
-    
-            // docs/modules/*/api-reference <= modules/*/docs/api-reference
+
+          // docs/modules/*/api-reference <= modules/*/docs/api-reference
           if (existingPath.includes('/docs/modules/')) {
             return [
               existingPath
@@ -93,6 +94,7 @@ const config = getDocusaurusConfig({
 
 const {
   onBrokenMarkdownLinks,
+  presets: basePresets = [],
   plugins: basePlugins = [],
   staticDirectories = [],
   ...baseConfig
@@ -102,8 +104,14 @@ module.exports = {
   ...baseConfig,
   baseUrl: websiteBaseUrl,
   staticDirectories: [...staticDirectories, '.generated/example-assets'],
+  presets: basePresets.map(preset => {
+    if (Array.isArray(preset) && preset[0] === 'classic') {
+      return [preset[0], {...preset[1], blog: false}];
+    }
+    return preset;
+  }),
   plugins: [
-    ...basePlugins.map((plugin) => {
+    ...basePlugins.map(plugin => {
       if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
         return [
           plugin[0],
@@ -121,8 +129,7 @@ module.exports = {
       '@signalwire/docusaurus-plugin-llms-txt',
       {
         siteTitle: 'luma.gl',
-        siteDescription:
-          'WebGPU and WebGL2 framework documentation for visualization and compute.',
+        siteDescription: 'WebGPU and WebGL2 framework documentation for visualization and compute.',
         // Plugin 1.x builds its route tree from base-prefixed Docusaurus paths.
         // Preserve the configured three levels after the post-build base-path normalization.
         depth: Math.min(5, 3 + websiteBasePathSegments.length),
@@ -172,7 +179,7 @@ module.exports = {
     function arrowLayersSourceAlias() {
       return {
         name: 'arrow-layers-source-alias',
-        configureWebpack() {
+        configureWebpack(_configuration, isServer) {
           return {
             resolve: {
               alias: {
@@ -182,6 +189,34 @@ module.exports = {
                 )
               }
             },
+            ...(isServer
+              ? {}
+              : {
+                  optimization: {
+                    splitChunks: {
+                      cacheGroups: {
+                        // The default shared chunk requires use by half of all documentation routes.
+                        websiteExamples: {
+                          name: 'website-examples',
+                          chunks: 'async',
+                          minChunks: 2,
+                          priority: 45,
+                          reuseExistingChunk: true,
+                          test(module) {
+                            const resource = module.resource;
+                            return Boolean(
+                              resource &&
+                                (resource === websiteExamplesPath ||
+                                  resource.startsWith(`${examplesDirectory}${path.sep}`) ||
+                                  resource.startsWith(`${modulesDirectory}${path.sep}`) ||
+                                  resource.startsWith(`${websiteReactLumaDirectory}${path.sep}`))
+                            );
+                          }
+                        }
+                      }
+                    }
+                  }
+                }),
             watchOptions: {
               aggregateTimeout: 200,
               poll: 1000
@@ -192,7 +227,8 @@ module.exports = {
     }
   ],
   future: {
-    v4: true
+    v4: true,
+    faster: true
   },
   markdown: {
     ...(config.markdown || {}),

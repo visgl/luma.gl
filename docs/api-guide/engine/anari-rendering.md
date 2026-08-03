@@ -656,7 +656,7 @@ and emits standalone JSON glTF with embedded buffers/images or ASCII `.usda`. AN
 declarations, optional renderer presets, bloom, fog, and renderer-only HDR controls remain
 ANARI-specific and are not exported.
 
-:::caution Experimental playground format
+:::caution[Experimental playground format]
 The JSON format and its optional schema exports are experimental. They are not part of the ANARI C
 specification and can change with the private `@luma.gl/anari` workspace.
 :::
