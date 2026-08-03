@@ -358,7 +358,12 @@ export class Model {
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
       // WGSL
-      const {source, getUniforms, bindingTable} = this.props.shaderAssembler.assembleWGSLShader({
+      const {
+        source,
+        getUniforms,
+        bindingTable,
+        shaderLayout: assembledShaderLayout
+      } = this.props.shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
         modules,
@@ -371,12 +376,14 @@ export class Model {
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
       this._bindingTable = bindingTable;
-      // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
-      const reflectedShaderLayout = (
-        device as Device & {getShaderLayout?: (source: string) => any}
-      ).getShaderLayout?.(this.source);
+      // Infer the layout after modules have been added so their bindings are included.
+      const scannedOrReflectedShaderLayout =
+        assembledShaderLayout ??
+        (device as Device & {getShaderLayout?: (source: string) => any}).getShaderLayout?.(
+          this.source
+        );
       const inferredShaderLayout = normalizeShaderPluginAttributeNames(
-        reflectedShaderLayout,
+        scannedOrReflectedShaderLayout,
         resolvedPlugins.vertexInputs
       );
       const shaderLayout = mergeInferredShaderLayout(

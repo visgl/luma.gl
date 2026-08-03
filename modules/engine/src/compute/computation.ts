@@ -173,7 +173,11 @@ export class Computation {
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
     this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
 
-    const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
+    const {
+      source,
+      getUniforms,
+      shaderLayout: assembledShaderLayout
+    } = this.props.shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
       modules,
@@ -184,9 +188,11 @@ export class Computation {
     this.source = source;
     // @ts-ignore
     this._getModuleUniforms = getUniforms;
-    const inferredShaderLayout = (
-      device as Device & {getShaderLayout?: (source: string) => any}
-    ).getShaderLayout?.(this.source);
+    const inferredShaderLayout =
+      assembledShaderLayout ??
+      (device as Device & {getShaderLayout?: (source: string) => any}).getShaderLayout?.(
+        this.source
+      );
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(
         this.props.shaderLayout || inferredShaderLayout || null,
