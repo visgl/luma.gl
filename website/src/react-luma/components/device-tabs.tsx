@@ -1,8 +1,9 @@
-import React, {CSSProperties, useEffect, useMemo, useState} from 'react';
+import React, {CSSProperties, useCallback, useEffect, useMemo, useState} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 
 import {Tabs, Tab} from './tabs';
 import {canCreateDeviceType, type DeviceType, useStore} from '../store/device-store';
+import {applyExampleTheme, type ExampleThemeAppearance} from '../../../../examples/example-theme';
 
 export type DeviceTabSelection =
   | 'webgl2'
@@ -12,6 +13,7 @@ export type DeviceTabSelection =
   | 'webgpu-compatibility';
 
 interface DeviceTabsProps {
+  appearance?: ExampleThemeAppearance;
   devices?: DeviceTabSelection[];
   style?: CSSProperties;
 }
@@ -39,6 +41,7 @@ const DEVICE_TAB_BADGES: Partial<Record<DeviceType, string>> = {
 };
 
 export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
+  const appearance = props.appearance ?? 'cinematic';
   const devices = getDeviceTypes(props.devices);
   const deviceAvailabilityKey = devices.join('|');
   const [deviceAvailability, setDeviceAvailability] = useState<
@@ -50,6 +53,14 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
   const selectedDeviceType = useMemo(
     () => (deviceType && devices.includes(deviceType) ? deviceType : undefined),
     [deviceType, deviceAvailabilityKey]
+  );
+  const setDeviceTabsElement = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (element) {
+        applyExampleTheme(element, appearance);
+      }
+    },
+    [appearance]
   );
 
   useEffect(() => {
@@ -80,8 +91,16 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
   };
 
   return (
-    <div style={props.style}>
-      <Tabs selectedItem={selectedDeviceType} setSelectedItem={selectDeviceType}>
+    <div
+      ref={setDeviceTabsElement}
+      data-luma-example-appearance={appearance}
+      style={props.style}
+    >
+      <Tabs
+        label="Graphics backend"
+        selectedItem={selectedDeviceType}
+        setSelectedItem={selectDeviceType}
+      >
         {devices.map(type => (
           <Tab
             key={type}

@@ -7,6 +7,7 @@ import {
   ExampleSettingsPanelManager,
   getSettingDefinitions,
   makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
   makeHtmlCustomPanel,
   makeInlineSettingsSchema
 } from '../../examples/example-panels';
@@ -205,6 +206,71 @@ describe('ExampleSettingsPanelManager', () => {
     expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe('');
     expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe('');
     expect(hostElement.style.getPropertyValue('--menu-background')).toBe('transparent');
+  });
+
+  test.each([
+    'cinematic',
+    'light'
+  ] as const)('renders shared source code with the inherited %s visual theme', async appearance => {
+    const exampleWindow = window as Window & {website?: boolean};
+    const previousWebsiteState = exampleWindow.website;
+    const previousUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const fetchMock = vi
+      .spyOn(window, 'fetch')
+      .mockResolvedValue(new Response('export const sourceTheme = true;'));
+    let panelManager: ExamplePanelManager | null = null;
+
+    exampleWindow.website = true;
+    window.history.pushState(null, '', '/examples/showcase/persistence');
+    document.body.innerHTML = `<section data-info-box-appearance="${appearance}">${makeExamplePanelHostHtml()}</section>`;
+
+    try {
+      panelManager = new ExamplePanelManager({
+        panel: makeExampleTabbedPanel({
+          id: 'themed-source-tabs',
+          title: 'Themed example source',
+          panels: [
+            makeHtmlCustomPanel({
+              id: 'themed-overview',
+              title: 'Overview',
+              html: '<p>Overview</p>'
+            })
+          ]
+        })
+      });
+      panelManager.mount();
+
+      const sourceButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+        button => button.textContent?.trim() === 'Source'
+      );
+      if (!sourceButton) {
+        throw new Error('Expected the shared source panel tab.');
+      }
+      sourceButton.click();
+
+      await vi.waitFor(() => {
+        const sourceViewer = document.querySelector<HTMLElement>('[data-example-source-viewer]');
+        expect(sourceViewer?.textContent).toContain('export const sourceTheme = true;');
+        expect(sourceViewer?.style.background).toContain('var(--luma-example-surface');
+        expect(sourceViewer?.style.color).toContain('var(--luma-example-text');
+        expect(sourceViewer && getComputedStyle(sourceViewer).backgroundColor).toBe(
+          EXAMPLE_THEME_TOKENS[appearance].surface
+        );
+        expect(sourceViewer && getComputedStyle(sourceViewer).color).toBe(
+          EXAMPLE_THEME_TOKENS[appearance].text
+        );
+      });
+    } finally {
+      panelManager?.finalize();
+      fetchMock.mockRestore();
+      document.body.replaceChildren();
+      window.history.replaceState(null, '', previousUrl);
+      if (previousWebsiteState === undefined) {
+        delete exampleWindow.website;
+      } else {
+        exampleWindow.website = previousWebsiteState;
+      }
+    }
   });
 
   test('registers descriptors and forwards structured changes', () => {
