@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-showcase-billion-point-spatial-atlas",
-  "version": "9.4.0-alpha.3",
+  "version": "9.4.0-alpha.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,12 +15,12 @@
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
     "@loaders.gl/core": "~4.4.2",
     "@loaders.gl/las": "~4.4.2",
-    "@luma.gl/core": "9.4.0-alpha.3",
-    "@luma.gl/effects": "9.4.0-alpha.3",
-    "@luma.gl/engine": "9.4.0-alpha.3",
-    "@luma.gl/experimental": "9.4.0-alpha.3",
-    "@luma.gl/shadertools": "9.4.0-alpha.3",
-    "@luma.gl/webgpu": "9.4.0-alpha.3"
+    "@luma.gl/core": "9.4.0-alpha.4",
+    "@luma.gl/effects": "9.4.0-alpha.4",
+    "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/experimental": "9.4.0-alpha.4",
+    "@luma.gl/shadertools": "9.4.0-alpha.4",
+    "@luma.gl/webgpu": "9.4.0-alpha.4"
   },
   "devDependencies": {
     "apache-arrow": "^17.0.0",
