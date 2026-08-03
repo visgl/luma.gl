@@ -27,6 +27,7 @@ export {PresentationContext} from './adapter/presentation-context';
 
 // GPU RESOURCES
 export {Resource, type ResourceProps} from './adapter/resources/resource';
+export type {ResourceInstrumentation} from './adapter/resources/resource-instrumentation';
 
 export {Buffer, type BufferProps, type BufferMapCallback} from './adapter/resources/buffer';
 

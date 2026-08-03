@@ -15,6 +15,8 @@ import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {PresentationContext, PresentationContextProps} from './presentation-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
+import {defaultResourceInstrumentation} from './resources/default-resource-instrumentation';
+import type {ResourceInstrumentation} from './resources/resource-instrumentation';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
 import type {SharedRenderPipeline} from './resources/shared-render-pipeline';
 import type {ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
@@ -396,6 +398,9 @@ export type DeviceProps = {
     info: {oldRatio: number}
   ) => unknown;
 
+  /** Optional observer for resource lifecycle and GPU memory allocation events. Set to null to disable resource instrumentation. */
+  resourceInstrumentation?: ResourceInstrumentation | null;
+
   // DEBUG SETTINGS
 
   /** Turn on implementation defined checks that slow down execution but help break where errors occur */
@@ -511,6 +516,7 @@ export abstract class Device {
       log.log(1, `${context} Visibility changed ${context.isVisible}`)(),
     onDevicePixelRatioChange: (context: CanvasContext, info: {oldRatio: number}) =>
       log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
+    resourceInstrumentation: defaultResourceInstrumentation,
 
     // Debug flags
     debug: getDefaultDebugValue(),
@@ -565,6 +571,8 @@ export abstract class Device {
   userData: {[key: string]: unknown} = {};
   /** stats */
   readonly statsManager: StatsManager = lumaStats;
+  /** Optional resource lifecycle and allocation observer. */
+  resourceInstrumentation: ResourceInstrumentation | null;
   /** Internal per-device factory storage */
   _factories: DeviceFactories = {};
   /** An abstract timestamp used for change tracking */
@@ -598,6 +606,7 @@ export abstract class Device {
   constructor(props: DeviceProps) {
     this.props = {...Device.defaultProps, ...props};
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
+    this.resourceInstrumentation = this.props.resourceInstrumentation;
   }
 
   abstract destroy(): void;
