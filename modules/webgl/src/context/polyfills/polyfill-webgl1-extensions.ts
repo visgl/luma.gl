@@ -8,6 +8,7 @@
 /* eslint-disable camelcase */
 
 import {GL} from '@luma.gl/webgl/constants';
+import {registerWebGL1Compatibility} from './webgl1-compatibility-hooks';
 
 // webgl1 extensions natively supported by webgl2
 const WEBGL1_STATIC_EXTENSIONS = {
@@ -106,6 +107,8 @@ export function enforceWebGL2(enforce: boolean = true): void {
     return this.originalGetContext(contextId, options);
   };
 }
+
+registerWebGL1Compatibility({enforceWebGL2});
 
 /** Install WebGL1-only extensions on WebGL2 contexts */
 export function polyfillWebGL1Extensions(gl: WebGL2RenderingContext): void {

@@ -31,6 +31,11 @@
       "import": "./dist/debug.js",
       "require": "./dist/debug.cjs"
     },
+    "./webgl1": {
+      "types": "./dist/webgl1.d.ts",
+      "import": "./dist/webgl1.js",
+      "require": "./dist/webgl1.cjs"
+    },
     "./constants": {
       "types": "./dist/constants/index.d.ts",
       "import": "./dist/constants/index.js",
@@ -53,7 +58,20 @@
     "dist.min.js",
     "README.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/debug.ts",
+    "./src/webgl1.ts",
+    "./src/context/debug/spector.ts",
+    "./src/context/debug/webgl-developer-tools.ts",
+    "./src/context/polyfills/polyfill-webgl1-extensions.ts",
+    "./dist/debug.js",
+    "./dist/debug.cjs",
+    "./dist/context/debug/spector.js",
+    "./dist/context/debug/webgl-developer-tools.js",
+    "./dist/context/polyfills/polyfill-webgl1-extensions.js",
+    "./dist/webgl1.js",
+    "./dist/webgl1.cjs"
+  ],
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
     "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",

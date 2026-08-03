@@ -61,6 +61,8 @@ interface TestHTMLCanvasElement {
 }
 
 test('luma#enforceWebGL2', async t => {
+  await import('@luma.gl/webgl/webgl1');
+
   const prototype = HTMLCanvasElement.prototype as unknown as TestHTMLCanvasElement;
 
   // Setup mock getContext

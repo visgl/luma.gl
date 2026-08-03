@@ -57,6 +57,8 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 **@luma.gl/webgl**
 
 - WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+- Legacy WebGL1 context enforcement now requires `import '@luma.gl/webgl/webgl1'` before calling
+  `luma.enforceWebGL2()`. Applications can also call the subpath's `enforceWebGL2()` export directly.
 
 **@luma.gl/arrow**
 

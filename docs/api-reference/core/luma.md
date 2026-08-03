@@ -173,6 +173,12 @@ so that device types do not have to be provided at `Device` create or attach tim
 
 ### `luma.enforceWebGL2()`
 
+Preload the optional WebGL1 compatibility entry before using this legacy facade:
+
+```ts
+import '@luma.gl/webgl/webgl1';
+```
+
 ```ts
 luma.enforceWebGL2(enforce: boolean = true, adapters: Adapter[]);
 ```
@@ -184,7 +190,9 @@ Since luma.gl only supports WebGL2 contexts (`WebGL2RenderingContext`), it is no
 This becomes a problem when using luma.gl with a WebGL library that always creates WebGL1 contexts (such as Mapbox GL JS v1).
 Calling `luma.enforceWebGL2()` before initializing the external library makes that library create a WebGL2 context, that luma.gl can then attach a Device to.
 
-Note that the `webgl2Adapter` must either be pre-registered or supplied to the `luma.enforceWebGL2()` call.
+Note that the `webgl2Adapter` must either be pre-registered or supplied to the
+`luma.enforceWebGL2()` call. Applications that do not need the `luma` facade can instead import and
+call `enforceWebGL2()` directly from `@luma.gl/webgl/webgl1`.
 
 :::caution
 Since WebGL2 is a essentially a superset of WebGL1, a library written for WebGL 1 will often still work with a WebGL 2 context. However there may be issues if the external library relies on WebGL1 extensions that are not available in WebGL2. To make a WebGL 2 context support WebGL1-only extensions, those extensions would also need to be emulated on top of the WebGL 2 API, and this is not currently done.

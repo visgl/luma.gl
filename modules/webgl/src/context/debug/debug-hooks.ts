@@ -25,19 +25,24 @@ type SpectorHooks = {
   initialize(props: SpectorProps): Spector | null;
 };
 
-let webglDeveloperToolsHooks: WebGLDeveloperToolsHooks | null = null;
-let spectorHooks: SpectorHooks | null = null;
-let debugImportWarningShown = false;
+type WebGLDebugHooksRegistry = {
+  webglDeveloperToolsHooks: WebGLDeveloperToolsHooks | null;
+  spectorHooks: SpectorHooks | null;
+  debugImportWarningShown: boolean;
+};
+
+const WEBGL_DEBUG_HOOKS_SYMBOL = Symbol.for('@luma.gl/webgl/debug-hooks');
 
 export function registerWebGLDeveloperTools(hooks: WebGLDeveloperToolsHooks): void {
-  webglDeveloperToolsHooks = hooks;
+  getWebGLDebugHooksRegistry().webglDeveloperToolsHooks = hooks;
 }
 
 export function registerSpectorJS(hooks: SpectorHooks): void {
-  spectorHooks = hooks;
+  getWebGLDebugHooksRegistry().spectorHooks = hooks;
 }
 
 export async function loadRegisteredWebGLDeveloperTools(): Promise<void> {
+  const {webglDeveloperToolsHooks} = getWebGLDebugHooksRegistry();
   if (!webglDeveloperToolsHooks) {
     warnDebugImportRequired();
     return;
@@ -49,6 +54,7 @@ export function makeRegisteredDebugContext(
   gl: WebGL2RenderingContext,
   props: DebugContextProps
 ): WebGL2RenderingContext {
+  const {webglDeveloperToolsHooks} = getWebGLDebugHooksRegistry();
   if (!webglDeveloperToolsHooks) {
     warnDebugImportRequired();
     return gl;
@@ -57,6 +63,7 @@ export function makeRegisteredDebugContext(
 }
 
 export async function loadRegisteredSpectorJS(props: SpectorProps): Promise<void> {
+  const {spectorHooks} = getWebGLDebugHooksRegistry();
   if (!spectorHooks) {
     warnDebugImportRequired();
     return;
@@ -65,12 +72,27 @@ export async function loadRegisteredSpectorJS(props: SpectorProps): Promise<void
 }
 
 export function initializeRegisteredSpectorJS(props: SpectorProps): Spector | null {
+  const {spectorHooks} = getWebGLDebugHooksRegistry();
   return spectorHooks?.initialize(props) || null;
 }
 
 function warnDebugImportRequired(): void {
-  if (!debugImportWarningShown) {
-    debugImportWarningShown = true;
+  const registry = getWebGLDebugHooksRegistry();
+  if (!registry.debugImportWarningShown) {
+    registry.debugImportWarningShown = true;
     log.warn('Import @luma.gl/webgl/debug before enabling WebGL debugging.')();
   }
+}
+
+function getWebGLDebugHooksRegistry(): WebGLDebugHooksRegistry {
+  const globalRegistry = globalThis as unknown as Record<
+    symbol,
+    WebGLDebugHooksRegistry | undefined
+  >;
+  globalRegistry[WEBGL_DEBUG_HOOKS_SYMBOL] ||= {
+    webglDeveloperToolsHooks: null,
+    spectorHooks: null,
+    debugImportWarningShown: false
+  };
+  return globalRegistry[WEBGL_DEBUG_HOOKS_SYMBOL];
 }

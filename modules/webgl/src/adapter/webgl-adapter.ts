@@ -4,7 +4,7 @@
 
 import type {WebGLDevice} from './webgl-device';
 import {Adapter, Device, DeviceProps, log} from '@luma.gl/core';
-import {enforceWebGL2} from '../context/polyfills/polyfill-webgl1-extensions';
+import {enforceRegisteredWebGL2} from '../context/polyfills/webgl1-compatibility-hooks';
 import {
   loadRegisteredSpectorJS,
   loadRegisteredWebGLDeveloperTools
@@ -18,7 +18,7 @@ export class WebGLAdapter extends Adapter {
 
   /** Force any created WebGL contexts to be WebGL2 contexts, polyfilled with WebGL1 extensions */
   enforceWebGL2(enable: boolean): void {
-    enforceWebGL2(enable);
+    enforceRegisteredWebGL2(enable);
   }
 
   /** Check if WebGL 2 is available */
