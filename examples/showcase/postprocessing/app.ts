@@ -62,7 +62,6 @@ type LookDefinition = {
   accent: string;
   passNames: string[];
   values: Record<string, EffectState>;
-  resolutionScale?: number;
 };
 
 const LOOK_DEFINITIONS: Record<LookName, LookDefinition> = {
@@ -99,7 +98,6 @@ const LOOK_DEFINITIONS: Record<LookName, LookDefinition> = {
     description: 'Punchy tonal separation with fine illustrated edge work.',
     accent: 'linear-gradient(135deg, #f8fafc, #64748b 45%, #0f172a)',
     passNames: ['brightnessContrast', 'ink'],
-    resolutionScale: 0.75,
     values: {
       brightnessContrast: {brightness: 0.04, contrast: 0.28},
       ink: {strength: 0.36}
@@ -120,7 +118,6 @@ const LOOK_DEFINITIONS: Record<LookName, LookDefinition> = {
     description: 'A gentle radial pull that preserves the center calibration target.',
     accent: 'linear-gradient(135deg, #a78bfa, #ec4899 52%, #fb7185)',
     passNames: ['zoomBlur', 'vignette'],
-    resolutionScale: 0.65,
     values: {
       zoomBlur: {center: [0.5, 0.5], strength: 0.12},
       vignette: {radius: 0.68, amount: 0.38}
@@ -219,13 +216,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const [drawingBufferWidth, drawingBufferHeight] = this.device
       .getCanvasContext()
       .getDrawingBufferSize();
-    const presetResolutionScale = LOOK_DEFINITIONS[this.selectedLookName].resolutionScale || 1;
-    const stackResolutionScale = this.activePassNames.some(passName =>
-      SAMPLE_HEAVY_EFFECT_NAMES.has(passName)
-    )
-      ? 0.75
-      : 1;
-    const resolutionScale = Math.min(presetResolutionScale, stackResolutionScale);
+    const resolutionScale = getEffectResolutionScale(this.activePassNames);
     this.shaderPassRenderer.resize([
       Math.max(Math.round(drawingBufferWidth * resolutionScale), 1),
       Math.max(Math.round(drawingBufferHeight * resolutionScale), 1)
@@ -613,6 +604,15 @@ function getControllableProps(shaderPass: ShaderPass): [string, ShaderPropType][
     }
   }
   return controllableProps;
+}
+
+/** Derives adaptive render resolution from the effects that are actually active. */
+export function getEffectResolutionScale(activePassNames: readonly string[]): number {
+  if (activePassNames.includes('zoomBlur')) {
+    return 0.65;
+  }
+
+  return activePassNames.some(passName => SAMPLE_HEAVY_EFFECT_NAMES.has(passName)) ? 0.75 : 1;
 }
 
 /** Adds or removes one effect while preserving an ordered, duplicate-free stack. */

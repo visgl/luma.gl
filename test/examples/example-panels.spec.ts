@@ -21,6 +21,7 @@ import {
 import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
 import {
   flattenEffectSettings,
+  getEffectResolutionScale,
   makePostprocessingUniforms,
   reorderEffectPassNames,
   unflattenEffectSettings,
@@ -425,6 +426,38 @@ describe('text 3D crawl color compatibility', () => {
 });
 
 describe('postprocessing effect settings', () => {
+  test('renders empty and inexpensive effect stacks at native resolution', () => {
+    expect(getEffectResolutionScale([])).toBe(1);
+    expect(getEffectResolutionScale(['bloom', 'vignette'])).toBe(1);
+  });
+
+  test('restores native resolution when expensive preset effects are removed', () => {
+    const dreamZoomPassNames = ['zoomBlur', 'vignette'];
+    const graphicInkPassNames = ['brightnessContrast', 'ink'];
+
+    expect(getEffectResolutionScale(dreamZoomPassNames)).toBe(0.65);
+    expect(
+      getEffectResolutionScale(updateEffectPassNames(dreamZoomPassNames, 'zoomBlur', false))
+    ).toBe(1);
+    expect(getEffectResolutionScale(graphicInkPassNames)).toBe(0.75);
+    expect(getEffectResolutionScale(updateEffectPassNames(graphicInkPassNames, 'ink', false))).toBe(
+      1
+    );
+  });
+
+  test('adapts resolution as expensive effects are added and removed', () => {
+    const inexpensivePassNames = ['vignette'];
+    const inkPassNames = updateEffectPassNames(inexpensivePassNames, 'ink', true);
+    const zoomPassNames = updateEffectPassNames(inkPassNames, 'zoomBlur', true);
+
+    expect(getEffectResolutionScale(inkPassNames)).toBe(0.75);
+    expect(getEffectResolutionScale(zoomPassNames)).toBe(0.65);
+    expect(getEffectResolutionScale(updateEffectPassNames(zoomPassNames, 'zoomBlur', false))).toBe(
+      0.75
+    );
+    expect(getEffectResolutionScale(updateEffectPassNames(['ink'], 'ink', false))).toBe(1);
+  });
+
   test('adds effects to the stack only once', () => {
     const activePassNames = ['bloom', 'vignette'];
 
