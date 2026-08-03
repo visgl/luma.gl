@@ -27,6 +27,20 @@ const source = /* WGSL*/ `\
 }
 `;
 
+const sharedSource = /* WGSL */ `\
+${source}
+
+@vertex
+fn firstVertex(@location(0) firstPosition: vec2f) -> @builtin(position) vec4f {
+  return vec4f(firstPosition, 0.0, 1.0);
+}
+
+@vertex
+fn secondVertex(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f {
+  return vec4f(secondPosition, 1.0);
+}
+`;
+
 const unsupportedSource = /* WGSL */ `\
 @group(0) @binding(0) var textures: binding_array<texture_2d<f32>>;
 @compute @workgroup_size(1) fn main() {}
@@ -37,7 +51,7 @@ test('ComputePipeline#construct/delete', async t => {
 
   for (const webgpuDevice of webgpuDevices) {
     const label = webgpuDevice.info.featureLevel;
-    const shader = webgpuDevice.createShader({source});
+    const shader = webgpuDevice.createShader({source: sharedSource});
     const computePipeline = webgpuDevice.createComputePipeline({shader});
     t.ok(
       computePipeline instanceof ComputePipeline,

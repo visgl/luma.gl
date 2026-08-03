@@ -211,7 +211,8 @@ export class WGSLShaderAssembler extends ShaderAssembler {
       bindingAssignments,
       bindingTable: getShaderBindingDebugRowsFromWGSL(preprocessedSource, bindingAssignments),
       shaderLayout: scanWGSLInterface(preprocessedSource, {
-        vertexEntryPoint: props.vertexEntryPoint
+        vertexEntryPoint: props.vertexEntryPoint,
+        scanVertexAttributes: props.scanVertexAttributes
       })
     };
   }

@@ -187,6 +187,7 @@ export class Computation {
       ...this.props,
       modules,
       defines,
+      scanVertexAttributes: false,
       pluginInjections: resolvedPlugins.injections
     });
 
@@ -195,9 +196,11 @@ export class Computation {
     this._getModuleUniforms = getUniforms;
     const inferredShaderLayout =
       assembledShaderLayout ??
-      (device as Device & {getShaderLayout?: (source: string) => any}).getShaderLayout?.(
-        this.source
-      );
+      (
+        device as Device & {
+          getShaderLayout?: (source: string, options?: {scanVertexAttributes?: boolean}) => any;
+        }
+      ).getShaderLayout?.(this.source, {scanVertexAttributes: false});
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(
         this.props.shaderLayout || inferredShaderLayout || null,

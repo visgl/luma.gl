@@ -18,6 +18,8 @@ import {maskWGSLComments} from './wgsl-binding-scan';
 export type ScanWGSLInterfaceOptions = {
   /** Selected render-pipeline vertex entry point. Required when WGSL declares multiple vertices. */
   vertexEntryPoint?: string;
+  /** Whether to scan vertex attributes. Disable for compute pipelines that only need bindings. */
+  scanVertexAttributes?: boolean;
 };
 
 type WGSLToken = {
@@ -47,12 +49,22 @@ export function scanWGSLInterface(
   }
 
   const aliases = scanWGSLAliases(tokens, braceDepths);
-  const structures = scanWGSLStructures(tokens, braceDepths);
-  if (!aliases || !structures) {
+  if (!aliases) {
     return null;
   }
 
   const bindings = scanWGSLBindings(tokens, braceDepths, aliases);
+  if (!bindings) {
+    return null;
+  }
+  if (options.scanVertexAttributes === false) {
+    return {attributes: [], bindings};
+  }
+
+  const structures = scanWGSLStructures(tokens, braceDepths);
+  if (!structures) {
+    return null;
+  }
   const attributes = scanWGSLVertexAttributes(
     tokens,
     braceDepths,
@@ -60,7 +72,7 @@ export function scanWGSLInterface(
     structures,
     options.vertexEntryPoint
   );
-  return bindings && attributes ? {attributes, bindings} : null;
+  return attributes ? {attributes, bindings} : null;
 }
 
 function tokenizeWGSL(source: string): WGSLToken[] {

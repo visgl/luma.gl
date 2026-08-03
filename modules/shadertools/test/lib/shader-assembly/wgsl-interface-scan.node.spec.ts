@@ -163,9 +163,19 @@ fn second(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f {
   t.end();
 });
 
-test('scanWGSLInterface#scans compute bindings without vertex attributes', t => {
+test('scanWGSLInterface#binding-only scans ignore unrelated vertex ambiguity', t => {
   const source = /* wgsl */ `\
 @group(0) @binding(0) var<storage, read_write> values: array<u32>;
+
+@vertex
+fn firstVertex(@location(0) firstPosition: vec2f) -> @builtin(position) vec4f {
+  return vec4f(firstPosition, 0.0, 1.0);
+}
+
+@vertex
+fn secondVertex(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f {
+  return vec4f(secondPosition, 1.0);
+}
 
 @compute @workgroup_size(1)
 fn computeMain() {
@@ -173,25 +183,33 @@ fn computeMain() {
 }
 `;
 
-  t.deepEqual(
+  t.equal(
     scanWGSLInterface(source),
+    null,
+    'render interface scanning still requires a selected vertex entry point'
+  );
+  t.deepEqual(
+    scanWGSLInterface(source, {scanVertexAttributes: false}),
     {
       attributes: [],
       bindings: [{name: 'values', group: 0, location: 0, type: 'storage'}]
     },
-    'compute-only shaders still produce binding layouts'
+    'compute interface scanning returns bindings without selecting an unrelated vertex entry point'
   );
   t.end();
 });
 
 test('scanWGSLInterface#falls back for unsupported or malformed interfaces', t => {
   t.equal(
-    scanWGSLInterface(`\
+    scanWGSLInterface(
+      `\
 @group(0) @binding(0) var textures: binding_array<texture_2d<f32>>;
 @compute @workgroup_size(1) fn computeMain() {}
-`),
+`,
+      {scanVertexAttributes: false}
+    ),
     null,
-    'unsupported binding arrays require an explicit layout'
+    'unsupported binding arrays require an explicit layout in binding-only mode'
   );
   t.equal(
     scanWGSLInterface(`\
@@ -244,6 +262,42 @@ fn selectedVertex(@location(1) position: vec3f) -> @builtin(position) vec4f {
       bindings: [{name: 'frame', group: 0, location: 0, type: 'uniform'}]
     },
     'assembly returns a layout for its final preprocessed WGSL source'
+  );
+  t.end();
+});
+
+test('WGSLShaderAssembler#binding-only interface ignores unrelated vertex ambiguity', t => {
+  const source = /* wgsl */ `\
+@group(0) @binding(0) var<storage, read_write> values: array<u32>;
+
+@vertex
+fn firstVertex(@location(0) firstPosition: vec2f) -> @builtin(position) vec4f {
+  return vec4f(firstPosition, 0.0, 1.0);
+}
+
+@vertex
+fn secondVertex(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f {
+  return vec4f(secondPosition, 1.0);
+}
+
+@compute @workgroup_size(1)
+fn computeMain() {
+  values[0] = 1;
+}
+`;
+  const assembledShader = new WGSLShaderAssembler().assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source,
+    scanVertexAttributes: false
+  });
+
+  t.deepEqual(
+    assembledShader.shaderLayout,
+    {
+      attributes: [],
+      bindings: [{name: 'values', group: 0, location: 0, type: 'storage'}]
+    },
+    'assembly returns compute bindings without selecting a vertex entry point'
   );
   t.end();
 });

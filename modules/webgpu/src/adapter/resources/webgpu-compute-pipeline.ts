@@ -34,7 +34,9 @@ export class WebGPUComputePipeline extends ComputePipeline {
     const suppliedHandle = this.props.handle as GPUComputePipeline | undefined;
 
     if (!this.shaderLayout) {
-      const inferredShaderLayout = this.device.getShaderLayout(webgpuShader.source);
+      const inferredShaderLayout = this.device.getShaderLayout(webgpuShader.source, {
+        scanVertexAttributes: false
+      });
       // Raw pipelines with WGSL outside the lightweight scanner's safe subset require shaderLayout.
       assert(inferredShaderLayout);
       this.shaderLayout = {bindings: inferredShaderLayout.bindings};
