@@ -22,7 +22,9 @@ import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
 import {
   flattenEffectSettings,
   makePostprocessingUniforms,
+  reorderEffectPassNames,
   unflattenEffectSettings,
+  updateEffectPassNames,
   type EffectState
 } from '../../examples/showcase/postprocessing/app';
 
@@ -423,6 +425,54 @@ describe('text 3D crawl color compatibility', () => {
 });
 
 describe('postprocessing effect settings', () => {
+  test('adds effects to the stack only once', () => {
+    const activePassNames = ['bloom', 'vignette'];
+
+    expect(updateEffectPassNames(activePassNames, 'sepia', true)).toEqual([
+      'bloom',
+      'vignette',
+      'sepia'
+    ]);
+    expect(updateEffectPassNames(activePassNames, 'bloom', true)).toEqual(['bloom', 'vignette']);
+    expect(activePassNames).toEqual(['bloom', 'vignette']);
+  });
+
+  test('removes effects without changing the remaining stack order', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(updateEffectPassNames(activePassNames, 'vignette', false)).toEqual(['bloom', 'sepia']);
+    expect(updateEffectPassNames(activePassNames, 'noise', false)).toEqual([
+      'bloom',
+      'vignette',
+      'sepia'
+    ]);
+    expect(activePassNames).toEqual(['bloom', 'vignette', 'sepia']);
+  });
+
+  test('moves active effects earlier and later in the stack', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(reorderEffectPassNames(activePassNames, 'vignette', -1)).toEqual([
+      'vignette',
+      'bloom',
+      'sepia'
+    ]);
+    expect(reorderEffectPassNames(activePassNames, 'vignette', 1)).toEqual([
+      'bloom',
+      'sepia',
+      'vignette'
+    ]);
+    expect(activePassNames).toEqual(['bloom', 'vignette', 'sepia']);
+  });
+
+  test('keeps effects within the stack bounds when reordering', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(reorderEffectPassNames(activePassNames, 'bloom', -1)).toEqual(activePassNames);
+    expect(reorderEffectPassNames(activePassNames, 'sepia', 1)).toEqual(activePassNames);
+    expect(reorderEffectPassNames(activePassNames, 'noise', -1)).toEqual(activePassNames);
+  });
+
   test('flattens and restores vector settings as scalar panel settings', () => {
     const effectState: EffectState = {
       amount: 0.5,

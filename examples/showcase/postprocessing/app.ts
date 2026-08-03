@@ -3,17 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Texture} from '@luma.gl/core';
-import {
-  bloom,
-  brightnessContrast,
-  colorHalftone,
-  hueSaturation,
-  ink,
-  swirl,
-  vibrance,
-  vignette,
-  zoomBlur
-} from '@luma.gl/effects';
 import {AnimationLoopTemplate, ShaderPassRenderer, type AnimationProps} from '@luma.gl/engine';
 import type {ShaderPass} from '@luma.gl/shadertools';
 import type {
@@ -31,11 +20,21 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {EFFECT_CATEGORY_ORDER, EFFECT_DETAILS, EFFECT_SHADER_PASSES} from './effect-catalog';
 import {kineticScenePass} from './kinetic-scene-pass';
 
 const NO_EFFECT = 'No effect';
 const DEFAULT_LOOK_NAME: LookName = 'Neon Bloom';
 const VECTOR_COMPONENT_LABELS = ['X', 'Y', 'Z', 'W'] as const;
+const SAMPLE_HEAVY_EFFECT_NAMES = new Set([
+  'denoise',
+  'edgeWork',
+  'gaussianBlur',
+  'ink',
+  'tiltShift',
+  'triangleBlur',
+  'zoomBlur'
+]);
 
 type EffectPropValue = number | number[];
 export type EffectState = Record<string, EffectPropValue>;
@@ -46,11 +45,6 @@ type ShaderPropType = {
   softMin?: number;
   softMax?: number;
   private?: boolean;
-};
-
-type EffectDetails = {
-  label: string;
-  description: string;
 };
 
 type LookName =
@@ -69,57 +63,6 @@ type LookDefinition = {
   passNames: string[];
   values: Record<string, EffectState>;
   resolutionScale?: number;
-};
-
-const CURATED_SHADER_PASSES: Record<string, ShaderPass> = {
-  bloom,
-  brightnessContrast,
-  colorHalftone,
-  hueSaturation,
-  ink,
-  swirl,
-  vibrance,
-  vignette,
-  zoomBlur
-};
-
-const EFFECT_DETAILS: Record<string, EffectDetails> = {
-  bloom: {
-    label: 'Bloom',
-    description: 'Spreads selected highlights into a soft luminous halo.'
-  },
-  brightnessContrast: {
-    label: 'Brightness + Contrast',
-    description: 'Shapes the image range before the final presentation.'
-  },
-  colorHalftone: {
-    label: 'Color Halftone',
-    description: 'Separates color channels into a rotating print-screen pattern.'
-  },
-  hueSaturation: {
-    label: 'Hue + Saturation',
-    description: 'Rotates the palette and controls chroma intensity.'
-  },
-  ink: {
-    label: 'Ink',
-    description: 'Extracts local contrast into a graphic hand-inked treatment.'
-  },
-  swirl: {
-    label: 'Swirl',
-    description: 'Warps pixels around a configurable lens center.'
-  },
-  vibrance: {
-    label: 'Vibrance',
-    description: 'Raises quieter colors while protecting already saturated hues.'
-  },
-  vignette: {
-    label: 'Vignette',
-    description: 'Guides attention with a soft radial falloff.'
-  },
-  zoomBlur: {
-    label: 'Zoom Blur',
-    description: 'Pulls samples toward a focal point for a kinetic rush.'
-  }
 };
 
 const LOOK_DEFINITIONS: Record<LookName, LookDefinition> = {
@@ -224,6 +167,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   sceneTime = 0;
   previousFrameTime = 0;
   comparisonOriginal = false;
+  effectSearchQuery = '';
 
   constructor({device}: AnimationProps) {
     super();
@@ -243,7 +187,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'postprocessing-tune',
-      label: 'Tune',
+      label: 'Controls',
       sectionPresentation: 'accordion',
       schema: this.makeTuneSettingsSchema(),
       settings: this.makeTuneSettingsState(),
@@ -275,7 +219,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const [drawingBufferWidth, drawingBufferHeight] = this.device
       .getCanvasContext()
       .getDrawingBufferSize();
-    const resolutionScale = LOOK_DEFINITIONS[this.selectedLookName].resolutionScale || 1;
+    const presetResolutionScale = LOOK_DEFINITIONS[this.selectedLookName].resolutionScale || 1;
+    const stackResolutionScale = this.activePassNames.some(passName =>
+      SAMPLE_HEAVY_EFFECT_NAMES.has(passName)
+    )
+      ? 0.75
+      : 1;
+    const resolutionScale = Math.min(presetResolutionScale, stackResolutionScale);
     this.shaderPassRenderer.resize([
       Math.max(Math.round(drawingBufferWidth * resolutionScale), 1),
       Math.max(Math.round(drawingBufferHeight * resolutionScale), 1)
@@ -300,6 +250,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.syncPanels(restoreFocus ? `[data-look-name="${lookName}"]` : undefined);
   }
 
+  setEffectEnabled(passName: string, enabled: boolean): void {
+    if (!this.shaderPassMap[passName]) {
+      return;
+    }
+
+    const nextPassNames = updateEffectPassNames(this.activePassNames, passName, enabled);
+    this.setActivePassNames(
+      nextPassNames,
+      `[data-effect-library-item][data-effect-name="${passName}"]`
+    );
+  }
+
+  moveEffect(passName: string, direction: -1 | 1): void {
+    const nextPassNames = reorderEffectPassNames(this.activePassNames, passName, direction);
+    const focusAction = direction < 0 ? 'move-up' : 'move-down';
+    this.setActivePassNames(
+      nextPassNames,
+      `[data-effect-action="${focusAction}"][data-effect-name="${passName}"]`
+    );
+  }
+
   setComparisonOriginal(showOriginal: boolean): void {
     if (this.activePassNames.length === 0) {
       this.comparisonOriginal = false;
@@ -314,6 +285,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   setShaderPasses(shaderPasses: ShaderPass[]): void {
     this.shaderPassRenderer?.destroy();
     this.shaderPassRenderer = new ShaderPassRenderer(this.device, {shaderPasses});
+  }
+
+  private setActivePassNames(nextPassNames: string[], focusSelector?: string): void {
+    if (nextPassNames === this.activePassNames) {
+      return;
+    }
+
+    this.activePassNames = nextPassNames;
+    if (this.activePassNames.length === 0) {
+      this.comparisonOriginal = false;
+    }
+    this.setShaderPasses(this.getActiveShaderPasses());
+    this.syncPanels(focusSelector);
   }
 
   private getActiveShaderPasses(): ShaderPass[] {
@@ -367,7 +351,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private makeTuneSettingsSchema(): SettingsSchema {
     return {
-      title: 'Tune',
+      title: 'Controls',
       sections: [
         {
           id: 'source-motion',
@@ -434,8 +418,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'postprocessing-looks',
           title: 'Looks',
-          html: makeLooksHtml(this.selectedLookName, this.comparisonOriginal),
+          html: makeLooksHtml(this.selectedLookName, this.comparisonOriginal, this.activePassNames),
           onRender: rootElement => this.bindLooksPanel(rootElement)
+        }),
+        makeHtmlCustomPanel({
+          id: 'postprocessing-stack',
+          title: 'Effects Stack',
+          html: makeEffectsStackHtml(
+            this.activePassNames,
+            this.selectedLookName,
+            this.effectSearchQuery
+          ),
+          onRender: rootElement => this.bindEffectsStackPanel(rootElement)
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -458,6 +452,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.applyLook(lookName, true);
         return;
       }
+      if (event.target.closest('[data-open-effects-stack]')) {
+        this.openPanelTab('Effects Stack');
+        return;
+      }
       const comparisonButton = event.target.closest<HTMLButtonElement>('[data-original-compare]');
       if (comparisonButton && !comparisonButton.disabled) {
         this.setComparisonOriginal(!this.comparisonOriginal);
@@ -472,6 +470,70 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     };
   }
 
+  private bindEffectsStackPanel(rootElement: HTMLElement): () => void {
+    const handleClick = (event: Event): void => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      const actionButton = event.target.closest<HTMLButtonElement>('[data-effect-action]');
+      const passName = actionButton?.dataset.effectName;
+      if (!passName || !this.shaderPassMap[passName]) {
+        return;
+      }
+
+      switch (actionButton?.dataset.effectAction) {
+        case 'add':
+          this.setEffectEnabled(passName, true);
+          break;
+        case 'remove':
+          this.setEffectEnabled(passName, false);
+          break;
+        case 'move-up':
+          this.moveEffect(passName, -1);
+          break;
+        case 'move-down':
+          this.moveEffect(passName, 1);
+          break;
+        default:
+          break;
+      }
+    };
+
+    const handleInput = (event: Event): void => {
+      if (
+        !(event.target instanceof HTMLInputElement) ||
+        !event.target.hasAttribute('data-effect-search')
+      ) {
+        return;
+      }
+      this.effectSearchQuery = event.target.value;
+      filterEffectsLibrary(rootElement, this.effectSearchQuery);
+    };
+
+    rootElement.addEventListener('click', handleClick);
+    rootElement.addEventListener('input', handleInput);
+    filterEffectsLibrary(rootElement, this.effectSearchQuery);
+
+    return () => {
+      rootElement.removeEventListener('click', handleClick);
+      rootElement.removeEventListener('input', handleInput);
+    };
+  }
+
+  private openPanelTab(panelTitle: string): void {
+    const tabButtons = document.querySelectorAll<HTMLButtonElement>('[data-panel-tabs] > button');
+    const panelTab = Array.from(tabButtons).find(
+      tabButton => tabButton.textContent?.trim() === panelTitle
+    );
+    if (!panelTab) {
+      return;
+    }
+
+    panelTab.dispatchEvent(new Event('pointerdown', {bubbles: true, cancelable: true}));
+    panelTab.focus();
+  }
+
   private syncPanels(focusSelector?: string): void {
     this.settingsPanel.setSchemaAndSettings(
       this.makeTuneSettingsSchema(),
@@ -480,7 +542,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.panels.setPanel(this.makePanel());
     if (focusSelector && typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
-        document.querySelector<HTMLButtonElement>(focusSelector)?.focus();
+        const focusTarget = document.querySelector<HTMLButtonElement>(focusSelector);
+        if (focusTarget && !focusTarget.disabled) {
+          focusTarget.focus();
+        }
       });
     }
   }
@@ -512,7 +577,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 }
 
 function getShaderPasses(): Record<string, ShaderPass> {
-  return {...CURATED_SHADER_PASSES};
+  return {...EFFECT_SHADER_PASSES};
 }
 
 function getInitialEffectValues(
@@ -548,6 +613,42 @@ function getControllableProps(shaderPass: ShaderPass): [string, ShaderPropType][
     }
   }
   return controllableProps;
+}
+
+/** Adds or removes one effect while preserving an ordered, duplicate-free stack. */
+export function updateEffectPassNames(
+  activePassNames: string[],
+  passName: string,
+  enabled: boolean
+): string[] {
+  const passIndex = activePassNames.indexOf(passName);
+  if (enabled) {
+    return passIndex < 0 ? [...activePassNames, passName] : activePassNames;
+  }
+
+  return passIndex < 0
+    ? activePassNames
+    : activePassNames.filter(activePassName => activePassName !== passName);
+}
+
+/** Moves one effect by a single position without mutating the existing stack. */
+export function reorderEffectPassNames(
+  activePassNames: string[],
+  passName: string,
+  direction: -1 | 1
+): string[] {
+  const currentIndex = activePassNames.indexOf(passName);
+  const nextIndex = currentIndex + direction;
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= activePassNames.length) {
+    return activePassNames;
+  }
+
+  const nextPassNames = [...activePassNames];
+  [nextPassNames[currentIndex], nextPassNames[nextIndex]] = [
+    nextPassNames[nextIndex],
+    nextPassNames[currentIndex]
+  ];
+  return nextPassNames;
 }
 
 export function makePostprocessingSettingsState(
@@ -665,8 +766,13 @@ function makeEffectSettingName(
     : `${effectName}__${propName}__${componentIndex}`;
 }
 
-function makeLooksHtml(selectedLookName: LookName, comparisonOriginal: boolean): string {
-  const hasEffects = LOOK_DEFINITIONS[selectedLookName].passNames.length > 0;
+function makeLooksHtml(
+  selectedLookName: LookName,
+  comparisonOriginal: boolean,
+  activePassNames: string[]
+): string {
+  const hasEffects = activePassNames.length > 0;
+  const customizedLook = isCustomizedLook(selectedLookName, activePassNames);
   const cards = LOOK_ORDER.map(lookName => {
     const look = LOOK_DEFINITIONS[lookName];
     const isSelected = lookName === selectedLookName;
@@ -707,11 +813,13 @@ function makeLooksHtml(selectedLookName: LookName, comparisonOriginal: boolean):
       .effects-look-description { margin-top: 4px; color: #94a3b8; font-size: 10.5px; line-height: 1.35; }
       .effects-look-check { position: absolute; top: 7px; right: 7px; display: none; color: #67e8f9; font-size: 11px; font-weight: 900; }
       .effects-look-card[aria-pressed='true'] .effects-look-check { display: block; }
-      .effects-lab-actions { padding: 0 10px 11px; }
+      .effects-lab-actions { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 10px 11px; }
       .effects-action { min-height: 35px; margin: 0; padding: 7px 9px; border: 1px solid rgba(148, 163, 184, .2); border-radius: 8px; background: rgba(15, 23, 42, .72); color: #cbd5e1; font: 650 11px/1.2 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
       .effects-action:hover, .effects-action:focus-visible { border-color: rgba(125, 211, 252, .55); color: #f8fafc; outline: none; }
       .effects-action[aria-pressed='true'] { border-color: #67e8f9; background: rgba(8, 145, 178, .22); color: #ecfeff; }
       .effects-action:disabled { cursor: not-allowed; opacity: .42; }
+      .effects-action-primary { border-color: rgba(103, 232, 249, .4); background: rgba(8, 47, 73, .7); color: #cffafe; }
+      .effects-look-customized { border-color: rgba(251, 191, 36, .3); background: rgba(120, 53, 15, .24); color: #fde68a; }
       .effects-lab-hint { margin: 0; padding: 0 12px 13px; color: #64748b; font-size: 10px; text-align: center; }
       @container (max-width: 330px) { .effects-look-grid { grid-template-columns: 1fr; } }
     </style>
@@ -719,15 +827,193 @@ function makeLooksHtml(selectedLookName: LookName, comparisonOriginal: boolean):
       <header class="effects-lab-header">
         <p class="effects-lab-kicker">Realtime image laboratory</p>
         <h3 class="effects-lab-title">Kinetic Color Lab</h3>
-        <p class="effects-lab-intro">Choose a composed look, then open Tune to inspect every pass and uniform.</p>
-        <div class="effects-lab-chips"><span class="effects-lab-chip">Animated source</span><span class="effects-lab-chip">Composable passes</span><span class="effects-lab-chip">WebGL + WebGPU</span></div>
+        <p class="effects-lab-intro">Start with a look, customize its effect stack, and adjust every live uniform.</p>
+        <div class="effects-lab-chips"><span class="effects-lab-chip">${Object.keys(EFFECT_SHADER_PASSES).length} image effects</span><span class="effects-lab-chip">WebGL + WebGPU</span>${customizedLook ? '<span class="effects-lab-chip effects-look-customized">Customized stack</span>' : ''}</div>
       </header>
       <div class="effects-look-grid">${cards}</div>
       <div class="effects-lab-actions">
+        <button class="effects-action effects-action-primary" type="button" data-open-effects-stack>Customize this look</button>
         <button class="effects-action" type="button" data-original-compare aria-pressed="${comparisonOriginal}" ${hasEffects ? '' : 'disabled'}>Original preview</button>
       </div>
-      <p class="effects-lab-hint">Toggle Original preview for an instant full-stack A/B comparison.</p>
+      <p class="effects-lab-hint">Effects Stack adds or reorders passes. Controls adjusts their live settings.</p>
     </div>`;
+}
+
+function makeEffectsStackHtml(
+  activePassNames: string[],
+  selectedLookName: LookName,
+  effectSearchQuery: string
+): string {
+  const customizedLook = isCustomizedLook(selectedLookName, activePassNames);
+  const effectCount = Object.keys(EFFECT_SHADER_PASSES).length;
+  const activeRows = activePassNames
+    .map((passName, index) => {
+      const details = EFFECT_DETAILS[passName];
+      const effectLabel = details?.label || formatControlLabel(passName);
+      return `
+        <li class="effects-stack-step">
+          <span class="effects-stack-step-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
+          <span class="effects-stack-step-copy">
+            <span class="effects-stack-step-title">${escapeHtml(effectLabel)}</span>
+            <span class="effects-stack-step-category">${escapeHtml(details?.category || 'Image effect')}</span>
+          </span>
+          <span class="effects-stack-step-actions">
+            <button class="effects-stack-icon-button" type="button" data-effect-action="move-up" data-effect-name="${passName}" aria-label="Move ${escapeHtml(effectLabel)} earlier" ${index === 0 ? 'disabled' : ''}>↑</button>
+            <button class="effects-stack-icon-button" type="button" data-effect-action="move-down" data-effect-name="${passName}" aria-label="Move ${escapeHtml(effectLabel)} later" ${index === activePassNames.length - 1 ? 'disabled' : ''}>↓</button>
+            <button class="effects-stack-icon-button effects-stack-remove" type="button" data-effect-action="remove" data-effect-name="${passName}" aria-label="Remove ${escapeHtml(effectLabel)}">×</button>
+          </span>
+        </li>`;
+    })
+    .join('');
+
+  const libraryGroups = EFFECT_CATEGORY_ORDER.map(category => {
+    const categoryPassNames = Object.keys(EFFECT_SHADER_PASSES).filter(
+      passName => EFFECT_DETAILS[passName]?.category === category
+    );
+    const categoryRows = categoryPassNames
+      .map(passName => {
+        const details = EFFECT_DETAILS[passName];
+        const active = activePassNames.includes(passName);
+        const action = active ? 'remove' : 'add';
+        const actionLabel = active ? 'Remove' : 'Add';
+        const searchText = `${details.label} ${details.category} ${details.description}`;
+        return `
+          <button class="effects-library-item" type="button" data-effect-library-item data-effect-action="${action}" data-effect-name="${passName}" data-effect-search-text="${escapeHtml(searchText.toLowerCase())}" aria-label="${actionLabel} ${escapeHtml(details.label)}" aria-pressed="${active}">
+            <span class="effects-library-copy">
+              <span class="effects-library-title">${escapeHtml(details.label)}</span>
+              <span class="effects-library-description">${escapeHtml(details.description)}</span>
+            </span>
+            <span class="effects-library-action" aria-hidden="true">${active ? '✓' : '+'}</span>
+          </button>`;
+      })
+      .join('');
+
+    return `
+      <section class="effects-library-group" data-effect-category-group>
+        <h4 class="effects-library-group-title">${escapeHtml(category)} <span>${categoryPassNames.length}</span></h4>
+        <div class="effects-library-list">${categoryRows}</div>
+      </section>`;
+  }).join('');
+
+  return `
+    <style>
+      .effects-stack { container-type: inline-size; color: #e2e8f0; font: 12px/1.45 Inter, ui-sans-serif, system-ui, sans-serif; }
+      .effects-stack * { box-sizing: border-box; }
+      .effects-stack [hidden] { display: none !important; }
+      .effects-stack-header { padding: 15px 15px 12px; border-bottom: 1px solid rgba(148, 163, 184, .16); background: radial-gradient(circle at 12% 0%, rgba(56, 189, 248, .13), transparent 46%); }
+      .effects-stack-kicker { margin: 0 0 4px; color: #67e8f9; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+      .effects-stack-title { margin: 0; color: #f8fafc; font-size: 17px; font-weight: 750; letter-spacing: -.02em; }
+      .effects-stack-intro { margin: 5px 0 0; color: #94a3b8; font-size: 11px; }
+      .effects-stack-origin { display: inline-flex; margin-top: 9px; padding: 3px 8px; border: 1px solid rgba(125, 211, 252, .18); border-radius: 999px; background: rgba(14, 116, 144, .1); color: #bae6fd; font-size: 10px; font-weight: 650; }
+      .effects-stack-origin-custom { border-color: rgba(251, 191, 36, .3); background: rgba(120, 53, 15, .22); color: #fde68a; }
+      .effects-stack-section { padding: 12px 12px 0; }
+      .effects-stack-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+      .effects-stack-section-title { margin: 0; color: #f8fafc; font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+      .effects-stack-count { color: #7dd3fc; font-size: 10px; font-weight: 700; }
+      .effects-stack-source { display: flex; align-items: center; gap: 8px; min-height: 33px; padding: 7px 9px; border: 1px solid rgba(56, 189, 248, .24); border-radius: 8px; background: rgba(8, 47, 73, .48); color: #bae6fd; font-size: 10px; font-weight: 650; }
+      .effects-stack-source-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #67e8f9; box-shadow: 0 0 10px rgba(103, 232, 249, .7); }
+      .effects-stack-list { display: grid; gap: 6px; margin: 7px 0 0; padding: 0; list-style: none; }
+      .effects-stack-step { display: flex; align-items: center; min-height: 49px; gap: 8px; padding: 7px; border: 1px solid rgba(148, 163, 184, .17); border-radius: 8px; background: rgba(15, 23, 42, .66); }
+      .effects-stack-step-number { width: 20px; color: #64748b; font-size: 10px; font-weight: 800; text-align: center; }
+      .effects-stack-step-copy { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; }
+      .effects-stack-step-title { overflow: hidden; color: #f8fafc; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+      .effects-stack-step-category { overflow: hidden; color: #94a3b8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+      .effects-stack-step-actions { display: flex; flex: 0 0 auto; gap: 4px; }
+      .effects-stack-icon-button { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; margin: 0; padding: 0; border: 1px solid rgba(148, 163, 184, .2); border-radius: 6px; background: rgba(30, 41, 59, .68); color: #cbd5e1; font-size: 14px; cursor: pointer; }
+      .effects-stack-icon-button:hover, .effects-stack-icon-button:focus-visible { border-color: rgba(125, 211, 252, .58); color: #f8fafc; outline: none; }
+      .effects-stack-icon-button:disabled { cursor: not-allowed; opacity: .32; }
+      .effects-stack-remove:hover, .effects-stack-remove:focus-visible { border-color: rgba(251, 113, 133, .62); color: #fecdd3; }
+      .effects-stack-empty { margin: 9px 0 0; padding: 12px; border: 1px dashed rgba(148, 163, 184, .24); border-radius: 8px; color: #94a3b8; font-size: 10px; text-align: center; }
+      .effects-library { margin-top: 16px; padding-bottom: 13px; }
+      .effects-library-search { display: block; width: 100%; min-height: 37px; margin: 0 0 9px; padding: 8px 10px; border: 1px solid rgba(148, 163, 184, .24); border-radius: 8px; background: rgba(15, 23, 42, .7); color: #f8fafc; font: 11px/1.2 Inter, ui-sans-serif, system-ui, sans-serif; }
+      .effects-library-search::placeholder { color: #64748b; }
+      .effects-library-search:focus { border-color: rgba(125, 211, 252, .62); outline: none; }
+      .effects-library-group { margin-top: 12px; }
+      .effects-library-group-title { display: flex; align-items: center; justify-content: space-between; margin: 0 0 6px; color: #cbd5e1; font-size: 10px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+      .effects-library-group-title span { color: #64748b; font-size: 9px; }
+      .effects-library-list { display: grid; gap: 5px; }
+      .effects-library-item { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; min-height: 49px; margin: 0; padding: 8px 9px; border: 1px solid rgba(148, 163, 184, .14); border-radius: 8px; background: rgba(15, 23, 42, .55); color: inherit; text-align: left; cursor: pointer; }
+      .effects-library-item:hover, .effects-library-item:focus-visible { border-color: rgba(125, 211, 252, .48); background: rgba(30, 41, 59, .72); outline: none; }
+      .effects-library-item[aria-pressed='true'] { border-color: rgba(103, 232, 249, .45); background: rgba(8, 47, 73, .58); }
+      .effects-library-copy { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; }
+      .effects-library-title { color: #f8fafc; font-size: 10px; font-weight: 700; }
+      .effects-library-description { color: #94a3b8; font-size: 9px; line-height: 1.35; }
+      .effects-library-action { display: inline-flex; width: 22px; height: 22px; flex: 0 0 22px; align-items: center; justify-content: center; border: 1px solid rgba(148, 163, 184, .25); border-radius: 6px; color: #7dd3fc; font-size: 15px; }
+      .effects-library-item[aria-pressed='true'] .effects-library-action { border-color: rgba(103, 232, 249, .42); background: rgba(8, 145, 178, .22); color: #67e8f9; }
+      .effects-library-no-results { margin: 10px 0 0; color: #94a3b8; font-size: 10px; text-align: center; }
+      @container (max-width: 300px) { .effects-stack-step { gap: 5px; padding: 6px; } .effects-stack-step-number { width: 16px; } .effects-stack-icon-button { width: 24px; height: 24px; } }
+    </style>
+    <section class="effects-stack">
+      <header class="effects-stack-header">
+        <p class="effects-stack-kicker">Build your own pipeline</p>
+        <h3 class="effects-stack-title">Effect Composer</h3>
+        <p class="effects-stack-intro">Add any image effect, reorder the live stack, and fine-tune each pass under Controls.</p>
+        <span class="effects-stack-origin${customizedLook ? ' effects-stack-origin-custom' : ''}">${escapeHtml(selectedLookName)}${customizedLook ? ' · customized' : ' preset'}</span>
+      </header>
+      <section class="effects-stack-section" aria-label="Active effect stack">
+        <div class="effects-stack-section-heading">
+          <h4 class="effects-stack-section-title">Active pipeline</h4>
+          <span class="effects-stack-count" aria-live="polite">${activePassNames.length} ${activePassNames.length === 1 ? 'pass' : 'passes'}</span>
+        </div>
+        <div class="effects-stack-source"><span class="effects-stack-source-dot" aria-hidden="true"></span>Animated source · always on</div>
+        ${activeRows ? `<ol class="effects-stack-list">${activeRows}</ol>` : '<p class="effects-stack-empty">No effects yet. Add any module from the library below.</p>'}
+      </section>
+      <section class="effects-stack-section effects-library" aria-label="Available image effects">
+        <div class="effects-stack-section-heading">
+          <h4 class="effects-stack-section-title">Effect library</h4>
+          <span class="effects-stack-count" data-effect-result-count>${effectCount} effects</span>
+        </div>
+        <input class="effects-library-search" type="search" data-effect-search aria-label="Search available effects" placeholder="Search ${effectCount} effects" value="${escapeHtml(effectSearchQuery)}" />
+        ${libraryGroups}
+        <p class="effects-library-no-results" data-effect-no-results hidden>No matching effects. Try a different search.</p>
+      </section>
+    </section>`;
+}
+
+function filterEffectsLibrary(rootElement: HTMLElement, searchQuery: string): void {
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const libraryItems = rootElement.querySelectorAll<HTMLElement>('[data-effect-library-item]');
+  let visibleEffectCount = 0;
+
+  for (const libraryItem of libraryItems) {
+    const searchText = libraryItem.dataset.effectSearchText || '';
+    const visible = !normalizedSearchQuery || searchText.includes(normalizedSearchQuery);
+    libraryItem.hidden = !visible;
+    if (visible) {
+      visibleEffectCount++;
+    }
+  }
+
+  const categoryGroups = rootElement.querySelectorAll<HTMLElement>('[data-effect-category-group]');
+  for (const categoryGroup of categoryGroups) {
+    categoryGroup.hidden = !categoryGroup.querySelector('[data-effect-library-item]:not([hidden])');
+  }
+
+  const resultCount = rootElement.querySelector<HTMLElement>('[data-effect-result-count]');
+  if (resultCount) {
+    resultCount.textContent = `${visibleEffectCount} ${visibleEffectCount === 1 ? 'effect' : 'effects'}`;
+  }
+  const emptyState = rootElement.querySelector<HTMLElement>('[data-effect-no-results]');
+  if (emptyState) {
+    emptyState.hidden = visibleEffectCount > 0;
+  }
+}
+
+function isCustomizedLook(selectedLookName: LookName, activePassNames: string[]): boolean {
+  const presetPassNames = LOOK_DEFINITIONS[selectedLookName].passNames;
+  return (
+    presetPassNames.length !== activePassNames.length ||
+    presetPassNames.some((passName, index) => passName !== activePassNames[index])
+  );
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 function makeAboutHtml(): string {
@@ -735,7 +1021,7 @@ function makeAboutHtml(): string {
     <div style="padding:14px 15px;color:#cbd5e1;font:12px/1.55 Inter,ui-sans-serif,system-ui,sans-serif">
       <p style="margin:0 0 10px;color:#f8fafc;font-size:15px;font-weight:750">A live test chart, not a fixed photograph.</p>
       <p style="margin:0 0 10px">The first fullscreen pass generates a moving scene with fine lines, broad gradients, saturated edges, highlights, and low-contrast shadow detail. Those signals make blur, bloom, color, edge, print, and warp behavior legible at a glance.</p>
-      <p style="margin:0 0 10px"><b style="color:#7dd3fc">Curated pipelines:</b> each Look composes ordinary <code>ShaderPass</code> modules. Tune exposes the same typed properties that an application can drive directly. Sample-heavy ink and zoom looks use a controlled processing resolution to stay fluid on high-DPI displays.</p>
+      <p style="margin:0 0 10px"><b style="color:#7dd3fc">Editable pipelines:</b> each Look starts with ordinary <code>ShaderPass</code> modules. Effects Stack exposes the complete portable image-effect library, and Controls adjusts the same typed properties an application can drive directly. Sample-heavy stacks use a controlled processing resolution to stay fluid on high-DPI displays.</p>
       <p style="margin:0"><b style="color:#7dd3fc">Portable by design:</b> the procedural source and every selected effect provide both WGSL and GLSL, so the visual language stays consistent across WebGPU and WebGL.</p>
     </div>`;
 }
