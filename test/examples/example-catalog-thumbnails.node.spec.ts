@@ -13,6 +13,7 @@ type ExampleSidebarEntry =
 
 const EXAMPLE_IMAGES_DIRECTORY = path.join(process.cwd(), 'website/static/images/examples');
 const RECOVERED_FLAGSHIP_EXAMPLES = [
+  'showcase/globe',
   'showcase/billion-point-spatial-atlas',
   'deck/luspatial-taxi',
   'deck/gpu-culled-trace',
@@ -62,6 +63,23 @@ describe('live example catalog thumbnails', () => {
       ).toEqual({width: 1280, height: 720});
     }
   });
+
+  test('keeps the HDR Globe visibly rendered with interoperable gain-map metadata', () => {
+    const globeImageBytes = readFileSync(resolveExampleThumbnailPath('showcase/globe'));
+
+    expect(
+      globeImageBytes.includes(Buffer.from('urn:iso:std:iso:ts:21496:-1')),
+      'The Globe poster must preserve ISO 21496-1 gain-map metadata'
+    ).toBe(true);
+    expect(
+      globeImageBytes.includes(Buffer.from('http://ns.adobe.com/hdr-gain-map/1.0/')),
+      'The Globe poster must preserve Ultra HDR XMP gain-map metadata'
+    ).toBe(true);
+    expect(
+      countDistinctJpegScanByteValues(globeImageBytes),
+      'The Globe poster must contain visibly rendered content instead of a flat-color JPEG scan'
+    ).toBeGreaterThan(32);
+  });
 });
 
 function readLiveExampleIdentifiers(): string[] {
@@ -96,6 +114,23 @@ function resolveExampleThumbnailPath(exampleIdentifier: string): string {
       : `${exampleIdentifier}.jpg`;
 
   return path.join(EXAMPLE_IMAGES_DIRECTORY, thumbnailName);
+}
+
+function countDistinctJpegScanByteValues(imageBytes: Buffer): number {
+  const startOfScanOffset = imageBytes.indexOf(Buffer.from([0xff, 0xda]));
+  if (startOfScanOffset < 0 || startOfScanOffset + 4 > imageBytes.length) {
+    throw new Error('The JPEG image does not contain a complete scan header');
+  }
+
+  const scanHeaderLength = imageBytes.readUInt16BE(startOfScanOffset + 2);
+  const scanDataOffset = startOfScanOffset + 2 + scanHeaderLength;
+  const endOfImageOffset = imageBytes.indexOf(Buffer.from([0xff, 0xd9]), scanDataOffset);
+
+  if (scanHeaderLength < 2 || endOfImageOffset <= scanDataOffset) {
+    throw new Error('The JPEG image does not contain a complete image scan');
+  }
+
+  return new Set(imageBytes.subarray(scanDataOffset, endOfImageOffset)).size;
 }
 
 function readJpegDimensions(imagePath: string): {width: number; height: number} {
