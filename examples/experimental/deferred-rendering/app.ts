@@ -140,17 +140,17 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   pointLightCount: 256,
   animate: true,
   autoOrbitCamera: true,
-  exposure: 1.15,
+  exposure: 0.82,
   highlightBoost: 1.4,
   autoExposureEnabled: true,
-  exposureKeyValue: 0.48,
-  minimumExposure: 0.45,
-  maximumExposure: 2.4,
+  exposureKeyValue: 0.16,
+  minimumExposure: 0.35,
+  maximumExposure: 1.2,
   exposureBrightenSpeed: 1.6,
   exposureDarkenSpeed: 2.8,
   bloomEnabled: true,
-  bloomThreshold: 0.78,
-  bloomIntensity: 0.34,
+  bloomThreshold: 0.96,
+  bloomIntensity: 0.15,
   bloomRadius: 8,
   bloomResolution: 1,
   sunIntensity: 2.8,
@@ -175,18 +175,18 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   reflectionHistoryWeight: 0.84,
   reflectionResolution: 0.5,
   atmosphereEnabled: true,
-  atmosphereDensity: 0.055,
+  atmosphereDensity: 0.008,
   atmosphereHeightFalloff: 0.28,
   atmosphereAnisotropy: 0.46,
-  atmospherePointLightIntensity: 1.65,
-  atmosphereSunIntensity: 1.1,
-  atmosphereStrength: 0.82,
+  atmospherePointLightIntensity: 1.45,
+  atmosphereSunIntensity: 0.6,
+  atmosphereStrength: 0.18,
   atmosphereSampleCount: 10,
   atmosphereHistoryWeight: 0.88,
   atmosphereShadowStrength: 0.76,
   atmosphereResolution: 0.5,
   godRaysEnabled: true,
-  godRayIntensity: 1.65,
+  godRayIntensity: 0.5,
   godRayDensity: 0.94,
   godRayDecay: 0.96,
   godRaySampleCount: 18
@@ -347,7 +347,9 @@ fn deferredDisplay_toneMap(color: vec3f) -> vec3f {
   let standardColor = clamp(mapped, vec3f(0.0), vec3f(1.0));
   let peakIntensity = max(max(exposed.r, exposed.g), exposed.b);
   let highlightWeight = smoothstep(0.32, 1.35, peakIntensity);
-  let extendedHighlights = exposed * highlightWeight * deferredDisplay.highlightBoost * 0.68;
+  // Extended-range output needs only a restrained lift above the filmic SDR shoulder. Large
+  // multipliers wash out the entire laboratory instead of preserving isolated HDR highlights.
+  let extendedHighlights = exposed * highlightWeight * deferredDisplay.highlightBoost * 0.02;
   let displayColor = select(
     standardColor,
     standardColor + extendedHighlights,
@@ -731,14 +733,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       Math.round(this.settings.pointLightCount),
       MAX_EXAMPLE_POINT_LIGHTS
     );
-    const highlightBoost =
-      device.preferredColorFormat === 'rgba16float' ? this.settings.highlightBoost : 0;
-    const lightState = makeAnimatedPointLights(
-      time,
-      activeLightCount,
-      viewMatrix,
-      1 + highlightBoost * 1.45
-    );
+    const lightState = makeAnimatedPointLights(time, activeLightCount, viewMatrix);
     this.pointLightBuffer.write(
       makeDeferredPointLightBufferData(lightState.viewLights, MAX_CLUSTERED_POINT_LIGHTS)
     );
@@ -1158,7 +1153,7 @@ function createRenderer(device: Device, settings: DeferredRenderingSettings): Sh
         ]
       : []),
     ...(settings.autoExposureEnabled || settings.debugView === 'HDR Luminance'
-      ? [createHDRAutoExposureShaderPassPipeline()]
+      ? [createHDRAutoExposureShaderPassPipeline({initialExposure: settings.minimumExposure})]
       : []),
     ...(settings.bloomEnabled
       ? [createBloomShaderPassPipeline({resolutionScale: settings.bloomResolution})]
@@ -1341,8 +1336,7 @@ function makeLightMarkerData(): SurfaceInstanceData {
 function makeAnimatedPointLights(
   time: number,
   lightCount: number,
-  viewMatrix: Matrix4,
-  lightIntensityMultiplier = 1
+  viewMatrix: Matrix4
 ): {viewLights: DeferredPointLight[]; markerPositions: Float32Array} {
   const viewLights: DeferredPointLight[] = [];
   const markerPositions = new Float32Array(MAX_EXAMPLE_POINT_LIGHTS * 3);
@@ -1371,7 +1365,7 @@ function makeAnimatedPointLights(
       position: viewMatrix.transformAsPoint(worldPosition) as [number, number, number],
       range: 3.6 + (ring % 3) * 0.55,
       color: [color[0], color[1], color[2]],
-      intensity: (7.5 + (ring % 3) * 1.2) * lightIntensityMultiplier
+      intensity: 7.5 + (ring % 3) * 1.2
     });
   }
   return {viewLights, markerPositions};

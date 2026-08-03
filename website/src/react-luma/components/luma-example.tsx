@@ -1,6 +1,6 @@
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import {Device, luma} from '@luma.gl/core';
+import {Device, luma, type DeviceLimits} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   makeAnimationLoop,
@@ -9,12 +9,12 @@ import {
 } from '@luma.gl/engine';
 import {DeviceTabs, type DeviceTabSelection} from './device-tabs';
 import {ExampleStats} from './example-stats';
-import {InfoBox, type ExampleInfoProps} from './info-box';
+import {InfoBox, type ExampleInfoProps, type InfoBoxAppearance} from './info-box';
 import {
   clearActiveCpuHotspotProfilerDevice,
   setActiveCpuHotspotProfilerDevice
 } from '../debug/luma-cpu-hotspot-profiler';
-import {logError} from '../utils/error-utils';
+import {getErrorMessage, logError} from '../utils/error-utils';
 import {
   HDRCanvasCaptureController,
   type HDRScreenshotCapture
@@ -59,15 +59,6 @@ if (typeof window !== 'undefined') {
   window.website = true;
 }
 
-const STYLES = {
-  EXAMPLE_NOT_SUPPPORTED: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh'
-  }
-};
-
 export type ExampleDisplayProps = {
   className?: string;
   embedded?: boolean;
@@ -87,11 +78,15 @@ export type LumaExampleProps = React.PropsWithChildren<
     sourceFiles?: string[];
     sourcePath?: string;
     stackBlitz?: boolean;
+    infoBoxAppearance?: InfoBoxAppearance;
     container?: string;
     panel?: boolean;
     showHeader?: boolean;
     showStats?: boolean;
     devices?: DeviceTabSelection[];
+    requiredDeviceLimits?: Partial<
+      Pick<DeviceLimits, 'maxColorAttachments' | 'maxColorAttachmentBytesPerSample'>
+    >;
     canvasContextProfile?: CanvasContextProfile;
     templateInfoPlacement?: 'header' | 'page';
     headerControls?: React.ReactNode;
@@ -102,22 +97,32 @@ const defaultProps = {
   name: 'luma-example'
 };
 
-const state = {
-  supported: true,
-  error: null
-};
-
 const EXAMPLE_CONTAINER_STYLE: CSSProperties = {
+  boxSizing: 'border-box',
   position: 'relative',
   width: '100%',
   height: 'calc(100vh - var(--ifm-navbar-height))',
-  minHeight: 'calc(100vh - var(--ifm-navbar-height))'
+  minHeight: 'calc(100vh - var(--ifm-navbar-height))',
+  overflow: 'hidden'
 };
 
 const EXAMPLE_CANVAS_STYLE: CSSProperties = {
   display: 'block',
   width: '100%',
   height: '100%'
+};
+
+const EXAMPLE_STARTUP_ERROR_STYLE: CSSProperties = {
+  alignItems: 'center',
+  background: 'rgba(2, 6, 23, 0.92)',
+  color: '#e2e8f0',
+  display: 'flex',
+  inset: 0,
+  justifyContent: 'center',
+  padding: 24,
+  position: 'absolute',
+  textAlign: 'center',
+  zIndex: 15
 };
 
 const EXAMPLE_HEADER_STYLE: CSSProperties = {
@@ -137,8 +142,14 @@ const EXAMPLE_HEADER_STYLE: CSSProperties = {
 
 export type ExamplePageProps = React.PropsWithChildren<ExampleDisplayProps>;
 
+export type ExampleStageProps = React.PropsWithChildren<{
+  className?: string;
+  style?: CSSProperties;
+}>;
+
 type ExampleHeaderProps = React.PropsWithChildren<
   ExampleInfoProps & {
+    infoBoxAppearance?: InfoBoxAppearance;
     devices?: DeviceTabSelection[];
     style?: CSSProperties;
   }
@@ -149,6 +160,17 @@ type ReactExampleProps<P> = {
   componentProps: P;
   showStats?: boolean;
 } & ExampleDisplayProps;
+
+/** Bounds an explicitly composed example header and render surface as one visual stage. */
+export const ExampleStage: FC<ExampleStageProps> = (props: ExampleStageProps) => (
+  <div
+    data-luma-example-page=""
+    className={props.className}
+    style={{position: 'relative', width: '100%', overflow: 'hidden', ...props.style}}
+  >
+    {props.children}
+  </div>
+);
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
   const embeddedHeight = props.embeddedHeight ?? 560;
@@ -161,6 +183,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
 
   return (
     <div
+      data-luma-example-page=""
       className={
         props.className || (props.embedded ? 'docs-embedded-example' : 'luma-example-page')
       }
@@ -183,6 +206,7 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
         sourceFiles={props.sourceFiles}
         sourcePath={props.sourcePath}
         stackBlitz={props.stackBlitz}
+        appearance={props.infoBoxAppearance}
         style={{pointerEvents: 'auto'}}
       >
         {props.children}
@@ -232,6 +256,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const device = useStore(store => store.device);
   const [effectiveDeviceType, setEffectiveDeviceType] = useState<DeviceType | undefined>();
   const [effectiveDevice, setEffectiveDevice] = useState<Device | undefined>();
+  const [startupErrorMessage, setStartupErrorMessage] = useState<string | null>(null);
   const requestedDeviceTypesKey = getRequestedDeviceTypes(props.devices)?.join('|') || '';
 
   useEffect(() => {
@@ -252,6 +277,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           props.canvasContextProfile && props.canvasContextProfile !== 'default'
             ? await createDevice(deviceType, props.canvasContextProfile)
             : device;
+        assertExampleDeviceLimits(exampleDevice, props.requiredDeviceLimits);
         if (!isCancelled) {
           setEffectiveDeviceType(deviceType);
           setEffectiveDevice(exampleDevice);
@@ -261,6 +287,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
       const fallbackDeviceType = await getPreferredAvailableDeviceType(requestedDeviceTypes);
       if (!fallbackDeviceType) {
+        assertExampleDeviceLimits(device, props.requiredDeviceLimits);
         if (!isCancelled) {
           setEffectiveDeviceType(deviceType);
           setEffectiveDevice(device);
@@ -269,6 +296,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
 
       const fallbackDevice = await createDevice(fallbackDeviceType, props.canvasContextProfile);
+      assertExampleDeviceLimits(fallbackDevice, props.requiredDeviceLimits);
       await createPresentationDevice(fallbackDeviceType);
       if (!isCancelled) {
         setEffectiveDeviceType(fallbackDeviceType);
@@ -276,12 +304,27 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
     };
 
-    void selectEffectiveDevice();
+    setStartupErrorMessage(null);
+    void selectEffectiveDevice().catch(error => {
+      if (!isCancelled) {
+        setEffectiveDeviceType(undefined);
+        setEffectiveDevice(undefined);
+        setStartupErrorMessage(getErrorMessage(error));
+        logError('Example device selection failed', error);
+      }
+    });
 
     return () => {
       isCancelled = true;
     };
-  }, [deviceType, device, props.canvasContextProfile, requestedDeviceTypesKey]);
+  }, [
+    deviceType,
+    device,
+    props.canvasContextProfile,
+    props.requiredDeviceLimits?.maxColorAttachments,
+    props.requiredDeviceLimits?.maxColorAttachmentBytesPerSample,
+    requestedDeviceTypesKey
+  ]);
 
   useEffect(() => {
     if (!canvasContainerRef.current || !effectiveDeviceType || !effectiveDevice) {
@@ -299,6 +342,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       props.canvasContextProfile === 'high-dynamic-range'
         ? new HDRCanvasCaptureController(exampleId, effectiveDevice, defaultCanvasContext)
         : null;
+    setStartupErrorMessage(null);
 
     const removeBrowserCaptureFunction = () => {
       if (window.lumaCaptureHDRScreenshot === browserCaptureFunction) {
@@ -369,6 +413,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       })
       .catch(error => {
         if (!isCancelled) {
+          setStartupErrorMessage(getErrorMessage(error));
           logError(`Example startup failed for ${effectiveDeviceType}`, error);
         }
       });
@@ -432,8 +477,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           sourceFiles={props.sourceFiles}
           sourcePath={props.sourcePath}
           stackBlitz={props.stackBlitz}
+          infoBoxAppearance={props.infoBoxAppearance}
           devices={props.devices}
         >
+          {props.children}
           {info && props.templateInfoPlacement !== 'page' ? (
             <div dangerouslySetInnerHTML={{__html: info}} />
           ) : null}
@@ -462,6 +509,16 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           }}
         />
       </div>
+      {startupErrorMessage ? (
+        <div role="alert" style={EXAMPLE_STARTUP_ERROR_STYLE}>
+          <div style={{maxWidth: 620}}>
+            <strong style={{display: 'block', fontSize: 18, marginBottom: 8}}>
+              This example is unavailable on the selected GPU.
+            </strong>
+            <span>{startupErrorMessage}</span>
+          </div>
+        </div>
+      ) : null}
     </ExamplePage>
   );
 };
@@ -498,4 +555,29 @@ function getRequestedDeviceTypes(devices?: DeviceTabSelection[]): DeviceType[] |
   }
 
   return requestedDeviceTypes;
+}
+
+function assertExampleDeviceLimits(
+  device: Device,
+  requiredLimits: LumaExampleProps['requiredDeviceLimits']
+): void {
+  const requiredColorAttachments = requiredLimits?.maxColorAttachments;
+  if (
+    requiredColorAttachments !== undefined &&
+    device.limits.maxColorAttachments < requiredColorAttachments
+  ) {
+    throw new Error(
+      `This example requires ${requiredColorAttachments} color attachments, but the selected GPU supports ${device.limits.maxColorAttachments}.`
+    );
+  }
+
+  const requiredAttachmentBytes = requiredLimits?.maxColorAttachmentBytesPerSample;
+  if (
+    requiredAttachmentBytes !== undefined &&
+    device.limits.maxColorAttachmentBytesPerSample < requiredAttachmentBytes
+  ) {
+    throw new Error(
+      `This example requires ${requiredAttachmentBytes} color-attachment bytes per sample, but the selected GPU supports ${device.limits.maxColorAttachmentBytesPerSample}.`
+    );
+  }
 }

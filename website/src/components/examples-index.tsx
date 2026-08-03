@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {useDocsSidebar} from '@docusaurus/plugin-content-docs/client';
+import {useDocsSidebar, useDocsVersion} from '@docusaurus/plugin-content-docs/client';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './examples-index.module.css';
 
@@ -9,7 +9,6 @@ type ExampleMaturity = 'stable' | 'experimental';
 
 type ExampleCustomProps = {
   backends?: ExampleBackend[];
-  description?: string;
   difficulty?: ExampleDifficulty;
   maturity?: ExampleMaturity;
   topics?: string[];
@@ -43,14 +42,19 @@ type CatalogItem = SidebarDocItem & {
   topics: string[];
 };
 
+type CatalogDocument = {
+  description?: string;
+};
+
 type ExamplesIndexProps = {
   getThumbnail: (item: SidebarDocItem) => string;
 };
 
 export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const sidebar = useDocsSidebar() as SidebarRoot;
+  const {docs} = useDocsVersion();
   const baseUrl = useBaseUrl('/');
-  const catalog = useMemo(() => buildCatalog(sidebar), [sidebar]);
+  const catalog = useMemo(() => buildCatalog(sidebar, docs), [docs, sidebar]);
   const topics = useMemo(
     () => [...new Set(catalog.flatMap(item => item.topics))].sort(),
     [catalog]
@@ -203,7 +207,10 @@ function FilterSelect({
   );
 }
 
-function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
+function buildCatalog(
+  sidebar: SidebarRoot,
+  documents: Record<string, CatalogDocument>
+): CatalogItem[] {
   const catalog: CatalogItem[] = [];
 
   const visit = (items: Array<SidebarDocItem | SidebarCategoryItem>, category = 'Examples') => {
@@ -211,7 +218,8 @@ function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
       if (item.type === 'category') {
         visit(item.items, item.label);
       } else if (item.docId !== 'index') {
-        catalog.push(normalizeItem(item, category));
+        const documentDescription = item.docId ? documents[item.docId]?.description : undefined;
+        catalog.push(normalizeItem(item, category, documentDescription));
       }
     }
   };
@@ -220,14 +228,18 @@ function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
   return catalog;
 }
 
-function normalizeItem(item: SidebarDocItem, category: string): CatalogItem {
+function normalizeItem(
+  item: SidebarDocItem,
+  category: string,
+  documentDescription?: string
+): CatalogItem {
   const customProps = item.customProps || {};
   const topic = getDefaultTopic(category);
   return {
     ...item,
     backends: customProps.backends || getDefaultBackends(category),
     category,
-    description: customProps.description || `${item.label} — ${category.toLowerCase()} example.`,
+    description: documentDescription || `${item.label} — ${category.toLowerCase()} example.`,
     difficulty: customProps.difficulty || getDefaultDifficulty(category),
     maturity: customProps.maturity || getDefaultMaturity(category),
     topics: customProps.topics || [topic]

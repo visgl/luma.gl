@@ -1257,6 +1257,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       <label><input type="checkbox" data-lightstorm checked> Animated lightstorm</label>
       <label><input type="checkbox" data-thunder-audio checked> Procedural thunder audio</label>
       <small data-thunder-status aria-live="polite"></small>
+      <button type="button" data-test-thunder>Test thunderclap</button>
       <label><input type="checkbox" data-guided-camera checked> Guided camera</label>
       <label><input type="checkbox" data-comparison> Tactical visibility proof</label>
       <button type="button" data-restart-tour>Restart cinematic tour</button>
@@ -1271,6 +1272,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     const lightstorm = root.querySelector('[data-lightstorm]') as HTMLInputElement;
     const thunderAudio = root.querySelector('[data-thunder-audio]') as HTMLInputElement;
     const thunderStatus = root.querySelector('[data-thunder-status]') as HTMLElement;
+    const testThunder = root.querySelector('[data-test-thunder]') as HTMLButtonElement;
     const guidedCamera = root.querySelector('[data-guided-camera]') as HTMLInputElement;
     const comparison = root.querySelector('[data-comparison]') as HTMLInputElement;
     const restartTour = root.querySelector('[data-restart-tour]') as HTMLButtonElement;
@@ -1297,10 +1299,11 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     const onThunderAudio = (): void => {
       this.thunderAudio.setEnabled(thunderAudio.checked);
       if (thunderAudio.checked) {
-        this.activateThunderAudio();
+        this.activateThunderAudio(true);
       }
       this.updateThunderStatus();
     };
+    const onTestThunder = (): void => this.activateThunderAudio(false, true);
     const onGuidedCamera = (): void => {
       if (guidedCamera.checked) {
         this.restartGuidedCamera();
@@ -1320,6 +1323,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     culling.addEventListener('change', onCulling);
     lightstorm.addEventListener('change', onLightstorm);
     thunderAudio.addEventListener('change', onThunderAudio);
+    testThunder.addEventListener('click', onTestThunder);
     guidedCamera.addEventListener('change', onGuidedCamera);
     comparison.addEventListener('change', onComparison);
     restartTour.addEventListener('click', onRestartTour);
@@ -1329,6 +1333,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       culling.removeEventListener('change', onCulling);
       lightstorm.removeEventListener('change', onLightstorm);
       thunderAudio.removeEventListener('change', onThunderAudio);
+      testThunder.removeEventListener('click', onTestThunder);
       guidedCamera.removeEventListener('change', onGuidedCamera);
       comparison.removeEventListener('change', onComparison);
       restartTour.removeEventListener('click', onRestartTour);
@@ -1427,11 +1432,16 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     }
   }
 
-  private activateThunderAudio(restartTour = false): void {
+  private activateThunderAudio(restartTour = false, preview = false): void {
     void this.thunderAudio.activate().then(
       () => {
-        if (this.thunderAudio.status === 'ready' && restartTour) {
-          this.restartGuidedCamera();
+        if (this.thunderAudio.status === 'ready') {
+          if (preview) {
+            this.thunderAudio.preview();
+          }
+          if (restartTour) {
+            this.restartGuidedCamera();
+          }
         }
         this.updateThunderStatus();
       },
@@ -1449,7 +1459,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     }
     const statusLabels = {
       waiting: 'Thunder: click or press a key to arm audio.',
-      ready: 'Thunder: armed · synchronized crack and low-frequency rumble.',
+      ready: 'Thunder: armed · synchronized full-band clap and bass rumble.',
       muted: 'Thunder: muted.',
       unavailable: 'Thunder: Web Audio is unavailable in this browser.'
     } as const;

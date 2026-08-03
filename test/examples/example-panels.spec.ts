@@ -2,6 +2,7 @@ import {describe, expect, test, vi} from 'vitest';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
 import {
+  configurePanelHostElement,
   ExamplePanelManager,
   ExampleSettingsPanelManager,
   getSettingDefinitions,
@@ -73,6 +74,25 @@ const MULTI_SELECT_SETTINGS_SCHEMA: SettingsSchema = {
 };
 
 describe('ExampleSettingsPanelManager', () => {
+  test('configures the shared cinematic card appearance for panel content', () => {
+    const hostElement = document.createElement('div');
+
+    configurePanelHostElement(hostElement, 'cinematic');
+
+    expect(hostElement.dataset.examplePanelHost).toBe('');
+    expect(hostElement.dataset.examplePanelAppearance).toBe('cinematic');
+    expect(hostElement.style.getPropertyValue('--menu-background')).toBe('rgb(8, 15, 27)');
+    expect(hostElement.style.getPropertyValue('--menu-shadow')).toBe('none');
+
+    const cardElement = document.createElement('section');
+    const inheritedHostElement = document.createElement('div');
+    cardElement.dataset.infoBoxAppearance = 'cinematic';
+    cardElement.appendChild(inheritedHostElement);
+    configurePanelHostElement(inheritedHostElement);
+
+    expect(inheritedHostElement.dataset.examplePanelAppearance).toBe('cinematic');
+  });
+
   test('registers descriptors and forwards structured changes', () => {
     const changes: SettingsChangeDescriptor[][] = [];
     const settingsPanel = new ExampleSettingsPanelManager({

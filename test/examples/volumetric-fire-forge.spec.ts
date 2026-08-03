@@ -101,7 +101,7 @@ describe('Volumetric Fire Forge', () => {
 
       expect(viewer.triggerBurnerFlare(-1)).toBe(false);
       expect(viewer.triggerBurnerFlare(0)).toBe(true);
-      viewer.onRender(makeAnimationProps(device, 1153));
+      viewer.onRender(makeAnimationProps(device, 1170));
       device.submit();
       expect(viewer.burnerFlareIntensities[0]).toBeGreaterThan(0);
       expect(viewer.burnerFlareIntensities.slice(1)).toEqual([0, 0, 0]);
@@ -122,14 +122,14 @@ describe('Volumetric Fire Forge', () => {
       expect(maximumCombustion).toBeGreaterThan(0.01);
 
       viewer.settings.debugView = 'Temperature';
-      viewer.onRender(makeAnimationProps(device, 1170));
+      viewer.onRender(makeAnimationProps(device, 1187));
       device.submit();
       expect(viewer.lastVolumeTexture).not.toBeNull();
       const temperatureOutput = await readColorTexture(viewer.lastVolumeTexture!, [96, 72, 1]);
       expect(getMaximumRgb(temperatureOutput)).toBeGreaterThan(0.01);
 
       viewer.settings.debugView = 'Obstacles';
-      viewer.onRender(makeAnimationProps(device, 1187));
+      viewer.onRender(makeAnimationProps(device, 1204));
       device.submit();
       const obstacleOutput = await readColorTexture(viewer.lastVolumeTexture!, [96, 72, 1]);
       expect(getMaximumRgb(obstacleOutput)).toBeGreaterThan(0.9);
@@ -138,18 +138,18 @@ describe('Volumetric Fire Forge', () => {
       viewer.requestReset();
       expect(viewer.burnerFlareIntensities).toEqual([0, 0, 0, 0]);
       expect(viewer.nextAutomaticFlare).toEqual(initialAutomaticFlare);
-      viewer.onRender(makeAnimationProps(device, 1204));
+      viewer.onRender(makeAnimationProps(device, 1221));
       device.submit();
       expect(viewer.stepsThisFrame).toBe(1);
       const resetFrameIndex = viewer.frameIndex;
 
-      viewer.onRender(makeAnimationProps(device, 1221));
+      viewer.onRender(makeAnimationProps(device, 1238));
       device.submit();
       expect(viewer.stepsThisFrame).toBe(0);
       expect(viewer.frameIndex).toBe(resetFrameIndex);
 
       viewer.requestSingleStep();
-      viewer.onRender(makeAnimationProps(device, 1238));
+      viewer.onRender(makeAnimationProps(device, 1255));
       device.submit();
       expect(viewer.stepsThisFrame).toBe(1);
       expect(viewer.frameIndex).toBe(resetFrameIndex + 1);

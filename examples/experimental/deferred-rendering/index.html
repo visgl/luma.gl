@@ -3,7 +3,8 @@
   <meta charset="utf-8" />
   <title>Deferred Illumination Lab</title>
   <style>
-    body { margin: 0; background: #01030b; color-scheme: dark; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #01030b; color-scheme: dark; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
     .display-status {
       position: fixed;
       top: 20px;
@@ -41,7 +42,7 @@
     createCanvasContext: supportsHighDynamicRange
       ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
       : true,
-    featureLevel: 'max'
+    featureLevel: 'core'
   });
   makeAnimationLoop(AnimationLoopTemplate, {device}).start();
 </script>

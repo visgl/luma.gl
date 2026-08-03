@@ -189,8 +189,8 @@ test('advanced effects expose composable pipeline shapes', testCase => {
   );
   testCase.equal(
     volumetricLighting.renderTargets?.clusteredVolumeDepthHistory.format,
-    'r32float',
-    'clustered volumetric lighting stores compact high-precision linear depth'
+    'rg16float',
+    'clustered volumetric lighting stores compact core-filterable linear depth'
   );
   testCase.equal(
     clusteredVolumetricDepthHistoryCopy.uniformTypes.inverseProjectionMatrix,
@@ -214,6 +214,9 @@ test('advanced effects expose composable pipeline shapes', testCase => {
   const minimumScaleAdaptiveExposure = createHDRAutoExposureShaderPassPipeline({
     meteringScale: 0.125
   });
+  const seededAdaptiveExposure = createHDRAutoExposureShaderPassPipeline({
+    initialExposure: 0.35
+  });
   testCase.equal(
     adaptiveExposure.steps.length,
     7,
@@ -223,6 +226,16 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     adaptiveExposure.renderTargets?.hdrExposureHistory.lifetime,
     'history',
     'HDR auto exposure keeps its adapted state on the GPU between frames'
+  );
+  testCase.deepEqual(
+    adaptiveExposure.renderTargets?.hdrExposureHistory.initialize?.clearColor,
+    [1, 1, 1, 1],
+    'HDR auto exposure preserves its neutral default history seed'
+  );
+  testCase.deepEqual(
+    seededAdaptiveExposure.renderTargets?.hdrExposureHistory.initialize?.clearColor,
+    [0.35, 1, 1, 1],
+    'HDR auto exposure can start at the scene minimum without a bright first frame'
   );
   testCase.equal(
     adaptiveExposure.steps[5].inputs?.historyTexture,
@@ -664,9 +677,9 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
 });
 
 test('advanced effects compose in order with existing effects', async testCase => {
-  const device = await getWebGPUTestDevice();
+  const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU unavailable, skipping mixed effect execution');
+    testCase.comment('Core WebGPU unavailable, skipping mixed effect execution');
     testCase.end();
     return;
   }

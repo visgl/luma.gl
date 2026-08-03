@@ -1,16 +1,14 @@
 ---
 title: 'Texture HTML-in-Canvas'
+description: Copy live DOM panels into GPU textures and map them onto a rotating interactive prism.
 ---
 
-import {ExampleHeader} from '@site/src/react-luma';
 import {HTMLUIPrismExample} from '@site/src/examples';
 
-<ExampleHeader id="html-ui-prism" directory="experimental" devices={['webgl2', 'webgpu']}>
+<HTMLUIPrismExample>
   <div>
     Live DOM panels are copied into GPU textures and mapped onto a rotating square prism. This
     requires a browser exposing the experimental HTML-in-Canvas paint and DOM-to-texture upload
     APIs; unsupported browsers show a fallback notice.
   </div>
-</ExampleHeader>
-
-<HTMLUIPrismExample />
+</HTMLUIPrismExample>

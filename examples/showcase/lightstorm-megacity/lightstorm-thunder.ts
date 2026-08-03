@@ -10,9 +10,9 @@ import {
 const MINIMUM_GAIN = 0.0001;
 
 const THUNDER_STRENGTH_BY_ROLE: Record<LightstormLightningBoltRole, number> = {
-  canyon: 0.92,
-  avenue: 0.82,
-  reveal: 1.25
+  canyon: 1.08,
+  avenue: 0.96,
+  reveal: 1.42
 };
 
 const THUNDER_PAN_BY_ROLE: Record<LightstormLightningBoltRole, number> = {
@@ -72,6 +72,7 @@ export class LightstormThunderController {
   private masterGain: GainNode | null = null;
   private previousTimeSeconds: number | null = null;
   private readonly activeSources = new Set<AudioScheduledSourceNode>();
+  private readonly activeProcessorNodes = new Set<AudioNode>();
   private audioEnabled = true;
   private destroyed = false;
 
@@ -135,6 +136,19 @@ export class LightstormThunderController {
     }
   }
 
+  /** Plays one immediate hero clap so a gesture can verify the browser's audio path. */
+  preview(): void {
+    if (this.audioContext?.state !== 'running' || !this.masterGain || !this.audioEnabled) {
+      return;
+    }
+    this.playStrike({
+      boltIndex: LIGHTSTORM_LIGHTNING_SCHEDULE.length - 1,
+      role: 'reveal',
+      strikeTimeSeconds: 0,
+      strength: 1.18
+    });
+  }
+
   /** Drops timeline state and silences any rumble left over from the previous camera run. */
   reset(): void {
     this.previousTimeSeconds = null;
@@ -159,7 +173,8 @@ export class LightstormThunderController {
       return;
     }
 
-    const startTime = audioContext.currentTime + 0.012;
+    // Leave enough scheduling headroom for the deterministic noise buffers on busy GPU frames.
+    const startTime = audioContext.currentTime + 0.045;
     const stereoPan = THUNDER_PAN_BY_ROLE[strike.role];
     const randomSeed = 0x9e3779b9 ^ ((strike.boltIndex + 1) * 0x85ebca6b);
     this.playCrack(audioContext, masterGain, startTime, strike.strength, stereoPan, randomSeed);
@@ -183,22 +198,38 @@ export class LightstormThunderController {
     stereoPan: number,
     randomSeed: number
   ): void {
-    const duration = 0.28;
+    const duration = 0.36;
     const noise = audioContext.createBufferSource();
     noise.buffer = makeNoiseBuffer(audioContext, duration, randomSeed);
     const highPass = audioContext.createBiquadFilter();
     highPass.type = 'highpass';
-    highPass.frequency.setValueAtTime(240, startTime);
-    highPass.Q.value = 0.72;
+    highPass.frequency.setValueAtTime(145, startTime);
+    highPass.Q.value = 0.6;
+    const lowPass = audioContext.createBiquadFilter();
+    lowPass.type = 'lowpass';
+    lowPass.frequency.setValueAtTime(4_800, startTime);
+    lowPass.frequency.exponentialRampToValueAtTime(1_900, startTime + duration);
+    lowPass.Q.value = 0.5;
     const crackGain = audioContext.createGain();
     crackGain.gain.setValueAtTime(MINIMUM_GAIN, startTime);
-    crackGain.gain.linearRampToValueAtTime(0.58 * strength, startTime + 0.004);
+    crackGain.gain.linearRampToValueAtTime(0.74 * strength, startTime + 0.006);
+    crackGain.gain.exponentialRampToValueAtTime(0.18 * strength, startTime + 0.075);
     crackGain.gain.exponentialRampToValueAtTime(MINIMUM_GAIN, startTime + duration);
     const panner = audioContext.createStereoPanner();
     panner.pan.value = stereoPan;
 
-    noise.connect(highPass).connect(crackGain).connect(panner).connect(destination);
-    this.startSource(noise, startTime, startTime + duration);
+    noise
+      .connect(highPass)
+      .connect(lowPass)
+      .connect(crackGain)
+      .connect(panner)
+      .connect(destination);
+    this.startSourceGroup(
+      [noise],
+      [highPass, lowPass, crackGain, panner],
+      startTime,
+      startTime + duration
+    );
   }
 
   private playBody(
@@ -208,25 +239,37 @@ export class LightstormThunderController {
     strength: number,
     stereoPan: number
   ): void {
-    const duration = 0.95;
+    const duration = 1.22;
     const oscillator = audioContext.createOscillator();
     oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(118, startTime);
-    oscillator.frequency.exponentialRampToValueAtTime(44, startTime + duration);
+    oscillator.frequency.setValueAtTime(132, startTime);
+    oscillator.frequency.exponentialRampToValueAtTime(46, startTime + duration);
+    const upperBodyOscillator = audioContext.createOscillator();
+    upperBodyOscillator.type = 'triangle';
+    upperBodyOscillator.frequency.setValueAtTime(224, startTime);
+    upperBodyOscillator.frequency.exponentialRampToValueAtTime(78, startTime + duration);
+    const upperBodyGain = audioContext.createGain();
+    upperBodyGain.gain.value = 0.19;
     const lowPass = audioContext.createBiquadFilter();
     lowPass.type = 'lowpass';
-    lowPass.frequency.value = 260;
-    lowPass.Q.value = 0.82;
+    lowPass.frequency.value = 390;
+    lowPass.Q.value = 0.7;
     const bodyGain = audioContext.createGain();
     bodyGain.gain.setValueAtTime(MINIMUM_GAIN, startTime);
-    bodyGain.gain.linearRampToValueAtTime(0.44 * strength, startTime + 0.018);
-    bodyGain.gain.exponentialRampToValueAtTime(0.18 * strength, startTime + 0.16);
+    bodyGain.gain.linearRampToValueAtTime(0.59 * strength, startTime + 0.02);
+    bodyGain.gain.exponentialRampToValueAtTime(0.23 * strength, startTime + 0.2);
     bodyGain.gain.exponentialRampToValueAtTime(MINIMUM_GAIN, startTime + duration);
     const panner = audioContext.createStereoPanner();
     panner.pan.value = stereoPan;
 
     oscillator.connect(lowPass).connect(bodyGain).connect(panner).connect(destination);
-    this.startSource(oscillator, startTime, startTime + duration);
+    upperBodyOscillator.connect(upperBodyGain).connect(lowPass);
+    this.startSourceGroup(
+      [oscillator, upperBodyOscillator],
+      [upperBodyGain, lowPass, bodyGain, panner],
+      startTime,
+      startTime + duration
+    );
   }
 
   private playRumble(
@@ -249,21 +292,21 @@ export class LightstormThunderController {
       const rollStopTime = rollStartTime + rollDuration;
       const attackDuration = 0.045 + nextRandomValue() * 0.105;
       const crestDuration = 0.18 + nextRandomValue() * 0.24;
-      const peakGain = strength * (0.145 + nextRandomValue() * 0.065) * (1 - rollIndex * 0.055);
+      const peakGain = strength * (0.19 + nextRandomValue() * 0.075) * (1 - rollIndex * 0.055);
 
       const noise = audioContext.createBufferSource();
       const rollNoiseSeed = randomSeed ^ Math.imul(rollIndex + 1, 0x85ebca6b);
       noise.buffer = makeNoiseBuffer(audioContext, rollDuration, rollNoiseSeed);
       const noiseLowPass = audioContext.createBiquadFilter();
       noiseLowPass.type = 'lowpass';
-      noiseLowPass.frequency.setValueAtTime(215 + nextRandomValue() * 105, rollStartTime);
+      noiseLowPass.frequency.setValueAtTime(265 + nextRandomValue() * 125, rollStartTime);
       noiseLowPass.frequency.exponentialRampToValueAtTime(
         78 + nextRandomValue() * 34,
         rollStopTime
       );
       noiseLowPass.Q.value = 0.72 + nextRandomValue() * 0.58;
       const noiseGain = audioContext.createGain();
-      noiseGain.gain.value = 0.72;
+      noiseGain.gain.value = 0.86;
 
       const fundamentalFrequency = (isHeroStrike ? 48 : 54) + nextRandomValue() * 14;
       const endingFundamentalFrequency = 32 + nextRandomValue() * 9;
@@ -275,7 +318,7 @@ export class LightstormThunderController {
         rollStopTime
       );
       const fundamentalGain = audioContext.createGain();
-      fundamentalGain.gain.value = isHeroStrike ? 0.42 : 0.36;
+      fundamentalGain.gain.value = isHeroStrike ? 0.56 : 0.48;
 
       // This restrained octave-plus partial keeps the rumble audible on laptop speakers.
       const harmonicOscillator = audioContext.createOscillator();
@@ -289,7 +332,7 @@ export class LightstormThunderController {
         rollStopTime
       );
       const harmonicGain = audioContext.createGain();
-      harmonicGain.gain.value = 0.105 + nextRandomValue() * 0.055;
+      harmonicGain.gain.value = 0.17 + nextRandomValue() * 0.065;
 
       const rollGain = audioContext.createGain();
       rollGain.gain.setValueAtTime(MINIMUM_GAIN, rollStartTime);
@@ -306,27 +349,47 @@ export class LightstormThunderController {
       fundamentalOscillator.connect(fundamentalGain).connect(rollGain);
       harmonicOscillator.connect(harmonicGain).connect(rollGain);
       rollGain.connect(panner).connect(destination);
-      this.startSource(noise, rollStartTime, rollStopTime);
-      this.startSource(fundamentalOscillator, rollStartTime, rollStopTime);
-      this.startSource(harmonicOscillator, rollStartTime, rollStopTime);
+      this.startSourceGroup(
+        [noise, fundamentalOscillator, harmonicOscillator],
+        [noiseLowPass, noiseGain, fundamentalGain, harmonicGain, rollGain, panner],
+        rollStartTime,
+        rollStopTime
+      );
 
       // Advance less than one roll's duration so neighboring rolls overlap naturally.
       rollOffsetSeconds += 0.31 + nextRandomValue() * (isHeroStrike ? 0.34 : 0.29);
     }
   }
 
-  private startSource(source: AudioScheduledSourceNode, startTime: number, stopTime: number): void {
-    this.activeSources.add(source);
-    source.addEventListener(
-      'ended',
-      () => {
-        this.activeSources.delete(source);
-        source.disconnect();
-      },
-      {once: true}
-    );
-    source.start(startTime);
-    source.stop(stopTime);
+  private startSourceGroup(
+    sources: AudioScheduledSourceNode[],
+    processorNodes: AudioNode[],
+    startTime: number,
+    stopTime: number
+  ): void {
+    for (const processorNode of processorNodes) {
+      this.activeProcessorNodes.add(processorNode);
+    }
+
+    let remainingSourceCount = sources.length;
+    for (const source of sources) {
+      this.activeSources.add(source);
+      source.addEventListener(
+        'ended',
+        () => {
+          if (this.activeSources.delete(source)) {
+            source.disconnect();
+          }
+          remainingSourceCount--;
+          if (remainingSourceCount === 0) {
+            this.disconnectProcessorNodes(processorNodes);
+          }
+        },
+        {once: true}
+      );
+      source.start(startTime);
+      source.stop(stopTime);
+    }
   }
 
   private stopActiveSources(): void {
@@ -339,19 +402,38 @@ export class LightstormThunderController {
       source.disconnect();
     }
     this.activeSources.clear();
+    this.disconnectProcessorNodes(this.activeProcessorNodes);
+  }
+
+  private disconnectProcessorNodes(processorNodes: Iterable<AudioNode>): void {
+    for (const processorNode of [...processorNodes]) {
+      if (this.activeProcessorNodes.delete(processorNode)) {
+        processorNode.disconnect();
+      }
+    }
   }
 }
 
 function makeMasterGain(audioContext: AudioContext): GainNode {
   const masterGain = audioContext.createGain();
-  masterGain.gain.value = 0.8;
+  masterGain.gain.value = 0.96;
+  const bassShelf = audioContext.createBiquadFilter();
+  bassShelf.type = 'lowshelf';
+  bassShelf.frequency.value = 175;
+  bassShelf.gain.value = 5.5;
   const compressor = audioContext.createDynamicsCompressor();
-  compressor.threshold.value = -12;
-  compressor.knee.value = 8;
-  compressor.ratio.value = 8;
-  compressor.attack.value = 0.002;
-  compressor.release.value = 0.32;
-  masterGain.connect(compressor).connect(audioContext.destination);
+  compressor.threshold.value = -8;
+  compressor.knee.value = 10;
+  compressor.ratio.value = 4;
+  compressor.attack.value = 0.004;
+  compressor.release.value = 0.4;
+  const outputGain = audioContext.createGain();
+  outputGain.gain.value = 0.94;
+  masterGain
+    .connect(bassShelf)
+    .connect(compressor)
+    .connect(outputGain)
+    .connect(audioContext.destination);
   return masterGain;
 }
 

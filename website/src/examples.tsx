@@ -111,12 +111,14 @@ import {createLuSpatialTaxiDeck} from '../../examples/deck/luspatial-taxi/app';
 
 const exampleConfig = {};
 
-type WebsiteExampleProps = ExampleDisplayProps & {
-  panel?: boolean;
-  showHeader?: boolean;
-  showStats?: boolean;
-  templateInfoPlacement?: 'header' | 'page';
-};
+type WebsiteExampleProps = React.PropsWithChildren<
+  ExampleDisplayProps & {
+    panel?: boolean;
+    showHeader?: boolean;
+    showStats?: boolean;
+    templateInfoPlacement?: 'header' | 'page';
+  }
+>;
 
 type DeckExampleHandle = {
   finalize: () => void;
@@ -1028,7 +1030,7 @@ export const GlobeExample: React.FC = props => (
   />
 );
 
-export const PacketSprayingExample: React.FC = props => (
+export const PacketSprayingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="packet-spraying"
     title="Effects: Glass"
@@ -1041,7 +1043,7 @@ export const PacketSprayingExample: React.FC = props => (
   />
 );
 
-export const DOFExample: React.FC = props => (
+export const DOFExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="dof"
     title="Depth of Field"
@@ -1052,26 +1054,31 @@ export const DOFExample: React.FC = props => (
   />
 );
 
-export const AdvancedEffectsExample: React.FC = props => (
+export const AdvancedEffectsExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="advanced-effects"
     title="Advanced Effects: Visualization City"
     directory="experimental"
     template={AdvancedEffectsApp}
     config={exampleConfig}
-    devices={['webgpu']}
+    devices={['webgpu-max']}
+    requiredDeviceLimits={{maxColorAttachmentBytesPerSample: 44}}
     {...props}
   />
 );
 
-export const DeferredRenderingExample: React.FC = props => (
+export const DeferredRenderingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="deferred-rendering"
     title="Deferred Rendering: Illumination Lab"
     directory="experimental"
     template={DeferredRenderingApp}
     config={exampleConfig}
-    devices={['webgpu']}
+    devices={['webgpu-max', 'webgpu-core']}
+    requiredDeviceLimits={{
+      maxColorAttachments: 5,
+      maxColorAttachmentBytesPerSample: 32
+    }}
     canvasContextProfile="high-dynamic-range"
     {...props}
   />
@@ -1131,7 +1138,7 @@ export const VirtualGeometryCanyonExample: React.FC<WebsiteExampleProps> = props
   />
 );
 
-export const ShadowMapExample: React.FC = props => (
+export const ShadowMapExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="shadow-map"
     title="Effects: Shadow Map Quality"
@@ -1139,7 +1146,6 @@ export const ShadowMapExample: React.FC = props => (
     template={ShadowMapApp}
     config={exampleConfig}
     devices={['webgpu']}
-    showHeader={false}
     {...props}
   />
 );
@@ -1345,7 +1351,7 @@ function getCameraErrorMessage(error: unknown): string {
     : getErrorMessage(error);
 }
 
-export const HTMLUIPrismExample: React.FC = props => (
+export const HTMLUIPrismExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="html-ui-prism"
     title="HTML-in-Canvas Prism"

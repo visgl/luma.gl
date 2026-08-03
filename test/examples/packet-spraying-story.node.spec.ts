@@ -268,9 +268,35 @@ test('packet-spraying floating-point highlights preserve honest display capabili
     sceneColorFormat: 'rgba16float',
     visualIntensity: 0
   });
+  const lowExtendedProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgpu',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: 0.1,
+    presentationColorFormat: 'rgba16float',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
+  const maximumExtendedProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgpu',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
+    presentationColorFormat: 'rgba16float',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
+  const maximumFloatingPointProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgl',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
+    presentationColorFormat: 'rgba8unorm',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
 
   testCase.equal(standardProfile.displayMode, 'standard', '8-bit scenes remain standard range');
   testCase.equal(standardProfile.highlightBoost, 0, 'standard scenes do not claim false headroom');
+  testCase.equal(standardProfile.emissionScale, 1, 'standard scenes retain their packet emission');
+  testCase.equal(standardProfile.exposureScale, 1, 'standard scenes retain their midtone exposure');
   testCase.equal(
     floatingPointProfile.displayMode,
     'floating-point',
@@ -305,6 +331,42 @@ test('packet-spraying floating-point highlights preserve honest display capabili
   testCase.ok(
     defaultExtendedProfile.maximumLuminance < 2,
     'default HDR highlights remain below twice SDR white'
+  );
+  testCase.ok(
+    defaultExtendedProfile.emissionScale < 1.25 && defaultExtendedProfile.specularScale < 1.15,
+    'the default keeps packet emission and glass reflections restrained'
+  );
+  testCase.ok(
+    lowExtendedProfile.maximumLuminance < 1.25 && lowExtendedProfile.emissionScale < 1.05,
+    'the bottom of the slider stays close to SDR instead of lifting the scene'
+  );
+  testCase.equal(
+    maximumExtendedProfile.maximumLuminance,
+    4,
+    'maximum HDR reaches the tone mapper display-headroom limit'
+  );
+  testCase.ok(
+    maximumExtendedProfile.emissionScale > 2.5 && maximumExtendedProfile.specularScale > 1.8,
+    'maximum HDR clearly accelerates packet cores and polished glass highlights'
+  );
+  testCase.ok(
+    maximumExtendedProfile.exposureScale < defaultExtendedProfile.exposureScale &&
+      maximumExtendedProfile.exposureScale <= 1,
+    'opening highlight headroom does not brighten scene midtones'
+  );
+  testCase.ok(
+    maximumExtendedProfile.bloomThresholdScale > maximumExtendedProfile.bloomIntensityScale,
+    'maximum HDR raises the bloom threshold faster than bloom intensity for selective accents'
+  );
+  testCase.ok(
+    maximumFloatingPointProfile.emissionScale < 1.1 &&
+      maximumFloatingPointProfile.specularScale < 1.05,
+    'floating-point SDR receives only restrained highlight shaping at slider maximum'
+  );
+  testCase.equal(
+    maximumFloatingPointProfile.maximumLuminance,
+    1,
+    'floating-point SDR never receives extended display luminance'
   );
   testCase.equal(
     diagramExtendedProfile.highlightBoost,

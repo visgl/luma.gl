@@ -1,18 +1,13 @@
 ---
 title: 'Deferred Rendering: Illumination Lab'
+description: Resolve hundreds of clustered lights through deferred PBR, GTAO, SSGI, SSR, volumetrics, adaptive exposure, and HDR bloom.
 sidebar_custom_props:
   backends: [webgpu]
 ---
 
-import {ExampleHeader} from '@site/src/react-luma';
 import {DeferredRenderingExample} from '@site/src/examples';
 
-<ExampleHeader
-  id="deferred-rendering"
-  title="Deferred Rendering: Illumination Lab"
-  directory="experimental"
-  devices={['webgpu']}
->
+<DeferredRenderingExample>
   <div>
     A WebGPU-only illumination laboratory that writes five surface targets once, then reconstructs
     view position from depth and resolves a directional light plus hundreds of compute-clustered
@@ -20,12 +15,10 @@ import {DeferredRenderingExample} from '@site/src/examples';
     contacts, diffuse screen-space global illumination transfers colored light between surfaces,
     stochastic reflections bounce the animated scene across polished floors, and clustered
     participating media turns the same point lights and sun into colored atmospheric halos and
-    depth-occluded crepuscular god rays. GPU-driven adaptive exposure and floating-point
-    multiscale bloom finish the scene without clipping its brightest highlights.
+    depth-occluded crepuscular god rays. GPU-driven adaptive exposure and floating-point multiscale
+    bloom finish the scene without clipping its brightest highlights.
   </div>
-</ExampleHeader>
-
-<DeferredRenderingExample />
+</DeferredRenderingExample>
 
 Open **Illumination Effects** to inspect the actual render-stack stages through separate
 accordions for clustered deferred lighting, GTAO, diffuse global illumination, screen-space

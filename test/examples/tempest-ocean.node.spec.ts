@@ -23,6 +23,11 @@ import {
   convertLinearDisplayP3ToSrgbBytes,
   packTempestOceanFloatRows
 } from '../../examples/showcase/tempest-ocean/tempest-ocean-capture';
+import {
+  getTempestOceanSirenEnvelope,
+  makeTempestOceanNoiseSamples,
+  makeTempestOceanSirenCue
+} from '../../examples/showcase/tempest-ocean/tempest-ocean-audio';
 
 describe('Tempest Ocean draw plan', () => {
   test('keeps raster tessellation independent from the FFT field', () => {
@@ -130,6 +135,53 @@ describe('Tempest Ocean HDR screenshot packing', () => {
     expect(convertLinearDisplayP3ToSrgbBytes(linearData)).toEqual(
       new Uint8Array([0, 255, 188, 128])
     );
+  });
+});
+
+describe('Tempest Ocean procedural atmosphere', () => {
+  test('builds deterministic seamless water noise', () => {
+    const sampleCount = 4_096;
+    const crossfadeSampleCount = 256;
+    const randomSeed = 0x61ef291b;
+    const loopSamples = makeTempestOceanNoiseSamples(sampleCount, crossfadeSampleCount, randomSeed);
+    const duplicateLoopSamples = makeTempestOceanNoiseSamples(
+      sampleCount,
+      crossfadeSampleCount,
+      randomSeed
+    );
+
+    expect(loopSamples).toEqual(duplicateLoopSamples);
+    expect(loopSamples).toHaveLength(sampleCount);
+    expect(Array.from(loopSamples).every(Number.isFinite)).toBe(true);
+    expect(Math.abs(loopSamples[0]! - loopSamples[sampleCount - 1]!)).toBeLessThan(0.6);
+  });
+
+  test('keeps nonverbal siren calls rare, slow, and deterministic', () => {
+    const firstCue = makeTempestOceanSirenCue(0);
+    expect(makeTempestOceanSirenCue(0)).toEqual(firstCue);
+    expect(firstCue.delaySeconds).toBeGreaterThanOrEqual(16);
+    expect(firstCue.durationSeconds).toBeGreaterThan(6);
+    expect(firstCue.middleFrequencyHertz).toBeGreaterThan(firstCue.startFrequencyHertz);
+    expect(firstCue.endFrequencyHertz).toBeLessThan(firstCue.middleFrequencyHertz);
+
+    for (let cueIndex = 1; cueIndex < 12; cueIndex++) {
+      const cue = makeTempestOceanSirenCue(cueIndex);
+      expect(cue.delaySeconds).toBeGreaterThanOrEqual(44);
+      expect(cue.durationSeconds).toBeGreaterThan(6);
+      expect(cue.durationSeconds).toBeLessThan(9);
+      expect(cue.peakGain).toBeLessThan(0.04);
+      expect(Math.abs(cue.startPan)).toBeLessThanOrEqual(0.8);
+      expect(Math.abs(cue.endPan)).toBeLessThanOrEqual(0.8);
+    }
+  });
+
+  test('shapes each call with silence at both ends and an audible center', () => {
+    const durationSeconds = 7.5;
+    expect(getTempestOceanSirenEnvelope(-1, durationSeconds)).toBe(0);
+    expect(getTempestOceanSirenEnvelope(0, durationSeconds)).toBe(0);
+    expect(getTempestOceanSirenEnvelope(durationSeconds / 2, durationSeconds)).toBeGreaterThan(0.7);
+    expect(getTempestOceanSirenEnvelope(durationSeconds, durationSeconds)).toBe(0);
+    expect(getTempestOceanSirenEnvelope(Number.NaN, durationSeconds)).toBe(0);
   });
 });
 

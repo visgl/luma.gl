@@ -332,30 +332,13 @@ fn sampleFluid(uv: vec2f) -> vec4f {
 
 const INFO_HTML = `
 <style>
-  .fluid-foundry-info {
-    position: fixed;
-    left: 24px;
-    bottom: 24px;
-    width: min(380px, calc(100vw - 48px));
-    box-sizing: border-box;
-    padding: 16px 18px;
-    border: 1px solid rgb(87 210 255 / 24%);
-    border-radius: 10px;
-    background: linear-gradient(135deg, rgb(2 8 14 / 90%), rgb(20 7 6 / 78%));
-    box-shadow: 0 18px 58px rgb(0 0 0 / 48%);
-    color: #eaf8ff;
-    font: 13px/1.45 system-ui, sans-serif;
-    backdrop-filter: blur(14px);
-    pointer-events: none;
-  }
-  .fluid-foundry-info h1 { margin: 0 0 7px; font: 600 18px/1.2 system-ui, sans-serif; }
-  .fluid-foundry-info p { margin: 0; color: #b9d6e5; }
+  .fluid-foundry-info { font: 13px/1.45 system-ui, sans-serif; }
+  .fluid-foundry-info p { margin: 0; color: inherit; opacity: .82; }
   .fluid-foundry-info strong { color: #a9ecff; }
   .fluid-foundry-badges { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
   .fluid-foundry-badge { padding: 4px 7px; border: 1px solid rgb(98 211 255 / 25%); border-radius: 99px; color: #dff8ff; background: rgb(17 97 126 / 18%); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
 </style>
 <section class="fluid-foundry-info">
-  <h1>Fluid Foundry: Liquid Metal Press</h1>
   <p><strong>12,288 particles</strong> exchange mass and momentum through a WebGPU MLS-MPM grid, then become a shaded HDR liquid surface without CPU readback. Watch the pressure-charged recirculation spouts, click repeatedly to build a surge, drag to steer, or press <strong>R</strong> to reset.</p>
   <div class="fluid-foundry-badges"><span class="fluid-foundry-badge">WebGPU compute</span><span class="fluid-foundry-badge">Cyclic spouts</span><span class="fluid-foundry-badge">HDR liquid metal</span></div>
 </section>`;

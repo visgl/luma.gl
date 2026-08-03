@@ -121,3 +121,83 @@ test('GBuffer validates dimensions and extra attachment names', async t => {
   );
   t.end();
 });
+
+test('GBuffer validates WebGPU color attachment byte cost', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const deferredGBuffer = new GBuffer(device, {
+    width: 1,
+    height: 1,
+    colorFormat: 'rgba16float',
+    normalRoughnessFormat: 'rgba8unorm',
+    velocityFormat: 'rg16float',
+    extraColorAttachments: [
+      {name: 'emissive', format: 'rgba8unorm'},
+      {name: 'objectId', format: 'rgba8uint'}
+    ]
+  });
+  t.equal(
+    deferredGBuffer.framebuffer.colorAttachments.length,
+    5,
+    'the deferred layout fits the core 32-byte attachment limit exactly'
+  );
+  deferredGBuffer.destroy();
+
+  t.throws(
+    () =>
+      new GBuffer(device, {
+        width: 1,
+        height: 1,
+        colorFormat: 'rgba8unorm',
+        normalRoughnessFormat: 'rgba8unorm',
+        velocityFormat: 'rg16float',
+        extraColorAttachments: [
+          {name: 'unshadowedColor', format: 'rgba8unorm'},
+          {name: 'directionalDirect', format: 'rgba16float'},
+          {name: 'shadowDebug', format: 'rgba16float'}
+        ]
+      }),
+    /require 44 bytes per sample, but the device supports 32/,
+    'unsupported MRT byte cost fails before WebGPU enters a validation-error render loop'
+  );
+  t.throws(
+    () =>
+      new GBuffer(device, {
+        width: 1,
+        height: 1,
+        colorFormat: 'rgb10a2unorm',
+        normalRoughnessFormat: 'rgb10a2unorm',
+        velocityFormat: 'rgb10a2unorm',
+        extraColorAttachments: [
+          {name: 'packed', format: 'rgb10a2unorm'},
+          {name: 'flag', format: 'r8uint'}
+        ]
+      }),
+    /require 33 bytes per sample, but the device supports 32/,
+    "packed 32-bit formats use WebGPU's eight-byte render-target cost"
+  );
+  t.throws(
+    () =>
+      new GBuffer(device, {
+        width: 1,
+        height: 1,
+        colorFormat: 'rgba16float',
+        normalRoughnessFormat: 'r8uint',
+        velocityFormat: 'rgba16float',
+        extraColorAttachments: [
+          {name: 'wide', format: 'rgba16float'},
+          {name: 'firstFlag', format: 'r8uint'},
+          {name: 'scalar', format: 'r32float'},
+          {name: 'secondFlag', format: 'r8uint'}
+        ]
+      }),
+    /require 33 bytes per sample, but the device supports 32/,
+    'mixed formats include WebGPU component-alignment padding'
+  );
+  t.end();
+});

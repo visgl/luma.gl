@@ -22,6 +22,8 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-points',
   'arrow/arrow-polygons',
   'experimental/fluid-foundry',
+  'experimental/advanced-effects',
+  'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
   'deck/luspatial-taxi',

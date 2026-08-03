@@ -437,7 +437,7 @@ export function makeNetworkSwitchHighlightColor(
   ];
 }
 
-/** Keeps floating-point highlights restrained without misreporting SDR presentation as HDR. */
+/** Opens selective highlight headroom without misreporting floating-point SDR as display HDR. */
 export function makeNetworkDynamicRangeProfile(
   options: NetworkDynamicRangeOptions
 ): NetworkDynamicRangeProfile {
@@ -457,17 +457,32 @@ export function makeNetworkDynamicRangeProfile(
     : DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST;
   const availableHeadroom = supportsExtendedPresentation ? 1 : sceneIsFloatingPoint ? 0.7 : 0;
   const highlightBoost = requestedBoost * availableHeadroom;
+  const normalizedRequestedBoost = requestedBoost / MAX_NETWORK_HDR_HIGHLIGHT_BOOST;
+  const extendedHighlightResponse = supportsExtendedPresentation
+    ? normalizedRequestedBoost * normalizedRequestedBoost
+    : 0;
+  const floatingPointHighlightResponse =
+    sceneIsFloatingPoint && !supportsExtendedPresentation
+      ? Math.pow(normalizedRequestedBoost, 1.5) * 0.2
+      : 0;
+  const selectiveHighlightResponse = extendedHighlightResponse + floatingPointHighlightResponse;
+  const extendedLuminanceResponse = supportsExtendedPresentation
+    ? Math.pow(normalizedRequestedBoost, 1.25)
+    : 0;
 
   return {
-    bloomIntensityScale: 1 + highlightBoost * 0.28,
-    bloomThresholdScale: 1 + highlightBoost * 0.6,
+    bloomIntensityScale: 1 + selectiveHighlightResponse * 0.4,
+    bloomThresholdScale: 1 + selectiveHighlightResponse * 1.1,
     displayMode,
-    emissionScale: 1 + highlightBoost * 0.6,
-    exposureScale: 1 - highlightBoost * 0.06,
+    emissionScale: 1 + selectiveHighlightResponse * (supportsExtendedPresentation ? 1.6 : 0.45),
+    exposureScale:
+      1 -
+      normalizedRequestedBoost *
+        (supportsExtendedPresentation ? 0.04 : sceneIsFloatingPoint ? 0.01 : 0),
     highlightBoost,
-    illuminationScale: 1 + highlightBoost * (supportsExtendedPresentation ? 0.86 : 0.34),
-    maximumLuminance: supportsExtendedPresentation ? 1 + highlightBoost * 3.2 : 1,
+    illuminationScale: 1 + selectiveHighlightResponse * (supportsExtendedPresentation ? 0.7 : 0.25),
+    maximumLuminance: 1 + extendedLuminanceResponse * 3,
     sceneIsFloatingPoint,
-    specularScale: 1 + highlightBoost * 0.32
+    specularScale: 1 + selectiveHighlightResponse * (supportsExtendedPresentation ? 0.85 : 0.2)
   };
 }
