@@ -13,8 +13,8 @@ import type {
 } from '../shadertypes/texture-types/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {PresentationContext, PresentationContextProps} from './presentation-context';
-import type {BufferProps} from './resources/buffer';
-import {Buffer} from './resources/buffer';
+import type {Buffer, BufferProps} from './resources/buffer';
+import {BufferUsage} from './resources/buffer-usage';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
 import type {SharedRenderPipeline} from './resources/shared-render-pipeline';
 import type {ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
@@ -1079,7 +1079,7 @@ or create a device with the 'debug: true' prop.`;
     const newProps = {...props};
     // Deduce indexType
     const usage = props.usage || 0;
-    if (usage & Buffer.INDEX) {
+    if (usage & BufferUsage.INDEX) {
       if (!props.indexType) {
         if (props.data instanceof Uint32Array) {
           newProps.indexType = 'uint32';

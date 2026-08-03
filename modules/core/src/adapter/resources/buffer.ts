@@ -4,6 +4,7 @@
 
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
+import {BufferUsage} from './buffer-usage';
 
 /** Callback for Buffer.mapAndReadAsync */
 export type BufferMapCallback<T> = (arrayBuffer: ArrayBuffer, lifetime: 'mapped' | 'copied') => T;
@@ -28,21 +29,21 @@ export type BufferProps = ResourceProps & {
 /** Abstract GPU buffer */
 export abstract class Buffer extends Resource<BufferProps> {
   /** Index buffer */
-  static INDEX = 0x0010;
+  static INDEX: number = BufferUsage.INDEX;
   /** Vertex buffer */
-  static VERTEX = 0x0020;
+  static VERTEX: number = BufferUsage.VERTEX;
   /** Uniform buffer */
-  static UNIFORM = 0x0040;
+  static UNIFORM: number = BufferUsage.UNIFORM;
   /** Storage buffer */
-  static STORAGE = 0x0080;
-  static INDIRECT = 0x0100;
-  static QUERY_RESOLVE = 0x0200;
+  static STORAGE: number = BufferUsage.STORAGE;
+  static INDIRECT: number = BufferUsage.INDIRECT;
+  static QUERY_RESOLVE: number = BufferUsage.QUERY_RESOLVE;
 
   // Usage Flags
-  static MAP_READ = 0x01;
-  static MAP_WRITE = 0x02;
-  static COPY_SRC = 0x0004;
-  static COPY_DST = 0x0008;
+  static MAP_READ: number = BufferUsage.MAP_READ;
+  static MAP_WRITE: number = BufferUsage.MAP_WRITE;
+  static COPY_SRC: number = BufferUsage.COPY_SRC;
+  static COPY_DST: number = BufferUsage.COPY_DST;
 
   override get [Symbol.toStringTag](): string {
     return 'Buffer';

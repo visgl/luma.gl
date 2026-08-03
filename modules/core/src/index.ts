@@ -29,6 +29,7 @@ export {PresentationContext} from './adapter/presentation-context';
 export {Resource, type ResourceProps} from './adapter/resources/resource';
 
 export {Buffer, type BufferProps, type BufferMapCallback} from './adapter/resources/buffer';
+export {BufferUsage} from './adapter/resources/buffer-usage';
 
 export {Texture, type TextureProps} from './adapter/resources/texture';
 

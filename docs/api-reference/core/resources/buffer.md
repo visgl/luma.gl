@@ -22,6 +22,18 @@ Usage expresses two things: The type of buffer and what operations can be perfor
 
 Note that the allowed combinations are very limited, especially in WebGPU.
 
+Import the lightweight `BufferUsage` object when only the flags are needed. The static `Buffer`
+aliases remain available and have the same values.
+
+```ts
+import {BufferUsage} from '@luma.gl/core';
+
+const buffer = device.createBuffer({
+  usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+  byteLength: 1024
+});
+```
+
 | Usage Flag             | Value  | Description                                                         |
 | ---------------------- | ------ | ------------------------------------------------------------------- |
 | `Buffer.INDEX`         | 0x0010 | An index buffer (array of 8, 16 or 32 bit unsigned integers)        |

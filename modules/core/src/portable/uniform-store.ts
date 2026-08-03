@@ -6,7 +6,8 @@ import type {CompositeShaderType} from '../shadertypes/shader-types/shader-types
 import type {CompositeUniformValue} from '../adapter/types/uniforms';
 import type {Device} from '../adapter/device';
 import type {CommandEncoder} from '../adapter/resources/command-encoder';
-import {Buffer} from '../adapter/resources/buffer';
+import type {Buffer} from '../adapter/resources/buffer';
+import {BufferUsage} from '../adapter/resources/buffer-usage';
 import {log} from '../utils/log';
 import {
   makeShaderBlockLayout,
@@ -159,7 +160,7 @@ export class UniformStore<
     }
     const byteLength = this.getUniformBufferByteLength(uniformBufferName);
     const uniformBuffer = this.device.createBuffer({
-      usage: Buffer.UNIFORM | Buffer.COPY_DST,
+      usage: BufferUsage.UNIFORM | BufferUsage.COPY_DST,
       byteLength
     });
     // Note that this clears the needs redraw flag
@@ -173,7 +174,7 @@ export class UniformStore<
     if (!this.uniformBuffers.get(uniformBufferName)) {
       const byteLength = this.getUniformBufferByteLength(uniformBufferName);
       const uniformBuffer = this.device.createBuffer({
-        usage: Buffer.UNIFORM | Buffer.COPY_DST,
+        usage: BufferUsage.UNIFORM | BufferUsage.COPY_DST,
         byteLength
       });
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
