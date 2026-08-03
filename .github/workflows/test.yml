@@ -62,9 +62,14 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
-  test:
+  browser_coverage:
+    name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -126,7 +131,7 @@ jobs:
 
       - name: Run headless tests and generate coverage
         run: |
-          yarn test-coverage
+          yarn test-coverage --shard=${{ matrix.shard }}/3
 
       - name: Report disk usage after coverage
         if: always()
@@ -135,6 +140,7 @@ jobs:
           du -sh . coverage "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
       - name: Run node tests
+        if: ${{ matrix.shard == 1 }}
         run: |
           yarn test-node
 
@@ -174,6 +180,30 @@ jobs:
         uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          flag-name: browser-${{ matrix.shard }}
+          parallel: true
+
+  test:
+    needs: browser_coverage
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Finalize parallel coverage in Coveralls
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
+
+      - name: Verify all browser coverage shards passed
+        if: always()
+        env:
+          SHARD_RESULT: ${{ needs.browser_coverage.result }}
+        run: |
+          if [ "$SHARD_RESULT" != "success" ]; then
+            echo "::error::Browser coverage shards finished with status: $SHARD_RESULT"
+            exit 1
+          fi
 
   examples:
     runs-on: ubuntu-22.04
