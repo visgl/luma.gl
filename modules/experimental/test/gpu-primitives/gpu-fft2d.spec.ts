@@ -81,6 +81,11 @@ test('GPUFFT2D rejects aliased and incompatible caller buffers', async t => {
     usage: Buffer.STORAGE
   });
   const shortBuffer = device.createBuffer({byteLength: 8, usage: Buffer.STORAGE});
+  const aliasBuffer = device.createBuffer({
+    handle: validBuffer.handle,
+    byteLength: validBuffer.byteLength,
+    usage: Buffer.STORAGE
+  });
   const copyOnlyBuffer = device.createBuffer({
     byteLength: transform.stats.complexBufferByteLength,
     usage: Buffer.COPY_DST
@@ -95,6 +100,15 @@ test('GPUFFT2D rejects aliased and incompatible caller buffers', async t => {
         }),
       /must be separate/,
       'in-place aliasing is rejected'
+    );
+    t.throws(
+      () =>
+        transform.encode(device.commandEncoder, {
+          inputBuffer: validBuffer,
+          outputBuffer: aliasBuffer
+        }),
+      /must be separate/,
+      'distinct Buffer wrappers cannot alias the same GPU allocation'
     );
     t.throws(
       () =>
@@ -126,6 +140,7 @@ test('GPUFFT2D rejects aliased and incompatible caller buffers', async t => {
     );
   } finally {
     transform.destroy();
+    aliasBuffer.destroy();
     validBuffer.destroy();
     shortBuffer.destroy();
     copyOnlyBuffer.destroy();

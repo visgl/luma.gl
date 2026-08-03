@@ -63,7 +63,8 @@ contains every root, so forests do not need a synthetic root.
 Each node has four source-aligned rows:
 
 - `sphereBounds`: packed `float32x4` world-space center XYZ and nonnegative radius.
-- `geometricErrors`: packed `float32` object-space error.
+- `geometricErrors`: packed `float32` world-space error, transformed with the same scale as the
+  world-space bounding sphere.
 - `children`: packed `uint32x2` first-child index and child count.
 - `clusterIds`: packed `uint32` render identity.
 
@@ -72,9 +73,10 @@ breadth level. CPU-visible lengths and level offsets are validated when the sele
 GPU child ranges are checked conservatively during traversal; an invalid range retains its coarse
 parent instead of creating a geometry hole.
 
-The active state is node-aligned. Multiple roots and convergent activation write the same boolean
-node bit, so a node can appear at most once. A refined parent is never selected in the same
-frontier as its children.
+The active state is node-aligned. Multiple roots and convergent activation write the same node
+state, so a node can appear at most once. If one parent remains coarse while another requests the
+same children, the coarse parent blocks those children. A selected parent and its children
+therefore never appear together even when child ranges converge.
 
 ## View and error metric
 
@@ -99,6 +101,10 @@ The projected error is:
 geometricError * projectionScalePixels /
 max(distance(camera, sphere.center) - sphere.radius, 1e-6)
 ```
+
+`geometricError`, the sphere, and the camera must use the same world-space units. If source
+geometry is scaled during placement, multiply its object-space error by the appropriate world
+scale before uploading the error column.
 
 A node refines when that value exceeds `maximumScreenSpaceError`, expressed in pixels. A camera
 inside or within `1e-6` world units of a sphere refines conservatively when valid children exist.

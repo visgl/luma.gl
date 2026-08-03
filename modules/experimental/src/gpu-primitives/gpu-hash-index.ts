@@ -427,11 +427,12 @@ function addBuildFinalizePass<Parameters>(
     index.tableKeys.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
-  const valueBinding = index.values
+  const hasExplicitValues = Boolean(index.values && index.keys.length > 0);
+  const valueBinding = hasExplicitValues
     ? '@group(0) @binding(3) var<storage, read> inputValues: array<u32>;'
     : '';
-  const valueExpression = index.values
-    ? `inputValues[${getViewElementOffset(index.values)}u + sourceRow]`
+  const valueExpression = hasExplicitValues
+    ? `inputValues[${getViewElementOffset(index.values!)}u + sourceRow]`
     : `${index.firstValue}u + sourceRow`;
   const source = /* wgsl */ `
 const CAPACITY: u32 = ${index.tableKeys.length}u;
@@ -461,13 +462,15 @@ ${valueBinding}
       {buffer: index.tableKeys, usage: 'storage-read'},
       {buffer: sourceRows, usage: 'storage-read'},
       {buffer: index.tableValues, usage: 'storage-write'},
-      ...(index.values ? ([{buffer: index.values, usage: 'storage-read'}] as GraphBufferUse[]) : [])
+      ...(hasExplicitValues
+        ? ([{buffer: index.values!, usage: 'storage-read'}] as GraphBufferUse[])
+        : [])
     ],
     bindings: {
       tableKeys: index.tableKeys,
       sourceRows,
       tableValues: index.tableValues,
-      ...(index.values ? {inputValues: index.values} : {})
+      ...(hasExplicitValues ? {inputValues: index.values!} : {})
     },
     dispatchSize: layout
   });

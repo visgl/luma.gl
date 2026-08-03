@@ -88,6 +88,27 @@ test('GPUBatchHashJoin preserves explicit IDs and propagates source overflow per
   t.end();
 });
 
+test('GPUBatchHashJoin reports matches for nonempty zero-capacity batches', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runBatchJoin(device, {
+    keyChunks: [Uint32Array.from([70, 20]), Uint32Array.from([1])],
+    outputCapacities: [0, 0]
+  });
+
+  t.deepEqual(result.leftRows, [[], []], 'zero-capacity output chunks retain their topology');
+  t.deepEqual(result.rightRows, [[], []]);
+  t.deepEqual(result.counts, [2, 0], 'required counts remain exact without output bindings');
+  t.deepEqual(result.overflows, [1, 0], 'only a nonempty required result overflows');
+  t.deepEqual(result.found, [[1, 1], [0]], 'source-aligned lookup masks remain available');
+  t.end();
+});
+
 test('GPUBatchHashJoin validates partition and output topology', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -277,9 +298,16 @@ function makeOutputVector(
   capacities: number[]
 ) {
   const buffers = capacities.map(capacity => createOutputBuffer(device, capacity));
-  const data = capacities.map((capacity, index) =>
-    importView(graph, `${id}-${index}`, buffers[index], capacity)
-  );
+  const data = capacities.map((capacity, index) => {
+    const view = importView(graph, `${id}-${index}`, buffers[index], capacity);
+    return capacity === 0
+      ? graph.createDataView(view.buffer, {
+          format: 'uint32',
+          length: 0,
+          byteOffset: buffers[index].byteLength
+        })
+      : view;
+  });
   return {vector: makeGraphVector(id, data), buffers};
 }
 

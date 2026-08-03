@@ -32,6 +32,10 @@ removal, `count` is the physical high-water mark and may include holes; `activeC
 number of live records. Consumers therefore combine the prefix with `flags` until compaction makes
 the two counts equal again.
 
+Pre-populated borrowed records may declare an explicit `activeCount` below their physical
+`recordCount`. Newly allocated empty storage cannot claim a positive record count, and bounds or
+transform values must remain finite after conversion to the stored `float32` representation.
+
 ### Mutation is transactional and measurable
 
 `mutate()` accepts removals, patches, insertions, and optional compaction as one transaction. The

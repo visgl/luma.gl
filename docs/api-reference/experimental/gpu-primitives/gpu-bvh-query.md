@@ -30,6 +30,10 @@ Its work and memory are therefore explicit and portable across WebGPU implementa
 order is unspecified because parallel leaves append atomically; stable identity, not traversal
 order, is the contract.
 
+Stable leaf IDs use the entire `uint32` range, including `0xffffffff`. Empty leaves are recognized
+by their invalid bounds rather than by reserving an application identity. Writable results must not
+overlap one another or any live query/BVH input.
+
 ### Exact predicates
 
 A point query returns leaves whose closed bounds contain the point. A bounds query returns leaves

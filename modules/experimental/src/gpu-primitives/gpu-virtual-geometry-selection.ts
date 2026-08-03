@@ -25,7 +25,7 @@ export const GPU_VIRTUAL_GEOMETRY_FRUSTUM_PLANE_COUNT = 6;
 export type GPUVirtualGeometryHierarchy = {
   /** World-space bounding sphere per hierarchy node as center XYZ and nonnegative radius. */
   sphereBounds: GraphDataView<'float32x4'>;
-  /** Object-space geometric error per hierarchy node. */
+  /** World-space geometric error per hierarchy node, scaled with its world-space bounds. */
   geometricErrors: GraphDataView<'float32'>;
   /** First-child index and child count per node. A zero child count identifies a leaf. */
   children: GraphDataView<'uint32x2'>;
@@ -123,7 +123,8 @@ export function makeGPUVirtualGeometrySelectionPlan(
  *
  * Traversal writes a source-aligned mask. {@link GPUVisibilityWorkflow} then performs stable scan
  * compaction of cluster IDs, so multiple roots and convergent child activation cannot duplicate a
- * node and output order is deterministic. The final pass copies only retained IDs and resets the
+ * node. A coarse shared parent suppresses its shared children, preserving frontier exclusivity.
+ * The final pass copies only retained IDs and resets the
  * borrowed count, optional `totalCount`, and `overflow` rows on every graph encoding.
  */
 export class GPUVirtualGeometrySelection {
@@ -444,7 +445,7 @@ fn sphereVisible(center: vec3f, radius: f32) -> bool {
 ) {
   if (globalId.x >= LEVEL_NODE_COUNT) { return; }
   let nodeIndex = FIRST_NODE + globalId.x;
-  if (atomicLoad(&activeNodes[ACTIVE_OFFSET + nodeIndex]) == 0u) { return; }
+  if (atomicLoad(&activeNodes[ACTIVE_OFFSET + nodeIndex]) != 1u) { return; }
 
   let boundsOffset = BOUNDS_OFFSET + nodeIndex * 4u;
   let center = vec3f(
@@ -489,9 +490,15 @@ fn sphereVisible(center: vec3f, radius: f32) -> bool {
   if (validChildRange && refineForView) {
     let childEnd = firstChild + childCount;
     for (var childIndex = firstChild; childIndex < childEnd; childIndex++) {
-      atomicStore(&activeNodes[ACTIVE_OFFSET + childIndex], 1u);
+      atomicMax(&activeNodes[ACTIVE_OFFSET + childIndex], 1u);
     }
     return;
+  }
+  if (validChildRange) {
+    let childEnd = firstChild + childCount;
+    for (var childIndex = firstChild; childIndex < childEnd; childIndex++) {
+      atomicMax(&activeNodes[ACTIVE_OFFSET + childIndex], 2u);
+    }
   }
   selectedMask[SELECTED_OFFSET + nodeIndex] = 1u;
 }`;

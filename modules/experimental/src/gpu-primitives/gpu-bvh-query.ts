@@ -8,6 +8,7 @@ import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-co
 import type {GPUBVHBoundsView} from './gpu-bvh';
 import {
   createTransientView,
+  doGraphDataViewsOverlap,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
@@ -110,6 +111,7 @@ export class GPUBVHQuery {
     if (this.query.length !== expectedQueryLength) {
       throw new Error(`${this.id} ${this.kind} query must contain ${expectedQueryLength} floats`);
     }
+    validateDisjointViews(this);
   }
 
   /** Adds initialization and level-ordered traversal without submission or readback. */
@@ -289,13 +291,11 @@ fn finite(value: f32) -> bool {
   if (selected) {
     let leafIndex = nodeIndex - INTERNAL_NODE_COUNT;
     let objectId = leafIds[LEAF_IDS_OFFSET + leafIndex];
-    if (objectId != ${INVALID_NODE}u) {
-      let outputIndex = atomicAdd(&outputCount[COUNT_OFFSET], 1u);
-      if (outputIndex < OUTPUT_CAPACITY) {
-        outputIds[OUTPUT_OFFSET + outputIndex] = objectId;
-      } else {
-        atomicStore(&outputOverflow[OVERFLOW_OFFSET], 1u);
-      }
+    let outputIndex = atomicAdd(&outputCount[COUNT_OFFSET], 1u);
+    if (outputIndex < OUTPUT_CAPACITY) {
+      outputIds[OUTPUT_OFFSET + outputIndex] = objectId;
+    } else {
+      atomicStore(&outputOverflow[OVERFLOW_OFFSET], 1u);
     }
   }
 }`;
@@ -394,6 +394,33 @@ fn finite(value: f32) -> bool {
     },
     dispatchCount: Math.ceil(levelNodeCount / BVH_QUERY_WORKGROUP_SIZE)
   });
+}
+
+function validateDisjointViews(query: GPUBVHQuery): void {
+  const inputs = [
+    query.bvh.nodeMinima,
+    query.bvh.nodeMaxima,
+    query.bvh.nodeChildren,
+    query.bvh.leafIds,
+    query.bvh.overflow,
+    query.query
+  ];
+  const outputs = [
+    query.output,
+    query.count,
+    query.overflow,
+    ...(query.outputMask ? [query.outputMask] : []),
+    ...(query.visitedCount ? [query.visitedCount] : [])
+  ];
+  for (let outputIndex = 0; outputIndex < outputs.length; outputIndex++) {
+    const output = outputs[outputIndex]!;
+    if (inputs.some(input => doGraphDataViewsOverlap(input, output))) {
+      throw new Error(`${query.id} output views must not overlap query or BVH inputs`);
+    }
+    if (outputs.slice(outputIndex + 1).some(other => doGraphDataViewsOverlap(output, other))) {
+      throw new Error(`${query.id} output views must not overlap one another`);
+    }
+  }
 }
 
 function addOutputMaskPass<Parameters>(
