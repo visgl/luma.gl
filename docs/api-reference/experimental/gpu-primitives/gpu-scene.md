@@ -189,6 +189,8 @@ Destroys owned buffers and leaves borrowed buffers untouched. Calling it repeate
 [scene adapters](/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters) add explicit
 CPU-hierarchy and zero-copy preserved-table boundaries without changing this core storage model.
 [`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation)
-publishes active, visible rows into deterministic indirect-command slots. GPU-authored record
-mutation, visibility policy, and pipeline/resource grouping remain later graph workflows rather
-than hidden behavior inside the storage owner.
+publishes active, visible rows into deterministic indirect-command slots, while
+[`GPUSceneResourceGroups`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups)
+classifies those commands into explicit renderer-owned binding windows. GPU-authored record
+mutation and visibility policy remain graph workflows rather than hidden behavior inside the
+storage owner.

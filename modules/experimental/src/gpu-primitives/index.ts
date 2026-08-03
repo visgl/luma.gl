@@ -207,6 +207,14 @@ export type {
   GPUSceneDrawGenerationStats,
   GPUSceneDrawSource
 } from './gpu-scene-draw-generation';
+
+export {GPUSceneResourceGroups} from './gpu-scene-resource-groups';
+export type {
+  GPUSceneResourceGroup,
+  GPUSceneResourceGroupSource,
+  GPUSceneResourceGroupsProps,
+  GPUSceneResourceGroupsStats
+} from './gpu-scene-resource-groups';
 export type {
   GPUSceneCPUAdapterContext,
   GPUSceneCPUAdapterProps,
