@@ -114,6 +114,10 @@ Target Release Date: TBD
 - **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper remains deferred with `@luma.gl/experimental` until v10.
 - **GPU data and buffer-layout utilities** - New exported helpers decode GPU data types, select native or emulated Float16 arrays, and resolve logical attributes over shared or composite buffer layouts.
 
+**@luma.gl/webgl**
+
+- **Optional WebGL debugging** - WebGLDeveloperTools and Spector integration are registered through `@luma.gl/webgl/debug`, keeping debug-only code out of normal adapter application bundles.
+
 **@luma.gl/engine**
 
 - **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
