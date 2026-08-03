@@ -22,6 +22,10 @@ test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', asy
     tapeTest.end();
     return;
   }
+  const softwareBackedDevice = isSoftwareBackedDevice(device);
+  if (softwareBackedDevice) {
+    tapeTest.comment('Skipping slow integer fp64 radius shaders on software WebGPU');
+  }
 
   const cases: QueryFixtureProps[] = [
     {
@@ -106,7 +110,7 @@ test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', asy
       query: Float32Array.from([0, 0, 0, 3]),
       expectedIds: [0, 1, 3]
     }
-  ];
+  ].filter(testCase => !softwareBackedDevice || testCase.kind !== 'radius');
 
   for (const testCase of cases) {
     const fixture = createQueryFixture(device, testCase);
@@ -126,6 +130,11 @@ test('GPUPointSpatialQuery preserves exact radius boundaries and subnormals', as
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 radius shaders on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -184,6 +193,11 @@ test('GPUPointSpatialQuery rejects outside radii at large coordinate offsets', a
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 radius shaders on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -661,4 +675,10 @@ function destroyFixture(fixture: QueryFixture): void {
 
 function sortNumbers(left: number, right: number): number {
   return left - right;
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
 }
