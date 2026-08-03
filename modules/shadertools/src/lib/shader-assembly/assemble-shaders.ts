@@ -18,8 +18,9 @@ import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './wgsl-binding-debug';
+import {scanWGSLInterface} from './wgsl-interface-scan';
 import {preprocess} from '../preprocessor/preprocessor';
-import type {AttributeShaderType} from '@luma.gl/core';
+import type {AttributeShaderType, ShaderLayout} from '@luma.gl/core';
 import type {ResolvedShaderPluginVarying} from '../shader-plugin';
 import {
   assembleShaderPluginVertexInputsWGSL,
@@ -150,6 +151,7 @@ export function assembleWGSLShader(
   getUniforms: GetUniformsFunc;
   bindingAssignments: {moduleName: string; name: string; group: number; location: number}[];
   bindingTable: ShaderBindingDebugRow[];
+  shaderLayout: ShaderLayout | null;
 } {
   const modules = getShaderModuleDependencies(options.modules || []);
   const {source, bindingAssignments} = assembleShaderWGSL(options.platformInfo, {
@@ -163,7 +165,8 @@ export function assembleWGSLShader(
     source,
     getUniforms: assembleGetUniforms(modules),
     bindingAssignments,
-    bindingTable: getShaderBindingDebugRowsFromWGSL(source, bindingAssignments)
+    bindingTable: getShaderBindingDebugRowsFromWGSL(source, bindingAssignments),
+    shaderLayout: scanWGSLInterface(source, {vertexEntryPoint: options.vertexEntryPoint})
   };
 }
 
