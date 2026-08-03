@@ -6,9 +6,13 @@ import {fromHalfFloat} from '@luma.gl/shadertools';
 
 const HIGH_DYNAMIC_RANGE_BYTES_PER_PIXEL = 8;
 const STANDARD_DYNAMIC_RANGE_BYTES_PER_PIXEL = 4;
+const TEMPEST_OCEAN_EXAMPLE_ID = 'showcase/tempest-ocean';
+const TEMPEST_OCEAN_TARGET_PEAK_NITS = 1117;
 
 /** Raw same-frame planes used to encode a gain-map JPEG outside the browser. */
 export type TempestOceanHDRScreenshot = {
+  exampleId: string;
+  targetPeakNits: number;
   width: number;
   height: number;
   hdr: {
@@ -101,6 +105,8 @@ export function makeTempestOceanHDRScreenshot(options: {
   );
 
   return {
+    exampleId: TEMPEST_OCEAN_EXAMPLE_ID,
+    targetPeakNits: TEMPEST_OCEAN_TARGET_PEAK_NITS,
     width,
     height,
     hdr: {

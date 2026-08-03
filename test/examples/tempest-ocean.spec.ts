@@ -91,6 +91,8 @@ describe('Tempest Ocean: Spectral Stormfront', () => {
       expect(viewer.oceanTimeSeconds).toBe(0);
 
       expect(capture).toMatchObject({
+        exampleId: 'showcase/tempest-ocean',
+        targetPeakNits: 1117,
         width,
         height,
         hdr: {

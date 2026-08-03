@@ -15,6 +15,10 @@ import {
   setActiveCpuHotspotProfilerDevice
 } from '../debug/luma-cpu-hotspot-profiler';
 import {logError} from '../utils/error-utils';
+import {
+  HDRCanvasCaptureController,
+  type HDRScreenshotCapture
+} from '../utils/hdr-screenshot-capture';
 
 // import {VRDisplay} from '@luma.gl/experimental';
 import {
@@ -29,24 +33,7 @@ import {
 
 let currentLumaExampleTask: Promise<void> = Promise.resolve();
 
-export type HDRScreenshotCapture = {
-  width: number;
-  height: number;
-  hdr: {
-    format: 'rgba16float';
-    colorSpace: 'display-p3';
-    transfer: 'linear';
-    bytesPerRow: number;
-    data: Uint8Array;
-  };
-  sdr: {
-    format: 'rgba8unorm-srgb';
-    colorSpace: 'display-p3';
-    transfer: 'srgb';
-    bytesPerRow: number;
-    data: Uint8Array;
-  };
-};
+export type {HDRScreenshotCapture} from '../utils/hdr-screenshot-capture';
 
 type HDRScreenshotCapturable = AnimationLoopTemplate & {
   captureHDRScreenshot: () => Promise<HDRScreenshotCapture>;
@@ -90,24 +77,24 @@ export type ExampleDisplayProps = {
 
 export type LumaExampleProps = React.PropsWithChildren<
   ExampleDisplayProps & {
-  id?: string;
-  title?: string;
-  subtitle?: string;
-  template: Function;
-  config: unknown;
-  directory?: string;
-  sourceDirectory?: string;
-  sourceFiles?: string[];
-  sourcePath?: string;
-  stackBlitz?: boolean;
-  container?: string;
-  panel?: boolean;
-  showHeader?: boolean;
-  showStats?: boolean;
-  devices?: DeviceTabSelection[];
-  canvasContextProfile?: CanvasContextProfile;
-  templateInfoPlacement?: 'header' | 'page';
-  headerControls?: React.ReactNode;
+    id?: string;
+    title?: string;
+    subtitle?: string;
+    template: Function;
+    config: unknown;
+    directory?: string;
+    sourceDirectory?: string;
+    sourceFiles?: string[];
+    sourcePath?: string;
+    stackBlitz?: boolean;
+    container?: string;
+    panel?: boolean;
+    showHeader?: boolean;
+    showStats?: boolean;
+    devices?: DeviceTabSelection[];
+    canvasContextProfile?: CanvasContextProfile;
+    templateInfoPlacement?: 'header' | 'page';
+    headerControls?: React.ReactNode;
   }
 >;
 
@@ -202,7 +189,12 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
       </InfoBox>
       <DeviceTabs
         devices={props.devices}
-        style={{flexShrink: 1, maxWidth: '100%', overflowX: 'auto', pointerEvents: 'auto'}}
+        style={{
+          flexShrink: 1,
+          maxWidth: '100%',
+          overflowX: 'auto',
+          pointerEvents: 'auto'
+        }}
       />
     </div>
   );
@@ -228,7 +220,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const showStats = props.showStats !== false && props.panel !== false;
   const showHeader = props.showHeader !== false && props.panel !== false;
   const {siteConfig} = useDocusaurusContext();
-  const websiteBaseUrl = siteConfig.baseUrl.endsWith('/') ? siteConfig.baseUrl : `${siteConfig.baseUrl}/`;
+  const websiteBaseUrl = siteConfig.baseUrl.endsWith('/')
+    ? siteConfig.baseUrl
+    : `${siteConfig.baseUrl}/`;
 
   /** Each example maintains an animation loop */
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
@@ -300,6 +294,11 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     let browserCaptureFunction: Window['lumaCaptureHDRScreenshot'];
     const defaultCanvasContext = effectiveDevice.getDefaultCanvasContext();
     const deviceCanvas = defaultCanvasContext.canvas;
+    const exampleId = [props.directory, props.id].filter(Boolean).join('/');
+    const captureController =
+      props.canvasContextProfile === 'high-dynamic-range'
+        ? new HDRCanvasCaptureController(exampleId, effectiveDevice, defaultCanvasContext)
+        : null;
 
     const removeBrowserCaptureFunction = () => {
       if (window.lumaCaptureHDRScreenshot === browserCaptureFunction) {
@@ -317,7 +316,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
 
       if (!(deviceCanvas instanceof HTMLCanvasElement)) {
-        throw new Error('Website examples require the shared device canvas to be an HTMLCanvasElement');
+        throw new Error(
+          'Website examples require the shared device canvas to be an HTMLCanvasElement'
+        );
       }
 
       deviceCanvas.style.display = EXAMPLE_CANVAS_STYLE.display;
@@ -330,7 +331,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         stats: luma.stats.get('GPU Time and Memory'),
         device: effectiveDevice,
         autoResizeViewport: true,
-        autoResizeDrawingBuffer: true
+        autoResizeDrawingBuffer: true,
+        onAfterRender: captureController
+          ? animationProps => captureController.onAfterRender(animationProps)
+          : undefined
       });
       animationLoop.frameRate.setSampleSize(1);
 
@@ -339,10 +343,16 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
 
       const animationLoopTemplate = animationLoop?.getAnimationLoopTemplate() || null;
-      if (!isCancelled && isHDRScreenshotCapturable(animationLoopTemplate)) {
-        const capturableTemplate = animationLoopTemplate;
+      if (
+        !isCancelled &&
+        animationLoop &&
+        (isHDRScreenshotCapturable(animationLoopTemplate) || captureController)
+      ) {
+        const activeAnimationLoop = animationLoop;
         browserCaptureFunction = Object.assign(
-          () => capturableTemplate.captureHDRScreenshot(),
+          isHDRScreenshotCapturable(animationLoopTemplate)
+            ? () => animationLoopTemplate.captureHDRScreenshot()
+            : () => captureController!.capture(activeAnimationLoop),
           {deviceType: effectiveDeviceType}
         );
         window.lumaCaptureHDRScreenshot = browserCaptureFunction;
@@ -365,6 +375,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     return () => {
       isCancelled = true;
+      captureController?.finalize();
       removeBrowserCaptureFunction();
       // Route transitions must stop displaying the outgoing example immediately, even when its
       // asynchronous initialization is still ahead of cleanup in the serialized task queue.
@@ -393,6 +404,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     props.template,
     props.directory,
     props.id,
+    props.canvasContextProfile,
     websiteBaseUrl,
     requestedDeviceTypesKey
   ]);
@@ -430,14 +442,17 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       ) : null}
       {info && props.templateInfoPlacement === 'page' ? (
         <div
-          style={{height: '100%', minHeight: 0, position: 'relative', zIndex: 1}}
+          style={{
+            height: '100%',
+            minHeight: 0,
+            position: 'relative',
+            zIndex: 1
+          }}
           dangerouslySetInnerHTML={{__html: info}}
         />
       ) : null}
       <div style={{minHeight: 0, position: 'absolute', inset: 0}}>
-        {showStats ? (
-          <ExampleStats device={effectiveDevice} trackSwapChainTextureMemory />
-        ) : null}
+        {showStats ? <ExampleStats device={effectiveDevice} trackSwapChainTextureMemory /> : null}
         <div
           key={effectiveDeviceType || deviceType}
           ref={canvasContainerRef}
@@ -461,9 +476,7 @@ function isHDRScreenshotCapturable(
   );
 }
 
-function getRequestedDeviceTypes(
-  devices?: DeviceTabSelection[]
-): DeviceType[] | undefined {
+function getRequestedDeviceTypes(devices?: DeviceTabSelection[]): DeviceType[] | undefined {
   if (!devices) {
     return undefined;
   }

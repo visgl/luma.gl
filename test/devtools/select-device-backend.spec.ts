@@ -82,7 +82,7 @@ function makeDeviceTabLocator(
     async count(): Promise<number> {
       return tab ? 1 : 0;
     },
-    first() {
+    last() {
       return this;
     },
     async click(): Promise<void> {

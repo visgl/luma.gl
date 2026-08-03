@@ -42,6 +42,7 @@ test('parseCliArguments selects the paired Display P3 raw defaults', () => {
   assert.equal(options.highDynamicRangeGamut, 'display-p3');
   assert.equal(options.standardDynamicRangeGamut, 'display-p3');
   assert.equal(options.targetPeakNits, 1000);
+  assert.equal(options.targetPeakNitsWasExplicitlySpecified, false);
   assert.equal(options.gainMapScale, 4);
   assert.equal(options.useMultiChannelGainMap, true);
   assert.equal(options.ultrahdrAppPath, '/tools/ultrahdr_app');
@@ -79,19 +80,105 @@ test('resolveUltrahdrAppPath honors the build cache override', async context => 
   );
 });
 
-test('loadCaptureManifestOptions consumes the Playwright paired raw artifact schema', async context => {
+test('loadCaptureManifestOptions consumes the Playwright v2 paired raw artifact schema', async context => {
   const fixture = await createRawCaptureFixture(context, 7, 3);
   const manifestPath = await writeCaptureManifest(fixture);
 
   const options = await loadCaptureManifestOptions(manifestPath);
 
   assert.equal(options.captureManifestPath, manifestPath);
+  assert.equal(options.captureManifestVersion, 2);
+  assert.equal(options.exampleId, 'showcase/tempest-ocean');
   assert.equal(options.highDynamicRangePath, fixture.highDynamicRangePath);
   assert.equal(options.standardDynamicRangeRawPath, fixture.standardDynamicRangePath);
   assert.equal(options.width, fixture.width);
   assert.equal(options.height, fixture.height);
   assert.equal(options.highDynamicRangeGamut, 'display-p3');
   assert.equal(options.standardDynamicRangeGamut, 'display-p3');
+  assert.equal(options.targetPeakNits, 1117);
+});
+
+test('capture manifest v1 remains compatible with the 1000-nit default', async context => {
+  const fixture = await createRawCaptureFixture(context, 7, 3);
+  const manifestPath = await writeCaptureManifest(fixture, {
+    version: 1,
+    exampleId: undefined,
+    targetPeakNits: undefined
+  });
+
+  const manifestOptions = await loadCaptureManifestOptions(manifestPath);
+  const parsedOptions = parseCliArguments([
+    '--manifest',
+    manifestPath,
+    '--output',
+    fixture.outputPath
+  ]);
+  const appliedOptions = await applyCaptureManifestOptions(parsedOptions);
+  const explicitOptions = await applyCaptureManifestOptions(
+    parseCliArguments([
+      '--manifest',
+      manifestPath,
+      '--output',
+      fixture.outputPath,
+      '--target-peak-nits',
+      '850'
+    ])
+  );
+
+  assert.equal(manifestOptions.captureManifestVersion, 1);
+  assert.equal(manifestOptions.exampleId, undefined);
+  assert.equal(manifestOptions.targetPeakNits, 1000);
+  assert.equal(appliedOptions.targetPeakNits, 1000);
+  assert.equal(explicitOptions.targetPeakNits, 850);
+});
+
+test('v2 manifest peak applies unless the CLI target peak is explicit', async context => {
+  const fixture = await createRawCaptureFixture(context, 7, 3);
+  const manifestPath = await writeCaptureManifest(fixture);
+  const commonArguments = ['--manifest', manifestPath, '--output', fixture.outputPath];
+
+  const manifestOptions = await applyCaptureManifestOptions(parseCliArguments(commonArguments));
+  const explicitOptions = await applyCaptureManifestOptions(
+    parseCliArguments([...commonArguments, '--target-peak-nits', '900'])
+  );
+
+  assert.equal(manifestOptions.targetPeakNits, 1117);
+  assert.equal(manifestOptions.targetPeakNitsWasExplicitlySpecified, false);
+  assert.equal(explicitOptions.targetPeakNits, 900);
+  assert.equal(explicitOptions.targetPeakNitsWasExplicitlySpecified, true);
+  assertOptionValue(buildEncoderArguments(manifestOptions, fixture.outputPath), '-L', '1117');
+  assertOptionValue(buildEncoderArguments(explicitOptions, fixture.outputPath), '-L', '900');
+});
+
+test('capture manifest v2 requires identity and bounded integer peak metadata', async context => {
+  const fixture = await createRawCaptureFixture(context, 7, 3);
+
+  let manifestPath = await writeCaptureManifest(fixture, {exampleId: undefined});
+  await assert.rejects(
+    loadCaptureManifestOptions(manifestPath),
+    /exampleId must be a non-empty string/
+  );
+
+  manifestPath = await writeCaptureManifest(fixture, {targetPeakNits: undefined});
+  await assert.rejects(
+    loadCaptureManifestOptions(manifestPath),
+    /manifest targetPeakNits must be an integer in \[203, 10000\]/
+  );
+
+  manifestPath = await writeCaptureManifest(fixture, {targetPeakNits: 1117.5});
+  await assert.rejects(
+    loadCaptureManifestOptions(manifestPath),
+    /manifest targetPeakNits must be an integer in \[203, 10000\]/
+  );
+
+  manifestPath = await writeCaptureManifest(fixture, {targetPeakNits: 10001});
+  await assert.rejects(
+    loadCaptureManifestOptions(manifestPath),
+    /manifest targetPeakNits must be an integer in \[203, 10000\]/
+  );
+
+  manifestPath = await writeCaptureManifest(fixture, {version: 3});
+  await assert.rejects(loadCaptureManifestOptions(manifestPath), /version must be 1 or 2/);
 });
 
 test('capture manifest rejects incompatible layout and ambiguous CLI overrides', async context => {
@@ -314,7 +401,10 @@ test('encodeGainMapJpeg rejects output symbolic links', async context => {
   });
 
   await assert.rejects(encodeGainMapJpeg(options), /Output path must not be a symbolic link/);
-  assert.deepEqual(await readFile(fixture.standardDynamicRangePath), originalStandardDynamicRangeData);
+  assert.deepEqual(
+    await readFile(fixture.standardDynamicRangePath),
+    originalStandardDynamicRangeData
+  );
 });
 
 test('encodeGainMapJpeg rejects an encoder built without XMP metadata', async context => {
@@ -402,7 +492,9 @@ async function writeCaptureManifest(fixture, overrides = {}) {
   } = overrides;
   const manifest = {
     schema: 'luma.gl/hdr-screenshot-capture',
-    version: 1,
+    version: 2,
+    exampleId: 'showcase/tempest-ocean',
+    targetPeakNits: 1117,
     width: fixture.width,
     height: fixture.height,
     orientation: 'top-down',

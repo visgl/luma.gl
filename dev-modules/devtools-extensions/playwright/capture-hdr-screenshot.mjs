@@ -5,6 +5,8 @@ const DEFAULT_CAPTURE_TIMEOUT_MILLISECONDS = 120_000;
 const HDR_RAW_FILENAME = 'website-playwright-hdr.rgba16float';
 const SDR_RAW_FILENAME = 'website-playwright-sdr.rgba8';
 const MANIFEST_FILENAME = 'website-playwright-hdr.json';
+const MINIMUM_TARGET_PEAK_NITS = 203;
+const MAXIMUM_TARGET_PEAK_NITS = 10000;
 
 /**
  * Requests the active example's high-dynamic-range capture and writes its raw planes plus metadata.
@@ -27,73 +29,86 @@ export async function captureHDRScreenshotArtifacts(page, artifactDirectory, opt
     {timeout: captureTimeoutMilliseconds}
   );
 
-  const serializedCapture = await page.evaluate(async captureOptions => {
-    const {expectedDeviceType, timeoutMilliseconds} = captureOptions;
-    if (typeof globalThis.lumaCaptureHDRScreenshot !== 'function') {
-      throw new Error('The active example does not expose lumaCaptureHDRScreenshot().');
-    }
-    if (
-      expectedDeviceType &&
-      globalThis.lumaCaptureHDRScreenshot.deviceType !== expectedDeviceType
-    ) {
-      throw new Error(
-        `The HDR screenshot bridge belongs to ${globalThis.lumaCaptureHDRScreenshot.deviceType}, expected ${expectedDeviceType}.`
-      );
-    }
+  const serializedCapture = await page.evaluate(
+    async captureOptions => {
+      const {expectedDeviceType, timeoutMilliseconds} = captureOptions;
+      if (typeof globalThis.lumaCaptureHDRScreenshot !== 'function') {
+        throw new Error('The active example does not expose lumaCaptureHDRScreenshot().');
+      }
+      if (
+        expectedDeviceType &&
+        globalThis.lumaCaptureHDRScreenshot.deviceType !== expectedDeviceType
+      ) {
+        throw new Error(
+          `The HDR screenshot bridge belongs to ${globalThis.lumaCaptureHDRScreenshot.deviceType}, expected ${expectedDeviceType}.`
+        );
+      }
 
-    let timeoutIdentifier;
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutIdentifier = setTimeout(
-        () => reject(new Error(`HDR screenshot capture timed out after ${timeoutMilliseconds}ms.`)),
-        timeoutMilliseconds
-      );
-    });
+      let timeoutIdentifier;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutIdentifier = setTimeout(
+          () =>
+            reject(new Error(`HDR screenshot capture timed out after ${timeoutMilliseconds}ms.`)),
+          timeoutMilliseconds
+        );
+      });
 
-    try {
-      const capture = await Promise.race([globalThis.lumaCaptureHDRScreenshot(), timeoutPromise]);
-      return {
-        width: capture.width,
-        height: capture.height,
-        hdr: {
-          format: capture.hdr.format,
-          colorSpace: capture.hdr.colorSpace,
-          transfer: capture.hdr.transfer,
-          bytesPerRow: capture.hdr.bytesPerRow,
-          dataBase64: encodeBytesAsBase64(capture.hdr.data)
-        },
-        sdr: {
-          format: capture.sdr.format,
-          colorSpace: capture.sdr.colorSpace,
-          transfer: capture.sdr.transfer,
-          bytesPerRow: capture.sdr.bytesPerRow,
-          dataBase64: encodeBytesAsBase64(capture.sdr.data)
+      try {
+        const capture = await Promise.race([globalThis.lumaCaptureHDRScreenshot(), timeoutPromise]);
+        return {
+          exampleId: capture.exampleId,
+          targetPeakNits: capture.targetPeakNits,
+          width: capture.width,
+          height: capture.height,
+          hdr: {
+            format: capture.hdr.format,
+            colorSpace: capture.hdr.colorSpace,
+            transfer: capture.hdr.transfer,
+            bytesPerRow: capture.hdr.bytesPerRow,
+            dataBase64: encodeBytesAsBase64(capture.hdr.data)
+          },
+          sdr: {
+            format: capture.sdr.format,
+            colorSpace: capture.sdr.colorSpace,
+            transfer: capture.sdr.transfer,
+            bytesPerRow: capture.sdr.bytesPerRow,
+            dataBase64: encodeBytesAsBase64(capture.sdr.data)
+          }
+        };
+      } finally {
+        clearTimeout(timeoutIdentifier);
+      }
+
+      function encodeBytesAsBase64(data) {
+        if (!(data instanceof Uint8Array)) {
+          throw new Error('HDR screenshot capture planes must use Uint8Array data.');
         }
-      };
-    } finally {
-      clearTimeout(timeoutIdentifier);
-    }
 
-    function encodeBytesAsBase64(data) {
-      if (!(data instanceof Uint8Array)) {
-        throw new Error('HDR screenshot capture planes must use Uint8Array data.');
+        // Keep each call below the JavaScript argument limit and aligned to a three-byte base64 group.
+        const chunkByteLength = 0x6000;
+        let encodedData = '';
+        for (let byteOffset = 0; byteOffset < data.byteLength; byteOffset += chunkByteLength) {
+          const chunk = data.subarray(byteOffset, byteOffset + chunkByteLength);
+          encodedData += btoa(String.fromCharCode(...chunk));
+        }
+        return encodedData;
       }
-
-      // Keep each call below the JavaScript argument limit and aligned to a three-byte base64 group.
-      const chunkByteLength = 0x6000;
-      let encodedData = '';
-      for (let byteOffset = 0; byteOffset < data.byteLength; byteOffset += chunkByteLength) {
-        const chunk = data.subarray(byteOffset, byteOffset + chunkByteLength);
-        encodedData += btoa(String.fromCharCode(...chunk));
-      }
-      return encodedData;
-    }
-  }, {expectedDeviceType, timeoutMilliseconds: captureTimeoutMilliseconds});
+    },
+    {expectedDeviceType, timeoutMilliseconds: captureTimeoutMilliseconds}
+  );
 
   return await writeHDRScreenshotArtifacts(serializedCapture, artifactDirectory);
 }
 
 /** Writes a serialized browser capture to stable artifact filenames. */
 export async function writeHDRScreenshotArtifacts(capture, artifactDirectory) {
+  assertNonEmptyString(capture?.exampleId, 'exampleId');
+  assertIntegerInRange(
+    capture?.targetPeakNits,
+    'targetPeakNits',
+    MINIMUM_TARGET_PEAK_NITS,
+    MAXIMUM_TARGET_PEAK_NITS
+  );
   assertPositiveInteger(capture?.width, 'width');
   assertPositiveInteger(capture?.height, 'height');
 
@@ -121,7 +136,9 @@ export async function writeHDRScreenshotArtifacts(capture, artifactDirectory) {
   const manifestPath = path.join(artifactDirectory, MANIFEST_FILENAME);
   const manifest = {
     schema: 'luma.gl/hdr-screenshot-capture',
-    version: 1,
+    version: 2,
+    exampleId: capture.exampleId,
+    targetPeakNits: capture.targetPeakNits,
     width: capture.width,
     height: capture.height,
     orientation: 'top-down',
@@ -187,6 +204,22 @@ function assertPositiveInteger(value, propertyName) {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error(
       `HDR screenshot ${propertyName} must be a positive integer, received ${value}.`
+    );
+  }
+}
+
+function assertNonEmptyString(value, propertyName) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(
+      `HDR screenshot ${propertyName} must be a non-empty string, received ${JSON.stringify(value)}.`
+    );
+  }
+}
+
+function assertIntegerInRange(value, propertyName, minimum, maximum) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new Error(
+      `HDR screenshot ${propertyName} must be an integer in [${minimum}, ${maximum}], received ${value}.`
     );
   }
 }

@@ -41,16 +41,25 @@ Artifacts:
   linear Display-P3 RGBA16F pixels
 - `.playwright-artifacts/website-playwright-sdr.rgba8`: tightly packed, top-down,
   Display-P3 RGBA8 pixels with the sRGB transfer function
-- `.playwright-artifacts/website-playwright-hdr.json`: dimensions, color metadata, row strides,
-  byte lengths, and raw artifact filenames
+- `.playwright-artifacts/website-playwright-hdr.json`: version 2 manifest with the example ID,
+  integer target peak in nits, dimensions, color metadata, row strides, byte lengths, and raw
+  artifact filenames
 
-The active `AnimationLoopTemplate` must implement `captureHDRScreenshot()` for this option. The
-website exposes that method to browser automation as `window.lumaCaptureHDRScreenshot()` after the
-example finishes initializing and removes it during route cleanup.
+For examples using the website's high-dynamic-range canvas profile, the website captures the active
+WebGPU `rgba16float` presentation texture after rendering and before submission. An
+`AnimationLoopTemplate` may implement `captureHDRScreenshot()` to provide a specialized paired
+capture instead. Both paths return a non-empty `exampleId` plus an integer `targetPeakNits` in the
+range 203–10000. The website exposes the active path to browser automation as
+`window.lumaCaptureHDRScreenshot()` after the example finishes initializing and removes it during
+route cleanup. Generic capture rejects SDR canvas fallbacks instead of writing falsely tagged data.
+The runner adds `luma-hdr-capture=1` to the example URL so capture can request the FP16 canvas even
+when browser media emulation reports an SDR display; the canvas configuration itself must still
+confirm Display-P3 extended presentation.
 
 Use `--viewport-width` and `--viewport-height` to set positive integer viewport dimensions before
-capture. For example, Tempest uses a 300-pixel examples sidebar and a 60-pixel navbar, so a
-`1580x780` viewport gives it a `1280x720` drawing area.
+capture. Capture mode uses CSS/DPR-compatible drawing-buffer sizing; the examples layout means a
+`1580x780` viewport produces a `1280x720` raw render target for routes rendered beside the 300-pixel
+examples sidebar. Full-width routes use `1310x780` for the same raw target size.
 
 Backend behavior:
 - explicit `--backend webgpu-core`, `--backend webgpu-max`, `--backend webgpu-compatibility`, or `--backend webgl2` clicks the corresponding `DeviceTabs` entry

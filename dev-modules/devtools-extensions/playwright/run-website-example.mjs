@@ -21,6 +21,7 @@ const DEFAULT_ARTIFACT_DIR = '.playwright-artifacts';
 const DEFAULT_SCREENSHOT_NAME = 'website-playwright.png';
 const DEFAULT_WATCH_INTERVAL_MS = 1000;
 const START_TIMEOUT_MS = 120_000;
+const SCREENSHOT_TIMEOUT_MS = 120_000;
 
 function getWebsiteDir(cwd) {
   return path.resolve(cwd, 'website');
@@ -37,7 +38,7 @@ export async function runWebsiteExample(options = {}) {
   const artifactDir = getArtifactDir(cwd, options.artifactDir);
   const requestedBaseUrl = options.baseUrl || DEFAULT_BASE_URL;
   let resolvedBaseUrl = requestedBaseUrl;
-  let targetUrl = resolveExampleUrl(options.example, resolvedBaseUrl, ocularConfig);
+  let targetUrl = resolveTargetUrl(options, resolvedBaseUrl, ocularConfig);
   const targetTab = options.targetTab || options.example || targetUrl;
 
   let serverProcess = null;
@@ -55,11 +56,11 @@ export async function runWebsiteExample(options = {}) {
         resolvedBaseUrl = buildBaseUrl(requestedEndpoint, availablePort);
       }
 
-      targetUrl = resolveExampleUrl(options.example, resolvedBaseUrl, ocularConfig);
+      targetUrl = resolveTargetUrl(options, resolvedBaseUrl, ocularConfig);
       serverProcess = startWebsiteServer(websiteDir, parseBaseUrl(resolvedBaseUrl));
       await waitForServer(resolvedBaseUrl, START_TIMEOUT_MS);
     } else if (usingExistingServer) {
-      targetUrl = resolveExampleUrl(options.example, resolvedBaseUrl, ocularConfig);
+      targetUrl = resolveTargetUrl(options, resolvedBaseUrl, ocularConfig);
     }
 
     await mkdir(artifactDir, {recursive: true});
@@ -71,31 +72,52 @@ export async function runWebsiteExample(options = {}) {
           ocularConfig
         });
 
-    const matchedPage = await findTargetPage(browserHandle.browser, targetTab);
-    const page = matchedPage || (await createPage(browserHandle.browser, targetUrl));
-
-    if (!usingAttachMode && page.url() !== targetUrl) {
-      await page.goto(targetUrl, {waitUntil: 'networkidle'});
+    if (options.backend && (!usingAttachMode || options.highDynamicRangeCapture)) {
+      await seedBackendPreference(browserHandle.browser, options.backend);
     }
+
+    const matchedPage = await findTargetPage(browserHandle.browser, targetTab);
+    const page = matchedPage || (await createPage(browserHandle.browser));
 
     await applyViewportSize(page, options.viewportWidth, options.viewportHeight);
 
     const {diagnostics, dispose} = collectPageDiagnostics(page, options.logger || console);
 
     try {
+      const navigationUrl = resolveNavigationUrl({
+        highDynamicRangeCapture: options.highDynamicRangeCapture,
+        matchedPage,
+        page,
+        targetUrl,
+        usingAttachMode
+      });
+      if (navigationUrl) {
+        targetUrl = navigationUrl;
+        await page.goto(targetUrl, {waitUntil: 'networkidle'});
+      }
+
       const selectedDeviceType = await applyBackendSelection(page, options.backend);
       if (options.highDynamicRangeCapture && !selectedDeviceType) {
         throw new Error('[playwright] HDR capture requires an available selected device backend.');
+      }
+      if (options.captureDelayMilliseconds) {
+        await page.waitForTimeout(options.captureDelayMilliseconds);
       }
       const webgpuProbe = await probeWebGPU(page);
 
       await writeJsonArtifact(artifactDir, 'webgpu-probe.json', webgpuProbe);
       await writeJsonArtifact(artifactDir, 'page-diagnostics.json', diagnostics);
       await writeTextArtifact(artifactDir, 'last-url.txt', `${targetUrl}\n`);
-      await page.screenshot({
-        path: path.join(artifactDir, DEFAULT_SCREENSHOT_NAME),
-        fullPage: true
-      });
+      const screenshotPath = options.skipScreenshot
+        ? null
+        : path.join(artifactDir, DEFAULT_SCREENSHOT_NAME);
+      if (screenshotPath) {
+        await page.screenshot({
+          path: screenshotPath,
+          fullPage: !options.highDynamicRangeCapture,
+          timeout: SCREENSHOT_TIMEOUT_MS
+        });
+      }
 
       const highDynamicRangeArtifacts = options.highDynamicRangeCapture
         ? await captureHDRScreenshotArtifacts(page, artifactDir, {
@@ -115,7 +137,7 @@ export async function runWebsiteExample(options = {}) {
         diagnostics,
         endpointURL: browserHandle.endpointURL,
         highDynamicRangeArtifacts,
-        screenshotPath: path.join(artifactDir, DEFAULT_SCREENSHOT_NAME),
+        screenshotPath,
         targetUrl,
         usingExistingServer
       };
@@ -133,6 +155,45 @@ export async function runWebsiteExample(options = {}) {
   }
 }
 
+function resolveNavigationUrl(options) {
+  if (!options.matchedPage) {
+    return options.targetUrl;
+  }
+  if (!options.usingAttachMode) {
+    return options.page.url() === options.targetUrl ? null : options.targetUrl;
+  }
+  if (!options.highDynamicRangeCapture) {
+    return null;
+  }
+
+  const captureUrl = new URL(options.page.url());
+  captureUrl.searchParams.set('luma-hdr-capture', '1');
+  const resolvedCaptureUrl = captureUrl.toString();
+  return resolvedCaptureUrl === options.page.url() ? null : resolvedCaptureUrl;
+}
+
+async function seedBackendPreference(browser, backend) {
+  const normalizedBackend = normalizeBackend(backend);
+  if (!normalizedBackend) {
+    return;
+  }
+  const existingContext = browser.contexts()[0];
+  const context = existingContext || (await browser.newContext());
+  await context.addInitScript(deviceType => {
+    globalThis.localStorage?.setItem('luma-device-type', deviceType);
+  }, normalizedBackend);
+}
+
+function resolveTargetUrl(options, baseUrl, ocularConfig) {
+  const targetUrl = resolveExampleUrl(options.example, baseUrl, ocularConfig);
+  if (!options.highDynamicRangeCapture) {
+    return targetUrl;
+  }
+  const captureUrl = new URL(targetUrl);
+  captureUrl.searchParams.set('luma-hdr-capture', '1');
+  return captureUrl.toString();
+}
+
 async function applyBackendSelection(page, backend) {
   if (backend) {
     return (await selectDeviceBackend(page, backend)) ? normalizeBackend(backend) : null;
@@ -148,12 +209,10 @@ async function applyBackendSelection(page, backend) {
   return selectedDeviceType;
 }
 
-async function createPage(browser, targetUrl) {
+async function createPage(browser) {
   const existingContext = browser.contexts()[0];
   const context = existingContext || (await browser.newContext());
-  const page = await context.newPage();
-  await page.goto(targetUrl, {waitUntil: 'networkidle'});
-  return page;
+  return await context.newPage();
 }
 
 export async function applyViewportSize(page, viewportWidth, viewportHeight) {

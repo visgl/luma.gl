@@ -221,7 +221,9 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
   // biome-ignore lint/suspicious/noConsole: test suppresses expected initialization failure logging.
   console.error = () => {};
   try {
-    const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {device});
+    const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {
+      device
+    });
     const startResult = await animationLoop.start();
     t.is(startResult, null, 'Animation loop stops after template initialization failure');
     t.is(renderCalled, 0, 'onRender is not called after template initialization failure');
@@ -245,7 +247,9 @@ test('engine#makeAnimationLoop exposes the active template instance', async t =>
     override onFinalize(): void {}
   }
 
-  const animationLoop = makeAnimationLoop(InspectableAnimationLoopTemplate, {device});
+  const animationLoop = makeAnimationLoop(InspectableAnimationLoopTemplate, {
+    device
+  });
   t.is(animationLoop.getAnimationLoopTemplate(), null, 'template is absent before initialization');
   await animationLoop.start();
   t.ok(
@@ -254,6 +258,55 @@ test('engine#makeAnimationLoop exposes the active template instance', async t =>
   );
   animationLoop.destroy();
   t.is(animationLoop.getAnimationLoopTemplate(), null, 'finalized template is no longer exposed');
+  t.end();
+});
+
+test('engine#makeAnimationLoop runs onAfterRender before device submission', async t => {
+  const device = await getWebGLTestDevice();
+  const frameStages: string[] = [];
+  let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
+    null;
+  const animationFrameProvider = {
+    requestAnimationFrame(callback: (time: DOMHighResTimeStamp, animationFrame?: unknown) => void) {
+      scheduledCallback = callback;
+      return 1;
+    },
+    cancelAnimationFrame() {}
+  };
+
+  class OrderedAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {
+      frameStages.push('template-render');
+    }
+    override onFinalize(): void {}
+  }
+
+  const originalSubmit = device.submit;
+  device.submit = commandBuffer => {
+    frameStages.push('device-submit');
+    originalSubmit.call(device, commandBuffer);
+  };
+  const animationLoop = makeAnimationLoop(OrderedAnimationLoopTemplate, {
+    device,
+    animationFrameProvider,
+    onAfterRender: animationProps => {
+      frameStages.push('after-render');
+      animationProps.animationLoop.stop();
+    }
+  });
+
+  try {
+    await animationLoop.start();
+    scheduledCallback?.(123);
+    t.deepEqual(
+      frameStages,
+      ['template-render', 'after-render', 'device-submit'],
+      'post-render hook runs while the frame command encoder is still open'
+    );
+  } finally {
+    animationLoop.destroy();
+    device.submit = originalSubmit;
+  }
   t.end();
 });
 

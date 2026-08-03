@@ -14,6 +14,11 @@ export type MakeAnimationLoopProps = Omit<
 > & {
   /** List of adapters to use when creating the device */
   adapters?: Adapter[];
+  /** Runs after the template has encoded its frame and before the animation loop submits it. */
+  onAfterRender?: (
+    animationProps: AnimationProps,
+    animationLoopTemplate: AnimationLoopTemplate | null
+  ) => void;
 };
 
 /** Animation loop created from a template, with access to the active template instance. */
@@ -34,7 +39,11 @@ export function makeAnimationLoop(
 
   const device =
     props?.device ||
-    luma.createDevice({id: 'animation-loop', adapters: props?.adapters, createCanvasContext: true});
+    luma.createDevice({
+      id: 'animation-loop',
+      adapters: props?.adapters,
+      createCanvasContext: true
+    });
 
   // Create an animation loop;
   const animationLoop = new AnimationLoop({
@@ -59,7 +68,10 @@ export function makeAnimationLoop(
       }
     },
 
-    onRender: (animationProps: AnimationProps) => renderLoop?.onRender(animationProps),
+    onRender(animationProps: AnimationProps): void {
+      renderLoop?.onRender(animationProps);
+      props?.onAfterRender?.(animationProps, renderLoop);
+    },
 
     onFinalize(animationProps: AnimationProps): void {
       try {

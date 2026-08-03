@@ -1002,6 +1002,7 @@ export const PacketSprayingExample: React.FC = props => (
     directory="showcase"
     template={PacketSprayingApp}
     config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
@@ -1037,6 +1038,7 @@ export const DeferredRenderingExample: React.FC = props => (
     template={DeferredRenderingApp}
     config={exampleConfig}
     devices={['webgpu']}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
