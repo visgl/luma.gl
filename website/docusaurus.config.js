@@ -112,6 +112,19 @@ module.exports = {
   }),
   plugins: [
     ...basePlugins.map(plugin => {
+      if (
+        Array.isArray(plugin) &&
+        plugin[0] === '@docusaurus/plugin-content-docs' &&
+        plugin[1]?.id === 'examples'
+      ) {
+        return [
+          plugin[0],
+          {
+            ...plugin[1],
+            docItemComponent: path.resolve(__dirname, 'src/components/example-doc-item.tsx')
+          }
+        ];
+      }
       if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
         return [
           plugin[0],

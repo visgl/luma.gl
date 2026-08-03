@@ -1,7 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {useDocsSidebar} from '@docusaurus/plugin-content-docs/client';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import styled from 'styled-components';
+import styles from './examples-index.module.css';
 
 type ExampleBackend = 'webgpu' | 'webgl2';
 type ExampleDifficulty = 'beginner' | 'intermediate' | 'advanced';
@@ -47,137 +47,6 @@ type ExamplesIndexProps = {
   getThumbnail: (item: SidebarDocItem) => string;
 };
 
-const MainExamples = styled.main`
-  padding: 1rem 0 2rem;
-`;
-
-const CatalogControls = styled.div`
-  background: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 12px;
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(14rem, 2fr) repeat(4, minmax(8rem, 1fr));
-  margin: 0 1rem 1.5rem;
-  padding: 1rem;
-
-  input,
-  select {
-    background: var(--ifm-background-color);
-    border: 1px solid var(--ifm-color-emphasis-300);
-    border-radius: 8px;
-    color: var(--ifm-font-color-base);
-    font: inherit;
-    min-height: 2.65rem;
-    padding: 0.55rem 0.7rem;
-    width: 100%;
-  }
-
-  @media screen and (max-width: 996px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    input {
-      grid-column: 1 / -1;
-    }
-  }
-
-  @media screen and (max-width: 520px) {
-    grid-template-columns: 1fr;
-
-    input {
-      grid-column: auto;
-    }
-  }
-`;
-
-const ResultsSummary = styled.p`
-  color: var(--ifm-color-emphasis-700);
-  margin: 0 1rem 1rem;
-`;
-
-const ExampleSection = styled.section`
-  margin: 0 1rem 2rem;
-`;
-
-const ExampleHeader = styled.h2`
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
-  margin: 0 0 1rem;
-  padding-bottom: 0.45rem;
-`;
-
-const ExamplesGroup = styled.div`
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-`;
-
-const ExampleCard = styled.a`
-  background: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 10px;
-  color: var(--ifm-font-color-base);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  text-decoration: none;
-  transition: border-color var(--ifm-transition-fast), box-shadow var(--ifm-transition-fast),
-    transform var(--ifm-transition-fast);
-
-  &:hover,
-  &:focus-visible {
-    border-color: var(--ifm-color-primary);
-    box-shadow: var(--ifm-global-shadow-md);
-    color: var(--ifm-font-color-base);
-    text-decoration: none;
-    transform: translateY(-2px);
-  }
-
-  img {
-    aspect-ratio: 16 / 9;
-    background: var(--ifm-color-emphasis-100);
-    object-fit: cover;
-    width: 100%;
-  }
-`;
-
-const CardBody = styled.div`
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.9rem;
-
-  h3 {
-    font-size: 1.08rem;
-    margin: 0;
-  }
-
-  p {
-    color: var(--ifm-color-emphasis-700);
-    font-size: 0.9rem;
-    line-height: 1.45;
-    margin: 0;
-  }
-`;
-
-const Badges = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: auto;
-`;
-
-const Badge = styled.span`
-  background: var(--ifm-color-emphasis-100);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 999px;
-  color: var(--ifm-color-emphasis-800);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.18rem 0.45rem;
-`;
-
 export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const sidebar = useDocsSidebar() as SidebarRoot;
   const baseUrl = useBaseUrl('/');
@@ -214,7 +83,11 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
     if (maturity !== 'all') parameters.set('maturity', maturity);
     if (topic !== 'all') parameters.set('topic', topic);
     const search = parameters.toString();
-    window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}`);
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${search ? `?${search}` : ''}`
+    );
   }, [backend, difficulty, isInitialized, maturity, query, topic]);
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -233,8 +106,8 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const categories = groupByCategory(filteredCatalog);
 
   return (
-    <MainExamples>
-      <CatalogControls aria-label="Filter examples">
+    <main className={styles.mainExamples}>
+      <div className={styles.catalogControls} aria-label="Filter examples">
         <input
           type="search"
           value={query}
@@ -242,7 +115,12 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
           placeholder="Search examples, APIs, and topics…"
           aria-label="Search examples"
         />
-        <FilterSelect label="Backend" value={backend} onChange={setBackend} options={['webgpu', 'webgl2']} />
+        <FilterSelect
+          label="Backend"
+          value={backend}
+          onChange={setBackend}
+          options={['webgpu', 'webgl2']}
+        />
         <FilterSelect
           label="Difficulty"
           value={difficulty}
@@ -256,39 +134,49 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
           options={['stable', 'experimental']}
         />
         <FilterSelect label="Topic" value={topic} onChange={setTopic} options={topics} />
-      </CatalogControls>
-      <ResultsSummary aria-live="polite">
+      </div>
+      <p className={styles.resultsSummary} aria-live="polite">
         Showing {filteredCatalog.length} of {catalog.length} examples
-      </ResultsSummary>
+      </p>
       {categories.map(([category, items]) => (
-        <ExampleSection key={category}>
-          <ExampleHeader>{category}</ExampleHeader>
-          <ExamplesGroup>
+        <section className={styles.exampleSection} key={category}>
+          <h2 className={styles.exampleHeader}>{category}</h2>
+          <div className={styles.examplesGroup}>
             {items.map(item => {
               const thumbnail = getThumbnail(item);
               const imageUrl = `${baseUrl}${thumbnail.replace(/^\//, '')}`;
               return (
-                <ExampleCard key={item.href || item.docId || item.label} href={item.href}>
+                <a
+                  className={styles.exampleCard}
+                  key={item.href || item.docId || item.label}
+                  href={item.href}
+                >
                   <img src={imageUrl} alt="" />
-                  <CardBody>
+                  <div className={styles.cardBody}>
                     <h3>{item.label}</h3>
                     <p>{item.description}</p>
-                    <Badges>
-                      {item.backends.map(value => <Badge key={value}>{value}</Badge>)}
-                      <Badge>{item.difficulty}</Badge>
-                      {item.maturity === 'experimental' ? <Badge>experimental</Badge> : null}
-                    </Badges>
-                  </CardBody>
-                </ExampleCard>
+                    <div className={styles.badges}>
+                      {item.backends.map(value => (
+                        <span className={styles.badge} key={value}>
+                          {value}
+                        </span>
+                      ))}
+                      <span className={styles.badge}>{item.difficulty}</span>
+                      {item.maturity === 'experimental' ? (
+                        <span className={styles.badge}>experimental</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </a>
               );
             })}
-          </ExamplesGroup>
-        </ExampleSection>
+          </div>
+        </section>
       ))}
       {filteredCatalog.length === 0 ? (
-        <ResultsSummary>No examples match the selected filters.</ResultsSummary>
+        <p className={styles.resultsSummary}>No examples match the selected filters.</p>
       ) : null}
-    </MainExamples>
+    </main>
   );
 }
 
@@ -306,7 +194,11 @@ function FilterSelect({
   return (
     <select aria-label={label} value={value} onChange={event => onChange(event.target.value)}>
       <option value="all">{getAllOptionsLabel(label)}</option>
-      {options.map(option => <option key={option} value={option}>{formatLabel(option)}</option>)}
+      {options.map(option => (
+        <option key={option} value={option}>
+          {formatLabel(option)}
+        </option>
+      ))}
     </select>
   );
 }
@@ -391,7 +283,11 @@ function groupByCategory(items: CatalogItem[]): Array<[string, CatalogItem[]]> {
 }
 
 function formatLabel(value: string): string {
-  return value === 'webgpu' ? 'WebGPU' : value === 'webgl2' ? 'WebGL2' : `${value[0].toUpperCase()}${value.slice(1)}`;
+  return value === 'webgpu'
+    ? 'WebGPU'
+    : value === 'webgl2'
+      ? 'WebGL2'
+      : `${value[0].toUpperCase()}${value.slice(1)}`;
 }
 
 function getAllOptionsLabel(label: string): string {

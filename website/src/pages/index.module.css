@@ -1,0 +1,97 @@
+.banner {
+  position: relative;
+  height: 30rem;
+  background: var(--ifm-color-gray-400);
+  color: var(--ifm-color-gray-200);
+  z-index: 0;
+}
+
+.heroExampleContainer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+}
+
+.bannerContainer {
+  position: absolute;
+  bottom: 0;
+  max-width: 80rem;
+  width: 100%;
+  margin: 0;
+  padding: 2rem 2rem 2rem 4rem;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.projectName {
+  font-size: 5em;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.getStartedLink {
+  pointer-events: all;
+  font-size: 12px;
+  line-height: 44px;
+  letter-spacing: 2px;
+  font-weight: bold;
+  margin: 24px 0;
+  padding: 0 4rem;
+  display: inline-block;
+  text-decoration: none;
+  transition:
+    background-color 250ms ease-in,
+    color 250ms ease-in;
+  border: solid 2px var(--ifm-color-primary);
+  color: inherit;
+  border-image: linear-gradient(
+    to right,
+    var(--ifm-color-gray-700) 0%,
+    var(--ifm-color-gray-400) 100%
+  );
+  border-image-slice: 2;
+}
+
+.getStartedLink:visited {
+  color: inherit;
+}
+
+.getStartedLink:active,
+.getStartedLink:hover {
+  color: var(--ifm-color-white);
+}
+
+.getStartedLink:hover {
+  background-color: var(--ifm-color-primary);
+}
+
+.contentContainer {
+  padding: 64px;
+}
+
+.bullet {
+  background: url("/img/icon-high-precision.svg") no-repeat left top;
+  list-style: none;
+  max-width: 540px;
+  margin-top: 8px;
+  padding: 0 0 12px 56px;
+  font-size: 16px;
+}
+
+@media screen and (max-width: 768px) {
+  .contentContainer {
+    padding: 48px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .banner {
+    height: 80vh;
+  }
+}
