@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/tables",
-  "version": "9.4.0-alpha.3",
+  "version": "9.4.0-alpha.4",
   "description": "GPU table primitives and execution helpers for luma.gl",
   "license": "MIT",
   "type": "module",
@@ -41,7 +41,7 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.0-alpha.3",
-    "@luma.gl/engine": "9.4.0-alpha.3"
+    "@luma.gl/core": "9.4.0-alpha.4",
+    "@luma.gl/engine": "9.4.0-alpha.4"
   }
 }
