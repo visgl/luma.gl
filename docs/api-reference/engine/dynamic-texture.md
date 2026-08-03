@@ -91,6 +91,8 @@ Destroys the underlying texture and marks the wrapper as destroyed.
 ### `generateMipmaps(): void`
 
 Generates mipmaps for the current texture. Uses the appropriate WebGL or WebGPU backend path.
+WebGPU devices must be created with the optional `webgpuMipmapGenerator` capability from
+`@luma.gl/webgpu/mipmaps`.
 
 ### `setSampler(sampler: Sampler | SamplerProps = {}): void`
 

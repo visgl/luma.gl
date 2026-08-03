@@ -22,6 +22,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./mipmaps": {
+      "types": "./dist/mipmaps.d.ts",
+      "import": "./dist/mipmaps.js",
+      "require": "./dist/mipmaps.cjs"
     }
   },
   "files": [

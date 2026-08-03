@@ -370,6 +370,8 @@ export type DeviceProps = {
   failIfMajorPerformanceCaveat?: boolean;
   /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to opt into compatibility mode, or `'best-available'` to upgrade a compatibility adapter to core when possible. */
   featureLevel?: WebGPUFeatureLevel;
+  /** Optional backend capability for generating texture mipmaps. */
+  mipmapGenerator?: MipmapGenerator | null;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
@@ -450,6 +452,11 @@ type DeviceFactories = {
   bindGroupFactory?: unknown;
 };
 
+/** Optional backend capability for generating texture mipmaps. */
+export interface MipmapGenerator {
+  generateMipmaps(device: Device, texture: Texture): void;
+}
+
 /** WebGL independent copy of WebGLContextAttributes */
 type WebGLContextProps = {
   /** indicates if the canvas contains an alpha buffer. */
@@ -492,6 +499,7 @@ export abstract class Device {
     powerPreference: 'high-performance',
     failIfMajorPerformanceCaveat: false,
     featureLevel: undefined!,
+    mipmapGenerator: null,
     createCanvasContext: undefined!,
     // WebGL specific
     webgl: {},
@@ -859,10 +867,15 @@ or create a device with the 'debug: true' prop.`;
   /**
    * Generate mipmaps for a WebGPU texture.
    * WebGPU textures must be created up front with the required mip count, usage flags, and a format that supports the chosen generation path.
+   * Requires a mipmap generator supplied during device creation.
    * WebGL uses `Texture.generateMipmapsWebGL()` directly because the backend manages mip generation on the texture object itself.
    */
-  generateMipmapsWebGPU(_texture: Texture): void {
-    throw new Error('not implemented');
+  generateMipmapsWebGPU(texture: Texture): void {
+    if (!this.props.mipmapGenerator) {
+      // Import webgpuMipmapGenerator from @luma.gl/webgpu/mipmaps and pass it during device creation.
+      throw new Error('WebGPU mipmap generator not configured');
+    }
+    this.props.mipmapGenerator.generateMipmaps(this, texture);
   }
 
   /** Internal helper for creating a shareable WebGL render-pipeline implementation. */

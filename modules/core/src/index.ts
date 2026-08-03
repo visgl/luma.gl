@@ -11,6 +11,7 @@ export {Adapter} from './adapter/adapter';
 
 export type {
   DeviceProps,
+  MipmapGenerator,
   DeviceInfo,
   DeviceFeature,
   BrowserDeviceFeature,

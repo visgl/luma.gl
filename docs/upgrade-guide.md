@@ -12,6 +12,11 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+- WebGPU mipmap generation is no longer included in the default `@luma.gl/webgpu` runtime. Import
+  `webgpuMipmapGenerator` from `@luma.gl/webgpu/mipmaps` and pass it as
+  `DeviceProps.mipmapGenerator` when using WebGPU `DynamicTexture` mipmaps or
+  `Device.generateMipmapsWebGPU()`.
+
 **@luma.gl/experimental**
 
 - `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque

@@ -6,6 +6,7 @@ import type {Device, CanvasContextProps, DeviceProps} from '@luma.gl/core';
 import {luma, log} from '@luma.gl/core';
 import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
+import {webgpuMipmapGenerator} from '@luma.gl/webgpu/mipmaps';
 import {nullAdapter} from './null-device/null-adapter';
 import {NullDevice} from './null-device/null-device';
 
@@ -158,6 +159,7 @@ async function makeWebGPUTestDevice(
       id: `webgpu-${featureLevel}-test-device`,
       type: 'webgpu',
       featureLevel,
+      mipmapGenerator: webgpuMipmapGenerator,
       adapters: [webgpuAdapter],
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true

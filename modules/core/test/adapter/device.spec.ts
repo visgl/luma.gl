@@ -4,7 +4,12 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, Texture, luma} from '@luma.gl/core';
-import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {
+  getNullTestDevice,
+  getTestDevices,
+  getWebGPUTestDevice,
+  NullDevice
+} from '@luma.gl/test-utils';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {_getDefaultDebugValue} from '../../src/adapter/device';
 
@@ -89,7 +94,7 @@ test('Device#getSupportedCompressedTextureFormats', async t => {
   t.end();
 });
 
-test('Device#generateMipmapsWebGPU throws on non-WebGPU devices', async t => {
+test('Device#generateMipmapsWebGPU requires a configured generator', async t => {
   const device = await getNullTestDevice();
   const texture = device.createTexture({
     width: 2,
@@ -100,11 +105,33 @@ test('Device#generateMipmapsWebGPU throws on non-WebGPU devices', async t => {
 
   t.throws(
     () => device.generateMipmapsWebGPU(texture),
-    /not implemented/,
-    'base Device stub throws on unsupported device types'
+    /mipmap generator not configured/,
+    'base Device reports the missing optional capability'
   );
 
   texture.destroy();
+  t.end();
+});
+
+test('Device#generateMipmapsWebGPU delegates to the configured generator', t => {
+  const calls: unknown[][] = [];
+  const device = new NullDevice({
+    mipmapGenerator: {
+      generateMipmaps: (...args) => calls.push(args)
+    }
+  });
+  const texture = device.createTexture({
+    width: 2,
+    height: 2,
+    format: 'rgba8unorm',
+    mipLevels: 2
+  });
+
+  device.generateMipmapsWebGPU(texture);
+
+  t.deepEqual(calls, [[device, texture]], 'configured generator receives the device and texture');
+  texture.destroy();
+  device.destroy();
   t.end();
 });
 

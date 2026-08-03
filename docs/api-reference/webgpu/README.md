@@ -17,6 +17,26 @@ const device = await luma.createDevice({adapters: [webgpuAdapter], createCanvasC
 const buffer = device.createBuffer(...);
 ```
 
+## Mipmap generation
+
+WebGPU mipmap generation is an optional capability. Import the provider from the explicit subpath
+and pass it when creating devices that use `DynamicTexture` mipmaps or call
+`device.generateMipmapsWebGPU()`:
+
+```typescript
+import {luma} from '@luma.gl/core';
+import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuMipmapGenerator} from '@luma.gl/webgpu/mipmaps';
+
+const device = await luma.createDevice({
+  adapters: [webgpuAdapter],
+  mipmapGenerator: webgpuMipmapGenerator
+});
+```
+
+Applications that manage backend-specific devices directly can instead call the exported
+`generateMipmapsWebGPU(device, texture)` function.
+
 ## Feature levels
 
 WebGPU devices default to the WebGPU core feature level:
