@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {scanWGSLInterface, ShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
+import {scanWGSLInterface, WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
 
 const PLATFORM_INFO: PlatformInfo = {
   type: 'webgpu',
@@ -218,7 +218,7 @@ struct BrokenInput {
   t.end();
 });
 
-test('ShaderAssembler#assembleWGSLShader returns the scanned interface', t => {
+test('WGSLShaderAssembler#assembleWGSLShader returns the scanned interface', t => {
   const source = /* wgsl */ `\
 struct FrameUniforms {
   scale: f32,
@@ -231,7 +231,7 @@ fn selectedVertex(@location(1) position: vec3f) -> @builtin(position) vec4f {
   return vec4f(position * frame.scale, 1.0);
 }
 `;
-  const assembledShader = new ShaderAssembler().assembleWGSLShader({
+  const assembledShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source,
     vertexEntryPoint: 'selectedVertex'

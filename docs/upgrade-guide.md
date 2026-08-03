@@ -12,6 +12,19 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/shadertools**
+
+- `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
+  `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
+  `new WGSLShaderAssembler()` for WGSL.
+- `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language.
+  Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')`
+  or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
+- `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and
+  `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing
+  `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or
+  `instanceof WGSLShaderAssembler` before assembling shader source.
+
 **@luma.gl/experimental**
 
 - `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque

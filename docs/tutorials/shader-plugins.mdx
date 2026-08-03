@@ -139,7 +139,9 @@ CLIP_COLOR(&color);
 The hook signatures are registered for the active shader language:
 
 ```ts
-const shaderAssembler = new ShaderAssembler();
+import {GLSLShaderAssembler} from '@luma.gl/shadertools';
+
+const shaderAssembler = new GLSLShaderAssembler();
 
 shaderAssembler.addShaderHook(
   'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'
@@ -147,7 +149,8 @@ shaderAssembler.addShaderHook(
 shaderAssembler.addShaderHook('fs:CLIP_COLOR(inout vec4 color)');
 ```
 
-The WGSL signatures use pointers for the mutable position and color. WGSL
+For WGSL, create a `WGSLShaderAssembler` instead. Its hook signatures use
+pointers for the mutable position and color. WGSL
 varying synthesis requires the selected vertex entry point to return a named
 stage-I/O struct and the fragment entry point to consume one named stage-I/O
 struct. The structs may be the same or separate. The assembler assigns unused

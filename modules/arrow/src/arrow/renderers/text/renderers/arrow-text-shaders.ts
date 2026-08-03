@@ -34,10 +34,10 @@ const configuredAttributeVertexHooks = new WeakMap<ShaderAssembler, Set<string>>
  * that ordinary text shaders compile while allowing hosts such as Space Crawl to replace
  * projection and texture orientation without forking the text shader.
  */
-export function configureArrowTextShaderAssembler(
-  shaderAssembler: ShaderAssembler,
+export function configureArrowTextShaderAssembler<ShaderAssemblerType extends ShaderAssembler>(
+  shaderAssembler: ShaderAssemblerType,
   shaderLanguage: 'glsl' | 'wgsl'
-): ShaderAssembler {
+): ShaderAssemblerType {
   let configuredLanguages = configuredAttributeVertexHooks.get(shaderAssembler);
   if (!configuredLanguages) {
     configuredLanguages = new Set();

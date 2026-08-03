@@ -5,12 +5,12 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {filterShaderPlugin, ShaderAssembler} from '@luma.gl/shadertools';
+import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 test('filterShaderPlugin#WebGL2 model binds, updates, and draws', async t => {
   const device = await getWebGLTestDevice();
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new GLSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:FILTER_POSITION(inout vec4 position)');
   const filterValues = device.createBuffer({
     data: new Float32Array([0.5]),
@@ -56,7 +56,7 @@ test('filterShaderPlugin#WebGPU model binds, updates, and draws', async t => {
     return;
   }
 
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)');
   const filterValues = device.createBuffer({
     data: new Float32Array([0.5]),

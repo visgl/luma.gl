@@ -8,7 +8,7 @@ import {Model, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 import {WgslReflect} from 'wgsl_reflect';
-import {ShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
+import {WGSLShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
 import {getFragmentShaderForRenderPass} from '../../../engine/src/passes/get-fragment-shader';
 import {textureTransform} from '../../../engine/src/passes/texture-transform-module';
 import {
@@ -69,7 +69,7 @@ struct VertexOutput {
 }`;
 
 test('shadow WGSL assembles and reflects group-2 depth resources', async t => {
-  const assembler = new ShaderAssembler();
+  const assembler = new WGSLShaderAssembler();
   const assembled = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: SHADOW_RECEIVER_SHADER,
@@ -94,7 +94,7 @@ test('shadow WGSL assembles and reflects group-2 depth resources', async t => {
 });
 
 test('contact shadow passes assemble and compile', async t => {
-  const assembler = new ShaderAssembler();
+  const assembler = new WGSLShaderAssembler();
   for (const shaderPass of [
     contactShadowTrace,
     contactShadowBilateralBlur,

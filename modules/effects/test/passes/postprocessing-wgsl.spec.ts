@@ -39,7 +39,7 @@ import {
   vignette,
   zoomBlur
 } from '../../src/index';
-import {ShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
+import {WGSLShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
 import {getFragmentShaderForRenderPass} from '../../../engine/src/passes/get-fragment-shader';
 import {textureTransform} from '../../../engine/src/passes/texture-transform-module';
 
@@ -170,7 +170,7 @@ async function getCompilationInfoWithTimeout(shader: {
 }
 
 test('postprocessing WGSL#assemble/compile', async testCase => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const webgpuDevice = await getOptionalWebGPUDevice();
 
   if (!webgpuDevice) {

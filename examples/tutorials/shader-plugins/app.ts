@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import type {ClipShaderPluginProps, ShaderPlugin} from '@luma.gl/shadertools';
-import {clipShaderPlugin, ShaderAssembler} from '@luma.gl/shadertools';
+import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -176,7 +176,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.fillPatternSizeBuffer = device.createBuffer(triangleAttributes.fillPatternSizes);
     this.fillPatternUvBuffer = device.createBuffer(triangleAttributes.fillPatternUvs);
 
-    const shaderAssembler = new ShaderAssembler();
+    const shaderAssembler =
+      device.info.shadingLanguage === 'wgsl'
+        ? new WGSLShaderAssembler()
+        : new GLSLShaderAssembler();
     if (device.info.shadingLanguage === 'wgsl') {
       shaderAssembler.addShaderHook(
         'vs:CLIP_POSITION(position: ptr<function, vec4<f32>>, instanceCoordinates: vec2<f32>, geometryCoordinates: vec2<f32>)'

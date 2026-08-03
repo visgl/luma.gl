@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getArrowTextRenderModules} from '@luma.gl/arrow';
-import {ShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
+import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   configureArrowTextShaderAssembler,
@@ -23,7 +23,7 @@ const WEBGPU_PLATFORM_INFO: PlatformInfo = {
 };
 
 test('Arrow text storage WGSL shaders resolve application auto bindings', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const modules = getArrowTextRenderModules(new NullDevice({}));
 
   for (const [label, source] of [
@@ -51,7 +51,7 @@ test('Arrow text storage WGSL shaders resolve application auto bindings', t => {
 });
 
 test('Arrow attribute text WGSL exposes a vertex transform hook before returning', t => {
-  const shaderAssembler = configureArrowTextShaderAssembler(new ShaderAssembler(), 'wgsl');
+  const shaderAssembler = configureArrowTextShaderAssembler(new WGSLShaderAssembler(), 'wgsl');
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WEBGPU_PLATFORM_INFO,
     source: WGSL_SHADER,

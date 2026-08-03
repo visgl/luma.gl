@@ -70,7 +70,7 @@ Modifying shader behavior with shader hooks
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
     this.uniformStore = new UniformStore(device, {
       app: {
