@@ -970,6 +970,7 @@ The intended v10 layering is:
   GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
   GPUReduction, GPUSort, GPUBatchSort, GPUHistogram, GPUGridBinning, GPUGridAggregation
   GPUGroupAggregation
+  GPUHashIndex and GPUHashIndexQuery
   higher-level table algorithms
 
 @luma.gl/arrow
@@ -1034,6 +1035,13 @@ deferred.
 
 ### Remaining tranche map
 
+The first larger-compute slice can proceed independently of package graduation because it uses the
+existing table-independent graph contract. Tranche 8.1a is implemented: `GPUHashIndex` rebuilds a
+fixed-capacity sparse `uint32` identity map, and `GPUHashIndexQuery` performs bounded batch lookup
+with deterministic duplicate values, explicit invalid and overflow counts, and probe statistics.
+It intentionally stops before deletion, partitioning, and join materialization establish their own
+consumer-driven contracts.
+
 The remaining work is divided into reviewable contracts. A tranche should land only when its entry
 dependency is present and its measurable exit evidence can be produced. Numbering groups related
 contracts; table order and the recommended sequence express dependency order, not staffing or
@@ -1043,6 +1051,11 @@ consumers.
 
 | Tranche | Outcome | Entry dependency | Measurable exit | Impact | Cost |
 | --- | --- | --- | --- | :---: | :---: |
+| 8.1b — Mutable hash maintenance | Deletion and tombstone or rebuild-threshold policy grounded in a dynamic consumer | Implemented bounded `GPUHashIndex` build/query plus measured mutation workload | Lookup parity across deletion and reinsertion; bounded degradation and explicit rebuild trigger | Medium | Medium |
+| 8.2 — Sparse grouping and joins | Reuse hash lookup for sparse group IDs and bounded inner/left join materialization | `GPUHashIndex` in two exact-lookup consumers | CPU-oracle parity for duplicate, missing, overflow, and output-capacity cases | High | Large |
+| 8.3 — Partitioned hash topology | Preserve batch identity across independently built or globally addressed tables | Tranche 8.2 plus a preserved-batch consumer | Empty and uneven chunks retain identity without implicit packing | High | Large |
+| 8.4 — Sparse graph analytics | Frontier/visited representations and graph algorithms selected by demonstrated consumers | Partitioned identity contracts from 3.2 and 8.3 | Bounded CPU-oracle parity on disconnected, cyclic, and high-degree graphs | High | Large |
+| 8.5 — Field and solver composition | Reusable graph-native stencil, advection, and solver building blocks behind live simulations | Two existing simulation consumers agree on field and boundary contracts | Shared primitives replace consumer-local kernels without hidden submission | High | Large |
 | 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
 | 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
 | 6.1c — Scene adapters | Explicit CPU-scene and GPU-table adapters without a canonical source model | Tranche 6.1b and partitioned-topology decisions | Both adapters build the same records without casts or hidden packing | High | Medium |
@@ -1064,6 +1077,9 @@ consumers.
 3. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
    documented decision gate gains a requesting consumer and positive evidence.
 4. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
+5. Develop the larger compute vocabulary independently where contracts are already bounded:
+   `GPUHashIndex` build/query is implemented; require consumers and measurements before adding
+   mutable maintenance, joins, sparse graph algorithms, or generalized field solvers.
 
 ### Phase 0 — Current foundation
 
@@ -1604,6 +1620,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [GPU spatial query benchmark](/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark)
 - [`GPUScene`](/docs/api-reference/experimental/gpu-primitives/gpu-scene)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
+- [`GPUHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-index)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)

@@ -215,6 +215,20 @@ export type {
 } from './gpu-group-aggregation';
 
 export {
+  GPUHashIndex,
+  GPUHashIndexQuery,
+  GPU_HASH_INDEX_EMPTY_KEY,
+  GPU_HASH_INDEX_STATISTICS_LENGTH,
+  GPU_HASH_QUERY_STATISTICS_LENGTH
+} from './gpu-hash-index';
+export type {
+  GPUHashIndexProps,
+  GPUHashIndexQueryProps,
+  GPUHashIndexStats,
+  GPUHashIndexView
+} from './gpu-hash-index';
+
+export {
   decodeGPUIndexPickInfo,
   decodeGPUIndexPickRegion,
   GPUIndexPickingTarget,

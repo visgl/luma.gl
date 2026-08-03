@@ -238,6 +238,7 @@
               "api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark",
               "api-reference/experimental/gpu-primitives/gpu-scene",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
+              "api-reference/experimental/gpu-primitives/gpu-hash-index",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },
@@ -340,6 +341,7 @@
               "api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark",
               "api-reference/experimental/gpu-primitives/gpu-scene",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
+              "api-reference/experimental/gpu-primitives/gpu-hash-index",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },
