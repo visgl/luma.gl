@@ -40,6 +40,8 @@ jobs:
             ~/.yarn/berry/cache
             .yarn/install-state.gz
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -78,24 +80,42 @@ jobs:
           corepack prepare yarn@4.13.0 --activate
           yarn -v
 
-      - name: Cache Yarn Berry artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - name: Restore Yarn Berry artifacts
+        id: yarn-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.yarn/berry/cache
             .yarn/install-state.gz
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
 
       - name: Install dependencies
         run: yarn install --immutable
 
+      - name: Save Yarn Berry artifacts before reclaiming disk space
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
+
+      - name: Resolve installed Playwright version
+        id: playwright-version
+        run: yarn workspace @luma.gl/devtools-extensions node -p "'version=' + require('playwright/package.json').version" >> "$GITHUB_OUTPUT"
+
       - name: Cache Playwright Chromium
+        id: playwright-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'dev-modules/devtools-extensions/package.json') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-ms-playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: yarn playwright:install
 
       - name: Reclaim install cache and report disk usage
@@ -180,6 +200,8 @@ jobs:
             ~/.yarn/berry/cache
             .yarn/install-state.gz
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -221,6 +243,8 @@ jobs:
             ~/.yarn/berry/cache
             .yarn/install-state.gz
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
 
       - name: Install website dependencies
         run: yarn install --immutable
