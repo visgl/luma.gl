@@ -66,6 +66,7 @@ describe('GPU hierarchical trace viewer', () => {
         spanCapacity: number;
         dependencyCapacity: number;
         compileCount: number;
+        frameIndex: number;
       };
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
@@ -231,7 +232,9 @@ describe('GPU hierarchical trace viewer', () => {
         29 * Uint32Array.BYTES_PER_ELEMENT,
         Uint32Array.BYTES_PER_ELEMENT
       );
-      expect(new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0]).toBe(1);
+      expect(new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0]).toBe(
+        state.frameIndex
+      );
       focusOnly!.checked = false;
       focusOnly!.dispatchEvent(new Event('change', {bubbles: true}));
       expect(state.focusOnly).toBe(false);

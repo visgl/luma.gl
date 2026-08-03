@@ -9,7 +9,6 @@ import {
   DispatchCommandBuffer,
   DrawCommandBuffer,
   GPUCommandGraph,
-  GPUGraphTraversal,
   GPUHierarchyLayout,
   GPUIndexedRangeCompaction,
   GPUReadbackRing,
@@ -62,6 +61,10 @@ import {
   getCandidateDependencyVisibilityShader,
   getDensityClearShader,
   getDependencyBatchVisibilityShader,
+  getFocusFrontierClearShader,
+  getFocusFrontierDispatchShader,
+  getFocusFrontierExpansionShader,
+  getFocusFrontierSeedShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -130,10 +133,9 @@ type TraceGraphResources = {
   threadOffsets: Buffer;
   selectedSeeds: Buffer;
   selectedSeedCount: Buffer;
-  traversalDepth: Buffer;
+  focusTraversalState: Buffer;
   reachedSpans: Buffer;
   dependencyResults: Buffer;
-  visibilityGeneration: Buffer;
   baseVisibility: Buffer;
   spanVisibility: Buffer;
   visibleDependencyIds: Buffer;
@@ -260,7 +262,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
     const pick = this.pendingPick;
     const visibilityGeneration = (this.frameIndex % 0xfffffffe) + 1;
-    resources.visibilityGeneration.write(Uint32Array.of(visibilityGeneration));
+    resources.focusTraversalState.write(Uint32Array.of(this.focusDepth, visibilityGeneration));
     this.writeViewUniforms(width, height, pick, visibilityGeneration, resources.dependencyCount);
     const encoding = resources.compiled.encode(device.commandEncoder, {parameters: this.view});
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
@@ -515,9 +517,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ),
       selectedSeeds: this.createDataBuffer('gpu-trace-selected-seeds', new Uint32Array(1)),
       selectedSeedCount: this.createDataBuffer('gpu-trace-selected-seed-count', new Uint32Array(1)),
-      traversalDepth: this.createDataBuffer(
-        'gpu-trace-focus-depth',
-        Uint32Array.from([this.focusDepth])
+      focusTraversalState: this.createDataBuffer(
+        'gpu-trace-focus-traversal-state',
+        Uint32Array.of(this.focusDepth, 1)
       ),
       reachedSpans: this.createStorageBuffer(
         'gpu-trace-reached-spans',
@@ -528,10 +530,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         'gpu-trace-dependency-results',
         Math.max(dataset.dependencyCount * 3, 1) * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
-      ),
-      visibilityGeneration: this.createDataBuffer(
-        'gpu-trace-visibility-generation',
-        Uint32Array.of(1)
       ),
       baseVisibility: this.createStorageBuffer('gpu-trace-base-visibility', spanMaskByteLength),
       spanVisibility: this.createStorageBuffer('gpu-trace-span-visibility', spanMaskByteLength),
@@ -636,17 +634,16 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         'selected-seed-count',
         resources.selectedSeedCount
       ),
-      traversalDepth: importTraceBuffer(graph, 'traversal-depth', resources.traversalDepth),
+      focusTraversalState: importTraceBuffer(
+        graph,
+        'focus-traversal-state',
+        resources.focusTraversalState
+      ),
       reachedSpans: importTraceBuffer(graph, 'reached-spans', resources.reachedSpans),
       dependencyResults: importTraceBuffer(
         graph,
         'dependency-results',
         resources.dependencyResults
-      ),
-      visibilityGeneration: importTraceBuffer(
-        graph,
-        'visibility-generation',
-        resources.visibilityGeneration
       ),
       baseVisibility: importTraceBuffer(graph, 'base-visibility', resources.baseVisibility),
       spanVisibility: importTraceBuffer(graph, 'span-visibility', resources.spanVisibility),
@@ -748,49 +745,117 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       collapsedParentHeight: 1
     }).addToGraph(graph);
 
-    new GPUGraphTraversal({
-      id: 'trace-selected-dependencies',
-      offsets: makeUint32GraphVector(
-        graph,
-        'outgoing-offset-partitions',
-        'outgoing offsets',
-        handles.outgoingOffsets,
-        topologyChunkLengths.map(length => length + 1)
-      ),
-      neighbors: makeUint32GraphVector(
-        graph,
-        'outgoing-neighbor-partitions',
-        'outgoing neighbors',
-        handles.outgoingNeighbors,
-        outgoingNeighborChunkLengths
-      ),
-      reverseOffsets: makeUint32GraphVector(
-        graph,
-        'incoming-offset-partitions',
-        'incoming offsets',
-        handles.incomingOffsets,
-        topologyChunkLengths.map(length => length + 1)
-      ),
-      reverseNeighbors: makeUint32GraphVector(
-        graph,
-        'incoming-neighbor-partitions',
-        'incoming neighbors',
-        handles.incomingNeighbors,
-        incomingNeighborChunkLengths
-      ),
-      seeds: graph.createDataView(handles.selectedSeeds, {format: 'uint32', length: 1}),
-      seedCount: graph.createDataView(handles.selectedSeedCount, {format: 'uint32', length: 1}),
-      activeDepth: graph.createDataView(handles.traversalDepth, {format: 'uint32', length: 1}),
-      output: makeUint32GraphVector(
-        graph,
-        'reached-span-partitions',
-        'reached spans',
-        handles.reachedSpans,
-        topologyChunkLengths
-      ),
-      direction: 'both',
-      maxDepth: MAXIMUM_FOCUS_DEPTH
-    }).addToGraph(graph);
+    const focusFrontiers = [0, 1].map(index =>
+      graph.createTransientBuffer({
+        id: `trace-focus-frontier-${index}`,
+        byteLength: Math.max(resources.spanCount, 1) * UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE
+      })
+    );
+    const focusFrontierCounts = [0, 1].map(index =>
+      graph.createTransientBuffer({
+        id: `trace-focus-frontier-count-${index}`,
+        byteLength: UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE
+      })
+    );
+    const focusDispatchCommands = [0, 1].map(index =>
+      graph.createTransientBuffer({
+        id: `trace-focus-dispatch-${index}`,
+        byteLength: 3 * UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE | Buffer.INDIRECT
+      })
+    );
+    addTraceComputePass(graph, {
+      id: 'trace-focus-frontier-seed',
+      source: getFocusFrontierSeedShader(resources.spanCount),
+      bindings: [
+        storageRead('selectedSeeds', handles.selectedSeeds),
+        storageRead('activeSeedCount', handles.selectedSeedCount),
+        storageRead('focusTraversalState', handles.focusTraversalState),
+        storageWrite('reachedSpans', handles.reachedSpans),
+        storageWrite('frontier', focusFrontiers[0]),
+        storageWrite('frontierCount', focusFrontierCounts[0]),
+        storageWrite('dispatchCommand', focusDispatchCommands[0])
+      ],
+      length: 1,
+      workgroupSize: 1
+    });
+    let currentFrontierIndex = 0;
+    for (let depth = 0; depth < MAXIMUM_FOCUS_DEPTH; depth++) {
+      const nextFrontierIndex = 1 - currentFrontierIndex;
+      addTraceComputePass(graph, {
+        id: `trace-focus-frontier-${depth}-clear`,
+        source: getFocusFrontierClearShader(),
+        bindings: [
+          storageWrite('frontierCount', focusFrontierCounts[nextFrontierIndex]),
+          storageWrite('dispatchCommand', focusDispatchCommands[nextFrontierIndex])
+        ],
+        length: 1,
+        workgroupSize: 1
+      });
+      let sourceNodeBase = 0;
+      let offsetWordBase = 0;
+      let outgoingNeighborWordBase = 0;
+      let incomingNeighborWordBase = 0;
+      for (const [partitionIndex, sourceNodeCount] of topologyChunkLengths.entries()) {
+        for (const direction of [
+          {
+            name: 'outgoing',
+            offsets: handles.outgoingOffsets,
+            neighbors: handles.outgoingNeighbors,
+            neighborWordBase: outgoingNeighborWordBase,
+            neighborCount: outgoingNeighborChunkLengths[partitionIndex]
+          },
+          {
+            name: 'incoming',
+            offsets: handles.incomingOffsets,
+            neighbors: handles.incomingNeighbors,
+            neighborWordBase: incomingNeighborWordBase,
+            neighborCount: incomingNeighborChunkLengths[partitionIndex]
+          }
+        ]) {
+          addTraceIndirectComputePass(graph, {
+            id: `trace-focus-frontier-${depth}-${direction.name}-${partitionIndex}`,
+            source: getFocusFrontierExpansionShader({
+              spanCount: resources.spanCount,
+              sourceNodeBase,
+              sourceNodeCount,
+              offsetWordBase,
+              neighborWordBase: direction.neighborWordBase,
+              neighborCount: direction.neighborCount,
+              depth
+            }),
+            bindings: [
+              storageRead('offsets', direction.offsets),
+              storageRead('neighbors', direction.neighbors),
+              storageRead('frontier', focusFrontiers[currentFrontierIndex]),
+              storageRead('frontierCount', focusFrontierCounts[currentFrontierIndex]),
+              storageWrite('nextFrontier', focusFrontiers[nextFrontierIndex]),
+              storageWrite('nextFrontierCount', focusFrontierCounts[nextFrontierIndex]),
+              storageWrite('reachedSpans', handles.reachedSpans),
+              storageRead('focusTraversalState', handles.focusTraversalState)
+            ],
+            dispatchBuffer: focusDispatchCommands[currentFrontierIndex]
+          });
+        }
+        sourceNodeBase += sourceNodeCount;
+        offsetWordBase += sourceNodeCount + 1;
+        outgoingNeighborWordBase += outgoingNeighborChunkLengths[partitionIndex];
+        incomingNeighborWordBase += incomingNeighborChunkLengths[partitionIndex];
+      }
+      addTraceComputePass(graph, {
+        id: `trace-focus-frontier-${depth}-publish`,
+        source: getFocusFrontierDispatchShader(),
+        bindings: [
+          storageRead('frontierCount', focusFrontierCounts[nextFrontierIndex]),
+          storageWrite('dispatchCommand', focusDispatchCommands[nextFrontierIndex])
+        ],
+        length: 1,
+        workgroupSize: 1
+      });
+      currentFrontierIndex = nextFrontierIndex;
+    }
 
     addTraceComputePass(graph, {
       id: 'trace-clear-pick',
@@ -824,7 +889,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         storageRead('baseVisibility', handles.baseVisibility),
         storageRead('reachedSpans', handles.reachedSpans),
         storageRead('activeSeedCount', handles.selectedSeedCount),
-        storageRead('visibilityGeneration', handles.visibilityGeneration),
+        storageRead('focusTraversalState', handles.focusTraversalState),
         storageWrite('spanVisibility', handles.spanVisibility),
         uniformBinding('viewUniforms', handles.uniforms)
       ],
@@ -1225,10 +1290,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.threadOffsets,
       resources.selectedSeeds,
       resources.selectedSeedCount,
-      resources.traversalDepth,
+      resources.focusTraversalState,
       resources.reachedSpans,
       resources.dependencyResults,
-      resources.visibilityGeneration,
       resources.baseVisibility,
       resources.spanVisibility,
       resources.visibleDependencyIds,
@@ -1407,7 +1471,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.dependencyMask = setBit(this.dependencyMask, 1, target.checked);
       } else if (target.matches('[data-focus-depth]')) {
         this.focusDepth = Number(target.value);
-        this.resources?.traversalDepth.write(Uint32Array.from([this.focusDepth]));
+        this.resources?.focusTraversalState.write(Uint32Array.of(this.focusDepth));
         const label = root.querySelector('[data-focus-depth-value]');
         if (label) {
           label.textContent = String(this.focusDepth);

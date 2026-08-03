@@ -23,6 +23,7 @@ import {
 } from './trace-data';
 
 const TRACE_WORKGROUP_SIZE = 256;
+export const TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE = 64;
 
 const TRACE_SHADER_DECLARATIONS = /* wgsl */ `
 struct TraceSpan {
@@ -159,7 +160,7 @@ struct VertexOutput {
   let laneY = 1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0;
   let pulse = 0.84 + 0.16 * sin(span.start * 0.13 + f32(lane) * 0.31);
   let isSelected = sourceIndex == viewUniforms.selectedSpanIndex;
-  let isReached = reachedSpans[sourceIndex] != 0u;
+  let isReached = reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
   let hasSelection = viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusOpacity = select(1.0, select(0.22, 1.0, isReached), hasSelection);
   let baseColor = getGroupColor(span.group) * pulse;
@@ -379,7 +380,7 @@ struct TraceSpanBatch {
 @group(0) @binding(2) var<storage, read> baseVisibility: array<u32>;
 @group(0) @binding(3) var<storage, read> reachedSpans: array<u32>;
 @group(0) @binding(4) var<storage, read> activeSeedCount: array<u32>;
-@group(0) @binding(5) var<storage, read> visibilityGeneration: array<u32>;
+@group(0) @binding(5) var<storage, read> focusTraversalState: array<u32>;
 @group(0) @binding(6) var<storage, read_write> spanVisibility: array<u32>;
 @group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
 
@@ -394,9 +395,121 @@ fn main(
   }
   let sourceIndex = batch.firstSpanIndex + localId.x;
   let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
-  let focusVisible = !focusEnabled || reachedSpans[sourceIndex] != 0u;
+  let focusVisible = !focusEnabled ||
+    reachedSpans[sourceIndex] == focusTraversalState[1];
   let visible = baseVisibility[sourceIndex] != 0u && focusVisible;
-  spanVisibility[sourceIndex] = select(0u, visibilityGeneration[0], visible);
+  spanVisibility[sourceIndex] = select(0u, focusTraversalState[1], visible);
+}`;
+}
+
+/** Seeds a generation-tagged compact focus frontier and its first indirect dispatch. */
+export function getFocusFrontierSeedShader(spanCount: number): string {
+  return /* wgsl */ `
+const SPAN_COUNT: u32 = ${spanCount}u;
+const WORKGROUP_SIZE: u32 = ${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE}u;
+@group(0) @binding(0) var<storage, read> selectedSeeds: array<u32>;
+@group(0) @binding(1) var<storage, read> activeSeedCount: array<u32>;
+@group(0) @binding(2) var<storage, read> focusTraversalState: array<u32>;
+@group(0) @binding(3) var<storage, read_write> reachedSpans: array<atomic<u32>>;
+@group(0) @binding(4) var<storage, read_write> frontier: array<u32>;
+@group(0) @binding(5) var<storage, read_write> frontierCount: array<u32>;
+@group(0) @binding(6) var<storage, read_write> dispatchCommand: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  var count = 0u;
+  let seed = selectedSeeds[0];
+  if (activeSeedCount[0] != 0u && seed < SPAN_COUNT) {
+    atomicStore(&reachedSpans[seed], focusTraversalState[1]);
+    frontier[0] = seed;
+    count = 1u;
+  }
+  frontierCount[0] = count;
+  dispatchCommand[0] = (count + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
+  dispatchCommand[1] = 1u;
+  dispatchCommand[2] = 1u;
+}`;
+}
+
+/** Clears one compact frontier count and disables its indirect dispatch. */
+export function getFocusFrontierClearShader(): string {
+  return /* wgsl */ `
+@group(0) @binding(0) var<storage, read_write> frontierCount: array<u32>;
+@group(0) @binding(1) var<storage, read_write> dispatchCommand: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  frontierCount[0] = 0u;
+  dispatchCommand[0] = 0u;
+  dispatchCommand[1] = 1u;
+  dispatchCommand[2] = 1u;
+}`;
+}
+
+/** Expands one CSR partition from a compact frontier into a generation-tagged next frontier. */
+export function getFocusFrontierExpansionShader(options: {
+  spanCount: number;
+  sourceNodeBase: number;
+  sourceNodeCount: number;
+  offsetWordBase: number;
+  neighborWordBase: number;
+  neighborCount: number;
+  depth: number;
+}): string {
+  return /* wgsl */ `
+const SPAN_COUNT: u32 = ${options.spanCount}u;
+const SOURCE_NODE_BASE: u32 = ${options.sourceNodeBase}u;
+const SOURCE_NODE_COUNT: u32 = ${options.sourceNodeCount}u;
+const OFFSET_WORD_BASE: u32 = ${options.offsetWordBase}u;
+const NEIGHBOR_WORD_BASE: u32 = ${options.neighborWordBase}u;
+const NEIGHBOR_COUNT: u32 = ${options.neighborCount}u;
+const DEPTH: u32 = ${options.depth}u;
+@group(0) @binding(0) var<storage, read> offsets: array<u32>;
+@group(0) @binding(1) var<storage, read> neighbors: array<u32>;
+@group(0) @binding(2) var<storage, read> frontier: array<u32>;
+@group(0) @binding(3) var<storage, read> frontierCount: array<u32>;
+@group(0) @binding(4) var<storage, read_write> nextFrontier: array<u32>;
+@group(0) @binding(5) var<storage, read_write> nextFrontierCount: array<atomic<u32>>;
+@group(0) @binding(6) var<storage, read_write> reachedSpans: array<atomic<u32>>;
+@group(0) @binding(7) var<storage, read> focusTraversalState: array<u32>;
+
+@compute @workgroup_size(${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let frontierIndex = globalId.x;
+  if (frontierIndex >= frontierCount[0] || DEPTH >= focusTraversalState[0]) {
+    return;
+  }
+  let sourceIndex = frontier[frontierIndex];
+  if (sourceIndex < SOURCE_NODE_BASE || sourceIndex - SOURCE_NODE_BASE >= SOURCE_NODE_COUNT) {
+    return;
+  }
+  let localSourceIndex = sourceIndex - SOURCE_NODE_BASE;
+  let firstNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex], NEIGHBOR_COUNT);
+  let lastNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex + 1u], NEIGHBOR_COUNT);
+  for (var neighborIndex = firstNeighbor; neighborIndex < lastNeighbor; neighborIndex++) {
+    let neighbor = neighbors[NEIGHBOR_WORD_BASE + neighborIndex];
+    if (neighbor < SPAN_COUNT &&
+      atomicExchange(&reachedSpans[neighbor], focusTraversalState[1]) !=
+        focusTraversalState[1]) {
+      let nextIndex = atomicAdd(&nextFrontierCount[0], 1u);
+      if (nextIndex < SPAN_COUNT) {
+        nextFrontier[nextIndex] = neighbor;
+      }
+    }
+  }
+}`;
+}
+
+/** Publishes a compact frontier count as the next indirect dispatch. */
+export function getFocusFrontierDispatchShader(): string {
+  return /* wgsl */ `
+const WORKGROUP_SIZE: u32 = ${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE}u;
+@group(0) @binding(0) var<storage, read> frontierCount: array<u32>;
+@group(0) @binding(1) var<storage, read_write> dispatchCommand: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  dispatchCommand[0] = (frontierCount[0] + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
 }`;
 }
 
@@ -446,7 +559,8 @@ fn main(
   }
   let sourceIndex = batch.firstSpanIndex + localId.x;
   let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
-  let focusVisible = !focusEnabled || reachedSpans[sourceIndex] != 0u;
+  let focusVisible = !focusEnabled ||
+    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
   let densityKey = densityKeys[sourceIndex];
   if (focusVisible && densityKey != 0xffffffffu) {
     atomicAdd(&densityBins[densityKey], 1u);
