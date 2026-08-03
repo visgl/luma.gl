@@ -22,6 +22,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./adapter": {
+      "types": "./dist/adapter.d.ts",
+      "import": "./dist/adapter.js",
+      "require": "./dist/adapter.cjs"
+    },
+    "./classes": {
+      "types": "./dist/classes.d.ts",
+      "import": "./dist/classes.js",
+      "require": "./dist/classes.cjs"
     }
   },
   "files": [

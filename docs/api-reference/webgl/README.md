@@ -8,12 +8,12 @@ import {WebGLDocsTabs} from '@site/src/components/docs/webgl-docs-tabs';
 
 This module contains the WebGL adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
-Importing `webgl2Adapter` from `@luma.gl/webgl` enables WebGL devices to
+Importing `webgl2Adapter` from `@luma.gl/webgl/adapter` enables WebGL devices to
 be created using `luma.createDevice(props)`. See [`CreateDeviceProps`](/docs/api-reference/core/luma#createdeviceprops) for WebGL property options.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl/adapter';
 
 const device = await luma.createDevice({
   adapters: [webgl2Adapter],
@@ -35,7 +35,7 @@ To use a luma.gl WebGL `Device` with raw WebGL calls, the application can access
 the underlying WebGL handles (`WebGL2RenderingContext`, `WebGLBuffer`, ...) using the `.handle` properties:
 
 ```typescript
-import type {WebGLDevice} from '@luma.gl/webgl';
+import type {WebGLDevice} from '@luma.gl/webgl/classes';
 
 const webglDevice = device as WebGLDevice;
 const gpuDevice: WebGL2RenderingContext = webglDevice.handle;

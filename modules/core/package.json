@@ -25,6 +25,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./device": {
+      "types": "./dist/device.d.ts",
+      "import": "./dist/device.js",
+      "require": "./dist/device.cjs"
+    },
+    "./resources": {
+      "types": "./dist/resources.d.ts",
+      "import": "./dist/resources.js",
+      "require": "./dist/resources.cjs"
+    },
+    "./uniforms": {
+      "types": "./dist/uniforms.d.ts",
+      "import": "./dist/uniforms.js",
+      "require": "./dist/uniforms.cjs"
+    },
+    "./diagnostics": {
+      "types": "./dist/diagnostics.d.ts",
+      "import": "./dist/diagnostics.js",
+      "require": "./dist/diagnostics.cjs"
     }
   },
   "files": [

@@ -15,7 +15,7 @@ be imported and provided during device creation.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu/adapter';
 
 const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter], createCanvasContext: ...});
 ```
@@ -25,11 +25,22 @@ that can work in both WebGL and WebGPU environments.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webglAdapter} '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu/adapter';
+import {webgl2Adapter} from '@luma.gl/webgl/adapter';
 
-const webgpuDevice = luma.createDevice({type: 'best-available', adapters: [webgpuAdapter, webglAdapter], createCanvasContext: ...});
+const webgpuDevice = luma.createDevice({type: 'best-available', adapters: [webgpuAdapter, webgl2Adapter], createCanvasContext: ...});
 ```
+
+## Narrow entry points
+
+Libraries that need only one part of the portable API can avoid loading the full package root:
+
+- `@luma.gl/core/device` exports adapter, device, and canvas interfaces.
+- `@luma.gl/core/resources` exports portable GPU resource classes.
+- `@luma.gl/core/uniforms` exports uniform layout, block, writer, and store utilities.
+- `@luma.gl/core/diagnostics` exports logging and statistics utilities.
+
+The `luma` singleton remains available from `@luma.gl/core`.
 
 ## Creating GPU Resources
 

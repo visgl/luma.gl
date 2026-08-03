@@ -4,12 +4,12 @@
 
 This module contains the WebGPU adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
-The `webgpuAdapter` imported from `@luma.gl/webgpu` enables WebGPU devices to
+The `webgpuAdapter` imported from `@luma.gl/webgpu/adapter` enables WebGPU devices to
 be created using `luma.createDevice(props)`: See [`CreateDeviceProps`](/docs/api-reference/core/luma#createdeviceprops) for WebGPU prop options.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu/adapter';
 
 const device = await luma.createDevice({adapters: [webgpuAdapter], createCanvasContext: {width: 800, height: 600}});
 
@@ -77,7 +77,7 @@ If you are only interested in using WebGPU for compute and not for rendering (or
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu/adapter';
 
 const device = await luma.createDevice({adapters: [webgpuAdapter]});
 
@@ -91,7 +91,7 @@ To use a luma.gl WebGPU `Device` with raw WebGPU calls, the application can acce
 the underlying WebGPU handles (`GPUDevice`, `GPUBuffer`, ...) using the `.handle` properties:
 
 ```typescript
-import type {WebGPUDevice} from '@luma.gl/webgpu`;
+import type {WebGPUDevice} from '@luma.gl/webgpu/classes';
 
 const webgpuDevice = device as WebGPUDevice;
 const gpuDevice: GPUDevice = webgpuDevice.handle;

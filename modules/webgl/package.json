@@ -26,6 +26,21 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./adapter": {
+      "types": "./dist/adapter.d.ts",
+      "import": "./dist/adapter.js",
+      "require": "./dist/adapter.cjs"
+    },
+    "./classes": {
+      "types": "./dist/classes.d.ts",
+      "import": "./dist/classes.js",
+      "require": "./dist/classes.cjs"
+    },
+    "./legacy": {
+      "types": "./dist/legacy.d.ts",
+      "import": "./dist/legacy.js",
+      "require": "./dist/legacy.cjs"
+    },
     "./constants": {
       "types": "./dist/constants/index.d.ts",
       "import": "./dist/constants/index.js",
