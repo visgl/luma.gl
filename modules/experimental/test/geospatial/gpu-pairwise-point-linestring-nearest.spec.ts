@@ -375,51 +375,55 @@ test('GPUPairwisePointLinestringNearest keeps extreme finite f32 rows finite', a
     return;
   }
 
-  const pointValues = Float32Array.from([3e38, 1e38, -3e38, -1e38, 0.5, 1e30, 1e38, 1e38, 1, 1]);
-  const linestringValues = Float32Array.from([
-    2e38, 0, 3e38, 0, -2e38, 0, -3e38, 0, 0, 0, 1, 0, 0, 0, 3e38, 3e38, 0, 0, 3e38, 0
+  const pointValues = Float32Array.from([
+    3e38, 1e38, -3e38, -1e38, 0.5, 1e30, 1e38, 1e38, 1, 1, 3e38, 0
   ]);
-  const geometryOffsetValues = Uint32Array.from([0, 1, 2, 3, 4, 5]);
-  const linestringOffsetValues = Uint32Array.from([0, 2, 4, 6, 8, 10]);
+  const linestringValues = Float32Array.from([
+    2e38, 0, 3e38, 0, -2e38, 0, -3e38, 0, 0, 0, 1, 0, 0, 0, 3e38, 3e38, 0, 0, 3e38, 0, 0, 0, -3e38,
+    0
+  ]);
+  const geometryOffsetValues = Uint32Array.from([0, 1, 2, 3, 4, 5, 6]);
+  const linestringOffsetValues = Uint32Array.from([0, 2, 4, 6, 8, 10, 12]);
   const pointBuffer = createInputBuffer(device, pointValues);
   const linestringBuffer = createInputBuffer(device, linestringValues);
   const geometryOffsetsBuffer = createInputBuffer(device, geometryOffsetValues);
   const linestringOffsetsBuffer = createInputBuffer(device, linestringOffsetValues);
-  const distanceBuffer = createOutputBuffer(device, 5, 4);
-  const nearestPointBuffer = createOutputBuffer(device, 5, 8);
+  const distanceBuffer = createOutputBuffer(device, 6, 4);
+  const nearestPointBuffer = createOutputBuffer(device, 6, 8);
   const graph = new GPUCommandGraph(device, {id: 'pairwise-linestring-nearest-extreme'});
 
   new GPUPairwisePointLinestringNearest({
-    points: importView(graph, 'points', pointBuffer, 'float32x2', 5),
+    points: importView(graph, 'points', pointBuffer, 'float32x2', 6),
     linestringPositions: importView(
       graph,
       'linestring-positions',
       linestringBuffer,
       'float32x2',
-      10
+      12
     ),
-    geometryOffsets: importView(graph, 'geometry-offsets', geometryOffsetsBuffer, 'uint32', 6),
+    geometryOffsets: importView(graph, 'geometry-offsets', geometryOffsetsBuffer, 'uint32', 7),
     linestringOffsets: importView(
       graph,
       'linestring-offsets',
       linestringOffsetsBuffer,
       'uint32',
-      6
+      7
     ),
-    output: importView(graph, 'distances', distanceBuffer, 'float32', 5),
-    nearestPoints: importView(graph, 'nearest-points', nearestPointBuffer, 'float32x2', 5)
+    output: importView(graph, 'distances', distanceBuffer, 'float32', 6),
+    nearestPoints: importView(graph, 'nearest-points', nearestPointBuffer, 'float32x2', 6)
   }).addToGraph(graph);
   const compiled = graph.compile();
   encode(device, compiled);
 
-  const distances = await readFloat32(distanceBuffer, 5);
+  const distances = await readFloat32(distanceBuffer, 6);
   for (const [index, distance] of distances.slice(0, 2).entries()) {
     assertRelativeClose(tapeTest, distance, 1e38, 2e-6, `extreme distance ${index}`);
   }
   assertRelativeClose(tapeTest, distances[2], 1e30, 2e-6, 'far perpendicular distance');
   tapeTest.ok(distances[3] <= 2e32, 'long-diagonal projection remains near the point');
   tapeTest.equal(distances[4], 1, 'tiny fraction retains its perpendicular distance');
-  const nearestPoints = await readFloat32(nearestPointBuffer, 10);
+  assertRelativeClose(tapeTest, distances[5], 3e38, 2e-6, 'overflowed end delta distance');
+  const nearestPoints = await readFloat32(nearestPointBuffer, 12);
   assertRelativeClose(tapeTest, nearestPoints[0], 3e38, 2e-6, 'extreme positive nearest x');
   tapeTest.equal(nearestPoints[1], 0, 'extreme positive nearest y');
   assertRelativeClose(tapeTest, nearestPoints[2], -3e38, 2e-6, 'extreme negative nearest x');
@@ -430,6 +434,8 @@ test('GPUPairwisePointLinestringNearest keeps extreme finite f32 rows finite', a
   assertRelativeClose(tapeTest, nearestPoints[7], 1e38, 2e-6, 'long-diagonal nearest y');
   tapeTest.equal(nearestPoints[8], 1, 'tiny fraction retains its projected displacement');
   tapeTest.equal(nearestPoints[9], 0, 'tiny fraction projects onto the huge segment');
+  tapeTest.equal(nearestPoints[10], 0, 'overflowed end delta selects the segment start x');
+  tapeTest.equal(nearestPoints[11], 0, 'overflowed end delta selects the segment start y');
 
   compiled.destroy();
   for (const buffer of [
@@ -561,12 +567,16 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
 
   const x = 12_345_678.125;
   const y = -7_654_321.5;
+  const extremeDiagonalCoordinate = 2 ** 127;
+  const nearEndCoordinate = (1 - 2 ** -30) * extremeDiagonalCoordinate;
   const points: Point[] = [
     [x + 1e-7, y + 3e-7],
     [x + 2e-7, y + 3e-7],
     [x, y],
     [0.5, 1e30],
-    [1e-30, 1]
+    [1e-30, 1],
+    [3e38, 0],
+    [nearEndCoordinate, nearEndCoordinate]
   ];
   const linestringPositions: Point[] = [
     [x, y + 1e-6],
@@ -580,10 +590,14 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
     [0, 0],
     [1, 0],
     [0, 0],
-    [3e38, 0]
+    [3e38, 0],
+    [0, 0],
+    [-3e38, 0],
+    [0, 0],
+    [extremeDiagonalCoordinate, extremeDiagonalCoordinate]
   ];
-  const geometryOffsetValues = Uint32Array.from([0, 2, 3, 4, 5, 6]);
-  const linestringOffsetValues = Uint32Array.from([0, 2, 4, 6, 8, 10, 12]);
+  const geometryOffsetValues = Uint32Array.from([0, 2, 3, 4, 5, 6, 7, 8]);
+  const linestringOffsetValues = Uint32Array.from([0, 2, 4, 6, 8, 10, 12, 14, 16]);
   const pointBuffer = createInputBuffer(device, encodeFloat64Points(points));
   const linestringBuffer = createInputBuffer(device, encodeFloat64Points(linestringPositions));
   const geometryOffsetsBuffer = createInputBuffer(device, geometryOffsetValues);
@@ -649,12 +663,22 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
     Math.hypot(points[1][0] - x, points[1][1] - y),
     Number.NaN,
     1e30,
-    1
+    1,
+    3e38,
+    0
   ];
   for (let index = 0; index < expectedDistances.length; index++) {
     const distance = distanceLimbs[index * 2] + distanceLimbs[index * 2 + 1];
     if (Number.isNaN(expectedDistances[index])) {
       tapeTest.ok(Number.isNaN(distance), `raw distance ${index} is invalid`);
+    } else if (index === expectedDistances.length - 1) {
+      assertClose(
+        tapeTest,
+        distance,
+        0,
+        extremeDiagonalCoordinate * 1e-12,
+        'raw near-end diagonal distance'
+      );
     } else {
       assertRelativeClose(
         tapeTest,
@@ -672,13 +696,30 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
     [x, y],
     [Number.NaN, Number.NaN],
     [0.5, 0],
-    [1e-30, 0]
+    [1e-30, 0],
+    [0, 0],
+    [nearEndCoordinate, nearEndCoordinate]
   ];
   for (let index = 0; index < expectedNearest.length; index++) {
     const nearestX = nearestLimbs[index * 4] + nearestLimbs[index * 4 + 1];
     const nearestY = nearestLimbs[index * 4 + 2] + nearestLimbs[index * 4 + 3];
     if (Number.isNaN(expectedNearest[index][0])) {
       tapeTest.ok(Number.isNaN(nearestX) && Number.isNaN(nearestY));
+    } else if (index === expectedNearest.length - 1) {
+      assertClose(
+        tapeTest,
+        nearestX,
+        expectedNearest[index][0],
+        Math.abs(expectedNearest[index][0]) * 1e-12,
+        `raw nearest x ${index}`
+      );
+      assertClose(
+        tapeTest,
+        nearestY,
+        expectedNearest[index][1],
+        Math.abs(expectedNearest[index][1]) * 1e-12,
+        `raw nearest y ${index}`
+      );
     } else {
       assertClose(tapeTest, nearestX, expectedNearest[index][0], 2e-7, `raw nearest x ${index}`);
       assertClose(tapeTest, nearestY, expectedNearest[index][1], 2e-7, `raw nearest y ${index}`);
@@ -696,9 +737,19 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
     0,
     NO_INDEX,
     0,
+    0,
+    0,
     0
   ]);
-  tapeTest.deepEqual(await readUint32(segmentIndexBuffer, points.length), [0, 0, NO_INDEX, 0, 0]);
+  tapeTest.deepEqual(await readUint32(segmentIndexBuffer, points.length), [
+    0,
+    0,
+    NO_INDEX,
+    0,
+    0,
+    0,
+    0
+  ]);
 
   compiled.destroy();
   for (const buffer of [
@@ -797,7 +848,10 @@ function assertClose(
   tolerance: number,
   message: string
 ): void {
-  tapeTest.ok(Math.abs(actual - expected) <= tolerance, message);
+  tapeTest.ok(
+    Math.abs(actual - expected) <= tolerance,
+    `${message}: expected ${expected} ± ${tolerance}, received ${actual}`
+  );
 }
 
 function isSoftwareBackedDevice(device: Device): boolean {

@@ -407,8 +407,7 @@ function getFloat32NearestExpression(
       let directSegment = end - start;
       let directProjection = geospatial_project_onto_segment_f32(
         directSegment,
-        point - start,
-        point - end
+        point - start
       );
       let coordinateScale = max(
         1.0,
@@ -426,8 +425,7 @@ function getFloat32NearestExpression(
       let normalizedSegment = normalizedEnd - normalizedStart;
       let normalizedProjection = geospatial_project_onto_segment_f32(
         normalizedSegment,
-        normalizedPoint - normalizedStart,
-        normalizedPoint - normalizedEnd
+        normalizedPoint - normalizedStart
       );
       var projectedDelta = directProjection.projectedDelta;
       var candidatePoint = start;
@@ -594,13 +592,11 @@ fn geospatial_is_finite_vec2_f32(value: vec2f) -> bool {
 
 fn geospatial_project_onto_segment_f32(
   segment: vec2f,
-  pointFromStart: vec2f,
-  pointFromEnd: vec2f
+  pointFromStart: vec2f
 ) -> GeospatialSegmentProjectionF32 {
   if (
     !geospatial_is_finite_vec2_f32(segment) ||
-    !geospatial_is_finite_vec2_f32(pointFromStart) ||
-    !geospatial_is_finite_vec2_f32(pointFromEnd)
+    !geospatial_is_finite_vec2_f32(pointFromStart)
   ) {
     return GeospatialSegmentProjectionF32(vec2f(0.0), false);
   }
@@ -612,31 +608,21 @@ fn geospatial_project_onto_segment_f32(
   if (pointScale == 0.0) {
     return GeospatialSegmentProjectionF32(vec2f(0.0), true);
   }
-  let pointFromEndScale = max(abs(pointFromEnd.x), abs(pointFromEnd.y));
-  if (pointFromEndScale == 0.0) {
-    return GeospatialSegmentProjectionF32(segment, true);
-  }
   let segmentExponent = frexp(segmentScale).exp;
   let normalizedSegment = ldexp(segment, vec2i(-segmentExponent));
   var startProjection = dot(pointFromStart, normalizedSegment);
-  var endProjection = dot(pointFromEnd, normalizedSegment);
   let denominator = dot(normalizedSegment, normalizedSegment);
   var projectionExponent = 0;
-  if (
-    !geospatial_is_finite_f32(startProjection) ||
-    !geospatial_is_finite_f32(endProjection)
-  ) {
+  var endThreshold = ldexp(denominator, segmentExponent);
+  if (!geospatial_is_finite_f32(startProjection)) {
     let pointExponent = frexp(pointScale).exp;
-    let pointFromEndExponent = frexp(pointFromEndScale).exp;
     let normalizedPoint = ldexp(pointFromStart, vec2i(-pointExponent));
-    let normalizedPointFromEnd = ldexp(pointFromEnd, vec2i(-pointFromEndExponent));
     startProjection = dot(normalizedPoint, normalizedSegment);
-    endProjection = dot(normalizedPointFromEnd, normalizedSegment);
     projectionExponent = pointExponent;
+    endThreshold = ldexp(denominator, segmentExponent - pointExponent);
   }
   if (
     !geospatial_is_finite_f32(startProjection) ||
-    !geospatial_is_finite_f32(endProjection) ||
     !geospatial_is_finite_f32(denominator) ||
     denominator <= 0.0
   ) {
@@ -645,13 +631,14 @@ fn geospatial_project_onto_segment_f32(
   if (startProjection <= 0.0) {
     return GeospatialSegmentProjectionF32(vec2f(0.0), true);
   }
-  if (endProjection >= 0.0) {
+  if (geospatial_is_finite_f32(endThreshold) && startProjection >= endThreshold) {
     return GeospatialSegmentProjectionF32(segment, true);
   }
   // Construct the displacement before restoring scale. A true segment fraction can underflow
-  // even when its displacement remains representable.
+  // even when its displacement remains representable, while the scalar projection can overflow
+  // before multiplication by a normalized diagonal component brings it back into range.
   let projectedDelta = ldexp(
-    normalizedSegment * (startProjection / denominator),
+    (normalizedSegment * startProjection) / denominator,
     vec2i(projectionExponent)
   );
   return GeospatialSegmentProjectionF32(
@@ -696,12 +683,9 @@ fn geospatial_nearest_segment(
   let segmentY = sub_fp64u32_to_fp64(end.y, start.y);
   let pointX = sub_fp64u32_to_fp64(point.x, start.x);
   let pointY = sub_fp64u32_to_fp64(point.y, start.y);
-  let pointFromEndX = sub_fp64u32_to_fp64(point.x, end.x);
-  let pointFromEndY = sub_fp64u32_to_fp64(point.y, end.y);
   if (
     !is_finite_fp64(segmentX) || !is_finite_fp64(segmentY) ||
-    !is_finite_fp64(pointX) || !is_finite_fp64(pointY) ||
-    !is_finite_fp64(pointFromEndX) || !is_finite_fp64(pointFromEndY)
+    !is_finite_fp64(pointX) || !is_finite_fp64(pointY)
   ) {
     return geospatial_invalid_nearest_segment(pointX.x + pointY.x);
   }
@@ -712,7 +696,6 @@ fn geospatial_nearest_segment(
   let endY = geospatial_raw_scalar_to_fp64(end.y);
   let segmentScale = geospatial_max_abs_fp64(segmentX, segmentY);
   let pointScale = geospatial_max_abs_fp64(pointX, pointY);
-  let pointFromEndScale = geospatial_max_abs_fp64(pointFromEndX, pointFromEndY);
   if (segmentScale == 0.0) {
     let distance = geospatial_hypot_fp64(pointX, pointY);
     return GeospatialNearestSegment(
@@ -725,10 +708,6 @@ fn geospatial_nearest_segment(
   if (pointScale == 0.0) {
     return GeospatialNearestSegment(vec2f(0.0, 0.0), startX, startY, 1u);
   }
-  if (pointFromEndScale == 0.0) {
-    return GeospatialNearestSegment(vec2f(0.0, 0.0), endX, endY, 1u);
-  }
-
   let segmentExponent = frexp(segmentScale).exp;
   let normalizedSegmentX = fp64_scale_fp64_integer(segmentX, -segmentExponent);
   let normalizedSegmentY = fp64_scale_fp64_integer(segmentY, -segmentExponent);
@@ -736,46 +715,29 @@ fn geospatial_nearest_segment(
     mul_fp64(pointX, normalizedSegmentX),
     mul_fp64(pointY, normalizedSegmentY)
   );
-  let directEndProjection = sum_fp64(
-    mul_fp64(pointFromEndX, normalizedSegmentX),
-    mul_fp64(pointFromEndY, normalizedSegmentY)
-  );
   let denominator = sum_fp64(
     mul_fp64(normalizedSegmentX, normalizedSegmentX),
     mul_fp64(normalizedSegmentY, normalizedSegmentY)
   );
   var startProjection = directStartProjection;
-  var endProjection = directEndProjection;
   var projectionExponent = 0;
-  if (
-    !is_finite_fp64(startProjection) ||
-    !is_finite_fp64(endProjection)
-  ) {
+  var endThreshold = fp64_scale_fp64_integer(denominator, segmentExponent);
+  if (!is_finite_fp64(startProjection)) {
     let pointExponent = frexp(pointScale).exp;
-    let pointFromEndExponent = frexp(pointFromEndScale).exp;
     let normalizedPointX = fp64_scale_fp64_integer(pointX, -pointExponent);
     let normalizedPointY = fp64_scale_fp64_integer(pointY, -pointExponent);
-    let normalizedPointFromEndX = fp64_scale_fp64_integer(
-      pointFromEndX,
-      -pointFromEndExponent
-    );
-    let normalizedPointFromEndY = fp64_scale_fp64_integer(
-      pointFromEndY,
-      -pointFromEndExponent
-    );
     startProjection = sum_fp64(
       mul_fp64(normalizedPointX, normalizedSegmentX),
       mul_fp64(normalizedPointY, normalizedSegmentY)
     );
-    endProjection = sum_fp64(
-      mul_fp64(normalizedPointFromEndX, normalizedSegmentX),
-      mul_fp64(normalizedPointFromEndY, normalizedSegmentY)
-    );
     projectionExponent = pointExponent;
+    endThreshold = fp64_scale_fp64_integer(
+      denominator,
+      segmentExponent - pointExponent
+    );
   }
   if (
     !is_finite_fp64(startProjection) ||
-    !is_finite_fp64(endProjection) ||
     !is_finite_fp64(denominator) ||
     compare_fp64(denominator, vec2f(0.0, 0.0)) <= 0
   ) {
@@ -788,21 +750,23 @@ fn geospatial_nearest_segment(
   var nearestY = startY;
   if (compare_fp64(startProjection, vec2f(0.0, 0.0)) <= 0) {
     // Keep the segment start.
-  } else if (compare_fp64(endProjection, vec2f(0.0, 0.0)) >= 0) {
+  } else if (
+    is_finite_fp64(endThreshold) &&
+    compare_fp64(startProjection, endThreshold) >= 0
+  ) {
     projectionX = segmentX;
     projectionY = segmentY;
     nearestX = endX;
     nearestY = endY;
   } else {
-    // Keep the normalized projection separate from the segment's exponent so a tiny fraction
-    // cannot erase a representable projected displacement.
-    let normalizedProjection = div_fp64(startProjection, denominator);
+    // Multiply each normalized segment component before division. This avoids both a tiny true
+    // fraction and an overflowing scalar projection when each displacement remains representable.
     projectionX = fp64_scale_fp64_integer(
-      mul_fp64(normalizedSegmentX, normalizedProjection),
+      div_fp64(mul_fp64(normalizedSegmentX, startProjection), denominator),
       projectionExponent
     );
     projectionY = fp64_scale_fp64_integer(
-      mul_fp64(normalizedSegmentY, normalizedProjection),
+      div_fp64(mul_fp64(normalizedSegmentY, startProjection), denominator),
       projectionExponent
     );
     if (!is_finite_fp64(projectionX) || !is_finite_fp64(projectionY)) {
