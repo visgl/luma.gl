@@ -1,0 +1,47 @@
+---
+title: 'Crossfilter Supremacy: Million-Point Command Center'
+description: Brush one million GPU-resident points across linked maps, scatterplots, histograms, and categorical distributions without reading source rows back to the CPU.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, data]
+---
+
+import {CrossfilterSupremacyExample} from '@site/src/examples';
+
+<CrossfilterSupremacyExample />
+
+Crossfilter Supremacy turns one million GPU-resident records into an interactive,
+linked-view intelligence dashboard. A geographic map, a detailed scatterplot,
+three histograms for value, risk, and hour, and categorical cohorts all describe
+the same source rows. Brush the map to update every other view, select a
+histogram range to narrow the visible points, or apply a preset brush to inspect
+a meaningful slice immediately. Multiple active dimensions intersect without
+moving those rows back to the CPU.
+
+The example is built on the optional `@luma.gl/experimental/luxfilter` entry
+point. Each dimension evaluates its current range or rectangular bounds into a
+source-aligned GPU mask. `LuxFilter` combines those masks, updates linked
+histograms and grouped summaries, and publishes compacted, stable source-row
+identifiers for downstream consumers on one reusable `GPUCommandGraph`. The map
+and scatterplot renderer draws source rows directly using the shared,
+source-aligned selection mask, preserving dimmed context around matching rows.
+
+Histogram and categorical views exclude their own selection when presenting an
+available distribution. This preserves the familiar crossfilter interaction:
+dragging a histogram brush keeps the surrounding population visible while the
+map, scatterplot, and unrelated distributions update immediately. Views that
+need their own predicate can opt in explicitly.
+
+The million-point figure describes resident source records, not a claim that
+every record survives every brush or is redrawn in every pass. Source columns,
+dimension predicates, selected-row masks, grouped aggregates, histogram bins,
+and compacted visible identifiers stay on the GPU. Pointer interactions update
+only small selection-control buffers; the previously compiled command graph can
+then be encoded again without rebuilding source storage or synchronizing the
+complete dataset. Only the displayed histogram bins, grouped counts, and
+selected-row total are copied into one compact summary readback. The map and
+scatterplot redraw when selection or layout changes, keeping the GPU queue
+available for interactive filtering instead of continuously redrawing static
+million-point clouds.

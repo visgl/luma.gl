@@ -39,6 +39,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'showcase/anari',
   'showcase/dof',
   'showcase/billion-point-spatial-atlas',
+  'showcase/crossfilter-supremacy',
   'showcase/lightstorm-megacity',
   'showcase/tempest-ocean',
   'showcase/packet-spraying',

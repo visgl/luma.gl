@@ -80,6 +80,7 @@ import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import BillionPointSpatialAtlasApp from '../../examples/showcase/billion-point-spatial-atlas/app';
+import CrossfilterSupremacyApp from '../../examples/showcase/crossfilter-supremacy/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
@@ -653,6 +654,19 @@ export const BillionPointSpatialAtlasExample: React.FC<WebsiteExampleProps> = pr
     template={BillionPointSpatialAtlasApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const CrossfilterSupremacyExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="crossfilter-supremacy"
+    title="Crossfilter Supremacy"
+    subtitle="One million points · one GPU-resident linked dashboard"
+    directory="showcase"
+    devices={['webgpu']}
+    template={CrossfilterSupremacyApp}
+    config={exampleConfig}
     {...props}
   />
 );

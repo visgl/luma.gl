@@ -33,6 +33,7 @@
     "type": "category",
     "label": "WebGPU",
     "items": [
+      "showcase/crossfilter-supremacy",
       "showcase/billion-point-spatial-atlas",
       {
         "type": "doc",
