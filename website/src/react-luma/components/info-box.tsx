@@ -8,6 +8,7 @@ import {
   renderExamplePanel,
   type ExamplePanelAppearance
 } from '../../../../examples/example-panels';
+import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../../../examples/example-theme';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 const INFO_BOX_DEFAULT_WIDTH = 420;
@@ -19,34 +20,71 @@ const INFO_BOX_KEYBOARD_RESIZE_STEP = 10;
 const INFO_BOX_LARGE_KEYBOARD_RESIZE_STEP = 30;
 const INFO_BOX_BASE_STYLE: CSSProperties = {
   boxSizing: 'border-box',
-  borderRadius: 14,
+  borderRadius: 'var(--luma-example-radius, 14px)',
   width: 420,
   minWidth: 0,
   maxWidth: '100%',
   overflow: 'hidden',
-  padding: '12px 16px',
+  padding: '13px 15px',
   zIndex: 10
 };
 const INFO_BOX_APPEARANCE_STYLES: Record<InfoBoxAppearance, CSSProperties> = {
   cinematic: {
-    backdropFilter: 'blur(18px) saturate(135%)',
+    backdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`,
     background:
-      'linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(5, 12, 24, 0.82))',
-    border: '1px solid rgba(148, 163, 184, 0.24)',
-    boxShadow:
-      '0 22px 58px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.07)',
-    color: '#e2e8f0',
+      'radial-gradient(ellipse at 12% 0%, rgba(56, 189, 248, 0.08), transparent 42%), linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(5, 12, 24, 0.91))',
+    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.cinematic.border})`,
+    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.cinematic.shadow})`,
+    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.cinematic.text})`,
     colorScheme: 'dark',
-    WebkitBackdropFilter: 'blur(18px) saturate(135%)'
+    WebkitBackdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`
   },
   light: {
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    border: '1px solid rgba(15, 23, 42, 0.1)',
-    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.28)',
-    color: '#111',
+    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.light.border})`,
+    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.light.shadow})`,
+    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.light.text})`,
     colorScheme: 'light'
   }
 };
+const INFO_BOX_CHROME_STYLE = `
+[data-info-box-appearance] [data-luma-example-chrome-action] {
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+[data-info-box-appearance] [data-luma-example-chrome-action]:hover,
+[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
+  border-color: var(--luma-example-accent) !important;
+  color: var(--luma-example-accent) !important;
+}
+[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
+  outline: 2px solid var(--luma-example-accent);
+  outline-offset: 2px;
+}
+[data-luma-example-source] .theme-code-block,
+[data-luma-example-source] .theme-code-block pre,
+[data-luma-example-source] .theme-code-block code {
+  background: var(--luma-example-surface) !important;
+  color: var(--luma-example-text) !important;
+}
+[data-luma-example-source] .theme-code-block {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-luma-example-source] .theme-code-block pre {
+  margin: 0 !important;
+  padding: 14px !important;
+}
+[data-info-box-appearance='cinematic'] [data-luma-example-source] .token.comment {
+  color: var(--luma-example-text-muted) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-info-box-appearance] [data-luma-example-chrome-action] {
+    transition: none;
+  }
+}
+`;
 
 let isInfoBoxCollapsedByDefault = true;
 
@@ -156,6 +194,7 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
 
 function InfoBoxView(props: InfoBoxViewProps) {
   const appearance = props.appearance ?? 'cinematic';
+  const theme = EXAMPLE_THEME_TOKENS[appearance];
   const sourceUrl = getExampleSourceUrl(props);
   const sourcePaths = React.useMemo(
     () => getExampleSourcePaths(props),
@@ -178,6 +217,16 @@ function InfoBoxView(props: InfoBoxViewProps) {
   const panelHostRef = useRef<HTMLDivElement | null>(null);
   const resizeStateRef = useRef<InfoBoxResizeState | null>(null);
   const [hasPanelTabs, setHasPanelTabs] = useState(false);
+  const contentId = React.useId();
+  const setInfoBoxElement = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      infoBoxRef.current = element;
+      if (element) {
+        applyExampleTheme(element, appearance);
+      }
+    },
+    [appearance]
+  );
   const toggleCollapsed = () => setIsCollapsed(value => !value);
   const currentSourceResult = sourceResult?.key === sourcePathsKey ? sourceResult : null;
 
@@ -346,7 +395,18 @@ function InfoBoxView(props: InfoBoxViewProps) {
     currentSourceResult?.files?.find(file => file.path === activeSourcePath) ||
     currentSourceResult?.files?.[0];
   const sourceContent = currentSourceResult?.error ? (
-    <p style={{margin: 0, color: '#b00020'}}>{currentSourceResult.error}</p>
+    <p
+      role="alert"
+      style={{
+        margin: 0,
+        padding: '12px 14px',
+        color: appearance === 'cinematic' ? '#fda4af' : '#be123c',
+        fontSize: 12,
+        lineHeight: 1.5
+      }}
+    >
+      {currentSourceResult.error}
+    </p>
   ) : (
     <CodeBlock language={getSourceLanguage(activeSourceFile?.path)}>
       {activeSourceFile?.source ?? '// Loading source…'}
@@ -355,7 +415,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
 
   return (
     <div
-      ref={infoBoxRef}
+      ref={setInfoBoxElement}
       data-info-box-appearance={appearance}
       style={{
         ...INFO_BOX_BASE_STYLE,
@@ -365,15 +425,25 @@ function InfoBoxView(props: InfoBoxViewProps) {
         flexDirection: 'column',
         position: 'relative',
         width: infoBoxSize?.width ?? props.style?.width ?? INFO_BOX_DEFAULT_WIDTH,
-        height: isCollapsed ? undefined : infoBoxSize?.height ?? props.style?.height,
+        height: isCollapsed ? undefined : (infoBoxSize?.height ?? props.style?.height),
         maxWidth: infoBoxSizeBounds?.maxWidth ?? '100%',
         maxHeight: isCollapsed ? undefined : infoBoxSizeBounds?.maxHeight
       }}
     >
-      <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12}}>
+      <style>{INFO_BOX_CHROME_STYLE}</style>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12
+        }}
+      >
         <button
           type="button"
           aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
+          aria-expanded={!isCollapsed}
+          aria-controls={contentId}
           onClick={toggleCollapsed}
           style={{
             minWidth: 0,
@@ -387,64 +457,96 @@ function InfoBoxView(props: InfoBoxViewProps) {
           }}
         >
           {title ? (
-            <h3
-              style={{
-                color: 'inherit',
-                fontSize: 18,
-                letterSpacing: '-0.015em',
-                lineHeight: 1.25,
-                marginTop: 0,
-                marginBottom: 0
-              }}
-            >
-              {title}
-            </h3>
+            <span style={{display: 'flex', alignItems: 'center', gap: 8}}>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 7,
+                  height: 7,
+                  flex: '0 0 7px',
+                  borderRadius: '50%',
+                  background: `var(--luma-example-accent, ${theme.accent})`,
+                  boxShadow: `0 0 12px var(--luma-example-accent, ${theme.accent})`
+                }}
+              />
+              <h3
+                style={{
+                  color: 'inherit',
+                  fontSize: 17,
+                  fontWeight: 720,
+                  letterSpacing: '-0.022em',
+                  lineHeight: 1.3,
+                  marginTop: 0,
+                  marginBottom: 0
+                }}
+              >
+                {title}
+              </h3>
+            </span>
           ) : null}
           {props.subtitle ? (
             <div
               style={{
-                color: appearance === 'cinematic' ? '#94a3b8' : '#596579',
+                color: `var(--luma-example-text-muted, ${theme.textMuted})`,
                 fontSize: 12,
                 lineHeight: 1.4,
-                marginTop: 3
+                marginTop: 5,
+                paddingLeft: title ? 15 : 0
               }}
             >
               {props.subtitle}
             </div>
           ) : null}
         </button>
-        <div style={{display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0}}>
+        <div style={{display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0}}>
           {sourceUrl ? (
             <a
+              data-luma-example-chrome-action=""
               href={sourceUrl}
               target="_blank"
               rel="noreferrer"
               style={{
-                color: appearance === 'cinematic' ? '#7dd3fc' : '#146ef5',
-                fontSize: 13,
-                fontWeight: 600
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                minHeight: 29,
+                padding: '0 8px',
+                border: `1px solid var(--luma-example-border, ${theme.border})`,
+                borderRadius: 8,
+                background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+                color: `var(--luma-example-text-muted, ${theme.textMuted})`,
+                fontSize: 11,
+                fontWeight: 650,
+                textDecoration: 'none'
               }}
             >
+              <svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13">
+                <path
+                  d="M8 1.5a6.5 6.5 0 0 0-2.06 12.67c.33.06.45-.14.45-.32v-1.13c-1.84.4-2.23-.79-2.23-.79-.3-.75-.73-.95-.73-.95-.6-.4.04-.4.04-.4.66.05 1 .68 1 .68.59 1 1.54.71 1.91.54.06-.43.23-.72.41-.89-1.46-.17-3-.72-3-3.24 0-.72.25-1.31.68-1.77-.07-.17-.3-.83.07-1.73 0 0 .56-.18 1.83.68a6.39 6.39 0 0 1 3.33 0c1.27-.86 1.83-.68 1.83-.68.36.9.13 1.56.06 1.73.43.46.69 1.05.69 1.77 0 2.53-1.54 3.07-3.01 3.23.24.21.45.62.45 1.25v1.85c0 .18.12.38.45.32A6.5 6.5 0 0 0 8 1.5Z"
+                  fill="currentColor"
+                />
+              </svg>
               GitHub
             </a>
           ) : null}
           <button
+            data-luma-example-chrome-action=""
             type="button"
             aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
+            aria-expanded={!isCollapsed}
+            aria-controls={contentId}
             onClick={toggleCollapsed}
             style={{
               flexShrink: 0,
-              border:
-                appearance === 'cinematic'
-                  ? '1px solid rgba(148, 163, 184, 0.32)'
-                  : '1px solid #d0d7de',
-              background: appearance === 'cinematic' ? 'rgba(15, 23, 42, 0.7)' : '#fff',
+              border: `1px solid var(--luma-example-border, ${theme.border})`,
+              background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
               borderRadius: 999,
-              color: appearance === 'cinematic' ? '#e2e8f0' : '#111827',
+              color: `var(--luma-example-text, ${theme.text})`,
               minWidth: 56,
-              padding: '0 12px',
-              height: 28,
-              fontSize: 14,
+              padding: '0 11px',
+              height: 29,
+              fontSize: 11,
+              fontWeight: 650,
               lineHeight: 1,
               whiteSpace: 'nowrap',
               cursor: 'pointer'
@@ -455,6 +557,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
         </div>
       </div>
       <div
+        id={contentId}
         hidden={isCollapsed}
         aria-hidden={isCollapsed}
         style={{
@@ -471,10 +574,17 @@ function InfoBoxView(props: InfoBoxViewProps) {
           <div
             role="tablist"
             aria-label="Example information"
-            style={{display: 'flex', gap: 4, marginBottom: 12}}
+            style={{
+              display: 'flex',
+              gap: 5,
+              marginBottom: 12,
+              paddingBottom: 11,
+              borderBottom: `1px solid var(--luma-example-border, ${theme.border})`
+            }}
           >
             {(['info', 'source'] as const).map(tab => (
               <button
+                data-luma-example-chrome-action=""
                 key={tab}
                 type="button"
                 role="tab"
@@ -482,22 +592,21 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 onClick={() => setActiveTab(tab)}
                 style={{
                   border:
-                    appearance === 'cinematic'
-                      ? '1px solid rgba(148, 163, 184, 0.28)'
-                      : '1px solid #cbd5e1',
-                  borderRadius: 6,
-                  padding: '4px 9px',
+                    activeTab === tab
+                      ? `1px solid var(--luma-example-accent, ${theme.accent})`
+                      : `1px solid var(--luma-example-border, ${theme.border})`,
+                  borderRadius: 7,
+                  padding: '5px 10px',
                   background:
-                    appearance === 'cinematic'
-                      ? activeTab === tab
-                        ? 'rgba(56, 189, 248, 0.2)'
-                        : 'rgba(15, 23, 42, 0.55)'
-                      : activeTab === tab
-                        ? '#e2e8f0'
-                        : '#fff',
-                  color: appearance === 'cinematic' ? '#e2e8f0' : '#0f172a',
+                    activeTab === tab
+                      ? `color-mix(in srgb, var(--luma-example-accent, ${theme.accent}) 15%, var(--luma-example-surface-raised, ${theme.surfaceRaised}))`
+                      : `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+                  color:
+                    activeTab === tab
+                      ? `var(--luma-example-accent, ${theme.accent})`
+                      : `var(--luma-example-text-muted, ${theme.textMuted})`,
                   cursor: 'pointer',
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: activeTab === tab ? 700 : 500
                 }}
               >
@@ -518,19 +627,20 @@ function InfoBoxView(props: InfoBoxViewProps) {
         </div>
         {sourcePaths.length > 0 && !hasPanelTabs ? (
           <div
+            data-luma-example-source=""
             hidden={activeTab !== 'source'}
             aria-hidden={activeTab !== 'source'}
             style={{
-              border: '1px solid rgba(148, 163, 184, 0.22)',
-              borderRadius: 8,
+              border: `1px solid var(--luma-example-border, ${theme.border})`,
+              borderRadius: 9,
               minWidth: 0,
               minHeight: 0,
               flex: '1 1 auto',
               maxWidth: '100%',
               overflow: 'auto',
-              background: '#f6f8fa',
-              color: '#0f172a',
-              colorScheme: 'light'
+              background: `var(--luma-example-surface, ${theme.surface})`,
+              color: `var(--luma-example-text, ${theme.text})`,
+              colorScheme: appearance === 'cinematic' ? 'dark' : 'light'
             }}
           >
             {currentSourceResult?.files && currentSourceResult.files.length > 0 ? (
@@ -539,29 +649,40 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 aria-label="Example source files"
                 style={{
                   alignItems: 'center',
-                  background: '#eef2f6',
+                  background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+                  borderBottom: `1px solid var(--luma-example-border, ${theme.border})`,
                   display: 'flex',
-                  gap: 4,
+                  gap: 5,
                   overflowX: 'auto',
-                  padding: '8px'
+                  padding: '8px 9px'
                 }}
               >
                 {currentSourceResult.files.map(file => (
                   <button
+                    data-luma-example-chrome-action=""
                     key={file.path}
                     type="button"
                     role="tab"
                     aria-selected={file.path === activeSourceFile?.path}
                     onClick={() => setActiveSourcePath(file.path)}
                     style={{
-                      background: file.path === activeSourceFile?.path ? '#fff' : 'transparent',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: 5,
-                      color: '#0f172a',
+                      background:
+                        file.path === activeSourceFile?.path
+                          ? `var(--luma-example-surface, ${theme.surface})`
+                          : 'transparent',
+                      border:
+                        file.path === activeSourceFile?.path
+                          ? `1px solid var(--luma-example-accent, ${theme.accent})`
+                          : `1px solid var(--luma-example-border, ${theme.border})`,
+                      borderRadius: 6,
+                      color:
+                        file.path === activeSourceFile?.path
+                          ? `var(--luma-example-text, ${theme.text})`
+                          : `var(--luma-example-text-muted, ${theme.textMuted})`,
                       cursor: 'pointer',
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: file.path === activeSourceFile?.path ? 700 : 500,
-                      padding: '4px 8px',
+                      padding: '5px 8px',
                       whiteSpace: 'nowrap'
                     }}
                   >
@@ -570,15 +691,18 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 ))}
                 {props.stackBlitz ? (
                   <button
+                    data-luma-example-chrome-action=""
                     type="button"
-                    onClick={() => void openExampleInStackBlitz(title, currentSourceResult.files || [])}
+                    onClick={() =>
+                      void openExampleInStackBlitz(title, currentSourceResult.files || [])
+                    }
                     style={{
-                      background: '#146ef5',
-                      border: 0,
-                      borderRadius: 5,
-                      color: '#fff',
+                      background: `color-mix(in srgb, var(--luma-example-accent, ${theme.accent}) 18%, var(--luma-example-surface, ${theme.surface}))`,
+                      border: `1px solid var(--luma-example-accent, ${theme.accent})`,
+                      borderRadius: 6,
+                      color: `var(--luma-example-accent, ${theme.accent})`,
                       cursor: 'pointer',
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 700,
                       marginLeft: 'auto',
                       padding: '5px 9px',
@@ -596,6 +720,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
       </div>
       {!isCollapsed ? (
         <button
+          data-luma-example-chrome-action=""
           type="button"
           aria-label="Resize info box"
           title="Resize info box"
@@ -614,14 +739,11 @@ function InfoBoxView(props: InfoBoxViewProps) {
             width: 28,
             height: 28,
             padding: 0,
-            border: '1px solid #94a3b8',
-            borderRadius: 6,
-            background: appearance === 'cinematic' ? 'rgba(15, 23, 42, 0.86)' : '#e2e8f0',
-            boxShadow:
-              appearance === 'cinematic'
-                ? '0 4px 12px rgba(0, 0, 0, 0.24)'
-                : '0 1px 3px rgba(15, 23, 42, 0.18)',
-            color: appearance === 'cinematic' ? '#cbd5e1' : '#334155',
+            border: `1px solid var(--luma-example-border, ${theme.border})`,
+            borderRadius: 7,
+            background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+            boxShadow: '0 4px 12px rgba(2, 6, 23, 0.18)',
+            color: `var(--luma-example-text-muted, ${theme.textMuted})`,
             cursor: 'nwse-resize',
             fontSize: 19,
             lineHeight: 1,

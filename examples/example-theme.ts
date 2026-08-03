@@ -16,6 +16,19 @@ export type ExampleThemeTokens = {
   backdrop: string;
 };
 
+const EXAMPLE_THEME_CUSTOM_PROPERTIES: ReadonlyArray<readonly [keyof ExampleThemeTokens, string]> =
+  [
+    ['surface', '--luma-example-surface'],
+    ['surfaceRaised', '--luma-example-surface-raised'],
+    ['border', '--luma-example-border'],
+    ['text', '--luma-example-text'],
+    ['textMuted', '--luma-example-text-muted'],
+    ['accent', '--luma-example-accent'],
+    ['radius', '--luma-example-radius'],
+    ['shadow', '--luma-example-shadow'],
+    ['backdrop', '--luma-example-backdrop']
+  ];
+
 /** Framework-independent visual tokens shared by example cards, panels, and overlays. */
 export const EXAMPLE_THEME_TOKENS = {
   cinematic: {
@@ -49,13 +62,14 @@ export function applyExampleTheme(
 ): void {
   const theme = EXAMPLE_THEME_TOKENS[appearance];
 
-  hostElement.style.setProperty('--luma-example-surface', theme.surface);
-  hostElement.style.setProperty('--luma-example-surface-raised', theme.surfaceRaised);
-  hostElement.style.setProperty('--luma-example-border', theme.border);
-  hostElement.style.setProperty('--luma-example-text', theme.text);
-  hostElement.style.setProperty('--luma-example-text-muted', theme.textMuted);
-  hostElement.style.setProperty('--luma-example-accent', theme.accent);
-  hostElement.style.setProperty('--luma-example-radius', theme.radius);
-  hostElement.style.setProperty('--luma-example-shadow', theme.shadow);
-  hostElement.style.setProperty('--luma-example-backdrop', theme.backdrop);
+  for (const [token, customProperty] of EXAMPLE_THEME_CUSTOM_PROPERTIES) {
+    hostElement.style.setProperty(customProperty, theme[token]);
+  }
+}
+
+/** Removes explicitly applied theme tokens so semantic values inherit from ancestors again. */
+export function clearExampleTheme(hostElement: HTMLElement): void {
+  for (const [, customProperty] of EXAMPLE_THEME_CUSTOM_PROPERTIES) {
+    hostElement.style.removeProperty(customProperty);
+  }
 }

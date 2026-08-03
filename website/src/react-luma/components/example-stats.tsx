@@ -2,16 +2,29 @@ import React, {type CSSProperties, type FC, useEffect, useRef} from 'react';
 import {Device, luma} from '@luma.gl/core';
 import type {Stat, Stats} from '@probe.gl/stats';
 import {StatsWidget} from '@probe.gl/stats-widget';
+import {applyExampleTheme, type ExampleThemeAppearance} from '../../../../examples/example-theme';
 
 const STAT_STYLES = {
   position: 'relative',
-  fontSize: '12px',
-  color: '#fff',
-  background: '#000',
-  padding: '8px',
-  opacity: 0.8,
-  borderRadius: '8px',
-  fontFamily: 'monospace'
+  color: 'var(--luma-example-text, rgb(226, 232, 240))',
+  background: 'var(--luma-example-surface, rgba(8, 15, 27, 0.94))',
+  border: '1px solid var(--luma-example-border, rgba(148, 163, 184, 0.24))',
+  borderRadius: 'var(--luma-example-radius, 12px)',
+  boxShadow: 'var(--luma-example-shadow, 0 16px 36px rgba(0, 0, 0, 0.28))',
+  padding: '10px 12px',
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+  fontSize: '11px',
+  lineHeight: '1.55',
+  header: {
+    color: 'var(--luma-example-text, rgb(226, 232, 240))',
+    fontSize: '11px',
+    fontWeight: '650',
+    letterSpacing: '0.015em'
+  },
+  item: {
+    color: 'var(--luma-example-text-muted, rgb(148, 163, 184))',
+    paddingLeft: '11px'
+  }
 };
 
 const STATS_CONTAINER_STYLE: CSSProperties = {
@@ -51,6 +64,7 @@ type FrameRateController = {
 };
 
 type ExampleStatsProps = {
+  appearance?: ExampleThemeAppearance;
   device?: Device | null;
   trackSwapChainTextureMemory?: boolean;
   style?: CSSProperties;
@@ -66,6 +80,7 @@ export const ExampleStats: FC<ExampleStatsProps> = (props: ExampleStatsProps) =>
       return;
     }
 
+    applyExampleTheme(statsPanelElement, props.appearance ?? 'cinematic');
     const resourceCounts = luma.stats.get('GPU Resource Counts');
     const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
     const frameRateController = createFrameRateController(gpuTimeAndMemoryStats);
@@ -139,9 +154,17 @@ export const ExampleStats: FC<ExampleStatsProps> = (props: ExampleStatsProps) =>
       }
       statsPanelElement.replaceChildren();
     };
-  }, [props.device, props.trackSwapChainTextureMemory]);
+  }, [props.appearance, props.device, props.trackSwapChainTextureMemory]);
 
-  return <div ref={statsPanelRef} style={{...STATS_CONTAINER_STYLE, ...props.style}} />;
+  return (
+    <div
+      ref={statsPanelRef}
+      role="group"
+      aria-label="GPU performance statistics"
+      data-luma-example-stats=""
+      style={{...STATS_CONTAINER_STYLE, ...props.style}}
+    />
+  );
 };
 
 function getStatsTitle(stats: Stats): string {

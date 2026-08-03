@@ -212,6 +212,7 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
         {props.children}
       </InfoBox>
       <DeviceTabs
+        appearance={props.infoBoxAppearance}
         devices={props.devices}
         style={{
           flexShrink: 1,
@@ -499,7 +500,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         />
       ) : null}
       <div style={{minHeight: 0, position: 'absolute', inset: 0}}>
-        {showStats ? <ExampleStats device={effectiveDevice} trackSwapChainTextureMemory /> : null}
+        {showStats ? (
+          <ExampleStats
+            appearance={props.infoBoxAppearance}
+            device={effectiveDevice}
+            trackSwapChainTextureMemory
+          />
+        ) : null}
         <div
           key={effectiveDeviceType || deviceType}
           ref={canvasContainerRef}

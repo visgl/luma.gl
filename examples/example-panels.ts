@@ -20,7 +20,7 @@ import {
 } from '@deck.gl-community/panels';
 import {Fragment, h, render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
-import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from './example-theme';
+import {applyExampleTheme, clearExampleTheme, EXAMPLE_THEME_TOKENS} from './example-theme';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
 const EXAMPLE_PANEL_HOST_ATTRIBUTE = 'data-example-panel-host';
@@ -196,19 +196,37 @@ function ExampleSourcePanelContent() {
   }, []);
 
   if (sourceResult.error) {
-    return h('p', {style: {margin: 0, color: '#b00020'}}, sourceResult.error);
+    return h(
+      'p',
+      {
+        role: 'alert',
+        style: {
+          margin: 0,
+          padding: '10px 12px',
+          borderLeft: '3px solid #f87171',
+          borderRadius: '0 6px 6px 0',
+          background: 'var(--luma-example-surface-raised, rgba(15, 23, 42, 0.72))',
+          color: 'var(--luma-example-text, rgb(226, 232, 240))',
+          font: '12px/1.5 ui-sans-serif, system-ui, sans-serif'
+        }
+      },
+      sourceResult.error
+    );
   }
 
   return h(
     'pre',
     {
+      'data-example-source-viewer': '',
       style: {
         margin: 0,
-        padding: '12px',
+        padding: '13px 14px',
         maxWidth: '100%',
         overflow: 'auto',
-        background: '#f6f8fa',
-        color: '#24292f',
+        border: '1px solid var(--luma-example-border, rgba(148, 163, 184, 0.24))',
+        borderRadius: '8px',
+        background: 'var(--luma-example-surface, rgb(8, 15, 27))',
+        color: 'var(--luma-example-text, rgb(226, 232, 240))',
         font: '12px/1.45 ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace',
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word'
@@ -482,6 +500,8 @@ export function configurePanelHostElement(
   hostElement.setAttribute(EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE, resolvedAppearance);
   if (resolvedAppearance === 'cinematic' || resolvedAppearance === 'light') {
     applyExampleTheme(hostElement, resolvedAppearance);
+  } else {
+    clearExampleTheme(hostElement);
   }
   hostElement.style.setProperty('--menu-backdrop-filter', 'unset');
   hostElement.style.setProperty(
