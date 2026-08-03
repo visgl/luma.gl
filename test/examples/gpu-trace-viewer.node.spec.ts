@@ -9,10 +9,12 @@ import {
   getTraceCapacityOptions,
   getTraceDependencyCapacityOptions,
   isTraceDensityMode,
+  makeTraceDependencyBatches,
   makeTraceDataset,
   makeTraceGroups,
   makeTraceSpanBatches,
   TRACE_CROSS_PROCESS_DEPENDENCY,
+  TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
   TRACE_GROUPS,
   TRACE_INVALID_SPAN_INDEX,
@@ -31,8 +33,9 @@ import {
   getCandidateFocusShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
+  getCandidateDependencyVisibilityShader,
   getDensityClearShader,
-  getDependencyVisibilityShader,
+  getDependencyBatchVisibilityShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -119,7 +122,8 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       {firstBatchIndex: 0, batchCount: 2},
       {firstBatchIndex: 2, batchCount: 1}
     ]),
-    getDependencyVisibilityShader(11)
+    getDependencyBatchVisibilityShader(3),
+    getCandidateDependencyVisibilityShader(11)
   ];
   for (const shader of shaders) {
     t.ok(new WgslReflect(shader), 'shader parses');
@@ -180,6 +184,47 @@ test('GPU trace dependency generation respects its independent capacity', t => {
   t.equal(dataset.spanCount, 10_000, 'span capacity remains independent');
   t.equal(dataset.dependencyCount, 250, 'dependency generation stops at its requested capacity');
   t.equal(makeTraceDataset(10_000, 0).dependencyCount, 0, 'zero dependencies are supported');
+  t.end();
+});
+
+test('GPU trace dependency batches preserve identity and conservative ancestor bounds', t => {
+  const dataset = makeTraceDataset(2048);
+  const {dependencyBatches, dependencyBatchIndex} = makeTraceDependencyBatches(
+    dataset.spans,
+    dataset.dependencies,
+    dataset.parentSpans,
+    7
+  );
+  t.equal(
+    dependencyBatchIndex.length,
+    dependencyBatches.length * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
+    'publishes one fixed-width GPU index record per dependency batch'
+  );
+  const indexFloats = new Float32Array(dependencyBatchIndex.buffer);
+  for (const batch of dependencyBatches) {
+    const indexOffset = batch.batchIndex * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH;
+    t.equal(
+      dependencyBatchIndex[indexOffset],
+      batch.firstDependencyIndex,
+      'index preserves dependency base'
+    );
+    t.equal(dependencyBatchIndex[indexOffset + 1], batch.count, 'index preserves batch length');
+    t.equal(dependencyBatchIndex[indexOffset + 4], batch.familyMask, 'index preserves families');
+    t.equal(dependencyBatchIndex[indexOffset + 5], batch.batchIndex, 'index preserves identity');
+    t.ok(
+      Math.abs(indexFloats[indexOffset + 2] - batch.timeMin) < 0.001,
+      'index preserves minimum time'
+    );
+    t.ok(
+      Math.abs(indexFloats[indexOffset + 3] - batch.timeMax) < 0.001,
+      'index preserves maximum time'
+    );
+  }
+  t.throws(
+    () => makeTraceDependencyBatches(dataset.spans, dataset.dependencies, dataset.parentSpans, 0),
+    /positive safe integer/,
+    'invalid dependency batch capacity is rejected'
+  );
   t.end();
 });
 
@@ -290,7 +335,7 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
     const source = dataset.dependencies[wordOffset];
     const destination = dataset.dependencies[wordOffset + 1];
     const family = dataset.dependencies[wordOffset + 2];
-    const flags = dataset.dependencies[wordOffset + 3];
+    const metadata = dataset.dependencies[wordOffset + 3];
     const outgoing = dataset.outgoing.neighbors.subarray(
       dataset.outgoing.offsets[source],
       dataset.outgoing.offsets[source + 1]
@@ -301,7 +346,7 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
     );
     t.ok(outgoing.includes(destination), 'forward CSR contains the canonical destination');
     t.ok(incoming.includes(source), 'reverse CSR contains the canonical source');
-    t.equal(flags, TRACE_PARENT_DEPENDENCY_FLAG, 'parent classification remains numeric');
+    t.equal(metadata & 0xff, TRACE_PARENT_DEPENDENCY_FLAG, 'parent classification remains numeric');
     if (family === TRACE_SAME_PROCESS_DEPENDENCY) {
       sameProcessCount++;
       t.equal(
@@ -330,6 +375,12 @@ test('GPU trace data handles empty inputs and rejects invalid capacities', t => 
   t.equal(dataset.parentSpans.length, 0, 'empty traces have no canonical parent rows');
   t.equal(dataset.spanBatches.length, 0, 'empty traces have no span batches');
   t.equal(dataset.spanBatchIndex.length, 0, 'empty traces have no batch index records');
+  t.equal(dataset.dependencyBatches.length, 0, 'empty traces have no dependency batches');
+  t.equal(
+    dataset.dependencyBatchIndex.length,
+    0,
+    'empty traces have no dependency batch index records'
+  );
   t.deepEqual(Array.from(dataset.outgoing.offsets), [0], 'empty forward CSR has a sentinel');
   t.deepEqual(Array.from(dataset.incoming.offsets), [0], 'empty reverse CSR has a sentinel');
   t.throws(() => makeTraceDataset(-1), /nonnegative uint32/, 'negative capacity is rejected');
