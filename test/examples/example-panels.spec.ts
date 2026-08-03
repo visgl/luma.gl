@@ -211,6 +211,51 @@ describe('ExampleSettingsPanelManager', () => {
   test.each([
     'cinematic',
     'light'
+  ] as const)('clears stale %s tokens when returning to inherited appearance', appearance => {
+    const ancestorElement = document.createElement('section');
+    const hostElement = document.createElement('div');
+    ancestorElement.style.setProperty('--luma-example-surface', 'rgb(19, 41, 61)');
+    ancestorElement.style.setProperty('--luma-example-accent', 'rgb(203, 157, 93)');
+    ancestorElement.appendChild(hostElement);
+    document.body.appendChild(ancestorElement);
+
+    try {
+      configurePanelHostElement(hostElement, appearance);
+      expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+        EXAMPLE_THEME_TOKENS[appearance].surface
+      );
+
+      configurePanelHostElement(hostElement, 'inherit');
+
+      for (const customProperty of [
+        '--luma-example-surface',
+        '--luma-example-surface-raised',
+        '--luma-example-border',
+        '--luma-example-text',
+        '--luma-example-text-muted',
+        '--luma-example-accent',
+        '--luma-example-radius',
+        '--luma-example-shadow',
+        '--luma-example-backdrop'
+      ]) {
+        expect(hostElement.style.getPropertyValue(customProperty)).toBe('');
+      }
+      expect(hostElement.dataset.examplePanelAppearance).toBe('inherit');
+      expect(hostElement.style.getPropertyValue('--menu-background')).toBe('transparent');
+      expect(getComputedStyle(hostElement).getPropertyValue('--luma-example-surface').trim()).toBe(
+        'rgb(19, 41, 61)'
+      );
+      expect(getComputedStyle(hostElement).getPropertyValue('--luma-example-accent').trim()).toBe(
+        'rgb(203, 157, 93)'
+      );
+    } finally {
+      ancestorElement.remove();
+    }
+  });
+
+  test.each([
+    'cinematic',
+    'light'
   ] as const)('renders shared source code with the inherited %s visual theme', async appearance => {
     const exampleWindow = window as Window & {website?: boolean};
     const previousWebsiteState = exampleWindow.website;

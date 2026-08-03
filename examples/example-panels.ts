@@ -20,7 +20,7 @@ import {
 } from '@deck.gl-community/panels';
 import {Fragment, h, render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
-import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from './example-theme';
+import {applyExampleTheme, clearExampleTheme, EXAMPLE_THEME_TOKENS} from './example-theme';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
 const EXAMPLE_PANEL_HOST_ATTRIBUTE = 'data-example-panel-host';
@@ -500,6 +500,8 @@ export function configurePanelHostElement(
   hostElement.setAttribute(EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE, resolvedAppearance);
   if (resolvedAppearance === 'cinematic' || resolvedAppearance === 'light') {
     applyExampleTheme(hostElement, resolvedAppearance);
+  } else {
+    clearExampleTheme(hostElement);
   }
   hostElement.style.setProperty('--menu-backdrop-filter', 'unset');
   hostElement.style.setProperty(
