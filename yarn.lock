@@ -16591,6 +16591,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-virtual-geometry-canyon@workspace:examples/experimental/virtual-geometry-canyon":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-virtual-geometry-canyon@workspace:examples/experimental/virtual-geometry-canyon"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:9.4.0-alpha.3"
+    "@luma.gl/engine": "npm:9.4.0-alpha.3"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.3"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.3"
+    "@luma.gl/tables": "npm:9.4.0-alpha.3"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.3"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-volumetric-fire-forge@workspace:examples/experimental/volumetric-fire-forge":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-volumetric-fire-forge@workspace:examples/experimental/volumetric-fire-forge"

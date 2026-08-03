@@ -28,6 +28,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
   'experimental/volumetric-fire-forge',
+  'experimental/virtual-geometry-canyon',
   'api/video-texture',
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',

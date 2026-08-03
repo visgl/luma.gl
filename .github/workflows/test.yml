@@ -178,6 +178,8 @@ jobs:
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
       - name: Install dependencies and build website
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           yarn install --immutable
           yarn website:build

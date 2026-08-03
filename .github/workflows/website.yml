@@ -84,6 +84,7 @@ jobs:
 
       - name: Install dependencies and build website
         env:
+          NODE_OPTIONS: --max-old-space-size=6144
           WEBSITE_BASE_URL: ${{ needs.check_branch.outputs.website_base_url }}
         run: |
           yarn install --immutable

@@ -1,0 +1,19 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Geometry Canyon</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #0b1429; }
+    canvas { display: block; width: 100% !important; height: 100% !important; }
+  </style>
+</head>
+<script type="module">
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter]});
+  animationLoop.start();
+</script>
+<body></body>

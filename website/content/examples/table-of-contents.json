@@ -51,6 +51,11 @@
       },
       {
         "type": "doc",
+        "id": "experimental/virtual-geometry-canyon",
+        "label": "Virtual Geometry Canyon"
+      },
+      {
+        "type": "doc",
         "id": "experimental/advanced-effects",
         "label": "Effects: Visualization City"
       },
