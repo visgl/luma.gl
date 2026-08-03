@@ -144,8 +144,64 @@ repacks application-owned vectors.
 `GPUProjection.updatePlan(nextPlan)` updates an equally sized packed plan
 without recompiling the surrounding command graph. Call
 `GPUProjection.destroy()` when the contributor is no longer needed; only its
-privately allocated plan storage is destroyed, never caller-owned source,
-destination, or explicitly supplied `planBuffer` storage.
+privately allocated plan and exact-boundary storage are destroyed, never
+caller-owned source, destination, or explicitly supplied `planBuffer` storage.
+
+The complete source domain is checked exactly before patch lookup. Interior
+patch seams retain a small Float32 normalization tolerance, but rows outside
+the active binary64 plan bounds always receive the documented `[0, 0]`
+sentinel.
+
+## Benchmark CPU and GPU projection paths
+
+The optional benchmark helpers compare the same deterministic source rows and
+report nearest-rank timing distributions in milliseconds plus coordinates per
+second:
+
+```ts
+import {createWebMercatorProjection} from '@luma.gl/experimental/luproj';
+import {
+  runGPUProjectionBenchmark,
+  runProjectionBenchmark
+} from '@luma.gl/experimental/luproj/benchmarks';
+
+const options = {
+  projection: createWebMercatorProjection(),
+  bounds: [-123, 37, -122, 38] as const,
+  degree: 2 as const,
+  tolerance: 0.03,
+  coordinateCount: 16_384,
+  warmupIterations: 2,
+  measuredIterations: 5
+};
+
+const cpuReport = runProjectionBenchmark(options);
+const gpuReport = await runGPUProjectionBenchmark(device, options);
+```
+
+The isolated `/benchmarks` entry point keeps benchmark infrastructure out of the
+normal `luproj` bundle. The CPU report measures plan compilation, direct provider
+calls, automatic patch scans, and preassigned patch IDs. The GPU report includes those same CPU
+baselines plus `float32x2` and raw binary64 `uint32x4` inputs, each with both
+patch-selection strategies. Each measured GPU dispatch waits for a device
+fence; its synchronized throughput includes submission and completion but
+excludes graph setup, position uploads, result validation, and readback. Devices
+supporting `timestamp-query` also report compute-pass-only timing and throughput.
+
+Every GPU path reports `synchronizedSpeedupOverCPUProvider`, comparing its
+end-to-end synchronized throughput with direct CPU projection. Timestamp-enabled
+paths also report `gpuSpeedupOverCPUProvider` for compute-pass-only throughput.
+Float32 paths are validated against their actual rounded source positions;
+raw binary64 paths and the shared CPU baseline retain their original coordinates.
+
+The reproducible browser benchmark can also be run from the repository root;
+the environment variable selects a representative dataset while ordinary CI
+uses a small smoke-test dataset:
+
+```sh
+VITE_LUPROJ_BENCHMARK_ROWS=16384 yarn test-headless \
+  modules/experimental/test/luproj/projection-benchmark.spec.ts --reporter=verbose
+```
 
 ## Accuracy boundaries
 

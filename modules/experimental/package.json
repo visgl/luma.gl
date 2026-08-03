@@ -41,6 +41,11 @@
       "import": "./dist/luproj/index.js",
       "require": "./dist/luproj/index.cjs",
       "types": "./dist/luproj/index.d.ts"
+    },
+    "./luproj/benchmarks": {
+      "import": "./dist/luproj/benchmarks.js",
+      "require": "./dist/luproj/benchmarks.cjs",
+      "types": "./dist/luproj/benchmarks.d.ts"
     }
   },
   "files": [

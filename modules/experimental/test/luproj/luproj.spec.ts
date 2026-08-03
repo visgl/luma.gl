@@ -338,6 +338,196 @@ test('GPUProjection accepts inclusive binary64 patch endpoints after Float32 nor
   tapeTest.end();
 });
 
+test('GPUProjection rejects outer-domain positions without removing patch seam tolerance', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const minimum = -500_000_000;
+  const maximum = 500_000_000;
+  const plan = compileProjectionPlan({
+    projection: (coordinates: number[]): number[] => [
+      coordinates[0] / 1_000_000_000,
+      coordinates[1] / 1_000_000_000
+    ],
+    bounds: [minimum, minimum, maximum, maximum],
+    degree: 1,
+    tolerance: 1e-6
+  });
+  const points: Coordinates[] = [
+    [minimum, 250_000_000],
+    [maximum, -250_000_000],
+    [250_000_000, minimum],
+    [-250_000_000, maximum],
+    [minimum - 100, 250_000_000],
+    [maximum + 100, -250_000_000],
+    [250_000_000, minimum - 100],
+    [-250_000_000, maximum + 100],
+    [Number.NaN, 250_000_000],
+    [250_000_000, Number.POSITIVE_INFINITY]
+  ];
+  const graph = new GPUCommandGraph(device, {id: 'luproj-exact-outer-bounds'});
+  const rawInputBuffer = createBuffer(device, encodeFloat64Points(points));
+  const float32InputBuffer = createBuffer(device, Float32Array.from(points.flat()));
+  const patchIdBuffer = createBuffer(device, new Uint32Array(points.length));
+  const rawPositions = importView(
+    graph,
+    'raw-positions',
+    rawInputBuffer,
+    'uint32x4',
+    points.length
+  );
+  const float32Positions = importView(
+    graph,
+    'float32-positions',
+    float32InputBuffer,
+    'float32x2',
+    points.length
+  );
+  const patchIds = importView(graph, 'patch-ids', patchIdBuffer, 'uint32', points.length);
+  const cases: Array<{
+    name: string;
+    positions: typeof rawPositions | typeof float32Positions;
+    explicitPatchIds: boolean;
+    outputBuffer: Buffer;
+  }> = [
+    {
+      name: 'raw-automatic',
+      positions: rawPositions,
+      explicitPatchIds: false,
+      outputBuffer: createOutputBuffer(device, points.length * 2)
+    },
+    {
+      name: 'raw-explicit',
+      positions: rawPositions,
+      explicitPatchIds: true,
+      outputBuffer: createOutputBuffer(device, points.length * 2)
+    },
+    {
+      name: 'float32-automatic',
+      positions: float32Positions,
+      explicitPatchIds: false,
+      outputBuffer: createOutputBuffer(device, points.length * 2)
+    },
+    {
+      name: 'float32-explicit',
+      positions: float32Positions,
+      explicitPatchIds: true,
+      outputBuffer: createOutputBuffer(device, points.length * 2)
+    }
+  ];
+  const contributors = cases.map(({name, positions, explicitPatchIds, outputBuffer}) => {
+    const contributor = new GPUProjection({
+      id: name,
+      positions,
+      output: importView(graph, `${name}-output`, outputBuffer, 'float32x2', points.length),
+      patchIds: explicitPatchIds ? patchIds : undefined,
+      plan
+    });
+    contributor.addToGraph(graph);
+    return contributor;
+  });
+
+  const compiled = graph.compile();
+  const encoder = device.createCommandEncoder({id: 'luproj-exact-outer-boundary-encoding'});
+  compiled.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+
+  for (const {name, outputBuffer} of cases) {
+    const actual = await readFloat32(outputBuffer, points.length * 2);
+    for (let pointIndex = 0; pointIndex < 4; pointIndex++) {
+      const expected = evaluateProjectionPlan(plan, points[pointIndex]);
+      assertClose(
+        tapeTest,
+        actual[pointIndex * 2],
+        expected[0] - plan.destinationOrigin[0],
+        1e-6,
+        `${name} accepts inclusive x endpoint ${pointIndex}`
+      );
+      assertClose(
+        tapeTest,
+        actual[pointIndex * 2 + 1],
+        expected[1] - plan.destinationOrigin[1],
+        1e-6,
+        `${name} accepts inclusive y endpoint ${pointIndex}`
+      );
+    }
+    tapeTest.deepEqual(
+      actual.slice(8),
+      new Array((points.length - 4) * 2).fill(0),
+      `${name} rejects coordinates beyond exact exterior bounds and non-finite inputs`
+    );
+  }
+
+  compiled.destroy();
+  for (const contributor of contributors) {
+    contributor.destroy();
+  }
+  for (const buffer of [
+    rawInputBuffer,
+    float32InputBuffer,
+    patchIdBuffer,
+    ...cases.map(({outputBuffer}) => outputBuffer)
+  ]) {
+    buffer.destroy();
+  }
+  tapeTest.end();
+});
+
+test('GPUProjection compares Float32 positions against exact fractional binary64 bounds', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const plan = compileProjectionPlan({
+    projection: (coordinates: number[]): number[] => [...coordinates],
+    bounds: [0, 0.1, 1, 1.1],
+    degree: 1,
+    tolerance: 1e-6
+  });
+  const points: Coordinates[] = [
+    [-0, Math.fround(0.1)],
+    [1, Math.fround(1.1 - 1e-7)],
+    [-0, Math.fround(0.1 - 1e-8)],
+    [0, Math.fround(1.1)]
+  ];
+  const inputBuffer = createBuffer(device, Float32Array.from(points.flat()));
+  const outputBuffer = createOutputBuffer(device, points.length * 2);
+  const graph = new GPUCommandGraph(device, {id: 'luproj-float32-fractional-bounds'});
+  const contributor = new GPUProjection({
+    positions: importView(graph, 'positions', inputBuffer, 'float32x2', points.length),
+    output: importView(graph, 'output', outputBuffer, 'float32x2', points.length),
+    plan
+  });
+
+  contributor.addToGraph(graph);
+  const compiled = graph.compile();
+  const encoder = device.createCommandEncoder({id: 'luproj-float32-fractional-boundary-encoding'});
+  compiled.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+
+  const actual = await readFloat32(outputBuffer, points.length * 2);
+  assertProjectedPoints(tapeTest, plan, points.slice(0, 2), actual.slice(0, 4));
+  tapeTest.notEqual(actual[0], 0, 'negative zero equals the positive-zero lower boundary');
+  tapeTest.deepEqual(
+    actual.slice(4),
+    [0, 0, 0, 0],
+    'Float32 values immediately outside unrounded binary64 bounds produce zero rows'
+  );
+
+  compiled.destroy();
+  contributor.destroy();
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+  tapeTest.end();
+});
+
 test('GPUProjection automatically selects different adaptive patches for mixed rows', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -652,16 +842,19 @@ test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage
   });
   const packedPlan = packProjectionPlan(initialPlan);
   const readOnlyPlanBuffer = device.createBuffer({data: packedPlan, usage: Buffer.STORAGE});
-  const positionBuffer = createBuffer(device, Float32Array.from([0.5, 0.5]));
+  const positionBuffer = createBuffer(device, Float32Array.from([0.75, 0.5]));
   const outputBuffer = createOutputBuffer(device, 2);
   const graph = new GPUCommandGraph(device, {id: 'luproj-read-only-plan-update'});
+  const positions = importView(graph, 'positions', positionBuffer, 'float32x2', 1);
+  const output = importView(graph, 'output', outputBuffer, 'float32x2', 1);
   const contributor = new GPUProjection({
-    positions: importView(graph, 'positions', positionBuffer, 'float32x2', 1),
-    output: importView(graph, 'output', outputBuffer, 'float32x2', 1),
+    positions,
+    output,
     plan: initialPlan,
     planBuffer: importView(graph, 'read-only-plan', readOnlyPlanBuffer, 'uint32', packedPlan.length)
   });
 
+  contributor.addToGraph(graph);
   tapeTest.throws(
     () => contributor.updatePlan(updatedPlan),
     /COPY_DST/,
@@ -669,6 +862,45 @@ test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage
   );
   tapeTest.equal(contributor.plan, initialPlan, 'a rejected update preserves the current CPU plan');
 
+  const invalidBounds = [
+    [0, 0, Number.POSITIVE_INFINITY, 1],
+    [1, 0, 0, 1],
+    [0, 1, 1, 0]
+  ] as const;
+  for (const bounds of invalidBounds) {
+    const invalidPlan = {...updatedPlan, bounds};
+    tapeTest.throws(
+      () => contributor.updatePlan(invalidPlan),
+      /finite, increasing source bounds/,
+      'plan updates reject non-finite or unordered source bounds'
+    );
+    tapeTest.throws(
+      () => new GPUProjection({positions, output, plan: invalidPlan}),
+      /finite, increasing source bounds/,
+      'construction rejects non-finite or unordered source bounds'
+    );
+  }
+  const compiled = graph.compile();
+  const encoder = device.createCommandEncoder({id: 'luproj-rejected-plan-update-encoding'});
+  compiled.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+  const actual = await readFloat32(outputBuffer, 2);
+  assertClose(
+    tapeTest,
+    actual[0],
+    0.25,
+    1e-6,
+    'rejected updates preserve the packed projection plan and exact x bounds'
+  );
+  assertClose(
+    tapeTest,
+    actual[1],
+    0,
+    1e-6,
+    'rejected updates preserve the packed projection plan and exact y bounds'
+  );
+
+  compiled.destroy();
   contributor.destroy();
   readOnlyPlanBuffer.destroy();
   positionBuffer.destroy();
@@ -770,6 +1002,85 @@ test('GPUProjection updates caller-owned packed plans without rebuilding its gra
   tapeTest.equal(outputBuffer.destroyed, false, 'caller-owned destination remains allocated');
   tapeTest.throws(() => contributor.updatePlan(initialPlan), /destroyed/);
 
+  planBuffer.destroy();
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+  tapeTest.end();
+});
+
+test('GPUProjection updates exact global bounds without rebuilding its graph', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const projection = (coordinates: number[]): number[] => [...coordinates];
+  const initialPlan = compileProjectionPlan({
+    projection,
+    bounds: [-2, -2, -0, -0],
+    degree: 1,
+    tolerance: 1e-5
+  });
+  const updatedPlan = compileProjectionPlan({
+    projection,
+    bounds: [0, 0, 2, 2],
+    degree: 1,
+    tolerance: 1e-5
+  });
+  const points: Coordinates[] = [
+    [-1.5, -0.5],
+    [-0, 0],
+    [0, -0],
+    [1.5, 0.5]
+  ];
+  const packedPlan = packProjectionPlan(initialPlan);
+  const planBuffer = device.createBuffer({
+    data: packedPlan,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const inputBuffer = createBuffer(device, encodeFloat64Points(points));
+  const outputBuffer = createOutputBuffer(device, points.length * 2);
+  const graph = new GPUCommandGraph(device, {id: 'luproj-shifted-global-bounds'});
+  const contributor = new GPUProjection({
+    id: 'mutable-global-bounds',
+    positions: importView(graph, 'positions', inputBuffer, 'uint32x4', points.length),
+    output: importView(graph, 'output', outputBuffer, 'float32x2', points.length),
+    plan: initialPlan,
+    planBuffer: importView(graph, 'caller-owned-plan', planBuffer, 'uint32', packedPlan.length)
+  });
+
+  contributor.addToGraph(graph);
+  const compiled = graph.compile();
+  const nodeOrder = [...compiled.stats.nodeOrder];
+  const initialEncoder = device.createCommandEncoder({id: 'luproj-initial-global-bounds'});
+  compiled.encode(initialEncoder, {parameters: undefined});
+  device.submit(initialEncoder.finish());
+  tapeTest.deepEqual(
+    await readFloat32(outputBuffer, points.length * 2),
+    [-0.5, 0.5, 1, 1, 1, 1, 0, 0],
+    'initial bounds accept both signed zeros and reject coordinates outside their upper edges'
+  );
+
+  contributor.updatePlan(updatedPlan);
+  const updatedEncoder = device.createCommandEncoder({id: 'luproj-updated-global-bounds'});
+  compiled.encode(updatedEncoder, {parameters: undefined});
+  device.submit(updatedEncoder.finish());
+  tapeTest.deepEqual(
+    await readFloat32(outputBuffer, points.length * 2),
+    [0, 0, -1, -1, -1, -1, 0.5, -0.5],
+    'shifted bounds reject old coordinates while still accepting both signed zeros'
+  );
+  tapeTest.deepEqual(
+    compiled.stats.nodeOrder,
+    nodeOrder,
+    'shifted bounds reuse the compiled graph'
+  );
+
+  compiled.destroy();
+  contributor.destroy();
+  tapeTest.equal(planBuffer.destroyed, false, 'caller-owned plan survives private bounds cleanup');
   planBuffer.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
