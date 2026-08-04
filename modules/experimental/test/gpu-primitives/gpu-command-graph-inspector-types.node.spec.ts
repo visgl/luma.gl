@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {
+  GPUCommandGraphInspectorCounterSnapshot,
   GPUCommandGraphInspectorEncoding,
   GPUCommandGraphInspectorObservableGraph,
   GPUCommandGraphInspectorObservation
@@ -22,4 +23,13 @@ test('GPUCommandGraphInspector observations preserve strict parameter types', ()
   >().not.toMatchTypeOf<
     GPUCommandGraphInspectorObservation<unknown, GPUCommandGraphInspectorEncoding>
   >();
+  expectTypeOf<
+    GPUCommandGraphInspectorObservation<StrictParameters>['recordCounters']
+  >().toEqualTypeOf<(counters: Readonly<Record<string, number>>) => void>();
+  expectTypeOf<GPUCommandGraphInspectorCounterSnapshot>().toMatchTypeOf<{
+    readonly id: string;
+    readonly latestValue: number;
+    readonly p50Value: number;
+    readonly p95Value: number;
+  }>();
 });

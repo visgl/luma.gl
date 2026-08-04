@@ -424,21 +424,27 @@ if (encoding.canReadGPUTimings) {
   await observation.recordGPUTimings(encoding);
 }
 
+// The application remains responsible for any diagnostic-buffer readback.
+observation.recordCounters({candidates, matches});
+
 const snapshot = inspector.getSnapshot();
 observation.detach();
 ```
 
 `getSnapshot()` returns an immutable view of every registered graph in registration order. Each
 graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read
-counts, bounded whole-graph CPU and GPU duration summaries, and per-node summaries in compiled
-schedule order. Duration summaries contain the retained sample count plus latest, p50, and p95
-milliseconds when samples exist. Pass `getNodeGroup` to the constructor to add application-specific
-semantic groups to node snapshots; pass `maxSamples` to bound each retained timing history.
+counts, bounded whole-graph CPU and GPU duration summaries, application-defined scalar counter
+summaries, and per-node summaries in compiled schedule order. Duration and counter summaries contain
+the retained sample count plus latest, p50, and p95 values. Counters remain in first-observed order.
+Pass `getNodeGroup` to the constructor to add application-specific semantic groups to node snapshots;
+pass `maxSamples` to bound every retained history.
 
 The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps
 automatically. An observation does not own or destroy its graph. `detach()` stops that observation
 and removes its registration when it is still current; an old handle cannot remove a replacement
-with the same graph ID. A handle accepts timing reads only for encodings it produced and records at
-most one GPU sample per encoding. `clear()` removes all registrations. The lower-level
-`registerGraph()`, `recordEncoding()`, and `recordGPUTimings()` methods remain available for
-applications that cannot route graph encoding through an observation handle.
+with the same graph ID or publish delayed counters into it. A handle accepts timing reads only for
+encodings it produced and records at most one GPU sample per encoding. `recordCounters()` only
+stores caller-provided finite, non-negative values; it does not read a buffer or synchronize the
+device. `clear()` removes all registrations. The lower-level `registerGraph()`, `recordEncoding()`,
+`recordGPUTimings()`, and `recordCounters()` methods remain available for applications that cannot
+route graph activity through an observation handle.
