@@ -65,6 +65,8 @@ const LIDAR_DOMAIN = [-1.25, -1.25, -0.25, 1.25, 1.25, 2.5] as const;
 const TAXI_GRID_SIZE = [128, 128] as const;
 const LIDAR_GRID_SIZE = [64, 64, 16] as const;
 const ATLAS_GENERATION_CHUNK_SIZE = 20_000;
+const VISUAL_SMOKE_TAXI_GRID_SIZE = [16, 16] as const;
+const VISUAL_SMOKE_LIDAR_GRID_SIZE = [16, 16, 4] as const;
 const VISUAL_SMOKE_POINT_COUNT = 2_000;
 const IS_VISUAL_SMOKE =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('visual-smoke');
@@ -801,7 +803,14 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     const dimension: 2 | 3 = this.mode === 'taxi' ? 2 : 3;
     const queryPositionValues = makeQueryPositions(renderPositions, dimension);
     const domain = this.mode === 'taxi' ? TAXI_DOMAIN : LIDAR_DOMAIN;
-    const gridSize = this.mode === 'taxi' ? TAXI_GRID_SIZE : LIDAR_GRID_SIZE;
+    const gridSize =
+      this.mode === 'taxi'
+        ? IS_VISUAL_SMOKE
+          ? VISUAL_SMOKE_TAXI_GRID_SIZE
+          : TAXI_GRID_SIZE
+        : IS_VISUAL_SMOKE
+          ? VISUAL_SMOKE_LIDAR_GRID_SIZE
+          : LIDAR_GRID_SIZE;
     const cellCount = gridSize.reduce((product, value) => product * value, 1);
     const renderPositionsBuffer =
       borrowedRenderPositionsBuffer ??

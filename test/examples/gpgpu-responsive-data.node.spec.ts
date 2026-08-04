@@ -152,6 +152,11 @@ describe('responsive GPU data examples', () => {
     expect(atlasSource).toMatch(/await yieldAtlasGeneration\(generationController\.signal\)/);
     expect(atlasSource).toMatch(/this\.dataGenerationAbortController\?\.abort\(\)/);
     expect(atlasSource).toMatch(/this\.canvas\.dataset\.atlasDataReadyMode = mode/);
+    expect(atlasSource).toMatch(/const VISUAL_SMOKE_TAXI_GRID_SIZE = \[16, 16\] as const/);
+    expect(atlasSource).toMatch(/const VISUAL_SMOKE_LIDAR_GRID_SIZE = \[16, 16, 4\] as const/);
+    expect(rebuildResourcesSource).toMatch(
+      /IS_VISUAL_SMOKE[\s\S]*VISUAL_SMOKE_TAXI_GRID_SIZE[\s\S]*TAXI_GRID_SIZE[\s\S]*IS_VISUAL_SMOKE[\s\S]*VISUAL_SMOKE_LIDAR_GRID_SIZE[\s\S]*LIDAR_GRID_SIZE/
+    );
     expect(atlasSource).toMatch(/byteLength: Math\.max\(UINT32_BYTE_LENGTH, data\.byteLength\)/);
     expect(atlasSource).toMatch(/buffer\.write\(data\)/);
     expect(rebuildResourcesStart).toBeGreaterThanOrEqual(0);
