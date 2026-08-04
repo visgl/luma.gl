@@ -10,7 +10,6 @@ import {
 import {getViewElementOffset} from '../gpu-primitives/graph-data-view-utils';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
-  PRECISE_DISTANCE_WGSL,
   RAW_POINT_WGSL,
   addGeospatialPass,
   assertGraphOwnership,
@@ -20,6 +19,36 @@ import {
   validateDisjointGeospatialViews,
   validateRowView
 } from './geospatial-utils';
+
+const PRECISE_PREDICATE_WGSL = /* wgsl */ `
+// Predicate arithmetic produces normalized high/low pairs. Keep these helpers
+// on that narrower contract so software backends do not repeatedly compile the
+// generic arbitrary-limb normalizer into every sign and finite check.
+fn geospatial_max_abs_fp64(first: vec2f, second: vec2f) -> f32 {
+  return max(abs(first.x), abs(second.x));
+}
+
+fn geospatial_div_fp64_f32(value: vec2f, divisor: f32) -> vec2f {
+  return twoSum(value.x / divisor, value.y / divisor);
+}
+
+fn geospatial_is_finite_normalized_fp64(value: vec2f) -> bool {
+  let highMagnitude = bitcast<u32>(value.x) & 0x7fffffffu;
+  let lowMagnitude = bitcast<u32>(value.y) & 0x7fffffffu;
+  return highMagnitude < 0x7f800000u && lowMagnitude < 0x7f800000u;
+}
+
+fn geospatial_sign_normalized_fp64(value: vec2f) -> i32 {
+  let highBits = bitcast<u32>(value.x);
+  let lowBits = bitcast<u32>(value.y);
+  let highMagnitude = highBits & 0x7fffffffu;
+  let lowMagnitude = lowBits & 0x7fffffffu;
+  if (highMagnitude > 0x7f800000u || lowMagnitude > 0x7f800000u) { return 0; }
+  if (highMagnitude != 0u) { return select(1, -1, (highBits >> 31u) == 1u); }
+  if (lowMagnitude != 0u) { return select(1, -1, (lowBits >> 31u) == 1u); }
+  return 0;
+}
+`;
 
 /** Numeric values written by {@link GPUPairwisePointInPolygon}. */
 export const GPU_POINT_IN_POLYGON_CLASSIFICATION = {
@@ -162,7 +191,7 @@ export class GPUPairwisePointInPolygon implements GPUCommandGraphContributor {
     const raw = this.points.format === 'uint32x4';
     const source = /* wgsl */ `
 ${raw ? RAW_POINT_WGSL : ''}
-${PRECISE_DISTANCE_WGSL}
+${PRECISE_PREDICATE_WGSL}
 const OUTSIDE: u32 = ${GPU_POINT_IN_POLYGON_CLASSIFICATION.outside}u;
 const INSIDE: u32 = ${GPU_POINT_IN_POLYGON_CLASSIFICATION.inside}u;
 const BOUNDARY: u32 = ${GPU_POINT_IN_POLYGON_CLASSIFICATION.boundary}u;
@@ -214,7 +243,8 @@ fn main(
         classifications: this.output
       },
       dispatchLayout,
-      precise: true
+      precise: true,
+      fp64Profile: raw ? 'predicate-raw' : 'predicate-f32'
     });
   }
 }
@@ -234,8 +264,8 @@ function makePredicateHelpers(
   let deltaY = sub_fp64u32_to_fp64(vertex.y, point.y);`
     : `let exactZeroX = vertex.x == point.x;
   let exactZeroY = vertex.y == point.y;
-  let deltaX = sub_fp64(vec2f(vertex.x, 0.0), vec2f(point.x, 0.0));
-  let deltaY = sub_fp64(vec2f(vertex.y, 0.0), vec2f(point.y, 0.0));`;
+  let deltaX = twoSub(vertex.x, point.x);
+  let deltaY = twoSub(vertex.y, point.y);`;
   const rawHelpers = raw
     ? `fn rawScalarEqual(first: vec2u, second: vec2u) -> bool {
   let firstDecoded = fp64_decode_bits(first);
@@ -291,10 +321,12 @@ fn pointIsFinite(point: ${pointType}) -> bool {
 
 fn makeRelativePoint(vertex: ${pointType}, point: ${pointType}) -> RelativePoint {
   ${relativePoint}
-  let finite = is_finite_fp64(deltaX) && is_finite_fp64(deltaY);
+  let finite =
+    geospatial_is_finite_normalized_fp64(deltaX) &&
+    geospatial_is_finite_normalized_fp64(deltaY);
   let underresolved =
-    (!exactZeroX && sign_fp64(deltaX) == 0) ||
-    (!exactZeroY && sign_fp64(deltaY) == 0);
+    (!exactZeroX && geospatial_sign_normalized_fp64(deltaX) == 0) ||
+    (!exactZeroY && geospatial_sign_normalized_fp64(deltaY) == 0);
   return RelativePoint(deltaX, deltaY, finite, exactZeroX, exactZeroY, underresolved);
 }
 
@@ -307,8 +339,8 @@ fn readRelativePoint(vertexIndex: u32, point: ${pointType}) -> RelativePoint {
 }
 
 fn bracketsZero(first: vec2f, second: vec2f) -> bool {
-  let firstSign = sign_fp64(first);
-  let secondSign = sign_fp64(second);
+  let firstSign = geospatial_sign_normalized_fp64(first);
+  let secondSign = geospatial_sign_normalized_fp64(second);
   return firstSign == 0 || secondSign == 0 || firstSign != secondSign;
 }
 
@@ -333,22 +365,30 @@ fn getOrientation(start: RelativePoint, end: RelativePoint) -> Orientation {
   let approximateCross = approximateFirst - approximateSecond;
   let errorBound =
     (abs(approximateFirst) + abs(approximateSecond)) * 9.5367431640625e-7;
-  let orientationSign = sign_fp64(crossProduct);
+  let orientationSign = geospatial_sign_normalized_fp64(crossProduct);
   let nearErrorBound = orientationSign != 0 && abs(approximateCross) <= errorBound;
   let underresolved =
-    (sign_fp64(start.x) != 0 && sign_fp64(startX) == 0) ||
-    (sign_fp64(start.y) != 0 && sign_fp64(startY) == 0) ||
-    (sign_fp64(end.x) != 0 && sign_fp64(endX) == 0) ||
-    (sign_fp64(end.y) != 0 && sign_fp64(endY) == 0) ||
-    (sign_fp64(startX) != 0 && sign_fp64(endY) != 0 && sign_fp64(firstProduct) == 0) ||
-    (sign_fp64(startY) != 0 && sign_fp64(endX) != 0 && sign_fp64(secondProduct) == 0);
+    (geospatial_sign_normalized_fp64(start.x) != 0 &&
+      geospatial_sign_normalized_fp64(startX) == 0) ||
+    (geospatial_sign_normalized_fp64(start.y) != 0 &&
+      geospatial_sign_normalized_fp64(startY) == 0) ||
+    (geospatial_sign_normalized_fp64(end.x) != 0 &&
+      geospatial_sign_normalized_fp64(endX) == 0) ||
+    (geospatial_sign_normalized_fp64(end.y) != 0 &&
+      geospatial_sign_normalized_fp64(endY) == 0) ||
+    (geospatial_sign_normalized_fp64(startX) != 0 &&
+      geospatial_sign_normalized_fp64(endY) != 0 &&
+      geospatial_sign_normalized_fp64(firstProduct) == 0) ||
+    (geospatial_sign_normalized_fp64(startY) != 0 &&
+      geospatial_sign_normalized_fp64(endX) != 0 &&
+      geospatial_sign_normalized_fp64(secondProduct) == 0);
   return Orientation(
     orientationSign,
     underresolved ||
       nearErrorBound ||
-      !is_finite_fp64(firstProduct) ||
-      !is_finite_fp64(secondProduct) ||
-      !is_finite_fp64(crossProduct)
+      !geospatial_is_finite_normalized_fp64(firstProduct) ||
+      !geospatial_is_finite_normalized_fp64(secondProduct) ||
+      !geospatial_is_finite_normalized_fp64(crossProduct)
   );
 }
 
@@ -388,8 +428,8 @@ fn classifyEdge(start: RelativePoint, end: RelativePoint) -> EdgeClassification 
   if (startIsPoint || endIsPoint) {
     return EdgeClassification(false, true, false);
   }
-  let startYSign = sign_fp64(start.y);
-  let endYSign = sign_fp64(end.y);
+  let startYSign = geospatial_sign_normalized_fp64(start.y);
+  let endYSign = geospatial_sign_normalized_fp64(end.y);
   let upward = startYSign <= 0 && endYSign > 0;
   let downward = endYSign <= 0 && startYSign > 0;
   let straddlesY = upward || downward;

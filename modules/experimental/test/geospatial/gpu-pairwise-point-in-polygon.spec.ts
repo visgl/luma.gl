@@ -251,7 +251,7 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
   );
 
   if (isSoftwareBackedDevice(device)) {
-    // SwiftShader spends more than 100 seconds compiling integer-fp64, then loses the GPU device.
+    // SwiftShader still exceeds the 60-second test budget after predicate-only source specialization.
     tapeTest.comment('Skipping precise f32 point-in-polygon execution on software WebGPU');
     for (const buffer of Object.values(buffers)) buffer.destroy();
     tapeTest.end();

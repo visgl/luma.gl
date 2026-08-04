@@ -21,6 +21,21 @@ const PLATFORM_INFO: PlatformInfo = {
 
 const FP64_INTEGER_MARKER = 'fn fp64_two_sum_integer_bits';
 const FP64_CLASSIC_MARKER = 'let splitValue = prevent_fp64_optimization';
+const FP64_PREDICATE_MARKERS = ['fn twoSum', 'fn twoSub', 'fn mul_fp64', 'fn sub_fp64'] as const;
+const FP64_GENERIC_VALUE_MARKERS = [
+  'fn fp64_add_raw_f32_bits',
+  'fn normalize_fp64',
+  'fn is_nan_fp64',
+  'fn is_finite_fp64',
+  'fn sign_fp64',
+  'fn compare_fp64'
+] as const;
+const FP64_RAW_MARKERS = ['fn fp64_decode_bits', 'fn sub_fp64u32_to_fp64'] as const;
+const FP64_DISTANCE_MARKERS = [
+  'fn fp64_scale_fp64_integer',
+  'fn div_fp64',
+  'fn sqrt_fp64'
+] as const;
 
 const APP_WGSL = /* wgsl */ `\
 struct AppFrameUniforms {
@@ -79,6 +94,64 @@ test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
   t.notOk(
     disabledSource.includes(FP64_INTEGER_MARKER),
     'false override removes integer arithmetic'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#specializes integer fp64 predicate sources', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const assemble = (defines: Record<string, boolean>) =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules: [fp64arithmetic],
+      defines
+    }).source;
+
+  const fullSource = assemble({LUMA_FP64_INTEGER_ARITHMETIC: true});
+  const predicateRawSource = assemble({
+    LUMA_FP64_INTEGER_ARITHMETIC: true,
+    LUMA_FP64_PREDICATE_ONLY: true
+  });
+  const predicateF32Source = assemble({
+    LUMA_FP64_INTEGER_ARITHMETIC: true,
+    LUMA_FP64_PREDICATE_ONLY: true,
+    LUMA_FP64_F32_INPUT_ONLY: true
+  });
+
+  for (const marker of [
+    ...FP64_PREDICATE_MARKERS,
+    ...FP64_GENERIC_VALUE_MARKERS,
+    ...FP64_RAW_MARKERS,
+    ...FP64_DISTANCE_MARKERS
+  ]) {
+    t.ok(fullSource.includes(marker), `full source retains ${marker}`);
+  }
+  for (const marker of FP64_PREDICATE_MARKERS) {
+    t.ok(predicateF32Source.includes(marker), `f32 predicate source retains ${marker}`);
+    t.ok(predicateRawSource.includes(marker), `raw predicate source retains ${marker}`);
+  }
+  for (const marker of [...FP64_RAW_MARKERS, ...FP64_DISTANCE_MARKERS]) {
+    t.notOk(predicateF32Source.includes(marker), `f32 predicate source omits ${marker}`);
+  }
+  for (const marker of FP64_RAW_MARKERS) {
+    t.ok(predicateRawSource.includes(marker), `raw predicate source retains ${marker}`);
+  }
+  for (const marker of FP64_DISTANCE_MARKERS) {
+    t.notOk(predicateRawSource.includes(marker), `raw predicate source omits ${marker}`);
+  }
+  for (const marker of FP64_GENERIC_VALUE_MARKERS) {
+    t.notOk(predicateF32Source.includes(marker), `f32 predicate source omits ${marker}`);
+    t.notOk(predicateRawSource.includes(marker), `raw predicate source omits ${marker}`);
+  }
+  t.ok(
+    predicateRawSource.length < fullSource.length * 0.8,
+    'raw predicate source stays at least 20% smaller than full fp64'
+  );
+  t.ok(
+    predicateF32Source.length < fullSource.length * 0.5,
+    'f32 predicate source stays at least 50% smaller than full fp64'
   );
 
   t.end();

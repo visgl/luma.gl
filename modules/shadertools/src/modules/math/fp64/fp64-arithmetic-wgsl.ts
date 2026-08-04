@@ -13,6 +13,7 @@ struct Fp64ArithmeticUniforms {
 
 @group(0) @binding(auto) var<uniform> fp64arithmetic : Fp64ArithmeticUniforms;
 
+#ifndef LUMA_FP64_F32_INPUT_ONLY
 struct Fp64Bits {
   sign: u32,
   exponent: i32,
@@ -21,11 +22,14 @@ struct Fp64Bits {
   isInf: bool,
   isNan: bool,
 };
+#endif
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn fp64_nan(seed: f32) -> f32 {
   let nanBits = 0x7fc00000u | select(0u, 1u, seed < 0.0);
   return bitcast<f32>(nanBits);
 }
+#endif
 
 fn fp64_u64_is_zero(value: vec2u) -> bool {
   return value.x == 0u && value.y == 0u;
@@ -113,6 +117,7 @@ fn fp64_u64_has_bits_below(value: vec2u, bitCount: u32) -> bool {
   return (value.y & lowMask) != 0u;
 }
 
+#ifndef LUMA_FP64_F32_INPUT_ONLY
 fn fp64_u64_shift_right_sticky(value: vec2u, shift: u32) -> vec2u {
   var shifted = fp64_u64_shift_right(value, shift);
   if (fp64_u64_has_bits_below(value, shift)) {
@@ -120,6 +125,7 @@ fn fp64_u64_shift_right_sticky(value: vec2u, shift: u32) -> vec2u {
   }
   return shifted;
 }
+#endif
 
 fn fp64_u64_count_leading_zeros(value: vec2u) -> u32 {
   if (value.x != 0u) {
@@ -143,6 +149,7 @@ fn fp64_round_shift_right_to_u32(value: vec2u, shift: u32) -> u32 {
   return rounded;
 }
 
+#ifndef LUMA_FP64_F32_INPUT_ONLY
 fn fp64_round_shift_right(value: vec2u, shift: u32) -> vec2u {
   if (shift == 0u) {
     return value;
@@ -156,6 +163,7 @@ fn fp64_round_shift_right(value: vec2u, shift: u32) -> vec2u {
   }
   return rounded;
 }
+#endif
 
 fn fp64_make_f32_bits_from_u64(sign: u32, significand: vec2u, baseExponent: i32) -> u32 {
   if (fp64_u64_is_zero(significand)) {
@@ -204,6 +212,7 @@ fn fp64_make_f32_bits_from_u64(sign: u32, significand: vec2u, baseExponent: i32)
   return (sign << 31u) | mantissa;
 }
 
+#ifndef LUMA_FP64_F32_INPUT_ONLY
 fn fp64_decode_bits(bits: vec2u) -> Fp64Bits {
   let sign = bits.x >> 31u;
   let exponentBits = (bits.x >> 20u) & 0x7ffu;
@@ -230,7 +239,9 @@ fn fp64_finite_magnitude_compare(a: Fp64Bits, b: Fp64Bits) -> i32 {
   }
   return fp64_u64_compare(a.significand, b.significand);
 }
+#endif
 
+#ifndef LUMA_FP64_F32_INPUT_ONLY
 struct Fp64RawF32Bits {
   sign: u32,
   baseExponent: i32,
@@ -336,7 +347,9 @@ fn fp64_split_raw_accumulator_bits(
   }
   return vec2u(highBits, lowBits);
 }
+#endif
 
+#ifndef LUMA_FP64_F32_INPUT_ONLY
 // Round an arithmetic accumulator to binary64 before splitting it. The
 // aligned add/subtract paths retain three guard bits plus a sticky bit, which
 // is sufficient for round-to-nearest-even at the binary64 boundary.
@@ -376,7 +389,9 @@ fn fp64_split_binary64_accumulator_bits(
   }
   return fp64_split_raw_accumulator_bits(sign, roundedMagnitude, roundedBaseExponent);
 }
+#endif
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn fp64_add_raw_f32_bits(aBits: u32, bBits: u32) -> vec2u {
   let a = fp64_decode_raw_f32_bits(aBits);
   let b = fp64_decode_raw_f32_bits(bBits);
@@ -441,7 +456,9 @@ fn fp64_add_raw_f32_bits(aBits: u32, bBits: u32) -> vec2u {
     commonBaseExponent
   );
 }
+#endif
 
+#ifndef LUMA_FP64_F32_INPUT_ONLY
 fn fp64_add_aligned_magnitudes_to_fp64_bits(
   sign: u32,
   larger: Fp64Bits,
@@ -595,7 +612,9 @@ fn sub_fp64u32_to_fp64(aBits: vec2u, bBits: vec2u) -> vec2f {
   let resultBits = sub_fp64u32_to_fp64_bits(aBits, bBits);
   return vec2f(bitcast<f32>(resultBits.x), bitcast<f32>(resultBits.y));
 }
+#endif
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn fp64_runtime_zero() -> f32 {
   return fp64arithmetic.ONE * 0.0;
 }
@@ -607,6 +626,7 @@ fn prevent_fp64_optimization(value: f32) -> f32 {
   return value;
 #endif
 }
+#endif
 
 #ifdef LUMA_FP64_INTEGER_ARITHMETIC
 ${fp64arithmeticWGSLInteger}
@@ -761,6 +781,7 @@ fn mul_fp64(a: vec2f, b: vec2f) -> vec2f {
   return prod;
 }
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn div_fp64(a: vec2f, b: vec2f) -> vec2f {
   let xn = prevent_fp64_optimization(1.0 / b.x);
   let yn = mul_fp64(a, vec2f(xn, fp64_runtime_zero()));
@@ -794,7 +815,9 @@ fn sqrt_fp64(a: vec2f) -> vec2f {
 #endif
 }
 #endif
+#endif
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn fp64_f32_bits_is_nan(bits: u32) -> bool {
   return (bits & 0x7fffffffu) > 0x7f800000u;
 }
@@ -881,4 +904,5 @@ fn compare_fp64(a: vec2f, b: vec2f) -> i32 {
   }
   return fp64_compare_f32_bits(aLowBits, bLowBits);
 }
+#endif
 `;
