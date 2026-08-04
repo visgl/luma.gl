@@ -10,9 +10,7 @@ import {fileURLToPath} from 'node:url';
 
 import {chromium} from 'playwright';
 import {createServer} from 'vite';
-import {
-  getPlaywrightLaunchOptions
-} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
+import {getPlaywrightLaunchOptions} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const screenshotPath =
@@ -23,6 +21,10 @@ const layoutScreenshotPath = screenshotPath.endsWith('.png')
 const requireGPUReadback = process.env.SPATIAL_ATLAS_REQUIRE_GPU_READBACK === 'true';
 const timeoutMilliseconds = 60_000;
 const viewport = {width: 1440, height: 900};
+const taxiManifestPath = 'taxi-fixture/manifest.json';
+const taxiShardPath = 'taxi-fixture/points-0000.f32';
+const taxiFixture = makeTaxiPointSourceFixture();
+const taxiFixtureRequests = {manifest: 0, shard: 0};
 const server = await createServer({
   root,
   logLevel: 'error',
@@ -48,13 +50,49 @@ try {
 
   const pageErrors = [];
   const consoleErrors = [];
-  page.on('pageerror', error => pageErrors.push(error.stack ?? error.message));
+  page.on('pageerror', error => {
+    const message = error.stack ?? error.message;
+    pageErrors.push(message);
+    process.stderr.write(`[atlas page error] ${message}\n`);
+  });
   page.on('console', message => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+      process.stderr.write(`[atlas console error] ${message.text()}\n`);
+    }
+  });
+
+  const taxiManifestUrl = new URL(taxiManifestPath, url);
+  const taxiShardUrl = new URL(taxiShardPath, url);
+  await page.route('**/taxi-fixture/*', async route => {
+    const requestUrl = route.request().url();
+    if (requestUrl === taxiManifestUrl.href) {
+      taxiFixtureRequests.manifest++;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: {etag: '"atlas-taxi-manifest-v2"'},
+        body: taxiFixture.manifestText
+      });
+      return;
+    }
+    if (requestUrl === taxiShardUrl.href) {
+      taxiFixtureRequests.shard++;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/octet-stream',
+        headers: {etag: '"atlas-taxi-shard-v1"'},
+        body: taxiFixture.shard
+      });
+      return;
+    }
+    await route.abort('failed');
   });
 
   const smokeUrl = new URL(url);
   smokeUrl.searchParams.set('visual-smoke', requireGPUReadback ? 'reference' : 'software');
+  if (requireGPUReadback) smokeUrl.searchParams.set('visual-smoke-gpu-readback', 'true');
+  smokeUrl.searchParams.set('taxi-manifest', taxiManifestUrl.href);
   await page.goto(smokeUrl.toString(), {waitUntil: 'domcontentloaded'});
   await page.waitForFunction(
     () => {
@@ -63,7 +101,6 @@ try {
         canvas instanceof HTMLCanvasElement &&
         canvas.width > 10 &&
         canvas.height > 10 &&
-        canvas.dataset.atlasRenderedMode === 'taxi' &&
         Boolean(document.querySelector('[data-atlas-navigation]')) &&
         Boolean(document.querySelector('#example-panel-host [data-mode]'))
       );
@@ -71,8 +108,29 @@ try {
     undefined,
     {timeout: timeoutMilliseconds}
   );
+  await waitForAtlasStatistics(
+    page,
+    {
+      source: 'packed',
+      'corpus total': '6',
+      downloaded: `${taxiFixture.downloadedByteCount} B · 2 requests`,
+      decoded: '6',
+      'GPU resident': '6'
+    },
+    'Packed taxi source active: 6 resident rows from 6 total.'
+  );
+  await changeSelect(page, '[data-atlas-overlay-execution]', 'scan');
+  await requestAtlasRedraw(page);
+  if (requireGPUReadback) {
+    await waitForAtlasStatistics(page, {candidate: '6', matched: '3', rendered: '3'});
+  }
+  await changeSelect(page, '[data-atlas-overlay-execution]', 'index');
+  await requestAtlasRedraw(page);
+  if (requireGPUReadback) {
+    await waitForAtlasStatistics(page, {candidate: '3', matched: '3', rendered: '3'});
+  }
   await pauseAtlasAnimation(page);
-  logPhase('initial Atlas state initialized');
+  logPhase('packed taxi fixture activated');
 
   const initialState = await readAtlasState(page);
   const initialLayoutArtifact = await captureLayoutArtifact(page, artifactBrowser);
@@ -108,13 +166,61 @@ try {
   assert.equal(initialState.execution, 'index', 'taxi mode starts on the uniform-grid index');
   assert.equal(initialState.zone, '230', 'taxi mode starts at Times Square');
   assert.match(initialState.title, /Billion-Point Spatial Atlas/);
+  assert.equal(initialState.sourceKind, 'packed', 'the routed packed source is active');
+  assert.equal(initialState.corpusCount, '6', 'manifest corpus count is reported');
+  assert.equal(initialState.gpuResidentCount, '6', 'all six fixture rows are GPU resident');
+  assert.equal(initialState.decodedCount, '6', 'all six fixture rows are decoded');
+  if (requireGPUReadback) {
+    assert.equal(
+      initialState.candidateCount,
+      '3',
+      'the index refines only Times Square candidates'
+    );
+    assert.equal(initialState.matchedCount, '3', 'the Times Square polygon matches three rows');
+    assert.equal(initialState.renderedCount, '3', 'the Times Square query renders three rows');
+  }
+  assert.equal(
+    initialState.requestCount,
+    2,
+    'source telemetry reports manifest and shard requests'
+  );
+  assert(
+    initialState.downloadedByteCount > taxiFixture.shard.byteLength,
+    'source telemetry includes manifest bytes in addition to the 48-byte shard'
+  );
+  assert.deepEqual(
+    taxiFixtureRequests,
+    {manifest: 1, shard: 1},
+    'the fixture serves one cached manifest request and one shard request'
+  );
   await assertBoundedLayout(page, 'initial taxi view');
-  assert.notEqual(initialState.gpuResidentCount, '0', 'taxi mode has GPU-resident points');
-  assert.notEqual(initialState.candidateCount, '0', 'taxi mode generates GPU query candidates');
   assert(
     initialRenderedFramePng.byteLength > 1_000,
     'initial taxi scene artifact was unexpectedly empty'
   );
+
+  await changeSelect(page, '[data-atlas-overlay-execution]', 'scan');
+  await requestAtlasRedraw(page);
+  if (requireGPUReadback) {
+    await waitForAtlasStatistics(page, {candidate: '6', matched: '3', rendered: '3'});
+  }
+  const fixtureScanState = await readAtlasState(page);
+  assert.equal(fixtureScanState.execution, 'scan', 'the fixture switches to the full-scan path');
+  if (requireGPUReadback) {
+    assert.equal(fixtureScanState.candidateCount, '6', 'full scan considers all six fixture rows');
+    assert.equal(
+      fixtureScanState.matchedCount,
+      '3',
+      'full scan preserves the three Times Square hits'
+    );
+    assert.equal(fixtureScanState.renderedCount, '3', 'full scan renders the same three hits');
+  }
+
+  await changeSelect(page, '[data-atlas-overlay-execution]', 'index');
+  await requestAtlasRedraw(page);
+  if (requireGPUReadback) {
+    await waitForAtlasStatistics(page, {candidate: '3', matched: '3', rendered: '3'});
+  }
 
   await changeCompactDropdown(page, '[data-atlas-navigation]', 'TLC taxi zone', 'Astoria · Queens');
   await requestAtlasRedraw(page);
@@ -187,7 +293,7 @@ try {
 
   // Linux SwiftShader can destroy its device while draining submitted graph work before a mode
   // rebuild. Reference-GPU runs retain the full Taxi -> LiDAR -> Taxi lifecycle; standard
-  // software CI keeps the deterministic Taxi interaction and layout coverage.
+  // software CI keeps the deterministic packed-Taxi interaction and layout coverage.
   if (requireGPUReadback) {
     await changeSelect(page, '#example-panel-host [data-mode]', 'lidar');
     await waitForAtlasDataReady(page, 'lidar');
@@ -239,21 +345,17 @@ try {
     );
     const lidarLayoutArtifact = await captureLayoutArtifact(page, artifactBrowser);
     await writeFile(layoutScreenshotPath, lidarLayoutArtifact);
-    const lidarRenderedFrame = requireGPUReadback ? await captureRenderedFrame(page) : null;
-    const lidarRenderedFramePng = lidarRenderedFrame
-      ? decodeDataUrl(lidarRenderedFrame.pngDataUrl)
-      : lidarLayoutArtifact;
+    const lidarRenderedFrame = await captureRenderedFrame(page);
+    const lidarRenderedFramePng = decodeDataUrl(lidarRenderedFrame.pngDataUrl);
     await writeFile(screenshotPath, lidarRenderedFramePng);
-    sceneArtifactWritten ||= Boolean(lidarRenderedFrame);
-    if (lidarRenderedFrame) {
-      assertRenderedFrame(lidarRenderedFrame, 'lidar', 'synthetic LiDAR view');
-    }
+    sceneArtifactWritten = true;
+    assertRenderedFrame(lidarRenderedFrame, 'lidar', 'synthetic LiDAR view');
     logPhase('LiDAR visual artifact captured');
     assert(
       lidarRenderedFramePng.byteLength > 1_000,
       'synthetic LiDAR scene artifact was unexpectedly empty'
     );
-    if (initialRenderedFrame && lidarRenderedFrame) {
+    if (initialRenderedFrame) {
       assert.notEqual(
         initialRenderedFrame.hash,
         lidarRenderedFrame.hash,
@@ -301,7 +403,6 @@ try {
     await writeFile(screenshotPath, decodeDataUrl(restoredTaxiRenderedFrame.pngDataUrl));
     sceneArtifactWritten = true;
     assertRenderedFrame(restoredTaxiRenderedFrame, 'taxi', 'restored taxi view');
-    logPhase('reference-GPU Taxi roundtrip verified');
   }
   await assertNoAtlasGPUFailure(page, 'completed visual smoke');
   assert.deepEqual(pageErrors, [], `page errors: ${pageErrors.join('\n')}`);
@@ -318,8 +419,8 @@ try {
   process.stdout.write(
     `Spatial Atlas visual smoke passed: ${screenshotPath} ` +
       (requireGPUReadback
-        ? '(taxi zone/query/execution, zoom, reference-GPU LiDAR lifecycle, and layout)\n'
-        : '(taxi zone/query/execution, zoom, and layout; reference-GPU lifecycle skipped)\n')
+        ? '(packed taxi source/query, zoom, reference-GPU LiDAR lifecycle, and layout)\n'
+        : '(packed taxi source/query, zoom, and layout; reference-GPU lifecycle skipped)\n')
   );
 } catch (error) {
   if (page && artifactBrowser) {
@@ -336,6 +437,108 @@ try {
   await artifactBrowser?.close();
   await browser?.close();
   await server.close();
+}
+
+function makeTaxiPointSourceFixture() {
+  const localPositions = [
+    [-0.11, 0.075],
+    [-0.12, 0.09],
+    [-0.1, 0.105],
+    [0.35, 0.1],
+    [0.38, 0.08],
+    [0.4, 0.12]
+  ];
+  const projectionOrigin = [-73.97, 40.75];
+  const projectionScales = [8, 9];
+  const shard = Buffer.alloc(localPositions.length * 2 * Float32Array.BYTES_PER_ELEMENT);
+  const bounds = [Infinity, Infinity, -Infinity, -Infinity];
+
+  for (let pointIndex = 0; pointIndex < localPositions.length; pointIndex++) {
+    const localPosition = localPositions[pointIndex];
+    const longitude = localPosition[0] / projectionScales[0] + projectionOrigin[0];
+    const latitude = localPosition[1] / projectionScales[1] + projectionOrigin[1];
+    shard.writeFloatLE(longitude, pointIndex * 8);
+    shard.writeFloatLE(latitude, pointIndex * 8 + 4);
+    bounds[0] = Math.min(bounds[0], longitude);
+    bounds[1] = Math.min(bounds[1], latitude);
+    bounds[2] = Math.max(bounds[2], longitude);
+    bounds[3] = Math.max(bounds[3], latitude);
+  }
+
+  const manifestText = `${JSON.stringify({
+    version: 2,
+    source: 'playwright://billion-point-spatial-atlas/taxi-fixture',
+    coordinateColumns: ['longitude', 'latitude'],
+    coordinateSpace: {kind: 'source-xy', crs: 'OGC:CRS84'},
+    format: 'float32x2-little-endian',
+    pointCount: localPositions.length,
+    shardPointCount: localPositions.length,
+    shards: [
+      {
+        file: 'points-0000.f32',
+        firstRow: 0,
+        pointCount: localPositions.length,
+        bounds
+      }
+    ]
+  })}\n`;
+  return {
+    manifestText,
+    shard,
+    downloadedByteCount: Buffer.byteLength(manifestText) + shard.byteLength
+  };
+}
+
+async function waitForAtlasStatistics(page, expectedStatistics, expectedStatusText) {
+  try {
+    await page.waitForFunction(
+      ({expectedStatistics, expectedStatusText}) => {
+        const statRows = document.querySelector('[data-atlas-stats] > div')?.children ?? [];
+        const statistics = {};
+        for (let index = 0; index + 1 < statRows.length; index += 2) {
+          const label = statRows[index]?.textContent?.trim();
+          const value = statRows[index + 1]?.textContent?.trim();
+          if (label && value) statistics[label] = value;
+        }
+        const statusText = document.querySelector('[data-atlas-status]')?.textContent ?? '';
+        return (
+          Object.entries(expectedStatistics).every(
+            ([label, value]) => statistics[label] === value
+          ) &&
+          (!expectedStatusText || statusText.includes(expectedStatusText))
+        );
+      },
+      {expectedStatistics, expectedStatusText}
+    );
+  } catch (error) {
+    const actual = await page.evaluate(() => {
+      const statRows = document.querySelector('[data-atlas-stats] > div')?.children ?? [];
+      const canvas = document.querySelector('canvas');
+      const statistics = {};
+      for (let index = 0; index + 1 < statRows.length; index += 2) {
+        const label = statRows[index]?.textContent?.trim();
+        const value = statRows[index + 1]?.textContent?.trim();
+        if (label && value) statistics[label] = value;
+      }
+      return {
+        statistics,
+        status: document.querySelector('[data-atlas-status]')?.textContent?.trim() ?? '',
+        renderFrame: canvas?.dataset.atlasRenderFrame ?? null,
+        countSample: canvas
+          ? {
+              state: canvas.dataset.atlasCountSampleState ?? null,
+              revision: canvas.dataset.atlasCountSampleRevision ?? null,
+              result: canvas.dataset.atlasCountSampleResult ?? null,
+              error: canvas.dataset.atlasCountSampleError ?? null
+            }
+          : null
+      };
+    });
+    throw new Error(
+      `Atlas statistics did not converge. Expected ${JSON.stringify(expectedStatistics)}; received ${JSON.stringify(actual)}`,
+      {cause: error}
+    );
+  }
 }
 
 async function changeCompactDropdown(page, scopeSelector, ariaLabel, optionLabel) {
@@ -545,6 +748,13 @@ async function readAtlasState(page) {
       const value = statRows[index + 1]?.textContent?.trim();
       if (label && value) stats[label] = value;
     }
+    const downloadedText = stats.downloaded ?? '0 B · 0 requests';
+    const byteCountMatch = /^([\d,.]+(?:\.\d+)?)\s+(B|KiB|MiB)/.exec(downloadedText);
+    const byteUnitScale = {B: 1, KiB: 1024, MiB: 1024 * 1024};
+    const downloadedByteCount = byteCountMatch
+      ? Number(byteCountMatch[1].replaceAll(',', '')) * byteUnitScale[byteCountMatch[2]]
+      : 0;
+    const requestCount = Number(/·\s*(\d+)\s+requests/.exec(downloadedText)?.[1] ?? 0);
     return {
       hasWebGPU: Boolean(navigator.gpu),
       canvasCount: document.querySelectorAll('canvas').length,
@@ -579,8 +789,15 @@ async function readAtlasState(page) {
           : true,
       loadLidarButtonText:
         document.querySelector('#example-panel-host [data-load-lidar]')?.textContent?.trim() ?? '',
+      sourceKind: stats.source ?? '',
+      corpusCount: stats['corpus total'] ?? '0',
+      downloadedByteCount,
+      requestCount,
+      decodedCount: stats.decoded ?? '0',
       gpuResidentCount: stats['GPU resident'] ?? '0',
       candidateCount: stats.candidate ?? '0',
+      matchedCount: stats.matched ?? '0',
+      renderedCount: stats.rendered ?? '0',
       title: document.title
     };
   });

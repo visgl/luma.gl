@@ -49,9 +49,35 @@ yarn preprocess:taxi --input ./168898952_points.arrow.gz --output ./public/taxi-
 
 The preprocessor preserves source X/Y values; it does not transform coordinate systems. When a
 different input is already known to contain longitude/latitude in X/Y order, `--crs OGC:CRS84`
-records that fact in the manifest. Do not apply that flag to projected or unknown coordinates. The
-deck.gl luSpatial example only activates manifests that explicitly pass this geographic CRS gate;
-otherwise it keeps its deterministic browser fixture active.
+records that fact in the manifest. Do not apply that flag to projected or unknown coordinates.
+The original Paul Taylor Arrow object names its two columns `x` and `y` but carries no authoritative
+CRS declaration, so the preprocessor cannot infer that it is longitude/latitude and emits
+`crs: null` unless the operator supplies externally verified metadata. It must not be labelled
+`OGC:CRS84` merely to pass the browser gate.
+
+The Atlas accepts an optional packed source through the `taxi-manifest` query parameter. The value
+may be relative to the page or an absolute CORS-readable URL; each `.f32` shard is fetched as one
+independently addressable row group, so the host does not need HTTP range support.
+
+```text
+?taxi-manifest=/data/taxi-atlas/manifest.json
+?taxi-manifest=https%3A%2F%2Fcdn.example.org%2Ftaxi-atlas%2Fmanifest.json
+```
+
+Activation has an explicit coordinate gate. A version-2 manifest must declare
+`coordinateSpace.kind: "source-xy"` and a geographic CRS. `OGC:CRS84` is preferred; `CRS84`,
+`WGS84`, and the browser convention for `EPSG:4326` are also accepted and are interpreted as
+X=longitude, Y=latitude. A missing, unknown, or projected CRS is rejected before upload. An invalid
+manifest, failed request, decode error, or rejected CRS leaves the deterministic generated fixture
+active (or retains the last good resident window) and reports the reason in the status area instead
+of blanking the visualization. The deck.gl luSpatial example applies the same gate and fallback.
+
+Source telemetry is literal rather than an estimate: **corpus total** comes from the manifest,
+**downloaded** counts the response bytes and requests for the manifest plus fetched shards,
+**decoded** counts rows decoded from those shards, and **GPU resident** is the capacity-bounded
+window actually uploaded. **Candidate**, **matched**, and **rendered** are asynchronously sampled
+from the active GPU query graph; they can briefly show the preceding query while readback completes.
+The local fallback truthfully reports no network download and identifies its rows as generated.
 
 **NYC LiDAR** reads and retains nearby pages of the public USGS New York City EPT hierarchy. It
 selects LAZ nodes around the current query, renders each decoded tile progressively, and keeps the
