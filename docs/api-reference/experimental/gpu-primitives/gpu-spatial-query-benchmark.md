@@ -1,8 +1,19 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {SpatialBenchmark} from '@site/src/components/docs/spatial-benchmark';
 
 # GPU spatial query benchmark
 
 <GPUPrimitivesDocsTabs active="spatial-benchmark" />
+
+## Run on your device
+
+<SpatialBenchmark />
+
+This opt-in benchmark runs a deterministic CPU bounds scan, the actual
+`GPUPointSpatialQuery` scan, and the same query against a reusable `GPUGridIndex`. Every GPU result
+must match the complete CPU-selected ID set. Grid construction is reported separately because its
+cost must be amortized across repeated queries; the timed GPU paths include graph encoding,
+submission, and a completion fence, not merely CPU-side command submission.
 
 ## Overview
 

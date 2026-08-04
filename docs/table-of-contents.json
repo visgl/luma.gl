@@ -200,6 +200,7 @@
         "items": [
           "api-reference/experimental/README",
           "api-reference/experimental/geospatial",
+          "api-reference/experimental/luproj",
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
@@ -312,6 +313,7 @@
         "items": [
           "api-reference/experimental/README",
           "api-reference/experimental/geospatial",
+          "api-reference/experimental/luproj",
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
