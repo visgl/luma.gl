@@ -176,6 +176,9 @@ for (const expectedText of [
     fail(`rendered Installing Markdown is missing "${expectedText}"`);
   }
 }
+if (installing.includes('<DeveloperDocsTabs')) {
+  fail('rendered Installing Markdown contains an unprocessed tab component');
+}
 
 const workingWithAi = readFileSync(workingWithAiPath, 'utf8');
 if (!workingWithAi.includes('Start from local truth')) {

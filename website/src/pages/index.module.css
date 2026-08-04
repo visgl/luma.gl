@@ -114,6 +114,13 @@
   pointer-events: auto;
 }
 
+.heroActionNote {
+  margin: 13px 0 0;
+  color: rgba(203, 213, 225, 0.8);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .primaryAction,
 .secondaryAction,
 .galleryAction,

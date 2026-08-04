@@ -10,6 +10,8 @@ const LUMA_GL_REPOSITORY_URL = 'https://github.com/visgl/luma.gl';
 
 export default function ShowcasePage(): React.JSX.Element {
   const climateGlobeImageUrl = useBaseUrl('/images/showcase-climate-globe.png');
+  const gettingStartedUrl = useBaseUrl('/docs/getting-started');
+  const examplesUrl = useBaseUrl('/examples');
 
   return (
     <Layout
@@ -22,8 +24,17 @@ export default function ShowcasePage(): React.JSX.Element {
             <p className={styles.eyebrow}>Community showcase</p>
             <h1>Made with luma.gl</h1>
             <p className={styles.introduction}>
-              A collection of ambitious, beautiful, and unexpected projects powered by luma.gl.
+              Ambitious, beautiful, and unexpected projects from people turning GPU-level control
+              into something worth sharing.
             </p>
+            <div className={styles.heroActions}>
+              <a className={styles.primaryAction} href={gettingStartedUrl}>
+                Find your starting point <span aria-hidden="true">→</span>
+              </a>
+              <a className={styles.secondaryAction} href={examplesUrl}>
+                Explore live examples
+              </a>
+            </div>
           </div>
         </header>
 

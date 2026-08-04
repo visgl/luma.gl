@@ -1178,7 +1178,7 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
   padding-right: 0;
 }
 
-.container:has(.luma-example-page) {
+.container:has(.luma-example-page):not(:has(> .row)) {
   max-width: none;
   width: 100%;
   padding: 0;

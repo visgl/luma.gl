@@ -54,6 +54,36 @@
   padding: 6px 10px;
 }
 
+.discoveryPaths {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 18px;
+  margin-top: -2px;
+}
+
+.discoveryPath {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 4px;
+  color: #bae6fd;
+  font-size: 0.77rem;
+  font-weight: 670;
+  text-decoration: none;
+}
+
+.discoveryPath:hover,
+.discoveryPath:focus-visible {
+  color: #e0f2fe;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.discoveryPath:focus-visible {
+  outline: 2px solid var(--luma-example-accent, #67e8f9);
+  outline-offset: 3px;
+}
+
 .searchField {
   position: relative;
 }

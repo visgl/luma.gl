@@ -11,6 +11,19 @@ const INSTALLATION_SOURCE_PATH = path.join(process.cwd(), 'docs/developer-guide/
 const EXAMPLE_IMAGES_DIRECTORY = path.join(process.cwd(), 'website/static/images/examples');
 const EXAMPLE_CONTENT_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const EXTRACTION_CHECKER_PATH = path.join(process.cwd(), 'website/scripts/check-llm-output.mjs');
+const WEBSITE_STYLES_PATH = path.join(process.cwd(), 'website/src/custom.css');
+const DEVELOPER_DOCS_TABS_SOURCE_PATH = path.join(
+  process.cwd(),
+  'website/src/components/docs/developer-docs-tabs.tsx'
+);
+const TUTORIAL_DOCS_TABS_SOURCE_PATH = path.join(
+  process.cwd(),
+  'website/src/components/docs/tutorial-docs-tabs.tsx'
+);
+const DOCUMENTATION_TABLE_OF_CONTENTS_PATH = path.join(
+  process.cwd(),
+  'docs/table-of-contents.json'
+);
 
 describe('getting-started onboarding', () => {
   test('introduces real, immediately explorable GPU experiences before technical setup', () => {
@@ -70,8 +83,13 @@ describe('getting-started onboarding', () => {
 
   test('preserves the complete runnable setup in the dedicated installation guide', () => {
     const installationSource = readFileSync(INSTALLATION_SOURCE_PATH, 'utf8');
+    const developerTabsSource = readFileSync(DEVELOPER_DOCS_TABS_SOURCE_PATH, 'utf8');
 
     expect(installationSource).toMatch(/^# Installing$/m);
+    expect(installationSource).toContain('<DeveloperDocsTabs active="installing" />');
+    expect(developerTabsSource).toMatch(
+      /id:\s*'installing',\s*label:\s*'Installing',\s*href:\s*'\/docs\/developer-guide\/installing'/
+    );
     expect(installationSource).toMatch(/^## A Minimal Install$/m);
     expect(installationSource).toMatch(/^## A Typical Install$/m);
     expect(installationSource).toMatch(/\bNode\.js\b/);
@@ -102,6 +120,61 @@ describe('getting-started onboarding', () => {
     expect(installationSource).not.toMatch(/<(?:Tabs|TabItem)\b/);
   });
 
+  test('connects live discovery to accurate backend choices, learning paths, and optional setup', () => {
+    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
+    const discoveryOffset = onboardingSource.indexOf('01 · See it in motion');
+    const capabilityOffset = onboardingSource.indexOf('02 · Built for ambitious ideas');
+    const learningPathOffset = onboardingSource.indexOf('03 · Find your starting point');
+    const projectSetupOffset = onboardingSource.indexOf('/docs/developer-guide/installing');
+
+    expect(discoveryOffset).toBeGreaterThan(0);
+    expect(capabilityOffset).toBeGreaterThan(discoveryOffset);
+    expect(learningPathOffset).toBeGreaterThan(capabilityOffset);
+    expect(projectSetupOffset).toBeGreaterThan(learningPathOffset);
+
+    expect(onboardingSource).toContain('Advanced scenes require WebGPU');
+    expect(onboardingSource).toContain('Effects: Image Processing also runs on WebGL2');
+    expect(onboardingSource).toContain('Share portable rendering across WebGPU and WebGL2');
+    expect(onboardingSource).toContain('use WebGPU for compute shaders');
+
+    for (const learningPath of [
+      '/docs/tutorials/hello-triangle',
+      '/docs/api-guide/engine',
+      '/docs/api-guide/gpu/gpu-data-processing',
+      '/docs/api-guide/shaders/shader-passes'
+    ]) {
+      expect(onboardingSource, `${learningPath} must remain an available learning path`).toContain(
+        learningPath
+      );
+    }
+
+    expect(onboardingSource).toContain('the developer guide takes you from local project setup');
+    expect(onboardingSource).toContain('Build your first project');
+  });
+
+  test('keeps tutorial and developer navigation consistent with the onboarding journey', () => {
+    const tutorialTabsSource = readFileSync(TUTORIAL_DOCS_TABS_SOURCE_PATH, 'utf8');
+    const websiteStyles = readFileSync(WEBSITE_STYLES_PATH, 'utf8');
+    const tableOfContents = JSON.parse(
+      readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
+    ) as Array<string | {label?: string; items?: string[]}>;
+    const developerGuide = tableOfContents.find(
+      (item): item is {label: string; items: string[]} =>
+        typeof item !== 'string' && item.label === 'Developer Guide' && Array.isArray(item.items)
+    );
+
+    expect(tutorialTabsSource).toMatch(
+      /id:\s*'setup',\s*label:\s*'Overview',\s*href:\s*'\/docs\/tutorials'/
+    );
+    expect(tutorialTabsSource).not.toMatch(/label:\s*'Setup'/);
+    expect(websiteStyles).toContain('.container:has(.luma-example-page):not(:has(> .row))');
+    expect(developerGuide?.items.slice(0, 3)).toEqual([
+      'developer-guide/README',
+      'developer-guide/installing',
+      'developer-guide/working-with-ai'
+    ]);
+  });
+
   test('validates runnable LLM setup against Installing while keeping onboarding readable', () => {
     const extractionCheckerSource = readFileSync(EXTRACTION_CHECKER_PATH, 'utf8');
 
@@ -112,6 +185,7 @@ describe('getting-started onboarding', () => {
       "const installing = readFileSync(installingPath, 'utf8')"
     );
     expect(extractionCheckerSource).toContain('if (!installing.includes(expectedText))');
+    expect(extractionCheckerSource).toContain("if (installing.includes('<DeveloperDocsTabs'))");
     expect(extractionCheckerSource).not.toContain('if (!gettingStarted.includes(expectedText))');
     expect(extractionCheckerSource).toContain('gettingStarted.trim().length');
     expect(extractionCheckerSource).toContain('unprocessed MDX components');

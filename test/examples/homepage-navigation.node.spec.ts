@@ -17,6 +17,11 @@ const EXAMPLE_CARD_SOURCE_PATH = path.join(
   process.cwd(),
   'website/src/components/example-card.tsx'
 );
+const EXAMPLES_INDEX_SOURCE_PATH = path.join(
+  process.cwd(),
+  'website/src/components/examples-index.tsx'
+);
+const COMMUNITY_SHOWCASE_SOURCE_PATH = path.join(process.cwd(), 'website/src/pages/showcase.tsx');
 const EXAMPLE_CONTENT_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const MINIMUM_PRIMARY_ACTION_CONTRAST = 7;
 
@@ -37,6 +42,44 @@ describe('homepage navigation', () => {
     );
 
     expect(gettingStartedActions).toEqual(['primaryAction', 'closingAction']);
+  });
+
+  test('introduces getting started as a zero-install guided discovery experience', () => {
+    const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
+
+    expect(homepageSource).toContain('Start with a guided tour. No installation required.');
+    expect(homepageSource).toContain('Explore live examples');
+    expect(homepageSource).toContain('Choose your starting point');
+  });
+
+  test('connects the example gallery to the guided tour and first tutorial with base-aware links', () => {
+    const examplesIndexSource = readFileSync(EXAMPLES_INDEX_SOURCE_PATH, 'utf8');
+
+    expect(examplesIndexSource).toMatch(
+      /const\s+gettingStartedUrl\s*=\s*useBaseUrl\(\s*['"]\/docs\/getting-started['"]\s*\)/
+    );
+    expect(examplesIndexSource).toMatch(
+      /const\s+firstTriangleUrl\s*=\s*useBaseUrl\(\s*['"]\/docs\/tutorials\/hello-triangle['"]\s*\)/
+    );
+    expect(examplesIndexSource).toContain('New here? Take the guided tour');
+    expect(examplesIndexSource).toContain('Draw your first triangle');
+    expect(examplesIndexSource).toMatch(/<a\b[^>]*\bhref=\{gettingStartedUrl\}[^>]*>/);
+    expect(examplesIndexSource).toMatch(/<a\b[^>]*\bhref=\{firstTriangleUrl\}[^>]*>/);
+  });
+
+  test('continues from the community showcase into first-party discovery and live examples', () => {
+    const communityShowcaseSource = readFileSync(COMMUNITY_SHOWCASE_SOURCE_PATH, 'utf8');
+
+    expect(communityShowcaseSource).toMatch(
+      /const\s+gettingStartedUrl\s*=\s*useBaseUrl\(\s*['"]\/docs\/getting-started['"]\s*\)/
+    );
+    expect(communityShowcaseSource).toMatch(
+      /const\s+examplesUrl\s*=\s*useBaseUrl\(\s*['"]\/examples['"]\s*\)/
+    );
+    expect(communityShowcaseSource).toContain('Find your starting point');
+    expect(communityShowcaseSource).toContain('Explore live examples');
+    expect(communityShowcaseSource).toMatch(/<a\b[^>]*\bhref=\{gettingStartedUrl\}[^>]*>/);
+    expect(communityShowcaseSource).toMatch(/<a\b[^>]*\bhref=\{examplesUrl\}[^>]*>/);
   });
 
   test('links every featured example card to a real catalog entry and documentation route', () => {

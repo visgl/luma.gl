@@ -164,8 +164,8 @@ export default function IndexPage() {
             </h1>
             <p className={styles.heroTagline}>{siteConfig.tagline}</p>
             <p className={styles.heroDescription}>
-              Create ambitious real-time rendering, simulation, and data visualization—directly on
-              the GPU.
+              Build living worlds, responsive simulations, and rich data visualizations—at the
+              speed of the GPU.
             </p>
 
             <div className={styles.heroActions}>
@@ -173,9 +173,12 @@ export default function IndexPage() {
                 Get started <span aria-hidden="true">→</span>
               </a>
               <a className={styles.secondaryAction} href={examplesUrl}>
-                Explore examples <span aria-hidden="true">↗</span>
+                Explore live examples <span aria-hidden="true">↗</span>
               </a>
             </div>
+            <p className={styles.heroActionNote}>
+              Start with a guided tour. No installation required.
+            </p>
 
             <ul className={styles.heroCapabilities} aria-label="Toolkit capabilities">
               {HERO_CAPABILITIES.map(capability => (
@@ -201,7 +204,8 @@ export default function IndexPage() {
                 </h2>
               </div>
               <p className={styles.sectionDescription}>
-                Real-time worlds, physical simulations, and visual effects—running in your browser.
+                Real-time worlds, physical simulations, and visual effects—live in your browser,
+                with nothing to install.
               </p>
             </div>
 
@@ -261,9 +265,9 @@ export default function IndexPage() {
             </div>
 
             <div className={styles.closingStatement}>
-              <p>Ready to build something that moves?</p>
+              <p>Found your inspiration? Find the right place to begin.</p>
               <a className={styles.closingAction} href={gettingStartedUrl}>
-                Start building <span aria-hidden="true">→</span>
+                Choose your starting point <span aria-hidden="true">→</span>
               </a>
             </div>
           </div>

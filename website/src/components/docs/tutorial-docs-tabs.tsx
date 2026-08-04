@@ -25,7 +25,7 @@ export type TutorialDocsTabGroupId = 'fundamentals' | 'shaders' | 'transforms';
 
 const TUTORIAL_DOCS_TABS: Record<TutorialDocsTabGroupId, TutorialDocsTab[]> = {
   fundamentals: [
-    {id: 'setup', label: 'Setup', href: '/docs/tutorials'},
+    {id: 'setup', label: 'Overview', href: '/docs/tutorials'},
     {id: 'hello-triangle', label: 'Triangle', href: '/docs/tutorials/hello-triangle'},
     {id: 'hello-cube', label: 'Cube', href: '/docs/tutorials/hello-cube'},
     {id: 'hello-instancing', label: 'Instancing', href: '/docs/tutorials/hello-instancing'}

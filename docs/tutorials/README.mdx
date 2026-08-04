@@ -4,43 +4,45 @@ import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 
 <TutorialDocsTabs group="fundamentals" active="setup" />
 
-This course builds a portable renderer one concept at a time. Every lesson includes a
-live example that can switch between WebGPU and WebGL2 when both backends support the
-feature. The files shown on each page are loaded from the runnable examples in this
-repository, so the documentation and tested code stay in sync.
+A living scene begins with a single draw call. Start with a triangle, add depth and
+light, then discover how the same rendering ideas scale into richer GPU-powered worlds.
+Every lesson includes a working example you can explore directly in your browser.
 
-Explore [Getting Started](/docs/getting-started) to see what you can build, or open any
-live lesson immediately. When you are ready to run the examples locally, follow the
-[Installing guide](/docs/developer-guide/installing). Familiarity with TypeScript and
-basic GPU concepts is helpful; the tutorials explain the luma.gl object model as it is
-introduced.
+**Start with [Hello Triangle](/docs/tutorials/hello-triangle). No installation required.**
+
+When a feature supports both backends, its live example can switch between WebGPU and
+WebGL2. The source shown on each page comes directly from the runnable example, so you
+can move from what you see to how it works without leaving the lesson.
+
+Curious where these fundamentals can take you? [Getting Started](/docs/getting-started)
+shows complete scenes, simulations, visual effects, and GPU data workflows.
 
 ## Rendering foundations
 
 <div className="docs-api-card-grid">
   <a className="docs-api-card" href="/docs/tutorials/hello-triangle">
-    <span className="docs-api-card__kind">1 · Beginner</span>
+    <span className="docs-api-card__kind">1 · Your first draw</span>
     <strong>Hello Triangle</strong>
     <span>Create a Model, supply portable shaders, and issue a draw inside a render pass.</span>
     <span className="docs-api-card__meta">Model · shaders · render passes</span>
   </a>
   <a className="docs-api-card" href="/docs/tutorials/hello-cube">
-    <span className="docs-api-card__kind">2 · Beginner</span>
+    <span className="docs-api-card__kind">2 · Add a dimension</span>
     <strong>Hello Cube</strong>
     <span>Add geometry, textures, depth testing, and uniforms that update every frame.</span>
     <span className="docs-api-card__meta">Geometry · textures · uniforms</span>
   </a>
-  <a className="docs-api-card" href="/docs/tutorials/hello-instancing">
-    <span className="docs-api-card__kind">3 · Intermediate</span>
-    <strong>Hello Instancing</strong>
-    <span>Draw many copies of one geometry using per-instance attributes.</span>
-    <span className="docs-api-card__meta">Buffers · layouts · instancing</span>
-  </a>
   <a className="docs-api-card" href="/docs/tutorials/lighting">
-    <span className="docs-api-card__kind">4 · Intermediate</span>
+    <span className="docs-api-card__kind">3 · Shape with light</span>
     <strong>Lighting</strong>
     <span>Compose reusable shader functionality and supply material inputs.</span>
     <span className="docs-api-card__meta">Shader modules · materials</span>
+  </a>
+  <a className="docs-api-card" href="/docs/tutorials/hello-instancing">
+    <span className="docs-api-card__kind">4 · Scale the scene</span>
+    <strong>Hello Instancing</strong>
+    <span>Draw many copies of one geometry using per-instance attributes.</span>
+    <span className="docs-api-card__meta">Buffers · layouts · instancing</span>
   </a>
 </div>
 
@@ -63,4 +65,6 @@ introduced.
 - Full source links point to the same files rendered in the documentation.
 
 After the course, use [What's Next?](/docs/tutorials/whats-next) to choose a deeper API
-guide or a larger example.
+guide or a larger example. Ready to work with the code on your own machine? The
+[Installing guide](/docs/developer-guide/installing) takes you from an empty project
+to your first rendered frame.
