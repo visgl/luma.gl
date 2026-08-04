@@ -4,12 +4,16 @@
 
 import type {Effect, EffectContext} from '@deck.gl/core';
 import {LuSpatialGeographicPointQueryEffect} from '@deck.gl-community/luspatial/query';
+import type {Device} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
 
-test('LuSpatialGeographicPointQueryEffect builds and updates real WebGPU queries', async () => {
+test('LuSpatialGeographicPointQueryEffect builds and updates real hardware WebGPU queries', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
+  // The precise radius kernel uses integer fp64 emulation and is intentionally not exercised on
+  // SwiftShader. Its focused geospatial tests apply the same exclusion; hardware coverage below
+  // still verifies the complete projection, index, mutable query, and indirect-draw path.
+  if (!device || isSoftwareBackedDevice(device)) return;
 
   const effect = new LuSpatialGeographicPointQueryEffect(device, {
     id: 'luspatial-geographic-query-browser-test',
@@ -132,3 +136,9 @@ test('LuSpatialGeographicPointQueryEffect builds and updates real WebGPU queries
     effect.destroy();
   }
 }, 60_000);
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
+}
