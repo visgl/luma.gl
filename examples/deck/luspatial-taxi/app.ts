@@ -19,7 +19,11 @@ import {
 import {ArrowDeck} from '../arrow-deck';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {LuSpatialPointLayer} from './luspatial-point-layer';
-import {LuSpatialTaxiQueryEffect, type LuSpatialTaxiQueryStats} from './luspatial-query-effect';
+import {
+  LU_SPATIAL_TAXI_QUERY_COUNTER_IDS,
+  LuSpatialTaxiQueryEffect,
+  type LuSpatialTaxiQueryStats
+} from './luspatial-query-effect';
 import {
   TAXI_CORPUS_POINT_COUNT,
   TAXI_POINT_COUNT,
@@ -626,6 +630,14 @@ function createControlPanel(
     graphLabels: {
       'luspatial-taxi-build-graph': 'luProj projection + grid build',
       'luspatial-taxi-query-graph': 'Viewport + radius queries'
+    },
+    counterLabels: {
+      [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.viewportIntersectedCells]: 'Viewport cells',
+      [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.viewportCandidates]: 'Viewport candidates',
+      [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.viewportMatches]: 'Viewport matches',
+      [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.selectionIntersectedCells]: 'Selection cells',
+      [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.selectionCandidates]: 'Selection candidates',
+      [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.selectionMatches]: 'Selection matches'
     }
   });
 
