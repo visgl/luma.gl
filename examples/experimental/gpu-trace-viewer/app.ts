@@ -144,7 +144,6 @@ type TraceGraphResources = {
   baseVisibility: Buffer;
   spanVisibility: Buffer;
   visibleDependencyIds: Buffer;
-  densityKeys: Buffer;
   densityBins: Buffer;
   pickResult: Buffer;
   spanCount: number;
@@ -563,7 +562,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         dependencyMaskByteLength,
         Buffer.COPY_SRC
       ),
-      densityKeys: this.createStorageBuffer('gpu-trace-density-keys', spanMaskByteLength),
       densityBins: this.createStorageBuffer(
         'gpu-trace-density-bins',
         densityBinCount * UINT32_BYTE_LENGTH,
@@ -697,7 +695,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         'visible-dependency-ids',
         resources.visibleDependencyIds
       ),
-      densityKeys: importTraceBuffer(graph, 'density-keys', resources.densityKeys),
       densityBins: importTraceBuffer(graph, 'density-bins', resources.densityBins),
       pickResult: importTraceBuffer(graph, 'pick-result', resources.pickResult),
       drawCommands: importTraceBuffer(graph, 'draw-commands', resources.drawCommands.buffer)
@@ -934,10 +931,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         storageRead('processStates', handles.processStates),
         storageRead('threadOffsets', handles.threadOffsets),
         storageRead('threadStates', handles.threadStates),
-        storageWrite('visibilityFlags', handles.baseVisibility),
-        storageWrite('densityKeys', handles.densityKeys)
+        storageWrite('visibilityFlags', handles.baseVisibility)
       ],
-      dispatchBuffer: handles.candidateDispatchCommands
+      dispatchBuffer: handles.exactCandidateDispatchCommands
     });
     addTraceIndirectComputePass(graph, {
       id: 'trace-candidate-focus',
@@ -964,13 +960,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       id: 'trace-candidate-density',
       source: getCandidateDensityShader(),
       bindings: [
+        storageRead('spans', handles.spans),
         storageRead('spanBatches', handles.spanBatchIndex),
         storageRead('candidateBatchIds', handles.candidateBatchIds),
-        storageRead('densityKeys', handles.densityKeys),
+        uniformBinding('viewUniforms', handles.uniforms),
+        storageRead('processStates', handles.processStates),
+        storageRead('threadOffsets', handles.threadOffsets),
+        storageRead('threadStates', handles.threadStates),
         storageRead('reachedSpans', handles.reachedSpans),
-        storageRead('activeSeedCount', handles.selectedSeedCount),
-        storageWrite('densityBins', handles.densityBins),
-        uniformBinding('viewUniforms', handles.uniforms)
+        storageWrite('densityBins', handles.densityBins)
       ],
       dispatchBuffer: handles.densityCandidateDispatchCommands
     });
@@ -1359,7 +1357,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.baseVisibility,
       resources.spanVisibility,
       resources.visibleDependencyIds,
-      resources.densityKeys,
       resources.densityBins,
       resources.pickResult
     ]) {

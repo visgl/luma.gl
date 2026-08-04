@@ -562,7 +562,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Aggregates focused candidate density directly, avoiding a full-domain key scan. */
+/** Classifies and aggregates focused candidate density without span-sized intermediate keys. */
 export function getCandidateDensityShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
@@ -576,29 +576,44 @@ struct TraceSpanBatch {
   groupIndex: u32,
   batchIndex: u32,
 };
-@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
-@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
-@group(0) @binding(2) var<storage, read> densityKeys: array<u32>;
-@group(0) @binding(3) var<storage, read> reachedSpans: array<u32>;
-@group(0) @binding(4) var<storage, read> activeSeedCount: array<u32>;
-@group(0) @binding(5) var<storage, read_write> densityBins: array<atomic<u32>>;
-@group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
+${TRACE_VISIBILITY_FILTER_DECLARATIONS}
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(6) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
+@group(0) @binding(8) var<storage, read_write> densityBins: array<atomic<u32>>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(global_invocation_id) globalId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
   let batch = spanBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x >= batch.spanCount) {
+  let batchRowIndex = globalId.x;
+  if (batchRowIndex >= batch.spanCount) {
     return;
   }
-  let sourceIndex = batch.firstSpanIndex + localId.x;
-  let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
+  let sourceIndex = batch.firstSpanIndex + batchRowIndex;
+  let span = spans[sourceIndex];
+  let processExpanded = processStates[span.processIndex] != 0u;
+  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
+  let expandedLane = threadOffsets[span.threadIndex] + localLane;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let lane = f32(select(collapsedLane, expandedLane, processExpanded));
+  let sourceVisible = isSpanSourceVisible(span, lane);
+  let focusEnabled =
+    viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
     reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
-  let densityKey = densityKeys[sourceIndex];
-  if (focusVisible && densityKey != 0xffffffffu) {
+  if (sourceVisible && focusVisible) {
+    let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+    let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
+    let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);
+    let densityKey = u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin;
     atomicAdd(&densityBins[densityKey], 1u);
   }
 }`;
@@ -658,7 +673,6 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(7) var<storage, read_write> visibilityFlags: array<u32>;
-@group(0) @binding(8) var<storage, read_write> densityKeys: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
@@ -678,15 +692,8 @@ fn main(
   let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let sourceVisible = isSpanSourceVisible(span, lane);
-  let densityMode = isDensityMode();
-  let exactVisible = sourceVisible && processExpanded && !densityMode;
+  let exactVisible = sourceVisible && processExpanded;
   visibilityFlags[sourceIndex] = select(0u, 1u, exactVisible);
-  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-  let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
-  let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);
-  let densityKey = u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin;
-  let densityVisible = sourceVisible && (densityMode || !processExpanded);
-  densityKeys[sourceIndex] = select(0xffffffffu, densityKey, densityVisible);
 }`;
 }
 
