@@ -41,6 +41,10 @@ describe('GPU hierarchical trace viewer', () => {
       const state = viewer as unknown as {
         resources: {
           candidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          exactCandidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          densityCandidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          pickCandidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          densityClearDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           candidateDependencyDispatchCommands: {
             buffer: {readAsync: () => Promise<Uint8Array>};
           };
@@ -145,6 +149,24 @@ describe('GPU hierarchical trace viewer', () => {
       const candidateCount = candidateDispatch[1];
       expect(candidateCount).toBeGreaterThan(0);
       expect(candidateCount).toBeLessThanOrEqual(state.resources.spanBatchCount);
+      const exactCandidateBytes =
+        await state.resources.exactCandidateDispatchCommands.buffer.readAsync();
+      const densityCandidateBytes =
+        await state.resources.densityCandidateDispatchCommands.buffer.readAsync();
+      const pickCandidateBytes =
+        await state.resources.pickCandidateDispatchCommands.buffer.readAsync();
+      const densityClearBytes =
+        await state.resources.densityClearDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(exactCandidateBytes.buffer, exactCandidateBytes.byteOffset, 3)[1]
+      ).toBe(candidateCount);
+      expect(
+        new Uint32Array(densityCandidateBytes.buffer, densityCandidateBytes.byteOffset, 3)[1]
+      ).toBe(0);
+      expect(new Uint32Array(pickCandidateBytes.buffer, pickCandidateBytes.byteOffset, 3)[1]).toBe(
+        0
+      );
+      expect(new Uint32Array(densityClearBytes.buffer, densityClearBytes.byteOffset, 3)[0]).toBe(0);
       const dependencyCandidateBytes =
         await state.resources.candidateDependencyDispatchCommands.buffer.readAsync();
       const dependencyCandidateCount = new Uint32Array(
@@ -248,6 +270,29 @@ describe('GPU hierarchical trace viewer', () => {
       );
       expect(densityCounts[1] + densityCounts[5] + densityCounts[9]).toBe(0);
       expect(densityCounts[13]).toBe(0);
+      const densityModeExactCandidateBytes =
+        await state.resources.exactCandidateDispatchCommands.buffer.readAsync();
+      const densityModeCandidateBytes =
+        await state.resources.densityCandidateDispatchCommands.buffer.readAsync();
+      const densityModeClearBytes =
+        await state.resources.densityClearDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(
+          densityModeExactCandidateBytes.buffer,
+          densityModeExactCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBe(0);
+      expect(
+        new Uint32Array(
+          densityModeCandidateBytes.buffer,
+          densityModeCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      expect(
+        new Uint32Array(densityModeClearBytes.buffer, densityModeClearBytes.byteOffset, 3)[0]
+      ).toBeGreaterThan(0);
       const adaptiveDensityBytes = await state.resources.densityBins.readAsync();
       const adaptiveDensity = new Uint32Array(
         adaptiveDensityBytes.buffer,

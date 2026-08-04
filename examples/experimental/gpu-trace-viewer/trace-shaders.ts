@@ -513,6 +513,42 @@ fn main() {
 }`;
 }
 
+/** Routes candidate work to only the passes needed by the active LOD and interaction mode. */
+export function getCandidatePassDispatchShader(): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+const DENSITY_CLEAR_WORKGROUP_COUNT: u32 = ${Math.ceil(
+    (TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT) / TRACE_WORKGROUP_SIZE
+  )}u;
+@group(0) @binding(0) var<storage, read> candidateDispatchCommand: array<u32>;
+@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(2) var<storage, read_write> exactDispatchCommand: array<u32>;
+@group(0) @binding(3) var<storage, read_write> densityDispatchCommand: array<u32>;
+@group(0) @binding(4) var<storage, read_write> pickDispatchCommand: array<u32>;
+@group(0) @binding(5) var<storage, read_write> densityClearDispatchCommand: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  let candidateWorkgroupCount = candidateDispatchCommand[0];
+  let candidateBatchCount = candidateDispatchCommand[1];
+  let densityMode = isDensityMode();
+  let pickActive = viewUniforms.pickLane >= 0.0;
+
+  exactDispatchCommand[0] = candidateWorkgroupCount;
+  exactDispatchCommand[1] = select(candidateBatchCount, 0u, densityMode);
+  exactDispatchCommand[2] = 1u;
+  densityDispatchCommand[0] = candidateWorkgroupCount;
+  densityDispatchCommand[1] = select(0u, candidateBatchCount, densityMode);
+  densityDispatchCommand[2] = 1u;
+  pickDispatchCommand[0] = candidateWorkgroupCount;
+  pickDispatchCommand[1] = select(0u, candidateBatchCount, pickActive);
+  pickDispatchCommand[2] = 1u;
+  densityClearDispatchCommand[0] = select(0u, DENSITY_CLEAR_WORKGROUP_COUNT, densityMode);
+  densityClearDispatchCommand[1] = 1u;
+  densityClearDispatchCommand[2] = 1u;
+}`;
+}
+
 /** Clears the fixed-size density target without touching source-aligned span storage. */
 export function getDensityClearShader(): string {
   return /* wgsl */ `
