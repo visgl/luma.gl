@@ -204,11 +204,11 @@ jobs:
       - name: Merge browser coverage reports
         if: ${{ needs.browser_coverage.result == 'success' }}
         run: |
-          cat \
+          node ./dev-modules/devtools-extensions/vitest/merge-lcov.mjs \
+            --output coverage/lcov.info \
             coverage/shards/browser-coverage-lcov-1/lcov.info \
             coverage/shards/browser-coverage-lcov-2/lcov.info \
-            coverage/shards/browser-coverage-lcov-3/lcov.info \
-            > coverage/lcov.info
+            coverage/shards/browser-coverage-lcov-3/lcov.info
 
       - name: Upload combined coverage to Coveralls
         if: ${{ needs.browser_coverage.result == 'success' }}
