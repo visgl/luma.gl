@@ -38,10 +38,10 @@ async function preprocess(sourcePath, targetDirectory, pointsPerShard) {
     const arrowPath = await maybeDecompress(sourcePath, temporaryDirectory ?? targetDirectory);
     process.stdout.write(`Reading Arrow IPC file ${arrowPath}\n`);
     const table = tableFromIPC(await readFile(arrowPath));
-    const [longitudeField, latitudeField] = findCoordinateFields(table.schema.fields);
-    const longitudeVector = table.getChild(longitudeField.name);
-    const latitudeVector = table.getChild(latitudeField.name);
-    if (!longitudeVector || !latitudeVector) {
+    const [xField, yField] = findCoordinateFields(table.schema.fields);
+    const xVector = table.getChild(xField.name);
+    const yVector = table.getChild(yField.name);
+    if (!xVector || !yVector) {
       throw new Error('Unable to read the selected coordinate columns');
     }
 
@@ -54,28 +54,31 @@ async function preprocess(sourcePath, targetDirectory, pointsPerShard) {
       const bounds = [Infinity, Infinity, -Infinity, -Infinity];
       for (let localIndex = 0; localIndex < pointCount; localIndex++) {
         const rowIndex = firstRow + localIndex;
-        const longitude = Number(longitudeVector.get(rowIndex));
-        const latitude = Number(latitudeVector.get(rowIndex));
-        positions[localIndex * 2] = longitude;
-        positions[localIndex * 2 + 1] = latitude;
-        if (Number.isFinite(longitude) && Number.isFinite(latitude)) {
-          bounds[0] = Math.min(bounds[0], longitude);
-          bounds[1] = Math.min(bounds[1], latitude);
-          bounds[2] = Math.max(bounds[2], longitude);
-          bounds[3] = Math.max(bounds[3], latitude);
+        const x = getCoordinateValue(xVector.get(rowIndex));
+        const y = getCoordinateValue(yVector.get(rowIndex));
+        positions[localIndex * 2] = x;
+        positions[localIndex * 2 + 1] = y;
+        const storedX = positions[localIndex * 2];
+        const storedY = positions[localIndex * 2 + 1];
+        if (Number.isFinite(storedX) && Number.isFinite(storedY)) {
+          bounds[0] = Math.min(bounds[0], storedX);
+          bounds[1] = Math.min(bounds[1], storedY);
+          bounds[2] = Math.max(bounds[2], storedX);
+          bounds[3] = Math.max(bounds[3], storedY);
         }
       }
       const file = `points-${String(shardIndex).padStart(4, '0')}.f32`;
-      await writeFile(join(targetDirectory, file), Buffer.from(positions.buffer));
+      await writeFile(join(targetDirectory, file), encodeLittleEndianFloat32(positions));
       shards.push({file, firstRow, pointCount, bounds: normalizeBounds(bounds)});
       process.stdout.write(`Wrote ${file} (${pointCount.toLocaleString()} rows)\n`);
     }
 
     const manifest = {
-      version: 1,
+      version: 2,
       source: DEFAULT_SOURCE_URL,
       sourceFile: basename(sourcePath),
-      coordinateColumns: [longitudeField.name, latitudeField.name],
+      coordinateColumns: [xField.name, yField.name],
+      coordinateSpace: {kind: 'source-xy', crs: null},
       format: 'float32x2-little-endian',
       pointCount: table.numRows,
       shardPointCount: pointsPerShard,
@@ -107,28 +110,40 @@ async function maybeDecompress(sourcePath, targetDirectory) {
 
 function findCoordinateFields(fields) {
   const byLowercaseName = new Map(fields.map(field => [field.name.toLowerCase(), field]));
-  const longitude = findFirst(byLowercaseName, ['longitude', 'lon', 'lng', 'pickup_longitude', 'x']);
-  const latitude = findFirst(byLowercaseName, ['latitude', 'lat', 'pickup_latitude', 'y']);
-  if (!longitude || !latitude || longitude === latitude) {
-    throw new Error(
-      `Could not identify longitude and latitude columns. Available columns: ${fields
-        .map(field => field.name)
-        .join(', ')}`
-    );
+  const coordinatePairs = [
+    ['x', 'y'],
+    ['longitude', 'latitude'],
+    ['lon', 'lat'],
+    ['lng', 'lat'],
+    ['pickup_longitude', 'pickup_latitude']
+  ];
+  for (const [xName, yName] of coordinatePairs) {
+    const x = byLowercaseName.get(xName);
+    const y = byLowercaseName.get(yName);
+    if (x && y) return [x, y];
   }
-  return [longitude, latitude];
-}
-
-function findFirst(fields, names) {
-  for (const name of names) {
-    const field = fields.get(name);
-    if (field) return field;
-  }
-  return undefined;
+  throw new Error(
+    `Could not identify a complete source X/Y coordinate pair. Available columns: ${fields
+      .map(field => field.name)
+      .join(', ')}`
+  );
 }
 
 function normalizeBounds(bounds) {
   return bounds.every(Number.isFinite) ? bounds : null;
+}
+
+function getCoordinateValue(value) {
+  return value === null || value === undefined ? Number.NaN : Number(value);
+}
+
+function encodeLittleEndianFloat32(values) {
+  const bytes = new Uint8Array(values.byteLength);
+  const dataView = new DataView(bytes.buffer);
+  for (let index = 0; index < values.length; index++) {
+    dataView.setFloat32(index * Float32Array.BYTES_PER_ELEMENT, values[index], true);
+  }
+  return bytes;
 }
 
 function parsePositiveInteger(value, name) {
@@ -163,7 +178,8 @@ function printUsage() {
 
 The original 859 MB object does not expose browser CORS. Download it once, then run this command
 to emit streamable packed float32 shards and manifest.json. The conversion needs enough memory to
-open the decompressed Arrow IPC file; it never runs in the browser.
+open the decompressed Arrow IPC file; it never runs in the browser. Coordinates remain in the
+source X/Y space, and the manifest leaves the coordinate reference system unspecified.
 
 Source:
   ${DEFAULT_SOURCE_URL}
