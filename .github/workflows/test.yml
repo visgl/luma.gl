@@ -200,7 +200,7 @@ jobs:
       - name: Merge browser coverage reports
         if: ${{ needs.browser_coverage.result == 'success' }}
         run: |
-          node ./dev-modules/devtools-extensions/vitest/merge-lcov.mjs \
+          node ./test/utils/merge-lcov.mjs \
             --output coverage/lcov.info \
             coverage/shards/browser-coverage-lcov-1/lcov.info \
             coverage/shards/browser-coverage-lcov-2/lcov.info \
