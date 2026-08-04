@@ -55,7 +55,6 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
-  getCandidateFocusShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
@@ -141,7 +140,6 @@ type TraceGraphResources = {
   focusTraversalState: Buffer;
   reachedSpans: Buffer;
   dependencyResults: Buffer;
-  baseVisibility: Buffer;
   spanVisibility: Buffer;
   visibleDependencyIds: Buffer;
   densityBins: Buffer;
@@ -555,7 +553,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         Math.max(dataset.dependencyCount * 3, 1) * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
       ),
-      baseVisibility: this.createStorageBuffer('gpu-trace-base-visibility', spanMaskByteLength),
       spanVisibility: this.createStorageBuffer('gpu-trace-span-visibility', spanMaskByteLength),
       visibleDependencyIds: this.createStorageBuffer(
         'gpu-trace-visible-dependencies',
@@ -688,7 +685,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         'dependency-results',
         resources.dependencyResults
       ),
-      baseVisibility: importTraceBuffer(graph, 'base-visibility', resources.baseVisibility),
       spanVisibility: importTraceBuffer(graph, 'span-visibility', resources.spanVisibility),
       visibleDependencyIds: importTraceBuffer(
         graph,
@@ -931,22 +927,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         storageRead('processStates', handles.processStates),
         storageRead('threadOffsets', handles.threadOffsets),
         storageRead('threadStates', handles.threadStates),
-        storageWrite('visibilityFlags', handles.baseVisibility)
-      ],
-      dispatchBuffer: handles.exactCandidateDispatchCommands
-    });
-    addTraceIndirectComputePass(graph, {
-      id: 'trace-candidate-focus',
-      source: getCandidateFocusShader(),
-      bindings: [
-        storageRead('spanBatches', handles.spanBatchIndex),
-        storageRead('candidateBatchIds', handles.candidateBatchIds),
-        storageRead('baseVisibility', handles.baseVisibility),
         storageRead('reachedSpans', handles.reachedSpans),
-        storageRead('activeSeedCount', handles.selectedSeedCount),
-        storageRead('focusTraversalState', handles.focusTraversalState),
-        storageWrite('spanVisibility', handles.spanVisibility),
-        uniformBinding('viewUniforms', handles.uniforms)
+        storageWrite('visibilityFlags', handles.spanVisibility)
       ],
       dispatchBuffer: handles.exactCandidateDispatchCommands
     });
@@ -1354,7 +1336,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.focusTraversalState,
       resources.reachedSpans,
       resources.dependencyResults,
-      resources.baseVisibility,
       resources.spanVisibility,
       resources.visibleDependencyIds,
       resources.densityBins,

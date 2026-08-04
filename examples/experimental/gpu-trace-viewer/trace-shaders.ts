@@ -361,47 +361,6 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Applies focus policy and publishes generation-tagged exact visibility for candidate spans. */
-export function getCandidateFocusShader(): string {
-  return /* wgsl */ `
-${TRACE_SHADER_DECLARATIONS}
-struct TraceSpanBatch {
-  firstSpanIndex: u32,
-  spanCount: u32,
-  timeMin: f32,
-  timeMax: f32,
-  laneMin: u32,
-  laneMax: u32,
-  groupIndex: u32,
-  batchIndex: u32,
-};
-@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
-@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
-@group(0) @binding(2) var<storage, read> baseVisibility: array<u32>;
-@group(0) @binding(3) var<storage, read> reachedSpans: array<u32>;
-@group(0) @binding(4) var<storage, read> activeSeedCount: array<u32>;
-@group(0) @binding(5) var<storage, read> focusTraversalState: array<u32>;
-@group(0) @binding(6) var<storage, read_write> spanVisibility: array<u32>;
-@group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
-
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
-) {
-  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x >= batch.spanCount) {
-    return;
-  }
-  let sourceIndex = batch.firstSpanIndex + localId.x;
-  let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
-  let focusVisible = !focusEnabled ||
-    reachedSpans[sourceIndex] == focusTraversalState[1];
-  let visible = baseVisibility[sourceIndex] != 0u && focusVisible;
-  spanVisibility[sourceIndex] = select(0u, focusTraversalState[1], visible);
-}`;
-}
-
 /** Seeds a generation-tagged compact focus frontier and its first indirect dispatch. */
 export function getFocusFrontierSeedShader(spanCount: number): string {
   return /* wgsl */ `
@@ -650,7 +609,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Tests exact span predicates only inside the compacted list of candidate batches. */
+/** Publishes focused, generation-tagged exact visibility for candidate spans. */
 export function getCandidateVisibilityShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
@@ -672,7 +631,8 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(4) var<storage, read> processStates: array<u32>;
 @group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
-@group(0) @binding(7) var<storage, read_write> visibilityFlags: array<u32>;
+@group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
+@group(0) @binding(8) var<storage, read_write> visibilityFlags: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
@@ -693,7 +653,15 @@ fn main(
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let sourceVisible = isSpanSourceVisible(span, lane);
   let exactVisible = sourceVisible && processExpanded;
-  visibilityFlags[sourceIndex] = select(0u, 1u, exactVisible);
+  let focusEnabled =
+    viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
+  let focusVisible = !focusEnabled ||
+    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+  visibilityFlags[sourceIndex] = select(
+    0u,
+    viewUniforms.visibilityGeneration,
+    exactVisible && focusVisible
+  );
 }`;
 }
 

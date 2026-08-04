@@ -30,7 +30,6 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
-  getCandidateFocusShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
@@ -120,7 +119,6 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getPickClearShader(),
     getCandidateVisibilityShader(),
     getCandidatePassDispatchShader(),
-    getCandidateFocusShader(),
     getDensityClearShader(),
     getCandidateDensityShader(),
     getCandidatePickShader(),
