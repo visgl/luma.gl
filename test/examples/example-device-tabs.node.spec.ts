@@ -56,6 +56,7 @@ function renderBackendTabs(selectedItem: string = 'webgpu-core'): string {
     write: false,
     platform: 'node',
     format: 'cjs',
+    tsconfig: path.join(process.cwd(), 'tsconfig.json'),
     external: ['react', 'clsx']
   });
   const javascript = build.outputFiles.find(output => output.path.endsWith('.js'));

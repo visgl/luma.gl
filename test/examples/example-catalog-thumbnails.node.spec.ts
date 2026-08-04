@@ -5,6 +5,7 @@
 import {existsSync, readFileSync, statSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
+import {getExampleThumbnailPath} from '../../website/src/example-thumbnails';
 
 type ExampleSidebarEntry =
   | string
@@ -52,6 +53,12 @@ describe('live example catalog thumbnails', () => {
     );
     expect(resolveExampleThumbnailPath('experimental/anari-playground')).toBe(
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/anari-playground.jpg')
+    );
+    expect(resolveExampleThumbnailPath('experimental/gpu-trace-scene')).toBe(
+      path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/gpu-trace-viewer.jpg')
+    );
+    expect(resolveExampleThumbnailPath('experimental/gpu-scene-graph')).toBe(
+      path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/gpu-frustum-culling.jpg')
     );
   });
 
@@ -108,12 +115,7 @@ function readLiveExampleIdentifiers(): string[] {
 }
 
 function resolveExampleThumbnailPath(exampleIdentifier: string): string {
-  const thumbnailName =
-    exampleIdentifier === 'v10/gpgpu'
-      ? 'gpu-tables/gpu-vector-storage-particles.jpg'
-      : `${exampleIdentifier}.jpg`;
-
-  return path.join(EXAMPLE_IMAGES_DIRECTORY, thumbnailName);
+  return path.join(EXAMPLE_IMAGES_DIRECTORY, getExampleThumbnailPath(exampleIdentifier));
 }
 
 function countDistinctJpegScanByteValues(imageBytes: Buffer): number {

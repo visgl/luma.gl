@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUSceneGraphExample} from '@site/src/examples';
 
 # GPUScene adapters
 
@@ -21,6 +22,8 @@ graph naturally owns hierarchy, lifecycle, and incremental edits. A table natura
 streaming batches, and GPU-resident data. Both can feed the same visibility, picking, spatial, and
 draw-generation contracts once they agree on the flat record at the boundary.
 
+<GPUSceneGraphExample embedded />
+
 ## Concepts
 
 ### An adapter is a boundary, not a new source model
@@ -38,6 +41,12 @@ their own inherited state before returning a record.
 The output is an ordinary mutable `GPUScene`. Stable IDs, bounds, transforms, group references,
 geometry references, and command slots have exactly the same meaning as records supplied directly
 to the constructor.
+
+In the embedded explorer, three application-owned grouping branches contain ordinary renderable
+leaves. Grouping nodes deliberately return `null`; leaf records retain stable application IDs that
+differ from their physical slots. The resulting flat scene feeds the same visibility, picking,
+indirect-draw, and renderer-resource-group primitives as the trace explorer without importing its
+hierarchy or domain concepts into `GPUScene`.
 
 ### Zero-copy table adaptation requires a physical agreement
 

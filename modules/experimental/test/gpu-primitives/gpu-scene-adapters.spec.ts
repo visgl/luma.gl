@@ -3,11 +3,18 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {Buffer, type Device} from '@luma.gl/core';
 import {
+  DrawCommandBuffer,
+  GPUCommandGraph,
   GPUScene,
+  GPUSceneDrawGeneration,
+  GPUSceneResourceGroups,
+  GPUVisibilityWorkflow,
   GPU_SCENE_RECORD_BYTE_LENGTH,
   makeGPUSceneFromCPUScene,
   makeGPUScenePartitionsFromGPUTable,
+  type GraphDataView,
   type GPUSceneRecord
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -132,6 +139,114 @@ test('GPU scene adapters preserve CPU identity and table batch topology without 
   t.end();
 });
 
+test('CPU scene hierarchies reuse generic visibility, indirect draws, and renderer groups after mutation', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const bounds = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;
+  const roots: CPUNode[] = [
+    {
+      children: [
+        {record: {id: 10, bounds, groupId: 0, geometryId: 7, commandSlot: 0}},
+        {record: {id: 20, bounds, groupId: 0, geometryId: 7, commandSlot: 1}}
+      ]
+    },
+    {
+      children: [
+        {record: {id: 30, bounds, groupId: 1, geometryId: 7, commandSlot: 2}},
+        {record: {id: 40, bounds, groupId: 1, geometryId: 7, commandSlot: 3}}
+      ]
+    }
+  ];
+  const scene = makeGPUSceneFromCPUScene(device, {
+    id: 'cpu-consumer-scene',
+    roots,
+    getChildren: node => node.children,
+    getRecord: node => node.record ?? null
+  });
+  const commands = new DrawCommandBuffer(device, {
+    type: 'draw',
+    commands: Array.from({length: 4}, () => ({vertexCount: 6, instanceCount: 0}))
+  });
+  const graph = new GPUCommandGraph(device, {id: 'cpu-consumer-command-graph'});
+  const source = scene.importToGraph(graph);
+  const commandViews = commands.importToGraph(graph);
+  const outputs: Buffer[] = [];
+  const makeOutput = (id: string, values: readonly number[]) =>
+    makeConsumerUint32(device, graph, outputs, id, values);
+  const visibility = makeOutput('visibility', [1, 0, 1, 1]);
+  const visibleRows = makeOutput('visible-rows', [0, 0, 0, 0]);
+  const visibleCount = makeOutput('visible-count', [0]);
+  const required = makeOutput('required', [0]);
+  const published = makeOutput('published', [0]);
+  const drawOverflow = makeOutput('draw-overflow', [0]);
+  const groupCounts = makeOutput('group-counts', [0, 0]);
+  const groupOverflows = makeOutput('group-overflows', [0, 0]);
+  const groupOverflow = makeOutput('group-overflow', [0]);
+
+  new GPUVisibilityWorkflow({
+    predicates: [{kind: 'bounds', mask: visibility.view}],
+    output: visibleRows.view,
+    count: visibleCount.view
+  }).addToGraph(graph);
+  new GPUSceneDrawGeneration({
+    scene: source,
+    visibility: visibility.view,
+    commands: commandViews,
+    requiredCount: required.view,
+    publishedCount: published.view,
+    overflow: drawOverflow.view
+  }).addToGraph(graph);
+  new GPUSceneResourceGroups({
+    scene: source,
+    commands: commandViews,
+    groups: [
+      {id: 0, firstCommand: 0, commandCount: 2, geometryId: 7},
+      {id: 1, firstCommand: 2, commandCount: 2, geometryId: 7}
+    ],
+    counts: groupCounts.view,
+    overflows: groupOverflows.view,
+    overflow: groupOverflow.view
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  let encoder = device.createCommandEncoder();
+  compiled.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+
+  t.deepEqual(await readConsumerUint32(visibleRows.buffer, 3), [0, 2, 3]);
+  t.deepEqual(await readConsumerUint32(groupCounts.buffer, 2), [1, 2]);
+  t.deepEqual(await readConsumerUint32(published.buffer, 1), [3]);
+  t.equal(scene.getRecordIndex(40), 3, 'stable application identity differs from scene row');
+
+  const mutation = scene.mutate({remove: [30]});
+  visibility.buffer.write(Uint32Array.from([1, 1, 0, 1]));
+  encoder = device.createCommandEncoder();
+  compiled.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+
+  t.equal(mutation.uploadedByteLength, 20, 'CPU hierarchy updates publish explicit bounded cost');
+  t.deepEqual(await readConsumerUint32(visibleRows.buffer, 3), [0, 1, 3]);
+  t.deepEqual(await readConsumerUint32(groupCounts.buffer, 2), [2, 1]);
+  t.deepEqual(await readConsumerUint32(groupOverflows.buffer, 2), [0, 0]);
+  t.deepEqual(await readConsumerUint32(groupOverflow.buffer, 1), [0]);
+  const commandWords = await readConsumerUint32(commands.buffer, 16);
+  t.deepEqual(
+    [commandWords[1], commandWords[5], commandWords[9], commandWords[13]],
+    [1, 1, 0, 1],
+    'one compiled graph updates stable renderer-owned command slots without CPU draw selection'
+  );
+
+  compiled.destroy();
+  commands.destroy();
+  scene.destroy();
+  for (const buffer of outputs) buffer.destroy();
+  t.end();
+});
+
 test('GPU scene adapters reject ambiguous CPU and table storage contracts', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -253,4 +368,29 @@ async function readSceneIds(scene: GPUScene): Promise<number[]> {
 async function readSceneRecordBytes(scene: GPUScene): Promise<Uint8Array> {
   const bytes = await scene.recordBuffer.readAsync();
   return bytes.slice(0, scene.recordCount * GPU_SCENE_RECORD_BYTE_LENGTH);
+}
+
+function makeConsumerUint32(
+  device: Device,
+  graph: GPUCommandGraph,
+  outputs: Buffer[],
+  id: string,
+  values: readonly number[]
+): {buffer: Buffer; view: GraphDataView<'uint32'>} {
+  const buffer = device.createBuffer({
+    id: `cpu-consumer-${id}`,
+    data: Uint32Array.from(values),
+    usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+  });
+  outputs.push(buffer);
+  const handle = graph.importBuffer(
+    {id, byteLength: buffer.byteLength, usage: buffer.usage},
+    buffer
+  );
+  return {buffer, view: graph.createDataView(handle, {format: 'uint32', length: values.length})};
+}
+
+async function readConsumerUint32(buffer: Buffer, length: number): Promise<number[]> {
+  const bytes = await buffer.readAsync();
+  return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, length));
 }

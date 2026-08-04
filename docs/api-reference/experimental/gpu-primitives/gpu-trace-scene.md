@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUTraceSceneExample} from '@site/src/examples';
 
 # GPUTraceScene
 
@@ -21,6 +22,8 @@ resource groups without translating identities between those stages.
 Useful consumers include distributed execution timelines, browser performance recordings, GPU
 capture visualizers, task schedulers, service dependency traces, and scientific workflows whose
 operations have both temporal ownership and explicit cross-process links.
+
+<GPUTraceSceneExample embedded />
 
 ## Concepts
 
@@ -63,6 +66,14 @@ consume trace scenes without a trace-specific renderer or additional fields in `
 The projection is created explicitly during ingestion. Its memory cost is observable through
 `stats.sceneByteLength`; a trace viewer should therefore choose a bounded scene capacity instead
 of assuming that canonical 32-byte spans and projected 128-byte records cost the same.
+
+The embedded explorer intentionally demonstrates that boundary with a bounded canonical trace.
+Its render shader reads temporal bounds from ordinary scene records, while process/thread
+ownership and classification remain in the separate canonical span buffer. Stable per-span
+indirect slots are recorded into one reusable render bundle; renderer resource-group membership
+is classified on the GPU instead of rebuilding JavaScript draw lists as visibility changes.
+Because those generated slots preserve canonical source rows in `firstInstance`, the example
+explicitly requests a WebGPU device with the `indirect-first-instance` feature.
 
 ### Source batches remain visible, including empty batches
 
@@ -142,5 +153,6 @@ workflow.
 This tranche establishes canonical ingestion, stable trace-to-scene identity, preserved source
 partitions, bidirectional topology, explicit ownership, and compatibility with the existing
 indirect-rendering stack. Interactive process/thread expansion, linked-span selection, and stable
-draw publication are provided by `GPUTraceInteraction`; a live scene-backed trace showcase remains
-a separate follow-up tranche.
+draw publication are provided by `GPUTraceInteraction`. The embedded live trace explorer combines
+those contracts with GPU picking, resource groups, stable indirect rendering, and command-graph
+inspection without introducing trace-specific fields into `GPUScene`.

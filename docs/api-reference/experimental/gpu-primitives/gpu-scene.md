@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUSceneGraphExample} from '@site/src/examples';
 
 # GPUScene
 
@@ -15,6 +16,8 @@ The class is deliberately a storage contract, not a scene graph. A game-engine h
 a simulation, or a map tile system may all populate the records, but none becomes the canonical
 source model. This separation makes the expensive GPU path reusable while applications retain
 their own hierarchy, lifecycle, and presentation policy.
+
+<GPUSceneGraphExample embedded />
 
 ## Concepts
 
@@ -57,6 +60,12 @@ compaction uploads no record bytes.
 These operations use explicit WebGPU queue writes. They do not submit command buffers or read GPU
 data back. This is the CPU-authored update path for scene graphs and streaming producers; later
 GPU-authored draw selection consumes the same resident records without requiring CPU filtering.
+
+The embedded scene-graph explorer makes that boundary visible: an application-owned tree is
+flattened once, group checkboxes update GPU visibility policy, and clicking selects a stable
+application object ID rather than its temporary scene slot. Moving or removing the selection
+uses `mutate()` and displays the exact upload cost while the previously compiled draw and
+renderer-group workflows remain unchanged.
 
 ### One fixed record connects several workflows
 

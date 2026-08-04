@@ -89,6 +89,8 @@
         "items": [
           "experimental/gpu-frustum-culling",
           "experimental/gpu-trace-viewer",
+          "experimental/gpu-trace-scene",
+          "experimental/gpu-scene-graph",
           "experimental/gpu-sort",
           "experimental/gpu-data-analysis"
         ]
