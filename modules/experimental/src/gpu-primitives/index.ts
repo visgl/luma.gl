@@ -58,6 +58,8 @@ export type {
   GPUCommandGraphInspectorGraphSnapshot,
   GPUCommandGraphInspectorNodeIdentity,
   GPUCommandGraphInspectorNodeSnapshot,
+  GPUCommandGraphInspectorObservableGraph,
+  GPUCommandGraphInspectorObservation,
   GPUCommandGraphInspectorProps,
   GPUCommandGraphInspectorSnapshot,
   GPUCommandGraphInspectorStatsSnapshot
