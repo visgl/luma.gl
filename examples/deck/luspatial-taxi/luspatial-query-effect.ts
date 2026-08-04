@@ -450,11 +450,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       'selection-overflow',
       this.selectionOverflow
     );
-    const queryDiagnosticsBuffer = importBuffer(
-      graph,
-      'query-diagnostics',
-      this.queryDiagnostics
-    );
+    const queryDiagnosticsBuffer = importBuffer(graph, 'query-diagnostics', this.queryDiagnostics);
     const drawCommandBuffer = importBuffer(graph, 'draw-commands', this.drawCommands.buffer);
 
     const positions = graph.createDataView(projectedBuffer, {
@@ -565,23 +561,17 @@ export class LuSpatialTaxiQueryEffect implements Effect {
         this.queryDiagnostics.readAsync()
       ]);
       if (this.destroyed) return;
-      const counters = decodeLuSpatialTaxiQueryCounters(
-        drawCommandBytes,
-        queryDiagnosticBytes,
-        {
-          viewportInstanceCountByteOffset: this.drawCommands.getInstanceCountByteOffset(0),
-          selectionInstanceCountByteOffset: this.drawCommands.getInstanceCountByteOffset(1)
-        }
-      );
+      const counters = decodeLuSpatialTaxiQueryCounters(drawCommandBytes, queryDiagnosticBytes, {
+        viewportInstanceCountByteOffset: this.drawCommands.getInstanceCountByteOffset(0),
+        selectionInstanceCountByteOffset: this.drawCommands.getInstanceCountByteOffset(1)
+      });
       this.viewportIntersectedCellCount = counters.viewportIntersectedCellCount;
       this.viewportCandidateCount = counters.viewportCandidateCount;
       this.visiblePointCount = counters.visiblePointCount;
       this.selectionIntersectedCellCount = counters.selectionIntersectedCellCount;
       this.selectionCandidateCount = counters.selectionCandidateCount;
       this.selectedPointCount = counters.selectedPointCount;
-      this.queryGraphObservation.recordCounters(
-        makeLuSpatialTaxiQueryInspectorCounters(counters)
-      );
+      this.queryGraphObservation.recordCounters(makeLuSpatialTaxiQueryInspectorCounters(counters));
       this.publishStats();
     } catch {
       // Device loss or teardown can reject optional diagnostics after the render path has ended.

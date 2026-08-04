@@ -131,11 +131,10 @@ describe('luSpatial taxi query telemetry', () => {
       true
     );
 
-    const counters = decodeLuSpatialTaxiQueryCounters(
-      drawCommandBytes,
-      queryDiagnosticBytes,
-      {viewportInstanceCountByteOffset, selectionInstanceCountByteOffset}
-    );
+    const counters = decodeLuSpatialTaxiQueryCounters(drawCommandBytes, queryDiagnosticBytes, {
+      viewportInstanceCountByteOffset,
+      selectionInstanceCountByteOffset
+    });
     expect(counters).toEqual({
       viewportIntersectedCellCount: 12,
       viewportCandidateCount: 83,
