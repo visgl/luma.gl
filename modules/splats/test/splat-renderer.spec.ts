@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
-import {Buffer, Texture} from '@luma.gl/core';
+import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
 import {getTestDevices} from '@luma.gl/test-utils';
 
@@ -12,6 +12,11 @@ test('SplatRenderer renders Gaussian source batches on WebGPU and WebGL2', async
   t.ok(devices.length > 0, 'at least one browser graphics backend is available');
 
   for (const device of devices) {
+    if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
+      t.comment('Skipping Gaussian splat WebGL2 rendering on a software-backed adapter');
+      continue;
+    }
+
     const firstBatch = makeGPUSplatData(device, makeBrowserSplatSource(0.5, 0));
     const secondBatch = makeGPUSplatData(device, makeBrowserSplatSource(0.25, 1));
     const renderer = new SplatRenderer(device, {
@@ -66,6 +71,11 @@ test('SplatRenderer preserves and tone-maps Float32 Gaussian radiance on WebGPU 
   t.ok(devices.length > 0, 'at least one browser graphics backend is available');
 
   for (const device of devices) {
+    if (isSoftwareBackedDevice(device)) {
+      t.comment(`Skipping Gaussian splat ${device.type} HDR readback on a software-backed adapter`);
+      continue;
+    }
+
     const textureSize = 16;
     const colorTexture = device.createTexture({
       width: textureSize,
@@ -158,6 +168,11 @@ test('SplatRenderer WebGPU pipeline writes visible Gaussian color into an offscr
     t.end();
     return;
   }
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping Gaussian splat WebGPU pixel readback on a software-backed adapter');
+    t.end();
+    return;
+  }
 
   const colorTexture = device.createTexture({
     width: 16,
@@ -212,6 +227,11 @@ test('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the ca
   const [device] = await getTestDevices(['webgpu']);
   if (!device) {
     t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping Gaussian splat WebGPU pixel readback on a software-backed adapter');
     t.end();
     return;
   }
@@ -289,6 +309,12 @@ test('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the ca
   colorTexture.destroy();
   t.end();
 });
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
+}
 
 function makeBrowserSplatSource(depth: number, rowIndex: number): SplatSource {
   return {
