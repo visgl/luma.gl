@@ -17,6 +17,7 @@ import {
   TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_OVERLAPPING_CHILD_FLAG,
+  TRACE_PROCESS_COUNT,
   TRACE_RUNTIME_SPAN_FLAG,
   TRACE_SIMILAR_DURATION_PARENT_FLAG,
   TRACE_THREADS_PER_PROCESS
@@ -476,15 +477,13 @@ fn main() {
 export function getCandidatePassDispatchShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
-const DENSITY_CLEAR_WORKGROUP_COUNT: u32 = ${Math.ceil(
-    (TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT) / TRACE_WORKGROUP_SIZE
-  )}u;
+const PROCESS_COUNT: u32 = ${TRACE_PROCESS_COUNT}u;
 @group(0) @binding(0) var<storage, read> candidateDispatchCommand: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(2) var<storage, read_write> exactDispatchCommand: array<u32>;
 @group(0) @binding(3) var<storage, read_write> densityDispatchCommand: array<u32>;
 @group(0) @binding(4) var<storage, read_write> pickDispatchCommand: array<u32>;
-@group(0) @binding(5) var<storage, read_write> densityClearDispatchCommand: array<u32>;
+@group(0) @binding(5) var<storage, read> processStates: array<u32>;
 
 @compute @workgroup_size(1)
 fn main() {
@@ -492,19 +491,21 @@ fn main() {
   let candidateBatchCount = candidateDispatchCommand[1];
   let densityMode = isDensityMode();
   let pickActive = viewUniforms.pickLane >= 0.0;
+  var hasCollapsedProcess = false;
+  for (var processIndex = 0u; processIndex < PROCESS_COUNT; processIndex++) {
+    hasCollapsedProcess = hasCollapsedProcess || processStates[processIndex] == 0u;
+  }
+  let densityActive = densityMode || hasCollapsedProcess;
 
   exactDispatchCommand[0] = candidateWorkgroupCount;
   exactDispatchCommand[1] = select(candidateBatchCount, 0u, densityMode);
   exactDispatchCommand[2] = 1u;
   densityDispatchCommand[0] = candidateWorkgroupCount;
-  densityDispatchCommand[1] = select(0u, candidateBatchCount, densityMode);
+  densityDispatchCommand[1] = select(0u, candidateBatchCount, densityActive);
   densityDispatchCommand[2] = 1u;
   pickDispatchCommand[0] = candidateWorkgroupCount;
   pickDispatchCommand[1] = select(0u, candidateBatchCount, pickActive);
   pickDispatchCommand[2] = 1u;
-  densityClearDispatchCommand[0] = select(0u, DENSITY_CLEAR_WORKGROUP_COUNT, densityMode);
-  densityClearDispatchCommand[1] = 1u;
-  densityClearDispatchCommand[2] = 1u;
 }`;
 }
 
@@ -568,7 +569,8 @@ fn main(
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
     reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
-  if (sourceVisible && focusVisible) {
+  let densityVisible = sourceVisible && (isDensityMode() || !processExpanded);
+  if (densityVisible && focusVisible) {
     let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
     let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
     let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);

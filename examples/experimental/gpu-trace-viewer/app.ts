@@ -114,7 +114,6 @@ type TraceGraphResources = {
   exactCandidateDispatchCommands: DispatchCommandBuffer;
   densityCandidateDispatchCommands: DispatchCommandBuffer;
   pickCandidateDispatchCommands: DispatchCommandBuffer;
-  densityClearDispatchCommands: DispatchCommandBuffer;
   candidateDependencyDispatchCommands: DispatchCommandBuffer;
   readbackRing: GPUReadbackRing;
   renderBundle: RenderBundle;
@@ -469,10 +468,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       id: 'gpu-trace-pick-candidate-dispatch-commands',
       commands: [{x: TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT, y: 0, z: 1}]
     });
-    const densityClearDispatchCommands = new DispatchCommandBuffer(this.device, {
-      id: 'gpu-trace-density-clear-dispatch-commands',
-      commands: [{x: 0, y: 1, z: 1}]
-    });
     const candidateDependencyDispatchCommands = new DispatchCommandBuffer(this.device, {
       id: 'gpu-trace-candidate-dependency-dispatch-commands',
       commands: [{x: 1, y: 0, z: 1}]
@@ -490,7 +485,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       exactCandidateDispatchCommands,
       densityCandidateDispatchCommands,
       pickCandidateDispatchCommands,
-      densityClearDispatchCommands,
       candidateDependencyDispatchCommands,
       readbackRing,
       groups,
@@ -629,11 +623,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         'pick-candidate-dispatch-commands',
         resources.pickCandidateDispatchCommands.buffer
       ),
-      densityClearDispatchCommands: importTraceBuffer(
-        graph,
-        'density-clear-dispatch-commands',
-        resources.densityClearDispatchCommands.buffer
-      ),
       visibleSpanIds: importTraceBuffer(graph, 'visible-span-ids', resources.visibleSpanIds),
       dependencies: importTraceBuffer(graph, 'dependencies', resources.dependencies),
       dependencyBatchIndex: importTraceBuffer(
@@ -755,7 +744,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         storageWrite('exactDispatchCommand', handles.exactCandidateDispatchCommands),
         storageWrite('densityDispatchCommand', handles.densityCandidateDispatchCommands),
         storageWrite('pickDispatchCommand', handles.pickCandidateDispatchCommands),
-        storageWrite('densityClearDispatchCommand', handles.densityClearDispatchCommands)
+        storageRead('processStates', handles.processStates)
       ],
       length: 1,
       workgroupSize: 1
@@ -932,11 +921,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ],
       dispatchBuffer: handles.exactCandidateDispatchCommands
     });
-    addTraceIndirectComputePass(graph, {
+    addTraceComputePass(graph, {
       id: 'trace-clear-density',
       source: getDensityClearShader(),
       bindings: [storageWrite('densityBins', handles.densityBins)],
-      dispatchBuffer: handles.densityClearDispatchCommands
+      length: TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT,
+      workgroupSize: TRACE_WORKGROUP_SIZE
     });
     addTraceIndirectComputePass(graph, {
       id: 'trace-candidate-density',
@@ -1311,7 +1301,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     resources.exactCandidateDispatchCommands.destroy();
     resources.densityCandidateDispatchCommands.destroy();
     resources.pickCandidateDispatchCommands.destroy();
-    resources.densityClearDispatchCommands.destroy();
     resources.candidateDependencyDispatchCommands.destroy();
     resources.readbackRing.destroy();
     for (const buffer of [
