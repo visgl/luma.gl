@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline, ShaderPassRenderTarget} from '@luma.gl/shadertools';
+import type {Texture, TextureFormatColor} from '@luma.gl/core';
+import type {
+  ShaderPass,
+  ShaderPassPipeline,
+  ShaderPassPipelineStep,
+  ShaderPassRenderTarget
+} from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
 
 const MAX_BLOOM_BLUR_RADIUS = 24;
@@ -21,14 +26,14 @@ type BloomTargetName =
   | 'blurEighth';
 
 /** Construction options for HDR-capable multiscale bloom. */
-export type BloomShaderPassPipelineOptions = {
+export type BloomShaderPassPipelineOptions = BloomProps & {
   /**
    * Positive fractional size multiplier applied to the half, quarter, and eighth-resolution
    * pyramid. The extraction filter adapts its source footprint to the resulting target size.
    */
   resolutionScale?: number;
-  /** Filterable RGBA intermediate format. Defaults to rgba16float for HDR highlight energy. */
-  colorFormat?: 'rgba8unorm' | 'rgba16float';
+  /** Filterable color intermediate format. Defaults to rgba16float for HDR highlight energy. */
+  colorFormat?: TextureFormatColor;
 };
 
 const bloomExtractPass = {
@@ -556,11 +561,26 @@ export function createBloomShaderPassPipeline(
 ): ShaderPassPipeline<BloomTargetName> {
   const resolutionScale = options.resolutionScale ?? 1;
   const colorFormat = options.colorFormat ?? 'rgba16float';
+  const threshold = options.threshold ?? 0.8;
+  const radius = options.radius ?? 8;
+  const intensity = options.intensity ?? 1;
   const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
     scale: [scale * resolutionScale, scale * resolutionScale],
     format: colorFormat,
     sampler: BLOOM_TARGET_SAMPLER
   });
+  const makeStep = (step: ShaderPassPipelineStep<BloomTargetName>) => {
+    switch (step.shaderPass.name) {
+      case 'bloomExtract':
+        return {...step, uniforms: {...step.uniforms, threshold}};
+      case 'bloomBlur':
+        return {...step, uniforms: {...step.uniforms, radius}};
+      case 'bloomComposite':
+        return {...step, uniforms: {...step.uniforms, intensity}};
+      default:
+        return step;
+    }
+  };
 
   return {
     ...bloomShaderPassPipeline,
@@ -574,6 +594,7 @@ export function createBloomShaderPassPipeline(
       extractEighth: makeRenderTarget(0.125),
       blurEighthScratch: makeRenderTarget(0.125),
       blurEighth: makeRenderTarget(0.125)
-    }
+    },
+    steps: bloomShaderPassPipeline.steps.map(makeStep)
   };
 }
