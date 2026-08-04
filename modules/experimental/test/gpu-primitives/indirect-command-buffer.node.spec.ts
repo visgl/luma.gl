@@ -7,8 +7,7 @@ import {describe, expect, test, vi} from 'vitest';
 import {DispatchCommandBuffer} from '../../src/gpu-primitives/dispatch-command-buffer';
 import {DrawCommandBuffer} from '../../src/gpu-primitives/draw-command-buffer';
 
-const INDIRECT_BUFFER_USAGE =
-  Buffer.STORAGE | Buffer.INDIRECT | Buffer.COPY_DST | Buffer.COPY_SRC;
+const INDIRECT_BUFFER_USAGE = Buffer.STORAGE | Buffer.INDIRECT | Buffer.COPY_DST | Buffer.COPY_SRC;
 
 describe('indirect command buffer initialization', () => {
   test('initializes owned draw records without mapping the buffer at creation', () => {
