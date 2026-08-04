@@ -22,6 +22,12 @@ const DEFERRED_FP64_EXAMPLE_PATH = path.join(
   process.cwd(),
   'website/src/components/docs/deferred-fp64-example.tsx'
 );
+const GPU_DATA_ANALYSIS_PATH = path.join(
+  process.cwd(),
+  'examples/experimental/gpu-data-analysis/src/app.ts'
+);
+const GPU_SORT_PATH = path.join(process.cwd(), 'examples/experimental/gpu-sort/src/app.ts');
+const LEGACY_GPGPU_SHOWCASE_PATH = path.join(process.cwd(), 'examples/v10/gpgpu/src/app.ts');
 
 describe('responsive GPGPU website examples', () => {
   test('loads heavyweight compute and precision applications only when their route requests them', () => {
@@ -100,6 +106,22 @@ describe('responsive GPGPU website examples', () => {
     expect(cancellationCommentOffset).toBeGreaterThan(0);
     expect(immediateStopOffset).toBeGreaterThan(cancellationCommentOffset);
     expect(queuedCleanupOffset).toBeGreaterThan(immediateStopOffset);
+  });
+
+  test('keeps DOM-only compute examples from inserting presentation canvases into the page', () => {
+    for (const examplePath of [GPU_DATA_ANALYSIS_PATH, GPU_SORT_PATH]) {
+      const exampleSource = readFileSync(examplePath, 'utf8');
+
+      expect(exampleSource).toContain('const device = await luma.createDevice({');
+      expect(exampleSource).not.toContain('createCanvasContext');
+      expect(exampleSource).not.toContain('new OffscreenCanvas');
+      expect(exampleSource).toContain('if (this.destroyed) {\n        device.destroy();');
+    }
+
+    const legacyShowcaseSource = readFileSync(LEGACY_GPGPU_SHOWCASE_PATH, 'utf8');
+    expect(legacyShowcaseSource).toContain("document.createElement('canvas')");
+    expect(legacyShowcaseSource).toContain('new OffscreenCanvas(1, 1)');
+    expect(legacyShowcaseSource).not.toMatch(/typeof OffscreenCanvas === 'undefined'\s*\? true/);
   });
 
   test('gives the dedicated GPGPU collection accurate backend, difficulty, and visual metadata', () => {

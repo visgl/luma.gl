@@ -244,16 +244,16 @@ async function makeOutputTableColumn(
 async function createEvaluationDevice(): Promise<Device> {
   return await luma.createDevice({
     adapters: [webgpuAdapter, webgl2Adapter],
-    createCanvasContext:
-      typeof OffscreenCanvas === 'undefined'
-        ? true
-        : {
-            canvas: new OffscreenCanvas(1, 1),
-            width: 1,
-            height: 1,
-            autoResize: false,
-            useDevicePixels: false
-          }
+    createCanvasContext: {
+      canvas:
+        typeof OffscreenCanvas === 'undefined'
+          ? document.createElement('canvas')
+          : new OffscreenCanvas(1, 1),
+      width: 1,
+      height: 1,
+      autoResize: false,
+      useDevicePixels: false
+    }
   });
 }
 

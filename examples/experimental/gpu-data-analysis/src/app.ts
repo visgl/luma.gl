@@ -89,11 +89,15 @@ class GPUDataAnalysisExample {
   async initialize(): Promise<void> {
     this.setStatus('Requesting a WebGPU device...');
     try {
-      this.device = await luma.createDevice({
+      const device = await luma.createDevice({
         type: 'webgpu',
-        adapters: [webgpuAdapter],
-        createCanvasContext: true
+        adapters: [webgpuAdapter]
       });
+      if (this.destroyed) {
+        device.destroy();
+        return;
+      }
+      this.device = device;
       await this.run();
     } catch (error) {
       this.setStatus(getErrorMessage(error), true);
