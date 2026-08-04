@@ -70,6 +70,8 @@ function parseLcovRecord(lines) {
     additionalLines: new Set(),
     hasHits: false
   };
+  const functionDefinitionOccurrenceByKey = new Map();
+  const functionHitOccurrences = [];
 
   for (const line of lines) {
     if (!line || line.startsWith('TN:') || /^(FNF|FNH|LF|LH|BRF|BRH):/.test(line)) {
@@ -81,13 +83,19 @@ function parseLcovRecord(lines) {
     }
     if (line.startsWith('FN:')) {
       const definition = parseFunctionDefinition(line.slice(3));
+      const baseKey = definition.key;
+      const occurrence = functionDefinitionOccurrenceByKey.get(baseKey) || 0;
+      functionDefinitionOccurrenceByKey.set(baseKey, occurrence + 1);
+      definition.baseKey = baseKey;
+      definition.occurrence = occurrence;
+      definition.key = `${baseKey}#${occurrence}`;
       record.functionDefinitions.set(definition.key, definition);
       continue;
     }
     if (line.startsWith('FNDA:')) {
-      const {name, hits} = parseFunctionHits(line.slice(5));
-      record.functionHits.set(name, (record.functionHits.get(name) || 0) + hits);
-      record.hasHits ||= hits > 0;
+      const functionHits = parseFunctionHits(line.slice(5));
+      functionHitOccurrences.push(functionHits);
+      record.hasHits ||= functionHits.hits > 0;
       continue;
     }
     if (line.startsWith('DA:')) {
@@ -108,10 +116,40 @@ function parseLcovRecord(lines) {
   if (!record.sourceFile) {
     throw new Error('LCOV record is missing its SF source-file field');
   }
+  record.functionHits = matchFunctionHitsToDefinitions(
+    record.functionDefinitions,
+    functionHitOccurrences
+  );
   record.schema = getCoverageSchema(record);
   record.siteCount =
     record.functionDefinitions.size + record.lineHits.size + record.branchHits.size;
   return record;
+}
+
+function matchFunctionHitsToDefinitions(functionDefinitions, functionHitOccurrences) {
+  const definitionsByName = new Map();
+  for (const definition of functionDefinitions.values()) {
+    const matchingDefinitions = definitionsByName.get(definition.name) || [];
+    matchingDefinitions.push(definition);
+    definitionsByName.set(definition.name, matchingDefinitions);
+  }
+
+  const occurrenceByName = new Map();
+  const functionHitsByDefinition = new Map();
+  for (const functionHits of functionHitOccurrences) {
+    const occurrence = occurrenceByName.get(functionHits.name) || 0;
+    occurrenceByName.set(functionHits.name, occurrence + 1);
+    const definition = definitionsByName.get(functionHits.name)?.[occurrence];
+    const key = definition?.key || `unmatched:${occurrence},${functionHits.name}`;
+    functionHitsByDefinition.set(key, {
+      key,
+      name: functionHits.name,
+      hits: functionHits.hits,
+      occurrence,
+      definition
+    });
+  }
+  return functionHitsByDefinition;
 }
 
 function parseFunctionDefinition(value) {
@@ -239,8 +277,12 @@ function mergeLcovRecords(sourceFile, records) {
     for (const [key, definition] of record.functionDefinitions) {
       mergedRecord.functionDefinitions.set(key, definition);
     }
-    for (const [name, hits] of record.functionHits) {
-      mergedRecord.functionHits.set(name, (mergedRecord.functionHits.get(name) || 0) + hits);
+    for (const [key, functionHits] of record.functionHits) {
+      const previous = mergedRecord.functionHits.get(key);
+      mergedRecord.functionHits.set(key, {
+        ...functionHits,
+        hits: (previous?.hits || 0) + functionHits.hits
+      });
     }
     for (const lineCoverage of record.lineHits.values()) {
       mergeLineCoverage(mergedRecord.lineHits, lineCoverage);
@@ -280,7 +322,7 @@ function mergeBranchCoverage(branchHits, branchCoverage) {
 function formatLcovRecord(record) {
   const lines = ['TN:', `SF:${record.sourceFile}`];
   const functionDefinitions = [...record.functionDefinitions.values()].sort(
-    (first, second) => first.startLine - second.startLine || first.name.localeCompare(second.name)
+    compareFunctionDefinitions
   );
   for (const definition of functionDefinitions) {
     const location =
@@ -290,13 +332,12 @@ function formatLcovRecord(record) {
     lines.push(`FN:${location},${definition.name}`);
   }
   lines.push(`FNF:${functionDefinitions.length}`);
+  const functionHits = [...record.functionHits.values()].sort(compareFunctionHits);
   lines.push(
-    `FNH:${[...record.functionHits.values()].filter(functionHits => functionHits > 0).length}`
+    `FNH:${functionHits.filter(functionCoverage => functionCoverage.hits > 0).length}`
   );
-  for (const [name, hits] of [...record.functionHits].sort(([first], [second]) =>
-    first.localeCompare(second)
-  )) {
-    lines.push(`FNDA:${hits},${name}`);
+  for (const functionCoverage of functionHits) {
+    lines.push(`FNDA:${functionCoverage.hits},${functionCoverage.name}`);
   }
 
   const lineCoverage = [...record.lineHits.values()].sort(
@@ -325,6 +366,29 @@ function formatLcovRecord(record) {
   lines.push(...[...record.additionalLines].sort());
   lines.push('end_of_record');
   return lines.join('\n');
+}
+
+function compareFunctionHits(first, second) {
+  if (first.definition && second.definition) {
+    return compareFunctionDefinitions(first.definition, second.definition);
+  }
+  if (first.definition) {
+    return -1;
+  }
+  if (second.definition) {
+    return 1;
+  }
+  return first.name.localeCompare(second.name) || first.occurrence - second.occurrence;
+}
+
+function compareFunctionDefinitions(first, second) {
+  return (
+    first.startLine - second.startLine ||
+    (first.endLine || first.startLine) - (second.endLine || second.startLine) ||
+    first.name.localeCompare(second.name) ||
+    first.baseKey.localeCompare(second.baseKey) ||
+    first.occurrence - second.occurrence
+  );
 }
 
 function compareLcovIdentifier(first, second) {
