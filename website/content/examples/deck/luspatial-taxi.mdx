@@ -26,7 +26,21 @@ path. Click the map to move the radius query, choose a taxi-zone preset to recen
 point to inspect its source row and coordinates.
 
 The one-million-point browser fixture is a deterministic expansion of the same public sample used
-by the Billion-Point Spatial Atlas. The corpus counter preserves the 168,898,952-row target while
-the resident counter states what is actually allocated on the current GPU. Open the command-graph
-inspector in the control card to compare projection/index construction with the per-frame viewport
-and radius queries.
+by the Billion-Point Spatial Atlas. It remains the default and does not issue taxi-data network
+requests. The corpus counter preserves the 168,898,952-row target while the resident counter states
+what is actually allocated on the current GPU. Open the command-graph inspector in the control card
+to compare projection/index construction with the per-frame viewport and radius queries.
+
+An opt-in packed source can be supplied with the `taxi-manifest` query parameter:
+
+```text
+?taxi-manifest=https://data.example/taxi/manifest.json
+```
+
+The app streams only the leading row groups needed for its capacity-bounded resident window, which
+defaults to one million rows. The manifest must explicitly declare `OGC:CRS84`, `CRS84`, `WGS84`,
+or browser-style `EPSG:4326` coordinates with X as longitude and Y as latitude. It rejects unknown
+and projected coordinate systems instead of placing them incorrectly on the basemap. Loading and
+GPU activation are atomic: a request, decode, CRS, or allocation failure leaves the deterministic
+fixture active and reports the failure in the source status. Cross-origin manifests and shards must
+permit browser CORS requests.

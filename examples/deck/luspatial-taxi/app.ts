@@ -11,6 +11,11 @@ import {
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
+import {loadTaxiPointResidentWindow} from '../../showcase/billion-point-spatial-atlas/taxi-resident-window';
+import {
+  PackedTaxiShardSource,
+  type TaxiPointSource
+} from '../../showcase/billion-point-spatial-atlas/taxi-source';
 import {ArrowDeck} from '../arrow-deck';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {LuSpatialPointLayer} from './luspatial-point-layer';
@@ -18,8 +23,10 @@ import {LuSpatialTaxiQueryEffect, type LuSpatialTaxiQueryStats} from './luspatia
 import {
   TAXI_CORPUS_POINT_COUNT,
   TAXI_POINT_COUNT,
+  assertLongitudeLatitudeTaxiMetadata,
   getTaxiPoint,
   makeLuSpatialTaxiDataAsync,
+  makeLuSpatialTaxiDataFromResidentWindow,
   makeTaxiZonePresets,
   type LuSpatialTaxiData,
   type TaxiZonePreset
@@ -27,6 +34,7 @@ import {
 
 const BASEMAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const INITIAL_ZONE_ID = 161;
+const MAX_RESIDENT_POINT_CAPACITY = 10_000_000;
 
 type TaxiViewState = MapViewState & {
   longitude: number;
@@ -36,15 +44,45 @@ type TaxiViewState = MapViewState & {
   bearing: number;
 };
 
+export type LuSpatialTaxiDeckOptions = DeckExampleDeviceOptions & {
+  /** Caller-supplied source whose ownership transfers to the returned Deck instance. */
+  taxiPointSource?: TaxiPointSource;
+  /** Packed manifest URL used when `taxiPointSource` is not supplied. */
+  taxiManifestUrl?: string | URL;
+  /** Maximum source rows retained for one GPU-resident window. */
+  residentPointCapacity?: number;
+};
+
 /** Creates the WebGPU-only luSpatial taxi explorer with a synchronized MapLibre basemap. */
 export function createLuSpatialTaxiDeck(
   parent?: HTMLDivElement,
-  options: DeckExampleDeviceOptions = {}
+  options: LuSpatialTaxiDeckOptions = {}
 ) {
+  const {
+    taxiPointSource: suppliedTaxiPointSource,
+    taxiManifestUrl: suppliedTaxiManifestUrl,
+    residentPointCapacity = TAXI_POINT_COUNT,
+    ...deviceOptions
+  } = options;
+  if (
+    !Number.isSafeInteger(residentPointCapacity) ||
+    residentPointCapacity <= 0 ||
+    residentPointCapacity > MAX_RESIDENT_POINT_CAPACITY
+  ) {
+    throw new Error(
+      `luSpatial taxi residentPointCapacity must be between 1 and ${MAX_RESIDENT_POINT_CAPACITY}`
+    );
+  }
   const ownsContainer = !parent;
   const container = parent ?? createStandaloneContainer();
   const generationController = new AbortController();
   let taxiData: LuSpatialTaxiData | null = null;
+  const configuredManifestUrl = suppliedTaxiManifestUrl ?? getConfiguredTaxiManifestUrl();
+  const taxiPointSource =
+    suppliedTaxiPointSource ??
+    (configuredManifestUrl ? new PackedTaxiShardSource(configuredManifestUrl) : null);
+  const sourceLoadController = taxiPointSource ? new AbortController() : null;
+  let finalized = false;
   const zonePresets = makeTaxiZonePresets();
   const initialZone = zonePresets.find(zone => zone.id === INITIAL_ZONE_ID) ?? zonePresets[0];
   let viewState: TaxiViewState = {
@@ -58,7 +96,10 @@ export function createLuSpatialTaxiDeck(
   };
   let queryEffect: LuSpatialTaxiQueryEffect | null = null;
   let latestSelectionCenter: readonly [number, number] = initialZone.center;
+  let stagingQueryEffect: LuSpatialTaxiQueryEffect | null = null;
+  let activeLayers: LuSpatialPointLayer[] = [];
   let queryRadiusKilometres = 0.35;
+  let taxiDataRevision = 0;
 
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
   const loadingIndicator = createLoadingIndicator(container);
@@ -89,6 +130,7 @@ export function createLuSpatialTaxiDeck(
     onRadiusChange: radiusKilometres => {
       queryRadiusKilometres = radiusKilometres;
       queryEffect?.setSelectionRadius(radiusKilometres);
+      stagingQueryEffect?.setSelectionRadius(radiusKilometres);
       deck?.redraw('luSpatial radius changed');
     },
     onZoneChange: zone => {
@@ -100,6 +142,7 @@ export function createLuSpatialTaxiDeck(
         zoom: zone.zoom
       };
       queryEffect?.setSelection(zone.center, queryRadiusKilometres);
+      stagingQueryEffect?.setSelection(zone.center, queryRadiusKilometres);
       controls.setCoordinate(zone.center, zone.name);
       deck?.setProps({viewState});
       synchronizeBasemap(map, viewState);
@@ -120,7 +163,7 @@ export function createLuSpatialTaxiDeck(
 
   deck = new ArrowDeck({
     parent: container,
-    ...getDeckExampleProps({...options, deviceType: 'webgpu'}),
+    ...getDeckExampleProps({...deviceOptions, deviceType: 'webgpu'}),
     views: new MapView({id: 'map', repeat: false}),
     viewState,
     controller: {
@@ -140,6 +183,7 @@ export function createLuSpatialTaxiDeck(
       const center = [coordinate[0], coordinate[1]] as const;
       latestSelectionCenter = center;
       queryEffect?.setSelection(center, queryRadiusKilometres);
+      stagingQueryEffect?.setSelection(center, queryRadiusKilometres);
       controls.setCoordinate(center, 'Custom map query');
       controls.setCustomZone();
       deck.redraw('luSpatial query moved');
@@ -160,69 +204,181 @@ export function createLuSpatialTaxiDeck(
           background: 'transparent'
         });
       }
-      void (async () => {
+      const activateTaxiData = (
+        nextTaxiData: LuSpatialTaxiData,
+        redrawReason: string
+      ): Promise<void> => {
+        const previousQueryEffect = queryEffect;
+        const previousLayers = activeLayers;
+        const nextTaxiDataRevision = taxiDataRevision + 1;
+        let nextQueryEffect: LuSpatialTaxiQueryEffect;
         try {
-          const generatedTaxiData = await makeLuSpatialTaxiDataAsync(TAXI_POINT_COUNT, {
-            signal: generationController.signal,
-            onProgress: (processedPointCount, totalPointCount) => {
-              controls.setLoadingProgress(processedPointCount, totalPointCount);
-              loadingIndicator.setProgress(processedPointCount, totalPointCount);
-            }
-          });
-          generationController.signal.throwIfAborted();
-          taxiData = generatedTaxiData;
-          loadingIndicator.setStatus('Compiling luProj projection and GPU spatial index…');
-
-          queryEffect = new LuSpatialTaxiQueryEffect(device, generatedTaxiData, {
+          nextQueryEffect = new LuSpatialTaxiQueryEffect(device, nextTaxiData, {
+            id: `luspatial-taxi-query-effect-${nextTaxiDataRevision}`,
             onStats: stats => controls.updateStats(stats)
           });
-          queryEffect.setSelection(latestSelectionCenter, queryRadiusKilometres);
-          loadedDeck.setProps({
-            effects: [queryEffect],
-            layers: [
-              new LuSpatialPointLayer({
-                id: 'luspatial-taxi-context',
-                data: [],
-                pickable: true,
-                autoHighlight: true,
-                highlightColor: [255, 140, 32, 230],
-                longitudeLatitudes: queryEffect.longitudeLatitudes,
-                visibleIds: queryEffect.viewportIds,
-                drawCommands: queryEffect.drawCommands,
-                commandIndex: 0,
-                color: [94, 172, 198, 105],
-                radiusPixels: 0.9,
-                opacity: 0.46
-              }),
-              new LuSpatialPointLayer({
-                id: 'luspatial-taxi-selection',
-                data: [],
-                pickable: true,
-                autoHighlight: true,
-                highlightColor: [255, 140, 32, 245],
-                longitudeLatitudes: queryEffect.longitudeLatitudes,
-                visibleIds: queryEffect.selectedIds,
-                drawCommands: queryEffect.drawCommands,
-                commandIndex: 1,
-                color: [52, 220, 244, 205],
-                radiusPixels: 1.25,
-                opacity: 0.72
-              })
-            ]
-          });
-          loadingIndicator.destroy();
-          loadedDeck.redraw('luProj and luSpatial initialized');
         } catch (error) {
-          if (!generationController.signal.aborted) {
+          return Promise.reject(error);
+        }
+        nextQueryEffect.setSelection(latestSelectionCenter, queryRadiusKilometres);
+        stagingQueryEffect = nextQueryEffect;
+
+        return new Promise<void>((resolve, reject) => {
+          let settled = false;
+          const readyLayerIndexes = new Set<number>();
+          let stagedLayers: LuSpatialPointLayer[] = [];
+
+          const rejectActivation = (error: Error): void => {
+            if (settled) return;
+            settled = true;
+            queueMicrotask(() => {
+              if (stagingQueryEffect === nextQueryEffect) stagingQueryEffect = null;
+              if (!finalized) {
+                try {
+                  loadedDeck.setProps({
+                    effects: previousQueryEffect ? [previousQueryEffect] : [],
+                    layers: previousLayers
+                  });
+                  loadedDeck.redraw('luSpatial taxi source activation rolled back');
+                } catch {
+                  // Deck is already tearing down; the effect cleanup below remains idempotent.
+                }
+              }
+              nextQueryEffect.destroy();
+              reject(error);
+            });
+          };
+
+          const commitActivation = (): void => {
+            if (settled) return;
+            if (finalized) {
+              rejectActivation(new Error('luSpatial taxi explorer finalized during activation'));
+              return;
+            }
+            try {
+              loadedDeck.setProps({
+                effects: previousQueryEffect
+                  ? [previousQueryEffect, nextQueryEffect]
+                  : [nextQueryEffect],
+                layers: stagedLayers
+              });
+            } catch (error) {
+              rejectActivation(error instanceof Error ? error : new Error(String(error)));
+              return;
+            }
+            settled = true;
+            for (const layer of stagedLayers) layer.reveal();
+            taxiData = nextTaxiData;
+            taxiDataRevision = nextTaxiDataRevision;
+            queryEffect = nextQueryEffect;
+            stagingQueryEffect = null;
+            activeLayers = stagedLayers;
+            controls.updateSourceStatus({
+              corpusPointCount: nextTaxiData.corpusPointCount,
+              message:
+                nextTaxiData.sourceKind === 'packed'
+                  ? `${nextTaxiData.sourceLabel} · ${formatByteCount(nextTaxiData.sourceTelemetry?.downloadedByteCount ?? 0)} downloaded`
+                  : 'Deterministic generated fixture · no network request'
+            });
+            loadedDeck.redraw(redrawReason);
+            retirePreviousQueryEffect(
+              loadedDeck,
+              previousQueryEffect,
+              nextQueryEffect,
+              () => finalized || queryEffect !== nextQueryEffect
+            );
+            resolve();
+          };
+
+          stagedLayers = makeTaxiLayers(nextQueryEffect, nextTaxiDataRevision, {
+            staged: true,
+            onLayerReady: layerIndex => {
+              readyLayerIndexes.add(layerIndex);
+              if (readyLayerIndexes.size === stagedLayers.length) {
+                queueMicrotask(commitActivation);
+              }
+            },
+            onLayerError: rejectActivation
+          });
+
+          try {
+            loadedDeck.setProps({
+              effects: previousQueryEffect
+                ? [previousQueryEffect, nextQueryEffect]
+                : [nextQueryEffect],
+              layers: [...previousLayers, ...stagedLayers]
+            });
+            loadedDeck.redraw('luSpatial taxi source activation staged');
+          } catch (error) {
+            rejectActivation(error instanceof Error ? error : new Error(String(error)));
+          }
+        });
+      };
+
+      void (async () => {
+        let generatedTaxiData: LuSpatialTaxiData;
+        try {
+          generatedTaxiData = await makeLuSpatialTaxiDataAsync(
+            Math.min(residentPointCapacity, TAXI_POINT_COUNT),
+            {
+              signal: generationController.signal,
+              onProgress: (processedPointCount, totalPointCount) => {
+                controls.setLoadingProgress(processedPointCount, totalPointCount);
+                loadingIndicator.setProgress(processedPointCount, totalPointCount);
+              }
+            }
+          );
+          generationController.signal.throwIfAborted();
+          loadingIndicator.setStatus('Compiling luProj projection and GPU spatial index…');
+          await activateTaxiData(generatedTaxiData, 'luProj and luSpatial initialized');
+          loadingIndicator.destroy();
+        } catch (error) {
+          if (!generationController.signal.aborted && !finalized) {
             loadingIndicator.setStatus(
               `GPU initialization failed: ${error instanceof Error ? error.message : String(error)}`
             );
+          }
+          return;
+        }
+        if (taxiPointSource && sourceLoadController) {
+          controls.updateSourceStatus({message: 'Reading packed taxi manifest…'});
+          try {
+            const metadata = await taxiPointSource.getMetadata(sourceLoadController.signal);
+            assertLongitudeLatitudeTaxiMetadata(metadata);
+            controls.updateSourceStatus({
+              corpusPointCount: metadata.rowCount,
+              message: `Streaming ${formatCount(Math.min(residentPointCapacity, metadata.rowCount))} source rows…`
+            });
+            const residentWindow = await loadTaxiPointResidentWindow(taxiPointSource, {
+              capacity: residentPointCapacity,
+              signal: sourceLoadController.signal,
+              onProgress: progress => {
+                if (finalized) return;
+                controls.updateSourceStatus({
+                  corpusPointCount: progress.sourceRowCount,
+                  message: `Streaming ${formatCount(progress.residentRowCount)} / ${formatCount(progress.targetRowCount)} · ${formatByteCount(progress.telemetry.downloadedByteCount)}`
+                });
+              }
+            });
+            const packedTaxiData = makeLuSpatialTaxiDataFromResidentWindow(residentWindow);
+            sourceLoadController.signal.throwIfAborted();
+            if (finalized) return;
+            await activateTaxiData(packedTaxiData, 'luSpatial packed taxi source activated');
+          } catch (error) {
+            if (sourceLoadController.signal.aborted || finalized) return;
+            controls.updateSourceStatus({
+              corpusPointCount: taxiData?.corpusPointCount ?? generatedTaxiData.corpusPointCount,
+              message: `Packed source unavailable; using synthetic fixture · ${error instanceof Error ? error.message : String(error)}`
+            });
           }
         }
       })();
     },
     onFinalize: () => {
+      finalized = true;
       generationController.abort();
+      sourceLoadController?.abort(new Error('luSpatial taxi explorer finalized'));
+      void closeTaxiPointSource(taxiPointSource);
       resizeObserver.disconnect();
       loadingIndicator.destroy();
       controls.destroy();
@@ -259,10 +415,10 @@ function getTooltip(data: LuSpatialTaxiData, info: PickingInfo): {html: string} 
   if (!point) return null;
   return {
     html: `<div style="font:12px/1.5 ui-monospace,monospace;min-width:190px">
-      <div style="color:#64e9ff;font-weight:700">TRIP ROW ${info.index.toLocaleString()}</div>
+      <div style="color:#64e9ff;font-weight:700">TRIP ROW ${point.sourceRowIndex.toLocaleString()}</div>
       <div>longitude&nbsp; ${point.longitude.toFixed(6)}</div>
       <div>latitude&nbsp;&nbsp; ${point.latitude.toFixed(6)}</div>
-      <div style="margin-top:4px;color:#91a4b7">Synthetic public-sample expansion</div>
+      <div style="margin-top:4px;color:#91a4b7">${data.sourceLabel}</div>
     </div>`
   };
 }
@@ -278,6 +434,7 @@ type TaxiControlPanel = {
   setCoordinate: (coordinate: readonly [number, number], label: string) => void;
   setCustomZone: () => void;
   setLoadingProgress: (processedPointCount: number, totalPointCount: number) => void;
+  updateSourceStatus: (status: {corpusPointCount?: number; message: string}) => void;
   updateStats: (stats: LuSpatialTaxiQueryStats) => void;
 };
 
@@ -417,7 +574,7 @@ function createControlPanel(
       <div style="padding:4px 6px;border:1px solid rgba(54,223,255,.28);border-radius:5px;color:#4be4ff;font:700 9px ui-monospace,monospace">DECK.GL · WEBGPU</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-      <div><div data-luspatial-label>CORPUS</div><div data-luspatial-value>${formatCount(TAXI_CORPUS_POINT_COUNT)}</div></div>
+      <div><div data-luspatial-label>CORPUS</div><div data-luspatial-value data-corpus>${formatCount(TAXI_CORPUS_POINT_COUNT)}</div></div>
       <div><div data-luspatial-label>GPU RESIDENT</div><div data-luspatial-value data-resident>—</div></div>
       <div><div data-luspatial-label>IN VIEW</div><div data-luspatial-value data-visible>—</div></div>
       <div><div data-luspatial-label>SELECTED</div><div data-luspatial-value data-selected style="color:#49e3ff">—</div></div>
@@ -437,6 +594,7 @@ function createControlPanel(
     <div style="margin-top:9px;padding:8px;border-radius:6px;background:rgba(32,210,242,.07);border:1px solid rgba(42,218,249,.13)">
       <div data-luspatial-label>QUERY CENTER</div><div data-coordinate style="margin-top:3px;color:#cdebf4;font:10px/1.4 ui-monospace,monospace">—</div>
     </div>
+    <div data-source-status style="margin-top:7px;color:#6f8598;font:9px/1.35 ui-monospace,monospace">DETERMINISTIC GENERATED FIXTURE · NO NETWORK REQUEST</div>
     <div style="display:flex;justify-content:space-between;gap:10px;margin-top:9px;color:#6f8598;font:9px/1.35 ui-monospace,monospace">
       <span>CLICK TO MOVE QUERY<br/>DRAG / SCROLL TO NAVIGATE</span>
       <span style="text-align:right"><span data-query-time>—</span> CPU ENCODE<br/>GPU COUNT → INDIRECT DRAW</span>
@@ -456,6 +614,8 @@ function createControlPanel(
   const radiusInput = root.querySelector<HTMLInputElement>('[data-radius]')!;
   const radiusValue = root.querySelector<HTMLElement>('[data-radius-value]')!;
   const coordinateElement = root.querySelector<HTMLElement>('[data-coordinate]')!;
+  const corpusElement = root.querySelector<HTMLElement>('[data-corpus]')!;
+  const sourceStatusElement = root.querySelector<HTMLElement>('[data-source-status]')!;
   const residentElement = root.querySelector<HTMLElement>('[data-resident]')!;
   const basemapWarningElement = root.querySelector<HTMLElement>('[data-basemap-warning]')!;
   const visibleElement = root.querySelector<HTMLElement>('[data-visible]')!;
@@ -586,6 +746,12 @@ function createControlPanel(
       const percentage = Math.round((processedPointCount / Math.max(1, totalPointCount)) * 100);
       residentElement.textContent = `${percentage}% loading`;
     },
+    updateSourceStatus: status => {
+      if (status.corpusPointCount !== undefined) {
+        corpusElement.textContent = formatCount(status.corpusPointCount);
+      }
+      sourceStatusElement.textContent = status.message;
+    },
     updateStats: stats => {
       residentElement.textContent = formatCount(stats.residentPointCount);
       visibleElement.textContent = formatCount(stats.visiblePointCount);
@@ -601,4 +767,94 @@ function formatCount(value: number): string {
     notation: 'compact',
     maximumFractionDigits: 1
   }).format(value);
+}
+
+function formatByteCount(value: number): string {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MiB`;
+}
+
+function getConfiguredTaxiManifestUrl(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return new URLSearchParams(window.location.search).get('taxi-manifest')?.trim() || undefined;
+}
+
+async function closeTaxiPointSource(source: TaxiPointSource | null): Promise<void> {
+  try {
+    await source?.close();
+  } catch {
+    // Finalization is best effort; an asynchronous source cleanup failure must not be unhandled.
+  }
+}
+
+function retirePreviousQueryEffect(
+  deck: ArrowDeck<MapView>,
+  previousQueryEffect: LuSpatialTaxiQueryEffect | null,
+  nextQueryEffect: LuSpatialTaxiQueryEffect,
+  shouldSkip: () => boolean
+): void {
+  if (!previousQueryEffect) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (shouldSkip()) return;
+      deck.setProps({effects: [nextQueryEffect]});
+      deck.redraw('luSpatial previous taxi source retired');
+    });
+  });
+}
+
+type TaxiLayerStagingOptions = {
+  staged?: boolean;
+  onLayerReady?: (layerIndex: number) => void;
+  onLayerError?: (error: Error) => void;
+};
+
+function makeTaxiLayers(
+  queryEffect: LuSpatialTaxiQueryEffect,
+  taxiDataRevision: number,
+  options: TaxiLayerStagingOptions = {}
+): LuSpatialPointLayer[] {
+  return [
+    new LuSpatialPointLayer({
+      id: `luspatial-taxi-context-${taxiDataRevision}`,
+      data: [],
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 140, 32, 230],
+      longitudeLatitudes: queryEffect.longitudeLatitudes,
+      visibleIds: queryEffect.viewportIds,
+      drawCommands: queryEffect.drawCommands,
+      commandIndex: 0,
+      color: [94, 172, 198, 105],
+      radiusPixels: 0.9,
+      opacity: 0.46,
+      staged: options.staged,
+      onResourcesReady: () => options.onLayerReady?.(0),
+      onError: error => {
+        options.onLayerError?.(error);
+        return Boolean(options.onLayerError);
+      }
+    }),
+    new LuSpatialPointLayer({
+      id: `luspatial-taxi-selection-${taxiDataRevision}`,
+      data: [],
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 140, 32, 245],
+      longitudeLatitudes: queryEffect.longitudeLatitudes,
+      visibleIds: queryEffect.selectedIds,
+      drawCommands: queryEffect.drawCommands,
+      commandIndex: 1,
+      color: [52, 220, 244, 205],
+      radiusPixels: 1.25,
+      opacity: 0.72,
+      staged: options.staged,
+      onResourcesReady: () => options.onLayerReady?.(1),
+      onError: error => {
+        options.onLayerError?.(error);
+        return Boolean(options.onLayerError);
+      }
+    })
+  ];
 }
