@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GPUGridIndex,
@@ -12,6 +13,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
+import {vi} from 'vitest';
 import {
   addGPUGridIndexToGraphWithDispatchLimit,
   getGPUGridIndexDispatchLayout,
@@ -91,6 +93,58 @@ test('GPUGridIndex executes a small three-dimensional dispatch layout', async t 
     Array.from({length: positionCount}, (_, index) => index),
     'scatter visits every source row exactly once'
   );
+  t.end();
+});
+
+test('GPUGridIndex scans cell offsets through a multidimensional dispatch', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const cellCount = 4 * 256 + 1;
+  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  let result: Awaited<ReturnType<typeof runGridIndex>>;
+  let scanDispatch: Parameters<Computation['dispatch']> | undefined;
+  try {
+    result = await runGridIndex(
+      device,
+      Float32Array.from([0.5, 0.5, 512.5, 0.5, 1024.5, 0.5]),
+      'float32x2',
+      [cellCount, 1],
+      [0, 0, cellCount, 1],
+      3,
+      {maxComputeWorkgroupsPerDimension: 2}
+    );
+    const scanDispatchIndex = dispatchSpy.mock.instances.findIndex(
+      computation => (computation as Computation).id === 'gpu-grid-index-scan-level-0-scan'
+    );
+    scanDispatch = dispatchSpy.mock.calls[scanDispatchIndex];
+  } finally {
+    dispatchSpy.mockRestore();
+  }
+  const expectedOffsets = Array.from({length: cellCount + 1}, (_, index) => {
+    if (index === 0) return 0;
+    if (index <= 512) return 1;
+    if (index <= 1024) return 2;
+    return 3;
+  });
+
+  t.deepEqual(
+    result.cellOffsets,
+    expectedOffsets,
+    'the five-block cell-count scan and offset pass preserve every empty cell'
+  );
+  t.deepEqual(
+    scanDispatch?.slice(1),
+    [2, 2, 2],
+    'the GridIndex synthetic device limit reaches its nested scan dispatch'
+  );
+  t.deepEqual(result.objectIds, [0, 1, 2], 'widely separated cells retain their source rows');
+  t.equal(result.count, 3, 'the complete index count survives the multidimensional scan');
+  t.equal(result.overflow, 0, 'the exact-capacity index does not overflow');
   t.end();
 });
 

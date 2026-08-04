@@ -10,6 +10,11 @@ import {
   type GraphDataView,
   GraphVectorView
 } from './gpu-command-graph';
+import {
+  type GPUBoundedDispatchLayout,
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource
+} from './gpu-dispatch-utils';
 import type {
   GPUGridIndex,
   GPUGridIndexBounds,
@@ -17,19 +22,11 @@ import type {
   GPUGridIndexSize,
   GPUGridIndexSourceIds
 } from './gpu-grid-index';
-import {GPUScan} from './gpu-scan';
+import {addGPUScanToGraphWithDispatchLimit, GPUScan} from './gpu-scan';
 import {createTransientView, getViewBinding, getViewElementOffset} from './graph-data-view-utils';
 
 const GRID_INDEX_WORKGROUP_SIZE = 256;
-const MAXIMUM_UINT32 = 0xffffffff;
-const MAXIMUM_LINEAR_GRID_INDEX_WORKGROUP_COUNT =
-  Math.floor(MAXIMUM_UINT32 / GRID_INDEX_WORKGROUP_SIZE) + 1;
-
-type GPUGridIndexDispatchLayout = {
-  x: number;
-  y: number;
-  z: number;
-};
+type GPUGridIndexDispatchLayout = GPUBoundedDispatchLayout;
 
 /** Adds an index rebuild using an explicit device dispatch limit. @internal */
 export function addGPUGridIndexToGraphWithDispatchLimit<Parameters>(
@@ -92,11 +89,12 @@ export function addGPUGridIndexToGraphWithDispatchLimit<Parameters>(
       });
     }
   }
-  new GPUScan({
+  const scan = new GPUScan({
     id: `${index.id}-scan`,
     input: cellCounts,
     output: scannedOffsets
-  }).addToGraph(graph);
+  });
+  addGPUScanToGraphWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension);
   addFinalizePass(graph, {
     id: `${index.id}-finalize`,
     cellCounts,
@@ -467,30 +465,17 @@ export function getGPUGridIndexDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUGridIndexDispatchLayout {
-  if (!Number.isSafeInteger(elementCount) || elementCount < 0 || elementCount > MAXIMUM_UINT32) {
-    throw new Error('GPUGridIndex element count must be a non-negative uint32');
-  }
-  const maximum = Math.floor(maxComputeWorkgroupsPerDimension);
-  if (!Number.isSafeInteger(maximum) || maximum < 1) {
-    throw new Error('maxComputeWorkgroupsPerDimension must be a positive integer');
-  }
-  const workgroupCount = Math.max(1, Math.ceil(elementCount / GRID_INDEX_WORKGROUP_SIZE));
-  const x = Math.min(workgroupCount, maximum);
-  const y = Math.min(Math.ceil(workgroupCount / x), maximum);
-  const z = Math.ceil(workgroupCount / x / y);
-  if (z > maximum) {
-    throw new Error(
-      `GPUGridIndex requires ${workgroupCount} workgroups, exceeding the 3D dispatch limit of ${maximum} per dimension`
-    );
-  }
-  return {x, y, z};
+  return getBoundedDispatchLayout(
+    'GPUGridIndex',
+    elementCount,
+    GRID_INDEX_WORKGROUP_SIZE,
+    maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Returns WGSL that maps a bounded 3D dispatch to one linear element index. @internal */
 export function getGPUGridIndexInvocationIndexSource(layout: GPUGridIndexDispatchLayout): string {
-  return `let workgroupIndex = (workgroupId.z * ${layout.y}u + workgroupId.y) * ${layout.x}u + workgroupId.x;
-  if (workgroupIndex >= ${MAXIMUM_LINEAR_GRID_INDEX_WORKGROUP_COUNT}u) { return; }
-  let index = workgroupIndex * ${GRID_INDEX_WORKGROUP_SIZE}u + localInvocationIndex;`;
+  return getBoundedInvocationIndexSource(layout, GRID_INDEX_WORKGROUP_SIZE);
 }
 
 function getPositionChunks(

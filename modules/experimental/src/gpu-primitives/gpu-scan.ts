@@ -4,7 +4,12 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
+import {
+  type GPUBoundedDispatchLayout,
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource
+} from './gpu-dispatch-utils';
 import {
   createTransientView,
   getViewBinding,
@@ -102,19 +107,36 @@ export class GPUScan {
    * or read data back.
    */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    validateScanOwnership(graph, this.input, this.id);
-    validateScanOwnership(graph, this.output, this.id);
-    if (this.segmentFlags) {
-      validateScanOwnership(graph, this.segmentFlags, this.id);
-    }
-    addChunkedScan(graph, {
-      id: this.id,
-      input: this.input,
-      output: this.output,
-      mode: this.mode,
-      segmentFlags: this.segmentFlags
-    });
+    addGPUScanToGraphWithDispatchLimit(
+      this,
+      graph,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
   }
+}
+
+/** Adds a scan using an explicit per-dimension dispatch limit. @internal */
+export function addGPUScanToGraphWithDispatchLimit<Parameters>(
+  scan: GPUScan,
+  graph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number
+): void {
+  validateScanOwnership(graph, scan.input, scan.id);
+  validateScanOwnership(graph, scan.output, scan.id);
+  if (scan.segmentFlags) {
+    validateScanOwnership(graph, scan.segmentFlags, scan.id);
+  }
+  addChunkedScan(
+    graph,
+    {
+      id: scan.id,
+      input: scan.input,
+      output: scan.output,
+      mode: scan.mode,
+      segmentFlags: scan.segmentFlags
+    },
+    maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Normalizes atomic and vector inputs and adds the required local scans and vector carries. */
@@ -126,7 +148,8 @@ function addChunkedScan<Parameters>(
     output: GPUScanInput;
     mode: 'exclusive' | 'inclusive';
     segmentFlags?: GPUScanInput;
-  }
+  },
+  maxComputeWorkgroupsPerDimension: number
 ): void {
   const inputChunks = getScanChunks(props.input);
   const outputChunks = getScanChunks(props.output);
@@ -150,7 +173,8 @@ function addChunkedScan<Parameters>(
       input: chunk.input,
       output: chunk.output,
       mode: props.mode,
-      segmentFlags: chunk.segmentFlags
+      segmentFlags: chunk.segmentFlags,
+      maxComputeWorkgroupsPerDimension
     });
     return;
   }
@@ -191,7 +215,8 @@ function addChunkedScan<Parameters>(
       finalSum: createPackedSubview(graph, chunkTotals, partialIndex),
       finalSegmentFlag: chunkSegmentFlags
         ? createPackedSubview(graph, chunkSegmentFlags, partialIndex)
-        : undefined
+        : undefined,
+      maxComputeWorkgroupsPerDimension
     });
   }
   addScanLevels(graph, {
@@ -200,7 +225,8 @@ function addChunkedScan<Parameters>(
     output: chunkOffsets,
     mode: 'exclusive',
     segmentFlags: chunkSegmentFlags,
-    segmentSummaryInput: Boolean(chunkSegmentFlags)
+    segmentSummaryInput: Boolean(chunkSegmentFlags),
+    maxComputeWorkgroupsPerDimension
   });
   for (const [partialIndex, chunk] of nonEmptyChunks.entries()) {
     addOffsetPass(graph, {
@@ -209,7 +235,11 @@ function addChunkedScan<Parameters>(
       offsets: chunkOffsets,
       length: chunk.output.length,
       offsetIndex: partialIndex,
-      segmentPrefixes: chunkSegmentPrefixes?.[partialIndex]
+      segmentPrefixes: chunkSegmentPrefixes?.[partialIndex],
+      dispatchLayout: getGPUScanDispatchLayout(
+        chunk.output.length,
+        maxComputeWorkgroupsPerDimension
+      )
     });
   }
 }
@@ -228,6 +258,7 @@ function addScanLevels<Parameters>(
     finalSegmentFlag?: GraphDataView<'uint32'>;
     /** Summary flags report a start anywhere in one lower-level block, not at its first row. */
     segmentSummaryInput?: boolean;
+    maxComputeWorkgroupsPerDimension: number;
   }
 ): void {
   if (props.input.length === 0) {
@@ -293,7 +324,8 @@ function addScanLevels<Parameters>(
       finalSum: blockSums ? undefined : props.finalSum,
       finalSegmentFlag: blockSums ? undefined : props.finalSegmentFlag,
       length: levelLength,
-      blockCount
+      blockCount,
+      dispatchLayout: getGPUScanDispatchLayout(levelLength, props.maxComputeWorkgroupsPerDimension)
     });
     levels.push({output: levelOutput, length: levelLength, segmentPrefixes});
 
@@ -323,7 +355,8 @@ function addScanLevels<Parameters>(
       offsets: level.blockOffsets!,
       length: level.length,
       segmentPrefixes: level.segmentPrefixes,
-      offsetSegmentPrefixes: parentLevel.segmentPrefixes
+      offsetSegmentPrefixes: parentLevel.segmentPrefixes,
+      dispatchLayout: getGPUScanDispatchLayout(level.length, props.maxComputeWorkgroupsPerDimension)
     });
   }
 }
@@ -384,6 +417,7 @@ function addBlockScanPass<Parameters>(
     finalSegmentFlag?: GraphDataView<'uint32'>;
     length: number;
     blockCount: number;
+    dispatchLayout: GPUScanDispatchLayout;
   }
 ): void {
   const sumOutput = props.blockSums ?? props.finalSum;
@@ -401,12 +435,12 @@ function addBlockScanPass<Parameters>(
     ? '@group(0) @binding(5) var<storage, read_write> summarySegmentFlags: array<u32>;'
     : '';
   const sumWrite = props.blockSums
-    ? 'sumValues[SUM_OFFSET + workgroupId.x] = scratch[255u];'
+    ? 'sumValues[SUM_OFFSET + workgroupIndex] = scratch[255u];'
     : props.finalSum
       ? 'sumValues[SUM_OFFSET] = scratch[255u];'
       : '';
   const segmentFlagWrite = props.blockSegmentFlags
-    ? 'summarySegmentFlags[SUMMARY_SEGMENT_FLAGS_OFFSET + workgroupId.x] = segmentScratch[255u];'
+    ? 'summarySegmentFlags[SUMMARY_SEGMENT_FLAGS_OFFSET + workgroupIndex] = segmentScratch[255u];'
     : props.finalSegmentFlag
       ? 'summarySegmentFlags[SUMMARY_SEGMENT_FLAGS_OFFSET] = segmentScratch[255u];'
       : '';
@@ -440,6 +474,7 @@ function addBlockScanPass<Parameters>(
     : '';
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.length}u;
+const BLOCK_COUNT: u32 = ${props.blockCount}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 ${sumOutput ? `const SUM_OFFSET: u32 = ${getViewElementOffset(sumOutput)}u;` : ''}
@@ -456,12 +491,12 @@ var<workgroup> scratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;
 ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;` : ''}
 
 @compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
-  let lane = localId.x;
+  ${getGPUScanInvocationIndexSource(props.dispatchLayout)}
+  if (workgroupIndex >= BLOCK_COUNT) { return; }
+  let lane = localInvocationIndex;
   var inputValue = 0u;
   var inputSegmentFlag = 0u;
   if (index < ELEMENT_COUNT) {
@@ -555,7 +590,12 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
             bindings['summarySegmentFlags'] = getViewBinding(segmentFlagOutput, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, props.blockCount);
+          computation.dispatch(
+            computePass,
+            props.dispatchLayout.x,
+            props.dispatchLayout.y,
+            props.dispatchLayout.z
+          );
         },
         destroy: () => computation.destroy()
       };
@@ -574,6 +614,7 @@ function addOffsetPass<Parameters>(
     offsetIndex?: number;
     segmentPrefixes?: GraphDataView<'uint32'>;
     offsetSegmentPrefixes?: GraphDataView<'uint32'>;
+    dispatchLayout: GPUScanDispatchLayout;
   }
 ): void {
   const offsetIndex =
@@ -590,9 +631,10 @@ ${props.segmentPrefixes ? `@group(0) @binding(2) var<storage, ${props.offsetSegm
 ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offsetSegmentPrefixes: array<u32>;' : ''}
 
 @compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
+  ${getGPUScanInvocationIndexSource(props.dispatchLayout)}
   if (index < ELEMENT_COUNT) {
     ${props.offsetSegmentPrefixes ? `let offsetSegmentPrefix = offsetSegmentPrefixes[OFFSET_SEGMENT_PREFIXES_OFFSET + ${offsetIndex}];` : ''}
     ${
@@ -663,10 +705,35 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
             );
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, Math.ceil(props.length / SCAN_WORKGROUP_SIZE));
+          computation.dispatch(
+            computePass,
+            props.dispatchLayout.x,
+            props.dispatchLayout.y,
+            props.dispatchLayout.z
+          );
         },
         destroy: () => computation.destroy()
       };
     }
   });
+}
+
+type GPUScanDispatchLayout = GPUBoundedDispatchLayout;
+
+/** Plans a bounded three-dimensional dispatch for one scan pass. @internal */
+export function getGPUScanDispatchLayout(
+  elementCount: number,
+  maxComputeWorkgroupsPerDimension: number
+): GPUScanDispatchLayout {
+  return getBoundedDispatchLayout(
+    'GPUScan',
+    elementCount,
+    SCAN_WORKGROUP_SIZE,
+    maxComputeWorkgroupsPerDimension
+  );
+}
+
+/** Returns WGSL that maps a bounded 3D scan dispatch to one linear element index. @internal */
+export function getGPUScanInvocationIndexSource(layout: GPUScanDispatchLayout): string {
+  return getBoundedInvocationIndexSource(layout, SCAN_WORKGROUP_SIZE);
 }
