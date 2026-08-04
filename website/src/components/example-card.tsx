@@ -139,6 +139,7 @@ function getCapabilityBadges(
 
 function getCardAccent(category: string, topics: readonly string[]): string {
   if (category === 'WebGPU') return '#67e8f9';
+  if (category === 'GPGPU') return '#a78bfa';
   if (category === 'Tutorials') return '#6ee7b7';
   if (category === 'Showcase') return '#c4b5fd';
   if (category.includes('Arrow') || category.includes('Data')) return '#93c5fd';

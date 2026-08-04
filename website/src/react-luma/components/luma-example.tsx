@@ -421,6 +421,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     return () => {
       isCancelled = true;
+      // Stop immediately so asynchronously initializing templates can abort their pending work
+      // before the serialized cleanup queue waits for animationLoop.start() to settle.
+      animationLoop?.stop();
       captureController?.finalize();
       removeBrowserCaptureFunction();
       // Route transitions must stop displaying the outgoing example immediately, even when its

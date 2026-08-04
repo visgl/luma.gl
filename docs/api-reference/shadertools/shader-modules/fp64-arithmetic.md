@@ -1,7 +1,10 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
 import {FP64Example} from '@site/src/examples';
 
 # fp64arithmetic
+
+<GPGPUDocsTabs active="fp64-arithmetic" />
 
 <ShaderModuleDocsTabs group="precision" active="fp64-arithmetic" />
 

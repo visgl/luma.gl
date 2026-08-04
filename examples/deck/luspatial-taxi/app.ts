@@ -17,9 +17,11 @@ import {LuSpatialPointLayer} from './luspatial-point-layer';
 import {LuSpatialTaxiQueryEffect, type LuSpatialTaxiQueryStats} from './luspatial-query-effect';
 import {
   TAXI_CORPUS_POINT_COUNT,
+  TAXI_POINT_COUNT,
   getTaxiPoint,
-  makeLuSpatialTaxiData,
+  makeLuSpatialTaxiDataAsync,
   makeTaxiZonePresets,
+  type LuSpatialTaxiData,
   type TaxiZonePreset
 } from './taxi-data';
 
@@ -41,7 +43,8 @@ export function createLuSpatialTaxiDeck(
 ) {
   const ownsContainer = !parent;
   const container = parent ?? createStandaloneContainer();
-  const taxiData = makeLuSpatialTaxiData();
+  const generationController = new AbortController();
+  let taxiData: LuSpatialTaxiData | null = null;
   const zonePresets = makeTaxiZonePresets();
   const initialZone = zonePresets.find(zone => zone.id === INITIAL_ZONE_ID) ?? zonePresets[0];
   let viewState: TaxiViewState = {
@@ -57,6 +60,7 @@ export function createLuSpatialTaxiDeck(
   let queryRadiusKilometres = 0.35;
 
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+  const loadingIndicator = createLoadingIndicator(container);
   const basemapContainer = document.createElement('div');
   Object.assign(basemapContainer.style, {
     position: 'absolute',
@@ -101,6 +105,16 @@ export function createLuSpatialTaxiDeck(
     }
   });
   controls.setCoordinate(initialZone.center, initialZone.name);
+  const handleBasemapError = () => {
+    controls.setBasemapStatus('Basemap tiles unavailable · GPU queries remain interactive');
+    loadingIndicator.setBasemapStatus('Basemap unavailable. GPU data continues loading.');
+  };
+  const handleBasemapLoad = () => {
+    controls.setBasemapStatus('');
+    loadingIndicator.setBasemapStatus('Basemap ready.');
+  };
+  map.on('error', handleBasemapError);
+  map.on('load', handleBasemapLoad);
 
   deck = new ArrowDeck({
     parent: container,
@@ -117,7 +131,7 @@ export function createLuSpatialTaxiDeck(
     style: {background: 'transparent'},
     layers: [],
     effects: [],
-    getTooltip: info => getTooltip(taxiData, info),
+    getTooltip: info => (taxiData ? getTooltip(taxiData, info) : null),
     onClick: (info: PickingInfo) => {
       const coordinate = info.coordinate;
       if (!coordinate || coordinate.length < 2) return;
@@ -143,48 +157,74 @@ export function createLuSpatialTaxiDeck(
           background: 'transparent'
         });
       }
-      queryEffect = new LuSpatialTaxiQueryEffect(device, taxiData, {
-        onStats: stats => controls.updateStats(stats)
-      });
-      queryEffect.setSelection(initialZone.center, queryRadiusKilometres);
-      loadedDeck.setProps({
-        effects: [queryEffect],
-        layers: [
-          new LuSpatialPointLayer({
-            id: 'luspatial-taxi-context',
-            data: [],
-            pickable: true,
-            autoHighlight: true,
-            highlightColor: [255, 140, 32, 230],
-            longitudeLatitudes: queryEffect.longitudeLatitudes,
-            visibleIds: queryEffect.viewportIds,
-            drawCommands: queryEffect.drawCommands,
-            commandIndex: 0,
-            color: [94, 172, 198, 105],
-            radiusPixels: 0.9,
-            opacity: 0.46
-          }),
-          new LuSpatialPointLayer({
-            id: 'luspatial-taxi-selection',
-            data: [],
-            pickable: true,
-            autoHighlight: true,
-            highlightColor: [255, 140, 32, 245],
-            longitudeLatitudes: queryEffect.longitudeLatitudes,
-            visibleIds: queryEffect.selectedIds,
-            drawCommands: queryEffect.drawCommands,
-            commandIndex: 1,
-            color: [52, 220, 244, 205],
-            radiusPixels: 1.25,
-            opacity: 0.72
-          })
-        ]
-      });
-      loadedDeck.redraw('luSpatial initialized');
+      void (async () => {
+        try {
+          const generatedTaxiData = await makeLuSpatialTaxiDataAsync(TAXI_POINT_COUNT, {
+            signal: generationController.signal,
+            onProgress: (processedPointCount, totalPointCount) => {
+              controls.setLoadingProgress(processedPointCount, totalPointCount);
+              loadingIndicator.setProgress(processedPointCount, totalPointCount);
+            }
+          });
+          generationController.signal.throwIfAborted();
+          taxiData = generatedTaxiData;
+          loadingIndicator.setStatus('Compiling luProj projection and GPU spatial index…');
+
+          queryEffect = new LuSpatialTaxiQueryEffect(device, generatedTaxiData, {
+            onStats: stats => controls.updateStats(stats)
+          });
+          queryEffect.setSelection(initialZone.center, queryRadiusKilometres);
+          loadedDeck.setProps({
+            effects: [queryEffect],
+            layers: [
+              new LuSpatialPointLayer({
+                id: 'luspatial-taxi-context',
+                data: [],
+                pickable: true,
+                autoHighlight: true,
+                highlightColor: [255, 140, 32, 230],
+                longitudeLatitudes: queryEffect.longitudeLatitudes,
+                visibleIds: queryEffect.viewportIds,
+                drawCommands: queryEffect.drawCommands,
+                commandIndex: 0,
+                color: [94, 172, 198, 105],
+                radiusPixels: 0.9,
+                opacity: 0.46
+              }),
+              new LuSpatialPointLayer({
+                id: 'luspatial-taxi-selection',
+                data: [],
+                pickable: true,
+                autoHighlight: true,
+                highlightColor: [255, 140, 32, 245],
+                longitudeLatitudes: queryEffect.longitudeLatitudes,
+                visibleIds: queryEffect.selectedIds,
+                drawCommands: queryEffect.drawCommands,
+                commandIndex: 1,
+                color: [52, 220, 244, 205],
+                radiusPixels: 1.25,
+                opacity: 0.72
+              })
+            ]
+          });
+          loadingIndicator.destroy();
+          loadedDeck.redraw('luProj and luSpatial initialized');
+        } catch (error) {
+          if (!generationController.signal.aborted) {
+            loadingIndicator.setStatus(
+              `GPU initialization failed: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        }
+      })();
     },
     onFinalize: () => {
+      generationController.abort();
       resizeObserver.disconnect();
+      loadingIndicator.destroy();
       controls.destroy();
+      map.off('error', handleBasemapError);
+      map.off('load', handleBasemapLoad);
       map.remove();
       if (ownsContainer) container.remove();
     }
@@ -211,10 +251,7 @@ function synchronizeBasemap(map: maplibregl.Map, viewState: TaxiViewState): void
   });
 }
 
-function getTooltip(
-  data: ReturnType<typeof makeLuSpatialTaxiData>,
-  info: PickingInfo
-): {html: string} | null {
+function getTooltip(data: LuSpatialTaxiData, info: PickingInfo): {html: string} | null {
   const point = getTaxiPoint(data, info.index);
   if (!point) return null;
   return {
@@ -234,10 +271,69 @@ type ControlPanelCallbacks = {
 
 type TaxiControlPanel = {
   destroy: () => void;
+  setBasemapStatus: (status: string) => void;
   setCoordinate: (coordinate: readonly [number, number], label: string) => void;
   setCustomZone: () => void;
+  setLoadingProgress: (processedPointCount: number, totalPointCount: number) => void;
   updateStats: (stats: LuSpatialTaxiQueryStats) => void;
 };
+
+type TaxiLoadingIndicator = {
+  destroy: () => void;
+  setBasemapStatus: (status: string) => void;
+  setProgress: (processedPointCount: number, totalPointCount: number) => void;
+  setStatus: (status: string) => void;
+};
+
+function createLoadingIndicator(container: HTMLElement): TaxiLoadingIndicator {
+  const root = document.createElement('section');
+  root.setAttribute('role', 'status');
+  root.setAttribute('aria-live', 'polite');
+  root.setAttribute('aria-label', 'Loading GPU taxi data');
+  Object.assign(root.style, {
+    position: 'absolute',
+    inset: '0',
+    zIndex: '8',
+    display: 'grid',
+    placeItems: 'center',
+    padding: '24px',
+    pointerEvents: 'none',
+    background: 'radial-gradient(ellipse at center, rgba(3, 12, 19, .82), rgba(2, 6, 9, .48))'
+  });
+  root.innerHTML = `<div style="width:min(340px,100%);padding:20px 22px;border:1px solid rgba(84,221,243,.25);border-radius:12px;background:rgba(4,11,17,.94);box-shadow:0 18px 54px rgba(0,0,0,.36);color:#e6f6ff;font:12px/1.55 Inter,system-ui,sans-serif">
+    <div style="color:#63eaff;font:700 10px ui-monospace,monospace;letter-spacing:.12em">LUPROJ + LUSPATIAL</div>
+    <div data-taxi-loading-status style="margin-top:9px;font-size:14px;font-weight:650">Preparing WebGPU taxi explorer…</div>
+    <div data-taxi-loading-progress role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:5px;margin-top:13px;overflow:hidden;border-radius:999px;background:rgba(108,154,177,.22)">
+      <div data-taxi-loading-bar style="width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2fc9dd,#6aeeff);transition:width 120ms linear"></div>
+    </div>
+    <div data-taxi-loading-count style="margin-top:8px;color:#adc4d2;font:10px ui-monospace,monospace">Waiting for the GPU…</div>
+    <div data-taxi-basemap-status style="margin-top:8px;color:#8296a5;font-size:10px">Basemap tiles stream separately and never block GPU data.</div>
+  </div>`;
+  container.appendChild(root);
+
+  const statusElement = root.querySelector<HTMLElement>('[data-taxi-loading-status]')!;
+  const progressElement = root.querySelector<HTMLElement>('[data-taxi-loading-progress]')!;
+  const progressBar = root.querySelector<HTMLElement>('[data-taxi-loading-bar]')!;
+  const countElement = root.querySelector<HTMLElement>('[data-taxi-loading-count]')!;
+  const basemapStatusElement = root.querySelector<HTMLElement>('[data-taxi-basemap-status]')!;
+
+  return {
+    destroy: () => root.remove(),
+    setBasemapStatus: status => {
+      basemapStatusElement.textContent = status;
+    },
+    setProgress: (processedPointCount, totalPointCount) => {
+      const percentage = Math.round((processedPointCount / Math.max(1, totalPointCount)) * 100);
+      statusElement.textContent = 'Generating taxi rows without blocking the page…';
+      progressElement.setAttribute('aria-valuenow', String(percentage));
+      progressBar.style.width = `${percentage}%`;
+      countElement.textContent = `${formatCount(processedPointCount)} / ${formatCount(totalPointCount)} points prepared`;
+    },
+    setStatus: status => {
+      statusElement.textContent = status;
+    }
+  };
+}
 
 function createControlPanel(
   container: HTMLElement,
@@ -314,7 +410,7 @@ function createControlPanel(
   </style>
   <div data-luspatial-card>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:10px;border-bottom:1px solid rgba(125,180,206,.16)">
-      <div><div style="font:700 16px/1.1 ui-sans-serif,system-ui">luSpatial</div><div style="margin-top:3px;color:#7890a4">NYC taxi query explorer</div></div>
+      <div><div style="font:700 16px/1.1 ui-sans-serif,system-ui">luProj + luSpatial</div><div style="margin-top:3px;color:#7890a4">NYC taxi query explorer</div></div>
       <div style="padding:4px 6px;border:1px solid rgba(54,223,255,.28);border-radius:5px;color:#4be4ff;font:700 9px ui-monospace,monospace">DECK.GL · WEBGPU</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
@@ -323,6 +419,7 @@ function createControlPanel(
       <div><div data-luspatial-label>IN VIEW</div><div data-luspatial-value data-visible>—</div></div>
       <div><div data-luspatial-label>SELECTED</div><div data-luspatial-value data-selected style="color:#49e3ff">—</div></div>
     </div>
+    <div data-basemap-warning hidden style="margin-top:9px;color:#e9ba7d;font:9px/1.45 ui-monospace,monospace"></div>
     <div style="margin-top:12px"><div data-luspatial-label>TAXI ZONE PRESET</div>
       <div data-zone-picker>
         <button data-zone-trigger type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="luspatial-zone-list" aria-label="Taxi zone preset: Manhattan, Midtown Center"><span data-zone-trigger-label>MANHATTAN · MIDTOWN CENTER</span></button>
@@ -357,13 +454,14 @@ function createControlPanel(
   const radiusValue = root.querySelector<HTMLElement>('[data-radius-value]')!;
   const coordinateElement = root.querySelector<HTMLElement>('[data-coordinate]')!;
   const residentElement = root.querySelector<HTMLElement>('[data-resident]')!;
+  const basemapWarningElement = root.querySelector<HTMLElement>('[data-basemap-warning]')!;
   const visibleElement = root.querySelector<HTMLElement>('[data-visible]')!;
   const selectedElement = root.querySelector<HTMLElement>('[data-selected]')!;
   const queryTimeElement = root.querySelector<HTMLElement>('[data-query-time]')!;
   const graphInspectorElement = root.querySelector<HTMLElement>('[data-graph-inspector]')!;
   const graphInspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
     graphLabels: {
-      'luspatial-taxi-build-graph': 'Projection + grid build',
+      'luspatial-taxi-build-graph': 'luProj projection + grid build',
       'luspatial-taxi-query-graph': 'Viewport + radius queries'
     }
   });
@@ -468,6 +566,10 @@ function createControlPanel(
       graphInspectorPanel.destroy();
       root.remove();
     },
+    setBasemapStatus: status => {
+      basemapWarningElement.hidden = !status;
+      basemapWarningElement.textContent = status;
+    },
     setCoordinate: (coordinate, label) => {
       coordinateElement.textContent = `${label} · ${coordinate[0].toFixed(5)}, ${coordinate[1].toFixed(5)}`;
     },
@@ -476,6 +578,10 @@ function createControlPanel(
       zoneTriggerLabel.textContent = 'CUSTOM MAP QUERY';
       zoneTrigger.setAttribute('aria-label', 'Taxi zone preset: custom map query');
       closeZonePicker();
+    },
+    setLoadingProgress: (processedPointCount, totalPointCount) => {
+      const percentage = Math.round((processedPointCount / Math.max(1, totalPointCount)) * 100);
+      residentElement.textContent = `${percentage}% loading`;
     },
     updateStats: stats => {
       residentElement.textContent = formatCount(stats.residentPointCount);

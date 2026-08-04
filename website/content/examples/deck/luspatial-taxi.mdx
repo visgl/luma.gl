@@ -1,21 +1,22 @@
 ---
 title: luSpatial Taxi Explorer
-description: A deck.gl WebGPU map that queries one million resident taxi points on the GPU and renders the result indirectly.
+description: Project and query one million GPU-resident taxi points with luProj and luSpatial, then render the result indirectly with deck.gl.
 sidebar_custom_props:
-  description: Query a million resident taxi points through luSpatial and render the result over a basemap with deck.gl.
+  description: Project, index, and query a million resident taxi points with luProj, luSpatial, and deck.gl.
   backends: [webgpu]
   difficulty: advanced
   maturity: experimental
-  topics: [compute, rendering, data, geospatial, deck.gl]
+  topics: [compute, projection, geospatial, gpgpu, deck.gl]
 ---
 
 import {DeckLuSpatialTaxiExample} from '@site/src/examples';
 
 <DeckLuSpatialTaxiExample />
 
-This focused integration keeps spatial compute and map rendering in their natural layers. The
-deck.gl `MapView` owns pan, zoom, picking, and the camera; MapLibre supplies a synchronized dark
-basemap; and `@luma.gl/experimental/geospatial` projects, indexes, and queries the resident points.
+This focused integration keeps projection, spatial compute, and map rendering in their natural
+layers. The deck.gl `MapView` owns pan, zoom, picking, and the camera; MapLibre supplies a
+synchronized dark basemap; `@luma.gl/experimental/luproj` projects the source coordinates; and
+`@luma.gl/experimental/geospatial` indexes and queries the resident points.
 
 The uniform grid stores position-row indices, keeping candidate addressing distinct from optional
 application IDs. Both the viewport and radius queries use the default row-index output and write it

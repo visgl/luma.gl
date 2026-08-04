@@ -63,6 +63,7 @@ const TAXI_DOMAIN = [-1.25, -1.25, 1.25, 1.25] as const;
 const LIDAR_DOMAIN = [-1.25, -1.25, -0.25, 1.25, 1.25, 2.5] as const;
 const TAXI_GRID_SIZE = [128, 128] as const;
 const LIDAR_GRID_SIZE = [64, 64, 16] as const;
+const ATLAS_GENERATION_CHUNK_SIZE = 20_000;
 const VISUAL_SMOKE_POINT_COUNT = 100_000;
 const MINIMUM_VIEW_SCALE = 0.35;
 const MAXIMUM_VIEW_SCALE = 32;
@@ -76,6 +77,7 @@ const ATLAS_GRAPH_LABELS: Readonly<Record<string, string>> = {
   'spatial-atlas-radius-scan-graph': 'Radius · full scan',
   'spatial-atlas-polygon-index-graph': 'Polygon · grid index',
   'spatial-atlas-polygon-scan-graph': 'Polygon · full scan',
+  'spatial-atlas-display-graph': 'Cached-result rendering',
   'spatial-atlas-picking-graph': 'Point picking'
 };
 
@@ -310,6 +312,7 @@ type AtlasResources = {
   sceneColor: Texture;
   renderBundle: RenderBundle;
   buildGraph: CompiledGPUCommandGraph<void>;
+  renderGraph: CompiledGPUCommandGraph<AtlasGraphParameters>;
   queryGraphs: Map<QueryGraphKey, CompiledGPUCommandGraph<AtlasGraphParameters>>;
   pickingGraph: CompiledGPUCommandGraph<PickingGraphParameters>;
   pickingReadbackIdentifier: string;
@@ -381,6 +384,10 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private lastLidarRefreshCenter: [number, number] | null = null;
   private lastLidarRefreshTime = 0;
   private lidarPublishTimer: ReturnType<typeof setTimeout> | null = null;
+  private dataGenerationAbortController: AbortController | null = null;
+  private loadingOverlay: HTMLDivElement | null = null;
+  private lastQuerySignature: string | null = null;
+  private finalized = false;
   private lastLidarPublishTime = 0;
   private readonly benchmarkSampleMilliseconds = getBenchmarkSampleMilliseconds();
   private benchmarkSampleStartTime: number | null = null;
@@ -408,7 +415,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     if (initialZone) {
       this.queryCenter = getBoundsCenter(initialZone.bounds);
     }
-    this.currentPositions = makeSyntheticTaxiPositions(this.capacity);
+    this.currentPositions = new Float32Array(0);
     this.uniformBuffer = device.createBuffer({
       id: 'spatial-atlas-uniforms',
       byteLength: UNIFORM_BYTE_LENGTH,
@@ -430,8 +437,8 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       slotCount: 2
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
-    this.rebuildResources(this.currentPositions);
     this.panels.mount();
+    this.setStatus(`Preparing ${formatCount(this.capacity)} GPU-resident points…`);
   }
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
@@ -455,6 +462,8 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       this.mountNavigationOverlay(canvas);
       this.updateInteractionPresentation();
     }
+
+    await this.loadSyntheticDataset(this.mode, this.capacity);
   }
 
   override onRender({
@@ -471,15 +480,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     if (this.benchmarkFinishing) return;
     const deviceSize = device.getDefaultCanvasContext().getDevicePixelSize();
     if (resources.width !== deviceSize[0] || resources.height !== deviceSize[1]) {
-      const lidarSnapshot = this.mode === 'lidar' ? this.lidarTileCache?.getSnapshot() : undefined;
-      this.rebuildResources(
-        lidarSnapshot?.positions ?? this.currentPositions,
-        lidarSnapshot ? this.lidarTileCache?.positionsBuffer : undefined,
-        lidarSnapshot?.attributes,
-        lidarSnapshot ? this.lidarTileCache?.attributesBuffer : undefined
-      );
-      resources = this.resources;
-      if (!resources) return;
+      this.resizeResources(resources, Math.max(1, deviceSize[0]), Math.max(1, deviceSize[1]));
     }
 
     if (this.mode === 'lidar' && this.cinematicFlyThrough && !this.pointerAction) {
@@ -489,11 +490,23 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       this.queryCenter = [Math.sin(time * 0.00009) * 0.38, Math.cos(time * 0.00007) * 0.24];
     }
     this.maybeRefreshLidarTiles();
-    this.writeQuery(resources);
     this.writeUniforms(width, height, time);
     this.updateQueryFootprint();
-    const graph = resources.queryGraphs.get(`${this.queryKind}-${this.queryExecution}`);
-    if (!graph) return;
+    const querySignature = [
+      this.queryKind,
+      this.queryExecution,
+      this.selectedZoneId,
+      this.queryCenter[0],
+      this.queryCenter[1],
+      this.queryRadius
+    ].join(':');
+    const queryChanged =
+      this.benchmarkSampleMilliseconds !== null || querySignature !== this.lastQuerySignature;
+    if (queryChanged) {
+      this.writeQuery(resources);
+      this.lastQuerySignature = querySignature;
+    }
+    const graph = queryChanged ? this.getQueryGraph(resources) : resources.renderGraph;
     const encoding = graph.encode(device.commandEncoder, {
       parameters: {viewport: [0, 0, width, height]}
     });
@@ -545,6 +558,10 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   override onFinalize(): void {
+    this.finalized = true;
+    this.dataGenerationAbortController?.abort();
+    this.loadingOverlay?.remove();
+    this.loadingOverlay = null;
     this.lidarLoadAbortController?.abort();
     if (this.lidarPublishTimer) clearTimeout(this.lidarPublishTimer);
     if (this.canvas) {
@@ -569,6 +586,106 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.model.destroy();
     this.contextModel.destroy();
     this.uniformBuffer.destroy();
+  }
+
+  /** Builds large deterministic fixtures between browser tasks so navigation stays responsive. */
+  private async loadSyntheticDataset(mode: AtlasMode, pointCount: number): Promise<void> {
+    this.dataGenerationAbortController?.abort();
+    const generationController = new AbortController();
+    this.dataGenerationAbortController = generationController;
+    this.mountLoadingOverlay(mode, pointCount);
+    this.setStatus(
+      `Preparing ${formatCount(pointCount)} GPU-resident points without blocking navigation…`
+    );
+
+    try {
+      const positions = new Float32Array(pointCount * 3);
+
+      for (let firstPointIndex = 0; firstPointIndex < pointCount; ) {
+        await yieldAtlasGeneration(generationController.signal);
+        generationController.signal.throwIfAborted();
+
+        const chunkPointCount = Math.min(ATLAS_GENERATION_CHUNK_SIZE, pointCount - firstPointIndex);
+        const chunk =
+          mode === 'taxi'
+            ? makeSyntheticTaxiPositions(chunkPointCount, firstPointIndex)
+            : makeSyntheticLidarPositions(chunkPointCount, firstPointIndex);
+        positions.set(chunk, firstPointIndex * 3);
+        firstPointIndex += chunkPointCount;
+        this.updateLoadingOverlay(firstPointIndex, pointCount);
+      }
+
+      generationController.signal.throwIfAborted();
+      if (this.finalized || this.mode !== mode || this.capacity !== pointCount) return;
+
+      this.currentPositions = positions;
+      this.decodedPointCount = mode === 'taxi' ? pointCount : 0;
+      this.setStatus('Building the resident GPU spatial index…');
+      this.updateLoadingOverlay(pointCount, pointCount, 'Building the GPU spatial index…');
+      await yieldAtlasGeneration(generationController.signal);
+      generationController.signal.throwIfAborted();
+      if (this.finalized || this.mode !== mode || this.capacity !== pointCount) return;
+
+      this.rebuildResources(positions);
+      this.setStatus('');
+      this.updateInteractionPresentation();
+    } catch (error) {
+      if (!generationController.signal.aborted && !this.finalized) {
+        this.setStatus(
+          `GPU data initialization failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    } finally {
+      if (this.dataGenerationAbortController === generationController) {
+        this.dataGenerationAbortController = null;
+        this.loadingOverlay?.remove();
+        this.loadingOverlay = null;
+      }
+    }
+  }
+
+  private mountLoadingOverlay(mode: AtlasMode, pointCount: number): void {
+    this.loadingOverlay?.remove();
+    const container = this.canvasContainer;
+    if (!container) return;
+
+    const overlay = document.createElement('div');
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.dataset.atlasLoading = '';
+    overlay.style.cssText =
+      'position:absolute;inset:0;z-index:2;display:grid;place-items:center;padding:24px;pointer-events:none;background:radial-gradient(ellipse at center,rgba(6,12,22,.91),rgba(4,8,14,.46));';
+    overlay.innerHTML = `<div style="width:min(340px,100%);padding:20px 22px;border:1px solid rgba(126,157,205,.3);border-radius:12px;background:rgba(8,12,20,.94);box-shadow:0 16px 48px rgba(0,0,0,.35);color:#edf3fc;font:12px/1.5 system-ui,sans-serif">
+      <div style="color:#87bfff;font:700 10px ui-monospace,monospace;letter-spacing:.1em">GPU SPATIAL ATLAS</div>
+      <div data-atlas-loading-message style="margin-top:8px;font-size:14px;font-weight:650">Preparing ${mode === 'taxi' ? 'NYC taxi' : 'NYC LiDAR'} points…</div>
+      <div data-atlas-loading-progress role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:5px;margin-top:13px;overflow:hidden;border-radius:999px;background:rgba(119,145,176,.24)">
+        <div data-atlas-loading-bar style="width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#68a4f4,#76d7ff);transition:width 120ms linear"></div>
+      </div>
+      <div data-atlas-loading-count style="margin-top:8px;color:#aec1d8;font:10px ui-monospace,monospace">0 / ${formatCount(pointCount)} points</div>
+      <div style="margin-top:8px;color:#8293ab;font-size:10px">Generated locally in responsive, cancellable batches.</div>
+    </div>`;
+    container.appendChild(overlay);
+    this.loadingOverlay = overlay;
+  }
+
+  private updateLoadingOverlay(
+    processedPointCount: number,
+    totalPointCount: number,
+    message?: string
+  ): void {
+    const overlay = this.loadingOverlay;
+    if (!overlay) return;
+    const progress = Math.round((processedPointCount / Math.max(1, totalPointCount)) * 100);
+    const progressElement = overlay.querySelector<HTMLElement>('[data-atlas-loading-progress]');
+    const progressBar = overlay.querySelector<HTMLElement>('[data-atlas-loading-bar]');
+    const countElement = overlay.querySelector<HTMLElement>('[data-atlas-loading-count]');
+    const messageElement = overlay.querySelector<HTMLElement>('[data-atlas-loading-message]');
+    progressElement?.setAttribute('aria-valuenow', String(progress));
+    if (progressBar) progressBar.style.width = `${progress}%`;
+    if (countElement) {
+      countElement.textContent = `${formatCount(processedPointCount)} / ${formatCount(totalPointCount)} points`;
+    }
+    if (message && messageElement) messageElement.textContent = message;
   }
 
   private createModel(kind: 'context' | 'selection' | 'picking'): Model {
@@ -620,6 +737,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.hoverGeneration++;
     this.pointerDirty = false;
     this.frameIndex = 0;
+    this.lastQuerySignature = null;
     this.currentPositions = renderPositions;
     const pointCount = Math.floor(renderPositions.length / 3);
     const dimension: 2 | 3 = this.mode === 'taxi' ? 2 : 3;
@@ -704,19 +822,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
     const width = Math.max(1, deviceSize[0]);
     const height = Math.max(1, deviceSize[1]);
-    const sceneColor = this.device.createTexture({
-      id: 'spatial-atlas-scene-color',
-      format: this.sceneColorFormat,
-      width,
-      height,
-      usage: Texture.SAMPLE | Texture.RENDER,
-      sampler: {
-        minFilter: 'linear',
-        magFilter: 'linear',
-        addressModeU: 'clamp-to-edge',
-        addressModeV: 'clamp-to-edge'
-      }
-    });
+    const sceneColor = this.createSceneColorTexture(width, height);
     this.postprocessingRenderer.resize([width, height]);
     const renderBundle = this.createRenderBundle(
       renderPositionsBuffer,
@@ -751,15 +857,18 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       renderBundle
     };
     const buildGraph = this.createBuildGraph(shared);
+    const renderGraph = this.createRenderGraph(shared);
     const queryGraphs = this.createQueryGraphs(shared);
     const picking = this.createPickingGraph(shared, width, height);
     this.graphInspector.registerGraph(buildGraph);
+    this.graphInspector.registerGraph(renderGraph);
     for (const queryGraph of queryGraphs.values()) this.graphInspector.registerGraph(queryGraph);
     this.graphInspector.registerGraph(picking.graph);
     const newResources: AtlasResources = {
       ...shared,
       mode: this.mode,
       buildGraph,
+      renderGraph,
       queryGraphs,
       pickingGraph: picking.graph,
       pickingReadbackIdentifier: picking.readbackIdentifier,
@@ -782,6 +891,51 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.pickedObjectIndex = null;
     this.hideHoverTooltip();
     this.updateInspector();
+  }
+
+  private createSceneColorTexture(width: number, height: number): Texture {
+    return this.device.createTexture({
+      id: 'spatial-atlas-scene-color',
+      format: this.sceneColorFormat,
+      width,
+      height,
+      usage: Texture.SAMPLE | Texture.RENDER,
+      sampler: {
+        minFilter: 'linear',
+        magFilter: 'linear',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge'
+      }
+    });
+  }
+
+  /** Replaces framebuffer-sized graphs while preserving all resident points and their GPU index. */
+  private resizeResources(resources: AtlasResources, width: number, height: number): void {
+    this.hoverGeneration++;
+    this.pointerDirty = false;
+    resources.renderGraph.destroy();
+    for (const graph of resources.queryGraphs.values()) graph.destroy();
+    resources.pickingGraph.destroy();
+    resources.sceneColor.destroy();
+
+    resources.width = width;
+    resources.height = height;
+    resources.sceneColor = this.createSceneColorTexture(width, height);
+    this.postprocessingRenderer.resize([width, height]);
+    resources.renderGraph = this.createRenderGraph(resources);
+    resources.queryGraphs = this.createQueryGraphs(resources);
+    const picking = this.createPickingGraph(resources, width, height);
+    resources.pickingGraph = picking.graph;
+    resources.pickingReadbackIdentifier = picking.readbackIdentifier;
+
+    this.graphInspector.clear();
+    this.graphInspector.registerGraph(resources.buildGraph);
+    this.graphInspector.registerGraph(resources.renderGraph);
+    for (const queryGraph of resources.queryGraphs.values()) {
+      this.graphInspector.registerGraph(queryGraph);
+    }
+    this.graphInspector.registerGraph(resources.pickingGraph);
+    this.lastQuerySignature = null;
   }
 
   private createBuildGraph(
@@ -863,14 +1017,100 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     >
   ): Map<QueryGraphKey, CompiledGPUCommandGraph<AtlasGraphParameters>> {
     const graphs = new Map<QueryGraphKey, CompiledGPUCommandGraph<AtlasGraphParameters>>();
-    const kinds: GPUPointSpatialQueryKind[] =
-      resources.dimension === 2 ? ['bounds', 'radius', 'polygon'] : ['bounds', 'radius'];
-    for (const kind of kinds) {
-      for (const execution of ['index', 'scan'] as const) {
-        graphs.set(`${kind}-${execution}`, this.createQueryGraph(resources, kind, execution));
-      }
-    }
+    const queryKind =
+      resources.dimension === 3 && this.queryKind === 'polygon' ? 'bounds' : this.queryKind;
+    graphs.set(
+      `${queryKind}-${this.queryExecution}`,
+      this.createQueryGraph(resources, queryKind, this.queryExecution)
+    );
     return graphs;
+  }
+
+  /** Alternate query pipelines are compiled only when a visitor actually selects them. */
+  private getQueryGraph(resources: AtlasResources): CompiledGPUCommandGraph<AtlasGraphParameters> {
+    const graphKey = `${this.queryKind}-${this.queryExecution}` as const;
+    let graph = resources.queryGraphs.get(graphKey);
+    if (!graph) {
+      graph = this.createQueryGraph(resources, this.queryKind, this.queryExecution);
+      resources.queryGraphs.set(graphKey, graph);
+      this.graphInspector.registerGraph(graph);
+    }
+    return graph;
+  }
+
+  /** Redraws persistent query results without dispatching a million-row spatial query again. */
+  private createRenderGraph(
+    resources: Pick<
+      AtlasResources,
+      | 'renderPositions'
+      | 'pointAttributes'
+      | 'visibleIds'
+      | 'drawCommands'
+      | 'sceneColor'
+      | 'renderBundle'
+    >
+  ): CompiledGPUCommandGraph<AtlasGraphParameters> {
+    const graph = new GPUCommandGraph<AtlasGraphParameters>(this.device, {
+      id: 'spatial-atlas-display-graph'
+    });
+    const renderPositions = importBuffer(
+      graph,
+      'display-render-positions',
+      resources.renderPositions
+    );
+    const pointAttributes = importBuffer(
+      graph,
+      'display-point-attributes',
+      resources.pointAttributes
+    );
+    const visibleIds = importBuffer(graph, 'display-visible-ids', resources.visibleIds);
+    const drawCommand = importBuffer(graph, 'display-draw-command', resources.drawCommands.buffer);
+    const uniforms = importBuffer(graph, 'display-uniforms', this.uniformBuffer);
+    const sceneColor = graph.importTexture(
+      {
+        id: 'display-scene-color',
+        format: resources.sceneColor.format,
+        width: resources.sceneColor.width,
+        height: resources.sceneColor.height,
+        usage: resources.sceneColor.props.usage
+      },
+      resources.sceneColor
+    );
+    const sceneDepth = graph.createTransientTexture({
+      id: 'display-scene-depth',
+      format: 'depth24plus',
+      width: resources.sceneColor.width,
+      height: resources.sceneColor.height,
+      usage: Texture.RENDER
+    });
+
+    graph.addRenderPass({
+      id: 'spatial-atlas-render-cached-results',
+      attachments: {
+        colorAttachments: [graph.createTextureView(sceneColor)],
+        depthStencilAttachment: graph.createTextureView(sceneDepth)
+      },
+      resources: [
+        {buffer: renderPositions, usage: 'storage-read'},
+        {buffer: pointAttributes, usage: 'storage-read'},
+        {buffer: visibleIds, usage: 'storage-read'},
+        {buffer: uniforms, usage: 'uniform'},
+        {buffer: drawCommand, usage: 'indirect'}
+      ],
+      compile: () => ({
+        getRenderPassProps: () => ({
+          id: 'spatial-atlas-cached-render-pass',
+          clearColor: [0.001, 0.002, 0.012, 1],
+          clearDepth: 1,
+          clearStencil: false
+        }),
+        encode: ({parameters, renderPass}) => {
+          renderPass.setParameters({viewport: parameters.viewport});
+          renderPass.executeBundles([resources.renderBundle]);
+        }
+      })
+    });
+    return graph.compile();
   }
 
   private createQueryGraph(
@@ -1477,16 +1717,15 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     }
     this.queryRadius = mode === 'taxi' ? 0.4 : 0.32;
     this.resetView();
-    this.currentPositions =
-      mode === 'taxi'
-        ? makeSyntheticTaxiPositions(this.capacity)
-        : makeSyntheticLidarPositions(this.capacity);
-    this.decodedPointCount = mode === 'taxi' ? this.capacity : 0;
+    this.dataGenerationAbortController?.abort();
+    this.destroyResources();
+    this.currentPositions = new Float32Array(0);
+    this.decodedPointCount = 0;
     this.downloadedTileCount = 0;
-    this.rebuildResources(this.currentPositions);
     previousTileCache?.destroy();
     this.panels.setPanel(this.makePanel());
     this.updateInteractionPresentation();
+    void this.loadSyntheticDataset(mode, this.capacity);
   }
 
   private changeCapacity(capacity: number): void {
@@ -1501,22 +1740,22 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.lidarRefreshPending = false;
     this.lidarPublishTimer = null;
     this.lastLidarRefreshCenter = null;
-    this.currentPositions =
-      this.mode === 'taxi'
-        ? makeSyntheticTaxiPositions(capacity)
-        : makeSyntheticLidarPositions(capacity);
-    this.decodedPointCount = this.mode === 'taxi' ? capacity : 0;
+    this.dataGenerationAbortController?.abort();
+    this.destroyResources();
+    this.currentPositions = new Float32Array(0);
+    this.decodedPointCount = 0;
     this.downloadedTileCount = 0;
-    this.rebuildResources(this.currentPositions);
     previousTileCache?.destroy();
     this.updateLoadLidarButton();
     this.updateInteractionPresentation();
+    void this.loadSyntheticDataset(this.mode, capacity);
   }
 
   private destroyResources(): void {
     const resources = this.resources;
     if (!resources) return;
     resources.buildGraph.destroy();
+    resources.renderGraph.destroy();
     for (const graph of resources.queryGraphs.values()) graph.destroy();
     resources.pickingGraph.destroy();
     resources.renderBundle.destroy();
@@ -2557,17 +2796,32 @@ function makeQueryPositions(positions: Float32Array, dimension: 2 | 3): Float32A
   return result;
 }
 
-function makeSyntheticLidarPositions(pointCount: number): Float32Array {
-  const positions = makeSyntheticTaxiPositions(pointCount);
+function makeSyntheticLidarPositions(pointCount: number, firstPointIndex = 0): Float32Array {
+  const positions = makeSyntheticTaxiPositions(pointCount, firstPointIndex);
   for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
     const offset = pointIndex * 3;
+    const globalPointIndex = firstPointIndex + pointIndex;
     const x = positions[offset];
     const y = positions[offset + 1];
     const skyline = Math.exp(-(x * x * 11 + y * y * 4));
-    const detail = hashUnit(pointIndex * 3 + 1) * 0.22;
-    positions[offset + 2] = 0.03 + skyline * (0.3 + hashUnit(pointIndex * 3) * 1.3) + detail;
+    const detail = hashUnit(globalPointIndex * 3 + 1) * 0.22;
+    positions[offset + 2] = 0.03 + skyline * (0.3 + hashUnit(globalPointIndex * 3) * 1.3) + detail;
   }
   return positions;
+}
+
+function yieldAtlasGeneration(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal.removeEventListener('abort', abortGeneration);
+      resolve();
+    }, 0);
+    const abortGeneration = () => {
+      clearTimeout(timeout);
+      reject(signal.reason ?? new DOMException('Atlas generation was cancelled', 'AbortError'));
+    };
+    signal.addEventListener('abort', abortGeneration, {once: true});
+  });
 }
 
 function getInitialResidentPointCount(): number {
@@ -2597,23 +2851,31 @@ function makeGridCellCounts(
   const cellCounts = new Uint32Array(gridSize.reduce((product, value) => product * value, 1));
   const pointCount = Math.floor(positions.length / dimension);
   for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
-    const cell = new Array<number>(dimension);
-    let accepted = true;
-    for (let axis = 0; axis < dimension; axis++) {
-      const value = positions[pointIndex * dimension + axis];
-      if (!Number.isFinite(value) || value < bounds[axis] || value > bounds[axis + dimension]) {
-        accepted = false;
-        break;
-      }
-      cell[axis] = getCellCoordinate(value, bounds[axis], bounds[axis + dimension], gridSize[axis]);
+    const offset = pointIndex * dimension;
+    const horizontal = positions[offset];
+    const vertical = positions[offset + 1];
+    if (
+      !Number.isFinite(horizontal) ||
+      !Number.isFinite(vertical) ||
+      horizontal < bounds[0] ||
+      horizontal > bounds[dimension] ||
+      vertical < bounds[1] ||
+      vertical > bounds[dimension + 1]
+    ) {
+      continue;
     }
-    if (accepted) {
-      const cellIndex =
-        dimension === 2
-          ? cell[1] * gridSize[0] + cell[0]
-          : (cell[2] * gridSize[1] + cell[1]) * gridSize[0] + cell[0];
-      cellCounts[cellIndex]++;
+
+    const horizontalCell = getCellCoordinate(horizontal, bounds[0], bounds[dimension], gridSize[0]);
+    const verticalCell = getCellCoordinate(vertical, bounds[1], bounds[dimension + 1], gridSize[1]);
+    if (dimension === 2) {
+      cellCounts[verticalCell * gridSize[0] + horizontalCell]++;
+      continue;
     }
+
+    const depth = positions[offset + 2];
+    if (!Number.isFinite(depth) || depth < bounds[2] || depth > bounds[5]) continue;
+    const depthCell = getCellCoordinate(depth, bounds[2], bounds[5], gridSize[2]);
+    cellCounts[(depthCell * gridSize[1] + verticalCell) * gridSize[0] + horizontalCell]++;
   }
   return cellCounts;
 }

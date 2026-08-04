@@ -43,7 +43,6 @@ import {
   initializeGPUDataAnalysisExample,
   type GPUDataAnalysisExampleHandle
 } from '../../examples/experimental/gpu-data-analysis/src/app';
-import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/api/video-texture/app';
 import WebXRKaleidoscopeApp from '../../examples/experimental/webxr-kaleidoscope/app';
@@ -81,8 +80,6 @@ import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starf
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
-import BillionPointSpatialAtlasApp from '../../examples/showcase/billion-point-spatial-atlas/app';
-import CrossfilterSupremacyApp from '../../examples/showcase/crossfilter-supremacy/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
@@ -111,18 +108,125 @@ import {createArrowPathLayerDeck} from '../../examples/deck/arrow-path-layer/app
 import {createArrowPolygonLayerDeck} from '../../examples/deck/arrow-polygon-layer/app';
 import {createArrowTextLayerDeck} from '../../examples/deck/arrow-text-layer/app';
 import {createGPUCulledTraceDeck} from '../../examples/deck/gpu-culled-trace/app';
-import {createLuSpatialTaxiDeck} from '../../examples/deck/luspatial-taxi/app';
 
 const exampleConfig = {};
 
+const loadBillionPointSpatialAtlasExample = () =>
+  import('../../examples/showcase/billion-point-spatial-atlas/app');
+const loadCrossfilterSupremacyExample = () =>
+  import('../../examples/showcase/crossfilter-supremacy/app');
+const loadLuSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
+const loadFP64Example = () => import('../../examples/experimental/fp64/app');
+
 type WebsiteExampleProps = React.PropsWithChildren<
   ExampleDisplayProps & {
+    autoStart?: boolean;
     panel?: boolean;
     showHeader?: boolean;
     showStats?: boolean;
     templateInfoPlacement?: 'header' | 'page';
   }
 >;
+
+type DeferredExampleModuleState<Module> = {
+  module: Module | null;
+  errorMessage: string | null;
+};
+
+function useDeferredExampleModule<Module>(
+  loadModule: () => Promise<Module>,
+  enabled = true
+): DeferredExampleModuleState<Module> {
+  const [moduleState, setModuleState] = useState<DeferredExampleModuleState<Module>>({
+    module: null,
+    errorMessage: null
+  });
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    let isCancelled = false;
+    const loadingTimeout = window.setTimeout(() => {
+      void loadModule()
+        .then(module => {
+          if (!isCancelled) {
+            setModuleState({module, errorMessage: null});
+          }
+        })
+        .catch(error => {
+          if (!isCancelled) {
+            setModuleState({module: null, errorMessage: getErrorMessage(error)});
+          }
+        });
+    }, 0);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(loadingTimeout);
+    };
+  }, [enabled, loadModule]);
+
+  return moduleState;
+}
+
+function DeferredGPUExampleStatus({
+  title,
+  description,
+  errorMessage,
+  embedded,
+  embeddedHeight,
+  style
+}: {
+  title: string;
+  description: string;
+  errorMessage?: string | null;
+} & WebsiteExampleProps): React.JSX.Element {
+  return (
+    <ExamplePage
+      embedded={embedded}
+      embeddedHeight={embeddedHeight}
+      style={{
+        background:
+          'radial-gradient(ellipse at 22% 16%, rgba(56, 189, 248, 0.16), transparent 42%), #07101d',
+        ...style
+      }}
+    >
+      <div
+        aria-live="polite"
+        role={errorMessage ? 'alert' : 'status'}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'grid',
+          alignContent: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          padding: 32,
+          color: '#f1f5f9',
+          textAlign: 'center'
+        }}
+      >
+        <span
+          style={{
+            color: '#7dd3fc',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase'
+          }}
+        >
+          {errorMessage ? 'Unable to load GPU experience' : 'Preparing GPU experience'}
+        </span>
+        <strong style={{fontSize: 22, lineHeight: 1.2}}>{title}</strong>
+        <span style={{maxWidth: 420, color: '#b6c5d7', fontSize: 14, lineHeight: 1.6}}>
+          {errorMessage || description}
+        </span>
+      </div>
+    </ExamplePage>
+  );
+}
 
 type DeckExampleHandle = {
   finalize: () => void;
@@ -330,21 +434,37 @@ export const DeckGPUCulledTraceExample: React.FC<DeckArrowLayerExampleProps> = (
 
 export const DeckLuSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
   embedded = false
-}) => (
-  <ReactExample
-    component={DeckArrowLayerCanvas}
-    componentProps={{
-      createDeck: createLuSpatialTaxiDeck,
-      panel: {
-        id: 'luspatial-taxi',
-        title: 'luSpatial Taxi Explorer',
-        devices: ['webgpu']
-      }
-    }}
-    showStats={false}
-    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
-  />
-);
+}) => {
+  const {module, errorMessage} = useDeferredExampleModule(loadLuSpatialTaxiExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        title="luProj + luSpatial Taxi Explorer"
+        description="Loading the projection, spatial-query, and interactive map tools."
+        errorMessage={errorMessage}
+        embedded={embedded}
+        style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+      />
+    );
+  }
+
+  return (
+    <ReactExample
+      component={DeckArrowLayerCanvas}
+      componentProps={{
+        createDeck: module.createLuSpatialTaxiDeck,
+        panel: {
+          id: 'luspatial-taxi',
+          title: 'luProj + luSpatial Taxi Explorer',
+          devices: ['webgpu']
+        }
+      }}
+      showStats={false}
+      style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+    />
+  );
+};
 
 type DeckArrowLayerExampleId = 'path' | 'polygon' | 'text';
 
@@ -646,32 +766,62 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
   />
 );
 
-export const BillionPointSpatialAtlasExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="billion-point-spatial-atlas"
-    title="Billion-Point Spatial Atlas"
-    subtitle="Indexed geospatial queries and indirect rendering at data scale"
-    directory="showcase"
-    devices={['webgpu']}
-    template={BillionPointSpatialAtlasApp}
-    config={exampleConfig}
-    canvasContextProfile="high-dynamic-range"
-    {...props}
-  />
-);
+export const BillionPointSpatialAtlasExample: React.FC<WebsiteExampleProps> = props => {
+  const {module, errorMessage} = useDeferredExampleModule(loadBillionPointSpatialAtlasExample);
 
-export const CrossfilterSupremacyExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="crossfilter-supremacy"
-    title="Crossfilter Supremacy"
-    subtitle="One million points · one GPU-resident linked dashboard"
-    directory="showcase"
-    devices={['webgpu']}
-    template={CrossfilterSupremacyApp}
-    config={exampleConfig}
-    {...props}
-  />
-);
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="Billion-Point Spatial Atlas"
+        description="Loading the GPU-native spatial index and interactive atlas."
+        errorMessage={errorMessage}
+      />
+    );
+  }
+
+  return (
+    <LumaExample
+      id="billion-point-spatial-atlas"
+      title="Billion-Point Spatial Atlas"
+      subtitle="Indexed geospatial queries and indirect rendering at data scale"
+      directory="showcase"
+      devices={['webgpu']}
+      template={module.default}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      {...props}
+    />
+  );
+};
+
+export const CrossfilterSupremacyExample: React.FC<WebsiteExampleProps> = props => {
+  const {module, errorMessage} = useDeferredExampleModule(loadCrossfilterSupremacyExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="LuxFilter: Crossfilter Supremacy"
+        description="Loading the million-row linked dashboard and GPU filtering pipeline."
+        errorMessage={errorMessage}
+      />
+    );
+  }
+
+  return (
+    <LumaExample
+      id="crossfilter-supremacy"
+      title="Crossfilter Supremacy"
+      subtitle="One million points · one GPU-resident linked dashboard"
+      directory="showcase"
+      devices={['webgpu']}
+      template={module.default}
+      config={exampleConfig}
+      {...props}
+    />
+  );
+};
 
 export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
@@ -1534,19 +1684,100 @@ export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
   );
 };
 
-export const FP64Example: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
+export const FP64Example: React.FC<WebsiteExampleProps> = ({
+  autoStart = false,
+  embeddedHeight,
+  ...props
+}) => {
+  const [isBenchmarkRequested, setIsBenchmarkRequested] = useState(!props.embedded || autoStart);
+  const {module, errorMessage} = useDeferredExampleModule(loadFP64Example, isBenchmarkRequested);
   const deviceType = useStore(store => store.deviceType);
   const presentationDevice = useStore(store => store.presentationDevice);
   const presentationDeviceError = useStore(store => store.presentationDeviceError);
+  const previewImageUrl = useBaseUrl('/images/examples/experimental/fp64.jpg');
+
+  if (!isBenchmarkRequested) {
+    return (
+      <ExamplePage
+        embedded
+        embeddedHeight={300}
+        style={{
+          border: '1px solid rgba(148, 163, 184, 0.24)',
+          borderRadius: 12,
+          background: `linear-gradient(90deg, rgba(4, 10, 20, 0.97), rgba(4, 10, 20, 0.68)), url("${previewImageUrl}") center / cover`,
+          margin: '1.5rem 0'
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            alignContent: 'center',
+            justifyItems: 'start',
+            gap: 12,
+            padding: 28,
+            color: '#f8fafc'
+          }}
+        >
+          <span
+            style={{
+              color: '#a5b4fc',
+              fontSize: 11,
+              fontWeight: 750,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase'
+            }}
+          >
+            Optional interactive GPU benchmark
+          </span>
+          <strong style={{fontSize: 22, lineHeight: 1.2}}>
+            Explore floating-point precision.
+          </strong>
+          <span style={{maxWidth: 460, color: '#cbd5e1', fontSize: 14, lineHeight: 1.6}}>
+            Compare Mandelbrot rendering and compute precision when you are ready to use your GPU.
+          </span>
+          <button
+            onClick={() => setIsBenchmarkRequested(true)}
+            style={{
+              border: 0,
+              borderRadius: 999,
+              background: '#e2e8f0',
+              color: '#0f172a',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 700,
+              padding: '10px 16px'
+            }}
+            type="button"
+          >
+            Launch precision benchmark →
+          </button>
+        </div>
+      </ExamplePage>
+    );
+  }
 
   if (presentationDeviceError) {
     return <div>{presentationDeviceError}</div>;
   }
 
+  if (errorMessage || !module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="64-bit GPU Precision"
+        description="Loading the interactive Mandelbrot and floating-point compute benchmark."
+        errorMessage={errorMessage}
+        embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      />
+    );
+  }
+
   return deviceType && presentationDevice ? (
     <ReactExample
       {...props}
-      component={FP64App}
+      component={module.default}
       componentProps={{presentationDevice}}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
       showStats={false}

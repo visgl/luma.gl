@@ -7,7 +7,8 @@ import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
 import {
   CROSS_FILTER_CATEGORY_NAMES,
   CROSS_FILTER_DOMAINS,
-  CROSS_FILTER_MAP_DOMAIN
+  CROSS_FILTER_MAP_DOMAIN,
+  makeCrossfilterDatasetAsync
 } from './crossfilter-data';
 import {CrossfilterEngine, type CrossfilterSummary} from './crossfilter-engine';
 import {
@@ -143,11 +144,14 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
   static info = '';
 
   readonly device: Device;
-  readonly engine: CrossfilterEngine;
 
+  private engine: CrossfilterEngine | null = null;
   private interface: CrossfilterInterface | null = null;
   private latestSummary: CrossfilterSummary | null = null;
   private readonly activeFilters = new Map<string, CrossfilterActiveFilter>();
+  private readonly initializationAbortController = new AbortController();
+  private readonly rowCount: number;
+  private readonly seed: number | undefined;
   private activeCategory: number | null = null;
   private refreshRequested = false;
   private refreshInFlight = false;
@@ -164,12 +168,8 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
     }
 
     this.device = animationProps.device;
-    this.engine = new CrossfilterEngine(animationProps.device, {
-      rowCount: animationProps.crossfilterRowCount ?? getInitialRowCount(),
-      ...(animationProps.crossfilterSeed === undefined
-        ? {}
-        : {seed: animationProps.crossfilterSeed})
-    });
+    this.rowCount = animationProps.crossfilterRowCount ?? getInitialRowCount();
+    this.seed = animationProps.crossfilterSeed;
   }
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
@@ -197,14 +197,55 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
         this.redrawRequested = true;
       }
     });
-    this.interface.setStatus('Compiling reusable GPU selection graph');
-    this.installDebugController();
-    this.refreshRequested = true;
-    await this.flushUpdates();
+    this.interface.setSummary({totalCount: this.rowCount, selectedCount: 0});
+    this.interface.setStatus('Preparing GPU-resident transaction columns · 0%');
+
+    // Paint the dashboard before generating a million rows, then yield between bounded batches so
+    // route transitions and cancellation stay responsive even on slower devices.
+    await waitForCrossfilterDashboardPaint(this.initializationAbortController.signal);
+    if (this.finalized) {
+      return;
+    }
+
+    try {
+      const dataset = await makeCrossfilterDatasetAsync({
+        rowCount: this.rowCount,
+        seed: this.seed,
+        signal: this.initializationAbortController.signal,
+        onProgress: (completedRowCount, totalRowCount) => {
+          if (!this.finalized) {
+            const percentage = Math.round((completedRowCount / totalRowCount) * 100);
+            this.interface?.setStatus(
+              `Preparing GPU-resident transaction columns · ${percentage}%`
+            );
+          }
+        }
+      });
+      if (this.finalized) {
+        return;
+      }
+
+      this.interface.setStatus('Uploading transaction columns and compiling the GPU graph');
+      await waitForCrossfilterDashboardPaint(this.initializationAbortController.signal);
+      if (this.finalized) {
+        return;
+      }
+
+      this.engine = new CrossfilterEngine(this.device, {dataset});
+      this.interface.setStatus('Computing linked GPU selections and histograms');
+      this.installDebugController();
+      this.refreshRequested = true;
+      await this.flushUpdates();
+    } catch (error) {
+      if (this.finalized && this.initializationAbortController.signal.aborted) {
+        return;
+      }
+      throw error;
+    }
   }
 
   override onRender({animationLoop, canvasContext}: AnimationProps): void {
-    if (!this.interface || this.finalized) {
+    if (!this.interface || !this.engine || this.finalized) {
       return;
     }
 
@@ -229,9 +270,11 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
 
   override onFinalize(): void {
     this.finalized = true;
+    this.initializationAbortController.abort();
     this.interface?.destroy();
     this.interface = null;
-    this.engine.destroy();
+    this.engine?.destroy();
+    this.engine = null;
 
     if (typeof window !== 'undefined') {
       const debugWindow = window as CrossfilterDebugWindow;
@@ -243,7 +286,12 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
 
   /** Applies a reproducible multi-dimensional brush without rebuilding the GPU graph. */
   applyPreset(identifier: CrossfilterPresetIdentifier): void {
-    this.engine.clearAll();
+    const engine = this.engine;
+    if (!engine || this.finalized) {
+      return;
+    }
+
+    engine.clearAll();
     this.activeCategory = null;
     this.activeFilters.clear();
     this.interface?.setBrush('map', null);
@@ -253,7 +301,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
 
     const preset = getCrossfilterPreset(identifier);
     if (preset.mapBounds) {
-      this.engine.setMapBounds(preset.mapBounds);
+      engine.setMapBounds(preset.mapBounds);
       this.interface?.setBrush(
         'map',
         makeCrossfilterNormalizedBounds(
@@ -266,7 +314,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
     }
 
     if (preset.scatterBounds) {
-      this.engine.setScatterBounds(preset.scatterBounds);
+      engine.setScatterBounds(preset.scatterBounds);
       this.interface?.setBrush(
         'scatter',
         makeCrossfilterNormalizedBounds(
@@ -285,7 +333,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
     for (const dimension of Object.keys(preset.ranges ?? {}) as CrossfilterHistogramDimension[]) {
       const range = preset.ranges?.[dimension];
       if (range) {
-        this.engine.setRange(dimension, range);
+        engine.setRange(dimension, range);
         this.updateRangeFilter(dimension, range);
         this.interface?.setHistogramBrush(dimension, [
           normalize(range[0], CROSS_FILTER_DOMAINS[dimension]),
@@ -302,6 +350,11 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
   }
 
   private handleViewBrush(event: CrossfilterBrushEvent): void {
+    const engine = this.engine;
+    if (!engine || this.finalized) {
+      return;
+    }
+
     const isMap = event.id === 'map';
     const horizontalDomain = isMap ? CROSS_FILTER_MAP_DOMAIN.x : CROSS_FILTER_DOMAINS.value;
     const verticalDomain = isMap ? CROSS_FILTER_MAP_DOMAIN.y : CROSS_FILTER_DOMAINS.risk;
@@ -310,9 +363,9 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
       : null;
 
     if (isMap) {
-      this.engine.setMapBounds(bounds);
+      engine.setMapBounds(bounds);
     } else {
-      this.engine.setScatterBounds(bounds);
+      engine.setScatterBounds(bounds);
     }
 
     if (bounds) {
@@ -330,11 +383,12 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
   }
 
   private handleHistogramBrush(event: CrossfilterHistogramBrushEvent): void {
-    if (!isHistogramDimension(event.id)) {
+    const engine = this.engine;
+    if (!engine || this.finalized || !isHistogramDimension(event.id)) {
       return;
     }
 
-    this.engine.setRange(event.id, event.range);
+    engine.setRange(event.id, event.range);
     if (event.range) {
       this.updateRangeFilter(event.id, event.range);
     } else {
@@ -363,6 +417,11 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
   }
 
   private toggleCategory(identifier: string): void {
+    const engine = this.engine;
+    if (!engine || this.finalized) {
+      return;
+    }
+
     const category = Number(identifier);
     if (
       !Number.isInteger(category) ||
@@ -373,7 +432,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
     }
 
     this.activeCategory = this.activeCategory === category ? null : category;
-    this.engine.setCategory(this.activeCategory);
+    engine.setCategory(this.activeCategory);
     if (this.activeCategory === null) {
       this.activeFilters.delete('category');
     } else {
@@ -409,7 +468,8 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
   }
 
   private async flushUpdates(): Promise<void> {
-    if (this.refreshInFlight || this.finalized) {
+    const engine = this.engine;
+    if (!engine || this.refreshInFlight || this.finalized) {
       return;
     }
 
@@ -417,7 +477,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
     try {
       while (this.refreshRequested && !this.finalized) {
         this.refreshRequested = false;
-        const summary = await this.engine.update();
+        const summary = await engine.update();
         if (this.finalized) {
           return;
         }
@@ -463,7 +523,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
       encodeTimeMilliseconds: summary.encodeTimeMilliseconds,
       readbackTimeMilliseconds: summary.readbackTimeMilliseconds,
       graphNodeCount: summary.nodeCount,
-      residentBytes: this.engine.residentByteLength
+      residentBytes: this.engine?.residentByteLength
     });
   }
 
@@ -478,7 +538,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
         return viewer.latestSummary !== null;
       },
       get rowCount() {
-        return viewer.engine.rowCount;
+        return viewer.rowCount;
       },
       get selectedCount() {
         return viewer.latestSummary?.selectedCount ?? 0;
@@ -494,6 +554,39 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
     };
     (window as CrossfilterDebugWindow).__luxFilterShowcase = this.debugController;
   }
+}
+
+function waitForCrossfilterDashboardPaint(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    let animationFrame: number | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const finish = () => {
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+      if (timeout !== null) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+      signal.removeEventListener('abort', finish);
+      resolve();
+    };
+    signal.addEventListener('abort', finish, {once: true});
+
+    if (typeof requestAnimationFrame === 'function') {
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = null;
+        timeout = setTimeout(finish, 0);
+      });
+      return;
+    }
+    timeout = setTimeout(finish, 0);
+  });
 }
 
 function getInitialRowCount(): number {
