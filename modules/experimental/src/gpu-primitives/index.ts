@@ -52,6 +52,7 @@ export type {
 export type {GPUCommandGraphContributor} from './gpu-command-graph';
 export {GPUCommandGraphInspector} from './gpu-command-graph-inspector';
 export type {
+  GPUCommandGraphInspectorCounterSnapshot,
   GPUCommandGraphInspectorDurationSnapshot,
   GPUCommandGraphInspectorEncoding,
   GPUCommandGraphInspectorGraph,

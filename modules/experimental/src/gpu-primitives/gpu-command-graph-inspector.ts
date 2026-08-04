@@ -47,6 +47,8 @@ export type GPUCommandGraphInspectorObservableGraph<
  * Route graph encodings through {@link GPUCommandGraphInspectorObservation.encode} to collect CPU
  * measurements without repeating graph IDs. GPU timestamp readback remains an explicit,
  * post-submission operation through {@link GPUCommandGraphInspectorObservation.recordGPUTimings}.
+ * Caller-read scalar counters can be published through
+ * {@link GPUCommandGraphInspectorObservation.recordCounters}.
  */
 export type GPUCommandGraphInspectorObservation<
   Parameters = void,
@@ -61,6 +63,8 @@ export type GPUCommandGraphInspectorObservation<
   ) => Encoding;
   /** Reads GPU timings once for an encoding produced by this handle, after caller submission. */
   readonly recordGPUTimings: (encoding: Encoding) => Promise<void>;
+  /** Records one sample for each named, caller-read scalar counter. */
+  readonly recordCounters: (counters: Readonly<Record<string, number>>) => void;
   /** Stops observing this graph without destroying or otherwise mutating it. */
   readonly detach: () => void;
 };
@@ -77,7 +81,7 @@ export type GPUCommandGraphInspectorNodeIdentity = {
 
 /** Configuration for a reusable command-graph inspector. */
 export type GPUCommandGraphInspectorProps = {
-  /** Maximum CPU and GPU duration samples retained for each total or node. Defaults to `120`. */
+  /** Maximum samples retained for each duration or scalar counter. Defaults to `120`. */
   maxSamples?: number;
   /** Optional application-specific group assigned when a node is first observed. */
   getNodeGroup?: (node: GPUCommandGraphInspectorNodeIdentity) => string | undefined;
@@ -93,6 +97,20 @@ export type GPUCommandGraphInspectorDurationSnapshot = {
   readonly p50Milliseconds?: number;
   /** Nearest-rank 95th percentile across retained samples. */
   readonly p95Milliseconds?: number;
+};
+
+/** Immutable bounded-sample summary for one named scalar counter. */
+export type GPUCommandGraphInspectorCounterSnapshot = {
+  /** Stable application-defined counter identifier. */
+  readonly id: string;
+  /** Number of retained samples. */
+  readonly sampleCount: number;
+  /** Most recently recorded value. */
+  readonly latestValue: number;
+  /** Nearest-rank 50th percentile across retained samples. */
+  readonly p50Value: number;
+  /** Nearest-rank 95th percentile across retained samples. */
+  readonly p95Value: number;
 };
 
 /** Immutable timing summary for one scheduled graph node. */
@@ -134,6 +152,8 @@ export type GPUCommandGraphInspectorGraphSnapshot = {
     readonly cpu: GPUCommandGraphInspectorDurationSnapshot;
     readonly gpu: GPUCommandGraphInspectorDurationSnapshot;
   };
+  /** Application-defined scalar counters in first-observed order. */
+  readonly counters: readonly GPUCommandGraphInspectorCounterSnapshot[];
   /** Per-node duration summaries in compiled schedule order. */
   readonly nodes: readonly GPUCommandGraphInspectorNodeSnapshot[];
 };
@@ -160,20 +180,21 @@ type GraphInspectionState = {
   timingReadFailureCount: number;
   cpuSamples: number[];
   gpuSamples: number[];
+  counters: Map<string, number[]>;
   nodes: Map<string, NodeInspectionState>;
 };
 
 const DEFAULT_MAX_SAMPLES = 120;
 
 /**
- * Collects bounded CPU and GPU timing histories for compiled command graphs.
+ * Collects bounded timing and caller-published scalar-counter histories for compiled graphs.
  *
  * The inspector has no DOM or submission responsibilities. {@link observeGraph} provides a
- * reusable encoding and timing lifecycle for executable graphs. The lower-level
- * {@link registerGraph}, {@link recordEncoding}, and {@link recordGPUTimings} methods remain
- * available when an application cannot route encoding through an observation handle. Registering
- * a new compiled graph with an existing ID replaces the old registration and resets its
- * measurements.
+ * reusable encoding, timing, and counter lifecycle for executable graphs. The lower-level
+ * {@link registerGraph}, {@link recordEncoding}, {@link recordGPUTimings}, and
+ * {@link recordCounters} methods remain available when an application cannot route activity
+ * through an observation handle. Registering a new compiled graph with an existing ID replaces
+ * the old registration and resets its measurements.
  */
 export class GPUCommandGraphInspector {
   private readonly maxSamples: number;
@@ -209,6 +230,7 @@ export class GPUCommandGraphInspector {
       timingReadFailureCount: 0,
       cpuSamples: [],
       gpuSamples: [],
+      counters: new Map(),
       nodes: new Map()
     });
   }
@@ -218,8 +240,9 @@ export class GPUCommandGraphInspector {
    *
    * The handle records CPU measurements for every encoding routed through `encode()`. Call its
    * `recordGPUTimings()` only after submitting the command buffer; repeated calls for one encoding
-   * coalesce into a single timing sample. Detaching removes this graph's registration only while it
-   * is still current, so an older handle cannot remove a replacement graph that uses the same ID.
+   * coalesce into a single timing sample. Caller-read diagnostics can be passed to
+   * `recordCounters()`. Detaching removes this graph's registration only while it is still current,
+   * so an older handle cannot remove or publish delayed counters into a same-ID replacement.
    */
   observeGraph<
     Parameters,
@@ -256,6 +279,11 @@ export class GPUCommandGraphInspector {
           await timingRead;
         }
       },
+      recordCounters: (counters: Readonly<Record<string, number>>): void => {
+        if (isCurrent()) {
+          this.recordGraphCounters(registration, counters);
+        }
+      },
       detach: (): void => {
         if (!attached) {
           return;
@@ -279,6 +307,11 @@ export class GPUCommandGraphInspector {
     this.recordGraphEncoding(graph, encoding);
   }
 
+  /** Records one sample for each named scalar counter on a registered graph. */
+  recordCounters(graphId: string, counters: Readonly<Record<string, number>>): void {
+    this.recordGraphCounters(this.getGraph(graphId), counters);
+  }
+
   private recordGraphEncoding(
     graph: GraphInspectionState,
     encoding: GPUCommandGraphInspectorEncoding
@@ -290,6 +323,28 @@ export class GPUCommandGraphInspector {
     for (const nodeStats of stats.nodes) {
       const node = this.getNode(graph, nodeStats);
       this.addSample(node.cpuSamples, nodeStats.cpuEncodeTimeMilliseconds);
+    }
+  }
+
+  private recordGraphCounters(
+    graph: GraphInspectionState,
+    counters: Readonly<Record<string, number>>
+  ): void {
+    const entries = Object.entries(counters);
+    for (const [id, value] of entries) {
+      if (!id || !Number.isFinite(value) || value < 0) {
+        throw new Error(
+          'GPUCommandGraphInspector counters require an ID and a finite, non-negative value'
+        );
+      }
+    }
+    for (const [id, value] of entries) {
+      let samples = graph.counters.get(id);
+      if (!samples) {
+        samples = [];
+        graph.counters.set(id, samples);
+      }
+      this.addSample(samples, value);
     }
   }
 
@@ -404,6 +459,9 @@ export class GPUCommandGraphInspector {
         gpu: summarizeSamples(node.gpuSamples)
       })
     );
+    const counters = Array.from(graph.counters, ([id, samples]) =>
+      summarizeCounterSamples(id, samples)
+    );
     return Object.freeze({
       id: graph.id,
       stats: graph.stats,
@@ -414,6 +472,7 @@ export class GPUCommandGraphInspector {
         cpu: summarizeSamples(graph.cpuSamples),
         gpu: summarizeSamples(graph.gpuSamples)
       }),
+      counters: Object.freeze(counters),
       nodes: Object.freeze(nodes)
     });
   }
@@ -433,6 +492,20 @@ function summarizeSamples(samples: readonly number[]): GPUCommandGraphInspectorD
     latestMilliseconds: samples[samples.length - 1],
     p50Milliseconds: getPercentile(sortedSamples, 0.5),
     p95Milliseconds: getPercentile(sortedSamples, 0.95)
+  });
+}
+
+function summarizeCounterSamples(
+  id: string,
+  samples: readonly number[]
+): GPUCommandGraphInspectorCounterSnapshot {
+  const sortedSamples = [...samples].sort((left, right) => left - right);
+  return Object.freeze({
+    id,
+    sampleCount: samples.length,
+    latestValue: samples[samples.length - 1],
+    p50Value: getPercentile(sortedSamples, 0.5),
+    p95Value: getPercentile(sortedSamples, 0.95)
   });
 }
 
