@@ -1516,6 +1516,119 @@ html[data-theme="dark"] .markdown .luma-onboarding {
   line-height: 1.72;
 }
 
+.markdown .luma-onboarding__feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 17px;
+  margin-top: 30px;
+}
+
+.markdown .luma-onboarding__feature {
+  position: relative;
+  display: flex;
+  min-height: 338px;
+  min-width: 0;
+  align-items: flex-end;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 19px;
+  background: #07101d;
+  box-shadow: var(--luma-onboarding-shadow);
+  color: #f8fafc;
+  text-decoration: none;
+  transition:
+    border-color 190ms ease,
+    box-shadow 190ms ease,
+    transform 190ms ease;
+}
+
+.markdown .luma-onboarding__feature::after {
+  position: absolute;
+  z-index: 1;
+  background:
+    linear-gradient(0deg, rgba(4, 10, 20, 0.98), rgba(4, 10, 20, 0.7) 45%, transparent 84%),
+    linear-gradient(110deg, rgba(4, 10, 20, 0.3), transparent 72%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+}
+
+.markdown .luma-onboarding__feature--splats {
+  --luma-onboarding-feature-accent: #f9a8d4;
+}
+
+.markdown .luma-onboarding__feature--anari {
+  --luma-onboarding-feature-accent: #93c5fd;
+}
+
+.markdown .luma-onboarding__feature--graph {
+  --luma-onboarding-feature-accent: #6ee7b7;
+}
+
+.markdown .luma-onboarding__feature:hover,
+.markdown .luma-onboarding__feature:focus-visible {
+  border-color: var(--luma-onboarding-feature-accent);
+  box-shadow:
+    var(--luma-onboarding-shadow),
+    0 0 0 1px color-mix(in srgb, var(--luma-onboarding-feature-accent) 34%, transparent);
+  color: #f8fafc;
+  text-decoration: none;
+  transform: translateY(-4px);
+}
+
+.markdown .luma-onboarding__feature-image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  transition: transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.markdown .luma-onboarding__feature:hover .luma-onboarding__feature-image,
+.markdown .luma-onboarding__feature:focus-visible .luma-onboarding__feature-image {
+  transform: scale(1.06);
+}
+
+.markdown .luma-onboarding__feature-content {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  padding: 23px;
+}
+
+.markdown .luma-onboarding__feature-package {
+  color: var(--luma-onboarding-feature-accent);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  font-weight: 690;
+  letter-spacing: -0.015em;
+}
+
+.markdown .luma-onboarding__feature-title {
+  margin: 10px 0 0;
+  color: #f8fafc;
+  font-size: clamp(1.32rem, 2vw, 1.7rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.14;
+}
+
+.markdown .luma-onboarding__feature-description {
+  margin: 9px 0 0;
+  color: #cbd5e1;
+  font-size: 0.83rem;
+  line-height: 1.58;
+}
+
+.markdown .luma-onboarding__feature-link {
+  display: inline-block;
+  margin-top: 17px;
+  color: var(--luma-onboarding-feature-accent);
+  font-size: 0.78rem;
+  font-weight: 680;
+}
+
 .markdown .luma-onboarding__gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1775,6 +1888,7 @@ html[data-theme="dark"] .markdown .luma-onboarding {
 }
 
 .markdown .luma-onboarding__action:focus-visible,
+.markdown .luma-onboarding__feature:focus-visible,
 .markdown .luma-onboarding__showcase:focus-visible,
 .markdown .luma-onboarding__path:focus-visible {
   outline: 2px solid #7dd3fc;
@@ -1830,6 +1944,15 @@ html[data-theme="dark"] .markdown .luma-onboarding {
 }
 
 @media screen and (max-width: 996px) {
+  .markdown .luma-onboarding__feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .markdown .luma-onboarding__feature:first-child {
+    grid-column: 1 / -1;
+    min-height: 320px;
+  }
+
   .markdown .luma-onboarding__capabilities {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1860,12 +1983,17 @@ html[data-theme="dark"] .markdown .luma-onboarding {
   }
 
   .markdown .luma-onboarding__gallery,
+  .markdown .luma-onboarding__feature-grid,
   .markdown .luma-onboarding__capabilities,
   .markdown .luma-onboarding__paths {
     grid-template-columns: 1fr;
   }
 
   .markdown .luma-onboarding__showcase--featured {
+    grid-column: auto;
+  }
+
+  .markdown .luma-onboarding__feature:first-child {
     grid-column: auto;
   }
 

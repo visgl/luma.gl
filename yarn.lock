@@ -4698,13 +4698,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/arrow@npm:9.4.0-alpha.4, @luma.gl/arrow@workspace:modules/arrow":
+"@luma.gl/arrow@npm:9.4.0-alpha.4, @luma.gl/arrow@workspace:*, @luma.gl/arrow@workspace:modules/arrow":
   version: 0.0.0-use.local
   resolution: "@luma.gl/arrow@workspace:modules/arrow"
   dependencies:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/splats": "workspace:*"
     "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/text": "npm:9.4.0-alpha.4"
     "@math.gl/geoarrow": "workspace:*"
@@ -4818,6 +4819,17 @@ __metadata:
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
     "@luma.gl/core": ~9.4.0-alpha.1
+  languageName: unknown
+  linkType: soft
+
+"@luma.gl/splats@workspace:*, @luma.gl/splats@workspace:modules/splats":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/splats@workspace:modules/splats"
+  dependencies:
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/tables": "npm:9.4.0-alpha.4"
   languageName: unknown
   linkType: soft
 
@@ -15607,6 +15619,27 @@ __metadata:
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-gaussian-splats@workspace:examples/showcase/gaussian-splats":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-gaussian-splats@workspace:examples/showcase/gaussian-splats"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/arrow": "workspace:*"
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/splats": "workspace:*"
+    "@luma.gl/tables": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
+    "@math.gl/core": "npm:^4.1.0"
+    preact: "npm:^10.17.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

@@ -69,6 +69,13 @@ types in [`@luma.gl/tables`](/docs/api-reference/tables):
 - `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
 - `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record
   batch boundaries.
+- `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for
+  [`@luma.gl/splats`](/docs/api-reference/splats), decoding GraphDECO encodings without
+  clamping or quantizing spherical-harmonic DC radiance.
+- `makeGPUSplatDataFromArrowStream()` progressively prepares Gaussian splat batches without
+  concatenating Arrow tables or rebuilding previously uploaded GPU buffers. Both Gaussian
+  conversion helpers accept structurally compatible Arrow objects from other installed Arrow
+  versions, including those produced by loaders.gl 5 alpha.
 - `ArrowInputSchema` combines source resolution and conversion with final
   `GPUInputSchema` validation for model-specific prepared inputs.
 

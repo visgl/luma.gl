@@ -38,6 +38,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/antialiasing',
   'showcase/anari',
   'showcase/dof',
+  'showcase/gaussian-splats',
   'showcase/billion-point-spatial-atlas',
   'showcase/lightstorm-megacity',
   'showcase/million-row-crossfilter',
@@ -85,6 +86,8 @@ const SHARED_COMPILER_OPTIONS = {
     '@math.gl/geoarrow/*': [join(repoRoot, 'modules/geoarrow/src/*')],
     '@luma.gl/experimental': [join(repoRoot, 'modules/experimental/src/index.ts')],
     '@luma.gl/experimental/*': [join(repoRoot, 'modules/experimental/src/*')],
+    '@luma.gl/splats': [join(repoRoot, 'modules/splats/src/index.ts')],
+    '@luma.gl/splats/*': [join(repoRoot, 'modules/splats/src/*')],
     '@luma.gl/tables': [join(repoRoot, 'modules/tables/src/index.ts')],
     '@luma.gl/tables/*': [join(repoRoot, 'modules/tables/src/*')]
   }

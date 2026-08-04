@@ -305,6 +305,11 @@
       },
       {
         "type": "category",
+        "label": "@luma.gl/splats (Experimental)",
+        "items": ["api-reference/splats/README"]
+      },
+      {
+        "type": "category",
         "label": "@luma.gl/gltf",
         "items": ["api-reference/gltf/README", "api-reference/gltf/gltf-extensions"]
       },

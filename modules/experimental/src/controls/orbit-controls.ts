@@ -14,12 +14,17 @@ export type OrbitControlsProps = {
   minPitch?: number;
   maxPitch?: number;
   rotateSpeed?: number;
+  pitchSpeed?: number;
   zoomSpeed?: number;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
+  onInteractionStart?: () => void;
 };
 
-type ResolvedOrbitControlsProps = Required<OrbitControlsProps>;
+type ResolvedOrbitControlsProps = Required<
+  Omit<OrbitControlsProps, 'pitchSpeed' | 'onInteractionStart'>
+> &
+  Pick<OrbitControlsProps, 'pitchSpeed' | 'onInteractionStart'>;
 
 const DEFAULT_PROPS: ResolvedOrbitControlsProps = {
   target: [0, 0, 0],
@@ -106,6 +111,31 @@ export class OrbitControls {
     this.props.autoRotate = autoRotate;
   }
 
+  /** Updates orbit configuration and applies supplied camera state immediately. */
+  setProps(props: OrbitControlsProps): void {
+    Object.assign(this.props, props);
+    if (props.target) {
+      this.props.target = [...props.target];
+    }
+    if (props.yaw !== undefined) {
+      this.yaw = props.yaw;
+    }
+    if (props.pitch !== undefined || props.minPitch !== undefined || props.maxPitch !== undefined) {
+      this.pitch = clampNumber(props.pitch ?? this.pitch, this.props.minPitch, this.props.maxPitch);
+    }
+    if (
+      props.distance !== undefined ||
+      props.minDistance !== undefined ||
+      props.maxDistance !== undefined
+    ) {
+      this.distance = clampNumber(
+        props.distance ?? this.distance,
+        this.props.minDistance,
+        this.props.maxDistance
+      );
+    }
+  }
+
   /** Restores the configured starting angle and zoom. */
   reset(): void {
     this.yaw = this.props.yaw;
@@ -134,6 +164,7 @@ export class OrbitControls {
     if (event.button !== 0) {
       return;
     }
+    this.props.onInteractionStart?.();
     this.dragging = true;
     this.pointerId = event.pointerId;
     this.lastPointer = [event.clientX, event.clientY];
@@ -150,7 +181,7 @@ export class OrbitControls {
     this.lastPointer = [event.clientX, event.clientY];
     this.yaw -= deltaX * this.props.rotateSpeed;
     this.pitch = clampNumber(
-      this.pitch - deltaY * this.props.rotateSpeed,
+      this.pitch - deltaY * (this.props.pitchSpeed ?? this.props.rotateSpeed),
       this.props.minPitch,
       this.props.maxPitch
     );
@@ -170,6 +201,7 @@ export class OrbitControls {
 
   private readonly handleWheel = (event: WheelEvent): void => {
     event.preventDefault();
+    this.props.onInteractionStart?.();
     const deltaY = clampNumber(event.deltaY, -240, 240);
     this.distance = clampNumber(
       this.distance * Math.exp(deltaY * this.props.zoomSpeed),

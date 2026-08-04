@@ -4,6 +4,14 @@
 
 export type {NumericArrowType, ArrowColumnInfo} from './arrow/arrow-utils/arrow-types';
 export {
+  makeGPUSplatDataFromArrow,
+  makeGPUSplatDataFromArrowStream,
+  type GPUSplatArrowRecordBatchLike,
+  type GPUSplatArrowSource,
+  type GPUSplatArrowTableLike,
+  type MakeGPUSplatDataFromArrowOptions
+} from './arrow/renderers/splats/conversion/make-gpu-splat-data-from-arrow';
+export {
   makeGPUTextDataFromArrow,
   makeGPUTextDataFromArrowStream,
   type GPUTextArrowStreamBatch,

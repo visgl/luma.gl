@@ -44,6 +44,7 @@
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
     "@luma.gl/shadertools": "9.4.0-alpha.4",
+    "@luma.gl/splats": "workspace:*",
     "@luma.gl/tables": "9.4.0-alpha.4",
     "@luma.gl/text": "9.4.0-alpha.4",
     "@math.gl/geoarrow": "workspace:*",

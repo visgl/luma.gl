@@ -122,15 +122,65 @@ describe('getting-started onboarding', () => {
 
   test('connects live discovery to accurate backend choices, learning paths, and optional setup', () => {
     const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
-    const discoveryOffset = onboardingSource.indexOf('01 · See it in motion');
-    const capabilityOffset = onboardingSource.indexOf('02 · Built for ambitious ideas');
-    const learningPathOffset = onboardingSource.indexOf('03 · Find your starting point');
+    const featureOffset = onboardingSource.indexOf('01 · Find your building blocks');
+    const discoveryOffset = onboardingSource.indexOf('02 · See it in motion');
+    const capabilityOffset = onboardingSource.indexOf('03 · Built for ambitious ideas');
+    const learningPathOffset = onboardingSource.indexOf('04 · Find your starting point');
     const projectSetupOffset = onboardingSource.indexOf('/docs/developer-guide/installing');
 
-    expect(discoveryOffset).toBeGreaterThan(0);
+    expect(featureOffset).toBeGreaterThan(0);
+    expect(discoveryOffset).toBeGreaterThan(featureOffset);
     expect(capabilityOffset).toBeGreaterThan(discoveryOffset);
     expect(learningPathOffset).toBeGreaterThan(capabilityOffset);
     expect(projectSetupOffset).toBeGreaterThan(learningPathOffset);
+
+    for (const feature of [
+      {
+        modifier: 'splats',
+        packageName: '@luma.gl/splats',
+        title: 'Gaussian Splats',
+        image: 'showcase/gaussian-splats.jpg',
+        route: '/examples/showcase/gaussian-splats'
+      },
+      {
+        modifier: 'anari',
+        packageName: '@luma.gl/anari',
+        title: 'Declarative 3D Scenes',
+        image: 'experimental/anari-playground.jpg',
+        route: '/examples/experimental/anari-playground'
+      },
+      {
+        modifier: 'graph',
+        packageName: 'GPU Command Graph',
+        title: 'GPU Graph',
+        image: 'experimental/gpu-trace-viewer.jpg',
+        route: '/examples/experimental/gpu-trace-viewer'
+      }
+    ]) {
+      const cardOffset = onboardingSource.indexOf(`luma-onboarding__feature--${feature.modifier}`);
+      const cardStart = onboardingSource.lastIndexOf('<Link', cardOffset);
+      const cardEnd = onboardingSource.indexOf('</Link>', cardOffset);
+
+      expect(cardOffset, `${feature.packageName} must have a feature card`).toBeGreaterThan(
+        featureOffset
+      );
+      expect(
+        cardOffset,
+        `${feature.packageName} must appear before the example gallery`
+      ).toBeLessThan(discoveryOffset);
+      expect(cardStart, `${feature.packageName} must use an interactive link`).toBeGreaterThan(
+        featureOffset
+      );
+      expect(cardEnd, `${feature.packageName} must retain a complete linked card`).toBeGreaterThan(
+        cardOffset
+      );
+
+      const featureCard = onboardingSource.slice(cardStart, cardEnd);
+      expect(featureCard).toContain(`to="${feature.route}"`);
+      expect(featureCard).toContain(`image="${feature.image}"`);
+      expect(featureCard).toContain(feature.packageName);
+      expect(featureCard).toContain(feature.title);
+    }
 
     expect(onboardingSource).toContain('Advanced scenes require WebGPU');
     expect(onboardingSource).toContain('Effects: Image Processing also runs on WebGL2');

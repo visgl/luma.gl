@@ -29,6 +29,7 @@ import '@luma.gl/arrow/test';
 import '@deck.gl-community/arrow-layers/test';
 import '@luma.gl/tables/test';
 import '@luma.gl/gpgpu/test';
+import '@luma.gl/splats/test';
 import '@luma.gl/text/test';
 import '@luma.gl/gpgpu/test';
 
