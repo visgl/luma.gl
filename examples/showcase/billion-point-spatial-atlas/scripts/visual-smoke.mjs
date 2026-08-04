@@ -10,6 +10,9 @@ import {fileURLToPath} from 'node:url';
 
 import {chromium} from 'playwright';
 import {createServer} from 'vite';
+import {
+  getPlaywrightLaunchOptions
+} from '../../../../scripts/playwright/get-playwright-launch-options.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const screenshotPath =
@@ -35,10 +38,9 @@ try {
   const url = server.resolvedUrls?.local[0];
   assert(url, 'Vite did not publish a local URL');
 
-  browser = await chromium.launch({
-    headless: true,
-    args: ['--enable-unsafe-webgpu', '--use-angle=swiftshader']
-  });
+  browser = await chromium.launch(
+    getPlaywrightLaunchOptions({headless: true, softwareGpu: true})
+  );
   const browserContext = await browser.newContext({viewport});
   page = await browserContext.newPage();
   artifactBrowser = await chromium.launch({headless: true, args: ['--disable-gpu']});
