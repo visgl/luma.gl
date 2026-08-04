@@ -169,6 +169,25 @@ describe('responsive GPU data examples', () => {
     );
     expect(atlasSource).toMatch(/controller\.signal\.throwIfAborted\(\)/);
     expect(atlasSource).toMatch(/this\.device\.lost/);
+    expect(atlasSource).toMatch(
+      /this\.completeSameModeTransition\(resumeLidarLoad, resumeLidarPublish\)/
+    );
+    expect(atlasSource).toMatch(
+      /resources\.pointCount === capacity[\s\S]*resources\.renderPositions === this\.lidarTileCache\.positionsBuffer/
+    );
+    expect(atlasSource).toMatch(
+      /this\.resumeLidarLoadAfterModeTransition \|\|=[\s\S]*this\.resumeLidarPublishAfterModeTransition \|\|=/
+    );
+    expect(atlasSource).toMatch(/this\.clearModeTransitionResumeState\(\)/);
+    expect(atlasSource).toMatch(
+      /this\.modeTransitionFailed = true[\s\S]*this\.modeTransitionFailed = false/
+    );
+    expect(atlasSource).toMatch(
+      /private async loadLidar[\s\S]*?this\.modeTransitionFailed[\s\S]*?private maybeRefreshLidarTiles/
+    );
+    expect(atlasSource).toMatch(
+      /private changeCapacity[\s\S]*?this\.modeTransitionFailed[\s\S]*?private destroyResources/
+    );
     expect(atlasSource).toMatch(/this\.canvas\.dataset\.atlasDataReadyMode = mode/);
     expect(atlasSource).toMatch(/const VISUAL_SMOKE_TAXI_GRID_SIZE = \[16, 16\] as const/);
     expect(atlasSource).toMatch(/const VISUAL_SMOKE_LIDAR_GRID_SIZE = \[16, 16, 4\] as const/);
@@ -193,5 +212,9 @@ describe('responsive GPU data examples', () => {
     );
     expect(atlasSmokeSource).toMatch(/canvas\?\.dataset\.atlasTransitionFailure/);
     expect(atlasSmokeSource).toMatch(/canvas\?\.dataset\.atlasDeviceLost/);
+    expect(atlasSmokeSource).toMatch(/softwareGpu: !requireGPUReadback/);
+    expect(atlasSmokeSource).toMatch(
+      /await assertNoAtlasGPUFailure\(page, 'completed visual smoke'\)/
+    );
   });
 });

@@ -403,6 +403,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private dataGenerationAbortController: AbortController | null = null;
   private modeTransitionGeneration = 0;
   private requestedMode: AtlasMode | null = null;
+  private resumeLidarLoadAfterModeTransition = false;
+  private resumeLidarPublishAfterModeTransition = false;
+  private modeTransitionFailed = false;
   private deviceLossMessage: string | null = null;
   private readonly gpuTimingReadbacks = new Set<Promise<void>>();
   private readonly gpuTimingReadbackTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -506,7 +509,10 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     // Stop adding work while the benchmark drains the queue and reads its final counters.
     if (this.benchmarkFinishing) return;
     const deviceSize = device.getDefaultCanvasContext().getDevicePixelSize();
-    if (resources.width !== deviceSize[0] || resources.height !== deviceSize[1]) {
+    if (
+      !this.modeTransitionFailed &&
+      (resources.width !== deviceSize[0] || resources.height !== deviceSize[1])
+    ) {
       this.resizeResources(resources, Math.max(1, deviceSize[0]), Math.max(1, deviceSize[1]));
     }
 
@@ -634,6 +640,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.finalized = true;
     this.modeTransitionGeneration++;
     this.requestedMode = null;
+    this.clearModeTransitionResumeState();
     this.cancelScheduledGPUTimingReadbacks();
     this.dataGenerationAbortController?.abort();
     this.loadingOverlay?.remove();
@@ -666,6 +673,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
 
   /** Builds large deterministic fixtures between browser tasks so navigation stays responsive. */
   private async loadSyntheticDataset(mode: AtlasMode, pointCount: number): Promise<void> {
+    if (this.modeTransitionFailed || this.requestedMode !== null) return;
     this.dataGenerationAbortController?.abort();
     const generationController = new AbortController();
     this.dataGenerationAbortController = generationController;
@@ -1675,7 +1683,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private async loadLidar(): Promise<void> {
-    if (this.mode !== 'lidar' || this.requestedMode !== null) return;
+    if (this.mode !== 'lidar' || this.requestedMode !== null || this.modeTransitionFailed) return;
     if (this.lidarLoading) {
       this.lidarRefreshPending = true;
       return;
@@ -1766,6 +1774,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private maybeRefreshLidarTiles(): void {
     if (
       this.mode !== 'lidar' ||
+      this.modeTransitionFailed ||
       !this.lidarTileSource ||
       !this.lidarTileCache ||
       this.lidarLoading ||
@@ -1784,7 +1793,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private scheduleLidarCachePublish(tileCache: GPULidarTileCache, immediate: boolean): void {
-    if (this.requestedMode !== null) return;
+    if (this.requestedMode !== null || this.modeTransitionFailed) return;
     if (immediate || performance.now() - this.lastLidarPublishTime >= 250) {
       this.publishLidarCache(tileCache);
       return;
@@ -1800,7 +1809,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     if (this.mode !== 'lidar' || this.lidarTileCache !== tileCache || tileCache.pointCount === 0) {
       return;
     }
-    if (this.requestedMode !== null) return;
+    if (this.requestedMode !== null || this.modeTransitionFailed) return;
     if (this.lidarPublishTimer) {
       clearTimeout(this.lidarPublishTimer);
       this.lidarPublishTimer = null;
@@ -1821,6 +1830,11 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     const canvas = this.canvas;
     if (!canvas) return;
     const transitionGeneration = ++this.modeTransitionGeneration;
+    this.resumeLidarLoadAfterModeTransition ||= this.mode === 'lidar' && this.lidarLoading;
+    this.resumeLidarPublishAfterModeTransition ||=
+      this.mode === 'lidar' && this.lidarPublishTimer !== null;
+    const resumeLidarLoad = this.resumeLidarLoadAfterModeTransition;
+    const resumeLidarPublish = this.resumeLidarPublishAfterModeTransition;
     this.requestedMode = mode;
     delete canvas.dataset.atlasDataReadyMode;
     delete canvas.dataset.atlasTransitionFailure;
@@ -1830,16 +1844,25 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     if (this.lidarPublishTimer) clearTimeout(this.lidarPublishTimer);
     this.lidarPublishTimer = null;
     this.lidarRefreshPending = false;
-    void this.completeModeSwitch(mode, transitionGeneration);
+    void this.completeModeSwitch(mode, transitionGeneration, resumeLidarLoad, resumeLidarPublish);
   }
 
-  private async completeModeSwitch(mode: AtlasMode, transitionGeneration: number): Promise<void> {
+  private async completeModeSwitch(
+    mode: AtlasMode,
+    transitionGeneration: number,
+    resumeLidarLoad: boolean,
+    resumeLidarPublish: boolean
+  ): Promise<void> {
     const canvas = this.canvas;
     if (!canvas) return;
     try {
       await this.waitForSubmittedGPUWork();
     } catch (error) {
       if (this.finalized || transitionGeneration !== this.modeTransitionGeneration) return;
+      // A failed drain cannot safely restart a producer that may replace GPU resources. Keep the
+      // current resources visible and report a terminal transition failure instead.
+      this.modeTransitionFailed = true;
+      this.clearModeTransitionResumeState();
       this.requestedMode = null;
       const message = error instanceof Error ? error.message : String(error);
       if (this.device.isLost) {
@@ -1855,18 +1878,13 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     }
 
     if (this.finalized || transitionGeneration !== this.modeTransitionGeneration) return;
+    this.modeTransitionFailed = false;
     if (this.mode === mode) {
-      this.requestedMode = null;
-      this.panels.setPanel(this.makePanel());
-      if (this.resources) {
-        canvas.dataset.atlasDataReadyMode = mode;
-        this.setStatus('');
-      } else {
-        void this.loadSyntheticDataset(mode, this.capacity);
-      }
-      this.updateInteractionPresentation();
+      this.completeSameModeTransition(resumeLidarLoad, resumeLidarPublish);
       return;
     }
+
+    this.clearModeTransitionResumeState();
 
     const previousTileCache = this.lidarTileCache;
     this.lidarTileCache = null;
@@ -1896,6 +1914,57 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.updateInteractionPresentation();
     this.requestedMode = null;
     void this.loadSyntheticDataset(mode, this.capacity);
+  }
+
+  private completeSameModeTransition(resumeLidarLoad: boolean, resumeLidarPublish: boolean): void {
+    const mode = this.mode;
+    const capacity = this.capacity;
+    const resources = this.resources;
+    const resourcesAreCurrent =
+      resources?.mode === mode &&
+      (resources.pointCount === capacity ||
+        (mode === 'lidar' &&
+          this.lidarTileCache !== null &&
+          resources.renderPositions === this.lidarTileCache.positionsBuffer));
+    if (!resourcesAreCurrent) {
+      this.destroyResources();
+      this.currentPositions = new Float32Array(0);
+      this.decodedPointCount = 0;
+      this.downloadedTileCount = 0;
+    }
+
+    this.clearModeTransitionResumeState();
+    this.requestedMode = null;
+    this.panels.setPanel(this.makePanel());
+    if (resourcesAreCurrent) {
+      if (this.canvas) this.canvas.dataset.atlasDataReadyMode = mode;
+      this.setStatus('');
+      if (resumeLidarPublish && this.lidarTileCache) {
+        this.scheduleLidarCachePublish(this.lidarTileCache, true);
+      }
+      if (resumeLidarLoad && mode === 'lidar') void this.loadLidar();
+    } else {
+      void this.loadSyntheticDataset(mode, capacity).then(() => {
+        if (
+          (resumeLidarLoad || resumeLidarPublish) &&
+          this.mode === 'lidar' &&
+          this.requestedMode === null &&
+          this.capacity === capacity &&
+          this.resources?.mode === 'lidar'
+        ) {
+          if (resumeLidarPublish && this.lidarTileCache) {
+            this.scheduleLidarCachePublish(this.lidarTileCache, true);
+          }
+          if (resumeLidarLoad) void this.loadLidar();
+        }
+      });
+    }
+    this.updateInteractionPresentation();
+  }
+
+  private clearModeTransitionResumeState(): void {
+    this.resumeLidarLoadAfterModeTransition = false;
+    this.resumeLidarPublishAfterModeTransition = false;
   }
 
   private async waitForSubmittedGPUWork(): Promise<void> {
@@ -1955,7 +2024,10 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private changeCapacity(capacity: number): void {
-    if (this.requestedMode !== null) return;
+    if (this.requestedMode !== null || this.modeTransitionFailed) {
+      this.panels.setPanel(this.makePanel());
+      return;
+    }
     if (capacity === this.capacity) return;
     this.capacity = capacity;
     this.lidarLoadAbortController?.abort();

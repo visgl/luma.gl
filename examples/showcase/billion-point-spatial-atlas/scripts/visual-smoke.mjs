@@ -39,7 +39,7 @@ try {
   assert(url, 'Vite did not publish a local URL');
 
   browser = await chromium.launch(
-    getPlaywrightLaunchOptions({headless: true, softwareGpu: true})
+    getPlaywrightLaunchOptions({headless: true, softwareGpu: !requireGPUReadback})
   );
   const browserContext = await browser.newContext({viewport});
   page = await browserContext.newPage();
@@ -303,6 +303,7 @@ try {
     assertRenderedFrame(restoredTaxiRenderedFrame, 'taxi', 'restored taxi view');
     logPhase('reference-GPU Taxi roundtrip verified');
   }
+  await assertNoAtlasGPUFailure(page, 'completed visual smoke');
   assert.deepEqual(pageErrors, [], `page errors: ${pageErrors.join('\n')}`);
   assert.deepEqual(consoleErrors, [], `console errors: ${consoleErrors.join('\n')}`);
   assert(
@@ -423,19 +424,25 @@ async function waitForAtlasDataReady(page, expectedMode) {
       status.includes('WebGPU device lost')
     );
   }, expectedMode);
-  const status = (await page.locator('[data-atlas-status]').textContent()) ?? '';
-  const failure = await page
-    .locator('canvas')
-    .evaluate(canvas =>
-      canvas instanceof HTMLCanvasElement
-        ? canvas.dataset.atlasTransitionFailure || canvas.dataset.atlasDeviceLost || ''
-        : ''
-    );
-  assert.equal(failure, '', `${expectedMode} GPU transition succeeds: ${failure}`);
+  await assertNoAtlasGPUFailure(page, `${expectedMode} GPU transition`);
+}
+
+async function assertNoAtlasGPUFailure(page, description) {
+  const {failure, status} = await page.evaluate(() => {
+    const canvas = document.querySelector('canvas');
+    return {
+      failure:
+        canvas instanceof HTMLCanvasElement
+          ? canvas.dataset.atlasTransitionFailure || canvas.dataset.atlasDeviceLost || ''
+          : '',
+      status: document.querySelector('[data-atlas-status]')?.textContent ?? ''
+    };
+  });
+  assert.equal(failure, '', `${description} succeeds: ${failure}`);
   assert.doesNotMatch(
     status,
     /GPU data initialization failed|GPU mode transition failed|WebGPU device lost/,
-    `${expectedMode} GPU data initializes`
+    `${description} remains GPU-ready`
   );
 }
 
