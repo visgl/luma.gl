@@ -249,7 +249,7 @@ export class LuxFilter<Parameters = void> {
 
     for (const selection of this.selections.values()) selection.addToGraph(graph);
     new GPUMask({
-      id: `${this.id}-compose`,
+      id: `${this.id}/controller/compose`,
       inputs: Array.from(this.selections.values(), selection => selection.mask),
       output: this.mask
     }).addToGraph(graph);
@@ -313,9 +313,13 @@ export class LuxFilter<Parameters = void> {
       return undefined;
     }
 
-    const output = createMaskLike(this.graph, `${this.id}-without-${view.dimension}`, this.mask);
+    const output = createMaskLike(
+      this.graph,
+      `${this.id}/controller/mask/without/${view.dimension}`,
+      this.mask
+    );
     new GPUMask({
-      id: `${this.id}-compose-without-${view.dimension}`,
+      id: `${this.id}/controller/compose-without/${view.dimension}`,
       inputs,
       output
     }).addToGraph(this.graph);
@@ -325,7 +329,7 @@ export class LuxFilter<Parameters = void> {
 
   /** Adds either an equal-width or an irregular linked histogram. */
   private addHistogramView(view: LuxFilterHistogramView, mask: LuxFilterMask | undefined): void {
-    const id = `${this.id}-${view.id}`;
+    const id = `${this.id}/view/${view.id.length}:${view.id}`;
     if (view.edges !== undefined) {
       new GPUHistogram({
         id,
@@ -347,7 +351,7 @@ export class LuxFilter<Parameters = void> {
 
   /** Adds source-aligned masked counts or floating-point grouped statistics. */
   private addGroupView(view: LuxFilterGroupView, mask: LuxFilterMask | undefined): void {
-    const id = `${this.id}-${view.id}`;
+    const id = `${this.id}/view/${view.id.length}:${view.id}`;
     if (!isGroupStatisticView(view)) {
       new GPUGroupAggregation({
         id,
@@ -371,10 +375,10 @@ export class LuxFilter<Parameters = void> {
 
   /** Adds stable row-ID compaction and an optional public source-aligned predicate. */
   private addVisibilityView(view: LuxFilterVisibilityView, mask: LuxFilterMask | undefined): void {
-    const selectionMask = mask ?? this.createAllRowsMask(`${this.id}-${view.id}-all`);
+    const selectionMask = mask ?? this.createAllRowsMask(view.id);
     this.viewMasks.set(view.id, selectionMask);
     new GPUVisibilityWorkflow({
-      id: `${this.id}-${view.id}`,
+      id: `${this.id}/view/${view.id.length}:${view.id}`,
       predicates: [{kind: 'selection', mask: selectionMask}],
       output: view.output,
       count: view.count,
@@ -386,10 +390,10 @@ export class LuxFilter<Parameters = void> {
 
   /** Publishes one effective source-aligned view mask without transferring GPU ownership. */
   private addMaskView(view: LuxFilterMaskView, mask: LuxFilterMask | undefined): void {
-    const selectionMask = mask ?? this.createAllRowsMask(`${this.id}-${view.id}-all`);
+    const selectionMask = mask ?? this.createAllRowsMask(view.id);
     if (selectionMask !== view.output) {
       new GPUMask({
-        id: `${this.id}-${view.id}`,
+        id: `${this.id}/view/${view.id.length}:${view.id}`,
         inputs: [selectionMask],
         output: view.output
       }).addToGraph(this.graph);
@@ -398,18 +402,20 @@ export class LuxFilter<Parameters = void> {
   }
 
   /** Creates an all-rows predicate using only source-aligned GPU mask operations. */
-  private createAllRowsMask(id: string): LuxFilterMask {
+  private createAllRowsMask(viewId: string): LuxFilterMask {
+    const id = `${this.id}/controller/mask/view/${viewId}/all`;
+    const nodeId = `${this.id}/controller/view/${viewId}/all`;
     const firstMask = this.selections.values().next().value!.mask;
     const inverse = createMaskLike(this.graph, `${id}-inverse`, firstMask);
     const output = createMaskLike(this.graph, id, firstMask);
     new GPUMask({
-      id: `${id}-not`,
+      id: `${nodeId}/not`,
       inputs: [firstMask],
       output: inverse,
       operation: 'not'
     }).addToGraph(this.graph);
     new GPUMask({
-      id: `${id}-compose`,
+      id: `${nodeId}/compose`,
       inputs: [firstMask, inverse],
       output,
       operation: 'or'
