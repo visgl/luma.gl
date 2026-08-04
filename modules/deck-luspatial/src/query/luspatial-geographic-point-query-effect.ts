@@ -212,8 +212,13 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
     this.pointCount = props.longitudeLatitudes.length / 2;
     this.projectionOrigin = props.projectionOrigin;
     this.projectionPlan = compileProjectionPlan({
-      projection: coordinates =>
-        projectLongitudeLatitude([coordinates[0], coordinates[1]], this.projectionOrigin),
+      projection: coordinates => {
+        const projected = projectLongitudeLatitude(
+          [coordinates[0], coordinates[1]],
+          this.projectionOrigin
+        );
+        return [projected[0], projected[1]];
+      },
       bounds: props.sourceBounds,
       degree: 2,
       tolerance: 0.0005,
