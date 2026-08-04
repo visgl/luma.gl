@@ -6,8 +6,10 @@ import {
   MapView,
   type MapViewState,
   type PickingInfo,
-  type ViewStateChangeParameters
+  type ViewStateChangeParameters,
+  type Viewport
 } from '@deck.gl/core';
+import {LuSpatialPointLayer} from '@deck.gl-community/luspatial';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
@@ -18,7 +20,6 @@ import {
 } from '../../showcase/billion-point-spatial-atlas/taxi-source';
 import {ArrowDeck} from '../arrow-deck';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import {LuSpatialPointLayer} from './luspatial-point-layer';
 import {
   LU_SPATIAL_TAXI_QUERY_COUNTER_IDS,
   LuSpatialTaxiQueryEffect,
@@ -834,12 +835,14 @@ function makeTaxiLayers(
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 140, 32, 230],
-      longitudeLatitudes: queryEffect.longitudeLatitudes,
-      visibleIds: queryEffect.viewportIds,
+      positions: queryEffect.longitudeLatitudes,
+      pointIds: queryEffect.viewportIds,
       drawCommands: queryEffect.drawCommands,
       commandIndex: 0,
       color: [94, 172, 198, 105],
       radiusPixels: 0.9,
+      radiusScale: getTaxiPointRadiusScale,
+      highlightRadiusScale: 1.65,
       opacity: 0.46,
       staged: options.staged,
       onResourcesReady: () => options.onLayerReady?.(0),
@@ -854,12 +857,14 @@ function makeTaxiLayers(
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 140, 32, 245],
-      longitudeLatitudes: queryEffect.longitudeLatitudes,
-      visibleIds: queryEffect.selectedIds,
+      positions: queryEffect.longitudeLatitudes,
+      pointIds: queryEffect.selectedIds,
       drawCommands: queryEffect.drawCommands,
       commandIndex: 1,
       color: [52, 220, 244, 205],
       radiusPixels: 1.25,
+      radiusScale: getTaxiPointRadiusScale,
+      highlightRadiusScale: 1.65,
       opacity: 0.72,
       staged: options.staged,
       onResourcesReady: () => options.onLayerReady?.(1),
@@ -869,4 +874,9 @@ function makeTaxiLayers(
       }
     })
   ];
+}
+
+function getTaxiPointRadiusScale(viewport: Viewport): number {
+  const zoom = viewport.zoom ?? 12;
+  return Math.max(0.8, Math.min(2.2, 2 ** ((zoom - 12) * 0.2)));
 }

@@ -27,6 +27,7 @@ import '@luma.gl/experimental/test';
 // EXPERIMENTAL
 import '@luma.gl/arrow/test';
 import '@deck.gl-community/arrow-layers/test';
+import '@deck.gl-community/luspatial/test';
 import '@luma.gl/tables/test';
 import '@luma.gl/gpgpu/test';
 import '@luma.gl/splats/test';

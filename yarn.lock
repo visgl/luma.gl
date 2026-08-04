@@ -2694,6 +2694,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@deck.gl-community/luspatial@workspace:*, @deck.gl-community/luspatial@workspace:modules/deck-luspatial":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/luspatial@workspace:modules/deck-luspatial"
+  dependencies:
+    "@deck.gl/core": "npm:9.3.4"
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+  languageName: unknown
+  linkType: soft
+
 "@deck.gl-community/panels@https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e":
   version: 9.3.7
   resolution: "@deck.gl-community/panels@https://github.com/visgl/deck.gl-community.git#workspace=%40deck.gl-community%2Fpanels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
@@ -15022,6 +15034,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi"
   dependencies:
+    "@deck.gl-community/luspatial": "workspace:*"
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"

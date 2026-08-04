@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Buffer, Device} from '@luma.gl/core';
-import type {LayerContext} from '@deck.gl/core';
-import type {DrawCommandBuffer} from '@luma.gl/experimental';
+import type {Device} from '@luma.gl/core';
 import {describe, expect, test} from 'vitest';
-import {LuSpatialPointLayer} from '../../examples/deck/luspatial-taxi/luspatial-point-layer';
 import {
   LU_SPATIAL_TAXI_QUERY_COUNTER_IDS,
   LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS,
@@ -16,7 +13,7 @@ import {
 } from '../../examples/deck/luspatial-taxi/luspatial-query-effect';
 import type {LuSpatialTaxiData} from '../../examples/deck/luspatial-taxi/taxi-data';
 
-describe('luSpatial taxi runtime resource safety', () => {
+describe('luSpatial taxi query-effect resource safety', () => {
   test('releases every completed effect allocation after a mid-construction failure', () => {
     const destroyedResourceIds: string[] = [];
     let bufferCreateCount = 0;
@@ -48,37 +45,6 @@ describe('luSpatial taxi runtime resource safety', () => {
       'luspatial-taxi-projected-positions',
       'luspatial-taxi-longitude-latitudes'
     ]);
-  });
-
-  test('releases layer resources and withholds readiness after model initialization fails', () => {
-    let styleBufferDestroyCount = 0;
-    let readinessCount = 0;
-    const device = {
-      type: 'webgpu',
-      createBuffer: () => ({
-        destroy: () => styleBufferDestroyCount++
-      })
-    } as unknown as Device;
-    const layer = new LuSpatialPointLayer({
-      id: 'injected-layer-failure',
-      data: [],
-      longitudeLatitudes: {} as Buffer,
-      visibleIds: {} as Buffer,
-      drawCommands: {} as DrawCommandBuffer,
-      commandIndex: 0,
-      color: [255, 255, 255, 255],
-      radiusPixels: 1,
-      onResourcesReady: () => readinessCount++,
-      onBeforeModelInitialization: () => {
-        throw new Error('injected model initialization failure');
-      }
-    });
-
-    expect(() => layer.initializeState({device} as LayerContext)).toThrow(
-      'injected model initialization failure'
-    );
-    expect(styleBufferDestroyCount).toBe(1);
-    expect(readinessCount).toBe(0);
   });
 });
 
