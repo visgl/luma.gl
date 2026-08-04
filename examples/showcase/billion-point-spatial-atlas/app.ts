@@ -68,6 +68,7 @@ const ATLAS_GENERATION_CHUNK_SIZE = 20_000;
 const VISUAL_SMOKE_TAXI_GRID_SIZE = [16, 16] as const;
 const VISUAL_SMOKE_LIDAR_GRID_SIZE = [16, 16, 4] as const;
 const VISUAL_SMOKE_POINT_COUNT = 2_000;
+const GPU_TRANSITION_DRAIN_TIMEOUT_MILLISECONDS = 10_000;
 const IS_VISUAL_SMOKE =
   typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('visual-smoke');
 const MINIMUM_VIEW_SCALE = 0.35;
@@ -388,7 +389,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private sampledMatchCount = 0;
   private sampledTotalMatchCount = 0;
   private sampledOverflow = false;
-  private countReadPending = false;
+  private countReadback: Promise<void> | null = null;
   private downloadedTileCount = 0;
   private decodedPointCount = 0;
   private lidarLoadAbortController: AbortController | null = null;
@@ -400,6 +401,11 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private lastLidarRefreshTime = 0;
   private lidarPublishTimer: ReturnType<typeof setTimeout> | null = null;
   private dataGenerationAbortController: AbortController | null = null;
+  private modeTransitionGeneration = 0;
+  private requestedMode: AtlasMode | null = null;
+  private deviceLossMessage: string | null = null;
+  private readonly gpuTimingReadbacks = new Set<Promise<void>>();
+  private readonly gpuTimingReadbackTimers = new Set<ReturnType<typeof setTimeout>>();
   private loadingOverlay: HTMLDivElement | null = null;
   private lastQuerySignature: string | null = null;
   private finalized = false;
@@ -425,6 +431,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       throw new Error('Billion-Point Spatial Atlas requires WebGPU');
     }
     this.device = device;
+    void device.lost.then(({message}) => {
+      if (!this.finalized) this.reportDeviceLoss(message);
+    });
     this.sceneColorFormat = getSceneColorFormat(device);
     const initialZone = makeTaxiZones().find(zone => zone.id === this.selectedZoneId);
     if (initialZone) {
@@ -489,6 +498,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     height,
     _mousePosition
   }: AnimationProps): void {
+    // Mode transitions stop encoding before taking a fence. This guarantees that every command
+    // referencing the current resource set is included in the fence before that set is destroyed.
+    if (this.requestedMode !== null) return;
     let resources = this.resources;
     if (!resources) return;
     // Stop adding work while the benchmark drains the queue and reads its final counters.
@@ -533,7 +545,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     ) {
       void this.sampleCounts(resources);
       if (encoding.canReadGPUTimings) {
-        setTimeout(() => void this.recordGPUTimings(graph.id, encoding), 0);
+        this.scheduleGPUTimingReadback(graph.id, encoding);
       }
     }
     this.postprocessingRenderer.encodeToScreen(device.commandEncoder, {
@@ -578,6 +590,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
 
   /** Reads the rendered scene texture without relying on browser compositor screenshots. */
   async captureVisualSmokeFrame(): Promise<SpatialAtlasVisualSmokeFrame> {
+    if (this.requestedMode !== null) {
+      throw new Error('Spatial Atlas visual smoke capture cannot run during a mode transition');
+    }
     const resources = this.resources;
     if (!IS_VISUAL_SMOKE || !resources) {
       throw new Error('Spatial Atlas visual smoke frame is unavailable');
@@ -617,6 +632,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
 
   override onFinalize(): void {
     this.finalized = true;
+    this.modeTransitionGeneration++;
+    this.requestedMode = null;
+    this.cancelScheduledGPUTimingReadbacks();
     this.dataGenerationAbortController?.abort();
     this.loadingOverlay?.remove();
     this.loadingOverlay = null;
@@ -953,7 +971,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.graphInspector.recordEncoding(buildGraph.id, encoding);
     this.device.submit(commandEncoder.finish());
     if (encoding.canReadGPUTimings) {
-      setTimeout(() => void this.recordGPUTimings(buildGraph.id, encoding), 0);
+      this.scheduleGPUTimingReadback(buildGraph.id, encoding);
     }
     this.sampledMatchCount = 0;
     this.sampledTotalMatchCount = 0;
@@ -1542,9 +1560,22 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     );
   }
 
-  private async sampleCounts(resources: AtlasResources): Promise<void> {
-    if (this.countReadPending) return;
-    this.countReadPending = true;
+  private sampleCounts(resources: AtlasResources): Promise<void> {
+    if (this.countReadback) return this.countReadback;
+    const countReadback = this.readSampleCounts(resources);
+    this.countReadback = countReadback;
+    void countReadback.then(
+      () => {
+        if (this.countReadback === countReadback) this.countReadback = null;
+      },
+      () => {
+        if (this.countReadback === countReadback) this.countReadback = null;
+      }
+    );
+    return countReadback;
+  }
+
+  private async readSampleCounts(resources: AtlasResources): Promise<void> {
     try {
       const [drawBytes, totalCountBytes, overflowBytes] = await Promise.all([
         resources.drawCommands.buffer.readAsync(),
@@ -1580,9 +1611,26 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
           `Counter readback unavailable: ${error instanceof Error ? error.message : String(error)}`
         );
       }
-    } finally {
-      this.countReadPending = false;
     }
+  }
+
+  private scheduleGPUTimingReadback(graphId: string, encoding: GPUCommandGraphEncoding): void {
+    const timer = setTimeout(() => {
+      this.gpuTimingReadbackTimers.delete(timer);
+      if (this.finalized || this.requestedMode !== null) return;
+      const readback = this.recordGPUTimings(graphId, encoding);
+      this.gpuTimingReadbacks.add(readback);
+      void readback.then(
+        () => this.gpuTimingReadbacks.delete(readback),
+        () => this.gpuTimingReadbacks.delete(readback)
+      );
+    }, 0);
+    this.gpuTimingReadbackTimers.add(timer);
+  }
+
+  private cancelScheduledGPUTimingReadbacks(): void {
+    for (const timer of this.gpuTimingReadbackTimers) clearTimeout(timer);
+    this.gpuTimingReadbackTimers.clear();
   }
 
   private async recordGPUTimings(
@@ -1627,7 +1675,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private async loadLidar(): Promise<void> {
-    if (this.mode !== 'lidar') return;
+    if (this.mode !== 'lidar' || this.requestedMode !== null) return;
     if (this.lidarLoading) {
       this.lidarRefreshPending = true;
       return;
@@ -1664,6 +1712,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
         refreshCenter,
         controller.signal
       );
+      controller.signal.throwIfAborted();
       const selectedKeys = new Set(selections.map(selection => selection.key));
       for (const selection of selections) {
         controller.signal.throwIfAborted();
@@ -1672,6 +1721,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
           continue;
         }
         const tile = await this.lidarTileSource.loadTile(selection, controller.signal);
+        controller.signal.throwIfAborted();
         this.downloadedTileCount++;
         this.decodedPointCount += tile.decodedPointCount;
         tileCache.insert(tile.key, tile.positions, tile.attributes);
@@ -1734,6 +1784,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private scheduleLidarCachePublish(tileCache: GPULidarTileCache, immediate: boolean): void {
+    if (this.requestedMode !== null) return;
     if (immediate || performance.now() - this.lastLidarPublishTime >= 250) {
       this.publishLidarCache(tileCache);
       return;
@@ -1749,6 +1800,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     if (this.mode !== 'lidar' || this.lidarTileCache !== tileCache || tileCache.pointCount === 0) {
       return;
     }
+    if (this.requestedMode !== null) return;
     if (this.lidarPublishTimer) {
       clearTimeout(this.lidarPublishTimer);
       this.lidarPublishTimer = null;
@@ -1765,9 +1817,57 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private switchMode(mode: AtlasMode): void {
-    if (this.mode === mode) return;
+    if ((this.requestedMode ?? this.mode) === mode) return;
+    const canvas = this.canvas;
+    if (!canvas) return;
+    const transitionGeneration = ++this.modeTransitionGeneration;
+    this.requestedMode = mode;
+    delete canvas.dataset.atlasDataReadyMode;
+    delete canvas.dataset.atlasTransitionFailure;
+    this.setStatus(`Waiting for submitted GPU work before switching to ${mode}…`);
+    this.dataGenerationAbortController?.abort();
     this.lidarLoadAbortController?.abort();
     if (this.lidarPublishTimer) clearTimeout(this.lidarPublishTimer);
+    this.lidarPublishTimer = null;
+    this.lidarRefreshPending = false;
+    void this.completeModeSwitch(mode, transitionGeneration);
+  }
+
+  private async completeModeSwitch(mode: AtlasMode, transitionGeneration: number): Promise<void> {
+    const canvas = this.canvas;
+    if (!canvas) return;
+    try {
+      await this.waitForSubmittedGPUWork();
+    } catch (error) {
+      if (this.finalized || transitionGeneration !== this.modeTransitionGeneration) return;
+      this.requestedMode = null;
+      const message = error instanceof Error ? error.message : String(error);
+      if (this.device.isLost) {
+        this.reportDeviceLoss(this.deviceLossMessage ?? message);
+      } else {
+        canvas.dataset.atlasTransitionFailure = message;
+        this.panels.setPanel(this.makePanel());
+        this.setStatus(`GPU mode transition failed: ${message}`);
+        if (this.resources) canvas.dataset.atlasDataReadyMode = this.mode;
+        this.updateInteractionPresentation();
+      }
+      return;
+    }
+
+    if (this.finalized || transitionGeneration !== this.modeTransitionGeneration) return;
+    if (this.mode === mode) {
+      this.requestedMode = null;
+      this.panels.setPanel(this.makePanel());
+      if (this.resources) {
+        canvas.dataset.atlasDataReadyMode = mode;
+        this.setStatus('');
+      } else {
+        void this.loadSyntheticDataset(mode, this.capacity);
+      }
+      this.updateInteractionPresentation();
+      return;
+    }
+
     const previousTileCache = this.lidarTileCache;
     this.lidarTileCache = null;
     this.lidarTileSource = null;
@@ -1787,7 +1887,6 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     }
     this.queryRadius = mode === 'taxi' ? 0.4 : 0.32;
     this.resetView();
-    this.dataGenerationAbortController?.abort();
     this.destroyResources();
     this.currentPositions = new Float32Array(0);
     this.decodedPointCount = 0;
@@ -1795,10 +1894,68 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     previousTileCache?.destroy();
     this.panels.setPanel(this.makePanel());
     this.updateInteractionPresentation();
+    this.requestedMode = null;
     void this.loadSyntheticDataset(mode, this.capacity);
   }
 
+  private async waitForSubmittedGPUWork(): Promise<void> {
+    this.cancelScheduledGPUTimingReadbacks();
+    const pendingReadbacks = [...this.gpuTimingReadbacks];
+    if (this.countReadback) pendingReadbacks.push(this.countReadback);
+    await this.waitForGPUCompletion(
+      Promise.allSettled(pendingReadbacks).then(() => undefined),
+      'Pending Atlas GPU readbacks'
+    );
+
+    const fence = this.device.createFence();
+    try {
+      await this.waitForGPUCompletion(fence.signaled, 'Atlas GPU submission fence');
+    } finally {
+      fence.destroy();
+    }
+  }
+
+  private async waitForGPUCompletion(
+    completion: Promise<void>,
+    description: string
+  ): Promise<void> {
+    let timeoutIdentifier: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const deviceLoss = await Promise.race([
+        completion.then(() => null),
+        this.device.lost,
+        new Promise<never>((_resolve, reject) => {
+          timeoutIdentifier = setTimeout(
+            () =>
+              reject(
+                new Error(`${description} exceeded ${GPU_TRANSITION_DRAIN_TIMEOUT_MILLISECONDS}ms`)
+              ),
+            GPU_TRANSITION_DRAIN_TIMEOUT_MILLISECONDS
+          );
+        })
+      ]);
+      if (deviceLoss || this.device.isLost) {
+        const message = deviceLoss?.message || this.deviceLossMessage || 'unknown reason';
+        throw new Error(`WebGPU device lost: ${message}`);
+      }
+    } finally {
+      if (timeoutIdentifier !== null) clearTimeout(timeoutIdentifier);
+    }
+  }
+
+  private reportDeviceLoss(message: string): void {
+    const detail = message.replace(/^WebGPU device lost:\s*/u, '').trim() || 'unknown reason';
+    this.deviceLossMessage = detail;
+    const status = `WebGPU device lost: ${detail}`;
+    if (this.canvas) {
+      this.canvas.dataset.atlasDeviceLost = detail;
+      this.canvas.dataset.atlasTransitionFailure = status;
+    }
+    this.setStatus(status);
+  }
+
   private changeCapacity(capacity: number): void {
+    if (this.requestedMode !== null) return;
     if (capacity === this.capacity) return;
     this.capacity = capacity;
     this.lidarLoadAbortController?.abort();

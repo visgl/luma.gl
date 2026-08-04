@@ -402,15 +402,28 @@ async function requestAtlasRedraw(page) {
 async function waitForAtlasDataReady(page, expectedMode) {
   await page.waitForFunction(mode => {
     const status = document.querySelector('[data-atlas-status]')?.textContent ?? '';
+    const canvas = document.querySelector('canvas');
     return (
-      document.querySelector('canvas')?.dataset.atlasDataReadyMode === mode ||
-      status.includes('GPU data initialization failed')
+      canvas?.dataset.atlasDataReadyMode === mode ||
+      Boolean(canvas?.dataset.atlasTransitionFailure) ||
+      Boolean(canvas?.dataset.atlasDeviceLost) ||
+      status.includes('GPU data initialization failed') ||
+      status.includes('GPU mode transition failed') ||
+      status.includes('WebGPU device lost')
     );
   }, expectedMode);
   const status = (await page.locator('[data-atlas-status]').textContent()) ?? '';
+  const failure = await page
+    .locator('canvas')
+    .evaluate(canvas =>
+      canvas instanceof HTMLCanvasElement
+        ? canvas.dataset.atlasTransitionFailure || canvas.dataset.atlasDeviceLost || ''
+        : ''
+    );
+  assert.equal(failure, '', `${expectedMode} GPU transition succeeds: ${failure}`);
   assert.doesNotMatch(
     status,
-    /GPU data initialization failed/,
+    /GPU data initialization failed|GPU mode transition failed|WebGPU device lost/,
     `${expectedMode} GPU data initializes`
   );
 }
