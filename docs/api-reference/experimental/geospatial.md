@@ -1,3 +1,5 @@
+import {SpatialBenchmark} from '@site/src/components/docs/spatial-benchmark';
+
 # WebGPU Geospatial Kernels
 
 The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-free WebGPU
@@ -242,6 +244,14 @@ either the index or result capacity overflows. The four writable output views mu
 disjoint aligned storage-binding ranges and must not overlap positions, source IDs, query values,
 index storage, or polygon storage. This includes the one-row binding footprint of a zero-capacity
 `ids` view. Result order is unspecified; no CPU readback is required for rendering.
+
+### Run a live spatial-query benchmark
+
+Compare this real query kernel against an equivalent CPU bounds scan using your browser and GPU.
+The indexed path builds a reusable grid once, reports that construction cost separately, and checks
+all compacted IDs against the CPU result before displaying fence-synchronized timings.
+
+<SpatialBenchmark />
 
 ## Non-finite data
 

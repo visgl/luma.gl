@@ -72,6 +72,18 @@ work to a `GPUCommandGraph`. It accepts either local f32 coordinates or raw bina
 words where supported and makes the f32-transcendental versus precise planar arithmetic boundary
 explicit.
 
+## High-precision GPU Coordinate Projection
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`@luma.gl/experimental/luproj`](/docs/api-reference/experimental/luproj) compiles arbitrary CPU
+projection providers into adaptive, origin-relative WebGPU polynomial patches. It preserves raw
+binary64 coordinate precision without native WGSL `f64`, supports optional preassigned patch IDs,
+and includes a live browser benchmark comparing direct CPU, compiled CPU, and four real WebGPU
+execution paths.
+
 ## GPU Simulations
 
 <p class="badges">
