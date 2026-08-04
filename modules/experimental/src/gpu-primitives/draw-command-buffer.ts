@@ -136,9 +136,10 @@ export class DrawCommandBuffer {
     } else {
       this.buffer = device.createBuffer({
         id: this.id,
-        data: makeCommandData(props.type, capacity, commands),
+        byteLength,
         usage: requiredUsage
       });
+      this.buffer.write(makeCommandData(props.type, capacity, commands));
       this.ownsBuffer = true;
     }
   }

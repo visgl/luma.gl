@@ -88,9 +88,10 @@ export class DispatchCommandBuffer {
     } else {
       this.buffer = device.createBuffer({
         id: this.id,
-        data: makeDispatchCommandData(capacity, commands),
+        byteLength,
         usage: requiredUsage
       });
+      this.buffer.write(makeDispatchCommandData(capacity, commands));
       this.ownsBuffer = true;
     }
   }
