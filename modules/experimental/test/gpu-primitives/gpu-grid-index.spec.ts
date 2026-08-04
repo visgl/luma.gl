@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -10,8 +9,90 @@ import {
   type GPUGridIndexBounds,
   type GPUGridIndexSize
 } from '@luma.gl/experimental';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUData, GPUVector} from '@luma.gl/tables';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
+import {
+  addGPUGridIndexToGraphWithDispatchLimit,
+  getGPUGridIndexDispatchLayout,
+  getGPUGridIndexInvocationIndexSource
+} from '../../src/gpu-primitives/gpu-grid-index-internals';
+
+test('GPUGridIndex plans bounded multidimensional direct dispatches', t => {
+  const maximum = 65_535;
+  const oneDimensionalRowCapacity = maximum * 256;
+
+  t.deepEqual(getGPUGridIndexDispatchLayout(0, maximum), {x: 1, y: 1, z: 1});
+  t.deepEqual(getGPUGridIndexDispatchLayout(oneDimensionalRowCapacity, maximum), {
+    x: maximum,
+    y: 1,
+    z: 1
+  });
+  t.deepEqual(getGPUGridIndexDispatchLayout(oneDimensionalRowCapacity + 1, maximum), {
+    x: maximum,
+    y: 2,
+    z: 1
+  });
+  t.deepEqual(
+    getGPUGridIndexDispatchLayout(4 * 256 + 1, 2),
+    {x: 2, y: 2, z: 2},
+    'a small synthetic limit exercises the third dispatch dimension'
+  );
+  t.throws(() => getGPUGridIndexDispatchLayout(8 * 256 + 1, 2), /exceeding the 3D dispatch limit/);
+
+  const source = getGPUGridIndexInvocationIndexSource({x: 3, y: 2, z: 2});
+  t.match(source, /workgroupId\.z \* 2u \+ workgroupId\.y/);
+  t.match(source, /\* 3u \+ workgroupId\.x/);
+  t.match(
+    source,
+    /workgroupIndex >= 16777216u/,
+    'padded workgroups cannot wrap the uint32 invocation index'
+  );
+  t.ok(
+    source.indexOf('workgroupIndex >= 16777216u') <
+      source.indexOf('workgroupIndex * 256u + localInvocationIndex'),
+    'the uint32 guard executes before invocation-index multiplication'
+  );
+  t.end();
+});
+
+test('GPUGridIndex executes a small three-dimensional dispatch layout', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const positionCount = 4 * 256 + 1;
+  const positions = new Float32Array(positionCount * 2);
+  positions.fill(0.5);
+  const result = await runGridIndex(
+    device,
+    positions,
+    'float32x2',
+    [1, 1],
+    [0, 0, 1, 1],
+    positionCount,
+    {
+      maxComputeWorkgroupsPerDimension: 2
+    }
+  );
+
+  t.deepEqual(
+    result.cellOffsets,
+    [0, positionCount],
+    'every multidimensional invocation is counted'
+  );
+  t.equal(result.count, positionCount, 'the padded dispatch does not add phantom rows');
+  t.equal(result.overflow, 0, 'the exact-capacity result does not overflow');
+  t.deepEqual(
+    result.objectIds.sort((left, right) => left - right),
+    Array.from({length: positionCount}, (_, index) => index),
+    'scatter visits every source row exactly once'
+  );
+  t.end();
+});
 
 test('GPUGridIndex builds bounded 2D cells with stable logical IDs', async t => {
   const device = await getWebGPUTestDevice();
@@ -268,7 +349,11 @@ async function runGridIndex(
   gridSize: GPUGridIndexSize,
   bounds: GPUGridIndexBounds,
   capacity: number,
-  options: {firstSourceIndex?: number; sourceIds?: Uint32Array} = {}
+  options: {
+    firstSourceIndex?: number;
+    sourceIds?: Uint32Array;
+    maxComputeWorkgroupsPerDimension?: number;
+  } = {}
 ): Promise<{
   cellOffsets: number[];
   objectIds: number[];
@@ -298,7 +383,11 @@ async function runGridIndex(
     bounds,
     ...importIndexOutputs(graph, outputs, cellCount, capacity)
   });
-  index.addToGraph(graph);
+  if (options.maxComputeWorkgroupsPerDimension === undefined) {
+    index.addToGraph(graph);
+  } else {
+    addGPUGridIndexToGraphWithDispatchLimit(index, graph, options.maxComputeWorkgroupsPerDimension);
+  }
   const compiled = graph.compile();
   encode(device, compiled);
   const result = {
