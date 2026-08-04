@@ -11,17 +11,9 @@ import {
   type GPUCommandGraphInspectorSnapshot,
   type CompiledGPUCommandGraph
 } from '@luma.gl/experimental';
-import {
-  GPUGridIndex,
-  GPUPointSpatialQuery,
-  GPUSinusoidalProjection
-} from '@luma.gl/experimental/geospatial';
-import {
-  TAXI_GRID_SIZE,
-  TAXI_PROJECTION_ORIGIN,
-  projectTaxiLongitudeLatitude,
-  type LuSpatialTaxiData
-} from './taxi-data';
+import {GPUGridIndex, GPUPointSpatialQuery} from '@luma.gl/experimental/geospatial';
+import {compileProjectionPlan, GPUProjection} from '@luma.gl/experimental/luproj';
+import {TAXI_GRID_SIZE, projectTaxiLongitudeLatitude, type LuSpatialTaxiData} from './taxi-data';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
@@ -74,6 +66,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private readonly buildGraph: CompiledGPUCommandGraph<void>;
   private readonly queryGraph: CompiledGPUCommandGraph<void>;
   private readonly onStats?: (stats: LuSpatialTaxiQueryStats) => void;
+  private projection: GPUProjection | null = null;
   private selectionCenter: readonly [number, number] = [-73.9855, 40.758];
   private selectionRadiusKilometres = 0.35;
   private visiblePointCount = 0;
@@ -167,7 +160,9 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     this.buildEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     device.submit(commandEncoder.finish());
     if (encoding.canReadGPUTimings) {
-      setTimeout(() => void this.inspector.recordGPUTimings(this.buildGraph.id, encoding), 0);
+      setTimeout(() => {
+        if (!this.destroyed) void this.inspector.recordGPUTimings(this.buildGraph.id, encoding);
+      }, 0);
     }
     this.publishStats();
   }
@@ -195,6 +190,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   }
 
   preRender(options: Parameters<Effect['preRender']>[0]): void {
+    if (this.destroyed) return;
     const viewport = options.viewports[0];
     if (!viewport || viewport.width <= 0 || viewport.height <= 0) return;
 
@@ -213,6 +209,8 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     const viewportBoundsChanged =
       !this.lastViewportBounds ||
       viewportBounds.some((value, index) => value !== this.lastViewportBounds?.[index]);
+    if (!viewportBoundsChanged && !this.queryInputsChanged) return;
+
     this.lastViewportBounds = viewportBounds;
     const projectedSelection = projectTaxiLongitudeLatitude(this.selectionCenter);
     this.viewportQuery.write(viewportBounds);
@@ -228,14 +226,14 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     this.inspector.recordEncoding(this.queryGraph.id, encoding);
     this.queryEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
-    if (viewportBoundsChanged || this.queryInputsChanged) {
-      this.queryInputsChanged = false;
-      this.scheduleCountSample(80);
-    }
+    this.queryInputsChanged = false;
+    this.scheduleCountSample(80);
     if (this.frameIndex === 1 || this.frameIndex % 30 === 0) {
       this.scheduleCountSample(0);
       if (encoding.canReadGPUTimings) {
-        setTimeout(() => void this.inspector.recordGPUTimings(this.queryGraph.id, encoding), 0);
+        setTimeout(() => {
+          if (!this.destroyed) void this.inspector.recordGPUTimings(this.queryGraph.id, encoding);
+        }, 0);
       }
     }
     if (this.frameIndex === 1 || this.frameIndex % 15 === 0) this.publishStats();
@@ -247,6 +245,8 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     if (this.countSampleTimer !== null) clearTimeout(this.countSampleTimer);
     this.buildGraph.destroy();
     this.queryGraph.destroy();
+    this.projection?.destroy();
+    this.projection = null;
     this.drawCommands.destroy();
     this.longitudeLatitudes.destroy();
     this.projectedPositions.destroy();
@@ -291,12 +291,24 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     const count = graph.createDataView(countBuffer, {format: 'uint32', length: 1});
     const overflow = graph.createDataView(overflowBuffer, {format: 'uint32', length: 1});
 
-    new GPUSinusoidalProjection({
-      id: 'luspatial-taxi-project',
+    const projectionPlan = compileProjectionPlan({
+      projection: coordinates => {
+        const projected = projectTaxiLongitudeLatitude([coordinates[0], coordinates[1]]);
+        return [projected[0], projected[1]];
+      },
+      bounds: this.data.sourceBounds,
+      degree: 2,
+      tolerance: 0.0005,
+      maxDepth: 4
+    });
+    const projection = new GPUProjection({
+      id: 'luspatial-taxi-luproj-project',
       positions: source,
       output: projected,
-      origin: TAXI_PROJECTION_ORIGIN
-    }).addToGraph(graph);
+      plan: projectionPlan
+    });
+    projection.addToGraph(graph);
+    this.projection = projection;
     new GPUGridIndex({
       id: 'luspatial-taxi-grid',
       positions: projected,

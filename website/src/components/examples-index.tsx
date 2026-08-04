@@ -327,6 +327,7 @@ function normalizeItem(
 
 function getDefaultBackends(category: string): ExampleBackend[] {
   return category === 'WebGPU' ||
+    category === 'GPGPU' ||
     category.includes('GPU Data') ||
     category.includes('GPU Command Graph')
     ? ['webgpu']
@@ -338,6 +339,7 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
   if (
     category === 'Experimental' ||
     category === 'WebGPU' ||
+    category === 'GPGPU' ||
     category.includes('Arrow') ||
     category.includes('GPU Command Graph')
   ) {
@@ -349,6 +351,7 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
 function getDefaultMaturity(category: string): ExampleMaturity {
   return category === 'Experimental' ||
     category === 'WebGPU' ||
+    category === 'GPGPU' ||
     category.includes('GPU Command Graph')
     ? 'experimental'
     : 'stable';
@@ -357,6 +360,7 @@ function getDefaultMaturity(category: string): ExampleMaturity {
 function getDefaultTopic(category: string): string {
   if (category === 'Tutorials') return 'fundamentals';
   if (category === 'Integrations') return 'integration';
+  if (category === 'GPGPU') return 'compute';
   if (category.includes('GPU Command Graph')) return 'compute';
   if (category.includes('GPU Data') || category.includes('Arrow')) return 'data';
   if (category === 'API') return 'api';
@@ -375,6 +379,7 @@ function groupByCategory(items: CatalogItem[]): Array<[string, CatalogItem[]]> {
 
 function getCategoryEyebrow(category: string): string {
   if (category === 'WebGPU') return 'Next-generation graphics';
+  if (category === 'GPGPU') return 'Compute, projections, and GPU-native data';
   if (category === 'Showcase') return 'Featured experiences';
   if (category === 'Tutorials') return 'Learn by building';
   if (category === 'Experimental') return 'Emerging techniques';

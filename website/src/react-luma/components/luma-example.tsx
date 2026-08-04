@@ -19,7 +19,6 @@ import {
   HDRCanvasCaptureController,
   type HDRScreenshotCapture
 } from '../utils/hdr-screenshot-capture';
-
 // import {VRDisplay} from '@luma.gl/experimental';
 import {
   createDevice,
@@ -430,6 +429,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       currentLumaExampleTask = currentLumaExampleTask
         .then(() => {
           if (animationLoop) {
+            // destroy() synchronously finalizes the template, so it must remain serialized after
+            // animationLoop.start() and its asynchronous onInitialize() have settled.
             if (!effectiveDevice.isLost) {
               effectiveDevice.submit();
             }

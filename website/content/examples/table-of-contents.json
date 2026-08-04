@@ -33,13 +33,6 @@
     "type": "category",
     "label": "WebGPU",
     "items": [
-      "showcase/crossfilter-supremacy",
-      "showcase/billion-point-spatial-atlas",
-      {
-        "type": "doc",
-        "id": "deck/luspatial-taxi",
-        "label": "luSpatial Taxi Explorer"
-      },
       "showcase/lightstorm-megacity",
       "experimental/volumetric-fire-forge",
       {
@@ -76,6 +69,23 @@
         "type": "doc",
         "id": "experimental/shadow-map",
         "label": "Effects: Shadow Map Quality"
+      }
+    ]
+  },
+  {
+    "type": "category",
+    "label": "GPGPU",
+    "items": [
+      {
+        "type": "doc",
+        "id": "showcase/crossfilter-supremacy",
+        "label": "LuxFilter: Million-Point Crossfilter"
+      },
+      "showcase/billion-point-spatial-atlas",
+      {
+        "type": "doc",
+        "id": "deck/luspatial-taxi",
+        "label": "luProj + luSpatial: Taxi Explorer"
       },
       "experimental/gpt-2",
       {

@@ -16,6 +16,7 @@ import {
   CROSS_FILTER_DOMAINS,
   DEFAULT_CROSSFILTER_ROW_COUNT,
   makeCrossfilterDataset,
+  type CrossfilterDataset,
   type CrossfilterDatasetOptions
 } from './crossfilter-data';
 import {CrossfilterRenderer, type CrossfilterRenderOptions} from './crossfilter-renderer';
@@ -59,6 +60,7 @@ export type CrossfilterSummary = {
 
 /** Deterministic dataset size, seed, and independent dashboard histogram resolution. */
 export type CrossfilterEngineOptions = CrossfilterDatasetOptions & {
+  dataset?: CrossfilterDataset;
   valueBinCount?: number;
   riskBinCount?: number;
   hourBinCount?: number;
@@ -127,10 +129,12 @@ export class CrossfilterEngine {
       throw new Error('Crossfilter showcase requires a WebGPU device');
     }
     this.device = device;
-    const dataset = makeCrossfilterDataset({
-      rowCount: options.rowCount ?? DEFAULT_CROSSFILTER_ROW_COUNT,
-      seed: options.seed
-    });
+    const dataset =
+      options.dataset ??
+      makeCrossfilterDataset({
+        rowCount: options.rowCount ?? DEFAULT_CROSSFILTER_ROW_COUNT,
+        seed: options.seed
+      });
     this.rowCount = dataset.rowCount;
     this.graph = new GPUCommandGraph(device, {id: 'crossfilter-supremacy-graph'});
 

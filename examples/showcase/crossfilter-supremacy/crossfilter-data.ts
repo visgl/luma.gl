@@ -45,6 +45,16 @@ export type CrossfilterDatasetOptions = {
   seed?: number;
 };
 
+/** Cooperative population controls keep browser navigation responsive during large uploads. */
+export type CrossfilterAsyncDatasetOptions = CrossfilterDatasetOptions & {
+  batchRowCount?: number;
+  onProgress?: (completedRowCount: number, totalRowCount: number) => void;
+  signal?: AbortSignal;
+  yieldControl?: () => Promise<void>;
+};
+
+const DEFAULT_CROSSFILTER_BATCH_ROW_COUNT = 16_384;
+
 type CityCluster = {
   longitude: number;
   latitude: number;
@@ -149,20 +159,65 @@ const CITY_CLUSTERS: readonly CityCluster[] = [
 export function makeCrossfilterDataset(
   options: CrossfilterDatasetOptions = {}
 ): CrossfilterDataset {
-  const rowCount = options.rowCount ?? DEFAULT_CROSSFILTER_ROW_COUNT;
+  const dataset = allocateCrossfilterDataset(options.rowCount);
+  populateCrossfilterDataset(dataset, options.seed, 0, dataset.rowCount);
+  return dataset;
+}
+
+/** Builds exactly the same deterministic columns while yielding between bounded CPU batches. */
+export async function makeCrossfilterDatasetAsync(
+  options: CrossfilterAsyncDatasetOptions = {}
+): Promise<CrossfilterDataset> {
+  options.signal?.throwIfAborted();
+  const batchRowCount = options.batchRowCount ?? DEFAULT_CROSSFILTER_BATCH_ROW_COUNT;
+  if (!Number.isSafeInteger(batchRowCount) || batchRowCount <= 0) {
+    throw new Error('Crossfilter showcase requires a positive, integral batch row count');
+  }
+
+  const dataset = allocateCrossfilterDataset(options.rowCount);
+  for (let completedRowCount = 0; completedRowCount < dataset.rowCount; ) {
+    const nextCompletedRowCount = Math.min(completedRowCount + batchRowCount, dataset.rowCount);
+    populateCrossfilterDataset(dataset, options.seed, completedRowCount, nextCompletedRowCount);
+    completedRowCount = nextCompletedRowCount;
+    options.onProgress?.(completedRowCount, dataset.rowCount);
+    options.signal?.throwIfAborted();
+
+    if (completedRowCount < dataset.rowCount) {
+      await (options.yieldControl ?? yieldCrossfilterMainThread)();
+      options.signal?.throwIfAborted();
+    }
+  }
+
+  return dataset;
+}
+
+function allocateCrossfilterDataset(requestedRowCount?: number): CrossfilterDataset {
+  const rowCount = requestedRowCount ?? DEFAULT_CROSSFILTER_ROW_COUNT;
   if (!Number.isSafeInteger(rowCount) || rowCount <= 0) {
     throw new Error('Crossfilter showcase requires a positive, integral row count');
   }
 
-  const seed = (options.seed ?? 0x1a2b3c4d) >>> 0;
-  const longitude = new Float32Array(rowCount);
-  const latitude = new Float32Array(rowCount);
-  const value = new Float32Array(rowCount);
-  const risk = new Float32Array(rowCount);
-  const hour = new Float32Array(rowCount);
-  const category = new Uint32Array(rowCount);
+  return {
+    rowCount,
+    longitude: new Float32Array(rowCount),
+    latitude: new Float32Array(rowCount),
+    value: new Float32Array(rowCount),
+    risk: new Float32Array(rowCount),
+    hour: new Float32Array(rowCount),
+    category: new Uint32Array(rowCount)
+  };
+}
 
-  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+function populateCrossfilterDataset(
+  dataset: CrossfilterDataset,
+  requestedSeed: number | undefined,
+  firstRowIndex: number,
+  finalRowIndex: number
+): void {
+  const seed = (requestedSeed ?? 0x1a2b3c4d) >>> 0;
+  const {longitude, latitude, value, risk, hour, category} = dataset;
+
+  for (let rowIndex = firstRowIndex; rowIndex < finalRowIndex; rowIndex++) {
     const clusterRandom = makeRandomValue(seed, rowIndex, 0);
     const clusterIndex = Math.min(
       CITY_CLUSTERS.length - 1,
@@ -215,8 +270,10 @@ export function makeCrossfilterDataset(
     hour[rowIndex] = transactionHour;
     category[rowIndex] = categoryIndex;
   }
+}
 
-  return {rowCount, longitude, latitude, value, risk, hour, category};
+function yieldCrossfilterMainThread(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0));
 }
 
 function makeRandomValue(seed: number, rowIndex: number, streamIndex: number): number {

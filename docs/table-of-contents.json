@@ -80,7 +80,6 @@
           "api-guide/shaders/shader-assembly",
           "api-guide/shaders/writing-customizable-shaders",
           "api-guide/shaders/writing-portable-shaders",
-          "api-guide/shaders/gpu-floating-point-precision",
           "api-guide/shaders/shader-passes",
           "api-guide/shaders/rendering-techniques",
           "api-guide/shaders/transparency",
@@ -93,6 +92,7 @@
         "items": [
           "api-guide/gpu/README",
           "api-guide/gpu/gpu-data-processing",
+          "api-guide/shaders/gpu-floating-point-precision",
           "api-guide/gpu/gpu-tables",
           "api-guide/gpu/tabular-data-in-wgsl"
         ]

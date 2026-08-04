@@ -16,7 +16,10 @@ export type GPGPUDocsTabId =
   | 'gpu-data-evaluator'
   | 'operations'
   | 'custom-operation'
-  | 'clean-evaluate';
+  | 'clean-evaluate'
+  | 'precision-guide'
+  | 'fp64'
+  | 'fp64-arithmetic';
 
 const GPGPU_DOCS_TABS: GPGPUDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/gpgpu'},
@@ -27,7 +30,22 @@ const GPGPU_DOCS_TABS: GPGPUDocsTab[] = [
     label: 'Custom Operations',
     href: '/docs/api-reference/gpgpu/custom-operation'
   },
-  {id: 'clean-evaluate', label: 'cleanEvaluate', href: '/docs/api-reference/gpgpu/clean-evaluate'}
+  {id: 'clean-evaluate', label: 'cleanEvaluate', href: '/docs/api-reference/gpgpu/clean-evaluate'},
+  {
+    id: 'precision-guide',
+    label: 'Precision',
+    href: '/docs/api-guide/shaders/gpu-floating-point-precision'
+  },
+  {
+    id: 'fp64',
+    label: 'fp64',
+    href: '/docs/api-reference/shadertools/shader-modules/fp64'
+  },
+  {
+    id: 'fp64-arithmetic',
+    label: 'fp64 arithmetic',
+    href: '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'
+  }
 ];
 
 /**

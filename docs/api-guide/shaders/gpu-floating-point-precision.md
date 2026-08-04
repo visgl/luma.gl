@@ -1,7 +1,10 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
+import {DeferredFP64Example} from '@site/src/components/docs/deferred-fp64-example';
 import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
-import {FP64Example} from '@site/src/examples';
 
 # GPU Floating-Point Precision Techniques
+
+<GPGPUDocsTabs active="precision-guide" />
 
 <ShaderModuleDocsTabs group="precision" active="precision-guide" />
 
@@ -24,7 +27,7 @@ On WebGPU, use the benchmark below the canvases to compare native `f32`,
 automatic selection, the classic transforms, and the integer-controlled path
 on the active device.
 
-<FP64Example embedded embeddedHeight={900} />
+<DeferredFP64Example embeddedHeight={900} />
 
 The benchmark is diagnostic rather than a CI performance test. It reports
 numerical error alongside runtime because the fastest implementation is not

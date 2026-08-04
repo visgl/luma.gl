@@ -85,17 +85,7 @@ class GPUSortExample {
     try {
       const device = await luma.createDevice({
         type: 'webgpu',
-        adapters: [webgpuAdapter],
-        createCanvasContext:
-          typeof OffscreenCanvas === 'undefined'
-            ? true
-            : {
-                canvas: new OffscreenCanvas(1, 1),
-                width: 1,
-                height: 1,
-                autoResize: false,
-                useDevicePixels: false
-              }
+        adapters: [webgpuAdapter]
       });
       if (this.destroyed) {
         device.destroy();

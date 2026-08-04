@@ -3,9 +3,9 @@ import Layout from '@theme/Layout';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {ExampleCard} from '../components/example-card';
-import {InstancingExample} from '../examples';
 import styles from './index.module.css';
 
+const HomepageGPUScene = React.lazy(() => import('../components/homepage-gpu-scene'));
 const HERO_CAPABILITIES = ['WebGPU', 'WebGL2', 'GPU compute', 'HDR rendering'];
 
 const FEATURED_EXAMPLES = [
@@ -141,6 +141,31 @@ if (typeof window !== 'undefined') {
   window.website = true;
 }
 
+function DeferredHomepageGPUScene() {
+  const [isSceneRequested, setIsSceneRequested] = React.useState(false);
+
+  React.useEffect(() => {
+    const sceneStartupTimeout = window.setTimeout(() => setIsSceneRequested(true), 120);
+    return () => window.clearTimeout(sceneStartupTimeout);
+  }, []);
+
+  return (
+    <div
+      className={styles.heroExampleContainer}
+      style={{
+        background:
+          'radial-gradient(ellipse at 72% 34%, rgba(56, 189, 248, 0.18), transparent 44%), #050b15'
+      }}
+    >
+      {isSceneRequested ? (
+        <React.Suspense fallback={null}>
+          <HomepageGPUScene />
+        </React.Suspense>
+      ) : null}
+    </div>
+  );
+}
+
 export default function IndexPage() {
   const {siteConfig} = useDocusaurusContext();
   const baseUrl = useBaseUrl('/');
@@ -154,9 +179,7 @@ export default function IndexPage() {
     >
       <main className={styles.page}>
         <section className={styles.banner} aria-labelledby="homepage-title">
-          <div className={styles.heroExampleContainer}>
-            <InstancingExample panel={false} />
-          </div>
+          <DeferredHomepageGPUScene />
           <div className={styles.bannerContainer}>
             <p className={styles.heroEyebrow}>The open-source GPU toolkit</p>
             <h1 className={styles.projectName} id="homepage-title">
