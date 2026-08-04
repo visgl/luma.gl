@@ -436,8 +436,8 @@
     "label": "Developer Guide",
     "items": [
       "developer-guide/README",
-      "developer-guide/working-with-ai",
       "developer-guide/installing",
+      "developer-guide/working-with-ai",
       "developer-guide/editing",
       "developer-guide/debugging",
       "developer-guide/testing",

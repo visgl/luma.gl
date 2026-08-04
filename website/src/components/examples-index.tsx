@@ -58,6 +58,8 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const sidebar = useDocsSidebar() as SidebarRoot;
   const {docs} = useDocsVersion();
   const baseUrl = useBaseUrl('/');
+  const gettingStartedUrl = useBaseUrl('/docs/getting-started');
+  const firstTriangleUrl = useBaseUrl('/docs/tutorials/hello-triangle');
   const catalog = useMemo(() => buildCatalog(sidebar, docs), [docs, sidebar]);
   const topics = useMemo(
     () => [...new Set(catalog.flatMap(item => item.topics))].sort(),
@@ -143,12 +145,21 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
       <div className={styles.catalogControls} aria-label="Filter examples">
         <div className={styles.controlsHeading}>
           <div>
-            <p className={styles.controlsEyebrow}>Realtime GPU experiments</p>
+            <p className={styles.controlsEyebrow}>Live GPU experiences</p>
             <p className={styles.controlsIntroduction}>
-              Explore rendering techniques, visual simulations, and interactive data.
+              Open a live scene, explore the technique, and see what you can build.
             </p>
           </div>
           <span className={styles.catalogCount}>{catalog.length} demos</span>
+        </div>
+
+        <div className={styles.discoveryPaths} aria-label="Suggested starting points">
+          <a className={styles.discoveryPath} href={gettingStartedUrl}>
+            New here? Take the guided tour <span aria-hidden="true">→</span>
+          </a>
+          <a className={styles.discoveryPath} href={firstTriangleUrl}>
+            Draw your first triangle <span aria-hidden="true">→</span>
+          </a>
         </div>
 
         <div className={styles.searchField}>

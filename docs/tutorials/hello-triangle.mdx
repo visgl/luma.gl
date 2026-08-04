@@ -7,16 +7,18 @@ import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 
 <TutorialDocsTabs group="fundamentals" active="hello-triangle" />
 
-**Goal:** create one `Model` and issue a portable draw call. Explore the live example
-below immediately, or follow the [Installing guide](/docs/developer-guide/installing) to
-run its source locally. New to luma.gl? [Getting Started](/docs/getting-started) shows
-what you can build next.
+Every rendered world starts somewhere. This live example turns one `Model` into a
+portable GPU draw call and runs directly in your browser.
+
+**What you will learn:** how shaders, a model, and a render pass work together to draw
+your first shape.
 
 <DeviceTabs />
 <HelloTriangleExample showHeader={false} showStats={false} />
 
-The example should display a red triangle. Switch backends above the canvas to verify
-that the same application code runs with WebGPU and WebGL2.
+The canvas displays a red triangle. When both backends are available, switch between
+WebGPU and WebGL2 above the example to see the same application logic run through
+either GPU API.
 
 ## The mental model
 
@@ -51,3 +53,7 @@ WebGL2 backend consumes GLSL, while the model and render loop are shared.
 You created a model, provided backend-appropriate shaders, and drew it through the same
 render-pass API. Next, [Hello Cube](/docs/tutorials/hello-cube) adds geometry, textures,
 depth testing, and uniforms.
+
+Want to run the example yourself? The [Installing guide](/docs/developer-guide/installing)
+sets up a local project. For a glimpse of where these building blocks can lead, explore
+the complete scenes and simulations in [Getting Started](/docs/getting-started).

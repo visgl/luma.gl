@@ -5,6 +5,10 @@ web. It provides one application-facing API with pluggable WebGPU and WebGL2 bac
 plus higher-level building blocks for models, animation, shader composition, and GPU
 data processing.
 
+Start with a live scene, follow the ideas behind a single rendered frame, and choose
+how much of the GPU you want to control. You can explore the examples and tutorials
+right here in your browser.
+
 <p className="badges">
   <a href="https://www.npmjs.com/package/@luma.gl/core">
     <img src="https://img.shields.io/npm/v/@luma.gl/core.svg?style=flat-square&label=npm" alt="npm package version" />
@@ -16,6 +20,8 @@ data processing.
     <img src="https://img.shields.io/badge/TypeScript-strict-3178C6.svg?style=flat-square" alt="TypeScript strict mode" />
   </a>
 </p>
+
+## Choose your starting point
 
 <div className="docs-api-card-grid">
   <a className="docs-api-card" href="/docs/getting-started">
@@ -44,8 +50,9 @@ data processing.
   </a>
 </div>
 
-Ready to build your own application? The [Installing guide](/docs/developer-guide/installing)
-walks through local project setup, device adapters, and your first rendered frame.
+When you are ready to turn an idea into your own application, the
+[Installing guide](/docs/developer-guide/installing) walks through your first project,
+device adapters, and your first rendered frame.
 
 ## Why luma.gl?
 
@@ -87,7 +94,8 @@ backends.
 Shadertools assembles WGSL and GLSL from reusable shader modules and application-defined
 hooks. It is used by luma.gl, deck.gl, and custom renderers.
 
-Read [A Tale of Three APIs](/docs/api-guide) for the detailed object model.
+Explore [how the three APIs fit together](/docs/api-guide) for the complete object
+model and guidance on choosing the right layer.
 
 ## Supported environments
 
@@ -95,8 +103,9 @@ luma.gl targets current evergreen browsers. WebGPU feature availability varies b
 browser and platform; WebGL2 provides the compatibility path for portable rendering.
 Compute shaders, storage textures, and some advanced features remain WebGPU-only.
 
-Node.js can be used when the host supplies a WebGPU or WebGL implementation, but browser
-image, canvas, and video APIs require environment-specific replacements.
+Server-side rendering and compute are also possible when the host supplies a compatible
+GPU implementation. Browser-specific image, canvas, and video APIs may require
+environment-specific replacements.
 
 ## Project and releases
 

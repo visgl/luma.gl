@@ -62,10 +62,10 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
   <section className="luma-onboarding__section" aria-labelledby="luma-onboarding-examples">
     <p className="luma-onboarding__section-label">01 · See it in motion</p>
     <h2 className="luma-onboarding__section-title" id="luma-onboarding-examples">
-      {'This is what your browser can do.'}
+      {'See what your GPU makes possible.'}
     </h2>
     <p className="luma-onboarding__section-description">
-      {'These are interactive scenes, not videos. Open one, explore it, and look under the hood.'}
+      {'Every card opens a live, interactive scene. Advanced scenes require WebGPU; Effects: Image Processing also runs on WebGL2.'}
     </p>
 
     <div className="luma-onboarding__gallery">
@@ -193,7 +193,7 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
         </div>
         <div className="luma-onboarding__showcase-content">
           <span className="luma-onboarding__showcase-kicker">Composable effects</span>
-          <h3 className="luma-onboarding__showcase-title">Image Processing</h3>
+          <h3 className="luma-onboarding__showcase-title">Effects: Image Processing</h3>
           <p className="luma-onboarding__showcase-description">
             {'Layer bloom, color grading, distortion, and film effects over a living scene.'}
           </p>
@@ -212,7 +212,7 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
       {'The whole GPU. Your way.'}
     </h2>
     <p className="luma-onboarding__section-description">
-      {'Start with a simple triangle or architect an entire rendering and compute pipeline.'}
+      {'Behind every scene are composable building blocks for rendering, GPU-resident data, and programmable effects.'}
     </p>
 
     <div className="luma-onboarding__capabilities">
@@ -225,16 +225,16 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
       </article>
       <article className="luma-onboarding__capability">
         <span className="luma-onboarding__capability-index">02</span>
-        <h3 className="luma-onboarding__capability-title">Keep the data moving.</h3>
+        <h3 className="luma-onboarding__capability-title">Keep your data on the GPU.</h3>
         <p className="luma-onboarding__capability-description">
-          {'Run fluid simulations, spatial queries, and million-point visualizations directly where the data lives: on the GPU.'}
+          {'Simulate, filter, and visualize millions of records without shuttling data back to the CPU between steps.'}
         </p>
       </article>
       <article className="luma-onboarding__capability">
         <span className="luma-onboarding__capability-index">03</span>
-        <h3 className="luma-onboarding__capability-title">Write once. Choose your backend.</h3>
+        <h3 className="luma-onboarding__capability-title">One API. Two ways to render.</h3>
         <p className="luma-onboarding__capability-description">
-          {'Build against one clear TypeScript API and run on WebGPU or WebGL2, with natural paths into deck.gl and Apache Arrow.'}
+          {'Share portable rendering across WebGPU and WebGL2, connect with deck.gl and Apache Arrow, and use WebGPU for compute shaders.'}
         </p>
       </article>
     </div>
@@ -245,13 +245,16 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
     <h2 className="luma-onboarding__section-title" id="luma-onboarding-paths">
       {'Choose your own first adventure.'}
     </h2>
+    <p className="luma-onboarding__section-description">
+      {'Begin with an interactive lesson, or go straight to the part of the GPU stack you want to explore.'}
+    </p>
 
     <div className="luma-onboarding__paths">
       <Link className="luma-onboarding__path" to="/docs/tutorials/hello-triangle">
         <span className="luma-onboarding__path-kicker">Start here</span>
         <h3 className="luma-onboarding__path-title">Draw your first triangle.</h3>
         <p className="luma-onboarding__path-description">
-          {'Watch a live, backend-switchable example, then follow its complete rendering pipeline.'}
+          {'Start with a live, backend-switchable scene, then follow its rendering pipeline one step at a time.'}
         </p>
         <span className="luma-onboarding__path-meta">Interactive fundamentals →</span>
       </Link>
@@ -267,15 +270,15 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
         <span className="luma-onboarding__path-kicker">Move faster</span>
         <h3 className="luma-onboarding__path-title">Think in GPU compute.</h3>
         <p className="luma-onboarding__path-description">
-          {'Keep data resident for simulation, filtering, aggregation, and spatial processing.'}
+          {'Compare portable data operations with WebGPU-native compute for simulation, filtering, and spatial processing.'}
         </p>
-        <span className="luma-onboarding__path-meta">GPU data processing →</span>
+        <span className="luma-onboarding__path-meta">Choose a GPU data workflow →</span>
       </Link>
       <Link className="luma-onboarding__path" to="/docs/api-guide/shaders/shader-passes">
         <span className="luma-onboarding__path-kicker">Create effects</span>
         <h3 className="luma-onboarding__path-title">Shape every pixel.</h3>
         <p className="luma-onboarding__path-description">
-          {'Combine post-processing passes, custom shaders, and reusable effects into your look.'}
+          {'Experiment with live image effects, then compose post-processing passes and reusable shader modules.'}
         </p>
         <span className="luma-onboarding__path-meta">Shader and effect passes →</span>
       </Link>
@@ -288,7 +291,7 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
         {'Ready to make something move?'}
       </h2>
       <p className="luma-onboarding__closing-description">
-        {'Your first real project is only a few steps away.'}
+        {'When you are ready to create your own app, the developer guide takes you from local project setup to your first rendered frame.'}
       </p>
     </div>
     <Link
