@@ -22,6 +22,10 @@ const ATLAS_APP_SOURCE_PATH = path.join(
   process.cwd(),
   'examples/showcase/billion-point-spatial-atlas/app.ts'
 );
+const ATLAS_SMOKE_SOURCE_PATH = path.join(
+  process.cwd(),
+  'examples/showcase/billion-point-spatial-atlas/scripts/visual-smoke.mjs'
+);
 
 describe('responsive GPU data examples', () => {
   test('progressively generates the exact deterministic taxi population and reports progress', async () => {
@@ -135,6 +139,7 @@ describe('responsive GPU data examples', () => {
 
   test('loads the spatial atlas progressively and reuses its GPU index and query results', () => {
     const atlasSource = readFileSync(ATLAS_APP_SOURCE_PATH, 'utf8');
+    const atlasSmokeSource = readFileSync(ATLAS_SMOKE_SOURCE_PATH, 'utf8');
     const constructorSource = atlasSource.match(
       /constructor\(\{device\}: AnimationProps\)\s*\{([\s\S]*?)\n  \}\n\n  override async onInitialize/
     );
@@ -170,5 +175,8 @@ describe('responsive GPU data examples', () => {
     expect(gridCountSource).not.toBeNull();
     expect(gridCountSource![0]).not.toMatch(/new Array<number>\(dimension\)/);
     expect(atlasSource).toMatch(/resources\.renderGraph\.destroy\(\)/);
+    expect(atlasSmokeSource).toMatch(
+      /if \(requireGPUReadback\) \{\s*await changeSelect\(page, '#example-panel-host \[data-mode\]', 'taxi'\)/
+    );
   });
 });

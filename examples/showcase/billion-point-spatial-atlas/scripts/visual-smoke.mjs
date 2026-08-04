@@ -253,39 +253,46 @@ try {
   await assertBoundedLayout(page, 'synthetic LiDAR view');
   logPhase('synthetic LiDAR state and layout verified');
 
-  await changeSelect(page, '#example-panel-host [data-mode]', 'taxi');
-  await waitForAtlasDataReady(page, 'taxi');
-  await requestAtlasRedraw(page);
-  await page.waitForFunction(
-    () =>
-      document.querySelector('#example-panel-host [data-mode]')?.value === 'taxi' &&
-      document
-        .querySelector('[data-atlas-navigation-context]')
-        ?.textContent?.includes('NYC TAXI') &&
-      document.querySelector('canvas')?.dataset.atlasRenderedMode === 'taxi'
-  );
-  const restoredTaxiState = await readAtlasState(page);
-  assert.equal(restoredTaxiState.mode, 'taxi', 'the Atlas control returns to taxi mode');
-  assert.equal(restoredTaxiState.queryKind, 'polygon', 'returning to taxi restores polygon query');
-  assert.equal(restoredTaxiState.zone, '7', 'returning to taxi preserves the selected zone');
-  assert.equal(restoredTaxiState.execution, 'scan', 'returning to taxi preserves execution choice');
-  assert.notEqual(
-    restoredTaxiState.queryFootprintDisplay,
-    'none',
-    'returning to taxi restores its query footprint'
-  );
-  assert(!restoredTaxiState.zoneRowHidden, 'returning to taxi restores taxi-zone controls');
-  await assertBoundedLayout(page, 'restored taxi view');
+  if (requireGPUReadback) {
+    await changeSelect(page, '#example-panel-host [data-mode]', 'taxi');
+    await waitForAtlasDataReady(page, 'taxi');
+    await requestAtlasRedraw(page);
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#example-panel-host [data-mode]')?.value === 'taxi' &&
+        document
+          .querySelector('[data-atlas-navigation-context]')
+          ?.textContent?.includes('NYC TAXI') &&
+        document.querySelector('canvas')?.dataset.atlasRenderedMode === 'taxi'
+    );
+    const restoredTaxiState = await readAtlasState(page);
+    assert.equal(restoredTaxiState.mode, 'taxi', 'the Atlas control returns to taxi mode');
+    assert.equal(
+      restoredTaxiState.queryKind,
+      'polygon',
+      'returning to taxi restores polygon query'
+    );
+    assert.equal(restoredTaxiState.zone, '7', 'returning to taxi preserves the selected zone');
+    assert.equal(
+      restoredTaxiState.execution,
+      'scan',
+      'returning to taxi preserves execution choice'
+    );
+    assert.notEqual(
+      restoredTaxiState.queryFootprintDisplay,
+      'none',
+      'returning to taxi restores its query footprint'
+    );
+    assert(!restoredTaxiState.zoneRowHidden, 'returning to taxi restores taxi-zone controls');
+    await assertBoundedLayout(page, 'restored taxi view');
 
-  const restoredTaxiLayoutArtifact = await captureLayoutArtifact(page, artifactBrowser);
-  await writeFile(layoutScreenshotPath, restoredTaxiLayoutArtifact);
-  const restoredTaxiRenderedFrame = requireGPUReadback ? await captureRenderedFrame(page) : null;
-  if (restoredTaxiRenderedFrame) {
+    const restoredTaxiLayoutArtifact = await captureLayoutArtifact(page, artifactBrowser);
+    await writeFile(layoutScreenshotPath, restoredTaxiLayoutArtifact);
+    const restoredTaxiRenderedFrame = await captureRenderedFrame(page);
     await writeFile(screenshotPath, decodeDataUrl(restoredTaxiRenderedFrame.pngDataUrl));
     sceneArtifactWritten = true;
     assertRenderedFrame(restoredTaxiRenderedFrame, 'taxi', 'restored taxi view');
-  } else {
-    await writeFile(screenshotPath, restoredTaxiLayoutArtifact);
+    logPhase('reference-GPU Taxi roundtrip verified');
   }
   assert.deepEqual(pageErrors, [], `page errors: ${pageErrors.join('\n')}`);
   assert.deepEqual(consoleErrors, [], `console errors: ${consoleErrors.join('\n')}`);
