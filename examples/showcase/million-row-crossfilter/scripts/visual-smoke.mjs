@@ -136,7 +136,7 @@ try {
     'all rows are initially selected'
   );
   assert(initialState.frameCount > 0, 'the showcase has rendered at least one frame');
-  assert.match(initialState.title, /Crossfilter Supremacy/);
+  assert.match(initialState.title, /Million-Row Crossfilter Explorer/);
 
   const mapSurfaceBounds = await page.locator('[data-map-surface]').boundingBox();
   const scatterSurfaceBounds = await page.locator('[data-scatter-surface]').boundingBox();
@@ -237,11 +237,11 @@ try {
   assert.deepEqual(consoleErrors, [], `console errors: ${consoleErrors.join('\n')}`);
 
   process.stdout.write(
-    `Crossfilter Supremacy visual smoke passed: ${screenshotPath} ` +
+    `Million-Row Crossfilter Explorer visual smoke passed: ${screenshotPath} ` +
       `(${anomalySelectedCount.toLocaleString()}/${initialState.rowCount.toLocaleString()} anomaly rows)\n`
   );
   if (thumbnailPath) {
-    process.stdout.write(`Crossfilter Supremacy website thumbnail: ${thumbnailPath}\n`);
+    process.stdout.write(`Million-Row Crossfilter Explorer website thumbnail: ${thumbnailPath}\n`);
   }
 } finally {
   await browser?.close();

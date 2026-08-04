@@ -8,11 +8,11 @@ import {
   CROSS_FILTER_CATEGORY_NAMES,
   makeCrossfilterDataset,
   type CrossfilterDataset
-} from '../../examples/showcase/crossfilter-supremacy/crossfilter-data';
-import {CrossfilterEngine} from '../../examples/showcase/crossfilter-supremacy/crossfilter-engine';
-import {CrossfilterInterface} from '../../examples/showcase/crossfilter-supremacy/crossfilter-interface';
+} from '../../examples/showcase/million-row-crossfilter/crossfilter-data';
+import {CrossfilterEngine} from '../../examples/showcase/million-row-crossfilter/crossfilter-engine';
+import {CrossfilterInterface} from '../../examples/showcase/million-row-crossfilter/crossfilter-interface';
 
-describe('Crossfilter Supremacy GPU-resident dashboard', () => {
+describe('Million-Row Crossfilter Explorer GPU-resident dashboard', () => {
   test('coalesces scrolling dashboard viewport updates and cancels them during cleanup', async () => {
     const container = document.createElement('div');
     const canvas = document.createElement('canvas');
@@ -85,7 +85,7 @@ describe('Crossfilter Supremacy GPU-resident dashboard', () => {
       const canvasHeight = 32;
       const canvasContext = device.getDefaultCanvasContext();
       const framebuffer = device.createFramebuffer({
-        id: 'crossfilter-supremacy-test-framebuffer',
+        id: 'million-row-crossfilter-test-framebuffer',
         width: canvasWidth,
         height: canvasHeight,
         colorAttachments: [device.preferredColorFormat],

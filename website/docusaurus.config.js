@@ -49,6 +49,10 @@ const config = getDocusaurusConfig({
       {
         redirects: [
           {
+            from: ['/examples/showcase/crossfilter-supremacy'],
+            to: '/examples/showcase/million-row-crossfilter'
+          },
+          {
             from: ['/examples/arrow/arrow-path-model'],
             to: '/examples/arrow/arrow-lines'
           },

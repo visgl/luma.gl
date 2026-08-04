@@ -18,7 +18,7 @@ import {
   type CrossfilterHistogramBrushEvent
 } from './crossfilter-interface';
 
-export const title = 'Crossfilter Supremacy';
+export const title = 'Million-Row Crossfilter Explorer';
 export const description =
   'One million GPU-resident records, six linked selection dimensions, and zero source-row readbacks.';
 
@@ -140,7 +140,7 @@ export function getCrossfilterPreset(
  * scatter draws consume the shared GPU selection mask, while the interface reads back compact
  * histogram, category, and selected-count summaries.
  */
-export default class CrossfilterSupremacyAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class MillionRowCrossfilterAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = '';
 
   readonly device: Device;
@@ -164,7 +164,7 @@ export default class CrossfilterSupremacyAnimationLoopTemplate extends Animation
   constructor(animationProps: CrossfilterAnimationProps) {
     super(animationProps);
     if (animationProps.device.type !== 'webgpu') {
-      throw new Error('Crossfilter Supremacy requires WebGPU');
+      throw new Error('Million-Row Crossfilter Explorer requires WebGPU');
     }
 
     this.device = animationProps.device;

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#050812" />
-    <title>Crossfilter Supremacy · GPU-Resident Linked Views</title>
+    <title>Million-Row Crossfilter Explorer · GPU-Resident Linked Views</title>
     <style>
       :root {
         color-scheme: dark;
@@ -85,7 +85,7 @@
     <main id="crossfilter-startup" aria-live="polite">
       <section class="startup-card">
         <p class="startup-eyebrow">luma.gl · WebGPU</p>
-        <h1 class="startup-title">Crossfilter Supremacy</h1>
+        <h1 class="startup-title">Million-Row Crossfilter Explorer</h1>
         <p class="startup-status" data-startup-status>Preparing one million GPU-resident rows…</p>
       </section>
     </main>
@@ -108,7 +108,7 @@
 
         status.textContent = 'Acquiring a high-performance WebGPU device…';
         const device = await luma.createDevice({
-          id: 'crossfilter-supremacy',
+          id: 'million-row-crossfilter',
           adapters: [webgpuAdapter],
           featureLevel: 'best-available',
           powerPreference: 'high-performance',
@@ -120,7 +120,7 @@
         await makeAnimationLoop(AnimationLoopTemplate, {device}).start();
         startup.remove();
       } catch (error) {
-        console.error('Crossfilter Supremacy failed to start.', error);
+        console.error('Million-Row Crossfilter Explorer failed to start.', error);
         status.dataset.state = 'error';
         status.textContent = error instanceof Error ? error.message : String(error);
       }

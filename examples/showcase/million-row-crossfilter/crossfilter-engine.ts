@@ -136,7 +136,7 @@ export class CrossfilterEngine {
         seed: options.seed
       });
     this.rowCount = dataset.rowCount;
-    this.graph = new GPUCommandGraph(device, {id: 'crossfilter-supremacy-graph'});
+    this.graph = new GPUCommandGraph(device, {id: 'million-row-crossfilter-graph'});
 
     let initializedFilter: LuxFilter | undefined;
     let initializedGraph: CompiledGPUCommandGraph | undefined;
@@ -176,7 +176,7 @@ export class CrossfilterEngine {
       this.ownedOutputBuffers.push(this.packedSummaryBuffer);
 
       initializedFilter = new LuxFilter(this.graph, {
-        id: 'crossfilter-supremacy',
+        id: 'million-row-crossfilter',
         dimensions: [
           {id: 'map', kind: 'bounds', x: longitude.view, y: latitude.view},
           {id: 'scatter', kind: 'bounds', x: value.view, y: risk.view},

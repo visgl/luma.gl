@@ -651,7 +651,7 @@ function makeDashboardHtml(): string {
         <span class="crossfilter-brand-mark" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none"><path d="M16 3 27 9.4v13.2L16 29 5 22.6V9.4L16 3Z" stroke="currentColor" stroke-width="1.4"/><path d="m5 9.4 11 6.5 11-6.5M16 16v13M10.4 12.6l11 6.4" stroke="currentColor" stroke-opacity=".74" stroke-width="1.1"/><circle cx="16" cy="16" r="2.4" fill="currentColor"/></svg>
         </span>
-        <div><span class="crossfilter-eyebrow">LUXFILTER / SYNTHETIC PLANETARY COMPUTE</span><h1>Crossfilter Supremacy</h1></div>
+        <div><span class="crossfilter-eyebrow">LUXFILTER / SYNTHETIC PLANETARY COMPUTE</span><h1>Million-Row Crossfilter Explorer</h1></div>
       </div>
       <div class="crossfilter-header-meta">
         <span class="crossfilter-badge"><span class="crossfilter-live-dot"></span>LIVE GPU FIELD</span>
