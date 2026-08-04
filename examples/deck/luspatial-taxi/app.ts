@@ -57,6 +57,7 @@ export function createLuSpatialTaxiDeck(
     maxZoom: 20
   };
   let queryEffect: LuSpatialTaxiQueryEffect | null = null;
+  let latestSelectionCenter: readonly [number, number] = initialZone.center;
   let queryRadiusKilometres = 0.35;
 
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
@@ -91,6 +92,7 @@ export function createLuSpatialTaxiDeck(
       deck?.redraw('luSpatial radius changed');
     },
     onZoneChange: zone => {
+      latestSelectionCenter = zone.center;
       viewState = {
         ...viewState,
         longitude: zone.center[0],
@@ -136,6 +138,7 @@ export function createLuSpatialTaxiDeck(
       const coordinate = info.coordinate;
       if (!coordinate || coordinate.length < 2) return;
       const center = [coordinate[0], coordinate[1]] as const;
+      latestSelectionCenter = center;
       queryEffect?.setSelection(center, queryRadiusKilometres);
       controls.setCoordinate(center, 'Custom map query');
       controls.setCustomZone();
@@ -173,7 +176,7 @@ export function createLuSpatialTaxiDeck(
           queryEffect = new LuSpatialTaxiQueryEffect(device, generatedTaxiData, {
             onStats: stats => controls.updateStats(stats)
           });
-          queryEffect.setSelection(initialZone.center, queryRadiusKilometres);
+          queryEffect.setSelection(latestSelectionCenter, queryRadiusKilometres);
           loadedDeck.setProps({
             effects: [queryEffect],
             layers: [

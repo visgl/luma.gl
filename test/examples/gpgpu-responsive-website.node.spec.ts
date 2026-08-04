@@ -92,21 +92,24 @@ describe('responsive GPGPU website examples', () => {
     expect(homepageSceneSource).toContain("from '../../../examples/showcase/instancing/app'");
   });
 
-  test('stops initializing GPU applications before waiting for serialized route cleanup', () => {
+  test('serializes template finalization after asynchronous initialization', () => {
     const lifecycleSource = readFileSync(LUMA_EXAMPLE_PATH, 'utf8');
-    const cancellationCommentOffset = lifecycleSource.indexOf('// Stop immediately');
-    const immediateStopOffset = lifecycleSource.indexOf(
-      'animationLoop?.stop()',
-      cancellationCommentOffset
-    );
+    const cleanupOffset = lifecycleSource.lastIndexOf('return () => {\n      isCancelled = true;');
     const queuedCleanupOffset = lifecycleSource.indexOf(
       'currentLumaExampleTask = currentLumaExampleTask',
-      immediateStopOffset
+      cleanupOffset
     );
+    const serializedDestroyOffset = lifecycleSource.indexOf(
+      'animationLoop.destroy()',
+      queuedCleanupOffset
+    );
+    const immediateCleanupSource = lifecycleSource.slice(cleanupOffset, queuedCleanupOffset);
 
-    expect(cancellationCommentOffset).toBeGreaterThan(0);
-    expect(immediateStopOffset).toBeGreaterThan(cancellationCommentOffset);
-    expect(queuedCleanupOffset).toBeGreaterThan(immediateStopOffset);
+    expect(cleanupOffset).toBeGreaterThan(0);
+    expect(queuedCleanupOffset).toBeGreaterThan(cleanupOffset);
+    expect(serializedDestroyOffset).toBeGreaterThan(queuedCleanupOffset);
+    expect(immediateCleanupSource).not.toContain('animationLoop?.stop()');
+    expect(immediateCleanupSource).toContain('canvasContainer.replaceChildren()');
   });
 
   test('keeps DOM-only compute examples from inserting presentation canvases into the page', () => {

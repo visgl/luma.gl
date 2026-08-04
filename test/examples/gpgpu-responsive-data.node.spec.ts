@@ -116,6 +116,23 @@ describe('responsive GPU data examples', () => {
     expect(appSource).toMatch(/map\.off\('error', handleBasemapError\)/);
   });
 
+  test('preserves the latest taxi selection while GPU data is still initializing', () => {
+    const appSource = readFileSync(TAXI_APP_SOURCE_PATH, 'utf8');
+    const zoneChangeSource = appSource.match(/onZoneChange: zone => \{([\s\S]*?)\n    \}\n  \}\);/);
+    const clickSource = appSource.match(
+      /onClick: \(info: PickingInfo\) => \{([\s\S]*?)\n    \},\n    onViewStateChange:/
+    );
+
+    expect(appSource).toContain(
+      'let latestSelectionCenter: readonly [number, number] = initialZone.center;'
+    );
+    expect(zoneChangeSource?.[1]).toContain('latestSelectionCenter = zone.center;');
+    expect(clickSource?.[1]).toContain('latestSelectionCenter = center;');
+    expect(appSource).toContain(
+      'queryEffect.setSelection(latestSelectionCenter, queryRadiusKilometres);'
+    );
+  });
+
   test('loads the spatial atlas progressively and reuses its GPU index and query results', () => {
     const atlasSource = readFileSync(ATLAS_APP_SOURCE_PATH, 'utf8');
     const constructorSource = atlasSource.match(
