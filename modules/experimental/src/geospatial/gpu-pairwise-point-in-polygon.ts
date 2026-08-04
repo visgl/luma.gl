@@ -10,7 +10,6 @@ import {
 import {getViewElementOffset} from '../gpu-primitives/graph-data-view-utils';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
-  PRECISE_DISTANCE_WGSL,
   RAW_POINT_WGSL,
   addGeospatialPass,
   assertGraphOwnership,
@@ -20,6 +19,18 @@ import {
   validateDisjointGeospatialViews,
   validateRowView
 } from './geospatial-utils';
+
+const PRECISE_PREDICATE_WGSL = /* wgsl */ `
+fn geospatial_max_abs_fp64(first: vec2f, second: vec2f) -> f32 {
+  let normalizedFirst = normalize_fp64(first);
+  let normalizedSecond = normalize_fp64(second);
+  return max(abs(normalizedFirst.x), abs(normalizedSecond.x));
+}
+
+fn geospatial_div_fp64_f32(value: vec2f, divisor: f32) -> vec2f {
+  return normalize_fp64(vec2f(value.x / divisor, value.y / divisor));
+}
+`;
 
 /** Numeric values written by {@link GPUPairwisePointInPolygon}. */
 export const GPU_POINT_IN_POLYGON_CLASSIFICATION = {
@@ -162,7 +173,7 @@ export class GPUPairwisePointInPolygon implements GPUCommandGraphContributor {
     const raw = this.points.format === 'uint32x4';
     const source = /* wgsl */ `
 ${raw ? RAW_POINT_WGSL : ''}
-${PRECISE_DISTANCE_WGSL}
+${PRECISE_PREDICATE_WGSL}
 const OUTSIDE: u32 = ${GPU_POINT_IN_POLYGON_CLASSIFICATION.outside}u;
 const INSIDE: u32 = ${GPU_POINT_IN_POLYGON_CLASSIFICATION.inside}u;
 const BOUNDARY: u32 = ${GPU_POINT_IN_POLYGON_CLASSIFICATION.boundary}u;
@@ -214,7 +225,8 @@ fn main(
         classifications: this.output
       },
       dispatchLayout,
-      precise: true
+      precise: true,
+      fp64Profile: raw ? 'predicate-raw' : 'predicate-f32'
     });
   }
 }
@@ -234,8 +246,8 @@ function makePredicateHelpers(
   let deltaY = sub_fp64u32_to_fp64(vertex.y, point.y);`
     : `let exactZeroX = vertex.x == point.x;
   let exactZeroY = vertex.y == point.y;
-  let deltaX = sub_fp64(vec2f(vertex.x, 0.0), vec2f(point.x, 0.0));
-  let deltaY = sub_fp64(vec2f(vertex.y, 0.0), vec2f(point.y, 0.0));`;
+  let deltaX = twoSub(vertex.x, point.x);
+  let deltaY = twoSub(vertex.y, point.y);`;
   const rawHelpers = raw
     ? `fn rawScalarEqual(first: vec2u, second: vec2u) -> bool {
   let firstDecoded = fp64_decode_bits(first);

@@ -250,14 +250,6 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
     /output and points must not overlap/
   );
 
-  if (isSoftwareBackedDevice(device)) {
-    // SwiftShader spends more than 100 seconds compiling integer-fp64, then loses the GPU device.
-    tapeTest.comment('Skipping precise f32 point-in-polygon execution on software WebGPU');
-    for (const buffer of Object.values(buffers)) buffer.destroy();
-    tapeTest.end();
-    return;
-  }
-
   const compiled = graph.compile();
   encode(device, compiled);
   const classifications = await readUint32(buffers.output, points.length);

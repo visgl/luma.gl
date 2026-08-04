@@ -41,6 +41,9 @@ export type GeospatialDispatchLayout = {
   z: number;
 };
 
+/** Internal fp64 source specialization for precise geospatial kernels. @internal */
+export type GeospatialFP64Profile = 'full' | 'predicate-f32' | 'predicate-raw';
+
 /** Recognizes vector views structurally across independently bundled package entry points. */
 export function isGraphVectorView<T extends GPUVectorFormat>(
   rows: GPURowView<T>
@@ -319,8 +322,12 @@ export function addGeospatialPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchLayout: GeospatialDispatchLayout;
     precise?: boolean;
+    fp64Profile?: GeospatialFP64Profile;
   }
 ): void {
+  if (!props.precise && props.fp64Profile !== undefined) {
+    throw new Error('geospatial fp64 profiles require precise arithmetic');
+  }
   graph.addComputePass({
     id: props.id,
     resources: props.resources,
@@ -328,8 +335,13 @@ export function addGeospatialPass<Parameters>(
       const modules: ShaderModule[] = props.precise
         ? [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE]
         : [];
+      const fp64Profile = props.fp64Profile ?? 'full';
       const defines: Record<string, boolean | number> = props.precise
-        ? {LUMA_FP64_INTEGER_ARITHMETIC: true}
+        ? {
+            LUMA_FP64_INTEGER_ARITHMETIC: true,
+            ...(fp64Profile === 'full' ? {} : {LUMA_FP64_PREDICATE_ONLY: true}),
+            ...(fp64Profile === 'predicate-f32' ? {LUMA_FP64_F32_INPUT_ONLY: true} : {})
+          }
         : {};
       const computation = new Computation(device, {
         id: props.id,

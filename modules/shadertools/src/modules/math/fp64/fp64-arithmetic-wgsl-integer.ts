@@ -234,6 +234,7 @@ fn fp64_round_mul_integer(a: f32, b: f32) -> f32 {
   return fp64_two_prod_integer(a, b).x;
 }
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn fp64_f32_finite_exponent(value: Fp64F32Bits) -> i32 {
   let mostSignificantBit = 31u - countLeadingZeros(value.significand);
   return value.baseExponent + i32(mostSignificantBit);
@@ -287,6 +288,7 @@ fn fp64_divide_f32_integer(aValue: f32, bValue: f32) -> f32 {
   );
   return bitcast<f32>(quotientBits);
 }
+#endif
 
 fn split(a: f32) -> vec2f {
   let aBits = bitcast<u32>(a);
@@ -382,6 +384,7 @@ fn mul_fp64(a: vec2f, b: vec2f) -> vec2f {
   return fp64_two_sum_integer(product.x, product.y);
 }
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn fp64_scale_fp64_integer(value: vec2f, exponent: i32) -> vec2f {
   let high = fp64_scale_f32_integer(value.x, exponent);
   let low = fp64_scale_f32_integer(value.y, exponent);
@@ -451,4 +454,5 @@ fn sqrt_fp64(a: vec2f) -> vec2f {
   let normalizedRoot = fp64_sqrt_fp64_normalized(normalizedA);
   return fp64_scale_fp64_integer(normalizedRoot, evenExponent / 2);
 }
+#endif
 `;
