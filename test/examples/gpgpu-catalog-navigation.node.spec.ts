@@ -95,6 +95,46 @@ describe('GPGPU example catalog navigation', () => {
     expect(taxiExampleSource).toContain('@luma.gl/experimental/geospatial');
   });
 
+  test('registers LuxFilter throughout experimental API navigation', () => {
+    const documentationTableOfContents = JSON.parse(
+      readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
+    ) as ExampleSidebarEntry[];
+    const experimentalCategories: ExampleCategory[] = [];
+
+    const collectExperimentalCategories = (entries: ExampleSidebarEntry[]): void => {
+      for (const entry of entries) {
+        if (typeof entry === 'string' || entry.type !== 'category') continue;
+        if (entry.label === '@luma.gl/experimental') experimentalCategories.push(entry);
+        collectExperimentalCategories(entry.items);
+      }
+    };
+
+    collectExperimentalCategories(documentationTableOfContents);
+    expect(experimentalCategories).toHaveLength(2);
+    for (const category of experimentalCategories) {
+      expect(category.items).toContain('api-reference/experimental/luxfilter');
+    }
+
+    const documentationSource = readFileSync(
+      path.join(DOCUMENTATION_DIRECTORY, 'api-reference/experimental/luxfilter.md'),
+      'utf8'
+    );
+    const experimentalOverviewSource = readFileSync(
+      path.join(DOCUMENTATION_DIRECTORY, 'api-reference/experimental/README.md'),
+      'utf8'
+    );
+    const experimentalTabsSource = readFileSync(
+      path.join(process.cwd(), 'website/src/components/docs/experimental-docs-tabs.tsx'),
+      'utf8'
+    );
+
+    expect(documentationSource).toContain('<ExperimentalDocsTabs active="luxfilter" />');
+    expect(experimentalOverviewSource).toContain('/docs/api-reference/experimental/luxfilter');
+    expect(experimentalTabsSource).toMatch(
+      /id:\s*['"]luxfilter['"][^}]*href:\s*['"]\/docs\/api-reference\/experimental\/luxfilter['"]/
+    );
+  });
+
   test('preserves every compute example route and WebGPU capability metadata', () => {
     const generalPurposeGPUCategory = getCategory('GPGPU');
     const webGPUCategory = getCategory('WebGPU');

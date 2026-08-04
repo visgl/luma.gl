@@ -60,6 +60,17 @@ introduces explicit command scheduling, typed table-backed graph views, hierarch
 compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written
 indirect draw commands.
 
+## GPU-resident Linked Crossfiltering
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`LuxFilter`](/docs/api-reference/experimental/luxfilter) connects numeric ranges and rectangular
+brushes to linked histograms, grouped aggregates, stable visible-row identifiers, and rendering
+masks through one reusable WebGPU command graph. Source rows stay on the GPU; applications control
+chart rendering, command submission, and any compact summary readback.
+
 ## WebGPU Geospatial Kernels
 
 <p class="badges">
