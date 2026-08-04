@@ -12,6 +12,7 @@ import {
   evaluateProjectionPlan,
   findProjectionPatch,
   packProjectionPlan,
+  PROJECTION_PLAN_BOUNDS_WORD_LENGTH,
   PROJECTION_PATCH_WORD_LENGTH,
   WEB_MERCATOR_EARTH_RADIUS,
   WEB_MERCATOR_MAX_LATITUDE
@@ -25,6 +26,7 @@ const LUPROJ_RUNTIME_EXPORTS = [
   'evaluateProjectionPlan',
   'findProjectionPatch',
   'packProjectionPlan',
+  'PROJECTION_PLAN_BOUNDS_WORD_LENGTH',
   'PROJECTION_PATCH_WORD_LENGTH',
   'WEB_MERCATOR_EARTH_RADIUS',
   'WEB_MERCATOR_MAX_LATITUDE'
@@ -349,7 +351,7 @@ describe('CPU projection plan compilation', () => {
     ).toThrow(/tolerance/);
   });
 
-  test('packs canonical binary64 origins and stable 40-word GPU patch records', () => {
+  test('packs canonical binary64 origins, stable patch records, and exact plan bounds', () => {
     const sourceOrigin = [20_000_000.125, 30_000_000.375] as const;
     const projection = (coordinates: number[]): number[] => [
       coordinates[0] * 0.5 - 13_000_000,
@@ -365,10 +367,12 @@ describe('CPU projection plan compilation', () => {
     const packedAgain = packProjectionPlan(plan);
     const bytes = new DataView(packed.buffer, packed.byteOffset, packed.byteLength);
     const patch = plan.patches[0];
+    const boundsWordOffset = plan.patches.length * PROJECTION_PATCH_WORD_LENGTH;
 
     expect(PROJECTION_PATCH_WORD_LENGTH).toBe(40);
+    expect(PROJECTION_PLAN_BOUNDS_WORD_LENGTH).toBe(12);
     expect(packed).toBeInstanceOf(Uint32Array);
-    expect(packed.length).toBe(plan.patches.length * PROJECTION_PATCH_WORD_LENGTH);
+    expect(packed.length).toBe(boundsWordOffset + PROJECTION_PLAN_BOUNDS_WORD_LENGTH);
     expect(packedAgain).toEqual(packed);
     expect(bytes.getFloat64(0, true)).toBe(patch.sourceOrigin[0]);
     expect(bytes.getFloat64(8, true)).toBe(patch.sourceOrigin[1]);
@@ -391,6 +395,19 @@ describe('CPU projection plan compilation', () => {
     expect(bytes.getFloat32(14 * 4, true)).toBe(Math.fround(patch.sourceOrigin[1]));
     expect(bytes.getFloat64(16 * 4, true)).toBe(patch.destinationOrigin[0]);
     expect(bytes.getFloat64(18 * 4, true)).toBe(patch.destinationOrigin[1]);
+    for (let boundIndex = 0; boundIndex < plan.bounds.length; boundIndex++) {
+      expect(bytes.getFloat64((boundsWordOffset + boundIndex * 2) * 4, true)).toBe(
+        plan.bounds[boundIndex]
+      );
+    }
+    const float32MinimumX = bytes.getFloat32((boundsWordOffset + 8) * 4, true);
+    const float32MinimumY = bytes.getFloat32((boundsWordOffset + 9) * 4, true);
+    const float32MaximumX = bytes.getFloat32((boundsWordOffset + 10) * 4, true);
+    const float32MaximumY = bytes.getFloat32((boundsWordOffset + 11) * 4, true);
+    expect(float32MinimumX).toBeGreaterThanOrEqual(plan.bounds[0]);
+    expect(float32MinimumY).toBeGreaterThanOrEqual(plan.bounds[1]);
+    expect(float32MaximumX).toBeLessThanOrEqual(plan.bounds[2]);
+    expect(float32MaximumY).toBeLessThanOrEqual(plan.bounds[3]);
   });
 });
 

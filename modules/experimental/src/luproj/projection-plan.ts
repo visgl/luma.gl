@@ -15,6 +15,9 @@ import type {
 /** Number of uint32 words occupied by one stable packed GPU projection-patch record. */
 export const PROJECTION_PATCH_WORD_LENGTH = 40;
 
+/** Number of uint32 words occupied by the source-bounds trailer in a packed projection plan. */
+export const PROJECTION_PLAN_BOUNDS_WORD_LENGTH = 12;
+
 const MAXIMUM_COEFFICIENT_COUNT = 10;
 const DEFAULT_TOLERANCE = 0.01;
 const DEFAULT_MAXIMUM_DEPTH = 8;
@@ -135,14 +138,16 @@ export function evaluateProjectionPlan(
 }
 
 /**
- * Packs the stable, little-endian GPU patch ABI without a header or hidden metadata.
+ * Packs the stable, little-endian GPU patch ABI followed by the plan's source-bounds trailer.
  *
  * Each record contains source and destination binary64 origin words, source normalization,
  * the patch's destination offset from the plan origin, degree, and two padded coefficient sets.
+ * The trailer contains four exact binary64 bounds plus four inward-rounded float32 bounds.
  * Updating an imported GPU plan buffer with the result does not require recompiling its graph.
  */
 export function packProjectionPlan(plan: ProjectionPlan): Uint32Array {
-  const words = new Uint32Array(plan.patches.length * PROJECTION_PATCH_WORD_LENGTH);
+  const patchWordLength = plan.patches.length * PROJECTION_PATCH_WORD_LENGTH;
+  const words = new Uint32Array(patchWordLength + PROJECTION_PLAN_BOUNDS_WORD_LENGTH);
   const dataView = new DataView(words.buffer);
 
   for (const patch of plan.patches) {
@@ -216,7 +221,52 @@ export function packProjectionPlan(plan: ProjectionPlan): Uint32Array {
     }
   }
 
+  for (let boundIndex = 0; boundIndex < plan.bounds.length; boundIndex++) {
+    dataView.setFloat64(
+      (patchWordLength + boundIndex * 2) * Uint32Array.BYTES_PER_ELEMENT,
+      plan.bounds[boundIndex],
+      true
+    );
+  }
+  const float32Bounds = [
+    getFloat32Ceiling(plan.bounds[0]),
+    getFloat32Ceiling(plan.bounds[1]),
+    getFloat32Floor(plan.bounds[2]),
+    getFloat32Floor(plan.bounds[3])
+  ];
+  for (let boundIndex = 0; boundIndex < float32Bounds.length; boundIndex++) {
+    dataView.setFloat32(
+      (patchWordLength + 8 + boundIndex) * Uint32Array.BYTES_PER_ELEMENT,
+      float32Bounds[boundIndex],
+      true
+    );
+  }
+
   return words;
+}
+
+function getFloat32Ceiling(value: number): number {
+  const rounded = Math.fround(value);
+  return rounded >= value ? rounded : getAdjacentFloat32(rounded, 1);
+}
+
+function getFloat32Floor(value: number): number {
+  const rounded = Math.fround(value);
+  return rounded <= value ? rounded : getAdjacentFloat32(rounded, -1);
+}
+
+function getAdjacentFloat32(value: number, direction: -1 | 1): number {
+  const values = new Float32Array(1);
+  const words = new Uint32Array(values.buffer);
+  values[0] = value;
+  if (value === 0) {
+    words[0] = direction === 1 ? 1 : 0x80000001;
+  } else if (value > 0 === (direction === 1)) {
+    words[0]++;
+  } else {
+    words[0]--;
+  }
+  return values[0];
 }
 
 function validateCompilerOptions(options: {

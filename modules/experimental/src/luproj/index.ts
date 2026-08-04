@@ -17,6 +17,7 @@ export {
   evaluateProjectionPlan,
   findProjectionPatch,
   packProjectionPlan,
+  PROJECTION_PLAN_BOUNDS_WORD_LENGTH,
   PROJECTION_PATCH_WORD_LENGTH
 } from './projection-plan';
 
