@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {CommandEncoder} from '@luma.gl/core';
 import type {GPUCommandGraphEncoding} from './gpu-command-graph';
 import type {
   GPUCommandGraphCapabilities,
+  GPUCommandGraphEncodeOptions,
   GPUCommandGraphEncodingStats,
   GPUCommandGraphNodeType,
   GPUCommandGraphStats,
@@ -26,6 +28,42 @@ export type GPUCommandGraphInspectorEncoding = Pick<
   GPUCommandGraphEncoding,
   'stats' | 'readTimings'
 >;
+
+/** Minimal executable graph surface supported by {@link GPUCommandGraphInspector.observeGraph}. */
+export type GPUCommandGraphInspectorObservableGraph<
+  Parameters = void,
+  Encoding extends GPUCommandGraphInspectorEncoding = GPUCommandGraphEncoding
+> = GPUCommandGraphInspectorGraph & {
+  /** Records the graph into a caller-owned command encoder. */
+  readonly encode: (
+    commandEncoder: CommandEncoder,
+    options: GPUCommandGraphEncodeOptions<Parameters>
+  ) => Encoding;
+};
+
+/**
+ * Non-owning observation handle for one executable command graph.
+ *
+ * Route graph encodings through {@link GPUCommandGraphInspectorObservation.encode} to collect CPU
+ * measurements without repeating graph IDs. GPU timestamp readback remains an explicit,
+ * post-submission operation through {@link GPUCommandGraphInspectorObservation.recordGPUTimings}.
+ */
+export type GPUCommandGraphInspectorObservation<
+  Parameters = void,
+  Encoding extends GPUCommandGraphInspectorEncoding = GPUCommandGraphEncoding
+> = {
+  /** Graph whose encodings are observed. */
+  readonly graph: GPUCommandGraphInspectorObservableGraph<Parameters, Encoding>;
+  /** Encodes the graph and records its immediately available CPU measurements. */
+  readonly encode: (
+    commandEncoder: CommandEncoder,
+    options: GPUCommandGraphEncodeOptions<Parameters>
+  ) => Encoding;
+  /** Reads GPU timings once for an encoding produced by this handle, after caller submission. */
+  readonly recordGPUTimings: (encoding: Encoding) => Promise<void>;
+  /** Stops observing this graph without destroying or otherwise mutating it. */
+  readonly detach: () => void;
+};
 
 /** Stable identity supplied to a semantic node-group callback. */
 export type GPUCommandGraphInspectorNodeIdentity = {
@@ -130,10 +168,12 @@ const DEFAULT_MAX_SAMPLES = 120;
 /**
  * Collects bounded CPU and GPU timing histories for compiled command graphs.
  *
- * The inspector has no DOM or submission responsibilities. Call {@link recordEncoding}
- * synchronously after encoding, then call {@link recordGPUTimings} after submission when explicit
- * timestamp readback is desired. Registering a new compiled graph with an existing ID replaces
- * the old registration and resets its measurements.
+ * The inspector has no DOM or submission responsibilities. {@link observeGraph} provides a
+ * reusable encoding and timing lifecycle for executable graphs. The lower-level
+ * {@link registerGraph}, {@link recordEncoding}, and {@link recordGPUTimings} methods remain
+ * available when an application cannot route encoding through an observation handle. Registering
+ * a new compiled graph with an existing ID replaces the old registration and resets its
+ * measurements.
  */
 export class GPUCommandGraphInspector {
   private readonly maxSamples: number;
@@ -173,6 +213,61 @@ export class GPUCommandGraphInspector {
     });
   }
 
+  /**
+   * Registers an executable graph and returns a non-owning observation handle.
+   *
+   * The handle records CPU measurements for every encoding routed through `encode()`. Call its
+   * `recordGPUTimings()` only after submitting the command buffer; repeated calls for one encoding
+   * coalesce into a single timing sample. Detaching removes this graph's registration only while it
+   * is still current, so an older handle cannot remove a replacement graph that uses the same ID.
+   */
+  observeGraph<
+    Parameters,
+    Encoding extends GPUCommandGraphInspectorEncoding = GPUCommandGraphEncoding
+  >(
+    graph: GPUCommandGraphInspectorObservableGraph<Parameters, Encoding>
+  ): GPUCommandGraphInspectorObservation<Parameters, Encoding> {
+    this.registerGraph(graph);
+    const registration = this.getGraph(graph.id);
+    const timingReadPromises = new WeakMap<GPUCommandGraphInspectorEncoding, Promise<void>>();
+    let attached = true;
+    const isCurrent = (): boolean => attached && this.graphs.get(graph.id) === registration;
+    return Object.freeze({
+      graph,
+      encode: (
+        commandEncoder: CommandEncoder,
+        options: GPUCommandGraphEncodeOptions<Parameters>
+      ): Encoding => {
+        const encoding = graph.encode(commandEncoder, options);
+        if (isCurrent()) {
+          this.recordGraphEncoding(registration, encoding);
+        }
+        return encoding;
+      },
+      recordGPUTimings: async (encoding: Encoding): Promise<void> => {
+        const existingRead = timingReadPromises.get(encoding);
+        if (existingRead) {
+          await existingRead;
+          return;
+        }
+        if (isCurrent() && this.encodingGraphs.get(encoding) === registration) {
+          const timingRead = this.recordGraphGPUTimings(graph.id, registration, encoding);
+          timingReadPromises.set(encoding, timingRead);
+          await timingRead;
+        }
+      },
+      detach: (): void => {
+        if (!attached) {
+          return;
+        }
+        attached = false;
+        if (this.graphs.get(graph.id) === registration) {
+          this.graphs.delete(graph.id);
+        }
+      }
+    });
+  }
+
   /** Removes every graph and invalidates any timing reads still pending for those registrations. */
   clear(): void {
     this.graphs.clear();
@@ -181,6 +276,13 @@ export class GPUCommandGraphInspector {
   /** Records immediately available whole-graph and per-node CPU encoding durations. */
   recordEncoding(graphId: string, encoding: GPUCommandGraphInspectorEncoding): void {
     const graph = this.getGraph(graphId);
+    this.recordGraphEncoding(graph, encoding);
+  }
+
+  private recordGraphEncoding(
+    graph: GraphInspectionState,
+    encoding: GPUCommandGraphInspectorEncoding
+  ): void {
     this.encodingGraphs.set(encoding, graph);
     const {stats} = encoding;
     graph.encodingCount++;
@@ -203,6 +305,14 @@ export class GPUCommandGraphInspector {
   ): Promise<void> {
     const recordedGraph = this.encodingGraphs.get(encoding);
     const graph = recordedGraph ?? this.getGraph(graphId);
+    await this.recordGraphGPUTimings(graphId, graph, encoding);
+  }
+
+  private async recordGraphGPUTimings(
+    graphId: string,
+    graph: GraphInspectionState,
+    encoding: GPUCommandGraphInspectorEncoding
+  ): Promise<void> {
     if (this.graphs.get(graphId) !== graph) {
       return;
     }
