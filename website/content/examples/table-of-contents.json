@@ -8,6 +8,7 @@
     "type": "category",
     "label": "Showcase",
     "items": [
+      "showcase/gaussian-splats",
       "showcase/gltf",
       "showcase/instancing",
       {

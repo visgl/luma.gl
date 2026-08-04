@@ -1,0 +1,41 @@
+{
+  "name": "@luma.gl/splats",
+  "version": "9.4.0-alpha.4",
+  "private": true,
+  "description": "Gaussian splat rendering utilities for luma.gl",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "keywords": [
+    "webgl",
+    "webgpu",
+    "visualization",
+    "3d",
+    "gaussian-splats"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "@luma.gl/core": "9.4.0-alpha.4",
+    "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/shadertools": "9.4.0-alpha.4",
+    "@luma.gl/tables": "9.4.0-alpha.4"
+  }
+}

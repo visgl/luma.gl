@@ -17,6 +17,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/tables`][tables]           | Optional    | GPU-resident table primitives, batching, table-backed rendering, and table-oriented compute.    |
 | [`@luma.gl/arrow`][arrow]             | Optional    | Apache Arrow adapters for deriving GPU layouts and building GPU table objects from Arrow data.  |
 | [`@luma.gl/text`][text]               | Optional    | Experimental `TextRenderer` facade and caller-owned GPU text data.                              |
+| [`@luma.gl/splats`][splats]           | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data.                    |
 | [`@luma.gl/experimental`][experimental] | Optional | Experimental v10 work-in-progress APIs, including WebGL-only WebXR helpers.                    |
 | [`@luma.gl/gltf`][gltf]               | Optional    | glTF scenegraph loading and instantiation etc.                                                  |
 | [`@luma.gl/test-utils`][test-utils]   | Optional    | Test setups, in particular support for rendering and comparing images.                          |
@@ -31,6 +32,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
 - [`@luma.gl/tables`][tables] for `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`.
 - [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
+- [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [`@luma.gl/experimental`][experimental] for v10 work-in-progress APIs, including experimental WebXR frame, view, and raw camera helpers.
 - [`@luma.gl/gltf`][gltf] for glTF scenegraph loading and extensions.
 - [`@luma.gl/webgl`][webgl] and [`@luma.gl/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
@@ -44,6 +46,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 [tables]: /docs/api-reference/tables
 [arrow]: /docs/api-reference/arrow
 [text]: /docs/api-reference/text
+[splats]: /docs/api-reference/splats
 [experimental]: /docs/api-reference/experimental
 [gltf]: /docs/api-reference/gltf
 [test-utils]: /docs/api-reference/test-utils

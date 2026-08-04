@@ -10,9 +10,7 @@
   "references": [
     {"path": "../core"},
     {"path": "../engine"},
-    {"path": "../geoarrow"},
-    {"path": "../splats"},
-    {"path": "../tables"},
-    {"path": "../text"}
+    {"path": "../shadertools"},
+    {"path": "../tables"}
   ]
 }

@@ -75,6 +75,7 @@ import ABufferApp from '../../examples/experimental/a-buffer/app';
 // import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
+import GaussianSplatsApp from '../../examples/showcase/gaussian-splats/app';
 import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
@@ -737,6 +738,21 @@ export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
     template={GLTFApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gaussian-splats"
+    title="Gaussian Splats"
+    subtitle="Progressive HDR Gaussian splat rendering"
+    directory="showcase"
+    devices={['webgpu', 'webgl2']}
+    template={GaussianSplatsApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
+    showStats
     {...props}
   />
 );

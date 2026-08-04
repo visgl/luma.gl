@@ -43,6 +43,7 @@ const config = {
         'external-context': '/examples/integrations/external-context',
         'arrow-text-2d': '/examples/arrow/arrow-text-2d',
         'arrow-text-3d': '/examples/arrow/arrow-text-3d',
+        'gaussian-splats': '/examples/showcase/gaussian-splats',
         gltf: '/examples/showcase/gltf',
         'hello-cube': '/examples/tutorials/hello-cube',
         'hello-instancing': '/examples/tutorials/hello-instancing',
