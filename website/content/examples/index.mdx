@@ -5,6 +5,7 @@ hide_title: true
 ---
 
 import {ExamplesIndex} from '@site/src/components/examples-index';
+import {getExampleThumbnailPath} from '@site/src/example-thumbnails';
 
 <header className="luma-example-catalog-hero" aria-labelledby="luma-example-catalog-title">
   <p className="luma-example-catalog-eyebrow">The real-time GPU laboratory</p>
@@ -21,9 +22,6 @@ import {ExamplesIndex} from '@site/src/components/examples-index';
 <ExamplesIndex
   getThumbnail={item => {
     const exampleName = typeof item === 'string' ? item : item.docId || item.label.toLowerCase();
-    if (exampleName === 'v10/gpgpu') {
-      return '/images/examples/gpu-tables/gpu-vector-storage-particles.jpg'
-    }
-    return `/images/examples/${exampleName}.jpg`
+    return `/images/examples/${getExampleThumbnailPath(exampleName)}`
   }}
 />
