@@ -60,7 +60,7 @@
     "@probe.gl/test-utils": "^4.1.1",
     "@types/node": "22.15.2",
     "@types/tape-promise": "^4.0.6",
-    "@vis.gl/dev-tools": "^2.0.0-alpha.2",
+    "@vis.gl/dev-tools": "^2.0.0-alpha.3",
     "@vis.gl/ts-plugins": "^1.0.2",
     "@vitest/coverage-istanbul": "4.1.0",
     "a5-js": "^0.8.0",
