@@ -2,23 +2,32 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {
   createTransientView,
   DispatchCommandBuffer,
   DrawCommandBuffer,
-  getViewBinding,
-  getViewElementOffset,
   GPUCommandGraph,
+  type GPUCommandGraphContributor,
   GPUCompaction,
   GPUScan,
-  type GPUCommandGraphContributor,
-  GPUTextSelection
+  GPUTextSelection,
+  getViewBinding,
+  getViewElementOffset
 } from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
+import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource
+} from '../../src/gpu-primitives/gpu-dispatch-utils';
+import {
+  addGPUScanToGraphWithDispatchLimit,
+  getGPUScanDispatchLayout,
+  getGPUScanInvocationIndexSource
+} from '../../src/gpu-primitives/gpu-scan';
 
 test('GPUCommandGraph compiles dependencies and reuses transient buffers', async t => {
   const device = await getWebGPUTestDevice();
@@ -652,6 +661,112 @@ test('CompiledGPUCommandGraph resolves DynamicBuffer replacements and preserves 
   t.end();
 });
 
+test('GPUScan plans bounded multidimensional direct dispatches', t => {
+  const maximum = 65_535;
+  const oneDimensionalRowCapacity = maximum * 256;
+
+  t.deepEqual(getGPUScanDispatchLayout(0, maximum), {x: 1, y: 1, z: 1});
+  t.deepEqual(getGPUScanDispatchLayout(oneDimensionalRowCapacity, maximum), {
+    x: maximum,
+    y: 1,
+    z: 1
+  });
+  t.deepEqual(getGPUScanDispatchLayout(oneDimensionalRowCapacity + 1, maximum), {
+    x: maximum,
+    y: 2,
+    z: 1
+  });
+  t.deepEqual(
+    getGPUScanDispatchLayout(4 * 256 + 1, 2),
+    {x: 2, y: 2, z: 2},
+    'a small synthetic limit exercises the third dispatch dimension'
+  );
+  t.throws(() => getGPUScanDispatchLayout(8 * 256 + 1, 2), /exceeding the 3D dispatch limit/);
+  t.throws(
+    () => getBoundedDispatchLayout('GPUScan', 1024, 3, maximum),
+    /power of two greater than one/,
+    'the shared uint32 guard rejects workgroup sizes that can wrap padded lanes'
+  );
+  t.throws(
+    () => getBoundedInvocationIndexSource({x: 1, y: 1, z: 1}, 1),
+    /power of two greater than one/,
+    'the source helper never emits an unrepresentable 2^32 guard literal'
+  );
+
+  const source = getGPUScanInvocationIndexSource({x: 3, y: 2, z: 2});
+  t.match(source, /workgroupId\.z \* 2u \+ workgroupId\.y/);
+  t.match(source, /\* 3u \+ workgroupId\.x/);
+  t.match(
+    source,
+    /workgroupIndex >= 16777216u/,
+    'padded workgroups cannot wrap the uint32 invocation index'
+  );
+  t.ok(
+    source.indexOf('workgroupIndex >= 16777216u') <
+      source.indexOf('workgroupIndex * 256u + localInvocationIndex'),
+    'the uint32 guard executes before invocation-index multiplication'
+  );
+  t.end();
+});
+
+test('GPUScan executes multidimensional block and offset dispatches', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const length = 4 * 256 + 1;
+  const values = Uint32Array.from({length}, (_, index) => (index % 11) + 1);
+  const segmentFlags = new Uint32Array(length);
+  for (const index of [0, 700]) {
+    segmentFlags[index] = 1;
+  }
+  const result = await runScan(device, values, {
+    mode: 'exclusive',
+    segmentFlags,
+    maxComputeWorkgroupsPerDimension: 2
+  });
+
+  t.deepEqual(
+    result,
+    getExpectedScan(values, 'exclusive', segmentFlags),
+    'five block scans and their offset pass execute through a padded 2x2x2 layout'
+  );
+  t.end();
+});
+
+test('GPUScan preserves vector segments and carries through multidimensional passes', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const valueChunks = [
+    Uint32Array.from([10]),
+    Uint32Array.from({length: 4 * 256 + 1}, () => 1),
+    Uint32Array.from([7])
+  ];
+  const segmentFlagChunks = valueChunks.map(chunk => new Uint32Array(chunk.length));
+  segmentFlagChunks[1][700] = 1;
+  const result = await runVectorScan(device, valueChunks, {
+    mode: 'exclusive',
+    segmentFlagChunks,
+    maxComputeWorkgroupsPerDimension: 2
+  });
+
+  t.deepEqual(result.chunks[0], [0], 'the first chunk starts the vector-wide prefix');
+  t.equal(result.chunks[1][0], 10, 'the preceding chunk carry reaches the 3D-dispatched chunk');
+  t.equal(result.chunks[1][699], 709, 'the carry survives x-to-y workgroup boundaries');
+  t.equal(result.chunks[1][700], 0, 'the interior segment start resets the carried prefix');
+  t.equal(result.chunks[1][1024], 324, 'the reset segment survives the padded z workgroup');
+  t.deepEqual(result.chunks[2], [325], 'the final chunk receives the last segment total');
+  t.end();
+});
+
 test('GPUScan computes exclusive uint32 prefixes', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -1240,6 +1355,7 @@ async function runVectorScan(
   options: {
     mode?: 'exclusive' | 'inclusive';
     segmentFlagChunks?: Uint32Array[];
+    maxComputeWorkgroupsPerDimension?: number;
   } = {}
 ): Promise<{chunks: number[][]; nodeOrder: string[]}> {
   const inputFixture = createUint32VectorFixture(device, 'input', chunks);
@@ -1253,7 +1369,12 @@ async function runVectorScan(
   const segmentFlags = segmentFlagsFixture
     ? graph.importGPUVector('segment-flags', segmentFlagsFixture.vector)
     : undefined;
-  new GPUScan({input, output, mode: options.mode, segmentFlags}).addToGraph(graph);
+  const scan = new GPUScan({input, output, mode: options.mode, segmentFlags});
+  if (options.maxComputeWorkgroupsPerDimension === undefined) {
+    scan.addToGraph(graph);
+  } else {
+    addGPUScanToGraphWithDispatchLimit(scan, graph, options.maxComputeWorkgroupsPerDimension);
+  }
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-scan-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1275,6 +1396,7 @@ async function runScan(
   options: {
     mode?: 'exclusive' | 'inclusive';
     segmentFlags?: Uint32Array;
+    maxComputeWorkgroupsPerDimension?: number;
   } = {}
 ): Promise<number[]> {
   const inputBuffer = device.createBuffer({
@@ -1315,7 +1437,12 @@ async function runScan(
   const segmentFlags = segmentFlagsHandle
     ? graph.createDataView(segmentFlagsHandle, {format: 'uint32', length: values.length})
     : undefined;
-  new GPUScan({input, output, mode: options.mode, segmentFlags}).addToGraph(graph);
+  const scan = new GPUScan({input, output, mode: options.mode, segmentFlags});
+  if (options.maxComputeWorkgroupsPerDimension === undefined) {
+    scan.addToGraph(graph);
+  } else {
+    addGPUScanToGraphWithDispatchLimit(scan, graph, options.maxComputeWorkgroupsPerDimension);
+  }
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'scan-variant-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
