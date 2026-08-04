@@ -2,51 +2,52 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Texture, type Device, type RenderBundle} from '@luma.gl/core';
+import type {Panel} from '@deck.gl-community/panels';
+import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
 import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, ShaderPassRenderer} from '@luma.gl/engine';
 import {
-  decodeGPUIndexPickInfo,
+  type CompiledGPUCommandGraph,
   DrawCommandBuffer,
+  decodeGPUIndexPickInfo,
   GPUCommandGraph,
+  type GPUCommandGraphEncoding,
   GPUCommandGraphInspector,
   GPUIndexPickingTarget,
   GPUReadbackRing,
-  INDEX_PICKING_READBACK_BYTE_LENGTH,
-  type CompiledGPUCommandGraph,
-  type GPUCommandGraphEncoding,
-  type GPUReadbackTicket
+  type GPUReadbackTicket,
+  INDEX_PICKING_READBACK_BYTE_LENGTH
 } from '@luma.gl/experimental';
 import {
   GPUGridIndex,
-  GPUPointSpatialQuery,
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
+  GPUPointSpatialQuery,
   type GPUPointSpatialQueryKind
 } from '@luma.gl/experimental/geospatial';
-import type {Panel} from '@deck.gl-community/panels';
+import {CompactDropdown} from '../../compact-dropdown';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
   makeHtmlCustomPanel
 } from '../../example-panels';
-import {CompactDropdown} from '../../compact-dropdown';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
+import type {NYCEPTTileSource} from './ept-source';
+import {GPULidarTileCache} from './lidar-tile-cache';
 import {
   DEFAULT_RESIDENT_POINT_COUNT,
+  formatCount,
+  getSupportedResidentPointCounts,
   MAXIMUM_TAXI_ZONE_POSITION_COUNT,
   MAXIMUM_TAXI_ZONE_RING_OFFSET_COUNT,
+  makeSyntheticTaxiPositions,
+  makeTaxiZones,
   NYC_LIDAR_POINT_COUNT,
   NYC_TAXI_SAMPLE_URL,
   NYC_TAXI_ZONES_URL,
-  PAUL_TAYLOR_POINT_COUNT,
-  formatCount,
-  getSupportedResidentPointCounts,
-  makeSyntheticTaxiPositions,
-  makeTaxiZones
+  PAUL_TAYLOR_POINT_COUNT
 } from './spatial-atlas-data';
-import type {NYCEPTTileSource} from './ept-source';
 import {
   SPATIAL_ATLAS_CONTEXT_SHADER,
   SPATIAL_ATLAS_PICKING_SHADER,
@@ -64,7 +65,12 @@ const LIDAR_DOMAIN = [-1.25, -1.25, -0.25, 1.25, 1.25, 2.5] as const;
 const TAXI_GRID_SIZE = [128, 128] as const;
 const LIDAR_GRID_SIZE = [64, 64, 16] as const;
 const ATLAS_GENERATION_CHUNK_SIZE = 20_000;
-const VISUAL_SMOKE_POINT_COUNT = 100_000;
+const VISUAL_SMOKE_TAXI_GRID_SIZE = [16, 16] as const;
+const VISUAL_SMOKE_LIDAR_GRID_SIZE = [16, 16, 4] as const;
+const VISUAL_SMOKE_POINT_COUNT = 2_000;
+const GPU_TRANSITION_DRAIN_TIMEOUT_MILLISECONDS = 10_000;
+const IS_VISUAL_SMOKE =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('visual-smoke');
 const MINIMUM_VIEW_SCALE = 0.35;
 const MAXIMUM_VIEW_SCALE = 32;
 const WHEEL_ZOOM_RATE = 0.0016;
@@ -287,6 +293,16 @@ type SpatialAtlasBenchmarkResult = {
   counterReadbackCompleted: boolean;
 };
 
+type SpatialAtlasVisualSmokeFrame = {
+  mode: AtlasMode;
+  width: number;
+  height: number;
+  hash: number;
+  uniquePixelCount: number;
+  foregroundPixelCount: number;
+  pngDataUrl: string;
+};
+
 type AtlasResources = {
   mode: AtlasMode;
   pointCount: number;
@@ -373,7 +389,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private sampledMatchCount = 0;
   private sampledTotalMatchCount = 0;
   private sampledOverflow = false;
-  private countReadPending = false;
+  private countReadback: Promise<void> | null = null;
   private downloadedTileCount = 0;
   private decodedPointCount = 0;
   private lidarLoadAbortController: AbortController | null = null;
@@ -385,6 +401,14 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private lastLidarRefreshTime = 0;
   private lidarPublishTimer: ReturnType<typeof setTimeout> | null = null;
   private dataGenerationAbortController: AbortController | null = null;
+  private modeTransitionGeneration = 0;
+  private requestedMode: AtlasMode | null = null;
+  private resumeLidarLoadAfterModeTransition = false;
+  private resumeLidarPublishAfterModeTransition = false;
+  private modeTransitionFailed = false;
+  private deviceLossMessage: string | null = null;
+  private readonly gpuTimingReadbacks = new Set<Promise<void>>();
+  private readonly gpuTimingReadbackTimers = new Set<ReturnType<typeof setTimeout>>();
   private loadingOverlay: HTMLDivElement | null = null;
   private lastQuerySignature: string | null = null;
   private finalized = false;
@@ -410,6 +434,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       throw new Error('Billion-Point Spatial Atlas requires WebGPU');
     }
     this.device = device;
+    void device.lost.then(({message}) => {
+      if (!this.finalized) this.reportDeviceLoss(message);
+    });
     this.sceneColorFormat = getSceneColorFormat(device);
     const initialZone = makeTaxiZones().find(zone => zone.id === this.selectedZoneId);
     if (initialZone) {
@@ -474,12 +501,18 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     height,
     _mousePosition
   }: AnimationProps): void {
+    // Mode transitions stop encoding before taking a fence. This guarantees that every command
+    // referencing the current resource set is included in the fence before that set is destroyed.
+    if (this.requestedMode !== null) return;
     let resources = this.resources;
     if (!resources) return;
     // Stop adding work while the benchmark drains the queue and reads its final counters.
     if (this.benchmarkFinishing) return;
     const deviceSize = device.getDefaultCanvasContext().getDevicePixelSize();
-    if (resources.width !== deviceSize[0] || resources.height !== deviceSize[1]) {
+    if (
+      !this.modeTransitionFailed &&
+      (resources.width !== deviceSize[0] || resources.height !== deviceSize[1])
+    ) {
       this.resizeResources(resources, Math.max(1, deviceSize[0]), Math.max(1, deviceSize[1]));
     }
 
@@ -518,7 +551,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     ) {
       void this.sampleCounts(resources);
       if (encoding.canReadGPUTimings) {
-        setTimeout(() => void this.recordGPUTimings(graph.id, encoding), 0);
+        this.scheduleGPUTimingReadback(graph.id, encoding);
       }
     }
     this.postprocessingRenderer.encodeToScreen(device.commandEncoder, {
@@ -551,14 +584,64 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     }
 
     this.frameIndex++;
+    if (IS_VISUAL_SMOKE && this.canvas) {
+      this.canvas.dataset.atlasRenderedMode = this.mode;
+      this.canvas.dataset.atlasRenderFrame = String(this.frameIndex);
+    }
     if (this.frameIndex % 10 === 0) {
       this.updateInspector(animationLoop.frameRate.getSampleHz());
     }
     this.maybeFinishBenchmark(animationLoop);
   }
 
+  /** Reads the rendered scene texture without relying on browser compositor screenshots. */
+  async captureVisualSmokeFrame(): Promise<SpatialAtlasVisualSmokeFrame> {
+    if (this.requestedMode !== null) {
+      throw new Error('Spatial Atlas visual smoke capture cannot run during a mode transition');
+    }
+    const resources = this.resources;
+    if (!IS_VISUAL_SMOKE || !resources) {
+      throw new Error('Spatial Atlas visual smoke frame is unavailable');
+    }
+    const {sceneColor} = resources;
+    const width = Math.min(512, resources.width);
+    const height = Math.min(320, resources.height);
+    const x = Math.floor((resources.width - width) / 2);
+    const y = Math.floor((resources.height - height) / 2);
+    const layout = sceneColor.computeMemoryLayout({width, height});
+    const readbackBuffer = this.device.createBuffer({
+      id: 'spatial-atlas-visual-smoke-readback',
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    try {
+      if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'copy';
+      sceneColor.readBuffer({x, y, width, height}, readbackBuffer);
+      if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'map';
+      const bytes = await readbackBuffer.readAsync(0, layout.byteLength);
+      if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'encode';
+      const frame = makeVisualSmokeFrame(
+        bytes,
+        layout.bytesPerRow,
+        layout.bytesPerPixel,
+        width,
+        height,
+        this.sceneColorFormat,
+        this.mode
+      );
+      if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'complete';
+      return frame;
+    } finally {
+      readbackBuffer.destroy();
+    }
+  }
+
   override onFinalize(): void {
     this.finalized = true;
+    this.modeTransitionGeneration++;
+    this.requestedMode = null;
+    this.clearModeTransitionResumeState();
+    this.cancelScheduledGPUTimingReadbacks();
     this.dataGenerationAbortController?.abort();
     this.loadingOverlay?.remove();
     this.loadingOverlay = null;
@@ -590,9 +673,11 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
 
   /** Builds large deterministic fixtures between browser tasks so navigation stays responsive. */
   private async loadSyntheticDataset(mode: AtlasMode, pointCount: number): Promise<void> {
+    if (this.modeTransitionFailed || this.requestedMode !== null) return;
     this.dataGenerationAbortController?.abort();
     const generationController = new AbortController();
     this.dataGenerationAbortController = generationController;
+    delete this.canvas.dataset.atlasDataReadyMode;
     this.mountLoadingOverlay(mode, pointCount);
     this.setStatus(
       `Preparing ${formatCount(pointCount)} GPU-resident points without blocking navigation…`
@@ -627,6 +712,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       if (this.finalized || this.mode !== mode || this.capacity !== pointCount) return;
 
       this.rebuildResources(positions);
+      this.canvas.dataset.atlasDataReadyMode = mode;
       this.setStatus('');
       this.updateInteractionPresentation();
     } catch (error) {
@@ -743,27 +829,37 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     const dimension: 2 | 3 = this.mode === 'taxi' ? 2 : 3;
     const queryPositionValues = makeQueryPositions(renderPositions, dimension);
     const domain = this.mode === 'taxi' ? TAXI_DOMAIN : LIDAR_DOMAIN;
-    const gridSize = this.mode === 'taxi' ? TAXI_GRID_SIZE : LIDAR_GRID_SIZE;
+    const gridSize =
+      this.mode === 'taxi'
+        ? IS_VISUAL_SMOKE
+          ? VISUAL_SMOKE_TAXI_GRID_SIZE
+          : TAXI_GRID_SIZE
+        : IS_VISUAL_SMOKE
+          ? VISUAL_SMOKE_LIDAR_GRID_SIZE
+          : LIDAR_GRID_SIZE;
     const cellCount = gridSize.reduce((product, value) => product * value, 1);
     const renderPositionsBuffer =
       borrowedRenderPositionsBuffer ??
-      this.device.createBuffer({
-        id: 'spatial-atlas-render-positions',
-        data: renderPositions,
-        usage: Buffer.STORAGE | Buffer.COPY_DST
-      });
-    const queryPositionsBuffer = this.device.createBuffer({
-      id: 'spatial-atlas-query-positions',
-      data: queryPositionValues,
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    });
+      createUploadedBuffer(
+        this.device,
+        'spatial-atlas-render-positions',
+        renderPositions,
+        Buffer.STORAGE
+      );
+    const queryPositionsBuffer = createUploadedBuffer(
+      this.device,
+      'spatial-atlas-query-positions',
+      queryPositionValues,
+      Buffer.STORAGE
+    );
     const pointAttributes =
       borrowedPointAttributesBuffer ??
-      this.device.createBuffer({
-        id: 'spatial-atlas-point-attributes',
-        data: pointAttributeValues ?? makePointAttributes(pointCount, this.mode),
-        usage: Buffer.STORAGE | Buffer.COPY_DST
-      });
+      createUploadedBuffer(
+        this.device,
+        'spatial-atlas-point-attributes',
+        pointAttributeValues ?? makePointAttributes(pointCount, this.mode),
+        Buffer.STORAGE
+      );
     const visibleIds = this.device.createBuffer({
       id: 'spatial-atlas-visible-ids',
       byteLength: Math.max(UINT32_BYTE_LENGTH, pointCount * UINT32_BYTE_LENGTH),
@@ -883,7 +979,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.graphInspector.recordEncoding(buildGraph.id, encoding);
     this.device.submit(commandEncoder.finish());
     if (encoding.canReadGPUTimings) {
-      setTimeout(() => void this.recordGPUTimings(buildGraph.id, encoding), 0);
+      this.scheduleGPUTimingReadback(buildGraph.id, encoding);
     }
     this.sampledMatchCount = 0;
     this.sampledTotalMatchCount = 0;
@@ -899,7 +995,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       format: this.sceneColorFormat,
       width,
       height,
-      usage: Texture.SAMPLE | Texture.RENDER,
+      usage: Texture.SAMPLE | Texture.RENDER | (IS_VISUAL_SMOKE ? Texture.COPY_SRC : 0),
       sampler: {
         minFilter: 'linear',
         magFilter: 'linear',
@@ -1472,9 +1568,22 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     );
   }
 
-  private async sampleCounts(resources: AtlasResources): Promise<void> {
-    if (this.countReadPending) return;
-    this.countReadPending = true;
+  private sampleCounts(resources: AtlasResources): Promise<void> {
+    if (this.countReadback) return this.countReadback;
+    const countReadback = this.readSampleCounts(resources);
+    this.countReadback = countReadback;
+    void countReadback.then(
+      () => {
+        if (this.countReadback === countReadback) this.countReadback = null;
+      },
+      () => {
+        if (this.countReadback === countReadback) this.countReadback = null;
+      }
+    );
+    return countReadback;
+  }
+
+  private async readSampleCounts(resources: AtlasResources): Promise<void> {
     try {
       const [drawBytes, totalCountBytes, overflowBytes] = await Promise.all([
         resources.drawCommands.buffer.readAsync(),
@@ -1510,9 +1619,26 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
           `Counter readback unavailable: ${error instanceof Error ? error.message : String(error)}`
         );
       }
-    } finally {
-      this.countReadPending = false;
     }
+  }
+
+  private scheduleGPUTimingReadback(graphId: string, encoding: GPUCommandGraphEncoding): void {
+    const timer = setTimeout(() => {
+      this.gpuTimingReadbackTimers.delete(timer);
+      if (this.finalized || this.requestedMode !== null) return;
+      const readback = this.recordGPUTimings(graphId, encoding);
+      this.gpuTimingReadbacks.add(readback);
+      void readback.then(
+        () => this.gpuTimingReadbacks.delete(readback),
+        () => this.gpuTimingReadbacks.delete(readback)
+      );
+    }, 0);
+    this.gpuTimingReadbackTimers.add(timer);
+  }
+
+  private cancelScheduledGPUTimingReadbacks(): void {
+    for (const timer of this.gpuTimingReadbackTimers) clearTimeout(timer);
+    this.gpuTimingReadbackTimers.clear();
   }
 
   private async recordGPUTimings(
@@ -1557,7 +1683,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private async loadLidar(): Promise<void> {
-    if (this.mode !== 'lidar') return;
+    if (this.mode !== 'lidar' || this.requestedMode !== null || this.modeTransitionFailed) return;
     if (this.lidarLoading) {
       this.lidarRefreshPending = true;
       return;
@@ -1594,6 +1720,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
         refreshCenter,
         controller.signal
       );
+      controller.signal.throwIfAborted();
       const selectedKeys = new Set(selections.map(selection => selection.key));
       for (const selection of selections) {
         controller.signal.throwIfAborted();
@@ -1602,6 +1729,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
           continue;
         }
         const tile = await this.lidarTileSource.loadTile(selection, controller.signal);
+        controller.signal.throwIfAborted();
         this.downloadedTileCount++;
         this.decodedPointCount += tile.decodedPointCount;
         tileCache.insert(tile.key, tile.positions, tile.attributes);
@@ -1646,6 +1774,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private maybeRefreshLidarTiles(): void {
     if (
       this.mode !== 'lidar' ||
+      this.modeTransitionFailed ||
       !this.lidarTileSource ||
       !this.lidarTileCache ||
       this.lidarLoading ||
@@ -1664,6 +1793,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private scheduleLidarCachePublish(tileCache: GPULidarTileCache, immediate: boolean): void {
+    if (this.requestedMode !== null || this.modeTransitionFailed) return;
     if (immediate || performance.now() - this.lastLidarPublishTime >= 250) {
       this.publishLidarCache(tileCache);
       return;
@@ -1679,6 +1809,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     if (this.mode !== 'lidar' || this.lidarTileCache !== tileCache || tileCache.pointCount === 0) {
       return;
     }
+    if (this.requestedMode !== null || this.modeTransitionFailed) return;
     if (this.lidarPublishTimer) {
       clearTimeout(this.lidarPublishTimer);
       this.lidarPublishTimer = null;
@@ -1695,9 +1826,66 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   }
 
   private switchMode(mode: AtlasMode): void {
-    if (this.mode === mode) return;
+    if ((this.requestedMode ?? this.mode) === mode) return;
+    const canvas = this.canvas;
+    if (!canvas) return;
+    const transitionGeneration = ++this.modeTransitionGeneration;
+    this.resumeLidarLoadAfterModeTransition ||= this.mode === 'lidar' && this.lidarLoading;
+    this.resumeLidarPublishAfterModeTransition ||=
+      this.mode === 'lidar' && this.lidarPublishTimer !== null;
+    const resumeLidarLoad = this.resumeLidarLoadAfterModeTransition;
+    const resumeLidarPublish = this.resumeLidarPublishAfterModeTransition;
+    this.requestedMode = mode;
+    delete canvas.dataset.atlasDataReadyMode;
+    delete canvas.dataset.atlasTransitionFailure;
+    this.setStatus(`Waiting for submitted GPU work before switching to ${mode}…`);
+    this.dataGenerationAbortController?.abort();
     this.lidarLoadAbortController?.abort();
     if (this.lidarPublishTimer) clearTimeout(this.lidarPublishTimer);
+    this.lidarPublishTimer = null;
+    this.lidarRefreshPending = false;
+    void this.completeModeSwitch(mode, transitionGeneration, resumeLidarLoad, resumeLidarPublish);
+  }
+
+  private async completeModeSwitch(
+    mode: AtlasMode,
+    transitionGeneration: number,
+    resumeLidarLoad: boolean,
+    resumeLidarPublish: boolean
+  ): Promise<void> {
+    const canvas = this.canvas;
+    if (!canvas) return;
+    try {
+      await this.waitForSubmittedGPUWork();
+    } catch (error) {
+      if (this.finalized || transitionGeneration !== this.modeTransitionGeneration) return;
+      // A failed drain cannot safely restart a producer that may replace GPU resources. Keep the
+      // current resources visible and report a terminal transition failure instead.
+      this.modeTransitionFailed = true;
+      this.clearModeTransitionResumeState();
+      this.requestedMode = null;
+      const message = error instanceof Error ? error.message : String(error);
+      if (this.device.isLost) {
+        this.reportDeviceLoss(this.deviceLossMessage ?? message);
+      } else {
+        canvas.dataset.atlasTransitionFailure = message;
+        this.panels.setPanel(this.makePanel());
+        this.setStatus(`GPU mode transition failed: ${message}`);
+        if (this.resources) canvas.dataset.atlasDataReadyMode = this.mode;
+        this.updateInteractionPresentation();
+      }
+      return;
+    }
+
+    if (this.finalized || transitionGeneration !== this.modeTransitionGeneration) return;
+    this.modeTransitionFailed = false;
+    if (this.mode === mode) {
+      this.completeSameModeTransition(resumeLidarLoad, resumeLidarPublish);
+      return;
+    }
+
+    this.clearModeTransitionResumeState();
+
     const previousTileCache = this.lidarTileCache;
     this.lidarTileCache = null;
     this.lidarTileSource = null;
@@ -1717,7 +1905,6 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     }
     this.queryRadius = mode === 'taxi' ? 0.4 : 0.32;
     this.resetView();
-    this.dataGenerationAbortController?.abort();
     this.destroyResources();
     this.currentPositions = new Float32Array(0);
     this.decodedPointCount = 0;
@@ -1725,10 +1912,122 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     previousTileCache?.destroy();
     this.panels.setPanel(this.makePanel());
     this.updateInteractionPresentation();
+    this.requestedMode = null;
     void this.loadSyntheticDataset(mode, this.capacity);
   }
 
+  private completeSameModeTransition(resumeLidarLoad: boolean, resumeLidarPublish: boolean): void {
+    const mode = this.mode;
+    const capacity = this.capacity;
+    const resources = this.resources;
+    const resourcesAreCurrent =
+      resources?.mode === mode &&
+      (resources.pointCount === capacity ||
+        (mode === 'lidar' &&
+          this.lidarTileCache !== null &&
+          resources.renderPositions === this.lidarTileCache.positionsBuffer));
+    if (!resourcesAreCurrent) {
+      this.destroyResources();
+      this.currentPositions = new Float32Array(0);
+      this.decodedPointCount = 0;
+      this.downloadedTileCount = 0;
+    }
+
+    this.clearModeTransitionResumeState();
+    this.requestedMode = null;
+    this.panels.setPanel(this.makePanel());
+    if (resourcesAreCurrent) {
+      if (this.canvas) this.canvas.dataset.atlasDataReadyMode = mode;
+      this.setStatus('');
+      if (resumeLidarPublish && this.lidarTileCache) {
+        this.scheduleLidarCachePublish(this.lidarTileCache, true);
+      }
+      if (resumeLidarLoad && mode === 'lidar') void this.loadLidar();
+    } else {
+      void this.loadSyntheticDataset(mode, capacity).then(() => {
+        if (
+          (resumeLidarLoad || resumeLidarPublish) &&
+          this.mode === 'lidar' &&
+          this.requestedMode === null &&
+          this.capacity === capacity &&
+          this.resources?.mode === 'lidar'
+        ) {
+          if (resumeLidarPublish && this.lidarTileCache) {
+            this.scheduleLidarCachePublish(this.lidarTileCache, true);
+          }
+          if (resumeLidarLoad) void this.loadLidar();
+        }
+      });
+    }
+    this.updateInteractionPresentation();
+  }
+
+  private clearModeTransitionResumeState(): void {
+    this.resumeLidarLoadAfterModeTransition = false;
+    this.resumeLidarPublishAfterModeTransition = false;
+  }
+
+  private async waitForSubmittedGPUWork(): Promise<void> {
+    this.cancelScheduledGPUTimingReadbacks();
+    const pendingReadbacks = [...this.gpuTimingReadbacks];
+    if (this.countReadback) pendingReadbacks.push(this.countReadback);
+    await this.waitForGPUCompletion(
+      Promise.allSettled(pendingReadbacks).then(() => undefined),
+      'Pending Atlas GPU readbacks'
+    );
+
+    const fence = this.device.createFence();
+    try {
+      await this.waitForGPUCompletion(fence.signaled, 'Atlas GPU submission fence');
+    } finally {
+      fence.destroy();
+    }
+  }
+
+  private async waitForGPUCompletion(
+    completion: Promise<void>,
+    description: string
+  ): Promise<void> {
+    let timeoutIdentifier: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const deviceLoss = await Promise.race([
+        completion.then(() => null),
+        this.device.lost,
+        new Promise<never>((_resolve, reject) => {
+          timeoutIdentifier = setTimeout(
+            () =>
+              reject(
+                new Error(`${description} exceeded ${GPU_TRANSITION_DRAIN_TIMEOUT_MILLISECONDS}ms`)
+              ),
+            GPU_TRANSITION_DRAIN_TIMEOUT_MILLISECONDS
+          );
+        })
+      ]);
+      if (deviceLoss || this.device.isLost) {
+        const message = deviceLoss?.message || this.deviceLossMessage || 'unknown reason';
+        throw new Error(`WebGPU device lost: ${message}`);
+      }
+    } finally {
+      if (timeoutIdentifier !== null) clearTimeout(timeoutIdentifier);
+    }
+  }
+
+  private reportDeviceLoss(message: string): void {
+    const detail = message.replace(/^WebGPU device lost:\s*/u, '').trim() || 'unknown reason';
+    this.deviceLossMessage = detail;
+    const status = `WebGPU device lost: ${detail}`;
+    if (this.canvas) {
+      this.canvas.dataset.atlasDeviceLost = detail;
+      this.canvas.dataset.atlasTransitionFailure = status;
+    }
+    this.setStatus(status);
+  }
+
   private changeCapacity(capacity: number): void {
+    if (this.requestedMode !== null || this.modeTransitionFailed) {
+      this.panels.setPanel(this.makePanel());
+      return;
+    }
     if (capacity === this.capacity) return;
     this.capacity = capacity;
     this.lidarLoadAbortController?.abort();
@@ -1955,7 +2254,9 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     const cleanupDropdowns = this.mountCompactDropdowns(root);
     return () => {
       cleanupDropdowns();
-      cleanups.forEach(cleanup => cleanup());
+      cleanups.forEach(cleanup => {
+        cleanup();
+      });
       this.loadLidarButtonElement = null;
     };
   }
@@ -2786,6 +3087,21 @@ function importBuffer<Parameters>(graph: GPUCommandGraph<Parameters>, id: string
   return graph.importBuffer({id, byteLength: buffer.byteLength, usage: buffer.usage}, buffer);
 }
 
+function createUploadedBuffer(
+  device: Device,
+  id: string,
+  data: ArrayBufferView,
+  usage: number
+): Buffer {
+  const buffer = device.createBuffer({
+    id,
+    byteLength: Math.max(UINT32_BYTE_LENGTH, data.byteLength),
+    usage: usage | Buffer.COPY_DST
+  });
+  if (data.byteLength > 0) buffer.write(data);
+  return buffer;
+}
+
 function makeQueryPositions(positions: Float32Array, dimension: 2 | 3): Float32Array {
   if (dimension === 3) return positions.slice();
   const result = new Float32Array((positions.length / 3) * 2);
@@ -2825,12 +3141,7 @@ function yieldAtlasGeneration(signal: AbortSignal): Promise<void> {
 }
 
 function getInitialResidentPointCount(): number {
-  if (
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).has('visual-smoke')
-  ) {
-    return VISUAL_SMOKE_POINT_COUNT;
-  }
+  if (IS_VISUAL_SMOKE) return VISUAL_SMOKE_POINT_COUNT;
   return DEFAULT_RESIDENT_POINT_COUNT;
 }
 
@@ -2948,6 +3259,96 @@ function getSceneColorFormat(device: Device): SceneColorFormat {
   return capabilities.render && capabilities.filter ? 'rgba16float' : 'rgba8unorm';
 }
 
+function makeVisualSmokeFrame(
+  source: Uint8Array,
+  bytesPerRow: number,
+  bytesPerPixel: number,
+  width: number,
+  height: number,
+  format: SceneColorFormat,
+  mode: AtlasMode
+): SpatialAtlasVisualSmokeFrame {
+  const sourceView = new DataView(source.buffer, source.byteOffset, source.byteLength);
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  const pixelCounts = new Map<number, number>();
+  let mostCommonPixelCount = 0;
+  let hash = 0x811c9dc5;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const sourceOffset = y * bytesPerRow + x * bytesPerPixel;
+      const targetOffset = (y * width + x) * 4;
+      const red = encodeVisualSmokeColor(readSceneChannel(sourceView, sourceOffset, 0, format));
+      const green = encodeVisualSmokeColor(readSceneChannel(sourceView, sourceOffset, 1, format));
+      const blue = encodeVisualSmokeColor(readSceneChannel(sourceView, sourceOffset, 2, format));
+      const alpha = Math.round(
+        Math.max(0, Math.min(1, readSceneChannel(sourceView, sourceOffset, 3, format))) * 255
+      );
+      pixels[targetOffset] = red;
+      pixels[targetOffset + 1] = green;
+      pixels[targetOffset + 2] = blue;
+      pixels[targetOffset + 3] = alpha;
+      const pixelKey = (red | (green << 8) | (blue << 16) | (alpha << 24)) >>> 0;
+      const pixelCount = (pixelCounts.get(pixelKey) ?? 0) + 1;
+      pixelCounts.set(pixelKey, pixelCount);
+      mostCommonPixelCount = Math.max(mostCommonPixelCount, pixelCount);
+      hash = Math.imul(hash ^ red, 0x01000193);
+      hash = Math.imul(hash ^ green, 0x01000193);
+      hash = Math.imul(hash ^ blue, 0x01000193);
+      hash = Math.imul(hash ^ alpha, 0x01000193);
+    }
+  }
+
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = width;
+  sourceCanvas.height = height;
+  const sourceContext = sourceCanvas.getContext('2d');
+  if (!sourceContext) throw new Error('Could not create the visual smoke source canvas');
+  sourceContext.putImageData(new ImageData(pixels, width, height), 0, 0);
+  const previewWidth = Math.min(720, width);
+  const previewHeight = Math.max(1, Math.round((height * previewWidth) / width));
+  const previewCanvas = document.createElement('canvas');
+  previewCanvas.width = previewWidth;
+  previewCanvas.height = previewHeight;
+  const previewContext = previewCanvas.getContext('2d');
+  if (!previewContext) throw new Error('Could not create the visual smoke preview canvas');
+  previewContext.drawImage(sourceCanvas, 0, 0, previewWidth, previewHeight);
+
+  return {
+    mode,
+    width,
+    height,
+    hash: hash >>> 0,
+    uniquePixelCount: pixelCounts.size,
+    foregroundPixelCount: width * height - mostCommonPixelCount,
+    pngDataUrl: previewCanvas.toDataURL('image/png')
+  };
+}
+
+function readSceneChannel(
+  source: DataView,
+  pixelOffset: number,
+  channel: number,
+  format: SceneColorFormat
+): number {
+  if (format === 'rgba8unorm') return source.getUint8(pixelOffset + channel) / 255;
+  return decodeFloat16(source.getUint16(pixelOffset + channel * 2, true));
+}
+
+function decodeFloat16(bits: number): number {
+  const sign = bits & 0x8000 ? -1 : 1;
+  const exponent = (bits >>> 10) & 0x1f;
+  const fraction = bits & 0x03ff;
+  if (exponent === 0) return sign * 2 ** -14 * (fraction / 1024);
+  if (exponent === 0x1f) return fraction ? Number.NaN : sign * Number.POSITIVE_INFINITY;
+  return sign * 2 ** (exponent - 15) * (1 + fraction / 1024);
+}
+
+function encodeVisualSmokeColor(value: number): number {
+  const linear = Number.isFinite(value) ? Math.max(0, value) : 0;
+  const toneMapped = linear / (1 + linear);
+  return Math.round(Math.max(0, Math.min(1, toneMapped ** (1 / 2.2))) * 255);
+}
+
 function makePointAttributes(pointCount: number, mode: AtlasMode): Uint32Array {
   const attributes = new Uint32Array(pointCount);
   if (mode === 'taxi') return attributes;
@@ -2967,123 +3368,4 @@ function hashUnit(seed: number): number {
   value = Math.imul(value, 0x735a2d97);
   value ^= value >>> 15;
   return value / 0x1_0000_0000;
-}
-
-/** Bounded least-recently-used LAZ tile cache backed by one directly renderable GPU atlas. */
-class GPULidarTileCache {
-  readonly positionsBuffer: Buffer;
-  readonly attributesBuffer: Buffer;
-
-  private readonly pointCapacity: number;
-  private readonly tiles = new Map<string, {positions: Float32Array; attributes: Uint32Array}>();
-  private residentPointCount = 0;
-  private destroyed = false;
-
-  get pointCount(): number {
-    return this.residentPointCount;
-  }
-
-  get tileCount(): number {
-    return this.tiles.size;
-  }
-
-  constructor(device: Device, pointCapacity: number) {
-    this.pointCapacity = pointCapacity;
-    this.positionsBuffer = device.createBuffer({
-      id: 'spatial-atlas-lidar-lru',
-      byteLength: Math.max(
-        Float32Array.BYTES_PER_ELEMENT * 3,
-        pointCapacity * 3 * Float32Array.BYTES_PER_ELEMENT
-      ),
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    });
-    this.attributesBuffer = device.createBuffer({
-      id: 'spatial-atlas-lidar-lru-attributes',
-      byteLength: Math.max(
-        Uint32Array.BYTES_PER_ELEMENT,
-        pointCapacity * Uint32Array.BYTES_PER_ELEMENT
-      ),
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    });
-  }
-
-  insert(key: string, sourcePositions: Float32Array, sourceAttributes: Uint32Array): void {
-    if (this.destroyed) return;
-    const positions =
-      sourcePositions.length / 3 > this.pointCapacity
-        ? sourcePositions.slice(0, this.pointCapacity * 3)
-        : sourcePositions;
-    const pointCount = positions.length / 3;
-    const attributes =
-      sourceAttributes.length === pointCount
-        ? sourceAttributes
-        : sourceAttributes.slice(0, pointCount);
-    const existing = this.tiles.get(key);
-    if (existing) {
-      this.residentPointCount -= existing.positions.length / 3;
-      this.tiles.delete(key);
-    }
-    while (
-      this.tiles.size > 0 &&
-      this.residentPointCount + positions.length / 3 > this.pointCapacity
-    ) {
-      const oldestKey = this.tiles.keys().next().value as string;
-      const oldest = this.tiles.get(oldestKey)!;
-      this.tiles.delete(oldestKey);
-      this.residentPointCount -= oldest.positions.length / 3;
-    }
-    this.tiles.set(key, {positions, attributes});
-    this.residentPointCount += positions.length / 3;
-  }
-
-  getPointCount(key: string): number {
-    return (this.tiles.get(key)?.positions.length ?? 0) / 3;
-  }
-
-  touch(key: string): void {
-    const tile = this.tiles.get(key);
-    if (!tile) return;
-    this.tiles.delete(key);
-    this.tiles.set(key, tile);
-  }
-
-  retain(keys: ReadonlySet<string>): boolean {
-    let changed = false;
-    for (const [key, tile] of this.tiles) {
-      if (!keys.has(key)) {
-        this.tiles.delete(key);
-        this.residentPointCount -= tile.positions.length / 3;
-        changed = true;
-      }
-    }
-    return changed;
-  }
-
-  getSnapshot(): {positions: Float32Array; attributes: Uint32Array} {
-    const positions = new Float32Array(this.residentPointCount * 3);
-    const attributes = new Uint32Array(this.residentPointCount);
-    let pointOffset = 0;
-    for (const tile of this.tiles.values()) {
-      positions.set(tile.positions, pointOffset * 3);
-      attributes.set(tile.attributes, pointOffset);
-      pointOffset += tile.positions.length / 3;
-    }
-    return {positions, attributes};
-  }
-
-  synchronize(): {positions: Float32Array; attributes: Uint32Array} {
-    const snapshot = this.getSnapshot();
-    if (snapshot.positions.length > 0) this.positionsBuffer.write(snapshot.positions);
-    if (snapshot.attributes.length > 0) this.attributesBuffer.write(snapshot.attributes);
-    return snapshot;
-  }
-
-  destroy(): void {
-    if (this.destroyed) return;
-    this.destroyed = true;
-    this.positionsBuffer.destroy();
-    this.attributesBuffer.destroy();
-    this.tiles.clear();
-    this.residentPointCount = 0;
-  }
 }
