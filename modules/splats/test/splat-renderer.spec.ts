@@ -71,8 +71,8 @@ test('SplatRenderer preserves and tone-maps Float32 Gaussian radiance on WebGPU 
   t.ok(devices.length > 0, 'at least one browser graphics backend is available');
 
   for (const device of devices) {
-    if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
-      t.comment('Skipping Gaussian splat WebGL2 rendering on a software-backed adapter');
+    if (isSoftwareBackedDevice(device)) {
+      t.comment(`Skipping Gaussian splat ${device.type} HDR readback on a software-backed adapter`);
       continue;
     }
 
