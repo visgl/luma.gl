@@ -23,6 +23,7 @@ Target Release Date: Q3, 2026
 * **`@luma.gl/arrow`** - New module for working with binary columnar data on the GPU.
 * **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 * **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering, atlas construction, and Arrow text adapters.
+* **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 
 **@luma.gl/experimental**
 
@@ -105,6 +106,13 @@ Target Release Date: Q3, 2026
 * **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 * **View-aware Arrow text clipping** - Arrow 2D text accepts optional `FixedSizeList<Float32>[4]` clip rectangles. `ArrowTextLayer` interprets them as world-space anchor offsets, projects them through the active deck viewport, and supports visible-region alignment and pixel cutoffs; omitting `clipRects` retains a constant no-clipping fallback instead of allocating per-row data.
 * **GPU-selected text** - `GPUTextSelection` filters row-indexed compact glyph records from GPU row flags, preserves original row identity, and writes the selected glyph count directly into an indirect draw command. The [GPU-Culled deck Trace](https://luma.gl/next/examples/deck/gpu-culled-trace) shares one culling result between blocks, Arrow labels, and picking.
+
+**@luma.gl/splats** NEW MODULE
+
+* **Gaussian splat rendering** - `SplatRenderer` draws caller-owned prepared GPU splat batches through reusable luma.gl rendering models on WebGPU and WebGL2.
+* **HDR Gaussian colors** - Float32 color columns preserve spherical-harmonic DC radiance above the display range without premature clamping or quantization.
+* **Incremental splat streaming** - New prepared batches append without concatenating source data, rebuilding previous batches, or transferring ownership to the renderer.
+* **Layered adapters** - File parsing stays in loaders.gl, Apache Arrow conversion stays in `@luma.gl/arrow`, and deck.gl integration stays in downstream applications.
 
 ## Version 9.4[​](#version-94 "Direct link to Version 9.4")
 

@@ -1,14 +1,18 @@
 # Fundamentals
 
-[Setup](https://luma.gl/next/docs/tutorials.md)[Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md)[Cube](https://luma.gl/next/docs/tutorials/hello-cube.md)[Instancing](https://luma.gl/next/docs/tutorials/hello-instancing.md)
+[Overview](https://luma.gl/next/docs/tutorials.md)[Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md)[Cube](https://luma.gl/next/docs/tutorials/hello-cube.md)[Instancing](https://luma.gl/next/docs/tutorials/hello-instancing.md)
 
-This course builds a portable renderer one concept at a time. Every lesson includes a live example that can switch between WebGPU and WebGL2 when both backends support the feature. The files shown on each page are loaded from the runnable examples in this repository, so the documentation and tested code stay in sync.
+A living scene begins with a single draw call. Start with a triangle, add depth and light, then discover how the same rendering ideas scale into richer GPU-powered worlds. Every lesson includes a working example you can explore directly in your browser.
 
-Explore [Getting Started](https://luma.gl/next/docs/getting-started.md) to see what you can build, or open any live lesson immediately. When you are ready to run the examples locally, follow the [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md). Familiarity with TypeScript and basic GPU concepts is helpful; the tutorials explain the luma.gl object model as it is introduced.
+**Start with [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md). No installation required.**
+
+When a feature supports both backends, its live example can switch between WebGPU and WebGL2. The source shown on each page comes directly from the runnable example, so you can move from what you see to how it works without leaving the lesson.
+
+Curious where these fundamentals can take you? [Getting Started](https://luma.gl/next/docs/getting-started.md) shows complete scenes, simulations, visual effects, and GPU data workflows.
 
 ## Rendering foundations[​](#rendering-foundations "Direct link to Rendering foundations")
 
-[1 · Beginner**Hello Triangle**Create a Model, supply portable shaders, and issue a draw inside a render pass.Model · shaders · render passes](https://luma.gl/next/docs/tutorials/hello-triangle)[2 · Beginner**Hello Cube**Add geometry, textures, depth testing, and uniforms that update every frame.Geometry · textures · uniforms](https://luma.gl/next/docs/tutorials/hello-cube)[3 · Intermediate**Hello Instancing**Draw many copies of one geometry using per-instance attributes.Buffers · layouts · instancing](https://luma.gl/next/docs/tutorials/hello-instancing)[4 · Intermediate**Lighting**Compose reusable shader functionality and supply material inputs.Shader modules · materials](https://luma.gl/next/docs/tutorials/lighting)
+[1 · Your first draw**Hello Triangle**Create a Model, supply portable shaders, and issue a draw inside a render pass.Model · shaders · render passes](https://luma.gl/next/docs/tutorials/hello-triangle)[2 · Add a dimension**Hello Cube**Add geometry, textures, depth testing, and uniforms that update every frame.Geometry · textures · uniforms](https://luma.gl/next/docs/tutorials/hello-cube)[3 · Shape with light**Lighting**Compose reusable shader functionality and supply material inputs.Shader modules · materials](https://luma.gl/next/docs/tutorials/lighting)[4 · Scale the scene**Hello Instancing**Draw many copies of one geometry using per-instance attributes.Buffers · layouts · instancing](https://luma.gl/next/docs/tutorials/hello-instancing)
 
 ## Reusable shaders[​](#reusable-shaders "Direct link to Reusable shaders")
 
@@ -28,4 +32,4 @@ Explore [Getting Started](https://luma.gl/next/docs/getting-started.md) to see w
 * The backend selector reflects the backends supported by each example.
 * Full source links point to the same files rendered in the documentation.
 
-After the course, use [What's Next?](https://luma.gl/next/docs/tutorials/whats-next.md) to choose a deeper API guide or a larger example.
+After the course, use [What's Next?](https://luma.gl/next/docs/tutorials/whats-next.md) to choose a deeper API guide or a larger example. Ready to work with the code on your own machine? The [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) takes you from an empty project to your first rendered frame.

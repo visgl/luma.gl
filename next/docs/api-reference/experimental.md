@@ -1,6 +1,6 @@
 # Overview
 
-[Overview](https://luma.gl/next/docs/api-reference/experimental.md)[GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md)[Deferred Lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md)[Clustered Lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md)[MLS-MPM Fluid](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md)[Spectral Ocean](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md)[ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md)[Spectral Caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md)[Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)[Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)[ABufferRenderer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)[WBOITRenderer](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)
+[Overview](https://luma.gl/next/docs/api-reference/experimental.md)[GPU Projection](https://luma.gl/next/docs/api-reference/experimental/luproj.md)[LuxFilter](https://luma.gl/next/docs/api-reference/experimental/luxfilter.md)[GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md)[Deferred Lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md)[Clustered Lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md)[MLS-MPM Fluid](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md)[Spectral Ocean](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md)[ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md)[Spectral Caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md)[Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)[Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)[ABufferRenderer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)[WBOITRenderer](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)
 
 `@luma.gl/experimental` publishes incubating luma.gl APIs that are usable by applications but may change or be removed without the compatibility guarantees applied to stable modules.
 
@@ -34,11 +34,23 @@ The [Shader Passes guide](https://luma.gl/next/docs/api-guide/shaders/shader-pas
 
 The [GPU Primitives and Command Graphs guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md) introduces explicit command scheduling, typed table-backed graph views, hierarchical scan, stable compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written indirect draw commands.
 
+## GPU-resident Linked Crossfiltering[​](#gpu-resident-linked-crossfiltering "Direct link to GPU-resident Linked Crossfiltering")
+
+![WebGPU required](https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square)
+
+[`LuxFilter`](https://luma.gl/next/docs/api-reference/experimental/luxfilter.md) connects numeric ranges and rectangular brushes to linked histograms, grouped aggregates, stable visible-row identifiers, and rendering masks through one reusable WebGPU command graph. Source rows stay on the GPU; applications control chart rendering, command submission, and any compact summary readback.
+
 ## WebGPU Geospatial Kernels[​](#webgpu-geospatial-kernels "Direct link to WebGPU Geospatial Kernels")
 
 ![WebGPU required](https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square)
 
 The [WebGPU Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md) entry point contributes projection, distance, point-in-polygon, nearest-linestring, uniform-grid indexing, and spatial-query work to a `GPUCommandGraph`. It accepts either local f32 coordinates or raw binary64 coordinate words where supported and makes the f32-transcendental versus precise planar arithmetic boundary explicit.
+
+## High-precision GPU Coordinate Projection[​](#high-precision-gpu-coordinate-projection "Direct link to High-precision GPU Coordinate Projection")
+
+![WebGPU required](https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square)
+
+[`@luma.gl/experimental/luproj`](https://luma.gl/next/docs/api-reference/experimental/luproj.md) compiles arbitrary CPU projection providers into adaptive, origin-relative WebGPU polynomial patches. It preserves raw binary64 coordinate precision without native WGSL `f64`, supports optional preassigned patch IDs, and includes a live browser benchmark comparing direct CPU, compiled CPU, and four real WebGPU execution paths.
 
 ## GPU Simulations[​](#gpu-simulations "Direct link to GPU Simulations")
 

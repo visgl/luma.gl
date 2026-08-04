@@ -1,5 +1,7 @@
 # GPU Floating-Point Precision Techniques
 
+[Overview](https://luma.gl/next/docs/api-reference/gpgpu.md)[GPU Evaluators](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)[Operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)[Custom Operations](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)[cleanEvaluate](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)[Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)
+
 [Precision Guide](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp32](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp32.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)[Mandelbrot & Benchmarks](https://luma.gl/next/examples/experimental/fp64)
 
 "fp64" is often used to mean "more precision than `f32`," but the available techniques do not all implement the same number system. A pair of `f32` values, raw IEEE 754 binary64 bits, fixed-point integers, and native 64-bit floating point have different precision, range, rounding, and portability guarantees.
@@ -10,7 +12,7 @@ That distinction matters on WebGPU. Classic double-single arithmetic can be fast
 
 The two Mandelbrot views follow the same deep zoom. The left view uses native `f32`; the right uses luma.gl's `fp64arithmetic` double-single representation. On WebGPU, use the benchmark below the canvases to compare native `f32`, automatic selection, the classic transforms, and the integer-controlled path on the active device.
 
-Initializing device...
+Optional interactive GPU benchmark**Explore floating-point precision.**&#x43;ompare Mandelbrot rendering and compute precision when you are ready to use your GPU.Launch precision benchmark →
 
 The benchmark is diagnostic rather than a CI performance test. It reports numerical error alongside runtime because the fastest implementation is not useful if the compiler has optimized away its residual terms.
 

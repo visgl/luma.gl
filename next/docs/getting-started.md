@@ -10,11 +10,47 @@ Build living worlds, simulate light and motion, and move millions of data points
 
 No installation. No account. Just your browser.
 
-01 · See it in motion
+01 · Find your building blocks
 
-## This is what your browser can do.
+## Pick a capability. Start building.
 
-These are interactive scenes, not videos. Open one, explore it, and look under the hood.
+Focused packages turn captured scenes, declarative worlds, and GPU-resident workflows into interactive experiences.
+
+[![A luminous field of three-dimensional Gaussian splats](/next/images/examples/showcase/gaussian-splats.jpg)](https://luma.gl/next/examples/showcase/gaussian-splats)
+
+[@luma.gl/splats](https://luma.gl/next/examples/showcase/gaussian-splats)
+
+### [Gaussian Splats](https://luma.gl/next/examples/showcase/gaussian-splats)
+
+[Stream captured 3D worlds with HDR color, depth-sorted transparency, and portable GPU rendering.](https://luma.gl/next/examples/showcase/gaussian-splats)
+
+[Explore the renderer →](https://luma.gl/next/examples/showcase/gaussian-splats)
+
+[![A physically lit declarative ANARI scene with materials and geometric primitives](/next/images/examples/experimental/anari-playground.jpg)](https://luma.gl/next/examples/experimental/anari-playground)
+
+[@luma.gl/anari](https://luma.gl/next/examples/experimental/anari-playground)
+
+### [Declarative 3D Scenes](https://luma.gl/next/examples/experimental/anari-playground)
+
+[Describe materials, lighting, geometry, and cameras with an expressive retained-scene API.](https://luma.gl/next/examples/experimental/anari-playground)
+
+[Build a scene →](https://luma.gl/next/examples/experimental/anari-playground)
+
+[![A dense interactive trace processed entirely through a GPU command graph](/next/images/examples/experimental/gpu-trace-viewer.jpg)](https://luma.gl/next/examples/experimental/gpu-trace-viewer)
+
+[GPU Command Graph](https://luma.gl/next/examples/experimental/gpu-trace-viewer)
+
+### [GPU Graph](https://luma.gl/next/examples/experimental/gpu-trace-viewer)
+
+[Compose culling, sorting, compute, and rendering without moving your data off the GPU.](https://luma.gl/next/examples/experimental/gpu-trace-viewer)
+
+[See the graph in action →](https://luma.gl/next/examples/experimental/gpu-trace-viewer)
+
+02 · See it in motion
+
+## See what your GPU makes possible.
+
+Every card opens a live, interactive scene. Advanced scenes require WebGPU; Effects: Image Processing also runs on WebGL2.
 
 [![A rain-soaked neon city illuminated by thousands of GPU-driven lights](/next/images/examples/showcase/lightstorm-megacity.jpg)](https://luma.gl/next/examples/showcase/lightstorm-megacity)
 
@@ -70,17 +106,17 @@ These are interactive scenes, not videos. Open one, explore it, and look under t
 
 [Composable effects](https://luma.gl/next/examples/showcase/postprocessing)
 
-### [Image Processing](https://luma.gl/next/examples/showcase/postprocessing)
+### [Effects: Image Processing](https://luma.gl/next/examples/showcase/postprocessing)
 
 [Layer bloom, color grading, distortion, and film effects over a living scene.](https://luma.gl/next/examples/showcase/postprocessing)
 
 [WebGPUWebGL2](https://luma.gl/next/examples/showcase/postprocessing)
 
-02 · Built for ambitious ideas
+03 · Built for ambitious ideas
 
 ## The whole GPU. Your way.
 
-Start with a simple triangle or architect an entire rendering and compute pipeline.
+Behind every scene are composable building blocks for rendering, GPU-resident data, and programmable effects.
 
 01
 
@@ -90,25 +126,27 @@ Compose models, materials, HDR lighting, shader effects, and GPU-driven geometry
 
 02
 
-### Keep the data moving.
+### Keep your data on the GPU.
 
-Run fluid simulations, spatial queries, and million-point visualizations directly where the data lives: on the GPU.
+Simulate, filter, and visualize millions of records without shuttling data back to the CPU between steps.
 
 03
 
-### Write once. Choose your backend.
+### One API. Two ways to render.
 
-Build against one clear TypeScript API and run on WebGPU or WebGL2, with natural paths into deck.gl and Apache Arrow.
+Share portable rendering across WebGPU and WebGL2, connect with deck.gl and Apache Arrow, and use WebGPU for compute shaders.
 
-03 · Find your starting point
+04 · Find your starting point
 
 ## Choose your own first adventure.
+
+Begin with an interactive lesson, or go straight to the part of the GPU stack you want to explore.
 
 [Start here](https://luma.gl/next/docs/tutorials/hello-triangle.md)
 
 ### [Draw your first triangle.](https://luma.gl/next/docs/tutorials/hello-triangle.md)
 
-[Watch a live, backend-switchable example, then follow its complete rendering pipeline.](https://luma.gl/next/docs/tutorials/hello-triangle.md)
+[Start with a live, backend-switchable scene, then follow its rendering pipeline one step at a time.](https://luma.gl/next/docs/tutorials/hello-triangle.md)
 
 [Interactive fundamentals →](https://luma.gl/next/docs/tutorials/hello-triangle.md)[Build worlds](https://luma.gl/next/docs/api-guide/engine.md)
 
@@ -120,18 +158,18 @@ Build against one clear TypeScript API and run on WebGPU or WebGL2, with natural
 
 ### [Think in GPU compute.](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
 
-[Keep data resident for simulation, filtering, aggregation, and spatial processing.](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
+[Compare portable data operations with WebGPU-native compute for simulation, filtering, and spatial processing.](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
 
-[GPU data processing →](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)[Create effects](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
+[Choose a GPU data workflow →](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)[Create effects](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
 ### [Shape every pixel.](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
-[Combine post-processing passes, custom shaders, and reusable effects into your look.](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
+[Experiment with live image effects, then compose post-processing passes and reusable shader modules.](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
 [Shader and effect passes →](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
 ## Ready to make something move?
 
-Your first real project is only a few steps away.
+When you are ready to create your own app, the developer guide takes you from local project setup to your first rendered frame.
 
 [Build your first project→](https://luma.gl/next/docs/developer-guide/installing.md)

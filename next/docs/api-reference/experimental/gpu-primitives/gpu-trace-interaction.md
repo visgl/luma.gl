@@ -10,6 +10,16 @@ The motivating problem is that interactive trace controls change much more frequ
 
 Representative uses include service latency investigations, browser performance recordings, GPU capture timelines, build-system scheduling views, and scientific workflows with both hierarchical ownership and cross-process dependency edges.
 
+### GPU Scene Trace Explorer
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-trace-scene)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
 ## Concepts[​](#concepts "Direct link to Concepts")
 
 ### One compiled graph, many interaction states[​](#one-compiled-graph-many-interaction-states "Direct link to One compiled graph, many interaction states")
@@ -24,6 +34,10 @@ The workflow composes existing independent primitives in a fixed order:
 6. [`GPUSceneDrawGeneration`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md) updates explicit renderer-authored indirect draw slots.
 
 The application owns graph compilation, encoding, submission, and any deliberate readback. None of the interaction stages uploads source spans again or chooses draw commands on the CPU.
+
+In the embedded example, scrolling updates only a three-value temporal window, checkboxes update process/thread and classification buffers, and clicking performs a GPU visibility-aware pick. Enabling linked-span focus changes policy and selection inputs without recompiling the graph. Per-group counts are sampled only as optional diagnostics; draw visibility is consumed directly from stable GPU-written indirect command slots.
+
+Scene-generated draw slots require the WebGPU `indirect-first-instance` feature. The live example therefore selects the maximum-feature WebGPU device explicitly instead of assuming that an otherwise functional core-only adapter supports source-indexed indirect rendering.
 
 ### Hierarchy collapse keeps representative lanes[​](#hierarchy-collapse-keeps-representative-lanes "Direct link to Hierarchy collapse keeps representative lanes")
 
@@ -141,4 +155,4 @@ selectedCountBuffer.write(Uint32Array.from([1]));
 
 ## Current scope[​](#current-scope "Direct link to Current scope")
 
-This implements roadmap tranche T.2 for one canonical packed trace scene and a fixed regular process/thread/lane hierarchy. Arbitrary sparse ownership layouts, cross-partition scene storage, GPU picking integration, and a live scene-backed trace showcase remain explicit follow-up work.
+This implements roadmap tranche T.2 for one canonical packed trace scene and a fixed regular process/thread/lane hierarchy. The T.3 scene-backed explorer adds GPU visibility-aware picking, renderer-owned resource groups, indirect rendering, and graph inspection as application-owned composition. Arbitrary sparse ownership layouts and cross-partition scene storage remain separate consumer-defined follow-up contracts.

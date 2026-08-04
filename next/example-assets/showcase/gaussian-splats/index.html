@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Interactive anisotropic 3D Gaussian splat rendering with luma.gl WebGPU and WebGL2."
+    />
+    <title>Gaussian Splats · luma.gl</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body {
+        --menu-background: rgb(20 27 55 / 96%);
+        --menu-border: 1px solid rgb(160 178 255 / 24%);
+        --menu-text: #f2f4ff;
+        --menu-item-hover: rgb(147 168 255 / 18%);
+        --button-background: rgb(147 168 255 / 30%);
+        --button-text: #b3c0ff;
+        background: #030510;
+        color: #f2f4ff;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      canvas { display: block; width: 100vw !important; height: 100vh !important; }
+      #gaussian-splats-overlay {
+        position: fixed;
+        top: 24px;
+        left: 24px;
+        z-index: 2;
+        width: min(328px, calc(100vw - 48px));
+        padding: 19px 20px 20px;
+        border: 1px solid rgb(160 178 255 / 16%);
+        border-radius: 14px;
+        background: rgb(8 12 31 / 78%);
+        box-shadow: 0 20px 64px rgb(0 0 0 / 28%);
+        backdrop-filter: blur(18px);
+      }
+      #gaussian-splats-overlay h1 { margin: 0 0 3px; font-size: 18px; font-weight: 640; }
+      #gaussian-splats-overlay .eyebrow {
+        margin: 0 0 13px;
+        color: #a4b5ff;
+        font-size: 11px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+      #gaussian-splats-overlay input { accent-color: #93a8ff; }
+      #gaussian-splats-error {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        left: 24px;
+        z-index: 3;
+        padding: 12px 16px;
+        color: #fff;
+        border: 1px solid #ff7582;
+        border-radius: 10px;
+        background: rgb(81 12 29 / 90%);
+      }
+      @media (max-width: 560px) {
+        #gaussian-splats-overlay { top: 12px; left: 12px; padding: 14px 15px; }
+      }
+    </style>
+  </head>
+  <body>
+    <aside id="gaussian-splats-overlay" aria-label="Gaussian splat settings">
+      <p class="eyebrow">luma.gl · streamed Gaussian field</p>
+      <h1>Chromatic Observatory</h1>
+      <div id="gaussian-splats-panel-container"></div>
+    </aside>
+    <script type="module">
+      import {luma} from '@luma.gl/core';
+      import {makeAnimationLoop} from '@luma.gl/engine';
+      import {webgl2Adapter} from '@luma.gl/webgl';
+      import {webgpuAdapter} from '@luma.gl/webgpu';
+      import AnimationLoopTemplate, {makeGaussianSplatInfoHtml} from './app.ts';
+
+      window.__lumaGaussianSplatsLocalLoadersRoot = import.meta.env.VITE_LOADERS_GL_ROOT || '';
+      document.getElementById('gaussian-splats-panel-container').innerHTML =
+        makeGaussianSplatInfoHtml();
+
+      try {
+        const requestedDevice = new URLSearchParams(window.location.search).get('device');
+        const adapters =
+          requestedDevice === 'webgl' || requestedDevice === 'webgl2'
+            ? [webgl2Adapter]
+            : requestedDevice === 'webgpu'
+              ? [webgpuAdapter]
+              : [webgpuAdapter, webgl2Adapter];
+        const deviceOptions = {
+          id: 'gaussian-splats',
+          adapters,
+          createCanvasContext: true
+        };
+        const prefersHighDynamicRange =
+          requestedDevice !== 'webgl' &&
+          requestedDevice !== 'webgl2' &&
+          window.matchMedia('(dynamic-range: high)').matches;
+        let device;
+        if (prefersHighDynamicRange) {
+          try {
+            device = await luma.createDevice({
+              ...deviceOptions,
+              adapters: [webgpuAdapter],
+              createCanvasContext: {
+                colorFormat: 'rgba16float',
+                colorSpace: 'display-p3',
+                toneMapping: 'extended'
+              }
+            });
+          } catch {
+            device = await luma.createDevice(deviceOptions);
+          }
+        } else {
+          device = await luma.createDevice(deviceOptions);
+        }
+        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+          device,
+          autoResizeViewport: true
+        });
+        await animationLoop.start();
+      } catch (error) {
+        const errorElement = document.createElement('div');
+        errorElement.id = 'gaussian-splats-error';
+        errorElement.setAttribute('role', 'alert');
+        errorElement.textContent =
+          error instanceof Error ? error.message : 'Unable to initialize Gaussian splat rendering.';
+        document.body.append(errorElement);
+      }
+    </script>
+  </body>
+</html>

@@ -11,6 +11,16 @@ The `GPUScene` adapters let two very different application models populate the s
 
 This distinction matters because CPU scene graphs and GPU tables have opposite strengths. A scene graph naturally owns hierarchy, lifecycle, and incremental edits. A table naturally owns columns, streaming batches, and GPU-resident data. Both can feed the same visibility, picking, spatial, and draw-generation contracts once they agree on the flat record at the boundary.
 
+### GPU Scene Graph Explorer
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-scene-graph)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
 ## Concepts[​](#concepts "Direct link to Concepts")
 
 ### An adapter is a boundary, not a new source model[​](#an-adapter-is-a-boundary-not-a-new-source-model "Direct link to An adapter is a boundary, not a new source model")
@@ -20,6 +30,8 @@ The CPU adapter does not prescribe a node class, transform hierarchy, material s
 Traversal is stable preorder. A repeated node identity is visited once, which bounds cycles and shared subgraphs without encoding parent pointers in the flat result. The callback receives the parent, depth, visited-source index, and next emitted-record index so applications can resolve their own inherited state before returning a record.
 
 The output is an ordinary mutable `GPUScene`. Stable IDs, bounds, transforms, group references, geometry references, and command slots have exactly the same meaning as records supplied directly to the constructor.
+
+In the embedded explorer, three application-owned grouping branches contain ordinary renderable leaves. Grouping nodes deliberately return `null`; leaf records retain stable application IDs that differ from their physical slots. The resulting flat scene feeds the same visibility, picking, indirect-draw, and renderer-resource-group primitives as the trace explorer without importing its hierarchy or domain concepts into `GPUScene`.
 
 ### Zero-copy table adaptation requires a physical agreement[​](#zero-copy-table-adaptation-requires-a-physical-agreement "Direct link to Zero-copy table adaptation requires a physical agreement")
 

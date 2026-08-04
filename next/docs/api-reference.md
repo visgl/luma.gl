@@ -17,6 +17,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`](https://luma.gl/n
 | [`@luma.gl/tables`](https://luma.gl/next/docs/api-reference/tables.md)             | Optional               | GPU-resident table primitives, batching, table-backed rendering, and table-oriented compute.    |
 | [`@luma.gl/arrow`](https://luma.gl/next/docs/api-reference/arrow.md)               | Optional               | Apache Arrow adapters for deriving GPU layouts and building GPU table objects from Arrow data.  |
 | [`@luma.gl/text`](https://luma.gl/next/docs/api-reference/text.md)                 | Optional               | Experimental `TextRenderer` facade and caller-owned GPU text data.                              |
+| [`@luma.gl/splats`](https://luma.gl/next/docs/api-reference/splats.md)             | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data.                              |
 | [`@luma.gl/experimental`](https://luma.gl/next/docs/api-reference/experimental.md) | Optional               | Experimental v10 work-in-progress APIs, including WebGL-only WebXR helpers.                     |
 | [`@luma.gl/gltf`](https://luma.gl/next/docs/api-reference/gltf.md)                 | Optional               | glTF scenegraph loading and instantiation etc.                                                  |
 | [`@luma.gl/test-utils`](https://luma.gl/next/docs/api-reference/test-utils.md)     | Optional               | Test setups, in particular support for rendering and comparing images.                          |
@@ -31,6 +32,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`](https://luma.gl/n
 * [`@luma.gl/shadertools`](https://luma.gl/next/docs/api-reference/shadertools.md) for shader modules and shader assembly.
 * [`@luma.gl/tables`](https://luma.gl/next/docs/api-reference/tables.md) for `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`.
 * [`@luma.gl/text`](https://luma.gl/next/docs/api-reference/text.md) for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`](https://luma.gl/next/docs/api-reference/arrow.md) for Arrow conversion.
+* [`@luma.gl/splats`](https://luma.gl/next/docs/api-reference/splats.md) for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 * [`@luma.gl/experimental`](https://luma.gl/next/docs/api-reference/experimental.md) for v10 work-in-progress APIs, including experimental WebXR frame, view, and raw camera helpers.
 * [`@luma.gl/gltf`](https://luma.gl/next/docs/api-reference/gltf.md) for glTF scenegraph loading and extensions.
 * [`@luma.gl/webgl`](https://luma.gl/next/docs/api-reference/webgl.md) and [`@luma.gl/webgpu`](https://luma.gl/next/docs/api-reference/webgpu.md) for backend adapters used by `@luma.gl/core`.

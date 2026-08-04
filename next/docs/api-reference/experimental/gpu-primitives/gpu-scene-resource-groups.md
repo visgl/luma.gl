@@ -10,6 +10,16 @@ The important separation is that WebGPU can decide which existing commands are a
 
 This is useful for map tiles that move between material buckets, simulation objects that change geometry, CAD scenes with distinct pipeline states, and table-backed features grouped by shared textures or vertex buffers. Visibility changes update GPU counts without rebuilding CPU-selected draw lists.
 
+### GPU Scene Graph Explorer
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-scene-graph)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
 ## Concepts[​](#concepts "Direct link to Concepts")
 
 ### Groups describe binding topology, not a second scene graph[​](#groups-describe-binding-topology-not-a-second-scene-graph "Direct link to Groups describe binding topology, not a second scene graph")
@@ -26,6 +36,8 @@ A group descriptor contains:
 Descriptor order is preserved exactly. It is the order in which an application can bind pipelines and resources before recording indirect draws from each group's command window. Group IDs must be unique and nonempty windows must not overlap, so one command cannot belong to two incompatible binding configurations.
 
 The class never owns a pipeline, material, bind group, scene hierarchy, or draw encoder. Those remain application concerns and may differ between a conventional renderer and a preserved-batch table application.
+
+The embedded conventional scene demonstrates three fixed renderer buckets: terrain, structures, and signals. Their command windows remain stable even when checkboxes hide an entire bucket or CPU-authored scene mutations remove an individual object. GPU-generated per-group counts are read back only for diagnostics; they never drive CPU draw selection.
 
 ### Generated commands are the source of truth[​](#generated-commands-are-the-source-of-truth "Direct link to Generated commands are the source of truth")
 

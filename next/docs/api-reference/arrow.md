@@ -56,6 +56,8 @@ Arrow also supports variable-length `List` columns. These are useful for data su
 * `makeGPUVectorFromArrow()` uploads one Arrow `Vector` into a `GPUVector`.
 * `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
 * `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record batch boundaries.
+* `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for [`@luma.gl/splats`](https://luma.gl/next/docs/api-reference/splats.md), decoding GraphDECO encodings without clamping or quantizing spherical-harmonic DC radiance.
+* `makeGPUSplatDataFromArrowStream()` progressively prepares Gaussian splat batches without concatenating Arrow tables or rebuilding previously uploaded GPU buffers. Both Gaussian conversion helpers accept structurally compatible Arrow objects from other installed Arrow versions, including those produced by loaders.gl 5 alpha.
 * `ArrowInputSchema` combines source resolution and conversion with final `GPUInputSchema` validation for model-specific prepared inputs.
 
 The resulting table schema is `GPUSchema`, and each vector has a `GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or `vertex-list<float32x3>`. Arrow `DataType` metadata may still be retained by adapter/readback paths, but `@luma.gl/tables` itself does not depend on `apache-arrow`.

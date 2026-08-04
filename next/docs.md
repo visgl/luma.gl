@@ -2,11 +2,15 @@
 
 luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web. It provides one application-facing API with pluggable WebGPU and WebGL2 backends, plus higher-level building blocks for models, animation, shader composition, and GPU data processing.
 
+Start with a live scene, follow the ideas behind a single rendered frame, and choose how much of the GPU you want to control. You can explore the examples and tutorials right here in your browser.
+
 [![npm package version](https://img.shields.io/npm/v/@luma.gl/core.svg?style=flat-square\&label=npm)](https://www.npmjs.com/package/@luma.gl/core) [![MIT license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://github.com/visgl/luma.gl/blob/master/LICENSE) [![TypeScript strict mode](https://img.shields.io/badge/TypeScript-strict-3178C6.svg?style=flat-square)](https://www.typescriptlang.org/)
+
+## Choose your starting point[​](#choose-your-starting-point "Direct link to Choose your starting point")
 
 [New to luma.gl**Discover what you can build**Explore living worlds, physical simulations, visual effects, and GPU-powered data directly in your browser.No installation required](https://luma.gl/next/docs/getting-started)[Learn**Follow the fundamentals**Build from a triangle to textured geometry, instancing, reusable shaders, and GPU transforms.Live, backend-switchable examples](https://luma.gl/next/docs/tutorials)[Design and concepts**Browse the API guides**Understand the Engine, portable GPU, and Shader APIs before choosing individual resources.Task-oriented explanations](https://luma.gl/next/docs/api-guide)[Look up details**Use the API reference**Find packages, classes, resource methods, accepted formats, and backend-specific behavior.Organized by npm package](https://luma.gl/next/docs/api-reference)
 
-Ready to build your own application? The [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) walks through local project setup, device adapters, and your first rendered frame.
+When you are ready to turn an idea into your own application, the [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) walks through your first project, device adapters, and your first rendered frame.
 
 ## Why luma.gl?[​](#why-lumagl "Direct link to Why luma.gl?")
 
@@ -39,13 +43,13 @@ The Core API exposes devices, buffers, textures, shaders, bindings, pipelines, a
 
 Shadertools assembles WGSL and GLSL from reusable shader modules and application-defined hooks. It is used by luma.gl, deck.gl, and custom renderers.
 
-Read [A Tale of Three APIs](https://luma.gl/next/docs/api-guide.md) for the detailed object model.
+Explore [how the three APIs fit together](https://luma.gl/next/docs/api-guide.md) for the complete object model and guidance on choosing the right layer.
 
 ## Supported environments[​](#supported-environments "Direct link to Supported environments")
 
 luma.gl targets current evergreen browsers. WebGPU feature availability varies by browser and platform; WebGL2 provides the compatibility path for portable rendering. Compute shaders, storage textures, and some advanced features remain WebGPU-only.
 
-Node.js can be used when the host supplies a WebGPU or WebGL implementation, but browser image, canvas, and video APIs require environment-specific replacements.
+Server-side rendering and compute are also possible when the host supplies a compatible GPU implementation. Browser-specific image, canvas, and video APIs may require environment-specific replacements.
 
 ## Project and releases[​](#project-and-releases "Direct link to Project and releases")
 

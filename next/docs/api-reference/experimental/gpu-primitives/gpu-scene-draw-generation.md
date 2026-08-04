@@ -8,6 +8,16 @@
 
 This is useful when visibility changes much more often than geometry or pipeline setup. Frustum culling, spatial queries, hierarchy expansion, and selection masks can remain GPU-resident instead of forcing a readback, rebuilding a CPU draw list, and uploading counts again. Geometry arguments remain stable; the workflow changes only `instanceCount` and `firstInstance`.
 
+### GPU Scene Graph Explorer
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-scene-graph)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
 ## Concepts[​](#concepts "Direct link to Concepts")
 
 ### Explicit slots separate selection from renderer policy[​](#explicit-slots-separate-selection-from-renderer-policy "Direct link to Explicit slots separate selection from renderer policy")
@@ -15,6 +25,8 @@ This is useful when visibility changes much more often than geometry or pipeline
 Each scene row carries a `commandSlot`. A visible active row requests that slot, while `GPU_SCENE_INVALID_REFERENCE` means that the row intentionally has no draw command. The command buffer is initialized by the renderer with stable geometry arguments such as vertex or index count and starting offsets. Draw generation does not infer materials, pipelines, or resource bindings.
 
 This division lets applications choose their own slot assignment and issue indirect calls in the order required by their renderer. It also keeps this primitive useful before pipeline/resource grouping is standardized.
+
+The live scene-graph example records every renderer-owned slot once in a reusable render bundle. Changing a group checkbox alters only the GPU visibility mask; moving or removing a selected object updates its ordinary scene record. The same compiled graph then republishes counts and source-indexed indirect commands without the application constructing a CPU-selected draw list.
 
 ### Fixed capacity is observable[​](#fixed-capacity-is-observable "Direct link to Fixed capacity is observable")
 

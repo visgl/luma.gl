@@ -8,6 +8,16 @@
 
 The class is deliberately a storage contract, not a scene graph. A game-engine hierarchy, a table, a simulation, or a map tile system may all populate the records, but none becomes the canonical source model. This separation makes the expensive GPU path reusable while applications retain their own hierarchy, lifecycle, and presentation policy.
 
+### GPU Scene Graph Explorer
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-scene-graph)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
 ## Concepts[​](#concepts "Direct link to Concepts")
 
 ### Stable identity is separate from record position[​](#stable-identity-is-separate-from-record-position "Direct link to Stable identity is separate from record position")
@@ -27,6 +37,8 @@ Fixed capacity is a normal result, not an implicit reallocation. Insertions fill
 `compact()` and `mutate({compact: true})` retain active records in prior slot order and return every `{id, from, to}` move. Stable IDs and group, geometry, and command references remain unchanged. Compaction uploads at most the former active prefix and clears its unused suffix; a dense no-op compaction uploads no record bytes.
 
 These operations use explicit WebGPU queue writes. They do not submit command buffers or read GPU data back. This is the CPU-authored update path for scene graphs and streaming producers; later GPU-authored draw selection consumes the same resident records without requiring CPU filtering.
+
+The embedded scene-graph explorer makes that boundary visible: an application-owned tree is flattened once, group checkboxes update GPU visibility policy, and clicking selects a stable application object ID rather than its temporary scene slot. Moving or removing the selection uses `mutate()` and displays the exact upload cost while the previously compiled draw and renderer-group workflows remain unchanged.
 
 ### One fixed record connects several workflows[​](#one-fixed-record-connects-several-workflows "Direct link to One fixed record connects several workflows")
 

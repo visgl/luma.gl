@@ -1,6 +1,6 @@
 # Overview
 
-[Overview](https://luma.gl/next/docs/api-reference/gpgpu.md)[GPU Evaluators](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)[Operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)[Custom Operations](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)[cleanEvaluate](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)
+[Overview](https://luma.gl/next/docs/api-reference/gpgpu.md)[GPU Evaluators](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)[Operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)[Custom Operations](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)[cleanEvaluate](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)[Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)
 
 The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 

@@ -173,6 +173,22 @@ type GPUSpatialQueryOutput = {
 
 `count` is clamped to `ids.length` and can alias an indirect draw count. `totalCount`, when provided, receives the unclamped number of matches among candidates actually examined by refinement. If the index overflowed, its stored candidates are only a subset of the accepted source rows, so `totalCount` is incomplete relative to the original positions. `overflow` is set when either the index or result capacity overflows. The four writable output views must have mutually disjoint aligned storage-binding ranges and must not overlap positions, source IDs, query values, index storage, or polygon storage. This includes the one-row binding footprint of a zero-capacity `ids` view. Result order is unspecified; no CPU readback is required for rendering.
 
+### Run a live spatial-query benchmark[​](#run-a-live-spatial-query-benchmark "Direct link to Run a live spatial-query benchmark")
+
+Compare this real query kernel against an equivalent CPU bounds scan using your browser and GPU. The indexed path builds a reusable grid once, reports that construction cost separately, and checks all compacted IDs against the CPU result before displaying fence-synchronized timings.
+
+Dataset size
+
+<!-- -->
+
+65,536 points (65536)
+
+### Live luSpatial: CPU vs. WebGPU
+
+Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU graph, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution.
+
+Run live CPU and WebGPU spatial benchmark
+
 ## Non-finite data[​](#non-finite-data "Direct link to Non-finite data")
 
 The fixed-output distance and projection kernels do not silently replace non-finite arithmetic with finite coordinates or distances. Grid construction ignores non-finite positions, and point queries do not select them. Applications should still filter or classify non-finite rows before rendering or consuming fixed-output results.

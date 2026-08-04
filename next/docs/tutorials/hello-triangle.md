@@ -1,12 +1,14 @@
 # Hello Triangle
 
-[Setup](https://luma.gl/next/docs/tutorials.md)[Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md)[Cube](https://luma.gl/next/docs/tutorials/hello-cube.md)[Instancing](https://luma.gl/next/docs/tutorials/hello-instancing.md)
+[Overview](https://luma.gl/next/docs/tutorials.md)[Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md)[Cube](https://luma.gl/next/docs/tutorials/hello-cube.md)[Instancing](https://luma.gl/next/docs/tutorials/hello-instancing.md)
 
-**Goal:** create one `Model` and issue a portable draw call. Explore the live example below immediately, or follow the [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) to run its source locally. New to luma.gl? [Getting Started](https://luma.gl/next/docs/getting-started.md) shows what you can build next.
+Every rendered world starts somewhere. This live example turns one `Model` into a portable GPU draw call and runs directly in your browser.
+
+**What you will learn:** how shaders, a model, and a render pass work together to draw your first shape.
 
 <!-- -->
 
-The example should display a red triangle. Switch backends above the canvas to verify that the same application code runs with WebGPU and WebGL2.
+The canvas displays a red triangle. When both backends are available, switch between WebGPU and WebGL2 above the example to see the same application logic run through either GPU API.
 
 ## The mental model[​](#the-mental-model "Direct link to The mental model")
 
@@ -37,3 +39,5 @@ This first model does not need a vertex buffer. Both shaders use the built-in ve
 ## Summary[​](#summary "Direct link to Summary")
 
 You created a model, provided backend-appropriate shaders, and drew it through the same render-pass API. Next, [Hello Cube](https://luma.gl/next/docs/tutorials/hello-cube.md) adds geometry, textures, depth testing, and uniforms.
+
+Want to run the example yourself? The [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) sets up a local project. For a glimpse of where these building blocks can lead, explore the complete scenes and simulations in [Getting Started](https://luma.gl/next/docs/getting-started.md).

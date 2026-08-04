@@ -17,9 +17,9 @@ Discover real-time rendering, physical simulation, GPU compute, and interactive 
 
 ### tutorials
 
-This course builds a portable renderer one concept at a time. Every lesson includes a
+A living scene begins with a single draw call. Start with a triangle, add depth and
 
-- [Fundamentals](https://luma.gl/next/docs/tutorials.md): This course builds a portable renderer one concept at a time. Every lesson includes a
+- [Fundamentals](https://luma.gl/next/docs/tutorials.md): A living scene begins with a single draw call. Start with a triangle, add depth and
 
 #### external-webgl-context
 
@@ -41,9 +41,9 @@ Goal: draw multiple copies of one geometry with one model and one draw call.
 
 #### hello-triangle
 
-Goal: create one Model and issue a portable draw call. Explore the live example
+Every rendered world starts somewhere. This live example turns one Model into a
 
-- [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md): Goal: create one Model and issue a portable draw call. Explore the live example
+- [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md): Every rendered world starts somewhere. This live example turns one Model into a
 
 #### lighting
 
@@ -296,11 +296,13 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [GPUSceneDrawGeneration](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md): Overview
 - [GPUSceneResourceGroups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md): Overview
 - [GPUSort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md): Overview
-- [GPU spatial query benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md): Overview
+- [GPU spatial query benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md): Run on your device
 - [GPUTraceInteraction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md): Overview
 - [GPUTraceScene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md): Overview
 - [GPUVirtualGeometrySelection](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md): Overview
 - [GPUVisibilityWorkflow](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md): Overview
+- [GPU Coordinate Projection (luProj)](https://luma.gl/next/docs/api-reference/experimental/luproj.md): @luma.gl/experimental/luproj reprojects GPU-resident coordinates through WebGPU command graphs
+- [LuxFilter: GPU-Resident Crossfiltering](https://luma.gl/next/docs/api-reference/experimental/luxfilter.md): @luma.gl/experimental/luxfilter coordinates linked selections across GPU-resident maps,
 - [MLSMPMFluidSimulation](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md): MLSMPMFluidSimulation is an experimental WebGPU-only, fixed-capacity two-dimensional fluid
 - [Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md): reflectiveMaterial is a lightweight cross-backend shader module for glossy surfaces. It combines
 - [ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md): ShadowMapRenderer is an experimental WebGPU-only light-space shadow system. It owns stable
@@ -564,6 +566,12 @@ The @luma.gl/gpgpu module performs GPU-based data transformation.
 - [ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md): ShaderPlugin groups reusable shader assembly contributions that can be
 - [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md): @luma.gl/shadertools supports WGSL shader assembly in addition to GLSL.
 
+#### splats
+
+@luma.gl/splats provides experimental GPU-native Gaussian splat rendering. It owns prepared
+
+- [@luma.gl/splats](https://luma.gl/next/docs/api-reference/splats.md): @luma.gl/splats provides experimental GPU-native Gaussian splat rendering. It owns prepared
+
 #### tables
 
 Typed, batch-preserving GPU table primitives for rendering, transforms, and compute.
@@ -611,9 +619,9 @@ WebGPU Device Adapter
 
 ### developer-guide
 
-This developer guide focuses on the practicalities of developing with the luma.gl framework,
+You have seen what luma.gl can do. This is where you turn those ideas into a working
 
-- [Developer Guide](https://luma.gl/next/docs/developer-guide.md): This developer guide focuses on the practicalities of developing with the luma.gl framework,
+- [Developer Guide](https://luma.gl/next/docs/developer-guide.md): You have seen what luma.gl can do. This is where you turn those ideas into a working
 
 #### bundling
 
@@ -641,9 +649,9 @@ Shader Syntax Highlighting
 
 #### installing
 
-luma.gl is published as a suite of npm modules. Each module responsible for a particular part of the rendering stack.
+When you are ready to turn an idea into your own application, this guide takes you from
 
-- [Installing](https://luma.gl/next/docs/developer-guide/installing.md): luma.gl is published as a suite of npm modules. Each module responsible for a particular part of the rendering stack.
+- [Installing](https://luma.gl/next/docs/developer-guide/installing.md): When you are ready to turn an idea into your own application, this guide takes you from
 
 #### multiple-canvases
 
@@ -668,6 +676,15 @@ The primary test runner is Vitest.
 AI coding agents can help design, implement, and debug luma.gl applications when they
 
 - [Working with AI Coding Agents](https://luma.gl/next/docs/developer-guide/working-with-ai.md): AI coding agents can help design, implement, and debug luma.gl applications when they
+
+### developer
+
+
+#### dev-tools
+
+- [Browser debug support](https://luma.gl/next/docs/developer/dev-tools/browser-debug.md): The repository supports two browser-debug workflows.
+- [LLM-friendly test setup](https://luma.gl/next/docs/developer/dev-tools/llm-friendly-test-setup.md): This repo uses @vis.gl/dev-tools for shared Vitest wiring and keeps repository-specific Playwright utilities under scripts/playwright/ so agents and contributors can use a small set of stable top-level commands without needing to remember the underlying runner details.
+- [Playwright support](https://luma.gl/next/docs/developer/dev-tools/playwright.md): Playwright support uses shared configuration from @vis.gl/dev-tools plus a thin repo CLI wrapper under scripts/playwright/.
 
 ### faq
 

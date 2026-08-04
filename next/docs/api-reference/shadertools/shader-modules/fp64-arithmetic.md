@@ -1,10 +1,18 @@
 # fp64arithmetic
 
+[Overview](https://luma.gl/next/docs/api-reference/gpgpu.md)[GPU Evaluators](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)[Operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)[Custom Operations](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)[cleanEvaluate](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)[Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)
+
 [Precision Guide](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp32](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp32.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)[Mandelbrot & Benchmarks](https://luma.gl/next/examples/experimental/fp64)
 
 The `fp64arithmetic` shader module provides the low-level double-single arithmetic used by [`fp64`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md). Use it directly when you only need the arithmetic primitives and want to avoid including the full `fp64` function library.
 
 See [GPU Floating-Point Precision Techniques](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md) for the numerical guarantees and tradeoffs of classic and integer-assisted double-single, native and software binary64, fixed point, and exact deltas. The [Mandelbrot and compute benchmark](https://luma.gl/next/examples/experimental/fp64) runs these paths on the active GPU.
+
+## Live WebGPU benchmark[​](#live-webgpu-benchmark "Direct link to Live WebGPU benchmark")
+
+The Mandelbrot views below compare native `f32` and double-single precision on your current device. Select **Run WebGPU benchmark** to measure native `f32`, automatic selection, classic double-single, and integer-controlled double-single across add, multiply, divide, and square-root workloads. Each result reports its measured GPU timestamp or queue-completion timing alongside numerical error; the benchmark runs only when requested.
+
+Optional interactive GPU benchmark**Explore floating-point precision.**&#x43;ompare Mandelbrot rendering and compute precision when you are ready to use your GPU.Launch precision benchmark →
 
 ## Uniforms[​](#uniforms "Direct link to Uniforms")
 
