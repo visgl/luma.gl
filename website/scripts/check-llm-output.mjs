@@ -123,6 +123,7 @@ const requiredIndexLinks = [
   'docs/tutorials/hello-triangle.md',
   'docs/api-guide.md',
   'docs/api-reference.md',
+  'docs/developer-guide/installing.md',
   'docs/developer-guide/working-with-ai.md'
 ].map((relativePath) => new URL(relativePath, websiteUrl).href);
 for (const link of requiredIndexLinks) {
@@ -132,6 +133,7 @@ for (const link of requiredIndexLinks) {
 }
 
 const gettingStartedPath = requireFile('docs/getting-started.md');
+const installingPath = requireFile('docs/developer-guide/installing.md');
 const workingWithAiPath = requireFile('docs/developer-guide/working-with-ai.md');
 requireFile('docs.md');
 requireFile('docs/api-guide.md');
@@ -151,13 +153,28 @@ if (markdownFiles.length < 100) {
 }
 
 const gettingStarted = readFileSync(gettingStartedPath, 'utf8');
-for (const expectedText of ['npm create vite', 'yarn create vite', 'pnpm create vite']) {
-  if (!gettingStarted.includes(expectedText)) {
-    fail(`rendered Getting Started Markdown is missing "${expectedText}"`);
-  }
+if (gettingStarted.trim().length < 80) {
+  fail('rendered Getting Started Markdown has empty editorial content');
 }
-if (gettingStarted.includes('<Tabs') || gettingStarted.includes('<TabItem')) {
+if (/<(?:Tabs|TabItem|OnboardingPoster|Link)\b/.test(gettingStarted)) {
   fail('rendered Getting Started Markdown contains unprocessed MDX components');
+}
+
+const installing = readFileSync(installingPath, 'utf8');
+for (const expectedText of [
+  'npm create vite',
+  'yarn create vite',
+  'pnpm create vite',
+  'makeAnimationLoop',
+  'webgpuAdapter',
+  'webgl2Adapter',
+  'npm run dev',
+  'yarn dev',
+  'pnpm dev'
+]) {
+  if (!installing.includes(expectedText)) {
+    fail(`rendered Installing Markdown is missing "${expectedText}"`);
+  }
 }
 
 const workingWithAi = readFileSync(workingWithAiPath, 'utf8');

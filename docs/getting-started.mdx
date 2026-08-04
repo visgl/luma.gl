@@ -1,154 +1,301 @@
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+---
+title: Getting Started
+description: Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
+hide_title: true
+hide_table_of_contents: true
+---
 
-# Getting Started
+import Link from '@docusaurus/Link';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 
-luma.gl is a TypeScript toolkit for applications that need direct, portable access to
-WebGPU and WebGL2. This guide creates a small rendering project that tries WebGPU first
-and falls back to WebGL2.
-
-## Prerequisites
-
-- A current Node.js LTS release
-- A browser with WebGPU or WebGL2 support
-- Basic TypeScript knowledge
-
-:::tip
-
-If your goal is a geospatial visualization rather than a GPU framework or custom
-renderer, start with [deck.gl](https://deck.gl) instead. deck.gl is built on luma.gl and
-provides higher-level layers, cameras, and interaction.
-
-:::
-
-## Create a project
-
-<Tabs groupId="package-manager">
-  <TabItem value="npm" label="npm" default>
-
-```bash
-npm create vite@latest luma-demo -- --template vanilla-ts
-cd luma-demo
-npm install @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
-```
-
-  </TabItem>
-  <TabItem value="yarn" label="yarn">
-
-```bash
-yarn create vite luma-demo --template vanilla-ts
-cd luma-demo
-yarn add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
-```
-
-  </TabItem>
-  <TabItem value="pnpm" label="pnpm">
-
-```bash
-pnpm create vite luma-demo --template vanilla-ts
-cd luma-demo
-pnpm add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
-```
-
-  </TabItem>
-</Tabs>
-
-Replace `src/main.ts` with:
-
-```typescript
-import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop} from '@luma.gl/engine';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
-
-class App extends AnimationLoopTemplate {
-  override onRender({device}: AnimationProps): void {
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.05, 0.08, 0.14, 1]
-    });
-    renderPass.end();
-  }
+export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
+  return (
+    <img
+      alt={alt}
+      className={className}
+      decoding="async"
+      height={720}
+      loading={loading}
+      src={useBaseUrl(`/images/examples/${image}`)}
+      width={1280}
+    />
+  );
 }
 
-makeAnimationLoop(App, {
-  adapters: [webgpuAdapter, webgl2Adapter]
-}).start();
-```
+<div className="luma-onboarding">
+  <header className="luma-onboarding__hero" aria-labelledby="luma-onboarding-title">
+    <OnboardingPoster
+      alt="Moonlight illuminating a cinematic, GPU-simulated ocean"
+      className="luma-onboarding__hero-image"
+      image="showcase/tempest-ocean.jpg"
+      loading="eager"
+    />
+    <div className="luma-onboarding__hero-content">
+      <p className="luma-onboarding__eyebrow">Start with what is possible</p>
+      <h1 className="luma-onboarding__title" id="luma-onboarding-title">
+        {'Your GPU is the canvas.'}
+      </h1>
+      <p className="luma-onboarding__subtitle">
+        {'Build living worlds, simulate light and motion, and move millions of data points—at the speed of the GPU.'}
+      </p>
+      <div className="luma-onboarding__actions">
+        <Link
+          className="luma-onboarding__action luma-onboarding__action--primary"
+          to="/examples"
+        >
+          <span>Explore live examples</span> <span aria-hidden="true">↗</span>
+        </Link>
+        <Link
+          className="luma-onboarding__action luma-onboarding__action--secondary"
+          to="/docs/tutorials/hello-triangle"
+        >
+          <span>See your first triangle</span> <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+      <p className="luma-onboarding__note">
+        <span className="luma-onboarding__status-dot" aria-hidden="true" />
+        <span>No installation. No account. Just your browser.</span>
+      </p>
+    </div>
+  </header>
 
-Start the development server:
+  <section className="luma-onboarding__section" aria-labelledby="luma-onboarding-examples">
+    <p className="luma-onboarding__section-label">01 · See it in motion</p>
+    <h2 className="luma-onboarding__section-title" id="luma-onboarding-examples">
+      {'This is what your browser can do.'}
+    </h2>
+    <p className="luma-onboarding__section-description">
+      {'These are interactive scenes, not videos. Open one, explore it, and look under the hood.'}
+    </p>
 
-<Tabs groupId="package-manager">
-  <TabItem value="npm" label="npm" default>
+    <div className="luma-onboarding__gallery">
+      <Link
+        className="luma-onboarding__showcase"
+        to="/examples/showcase/lightstorm-megacity"
+      >
+        <div className="luma-onboarding__showcase-media">
+          <OnboardingPoster
+            alt="A rain-soaked neon city illuminated by thousands of GPU-driven lights"
+            className="luma-onboarding__showcase-image"
+            image="showcase/lightstorm-megacity.jpg"
+          />
+        </div>
+        <div className="luma-onboarding__showcase-content">
+          <span className="luma-onboarding__showcase-kicker">Real-time lighting</span>
+          <h3 className="luma-onboarding__showcase-title">Lightstorm Megacity</h3>
+          <p className="luma-onboarding__showcase-description">
+            {'Fly between rain-soaked towers beneath lightning, reflections, and thousands of lights.'}
+          </p>
+          <div className="luma-onboarding__showcase-meta">
+            <span className="luma-onboarding__badge">WebGPU</span>
+            <span className="luma-onboarding__badge">HDR</span>
+          </div>
+        </div>
+      </Link>
 
-```bash
-npm run dev
-```
+      <Link className="luma-onboarding__showcase" to="/examples/showcase/tempest-ocean">
+        <div className="luma-onboarding__showcase-media">
+          <OnboardingPoster
+            alt="A moonlit storm ocean with physically simulated waves and luminous foam"
+            className="luma-onboarding__showcase-image"
+            image="showcase/tempest-ocean.jpg"
+          />
+        </div>
+        <div className="luma-onboarding__showcase-content">
+          <span className="luma-onboarding__showcase-kicker">Physical simulation</span>
+          <h3 className="luma-onboarding__showcase-title">Tempest Ocean</h3>
+          <p className="luma-onboarding__showcase-description">
+            {'Cross an endless spectral ocean shaped by wind, whitecaps, and moonlight.'}
+          </p>
+          <div className="luma-onboarding__showcase-meta">
+            <span className="luma-onboarding__badge">WebGPU</span>
+            <span className="luma-onboarding__badge">HDR</span>
+          </div>
+        </div>
+      </Link>
 
-  </TabItem>
-  <TabItem value="yarn" label="yarn">
+      <Link
+        className="luma-onboarding__showcase"
+        to="/examples/experimental/spectral-caustics"
+      >
+        <div className="luma-onboarding__showcase-media">
+          <OnboardingPoster
+            alt="Rainbow caustics refracting through a crystal inside an atmospheric cathedral"
+            className="luma-onboarding__showcase-image"
+            image="experimental/spectral-caustics.jpg"
+          />
+        </div>
+        <div className="luma-onboarding__showcase-content">
+          <span className="luma-onboarding__showcase-kicker">Light transport</span>
+          <h3 className="luma-onboarding__showcase-title">Prism Cathedral</h3>
+          <p className="luma-onboarding__showcase-description">
+            {'Follow spectral light through glass as rainbow caustics travel across stone.'}
+          </p>
+          <div className="luma-onboarding__showcase-meta">
+            <span className="luma-onboarding__badge">WebGPU</span>
+            <span className="luma-onboarding__badge">Caustics</span>
+          </div>
+        </div>
+      </Link>
 
-```bash
-yarn dev
-```
+      <Link className="luma-onboarding__showcase" to="/examples/experimental/fluid-foundry">
+        <div className="luma-onboarding__showcase-media">
+          <OnboardingPoster
+            alt="Liquid metal pouring and splashing inside an interactive industrial foundry"
+            className="luma-onboarding__showcase-image"
+            image="experimental/fluid-foundry.jpg"
+          />
+        </div>
+        <div className="luma-onboarding__showcase-content">
+          <span className="luma-onboarding__showcase-kicker">GPU compute</span>
+          <h3 className="luma-onboarding__showcase-title">Fluid Foundry</h3>
+          <p className="luma-onboarding__showcase-description">
+            {'Pour, splash, and reshape liquid metal without moving simulation data off the GPU.'}
+          </p>
+          <div className="luma-onboarding__showcase-meta">
+            <span className="luma-onboarding__badge">WebGPU</span>
+            <span className="luma-onboarding__badge">Simulation</span>
+          </div>
+        </div>
+      </Link>
 
-  </TabItem>
-  <TabItem value="pnpm" label="pnpm">
+      <Link
+        className="luma-onboarding__showcase"
+        to="/examples/experimental/virtual-geometry-canyon"
+      >
+        <div className="luma-onboarding__showcase-media">
+          <OnboardingPoster
+            alt="A vast desert canyon assembled from continuously streaming virtual geometry"
+            className="luma-onboarding__showcase-image"
+            image="experimental/virtual-geometry-canyon.jpg"
+          />
+        </div>
+        <div className="luma-onboarding__showcase-content">
+          <span className="luma-onboarding__showcase-kicker">Virtual geometry</span>
+          <h3 className="luma-onboarding__showcase-title">Virtual Geometry Canyon</h3>
+          <p className="luma-onboarding__showcase-description">
+            {'Travel across a massive procedural landscape that streams detail as you move.'}
+          </p>
+          <div className="luma-onboarding__showcase-meta">
+            <span className="luma-onboarding__badge">WebGPU</span>
+            <span className="luma-onboarding__badge">Geometry</span>
+          </div>
+        </div>
+      </Link>
 
-```bash
-pnpm dev
-```
+      <Link className="luma-onboarding__showcase" to="/examples/showcase/postprocessing">
+        <div className="luma-onboarding__showcase-media">
+          <OnboardingPoster
+            alt="Colorful animated geometry transformed by a stack of interactive image effects"
+            className="luma-onboarding__showcase-image"
+            image="showcase/postprocessing.jpg"
+          />
+        </div>
+        <div className="luma-onboarding__showcase-content">
+          <span className="luma-onboarding__showcase-kicker">Composable effects</span>
+          <h3 className="luma-onboarding__showcase-title">Image Processing</h3>
+          <p className="luma-onboarding__showcase-description">
+            {'Layer bloom, color grading, distortion, and film effects over a living scene.'}
+          </p>
+          <div className="luma-onboarding__showcase-meta">
+            <span className="luma-onboarding__badge">WebGPU</span>
+            <span className="luma-onboarding__badge">WebGL2</span>
+          </div>
+        </div>
+      </Link>
+    </div>
+  </section>
 
-  </TabItem>
-</Tabs>
+  <section className="luma-onboarding__section" aria-labelledby="luma-onboarding-capabilities">
+    <p className="luma-onboarding__section-label">02 · Built for ambitious ideas</p>
+    <h2 className="luma-onboarding__section-title" id="luma-onboarding-capabilities">
+      {'The whole GPU. Your way.'}
+    </h2>
+    <p className="luma-onboarding__section-description">
+      {'Start with a simple triangle or architect an entire rendering and compute pipeline.'}
+    </p>
 
-You should see a dark canvas. luma.gl creates the best available device, begins a render
-pass each frame, and presents the result to the page.
+    <div className="luma-onboarding__capabilities">
+      <article className="luma-onboarding__capability">
+        <span className="luma-onboarding__capability-index">01</span>
+        <h3 className="luma-onboarding__capability-title">Render without a ceiling.</h3>
+        <p className="luma-onboarding__capability-description">
+          {'Compose models, materials, HDR lighting, shader effects, and GPU-driven geometry at interactive frame rates.'}
+        </p>
+      </article>
+      <article className="luma-onboarding__capability">
+        <span className="luma-onboarding__capability-index">02</span>
+        <h3 className="luma-onboarding__capability-title">Keep the data moving.</h3>
+        <p className="luma-onboarding__capability-description">
+          {'Run fluid simulations, spatial queries, and million-point visualizations directly where the data lives: on the GPU.'}
+        </p>
+      </article>
+      <article className="luma-onboarding__capability">
+        <span className="luma-onboarding__capability-index">03</span>
+        <h3 className="luma-onboarding__capability-title">Write once. Choose your backend.</h3>
+        <p className="luma-onboarding__capability-description">
+          {'Build against one clear TypeScript API and run on WebGPU or WebGL2, with natural paths into deck.gl and Apache Arrow.'}
+        </p>
+      </article>
+    </div>
+  </section>
 
-## Choose a learning path
+  <section className="luma-onboarding__section" aria-labelledby="luma-onboarding-paths">
+    <p className="luma-onboarding__section-label">03 · Find your starting point</p>
+    <h2 className="luma-onboarding__section-title" id="luma-onboarding-paths">
+      {'Choose your own first adventure.'}
+    </h2>
 
-<div className="docs-api-card-grid">
-  <a className="docs-api-card" href="/docs/tutorials/hello-triangle">
-    <span className="docs-api-card__kind">Recommended</span>
-    <strong>Rendering with the Engine API</strong>
-    <span>Draw a triangle, add geometry and textures, then move on to instancing and reusable shaders.</span>
-    <span className="docs-api-card__meta">Start with Model and AnimationLoop</span>
-  </a>
-  <a className="docs-api-card" href="/docs/api-guide/gpu">
-    <span className="docs-api-card__kind">Lower level</span>
-    <strong>GPU resources and compute</strong>
-    <span>Work directly with devices, buffers, textures, bindings, command encoders, and compute passes.</span>
-    <span className="docs-api-card__meta">Start with the portable GPU API</span>
-  </a>
+    <div className="luma-onboarding__paths">
+      <Link className="luma-onboarding__path" to="/docs/tutorials/hello-triangle">
+        <span className="luma-onboarding__path-kicker">Start here</span>
+        <h3 className="luma-onboarding__path-title">Draw your first triangle.</h3>
+        <p className="luma-onboarding__path-description">
+          {'Watch a live, backend-switchable example, then follow its complete rendering pipeline.'}
+        </p>
+        <span className="luma-onboarding__path-meta">Interactive fundamentals →</span>
+      </Link>
+      <Link className="luma-onboarding__path" to="/docs/api-guide/engine">
+        <span className="luma-onboarding__path-kicker">Build worlds</span>
+        <h3 className="luma-onboarding__path-title">Meet the rendering engine.</h3>
+        <p className="luma-onboarding__path-description">
+          {'Explore models, animation loops, geometry, materials, and reusable shader modules.'}
+        </p>
+        <span className="luma-onboarding__path-meta">Engine API guide →</span>
+      </Link>
+      <Link className="luma-onboarding__path" to="/docs/api-guide/gpu/gpu-data-processing">
+        <span className="luma-onboarding__path-kicker">Move faster</span>
+        <h3 className="luma-onboarding__path-title">Think in GPU compute.</h3>
+        <p className="luma-onboarding__path-description">
+          {'Keep data resident for simulation, filtering, aggregation, and spatial processing.'}
+        </p>
+        <span className="luma-onboarding__path-meta">GPU data processing →</span>
+      </Link>
+      <Link className="luma-onboarding__path" to="/docs/api-guide/shaders/shader-passes">
+        <span className="luma-onboarding__path-kicker">Create effects</span>
+        <h3 className="luma-onboarding__path-title">Shape every pixel.</h3>
+        <p className="luma-onboarding__path-description">
+          {'Combine post-processing passes, custom shaders, and reusable effects into your look.'}
+        </p>
+        <span className="luma-onboarding__path-meta">Shader and effect passes →</span>
+      </Link>
+    </div>
+  </section>
+
+  <section className="luma-onboarding__closing" aria-labelledby="luma-onboarding-build">
+    <div>
+      <h2 className="luma-onboarding__closing-title" id="luma-onboarding-build">
+        {'Ready to make something move?'}
+      </h2>
+      <p className="luma-onboarding__closing-description">
+        {'Your first real project is only a few steps away.'}
+      </p>
+    </div>
+    <Link
+      className="luma-onboarding__action luma-onboarding__action--primary"
+      to="/docs/developer-guide/installing"
+    >
+      <span>Build your first project</span> <span aria-hidden="true">→</span>
+    </Link>
+  </section>
 </div>
-
-## How backend selection works
-
-The application supplies both adapters in preference order. A WebGPU-capable browser
-uses `webgpuAdapter`; other supported browsers fall back to `webgl2Adapter`. Application
-code continues to use the same luma.gl `Device`, resource, and render-pass APIs.
-
-Use only `webgpuAdapter` when your application depends on compute shaders, storage
-textures, or another WebGPU-only feature. The documentation marks backend-specific
-features explicitly.
-
-## Troubleshooting
-
-### The canvas is blank
-
-Check the browser console first. Confirm that `src/main.ts` is imported by `index.html`
-and that the canvas is not hidden by application CSS.
-
-### WebGPU is unavailable
-
-The example should fall back to WebGL2. To debug WebGPU specifically, consult the
-[WebGPU and WebGL comparison](/docs/api-guide/background/webgpu-vs-webgl) and inspect
-the selected device in your browser developer tools.
-
-### TypeScript cannot resolve a package
-
-Install all three packages shown above. `@luma.gl/engine` provides `AnimationLoop` and
-`Model`; `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete device adapters.
-
-## Next step
-
-Continue with [Hello Triangle](/docs/tutorials/hello-triangle), where the empty render
-pass becomes a complete portable draw call.
