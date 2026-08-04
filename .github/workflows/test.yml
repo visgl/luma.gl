@@ -258,6 +258,9 @@ jobs:
         run: |
           yarn build
 
+      - name: Verify experimental geospatial package imports
+        run: yarn test-geospatial-package
+
       - name: Run lint
         run: |
           yarn lint

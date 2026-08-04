@@ -318,15 +318,10 @@ test('GPUHaversineDistance preserves raw binary64 coordinate deltas', async tape
   tapeTest.end();
 });
 
-test('point and point-to-segment distances match f32 and raw binary64 CPU oracles', async tapeTest => {
+test('point and point-to-segment f32 distances match CPU oracles', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
-    return;
-  }
-  if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -335,32 +330,16 @@ test('point and point-to-segment distances match f32 and raw binary64 CPU oracle
   const floatOtherPoints = Float32Array.from([0, 0, 1, 2, 0, 0]);
   const floatStarts = Float32Array.from([0, 0, 0, 0, 0, 0]);
   const floatEnds = Float32Array.from([0, 2, 2, 0, 2, 0]);
-  const origin: Point = [20_000_000, 30_000_000];
-  const rawPoints: Point[] = [
-    [origin[0] + 0.5, origin[1] + 2 ** -20],
-    [origin[0] + 1.25, origin[1] + 0.5],
-    [origin[0] + 2 ** -22, origin[1] + 2 ** -20]
-  ];
-  const rawOtherPoints: Point[] = [origin, origin, origin];
-  const rawStarts: Point[] = [origin, origin, origin];
-  const rawEnds: Point[] = [[origin[0] + 1, origin[1]], [origin[0] + 1, origin[1]], origin];
   const inputBuffers = [
     createBuffer(device, floatPoints, Buffer.STORAGE),
     createBuffer(device, floatOtherPoints, Buffer.STORAGE),
     createBuffer(device, floatStarts, Buffer.STORAGE),
-    createBuffer(device, floatEnds, Buffer.STORAGE),
-    createBuffer(device, encodeFloat64Points(rawPoints), Buffer.STORAGE),
-    createBuffer(device, encodeFloat64Points(rawOtherPoints), Buffer.STORAGE),
-    createBuffer(device, encodeFloat64Points(rawStarts), Buffer.STORAGE),
-    createBuffer(device, encodeFloat64Points(rawEnds), Buffer.STORAGE)
+    createBuffer(device, floatEnds, Buffer.STORAGE)
   ];
   const floatPointOutputBuffer = createOutputBuffer(device, 12);
   const floatSegmentOutputBuffer = createOutputBuffer(device, 12);
-  const rawPointOutputBuffer = createOutputBuffer(device, rawPoints.length * 8);
-  const rawSegmentOutputBuffer = createOutputBuffer(device, rawPoints.length * 8);
-  const graph = new GPUCommandGraph(device, {id: 'point-distance-oracle-test'});
+  const graph = new GPUCommandGraph(device, {id: 'f32-point-distance-oracle-test'});
   const floatPointView = importView(graph, 'float-points', inputBuffers[0], 'float32x2', 3);
-  const rawPointView = importView(graph, 'raw-points', inputBuffers[4], 'uint32x4', 3);
 
   new GPUPairwisePointDistance({
     id: 'f32-point-distance',
@@ -375,22 +354,9 @@ test('point and point-to-segment distances match f32 and raw binary64 CPU oracle
     segmentEnds: importView(graph, 'float-ends', inputBuffers[3], 'float32x2', 3),
     output: importView(graph, 'float-segment-output', floatSegmentOutputBuffer, 'float32', 3)
   }).addToGraph(graph);
-  new GPUPairwisePointDistance({
-    id: 'raw-point-distance',
-    left: rawPointView,
-    right: importView(graph, 'raw-other', inputBuffers[5], 'uint32x4', 3),
-    output: importView(graph, 'raw-point-output', rawPointOutputBuffer, 'float32x2', 3)
-  }).addToGraph(graph);
-  new GPUPairwisePointSegmentDistance({
-    id: 'raw-segment-distance',
-    points: rawPointView,
-    segmentStarts: importView(graph, 'raw-starts', inputBuffers[6], 'uint32x4', 3),
-    segmentEnds: importView(graph, 'raw-ends', inputBuffers[7], 'uint32x4', 3),
-    output: importView(graph, 'raw-segment-output', rawSegmentOutputBuffer, 'float32x2', 3)
-  }).addToGraph(graph);
 
   const compiled = graph.compile();
-  const commandEncoder = device.createCommandEncoder({id: 'point-distance-oracle-encoding'});
+  const commandEncoder = device.createCommandEncoder({id: 'f32-point-distance-oracle-encoding'});
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
 
@@ -414,6 +380,65 @@ test('point and point-to-segment distances match f32 and raw binary64 CPU oracle
     !Number.isFinite(floatSegmentDistances[2]),
     'non-finite point-to-segment distance stays non-finite'
   );
+
+  compiled.destroy();
+  for (const buffer of [...inputBuffers, floatPointOutputBuffer, floatSegmentOutputBuffer]) {
+    buffer.destroy();
+  }
+  tapeTest.end();
+});
+
+test('point and point-to-segment raw binary64 distances match CPU oracles', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
+    tapeTest.end();
+    return;
+  }
+
+  const origin: Point = [20_000_000, 30_000_000];
+  const rawPoints: Point[] = [
+    [origin[0] + 0.5, origin[1] + 2 ** -20],
+    [origin[0] + 1.25, origin[1] + 0.5],
+    [origin[0] + 2 ** -22, origin[1] + 2 ** -20]
+  ];
+  const rawOtherPoints: Point[] = [origin, origin, origin];
+  const rawStarts: Point[] = [origin, origin, origin];
+  const rawEnds: Point[] = [[origin[0] + 1, origin[1]], [origin[0] + 1, origin[1]], origin];
+  const inputBuffers = [
+    createBuffer(device, encodeFloat64Points(rawPoints), Buffer.STORAGE),
+    createBuffer(device, encodeFloat64Points(rawOtherPoints), Buffer.STORAGE),
+    createBuffer(device, encodeFloat64Points(rawStarts), Buffer.STORAGE),
+    createBuffer(device, encodeFloat64Points(rawEnds), Buffer.STORAGE)
+  ];
+  const rawPointOutputBuffer = createOutputBuffer(device, rawPoints.length * 8);
+  const rawSegmentOutputBuffer = createOutputBuffer(device, rawPoints.length * 8);
+  const graph = new GPUCommandGraph(device, {id: 'raw-point-distance-oracle-test'});
+  const rawPointView = importView(graph, 'raw-points', inputBuffers[0], 'uint32x4', 3);
+
+  new GPUPairwisePointDistance({
+    id: 'raw-point-distance',
+    left: rawPointView,
+    right: importView(graph, 'raw-other', inputBuffers[1], 'uint32x4', 3),
+    output: importView(graph, 'raw-point-output', rawPointOutputBuffer, 'float32x2', 3)
+  }).addToGraph(graph);
+  new GPUPairwisePointSegmentDistance({
+    id: 'raw-segment-distance',
+    points: rawPointView,
+    segmentStarts: importView(graph, 'raw-starts', inputBuffers[2], 'uint32x4', 3),
+    segmentEnds: importView(graph, 'raw-ends', inputBuffers[3], 'uint32x4', 3),
+    output: importView(graph, 'raw-segment-output', rawSegmentOutputBuffer, 'float32x2', 3)
+  }).addToGraph(graph);
+
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'raw-point-distance-oracle-encoding'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
 
   const rawPointDistances = await readFloat32(rawPointOutputBuffer, rawPoints.length * 2);
   const rawSegmentDistances = await readFloat32(rawSegmentOutputBuffer, rawPoints.length * 2);
@@ -442,13 +467,7 @@ test('point and point-to-segment distances match f32 and raw binary64 CPU oracle
   tapeTest.notEqual(rawSegmentDistances[3], 0, 'precise segment output retains a low limb');
 
   compiled.destroy();
-  for (const buffer of [
-    ...inputBuffers,
-    floatPointOutputBuffer,
-    floatSegmentOutputBuffer,
-    rawPointOutputBuffer,
-    rawSegmentOutputBuffer
-  ]) {
+  for (const buffer of [...inputBuffers, rawPointOutputBuffer, rawSegmentOutputBuffer]) {
     buffer.destroy();
   }
   tapeTest.end();
@@ -734,7 +753,52 @@ test('fixed kernels preserve vector chunks, empty chunks, and non-finite rows', 
   tapeTest.end();
 });
 
-test('point distance honors naturally aligned input and output offsets', async tapeTest => {
+test('f32 point distance honors naturally aligned input and output offsets', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const floatInputOffset = 264;
+  const floatOutputOffset = 260;
+  const floatLeftBuffer = device.createBuffer({
+    byteLength: 288,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const floatRightBuffer = device.createBuffer({
+    byteLength: 288,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  floatLeftBuffer.write(Float32Array.from([3, 4]), floatInputOffset);
+  floatRightBuffer.write(Float32Array.from([0, 0]), floatInputOffset);
+  const floatOutputBuffer = createOutputBuffer(device, floatOutputOffset + 4);
+  const graph = new GPUCommandGraph(device, {id: 'geospatial-f32-aligned-offset-test'});
+
+  new GPUPairwisePointDistance({
+    id: 'offset-f32-point-distance',
+    left: importView(graph, 'float-left', floatLeftBuffer, 'float32x2', 1, floatInputOffset),
+    right: importView(graph, 'float-right', floatRightBuffer, 'float32x2', 1, floatInputOffset),
+    output: importView(graph, 'float-output', floatOutputBuffer, 'float32', 1, floatOutputOffset)
+  }).addToGraph(graph);
+
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'geospatial-f32-offset-encoding'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+
+  const floatBytes = await floatOutputBuffer.readAsync(floatOutputOffset, 4);
+  tapeTest.equal(new Float32Array(floatBytes.buffer, floatBytes.byteOffset, 1)[0], 5);
+
+  compiled.destroy();
+  for (const buffer of [floatLeftBuffer, floatRightBuffer, floatOutputBuffer]) {
+    buffer.destroy();
+  }
+  tapeTest.end();
+});
+
+test('raw point distance honors naturally aligned input and output offsets', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
@@ -747,20 +811,8 @@ test('point distance honors naturally aligned input and output offsets', async t
     return;
   }
 
-  const floatInputOffset = 264;
-  const floatOutputOffset = 260;
   const rawInputOffset = 272;
   const rawOutputOffset = 264;
-  const floatLeftBuffer = device.createBuffer({
-    byteLength: 288,
-    usage: Buffer.STORAGE | Buffer.COPY_DST
-  });
-  const floatRightBuffer = device.createBuffer({
-    byteLength: 288,
-    usage: Buffer.STORAGE | Buffer.COPY_DST
-  });
-  floatLeftBuffer.write(Float32Array.from([3, 4]), floatInputOffset);
-  floatRightBuffer.write(Float32Array.from([0, 0]), floatInputOffset);
   const rawLeft: Point = [12_345_678.1250001, -7_654_321.5];
   const rawRight: Point = [12_345_678.125, -7_654_321.5];
   const rawLeftValues = new Uint32Array(rawInputOffset / 4 + 4);
@@ -769,16 +821,9 @@ test('point distance honors naturally aligned input and output offsets', async t
   rawRightValues.set(encodeFloat64Points([rawRight]), rawInputOffset / 4);
   const rawLeftBuffer = createBuffer(device, rawLeftValues, Buffer.STORAGE);
   const rawRightBuffer = createBuffer(device, rawRightValues, Buffer.STORAGE);
-  const floatOutputBuffer = createOutputBuffer(device, floatOutputOffset + 4);
   const rawOutputBuffer = createOutputBuffer(device, rawOutputOffset + 8);
-  const graph = new GPUCommandGraph(device, {id: 'geospatial-aligned-offset-test'});
+  const graph = new GPUCommandGraph(device, {id: 'geospatial-raw-aligned-offset-test'});
 
-  new GPUPairwisePointDistance({
-    id: 'offset-f32-point-distance',
-    left: importView(graph, 'float-left', floatLeftBuffer, 'float32x2', 1, floatInputOffset),
-    right: importView(graph, 'float-right', floatRightBuffer, 'float32x2', 1, floatInputOffset),
-    output: importView(graph, 'float-output', floatOutputBuffer, 'float32', 1, floatOutputOffset)
-  }).addToGraph(graph);
   new GPUPairwisePointDistance({
     id: 'offset-raw-point-distance',
     left: importView(graph, 'raw-left', rawLeftBuffer, 'uint32x4', 1, rawInputOffset),
@@ -787,12 +832,10 @@ test('point distance honors naturally aligned input and output offsets', async t
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  const commandEncoder = device.createCommandEncoder({id: 'geospatial-aligned-offset-encoding'});
+  const commandEncoder = device.createCommandEncoder({id: 'geospatial-raw-offset-encoding'});
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
 
-  const floatBytes = await floatOutputBuffer.readAsync(floatOutputOffset, 4);
-  tapeTest.equal(new Float32Array(floatBytes.buffer, floatBytes.byteOffset, 1)[0], 5);
   const rawBytes = await rawOutputBuffer.readAsync(rawOutputOffset, 8);
   const rawDistance = new Float32Array(rawBytes.buffer, rawBytes.byteOffset, 2);
   assertRelativeClose(
@@ -804,14 +847,7 @@ test('point distance honors naturally aligned input and output offsets', async t
   );
 
   compiled.destroy();
-  for (const buffer of [
-    floatLeftBuffer,
-    floatRightBuffer,
-    rawLeftBuffer,
-    rawRightBuffer,
-    floatOutputBuffer,
-    rawOutputBuffer
-  ]) {
+  for (const buffer of [rawLeftBuffer, rawRightBuffer, rawOutputBuffer]) {
     buffer.destroy();
   }
   tapeTest.end();
