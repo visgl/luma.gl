@@ -59,7 +59,6 @@ export const description =
   'Indexed WebGPU spatial queries over a 169M-row taxi atlas and the 4.8B-point NYC USGS LiDAR corpus.';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
-const GPU_MAP_MODE_READ = 0x0001;
 const UNIFORM_BYTE_LENGTH = 96;
 const TAXI_DOMAIN = [-1.25, -1.25, 1.25, 1.25] as const;
 const LIDAR_DOMAIN = [-1.25, -1.25, -0.25, 1.25, 1.25, 2.5] as const;
@@ -595,26 +594,20 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     try {
       if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'copy';
       sceneColor.readBuffer({x, y, width, height}, readbackBuffer);
-      const gpuBuffer = readbackBuffer.handle as GPUBuffer;
       if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'map';
-      await gpuBuffer.mapAsync(GPU_MAP_MODE_READ, 0, layout.byteLength);
-      try {
-        const bytes = new Uint8Array(gpuBuffer.getMappedRange(0, layout.byteLength).slice(0));
-        if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'encode';
-        const frame = makeVisualSmokeFrame(
-          bytes,
-          layout.bytesPerRow,
-          layout.bytesPerPixel,
-          width,
-          height,
-          this.sceneColorFormat,
-          this.mode
-        );
-        if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'complete';
-        return frame;
-      } finally {
-        gpuBuffer.unmap();
-      }
+      const bytes = await readbackBuffer.readAsync(0, layout.byteLength);
+      if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'encode';
+      const frame = makeVisualSmokeFrame(
+        bytes,
+        layout.bytesPerRow,
+        layout.bytesPerPixel,
+        width,
+        height,
+        this.sceneColorFormat,
+        this.mode
+      );
+      if (this.canvas) this.canvas.dataset.atlasCapturePhase = 'complete';
+      return frame;
     } finally {
       readbackBuffer.destroy();
     }
