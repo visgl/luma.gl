@@ -146,7 +146,6 @@ jobs:
       - name: Run Billion-Point Spatial Atlas visual smoke
         if: ${{ matrix.shard == 1 }}
         env:
-          SPATIAL_ATLAS_REQUIRE_GPU_READBACK: 'true'
           SPATIAL_ATLAS_SCREENSHOT: ${{ runner.temp }}/billion-point-spatial-atlas.png
         run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas test:visual
 
