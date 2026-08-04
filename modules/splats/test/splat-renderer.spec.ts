@@ -168,6 +168,11 @@ test('SplatRenderer WebGPU pipeline writes visible Gaussian color into an offscr
     t.end();
     return;
   }
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping Gaussian splat WebGPU pixel readback on a software-backed adapter');
+    t.end();
+    return;
+  }
 
   const colorTexture = device.createTexture({
     width: 16,
@@ -222,6 +227,11 @@ test('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the ca
   const [device] = await getTestDevices(['webgpu']);
   if (!device) {
     t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping Gaussian splat WebGPU pixel readback on a software-backed adapter');
     t.end();
     return;
   }
