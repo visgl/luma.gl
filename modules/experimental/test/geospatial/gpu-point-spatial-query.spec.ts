@@ -336,6 +336,56 @@ test('GPUPointSpatialQuery keeps indexed row addressing separate from returned s
   tapeTest.end();
 });
 
+test('GPUPointSpatialQuery preserves duplicate source IDs as distinct matching rows', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const sharedProps = {
+    positions: Float32Array.from([0.25, 0.25, 0.75, 0.75, 1.25, 0.5, 2.5, 2.5]),
+    sourceIds: Uint32Array.from([42, 42, 7, 42]),
+    dimension: 2 as const,
+    kind: 'bounds' as const,
+    query: Float32Array.from([0, 0, 1, 1]),
+    gridSize: [4, 4] as const,
+    indexBounds: [0, 0, 4, 4] as const,
+    expectedIds: [42, 42]
+  };
+  const indexed = createQueryFixture(device, {
+    id: 'indexed-duplicate-source-ids',
+    ...sharedProps,
+    indexed: true
+  });
+  const scanned = createQueryFixture(device, {
+    id: 'scanned-duplicate-source-ids',
+    ...sharedProps
+  });
+
+  encode(device, indexed.compiled);
+  encode(device, scanned.compiled);
+  const indexedResult = await readResult(indexed);
+  const scannedResult = await readResult(scanned);
+  tapeTest.deepEqual(
+    indexedResult.ids.sort(sortNumbers),
+    [42, 42],
+    'the indexed path does not deduplicate equal application IDs from separate rows'
+  );
+  tapeTest.deepEqual(
+    scannedResult.ids.sort(sortNumbers),
+    [42, 42],
+    'the scan path preserves the same duplicate application IDs'
+  );
+  tapeTest.equal(indexedResult.count, 2, 'both matching rows contribute to the clamped count');
+  tapeTest.equal(indexedResult.totalCount, 2, 'both matching rows contribute to totalCount');
+
+  destroyFixture(indexed);
+  destroyFixture(scanned);
+  tapeTest.end();
+});
+
 test('GPUPointSpatialQuery applies even-odd polygon holes and includes ring boundaries', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
