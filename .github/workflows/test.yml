@@ -116,7 +116,6 @@ jobs:
           key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
 
       - name: Install Playwright Chromium
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: yarn playwright:install
 
       - name: Reclaim install cache and report disk usage
