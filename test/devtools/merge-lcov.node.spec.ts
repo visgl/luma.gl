@@ -23,6 +23,47 @@ describe('mergeLcovReports', () => {
     expect(merged).toContain('BRF:2\nBRH:2');
   });
 
+  test('preserves same-named function counters by definition', () => {
+    const first = makeDuplicateFunctionReport([1, 0]);
+    const second = makeDuplicateFunctionReport([2, 3]);
+    const merged = mergeLcovReports([first, second]);
+
+    expect(merged).toContain('FNF:2\nFNH:2');
+    expect(merged.match(/^FNDA:3,project$/gm)).toHaveLength(2);
+  });
+
+  test('preserves exact duplicate function definitions by occurrence', () => {
+    const first = makeExactDuplicateFunctionReport([1, 0]);
+    const second = makeExactDuplicateFunctionReport([2, 3]);
+    const merged = mergeLcovReports([first, second]);
+
+    expect(merged.match(/^FN:10,project$/gm)).toHaveLength(2);
+    expect(merged).toContain('FNF:2\nFNH:2');
+    expect(merged.match(/^FNDA:3,project$/gm)).toHaveLength(2);
+  });
+
+  test('keeps duplicate function occurrence order stable through staged merges', () => {
+    const functionHits = Array.from({length: 12}, (_, occurrence) => occurrence + 1);
+    const report = makeExactDuplicateFunctionReport(functionHits);
+    const stagedMerge = mergeLcovReports([mergeLcovReports([report]), report]);
+
+    expect(stagedMerge.match(/^FNDA:\d+,project$/gm)).toEqual(
+      functionHits.map(hits => `FNDA:${hits * 2},project`)
+    );
+  });
+
+  test('preserves same-named function counters across executed schemas', () => {
+    const first = makeSingleFunctionReport({startLine: 10, hits: 1});
+    const second = makeSingleFunctionReport({startLine: 30, hits: 2});
+    const merged = mergeLcovReports([first, second]);
+
+    expect(merged).toContain('FN:10,project');
+    expect(merged).toContain('FN:30,project');
+    expect(merged).toContain('FNF:2\nFNH:2');
+    expect(merged.match(/^FNDA:[12],project$/gm)).toHaveLength(2);
+    expect(merged).not.toContain('FNDA:3,project');
+  });
+
   test('drops an incompatible zero-hit schema once another shard executes the source', () => {
     const executed = makeReport({lineHits: [2, 0], branchHits: [2, 0], functionHits: 1});
     const zeroHitRawTypeScriptSchema = `TN:
@@ -166,6 +207,59 @@ BRDA:10,0,0,${branchHits[0]}
 BRDA:10,0,1,${branchHits[1]}
 BRF:2
 BRH:${branchHits.filter(hits => hits > 0).length}
+end_of_record
+`;
+}
+
+function makeDuplicateFunctionReport(functionHits: [number, number]): string {
+  return `TN:
+SF:src/project.ts
+FN:10,project
+FN:20,project
+FNF:2
+FNH:${functionHits.filter(hits => hits > 0).length}
+FNDA:${functionHits[0]},project
+FNDA:${functionHits[1]},project
+DA:10,${functionHits[0]}
+DA:20,${functionHits[1]}
+LF:2
+LH:${functionHits.filter(hits => hits > 0).length}
+BRF:0
+BRH:0
+end_of_record
+`;
+}
+
+function makeExactDuplicateFunctionReport(functionHits: number[]): string {
+  const functionDefinitions = functionHits.map(() => 'FN:10,project').join('\n');
+  const functionCounters = functionHits.map(hits => `FNDA:${hits},project`).join('\n');
+  return `TN:
+SF:src/project.ts
+${functionDefinitions}
+FNF:${functionHits.length}
+FNH:${functionHits.filter(hits => hits > 0).length}
+${functionCounters}
+DA:10,1
+LF:1
+LH:1
+BRF:0
+BRH:0
+end_of_record
+`;
+}
+
+function makeSingleFunctionReport(options: {startLine: number; hits: number}): string {
+  return `TN:
+SF:src/project.ts
+FN:${options.startLine},project
+FNF:1
+FNH:1
+FNDA:${options.hits},project
+DA:${options.startLine},${options.hits}
+LF:1
+LH:1
+BRF:0
+BRH:0
 end_of_record
 `;
 }
