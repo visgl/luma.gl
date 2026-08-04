@@ -649,6 +649,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.dataGenerationAbortController?.abort();
     const generationController = new AbortController();
     this.dataGenerationAbortController = generationController;
+    delete this.canvas.dataset.atlasDataReadyMode;
     this.mountLoadingOverlay(mode, pointCount);
     this.setStatus(
       `Preparing ${formatCount(pointCount)} GPU-resident points without blocking navigation…`
@@ -683,6 +684,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       if (this.finalized || this.mode !== mode || this.capacity !== pointCount) return;
 
       this.rebuildResources(positions);
+      this.canvas.dataset.atlasDataReadyMode = mode;
       this.setStatus('');
       this.updateInteractionPresentation();
     } catch (error) {
@@ -803,23 +805,26 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     const cellCount = gridSize.reduce((product, value) => product * value, 1);
     const renderPositionsBuffer =
       borrowedRenderPositionsBuffer ??
-      this.device.createBuffer({
-        id: 'spatial-atlas-render-positions',
-        data: renderPositions,
-        usage: Buffer.STORAGE | Buffer.COPY_DST
-      });
-    const queryPositionsBuffer = this.device.createBuffer({
-      id: 'spatial-atlas-query-positions',
-      data: queryPositionValues,
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    });
+      createUploadedBuffer(
+        this.device,
+        'spatial-atlas-render-positions',
+        renderPositions,
+        Buffer.STORAGE
+      );
+    const queryPositionsBuffer = createUploadedBuffer(
+      this.device,
+      'spatial-atlas-query-positions',
+      queryPositionValues,
+      Buffer.STORAGE
+    );
     const pointAttributes =
       borrowedPointAttributesBuffer ??
-      this.device.createBuffer({
-        id: 'spatial-atlas-point-attributes',
-        data: pointAttributeValues ?? makePointAttributes(pointCount, this.mode),
-        usage: Buffer.STORAGE | Buffer.COPY_DST
-      });
+      createUploadedBuffer(
+        this.device,
+        'spatial-atlas-point-attributes',
+        pointAttributeValues ?? makePointAttributes(pointCount, this.mode),
+        Buffer.STORAGE
+      );
     const visibleIds = this.device.createBuffer({
       id: 'spatial-atlas-visible-ids',
       byteLength: Math.max(UINT32_BYTE_LENGTH, pointCount * UINT32_BYTE_LENGTH),
@@ -2842,6 +2847,21 @@ function getBoundsCenter(bounds: readonly [number, number, number, number]): [nu
 
 function importBuffer<Parameters>(graph: GPUCommandGraph<Parameters>, id: string, buffer: Buffer) {
   return graph.importBuffer({id, byteLength: buffer.byteLength, usage: buffer.usage}, buffer);
+}
+
+function createUploadedBuffer(
+  device: Device,
+  id: string,
+  data: ArrayBufferView,
+  usage: number
+): Buffer {
+  const buffer = device.createBuffer({
+    id,
+    byteLength: Math.max(UINT32_BYTE_LENGTH, data.byteLength),
+    usage: usage | Buffer.COPY_DST
+  });
+  if (data.byteLength > 0) buffer.write(data);
+  return buffer;
 }
 
 function makeQueryPositions(positions: Float32Array, dimension: 2 | 3): Float32Array {

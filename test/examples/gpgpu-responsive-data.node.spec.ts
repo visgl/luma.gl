@@ -141,6 +141,9 @@ describe('responsive GPU data examples', () => {
     const gridCountSource = atlasSource.match(
       /function makeGridCellCounts\s*\([\s\S]*?\n\}\n\nfunction countCandidates/
     );
+    const rebuildResourcesStart = atlasSource.indexOf('  private rebuildResources(');
+    const resizeResourcesStart = atlasSource.indexOf('  private resizeResources(');
+    const rebuildResourcesSource = atlasSource.slice(rebuildResourcesStart, resizeResourcesStart);
 
     expect(constructorSource).not.toBeNull();
     expect(constructorSource![1]).toMatch(/this\.currentPositions\s*=\s*new Float32Array\(0\)/);
@@ -148,6 +151,12 @@ describe('responsive GPU data examples', () => {
     expect(atlasSource).toMatch(/await this\.loadSyntheticDataset\(this\.mode, this\.capacity\)/);
     expect(atlasSource).toMatch(/await yieldAtlasGeneration\(generationController\.signal\)/);
     expect(atlasSource).toMatch(/this\.dataGenerationAbortController\?\.abort\(\)/);
+    expect(atlasSource).toMatch(/this\.canvas\.dataset\.atlasDataReadyMode = mode/);
+    expect(atlasSource).toMatch(/byteLength: Math\.max\(UINT32_BYTE_LENGTH, data\.byteLength\)/);
+    expect(atlasSource).toMatch(/buffer\.write\(data\)/);
+    expect(rebuildResourcesStart).toBeGreaterThanOrEqual(0);
+    expect(resizeResourcesStart).toBeGreaterThan(rebuildResourcesStart);
+    expect(rebuildResourcesSource).not.toMatch(/createBuffer\(\{[\s\S]*?data:/);
     expect(atlasSource).toMatch(/this\.resizeResources\(resources,/);
     expect(atlasSource).toMatch(
       /queryChanged \? this\.getQueryGraph\(resources\) : resources\.renderGraph/

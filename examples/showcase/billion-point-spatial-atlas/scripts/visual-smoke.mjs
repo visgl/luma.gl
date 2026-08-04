@@ -186,6 +186,7 @@ try {
   logPhase('taxi interactions verified');
 
   await changeSelect(page, '#example-panel-host [data-mode]', 'lidar');
+  await waitForAtlasDataReady(page, 'lidar');
   await requestAtlasRedraw(page);
   await page.waitForFunction(
     () =>
@@ -253,6 +254,7 @@ try {
   logPhase('synthetic LiDAR state and layout verified');
 
   await changeSelect(page, '#example-panel-host [data-mode]', 'taxi');
+  await waitForAtlasDataReady(page, 'taxi');
   await requestAtlasRedraw(page);
   await page.waitForFunction(
     () =>
@@ -388,6 +390,22 @@ async function requestAtlasRedraw(page) {
   await page.evaluate(() => {
     window.dispatchEvent(new Event('spatial-atlas-redraw'));
   });
+}
+
+async function waitForAtlasDataReady(page, expectedMode) {
+  await page.waitForFunction(mode => {
+    const status = document.querySelector('[data-atlas-status]')?.textContent ?? '';
+    return (
+      document.querySelector('canvas')?.dataset.atlasDataReadyMode === mode ||
+      status.includes('GPU data initialization failed')
+    );
+  }, expectedMode);
+  const status = (await page.locator('[data-atlas-status]').textContent()) ?? '';
+  assert.doesNotMatch(
+    status,
+    /GPU data initialization failed/,
+    `${expectedMode} GPU data initializes`
+  );
 }
 
 async function pauseAtlasAnimation(page) {
