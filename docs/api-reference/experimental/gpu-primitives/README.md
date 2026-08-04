@@ -1061,13 +1061,13 @@ consumers.
 | 8.3b — Partitioned-right decision | Decide paired partitions, key routing, or global addressing for multiple right indices | Implemented shared-right `GPUBatchHashJoin` plus a consumer with partitioned right ownership | One routing contract is accepted with empty/uneven batch evidence or explicitly deferred | High | Large |
 | 8.4 — Sparse graph analytics | Frontier/visited representations and graph algorithms selected by demonstrated consumers | Partitioned identity contracts from 3.2 and the 8.3b decision | Bounded CPU-oracle parity on disconnected, cyclic, and high-degree graphs | High | Large |
 | 8.5 — Field and solver composition | Reusable graph-native stencil, advection, and solver building blocks behind live simulations | Two existing simulation consumers agree on field and boundary contracts | Shared primitives replace consumer-local kernels without hidden submission | High | Large |
-| 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
-| 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
-| 6.3a — Conventional scene consumer | A CPU scene graph uses shared storage, visibility, picking, and draw generation | Tranche 6.2b and Phase 4 | No consumer-specific fields or CPU draw filtering | High | Medium |
+| 3.2 — Partitioned topology | Implemented: global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
+| 3.3 — Extension decision gate | Implemented: sparse/multidimensional histograms, custom scans, and shader predicates explicitly deferred pending consumer evidence | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
+| 6.3a — Conventional scene consumer | Implemented: an application-owned CPU scene graph uses shared flat storage, GPU visibility and picking, renderer resource groups, measured mutation, and indirect draw generation | Tranche 6.2b and Phase 4 | Stable application IDs, one compiled graph, explicit update costs, and no consumer-specific fields or CPU draw filtering | High | Medium |
 | 6.3b — Table-oriented scene consumer | A preserved-batch table application uses the same runtime contracts | Tranches 6.1c, 6.2b, and 3.2 | Shares public primitives with 6.3a without repacking or adapter casts | High | Medium |
 | T.1 — Canonical GPU trace scene | Stable spans, process/thread ownership, preserved source partitions, parents, dependency CSR, and generic scene projection | Implemented `GPUScene`, draw generation, and renderer-owned resource groups | Source identity, empty/uneven batches, bidirectional links, ownership, and scene draw/group integration pass GPU tests | High | Medium |
 | T.2 — Interactive GPU trace policies | Implemented: time windows, process/thread expansion, linked-span focus, ancestor retention, and stable indirect draws | Tranche T.1 plus hierarchy, mask, traversal, and visibility workflows | Policy-only updates reuse one graph with GPU-tested stable masks, row IDs, hierarchy offsets, ancestry, and indirect draws | High | Large |
-| T.3 — Scene-backed trace showcase | A live trace explorer combines canonical trace scenes, GPU interactions, picking, resource groups, and timing | Tranche T.2 plus existing picking and graph-inspection contracts | Representative traces pan, filter, collapse, focus, and pick without CPU draw selection | High | Large |
+| T.3 — Scene-backed trace showcase | Implemented: a bounded live trace explorer combines canonical trace scenes, GPU interactions, picking, resource groups, stable indirect drawing, and command-graph inspection | Tranche T.2 plus existing picking and graph-inspection contracts | Representative traces pan, filter, collapse, focus, and pick without CPU draw selection or graph recompilation | High | Large |
 | 7.1 — Dependency audit and API freeze | Freeze names, ownership, failures, capacities, submission, and package graph | Phase 6 exits and two consumers per graduation candidate | Acyclic dependency report and owner for every public resource boundary | High | Medium |
 | 7.2 — Scheduling-core extraction | Move table-independent graph scheduling directly to `@luma.gl/engine` | Tranche 7.1 | Engine builds without tables, gpgpu, or Arrow; all repository imports use the final owner | High | Large |
 | 7.3 — Adapter and algorithm migration | Keep table adapters in `@luma.gl/tables`; move optional workflows to `@luma.gl/gpgpu` | Tranche 7.2 | Package tests enforce dependency direction and examples use final owners | High | Large |
@@ -1075,12 +1075,14 @@ consumers.
 
 ### Recommended execution order
 
-1. Add a conventional scene consumer (6.3a) to prove shared visibility, picking, generated draws,
-   and renderer-owned resource groups without consumer-specific scene fields.
-2. Build on the implemented canonical trace-scene and interaction foundations (T.1–T.2) with a
-   live scene-backed trace showcase (T.3).
-3. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the
-   cross-chunk identity contract.
+1. Add the preserved-batch table consumer (6.3b) beside the implemented conventional scene
+   consumer (6.3a) to prove the same shared visibility, picking, generated draws, and
+   renderer-owned resource groups without packing or consumer-specific scene fields.
+2. Preserve the implemented canonical trace-scene, reusable interaction, and live scene-backed
+   showcase contracts (T.1–T.3); add larger trace features only when a consumer establishes their
+   resource bounds and measurable benefit.
+3. Preserve the implemented partitioned hierarchy/CSR topology and explicit extension decision
+   gate (3.2–3.3); reopen extensions only when new consumers fix their memory and identity costs.
 4. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
    documented decision gate gains a requesting consumer and positive evidence.
 5. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
@@ -1517,8 +1519,15 @@ Prove that the storage contract serves both a conventional scene graph and a tab
 application. Both consumers use the same identity, visibility, picking, and indirect-draw path
 while retaining their own update and presentation policies.
 
-The conventional consumer lands as 6.3a; the preserved-batch table consumer follows as 6.3b. Phase
-6 does not exit until both use the same public runtime contracts without casts, hidden packing, or
+Tranche 6.3a is implemented by the live GPU Scene Graph Explorer. An application-owned hierarchy
+is flattened through `makeGPUSceneFromCPUScene`; GPU bounds visibility, stable-row compaction,
+source-indexed indirect draw generation, renderer-owned resource windows, visibility-aware
+picking, and explicit mutation costs share one compiled command graph. The hierarchy stays on the
+CPU, stable application IDs differ from physical scene slots, and group diagnostics never drive
+CPU draw selection.
+
+The preserved-batch table consumer follows as 6.3b. Phase 6 does not exit until that second
+independent consumer uses the same public runtime contracts without casts, hidden packing, or
 consumer-specific record fields.
 
 **Exit evidence:** Two independent consumers share the public scene primitives without adapter

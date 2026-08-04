@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUSceneGraphExample} from '@site/src/examples';
 
 # GPUSceneResourceGroups
 
@@ -21,6 +22,8 @@ geometry, CAD scenes with distinct pipeline states, and table-backed features gr
 textures or vertex buffers. Visibility changes update GPU counts without rebuilding CPU-selected
 draw lists.
 
+<GPUSceneGraphExample embedded />
+
 ## Concepts
 
 ### Groups describe binding topology, not a second scene graph
@@ -42,6 +45,11 @@ binding configurations.
 The class never owns a pipeline, material, bind group, scene hierarchy, or draw encoder. Those
 remain application concerns and may differ between a conventional renderer and a preserved-batch
 table application.
+
+The embedded conventional scene demonstrates three fixed renderer buckets: terrain, structures,
+and signals. Their command windows remain stable even when checkboxes hide an entire bucket or
+CPU-authored scene mutations remove an individual object. GPU-generated per-group counts are read
+back only for diagnostics; they never drive CPU draw selection.
 
 ### Generated commands are the source of truth
 

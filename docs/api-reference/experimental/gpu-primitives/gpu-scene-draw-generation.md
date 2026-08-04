@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUSceneGraphExample} from '@site/src/examples';
 
 # GPUSceneDrawGeneration
 
@@ -16,6 +17,8 @@ culling, spatial queries, hierarchy expansion, and selection masks can remain GP
 of forcing a readback, rebuilding a CPU draw list, and uploading counts again. Geometry arguments
 remain stable; the workflow changes only `instanceCount` and `firstInstance`.
 
+<GPUSceneGraphExample embedded />
+
 ## Concepts
 
 ### Explicit slots separate selection from renderer policy
@@ -28,6 +31,11 @@ and starting offsets. Draw generation does not infer materials, pipelines, or re
 This division lets applications choose their own slot assignment and issue indirect calls in the
 order required by their renderer. It also keeps this primitive useful before pipeline/resource
 grouping is standardized.
+
+The live scene-graph example records every renderer-owned slot once in a reusable render bundle.
+Changing a group checkbox alters only the GPU visibility mask; moving or removing a selected
+object updates its ordinary scene record. The same compiled graph then republishes counts and
+source-indexed indirect commands without the application constructing a CPU-selected draw list.
 
 ### Fixed capacity is observable
 

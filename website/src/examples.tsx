@@ -32,6 +32,8 @@ import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
 import GPUFrustumCullingApp from '../../examples/experimental/gpu-frustum-culling/app';
+import GPUSceneGraphApp from '../../examples/experimental/gpu-scene-graph/app';
+import GPUTraceSceneApp from '../../examples/experimental/gpu-trace-scene/app';
 import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
 import {
   initializeGPUSortExample,
@@ -1400,6 +1402,30 @@ export const GPUTraceViewerExample: React.FC = props => (
     directory="experimental"
     devices={['webgpu']}
     template={GPUTraceViewerApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUTraceSceneExample: React.FC = props => (
+  <LumaExample
+    id="gpu-trace-scene"
+    title="GPU Scene Trace Explorer"
+    directory="experimental"
+    devices={['webgpu-max']}
+    template={GPUTraceSceneApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUSceneGraphExample: React.FC = props => (
+  <LumaExample
+    id="gpu-scene-graph"
+    title="GPU Scene Graph Explorer"
+    directory="experimental"
+    devices={['webgpu-max']}
+    template={GPUSceneGraphApp}
     config={exampleConfig}
     {...props}
   />
