@@ -22,6 +22,12 @@ export type LuSpatialPointLayerProps = LayerProps & {
   commandIndex: number;
   color: Color;
   radiusPixels: number;
+  /** Keeps a fully initialized replacement out of render and picking passes until commit. */
+  staged?: boolean;
+  /** Signals that this layer's render resources were created successfully. */
+  onResourcesReady?: () => void;
+  /** @internal Test hook for deterministic resource-initialization failures. */
+  onBeforeModelInitialization?: () => void;
 };
 
 type LuSpatialPointLayerState = {
@@ -124,33 +130,53 @@ export class LuSpatialPointLayer extends Layer<LuSpatialPointLayerProps> {
   static override layerName = 'LuSpatialPointLayer';
   static override defaultProps = {parameters: POINT_BLEND_PARAMETERS};
 
+  private staged = false;
+
   override getAttributeManager() {
     return null;
   }
 
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('LuSpatialPointLayer requires WebGPU');
-    const styleUniforms = device.createBuffer({
-      id: `${this.id}-style-uniforms`,
-      byteLength: 32,
-      usage: Buffer.UNIFORM | Buffer.COPY_DST
-    });
-    const model = new Model(device, {
-      ...this.getShaders({modules: [project32, picking], source: LUSPATIAL_POINT_SHADER}),
-      id: `${this.id}-model`,
-      topology: 'triangle-list',
-      isInstanced: true,
-      vertexCount: 6,
-      instanceCount: 0,
-      bufferLayout: [],
-      bindings: {
-        longitudeLatitudes: this.props.longitudeLatitudes,
-        visibleIds: this.props.visibleIds,
-        pointStyle: styleUniforms
-      },
-      parameters: POINT_BLEND_PARAMETERS
-    });
-    this.setState({model, styleUniforms} satisfies LuSpatialPointLayerState);
+    let styleUniforms: Buffer | null = null;
+    let model: Model | null = null;
+    try {
+      styleUniforms = device.createBuffer({
+        id: `${this.id}-style-uniforms`,
+        byteLength: 32,
+        usage: Buffer.UNIFORM | Buffer.COPY_DST
+      });
+      this.props.onBeforeModelInitialization?.();
+      model = new Model(device, {
+        ...this.getShaders({modules: [project32, picking], source: LUSPATIAL_POINT_SHADER}),
+        id: `${this.id}-model`,
+        topology: 'triangle-list',
+        isInstanced: true,
+        vertexCount: 6,
+        instanceCount: 0,
+        bufferLayout: [],
+        bindings: {
+          longitudeLatitudes: this.props.longitudeLatitudes,
+          visibleIds: this.props.visibleIds,
+          pointStyle: styleUniforms
+        },
+        parameters: POINT_BLEND_PARAMETERS
+      });
+      this.staged = Boolean(this.props.staged);
+      this.setState({model, styleUniforms} satisfies LuSpatialPointLayerState);
+    } catch (error) {
+      model?.destroy();
+      styleUniforms?.destroy();
+      throw error;
+    }
+    this.props.onResourcesReady?.();
+  }
+
+  /** Reveals a staged layer after every layer in its resident-data revision is ready. */
+  reveal(): void {
+    if (!this.staged) return;
+    this.staged = false;
+    this.setNeedsRedraw();
   }
 
   override getModels(): Model[] {
@@ -165,6 +191,7 @@ export class LuSpatialPointLayer extends Layer<LuSpatialPointLayerProps> {
     renderPass: RenderPass;
     shaderModuleProps?: {picking?: {isActive?: number | boolean}};
   }): void {
+    if (this.staged) return;
     const {model, styleUniforms} = this.state as LuSpatialPointLayerState;
     if (!model || !styleUniforms) return;
     const [red, green, blue, alpha = 255] = this.props.color;
