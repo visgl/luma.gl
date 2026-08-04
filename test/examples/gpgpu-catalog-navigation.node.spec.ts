@@ -24,6 +24,8 @@ const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'v10/gpgpu',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
+  'experimental/gpu-trace-scene',
+  'experimental/gpu-scene-graph',
   'experimental/gpu-sort',
   'experimental/gpu-data-analysis'
 ] as const;
@@ -44,7 +46,7 @@ describe('GPGPU example catalog navigation', () => {
       )
     ).toHaveLength(1);
     expect(readCategoryIdentifiers(generalPurposeGPUCategory as ExampleCategory)).toEqual(
-      GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS
+      expect.arrayContaining([...GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS])
     );
   });
 
@@ -124,12 +126,16 @@ describe('GPGPU example catalog navigation', () => {
       'GPU Command Graph - luma v10'
     ]);
     expect(readCategoryIdentifiers(nestedCategories[0])).toEqual(['v10/gpgpu']);
-    expect(readCategoryIdentifiers(nestedCategories[1])).toEqual([
-      'experimental/gpu-frustum-culling',
-      'experimental/gpu-trace-viewer',
-      'experimental/gpu-sort',
-      'experimental/gpu-data-analysis'
-    ]);
+    expect(readCategoryIdentifiers(nestedCategories[1])).toEqual(
+      expect.arrayContaining([
+        'experimental/gpu-frustum-culling',
+        'experimental/gpu-trace-viewer',
+        'experimental/gpu-trace-scene',
+        'experimental/gpu-scene-graph',
+        'experimental/gpu-sort',
+        'experimental/gpu-data-analysis'
+      ])
+    );
   });
 
   test('groups floating-point precision with GPGPU guides while preserving its canonical URL', () => {

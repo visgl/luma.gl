@@ -14,11 +14,14 @@ const PRECISION_DOCUMENTATION_PAGES = [
 describe('FP64 live benchmark documentation', () => {
   test.each(
     PRECISION_DOCUMENTATION_PAGES
-  )('embeds the interactive, device-backed benchmark in %s', documentationPath => {
+  )('embeds an explicit-launch, device-backed benchmark in %s', documentationPath => {
     const documentationContent = readFileSync(new URL(documentationPath, import.meta.url), 'utf8');
 
-    expect(documentationContent).toContain("import {FP64Example} from '@site/src/examples';");
-    expect(documentationContent).toContain('<FP64Example embedded embeddedHeight={900} />');
+    expect(documentationContent).toContain(
+      "import {DeferredFP64Example} from '@site/src/components/docs/deferred-fp64-example';"
+    );
+    expect(documentationContent).toContain('<DeferredFP64Example embeddedHeight={900} />');
+    expect(documentationContent).not.toContain("from '@site/src/examples'");
   });
 
   test('explains that fp64 arithmetic benchmarks run only when requested', () => {

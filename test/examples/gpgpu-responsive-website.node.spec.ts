@@ -68,7 +68,8 @@ describe('responsive GPGPU website examples', () => {
 
     for (const precisionPage of [
       'docs/api-guide/shaders/gpu-floating-point-precision.md',
-      'docs/api-reference/shadertools/shader-modules/fp64.md'
+      'docs/api-reference/shadertools/shader-modules/fp64.md',
+      'docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md'
     ]) {
       const precisionPageSource = readFileSync(path.join(process.cwd(), precisionPage), 'utf8');
       expect(precisionPageSource).toContain('<DeferredFP64Example embeddedHeight={900} />');
