@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type ComputePassProps, type Device} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
+  type CompiledGPUCommandGraph,
   DrawCommandBuffer,
   GPUCommandGraph,
   GPUGridIndex,
-  type CompiledGPUCommandGraph,
   type GraphDataView
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
 import {GPUPointSpatialQuery, type GPUSpatialQueryOutput} from '../../src/geospatial';
 
 const STORAGE_BINDING_ALIGNMENT = 256;
@@ -30,7 +30,7 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
   const queryBuffer = createInputBuffer(device, Float32Array.from([-1, -1, 1, 1]));
   const outputBuffer = createOutputBuffer(
     device,
-    (STORAGE_BINDING_ALIGNMENT * 3) / Uint32Array.BYTES_PER_ELEMENT + 1
+    (STORAGE_BINDING_ALIGNMENT * 5) / Uint32Array.BYTES_PER_ELEMENT + 1
   );
   const graph = new GPUCommandGraph(device, {id: 'spatial-query-output-aliases'});
   const positions = importView(graph, 'positions', positionsBuffer, 'float32x2', 1);
@@ -59,6 +59,16 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
     })
   };
   const outputNames = ['ids', 'count', 'overflow', 'totalCount'] as const;
+  const intersectedCellCount = graph.createDataView(outputHandle, {
+    format: 'uint32',
+    length: 1,
+    byteOffset: STORAGE_BINDING_ALIGNMENT * 4
+  });
+  const candidateCount = graph.createDataView(outputHandle, {
+    format: 'uint32',
+    length: 1,
+    byteOffset: STORAGE_BINDING_ALIGNMENT * 5
+  });
 
   for (let firstIndex = 0; firstIndex < outputNames.length; firstIndex++) {
     for (let secondIndex = firstIndex + 1; secondIndex < outputNames.length; secondIndex++) {
@@ -92,6 +102,87 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
       }),
     /output ids and sourceIds must not overlap/,
     'a writable output cannot alias a live source-ID read'
+  );
+
+  tapeTest.throws(
+    () =>
+      new GPUPointSpatialQuery({
+        id: 'diagnostic-output-alias',
+        positions,
+        kind: 'bounds',
+        query,
+        output: baseOutput,
+        candidateCount: baseOutput.count
+      }),
+    /output candidateCount and output count must not overlap/,
+    'candidate diagnostics cannot alias compact outputs'
+  );
+  tapeTest.throws(
+    () =>
+      new GPUPointSpatialQuery({
+        id: 'diagnostic-input-alias',
+        positions,
+        sourceIds,
+        kind: 'bounds',
+        query,
+        output: baseOutput,
+        intersectedCellCount: sourceIds
+      }),
+    /intersectedCellCount.*sourceIds must not overlap/,
+    'cell diagnostics cannot alias query inputs'
+  );
+  tapeTest.throws(
+    () =>
+      new GPUPointSpatialQuery({
+        id: 'diagnostic-pair-alias',
+        positions,
+        kind: 'bounds',
+        query,
+        output: baseOutput,
+        intersectedCellCount,
+        candidateCount: intersectedCellCount
+      }),
+    /output candidateCount and output intersectedCellCount must not overlap/,
+    'the two diagnostics cannot alias one another'
+  );
+  tapeTest.throws(
+    () =>
+      new GPUPointSpatialQuery({
+        id: 'diagnostic-not-scalar',
+        positions,
+        kind: 'bounds',
+        query,
+        output: baseOutput,
+        candidateCount: graph.createDataView(outputHandle, {
+          format: 'uint32',
+          length: 2,
+          byteOffset: STORAGE_BINDING_ALIGNMENT * 4
+        })
+      }),
+    /candidateCount must be one packed uint32 scalar/,
+    'diagnostics must be scalar views'
+  );
+
+  const foreignDiagnosticBuffer = createOutputBuffer(device, 1);
+  const foreignGraph = new GPUCommandGraph(device, {id: 'foreign-diagnostic-graph'});
+  const foreignQuery = new GPUPointSpatialQuery({
+    id: 'foreign-diagnostic',
+    positions,
+    kind: 'bounds',
+    query,
+    output: baseOutput,
+    candidateCount: importView(
+      foreignGraph,
+      'foreign-candidate-count',
+      foreignDiagnosticBuffer,
+      'uint32',
+      1
+    )
+  });
+  tapeTest.throws(
+    () => foreignQuery.addToGraph(graph),
+    /views must belong to the target graph/,
+    'diagnostics must belong to the target graph'
   );
 
   const packedOutputBuffer = createOutputBuffer(device, 4);
@@ -162,7 +253,9 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
     positions,
     kind: 'bounds',
     query,
-    output: baseOutput
+    output: baseOutput,
+    intersectedCellCount,
+    candidateCount
   }).addToGraph(graph);
   const compiled = graph.compile();
   encode(device, compiled);
@@ -182,6 +275,16 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
     1,
     'aligned output totalCount is writable'
   );
+  tapeTest.equal(
+    await readUint32At(outputBuffer, STORAGE_BINDING_ALIGNMENT * 4),
+    0,
+    'aligned intersectedCellCount is writable'
+  );
+  tapeTest.equal(
+    await readUint32At(outputBuffer, STORAGE_BINDING_ALIGNMENT * 5),
+    1,
+    'aligned candidateCount is writable'
+  );
 
   compiled.destroy();
   dynamicPositionsBuffer.destroy();
@@ -190,6 +293,7 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
   queryBuffer.destroy();
   outputBuffer.destroy();
   packedOutputBuffer.destroy();
+  foreignDiagnosticBuffer.destroy();
   tapeTest.end();
 });
 
@@ -209,6 +313,8 @@ test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCoun
   const idsBuffer = createOutputBuffer(device, 2);
   const overflowBuffer = createOutputBuffer(device, 1);
   const totalCountBuffer = createOutputBuffer(device, 1);
+  const intersectedCellCountBuffer = createOutputBuffer(device, 1);
+  const candidateCountBuffer = createOutputBuffer(device, 1);
   const drawCommands = new DrawCommandBuffer(device, {
     id: 'spatial-query-draw-count',
     type: 'draw',
@@ -226,7 +332,15 @@ test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCoun
       count: graph.importGPUData('draw-count', drawCommands.getInstanceCountData(0)),
       overflow: importView(graph, 'overflow', overflowBuffer, 'uint32', 1),
       totalCount: importView(graph, 'total-count', totalCountBuffer, 'uint32', 1)
-    }
+    },
+    intersectedCellCount: importView(
+      graph,
+      'intersected-cell-count',
+      intersectedCellCountBuffer,
+      'uint32',
+      1
+    ),
+    candidateCount: importView(graph, 'candidate-count', candidateCountBuffer, 'uint32', 1)
   }).addToGraph(graph);
 
   const compiled = graph.compile();
@@ -236,6 +350,16 @@ test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCoun
 
   tapeTest.equal(drawCount, 2, 'the DrawCommandBuffer instance count is clamped to ID capacity');
   tapeTest.equal((await readUint32(totalCountBuffer, 1))[0], 6, 'totalCount remains unclamped');
+  tapeTest.equal(
+    (await readUint32(intersectedCellCountBuffer, 1))[0],
+    0,
+    'a scan reports zero intersected cells'
+  );
+  tapeTest.equal(
+    (await readUint32(candidateCountBuffer, 1))[0],
+    6,
+    'a valid scan presents every position row to the narrow phase'
+  );
   tapeTest.equal((await readUint32(overflowBuffer, 1))[0], 1, 'result truncation sets overflow');
   tapeTest.equal(new Set(ids).size, 2, 'the retained rows are unique');
   tapeTest.ok(
@@ -250,6 +374,8 @@ test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCoun
   idsBuffer.destroy();
   overflowBuffer.destroy();
   totalCountBuffer.destroy();
+  intersectedCellCountBuffer.destroy();
+  candidateCountBuffer.destroy();
   tapeTest.end();
 });
 
@@ -275,6 +401,8 @@ test('GPUPointSpatialQuery propagates index overflow independently of result cap
   const countBuffer = createOutputBuffer(device, 1);
   const overflowBuffer = createOutputBuffer(device, 1);
   const totalCountBuffer = createOutputBuffer(device, 1);
+  const intersectedCellCountBuffer = createOutputBuffer(device, 1);
+  const candidateCountBuffer = createOutputBuffer(device, 1);
   const graph = new GPUCommandGraph(device, {id: 'spatial-query-index-capacity'});
   const positions = importView(graph, 'positions', positionsBuffer, 'float32x2', 5);
   const cellOffsets = importView(graph, 'cell-offsets', cellOffsetsBuffer, 'uint32', 2);
@@ -310,7 +438,15 @@ test('GPUPointSpatialQuery propagates index overflow independently of result cap
       count: importView(graph, 'count', countBuffer, 'uint32', 1),
       overflow: importView(graph, 'overflow', overflowBuffer, 'uint32', 1),
       totalCount: importView(graph, 'total-count', totalCountBuffer, 'uint32', 1)
-    }
+    },
+    intersectedCellCount: importView(
+      graph,
+      'intersected-cell-count',
+      intersectedCellCountBuffer,
+      'uint32',
+      1
+    ),
+    candidateCount: importView(graph, 'candidate-count', candidateCountBuffer, 'uint32', 1)
   }).addToGraph(graph);
 
   const compiled = graph.compile();
@@ -329,6 +465,16 @@ test('GPUPointSpatialQuery propagates index overflow independently of result cap
     (await readUint32(totalCountBuffer, 1))[0],
     2,
     'totalCount covers only the candidates retained by the overflowing index'
+  );
+  tapeTest.equal(
+    (await readUint32(intersectedCellCountBuffer, 1))[0],
+    1,
+    'the one-cell index reports one intersected cell'
+  );
+  tapeTest.equal(
+    (await readUint32(candidateCountBuffer, 1))[0],
+    2,
+    'candidateCount covers exactly the row IDs retained by the overflowing index'
   );
   tapeTest.equal((await readUint32(overflowBuffer, 1))[0], 1, 'query carries index overflow');
   tapeTest.equal(new Set(ids).size, 2, 'stored row indices remain unique');
@@ -349,14 +495,16 @@ test('GPUPointSpatialQuery propagates index overflow independently of result cap
     idsBuffer,
     countBuffer,
     overflowBuffer,
-    totalCountBuffer
+    totalCountBuffer,
+    intersectedCellCountBuffer,
+    candidateCountBuffer
   ]) {
     buffer.destroy();
   }
   tapeTest.end();
 });
 
-test('GPUPointSpatialQuery uses GPU-prepared indirect dispatch for indexed refinement', async tapeTest => {
+test('GPUPointSpatialQuery reports exact indexed broad-phase work without source-sized scratch', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
@@ -364,48 +512,33 @@ test('GPUPointSpatialQuery uses GPU-prepared indirect dispatch for indexed refin
     return;
   }
 
-  const gridWidth = 16;
-  const positionsValues = new Float32Array(gridWidth * gridWidth * 2);
-  for (let row = 0; row < gridWidth; row++) {
-    for (let column = 0; column < gridWidth; column++) {
-      const index = row * gridWidth + column;
-      positionsValues[index * 2] = column + 0.5;
-      positionsValues[index * 2 + 1] = row + 0.5;
-    }
-  }
-  const pointCount = gridWidth * gridWidth;
-  const positionsBuffer = createInputBuffer(device, positionsValues);
-  const queryBuffer = createInputBuffer(device, Float32Array.from([8.49, 8.49, 8.51, 8.51]));
-  const cellOffsetsBuffer = createOutputBuffer(device, pointCount + 1);
-  const rowIndicesBuffer = createOutputBuffer(device, pointCount);
-  const indexCountBuffer = createOutputBuffer(device, 1);
-  const indexOverflowBuffer = createOutputBuffer(device, 1);
+  const gridWidth = 4;
+  const positionsBuffer = createInputBuffer(
+    device,
+    Float32Array.from([1.5, 1.5, 0.5, 0.5, 2.5, 2.5, 1.5, 1.5])
+  );
+  const queryBuffer = createInputBuffer(device, Float32Array.from([1.49, 1.49, 1.51, 1.51]));
+  const cellOffsetsBuffer = createInputBuffer(
+    device,
+    Uint32Array.from([0, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6])
+  );
+  // Row 1 is retained twice and row 999 is invalid. Row 3 is a matching poison row assigned to the
+  // far corner cell; indexed refinement must not visit it.
+  const rowIndicesBuffer = createInputBuffer(device, Uint32Array.from([1, 1, 999, 0, 2, 3]));
+  const indexCountBuffer = createInputBuffer(device, Uint32Array.from([6]));
+  const indexOverflowBuffer = createInputBuffer(device, Uint32Array.from([0]));
   const idsBuffer = createOutputBuffer(device, 4);
   const countBuffer = createOutputBuffer(device, 1);
   const overflowBuffer = createOutputBuffer(device, 1);
   const totalCountBuffer = createOutputBuffer(device, 1);
+  const intersectedCellCountBuffer = createOutputBuffer(device, 1);
+  const candidateCountBuffer = createOutputBuffer(device, 1);
   const graph = new GPUCommandGraph(device, {id: 'spatial-query-indirect-candidates'});
-  const positions = importView(graph, 'positions', positionsBuffer, 'float32x2', pointCount);
-  const cellOffsets = importView(
-    graph,
-    'cell-offsets',
-    cellOffsetsBuffer,
-    'uint32',
-    pointCount + 1
-  );
-  const rowIndices = importView(graph, 'row-indices', rowIndicesBuffer, 'uint32', pointCount);
+  const positions = importView(graph, 'positions', positionsBuffer, 'float32x2', 4);
+  const cellOffsets = importView(graph, 'cell-offsets', cellOffsetsBuffer, 'uint32', 17);
+  const rowIndices = importView(graph, 'row-indices', rowIndicesBuffer, 'uint32', 6);
   const indexCount = importView(graph, 'index-count', indexCountBuffer, 'uint32', 1);
   const indexOverflow = importView(graph, 'index-overflow', indexOverflowBuffer, 'uint32', 1);
-  new GPUGridIndex({
-    id: 'dispatch-index',
-    positions,
-    gridSize: [gridWidth, gridWidth],
-    bounds: [0, 0, gridWidth, gridWidth],
-    cellOffsets,
-    objectIds: rowIndices,
-    count: indexCount,
-    overflow: indexOverflow
-  }).addToGraph(graph);
   new GPUPointSpatialQuery({
     id: 'dispatch-query',
     positions,
@@ -424,7 +557,15 @@ test('GPUPointSpatialQuery uses GPU-prepared indirect dispatch for indexed refin
       count: importView(graph, 'count', countBuffer, 'uint32', 1),
       overflow: importView(graph, 'overflow', overflowBuffer, 'uint32', 1),
       totalCount: importView(graph, 'total-count', totalCountBuffer, 'uint32', 1)
-    }
+    },
+    intersectedCellCount: importView(
+      graph,
+      'intersected-cell-count',
+      intersectedCellCountBuffer,
+      'uint32',
+      1
+    ),
+    candidateCount: importView(graph, 'candidate-count', candidateCountBuffer, 'uint32', 1)
   }).addToGraph(graph);
 
   const compiled = graph.compile();
@@ -432,10 +573,61 @@ test('GPUPointSpatialQuery uses GPU-prepared indirect dispatch for indexed refin
   const count = (await readUint32(countBuffer, 1))[0];
 
   tapeTest.deepEqual(
-    compiled.stats.nodeOrder.slice(-3),
+    compiled.stats.nodeOrder,
     ['dispatch-query-prepare', 'dispatch-query-refine', 'dispatch-query-finalize'],
-    'GPU preparation precedes candidate refinement'
+    'diagnostics preserve prepare, refine, and finalize pass topology'
   );
+  tapeTest.equal(
+    compiled.stats.logicalTransientBytes,
+    15 * Uint32Array.BYTES_PER_ELEMENT,
+    'the query owns only its fixed 12-word dispatch state and optional three-word result state'
+  );
+  const baselineGraph = new GPUCommandGraph(device, {id: 'spatial-query-two-word-result-state'});
+  const baselinePositions = importView(
+    baselineGraph,
+    'baseline-positions',
+    positionsBuffer,
+    'float32x2',
+    4
+  );
+  new GPUPointSpatialQuery({
+    id: 'baseline-query',
+    positions: baselinePositions,
+    index: {
+      gridSize: [gridWidth, gridWidth],
+      bounds: [0, 0, gridWidth, gridWidth],
+      cellOffsets: importView(
+        baselineGraph,
+        'baseline-cell-offsets',
+        cellOffsetsBuffer,
+        'uint32',
+        17
+      ),
+      rowIndices: importView(baselineGraph, 'baseline-row-indices', rowIndicesBuffer, 'uint32', 6),
+      count: importView(baselineGraph, 'baseline-index-count', indexCountBuffer, 'uint32', 1),
+      overflow: importView(
+        baselineGraph,
+        'baseline-index-overflow',
+        indexOverflowBuffer,
+        'uint32',
+        1
+      )
+    },
+    kind: 'bounds',
+    query: importView(baselineGraph, 'baseline-query-values', queryBuffer, 'float32', 4),
+    output: {
+      ids: importView(baselineGraph, 'baseline-ids', idsBuffer, 'uint32', 4),
+      count: importView(baselineGraph, 'baseline-count', countBuffer, 'uint32', 1),
+      overflow: importView(baselineGraph, 'baseline-overflow', overflowBuffer, 'uint32', 1)
+    }
+  }).addToGraph(baselineGraph);
+  const baselineCompiled = baselineGraph.compile();
+  tapeTest.equal(
+    baselineCompiled.stats.logicalTransientBytes,
+    14 * Uint32Array.BYTES_PER_ELEMENT,
+    'omitting candidateCount preserves the two-word result state'
+  );
+  baselineCompiled.destroy();
   tapeTest.equal(dispatchProbe.indirect, 1, 'indexed refinement records one indirect dispatch');
   tapeTest.equal(
     dispatchProbe.direct,
@@ -443,7 +635,39 @@ test('GPUPointSpatialQuery uses GPU-prepared indirect dispatch for indexed refin
     'indexed refinement does not record a fixed full-N dispatch'
   );
   tapeTest.equal(count, 1, 'indexed refinement returns one exact match');
-  tapeTest.deepEqual(await readUint32(idsBuffer, count), [8 * gridWidth + 8]);
+  tapeTest.deepEqual(await readUint32(idsBuffer, count), [0], 'the far-cell poison is not visited');
+  tapeTest.equal(
+    (await readUint32(intersectedCellCountBuffer, 1))[0],
+    9,
+    'the conservative three-by-three cell range is reported exactly'
+  );
+  tapeTest.equal(
+    (await readUint32(candidateCountBuffer, 1))[0],
+    5,
+    'retained rows in active cells include duplicate and invalid row IDs exactly'
+  );
+
+  queryBuffer.write(Float32Array.from([Number.NaN, 0, 1, 1]));
+  encode(device, compiled);
+  tapeTest.deepEqual(
+    [
+      (await readUint32(intersectedCellCountBuffer, 1))[0],
+      (await readUint32(candidateCountBuffer, 1))[0]
+    ],
+    [0, 0],
+    'a mutable invalid query resets both diagnostics'
+  );
+
+  queryBuffer.write(Float32Array.from([10, 10, 11, 11]));
+  encode(device, compiled);
+  tapeTest.deepEqual(
+    [
+      (await readUint32(intersectedCellCountBuffer, 1))[0],
+      (await readUint32(candidateCountBuffer, 1))[0]
+    ],
+    [0, 0],
+    'a mutable query outside the index domain resets both diagnostics'
+  );
 
   compiled.destroy();
   for (const buffer of [
@@ -456,7 +680,9 @@ test('GPUPointSpatialQuery uses GPU-prepared indirect dispatch for indexed refin
     idsBuffer,
     countBuffer,
     overflowBuffer,
-    totalCountBuffer
+    totalCountBuffer,
+    intersectedCellCountBuffer,
+    candidateCountBuffer
   ]) {
     buffer.destroy();
   }
