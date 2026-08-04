@@ -17,12 +17,14 @@ import {
   TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_OVERLAPPING_CHILD_FLAG,
+  TRACE_PROCESS_COUNT,
   TRACE_RUNTIME_SPAN_FLAG,
   TRACE_SIMILAR_DURATION_PARENT_FLAG,
   TRACE_THREADS_PER_PROCESS
 } from './trace-data';
 
 const TRACE_WORKGROUP_SIZE = 256;
+export const TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE = 64;
 
 const TRACE_SHADER_DECLARATIONS = /* wgsl */ `
 struct TraceSpan {
@@ -159,7 +161,7 @@ struct VertexOutput {
   let laneY = 1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0;
   let pulse = 0.84 + 0.16 * sin(span.start * 0.13 + f32(lane) * 0.31);
   let isSelected = sourceIndex == viewUniforms.selectedSpanIndex;
-  let isReached = reachedSpans[sourceIndex] != 0u;
+  let isReached = reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
   let hasSelection = viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusOpacity = select(1.0, select(0.22, 1.0, isReached), hasSelection);
   let baseColor = getGroupColor(span.group) * pulse;
@@ -360,43 +362,150 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Applies focus policy and publishes generation-tagged exact visibility for candidate spans. */
-export function getCandidateFocusShader(): string {
+/** Seeds a generation-tagged compact focus frontier and its first indirect dispatch. */
+export function getFocusFrontierSeedShader(spanCount: number): string {
   return /* wgsl */ `
-${TRACE_SHADER_DECLARATIONS}
-struct TraceSpanBatch {
-  firstSpanIndex: u32,
-  spanCount: u32,
-  timeMin: f32,
-  timeMax: f32,
-  laneMin: u32,
-  laneMax: u32,
-  groupIndex: u32,
-  batchIndex: u32,
-};
-@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
-@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
-@group(0) @binding(2) var<storage, read> baseVisibility: array<u32>;
-@group(0) @binding(3) var<storage, read> reachedSpans: array<u32>;
-@group(0) @binding(4) var<storage, read> activeSeedCount: array<u32>;
-@group(0) @binding(5) var<storage, read> visibilityGeneration: array<u32>;
-@group(0) @binding(6) var<storage, read_write> spanVisibility: array<u32>;
-@group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
+const SPAN_COUNT: u32 = ${spanCount}u;
+const WORKGROUP_SIZE: u32 = ${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE}u;
+@group(0) @binding(0) var<storage, read> selectedSeeds: array<u32>;
+@group(0) @binding(1) var<storage, read> activeSeedCount: array<u32>;
+@group(0) @binding(2) var<storage, read> focusTraversalState: array<u32>;
+@group(0) @binding(3) var<storage, read_write> reachedSpans: array<atomic<u32>>;
+@group(0) @binding(4) var<storage, read_write> frontier: array<u32>;
+@group(0) @binding(5) var<storage, read_write> frontierCount: array<u32>;
+@group(0) @binding(6) var<storage, read_write> dispatchCommand: array<u32>;
 
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
-) {
-  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x >= batch.spanCount) {
+@compute @workgroup_size(1)
+fn main() {
+  var count = 0u;
+  let seed = selectedSeeds[0];
+  if (activeSeedCount[0] != 0u && seed < SPAN_COUNT) {
+    atomicStore(&reachedSpans[seed], focusTraversalState[1]);
+    frontier[0] = seed;
+    count = 1u;
+  }
+  frontierCount[0] = count;
+  dispatchCommand[0] = (count + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
+  dispatchCommand[1] = 1u;
+  dispatchCommand[2] = 1u;
+}`;
+}
+
+/** Clears one compact frontier count and disables its indirect dispatch. */
+export function getFocusFrontierClearShader(): string {
+  return /* wgsl */ `
+@group(0) @binding(0) var<storage, read_write> frontierCount: array<u32>;
+@group(0) @binding(1) var<storage, read_write> dispatchCommand: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  frontierCount[0] = 0u;
+  dispatchCommand[0] = 0u;
+  dispatchCommand[1] = 1u;
+  dispatchCommand[2] = 1u;
+}`;
+}
+
+/** Expands one CSR partition from a compact frontier into a generation-tagged next frontier. */
+export function getFocusFrontierExpansionShader(options: {
+  spanCount: number;
+  sourceNodeBase: number;
+  sourceNodeCount: number;
+  offsetWordBase: number;
+  neighborWordBase: number;
+  neighborCount: number;
+  depth: number;
+}): string {
+  return /* wgsl */ `
+const SPAN_COUNT: u32 = ${options.spanCount}u;
+const SOURCE_NODE_BASE: u32 = ${options.sourceNodeBase}u;
+const SOURCE_NODE_COUNT: u32 = ${options.sourceNodeCount}u;
+const OFFSET_WORD_BASE: u32 = ${options.offsetWordBase}u;
+const NEIGHBOR_WORD_BASE: u32 = ${options.neighborWordBase}u;
+const NEIGHBOR_COUNT: u32 = ${options.neighborCount}u;
+const DEPTH: u32 = ${options.depth}u;
+@group(0) @binding(0) var<storage, read> offsets: array<u32>;
+@group(0) @binding(1) var<storage, read> neighbors: array<u32>;
+@group(0) @binding(2) var<storage, read> frontier: array<u32>;
+@group(0) @binding(3) var<storage, read> frontierCount: array<u32>;
+@group(0) @binding(4) var<storage, read_write> nextFrontier: array<u32>;
+@group(0) @binding(5) var<storage, read_write> nextFrontierCount: array<atomic<u32>>;
+@group(0) @binding(6) var<storage, read_write> reachedSpans: array<atomic<u32>>;
+@group(0) @binding(7) var<storage, read> focusTraversalState: array<u32>;
+
+@compute @workgroup_size(${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let frontierIndex = globalId.x;
+  if (frontierIndex >= frontierCount[0] || DEPTH >= focusTraversalState[0]) {
     return;
   }
-  let sourceIndex = batch.firstSpanIndex + localId.x;
-  let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
-  let focusVisible = !focusEnabled || reachedSpans[sourceIndex] != 0u;
-  let visible = baseVisibility[sourceIndex] != 0u && focusVisible;
-  spanVisibility[sourceIndex] = select(0u, visibilityGeneration[0], visible);
+  let sourceIndex = frontier[frontierIndex];
+  if (sourceIndex < SOURCE_NODE_BASE || sourceIndex - SOURCE_NODE_BASE >= SOURCE_NODE_COUNT) {
+    return;
+  }
+  let localSourceIndex = sourceIndex - SOURCE_NODE_BASE;
+  let firstNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex], NEIGHBOR_COUNT);
+  let lastNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex + 1u], NEIGHBOR_COUNT);
+  for (var neighborIndex = firstNeighbor; neighborIndex < lastNeighbor; neighborIndex++) {
+    let neighbor = neighbors[NEIGHBOR_WORD_BASE + neighborIndex];
+    if (neighbor < SPAN_COUNT &&
+      atomicExchange(&reachedSpans[neighbor], focusTraversalState[1]) !=
+        focusTraversalState[1]) {
+      let nextIndex = atomicAdd(&nextFrontierCount[0], 1u);
+      if (nextIndex < SPAN_COUNT) {
+        nextFrontier[nextIndex] = neighbor;
+      }
+    }
+  }
+}`;
+}
+
+/** Publishes a compact frontier count as the next indirect dispatch. */
+export function getFocusFrontierDispatchShader(): string {
+  return /* wgsl */ `
+const WORKGROUP_SIZE: u32 = ${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE}u;
+@group(0) @binding(0) var<storage, read> frontierCount: array<u32>;
+@group(0) @binding(1) var<storage, read_write> dispatchCommand: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  dispatchCommand[0] = (frontierCount[0] + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
+}`;
+}
+
+/** Routes candidate work to only the passes needed by the active LOD and interaction mode. */
+export function getCandidatePassDispatchShader(): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+const PROCESS_COUNT: u32 = ${TRACE_PROCESS_COUNT}u;
+@group(0) @binding(0) var<storage, read> candidateDispatchCommand: array<u32>;
+@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(2) var<storage, read_write> exactDispatchCommand: array<u32>;
+@group(0) @binding(3) var<storage, read_write> densityDispatchCommand: array<u32>;
+@group(0) @binding(4) var<storage, read_write> pickDispatchCommand: array<u32>;
+@group(0) @binding(5) var<storage, read> processStates: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  let candidateWorkgroupCount = candidateDispatchCommand[0];
+  let candidateBatchCount = candidateDispatchCommand[1];
+  let densityMode = isDensityMode();
+  let pickActive = viewUniforms.pickLane >= 0.0;
+  var hasCollapsedProcess = false;
+  for (var processIndex = 0u; processIndex < PROCESS_COUNT; processIndex++) {
+    hasCollapsedProcess = hasCollapsedProcess || processStates[processIndex] == 0u;
+  }
+  let densityActive = densityMode || hasCollapsedProcess;
+
+  exactDispatchCommand[0] = candidateWorkgroupCount;
+  exactDispatchCommand[1] = select(candidateBatchCount, 0u, densityMode);
+  exactDispatchCommand[2] = 1u;
+  densityDispatchCommand[0] = candidateWorkgroupCount;
+  densityDispatchCommand[1] = select(0u, candidateBatchCount, densityActive);
+  densityDispatchCommand[2] = 1u;
+  pickDispatchCommand[0] = candidateWorkgroupCount;
+  pickDispatchCommand[1] = select(0u, candidateBatchCount, pickActive);
+  pickDispatchCommand[2] = 1u;
 }`;
 }
 
@@ -413,7 +522,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Aggregates focused candidate density directly, avoiding a full-domain key scan. */
+/** Classifies and aggregates focused candidate density without span-sized intermediate keys. */
 export function getCandidateDensityShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
@@ -427,28 +536,45 @@ struct TraceSpanBatch {
   groupIndex: u32,
   batchIndex: u32,
 };
-@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
-@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
-@group(0) @binding(2) var<storage, read> densityKeys: array<u32>;
-@group(0) @binding(3) var<storage, read> reachedSpans: array<u32>;
-@group(0) @binding(4) var<storage, read> activeSeedCount: array<u32>;
-@group(0) @binding(5) var<storage, read_write> densityBins: array<atomic<u32>>;
-@group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
+${TRACE_VISIBILITY_FILTER_DECLARATIONS}
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(6) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
+@group(0) @binding(8) var<storage, read_write> densityBins: array<atomic<u32>>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(global_invocation_id) globalId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
   let batch = spanBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x >= batch.spanCount) {
+  let batchRowIndex = globalId.x;
+  if (batchRowIndex >= batch.spanCount) {
     return;
   }
-  let sourceIndex = batch.firstSpanIndex + localId.x;
-  let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
-  let focusVisible = !focusEnabled || reachedSpans[sourceIndex] != 0u;
-  let densityKey = densityKeys[sourceIndex];
-  if (focusVisible && densityKey != 0xffffffffu) {
+  let sourceIndex = batch.firstSpanIndex + batchRowIndex;
+  let span = spans[sourceIndex];
+  let processExpanded = processStates[span.processIndex] != 0u;
+  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
+  let expandedLane = threadOffsets[span.threadIndex] + localLane;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let lane = f32(select(collapsedLane, expandedLane, processExpanded));
+  let sourceVisible = isSpanSourceVisible(span, lane);
+  let focusEnabled =
+    viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
+  let focusVisible = !focusEnabled ||
+    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+  let densityVisible = sourceVisible && (isDensityMode() || !processExpanded);
+  if (densityVisible && focusVisible) {
+    let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+    let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
+    let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);
+    let densityKey = u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin;
     atomicAdd(&densityBins[densityKey], 1u);
   }
 }`;
@@ -485,7 +611,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Tests exact span predicates only inside the compacted list of candidate batches. */
+/** Publishes focused, generation-tagged exact visibility for candidate spans. */
 export function getCandidateVisibilityShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
@@ -507,8 +633,8 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(4) var<storage, read> processStates: array<u32>;
 @group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
-@group(0) @binding(7) var<storage, read_write> visibilityFlags: array<u32>;
-@group(0) @binding(8) var<storage, read_write> densityKeys: array<u32>;
+@group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
+@group(0) @binding(8) var<storage, read_write> visibilityFlags: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
@@ -528,15 +654,16 @@ fn main(
   let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let sourceVisible = isSpanSourceVisible(span, lane);
-  let densityMode = isDensityMode();
-  let exactVisible = sourceVisible && processExpanded && !densityMode;
-  visibilityFlags[sourceIndex] = select(0u, 1u, exactVisible);
-  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-  let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
-  let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);
-  let densityKey = u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin;
-  let densityVisible = sourceVisible && (densityMode || !processExpanded);
-  densityKeys[sourceIndex] = select(0xffffffffu, densityKey, densityVisible);
+  let exactVisible = sourceVisible && processExpanded;
+  let focusEnabled =
+    viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
+  let focusVisible = !focusEnabled ||
+    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+  visibilityFlags[sourceIndex] = select(
+    0u,
+    viewUniforms.visibilityGeneration,
+    exactVisible && focusVisible
+  );
 }`;
 }
 

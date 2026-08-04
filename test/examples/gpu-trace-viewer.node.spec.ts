@@ -30,12 +30,16 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
-  getCandidateFocusShader,
+  getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
   getCandidateDependencyVisibilityShader,
   getDensityClearShader,
   getDependencyBatchVisibilityShader,
+  getFocusFrontierClearShader,
+  getFocusFrontierDispatchShader,
+  getFocusFrontierExpansionShader,
+  getFocusFrontierSeedShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -114,7 +118,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getBatchVisibilityShader(3),
     getPickClearShader(),
     getCandidateVisibilityShader(),
-    getCandidateFocusShader(),
+    getCandidatePassDispatchShader(),
     getDensityClearShader(),
     getCandidateDensityShader(),
     getCandidatePickShader(),
@@ -123,7 +127,19 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       {firstBatchIndex: 2, batchCount: 1}
     ]),
     getDependencyBatchVisibilityShader(3),
-    getCandidateDependencyVisibilityShader(11)
+    getCandidateDependencyVisibilityShader(11),
+    getFocusFrontierSeedShader(11),
+    getFocusFrontierClearShader(),
+    getFocusFrontierExpansionShader({
+      spanCount: 11,
+      sourceNodeBase: 0,
+      sourceNodeCount: 6,
+      offsetWordBase: 0,
+      neighborWordBase: 0,
+      neighborCount: 4,
+      depth: 0
+    }),
+    getFocusFrontierDispatchShader()
   ];
   for (const shader of shaders) {
     t.ok(new WgslReflect(shader), 'shader parses');
