@@ -617,7 +617,8 @@ function addFinalizePass<Parameters>(
 ): void {
   let nextBinding = 3;
   const totalCountBinding = query.output.totalCount ? nextBinding++ : undefined;
-  const queryStateBinding = query.intersectedCellCount ? nextBinding++ : undefined;
+  const readsQueryState = Boolean(query.intersectedCellCount && query.index);
+  const queryStateBinding = readsQueryState ? nextBinding++ : undefined;
   const intersectedCellCountBinding = query.intersectedCellCount ? nextBinding++ : undefined;
   const candidateCountBinding = query.candidateCount ? nextBinding++ : undefined;
   const totalCountDeclaration = query.output.totalCount
@@ -626,9 +627,13 @@ function addFinalizePass<Parameters>(
     : '';
   const totalCountWrite = query.output.totalCount ? 'outputTotalCount[TOTAL_OFFSET] = total;' : '';
   const intersectedCellCountDeclaration = query.intersectedCellCount
-    ? `const STATE_OFFSET: u32 = ${getViewElementOffset(queryState)}u;
+    ? `${
+        readsQueryState
+          ? `const STATE_OFFSET: u32 = ${getViewElementOffset(queryState)}u;
+@group(0) @binding(${queryStateBinding}) var<storage, read> queryState: array<u32>;`
+          : ''
+      }
 const INTERSECTED_CELL_COUNT_OFFSET: u32 = ${getViewElementOffset(query.intersectedCellCount)}u;
-@group(0) @binding(${queryStateBinding}) var<storage, read> queryState: array<u32>;
 @group(0) @binding(${intersectedCellCountBinding}) var<storage, read_write> outputIntersectedCellCount: array<u32>;`
     : '';
   const intersectedCellCountWrite = query.intersectedCellCount
@@ -677,7 +682,7 @@ ${candidateCountDeclaration}
         : []),
       ...(query.intersectedCellCount
         ? ([
-            {buffer: queryState, usage: 'storage-read'},
+            ...(readsQueryState ? [{buffer: queryState, usage: 'storage-read'}] : []),
             {buffer: query.intersectedCellCount, usage: 'storage-write'}
           ] as GraphBufferUse[])
         : []),
@@ -692,7 +697,7 @@ ${candidateCountDeclaration}
       ...(query.output.totalCount ? {outputTotalCount: query.output.totalCount} : {}),
       ...(query.intersectedCellCount
         ? {
-            queryState,
+            ...(readsQueryState ? {queryState} : {}),
             outputIntersectedCellCount: query.intersectedCellCount
           }
         : {}),

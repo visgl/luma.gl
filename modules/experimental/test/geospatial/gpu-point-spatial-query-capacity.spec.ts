@@ -346,9 +346,9 @@ test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCoun
   const compiled = graph.compile();
   encode(device, compiled);
   const drawCount = await readDrawCount(drawCommands);
-  const ids = await readUint32(idsBuffer, drawCount);
 
   tapeTest.equal(drawCount, 2, 'the DrawCommandBuffer instance count is clamped to ID capacity');
+  const ids = await readUint32(idsBuffer, Math.min(drawCount, 2));
   tapeTest.equal((await readUint32(totalCountBuffer, 1))[0], 6, 'totalCount remains unclamped');
   tapeTest.equal(
     (await readUint32(intersectedCellCountBuffer, 1))[0],
