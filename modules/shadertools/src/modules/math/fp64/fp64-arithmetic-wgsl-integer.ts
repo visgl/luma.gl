@@ -290,6 +290,7 @@ fn fp64_divide_f32_integer(aValue: f32, bValue: f32) -> f32 {
 }
 #endif
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn split(a: f32) -> vec2f {
   let aBits = bitcast<u32>(a);
   let decoded = fp64_decode_f32_bits(aBits);
@@ -334,10 +335,13 @@ fn split2(a: vec2f) -> vec2f {
   result.y = fp64_round_add_integer(result.y, a.y);
   return result;
 }
+#endif
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn quickTwoSum(a: f32, b: f32) -> vec2f {
   return fp64_two_sum_integer(a, b);
 }
+#endif
 
 fn twoSum(a: f32, b: f32) -> vec2f {
   return fp64_two_sum_integer(a, b);
@@ -349,6 +353,7 @@ fn twoSub(a: f32, b: f32) -> vec2f {
   return vec2f(bitcast<f32>(resultBits.x), bitcast<f32>(resultBits.y));
 }
 
+#ifndef LUMA_FP64_PREDICATE_ONLY
 fn twoSqr(a: f32) -> vec2f {
   return fp64_two_prod_integer(a, a);
 }
@@ -356,6 +361,7 @@ fn twoSqr(a: f32) -> vec2f {
 fn twoProd(a: f32, b: f32) -> vec2f {
   return fp64_two_prod_integer(a, b);
 }
+#endif
 
 fn sum_fp64(a: vec2f, b: vec2f) -> vec2f {
   var sum = fp64_two_sum_integer(a.x, b.x);
