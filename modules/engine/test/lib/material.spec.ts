@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {waterMaterial} from '../../../shadertools/src/modules/lighting/water-material/water-material';

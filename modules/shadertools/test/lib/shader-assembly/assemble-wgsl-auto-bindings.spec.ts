@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {WGSLShaderAssembler, type PlatformInfo, type ShaderModule} from '@luma.gl/shadertools';
 import {skin} from '../../../src/modules/engine/skin/skin';
 import {ibl} from '../../../src/modules/lighting/ibl/ibl';

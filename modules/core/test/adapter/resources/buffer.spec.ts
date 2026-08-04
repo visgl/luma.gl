@@ -4,7 +4,7 @@
 
 /* eslint-disable no-continue */
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {TypedArray} from '@math.gl/types';

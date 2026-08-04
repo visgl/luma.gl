@@ -16,10 +16,10 @@
   - `yarn test-headless`
   - `yarn test-coverage`
   - `yarn website-debug`
-- Those commands delegate into the local `@luma.gl/devtools-extensions` workspace.
-- Reusable Vitest and Playwright wiring lives under [`dev-modules/devtools-extensions`](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions).
-- Repo-specific overrides for that tooling live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
-- For details, see [dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md).
+- The test commands use the shared `@vis.gl/dev-tools` Vitest runner and the root `vitest.config.ts`.
+- Luma-specific Playwright utilities live under [`scripts/playwright`](/Users/ibgreen/code/luma.gl/scripts/playwright).
+- Playwright example aliases and defaults live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
+- For details, see [docs/developer/dev-tools/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/docs/developer/dev-tools/llm-friendly-test-setup.md).
 
 ## Before committing
 - Format code: `yarn lint fix`

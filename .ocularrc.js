@@ -1,4 +1,4 @@
-/** @typedef {import('ocular-dev-tools').OcularConfig} OcularConfig */
+/** @typedef {import('@vis.gl/dev-tools').OcularConfig} OcularConfig */
 
 import {dirname, join} from 'path';
 import {fileURLToPath} from 'url';
@@ -23,12 +23,7 @@ const config = {
     test: testDir
   },
 
-  coverage: {
-    test: 'browser'
-  },
-
-  // Local extensions for the in-repo devtools workspace.
-  // Reusable logic lives under `dev-modules/devtools-extensions/`; repo-specific policy belongs here.
+  // Repo-specific configuration consumed by the local Playwright utilities.
   devtools: {
     // Local Playwright configuration layered on top of the reusable runner.
     playwright: {
@@ -72,50 +67,6 @@ const config = {
         'transform-feedback': '/examples/tutorials/transform-feedback',
         'two-cubes': '/examples/tutorials/two-cubes'
       }
-    },
-    // Local Vitest configuration layered on top of the reusable config factory.
-    vitest: {
-      // Force Chromium browser projects onto SwiftShader in CI for deterministic rendering.
-      // Local runs should use the machine GPU unless explicitly overridden.
-      softwareGpu: Boolean(process.env.CI),
-      // CI runners intermittently close Chromium under high parallel WebGL/WebGPU load.
-      fileParallelism: !process.env.CI,
-      // Istanbul instruments only the product source allowlist before browser execution.
-      // This keeps generated bundles, source maps, examples, and large fixtures out of the
-      // transient coverage chunks that can exhaust smaller GitHub-hosted runner disks.
-      coverage: {
-        provider: 'istanbul',
-        include: ['modules/**/src/**/*.{js,ts,tsx}'],
-        exclude: [
-          '**/*.d.ts',
-          '**/*.map',
-          '**/*.{bundle,min}.{js,ts}',
-          '**/{build,coverage,dist,node_modules,vendor,vendored}/**',
-          'examples/**',
-          'website/**',
-          'test/**',
-          'modules/**/test/**'
-        ],
-        excludeAfterRemap: true
-      },
-      // Repo-owned exclusions that should not live in reusable devtools code.
-      excludePatterns: [
-        '**/*.disabled.*',
-        'modules/**/wip/**',
-        'modules/arrow/test/arrow/arrow-column-info.spec.ts',
-        'modules/arrow/test/arrow/get-arrow-data.spec.ts',
-        'modules/core/test/shadertypes/shader-types.spec.ts',
-        'modules/engine/test/shader-inputs-types.spec.ts',
-        'modules/engine/test/geometry/gpu-geometry.spec.ts',
-        'modules/shadertools/test/lib/uniform-types.spec.ts',
-        'modules/shadertools/test/modules/lighting/dirlight.spec.ts',
-        'modules/webgl/test/adapter/helpers/get-shader-layout.spec.ts',
-        'test/browser.ts',
-        'test/index.ts',
-        'test/modules.ts',
-        'test/perf/**',
-        'test/render/**'
-      ]
     }
   },
 
@@ -130,10 +81,6 @@ const config = {
   },
 
   entry: {
-    test: 'test/index.ts',
-    'test-browser': 'test/index.html',
-    bench: 'test/bench/index.js',
-    'bench-browser': 'test/bench/index.html',
     size: 'test/size/import-nothing.js',
     'modules/webgl/test/context/create-context.spec.ts':
       'modules/webgl/test/context/create-browser-context.spec.ts',

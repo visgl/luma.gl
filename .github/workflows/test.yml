@@ -108,16 +108,12 @@ jobs:
             .yarn/install-state.gz
           key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
 
-      - name: Resolve installed Playwright version
-        id: playwright-version
-        run: yarn workspace @luma.gl/devtools-extensions node -p "'version=' + require('playwright/package.json').version" >> "$GITHUB_OUTPUT"
-
       - name: Cache Playwright Chromium
         id: playwright-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-${{ runner.arch }}-ms-playwright-${{ steps.playwright-version.outputs.version }}
+          key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
 
       - name: Install Playwright Chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -204,7 +200,7 @@ jobs:
       - name: Merge browser coverage reports
         if: ${{ needs.browser_coverage.result == 'success' }}
         run: |
-          node ./dev-modules/devtools-extensions/vitest/merge-lcov.mjs \
+          node ./test/utils/merge-lcov.mjs \
             --output coverage/lcov.info \
             coverage/shards/browser-coverage-lcov-1/lcov.info \
             coverage/shards/browser-coverage-lcov-2/lcov.info \

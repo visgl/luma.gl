@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {getArrowTextRenderModules} from '@luma.gl/arrow';
 import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
 import {NullDevice} from '@luma.gl/test-utils';

@@ -1,4 +1,4 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {parseGLTFLights} from '@luma.gl/gltf/parsers/parse-gltf-lights';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 

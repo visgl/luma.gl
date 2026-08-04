@@ -1,4 +1,4 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '../../src';
 
 function almostEqual(a: number, b: number, eps = 1e-3): boolean {

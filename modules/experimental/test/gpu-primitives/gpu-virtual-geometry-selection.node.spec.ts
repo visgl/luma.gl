@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {makeGPUVirtualGeometrySelectionPlan} from '@luma.gl/experimental';
 
 test('GPU virtual geometry publishes an immutable breadth-level plan', testCase => {

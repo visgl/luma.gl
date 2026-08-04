@@ -4,7 +4,7 @@
 
 import {describe, expect, test} from 'vitest';
 
-import {mergeLcovReports} from '../../dev-modules/devtools-extensions/vitest/merge-lcov.mjs';
+import {mergeLcovReports} from '../utils/merge-lcov.mjs';
 
 describe('mergeLcovReports', () => {
   test('sums compatible records and preserves complementary hits', () => {

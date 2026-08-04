@@ -6,8 +6,8 @@ import path from 'node:path';
 import process from 'node:process';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
-import {loadOcularConfig} from '../../dev-modules/devtools-extensions/load-ocular-config.mjs';
-import {runWebsiteExample} from '../../dev-modules/devtools-extensions/playwright/run-website-example.mjs';
+import {loadOcularConfig} from '../../scripts/playwright/load-ocular-config.mjs';
+import {runWebsiteExample} from '../../scripts/playwright/run-website-example.mjs';
 import {
   applyCaptureManifestOptions,
   encodeGainMapJpeg,

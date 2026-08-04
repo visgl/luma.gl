@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import type {ArrowColumnInfo} from '@luma.gl/arrow';
 import {getArrowBufferLayout, getArrowVertexFormat, makeArrowMatrix3x3Vector} from '@luma.gl/arrow';
 import type {AttributeShaderType, ShaderLayout, VertexFormat} from '@luma.gl/core';

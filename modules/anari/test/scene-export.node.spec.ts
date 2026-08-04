@@ -1,4 +1,4 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {PLAYGROUND_PRESETS} from '../../../examples/showcase/anari/playground-presets';
 import {
   exportANARIJSONSceneToGLTF,

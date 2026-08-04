@@ -26,10 +26,9 @@ yarn website-debug
 combined test gate. Follow the final command sequence in `AGENTS.md`, including
 formatting after changes and the required `yarn build` and `yarn test`.
 
-Reusable Vitest and Playwright wiring lives in
-`dev-modules/devtools-extensions/`. Repository-specific overrides live in
-`.ocularrc.js`. Change the reusable workspace for shared runner behavior and the root
-configuration for luma.gl-specific policy.
+Reusable Vitest wiring lives in `@vis.gl/dev-tools`. Repository-specific Vitest configuration
+lives in `vitest.config.ts`, Playwright utilities live in `scripts/playwright/`, and Playwright
+defaults live in `.ocularrc.js`.
 
 ## Browser diagnosis
 
@@ -60,7 +59,7 @@ an agent to follow.
 ## Repository sources
 
 - `AGENTS.md`
-- `dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md`
-- `dev-modules/devtools-extensions/docs/vitest.md`
-- `dev-modules/devtools-extensions/docs/playwright.md`
+- `docs/developer/dev-tools/llm-friendly-test-setup.md`
+- `docs/developer/dev-tools/playwright.md`
+- `vitest.config.ts`
 - `.ocularrc.js`

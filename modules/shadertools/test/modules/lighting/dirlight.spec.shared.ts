@@ -4,7 +4,7 @@
 
 import {checkType} from '@luma.gl/test-utils';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {TapeTestFunction} from 'test/utils/vitest-tape';
 
 checkType<ShaderModule>(dirlight);
 

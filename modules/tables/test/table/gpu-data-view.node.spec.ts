@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import type {BufferLayout} from '@luma.gl/core';
 import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';

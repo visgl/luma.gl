@@ -1,4 +1,4 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {parse} from '@loaders.gl/core';
 import {readFile} from 'node:fs/promises';
 import {USDLoader, parseUSD} from '../../../examples/showcase/anari/usd-loader/usd-loader';
