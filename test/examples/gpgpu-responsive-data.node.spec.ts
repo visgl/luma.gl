@@ -189,7 +189,7 @@ describe('responsive GPU data examples', () => {
     expect(gridCountSource![0]).not.toMatch(/new Array<number>\(dimension\)/);
     expect(atlasSource).toMatch(/resources\.renderGraph\.destroy\(\)/);
     expect(atlasSmokeSource).toMatch(
-      /if \(requireGPUReadback\) \{\s*await changeSelect\(page, '#example-panel-host \[data-mode\]', 'taxi'\)/
+      /if \(requireGPUReadback\) \{\s*await changeSelect\(page, '#example-panel-host \[data-mode\]', 'lidar'\)/
     );
     expect(atlasSmokeSource).toMatch(/canvas\?\.dataset\.atlasTransitionFailure/);
     expect(atlasSmokeSource).toMatch(/canvas\?\.dataset\.atlasDeviceLost/);
