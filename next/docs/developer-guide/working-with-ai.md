@@ -76,10 +76,15 @@ Repository contributors should direct the agent to read the root `AGENTS.md` bef
 
 ```
 yarn test-node
+
 yarn test-browser
+
 yarn test-headless
+
 yarn test-coverage
+
 yarn website-debug --example hello-triangle --backend webgpu-core
+
 yarn website-debug --example hello-triangle --backend webgl2
 ```
 

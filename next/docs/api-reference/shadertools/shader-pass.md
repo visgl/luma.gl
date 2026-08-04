@@ -11,9 +11,15 @@ For the authoring model, see [Shader Passes](https://luma.gl/next/docs/api-guide
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
+
+
 const renderer = new ShaderPassRenderer(device, {
+
   shaderPasses: [myShaderPass, myShaderPassPipeline]
+
 });
+
+
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
@@ -26,12 +32,19 @@ Use a plain `ShaderPass` when subpasses only need the logical `original` or `pre
 
 ```
 export type ShaderPass<
+
   PropsT extends Record<string, any> = Record<string, any>,
+
   UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
+
   BindingsT extends Record<string, Binding> = PickBindings<PropsT>,
+
   RenderTargetNameT extends string = never
+
 > = ShaderModule<PropsT, UniformsT, BindingsT> & {
+
   passes?: ShaderSubPass<UniformsT, Extract<keyof BindingsT, string>, RenderTargetNameT>[];
+
 };
 ```
 
@@ -41,18 +54,31 @@ export type ShaderPass<
 
 ```
 export type ShaderSubPass<
+
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
+
   BindingNameT extends string = string,
+
   RenderTargetNameT extends string = string
+
 > = {
+
   action?: 'filter' | 'sample';
+
   sampler?: boolean;
+
   filter?: boolean;
+
   uniforms?: UniformsT;
+
   inputs?: Partial<
+
     Record<BindingNameT | 'sourceTexture', ShaderPassInputSource<RenderTargetNameT>>
+
   >;
+
   output?: 'previous' | RenderTargetNameT;
+
 };
 ```
 
@@ -68,8 +94,11 @@ export type ShaderSubPass<
 
 ```
 export type ShaderPassInputSource<TargetNameT extends string = string> =
+
   | 'original'
+
   | 'previous'
+
   | TargetNameT;
 ```
 
@@ -77,10 +106,15 @@ export type ShaderPassInputSource<TargetNameT extends string = string> =
 
 ```
 export type ShaderPassRenderTarget = {
+
   scale?: [number, number];
+
   format?: TextureFormat;
+
   lifetime?: 'transient' | 'history';
+
   initialize?: 'original' | {clearColor: [number, number, number, number]};
+
 };
 ```
 
@@ -90,9 +124,13 @@ export type ShaderPassRenderTarget = {
 
 ```
 export type ShaderPassPipeline<TargetNameT extends string = string> = {
+
   name: string;
+
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
+
   steps: ShaderPassPipelineStep<TargetNameT>[];
+
 };
 ```
 
@@ -100,10 +138,15 @@ export type ShaderPassPipeline<TargetNameT extends string = string> = {
 
 ```
 export type ShaderPassPipelineStep<TargetNameT extends string = string> = {
+
   shaderPass: ShaderPass<any, any, any, any>;
+
   inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
+
   output?: 'previous' | TargetNameT;
+
   uniforms?: Record<string, UniformValue>;
+
 };
 ```
 

@@ -40,33 +40,61 @@ For moving emitters, `emissiveMaterial_getTrailColor(...)` applies a smooth axia
 
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
+
 import {glassMaterial, glassMaterialPlugin} from '@luma.gl/experimental';
+
+
 
 const shaderInputs = new ShaderInputs({glassMaterial});
 
+
+
 shaderInputs.setProps({
+
   glassMaterial: {
+
     viewportSize: [width, height],
+
     sceneColorTexture,
+
     indexOfRefraction: 1.5,
+
     roughness: 0.14,
+
     dispersion: 0.022,
+
     thickness: 1.05,
+
     refractionStrength: 1,
+
     reflectionStrength: 1,
+
     fresnelStrength: 1.2,
+
     clearcoatStrength: 0.8,
+
     iridescenceStrength: 0.12,
+
     internalReflectionStrength: 0.5,
+
     transmissionStrength: 1
+
   }
+
 });
 
+
+
 const model = new Model(device, {
+
   source: glassShader,
+
   plugins: [glassMaterialPlugin],
+
   shaderInputs,
+
   geometry
+
 });
 ```
 
@@ -74,11 +102,17 @@ Call the installed shader helper from the fragment entry point:
 
 ```
 let color = glassMaterial_getColor(
+
   inputs.normal,
+
   inputs.worldPosition,
+
   inputs.color,
+
   cameraPosition,
+
   inputs.position
+
 );
 ```
 
@@ -93,30 +127,56 @@ let color = glassMaterial_getColor(
 ```
 import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/experimental';
 
+
+
 const shaderInputs = new ShaderInputs({glassMaterial, glassTransmission});
 
+
+
 shaderInputs.setProps({
+
   glassTransmission: {
+
     viewportSize: [width, height],
+
     depthRange: [0.1, 60],
+
     sceneDepthTexture,
+
     backfaceTexture,
+
     environmentTexture,
+
     environmentIntensity: 1.25,
+
     environmentMipLevels: environmentTexture.mipLevels,
+
     environmentPrefilterStrength: 1,
+
     thicknessStrength: 1,
+
     roughTransmissionStrength: 0.85,
+
     spectralAbsorptionStrength: 0.42,
+
     thinFilmThickness: 420,
+
     thinFilmStrength: 0.22,
+
     volumeScatteringStrength: 0.38,
+
     contactShadowStrength: 0.35,
+
     dynamicReflectionStrength: 0.38,
+
     secondaryBounceStrength: 0.55,
+
     faultDistortionStrength: 0.42,
+
     time: animationTime
+
   }
+
 });
 ```
 
@@ -128,19 +188,33 @@ Call `glassTransmission_getColor(...)`, or install `opticalPointLightsPlugin` an
 
 ```
 import {
+
   MAX_OPTICAL_CAUSTIC_LENSES,
+
   opticalCaustics,
+
   opticalCausticsPlugin
+
 } from '@luma.gl/experimental';
+
+
 
 const shaderInputs = new ShaderInputs({reflectiveMaterial, opticalCaustics});
 
+
+
 shaderInputs.setProps({
+
   opticalCaustics: {
+
     intensity: 0.48,
+
     focus: 1.15,
+
     lenses: nearbyGlassLenses.slice(0, MAX_OPTICAL_CAUSTIC_LENSES)
+
   }
+
 });
 ```
 

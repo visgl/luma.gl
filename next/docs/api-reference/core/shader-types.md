@@ -65,18 +65,31 @@ Notes:
 
 ```
 const uniformTypes = {
+
   camera: {
+
     position: 'vec3<f32>',
+
     exposure: 'f32'
+
   },
+
   lights: [
+
     {
+
       color: 'vec3<f32>',
+
       position: 'vec3<f32>',
+
       intensity: 'f32'
+
     },
+
     4
+
   ]
+
 } as const;
 ```
 
@@ -84,15 +97,25 @@ The corresponding TypeScript uniform values stay nested:
 
 ```
 type Uniforms = {
+
   camera: {
+
     position: [number, number, number];
+
     exposure: number;
+
   };
+
   lights: {
+
     color: [number, number, number];
+
     position: [number, number, number];
+
     intensity: number;
+
   }[];
+
 };
 ```
 
@@ -110,48 +133,91 @@ Example:
 
 ```
 import type {ShaderModule, UniformTypes} from '@luma.gl/shadertools';
+
 import {ShaderInputs} from '@luma.gl/engine';
+
 import type {NumberArray16} from '@math.gl/core';
 
+
+
 type Uniforms = {
+
   color: [number, number, number, number];
+
   light: {
+
     position: [number, number, number];
+
     range: number;
+
   };
+
   jointMatrix: NumberArray16[];
+
 };
+
+
 
 type Props = {
+
   color?: [number, number, number, number];
+
   light?: {
+
     position?: [number, number, number];
+
     range?: number;
+
   };
+
   jointMatrix?: NumberArray16[];
+
 };
 
+
+
 const module = {
+
   name: 'example',
+
   uniformTypes: {
+
     color: 'vec4<f32>',
+
     light: {
+
       position: 'vec3<f32>',
+
       range: 'f32'
+
     },
+
     jointMatrix: ['mat4x4<f32>', 64]
+
   },
+
   getUniforms: (props, previousUniforms) => props
+
 } as const satisfies ShaderModule<Props, Uniforms>;
+
+
 
 const shaderInputs = new ShaderInputs({example: module});
 
+
+
 shaderInputs.setProps({
+
   example: {
+
     light: {
+
       position: [1, 2, 3]
+
     }
+
   }
+
 });
 ```
 
@@ -176,19 +242,33 @@ That means application code works with values like:
 
 ```
 shaderInputs.setProps({
+
   lighting: {
+
     lights: [
+
       {type: 'ambient', color: [255, 255, 255], intensity: 0.15},
+
       {
+
         type: 'spot',
+
         color: [255, 120, 10],
+
         position: [2, 4, 3],
+
         direction: [-2, -4, -3],
+
         innerConeAngle: 0.2,
+
         outerConeAngle: 0.55
+
       }
+
     ]
+
   }
+
 });
 ```
 

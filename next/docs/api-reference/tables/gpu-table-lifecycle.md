@@ -23,10 +23,16 @@ This means a multi-batch Arrow table stays multi-batch after GPU upload. If the 
 ```
 const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
 
+
+
 // Replace preserved batches with one packed batch.
+
 gpuTable.packBatches();
 
+
+
 // Or greedily merge adjacent batches until each emitted batch reaches the threshold.
+
 gpuTable.packBatches({minBatchSize: 50_000});
 ```
 
@@ -47,8 +53,11 @@ Packing mutates the table in place. It rebuilds `batches[]` and table-level `gpu
 
 ```
 type GPUSchema<T extends GPUTypeMap = GPUTypeMap> = {
+
   fields: Array<GPUField<keyof T & string>>;
+
   metadata: Map<string, string>;
+
 };
 ```
 
@@ -58,8 +67,11 @@ Shader-facing values remain in `ShaderLayout`:
 
 ```
 const shaderLayout = {
+
   attributes: [{name: 'colors', location: 0, type: 'vec4<f32>'}],
+
   bindings: []
+
 };
 ```
 
@@ -91,11 +103,17 @@ When streaming Arrow data, create one immutable GPU batch per Arrow record batch
 
 ```
 const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstRecordBatch]), {
+
   shaderLayout
+
 });
 
+
+
 for await (const recordBatch of remainingRecordBatches) {
+
   gpuTable.addBatch(makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {shaderLayout}));
+
 }
 ```
 
@@ -112,11 +130,18 @@ Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering. I
 ```
 const table = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
 
+
+
 const model = new GPUTableModel(device, {
+
   source,
+
   shaderLayout,
+
   table,
+
   tableCount: 'instance'
+
 });
 ```
 
@@ -132,15 +157,25 @@ For preserved indexed batches, call `drawBatches(renderPass)`. Each batch keeps 
 
 ```
 const transform = new TableTransform(device, {
+
   vs,
+
   varyings,
+
   shaderLayout,
+
   table: makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout}),
+
   tableCount: 'vertex'
+
 });
 
+
+
 transform.dispatchBatches({
+
   outputBuffers: (batch, batchIndex) => makeOutputBuffers(batch, batchIndex)
+
 });
 ```
 
@@ -148,16 +183,27 @@ For a compute-like update path, pass `inputVectors` plus `copyOutputToInputVecto
 
 ```
 const transform = new TableTransform(device, {
+
   vs,
+
   shaderLayout,
+
   inputVectors: {
+
     particlePositions,
+
     particleVelocities
+
   },
+
   copyOutputToInputVectors: {
+
     nextParticlePositions: 'particlePositions',
+
     nextParticleVelocities: 'particleVelocities'
+
   }
+
 });
 ```
 
@@ -178,12 +224,19 @@ Relevant public types:
 
 ```
 const computation = new GPUTableComputation(device, {
+
   source: computeShader,
+
   shaderLayout: computeShaderLayout,
+
   inputVectors: {
+
     particlePositions,
+
     particleVelocities
+
   }
+
 });
 ```
 

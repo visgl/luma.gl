@@ -11,10 +11,16 @@ It is useful for fullscreen background imagery, texture previews, and screen-spa
 ```
 import {BackgroundTextureModel, DynamicTexture} from '@luma.gl/engine';
 
+
+
 const backgroundTexture = new DynamicTexture(device, {data: loadImageBitmap('/background.png')});
 
+
+
 const background = new BackgroundTextureModel(device, {
+
   backgroundTexture
+
 });
 ```
 
@@ -24,9 +30,13 @@ const background = new BackgroundTextureModel(device, {
 
 ```
 export type BackgroundTextureModelProps = ClipSpaceProps & {
+
   id?: string;
+
   backgroundTexture: Texture | DynamicTexture;
+
   blend?: boolean;
+
 };
 ```
 

@@ -11,18 +11,32 @@
 ```
 import {BufferTransform} from '@luma.gl/engine';
 
+
+
 const transform = new BufferTransform(device, {
+
   vs: VERTEX_SHADER,
+
   outputs: ['outValue'],
+
   attributes: {
+
     inValue: sourceBuffer
+
   }
+
 });
 
+
+
 transform.run({
+
   outputBuffers: {
+
     outValue: targetBuffer
+
   }
+
 });
 ```
 
@@ -32,9 +46,13 @@ transform.run({
 
 ```
 export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
+
   fs?: ModelProps['fs'];
+
   outputs?: string[];
+
   feedbackBuffers?: Record<string, Buffer | BufferRange>;
+
 };
 ```
 
@@ -78,8 +96,11 @@ Runs one transform-feedback pass.
 
 ```
 run(options?: RenderPassProps & {
+
   inputBuffers?: Record<string, Buffer>;
+
   outputBuffers?: Record<string, Buffer>;
+
 }): void
 ```
 

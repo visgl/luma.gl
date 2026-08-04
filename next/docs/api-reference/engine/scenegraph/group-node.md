@@ -9,7 +9,10 @@
 ```
 import {GroupNode} from '@luma.gl/engine';
 
+
+
 const group = new GroupNode();
+
 group.add(childNodeA, childNodeB);
 ```
 
@@ -19,19 +22,33 @@ group.add(childNodeA, childNodeB);
 
 ```
 export type GroupNodeProps = ScenegraphNodeProps & {
+
   children?: ScenegraphNode[];
+
 };
+
+
 
 export type DepthSortedTraversalOptions = {
+
   viewMatrix: NumericArray;
+
   worldMatrix?: NumericArray;
+
   order?: 'back-to-front' | 'front-to-back';
+
 };
 
+
+
 export type DepthSortedTraversalContext = {
+
   worldMatrix: Matrix4;
+
   bounds: [number[], number[]] | null;
+
   depth: number;
+
 };
 ```
 
@@ -81,12 +98,19 @@ Flattens leaf descendants and visits them in camera-depth order using their aggr
 
 ```
 group.traverseDepthSorted(
+
   (node, {worldMatrix, bounds, depth}) => {
+
     if (node instanceof ModelNode) {
+
       node.draw(renderPass);
+
     }
+
   },
+
   {viewMatrix, order: 'back-to-front'}
+
 );
 ```
 

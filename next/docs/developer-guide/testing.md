@@ -48,12 +48,20 @@ In your Node.js start script:
 ```
 const {BrowserTestDriver} = require('@probe.gl/test-utils');
 
+
+
 new BrowserTestDriver().run({
+
   server: {
+
     command: 'webpack-dev-server',
+
     arguments: ['--env.render-test']
+
   },
+
   headless: true
+
 });
 ```
 
@@ -61,24 +69,44 @@ In the browser test script:
 
 ```
 const {SnapshotTestRunner} = require('@luma.gl/test-utils');
+
 const {Cube} = require('@luma.gl/engine');
 
+
+
 const TEST_CASES = [
+
   {
+
     name: 'Render A Cube',
+
     onRender: ({gl, done}) => {
+
       const model = new Cube(gl);
+
       model.draw(...);
+
       done();
+
     },
+
     goldenImage: './test/render/golden-images/cube.png'
+
   }
+
 ];
 
+
+
 new SnapshotTestRunner({width: 800, height: 600})
+
   .add(TEST_CASES)
+
   .run({
+
     onTestFail: window.browserTestDriver_fail
+
   })
+
   .then(window.browserTestDriver_finish);
 ```

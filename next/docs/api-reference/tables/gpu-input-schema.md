@@ -18,26 +18,48 @@ It is distinct from [`GPUSchema`](https://luma.gl/next/docs/api-reference/tables
 ```
 import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/tables';
 
+
+
 export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'matrices' | 'text' | 'time';
 
+
+
 export type GPUInputDeclaration<
+
   ColumnName extends string = string,
+
   Format extends GPUVectorFormat = GPUVectorFormat
+
 > = {
+
   columnName: ColumnName;
+
   storageBindingName?: string;
+
   kind: GPUInputKind;
+
   required: boolean;
+
   formats: readonly Format[];
+
   internal?: boolean;
+
 } & (
+
   | {attributeName?: string; attributeNames?: never}
+
   | {attributeName?: never; attributeNames: readonly [string, string, ...string[]]}
+
 );
+
+
 
 export type GPUInputSchema = readonly GPUInputDeclaration[];
 
+
+
 export type GPUInputVectors = Record<string, GPUVector | undefined>;
+
 export type GPUInputColumns = Record<string, GPUVector | GPUConstant | undefined>;
 ```
 
@@ -58,19 +80,33 @@ One logical column can supply several attributes when its `BufferLayout` contain
 
 ```
 const matrixInputs = [
+
   {
+
     columnName: 'instanceModelMatrix',
+
     attributeNames: [
+
       'instanceModelMatrixCol0',
+
       'instanceModelMatrixCol1',
+
       'instanceModelMatrixCol2',
+
       'instanceModelMatrixCol3'
+
     ],
+
     storageBindingName: 'instanceModelMatrix',
+
     kind: 'matrices',
+
     required: true,
+
     formats: ['float32x4']
+
   }
+
 ] as const satisfies GPUInputSchema;
 ```
 
@@ -83,35 +119,66 @@ Use `as const satisfies GPUInputSchema` so literal column names and formats rema
 ```
 import type {GPUInputSchema} from '@luma.gl/tables';
 
+
+
 export const PATH_GPU_INPUT_SCHEMA = [
+
   {
+
     columnName: 'paths',
+
     kind: 'positions',
+
     required: true,
+
     formats: [
+
       'vertex-list<float32x2>',
+
       'vertex-list<float32x3>',
+
       'vertex-list<float32x4>'
+
     ]
+
   },
+
   {
+
     columnName: 'colors',
+
     attributeName: 'colors',
+
     kind: 'colors',
+
     required: false,
+
     formats: ['unorm8x4', 'vertex-list<unorm8x4>']
+
   },
+
   {
+
     columnName: 'viewOrigins',
+
     kind: 'positions',
+
     required: false,
+
     formats: ['float32x4'],
+
     internal: true
+
   }
+
 ] as const satisfies GPUInputSchema;
 
+
+
 export class PathModel {
+
   static readonly gpuInputSchema = PATH_GPU_INPUT_SCHEMA;
+
 }
 ```
 
@@ -124,10 +191,16 @@ The common case is compact: externally supplied inputs omit `internal`. Only gen
 ```
 import {validateGPUInputVectors} from '@luma.gl/tables';
 
+
+
 validateGPUInputVectors('PathModel', PathModel.gpuInputSchema, {
+
   paths,
+
   colors,
+
   viewOrigins
+
 });
 ```
 
@@ -148,12 +221,19 @@ For example, one table column can map to a differently named attribute and stora
 
 ```
 {
+
   columnName: 'positions',
+
   attributeName: 'positions',
+
   storageBindingName: 'polygonPositions',
+
   kind: 'positions',
+
   required: true,
+
   formats: ['vertex-list<float32x4>']
+
 }
 ```
 

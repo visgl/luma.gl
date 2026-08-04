@@ -8,15 +8,21 @@
 
 ```
 new GPUConstant({
+
   format: 'unorm8x4',
+
   value: new Uint8Array([60, 150, 255, 220])
+
 });
 ```
 
 ```
 type GPUConstantProps<T extends VertexFormat> = {
+
   format: T;
+
   value: TypedArray;
+
 };
 ```
 
@@ -39,8 +45,11 @@ An all-constant table must provide `numRows`:
 
 ```
 const table = new GPUTable({
+
   columns: {radius: new GPUConstant({format: 'float32', value: new Float32Array([3])})},
+
   numRows: 1000
+
 });
 ```
 

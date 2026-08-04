@@ -8,14 +8,23 @@
 
 ```
 import {ShaderInputs} from '@luma.gl/engine';
+
 import {picking} from '@luma.gl/shadertools';
 
+
+
 const shaderInputs = new ShaderInputs({picking});
+
 shaderInputs.setProps({
+
   picking: {
+
     isActive: true,
+
     highlightedObjectIndex: 5
+
   }
+
 });
 ```
 
@@ -27,7 +36,9 @@ For the `uniformTypes` descriptor syntax that drives nested uniform handling, se
 
 ```
 export type ShaderInputsOptions = {
+
   disableWarnings?: boolean;
+
 };
 ```
 

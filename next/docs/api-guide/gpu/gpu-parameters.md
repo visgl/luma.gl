@@ -10,41 +10,73 @@ To set up depth testing
 
 ```
 const value = device.createRenderPipeline({
+
   parameters: {
+
     depthWriteEnabled: true,
+
     depthCompare: 'less-equal'
+
   },
 ```
 
 ```
 const value = device.createRenderPipeline({
+
   parameters: {
+
     depthWriteEnabled: true,
+
     depthCompare: 'less-equal'
+
   },
+
   targets: [
+
     {
+
       blendColor: ...,
 
+
+
     }
+
   ]
+
 });
 
+
+
 const framebuffer = device.createFramebuffer({
+
   colorAttachments: {clearColor: [1, 0, 0]},
+
 })
+
+
 
 const device.beginRenderPass({
+
   framebuffer,
+
   parameters: {
 
+
+
   }
+
 })
 
+
+
 renderPass.setPipeline(pipeline);
+
 renderPass.setParameters({viewport: MAIN_MAP})
+
 renderPass.draw();
+
 renderPass.setParameters({viewport: MINI_MAP})
+
 renderPass.draw();
 ```
 

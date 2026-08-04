@@ -13,12 +13,20 @@
 ```
 import {GPUData} from '@luma.gl/tables';
 
+
+
 const gpuData = new GPUData({
+
   buffer,
+
   format: 'float32x3',
+
   length,
+
   byteStride: 12,
+
   ownsBuffer: true
+
 });
 ```
 
@@ -27,15 +35,26 @@ Interleaved rows can use a physical struct format. Field declarations use the sa
 ```
 import {GPUData} from '@luma.gl/tables';
 
+
+
 const data = new GPUData({
+
   buffer,
+
   length,
+
   format: {
+
     a: 'sint32',
+
     b: 'float32'
+
   },
+
   layout: 'packed'
+
 });
+
 const b = data.getChild('b'); // GPUDataView<'float32'> | null
 ```
 

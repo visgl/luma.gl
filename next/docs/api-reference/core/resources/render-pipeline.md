@@ -14,17 +14,29 @@ A `RenderPipeline` combines a vertex shader, a fragment shader, a [`ShaderLayout
 
 ```
 const pipeline = device.createRenderPipeline({
+
   id: 'my-pipeline',
+
   vs,
+
   fs,
+
   shaderLayout: {
+
     attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+
     bindings: [
+
       {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+
       {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+
       {name: 'materialUniforms', type: 'uniform', group: 3, location: 0}
+
     ]
+
   }
+
 });
 ```
 
@@ -32,12 +44,19 @@ Draw through the render pass:
 
 ```
 renderPass.setPipeline(pipeline);
+
 renderPass.setBindings({
+
     0: {frameUniforms},
+
     2: {lightingUniforms},
+
     3: {materialUniforms}
+
 });
+
 renderPass.setVertexArray(vertexArray);
+
 renderPass.draw({vertexCount});
 ```
 
@@ -45,9 +64,13 @@ Flat bindings are also accepted:
 
 ```
 renderPass.setBindings({
+
   frameUniforms,
+
   lightingUniforms,
+
   materialUniforms
+
 });
 ```
 

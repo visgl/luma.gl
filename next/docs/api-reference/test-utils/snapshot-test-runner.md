@@ -17,14 +17,23 @@ In your node.js start script:
 
 ```
 // This is the script that runs in Node.js and starts the browser
+
 const {BrowserTestDriver} = require('@probe.gl/test-utils');
+
 new BrowserTestDriver().run({
+
   server: {
+
     // Bundles and serves the browser script
+
     command: 'webpack-dev-server',
+
     arguments: ['--env.render-test']
+
   },
+
   headless: true
+
 });
 ```
 
@@ -32,27 +41,49 @@ In your script that is run on the browser:
 
 ```
 const {SnapshotTestRunner} = require('@luma.gl/test-utils');
+
 const {Cube} = require('@luma.gl/engine');
 
+
+
 const TEST_CASES = [
+
   {
+
     name: 'Render A Cube',
+
     // `onRender` receives animation props from the AnimationLoop
+
     onRender: ({gl, done}) => {
+
       const model = new Cube(gl);
+
       model.draw(...);
+
       // ready for capture and diffing
+
       done();
+
     },
+
     goldenImage: './test/render/golden-images/cube.png'
+
   }
+
 ];
 
+
+
 new TestRender({width: 800, height: 600})
+
   .add(TEST_CASES)
+
   .run({
+
     onTestFail: window.browserTestDriver_fail
+
   })
+
   .then(window.browserTestDriver_finish);
 ```
 

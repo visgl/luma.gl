@@ -24,18 +24,31 @@ Use render bundles when the same draw commands execute every frame and only the 
 
 ```
 const renderBundleEncoder = device.createRenderBundleEncoder({
+
   colorAttachmentFormats: [device.preferredColorFormat]
+
 });
+
+
 
 model.draw(renderBundleEncoder);
+
 const renderBundle = renderBundleEncoder.finish();
 
+
+
 const renderPass = device.beginRenderPass({
+
   clearColor: [0, 0, 0, 1],
+
   clearDepth: 1
+
 });
+
 renderPass.executeBundles([renderBundle]);
+
 renderPass.end();
+
 device.submit();
 ```
 

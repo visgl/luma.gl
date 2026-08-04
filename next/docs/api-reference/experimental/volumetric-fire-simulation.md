@@ -8,58 +8,111 @@ This is a real-time visual-effects solver rather than a general computational-fl
 
 ```
 import {Texture} from '@luma.gl/core';
+
 import {VolumetricFireSimulation} from '@luma.gl/experimental';
 
+
+
 const dimensions = [64, 96, 64] as const;
+
 const obstacleTexture = device.createTexture({
+
   dimension: '3d',
+
   width: dimensions[0],
+
   height: dimensions[1],
+
   depth: dimensions[2],
+
   format: 'r8unorm',
+
   usage: Texture.SAMPLE | Texture.COPY_DST,
+
   data: obstacleMask
+
 });
+
+
 
 const simulation = new VolumetricFireSimulation(device, {
+
   id: 'forge-fire',
+
   dimensions,
+
   pressureIterations: 6,
+
   obstacleTexture
+
 });
 
+
+
 const commandEncoder = device.createCommandEncoder({id: 'fire-step'});
+
 simulation.encode(commandEncoder, {
+
   deltaTime: 1 / 60,
+
   time: elapsedSeconds,
+
   emitters: [
+
     {
+
       position: [0.5, 0.08, 0.5],
+
       radius: 0.07,
+
       velocity: [0, 0.45, 0],
+
       density: 1.2,
+
       temperature: 5.5,
+
       fuel: 1,
+
       rate: 1,
+
       impulse: 1
+
     }
+
   ],
+
   buoyancy: 3,
+
   smokeWeight: 0.15,
+
   turbulence: 2.5,
+
   vorticity: 0.45,
+
   velocityDissipation: 0.997,
+
   densityDissipation: 0.995,
+
   temperatureDissipation: 0.99,
+
   fuelDissipation: 0.985,
+
   reactionRate: 1.5,
+
   heatRelease: 2,
+
   smokeYield: 0.6,
+
   cooling: 0.12,
+
   boundaryDamping: 0.72,
+
   obstacleThreshold: 0.5,
+
   noiseScale: 3.4
+
 });
+
 device.submit(commandEncoder.finish());
 ```
 

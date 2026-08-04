@@ -13,19 +13,34 @@
 ```
 import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/tables';
 
+
+
 const positions = new GPUDataView({
+
   buffer,
+
   format: 'float32x3',
+
   length: vertexCount,
+
   byteOffset: 4,
+
   byteStride: 16
+
 });
 
+
+
 const colors = makeGPUDataViewFromAttribute({
+
   buffer,
+
   bufferLayout,
+
   attributeName: 'colors',
+
   length: vertexCount
+
 });
 ```
 

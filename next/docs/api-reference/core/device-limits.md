@@ -14,12 +14,19 @@ Access the current `Device` limits using the `device.limits` field
 
 ```
 import type {DeviceLimits} from '@luma.gl/core';
+
 import {Device} from '@luma.gl/core';
 
+
+
 const limits: DeviceLimits = device.limits;
+
 console.log(limits);
+
 if (limits.maxTextureDimension2D > 2048) {
+
    ...
+
 }
 ```
 

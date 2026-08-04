@@ -7,6 +7,8 @@ The `random` shader module injects a small random-number helper into shaders. It
 ```
 import {random} from '@luma.gl/shadertools';
 
+
+
 const modules = [random];
 ```
 

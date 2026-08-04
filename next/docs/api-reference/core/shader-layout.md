@@ -13,18 +13,31 @@ luma.gl uses `ShaderLayout` to match named JavaScript resources to the numeric b
 
 ```
 const shaderLayout = {
+
   attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+
   bindings: [
+
     {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+
     {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+
     {name: 'materialUniforms', type: 'uniform', group: 3, location: 0}
+
   ]
+
 };
 
+
+
 const pipeline = device.createRenderPipeline({
+
   vs,
+
   fs,
+
   shaderLayout
+
 });
 ```
 
@@ -34,10 +47,15 @@ const pipeline = device.createRenderPipeline({
 
 ```
 type ShaderLayout = {
+
   attributes: AttributeDeclaration[];
+
   bindings: BindingDeclaration[];
+
   uniforms?: any[];
+
   varyings?: VaryingBinding[];
+
 };
 ```
 
@@ -45,7 +63,9 @@ type ShaderLayout = {
 
 ```
 type ComputeShaderLayout = {
+
   bindings: BindingDeclaration[];
+
 };
 ```
 
@@ -53,10 +73,15 @@ type ComputeShaderLayout = {
 
 ```
 type AttributeDeclaration = {
+
   name: string;
+
   location: number;
+
   type: AttributeShaderType;
+
   stepMode?: 'vertex' | 'instance';
+
 };
 ```
 
@@ -64,11 +89,17 @@ Example:
 
 ```
 const shaderLayout = {
+
   attributes: [
+
     {name: 'positions', location: 0, type: 'vec3<f32>'},
+
     {name: 'instanceOffsets', location: 1, type: 'vec2<f32>', stepMode: 'instance'}
+
   ],
+
   bindings: []
+
 };
 ```
 
@@ -86,10 +117,15 @@ All binding declarations include these core fields:
 
 ```
 {
+
   name: string;
+
   group: number;
+
   location: number;
+
   type: ...;
+
 }
 ```
 
@@ -101,11 +137,17 @@ Example:
 
 ```
 bindings: [
+
   {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+
   {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+
   {name: 'materialUniforms', type: 'uniform', group: 3, location: 0},
+
   {name: 'baseColorTexture', type: 'texture', group: 3, location: 1},
+
   {name: 'baseColorSampler', type: 'sampler', group: 3, location: 2}
+
 ]
 ```
 
@@ -121,10 +163,15 @@ Uniform buffer:
 
 ```
 {
+
   name: 'frameUniforms',
+
   type: 'uniform',
+
   group: 0,
+
   location: 0
+
 }
 ```
 
@@ -132,12 +179,19 @@ Texture:
 
 ```
 {
+
   name: 'baseColorTexture',
+
   type: 'texture',
+
   group: 3,
+
   location: 1,
+
   viewDimension: '2d',
+
   sampleType: 'float'
+
 }
 ```
 
@@ -145,11 +199,17 @@ Sampler:
 
 ```
 {
+
   name: 'baseColorSampler',
+
   type: 'sampler',
+
   group: 3,
+
   location: 2,
+
   samplerType: 'filtering'
+
 }
 ```
 

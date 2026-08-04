@@ -14,6 +14,7 @@ Create a pair of shaders
 
 ```
 const vs = device.createShader({stage: 'vertex', source});
+
 const fs = device.createShader({stage: 'fragment', source});
 ```
 

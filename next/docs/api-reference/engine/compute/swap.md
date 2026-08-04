@@ -9,7 +9,10 @@
 ```
 import {SwapBuffers} from '@luma.gl/engine';
 
+
+
 const swapBuffers = new SwapBuffers(device, {byteLength: 1024});
+
 swapBuffers.swap();
 ```
 

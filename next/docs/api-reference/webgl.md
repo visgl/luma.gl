@@ -10,14 +10,23 @@ Importing `webgl2Adapter` from `@luma.gl/webgl` enables WebGL devices to be crea
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
 
+
+
 const device = await luma.createDevice({
+
   adapters: [webgl2Adapter],
+
   createCanvasContext: {width: 800, height: 600}
+
 });
 
+
+
 // Resources can now be created
+
 const buffer = device.createBuffer(...);
 ```
 
@@ -32,9 +41,15 @@ To use a luma.gl WebGL `Device` with raw WebGL calls, the application can access
 ```
 import type {WebGLDevice} from '@luma.gl/webgl';
 
+
+
 const webglDevice = device as WebGLDevice;
+
 const gpuDevice: WebGL2RenderingContext = webglDevice.handle;
 
+
+
 const buffer = device.createBuffer(...);
+
 const gpuBuffer: WebGLBuffer = buffer.handle;
 ```

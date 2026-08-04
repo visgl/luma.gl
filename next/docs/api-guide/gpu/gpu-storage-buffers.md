@@ -12,11 +12,17 @@ Declare storage bindings in the shader layout:
 
 ```
 const shaderLayout = {
+
   attributes: [],
+
   bindings: [
+
     {name: 'positions', type: 'storage', group: 0, location: 0},
+
     {name: 'velocities', type: 'storage', group: 0, location: 1}
+
   ]
+
 };
 ```
 
@@ -24,8 +30,11 @@ Bind GPU buffers by the same names:
 
 ```
 model.setBindings({
+
   positions: positionBuffer,
+
   velocities: velocityBuffer
+
 });
 ```
 
@@ -33,12 +42,19 @@ or, for compute:
 
 ```
 const computation = new Computation(device, {
+
   source,
+
   shaderLayout,
+
   bindings: {
+
     positions: positionBuffer,
+
     velocities: velocityBuffer
+
   }
+
 });
 ```
 
@@ -46,9 +62,13 @@ WGSL then sees the raw storage arrays:
 
 ```
 @group(0) @binding(auto)
+
 var<storage, read_write> positions: array<vec2<f32>>;
 
+
+
 @group(0) @binding(auto)
+
 var<storage, read_write> velocities: array<vec2<f32>>;
 ```
 
@@ -60,11 +80,17 @@ Storage buffers become especially useful when the shader reads a well-structured
 
 ```
 struct InstanceRecord {
+
   modelMatrix: mat4x4<f32>,
+
   tint: vec4<f32>,
+
 };
 
+
+
 @group(0) @binding(auto)
+
 var<storage, read> instances: array<InstanceRecord>;
 ```
 
@@ -94,18 +120,31 @@ For table vectors, use `GPUTableComputation` when storage bindings should come f
 
 ```
 const computation = new GPUTableComputation(device, {
+
   source: computeShader,
+
   shaderLayout,
+
   inputVectors: {
+
     particlePositions,
+
     particleVelocities
+
   }
+
 });
 
+
+
 const computePass = device.beginComputePass({});
+
 computation.dispatchBatches(computePass, batch =>
+
   Math.ceil(batch.numRows / WORKGROUP_SIZE)
+
 );
+
 computePass.end();
 ```
 

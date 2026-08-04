@@ -28,25 +28,45 @@ Automatic update usage (assume `update` method is being called once per frame):
 
 ```
 animationLoop.attachTimeline(new Timeline());
+
 const timeline = animationLoop.timeline;
+
 const channel1 = timeline.addChannel({
+
   rate: 0.5,
+
   duration: 4000,
+
   repeat: Number.POSITIVE_INFINITY
+
 });
+
 const channel2 = timeline.addChannel({
+
   rate: 2,
+
   delay: 500,
+
   duration: 1000,
+
   repeat: 3
+
 });
+
+
 
 timeline.pause();
+
 timeline.play();
 
+
+
 model.setUniforms({
+
   uValue1: timeline.getTime(channel1);
+
   uValue2: timeline.getTime(channel2);
+
 });
 ```
 
@@ -54,22 +74,39 @@ Manual usage:
 
 ```
 const timeline = new Timeline();
+
 const channel1 = timeline.addChannel({
+
   rate: 0.5,
+
   duration: 4000,
+
   repeat: Number.POSITIVE_INFINITY
+
 });
+
 const channel2 = timeline.addChannel({
+
   rate: 2,
+
   delay: 500,
+
   duration: 1000,
+
   repeat: 3
+
 });
+
 timeline.setTime(500);
 
+
+
 model.setUniforms({
+
   uValue1: timeline.getTime(channel1);
+
   uValue2: timeline.getTime(channel2);
+
 });
 ```
 

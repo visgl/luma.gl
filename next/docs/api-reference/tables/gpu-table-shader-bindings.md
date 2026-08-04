@@ -10,28 +10,51 @@ Use `GPUTableModel` for automatic integration. Use this class directly when an a
 
 ```
 const prepared = new GPUTableShaderBindings(device, {
+
   table,
+
   gpuInputSchema: PointModel.gpuInputSchema,
+
   shaderLayout
+
 });
+
+
 
 const model = new Model(device, {
+
   source,
+
   modules: prepared.shaderModule ? [prepared.shaderModule] : [],
+
   shaderLayout,
+
   bufferLayout: prepared.bufferLayout,
+
   attributes: prepared.batches[0]?.attributes,
+
   bindings: prepared.batches[0]?.bindings
+
 });
 
+
+
 for (const batch of prepared.batches) {
+
   model.setAttributes(batch.attributes);
+
   model.setBindings(batch.bindings);
+
   model.setConstantAttributes(prepared.constantAttributes);
+
   model.draw(renderPass);
+
 }
 
+
+
 model.destroy();
+
 prepared.destroy();
 ```
 
@@ -39,9 +62,13 @@ prepared.destroy();
 
 ```
 new GPUTableShaderBindings(device, {
+
   table,
+
   gpuInputSchema,
+
   shaderLayout
+
 });
 ```
 
@@ -63,9 +90,13 @@ The schema and shader layout define the pipeline contract and remain fixed for t
 
 ```
 type GPUTableShaderBindingBatch = {
+
   attributes: Record<string, Buffer | DynamicBuffer>;
+
   attributeBuffers: Array<Buffer | DynamicBuffer>;
+
   bindings: Record<string, Binding>;
+
 };
 ```
 
@@ -97,10 +128,15 @@ When storage declarations are present, `shaderModule` contributes:
 
 ```
 @group(0) @binding(auto)
+
 var<uniform> gpuTableColumns : GPUTableColumnUniforms;
 
+
+
 fn gpuTable_getRowIndex(rowIndex : u32, rowMultiplier : u32) -> u32 {
+
   return rowIndex * rowMultiplier;
+
 }
 ```
 
@@ -108,10 +144,15 @@ Each storage binding receives a generated field named `<storageBindingName>RowMu
 
 ```
 let color = pointColors[
+
   gpuTable_getRowIndex(
+
     instanceIndex,
+
     gpuTableColumns.pointColorsRowMultiplier
+
   )
+
 ];
 ```
 
@@ -121,15 +162,25 @@ The multiplier is `1` for varying columns and `0` for constants. The uniform bin
 
 ```
 const model = new GPUTableModel(device, {
+
   source,
+
   shaderLayout,
+
   gpuInputSchema: PointModel.gpuInputSchema,
+
   table,
+
   tableCount: 'instance'
+
 });
 
+
+
 model.drawBatches(renderPass);
+
 model.setProps({table: replacementTable});
+
 model.destroy();
 ```
 

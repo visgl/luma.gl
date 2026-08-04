@@ -50,35 +50,65 @@ Create a `BufferTransform` object by passing, vs (vertex shader), source buffer(
 
 ```
 const VS = `\
+
 #version 300 es
+
 attribute float inValue;
+
 varying float outValue;
 
+
+
 void main()
+
 {
+
   outValue = 2.0 * inValue;
+
 }
+
 `;
 
+
+
 const sourceData = new Float32Array([10, 20, 31, 0, -57]);
+
 const sourceBuffer = device.createBuffer({data: sourceData});
 
+
+
 // Default values applied for size (1) and type (gl.FLOAT)
+
 const feedbackBuffer = device.createBuffer({byteLength: sourceData.length * 4});
 
+
+
 const transform = new BufferTransform(device, {
+
   sourceBuffers: {
+
     inValue: sourceBuffer
+
   },
+
   feedbackBuffers: {
+
     outValue: feedbackBuffer
+
   },
+
   vs: VS,
+
   varyings: ['outValue'],
+
   elementCount: 5
+
 });
 
+
+
 // Perform one transform feedback iteration
+
 transform.run();
 ```
 
@@ -88,15 +118,25 @@ transform.run();
 
 ```
 const transform = new BufferTransform(device, {
+
   sourceBuffers: {
+
     inValue: sourceBuffer
+
   },
+
   feedbackMap: {
+
     inValue: 'outValue'
+
   },
+
   vs: VS,
+
   varyings: ['outValue'],
+
   elementCount: 5
+
 });
 ```
 
@@ -107,19 +147,34 @@ When `feedbackMap` is specified buffers can be swapped using a single call to `s
 ```
 // Setup BufferTransform with `souceDestinationMap` as above
 
+
+
 transform.run();
+
+
 
 let bufferWithNewValues = transform.getBuffer('outValue');
-...
-// Render using 'bufferWithNewValues'
+
 ...
 
-//swap buffers
-transform.swap();
-transform.run();
-bufferWithNewValues = transform.getBuffer('outValue');
-...
 // Render using 'bufferWithNewValues'
+
+...
+
+
+
+//swap buffers
+
+transform.swap();
+
+transform.run();
+
+bufferWithNewValues = transform.getBuffer('outValue');
+
+...
+
+// Render using 'bufferWithNewValues'
+
 ...
 ```
 
@@ -129,16 +184,28 @@ Once `BufferTransform` object is constructed and used, one or more source or des
 
 ```
 // transform is set up as above
+
 ...
 
+
+
 // update buffer binding for 'inValue' attribute
+
 const newSourceBuffer = new Buffer(gl, {data: newSourceData});
+
 transform.update({
+
   sourceBuffers: {
+
     inValue: newSourceBuffer
+
   }
+
 });
 
+
+
 // now data is provided from newly bound buffer.
+
 transform.run();
 ```

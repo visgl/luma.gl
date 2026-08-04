@@ -10,8 +10,11 @@ See [GPU Floating-Point Precision Techniques](https://luma.gl/next/docs/api-guid
 
 ```
 {
+
   ONE: 'f32',
+
   SPLIT: 'f32'
+
 }
 ```
 
@@ -21,6 +24,8 @@ These uniforms are supplied automatically by the module's `defaultUniforms`.
 
 ```
 import {fp64arithmetic} from '@luma.gl/shadertools';
+
+
 
 const modules = [fp64arithmetic];
 ```
@@ -33,11 +38,17 @@ The selection is a shader define, so it can also be forced on for another adapte
 
 ```
 const computation = new Computation(device, {
+
   // ...
+
   modules: [fp64arithmetic],
+
   defines: {
+
     LUMA_FP64_INTEGER_ARITHMETIC: true // false overrides the Apple default
+
   }
+
 });
 ```
 
@@ -51,8 +62,11 @@ WGSL also exposes:
 
 ```
 fn sub_fp64u32_to_f32_bits(aBits: vec2u, bBits: vec2u) -> u32
+
 fn sub_fp64u32_to_f32(aBits: vec2u, bBits: vec2u) -> f32
+
 fn sub_fp64u32_to_fp64_bits(aBits: vec2u, bBits: vec2u) -> vec2u
+
 fn sub_fp64u32_to_fp64(aBits: vec2u, bBits: vec2u) -> vec2f
 ```
 
@@ -77,9 +91,13 @@ WGSL additionally exposes normalized comparison helpers:
 
 ```
 fn normalize_fp64(value: vec2f) -> vec2f
+
 fn is_nan_fp64(value: vec2f) -> bool
+
 fn is_finite_fp64(value: vec2f) -> bool
+
 fn sign_fp64(value: vec2f) -> i32
+
 fn compare_fp64(a: vec2f, b: vec2f) -> i32
 ```
 

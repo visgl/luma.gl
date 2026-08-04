@@ -35,52 +35,99 @@ The extra attachment names are conventions at the application boundary; `GBuffer
 
 ```
 import {Buffer} from '@luma.gl/core';
+
 import {ShaderPassRenderer} from '@luma.gl/engine';
+
 import {
+
   createDeferredLightingShaderPassPipeline,
+
   GBuffer,
+
   makeDeferredPointLightBufferData,
+
   MAX_DEFERRED_POINT_LIGHTS
+
 } from '@luma.gl/experimental';
 
+
+
 const gBuffer = new GBuffer(device, {
+
   width,
+
   height,
+
   colorFormat: 'rgba16float',
+
   extraColorAttachments: [
+
     {name: 'baseColorMetallic', format: 'rgba8unorm'},
+
     {name: 'emissiveOcclusion', format: 'rgba8uint'}
+
   ]
+
 });
+
+
 
 const pointLights = device.createBuffer({
+
   data: makeDeferredPointLightBufferData(lights, MAX_DEFERRED_POINT_LIGHTS),
+
   usage: Buffer.STORAGE | Buffer.COPY_DST
+
 });
+
+
 
 const renderer = new ShaderPassRenderer(device, {
+
   shaderPasses: [createDeferredLightingShaderPassPipeline()]
+
 });
 
+
+
 renderer.renderToScreen({
+
   sourceTexture: gBuffer.colorTexture,
+
   bindings: {
+
     depthTexture: gBuffer.depthTexture,
+
     normalTexture: gBuffer.normalRoughnessTexture,
+
     baseColorMetallicTexture: gBuffer.getExtraColorTexture('baseColorMetallic'),
+
     emissiveOcclusionTexture: gBuffer.getExtraColorTexture('emissiveOcclusion'),
+
     pointLights
+
   },
+
   uniforms: {
+
     deferredLighting: {
+
       inverseProjectionMatrix,
+
       ambientColor: [0.03, 0.03, 0.05],
+
       directionalLightDirectionView,
+
       directionalLightColor: [1, 0.9, 0.8],
+
       directionalLightIntensity: 2.5,
+
       pointLightCount: lights.length
+
     }
+
   }
+
 });
 ```
 

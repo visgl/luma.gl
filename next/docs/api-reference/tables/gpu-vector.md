@@ -11,14 +11,25 @@
 ```
 import {GPUVector} from '@luma.gl/tables';
 
+
+
 const gpuVector = new GPUVector({
+
   type: 'buffer',
+
   name: 'positions',
+
   buffer,
+
   format: 'float32x3',
+
   length,
+
   byteStride: 12
+
 });
+
+
 
 gpuVector.data[0].buffer; // the bindable storage
 ```

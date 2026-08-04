@@ -1,0 +1,23 @@
+{
+  "name": "luma.gl-examples-showcase-crossfilter-supremacy",
+  "version": "9.4.0-alpha.4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "visual-smoke": "node ./scripts/visual-smoke.mjs",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/core": "9.4.0-alpha.4",
+    "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/experimental": "9.4.0-alpha.4",
+    "@luma.gl/tables": "9.4.0-alpha.4",
+    "@luma.gl/webgpu": "9.4.0-alpha.4"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}

@@ -19,35 +19,65 @@ Grouped bindings are keyed by bind-group index, and sparse groups are valid.
 
 ```
 const source = /* wgsl */ `
+
 @group(0) @binding(0) var<storage, read_write> data: array<i32>;
 
+
+
 struct SceneUniforms {
+
   addend: i32
+
 };
+
+
 
 @group(2) @binding(0) var<uniform> sceneUniforms: SceneUniforms;
 
+
+
 @compute @workgroup_size(1)
+
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+
   let i = id.x;
+
   data[i] = data[i] + sceneUniforms.addend;
+
 }
+
 `;
 
+
+
 const shader = webgpuDevice.createShader({source});
+
 const computePipeline = webgpuDevice.createComputePipeline({
+
   shader,
+
   shaderLayout: {
+
     bindings: [
+
       {name: 'data', type: 'storage', group: 0, location: 0},
+
       {name: 'sceneUniforms', type: 'uniform', group: 2, location: 0}
+
     ]
+
   }
+
 });
 
+
+
 computePipeline.setBindings({
+
   0: {data: workBuffer},
+
   2: {sceneUniforms}
+
 });
 ```
 
@@ -55,8 +85,11 @@ Flat bindings work as well:
 
 ```
 computePipeline.setBindings({
+
   data: workBuffer,
+
   sceneUniforms
+
 });
 ```
 

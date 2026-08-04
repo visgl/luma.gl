@@ -24,6 +24,7 @@ Two `TextureView` objects are texture-view-aliasing if and only if their sets of
 
 ```
 const texture = device.createTexture({...});
+
 const textureView = texture.createView({...});
 ```
 

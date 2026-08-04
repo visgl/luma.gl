@@ -10,6 +10,12 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0[​](#upgrading-to-v100 "Direct link to Upgrading to v10.0")
 
+**@luma.gl/shadertools**
+
+* `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or `new WGSLShaderAssembler()` for WGSL.
+* `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language. Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')` or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
+* `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or `instanceof WGSLShaderAssembler` before assembling shader source.
+
 **@luma.gl/experimental**
 
 * `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque `sourceTexture` and return the resolved color texture. Applications must render opaque color and depth before invoking the OIT renderer; the former base-pass/framebuffer callbacks were removed.
@@ -53,6 +59,14 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 * `BufferTransform.run()` now creates its render pass with `discard: true` by default, avoiding unnecessary attachment stores for transform-feedback-only workloads. Applications that attach a framebuffer and consume rasterized fragment output must pass `discard: false` to `run()`.
 * `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 * `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
+
+**@luma.gl/webgl**
+
+* WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+
+**@luma.gl/webgpu**
+
+* `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
 
 **@luma.gl/arrow**
 

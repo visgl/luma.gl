@@ -20,10 +20,15 @@ Creating a framebuffer and have it auto-create color and depth attachments
 
 ```
 const framebuffer = device.createFramebuffer({
+
   width: window.innerWidth,
+
   height: window.innerHeight,
+
   colorAttachments: [{format: 'rgb8unorm'}],
+
   depthStencilAttachment: {format: 'depth24plus-stencil8'}
+
 });
 ```
 
@@ -31,13 +36,21 @@ Creating a framebuffer with supplied color and depth attachments
 
 ```
 const size = {
+
   width: window.innerWidth,
+
   height: window.innerHeight
+
 };
+
 const framebuffer = device.createFramebuffer({
+
   ...size,
+
   colorAttachments: [device.createTexture({format: 'rgb8unorm', ...size})],
+
   depthStencilAttachment: device.createTexture({format: 'depth24plus-stencil8', ...size})
+
 });
 ```
 
@@ -53,7 +66,9 @@ For the
 
 ```
 const canvasFramebuffer = canvasContext.getDefaultFramebuffer();
+
 const canvasRenderPass = device.beginRenderPass({framebuffer: canvasFramebuffer});
+
 model2.draw({renderPass: screenRenderPass, ...});
 ```
 
@@ -62,14 +77,24 @@ Alternatively can create texture based framebuffers for off-screen rendering. Sp
 ```
 const offScreenFramebuffer = device.createFramebuffer(...);
 
+
+
 const offScreenRenderPass = device.beginRenderPass({framebuffer: offScreenFramebuffer});
+
 model1.draw({renderPass: offScreenRenderPass, ...});
+
 offScreenRenderPass.endPass();
 
+
+
 // Textures attached offscreenFramebuffer now contain the results of the first renderpass, 
+
 // and those textures can be used as input for a second to-screen render pass
 
+
+
 const screenRenderPass = device.beginRenderPass();
+
 model2.draw({renderPass: screenRenderPass, ...});
 ```
 

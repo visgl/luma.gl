@@ -2,7 +2,7 @@
 
 > **DeviceInfo** = `object`
 
-Defined in: [modules/core/src/adapter/device.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L49)
+Defined in: [modules/core/src/adapter/device.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L52)
 
 Identifies the GPU vendor and driver.
 
@@ -20,7 +20,7 @@ Chrome WebGPU does not provide much information, though more can be enabled with
 
 > `optional` **fallback?**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L67)
+Defined in: [modules/core/src/adapter/device.ts:70](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L70)
 
 If this is a fallback adapter
 
@@ -30,7 +30,7 @@ If this is a fallback adapter
 
 > `optional` **featureLevel?**: [`WebGPUDeviceFeatureLevel`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeatureLevel.md)
 
-Defined in: [modules/core/src/adapter/device.ts:69](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L69)
+Defined in: [modules/core/src/adapter/device.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L72)
 
 Effective WebGPU feature level used to create this device. Undefined for non-WebGPU devices.
 
@@ -40,7 +40,7 @@ Effective WebGPU feature level used to create this device. Undefined for non-Web
 
 > **gpu**: `"nvidia"` | `"amd"` | `"intel"` | `"apple"` | `"software"` | `"unknown"`
 
-Defined in: [modules/core/src/adapter/device.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L59)
+Defined in: [modules/core/src/adapter/device.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L62)
 
 family of GPU
 
@@ -50,7 +50,7 @@ family of GPU
 
 > `optional` **gpuArchitecture?**: `string`
 
-Defined in: [modules/core/src/adapter/device.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L63)
+Defined in: [modules/core/src/adapter/device.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L66)
 
 GPU architecture
 
@@ -60,7 +60,7 @@ GPU architecture
 
 > `optional` **gpuBackend?**: `"opengl"` | `"opengles"` | `"metal"` | `"d3d11"` | `"d3d12"` | `"vulkan"` | `"unknown"`
 
-Defined in: [modules/core/src/adapter/device.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L65)
+Defined in: [modules/core/src/adapter/device.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L68)
 
 GPU driver backend. Can sometimes be sniffed
 
@@ -70,7 +70,7 @@ GPU driver backend. Can sometimes be sniffed
 
 > **gpuType**: `"discrete"` | `"integrated"` | `"cpu"` | `"unknown"`
 
-Defined in: [modules/core/src/adapter/device.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L61)
+Defined in: [modules/core/src/adapter/device.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L64)
 
 Type of GPU ()
 
@@ -80,7 +80,7 @@ Type of GPU ()
 
 > **renderer**: `string`
 
-Defined in: [modules/core/src/adapter/device.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L55)
+Defined in: [modules/core/src/adapter/device.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L58)
 
 Renderer (usually driver name)
 
@@ -90,7 +90,7 @@ Renderer (usually driver name)
 
 > **shadingLanguage**: `"wgsl"` | `"glsl"`
 
-Defined in: [modules/core/src/adapter/device.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L71)
+Defined in: [modules/core/src/adapter/device.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L74)
 
 Shader language supported by device.createShader()
 
@@ -100,7 +100,7 @@ Shader language supported by device.createShader()
 
 > **shadingLanguageVersion**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:73](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L73)
+Defined in: [modules/core/src/adapter/device.ts:76](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L76)
 
 Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100
 
@@ -110,7 +110,7 @@ Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100
 
 > **type**: `"webgl"` | `"webgpu"` | `"null"` | `"unknown"`
 
-Defined in: [modules/core/src/adapter/device.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L51)
+Defined in: [modules/core/src/adapter/device.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L54)
 
 Type of device
 
@@ -120,7 +120,7 @@ Type of device
 
 > **vendor**: `string`
 
-Defined in: [modules/core/src/adapter/device.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L53)
+Defined in: [modules/core/src/adapter/device.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L56)
 
 Vendor (name of GPU vendor, Apple, nVidia etc
 
@@ -130,6 +130,6 @@ Vendor (name of GPU vendor, Apple, nVidia etc
 
 > **version**: `string`
 
-Defined in: [modules/core/src/adapter/device.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L57)
+Defined in: [modules/core/src/adapter/device.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L60)
 
 version of driver

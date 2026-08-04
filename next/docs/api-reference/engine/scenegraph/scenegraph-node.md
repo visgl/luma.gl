@@ -9,7 +9,10 @@
 ```
 import {ScenegraphNode} from '@luma.gl/engine';
 
+
+
 const node = new ScenegraphNode({position: [0, 1, 2]});
+
 node.updateMatrix();
 ```
 
@@ -19,13 +22,21 @@ node.updateMatrix();
 
 ```
 export type ScenegraphNodeProps = {
+
   id?: string;
+
   display?: boolean;
+
   matrix?: NumericArray;
+
   position?: NumericArray;
+
   rotation?: NumericArray;
+
   scale?: NumericArray;
+
   update?: boolean;
+
 };
 ```
 

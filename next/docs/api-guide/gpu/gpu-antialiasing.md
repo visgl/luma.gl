@@ -72,9 +72,13 @@ WebGL exposes `antialias` as a context-creation attribute:
 
 ```
 const device = await luma.createDevice({
+
   type: 'webgl2',
+
   createCanvasContext: true,
+
   webgl: {antialias: true}
+
 });
 ```
 
@@ -82,6 +86,7 @@ This is a request for the default drawing buffer only. The browser chooses the t
 
 ```
 const gl = device.gl as WebGL2RenderingContext;
+
 const antialias = gl.getContextAttributes()?.antialias;
 ```
 
@@ -104,17 +109,29 @@ Proposed API, not implemented
 
 ```
 const colorTexture = device.createTexture({
+
   width,
+
   height,
+
   format: 'rgba8unorm',
+
   usage: Texture.RENDER | Texture.SAMPLE
+
 });
 
+
+
 const framebuffer = device.createFramebuffer({
+
   width,
+
   height,
+
   samples: 4,
+
   colorAttachments: [colorTexture]
+
 });
 ```
 

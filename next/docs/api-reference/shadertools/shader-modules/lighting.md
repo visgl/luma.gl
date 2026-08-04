@@ -57,9 +57,13 @@ The following legacy props are still accepted and are normalized to the same uni
 
 ```
 type AmbientLight = {
+
   type: 'ambient';
+
   color?: [number, number, number];
+
   intensity?: number;
+
 };
 ```
 
@@ -67,11 +71,17 @@ type AmbientLight = {
 
 ```
 type PointLight = {
+
   type: 'point';
+
   position: [number, number, number];
+
   color?: [number, number, number];
+
   intensity?: number;
+
   attenuation?: [number, number, number];
+
 };
 ```
 
@@ -81,14 +91,23 @@ type PointLight = {
 
 ```
 type SpotLight = {
+
   type: 'spot';
+
   position: [number, number, number];
+
   direction: [number, number, number];
+
   color?: [number, number, number];
+
   intensity?: number;
+
   attenuation?: [number, number, number];
+
   innerConeAngle?: number;
+
   outerConeAngle?: number;
+
 };
 ```
 
@@ -96,10 +115,15 @@ type SpotLight = {
 
 ```
 type DirectionalLight = {
+
   type: 'directional';
+
   direction: [number, number, number];
+
   color?: [number, number, number];
+
   intensity?: number;
+
 };
 ```
 
@@ -111,21 +135,37 @@ On the JavaScript side you work with `lights: Light[]`. On the GPU side the modu
 
 ```
 {
+
   enabled: 'i32',
+
   directionalLightCount: 'i32',
+
   pointLightCount: 'i32',
+
   spotLightCount: 'i32',
+
   ambientColor: 'vec3<f32>',
+
   lights: [
+
     {
+
       color: 'vec3<f32>',
+
       position: 'vec3<f32>',
+
       direction: 'vec3<f32>',
+
       attenuation: 'vec3<f32>',
+
       coneCos: 'vec2<f32>'
+
     },
+
     5
+
   ]
+
 }
 ```
 
@@ -142,27 +182,49 @@ Additional non-ambient lights beyond `5` are truncated and logged as a warning.
 
 ```
 import {ShaderInputs} from '@luma.gl/engine';
+
 import {lighting, phongMaterial} from '@luma.gl/shadertools';
+
+
 
 const shaderInputs = new ShaderInputs({lighting, phongMaterial});
 
+
+
 shaderInputs.setProps({
+
   lighting: {
+
     useByteColors: false,
+
     lights: [
+
       {type: 'ambient', color: [1, 1, 1], intensity: 0.1},
+
       {type: 'point', color: [1, 0.47, 0.04], position: [2, 4, 3]},
+
       {
+
         type: 'spot',
+
         color: [0.31, 0.63, 1],
+
         position: [-3, -2, 2],
+
         direction: [3, 2, -2],
+
         innerConeAngle: 0.2,
+
         outerConeAngle: 0.6
+
       },
+
       {type: 'directional', color: [1, 1, 1], direction: [0, -1, 0]}
+
     ]
+
   }
+
 });
 ```
 

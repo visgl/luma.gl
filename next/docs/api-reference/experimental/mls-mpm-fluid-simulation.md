@@ -14,8 +14,6 @@ GPU-resident MLS-MPM fluid
 
 InfoSource
 
-# Fluid Foundry: Liquid Metal Press
-
 **12,288 particles** exchange mass and momentum through a WebGPU MLS-MPM grid, then become a shaded HDR liquid surface without CPU readback. Watch the pressure-charged recirculation spouts, click repeatedly to build a surge, drag to steer, or press **R** to reset.
 
 WebGPU computeCyclic spoutsHDR liquid metal
@@ -29,28 +27,53 @@ WebGPU computeCyclic spoutsHDR liquid metal
 ```
 import {MLSMPMFluidSimulation} from '@luma.gl/experimental';
 
+
+
 const simulation = new MLSMPMFluidSimulation(device, {
+
   gridSize: [96, 64],
+
   particleCount: 16_384,
+
   seed: 42,
+
   velocityDamping: 0.1,
+
   maxVelocity: 2
+
 });
+
+
 
 const commandEncoder = device.createCommandEncoder({id: 'fluid-frame'});
+
 const particleBuffer = simulation.encode(commandEncoder, {
+
   deltaTime: 1 / 960,
+
   gravity: [0, -9.81],
+
   force: pointerDown
+
     ? {position: pointerPosition, radius: 0.08, vector: pointerForce}
+
     : undefined
+
 });
 
+
+
 particleModel.setBindings({particles: particleBuffer});
+
 particleModel.predraw(commandEncoder);
+
 const renderPass = commandEncoder.beginRenderPass({framebuffer});
+
 particleModel.draw(renderPass);
+
 renderPass.end();
+
+
 
 device.submit(commandEncoder.finish());
 ```
@@ -72,13 +95,21 @@ Grid scatter uses signed fixed-point integer atomics so accumulation order does 
 
 ```
 export type MLSMPMFluidSimulationStepOptions = {
+
   deltaTime: number;
+
   gravity?: readonly [number, number];
+
   force?: {
+
     position: readonly [number, number];
+
     radius: number;
+
     vector: readonly [number, number];
+
   };
+
 };
 ```
 
@@ -120,6 +151,7 @@ The public `particleBuffer` uses a stable 48-byte particle record:
 
 ```
 simulation.reset(commandEncoder);
+
 simulation.reset(commandEncoder, replacementParticles);
 ```
 

@@ -33,19 +33,30 @@ Returns the unpremultiplied RGBA color when alpha is greater than zero, otherwis
 ```
 import {colors, lighting} from '@luma.gl/shadertools';
 
+
+
 const shaderInputs = new ShaderInputs({colors, lighting});
 
+
+
 shaderInputs.setProps({
+
   colors: {useByteColors: false},
+
   lighting: {
+
     useByteColors: false,
+
     lights: [{type: 'ambient', color: [1, 0.9, 0.8], intensity: 0.2}]
+
   }
+
 });
 ```
 
 ```
 var surfaceColor = colors_normalize4(vec4<f32>(255.0, 128.0, 64.0, 255.0));
+
 surfaceColor = colors_premultiplyAlpha(surfaceColor);
 ```
 
@@ -56,13 +67,22 @@ surfaceColor = colors_premultiplyAlpha(surfaceColor);
 ```
 import {storageColors} from '@luma.gl/shadertools';
 
+
+
 const shaderInputs = new ShaderInputs({storageColors});
+
 shaderInputs.setProps({
+
   storageColors: {
+
     colorBuffer,
+
     format: 'rgba8unorm',
+
     byteStride: 4
+
   }
+
 });
 ```
 

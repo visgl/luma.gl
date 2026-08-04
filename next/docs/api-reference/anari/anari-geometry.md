@@ -14,15 +14,25 @@ Applications normally call the equivalent `anariDevice.newArray(parameters)` fac
 
 ```
 const positions = new Float32Array([
+
   -1, 0, 0,
+
    1, 0, 0,
+
    0, 1, 0
+
 ]);
 
+
+
 const positionArray = anariDevice.newArray({
+
   data: positions,
+
   elementType: 'float32x3',
+
   dimensions: [3]
+
 });
 ```
 
@@ -30,10 +40,16 @@ const positionArray = anariDevice.newArray({
 
 ```
 type ANARIArrayParameters = {
+
   data: ANARIArrayData;
+
   elementType?: string;
+
   dimensions?: readonly number[];
+
 };
+
+
 
 type ANARIArrayData = TypedArray | readonly ANARIObjectReference[];
 ```
@@ -50,6 +66,7 @@ The current implementation preserves the original typed array without copying. `
 
 ```
 array.data: ANARIArrayData;
+
 array.length: number;
 ```
 
@@ -59,6 +76,7 @@ Mutating the original typed array mutates the retained storage:
 
 ```
 positions[0] = -2;
+
 positionArray.data === positions; // true
 ```
 
@@ -66,6 +84,7 @@ When geometry data changes after its first render, commit the owning geometry so
 
 ```
 positions[0] = -2;
+
 geometry.commitParameters();
 ```
 
@@ -73,9 +92,13 @@ geometry.commitParameters();
 
 ```
 const surfaces = anariDevice.newArray({data: [firstSurface, secondSurface]});
+
 const group = anariDevice.newGroup({surface: surfaces});
 
+
+
 const instances = anariDevice.newArray({data: [leftInstance, rightInstance]});
+
 const world = anariDevice.newWorld({instance: instances});
 ```
 
@@ -85,14 +108,23 @@ The exported `ANARIObjectReference` union contains geometries, materials, surfac
 
 ```
 new ANARIGeometry(
+
   device: ANARIDevice,
+
   subtype: ANARIGeometrySubtype,
+
   parameters?: ANARIGeometryParameters
+
 );
 
+
+
 newGeometry(
+
   subtype: 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad',
+
   parameters?: ANARIGeometryParameters
+
 ): ANARIGeometry;
 ```
 
@@ -102,15 +134,25 @@ All geometry objects expose `type === 'geometry'`, their declared `subtype`, and
 
 ```
 type ANARIGeometryParameters = {
+
   'vertex.position'?: Float32Array | ANARIArray;
+
   'vertex.normal'?: Float32Array | ANARIArray;
+
   'vertex.attribute0'?: Float32Array | ANARIArray;
+
   'vertex.attribute1'?: Float32Array | ANARIArray;
+
   'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
+
   radius?: number;
+
   height?: number;
+
   width?: number;
+
   segments?: number;
+
 };
 ```
 
@@ -130,17 +172,29 @@ type ANARIGeometryParameters = {
 
 ```
 const geometry = anariDevice.newGeometry('triangle', {
+
   'vertex.position': new Float32Array([
+
     -1, 0, 0,
+
      1, 0, 0,
+
      0, 1, 0
+
   ]),
+
   'vertex.normal': new Float32Array([
+
     0, 0, 1,
+
     0, 0, 1,
+
     0, 0, 1
+
   ]),
+
   'primitive.index': new Uint16Array([0, 1, 2])
+
 });
 ```
 
@@ -152,8 +206,11 @@ If normals are omitted, the renderer generates flat normals by reading each cons
 
 ```
 const sphere = anariDevice.newGeometry('sphere', {
+
   radius: 1.25,
+
   segments: 24
+
 });
 ```
 
@@ -163,9 +220,13 @@ The runtime creates a luma.gl `SphereGeometry` with `segments` latitude subdivis
 
 ```
 const cylinder = anariDevice.newGeometry('cylinder', {
+
   radius: 0.35,
+
   height: 2,
+
   segments: 32
+
 });
 ```
 
@@ -175,9 +236,13 @@ Cylinders include top and bottom caps and one vertical subdivision.
 
 ```
 const cone = anariDevice.newGeometry('cone', {
+
   radius: 0.8,
+
   height: 1.6,
+
   segments: 32
+
 });
 ```
 
@@ -187,8 +252,11 @@ Cones include their base cap and one vertical subdivision.
 
 ```
 const floor = anariDevice.newGeometry('quad', {
+
   width: 12,
+
   height: 8
+
 });
 ```
 
@@ -198,6 +266,7 @@ Quads lie in the XZ plane. `width` controls X extent; `height` controls Z extent
 
 ```
 sphere.setParameters({radius: 1.6, segments: 48}).commitParameters();
+
 frame.render();
 ```
 

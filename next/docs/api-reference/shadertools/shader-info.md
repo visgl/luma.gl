@@ -12,9 +12,13 @@ Returns information extracted from shader source code
 
 ```
 function getShaderInfo(shaderSource: string): {
+
   name: string;
+
   language: 'glsl' | 'wgsl';
+
   version: number;
+
 }
 ```
 

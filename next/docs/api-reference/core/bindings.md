@@ -19,10 +19,15 @@ For WGSL assembled through `Model` or shadertools, the recommended style is to u
 
 ```
 type Binding =
+
   | TextureView
+
   | Texture
+
   | Sampler
+
   | Buffer
+
   | {buffer: Buffer; offset?: number; size?: number};
 ```
 
@@ -40,11 +45,17 @@ Example:
 
 ```
 const bindings = {
+
   frameUniforms,
+
   lightingUniforms,
+
   materialUniforms,
+
   baseColorTexture: textureView,
+
   baseColorSampler: sampler
+
 };
 ```
 
@@ -60,13 +71,21 @@ Example:
 
 ```
 const bindGroups = {
+
   0: {frameUniforms},
+
   2: {lightingUniforms},
+
   3: {
+
     materialUniforms,
+
     baseColorTexture: textureView,
+
     baseColorSampler: sampler
+
   }
+
 };
 ```
 

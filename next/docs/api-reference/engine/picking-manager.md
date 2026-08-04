@@ -9,16 +9,29 @@ It is useful when rendering models that use the engine `picking`, `colorPicking`
 ```
 import {Model, PickingManager, ShaderInputs, picking} from '@luma.gl/engine';
 
+
+
 const shaderInputs = new ShaderInputs({picking});
+
 const pickingManager = new PickingManager(device, {
+
   shaderInputs,
+
   mode: 'auto',
+
   getTooltip: ({objectIndex}) => (objectIndex === null ? null : `row ${objectIndex}`)
+
 });
 
+
+
 const pickingPass = pickingManager.beginRenderPass();
+
 model.draw(pickingPass);
+
 pickingPass.end();
+
+
 
 const pickInfo = await pickingManager.updatePickInfo(mousePosition);
 ```
@@ -29,8 +42,11 @@ const pickInfo = await pickingManager.updatePickInfo(mousePosition);
 
 ```
 export type PickInfo = {
+
   batchIndex: number | null;
+
   objectIndex: number | null;
+
 };
 ```
 
@@ -55,10 +71,15 @@ export type PickingMode = 'auto' | 'index' | 'color';
 
 ```
 export type PickingManagerProps = {
+
   shaderInputs?: ShaderInputs<{picking: typeof pickingUniforms.props}>;
+
   onObjectPicked?: (info: PickInfo) => void;
+
   getTooltip?: (info: PickInfo) => PickingTooltip;
+
   mode?: PickingMode;
+
 };
 ```
 

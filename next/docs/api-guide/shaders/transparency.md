@@ -42,23 +42,42 @@ Optical materials shade the surface first; the transparency plugin captures the 
 
 ```
 import {ShaderInputs} from '@luma.gl/engine';
+
 import {
+
   aBuffer,
+
   aBufferPlugin,
+
   glassMaterial,
+
   glassMaterialPlugin
+
 } from '@luma.gl/experimental';
+
+
 
 const shaderInputs = new ShaderInputs({glassMaterial, aBuffer});
 
+
+
 shaderInputs.setProps({
+
   glassMaterial: {
+
     viewportSize: [width, height],
+
     sceneColorTexture,
+
     indexOfRefraction: 1.5
+
   },
+
   aBuffer: captureProperties
+
 });
+
+
 
 const plugins = [glassMaterialPlugin, aBufferPlugin];
 ```

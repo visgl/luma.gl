@@ -24,19 +24,34 @@ Notes
 ```
 import {AnimationLoop, Model} from '@luma.gl/engine';
 
+
+
 const model = new Model({device /* ... */});
 
+
+
 const loop = new AnimationLoop({
+
   device,
+
   onRender({animationLoop}) {
+
     const reason = animationLoop.needsRedraw() || model.needsRedraw();
+
     if (reason) {
+
       model.draw();
+
     }
+
   }
+
 });
 
+
+
 model.setNeedsRedraw('initial draw');
+
 loop.start();
 ```
 

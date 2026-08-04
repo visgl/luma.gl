@@ -10,7 +10,10 @@ The `@luma.gl/core` module is not usable on its own. A device adapter module mus
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
+
+
 
 const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter], createCanvasContext: ...});
 ```
@@ -19,8 +22,12 @@ It is possible to supply more than one device adapter to create an application t
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
+
 import {webglAdapter} '@luma.gl/webgl';
+
+
 
 const webgpuDevice = luma.createDevice({type: 'best-available', adapters: [webgpuAdapter, webglAdapter], createCanvasContext: ...});
 ```
@@ -31,7 +38,9 @@ Once the application has created a `Device`, GPU resources can be created:
 
 ```
 const buffer = device.createBuffer(...);
+
 const texture = device.createTexture(...);
+
 const renderPass = device.beginRenderPass(...);
 ```
 

@@ -12,8 +12,6 @@ The result is a reusable receiver-lighting contribution, not a replacement scene
 
 InfoSource
 
-# Spectral Caustics: Prism Cathedral
-
 A rotating convex crystal is captured from the light, then **six CIE/D65 wavelength bands** refract through its real front and back surfaces into an HDR XYZ caustic map.
 
 **Drag** to orbit · **Wheel** to zoom · **Space** for cinematic orbit · **R** to reset
@@ -28,54 +26,104 @@ WebGPU computeGeometry tracedHDR bloom
 
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
+
 import {SpectralCausticsRenderer, spectralCaustics} from '@luma.gl/experimental';
 
+
+
 const causticsRenderer = new SpectralCausticsRenderer(device, {
+
   captureSize: 128,
+
   mapSize: 512,
+
   splatRadius: 2
+
 });
+
+
 
 const receiverShaderInputs = new ShaderInputs({spectralCaustics});
+
 const receiverModel = new Model(device, {
+
   source: receiverShader,
+
   modules: [spectralCaustics],
+
   shaderInputs: receiverShaderInputs,
+
   geometry: receiverGeometry
+
 });
+
+
 
 const commandEncoder = device.createCommandEncoder({id: 'spectral-caustics-frame'});
+
 const causticsProps = causticsRenderer.encode(commandEncoder, {
+
   lightViewProjectionMatrix,
+
   inverseLightViewProjectionMatrix,
+
   receiverOrigin: [0, 0, 0],
+
   receiverTangent: [1, 0, 0],
+
   receiverBitangent: [0, 0, 1],
+
   receiverNormal: [0, 1, 0],
+
   receiverWidth: 12,
+
   receiverHeight: 12,
+
   refractiveIndex: 1.52,
+
   dispersion: 0.025,
+
   absorption: [0.02, 0.008, 0.003],
+
   intensity: 5,
+
   prepareRefractor: ({commandEncoder, captureParameters, lightViewProjectionMatrix}) => {
+
     refractorCaptureModel.shaderInputs.setProps({
+
       capture: {lightViewProjectionMatrix}
+
     });
+
     refractorCaptureModel.setParameters({
+
       ...refractorCaptureModel.parameters,
+
       ...captureParameters
+
     });
+
     refractorCaptureModel.predraw(commandEncoder);
+
   },
+
   drawRefractor: ({renderPass}) => refractorCaptureModel.draw(renderPass)
+
 });
 
+
+
 receiverShaderInputs.setProps({spectralCaustics: causticsProps});
+
 receiverModel.predraw(commandEncoder);
+
 const receiverPass = commandEncoder.beginRenderPass({framebuffer: sceneFramebuffer});
+
 receiverModel.draw(receiverPass);
+
 receiverPass.end();
+
+
 
 device.submit(commandEncoder.finish());
 ```
@@ -84,6 +132,7 @@ The receiver fragment shader adds the traced result in linear HDR space:
 
 ```
 let causticColor = spectralCaustics_getLinearSRGB(inputs.worldPosition);
+
 return vec4f(baseLighting + causticColor, 1.0);
 ```
 
@@ -104,8 +153,11 @@ The application must:
 
 ```
 @fragment fn fragmentMain(input: FragmentInput) -> @location(0) vec4f {
+
   let encodedWorldNormal = normalize(input.worldNormal) * 0.5 + vec3f(0.5);
+
   return vec4f(encodedWorldNormal, 1.0);
+
 }
 ```
 

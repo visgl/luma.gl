@@ -23,8 +23,11 @@ Example:
 
 ```
 // A "minimal" vertex shader
+
 void main(void) {
+
   gl_Position = project_toClipspace(position);
+
 }
 ```
 

@@ -9,11 +9,18 @@
 ```
 import {Geometry} from '@luma.gl/engine';
 
+
+
 const geometry = new Geometry({
+
   topology: 'triangle-list',
+
   attributes: {
+
     POSITION: {size: 3, value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])}
+
   }
+
 });
 ```
 
@@ -23,12 +30,19 @@ const geometry = new Geometry({
 
 ```
 export type GeometryProps = {
+
   id?: string;
+
   topology: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+
   vertexCount?: number;
+
   attributes: Record<string, GeometryAttributeInput>;
+
   bufferLayout?: BufferLayout[];
+
   indices?: GeometryAttribute | TypedArray;
+
 };
 ```
 
@@ -42,9 +56,13 @@ export type GeometryAttributeInput = GeometryAttribute | TypedArray;
 
 ```
 export type GeometryAttribute = {
+
   size?: number;
+
   value: TypedArray;
+
   [key: string]: any;
+
 };
 ```
 
@@ -103,17 +121,30 @@ Packs non-index geometry attributes into one typed-array-backed buffer and retur
 ```
 import {Geometry, makeInterleavedGeometry} from '@luma.gl/engine';
 
+
+
 const geometry = new Geometry({
+
   topology: 'triangle-list',
+
   attributes: {
+
     POSITION: {size: 3, value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])},
+
     TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 1, 0, 0, 1])}
+
   }
+
 });
+
+
 
 const interleavedGeometry = makeInterleavedGeometry(geometry);
 
+
+
 interleavedGeometry.attributes.geometry; // packed Uint8Array
+
 interleavedGeometry.bufferLayout; // maps positions and texCoords into the packed buffer
 ```
 

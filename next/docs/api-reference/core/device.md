@@ -18,6 +18,7 @@ Create a new `Device`, auto creating a canvas and a new WebGL 2 context. See [`l
 
 ```
 import {Device} from '@luma.gl/core';
+
 const device = new luma.createDevice({type: 'webgl2', ...});
 ```
 
@@ -25,10 +26,16 @@ Attaching a `Device` to an externally created `WebGL2RenderingContext`.
 
 ```
 import {Device} from '@luma.gl/core';
+
 import {Model} from '@luma.gl/engine';
 
+
+
 const gl = canvas.getContext('webgl2', ...);
+
 const device = Device.attach(gl);
+
+
 
 const model = new Model(device, options);
 ```
@@ -37,10 +44,15 @@ Handle GPU disconnections:
 
 ```
 if (!device.isLost) {
+
   console.error('Device lost');
+
 }
 
+
+
 const {message} = await device.lost;
+
 console.error(message);
 ```
 
@@ -326,6 +338,7 @@ See [GPU Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md) for 
 
 ```
 createBuffer(props: BufferProps): Buffer
+
 createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer
 ```
 
@@ -337,6 +350,7 @@ Deduces `indexType` if usage.
 
 ```
 createTexture(props: TextureProps): Texture
+
 createTexture(data: Promise<TextureData>): Texture
 ```
 

@@ -105,8 +105,11 @@ This means the shader does not need to be written specifically for every memory 
 
 ```
 const shaderLayout = {
+
   attributes: [{name: 'colors', location: 0, type: 'vec4<f32>'}],
+
   bindings: []
+
 };
 ```
 
@@ -130,19 +133,34 @@ Use `getArrowBufferLayout()` with an Arrow table when Arrow column names match s
 ```
 import {getArrowBufferLayout} from '@luma.gl/arrow';
 
+
+
 const bufferLayout = getArrowBufferLayout(shaderLayout, {
+
   arrowTable: table,
+
   arrowPaths: {
+
     instanceColors: 'properties.color'
+
   }
+
 });
 
+
+
 const model = new Model(device, {
+
   vs,
+
   fs,
+
   shaderLayout,
+
   bufferLayout,
+
   vertexCount
+
 });
 ```
 
@@ -150,9 +168,13 @@ You can also provide Arrow vectors directly. In this mode, object keys are shade
 
 ```
 const bufferLayout = getArrowBufferLayout(shaderLayout, {
+
   arrowVectors: {
+
     instanceColors: table.getChild('properties').getChild('color')
+
   }
+
 });
 ```
 
@@ -160,7 +182,9 @@ The generated layouts use shader attribute names as buffer names:
 
 ```
 [
+
   {name: 'instanceColors', format: 'unorm8x4'}
+
 ]
 ```
 
@@ -202,9 +226,14 @@ The generic `makeArrowMatrixVector(shape, values, options)` form is available wh
 ```
 import {makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
 
+
+
 const instanceModelMatrix = makeArrowMatrix4x4Vector(matrixValues, {
+
   order: 'column-major',
+
   layout: 'wgsl-storage'
+
 });
 ```
 
@@ -236,20 +265,31 @@ On WebGPU, one matrix Arrow column can remain one storage binding:
 
 ```
 const shaderLayout = {
+
   attributes: [],
+
   bindings: [
+
     {
+
       name: 'instanceModelMatrix',
+
       type: 'read-only-storage',
+
       group: 0,
+
       location: 0
+
     }
+
   ]
+
 };
 ```
 
 ```
 @group(0) @binding(auto)
+
 var<storage, read> instanceModelMatrix: array<mat4x4<f32>>;
 ```
 
@@ -257,23 +297,41 @@ On attribute-oriented paths, map each vector attribute back to the same matrix c
 
 ```
 const shaderLayout = {
+
   attributes: [
+
     {name: 'instanceModelMatrixCol0', location: 0, type: 'vec4<f32>'},
+
     {name: 'instanceModelMatrixCol1', location: 1, type: 'vec4<f32>'},
+
     {name: 'instanceModelMatrixCol2', location: 2, type: 'vec4<f32>'},
+
     {name: 'instanceModelMatrixCol3', location: 3, type: 'vec4<f32>'}
+
   ],
+
   bindings: []
+
 };
 
+
+
 const bufferLayout = getArrowBufferLayout(shaderLayout, {
+
   arrowTable,
+
   arrowPaths: {
+
     instanceModelMatrixCol0: 'instanceModelMatrix',
+
     instanceModelMatrixCol1: 'instanceModelMatrix',
+
     instanceModelMatrixCol2: 'instanceModelMatrix',
+
     instanceModelMatrixCol3: 'instanceModelMatrix'
+
   }
+
 });
 ```
 
@@ -285,15 +343,25 @@ The Arrow helper recognizes the matrix metadata and creates one shared `BufferLa
 
 ```
 const preparedTemporalColumns = await convertArrowTemporalToGPUVectors(device, {
+
   eventStarts,
+
   eventDurations
+
 });
 
+
+
 const eventTable = new GPUTable({
+
   vectors: {
+
     eventStarts: preparedTemporalColumns.eventStarts.temporal,
+
     eventDurations: preparedTemporalColumns.eventDurations.temporal
+
   }
+
 });
 ```
 
@@ -307,10 +375,15 @@ DGGS helpers provide a WebGPU-only path from compact global grid IDs to Uint64 k
 
 ```
 const preparedKeys = convertDggsCellIdsToGPUKeys(device, cellIds, {
+
   encoding: 'geohash'
+
 });
+
 const preparedPaths = convertDggsCellKeysToGPUPaths(device, preparedKeys.keys, {
+
   encoding: 'geohash'
+
 });
 ```
 
@@ -352,10 +425,16 @@ For `FixedSizeList` vectors, the parent row may be nullable and will expand to t
 ```
 import {closeArrowPaths} from '@luma.gl/arrow';
 
+
+
 const normalizedPaths = await closeArrowPaths(device, {
+
   paths,
+
   closed,
+
   epsilon: 1e-5
+
 });
 ```
 
@@ -367,19 +446,33 @@ Use `ArrowPathRenderer.convertToGPUVectors()` when raw Arrow vectors need to bec
 
 ```
 const prepared = await ArrowPathRenderer.convertToGPUVectors(device, {
+
   paths,
+
   colors,
+
   widths,
+
   closed
+
 }, {
+
   closeEpsilon: 1e-5
+
 });
+
+
 
 const pathModel = ArrowPathRenderer.createModel(device, prepared);
 
+
+
 prepared.updateViewOrigins({modelViewMatrix});
 
+
+
 pathModel.destroy();
+
 prepared.destroy();
 ```
 
@@ -387,18 +480,31 @@ For storage-only WebGPU paths, use the storage conversion entrypoint instead:
 
 ```
 const preparedStorage = await ArrowPathRenderer.convertToGPUVectors(device, {
+
   paths,
+
   colors,
+
   widths,
+
   closed
+
 }, {
+
   model: 'storage',
+
   closeEpsilon: 1e-5
+
 });
 
+
+
 const pathStorageModel = ArrowPathRenderer.createModel(device, {
+
   model: 'storage',
+
   ...preparedStorage
+
 });
 ```
 
@@ -418,27 +524,49 @@ Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with on
 
 ```
 import {
+
   ArrowTableGeometry,
+
   makeGPUGeometryFromArrow,
+
   type ArrowMeshTable
+
 } from '@luma.gl/arrow';
+
 import {Model} from '@luma.gl/engine';
 
+
+
 const geometry = new ArrowTableGeometry(device, {
+
   arrowMesh,
+
   interleaved: true
+
 });
+
+
 
 const equivalentGeometry = makeGPUGeometryFromArrow(device, {
+
   arrowMesh,
+
   interleaved: true
+
 });
 
+
+
 const model = new Model(device, {
+
   vs,
+
   fs,
+
   shaderLayout,
+
   geometry
+
 });
 ```
 
@@ -465,13 +593,22 @@ Streaming sources stay application-owned. Convert each yielded Arrow record batc
 ```
 import {makeGPURecordBatchFromArrowRecordBatch, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 
+
+
 const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstRecordBatch]), {
+
   shaderLayout
+
 });
 
+
+
 for await (const recordBatch of remainingRecordBatches) {
+
   gpuTable.addBatch(makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {shaderLayout}));
+
   model.setInstanceCount(gpuTable.numRows);
+
 }
 ```
 
@@ -514,8 +651,11 @@ For WebGL-only use cases, opt in to WebGL-only formats:
 
 ```
 const bufferLayout = getArrowBufferLayout(shaderLayout, {
+
   arrowTable: table,
+
   allowWebGLOnlyFormats: true
+
 });
 ```
 

@@ -8,13 +8,21 @@ For most applications, register both backends and let luma.gl choose the best av
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webglAdapter} from '@luma.gl/webgl';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
+
+
 const device = await luma.createDevice({
+
   type: 'best-available',
+
   adapters: [webgpuAdapter, webglAdapter],
+
   createCanvasContext: true
+
 });
 ```
 

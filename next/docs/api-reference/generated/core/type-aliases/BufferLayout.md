@@ -24,16 +24,27 @@ A buffer layout is used to specify "non-standard" buffer layouts (buffers with o
 
 ```
  device.createRenderPipeline({
+
    ...
+
    shaderLayout,
+
    bufferLayout: [
+
      {name: 'positions', stepMode: 'vertex', format: 'float32x3'},
+
      // interleaved bindings, auto offset
+
      {name: 'particles', stepMode: 'instance', byteStride: 32, attributes: [
+
        {name: 'instancePositions', format: 'float32x4', byteOffset: 0},
+
        {name: 'instanceVelocities', format: 'float32x4', byteOffset: 16}
+
      ]},
+
    ]
+
  ];
 ```
 

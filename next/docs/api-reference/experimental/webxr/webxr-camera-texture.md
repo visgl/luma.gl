@@ -9,16 +9,28 @@
 ```
 import {WebXRCameraTexture} from '@luma.gl/experimental';
 
+
+
 const cameraTexture = new WebXRCameraTexture(device, xrWebGLBinding);
 
+
+
 session.requestAnimationFrame((time, xrFrame) => {
+
   const pose = xrFrame.getViewerPose(referenceSpace);
+
   const xrView = pose?.views[0] ?? null;
 
+
+
   cameraTexture.setView(xrView);
+
   model.shaderInputs.setProps({
+
     bindings: {uTexture: cameraTexture}
+
   });
+
 });
 ```
 
@@ -26,6 +38,7 @@ Use it through an ordinary GLSL sampler:
 
 ```
 uniform sampler2D uTexture;
+
 vec4 color = texture(uTexture, uv);
 ```
 

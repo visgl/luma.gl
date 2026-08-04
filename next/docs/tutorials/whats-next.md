@@ -8,8 +8,11 @@ To run one of the examples locally, clone the **luma.gl** repo and start an exam
 
 ```
 git clone git@github.com:visgl/luma.gl.git
+
 cd luma.gl/examples/tutorials/hello-cube
+
 yarn
+
 yarn start
 ```
 

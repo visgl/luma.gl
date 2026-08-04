@@ -28,7 +28,9 @@ fragColor = dirlight_filterColor(fragColor);
 
 ```
 {
+
   lightDirection: 'vec3<f32>'
+
 }
 ```
 

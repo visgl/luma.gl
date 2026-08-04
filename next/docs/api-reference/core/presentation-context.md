@@ -15,18 +15,33 @@ Experimental
 ```
 const offscreenCanvas = new OffscreenCanvas(1, 1);
 
+
+
 const device = await luma.createDevice({
+
   type: 'best-available',
+
   adapters: [webgl2Adapter, webgpuAdapter],
+
   createCanvasContext: {canvas: offscreenCanvas}
+
 });
 
+
+
 const presentationContext = device.createPresentationContext({canvas});
+
 const framebuffer = presentationContext.getCurrentFramebuffer();
 
+
+
 const renderPass = device.beginRenderPass({framebuffer});
+
 // draw...
+
 renderPass.end();
+
+
 
 presentationContext.present();
 ```

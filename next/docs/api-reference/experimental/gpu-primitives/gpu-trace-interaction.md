@@ -1,0 +1,144 @@
+# GPUTraceInteraction
+
+[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+
+## Overview[​](#overview "Direct link to Overview")
+
+`GPUTraceInteraction` turns a canonical [`GPUTraceScene`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md) into an interactive, GPU-resident trace exploration pipeline. One caller-owned command graph combines process/thread expansion, scanned row layout, temporal filtering, classification masks, bidirectional dependency focus, ancestor projection, stable visibility compaction, and indirect scene draw generation.
+
+The motivating problem is that interactive trace controls change much more frequently than the trace itself. Panning through a distributed execution timeline, collapsing a noisy process, isolating a selected span's upstream dependencies, or hiding low-duration runtime events should update small GPU-resident control buffers instead of scanning millions of JavaScript span objects, reading visibility back to the CPU, rebuilding draw lists, or recompiling graph topology.
+
+Representative uses include service latency investigations, browser performance recordings, GPU capture timelines, build-system scheduling views, and scientific workflows with both hierarchical ownership and cross-process dependency edges.
+
+## Concepts[​](#concepts "Direct link to Concepts")
+
+### One compiled graph, many interaction states[​](#one-compiled-graph-many-interaction-states "Direct link to One compiled graph, many interaction states")
+
+The workflow composes existing independent primitives in a fixed order:
+
+1. [`GPUHierarchyLayout`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md) converts process/thread expansion states into effective thread heights and scanned offsets.
+2. [`GPUGraphTraversal`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md) expands selected canonical span rows over bounded incoming, outgoing, or combined dependency edges.
+3. A fixed-contract trace policy evaluates time, duration, classification, hierarchy, and optional linked-span focus into one source-aligned visibility mask.
+4. [`GPUVisibilityWorkflow`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md) compacts stable canonical row IDs and publishes an exact visible count.
+5. [`GPUAncestorProjection`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md) maps each hidden span to its nearest still-visible canonical parent.
+6. [`GPUSceneDrawGeneration`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md) updates explicit renderer-authored indirect draw slots.
+
+The application owns graph compilation, encoding, submission, and any deliberate readback. None of the interaction stages uploads source spans again or chooses draw commands on the CPU.
+
+### Hierarchy collapse keeps representative lanes[​](#hierarchy-collapse-keeps-representative-lanes "Direct link to Hierarchy collapse keeps representative lanes")
+
+Processes own `threadsPerProcess` consecutive globally numbered threads. Each thread owns `lanesPerThread` consecutive original lanes. Expanded threads contribute their complete lane height; collapsed threads retain their first lane. A collapsed process retains only the first lane of its first thread, while its remaining threads contribute zero height.
+
+The caller receives both effective thread heights and exclusive scanned offsets, so rendering can position every remaining row without rewriting canonical span ownership. A process/thread mapping that violates the declared contiguous topology is treated as invisible rather than silently assigning a span to the wrong process.
+
+This is useful when a process contains hundreds of runtime spans: its collapsed representative remains stable while the following processes shift upward automatically.
+
+### Time and classification controls remain small GPU buffers[​](#time-and-classification-controls-remain-small-gpu-buffers "Direct link to Time and classification controls remain small GPU buffers")
+
+`timeWindow` is a packed three-element `float32` view:
+
+| Index | Meaning                          |
+| ----- | -------------------------------- |
+| 0     | Inclusive visible-window minimum |
+| 1     | Inclusive visible-window maximum |
+| 2     | Minimum accepted span duration   |
+
+A span participates when its `[start, start + duration]` interval intersects the current window and its duration meets the minimum. An inverted or invalid window produces an empty result.
+
+`policy` is a packed three-element `uint32` view:
+
+| Index | Meaning                                      |
+| ----- | -------------------------------------------- |
+| 0     | Classification bits that must all be present |
+| 1     | Classification bits that must all be absent  |
+| 2     | Nonzero enables dependency-focused filtering |
+
+For example, a service viewer can require an error bit while excluding instrumentation-only spans, then adjust its duration threshold without changing the command graph.
+
+### Linked-span focus preserves canonical identity[​](#linked-span-focus-preserves-canonical-identity "Direct link to Linked-span focus preserves canonical identity")
+
+`selectedSpans` contains canonical source-row indices, `selectedCount` determines how many are currently active, and `focusDepth` selects a runtime hop count up to `maxFocusDepth`. The default `both` direction considers incoming and outgoing dependency adjacency.
+
+The traversal publishes `reachedSpans`; the trace policy intersects that reachability with normal time, classification, and hierarchy visibility only when focus is enabled and at least one seed exists. With no active seed, enabling focus does not unexpectedly erase the entire trace.
+
+This makes it possible to click a slow storage operation and progressively reveal the network and compute work that preceded it while keeping original span identity stable across all views.
+
+### Ancestor projection keeps hidden endpoints meaningful[​](#ancestor-projection-keeps-hidden-endpoints-meaningful "Direct link to Ancestor projection keeps hidden endpoints meaningful")
+
+Collapsing a process or excluding a classification can hide a span that is still the endpoint of a dependency. `projectedAncestors` maps visible rows to themselves and hidden rows to their nearest visible parent, with a bounded ancestry walk and the standard invalid sentinel for unresolved chains.
+
+Applications can therefore route an edge to the visible process/thread representative instead of dropping the dependency or reconstructing hierarchy relationships on the CPU.
+
+### Stable compacted rows and indirect draws remain separate[​](#stable-compacted-rows-and-indirect-draws-remain-separate "Direct link to Stable compacted rows and indirect draws remain separate")
+
+`visibleSpans` contains compacted canonical row indices in source order, while `visibleMask` stays aligned to the fixed scene capacity. `visibleCount` reports the exact compacted result. The downstream draw workflow independently clears and republishes explicit command slots, retaining its existing required-count, published-count, overflow, and `indirect-first-instance` contracts.
+
+This distinction lets one application use compacted rows for labels or picking while another replays stable resource-grouped indirect draws from the same interaction state.
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+const source = trace.importToGraph(graph);
+
+
+
+new GPUTraceInteraction({
+
+  trace: source,
+
+  timeWindow,
+
+  policy,
+
+  processStates,
+
+  threadStates,
+
+  selectedSpans,
+
+  selectedCount,
+
+  focusDepth,
+
+  threadHeights,
+
+  threadOffsets,
+
+  reachedSpans,
+
+  visibleMask,
+
+  visibleSpans,
+
+  visibleCount,
+
+  projectedAncestors,
+
+  draw: {commands, requiredCount, publishedCount, overflow},
+
+  threadsPerProcess: 4,
+
+  lanesPerThread: 4,
+
+  maxFocusDepth: 3
+
+}).addToGraph(graph);
+
+
+
+const compiled = graph.compile();
+
+
+
+// Later interaction updates write small caller-owned buffers and reuse the same graph.
+
+timeWindowBuffer.write(Float32Array.from([120, 260, 0.5]));
+
+processStatesBuffer.write(nextProcessStates);
+
+selectedCountBuffer.write(Uint32Array.from([1]));
+```
+
+## Current scope[​](#current-scope "Direct link to Current scope")
+
+This implements roadmap tranche T.2 for one canonical packed trace scene and a fixed regular process/thread/lane hierarchy. Arbitrary sparse ownership layouts, cross-partition scene storage, GPU picking integration, and a live scene-backed trace showcase remain explicit follow-up work.

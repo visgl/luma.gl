@@ -22,8 +22,11 @@ A packed buffer stores one column with no unrelated data between rows.
 
 ```
 positions buffer
+
 row 0: position
+
 row 1: position
+
 row 2: position
 ```
 
@@ -35,8 +38,11 @@ An interleaved buffer stores multiple columns inside each row.
 
 ```
 instance buffer
+
 row 0: position, color, radius
+
 row 1: position, color, radius
+
 row 2: position, color, radius
 ```
 
@@ -48,8 +54,11 @@ A segmented buffer stores multiple packed columns in one buffer.
 
 ```
 table buffer
+
 segment 0: position row 0, position row 1, position row 2
+
 segment 1: color row 0, color row 1, color row 2
+
 segment 2: radius row 0, radius row 1, radius row 2
 ```
 

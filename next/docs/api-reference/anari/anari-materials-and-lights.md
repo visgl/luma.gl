@@ -8,14 +8,23 @@ Materials define how a surface responds to light. Lights are attached to a world
 
 ```
 new ANARIMaterial(
+
   device: ANARIDevice,
+
   subtype: ANARIMaterialSubtype,
+
   parameters?: ANARIMaterialParameters
+
 );
 
+
+
 newMaterial(
+
   subtype: 'matte' | 'physicallyBased',
+
   parameters?: ANARIMaterialParameters
+
 ): ANARIMaterial;
 ```
 
@@ -23,31 +32,57 @@ newMaterial(
 
 ```
 type ANARIMaterialParameters = {
+
   color?: ANARIVector3 | ANARIVector4;
+
   baseColor?: ANARIVector3 | ANARIVector4;
+
   emissive?: ANARIVector3;
+
   emissiveStrength?: number;
+
   metallic?: number;
+
   roughness?: number;
+
   opacity?: number;
+
   alphaMode?: 'opaque' | 'blend';
+
   clearcoat?: number;
+
   clearcoatRoughness?: number;
+
   iridescence?: number;
+
   transmission?: number;
+
   indexOfRefraction?: number;
+
   sheenColor?: ANARIVector3;
+
   sheenRoughness?: number;
+
   normalScale?: number;
+
   occlusionStrength?: number;
+
   baseColorTexture?: ANARISampler;
+
   normalTexture?: ANARISampler;
+
   metallicRoughnessTexture?: ANARISampler;
+
   emissiveTexture?: ANARISampler;
+
   occlusionTexture?: ANARISampler;
+
   clearcoatTexture?: ANARISampler;
+
   transmissionTexture?: ANARISampler;
+
   sheenColorTexture?: ANARISampler;
+
 };
 ```
 
@@ -72,8 +107,11 @@ type ANARIMaterialParameters = {
 
 ```
 const sampler = anariDevice.newSampler('image2D', {
+
   image: texture,
+
   transform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+
 });
 ```
 
@@ -85,8 +123,11 @@ Values are not automatically clamped or validated. Treat metallic, roughness, op
 
 ```
 const matte = anariDevice.newMaterial('matte', {
+
   color: [0.72, 0.2, 0.12],
+
   roughness: 0.8
+
 });
 ```
 
@@ -96,11 +137,17 @@ const matte = anariDevice.newMaterial('matte', {
 
 ```
 const metal = anariDevice.newMaterial('physicallyBased', {
+
   baseColor: [0.18, 0.52, 0.96],
+
   metallic: 0.9,
+
   roughness: 0.16,
+
   clearcoat: 0.35,
+
   iridescence: 0.2
+
 });
 ```
 
@@ -110,11 +157,17 @@ The current shader combines a GGX-style specular term, Schlick Fresnel, diffuse 
 
 ```
 const emitter = anariDevice.newMaterial('physicallyBased', {
+
   baseColor: [0.06, 0.12, 0.18],
+
   emissive: [0.2, 0.8, 1],
+
   emissiveStrength: 8,
+
   metallic: 0,
+
   roughness: 0.35
+
 });
 ```
 
@@ -124,6 +177,7 @@ Emission changes the surface's appearance but does not automatically create a li
 
 ```
 metal.setParameters({roughness: 0.08, metallic: 1}).commitParameters();
+
 frame.render();
 ```
 
@@ -133,14 +187,23 @@ Committed material values are uploaded on subsequent renders. However, transpare
 
 ```
 new ANARILight(
+
   device: ANARIDevice,
+
   subtype: ANARILightSubtype,
+
   parameters?: ANARILightParameters
+
 );
 
+
+
 newLight(
+
   subtype: 'ambient' | 'directional' | 'point' | 'spot',
+
   parameters?: ANARILightParameters
+
 ): ANARILight;
 ```
 
@@ -148,14 +211,23 @@ newLight(
 
 ```
 type ANARILightParameters = {
+
   color?: ANARIVector3;
+
   direction?: ANARIVector3;
+
   position?: ANARIVector3;
+
   intensity?: number;
+
   irradiance?: number;
+
   radiance?: number;
+
   openingAngle?: number;
+
   falloffAngle?: number;
+
 };
 ```
 
@@ -176,8 +248,11 @@ The renderer also supplies a base ambient light using `renderer.ambientRadiance`
 
 ```
 const ambient = anariDevice.newLight('ambient', {
+
   color: [0.4, 0.55, 0.8],
+
   radiance: 0.25
+
 });
 ```
 
@@ -187,9 +262,13 @@ Ambient lights have no position or direction. `radiance` takes precedence over `
 
 ```
 const sunlight = anariDevice.newLight('directional', {
+
   direction: [-0.7, -1, -0.35],
+
   color: [1, 0.91, 0.74],
+
   irradiance: 2.2
+
 });
 ```
 
@@ -199,9 +278,13 @@ Directional lights have no position. `irradiance` takes precedence over `intensi
 
 ```
 const point = anariDevice.newLight('point', {
+
   position: [2, 3, 1],
+
   color: [1, 0.35, 0.12],
+
   intensity: 30
+
 });
 ```
 
@@ -211,11 +294,17 @@ Point lights use a fixed attenuation configuration in the current runtime. Add t
 
 ```
 const spotlight = anariDevice.newLight('spot', {
+
   position: [0, 5, 3],
+
   direction: [0, -1, -0.5],
+
   color: [0.8, 0.9, 1],
+
   intensity: 24,
+
   openingAngle: Math.PI / 5
+
 });
 ```
 
@@ -225,9 +314,13 @@ Spotlights use fixed attenuation. The current implementation derives the inner c
 
 ```
 function updateLight(time: number): void {
+
   point
+
     .setParameter('position', [Math.cos(time) * 3, 2, Math.sin(time) * 3])
+
     .commitParameters();
+
 }
 ```
 

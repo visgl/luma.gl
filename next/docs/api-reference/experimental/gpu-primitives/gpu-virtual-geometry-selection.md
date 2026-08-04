@@ -1,6 +1,6 @@
 # GPUVirtualGeometrySelection
 
-[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -10,36 +10,67 @@ The primitive is renderer-independent. Cluster IDs can address meshlets, point-c
 
 ```
 import {
+
   DrawCommandBuffer,
+
   GPUCommandGraph,
+
   GPUVirtualGeometrySelection
+
 } from '@luma.gl/experimental';
 
+
+
 const drawCommands = new DrawCommandBuffer(device, {
+
   type: 'draw-indexed',
+
   commands: [{indexCount: meshletIndexCount, instanceCount: 0}]
+
 });
+
 const graph = new GPUCommandGraph(device);
+
 const count = graph.importGPUData('visible-count', drawCommands.getInstanceCountData(0));
 
+
+
 new GPUVirtualGeometrySelection({
+
   hierarchy: {
+
     sphereBounds,
+
     geometricErrors,
+
     children,
+
     clusterIds,
+
     levelOffsets: [0, 4, 20, 84]
+
   },
+
   view: {
+
     frustumPlanes,
+
     cameraPosition,
+
     pixelProjectionScale,
+
     maximumScreenSpaceError
+
   },
+
   output: visibleClusterIds,
+
   count,
+
   totalCount,
+
   overflow
+
 }).addToGraph(graph);
 ```
 
@@ -52,13 +83,13 @@ Nodes are stored in breadth-level order. `levelOffsets` is CPU metadata beginnin
 Each node has four source-aligned rows:
 
 * `sphereBounds`: packed `float32x4` world-space center XYZ and nonnegative radius.
-* `geometricErrors`: packed `float32` object-space error.
+* `geometricErrors`: packed `float32` world-space error, transformed with the same scale as the world-space bounding sphere.
 * `children`: packed `uint32x2` first-child index and child count.
 * `clusterIds`: packed `uint32` render identity.
 
 A zero child count marks a leaf. A nonempty range must lie wholly inside the immediately following breadth level. CPU-visible lengths and level offsets are validated when the selection is created. GPU child ranges are checked conservatively during traversal; an invalid range retains its coarse parent instead of creating a geometry hole.
 
-The active state is node-aligned. Multiple roots and convergent activation write the same boolean node bit, so a node can appear at most once. A refined parent is never selected in the same frontier as its children.
+The active state is node-aligned. Multiple roots and convergent activation write the same node state, so a node can appear at most once. If one parent remains coarse while another requests the same children, the coarse parent blocks those children. A selected parent and its children therefore never appear together even when child ranges converge.
 
 ## View and error metric[​](#view-and-error-metric "Direct link to View and error metric")
 
@@ -78,8 +109,11 @@ The projected error is:
 
 ```
 geometricError * projectionScalePixels /
+
 max(distance(camera, sphere.center) - sphere.radius, 1e-6)
 ```
+
+`geometricError`, the sphere, and the camera must use the same world-space units. If source geometry is scaled during placement, multiply its object-space error by the appropriate world scale before uploading the error column.
 
 A node refines when that value exceeds `maximumScreenSpaceError`, expressed in pixels. A camera inside or within `1e-6` world units of a sphere refines conservatively when valid children exist. Non-finite view or error inputs also prefer refinement, while non-finite frustum planes do not cull geometry.
 
@@ -93,6 +127,7 @@ Traversal writes a node-aligned mask and delegates ordered ID publication to `GP
 
 ```
 count = min(totalCount, output.length)
+
 overflow = totalCount > output.length ? 1 : 0
 ```
 

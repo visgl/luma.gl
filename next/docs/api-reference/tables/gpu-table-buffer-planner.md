@@ -13,43 +13,82 @@ The planner does not inspect Arrow vectors, allocate GPU buffers, upload data, p
 ```
 import {GPUTableBufferPlanner, type GPUTableColumnDescriptor} from '@luma.gl/tables';
 
+
+
 const columns: GPUTableColumnDescriptor[] = [
+
   {
+
     id: 'positions',
+
     byteStride: 8,
+
     byteLength: 8 * 4,
+
     rowCount: 4,
+
     stepMode: 'vertex',
+
     supportsPackedBuffer: true
+
   },
+
   {
+
     id: 'instancePositions',
+
     byteStride: 12,
+
     byteLength: 12 * table.numRows,
+
     rowCount: table.numRows,
+
     stepMode: 'instance',
+
     isPosition: true,
+
     supportsPackedBuffer: true,
+
     priority: 'high'
+
   },
+
   {
+
     id: 'instanceColors',
+
     byteStride: 4,
+
     byteLength: 4 * table.numRows,
+
     rowCount: table.numRows,
+
     stepMode: 'instance',
+
     supportsPackedBuffer: true
+
   }
+
 ];
 
+
+
 const plan = GPUTableBufferPlanner.getAllocationPlan({
+
   device,
+
   columns,
+
   modelInfo: {
+
     isInstanced: true,
+
     reservedVertexBufferCount: 1
+
   },
+
   generateConstantAttributes: device.type === 'webgpu'
+
 });
 ```
 

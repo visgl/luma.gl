@@ -10,11 +10,18 @@ On WebGL, attribute can be bound to constants,
 
 ```
 const renderPipeline = device.createRenderPipeline({bufferLayout, ...});
+
 const vertexArray = device.createVertexArray({renderPipeline});
 
+
+
 vertexArray.setIndexBuffer(device.createBuffer({usage: Buffer.INDEX, ...));
+
 vertexArray.setBuffer(0, device.createBuffer({usage: Buffer.VERTEX, ...));
+
 vertexArray.setConstant(1, new Float32Array([1, 2, 3]));
+
+
 
 const renderPipeline.setVertexArray(vertexArray);
 ```

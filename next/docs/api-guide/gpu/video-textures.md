@@ -38,11 +38,18 @@ Use `VideoTexture` when the application owns a live video source and wants luma.
 ```
 import {Model, VideoTexture} from '@luma.gl/engine';
 
+
+
 const videoTexture = new VideoTexture(device, {source: video});
 
+
+
 const model = new Model(device, {
+
   source,
+
   bindings: {videoTexture}
+
 });
 ```
 
@@ -54,6 +61,7 @@ WebGL always uses the copied path:
 
 ```
 uniform sampler2D videoTexture;
+
 vec4 color = texture(videoTexture, uv);
 ```
 
@@ -61,7 +69,9 @@ WebGPU uses the same copied path when the shader asks for a normal texture:
 
 ```
 @group(0) @binding(auto) var videoTexture: texture_2d<f32>;
+
 @group(0) @binding(auto) var videoTextureSampler: sampler;
+
 let color = textureSample(videoTexture, videoTextureSampler, uv);
 ```
 
@@ -73,7 +83,9 @@ WebGPU can sample a native external texture:
 
 ```
 @group(0) @binding(auto) var videoTexture: texture_external;
+
 @group(0) @binding(auto) var videoTextureSampler: sampler;
+
 let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 ```
 
@@ -94,8 +106,12 @@ Camera streams use the same `HTMLVideoElement` path:
 
 ```
 const stream = await navigator.mediaDevices.getUserMedia({video: true});
+
 video.srcObject = stream;
+
 await video.play();
+
+
 
 const videoTexture = new VideoTexture(device, {source: video});
 ```
@@ -111,15 +127,26 @@ For URL-backed videos, configure the media element's `crossOrigin` value before 
 ```
 let currentFrame: VideoFrame | null = null;
 
+
+
 function showFrame(nextFrame: VideoFrame) {
+
   const previousFrame = currentFrame;
+
   currentFrame = nextFrame;
+
   videoTexture.setSource(nextFrame);
+
   previousFrame?.close();
+
 }
 
+
+
 // Keep currentFrame open while VideoTexture can still resolve it.
+
 videoTexture.destroy();
+
 currentFrame?.close();
 ```
 

@@ -18,62 +18,119 @@ Create the map first so MapLibre owns the WebGL canvas, then attach the device t
 
 ```
 import maplibregl from 'maplibre-gl'
+
 import {Matrix4} from '@math.gl/core'
+
 import {webgl2Adapter} from '@luma.gl/webgl'
+
 import {Model} from '@luma.gl/engine'
 
+
+
 const map = new maplibregl.Map({
+
   container: 'map',
+
   style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+
   antialias: true,
+
   pitch: 60,
+
   zoom: 12
+
 })
 
+
+
 map.on('load', async () => {
+
   const webglContext = map.getCanvas().getContext('webgl2') as WebGL2RenderingContext
+
   const device = await webgl2Adapter.attach(webglContext, {
+
     createCanvasContext: {autoResize: false}
+
   })
+
+
 
   // Keep the WebGLCanvasContext aligned with MapLibre's drawing buffer
+
   device.canvasContext.resize({width: webglContext.drawingBufferWidth, height: webglContext.drawingBufferHeight})
 
+
+
   const modelMatrix = new Matrix4()
+
   const viewProjection = new Matrix4()
 
+
+
   const overlay = new Model(device, {
+
     id: 'maplibre-overlay',
+
     vs: `...`,
+
     fs: `...`,
+
     shaderLayout: {
+
       attributes: [
+
         {name: 'positions', location: 0, format: 'float32x3'}
+
       ],
+
       bindings: [{name: 'app', type: 'uniform', location: 0}]
+
     },
+
     attributes: {
+
       positions: new Float32Array([...])
+
     },
+
     vertexCount: 6,
+
     bindings: {
+
       app: /* uniform buffer */
+
     }
+
   })
 
+
+
   map.addLayer({
+
     id: 'luma-gl-overlay',
+
     type: 'custom',
+
     renderingMode: '3d',
+
     render: (_, matrix) => {
+
       viewProjection.fromArray(matrix as number[])
+
       // Update uniforms and draw without clearing the map's buffers
+
       const renderPass = device.beginRenderPass({clearColor: false, clearDepth: false})
+
       overlay.draw(renderPass)
+
       renderPass.end()
+
       map.triggerRepaint()
+
     }
+
   })
+
 })
 ```
 
@@ -83,11 +140,17 @@ Because the context comes from MapLibre, luma.gl cannot resize it automatically.
 
 ```
 map.on('resize', () => {
+
   const webglContext = map.getCanvas().getContext('webgl2') as WebGL2RenderingContext
+
   device.canvasContext.resize({
+
     width: webglContext.drawingBufferWidth,
+
     height: webglContext.drawingBufferHeight
+
   })
+
 })
 ```
 
@@ -95,10 +158,15 @@ If you are matching an overlaid map canvas such as deck.gl `MapboxOverlay` or a 
 
 ```
 const device = await webgl2Adapter.attach(webglContext, {
+
   createCanvasContext: {
+
     autoResize: false,
+
     pixelSizeSource: 'css-dpr'
+
   }
+
 })
 ```
 

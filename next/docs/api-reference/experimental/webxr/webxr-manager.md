@@ -8,33 +8,61 @@
 
 ```
 import {AnimationLoop} from '@luma.gl/engine';
+
 import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/experimental';
 
+
+
 const webXRManager = new WebXRManager(device);
+
 await webXRManager.setSession(session);
 
+
+
 const animationLoop = new AnimationLoop({
+
   device,
+
   animationFrameProvider: new WebXRAnimationFrameProvider(session),
+
   onRender({animationFrame}) {
+
     const xrFrame = animationFrame as XRFrame | null;
+
     const frameState = xrFrame && webXRManager.getFrameState(xrFrame);
+
     if (!frameState) {
+
       return;
+
     }
 
+
+
     for (const [viewIndex, view] of frameState.views.entries()) {
+
       const renderPass = device.beginRenderPass({
+
         framebuffer: frameState.framebuffer,
+
         parameters: {viewport: view.viewport},
+
         clearColor: viewIndex === 0 ? [0, 0, 0, 0] : false,
+
         clearDepth: viewIndex === 0 ? 1 : false,
+
         clearStencil: false
+
       });
+
       // Set view.projectionMatrix and view.viewMatrix uniforms, then draw.
+
       renderPass.end();
+
     }
+
   }
+
 });
 ```
 
@@ -53,8 +81,11 @@ const animationLoop = new AnimationLoop({
 
 ```
 export type WebXRManagerProps = {
+
   referenceSpaceType?: XRReferenceSpaceType;
+
   layerInit?: XRWebGLLayerInit;
+
 };
 ```
 
@@ -62,13 +93,21 @@ export type WebXRManagerProps = {
 
 ```
 export type WebXRViewState = {
+
   xrView: XRView;
+
   eye: XREye;
+
   index: number;
+
   viewport: [number, number, number, number];
+
   projectionMatrix: Float32Array;
+
   viewMatrix: Float32Array;
+
   camera: XRCamera | null;
+
 };
 ```
 
@@ -76,9 +115,13 @@ export type WebXRViewState = {
 
 ```
 export type WebXRFrameState = {
+
   xrFrame: XRFrame;
+
   framebuffer: Framebuffer;
+
   views: readonly WebXRViewState[];
+
 };
 ```
 

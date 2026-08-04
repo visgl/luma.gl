@@ -20,13 +20,21 @@ For example, an application can prefer WebGPU and fall back to WebGL:
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
+
+
 const device = await luma.createDevice({
+
   type: 'best-available',
+
   adapters: [webgpuAdapter, webgl2Adapter],
+
   createCanvasContext: true
+
 });
 ```
 
@@ -147,13 +155,21 @@ The current WebGL and WebGPU package roots also export concrete device and resou
 
 ```
 async function loadAdapter(type: 'webgpu' | 'webgl') {
+
   if (type === 'webgpu') {
+
     const {webgpuAdapter} = await import('@luma.gl/webgpu');
+
     return webgpuAdapter;
+
   }
 
+
+
   const {webgl2Adapter} = await import('@luma.gl/webgl');
+
   return webgl2Adapter;
+
 }
 ```
 

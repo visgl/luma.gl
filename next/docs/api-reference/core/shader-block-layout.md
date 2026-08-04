@@ -12,21 +12,33 @@ Create layout metadata that matches the block declaration in your shader:
 
 ```
 #version 300 es
+
 layout(std140) uniform matrixBlock {
+
   mat4 mvp;
+
 } matrix;
 ```
 
 ```
 import {makeShaderBlockLayout, ShaderBlockWriter} from '@luma.gl/core';
 
+
+
 const shaderBlockLayout = makeShaderBlockLayout({
+
   mvp: 'mat4x4<f32>'
+
 });
 
+
+
 const shaderBlockWriter = new ShaderBlockWriter(shaderBlockLayout);
+
 const data = shaderBlockWriter.getData({
+
   mvp: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+
 });
 ```
 
@@ -34,9 +46,14 @@ Allocate a GPU buffer using the computed byte length:
 
 ```
 const uniformBuffer = device.createBuffer({
+
   usage: Buffer.UNIFORM | Buffer.COPY_DST,
+
   byteLength: shaderBlockLayout.byteLength
+
 });
+
+
 
 uniformBuffer.write(data);
 ```

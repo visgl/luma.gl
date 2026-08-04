@@ -39,7 +39,9 @@ The luma.gl API is designed to allow a `Device` to create multiple associated `C
 
 ```
 const device = await luma.createDevice(...);
+
 const canvasContext1 = device.createCanvasContext(...);
+
 const canvasContext2 = device.createCanvasContext(...);
 ```
 
@@ -49,6 +51,7 @@ Because of this, the `Device` class provides a `DeviceProps.createCanvasContext`
 
 ```
 const device = await luma.createDevice({createCanvasContext: true});
+
 const canvasContext = device.getDefaultCanvasContext()
 ```
 
@@ -56,6 +59,7 @@ The application can also provide properties for the default `CanvasContext`:
 
 ```
 const device = await luma.createDevice({createCanvasContext: {width, height}}); // Creates a new HTML canvas and adds it to document.body.
+
 const canvasContext = device.getDefaultCanvasContext()
 ```
 
@@ -63,6 +67,7 @@ A `CanvasContext` can be associated with an existing canvas:
 
 ```
 const device = await luma.createDevice({createCanvasContext: {canvas: document.getElementById('canvas-id')}}); // Creates a new HTML canvas and adds it to document.body.
+
 const canvasContext = device.getDefaultCanvasContext()
 ```
 
@@ -75,15 +80,26 @@ On an HDR-capable display, configure a WebGPU canvas with a floating-point prese
 ```
 const supportsHighDynamicRange = window.matchMedia('(dynamic-range: high)').matches;
 
+
+
 const device = await luma.createDevice({
+
   adapters: [webgpuAdapter],
+
   createCanvasContext: supportsHighDynamicRange
+
     ? {
+
         colorFormat: 'rgba16float',
+
         colorSpace: 'display-p3',
+
         toneMapping: 'extended'
+
       }
+
     : true
+
 });
 ```
 
@@ -101,7 +117,9 @@ This is equivalent to
 
 ```
 const renderPass = device.beginRenderPass({
+
   framebuffer: device.getDefaultCanvasContext().getFramebuffer()
+
 });
 ```
 
@@ -121,8 +139,11 @@ Render into an additional canvas context:
 
 ```
 const newCanvasContext = device.createCanvasContext({canvas: ...});
+
 const renderPass = device.beginRenderPass({
+
   framebuffer: newCanvasContext.getFramebuffer()
+
 });
 ```
 

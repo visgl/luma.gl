@@ -52,12 +52,19 @@ Keep the final GPU contract separate from Arrow conversion policy:
 
 ```
 GPUInputSchema
+
   -> validates final GPUVector props
 
+
+
 ArrowInputSchema
+
   -> resolves Arrow columns
+
   -> converts Arrow vectors
+
   -> generates internal vectors
+
   -> validates the result against GPUInputSchema
 ```
 

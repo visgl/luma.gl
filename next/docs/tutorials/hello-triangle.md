@@ -2,7 +2,7 @@
 
 [Setup](https://luma.gl/next/docs/tutorials.md)[Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md)[Cube](https://luma.gl/next/docs/tutorials/hello-cube.md)[Instancing](https://luma.gl/next/docs/tutorials/hello-instancing.md)
 
-**Goal:** create one `Model` and issue a portable draw call. Complete [Getting Started](https://luma.gl/next/docs/getting-started.md) before this lesson.
+**Goal:** create one `Model` and issue a portable draw call. Explore the live example below immediately, or follow the [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) to run its source locally. New to luma.gl? [Getting Started](https://luma.gl/next/docs/getting-started.md) shows what you can build next.
 
 <!-- -->
 

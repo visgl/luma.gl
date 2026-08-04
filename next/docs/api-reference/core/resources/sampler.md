@@ -16,9 +16,13 @@ Create a new `Sampler`
 
 ```
 import {luma} from '@luma.gl/core';
+
 const device = await luma.createDevice();
+
 const sampler = device.createSampler(gl, {
+
   addressModeU: 'clamp-to-edge'
+
 });
 ```
 
@@ -26,12 +30,19 @@ Note that a default `Sampler` is automatically created for each texture:
 
 ```
 // Create a texture
+
 const texture = device.createTexture({
+
   sampler: {
+
     minFilter: 'linear',
+
     maxFilter: 'linear'
+
   }
+
 });
+
 console.log(texture.sampler);
 ```
 
@@ -39,7 +50,9 @@ Create a new **comparison sampler**, by specifying the `compare` sampler propert
 
 ```
 const sampler = device.createSampler(gl, {
+
   compare: 'lequal'
+
 });
 ```
 

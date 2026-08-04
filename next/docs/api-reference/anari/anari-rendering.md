@@ -8,14 +8,23 @@ An `ANARICamera` describes the view, an `ANARIRenderer` selects shading and pres
 
 ```
 new ANARICamera(
+
   device: ANARIDevice,
+
   subtype: ANARICameraSubtype,
+
   parameters?: ANARICameraParameters
+
 );
 
+
+
 newCamera(
+
   subtype: 'perspective' | 'orthographic',
+
   parameters?: ANARICameraParameters
+
 ): ANARICamera;
 ```
 
@@ -23,14 +32,23 @@ newCamera(
 
 ```
 type ANARICameraParameters = {
+
   position?: ANARIVector3;
+
   direction?: ANARIVector3;
+
   up?: ANARIVector3;
+
   aspect?: number;
+
   fovy?: number;
+
   height?: number;
+
   near?: number;
+
   far?: number;
+
 };
 ```
 
@@ -49,11 +67,17 @@ type ANARICameraParameters = {
 
 ```
 const camera = anariDevice.newCamera('perspective', {
+
   position: [5, 3, 8],
+
   direction: [-5, -2, -8],
+
   fovy: Math.PI / 4,
+
   near: 0.05,
+
   far: 200
+
 });
 ```
 
@@ -61,11 +85,17 @@ const camera = anariDevice.newCamera('perspective', {
 
 ```
 const camera = anariDevice.newCamera('orthographic', {
+
   position: [0, 6, 12],
+
   direction: [0, -4, -12],
+
   height: 10,
+
   near: 0.05,
+
   far: 100
+
 });
 ```
 
@@ -75,14 +105,23 @@ The horizontal extent is `height * aspect`. Update camera position or direction 
 
 ```
 new ANARIRenderer(
+
   device: ANARIDevice,
+
   subtype: ANARIRendererSubtype,
+
   parameters?: ANARIRendererParameters
+
 );
 
+
+
 newRenderer(
+
   subtype?: 'default' | 'deferred' | 'debugNormals' | 'debugDepth',
+
   parameters?: ANARIRendererParameters
+
 ): ANARIRenderer;
 ```
 
@@ -92,14 +131,23 @@ Omitting the subtype selects `default`.
 
 ```
 type ANARIRendererParameters = {
+
   background?: ANARIVector4;
+
   ambientRadiance?: number;
+
   exposure?: number;
+
   bloomIntensity?: number;
+
   bloomThreshold?: number;
+
   bloomRadius?: number;
+
   fogColor?: ANARIVector3;
+
   fogDensity?: number;
+
 };
 ```
 
@@ -118,14 +166,23 @@ type ANARIRendererParameters = {
 
 ```
 const renderer = anariDevice.newRenderer('default', {
+
   background: [0.012, 0.016, 0.04, 1],
+
   ambientRadiance: 0.16,
+
   exposure: 1.5,
+
   bloomIntensity: 0.7,
+
   bloomThreshold: 0.65,
+
   bloomRadius: 8,
+
   fogColor: [0.03, 0.04, 0.09],
+
   fogDensity: 0.0004
+
 });
 ```
 
@@ -135,8 +192,11 @@ Bloom renders into a temporary frame-sized texture before composing the result t
 
 ```
 const renderer = anariDevice.newRenderer('deferred', {
+
   ambientRadiance: 0.08,
+
   background: [0.006, 0.008, 0.018, 1]
+
 });
 ```
 
@@ -148,6 +208,7 @@ The deferred path is intended as an architecture baseline for richer ANARI rende
 
 ```
 const normals = anariDevice.newRenderer('debugNormals');
+
 frame.setParameter('renderer', normals).commitParameters();
 ```
 
@@ -157,6 +218,7 @@ frame.setParameter('renderer', normals).commitParameters();
 
 ```
 const depth = anariDevice.newRenderer('debugDepth');
+
 frame.setParameter('renderer', depth).commitParameters();
 ```
 
@@ -166,7 +228,9 @@ frame.setParameter('renderer', depth).commitParameters();
 
 ```
 renderer
+
   .setParameters({exposure: 1.8, bloomIntensity: 0.9, fogDensity: 0.001})
+
   .commitParameters();
 ```
 
@@ -176,13 +240,21 @@ Committed renderer settings apply on the next frame. Set `bloomIntensity` to `0`
 
 ```
 new ANARIFrame(device: ANARIDevice, parameters: ANARIFrameParameters);
+
 newFrame(parameters: ANARIFrameParameters): ANARIFrame;
 
+
+
 type ANARIFrameParameters = {
+
   world: ANARIWorld;
+
   camera: ANARICamera;
+
   renderer: ANARIRenderer;
+
   size?: readonly [number, number];
+
 };
 ```
 
@@ -195,10 +267,15 @@ type ANARIFrameParameters = {
 
 ```
 const frame = anariDevice.newFrame({
+
   world,
+
   camera,
+
   renderer,
+
   size: [1280, 720]
+
 });
 ```
 
@@ -212,6 +289,7 @@ Compiles committed scene objects as necessary, updates transforms and material/l
 
 ```
 const statistics = frame.render();
+
 graphicsDevice.submit();
 ```
 
@@ -222,11 +300,18 @@ If required world, camera, or renderer parameters are absent from committed fram
 ```
 frame.statistics: ANARIFrameStatistics;
 
+
+
 type ANARIFrameStatistics = {
+
   surfaceCount: number;
+
   instanceCount: number;
+
   drawCount: number;
+
   triangleCount: number;
+
 };
 ```
 
@@ -251,9 +336,13 @@ Omit `size` to follow the canvas drawing-buffer size. Changing an explicit frame
 
 ```
 frame.setParameters({
+
   world: nextWorld,
+
   camera: nextCamera,
+
   renderer: nextRenderer
+
 }).commitParameters();
 ```
 
@@ -271,13 +360,21 @@ Releases the frame's cached models, instance buffers, intermediate textures/fram
 
 ```
 type ANARIVector3 = readonly [number, number, number];
+
 type ANARIVector4 = readonly [number, number, number, number];
+
 type ANARIMatrix4 = readonly number[];
 
+
+
 type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad';
+
 type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
+
 type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
+
 type ANARICameraSubtype = 'perspective' | 'orthographic';
+
 type ANARIRendererSubtype = 'default' | 'deferred' | 'debugNormals' | 'debugDepth';
 ```
 

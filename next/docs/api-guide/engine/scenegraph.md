@@ -43,24 +43,44 @@ An instanced model can remain one renderable scenegraph node while providing all
 ```
 import {GroupNode, ModelNode} from '@luma.gl/engine';
 
+
+
 const switches = new ModelNode({
+
   model: switchModel,
+
   bounds: [
+
     [-1, -1, -1],
+
     [1, 1, 1]
+
   ],
+
   instanceMatrices: switchTransforms
+
 });
+
+
 
 const scene = new GroupNode({children: [switches]});
 
+
+
 scene.traverseDepthSorted(
+
   node => {
+
     if (node instanceof ModelNode) {
+
       node.draw(renderPass);
+
     }
+
   },
+
   {viewMatrix, order: 'back-to-front'}
+
 );
 ```
 

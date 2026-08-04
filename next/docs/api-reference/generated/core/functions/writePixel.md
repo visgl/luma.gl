@@ -42,20 +42,36 @@ A tuple \[r, g, b, a] containing the channel values (as numbers).
 
 ```
 Assume you want to encode a pixel into a packed format where:
+
  - Red uses 5 bits
+
  - Green uses 6 bits
+
  - Blue uses 5 bits
+
  - Alpha is not used (0 bits)
+
 And the pixel format is packed into 16 bits total.
 
+
+
 You might have:
+
  const bitsPerChannel: [number, number, number, number] = [5, 6, 5, 0];
+
  const pixel: [number, number, number, number] = [15, 31, 15, 0]; // Example values
+
  const buffer = new ArrayBuffer(2); // 16 bits = 2 bytes
+
  const dataView = new DataView(buffer);
 
+
+
 Now encode the pixel at bit offset 0:
+
  encodePixel(dataView, 0, bitsPerChannel, pixel);
+
+
 
 The dataView now contains the 16-bit packed pixel value in big-endian order.
 ```

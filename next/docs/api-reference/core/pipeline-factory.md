@@ -15,10 +15,16 @@ Pipeline creation involves shader compilation and backend-specific linking work.
 ```
 import {PipelineFactory} from '@luma.gl/core';
 
+
+
 const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
+
 const pipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
+
+
 // Later, when the caller is done with the pipeline:
+
 pipelineFactory.release(pipeline);
 ```
 

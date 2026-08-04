@@ -53,9 +53,13 @@ In your vertex shader, your inform the picking module what object we are current
 
 ```
 attribute vec3 aPickingColor;
+
 main() {
+
   picking_setPickingColor(aPickingColor);
+
   ...
+
 }
 ```
 
@@ -63,8 +67,11 @@ In your fragment shader, you simply apply (call) the `picking_filterColor` filte
 
 ```
 main() {
+
   gl_FragColor = ...
+
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
+
 }
 ```
 
@@ -72,8 +79,11 @@ In your fragment shader, you simply apply (call) the `picking_filterPickingColor
 
 ```
 main() {
+
   gl_FragColor = ...
+
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
+
 }
 ```
 
@@ -81,8 +91,11 @@ If highlighting is not needed, you simply apply (call) the `picking_filterPickin
 
 ```
 main() {
+
   gl_FragColor = ...
+
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
+
 }
 ```
 
@@ -90,10 +103,15 @@ If you would like to apply the highlight color to the currently selected element
 
 ```
 main() {
+
   gl_FragColor = ...
+
   gl_FragColor = picking_filterHighlightColor(gl_FragColor);
+
    ... apply any filters on gl_FragColor ...
+
  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+
 }
 ```
 
@@ -117,6 +135,8 @@ Uniforms for the picking module, which renders picking colors and highlighted it
 * `isActive` - When true, renders picking colors. Set when rendering to off-screen "picking" buffer. When false, renders normal colors, with the exception of selected object which is rendered with highlight
 * `useByteColors` defaults to byte-compatible highlight color behavior in Phase 1.
 
+<!-- -->
+
 ## Vertex Shader Functions[​](#vertex-shader-functions "Direct link to Vertex Shader Functions")
 
 ### picking\_setPickingColor()[​](#picking_setpickingcolor "Direct link to picking_setPickingColor()")
@@ -139,6 +159,7 @@ Sets the attribute value that needs to be picked.
 
 ```
 fn picking_filterColor(color: vec4<f32>) -> vec4<f32>
+
 vec4 picking_filterColor(vec4 color)
 ```
 

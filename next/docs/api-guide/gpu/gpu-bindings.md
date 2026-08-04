@@ -17,14 +17,19 @@ For WGSL that goes through `Model` or shadertools assembly, prefer `@binding(aut
 
 ```
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
+
 @group(0) @binding(auto) var colorTexture: texture_2d<f32>;
+
 @group(0) @binding(auto) var colorTextureSampler: sampler;
 ```
 
 ```
 model.setBindings({
+
   app: uniformBuffer,
+
   colorTexture: texture
+
 });
 ```
 
@@ -130,14 +135,23 @@ The `group` field lives on each binding declaration.
 
 ```
 const shaderLayout = {
+
   attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+
   bindings: [
+
     {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+
     {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+
     {name: 'materialUniforms', type: 'uniform', group: 3, location: 0},
+
     {name: 'baseColorTexture', type: 'texture', group: 3, location: 1},
+
     {name: 'baseColorSampler', type: 'sampler', group: 3, location: 2}
+
   ]
+
 };
 ```
 
@@ -154,11 +168,17 @@ Flat bindings:
 
 ```
 const bindings = {
+
   frameUniforms,
+
   lightingUniforms,
+
   materialUniforms,
+
   baseColorTexture: textureView,
+
   baseColorSampler: sampler
+
 };
 ```
 
@@ -166,13 +186,21 @@ Grouped bindings:
 
 ```
 const bindGroups = {
+
   0: {frameUniforms},
+
   2: {lightingUniforms},
+
   3: {
+
     materialUniforms,
+
     baseColorTexture: textureView,
+
     baseColorSampler: sampler
+
   }
+
 };
 ```
 
@@ -204,68 +232,131 @@ This example shows a WGSL-style layout using group `0` for frame data, group `2`
 
 ```
 const vs = device.createShader({
+
   stage: 'vertex',
+
   source: /* wgsl */ `
+
   struct FrameUniforms {
+
     modelViewProjectionMatrix: mat4x4<f32>
+
   };
+
+
 
   @group(0) @binding(0) var<uniform> frameUniforms: FrameUniforms;
 
+
+
   @vertex
+
   fn vertexMain(@location(0) positions: vec3f) -> @builtin(position) vec4f {
+
     return frameUniforms.modelViewProjectionMatrix * vec4f(positions, 1.0);
+
   }
+
   `
+
 });
+
+
 
 const fs = device.createShader({
+
   stage: 'fragment',
+
   source: /* wgsl */ `
+
   struct LightingUniforms {
+
     ambientColor: vec3f
+
   };
+
+
 
   struct MaterialUniforms {
+
     baseColorFactor: vec4f
+
   };
 
+
+
   @group(2) @binding(0) var<uniform> lightingUniforms: LightingUniforms;
+
   @group(3) @binding(0) var<uniform> materialUniforms: MaterialUniforms;
+
   @group(3) @binding(1) var baseColorTexture: texture_2d<f32>;
+
   @group(3) @binding(2) var baseColorSampler: sampler;
 
+
+
   @fragment
+
   fn fragmentMain() -> @location(0) vec4f {
+
     let textureColor = textureSample(baseColorTexture, baseColorSampler, vec2f(0.5, 0.5));
+
     return vec4f(textureColor.rgb * lightingUniforms.ambientColor, textureColor.a) *
+
       materialUniforms.baseColorFactor;
+
   }
+
   `
+
 });
 
+
+
 const pipeline = device.createRenderPipeline({
+
   vs,
+
   fs,
+
   shaderLayout: {
+
     attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+
     bindings: [
+
       {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+
       {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+
       {name: 'materialUniforms', type: 'uniform', group: 3, location: 0},
+
       {name: 'baseColorTexture', type: 'texture', group: 3, location: 1},
+
       {name: 'baseColorSampler', type: 'sampler', group: 3, location: 2}
+
     ]
+
   },
+
   bindGroups: {
+
     0: {frameUniforms},
+
     2: {lightingUniforms},
+
     3: {
+
       materialUniforms,
+
       baseColorTexture: textureView,
+
       baseColorSampler: sampler
+
     }
+
   }
+
 });
 ```
 
@@ -277,29 +368,53 @@ At the engine level, `Model` still primarily works with flat bindings. Grouping 
 
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
+
 import {lighting, pbrMaterial} from '@luma.gl/shadertools';
+
+
 
 const shaderInputs = new ShaderInputs({lighting, pbrMaterial});
 
+
+
 const model = new Model(device, {
+
   vs,
+
   fs,
+
   modules: [lighting, pbrMaterial],
+
   shaderInputs
+
 });
+
+
 
 shaderInputs.setProps({
+
   lighting: {
+
     useByteColors: false,
+
     lights: [{type: 'ambient', color: [1, 1, 1], intensity: 0.2}]
+
   },
+
   pbrMaterial: {
+
     baseColorFactor: [1, 0.8, 0.7, 1]
+
   }
+
 });
 
+
+
 model.setBindings({
+
   pbr_baseColorSampler: textureView
+
 });
 ```
 

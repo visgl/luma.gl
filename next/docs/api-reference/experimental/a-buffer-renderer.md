@@ -13,41 +13,77 @@ The renderer owns the per-frame linked-list buffers and runs two stages:
 
 ```
 import {
+
   Model,
+
   ShaderInputs
+
 } from '@luma.gl/engine';
+
 import {
+
   ABufferRenderer,
+
   aBuffer,
+
   aBufferPlugin
+
 } from '@luma.gl/experimental';
 
+
+
 const shaderInputs = new ShaderInputs({aBuffer});
+
 const renderer = new ABufferRenderer(device, {
+
   averageFragmentsPerPixel: 4,
+
   maxFragmentsPerPixel: 12,
+
   maxBufferByteLength: 64 * 1024 * 1024,
+
   colorFormat: 'rgba16float'
+
 });
+
+
 
 const model = new Model(device, {
+
   source,
+
   plugins: [aBufferPlugin],
+
   shaderInputs
+
 });
 
+
+
 // Render opaque color and sampleable depth into an application-owned framebuffer first.
+
 const outputTexture = renderer.render({
+
   sourceTexture: sceneFramebuffer.colorAttachments[0].texture,
+
   opaqueDepthTexture: sceneFramebuffer.depthStencilAttachment!,
+
   prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+
     shaderInputs.setProps({aBuffer: shaderModuleProps});
+
     model.setParameters({...model.parameters, ...captureParameters});
+
     model.predraw(commandEncoder);
+
   },
+
   drawTranslucent: renderPass => {
+
     model.draw(renderPass);
+
   }
+
 });
 ```
 
@@ -76,17 +112,29 @@ The renderer supplies module bindings through `ABufferCaptureContext.shaderModul
 
 ```
 export type ABufferRendererProps = {
+
   averageFragmentsPerPixel?: number;
+
   maxFragmentsPerPixel?: number;
+
   maxBufferByteLength?: number;
+
   colorFormat?: TextureFormatColor;
+
 };
 
+
+
 export type ABufferRenderOptions = {
+
   sourceTexture: Texture;
+
   opaqueDepthTexture: TextureView;
+
   prepareTranslucent: (context: ABufferCaptureContext) => void;
+
   drawTranslucent: (renderPass: RenderPass) => void;
+
 };
 ```
 

@@ -14,13 +14,21 @@ Use `GPUTable` to preserve row alignment, source batch boundaries, GPU formats, 
 
 ```
 const table = new GPUTable({
+
   columns: {
+
     positions,
+
     colors: new GPUConstant({
+
       format: 'unorm8x4',
+
       value: new Uint8Array([60, 150, 255, 220])
+
     })
+
   }
+
 });
 ```
 
@@ -28,7 +36,9 @@ const table = new GPUTable({
 
 ```
 type GPUColumn<T extends GPUVectorFormat> =
+
   | GPUVector<T>
+
   | (T extends VertexFormat ? GPUConstant<T> : never);
 ```
 
@@ -47,8 +57,11 @@ Variable-length list formats cannot be constants.
 
 ```
 const table = new GPUTable({
+
   columns: {radius: constantRadius, color: constantColor},
+
   numRows: 10_000
+
 });
 ```
 
@@ -58,8 +71,11 @@ const table = new GPUTable({
 
 ```
 const table = new GPUTable({
+
   batches: [firstBatch, secondBatch],
+
   constants: {color: constantColor}
+
 });
 ```
 

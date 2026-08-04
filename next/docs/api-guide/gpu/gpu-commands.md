@@ -27,12 +27,19 @@ For the common single-pass rendering case, `device.beginRenderPass()` and `devic
 
 ```
 const renderPass = device.beginRenderPass({
+
   clearColor: [0, 0, 0, 1],
+
   clearDepth: 1
+
 });
 
+
+
 model.draw(renderPass);
+
 renderPass.end();
+
 device.submit();
 ```
 
@@ -41,14 +48,24 @@ Use an explicit `CommandEncoder` when you need one visible submission boundary a
 ```
 const commandEncoder = device.createCommandEncoder();
 
+
+
 const renderPass = commandEncoder.beginRenderPass({
+
   framebuffer,
+
   clearColor: [0, 0, 0, 1]
+
 });
+
 model.draw(renderPass);
+
 renderPass.end();
 
+
+
 const commandBuffer = commandEncoder.finish();
+
 device.submit(commandBuffer);
 ```
 
@@ -71,8 +88,11 @@ Use a `RenderPass` when you are drawing. It chooses the render target, applies c
 
 ```
 const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+
 model.draw(renderPass);
+
 renderPass.end();
+
 device.submit();
 ```
 
@@ -84,9 +104,13 @@ Use a `ComputePass` when you are dispatching a compute pipeline.
 
 ```
 const computePass = webgpuDevice.beginComputePass();
+
 computePass.setPipeline(computePipeline);
+
 computePass.dispatch(workgroupCount);
+
 computePass.end();
+
 webgpuDevice.submit();
 ```
 
@@ -146,15 +170,25 @@ Use a `RenderBundleEncoder` when the same WebGPU draw commands run repeatedly an
 
 ```
 const renderBundleEncoder = device.createRenderBundleEncoder({
+
   colorAttachmentFormats: [device.preferredColorFormat]
+
 });
 
+
+
 model.draw(renderBundleEncoder);
+
 const renderBundle = renderBundleEncoder.finish();
 
+
+
 const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+
 renderPass.executeBundles([renderBundle]);
+
 renderPass.end();
+
 device.submit();
 ```
 

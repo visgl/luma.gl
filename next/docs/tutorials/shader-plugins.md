@@ -22,24 +22,44 @@ Each backend-specific plugin variant injects the pattern implementation into `fs
 ```
 import type {ShaderPlugin} from '@luma.gl/shadertools';
 
+
+
 const fillPatternPlugin: ShaderPlugin = {
+
   name: 'fill-pattern-plugin',
+
   glsl: {
+
     injections: [
+
       {
+
         target: 'fs:#decl',
+
         injection: GLSL_FILL_PATTERN_SOURCE
+
       }
+
     ]
+
   },
+
   wgsl: {
+
     injections: [
+
       {
+
         target: 'fs:#decl',
+
         injection: WGSL_FILL_PATTERN_SOURCE
+
       }
+
     ]
+
   }
+
 };
 ```
 
@@ -47,38 +67,71 @@ The injected shader source can expose a stable callable surface while still usin
 
 ```
 const GLSL_FILL_PATTERN_SOURCE = /* glsl */ `
+
 float plugin_fillPatternStripeMask(float position, vec2 size) {
+
   float stepLength = max(size.x + size.y, 0.0001);
+
   float wrappedPosition = fract(position / stepLength) * stepLength;
+
   float edgeWidth = 0.0025;
+
   return 1.0 - smoothstep(size.x - edgeWidth, size.x + edgeWidth, wrappedPosition);
+
 }
+
+
 
 vec4 plugin_applyFillPattern(vec4 color, float fillPatternType, vec2 uv, vec2 size) {
+
   float opacity =
+
     fillPatternType < 0.5 ? 1.0 : plugin_fillPatternStripeMask(uv.x + uv.y, size);
+
   return vec4(color.rgb, color.a * opacity);
+
 }
+
 `;
 
+
+
 const WGSL_FILL_PATTERN_SOURCE = /* wgsl */ `
+
 fn pluginFillPatternStripeMask(position: f32, size: vec2<f32>) -> f32 {
+
   let stepLength = max(size.x + size.y, 0.0001);
+
   let wrappedPosition = fract(position / stepLength) * stepLength;
+
   let edgeWidth = 0.0025;
+
   return 1.0 - smoothstep(size.x - edgeWidth, size.x + edgeWidth, wrappedPosition);
+
 }
 
+
+
 fn pluginApplyFillPattern(
+
   color: vec4<f32>,
+
   fillPatternType: f32,
+
   uv: vec2<f32>,
+
   size: vec2<f32>
+
 ) -> vec4<f32> {
+
   let opacity =
+
     select(pluginFillPatternStripeMask(uv.x + uv.y, size), 1.0, fillPatternType < 0.5);
+
   return vec4<f32>(color.rgb, color.a * opacity);
+
 }
+
 `;
 ```
 
@@ -86,26 +139,47 @@ The model opts into the behavior through `plugins`, while the explicit attribute
 
 ```
 const model = new Model(device, {
+
   source: WGSL_SOURCE,
+
   vs: GLSL_VERTEX_SHADER,
+
   fs: GLSL_FRAGMENT_SHADER,
+
   shaderAssembler,
+
   plugins: [fillPatternPlugin, clipShaderPlugin],
+
   bufferLayout: [
+
     {name: 'position', format: 'float32x2'},
+
     {name: 'fillPatternType', format: 'float32'},
+
     {name: 'fillPatternSize', format: 'float32x2'},
+
     {name: 'fillPatternUv', format: 'float32x2'},
+
     {name: 'triangleCenter', format: 'float32x2'}
+
   ],
+
   attributes: {
+
     position: positionBuffer,
+
     fillPatternType: fillPatternTypeBuffer,
+
     fillPatternSize: fillPatternSizeBuffer,
+
     fillPatternUv: fillPatternUvBuffer,
+
     triangleCenter: triangleCenterBuffer
+
   },
+
   vertexCount
+
 });
 ```
 
@@ -115,38 +189,57 @@ const model = new Model(device, {
 
 ```
 CLIP_POSITION(gl_Position, triangleCenter, position);
+
 // ...in the fragment shader, after creating fragColor:
+
 CLIP_COLOR(fragColor);
 ```
 
 ```
 CLIP_POSITION(&output.position, triangleCenter, position);
+
 // ...in the fragment shader, after creating a mutable color:
+
 CLIP_COLOR(&color);
 ```
 
 The hook signatures are registered for the active shader language:
 
 ```
-const shaderAssembler = new ShaderAssembler();
+import {GLSLShaderAssembler} from '@luma.gl/shadertools';
+
+
+
+const shaderAssembler = new GLSLShaderAssembler();
+
+
 
 shaderAssembler.addShaderHook(
+
   'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'
+
 );
+
 shaderAssembler.addShaderHook('fs:CLIP_COLOR(inout vec4 color)');
 ```
 
-The WGSL signatures use pointers for the mutable position and color. WGSL varying synthesis requires the selected vertex entry point to return a named stage-I/O struct and the fragment entry point to consume one named stage-I/O struct. The structs may be the same or separate. The assembler assigns unused locations and copies plugin values across the generated interface.
+For WGSL, create a `WGSLShaderAssembler` instead. Its hook signatures use pointers for the mutable position and color. WGSL varying synthesis requires the selected vertex entry point to return a named stage-I/O struct and the fragment entry point to consume one named stage-I/O struct. The structs may be the same or separate. The assembler assigns unused locations and copies plugin values across the generated interface.
 
 The clipping controls update only the plugin's shader inputs:
 
 ```
 model.shaderInputs.setProps({
+
   clip: {
+
     enabled,
+
     mode,
+
     bounds: [left, bottom, right, top]
+
   }
+
 });
 ```
 

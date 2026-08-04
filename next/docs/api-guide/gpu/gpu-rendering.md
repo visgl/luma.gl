@@ -86,21 +86,38 @@ Detect whether the current display advertises high dynamic range, then configure
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
+
+
 const supportsHighDynamicRange =
+
   typeof window !== 'undefined' && window.matchMedia('(dynamic-range: high)').matches;
 
+
+
 const device = await luma.createDevice({
+
   adapters: [webgpuAdapter],
+
   createCanvasContext: supportsHighDynamicRange
+
     ? {
+
         colorFormat: 'rgba16float',
+
         colorSpace: 'display-p3',
+
         toneMapping: 'extended'
+
       }
+
     : true
+
 });
+
+
 
 const renderingHighDynamicRange = device.preferredColorFormat === 'rgba16float';
 ```
@@ -128,9 +145,13 @@ The [Deferred Rendering: Illumination Lab](https://luma.gl/next/examples/experim
 
 ```
 const pipeline = device.createRenderPipeline({
+
   id: 'my-pipeline',
+
   vs: vertexShaderSourceString,
+
   fs: fragmentShaderSourceString
+
 });
 ```
 
@@ -151,9 +172,15 @@ Once all bindings have been set up, call `pipeline.draw()`
 ```
 const pipeline = device.createRenderPipeline({vs, fs});
 
+
+
 // Create a `VertexArray` to store buffer values for the vertices of a triangle and drawing
+
 const vertexArray = device.createVertexArray();
+
 ...
+
+
 
 const success = pipeline.draw({vertexArray, ...});
 ```
@@ -162,10 +189,16 @@ Create a `VertexArray` to store buffer values for the vertices of a triangle and
 
 ```
 const pipeline = device.createRenderPipeline({vs, fs});
+
 const vertexArray = new VertexArray(gl, {pipeline});
+
 vertexArray.setAttributes({
+
   aVertexPosition: new Buffer(gl, {data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0])})
+
 });
+
+
 
 pipeline.draw({vertexArray, ...});
 ```
@@ -182,9 +215,13 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling `devic
 
 ```
   // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
+
   const renderPass = device.beginRenderPass();
+
   model.draw();
+
   renderPass.end();
+
   device.submit(); 
 ```
 
@@ -192,6 +229,7 @@ For more detail. `device.getDefaultCanvasContext().getDefaultFramebuffer()` retu
 
 ```
   const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
+
   ...
 ```
 
@@ -201,8 +239,11 @@ Unless implementing special compositing techniques, applications usually want to
 
 ```
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+
   model.draw();
+
   renderPass.end();
+
   device.submit();
 ```
 
@@ -210,11 +251,17 @@ Depth and stencil buffers should normally also be cleared to default values:
 
 ```
   const renderPass = device.beginRenderPass({
+
     clearColor: [0, 0, 0, 1],
+
     depthClearValue: 1,
+
     stencilClearValue: 0
+
   });
+
   renderPass.end();
+
   device.submit();
 ```
 
@@ -236,10 +283,15 @@ A default Framebuffer should not be manually resized.
 
 ```
 const framebuffer = device.createFramebuffer({
+
   width: window.innerWidth,
+
   height: window.innerHeight,
+
   color: 'true',
+
   depthStencil: true
+
 });
 ```
 
@@ -247,9 +299,13 @@ Attaching textures and renderbuffers
 
 ```
 device.createFramebuffer({
+
   depthStencil: device.createRenderbuffer({...}),
+
   color0: device.createTexture({...})
+
 });
+
 framebuffer.checkStatus(); // optional
 ```
 
@@ -263,14 +319,23 @@ Specifying a framebuffer for rendering in each render calls
 
 ```
 const offScreenBuffer = device.createFramebuffer(...);
+
 const offScreenRenderPass = device.beginRenderPass({framebuffer: offScreenFramebuffer});
+
 model1.draw({
+
   framebuffer: offScreenBuffer,
+
   parameters: {}
+
 });
+
 model2.draw({
+
   framebuffer: null, // the default drawing buffer
+
   parameters: {}
+
 });
 ```
 
@@ -278,14 +343,23 @@ model2.draw({
 
 ```
 const framebuffer1 = device.createFramebuffer({...});
+
 const framebuffer2 = device.createFramebuffer({...});
 
+
+
 const renderPass1 = device.beginRenderPass({framebuffer: framebuffer1});
+
 program.draw(renderPass1);
+
 renderPass1.endPass();
 
+
+
 const renderPass2 = device.beginRenderPass({framebuffer: framebuffer1});
+
 program.draw(renderPass2);
+
 renderPass2.endPass();
 ```
 
@@ -301,11 +375,18 @@ Writing to multiple framebuffer attachments in GLSL fragment shader
 
 ```
 #extension GL_EXT_draw_buffers : require
+
 precision highp float;
+
 void main(void) {
+
   gl_FragData[0] = vec4(0.25);
+
   gl_FragData[1] = vec4(0.5);
+
   gl_FragData[2] = vec4(0.75);
+
   gl_FragData[3] = vec4(1.0);
+
 }
 ```

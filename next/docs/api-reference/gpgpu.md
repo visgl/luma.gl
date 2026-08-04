@@ -23,23 +23,42 @@ Interleaving two buffers together
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webglAdapter} from '@luma.gl/webgl';
+
 import {GPUDataEvaluator, add, interleave} from '@luma.gl/gpgpu';
 
+
+
 const inputA = GPUDataEvaluator.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
+
 const inputB = GPUDataEvaluator.fromArray(new Float32Array([10, 20]), {size: 1});
+
 const output = interleave(inputA, inputB);
 
+
+
 // Operations can be chained
+
 const outputAlt = interleave(inputA, add(inputB, GPUDataEvaluator.fromConstant(1)));
 
+
+
 // No computation is performed until the output is evaluated.
+
 // The WebGL backend is loaded automatically on first use.
 
+
+
 const device = await luma.createDevice({
+
   type: 'webgl',
+
   adapters: [webglAdapter]
+
 });
+
+
 
 const outputVector = await output.evaluate(device);
 ```
@@ -63,10 +82,15 @@ Backend modules are also available from dedicated endpoints. Use these imports w
 
 ```
 import {backendRegistry} from '@luma.gl/gpgpu';
+
 import * as webglBackend from '@luma.gl/gpgpu/webgl';
+
 import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
 
+
+
 backendRegistry.add('webgl', webglBackend);
+
 backendRegistry.add('webgpu', webgpuBackend);
 ```
 
@@ -74,11 +98,17 @@ If you plan to use synchronous evaluation on a `webgl` or `webgpu` device, eager
 
 ```
 import {backendRegistry, cleanEvaluateSync, interleave} from '@luma.gl/gpgpu';
+
 import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
+
+
 
 backendRegistry.add('webgpu', webgpuBackend);
 
+
+
 const packed = interleave(inputA, inputB);
+
 cleanEvaluateSync(device, packed);
 ```
 
@@ -86,16 +116,27 @@ The same endpoints export individual backend operation handlers. Applications ca
 
 ```
 import {backendRegistry} from '@luma.gl/gpgpu';
+
 import {interleave, swizzle} from '@luma.gl/gpgpu/webgl';
+
 import {customOpWebGL} from './custom-operation';
 
+
+
 backendRegistry.add('webgl', {
+
   // Built-in operation handlers selected from the WebGL backend.
+
   interleave,
+
   swizzle,
 
+
+
   // Custom operation handler. The key must match the custom operation name.
+
   customOp: customOpWebGL
+
 });
 ```
 

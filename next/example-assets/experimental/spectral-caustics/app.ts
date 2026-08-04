@@ -344,31 +344,14 @@ struct FragmentInputs {
 
 const INFO_HTML = `
 <style>
-  .prism-cathedral-info {
-    position: fixed;
-    left: 24px;
-    bottom: 24px;
-    width: min(360px, calc(100vw - 48px));
-    box-sizing: border-box;
-    padding: 16px 18px;
-    border: 1px solid rgb(154 205 255 / 22%);
-    border-radius: 10px;
-    background: linear-gradient(135deg, rgb(3 7 18 / 88%), rgb(14 10 28 / 72%));
-    box-shadow: 0 16px 54px rgb(0 0 0 / 35%);
-    color: #eaf4ff;
-    font: 13px/1.45 system-ui, sans-serif;
-    backdrop-filter: blur(14px);
-    pointer-events: none;
-  }
-  .prism-cathedral-info h1 { margin: 0 0 7px; font: 600 17px/1.2 system-ui, sans-serif; letter-spacing: .02em; }
-  .prism-cathedral-info p { margin: 0; color: #b8cae5; }
+  .prism-cathedral-info { font: 13px/1.45 system-ui, sans-serif; }
+  .prism-cathedral-info p { margin: 0; color: inherit; opacity: .82; }
   .prism-cathedral-info .prism-cathedral-controls { margin-top: 9px; color: #d8e8ff; }
   .prism-cathedral-info strong { color: #fff3c4; font-weight: 600; }
   .prism-cathedral-badges { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
   .prism-cathedral-badge { padding: 4px 7px; border: 1px solid rgb(120 186 255 / 24%); border-radius: 99px; color: #dcecff; background: rgb(30 72 120 / 18%); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
 </style>
 <section class="prism-cathedral-info">
-  <h1>Spectral Caustics: Prism Cathedral</h1>
   <p>A rotating convex crystal is captured from the light, then <strong>six CIE/D65 wavelength bands</strong> refract through its real front and back surfaces into an HDR XYZ caustic map.</p>
   <p class="prism-cathedral-controls"><strong>Drag</strong> to orbit · <strong>Wheel</strong> to zoom · <strong>Space</strong> for cinematic orbit · <strong>R</strong> to reset</p>
   <div class="prism-cathedral-badges"><span class="prism-cathedral-badge">WebGPU compute</span><span class="prism-cathedral-badge">Geometry traced</span><span class="prism-cathedral-badge">HDR bloom</span></div>

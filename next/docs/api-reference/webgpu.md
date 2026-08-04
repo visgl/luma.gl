@@ -8,11 +8,17 @@ The `webgpuAdapter` imported from `@luma.gl/webgpu` enables WebGPU devices to be
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
+
+
 
 const device = await luma.createDevice({adapters: [webgpuAdapter], createCanvasContext: {width: 800, height: 600}});
 
+
+
 // Resources can now be created
+
 const buffer = device.createBuffer(...);
 ```
 
@@ -22,9 +28,13 @@ WebGPU devices default to the WebGPU core feature level:
 
 ```
 const device = await luma.createDevice({
+
   type: 'webgpu',
+
   adapters: [webgpuAdapter],
+
   featureLevel: 'core'
+
 });
 ```
 
@@ -32,9 +42,13 @@ Applications that need the previous "request every supported feature and limit" 
 
 ```
 const device = await luma.createDevice({
+
   type: 'webgpu',
+
   adapters: [webgpuAdapter],
+
   featureLevel: 'max'
+
 });
 ```
 
@@ -42,9 +56,13 @@ Applications can opt into WebGPU compatibility mode on browsers and backends tha
 
 ```
 const device = await luma.createDevice({
+
   type: 'webgpu',
+
   adapters: [webgpuAdapter],
+
   featureLevel: 'compatibility'
+
 });
 ```
 
@@ -52,9 +70,13 @@ Applications that fit within compatibility restrictions but prefer core WebGPU w
 
 ```
 const device = await luma.createDevice({
+
   type: 'webgpu',
+
   adapters: [webgpuAdapter],
+
   featureLevel: 'best-available'
+
 });
 ```
 
@@ -68,11 +90,17 @@ If you are only interested in using WebGPU for compute and not for rendering (or
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
+
+
 
 const device = await luma.createDevice({adapters: [webgpuAdapter]});
 
+
+
 // Resources can now be created
+
 const buffer = device.createBuffer(...);
 ```
 
@@ -83,9 +111,15 @@ To use a luma.gl WebGPU `Device` with raw WebGPU calls, the application can acce
 ```
 import type {WebGPUDevice} from '@luma.gl/webgpu`;
 
+
+
 const webgpuDevice = device as WebGPUDevice;
+
 const gpuDevice: GPUDevice = webgpuDevice.handle;
 
+
+
 const buffer = device.createBuffer(...);
+
 const gpuBuffer: GPUBuffer = buffer.handle;
 ```

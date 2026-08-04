@@ -27,14 +27,20 @@ A hook has three parts:
 ```
 import {ShaderAssembler} from '@luma.gl/shadertools';
 
-const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+
+
+const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+
 shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 ```
 
 ```
 void main() {
+
   gl_Position = vec4(position, 0.0, 1.0);
+
   OFFSET_POSITION(gl_Position);
+
 }
 ```
 
@@ -47,24 +53,44 @@ A plugin is the reusable attachment unit. It can contribute modules, defines, sh
 ```
 import type {ShaderPlugin} from '@luma.gl/shadertools';
 
+
+
 const tintPlugin: ShaderPlugin = {
+
   name: 'tint-plugin',
+
   glsl: {
+
     injections: [
+
       {
+
         target: 'fs:#decl',
+
         injection: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }'
+
       }
+
     ]
+
   },
+
   wgsl: {
+
     injections: [
+
       {
+
         target: 'fs:#decl',
+
         injection: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
+
       }
+
     ]
+
   }
+
 };
 ```
 
@@ -73,11 +99,18 @@ The model opts in explicitly:
 ```
 import {Model} from '@luma.gl/engine';
 
+
+
 const model = new Model(device, {
+
   source: wgslSource,
+
   vs: glslVertexSource,
+
   fs: glslFragmentSource,
+
   plugins: [tintPlugin]
+
 });
 ```
 

@@ -23,39 +23,73 @@ Named `extraColorAttachments` are appended after location 2 in declaration order
 
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
+
 import {createSSRShaderPassPipeline, createTAAShaderPassPipeline} from '@luma.gl/effects';
+
 import {GBuffer} from '@luma.gl/experimental';
 
+
+
 const gBuffer = new GBuffer(device, {
+
   id: 'scene',
+
   width,
+
   height,
+
   extraColorAttachments: [{name: 'emissive', format: 'rgba16float'}]
+
 });
+
+
 
 const scenePass = device.beginRenderPass({
+
   framebuffer: gBuffer.framebuffer,
+
   clearColors: [
+
     new Float32Array([0, 0, 0, 1]),
+
     new Float32Array([0.5, 0.5, 1, 1]),
+
     new Float32Array([0, 0, 0, 0]),
+
     new Float32Array([0, 0, 0, 0])
+
   ],
+
   clearDepth: 1
+
 });
+
 sceneModel.draw(scenePass);
+
 scenePass.end();
 
+
+
 const effects = new ShaderPassRenderer(device, {
+
   shaderPasses: [createSSRShaderPassPipeline(), createTAAShaderPassPipeline()]
+
 });
 
+
+
 effects.renderToScreen({
+
   sourceTexture: gBuffer.colorTexture,
+
   bindings: {
+
     ...gBuffer.getShaderPassBindings(),
+
     emissiveTexture: gBuffer.getExtraColorTexture('emissive')
+
   }
+
 });
 ```
 
@@ -63,9 +97,13 @@ The geometry fragment shader must write outputs that match the contract:
 
 ```
 struct FragmentOutputs {
+
   @location(0) color: vec4f,
+
   @location(1) normalRoughness: vec4f,
+
   @location(2) velocity: vec2f,
+
 };
 ```
 
@@ -75,13 +113,21 @@ The [Deferred Illumination Lab](https://luma.gl/next/examples/experimental/defer
 
 ```
 const gBuffer = new GBuffer(device, {
+
   width,
+
   height,
+
   colorFormat: 'rgba16float',
+
   extraColorAttachments: [
+
     {name: 'baseColorMetallic', format: 'rgba8unorm'},
+
     {name: 'emissiveOcclusion', format: 'rgba8uint'}
+
   ]
+
 });
 ```
 
@@ -109,9 +155,13 @@ Returns:
 
 ```
 {
+
   depthTexture: gBuffer.depthTexture,
+
   normalTexture: gBuffer.normalRoughnessTexture,
+
   velocityTexture: gBuffer.velocityTexture
+
 }
 ```
 

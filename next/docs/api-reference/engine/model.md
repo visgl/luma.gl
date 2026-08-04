@@ -9,19 +9,34 @@
 ```
 import {CubeGeometry, DynamicTexture, Model} from '@luma.gl/engine';
 
+
+
 const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 
+
+
 const model = new Model(device, {
+
   vs: GLSL_VERTEX_SHADER,
+
   fs: GLSL_FRAGMENT_SHADER,
+
   geometry: new CubeGeometry(),
+
   bindings: {
+
     uSampler: dynamicTexture
+
   }
+
 });
 
+
+
 const renderPass = device.beginRenderPass({framebuffer});
+
 model.draw(renderPass);
+
 renderPass.end();
 ```
 

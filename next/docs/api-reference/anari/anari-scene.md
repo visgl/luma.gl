@@ -6,8 +6,11 @@ The scene hierarchy combines geometry and materials into surfaces, groups relate
 
 ```
 ANARIGeometry + ANARIMaterial → ANARISurface
+
 ANARISurface + ANARILight → ANARIGroup
+
 ANARIGroup + matrix → ANARIInstance
+
 ANARISurface / ANARIInstance / ANARILight → ANARIWorld
 ```
 
@@ -15,11 +18,17 @@ ANARISurface / ANARIInstance / ANARILight → ANARIWorld
 
 ```
 new ANARISurface(device: ANARIDevice, parameters: ANARISurfaceParameters);
+
 newSurface(parameters: ANARISurfaceParameters): ANARISurface;
 
+
+
 type ANARISurfaceParameters = {
+
   geometry: ANARIGeometry;
+
   material: ANARIMaterial;
+
 };
 ```
 
@@ -27,11 +36,17 @@ Both `geometry` and `material` are required:
 
 ```
 const sphere = anariDevice.newGeometry('sphere', {radius: 0.9});
+
 const gold = anariDevice.newMaterial('physicallyBased', {
+
   baseColor: [1, 0.72, 0.18],
+
   metallic: 1,
+
   roughness: 0.2
+
 });
+
 const surface = anariDevice.newSurface({geometry: sphere, material: gold});
 ```
 
@@ -41,13 +56,21 @@ A surface is the runtime's instancing and batching identity. Referencing the **s
 
 ```
 new ANARIGroup(device: ANARIDevice, parameters?: ANARIGroupParameters);
+
 newGroup(parameters?: ANARIGroupParameters): ANARIGroup;
 
+
+
 type ANARIGroupParameters = {
+
   surface?: readonly ANARISurface[] | ANARIArray;
+
   surfaces?: readonly ANARISurface[];
+
   light?: readonly ANARILight[] | ANARIArray;
+
   lights?: readonly ANARILight[];
+
 };
 ```
 
@@ -60,8 +83,11 @@ type ANARIGroupParameters = {
 
 ```
 const group = anariDevice.newGroup({
+
   surface: [metalSurface, glassSurface],
+
   light: [interiorLight]
+
 });
 ```
 
@@ -73,12 +99,20 @@ The group itself does not appear directly in the world; reference it through an 
 
 ```
 new ANARIInstance(device: ANARIDevice, parameters: ANARIInstanceParameters);
+
 newInstance(parameters: ANARIInstanceParameters): ANARIInstance;
 
+
+
 type ANARIInstanceParameters = {
+
   group: ANARIGroup | readonly ANARIGroup[] | ANARIArray;
+
   transform?: ANARIMatrix4;
+
 };
+
+
 
 type ANARIMatrix4 = readonly number[];
 ```
@@ -86,14 +120,24 @@ type ANARIMatrix4 = readonly number[];
 ```
 import {Matrix4} from '@math.gl/core';
 
+
+
 const left = anariDevice.newInstance({
+
   group,
+
   transform: new Matrix4().translate([-2, 0, 0])
+
 });
 
+
+
 const right = anariDevice.newInstance({
+
   group,
+
   transform: new Matrix4().translate([2, 0, 0])
+
 });
 ```
 
@@ -105,7 +149,9 @@ All surfaces in the referenced groups receive the same instance transform. Group
 
 ```
 left
+
   .setParameter('transform', new Matrix4().translate([-2, Math.sin(time), 0]))
+
   .commitParameters();
 ```
 
@@ -115,15 +161,25 @@ Instance transforms are uploaded every render, allowing animation without rebuil
 
 ```
 new ANARIWorld(device: ANARIDevice, parameters?: ANARIWorldParameters);
+
 newWorld(parameters?: ANARIWorldParameters): ANARIWorld;
 
+
+
 type ANARIWorldParameters = {
+
   surface?: readonly ANARISurface[] | ANARIArray;
+
   surfaces?: readonly ANARISurface[];
+
   instance?: readonly ANARIInstance[] | ANARIArray;
+
   instances?: readonly ANARIInstance[];
+
   light?: readonly ANARILight[] | ANARIArray;
+
   lights?: readonly ANARILight[];
+
 };
 ```
 
@@ -137,9 +193,13 @@ Canonical singular names accept either normal JavaScript arrays or `ANARIArray` 
 
 ```
 const world = anariDevice.newWorld({
+
   surface: [floorSurface],
+
   instance: [left, right],
+
   light: [sunlight, pointLight]
+
 });
 ```
 
@@ -147,8 +207,11 @@ const world = anariDevice.newWorld({
 
 ```
 world.setParameters({
+
   instance: [left, right, center],
+
   light: [sunlight, animatedPoint]
+
 }).commitParameters();
 ```
 
@@ -158,10 +221,15 @@ The next render recollects committed world contents. Cached models for surfaces 
 
 ```
 const frame = anariDevice.newFrame({world, camera, renderer});
+
 const statistics = frame.render();
 
+
+
 statistics.surfaceCount;  // Distinct ANARISurface object identities.
+
 statistics.instanceCount; // Total direct and instanced surface placements.
+
 statistics.drawCount;     // Successful instanced draw calls.
 ```
 
@@ -175,7 +243,9 @@ The underlying luma.gl `Device` is separately owned by your application:
 
 ```
 frame.destroy();
+
 anariDevice.destroy();
+
 graphicsDevice.destroy();
 ```
 

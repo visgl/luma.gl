@@ -13,24 +13,44 @@ The simulation records into an application-owned `CommandEncoder`. It never subm
 ```
 import {SpectralOceanSimulation} from '@luma.gl/experimental';
 
+
+
 const ocean = new SpectralOceanSimulation(device, {
+
   id: 'offshore-ocean',
+
   resolution: 256,
+
   patchSize: 512,
+
   windDirection: [0.9, 0.3],
+
   windSpeed: 22,
+
   amplitude: 0.0005,
+
   choppiness: 1.4,
+
   seed: 2026
+
 });
+
+
 
 const commandEncoder = device.createCommandEncoder({id: 'ocean-frame'});
+
 const outputs = ocean.encode(commandEncoder, {
+
   time: elapsedSeconds,
+
   deltaTime: frameDeltaSeconds
+
 });
 
+
+
 // Bind outputs.displacementBuffer and outputs.normalFoamBuffer to a grid model.
+
 device.submit(commandEncoder.finish());
 ```
 
@@ -40,18 +60,31 @@ device.submit(commandEncoder.finish());
 
 ```
 type SpectralOceanSimulationProps = {
+
   id?: string;
+
   resolution: number;
+
   patchSize?: number;
+
   windDirection?: readonly [number, number];
+
   windSpeed?: number;
+
   amplitude?: number;
+
   choppiness?: number;
+
   gravity?: number;
+
   seed?: number;
+
   foamDecay?: number;
+
   foamThreshold?: number;
+
   foamGain?: number;
+
 };
 ```
 
@@ -67,9 +100,13 @@ Foam comes from horizontal-displacement compression. `foamThreshold` is the Jaco
 
 ```
 type SpectralOceanSimulationEncodeOptions = {
+
   time: number;
+
   deltaTime?: number;
+
   resetFoamHistory?: boolean;
+
 };
 ```
 

@@ -11,17 +11,30 @@
 ```
 import {Computation} from '@luma.gl/engine';
 
+
+
 const computation = new Computation(device, {
+
   source: COMPUTE_SHADER_SOURCE,
+
   bindings: {
+
     inputBuffer,
+
     outputBuffer
+
   }
+
 });
 
+
+
 computation.predraw(device.commandEncoder);
+
 const computePass = device.beginComputePass();
+
 computation.dispatch(computePass, 64, 1, 1);
+
 computePass.end();
 ```
 

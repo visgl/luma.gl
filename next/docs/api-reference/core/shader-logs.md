@@ -12,10 +12,15 @@ Contains information about one compilation message.
 
 ```
 export type CompilerMessage = {
+
   type: 'error' | 'warning' | 'info';
+
   message: string;
+
   lineNum: number;
+
   linePos: number;
+
 }
 ```
 
@@ -31,11 +36,17 @@ Formats compiler messages, optionally interleaving them with the source code.
 
 ```
 export function formatCompilerLog(
+
   shaderLog: readonly CompilerMessage[],
+
   source: string,
+
   options?: {
+
     showSourceCode?: boolean;
+
   }
+
 ): string;
 ```
 

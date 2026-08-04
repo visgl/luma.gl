@@ -8,6 +8,7 @@ A simple small utility to load images from URLs. The loaded `ImageBitmaps` can b
 
 ```
 import {loadImageBitmap} from `@luma.gl/engine`;
+
 const imageBitmap = await loadImageBitmap(url);
 ```
 

@@ -4,17 +4,29 @@ HTML-in-Canvas is an emerging browser API for drawing laid out DOM descendants o
 
 ```
 DOM
+
  |
+
  v
+
 Layout
+
  |
+
  v
+
 CSS paint
+
  |
+
  v
+
 Compositor
+
  |
+
  v
+
 GPU texture
 ```
 
@@ -40,7 +52,9 @@ luma.gl surfaces the complete DOM-to-texture path as the `'html-in-canvas'` [`De
 
 ```
 if (device.features.has('html-in-canvas')) {
+
   // The current browser and luma.gl backend expose the HTML-in-Canvas texture path.
+
 }
 ```
 
@@ -68,27 +82,49 @@ That split keeps the portable GPU API focused:
 
 ```
 import {Model} from '@luma.gl/engine';
+
 import {HTMLTexture} from '@luma.gl/experimental';
+
+
 
 HTMLTexture.configureCanvas(canvas);
 
+
+
 const panelElement = document.createElement('div');
+
 panelElement.style.cssText = 'position:absolute;left:0;top:0;width:320px;height:320px';
+
 panelElement.innerHTML = '<button>Live DOM</button>';
+
 canvas.appendChild(panelElement);
 
+
+
 const htmlTexture = new HTMLTexture(device, {
+
   canvas,
+
   element: panelElement,
+
   width: 640,
+
   height: 640,
+
   autoUpdate: true,
+
   observeResize: true
+
 });
 
+
+
 const model = new Model(device, {
+
   source,
+
   bindings: {uHtmlTexture: htmlTexture}
+
 });
 ```
 
@@ -98,14 +134,23 @@ Chrome may throw `InvalidStateError` before the element has a cached paint recor
 
 ```
 try {
+
   const transform = canvas.getElementTransform?.(panelElement, drawTransform);
+
   if (transform) {
+
     panelElement.style.transform = transform.toString();
+
   }
+
 } catch (error) {
+
   if (!(error instanceof DOMException) || error.name !== 'InvalidStateError') {
+
     throw error;
+
   }
+
 }
 ```
 
@@ -120,16 +165,28 @@ Practical constraints:
 ```
 import type {TextureProps} from '@luma.gl/core';
 
+
+
 export type HTMLTextureProps =
+
   Pick<TextureProps, 'format' | 'id' | 'sampler' | 'usage'> & {
+
     canvas: HTMLCanvasElement;
+
     element: Element;
+
     width: number;
+
     height: number;
+
     sourceWidth?: number;
+
     sourceHeight?: number;
+
     autoUpdate?: boolean;
+
     observeResize?: boolean;
+
   };
 ```
 

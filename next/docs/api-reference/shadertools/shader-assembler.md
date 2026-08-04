@@ -2,24 +2,67 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
 
-`ShaderAssembler` combines application shader source with shadertools modules, hook functions, and injections before luma.gl creates shader resources. Use `assembleGLSLShaderPair()` for WebGL/GLSL and `assembleWGSLShader()` for unified WGSL used by WebGPU.
+`ShaderAssembler` is the abstract base for stateful shader assembly. Its concrete subclasses combine application shader source with shadertools modules, hook functions, and injections before luma.gl creates shader resources:
+
+* `GLSLShaderAssembler` assembles GLSL vertex and fragment shaders for WebGL.
+* `WGSLShaderAssembler` assembles unified WGSL shaders for WebGPU.
+
+Each shader language has its own default assembler, keeping language-specific hooks, default modules, and other assembly state isolated.
 
 For the assembly model, see [Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md). For extension design, see [Writing Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md). For WGSL binding relocation and conditionals, see [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md).
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {
 
-const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
-shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+  GLSLShaderAssembler,
 
-const assembledShaders = shaderAssembler.assembleGLSLShaderPair({
-  platformInfo,
+  ShaderAssembler,
+
+  WGSLShaderAssembler
+
+} from '@luma.gl/shadertools';
+
+
+
+const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+
+glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+
+
+
+const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
+
+  platformInfo: glslPlatformInfo,
+
   vs: vertexShaderSource,
+
   fs: fragmentShaderSource,
+
   modules: [offsetLeftModule]
+
 });
+
+
+
+const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+
+const assembledWGSLShader = wgslShaderAssembler.assembleWGSLShader({
+
+  platformInfo: wgslPlatformInfo,
+
+  source: wgslShaderSource,
+
+  modules: [offsetLeftModule]
+
+});
+
+
+
+const isolatedGLSLShaderAssembler = new GLSLShaderAssembler();
+
+const isolatedWGSLShaderAssembler = new WGSLShaderAssembler();
 ```
 
 ## Types[​](#types "Direct link to Types")
@@ -46,9 +89,11 @@ Common assembly props:
 
 ## Static Methods[​](#static-methods "Direct link to Static Methods")
 
-### `getDefaultShaderAssembler(): ShaderAssembler`[​](#getdefaultshaderassembler-shaderassembler "Direct link to getdefaultshaderassembler-shaderassembler")
+### `getDefaultShaderAssembler('glsl'): GLSLShaderAssembler`[​](#getdefaultshaderassemblerglsl-glslshaderassembler "Direct link to getdefaultshaderassemblerglsl-glslshaderassembler")
 
-Returns the shared assembler used by default by engine classes.
+### `getDefaultShaderAssembler('wgsl'): WGSLShaderAssembler`[​](#getdefaultshaderassemblerwgsl-wgslshaderassembler "Direct link to getdefaultshaderassemblerwgsl-wgslshaderassembler")
+
+Returns the shared assembler for the explicitly requested shader language. The language argument is required. GLSL and WGSL use separate instances, so registering hooks for one language cannot overwrite or remove hooks for the other.
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -64,11 +109,11 @@ Removes a previously registered default module.
 
 Registers a stage-prefixed hook function that modules can inject into. GLSL hook signatures use GLSL syntax, for example `vs:OFFSET_POSITION(inout vec4 position)`. WGSL hook signatures use WGSL syntax, for example `vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)`.
 
-### `assembleGLSLShaderPair(props: AssembleShaderProps)`[​](#assembleglslshaderpairprops-assembleshaderprops "Direct link to assembleglslshaderpairprops-assembleshaderprops")
+### `GLSLShaderAssembler.assembleGLSLShaderPair(props: AssembleShaderProps)`[​](#glslshaderassemblerassembleglslshaderpairprops-assembleshaderprops "Direct link to glslshaderassemblerassembleglslshaderpairprops-assembleshaderprops")
 
 Assembles a GLSL vertex/fragment pair and returns `{vs, fs, getUniforms, modules}`.
 
-### `assembleWGSLShader(props: AssembleShaderProps)`[​](#assemblewgslshaderprops-assembleshaderprops "Direct link to assemblewgslshaderprops-assembleshaderprops")
+### `WGSLShaderAssembler.assembleWGSLShader(props: AssembleShaderProps)`[​](#wgslshaderassemblerassemblewgslshaderprops-assembleshaderprops "Direct link to wgslshaderassemblerassemblewgslshaderprops-assembleshaderprops")
 
 Assembles one unified WGSL source string and returns `{source, getUniforms, modules, bindingAssignments, bindingTable}`. Module WGSL source is prepended to application WGSL, inactive conditional branches are removed, and `@binding(auto)` declarations are assigned concrete binding numbers before WebGPU reflection.
 
@@ -77,35 +122,50 @@ Assembles one unified WGSL source string and returns `{source, getUniforms, modu
 Hooks are deliberate extension points called by application shader code. The base shader registers a stage-prefixed hook signature, calls the generated hook function, and lets modules or plugin contributions add ordered source by using the same stage-prefixed key without the function signature.
 
 ```
-shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+
+
 
 const offsetLeftModule = {
+
   name: 'offsetLeft',
+
   inject: {
+
     'vs:OFFSET_POSITION': 'position.x -= 0.5;'
+
   }
+
 };
 ```
 
 ```
 void main() {
+
   gl_Position = vec4(position, 0.0, 1.0);
+
   OFFSET_POSITION(gl_Position);
+
 }
 ```
 
 If no module injects into a hook, the generated hook function is a no-op. WGSL uses the same flow with WGSL hook signatures and pointer arguments:
 
 ```
-shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
+wgslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
 ```
 
 ```
 @vertex
+
 fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> {
+
   var shaderPosition = vec4<f32>(position, 0.0, 1.0);
+
   OFFSET_POSITION(&shaderPosition);
+
   return shaderPosition;
+
 }
 ```
 

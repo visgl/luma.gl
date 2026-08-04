@@ -42,9 +42,14 @@ THREE.js generally exposes a mutable, renderer-owned object graph. ANARI explici
 
 ```
 const graphicsDevice = await luma.createDevice({
+
   adapters: [webgpuAdapter, webgl2Adapter],
+
   createCanvasContext: true
+
 });
+
+
 
 const anariDevice = new ANARIDevice(graphicsDevice);
 ```
@@ -102,7 +107,9 @@ Official ANARI light subtypes include directional, point, spot, HDRI, quad, and 
 
 ```
 float roughness = 0.15f;
+
 anariSetParameter(device, material, "roughness", ANARI_FLOAT32, &roughness);
+
 anariCommitParameters(device, material);
 ```
 
@@ -116,9 +123,13 @@ The commit boundary is intentionally similar. The parameter typing and ownership
 
 ```
 // @luma.gl/anari
+
 material.setParameter('roughness', 0.15).commitParameters();
 
+
+
 // Conceptual THREE.js equivalent
+
 threeMaterial.roughness = 0.15;
 ```
 
@@ -139,9 +150,13 @@ THREE.js materials are generally mutated directly. Some operations additionally 
 
 ```
 const positions = new Float32Array([-1, 0, 0, 1, 0, 0, 0, 1, 0]);
+
 const array = anariDevice.newArray({data: positions, elementType: 'float32x3'});
 
+
+
 positions[0] = -2;
+
 geometry.commitParameters();
 ```
 
@@ -159,9 +174,13 @@ The array retains the original JavaScript object. `array.length` counts scalar J
 
 ```
 anariDevice.getObjectSubtypes('geometry');
+
 // ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
 
+
+
 anariDevice.getObjectInfo('material');
+
 // {type: 'material', subtypes: [...], extensions: [...]}
 ```
 
@@ -181,6 +200,7 @@ The current extension names describe concepts the proof of concept supports; the
 
 ```
 const statistics = frame.render();
+
 graphicsDevice.submit();
 ```
 
@@ -197,7 +217,9 @@ Official ANARI rendering is specified as asynchronous and may support readiness 
 
 ```
 frame.destroy();
+
 anariDevice.destroy();
+
 graphicsDevice.destroy();
 ```
 
@@ -255,26 +277,49 @@ The following snippets express approximately the same simple scene. They are not
 ```
 import * as THREE from 'three';
 
+
+
 const scene = new THREE.Scene();
+
 const geometry = new THREE.SphereGeometry(1, 48, 24);
+
 const material = new THREE.MeshPhysicalMaterial({
+
   color: 0x3388ff,
+
   metalness: 0.85,
+
   roughness: 0.18,
+
   clearcoat: 0.25
+
 });
 
+
+
 const mesh = new THREE.Mesh(geometry, material);
+
 mesh.position.set(0, 1, 0);
+
 scene.add(mesh);
 
+
+
 const light = new THREE.PointLight(0xff8833, 30);
+
 light.position.set(3, 2, 0);
+
 scene.add(light);
 
+
+
 const camera = new THREE.PerspectiveCamera(50, width / height, 0.05, 200);
+
 camera.position.set(0, 2, 8);
+
 camera.lookAt(0, 1, 0);
+
+
 
 renderer.render(scene, camera);
 ```
@@ -283,34 +328,64 @@ renderer.render(scene, camera);
 
 ```
 const geometry = anariDevice.newGeometry('sphere', {radius: 1, segments: 24});
+
 const material = anariDevice.newMaterial('physicallyBased', {
+
   baseColor: [0.2, 0.53, 1],
+
   metallic: 0.85,
+
   roughness: 0.18,
+
   clearcoat: 0.25
+
 });
+
+
 
 const surface = anariDevice.newSurface({geometry, material});
+
 const group = anariDevice.newGroup({surface: [surface]});
+
 const instance = anariDevice.newInstance({
+
   group,
+
   transform: new Matrix4().translate([0, 1, 0])
+
 });
+
+
 
 const light = anariDevice.newLight('point', {
+
   position: [3, 2, 0],
+
   color: [1, 0.53, 0.2],
+
   intensity: 30
+
 });
 
+
+
 const world = anariDevice.newWorld({instance: [instance], light: [light]});
+
 const camera = anariDevice.newCamera('perspective', {
+
   position: [0, 2, 8],
+
   direction: [0, -1, -8],
+
   fovy: 50 * Math.PI / 180
+
 });
+
 const renderer = anariDevice.newRenderer('default');
+
 const frame = anariDevice.newFrame({world, camera, renderer, size: [width, height]});
+
+
 
 frame.render();
 ```

@@ -81,9 +81,13 @@ These parameters control the rasterization stage (which happens before fragment 
 
 ```
 renderPass.setParameters({
+
   viewport: ...,
+
   scissor: ...,
+
   blendConstant: ...
+
 })
 ```
 
@@ -95,19 +99,29 @@ To set up depth testing
 
 ```
 const value = device.createRenderPipeline({
+
   parameters: {
+
     depthWriteEnabled: true,
+
     depthCompare: 'less-equal'
+
   },
 ```
 
 ```
 const value = device.createRenderPipeline({
+
   parameters: {
+
     depthWriteEnabled: true,
+
     depthCompare: 'less-equal'
+
   },
+
   ]
+
 });
 ```
 
@@ -115,15 +129,25 @@ Some parameters, in particular clear values, are set on specific color attachmen
 
 ```
 const framebuffer = device.createFramebuffer({
+
   colorAttachments: {clearColor: [1, 0, 0]},
+
 })
+
+
 
 const device.beginRenderPass({framebuffer})
 
+
+
 renderPass.setPipeline(pipeline);
+
 renderPass.setParameters({viewport: MAIN_MAP})
+
 renderPass.draw();
+
 renderPass.setParameters({viewport: MINI_MAP})
+
 renderPass.draw();
 ```
 

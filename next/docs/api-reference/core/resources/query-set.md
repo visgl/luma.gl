@@ -21,8 +21,11 @@ Record timestamps through the command stream:
 
 ```
 device.commandEncoder.writeTimestamp(querySet, 0);
+
 // encode GPU work here
+
 device.commandEncoder.writeTimestamp(querySet, 1);
+
 device.submit();
 ```
 
@@ -30,9 +33,13 @@ device.submit();
 
 ```
 const querySet = device.createQuerySet({type: 'timestamp', count: 256});
+
 const commandEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+
 commandEncoder.beginRenderPass({});
+
 // ... encode passes ...
+
 device.submit();
 ```
 

@@ -25,15 +25,27 @@ Uses a luma.gl `TextureCube` to simulate a reflective surface
 ```
 import {DynamicTexture, loadImageBitmap, Model} from '@luma.gl/engine';
 
+
+
 const dynamicTexture = new DynamicTexture(device, {
+
   data: loadImageBitmap('/path/to/image.png'),
+
   mipmaps: true
+
 });
 
+
+
 const model = new Model(device, {
+
   source,
+
   bindings: {texture: dynamicTexture}
+
 });
+
+
 
 await dynamicTexture.ready;
 ```
@@ -44,12 +56,19 @@ await dynamicTexture.ready;
 
 ```
 export type DynamicTextureProps =
+
   Omit<TextureProps, 'data' | 'mipLevels' | 'width' | 'height'> &
+
   TextureDataAsyncProps & {
+
     mipmaps?: boolean;
+
     mipLevels?: number | 'auto';
+
     width?: number;
+
     height?: number;
+
   };
 ```
 

@@ -11,8 +11,12 @@ It is commonly used for fullscreen rendering, postprocessing, texture blits, and
 ```
 import {ClipSpace} from '@luma.gl/engine';
 
+
+
 const fullscreenQuad = new ClipSpace(device, {
+
   fs: FRAGMENT_SHADER
+
 });
 ```
 

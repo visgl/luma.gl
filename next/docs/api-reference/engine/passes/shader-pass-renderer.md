@@ -23,9 +23,15 @@ InfoSource
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
+
+
 const renderer = new ShaderPassRenderer(device, {
+
   shaderPasses: [myShaderPass, myShaderPassPipeline]
+
 });
+
+
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
@@ -34,16 +40,27 @@ Per-draw uniforms and extra bindings can be supplied when a pass needs frame-spe
 
 ```
 renderer.renderToScreen({
+
   sourceTexture: sceneColorTexture,
+
   bindings: {depthTexture: sceneDepthTexture},
+
   uniforms: {
+
     dof: {
+
       depthRange: [0.1, 30],
+
       focusDistance: 3,
+
       blurCoefficient: 0.9,
+
       pixelsPerMillimeter: 42
+
     }
+
   }
+
 });
 ```
 
@@ -60,22 +77,39 @@ Plain `ShaderPass` objects may route subpasses only against those logical source
 
 ```
 type ShaderPassPipeline<TargetNameT extends string = string> = {
+
   name: string;
+
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
+
   steps: ShaderPassPipelineStep<TargetNameT>[];
+
 };
+
+
 
 type ShaderPassRenderTarget = {
+
   scale?: [number, number];
+
   format?: TextureFormat;
+
   sampler?: SamplerProps;
+
 };
 
+
+
 type ShaderPassPipelineStep<TargetNameT extends string = string> = {
+
   shaderPass: ShaderPass;
+
   inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
+
   output?: 'previous' | TargetNameT;
+
   uniforms?: Record<string, UniformValue>;
+
 };
 ```
 
@@ -110,34 +144,63 @@ This example extracts highlights into one named target, runs an existing blur pa
 
 ```
 const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
+
   name: 'bloom',
+
   renderTargets: {
+
     extract: {},
+
     blurred: {scale: [0.5, 0.5]}
+
   },
+
   steps: [
+
     {
+
       shaderPass: brightExtractPass,
+
       inputs: {sourceTexture: 'previous'},
+
       output: 'extract',
+
       uniforms: {threshold: 0.8}
+
     },
+
     {
+
       shaderPass: gaussianBlur,
+
       inputs: {sourceTexture: 'extract'},
+
       output: 'blurred',
+
       uniforms: {radius: 12}
+
     },
+
     {
+
       shaderPass: bloomCompositePass,
+
       inputs: {
+
         sourceTexture: 'previous',
+
         bloomTexture: 'blurred'
+
       },
+
       output: 'previous',
+
       uniforms: {intensity: 1.5}
+
     }
+
   ]
+
 };
 ```
 
@@ -149,10 +212,15 @@ Using `previous` for the primary color input makes the pipeline compose in its d
 
 ```
 export type ShaderPassRendererProps = {
+
   shaderPasses: (ShaderPass | ShaderPassPipeline)[];
+
   shaderInputs?: ShaderInputs;
+
   colorFormat?: TextureFormatColor;
+
   flipY?: boolean;
+
 };
 ```
 
@@ -208,10 +276,15 @@ Runs the pass chain and then draws the result into the device's current framebuf
 
 ```
 renderToScreen(options: {
+
   sourceTexture: DynamicTexture | Texture;
+
   uniforms?: Record<string, Record<string, unknown>>;
+
   bindings?: Record<string, Binding | TextureBindingSource>;
+
   resetHistory?: boolean;
+
 }): boolean
 ```
 
@@ -223,10 +296,15 @@ Runs the pass chain and returns the output texture.
 
 ```
 renderToTexture(options: {
+
   sourceTexture: DynamicTexture | Texture;
+
   uniforms?: Record<string, Record<string, unknown>>;
+
   bindings?: Record<string, Binding | TextureBindingSource>;
+
   resetHistory?: boolean;
+
 }): Texture | null
 ```
 
@@ -236,8 +314,11 @@ Records the pass chain and final presentation into a caller-owned command encode
 
 ```
 encodeToScreen(
+
   commandEncoder: CommandEncoder,
+
   options: ShaderPassRendererRenderOptions
+
 ): boolean
 ```
 
@@ -249,8 +330,11 @@ Records the pass chain into a caller-owned command encoder and returns the rende
 
 ```
 encodeToTexture(
+
   commandEncoder: CommandEncoder,
+
   options: ShaderPassRendererRenderOptions
+
 ): Texture | null
 ```
 

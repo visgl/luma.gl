@@ -10,18 +10,27 @@ If your WGSL goes through shadertools assembly, use `@binding(auto)` and pass re
 
 ```
 struct AppUniforms {
+
   modelViewProjectionMatrix: mat4x4<f32>,
+
 };
 
+
+
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
+
 @group(0) @binding(auto) var colorTexture: texture_2d<f32>;
+
 @group(0) @binding(auto) var colorTextureSampler: sampler;
 ```
 
 ```
 model.setBindings({
+
   app: uniformBuffer,
+
   colorTexture: texture
+
 });
 ```
 
@@ -56,11 +65,17 @@ For WGSL assembled from a `Model` or `Computation`, luma.gl also sets `LUMA_SUPP
 
 ```
 #if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
+
 @group(0) @binding(auto) var<storage, read> positions: array<vec4<f32>>;
+
 #else
+
 struct VertexInput {
+
   @location(0) position: vec4<f32>,
+
 };
+
 #endif
 ```
 
@@ -91,7 +106,9 @@ Example:
 
 ```
 // ----- MODULE WGSL BINDING ASSIGNMENTS ---------------
+
 // pbrProjection.pbrProjection -> @group(0) @binding(100)
+
 // skin.skin -> @group(0) @binding(101)
 ```
 

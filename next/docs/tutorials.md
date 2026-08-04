@@ -4,7 +4,7 @@
 
 This course builds a portable renderer one concept at a time. Every lesson includes a live example that can switch between WebGPU and WebGL2 when both backends support the feature. The files shown on each page are loaded from the runnable examples in this repository, so the documentation and tested code stay in sync.
 
-Before starting, complete [Getting Started](https://luma.gl/next/docs/getting-started.md). Familiarity with TypeScript and basic GPU concepts is helpful; the tutorials explain the luma.gl object model as it is introduced.
+Explore [Getting Started](https://luma.gl/next/docs/getting-started.md) to see what you can build, or open any live lesson immediately. When you are ready to run the examples locally, follow the [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md). Familiarity with TypeScript and basic GPU concepts is helpful; the tutorials explain the luma.gl object model as it is introduced.
 
 ## Rendering foundations[​](#rendering-foundations "Direct link to Rendering foundations")
 

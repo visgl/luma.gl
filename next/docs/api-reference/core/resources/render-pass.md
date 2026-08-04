@@ -8,9 +8,13 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling `devic
 
 ```
   // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
+
   const renderPass = device.beginRenderPass();
+
   model.draw(renderPass);
+
   renderPass.end();
+
   device.submit();
 ```
 
@@ -18,6 +22,7 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling `devic
 
 ```
   const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
+
   ...
 ```
 
@@ -27,8 +32,11 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling `devic
 
 ```
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+
   model.draw(renderPass);
+
   renderPass.end();
+
   device.submit();
 ```
 
@@ -36,11 +44,17 @@ Depth and stencil buffers are also cleared to default values:
 
 ```
   const renderPass = device.beginRenderPass({
+
     clearColor: [0, 0, 0, 1],
+
     clearDepth: 1,
+
     clearStencil: 0
+
   });
+
   renderPass.end();
+
   device.submit();
 ```
 
@@ -109,8 +123,11 @@ Draws with the active pipeline, bindings, and vertex array. `options` contains d
 
 ```
 renderPass.setPipeline(pipeline);
+
 renderPass.setBindings({frameUniforms, materialUniforms});
+
 renderPass.setVertexArray(vertexArray);
+
 renderPass.draw({vertexCount: 3});
 ```
 

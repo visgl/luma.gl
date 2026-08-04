@@ -1,6 +1,6 @@
 # GPUCommandGraph
 
-[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -41,27 +41,49 @@ This example composes reduction, histogram, and grid-binning nodes in one reusab
 
 ```
 const graph = new GPUCommandGraph<{time: number}>(device, {id: 'simulation'});
+
 const source = graph.importBuffer(
+
   {id: 'source', byteLength: sourceBuffer.byteLength, usage: sourceBuffer.usage},
+
   sourceBuffer
+
 );
+
 const scratch = graph.createTransientBuffer({
+
   id: 'scratch',
+
   byteLength: sourceBuffer.byteLength,
+
   usage: Buffer.STORAGE
+
 });
+
+
 
 graph.addComputePass({
+
   id: 'update',
+
   resources: [
+
     {buffer: source, usage: 'storage-read'},
+
     {buffer: scratch, usage: 'storage-write'}
+
   ],
+
   compile: ({device}) => makeExecutableNode(device)
+
 });
 
+
+
 const compiled = graph.compile();
+
 const encoding = compiled.encode(device.commandEncoder, {parameters: {time}});
+
 console.log(encoding.stats.cpuEncodeTimeMilliseconds);
 ```
 
@@ -77,17 +99,30 @@ Small algorithm libraries can implement the structural `GPUCommandGraphContribut
 
 ```
 class GPUAlgorithm implements GPUCommandGraphContributor {
+
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+
     const output = createTransientView(
+
       graph,
+
       'algorithm-output',
+
       'uint32',
+
       outputCapacity,
+
       Buffer.STORAGE | Buffer.INDIRECT
+
     );
+
     // Declare compute, render, or copy nodes that use output.
+
   }
+
 }
+
+
 
 new GPUAlgorithm().addToGraph(graph);
 ```
@@ -102,7 +137,7 @@ The exported `createTransientView()` helper creates packed, graph-owned typed st
 
 ### `importBuffer(descriptor, defaultBuffer?)`[​](#importbufferdescriptor-defaultbuffer "Direct link to importbufferdescriptor-defaultbuffer")
 
-Declares caller-owned storage. A default `Buffer` or `DynamicBuffer` may be supplied during graph construction, or the caller may provide a compatible override to each encoding.
+Declares caller-owned storage. A default `Buffer` or `DynamicBuffer` may be supplied during graph construction, or the caller may provide a compatible override to each encoding. Represent each physical buffer with one logical handle and create multiple views from that handle. Distinct imported handles, including their per-encoding overrides, must not resolve to the same physical buffer because hazards are tracked by handle identity.
 
 ### `createTransientBuffer(descriptor)`[​](#createtransientbufferdescriptor "Direct link to createtransientbufferdescriptor")
 
@@ -162,21 +197,38 @@ Only render nodes may declare `{externalTexture, usage: 'sampled'}`. Executables
 ```
 const video = graph.importExternalTexture({id: 'video', width, height});
 
+
+
 graph.addRenderPass({
+
   id: 'sample-video',
+
   resources: [{externalTexture: video, usage: 'sampled'}],
+
   compile: () => ({
+
     encode: ({renderPass, getExternalTexture}) => {
+
       model.setBindings({videoTexture: getExternalTexture(video)});
+
       model.draw(renderPass);
+
     }
+
   })
+
 });
 
+
+
 const externalTexture = device.createExternalTexture({source: videoElement});
+
 compiled.encode(device.commandEncoder, {
+
   parameters,
+
   externalTextures: {video: {texture: externalTexture, frameId}}
+
 });
 ```
 
@@ -196,13 +248,21 @@ Creates a `GraphTextureView` with normalized aspect, mip, and array-layer ranges
 
 ```
 graph.addRenderPass({
+
   id: 'render-msaa',
+
   attachments: {
+
     colorAttachments: [multisampledColor],
+
     resolveTargets: [frameColor],
+
     depthStencilAttachment: multisampledDepth
+
   },
+
   compile: () => renderExecutable
+
 });
 ```
 
@@ -277,3 +337,43 @@ Report adapter capabilities with the measurements so software and hardware resul
 ### `destroy()`[​](#destroy "Direct link to destroy")
 
 Destroys compiled node resources, cached views/framebuffers, and physical transients. Imported buffers, textures, and external-image bindings remain caller-owned.
+
+## `GPUCommandGraphInspector`[​](#gpucommandgraphinspector "Direct link to gpucommandgraphinspector")
+
+`GPUCommandGraphInspector` is a data-only collector for one or more compiled graphs. Register each compiled graph once, record synchronous CPU measurements immediately after `encode()`, and request optional GPU timestamp readback only after submitting the command buffer:
+
+```
+import {GPUCommandGraphInspector} from '@luma.gl/experimental';
+
+
+
+const inspector = new GPUCommandGraphInspector({maxSamples: 120});
+
+inspector.registerGraph(compiled);
+
+
+
+const commandEncoder = device.createCommandEncoder();
+
+const encoding = compiled.encode(commandEncoder, {parameters: {time}});
+
+inspector.recordEncoding(compiled.id, encoding);
+
+device.submit(commandEncoder.finish());
+
+
+
+if (encoding.canReadGPUTimings) {
+
+  await inspector.recordGPUTimings(compiled.id, encoding);
+
+}
+
+
+
+const snapshot = inspector.getSnapshot();
+```
+
+`getSnapshot()` returns an immutable view of every registered graph in registration order. Each graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read counts, bounded whole-graph CPU and GPU duration summaries, and per-node summaries in compiled schedule order. Duration summaries contain the retained sample count plus latest, p50, and p95 milliseconds when samples exist. Pass `getNodeGroup` to the constructor to add application-specific semantic groups to node snapshots; pass `maxSamples` to bound each retained timing history.
+
+The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps automatically. `clear()` removes all registrations, while registering a new compiled graph with an existing ID replaces its captured metadata and resets its measurements.

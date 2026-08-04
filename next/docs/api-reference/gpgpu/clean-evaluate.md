@@ -13,20 +13,36 @@ This is most useful when you build a lazy operation graph inline and only want t
 ```
 import {GPUDataEvaluator, add, cleanEvaluate} from '@luma.gl/gpgpu';
 
+
+
 const positions = GPUDataEvaluator.fromArray(
+
   new Float32Array([
+
     0, 0, 0,
+
     1, 0, 0
+
   ]),
+
   {size: 3}
+
 );
 
+
+
 const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
+
 const translated = add(positions, offset);
+
+
 
 await cleanEvaluate(device, {translated});
 
+
+
 const values = await translated.readValue();
+
 translated.destroy();
 ```
 
@@ -35,18 +51,33 @@ translated.destroy();
 ```
 import {GPUDataEvaluator, add, cleanEvaluateSync} from '@luma.gl/gpgpu';
 
+
+
 const positions = GPUDataEvaluator.fromArray(
+
   new Float32Array([
+
     0, 0, 0,
+
     1, 0, 0
+
   ]),
+
   {size: 3}
+
 );
 
+
+
 const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
+
 const translated = add(positions, offset);
 
+
+
 cleanEvaluateSync(device, {translated});
+
+
 
 translated.destroy();
 ```
@@ -57,7 +88,9 @@ translated.destroy();
 
 ```
 function cleanEvaluate<
+
   ResultT extends GPUDataEvaluator | GPUVectorEvaluator | Array<GPUDataEvaluator | GPUVectorEvaluator> | Record<string, unknown>
+
 >(device: Device, result: ResultT): Promise<ResultT>;
 ```
 
@@ -65,7 +98,9 @@ function cleanEvaluate<
 
 ```
 function cleanEvaluateSync<
+
   ResultT extends GPUDataEvaluator | GPUVectorEvaluator | Array<GPUDataEvaluator | GPUVectorEvaluator> | Record<string, unknown>
+
 >(device: Device, result: ResultT): ResultT;
 ```
 

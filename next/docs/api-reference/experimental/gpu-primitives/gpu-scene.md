@@ -1,6 +1,6 @@
 # GPUScene
 
-[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -15,6 +15,8 @@ The class is deliberately a storage contract, not a scene graph. A game-engine h
 `id` is the durable application identity used by picking and selection. A record's array position is only its current storage slot. Keeping those concepts separate is essential once later update and compaction workflows move records: references can continue to name an object even when its physical location changes. `0xffffffff` is reserved as the invalid reference and cannot be an object ID.
 
 Initial records occupy a dense active prefix. `flags` marks those records active, while the state buffer publishes `count`, `activeCount`, and `overflow` as separate `uint32` graph views. After a removal, `count` is the physical high-water mark and may include holes; `activeCount` is the exact number of live records. Consumers therefore combine the prefix with `flags` until compaction makes the two counts equal again.
+
+Pre-populated borrowed records may declare an explicit `activeCount` below their physical `recordCount`. Newly allocated empty storage cannot claim a positive record count, and bounds or transform values must remain finite after conversion to the stored `float32` representation.
 
 ### Mutation is transactional and measurable[​](#mutation-is-transactional-and-measurable "Direct link to Mutation is transactional and measurable")
 
@@ -49,7 +51,7 @@ The bounds' coordinate space is caller policy. Applications may upload world-spa
 
 ### Capacity and ownership are visible[​](#capacity-and-ownership-are-visible "Direct link to Capacity and ownership are visible")
 
-Capacity is fixed when the scene is constructed. The `stats` property reports record and state allocation sizes before submission, and `getRecordByteOffset()` provides validated slot addressing. The default constructor owns its two buffers. Supplying `buffers` borrows them unless `ownsBuffers: true` is explicit; borrowed buffers must have storage, copy-source, and copy-destination usage and enough bytes for the declared capacity.
+Capacity is fixed when the scene is constructed. The `stats` property reports record and state allocation sizes before submission, and `getRecordByteOffset()` provides validated slot addressing. The default constructor owns its two buffers. Supplying `buffers` borrows them unless `ownsBuffers: true` is explicit. An ownership object such as `{records: false, state: true}` may adopt the buffers independently, which lets a table adapter borrow record storage while owning its small state block. Borrowed buffers must have storage, copy-source, and copy-destination usage and enough bytes for the declared capacity.
 
 This first contract never grows storage implicitly. A caller can size for a known maximum or create a replacement scene deliberately when capacity changes, keeping allocation and lifetime costs visible.
 
@@ -63,30 +65,55 @@ CPU-authored mutation requires known initial records. A scene created from opaqu
 
 ```
 const scene = new GPUScene(device, {
+
   capacity: 10_000,
+
   records: [
+
     {
+
       id: 42,
+
       bounds: {minimum: [-1, -1, -1], maximum: [1, 1, 1]},
+
       geometryId: 7,
+
       commandSlot: 0
+
     }
+
   ]
+
 });
+
+
 
 const graph = new GPUCommandGraph(device);
+
 const sceneView = scene.importToGraph(graph);
 
+
+
 const mutation = scene.mutate({
+
   update: [{id: 42, geometryId: 8}],
+
   insert: [{id: 43, bounds: {minimum: [2, -1, -1], maximum: [4, 1, 1]}}]
+
 });
 
+
+
 if (mutation.overflowCount > 0) {
+
   // Create a deliberately larger replacement scene at an application-defined boundary.
+
 }
 
+
+
 // Compose sceneView.boundsMinimum, sceneView.boundsMaximum, and
+
 // sceneView.objectIds with visibility, spatial, picking, or draw workflows.
 ```
 
@@ -96,7 +123,7 @@ if (mutation.overflowCount > 0) {
 new GPUScene(device: Device, props: GPUSceneProps)
 ```
 
-Important properties include `capacity`, optional initial `records`, optional borrowed `buffers`, and `ownsBuffers`. When borrowed buffers are already populated, `recordCount` declares their active prefix.
+Important properties include `capacity`, optional initial `records`, optional borrowed `buffers`, and boolean or per-buffer `ownsBuffers`. When borrowed buffers are already populated, `recordCount` declares their active prefix.
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -126,4 +153,4 @@ Destroys owned buffers and leaves borrowed buffers untouched. Calling it repeate
 
 ## Current scope[​](#current-scope "Direct link to Current scope")
 
-`GPUScene` now implements the Phase 6.1a storage and 6.1b CPU-authored mutation contracts. It does not yet provide CPU-scene or table adapters, GPU-authored record mutation, visibility policy, resource grouping, or indirect-command generation. Those policies build on this record layout in later tranches rather than being hidden inside the storage owner.
+`GPUScene` now implements the Phase 6.1a storage and 6.1b CPU-authored mutation contracts. The [scene adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md) add explicit CPU-hierarchy and zero-copy preserved-table boundaries without changing this core storage model. [`GPUSceneDrawGeneration`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md) publishes active, visible rows into deterministic indirect-command slots, while [`GPUSceneResourceGroups`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md) classifies those commands into explicit renderer-owned binding windows. GPU-authored record mutation and visibility policy remain graph workflows rather than hidden behavior inside the storage owner.

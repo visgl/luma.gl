@@ -190,54 +190,103 @@ A representative WebGPU stack is:
 
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
+
 import {
+
   createBloomShaderPassPipeline,
+
   createGTAOShaderPassPipeline,
+
   createHDRAutoExposureShaderPassPipeline,
+
   createSSGIShaderPassPipeline,
+
   createSSRShaderPassPipeline,
+
   createTAAShaderPassPipeline,
+
   toneMapping
+
 } from '@luma.gl/effects';
+
 import {createClusteredDeferredLightingShaderPassPipeline} from '@luma.gl/experimental';
 
+
+
 const renderer = new ShaderPassRenderer(device, {
+
   shaderPasses: [
+
     createClusteredDeferredLightingShaderPassPipeline(),
+
     createGTAOShaderPassPipeline({resolutionScale: 0.5}),
+
     createSSGIShaderPassPipeline({resolutionScale: 0.5}),
+
     createSSRShaderPassPipeline({resolutionScale: 0.5}),
+
     createTAAShaderPassPipeline(),
+
     createHDRAutoExposureShaderPassPipeline(),
+
     createBloomShaderPassPipeline(),
+
     toneMapping
+
   ],
+
   colorFormat: 'rgba16float'
+
 });
 
+
+
 renderer.renderToScreen({
+
   sourceTexture: gBuffer.colorTexture,
+
   bindings: {
+
     ...gBuffer.getShaderPassBindings(),
+
     baseColorMetallicTexture: gBuffer.getExtraColorTexture('baseColorMetallic'),
+
     emissiveOcclusionTexture: gBuffer.getExtraColorTexture('emissiveOcclusion'),
+
     pointLights,
+
     ...clusteredLightGrid.getShaderPassBindings()
+
   },
+
   uniforms: {
+
     clusteredDeferredLighting: {
+
       inverseProjectionMatrix,
+
       ...clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)
+
     },
+
     gtaoEvaluate: {projectionMatrix, inverseProjectionMatrix},
+
     gtaoTemporal: {inverseProjectionMatrix},
+
     ssgiTrace: {projectionMatrix, inverseProjectionMatrix},
+
     ssgiTemporal: {inverseProjectionMatrix},
+
     ssrTrace: {projectionMatrix, inverseProjectionMatrix, frameIndex},
+
     ssrTemporal: {inverseProjectionMatrix},
+
     ssrSpatial: {inverseProjectionMatrix},
+
     ssrComposite: {inverseProjectionMatrix}
+
   }
+
 });
 ```
 

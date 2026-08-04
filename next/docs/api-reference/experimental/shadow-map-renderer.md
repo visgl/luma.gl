@@ -8,23 +8,42 @@
 
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
+
 import {ShadowMapRenderer, shadow} from '@luma.gl/experimental';
 
+
+
 const renderer = new ShadowMapRenderer(device, {quality: 'balanced'});
+
 const shaderInputs = new ShaderInputs({shadow});
 
+
+
 const shadowProps = renderer.render({
+
   camera: {viewMatrix, projectionMatrix, near: 0.1, far: 200},
+
   directionalLights: [{direction: [0.4, 0.8, 0.3]}],
+
   spotLights: [{position: [0, 10, 0], direction: [0, -1, 0], range: 40, outerConeAngle: 0.45}],
+
   pointLights: [{position: [0, 4, 0], range: 18}],
+
   drawShadowCasters: view => {
+
     const casterModel = casterModels[getViewIndex(view)];
+
     casterModel.shaderInputs.setProps({caster: {viewProjectionMatrix: view.viewProjectionMatrix}});
+
     casterModel.setParameters(view.rasterParameters);
+
     casterModel.draw(view.renderPass);
+
   }
+
 });
+
+
 
 shaderInputs.setProps({shadow: shadowProps});
 ```
@@ -37,11 +56,17 @@ Add `shadow` to a WebGPU model and apply the returned visibility to each direct-
 
 ```
 let sunVisibility = shadow_getDirectionalFactor(worldPosition, worldNormal, viewDepth);
+
 let spotVisibility = shadow_getSpotFactor(spotIndex, worldPosition, worldNormal);
+
 let pointVisibility = shadow_getPointFactor(pointIndex, worldPosition, worldNormal);
 
+
+
 color += sunDirect * sunVisibility;
+
 color += spotDirect * spotVisibility;
+
 color += pointDirect * pointVisibility;
 ```
 

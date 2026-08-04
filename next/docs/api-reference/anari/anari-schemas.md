@@ -12,24 +12,43 @@ These schemas describe the private luma.gl ANARI playground format. They are not
 
 ```
 import {
+
   ANARIVector3Schema,
+
   ANARIVector4Schema,
+
   ANARIMatrix4Schema,
+
   ANARIGeometryGeneratorSchema,
+
   ANARIGeometrySchema,
+
   ANARITextureSchema,
+
   ANARIMaterialSchema,
+
   ANARIAnimationSchema,
+
   ANARILightSchema,
+
   ANARICameraSchema,
+
   ANARIRendererSchema,
+
   ANARISurfaceSchema,
+
   ANARIGroupSchema,
+
   ANARIInstanceSchema,
+
   ANARIStarfieldSchema,
+
   ANARISceneSchema,
+
   ANARI_SCENE_JSON_SCHEMA,
+
   type ANARISceneDescription
+
 } from '@luma.gl/anari/schemas';
 ```
 
@@ -63,14 +82,24 @@ Each object schema uses a strict property set and discriminates supported subtyp
 ```
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 
+
+
 const result = ANARISceneSchema.safeParse(scene);
 
+
+
 if (result.success) {
+
   renderScene(result.data);
+
 } else {
+
   for (const issue of result.error.issues) {
+
     console.error(`${issue.path.join('.')}: ${issue.message}`);
+
   }
+
 }
 ```
 
@@ -93,17 +122,29 @@ Register the generated schema with Monaco's JSON language service:
 
 ```
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+
 import {ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/anari/schemas';
 
+
+
 monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+
   validate: true,
+
   schemas: [
+
     {
+
       uri: ANARI_SCENE_JSON_SCHEMA.$id,
+
       fileMatch: ['inmemory://anari/scene.json'],
+
       schema: ANARI_SCENE_JSON_SCHEMA
+
     }
+
   ]
+
 });
 ```
 

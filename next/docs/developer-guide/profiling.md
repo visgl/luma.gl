@@ -11,6 +11,8 @@ GPU programming is all about performance, so having tools to systematically meas
 ```
 import {luma} from '@luma.gl/core';
 
+
+
 console.log(luma.stats.getTable());
 ```
 
@@ -19,18 +21,32 @@ Resource allocation and timing stats are collected in these buckets:
 ```
 import {luma} from '@luma.gl/core';
 
+
+
 const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
+
 const resourceStats = luma.stats.get('GPU Resource Counts');
 
+
+
 console.log('Frame rate', gpuTimeAndMemoryStats.get('Frame Rate').getSampleHz());
+
 console.log('CPU time', gpuTimeAndMemoryStats.get('CPU Time').getSampleAverageTime());
+
 console.log('GPU time', gpuTimeAndMemoryStats.get('GPU Time').getSampleAverageTime());
+
 console.log('Total GPU memory', gpuTimeAndMemoryStats.get('GPU Memory').count);
+
 console.log('Buffer memory', gpuTimeAndMemoryStats.get('Buffer Memory').count);
+
 console.log('Texture memory', gpuTimeAndMemoryStats.get('Texture Memory').count);
+
 console.log('Total resources created', resourceStats.get('Resources Created').count);
+
 console.log('Total resources active', resourceStats.get('Resources Active').count);
+
 console.log('Buffers active', resourceStats.get('Buffers Active').count);
+
 console.log('Textures active', resourceStats.get('Textures Active').count);
 ```
 
@@ -83,8 +99,11 @@ Record timestamps through the command encoder:
 
 ```
 device.commandEncoder.writeTimestamp(querySet, 0);
+
 // encode GPU work here
+
 device.commandEncoder.writeTimestamp(querySet, 1);
+
 device.submit();
 ```
 
@@ -92,9 +111,13 @@ Most engines can also use automatic per-pass profiling by constructing a command
 
 ```
 const commandEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+
 const pass = commandEncoder.beginRenderPass({});
+
 // no need to manually write begin/end timestamps
+
 pass.end();
+
 device.submit();
 ```
 
@@ -102,10 +125,15 @@ Read the duration asynchronously:
 
 ```
 try {
+
   const gpuMilliseconds = await querySet.readTimestampDuration(0, 1);
+
   console.log(`GPU work took ${gpuMilliseconds.toFixed(3)}ms`);
+
 } catch (error) {
+
   console.warn('GPU timing was invalid', error);
+
 }
 ```
 

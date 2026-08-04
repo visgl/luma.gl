@@ -39,57 +39,109 @@ The fullscreen resolve uses the compact list while it fits. Overflow is compacte
 
 ```
 import {Buffer} from '@luma.gl/core';
+
 import {ShaderPassRenderer} from '@luma.gl/engine';
+
 import {
+
   ClusteredLightGrid,
+
   createClusteredDeferredLightingShaderPassPipeline,
+
   makeDeferredPointLightBufferData,
+
   MAX_CLUSTERED_POINT_LIGHTS
+
 } from '@luma.gl/experimental';
 
+
+
 const pointLights = device.createBuffer({
+
   data: makeDeferredPointLightBufferData([], MAX_CLUSTERED_POINT_LIGHTS),
+
   usage: Buffer.STORAGE | Buffer.COPY_DST
+
 });
+
+
 
 const clusteredLightGrid = new ClusteredLightGrid(device, {
+
   maxLightCount: MAX_CLUSTERED_POINT_LIGHTS
+
 });
+
+
 
 pointLights.write(makeDeferredPointLightBufferData(viewLights, MAX_CLUSTERED_POINT_LIGHTS));
+
 clusteredLightGrid.encode(device.commandEncoder, {
+
   pointLights,
+
   pointLightCount: viewLights.length,
+
   projectionMatrix,
+
   nearPlane,
+
   farPlane
+
 });
+
+
 
 const renderer = new ShaderPassRenderer(device, {
+
   shaderPasses: [createClusteredDeferredLightingShaderPassPipeline()],
+
   colorFormat: 'rgba16float'
+
 });
 
+
+
 renderer.renderToScreen({
+
   sourceTexture: gBuffer.colorTexture,
+
   bindings: {
+
     depthTexture: gBuffer.depthTexture,
+
     normalTexture: gBuffer.normalRoughnessTexture,
+
     baseColorMetallicTexture: gBuffer.getExtraColorTexture('baseColorMetallic'),
+
     emissiveOcclusionTexture: gBuffer.getExtraColorTexture('emissiveOcclusion'),
+
     pointLights,
+
     ...clusteredLightGrid.getShaderPassBindings()
+
   },
+
   uniforms: {
+
     clusteredDeferredLighting: {
+
       inverseProjectionMatrix,
+
       ambientColor,
+
       directionalLightDirectionView,
+
       directionalLightColor,
+
       directionalLightIntensity,
+
       ...clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)
+
     }
+
   }
+
 });
 ```
 

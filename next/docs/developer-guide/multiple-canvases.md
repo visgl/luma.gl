@@ -37,10 +37,16 @@ That default canvas is the real render target. The visible canvases are presenta
 ```
 const offscreenCanvas = new OffscreenCanvas(1, 1);
 
+
+
 const device = await luma.createDevice({
+
   type: 'best-available',
+
   adapters: [webgl2Adapter, webgpuAdapter],
+
   createCanvasContext: {canvas: offscreenCanvas}
+
 });
 ```
 
@@ -48,18 +54,31 @@ const device = await luma.createDevice({
 
 ```
 const leftPresentationContext = device.createPresentationContext({canvas: leftCanvas});
+
 const rightPresentationContext = device.createPresentationContext({canvas: rightCanvas});
 
+
+
 const leftFramebuffer = leftPresentationContext.getCurrentFramebuffer();
+
 const leftRenderPass = device.beginRenderPass({framebuffer: leftFramebuffer});
+
 // draw left view
+
 leftRenderPass.end();
+
 leftPresentationContext.present();
 
+
+
 const rightFramebuffer = rightPresentationContext.getCurrentFramebuffer();
+
 const rightRenderPass = device.beginRenderPass({framebuffer: rightFramebuffer});
+
 // draw right view
+
 rightRenderPass.end();
+
 rightPresentationContext.present();
 ```
 

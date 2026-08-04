@@ -28,7 +28,10 @@ Example:
 ```
 import {getArrowPaths} from '@luma.gl/arrow';
 
+
+
 const paths = getArrowPaths(table);
+
 // ['positions', 'properties.color']
 ```
 
@@ -50,6 +53,8 @@ Example:
 
 ```
 import {getArrowDataByPath} from '@luma.gl/arrow';
+
+
 
 const colorData = getArrowDataByPath(table, 'properties.color');
 ```
@@ -73,6 +78,8 @@ Example:
 ```
 import {getArrowVectorByPath} from '@luma.gl/arrow';
 
+
+
 const colorVector = getArrowVectorByPath(table, 'properties.color');
 ```
 
@@ -93,6 +100,8 @@ Example:
 
 ```
 import {getArrowListNestingLevel} from '@luma.gl/arrow';
+
+
 
 const nestingLevel = getArrowListNestingLevel(pathData);
 ```

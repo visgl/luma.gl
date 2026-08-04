@@ -15,11 +15,18 @@ Attach modules through an engine class:
 ```
 import {Model} from '@luma.gl/engine';
 
+
+
 const model = new Model(device, {
+
   source: wgslSource,
+
   vs: glslVertexSource,
+
   fs: glslFragmentSource,
+
   modules: [color]
+
 });
 ```
 
@@ -30,21 +37,38 @@ To define a new shader module, create a descriptor that brings together the sour
 ```
 import type {ShaderModule} from '@luma.gl/shadertools';
 
+
+
 type MyShaderModuleProps = {
+
   intensity: number;
+
 };
 
+
+
 export const myShaderModule = {
+
   name: 'my-shader-module',
+
   source: '...',
+
   vs: '...',
+
   fs: '...',
+
   uniformTypes: {
+
     intensity: 'f32'
+
   },
+
   inject: {},
+
   dependencies: [],
+
   getUniforms: props => ({intensity: props.intensity})
+
 } as const satisfies ShaderModule<MyShaderModuleProps>;
 ```
 
@@ -130,9 +154,13 @@ If the uniforms of this module can be directly pulled from user props, they may 
 
 ```
 {
+
   name: 'my-shader-module',
+
   defaultUniforms: {center: [0.5, 0.5], strength: 0.9},
+
   uniformTypes: {center: 'vec2<f32>', strength: 'f32'}
+
 }
 ```
 
@@ -144,14 +172,23 @@ The shader module may want to perform more complex logic when mapping the user's
 
 ```
 {
+
   name: 'my-shader-module',
+
   uniformTypes: {center: 'vec2<f32>', strength: 'f32'},
+
   getUniforms: ({intensity}) => {
+
     return {
+
       strength: Math.sqrt(intensity),
+
       center: intensity > 0 ? [0.5, 0.5] : [0, 0]
+
     };
+
   }
+
 }
 ```
 
@@ -163,15 +200,25 @@ For example:
 
 ```
 const picking = {
+
   name: 'picking',
+
   inject: {
+
     'vs:VERTEX_HOOK_FUNCTION': 'picking_setPickingColor(color.rgb);',
+
     'fs:FRAGMENT_HOOK_FUNCTION': {
+
       injection: 'color = picking_filterColor(color);',
+
       order: Number.POSITIVE_INFINITY
+
     },
+
     'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
+
   }
+
 };
 ```
 
@@ -197,9 +244,13 @@ Initializes each module in an array.
 
 ```
 getShaderModuleUniforms(
+
   module: ShaderModule,
+
   props?: Record<string, unknown>,
+
   oldUniforms?: Record<string, ShaderModuleUniformValue>
+
 ): Record<string, Binding | ShaderModuleUniformValue>
 ```
 
@@ -217,9 +268,13 @@ Returns modules and transitive dependencies sorted so dependencies are assembled
 
 ```
 checkShaderModuleDeprecations(
+
   shaderModule: ShaderModule,
+
   shaderSource: string,
+
   log: any
+
 ): void
 ```
 

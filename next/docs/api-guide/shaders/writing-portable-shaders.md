@@ -33,7 +33,9 @@ WGSL used through shadertools should usually declare named resources with `@bind
 
 ```
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
+
 @group(0) @binding(auto) var colorTexture: texture_2d<f32>;
+
 @group(0) @binding(auto) var colorTextureSampler: sampler;
 ```
 
@@ -41,8 +43,11 @@ Then bind by resource name:
 
 ```
 model.setBindings({
+
   app: uniformBuffer,
+
   colorTexture: texture
+
 });
 ```
 

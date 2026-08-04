@@ -15,11 +15,18 @@ For the copied-versus-external texture tradeoff, see [Working With Video Texture
 ```
 import {Model, VideoTexture} from '@luma.gl/engine';
 
+
+
 const videoTexture = new VideoTexture(device, {source: video});
 
+
+
 const model = new Model(device, {
+
   source,
+
   bindings: {videoTexture}
+
 });
 ```
 
@@ -27,12 +34,15 @@ The shader declaration selects the concrete representation:
 
 ```
 uniform sampler2D videoTexture;
+
 vec4 color = texture(videoTexture, uv);
 ```
 
 ```
 @group(0) @binding(auto) var videoTexture: texture_2d<f32>;
+
 @group(0) @binding(auto) var videoTextureSampler: sampler;
+
 let color = textureSample(videoTexture, videoTextureSampler, uv);
 ```
 
@@ -40,7 +50,9 @@ Both declarations above use the portable copied texture path. WebGPU callers may
 
 ```
 @group(0) @binding(auto) var videoTexture: texture_external;
+
 @group(0) @binding(auto) var videoTextureSampler: sampler;
+
 let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 ```
 
@@ -50,9 +62,13 @@ let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 
 ```
 export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
+
   source: HTMLVideoElement | VideoFrame;
+
   colorSpace?: 'srgb';
+
   sampler?: Sampler | SamplerProps;
+
 };
 ```
 

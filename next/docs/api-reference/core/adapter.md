@@ -16,8 +16,11 @@ Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
 luma.registerAdapters([webgl2Adapter]);
+
 const webglDevice = await luma.createDevice({type: 'webgl', createCanvasContext: ...});
 ```
 

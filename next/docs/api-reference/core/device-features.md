@@ -68,16 +68,27 @@ An example of feature detection
 
 ```
 // Checks if `QuerySet` objects can do GPU timing
+
 if (device.features.has('timestamp-query')) {
+
    ...
+
 }
+
 // Checks whether the active browser and backend can rasterize DOM children into textures
+
 if (device.features.has('html-in-canvas')) {
+
    ...
+
 }
+
 // Alternatively - do the same query using raw WebGL extensions
+
 if (webglDevice.gl.getExtension('EXT_disjoint_timer_query_webgl2')) {
+
    ...
+
 }
 ```
 

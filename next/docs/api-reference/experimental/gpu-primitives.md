@@ -1,6 +1,6 @@
 # GPU Primitives and Command Graphs
 
-[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
 
 ![From v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)![WebGPU required](https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square)
 
@@ -14,15 +14,25 @@ The experimental GPU primitives replace that pattern with an explicit dataflow:
 
 ```
 GPU-resident source data
+
         ↓
+
 visibility or application predicate
+
         ↓
+
 exclusive scan
+
         ↓
+
 stable compaction
+
         ↓
+
 indirect draw arguments
+
         ↓
+
 pre-recorded render commands
 ```
 
@@ -182,18 +192,32 @@ A `GraphDataView<T>` describes a typed range within a handle. Its format uses `G
 ```
 const graph = new GPUCommandGraph(device, {id: 'filter-and-draw'});
 
+
+
 const sourceBuffer = graph.importBuffer(
+
   {
+
     id: 'source-ids',
+
     byteLength: source.byteLength,
+
     usage: source.usage
+
   },
+
   source
+
 );
 
+
+
 const sourceIds = graph.createDataView(sourceBuffer, {
+
   format: 'uint32',
+
   length: objectCount
+
 });
 ```
 
@@ -245,9 +269,13 @@ The algorithm accepts arbitrary lengths. Partial final workgroups load zero for 
 
 ```
 new GPUScan({
+
   id: 'visible-prefixes',
+
   input: visibilityFlags,
+
   output: visibilityOffsets
+
 }).addToGraph(graph);
 ```
 
@@ -271,11 +299,17 @@ Compaction takes values and `0`/`1` selection flags and writes only selected val
 
 ```
 new GPUCompaction({
+
   id: 'visible-objects',
+
   input: sourceIds,
+
   flags: visibilityFlags,
+
   output: visibleIds,
+
   count: visibleCount
+
 }).addToGraph(graph);
 ```
 
@@ -291,10 +325,15 @@ Interactive applications rarely have one visibility predicate. A trace viewer ma
 
 ```
 new GPUMask({
+
   id: 'focused-visible-spans',
+
   inputs: [viewportMask, hierarchyMask, focusedSpanMask],
+
   output: visibleSpanMask,
+
   operation: 'and'
+
 }).addToGraph(graph);
 ```
 
@@ -306,17 +345,29 @@ Topology-based selection uses `GPUGraphTraversal`. It accepts forward and option
 
 ```
 new GPUGraphTraversal({
+
   id: 'selected-dependency-neighborhood',
+
   offsets: outgoingOffsets,
+
   neighbors: outgoingNeighbors,
+
   reverseOffsets: incomingOffsets,
+
   reverseNeighbors: incomingNeighbors,
+
   seeds: selectedSpanIds,
+
   seedCount: activeSeedCount,
+
   output: reachedSpanMask,
+
   direction: 'both',
+
   maxDepth: 4,
+
   activeDepth: requestedDepth
+
 }).addToGraph(graph);
 ```
 
@@ -328,15 +379,25 @@ Expansion changes both visibility and row position. `GPUHierarchyLayout` first c
 
 ```
 new GPUHierarchyLayout({
+
   id: 'process-thread-layout',
+
   parentStates: processStates,
+
   childStates: threadStates,
+
   heights: threadHeights,
+
   offsets: threadOffsets,
+
   childrenPerParent: 4,
+
   expandedChildHeight: 4,
+
   collapsedChildHeight: 1,
+
   collapsedParentHeight: 1
+
 }).addToGraph(graph);
 ```
 
@@ -348,11 +409,17 @@ Filtering an intermediate parent must not sever the visual dependency between it
 
 ```
 new GPUAncestorProjection({
+
   id: 'visible-dependency-endpoints',
+
   parents: canonicalParentIds,
+
   visibility: visibleSpanMask,
+
   output: nearestVisibleAncestors,
+
   maxDepth: 32
+
 }).addToGraph(graph);
 ```
 
@@ -368,6 +435,7 @@ The CPU defines stable draw groups: pipeline, geometry, bindings, and a bounded 
 
 ```
 draw:         vertexCount, instanceCount, firstVertex, firstInstance
+
 drawIndexed:  indexCount, instanceCount, firstIndex, baseVertex, firstInstance
 ```
 
@@ -387,23 +455,41 @@ For each span group, the graph performs:
 
 ```
 hierarchical visibility
+
   reads: canonical spans, process state, thread offsets, filters, view uniforms
+
   writes: base flags, source IDs, optional picked source ID
 
+
+
 focused mask composition
+
   reads: base flags, dependency-reachability mask
+
   writes: final visible flags
 
+
+
 scan block passes
+
   reads: flags or block sums
+
   writes: offsets and block sums
 
+
+
 scan offset passes
+
   reads: block offsets
+
   updates: offsets
 
+
+
 compaction scatter
+
   reads: source IDs, flags, offsets
+
   writes: visible IDs, indirect instance count
 ```
 
@@ -555,23 +641,41 @@ The intended v10 layering is:
 
 ```
 @luma.gl/engine
+
   table-independent command-graph scheduling core
+
   buffer, texture, pass, and generic graph views
+
   compute/render kernel integration without a tables dependency
 
+
+
 @luma.gl/tables
+
   GPUData, GPUVector, GPURecordBatch, GPUTable, GPUSchema, GPUVectorFormat
+
   GPU table and vector adapters for graph views
 
+
+
 @luma.gl/gpgpu
+
   GPUScan, GPUCompaction, and reusable visibility workflows
+
   GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
+
   GPUReduction, GPUSort, GPUBatchSort, GPUHistogram, GPUGridBinning, GPUGridAggregation
+
   GPUGroupAggregation
+
   GPUHashIndex, GPUHashIndexQuery, GPUHashJoin, and GPUBatchHashJoin
+
   higher-level table algorithms
 
+
+
 @luma.gl/arrow
+
   Arrow upload, conversion, and readback adapters
 ```
 
@@ -585,16 +689,16 @@ The command-graph foundation and hierarchical-trace, analysis, texture, picking,
 
 Impact estimates how broadly a phase unlocks GPU-driven applications. Complexity/cost estimates relative engineering scope, integration risk, and validation effort; it is not a staffing or schedule commitment.
 
-| Phase                             | Outcome                                                                                                                                                                  | Status                                                                 | Impact | Complexity/cost |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ------ | --------------- |
-| 0 — Current foundation            | Command graph, masks, hierarchy layout, graph traversal, ancestor projection, compaction, indirect drawing, picking, analysis primitives, and three working consumers    | Implemented                                                            | High   | Complete        |
-| 1 — Hardening and observability   | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented                                                            | High   | Medium          |
-| 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands                                             | Implemented                                                            | High   | Medium          |
-| 3 — Algorithm and table scaling   | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms                                             | Core implemented; topology extensions deferred                         | High   | Large           |
-| 4 — Picking and texture coverage  | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts                              | Implemented                                                            | Medium | Large           |
-| 5 — Spatial acceleration          | `GPUGridIndex` and `GPUBVH` with explicit build, update, query, correctness, and cost-comparison contracts                                                               | V1 implemented; conditional extensions deferred                        | High   | Large           |
-| 6 — GPUScene                      | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots                                             | Storage and mutation implemented; adapters and draw generation planned | High   | Large           |
-| 7 — API graduation                | Stable package contracts and a dependency-safe direct move out of experimental packages                                                                                  | Planned                                                                | High   | Large           |
+| Phase                             | Outcome                                                                                                                                                                  | Status                                                                                                                 | Impact | Complexity/cost |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------ | --------------- |
+| 0 — Current foundation            | Command graph, masks, hierarchy layout, graph traversal, ancestor projection, compaction, indirect drawing, picking, analysis primitives, and three working consumers    | Implemented                                                                                                            | High   | Complete        |
+| 1 — Hardening and observability   | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented                                                                                                            | High   | Medium          |
+| 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands                                             | Implemented                                                                                                            | High   | Medium          |
+| 3 — Algorithm and table scaling   | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms                                             | Core implemented; topology extensions deferred                                                                         | High   | Large           |
+| 4 — Picking and texture coverage  | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts                              | Implemented                                                                                                            | Medium | Large           |
+| 5 — Spatial acceleration          | `GPUGridIndex` and `GPUBVH` with explicit build, update, query, correctness, and cost-comparison contracts                                                               | V1 implemented; conditional extensions deferred                                                                        | High   | Large           |
+| 6 — GPUScene                      | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots                                             | Storage, mutation, source adapters, draw generation, and resource grouping implemented; cross-domain consumers planned | High   | Large           |
+| 7 — API graduation                | Stable package contracts and a dependency-safe direct move out of experimental packages                                                                                  | Planned                                                                                                                | High   | Large           |
 
 ### Spatial v1 milestones[​](#spatial-v1-milestones "Direct link to Spatial v1 milestones")
 
@@ -616,32 +720,33 @@ The first larger-compute slice can proceed independently of package graduation b
 
 The remaining work is divided into reviewable contracts. A tranche should land only when its entry dependency is present and its measurable exit evidence can be produced. Numbering groups related contracts; table order and the recommended sequence express dependency order, not staffing or schedule commitments. Conditional implementation tranches are entered only when the preceding decision gate shows that their added memory and complexity pay for themselves in representative consumers.
 
-| Tranche                                         | Outcome                                                                                            | Entry dependency                                                                             | Measurable exit                                                                                       | Impact | Cost   |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------ | ------ |
-| 8.1b — Mutable hash maintenance                 | Deletion and tombstone or rebuild-threshold policy grounded in a dynamic consumer                  | Implemented bounded `GPUHashIndex` build/query plus measured mutation workload               | Lookup parity across deletion and reinsertion; bounded degradation and explicit rebuild trigger       | Medium | Medium |
-| 8.2b — Sparse grouping and multi-match decision | Decide sparse aggregate rows, one-to-many storage, and payload materialization separately          | Implemented bounded many-to-one `GPUHashJoin` plus two requesting consumers                  | Each expansion contract is accepted with output bounds and CPU-oracle evidence or explicitly deferred | High   | Large  |
-| 8.3b — Partitioned-right decision               | Decide paired partitions, key routing, or global addressing for multiple right indices             | Implemented shared-right `GPUBatchHashJoin` plus a consumer with partitioned right ownership | One routing contract is accepted with empty/uneven batch evidence or explicitly deferred              | High   | Large  |
-| 8.4 — Sparse graph analytics                    | Frontier/visited representations and graph algorithms selected by demonstrated consumers           | Partitioned identity contracts from 3.2 and the 8.3b decision                                | Bounded CPU-oracle parity on disconnected, cyclic, and high-degree graphs                             | High   | Large  |
-| 8.5 — Field and solver composition              | Reusable graph-native stencil, advection, and solver building blocks behind live simulations       | Two existing simulation consumers agree on field and boundary contracts                      | Shared primitives replace consumer-local kernels without hidden submission                            | High   | Large  |
-| 3.2 — Partitioned topology                      | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing             | Implemented Phase 3 primitives plus a preserved-batch consumer                               | CPU-oracle parity across empty and uneven chunks; no implicit repack                                  | High   | Large  |
-| 3.3 — Extension decision gate                   | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers                                           | Each proposal is accepted with a fixed contract or explicitly deferred with evidence                  | Medium | Small  |
-| 6.1c — Scene adapters                           | Explicit CPU-scene and GPU-table adapters without a canonical source model                         | Tranche 6.1b and partitioned-topology decisions                                              | Both adapters build the same records without casts or hidden packing                                  | High   | Medium |
-| 6.2a — Draw-command generation                  | Visibility and spatial results write capacity-bounded indirect slots                               | Tranches 6.1b and 5.4a                                                                       | Parameter-only graph encodings update counts and commands without CPU draw selection                  | High   | Large  |
-| 6.2b — Pipeline/resource grouping               | Stable command groups under geometry or material changes within WebGPU binding limits              | Tranche 6.2a                                                                                 | Empty groups, regrouping, ordering, and overflow pass deterministic tests                             | High   | Large  |
-| 6.3a — Conventional scene consumer              | A CPU scene graph uses shared storage, visibility, picking, and draw generation                    | Tranche 6.2b and Phase 4                                                                     | No consumer-specific fields or CPU draw filtering                                                     | High   | Medium |
-| 6.3b — Table-oriented scene consumer            | A preserved-batch table application uses the same runtime contracts                                | Tranches 6.1c, 6.2b, and 3.2                                                                 | Shares public primitives with 6.3a without repacking or adapter casts                                 | High   | Medium |
-| 7.1 — Dependency audit and API freeze           | Freeze names, ownership, failures, capacities, submission, and package graph                       | Phase 6 exits and two consumers per graduation candidate                                     | Acyclic dependency report and owner for every public resource boundary                                | High   | Medium |
-| 7.2 — Scheduling-core extraction                | Move table-independent graph scheduling directly to `@luma.gl/engine`                              | Tranche 7.1                                                                                  | Engine builds without tables, gpgpu, or Arrow; all repository imports use the final owner             | High   | Large  |
-| 7.3 — Adapter and algorithm migration           | Keep table adapters in `@luma.gl/tables`; move optional workflows to `@luma.gl/gpgpu`              | Tranche 7.2                                                                                  | Package tests enforce dependency direction and examples use final owners                              | High   | Large  |
-| 7.4 — Documentation and graduation              | Stable docs, release notes, and experimental-removal criteria                                      | Tranche 7.3                                                                                  | API reports and links pass; obsolete experimental exports are absent                                  | High   | Medium |
+| Tranche                                         | Outcome                                                                                                                    | Entry dependency                                                                             | Measurable exit                                                                                                            | Impact | Cost   |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------ | ------ |
+| 8.1b — Mutable hash maintenance                 | Deletion and tombstone or rebuild-threshold policy grounded in a dynamic consumer                                          | Implemented bounded `GPUHashIndex` build/query plus measured mutation workload               | Lookup parity across deletion and reinsertion; bounded degradation and explicit rebuild trigger                            | Medium | Medium |
+| 8.2b — Sparse grouping and multi-match decision | Decide sparse aggregate rows, one-to-many storage, and payload materialization separately                                  | Implemented bounded many-to-one `GPUHashJoin` plus two requesting consumers                  | Each expansion contract is accepted with output bounds and CPU-oracle evidence or explicitly deferred                      | High   | Large  |
+| 8.3b — Partitioned-right decision               | Decide paired partitions, key routing, or global addressing for multiple right indices                                     | Implemented shared-right `GPUBatchHashJoin` plus a consumer with partitioned right ownership | One routing contract is accepted with empty/uneven batch evidence or explicitly deferred                                   | High   | Large  |
+| 8.4 — Sparse graph analytics                    | Frontier/visited representations and graph algorithms selected by demonstrated consumers                                   | Partitioned identity contracts from 3.2 and the 8.3b decision                                | Bounded CPU-oracle parity on disconnected, cyclic, and high-degree graphs                                                  | High   | Large  |
+| 8.5 — Field and solver composition              | Reusable graph-native stencil, advection, and solver building blocks behind live simulations                               | Two existing simulation consumers agree on field and boundary contracts                      | Shared primitives replace consumer-local kernels without hidden submission                                                 | High   | Large  |
+| 3.2 — Partitioned topology                      | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing                                     | Implemented Phase 3 primitives plus a preserved-batch consumer                               | CPU-oracle parity across empty and uneven chunks; no implicit repack                                                       | High   | Large  |
+| 3.3 — Extension decision gate                   | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately                         | Tranche 3.2 plus at least two requesting consumers                                           | Each proposal is accepted with a fixed contract or explicitly deferred with evidence                                       | Medium | Small  |
+| 6.3a — Conventional scene consumer              | A CPU scene graph uses shared storage, visibility, picking, and draw generation                                            | Tranche 6.2b and Phase 4                                                                     | No consumer-specific fields or CPU draw filtering                                                                          | High   | Medium |
+| 6.3b — Table-oriented scene consumer            | A preserved-batch table application uses the same runtime contracts                                                        | Tranches 6.1c, 6.2b, and 3.2                                                                 | Shares public primitives with 6.3a without repacking or adapter casts                                                      | High   | Medium |
+| T.1 — Canonical GPU trace scene                 | Stable spans, process/thread ownership, preserved source partitions, parents, dependency CSR, and generic scene projection | Implemented `GPUScene`, draw generation, and renderer-owned resource groups                  | Source identity, empty/uneven batches, bidirectional links, ownership, and scene draw/group integration pass GPU tests     | High   | Medium |
+| T.2 — Interactive GPU trace policies            | Implemented: time windows, process/thread expansion, linked-span focus, ancestor retention, and stable indirect draws      | Tranche T.1 plus hierarchy, mask, traversal, and visibility workflows                        | Policy-only updates reuse one graph with GPU-tested stable masks, row IDs, hierarchy offsets, ancestry, and indirect draws | High   | Large  |
+| T.3 — Scene-backed trace showcase               | A live trace explorer combines canonical trace scenes, GPU interactions, picking, resource groups, and timing              | Tranche T.2 plus existing picking and graph-inspection contracts                             | Representative traces pan, filter, collapse, focus, and pick without CPU draw selection                                    | High   | Large  |
+| 7.1 — Dependency audit and API freeze           | Freeze names, ownership, failures, capacities, submission, and package graph                                               | Phase 6 exits and two consumers per graduation candidate                                     | Acyclic dependency report and owner for every public resource boundary                                                     | High   | Medium |
+| 7.2 — Scheduling-core extraction                | Move table-independent graph scheduling directly to `@luma.gl/engine`                                                      | Tranche 7.1                                                                                  | Engine builds without tables, gpgpu, or Arrow; all repository imports use the final owner                                  | High   | Large  |
+| 7.3 — Adapter and algorithm migration           | Keep table adapters in `@luma.gl/tables`; move optional workflows to `@luma.gl/gpgpu`                                      | Tranche 7.2                                                                                  | Package tests enforce dependency direction and examples use final owners                                                   | High   | Large  |
+| 7.4 — Documentation and graduation              | Stable docs, release notes, and experimental-removal criteria                                                              | Tranche 7.3                                                                                  | API reports and links pass; obsolete experimental exports are absent                                                       | High   | Medium |
 
 ### Recommended execution order[​](#recommended-execution-order "Direct link to Recommended execution order")
 
-1. Add explicit CPU-scene and GPU-table adapters (6.1c), then draw-command generation (6.2a), now that storage, mutation, compaction, and grouping ownership are explicit.
-2. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the cross-chunk identity contract.
-3. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the documented decision gate gains a requesting consumer and positive evidence.
-4. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
-5. Develop the larger compute vocabulary independently where contracts are already bounded: `GPUHashIndex` build/query, bounded many-to-one `GPUHashJoin`, and shared-right `GPUBatchHashJoin` are implemented; require consumers and measurements before adding mutable maintenance, partitioned-right routing, multi-match joins, sparse graph algorithms, or generalized field solvers.
+1. Add a conventional scene consumer (6.3a) to prove shared visibility, picking, generated draws, and renderer-owned resource groups without consumer-specific scene fields.
+2. Build on the implemented canonical trace-scene and interaction foundations (T.1–T.2) with a live scene-backed trace showcase (T.3).
+3. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the cross-chunk identity contract.
+4. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the documented decision gate gains a requesting consumer and positive evidence.
+5. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
+6. Develop the larger compute vocabulary independently where contracts are already bounded: `GPUHashIndex` build/query, bounded many-to-one `GPUHashJoin`, and shared-right `GPUBatchHashJoin` are implemented; require consumers and measurements before adding mutable maintenance, partitioned-right routing, multi-match joins, sparse graph algorithms, or generalized field solvers.
 
 ### Phase 0 — Current foundation[​](#phase-0--current-foundation "Direct link to Phase 0 — Current foundation")
 
@@ -834,7 +939,7 @@ Define `GPUScene` as a flat draw database containing stable object IDs, bounds, 
 
 Specify flat draw records, stable IDs, bounded update ranges, group membership, geometry references, and command-slot ownership. Provide explicit adapters for CPU scene graphs and GPU tables without making either representation canonical.
 
-The table-independent record contract (6.1a) is implemented as a fixed 128-byte interleaved record with explicit stable identity, references, bounds, transforms, state, capacity, ownership, and typed graph views. Transactional CPU-authored insert, patch, removal, stable compaction, overflow, and exact upload-cost reporting complete 6.1b. Delivery continues with explicit CPU-scene and GPU-table adapters (6.1c). This keeps adapter convenience from silently defining core storage or update ownership.
+The table-independent record contract (6.1a) is implemented as a fixed 128-byte interleaved record with explicit stable identity, references, bounds, transforms, state, capacity, ownership, and typed graph views. Transactional CPU-authored insert, patch, removal, stable compaction, overflow, and exact upload-cost reporting complete 6.1b. Tranche 6.1c adds two explicit source boundaries: stable preorder callbacks flatten an application-owned CPU hierarchy into normal mutable records, while canonical interleaved `GPUTable` batches are borrowed as ordered scene partitions without readback, concatenation, or hidden packing. Empty batches retain their partition slots and global record bases. Independent buffer ownership lets each adapted scene release its state block while leaving table record storage with the table.
 
 **Exit evidence:** Insert, update, removal, and compaction tests preserve identity and references; partial updates have measurable upload bounds; no scene hierarchy or table type enters the core storage contract.
 
@@ -842,7 +947,7 @@ The table-independent record contract (6.1a) is implemented as a fixed 128-byte 
 
 Translate visibility and spatial-query results into capacity-bounded indirect-command slots grouped by compatible pipeline and resource bindings. WebGPU binding constraints remain explicit rather than being presented as a bindless renderer.
 
-Tranche 6.2a establishes command-slot generation and overflow. Tranche 6.2b adds stable pipeline and resource grouping, including regrouping after geometry or material changes. Separating them keeps basic GPU draw selection reviewable before taking on renderer grouping policy.
+Tranche 6.2a is implemented by `GPUSceneDrawGeneration`. Active, optionally visible scene rows claim explicit fixed-capacity indirect-command slots; the lowest scene row deterministically wins a collision. The graph clears and publishes only instance count and first instance, preserving renderer-authored geometry arguments. Required and published counts plus overflow distinguish complete, colliding, and out-of-range results without CPU draw selection, hidden allocation, submission, or readback. Tranche 6.2b is implemented by `GPUSceneResourceGroups`: immutable renderer-owned group IDs and command windows preserve pipeline/binding order while generated draw membership, empty groups, geometry mismatches, misplaced slots, unknown groups, and per-group overflow remain GPU-resident and observable. Re-encoding after scene mutation reclassifies groups without claiming bindless WebGPU behavior or hiding resource binding policy.
 
 **Exit evidence:** A compiled graph updates counts and commands after parameter-only changes with no CPU draw selection. Tests cover empty groups, stable ordering, capacity overflow, and geometry or material group changes.
 
@@ -933,6 +1038,11 @@ If those answers remain positive across several consumers, luma.gl 10 will have 
 * [`GPUBVHQuery`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)
 * [GPU spatial query benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)
 * [`GPUScene`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)
+* [GPUScene adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)
+* [`GPUSceneDrawGeneration`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)
+* [`GPUSceneResourceGroups`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)
+* [`GPUTraceScene`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)
+* [`GPUTraceInteraction`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)
 * [`GPUGroupAggregation`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)
 * [`GPUHashIndex`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)
 * [`GPUHashJoin`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)

@@ -13,10 +13,17 @@ It describes bytes in GPU memory, not the shader value written in WGSL or GLSL. 
 ```
 import type {VertexFormat} from '@luma.gl/core';
 
+
+
 export type VertexList<Format extends VertexFormat = VertexFormat> =
+
   `vertex-list<${Format}>`;
 
+
+
 export type GPUVectorFormat = VertexFormat | VertexList;
+
+
 
 export type GPUDataFormat = GPUVectorFormat | GPUDataStructFormat;
 ```
@@ -25,10 +32,15 @@ Fixed-width vectors reuse core [`VertexFormat`](https://luma.gl/next/docs/api-re
 
 ```
 'float32'
+
 'float32x2'
+
 'float32x3'
+
 'float32x4'
+
 'uint32'
+
 'unorm8x4'
 ```
 
@@ -36,6 +48,7 @@ Variable-length vertex-aligned vectors wrap a fixed element format:
 
 ```
 'vertex-list<float32x3>'
+
 'vertex-list<unorm8x4>'
 ```
 
@@ -54,10 +67,16 @@ Decodes a fixed or `vertex-list<...>` format string.
 ```
 const info = getGPUVectorFormatInfo('vertex-list<float32x3>');
 
+
+
 info.elementFormat; // 'float32x3'
+
 info.vertexList; // true
+
 info.components; // 3
+
 info.byteLength; // 12
+
 info.primitiveType; // 'f32'
 ```
 
@@ -89,11 +108,17 @@ Fixed formats can synthesize ordinary `BufferLayout` entries:
 
 ```
 const positions = new GPUVector({
+
   type: 'buffer',
+
   name: 'positions',
+
   buffer,
+
   format: 'float32x3',
+
   length
+
 });
 ```
 
@@ -107,13 +132,21 @@ If the source rows are padded, `GPUVector.byteStride` is preserved:
 
 ```
 const positions = new GPUVector({
+
   type: 'buffer',
+
   name: 'positions',
+
   buffer,
+
   format: 'float32x3',
+
   length,
+
   byteStride: 16,
+
   rowByteLength: 12
+
 });
 ```
 

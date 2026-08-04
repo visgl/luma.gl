@@ -6,14 +6,23 @@
 
 ```
 import {
+
   glassMaterial,
+
   glassMaterialPlugin,
+
   glassTransmission,
+
   glassTransmissionPlugin,
+
   opticalLighting,
+
   type GlassMaterialBindings,
+
   type GlassMaterialProps,
+
   type GlassMaterialUniforms
+
 } from '@luma.gl/experimental';
 ```
 
@@ -39,11 +48,17 @@ import {
 
 ```
 fn glassMaterial_getColor(
+
   normal: vec3<f32>,
+
   worldPosition: vec3<f32>,
+
   baseColor: vec4<f32>,
+
   cameraPosition: vec3<f32>,
+
   fragmentPosition: vec4<f32>
+
 ) -> vec4<f32>
 ```
 
@@ -88,24 +103,43 @@ The optional volume controls preserve existing output when left at their zero de
 
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
+
 import {glassMaterial, glassMaterialPlugin} from '@luma.gl/experimental';
+
+
 
 const shaderInputs = new ShaderInputs({glassMaterial});
 
+
+
 shaderInputs.setProps({
+
   glassMaterial: {
+
     viewportSize: [width, height],
+
     sceneColorTexture,
+
     indexOfRefraction: 1.5,
+
     thickness: 1
+
   }
+
 });
 
+
+
 const model = new Model(device, {
+
   source: glassShader,
+
   plugins: [glassMaterialPlugin],
+
   shaderInputs,
+
   geometry
+
 });
 ```
 

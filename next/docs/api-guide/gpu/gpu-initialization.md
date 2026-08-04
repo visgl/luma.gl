@@ -38,17 +38,25 @@ To create a WebGPU device:
 
 ```
 yarn add @luma.gl/core
+
 yarn add @luma.gl/webgpu
 ```
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
+
+
 const device = await luma.createDevice({
+
   type: 'webgpu',
+
   adapters: [webgpuAdapter],
+
   createCanvasContext: {canvas: ...}
+
 });
 ```
 
@@ -56,19 +64,30 @@ It is possible to supply more than one device adapter to create an application t
 
 ```
 yarn add @luma.gl/core
+
 yarn add @luma.gl/webgl
+
 yarn add @luma.gl/webgpu
 ```
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
+
+
 const bestAvailableDevice = await luma.createDevice({
+
   type: 'best-available',
+
   adapters: [webgpuAdapter, webgl2Adapter],
+
   createCanvasContext: true
+
 });
+
 console.log(bestAvailableDevice.type); // 'webgpu' or 'webgl' depending on what the browser supports.
 ```

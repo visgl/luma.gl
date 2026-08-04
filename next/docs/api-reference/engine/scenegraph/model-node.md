@@ -10,10 +10,15 @@
 
 ```
 export type ModelNodeProps = ScenegraphNodeProps & {
+
   model: Model;
+
   managedResources?: any[];
+
   bounds?: [[number, number, number], [number, number, number]];
+
   instanceMatrices?: readonly NumericArray[];
+
 };
 ```
 

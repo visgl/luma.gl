@@ -46,16 +46,27 @@ When materialized as a full table, the file would be represented by an `arrow.Ta
 
 ```
 arrow.Schema([
+
   arrow.Field(
+
     'positions',
+
     new arrow.FixedSizeList(new arrow.Field('position', new arrow.Float32(), false), 3),
+
     false
+
   ),
+
   arrow.Field(
+
     'color',
+
     new arrow.FixedSizeList(new arrow.Field('color', new arrow.Uint8(), false), 4),
+
     false
+
   )
+
 ]);
 ```
 
@@ -65,10 +76,15 @@ Loading by URL should prefer batched parsing. The layer can start uploading and 
 
 ```
 new AnyLayer({
+
   data: 'some-url',
+
   loaders: [AnyLoader],
+
   positions: 'positions',
+
   colors: 'color'
+
 });
 ```
 
@@ -76,14 +92,23 @@ Applications that need a complete table can disable batched parsing with loader 
 
 ```
 const arrowTable = await load('some-url', AnyLoader, {
+
   // Directional: loader options can request a fully materialized table
+
   // instead of batched parsing.
+
 });
 
+
+
 new AnyLayer({
+
   data: arrowTable,
+
   positions: 'positions',
+
   colors: 'color'
+
 });
 ```
 
@@ -95,15 +120,25 @@ Streaming inputs should preserve `RecordBatch` boundaries from the source Arrow 
 
 ```
 async function* loadRecordBatches(): AsyncIterable<arrow.RecordBatch> {
+
   for await (const recordBatch of parseArrowBatches('some-url')) {
+
     yield recordBatch;
+
   }
+
 }
 
+
+
 new AnyLayer({
+
   data: loadRecordBatches(),
+
   positions: 'positions',
+
   colors: 'color'
+
 });
 ```
 
@@ -117,13 +152,21 @@ Columns can also be supplied directly as `arrow.Vector` or `GPUVector` values wh
 
 ```
 const arrowTable = await load('some-url', AnyLoader, {
+
   // Directional: loader options can request a fully materialized table.
+
 });
 
+
+
 new AnyLayer({
+
   data: arrowTable,
+
   positions: arrowTable.getChild('positions'),
+
   colors: arrowTable.getChild('color')
+
 });
 ```
 
@@ -139,15 +182,25 @@ GPU-resident inputs let applications bypass Arrow upload and avoid retained CPU 
 
 ```
 new AnyLayer({
+
   data: gpuTable,
+
   positions: 'positions',
+
   colors: 'color'
+
 });
 
+
+
 new AnyLayer({
+
   data: gpuRecordBatchStream,
+
   positions: gpuPositionVector,
+
   colors: gpuColorVector
+
 });
 ```
 
@@ -170,17 +223,29 @@ The exact callback field names are directional, but the layer should preserve en
 
 ```
 new AnyLayer({
+
   data: loadRecordBatches(),
+
   positions: 'positions',
+
   colors: 'color',
+
   onClick: info => {
+
     // Directional shape only. Exact PickingInfo field names are TBD.
+
     const sourceRowIndex = info.arrow?.sourceRowIndex;
+
     const sourceRecordBatch = info.arrow?.recordBatch;
+
     const sourceTable = info.arrow?.table;
 
+
+
     console.log({sourceTable, sourceRecordBatch, sourceRowIndex});
+
   }
+
 });
 ```
 
@@ -190,10 +255,15 @@ GeoArrow metadata can identify the geometry column, so the layer can select geom
 
 ```
 new GeoLayer({
+
   data: 'some-url',
+
   loaders: [AnyGeometryLoader],
+
   // additional columns may be used for styling, but geometry column is auto-detected
+
   getColor: 'color'
+
 });
 ```
 
@@ -205,10 +275,15 @@ An instance Arrow table can then additionally be supplied with transformation ma
 
 ```
 new MultiMeshLayer({
+
   mesh: 'mesh-url',
+
   data: 'some-url',
+
   loaders: [AnyMeshLoader, AnyTableLoader],
+
   getColor: 'color'
+
 });
 ```
 

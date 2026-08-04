@@ -27,6 +27,7 @@ import {
   makeTempestOceanHDRScreenshot,
   type TempestOceanHDRScreenshot
 } from './tempest-ocean-capture';
+import {TempestOceanAudio, type TempestOceanAudioStatus} from './tempest-ocean-audio';
 
 const DEFAULT_SIMULATION_RESOLUTION = 128;
 const DEFAULT_GRID_RESOLUTION = 145;
@@ -89,33 +90,16 @@ export type TempestOceanExampleProps = Pick<AnimationProps, 'device' | 'width' |
 
 const INFO_HTML = `
 <style>
-  .tempest-ocean-info {
-    position: fixed;
-    left: 22px;
-    bottom: 22px;
-    width: min(420px, calc(100vw - 44px));
-    box-sizing: border-box;
-    padding: 15px 17px;
-    border: 1px solid rgb(149 211 255 / 25%);
-    border-radius: 11px;
-    background: linear-gradient(135deg, rgb(3 12 22 / 88%), rgb(20 22 30 / 72%));
-    box-shadow: 0 20px 64px rgb(0 0 0 / 46%);
-    color: #eff9ff;
-    font: 13px/1.45 system-ui, sans-serif;
-    backdrop-filter: blur(14px);
-    pointer-events: none;
-  }
-  .tempest-ocean-info h1 { margin: 0 0 6px; font: 600 18px/1.2 system-ui, sans-serif; }
-  .tempest-ocean-info p { margin: 0; color: #bed6e5; }
+  .tempest-ocean-info { font: 13px/1.45 system-ui, sans-serif; }
+  .tempest-ocean-info p { margin: 0; color: inherit; opacity: .82; }
   .tempest-ocean-info strong { color: #fff2c8; }
   .tempest-ocean-controls { margin-top: 10px; color: #e2f4ff; font-size: 12px; }
   .tempest-ocean-badges { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
   .tempest-ocean-badge { padding: 4px 7px; border: 1px solid rgb(120 205 255 / 24%); border-radius: 99px; background: rgb(22 91 132 / 20%); color: #daf3ff; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
 </style>
 <section class="tempest-ocean-info">
-  <h1>Tempest Ocean: Spectral Stormfront</h1>
   <p>A reusable <strong>GPUFFT2D spectral field</strong> physically displaces this raster surface. Live normals and Jacobian whitecaps drive the HDR water material without CPU readback.</p>
-  <div class="tempest-ocean-controls">Drag to orbit · wheel to zoom · <strong>C</strong> cinematic · <strong>P</strong> pause waves · <strong>R</strong> deterministic reset · <span data-tempest-state>cinematic · running</span></div>
+  <div class="tempest-ocean-controls">Drag to orbit · wheel to zoom · <strong>C</strong> cinematic · <strong>P</strong> pause waves · <strong>R</strong> deterministic reset · <strong>M</strong> mute sound · <span data-tempest-state>cinematic · running</span> · <span data-tempest-audio-state>sound waiting for a gesture</span></div>
   <div class="tempest-ocean-badges"><span class="tempest-ocean-badge">WebGPU compute</span><span class="tempest-ocean-badge">Storage-buffer surface</span><span class="tempest-ocean-badge">HDR sunbreak</span></div>
 </section>`;
 
@@ -138,6 +122,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
 
   private readonly skyShaderInputs = new ShaderInputs({tempestOceanScene});
   private readonly oceanShaderInputs = new ShaderInputs({tempestOceanScene});
+  private readonly oceanAudio = new TempestOceanAudio();
   private canvas: HTMLCanvasElement | null = null;
   private previousTimeMilliseconds: number | null = null;
   private simulationTimeSeconds = 0;
@@ -264,7 +249,10 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
       this.orbitController = new OrbitController(canvas, TEMPEST_OCEAN_CAMERA_PROPS);
+      canvas.addEventListener('pointerdown', this.handleAudioActivation);
       globalThis.addEventListener('keydown', this.handleKeyDown);
+      globalThis.document?.addEventListener('visibilitychange', this.handleVisibilityChange);
+      this.oceanAudio.setPageVisible(!globalThis.document?.hidden);
     }
     this.updateControlStatus();
   }
@@ -363,6 +351,8 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     this.finalized = true;
     this.rejectCaptureRequest(this.captureRequest, new Error('Tempest Ocean was finalized.'));
     globalThis.removeEventListener('keydown', this.handleKeyDown);
+    globalThis.document?.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    this.canvas?.removeEventListener('pointerdown', this.handleAudioActivation);
     this.orbitController?.destroy();
     this.orbitController = null;
     this.canvas = null;
@@ -373,6 +363,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     this.oceanShaderInputs.destroy();
     destroyTempestOceanSceneTarget(this.sceneTarget);
     this.simulation.destroy();
+    this.oceanAudio.destroy();
   }
 
   private getPostprocessingOptions(maximumLuminance: number): ShaderPassRendererRenderOptions {
@@ -493,6 +484,15 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.key.toLowerCase() === 'm') {
+      this.oceanAudio.setEnabled(!this.oceanAudio.enabled);
+      if (this.oceanAudio.enabled) {
+        this.activateOceanAudio();
+      }
+      this.updateControlStatus();
+      return;
+    }
+    this.activateOceanAudio();
     const key = event.key.toLowerCase();
     if (key === 'p' || event.key === ' ') {
       this.paused = !this.paused;
@@ -510,10 +510,36 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     this.updateControlStatus();
   };
 
+  private readonly handleAudioActivation = (): void => {
+    this.activateOceanAudio();
+  };
+
+  private readonly handleVisibilityChange = (): void => {
+    this.oceanAudio.setPageVisible(!globalThis.document?.hidden);
+    this.updateControlStatus();
+  };
+
+  private activateOceanAudio(): void {
+    void this.oceanAudio.activate().then(
+      () => this.updateControlStatus(),
+      () => this.updateControlStatus()
+    );
+  }
+
   private updateControlStatus(): void {
     const status = globalThis.document?.querySelector('[data-tempest-state]');
     if (status) {
       status.textContent = `${this.cinematicCamera ? 'cinematic' : 'manual'} · ${this.paused ? 'paused' : 'running'}`;
+    }
+    const audioStatus = globalThis.document?.querySelector('[data-tempest-audio-state]');
+    if (audioStatus) {
+      const statusLabels: Record<TempestOceanAudioStatus, string> = {
+        waiting: 'sound: click or press a key to enable',
+        ready: 'sound: ocean atmosphere armed',
+        muted: 'sound: muted',
+        unavailable: 'sound unavailable'
+      };
+      audioStatus.textContent = statusLabels[this.oceanAudio.status];
     }
   }
 }

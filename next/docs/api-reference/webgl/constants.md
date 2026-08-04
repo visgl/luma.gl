@@ -12,6 +12,7 @@ Use this entry point when you need the raw numeric WebGL enums that luma.gl stil
 
 ```
 import {GL} from '@luma.gl/webgl/constants';
+
 import type {GLParameters, GLSamplerParameters} from '@luma.gl/webgl/constants';
 ```
 

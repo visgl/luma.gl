@@ -12,10 +12,15 @@ The simplest use case is to provide a non-default vertex type:
 
 ```
   bufferLayout: [
+
     {name: 'instancePositions', format: 'float32x3'}
+
     ...
+
     // RGBA colors can be efficiently encoded in 4 8bit bytes, instead of 4 32bit floats
+
     {name: 'instanceColors', format: 'uint8normx4'},
+
   ],
 ```
 
@@ -23,8 +28,11 @@ This is short hand for specifying an attribute with the same name as the buffer
 
 ```
   bufferLayout: [
+
     {name: 'instancePositions', attributes: [{attribute: 'instancePositions', format: 'float32x3'}]},
+
     {name: 'instanceColors', attributes: [{attribute: 'instanceColors', format: 'uint8normx4'}]},
+
   ]
 ```
 
@@ -32,13 +40,21 @@ A more advanced use case is interleaving: two attributes access the same buffer 
 
 ```
   bufferLayout: [
+
     {
+
       name: 'particles', stepMode: 'instance', byteStride: 24, attributes: [
+
         // Note that strides are automatically calculated assuming a packed buffer.
+
         {attribute: 'instancePositions', format: 'float32x3', byteOffset: 0},
+
         {attribute: 'instanceVelocities', format: 'float32x3', byteOffset: 12}
+
       ]
+
     }
+
   ],
 ```
 

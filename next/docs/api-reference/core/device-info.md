@@ -9,10 +9,16 @@ The `device.info` field holds a small `DeviceInfo` object that provides informat
 ```
 import {Device} from '@luma.gl/core';
 
+
+
 const device: Device = ...;
+
 console.log(device.info);
+
 if (device.info.gpu === 'nvidia') {
+
    ...
+
 }
 ```
 

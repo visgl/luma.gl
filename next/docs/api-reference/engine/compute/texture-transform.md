@@ -11,15 +11,27 @@
 ```
 import {TextureTransform} from '@luma.gl/engine';
 
+
+
 const transform = new TextureTransform(device, {
+
   vs: VERTEX_SHADER,
+
   targetTexture,
+
   targetTextureChannels: 4,
+
   targetTextureVarying: 'outColor',
+
   sourceTextures: {
+
     sourceTexture
+
   }
+
 });
+
+
 
 transform.run();
 ```
@@ -30,14 +42,23 @@ transform.run();
 
 ```
 export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
+
   fs?: ModelProps['fs'];
+
   inject?: Record<string, string>;
+
   framebuffer?: Framebuffer;
+
   sourceBuffers?: Record<string, Buffer>;
+
   sourceTextures?: Record<string, Texture>;
+
   targetTexture: Texture;
+
   targetTextureChannels: 1 | 2 | 3 | 4;
+
   targetTextureVarying: string;
+
 };
 ```
 

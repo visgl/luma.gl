@@ -26,11 +26,17 @@ Create a new UniformStore instance
 
 ```
   constructor(
+
     device: Device, 
+
     blocks: Record<string, {
+
       uniformFormats: Record<string, UniformFormat>;
+
       defaultValues?: Record<string, UniformValue>;
+
     }>
+
   )
 ```
 

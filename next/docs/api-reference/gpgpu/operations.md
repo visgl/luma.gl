@@ -42,18 +42,32 @@ The arithmetic API is exported from `@luma.gl/gpgpu` as:
 ```
 type ArithmeticArgument = GPUDataEvaluatorInput | number | number[];
 
+
+
 add(...args: ArithmeticArgument[]): GPUDataEvaluator
+
 subtract(...args: ArithmeticArgument[]): GPUDataEvaluator
+
 multiply(...args: ArithmeticArgument[]): GPUDataEvaluator
+
 divide(...args: ArithmeticArgument[]): GPUDataEvaluator
 
+
+
 pow(base: ArithmeticArgument, exponent: ArithmeticArgument): GPUDataEvaluator
+
 sqrt(arg: ArithmeticArgument): GPUDataEvaluator
+
 abs(arg: ArithmeticArgument): GPUDataEvaluator
+
 sin(arg: ArithmeticArgument): GPUDataEvaluator
+
 cos(arg: ArithmeticArgument): GPUDataEvaluator
+
 tan(arg: ArithmeticArgument): GPUDataEvaluator
+
 exp(arg: ArithmeticArgument): GPUDataEvaluator
+
 log(arg: ArithmeticArgument): GPUDataEvaluator
 ```
 
@@ -69,12 +83,20 @@ log(arg: ArithmeticArgument): GPUDataEvaluator
 
 ```
 const xyz = GPUDataEvaluator.fromArray(
+
   new Float32Array([
+
     1, 2, 3,
+
     4, 5, 6
+
   ]),
+
   {size: 3}
+
 );
+
+
 
 const result = add(xyz, [10, 20, 30], 1);
 ```
@@ -101,14 +123,24 @@ The output:
 
 ```
 const xyz = GPUDataEvaluator.fromArray(
+
   new Float32Array([
+
     0, 0, 0,
+
     1, 0, 0
+
   ]),
+
   {size: 3}
+
 );
 
+
+
 const id = GPUDataEvaluator.fromArray(new Float32Array([5, 6]), {size: 1});
+
+
 
 const result = interleave(xyz, id);
 ```
@@ -145,11 +177,17 @@ Behavior:
 
 ```
 const values = GPUDataEvaluator.fromArray(
+
   [10, 11, 12, 13, 20, 21, 22, 23],
+
   {size: 4}
+
 );
 
+
+
 const yz = swizzle(values, [1, 2]);
+
 const reordered = swizzle(values, [2, 0, 2]);
 ```
 
@@ -176,10 +214,16 @@ Behavior:
 
 ```
 const ids = GPUDataEvaluator.fromArray([2, 0, 1], {type: 'uint32', size: 1});
+
 const values = GPUDataEvaluator.fromArray(
+
   [10, 11, 20, 21, 30, 31],
+
   {size: 2}
+
 );
+
+
 
 const result = gather(ids, values);
 ```
@@ -202,6 +246,7 @@ For an input table with `size = 2`, the output rows are:
 
 ```
 row 0: [min(x), max(x)]
+
 row 1: [min(y), max(y)]
 ```
 
@@ -209,9 +254,14 @@ row 1: [min(y), max(y)]
 
 ```
 const points = GPUDataEvaluator.fromArray(
+
   [4, 9, -1, 8, 7, 3, 2, 12],
+
   {size: 2}
+
 );
+
+
 
 const result = extent(points);
 ```
@@ -238,13 +288,22 @@ Behavior:
 
 ```
 const x = GPUDataEvaluator.fromArray(
+
   [1, 2, 3, 4, 5, 6],
+
   {size: 3}
+
 );
+
 const y = GPUDataEvaluator.fromArray(
+
   [7, 8, 9, -1, -2, -3],
+
   {size: 3}
+
 );
+
+
 
 const result = dot(x, y);
 ```
@@ -270,9 +329,14 @@ Behavior:
 
 ```
 const points = GPUDataEvaluator.fromArray(
+
   [3, 4, 5, 12],
+
   {size: 2}
+
 );
+
+
 
 const result = length(points);
 ```
@@ -305,13 +369,22 @@ Behavior:
 
 ```
 const a = GPUDataEvaluator.fromArray(
+
   [1, 2, 3, 4, 5, 6],
+
   {size: 3}
+
 );
+
 const b = GPUDataEvaluator.fromArray(
+
   [1, 2, 3, 4, 0, 6],
+
   {size: 3}
+
 );
+
+
 
 const result = equalAll(a, b);
 ```
@@ -340,6 +413,7 @@ Behavior:
 
 ```
 const a = sequence(5);        // 0, 1, 2, 3, 4
+
 const b = sequence(4, 10, 2); // 10, 12, 14, 16
 ```
 
@@ -366,8 +440,12 @@ Behavior:
 
 ```
 const condition = GPUDataEvaluator.fromArray([1, 0, 1], {type: 'uint32', size: 1});
+
 const whenTrue = GPUDataEvaluator.fromArray([10, 11, 20, 21, 30, 31], {size: 2});
+
 const whenFalse = GPUDataEvaluator.fromArray([100, 101, 200, 201, 300, 301], {size: 2});
+
+
 
 const result = select(condition, whenTrue, whenFalse);
 ```
@@ -402,11 +480,17 @@ For segment starts `[0, 3, 3, 6]`, the output rows begin:
 
 ```
 row 0: [0, 0]
+
 row 1: [0, 1]
+
 row 2: [0, 2]
+
 row 3: [2, 0]
+
 row 4: [2, 1]
+
 row 5: [2, 2]
+
 row 6: [3, 0]
 ```
 
@@ -414,6 +498,8 @@ row 6: [3, 0]
 
 ```
 const segments = GPUDataEvaluator.fromArray([0, 3, 5], {type: 'uint32', size: 1});
+
+
 
 const result = segmentedMap(segments, 7);
 ```
@@ -433,9 +519,14 @@ Splits float64 values into float32 high and low parts for fp64-style workflows.
 
 ```
 const source = GPUDataEvaluator.fromArray(
+
   new Float64Array([Math.PI, Math.E]),
+
   {size: 1}
+
 );
+
+
 
 const result = fround(source);
 ```

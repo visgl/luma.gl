@@ -55,7 +55,9 @@ Let `fl(x)` mean that `x` is evaluated as a distinct binary32 operation and roun
 
 ```
 s = fl(a + b)
+
 v = fl(s - a)
+
 e = fl(fl(a - fl(s - v)) + fl(b - v))
 ```
 
@@ -63,6 +65,7 @@ Under its assumptions, `s + e` is exactly equal to the real sum `a + b`. Dekker'
 
 ```
 s = fl(a + b)
+
 e = fl(b - fl(s - a))
 ```
 
@@ -72,7 +75,9 @@ For multiplication without a fused multiply-add, Dekker splits each operand into
 
 ```
 c = fl(4097 * a)              // 4097 = 2^12 + 1
+
 aHigh = fl(c - fl(c - a))
+
 aLow = fl(a - aHigh)
 ```
 
@@ -106,11 +111,17 @@ The public representation and function names remain `vec2f` double-single, so ex
 
 ```
 const computation = new Computation(device, {
+
   // ...
+
   modules: [fp64arithmetic],
+
   defines: {
+
     LUMA_FP64_INTEGER_ARITHMETIC: true // false overrides the Apple default
+
   }
+
 });
 ```
 
@@ -196,8 +207,11 @@ WGSL also provides these targeted helpers for `fp64u32` values:
 
 ```
 fn sub_fp64u32_to_f32_bits(aBits: vec2u, bBits: vec2u) -> u32
+
 fn sub_fp64u32_to_f32(aBits: vec2u, bBits: vec2u) -> f32
+
 fn sub_fp64u32_to_fp64_bits(aBits: vec2u, bBits: vec2u) -> vec2u
+
 fn sub_fp64u32_to_fp64(aBits: vec2u, bBits: vec2u) -> vec2f
 ```
 

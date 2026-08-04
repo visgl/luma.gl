@@ -31,18 +31,32 @@ The central distinction is logical versus physical state. `table.gpuColumns` con
 ```
 import {GPUConstant, GPUTable} from '@luma.gl/tables';
 
+
+
 const table = new GPUTable({
+
   columns: {
+
     positions,
+
     colors: new GPUConstant({
+
       format: 'unorm8x4',
+
       value: new Uint8Array([60, 150, 255, 220])
+
     }),
+
     radii: new GPUConstant({
+
       format: 'float32',
+
       value: new Float32Array([4])
+
     })
+
   }
+
 });
 ```
 
@@ -50,8 +64,11 @@ The varying `positions` vector determines `numRows`. If every column is constant
 
 ```
 const table = new GPUTable({
+
   columns: {color: constantColor},
+
   numRows: 10_000
+
 });
 ```
 
@@ -63,22 +80,39 @@ A model publishes one `GPUInputSchema` independent of the backend:
 
 ```
 const pointInputs = [
+
   {
+
     columnName: 'positions',
+
     attributeName: 'positions',
+
     storageBindingName: 'pointPositions',
+
     kind: 'positions',
+
     required: true,
+
     formats: ['float32x2']
+
   },
+
   {
+
     columnName: 'colors',
+
     attributeName: 'colors',
+
     storageBindingName: 'pointColors',
+
     kind: 'colors',
+
     required: false,
+
     formats: ['unorm8x4']
+
   }
+
 ] as const satisfies GPUInputSchema;
 ```
 
@@ -88,19 +122,33 @@ Composite inputs use `attributeNames` to map one logical column to several attri
 
 ```
 const transformInputs = [
+
   {
+
     columnName: 'instanceModelMatrix',
+
     attributeNames: [
+
       'instanceModelMatrixCol0',
+
       'instanceModelMatrixCol1',
+
       'instanceModelMatrixCol2',
+
       'instanceModelMatrixCol3'
+
     ],
+
     storageBindingName: 'instanceModelMatrix',
+
     kind: 'matrices',
+
     required: true,
+
     formats: ['float32x4']
+
   }
+
 ] as const satisfies GPUInputSchema;
 ```
 
@@ -110,20 +158,35 @@ The vector's `BufferLayout` describes the four offsets and shared row stride. Bi
 
 ```
 const prepared = new GPUTableShaderBindings(device, {
+
   table,
+
   gpuInputSchema: pointInputs,
+
   shaderLayout
+
 });
 
+
+
 for (const batch of prepared.batches) {
+
   model.setBufferLayout(prepared.bufferLayout);
+
   model.setAttributes(batch.attributes);
+
   model.setBindings(batch.bindings);
+
   model.setConstantAttributes(prepared.constantAttributes);
+
   model.draw(renderPass);
+
 }
 
+
+
 prepared.destroy();
+
 table.destroy();
 ```
 
@@ -141,10 +204,15 @@ WebGPU storage shaders use the generated module:
 
 ```
 let color = pointColors[
+
   gpuTable_getRowIndex(
+
     rowIndex,
+
     gpuTableColumns.pointColorsRowMultiplier
+
   )
+
 ];
 ```
 

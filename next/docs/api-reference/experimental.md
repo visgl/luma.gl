@@ -38,7 +38,7 @@ The [GPU Primitives and Command Graphs guide](https://luma.gl/next/docs/api-refe
 
 ![WebGPU required](https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square)
 
-The [WebGPU Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md) entry point contributes chunk-preserving sinusoidal projection, haversine distance, Euclidean point distance, and point-to-segment distance nodes to a `GPUCommandGraph`. It accepts either local f32 coordinates or raw binary64 coordinate words and makes the f32-transcendental versus precise planar arithmetic boundary explicit.
+The [WebGPU Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md) entry point contributes projection, distance, point-in-polygon, nearest-linestring, uniform-grid indexing, and spatial-query work to a `GPUCommandGraph`. It accepts either local f32 coordinates or raw binary64 coordinate words where supported and makes the f32-transcendental versus precise planar arithmetic boundary explicit.
 
 ## GPU Simulations[​](#gpu-simulations "Direct link to GPU Simulations")
 

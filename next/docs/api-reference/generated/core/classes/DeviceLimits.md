@@ -1,6 +1,6 @@
 # Abstract Class: DeviceLimits
 
-Defined in: [modules/core/src/adapter/device.ts:89](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L89)
+Defined in: [modules/core/src/adapter/device.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L92)
 
 Limits for a device (max supported sizes of resources, max number of bindings etc)
 
@@ -20,7 +20,7 @@ Limits for a device (max supported sizes of resources, max number of bindings et
 
 > `abstract` **maxBindGroups**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L99)
+Defined in: [modules/core/src/adapter/device.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L102)
 
 max number of BindGroups
 
@@ -30,7 +30,7 @@ max number of BindGroups
 
 > `abstract` **maxBindGroupsPlusVertexBuffers**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L101)
+Defined in: [modules/core/src/adapter/device.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L104)
 
 max total bind groups plus vertex buffers usable by one pipeline
 
@@ -40,7 +40,7 @@ max total bind groups plus vertex buffers usable by one pipeline
 
 > `abstract` **maxBindingsPerBindGroup**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L103)
+Defined in: [modules/core/src/adapter/device.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L106)
 
 max bindings in one bind group
 
@@ -50,7 +50,7 @@ max bindings in one bind group
 
 > `abstract` **maxBufferSize**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L131)
+Defined in: [modules/core/src/adapter/device.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L134)
 
 max total byte size of one GPU buffer allocation
 
@@ -60,7 +60,7 @@ max total byte size of one GPU buffer allocation
 
 > `abstract` **maxColorAttachmentBytesPerSample**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L147)
+Defined in: [modules/core/src/adapter/device.ts:150](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L150)
 
 max attachment bytes consumed per sample
 
@@ -70,7 +70,7 @@ max attachment bytes consumed per sample
 
 > `abstract` **maxColorAttachments**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L145)
+Defined in: [modules/core/src/adapter/device.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L148)
 
 max number of color attachments in one render pass
 
@@ -80,7 +80,7 @@ max number of color attachments in one render pass
 
 > `abstract` **maxComputeInvocationsPerWorkgroup**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L151)
+Defined in: [modules/core/src/adapter/device.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L154)
 
 max number of ComputeInvocations per Workgroup
 
@@ -90,7 +90,7 @@ max number of ComputeInvocations per Workgroup
 
 > `abstract` **maxComputeWorkgroupSizeX**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L153)
+Defined in: [modules/core/src/adapter/device.ts:156](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L156)
 
 max ComputeWorkgroupSizeX
 
@@ -100,7 +100,7 @@ max ComputeWorkgroupSizeX
 
 > `abstract` **maxComputeWorkgroupSizeY**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L155)
+Defined in: [modules/core/src/adapter/device.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L158)
 
 max ComputeWorkgroupSizeY
 
@@ -110,7 +110,7 @@ max ComputeWorkgroupSizeY
 
 > `abstract` **maxComputeWorkgroupSizeZ**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L157)
+Defined in: [modules/core/src/adapter/device.ts:160](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L160)
 
 max ComputeWorkgroupSizeZ
 
@@ -120,7 +120,7 @@ max ComputeWorkgroupSizeZ
 
 > `abstract` **maxComputeWorkgroupsPerDimension**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L159)
+Defined in: [modules/core/src/adapter/device.ts:162](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L162)
 
 max ComputeWorkgroupsPerDimension
 
@@ -130,7 +130,7 @@ max ComputeWorkgroupsPerDimension
 
 > `abstract` **maxComputeWorkgroupStorageSize**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L149)
+Defined in: [modules/core/src/adapter/device.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L152)
 
 max number of ComputeWorkgroupStorageSize
 
@@ -140,7 +140,7 @@ max number of ComputeWorkgroupStorageSize
 
 > `abstract` **maxDynamicStorageBuffersPerPipelineLayout**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L107)
+Defined in: [modules/core/src/adapter/device.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L110)
 
 max number of DynamicStorageBuffers per PipelineLayout
 
@@ -150,7 +150,7 @@ max number of DynamicStorageBuffers per PipelineLayout
 
 > `abstract` **maxDynamicUniformBuffersPerPipelineLayout**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L105)
+Defined in: [modules/core/src/adapter/device.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L108)
 
 max number of DynamicUniformBuffers per PipelineLayout
 
@@ -160,7 +160,7 @@ max number of DynamicUniformBuffers per PipelineLayout
 
 > `abstract` **maxInterStageShaderVariables**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L143)
+Defined in: [modules/core/src/adapter/device.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L146)
 
 max number of InterStageShaderComponents
 
@@ -170,7 +170,7 @@ max number of InterStageShaderComponents
 
 > `abstract` **maxSampledTexturesPerShaderStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L109)
+Defined in: [modules/core/src/adapter/device.ts:112](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L112)
 
 max number of SampledTextures per ShaderStage
 
@@ -180,7 +180,7 @@ max number of SampledTextures per ShaderStage
 
 > `abstract` **maxSamplersPerShaderStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:111](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L111)
+Defined in: [modules/core/src/adapter/device.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L114)
 
 max number of Samplers per ShaderStage
 
@@ -190,7 +190,7 @@ max number of Samplers per ShaderStage
 
 > `abstract` **maxStorageBufferBindingSize**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L129)
+Defined in: [modules/core/src/adapter/device.ts:132](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L132)
 
 max number of StorageBufferBindingSize
 
@@ -200,7 +200,7 @@ max number of StorageBufferBindingSize
 
 > `abstract` **maxStorageBuffersInFragmentStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:117](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L117)
+Defined in: [modules/core/src/adapter/device.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L120)
 
 Maximum number of storage buffers visible to the fragment shader stage.
 
@@ -210,7 +210,7 @@ Maximum number of storage buffers visible to the fragment shader stage.
 
 > `abstract` **maxStorageBuffersInVertexStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:115](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L115)
+Defined in: [modules/core/src/adapter/device.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L118)
 
 Maximum number of storage buffers visible to the vertex shader stage.
 
@@ -220,7 +220,7 @@ Maximum number of storage buffers visible to the vertex shader stage.
 
 > `abstract` **maxStorageBuffersPerShaderStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L113)
+Defined in: [modules/core/src/adapter/device.ts:116](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L116)
 
 max number of StorageBuffers per ShaderStage
 
@@ -230,7 +230,7 @@ max number of StorageBuffers per ShaderStage
 
 > `abstract` **maxStorageTexturesInFragmentStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L123)
+Defined in: [modules/core/src/adapter/device.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L126)
 
 Maximum number of storage textures visible to the fragment shader stage.
 
@@ -240,7 +240,7 @@ Maximum number of storage textures visible to the fragment shader stage.
 
 > `abstract` **maxStorageTexturesInVertexStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:121](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L121)
+Defined in: [modules/core/src/adapter/device.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L124)
 
 Maximum number of storage textures visible to the vertex shader stage.
 
@@ -250,7 +250,7 @@ Maximum number of storage textures visible to the vertex shader stage.
 
 > `abstract` **maxStorageTexturesPerShaderStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:119](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L119)
+Defined in: [modules/core/src/adapter/device.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L122)
 
 max number of StorageTextures per ShaderStage
 
@@ -260,7 +260,7 @@ max number of StorageTextures per ShaderStage
 
 > `abstract` **maxTextureArrayLayers**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L97)
+Defined in: [modules/core/src/adapter/device.ts:100](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L100)
 
 max number of TextureArrayLayers
 
@@ -270,7 +270,7 @@ max number of TextureArrayLayers
 
 > `abstract` **maxTextureDimension1D**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L91)
+Defined in: [modules/core/src/adapter/device.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L94)
 
 max number of TextureDimension1D
 
@@ -280,7 +280,7 @@ max number of TextureDimension1D
 
 > `abstract` **maxTextureDimension2D**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L93)
+Defined in: [modules/core/src/adapter/device.ts:96](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L96)
 
 max number of TextureDimension2D
 
@@ -290,7 +290,7 @@ max number of TextureDimension2D
 
 > `abstract` **maxTextureDimension3D**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L95)
+Defined in: [modules/core/src/adapter/device.ts:98](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L98)
 
 max number of TextureDimension3D
 
@@ -300,7 +300,7 @@ max number of TextureDimension3D
 
 > `abstract` **maxUniformBufferBindingSize**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L127)
+Defined in: [modules/core/src/adapter/device.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L130)
 
 max number of UniformBufferBindingSize
 
@@ -310,7 +310,7 @@ max number of UniformBufferBindingSize
 
 > `abstract` **maxUniformBuffersPerShaderStage**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:125](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L125)
+Defined in: [modules/core/src/adapter/device.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L128)
 
 max number of UniformBuffers per ShaderStage
 
@@ -320,7 +320,7 @@ max number of UniformBuffers per ShaderStage
 
 > `abstract` **maxVertexAttributes**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L139)
+Defined in: [modules/core/src/adapter/device.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L142)
 
 max number of VertexAttributes
 
@@ -330,7 +330,7 @@ max number of VertexAttributes
 
 > `abstract` **maxVertexBufferArrayStride**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L141)
+Defined in: [modules/core/src/adapter/device.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L144)
 
 max number of VertexBufferArrayStride
 
@@ -340,7 +340,7 @@ max number of VertexBufferArrayStride
 
 > `abstract` **maxVertexBuffers**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L137)
+Defined in: [modules/core/src/adapter/device.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L140)
 
 max number of VertexBuffers
 
@@ -350,7 +350,7 @@ max number of VertexBuffers
 
 > `abstract` **minStorageBufferOffsetAlignment**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:135](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L135)
+Defined in: [modules/core/src/adapter/device.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L138)
 
 min StorageBufferOffsetAlignment
 
@@ -360,6 +360,6 @@ min StorageBufferOffsetAlignment
 
 > `abstract` **minUniformBufferOffsetAlignment**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L133)
+Defined in: [modules/core/src/adapter/device.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L136)
 
 min UniformBufferOffsetAlignment

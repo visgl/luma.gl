@@ -14,21 +14,37 @@
 
 ```
 import {Buffer} from '@luma.gl/core';
+
 import {DynamicBuffer, Model} from '@luma.gl/engine';
 
+
+
 const positions = new DynamicBuffer(device, {
+
   data: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+
   usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC
+
 });
+
+
 
 const model = new Model(device, {
+
   vs,
+
   fs,
+
   attributes: {positions},
+
   bufferLayout: [{name: 'positions', format: 'float32x3'}]
+
 });
 
+
+
 positions.ensureSize(1024, {preserveData: true});
+
 positions.write(new Float32Array([0, 0, 0]), 0);
 ```
 
@@ -38,7 +54,9 @@ positions.write(new Float32Array([0, 0, 0]), 0);
 
 ```
 export type DynamicBufferProps = Omit<BufferProps, 'handle' | 'onMapped'> & {
+
   debugData?: boolean | {maxByteLength?: number};
+
 };
 ```
 
@@ -48,9 +66,13 @@ export type DynamicBufferProps = Omit<BufferProps, 'handle' | 'onMapped'> & {
 
 ```
 export type DynamicBufferRange = {
+
   buffer: Buffer | DynamicBuffer;
+
   offset?: number;
+
   size?: number;
+
 };
 ```
 

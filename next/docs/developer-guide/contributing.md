@@ -22,7 +22,9 @@ luma.gl's source code is in the `modules/` directory. Development is most easily
 
 ```
 cd examples/core/instancing
+
 yarn
+
 yarn start-local
 ```
 

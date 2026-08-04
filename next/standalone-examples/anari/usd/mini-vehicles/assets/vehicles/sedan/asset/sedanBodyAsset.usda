@@ -1,0 +1,67 @@
+#usda 1.0
+(
+    defaultPrim = "sedan"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "sedan"
+{
+    def "geo" (
+        prepend references = @../geo/sedanGeo.usda@</sedan>
+    )
+    {
+        over "_7_redMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </sedan/materials/redMaterial>
+        }
+
+        over "_4_frontLightMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </sedan/materials/frontLightMaterial>
+        }
+
+        over "_9_greyLightMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </sedan/materials/greyLightMaterial>
+        }
+
+        over "_8_windowMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </sedan/materials/windowMaterial>
+        }
+
+        over "_5_backLightMax" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </sedan/materials/backLightMaterial>
+        }
+    }
+
+    def "materials" (
+        prepend references = [
+            @../../../../materials/backLight.usda@</materials>,
+            @../../../../materials/window.usda@</materials>,
+            @../../../../materials/lightGrey.usda@</materials>,
+            @../../../../materials/frontLight.usda@</materials>,
+            @../../../../materials/red.usda@</materials>
+        ]
+    )
+    {
+    }
+}
+
+

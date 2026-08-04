@@ -32,29 +32,53 @@ Loading a glTF file and instantiating scenegraphs
 
 ```
 import {load} from '@loaders.gl/core';
+
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+
 import {luma} from '@luma.gl/core';
+
 import {webglAdapter} from '@luma.gl/webgl';
+
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 
+
+
 const device = await luma.createDevice({
+
   type: 'webgl',
+
   adapters: [webglAdapter]               // supply a device adapter
+
 });
 
+
+
 const gltf = await load('model.glb', GLTFLoader, {gltf: {postProcess: true}});
+
 const {scenes, animator} = createScenegraphsFromGLTF(device, gltf);
 
+
+
 // `scenes` is an array of GroupNode instances. Add them to your scenegraph.
+
 for (const scene of scenes) {
+
   root.add(scene);
+
 }
 
+
+
 // Move animations forward each frame:
+
 function renderFrame(timeMs: number) {
+
   animator.setTime(timeMs);
+
   requestAnimationFrame(renderFrame);
+
 }
+
 requestAnimationFrame(renderFrame);
 ```
 
@@ -82,11 +106,17 @@ The returned scenes array contains a GroupNode for each glTF scene in the file. 
 
 ```
 type ParseGLTFOptions = {
+
   modelOptions?: Partial<ModelProps>;
+
   pbrDebug?: boolean;
+
   imageBasedLightingEnvironment?: PBREnvironment;
+
   lights?: boolean;
+
   useTangents?: boolean;
+
 };
 ```
 
@@ -114,11 +144,19 @@ Image Based Lighting Utilities
 ```
 import {loadPBREnvironment} from '@luma.gl/gltf';
 
+
+
 type PBREnvironmentProps = {
+
   brdfLutUrl: string;
+
   getTexUrl: (type: 'diffuse' | 'specular', faceIndex: number, lod: number) => string;
+
   specularMipLevels?: number;
+
 };
+
+
 
 loadPBREnvironment(device, props)
 ```
@@ -127,9 +165,13 @@ Creates a set of textures suitable for physically based rendering:
 
 ```
 const env = loadPBREnvironment(device, {
+
   brdfLutUrl: '/path/brdfLUT.png',
+
   getTexUrl: (name, face, mip) => `/env/${name}/${face}/${mip}.jpg`,
+
   specularMipLevels: 10
+
 });
 ```
 
@@ -137,9 +179,13 @@ The returned object:
 
 ```
 type PBREnvironment = {
+
   brdfLutTexture: DynamicTexture;
+
   diffuseEnvSampler: DynamicTexture;
+
   specularEnvSampler: DynamicTexture;
+
 };
 ```
 
@@ -178,9 +224,14 @@ See also
 
 ```
 load('model.glb', GLTFLoader, {
+
   gltf: {
+
     postProcess: true,
+
     decompress: false         # set to true if draco-encoded
+
   }
+
 });
 ```

@@ -22,7 +22,10 @@ The `@luma.gl/gpgpu` module presents computation as lazy values. Operations such
 ```
 import {add, multiply} from '@luma.gl/gpgpu';
 
+
+
 const adjusted = add(multiply(sourceData, 2), 1);
+
 const result = await adjusted.evaluate(device);
 ```
 
@@ -69,9 +72,14 @@ The two APIs exchange caller-owned table resources without repacking them. A mat
 ```
 import {GPUCommandGraph} from '@luma.gl/experimental';
 
+
+
 const evaluatedVector = await adjusted.evaluate(webgpuDevice);
 
+
+
 const graph = new GPUCommandGraph(webgpuDevice);
+
 const graphInput = graph.importGPUVector('adjusted', evaluatedVector);
 ```
 

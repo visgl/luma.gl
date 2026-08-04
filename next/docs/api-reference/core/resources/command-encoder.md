@@ -13,13 +13,22 @@ Record explicit copy work:
 ```
 const commandEncoder = device.createCommandEncoder();
 
+
+
 commandEncoder.copyBufferToBuffer({
+
   sourceBuffer,
+
   destinationBuffer,
+
   size: sourceBuffer.byteLength
+
 });
 
+
+
 const commandBuffer = commandEncoder.finish();
+
 device.submit(commandBuffer);
 ```
 
@@ -27,13 +36,22 @@ Record a render pass:
 
 ```
 const commandEncoder = device.createCommandEncoder();
+
 const renderPass = commandEncoder.beginRenderPass({
+
   framebuffer,
+
   clearColor: [0, 0, 0, 1]
+
 });
 
+
+
 model.draw(renderPass);
+
 renderPass.end();
+
+
 
 device.submit(commandEncoder.finish());
 ```
@@ -42,8 +60,11 @@ Use the device's default encoder:
 
 ```
 const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+
 model.draw(renderPass);
+
 renderPass.end();
+
 device.submit();
 ```
 

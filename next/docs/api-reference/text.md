@@ -25,17 +25,29 @@ Both builders cache identical inputs and incrementally add newly requested chara
 
 ```
 const resources = new GPUTextResources(device, {fontAtlas});
+
 const data = makeGPUTextDataFromArrow(device, {...textProps, resources});
+
 const renderer = new TextRenderer(device, {data});
+
+
 
 renderer.draw(renderPass);
 
+
+
 const nextData = makeGPUTextDataFromArrow(device, {...nextTextProps, resources});
+
 for (const batch of nextData) renderer.appendData(batch);
 
+
+
 renderer.destroy();
+
 for (const batch of data) batch.destroy();
+
 for (const batch of nextData) batch.destroy();
+
 resources.destroy();
 ```
 

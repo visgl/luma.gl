@@ -11,11 +11,18 @@
 ```
 import {GPURecordBatch} from '@luma.gl/tables';
 
+
+
 const batch = new GPURecordBatch({
+
   gpuData: {
+
     positions: positions.data[0],
+
     colors: colors.data[0]
+
   }
+
 });
 ```
 

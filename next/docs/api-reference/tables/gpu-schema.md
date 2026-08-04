@@ -14,23 +14,41 @@ For the required and optional `GPUVector` inputs accepted by a model, see [`GPUI
 
 ```
 import type {VertexFormat} from '@luma.gl/core';
+
 import type {GPUVectorFormat, VertexList} from '@luma.gl/tables';
+
+
 
 export type GPUTypeMap = Record<string, GPUVectorFormat>;
 
+
+
 export type GPUField<
+
   Name extends string = string,
+
   Format extends VertexFormat | VertexList<VertexFormat> = GPUVectorFormat
+
 > = {
+
   name: Name;
+
   format?: Format;
+
   nullable?: boolean;
+
   metadata?: Map<string, string>;
+
 };
 
+
+
 export type GPUSchema<T extends GPUTypeMap = GPUTypeMap> = {
+
   fields: Array<GPUField<keyof T & string>>;
+
   metadata: Map<string, string>;
+
 };
 ```
 
@@ -38,15 +56,25 @@ export type GPUSchema<T extends GPUTypeMap = GPUTypeMap> = {
 
 ```
 type PointTable = {
+
   positions: 'float32x3';
+
   colors: 'unorm8x4';
+
 };
 
+
+
 const table: GPUTable<PointTable> = new GPUTable({
+
   vectors: {
+
     positions,
+
     colors
+
   }
+
 });
 ```
 
@@ -54,8 +82,11 @@ Variable-length vertex-aligned fields use `VertexList`:
 
 ```
 type PathTable = {
+
   paths: VertexList<'float32x3'>;
+
   vertexColors: VertexList<'unorm8x4'>;
+
 };
 ```
 
@@ -103,6 +134,9 @@ For example:
 ```
 const gpuTable = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
 
+
+
 gpuTable.schema.fields[0].name; // shader/table column name
+
 gpuTable.schema.fields[0].format; // GPUVectorFormat, e.g. 'unorm8x4'
 ```

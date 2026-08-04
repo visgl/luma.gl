@@ -10,14 +10,23 @@ Since WebGPU external textures are acquired per frame, bindings that use them mu
 
 ```
 function onFrame() {
+
   requestAnimationFrame(onFrame);
+
+
 
   const externalTexture = device.createExternalTexture({source: video});
 
+
+
   model.setBindings({videoTexture: externalTexture});
 
+
+
   model.draw(renderPass);
+
 }
+
 requestAnimationFrame(onFrame);
 ```
 

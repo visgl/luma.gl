@@ -34,14 +34,23 @@ Another workspace inside the same checkout can depend on it through `"@luma.gl/a
 
 ```
 ANARIDevice
+
   ├── ANARIArray
+
   ├── ANARISampler → ANARIMaterial
+
   ├── ANARIGeometry + ANARIMaterial → ANARISurface
+
   ├── ANARISurface + ANARILight → ANARIGroup
+
   ├── ANARIGroup + transform → ANARIInstance
+
   ├── ANARISurface / ANARIInstance / ANARILight → ANARIWorld
+
   ├── ANARICamera
+
   ├── ANARIRenderer
+
   └── ANARIWorld + ANARICamera + ANARIRenderer → ANARIFrame
 ```
 
@@ -51,20 +60,35 @@ Every scene object stores committed parameters. Reusing the same `ANARISurface` 
 
 ```
 import {
+
   ANARIDevice,
+
   ANARIObject,
+
   ANARIArray,
+
   ANARIGeometry,
+
   ANARISampler,
+
   ANARIMaterial,
+
   ANARISurface,
+
   ANARIGroup,
+
   ANARIInstance,
+
   ANARIWorld,
+
   ANARILight,
+
   ANARICamera,
+
   ANARIRenderer,
+
   ANARIFrame
+
 } from '@luma.gl/anari';
 ```
 

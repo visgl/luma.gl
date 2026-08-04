@@ -14,14 +14,23 @@ A ShaderLayout needs to be complemented by a BufferLayout that describes the act
 
 ```
  device.createRenderPipeline({
+
    shaderLayout: [
+
      attributes: [
+
        {name: 'instancePositions', location: 0, format: 'vec3<f32>', stepMode: 'instance'},
+
        {name: 'instanceVelocities', location: 1, format: 'vec3<f32>', stepMode: 'instance'},
+
        {name: 'vertexPositions', location: 2, format: 'vec3<f32>', stepMode: 'vertex'}
+
      ],
+
      bindings: [...]
+
    ]
+
  })
 ```
 

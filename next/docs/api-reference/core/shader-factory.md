@@ -11,8 +11,12 @@ If you use [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) or
 ```
 import {ShaderFactory} from '@luma.gl/core';
 
+
+
 const shaderFactory = ShaderFactory.getDefaultShaderFactory(device);
+
 const shader = shaderFactory.createShader({stage: 'vertex', source: '...'});
+
 shaderFactory.release(shader);
 ```
 

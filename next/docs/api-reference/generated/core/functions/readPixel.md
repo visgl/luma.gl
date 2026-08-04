@@ -43,19 +43,35 @@ A tuple \[r, g, b, a] where each channel is the extracted numeric value.
 ```
 Assume you obtained an ArrayBuffer from copyTextureToBuffer and have the following metadata:
 
+
+
  const pixelData: PixelData = {
+
    bitsPerChannel: [5, 6, 5, 0], // For example, a 16-bit RGB565 format (no alpha)
+
    width: 800,
+
    height: 600,
+
    bytesPerPixel: 2,           // 16 bits per pixel
+
    bytesPerRow: 1600,          // Assuming no extra padding
+
    arrayBuffer: myTextureBuffer, // Obtained from copyTextureToBuffer
+
  };
+
+
 
 You can then extract the pixel at (x, y) like so:
 
+
+
  const rgba = extractPixel(pixelData, x, y);
+
  console.log("Extracted RGBA:", rgba);
+
+
 
 For RGBA formats where all channels are present (e.g. [8, 8, 8, 8]), the function will extract a 4-channel pixel value.
 ```

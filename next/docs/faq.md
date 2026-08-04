@@ -6,8 +6,11 @@ Simply create a `RenderPass` and start rendering.
 
 ```
   // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
+
   const renderPass = device.beginRenderPass();
+
   model.draw(renderPass);
+
   renderPass.end();
 ```
 
@@ -15,6 +18,7 @@ Simply create a `RenderPass` and start rendering.
 
 ```
   const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
+
   ...
 ```
 
@@ -24,7 +28,9 @@ Simply create a `RenderPass` and start rendering.
 
 ```
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+
   model.draw(renderPass);
+
   renderPass.end();
 ```
 
@@ -32,10 +38,16 @@ Depth and stencil buffers are also cleared to default values:
 
 ```
   const renderPass = device.beginRenderPass({
+
     clearColor: [0, 0, 0, 1],
+
     depthClearValue: 1,
+
     stencilClearValue: 0
+
   });
+
   renderPass.end();
+
   device.submit();
 ```

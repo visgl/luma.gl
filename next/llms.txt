@@ -11,9 +11,9 @@ luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute o
 
 ### getting-started
 
-luma.gl is a TypeScript toolkit for applications that need direct, portable access to
+Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
 
-- [Getting Started](https://luma.gl/next/docs/getting-started.md): luma.gl is a TypeScript toolkit for applications that need direct, portable access to
+- [Your GPU is the canvas.](https://luma.gl/next/docs/getting-started.md): Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
 
 ### tutorials
 
@@ -41,9 +41,9 @@ Goal: draw multiple copies of one geometry with one model and one draw call.
 
 #### hello-triangle
 
-Goal: create one Model and issue a portable draw call. Complete
+Goal: create one Model and issue a portable draw call. Explore the live example
 
-- [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md): Goal: create one Model and issue a portable draw call. Complete
+- [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md): Goal: create one Model and issue a portable draw call. Explore the live example
 
 #### lighting
 
@@ -292,8 +292,13 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [GPUReduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md): Overview
 - [GPUScan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md): Overview
 - [GPUScene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md): Overview
+- [GPUScene adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md): Overview
+- [GPUSceneDrawGeneration](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md): Overview
+- [GPUSceneResourceGroups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md): Overview
 - [GPUSort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md): Overview
 - [GPU spatial query benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md): Overview
+- [GPUTraceInteraction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md): Overview
+- [GPUTraceScene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md): Overview
 - [GPUVirtualGeometrySelection](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md): Overview
 - [GPUVisibilityWorkflow](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md): Overview
 - [MLSMPMFluidSimulation](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md): MLSMPMFluidSimulation is an experimental WebGPU-only, fixed-capacity two-dimensional fluid
@@ -317,9 +322,9 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [Abstract Class: CommandEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
 - [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
 - [Abstract Class: ComputePipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in489
-- [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in241
-- [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in89
+- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in492
+- [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in244
+- [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in92
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
 - [Abstract Class: Fence](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md): Defined in11
 - [Abstract Class: Framebuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in27
@@ -534,7 +539,7 @@ The @luma.gl/gpgpu module performs GPU-based data transformation.
 @luma.gl/shadertools provides textual shader assembly utilities and the
 
 - [Overview](https://luma.gl/next/docs/api-reference/shadertools.md): @luma.gl/shadertools provides textual shader assembly utilities and the
-- [ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md): ShaderAssembler combines application shader source with shadertools modules,
+- [ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md): ShaderAssembler is the abstract base for stateful shader assembly. Its concrete
 - [Shader Module Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md): This describes informal conventions that luma.gl applies to its shaders.
 - [Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md): It is sometimes useful to be able to inspect shader source code
 - [ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md): ShaderModule is the reusable shader feature descriptor used by

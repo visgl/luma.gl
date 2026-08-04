@@ -20,13 +20,21 @@ Create a `Model` for transform feedback operations.
 
 ```
 return new Model(device, {
+
   vs,
+
   fs,
+
   vertexCount,
+
   topology: 'point-list'
+
   attributes: {inValue: buffer},
+
   bufferLayout: [{name: 'inValue', format: 'float32'}],
+
   varyings: ['outValue'],
+
 });
 ```
 
@@ -34,9 +42,14 @@ Create a `TransformFeedback` and assign output buffers.
 
 ```
 const transformFeedback = device.createTransformFeedback({
+
   layout: model.pipeline.shaderLayout,
+
   buffers: {0: positionBuffer, 1: colorBuffer}
+
 });
+
+
 
 model.setTransformFeedback(transformFeedback);
 ```
@@ -45,11 +58,17 @@ When binding the buffers, index should be equal to the corresponding varying ent
 
 ```
 const transformFeedback = device.createTransformFeedback({
+
   layout: model.pipeline.shaderLayout,
+
   buffers: {
+
     outputColor: bufferColor,
+
     gl_Position: bufferPosition
+
   }
+
 });
 ```
 
@@ -58,7 +77,11 @@ To run a `TransformFeedback` operation, draw a Model with an associated `Transfo
 ```
 const renderPass = device.beginRenderPass({discard: true});
 
+
+
 model.draw(renderPass);
+
+
 
 renderPass.end();
 ```

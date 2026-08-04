@@ -8,10 +8,15 @@ Environment reflections follow the camera-reflected view direction as the viewpo
 
 ```
 import {
+
   reflectiveMaterial,
+
   reflectiveMaterialPlugin,
+
   type ReflectiveMaterialProps,
+
   type ReflectiveMaterialUniforms
+
 } from '@luma.gl/experimental';
 ```
 
@@ -28,10 +33,15 @@ import {
 
 ```
 fn reflectiveMaterial_getColor(
+
   normal: vec3<f32>,
+
   worldPosition: vec3<f32>,
+
   baseColor: vec4<f32>,
+
   cameraPosition: vec3<f32>
+
 ) -> vec4<f32>
 ```
 
@@ -41,24 +51,43 @@ Install `opticalPointLightsPlugin` as well and call `reflectiveMaterial_getIllum
 
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
+
 import {reflectiveMaterial, reflectiveMaterialPlugin} from '@luma.gl/experimental';
+
+
 
 const shaderInputs = new ShaderInputs({reflectiveMaterial});
 
+
+
 shaderInputs.setProps({
+
   reflectiveMaterial: {
+
     roughness: 0.45,
+
     reflectionStrength: 0.3,
+
     specularStrength: 0.35,
+
     opacityScale: 0.6
+
   }
+
 });
 
+
+
 const model = new Model(device, {
+
   source: reflectiveShader,
+
   plugins: [reflectiveMaterialPlugin],
+
   shaderInputs,
+
   geometry
+
 });
 ```
 

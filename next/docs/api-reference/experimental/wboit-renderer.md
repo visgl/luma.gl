@@ -8,38 +8,71 @@
 
 ```
 import {Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
+
 import {
+
   WBOITRenderer,
+
   createWBOITResolveShaderPassPipeline,
+
   wboit,
+
   wboitPlugin
+
 } from '@luma.gl/experimental';
 
+
+
 const shaderInputs = new ShaderInputs({wboit});
+
 const model = new Model(device, {
+
   source,
+
   fs,
+
   plugins: [wboitPlugin],
+
   shaderInputs
+
 });
+
 const renderer = new WBOITRenderer(device, {colorFormat: 'rgba16float'});
 
+
+
 // Render opaque color and depth into an application-owned scene framebuffer first.
+
 opaqueModel.predraw(device.commandEncoder);
+
 const opaquePass = device.beginRenderPass({framebuffer: sceneFramebuffer});
+
 opaqueModel.draw(opaquePass);
+
 opaquePass.end();
 
+
+
 const outputTexture = renderer.render({
+
   sourceTexture: sceneFramebuffer.colorAttachments[0].texture,
+
   prepareOpaqueDepth: commandEncoder => opaqueModel.predraw(commandEncoder),
+
   drawOpaqueDepth: renderPass => opaqueModel.draw(renderPass),
+
   prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+
     shaderInputs.setProps({wboit: shaderModuleProps});
+
     model.setParameters({...model.parameters, ...captureParameters});
+
     model.predraw(commandEncoder);
+
   },
+
   drawTranslucent: renderPass => model.draw(renderPass)
+
 });
 ```
 
@@ -59,15 +92,25 @@ Use `wboit_capturePremultipliedColor` when RGB is already multiplied by alpha.
 
 ```
 const capture = renderer.capture({
+
   size: {width: sceneColor.width, height: sceneColor.height},
+
   drawOpaqueDepth,
+
   prepareTranslucent,
+
   drawTranslucent
+
 });
 
+
+
 const effects = new ShaderPassRenderer(device, {
+
   shaderPasses: [createWBOITResolveShaderPassPipeline(), bloomShaderPassPipeline]
+
 });
+
 const output = effects.renderToTexture({sourceTexture: sceneColor, bindings: capture.bindings});
 ```
 
@@ -93,16 +136,28 @@ The two color targets consume 16 bytes per pixel in addition to the internal dep
 ```
 export type WBOITPass = 'accumulation' | 'revealage';
 
+
+
 export type WBOITRendererProps = {
+
   colorFormat?: TextureFormatColor;
+
 };
 
+
+
 export type WBOITRenderOptions = {
+
   sourceTexture: Texture;
+
   prepareOpaqueDepth?: (commandEncoder: CommandEncoder) => void;
+
   drawOpaqueDepth: (renderPass: RenderPass) => void;
+
   prepareTranslucent: (context: WBOITCaptureContext) => void;
+
   drawTranslucent: (renderPass: RenderPass) => void;
+
 };
 ```
 

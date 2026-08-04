@@ -6,7 +6,7 @@ A shader pass is a shader module that can run as a fullscreen texture-processing
 
 Choose an effect and adjust its parameters to see a shader pass update the source texture live:
 
-### Postprocessing
+### Effects: Image Processing
 
 [GitHub](https://github.com/visgl/luma.gl/tree/master/examples/showcase/postprocessing)Info
 
@@ -62,50 +62,95 @@ On WebGPU, experimental [`GBuffer`](https://luma.gl/next/docs/api-reference/expe
 
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
+
 import {
+
   createBloomShaderPassPipeline,
+
   createMotionBlurShaderPassPipeline,
+
   createGTAOShaderPassPipeline,
+
   createHDRAutoExposureShaderPassPipeline,
+
   createSSGIShaderPassPipeline,
+
   createSSRShaderPassPipeline,
+
   createTAAShaderPassPipeline,
+
   toneMapping
+
 } from '@luma.gl/effects';
+
 import {GBuffer} from '@luma.gl/experimental';
+
+
 
 const gBuffer = new GBuffer(device, {width, height});
 
+
+
 // Geometry shaders write color, normalRoughness, and velocity in one MRT render pass.
+
 const scenePass = device.beginRenderPass({
+
   framebuffer: gBuffer.framebuffer,
+
   clearColors: [
+
     new Float32Array([0, 0, 0, 1]),
+
     new Float32Array([0.5, 0.5, 1, 1]),
+
     new Float32Array([0, 0, 0, 0])
+
   ],
+
   clearDepth: 1
+
 });
+
 sceneModel.draw(scenePass);
+
 scenePass.end();
 
+
+
 const effects = new ShaderPassRenderer(device, {
+
   colorFormat: 'rgba16float',
+
   shaderPasses: [
+
     createGTAOShaderPassPipeline(),
+
     createSSGIShaderPassPipeline(),
+
     createSSRShaderPassPipeline(),
+
     createTAAShaderPassPipeline(),
+
     createMotionBlurShaderPassPipeline(),
+
     createHDRAutoExposureShaderPassPipeline(),
+
     createBloomShaderPassPipeline(),
+
     toneMapping
+
   ]
+
 });
 
+
+
 effects.renderToScreen({
+
   sourceTexture: gBuffer.colorTexture,
+
   bindings: gBuffer.getShaderPassBindings()
+
 });
 ```
 
@@ -113,17 +158,29 @@ effects.renderToScreen({
 
 ```
 const renderer = new ShaderPassRenderer(device, {
+
   colorFormat: 'rgba16float',
+
   shaderPasses: [
+
     createDeferredLightingShaderPassPipeline(),
+
     createGTAOShaderPassPipeline(),
+
     createSSGIShaderPassPipeline(),
+
     createSSRShaderPassPipeline(),
+
     createTAAShaderPassPipeline(),
+
     createHDRAutoExposureShaderPassPipeline(),
+
     createBloomShaderPassPipeline(),
+
     toneMapping
+
   ]
+
 });
 ```
 
@@ -133,31 +190,57 @@ GTAO defaults to its backward-compatible full-color composite. Deferred applicat
 
 ```
 import {createGTAOShaderPassPipeline} from '@luma.gl/effects';
+
 import {createDeferredAmbientLightingShaderPassPipeline} from '@luma.gl/experimental';
 
+
+
 const ambientRenderer = new ShaderPassRenderer(device, {
+
   shaderPasses: [createDeferredAmbientLightingShaderPassPipeline()]
+
 });
+
 const ambientLightingTexture = ambientRenderer.renderToTexture({
+
   sourceTexture: gBuffer.colorTexture,
+
   bindings: {
+
     depthTexture: gBuffer.depthTexture,
+
     baseColorMetallicTexture: gBuffer.getExtraColorTexture('baseColorMetallic'),
+
     emissiveOcclusionTexture: gBuffer.getExtraColorTexture('emissiveOcclusion')
+
   },
+
   uniforms: {deferredAmbientLighting: {ambientColor: [0.04, 0.04, 0.05]}}
+
 });
+
+
 
 const effects = new ShaderPassRenderer(device, {
+
   shaderPasses: [
+
     createDeferredLightingShaderPassPipeline(),
+
     createGTAOShaderPassPipeline({composition: 'ambient-only'})
+
   ]
+
 });
 
+
+
 effects.renderToScreen({
+
   sourceTexture: gBuffer.colorTexture,
+
   bindings: {...gBuffer.getShaderPassBindings(), ambientLightingTexture}
+
 });
 ```
 
@@ -261,9 +344,15 @@ Do not use shader passes for ordinary geometry shading. Use `Model` with modules
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
+
+
 const renderer = new ShaderPassRenderer(device, {
+
   shaderPasses: [myShaderPass, myShaderPassPipeline]
+
 });
+
+
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```

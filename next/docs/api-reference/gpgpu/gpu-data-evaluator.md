@@ -18,8 +18,13 @@ There is no `GPUTable` evaluator input path. Streaming code should pass an incom
 ```
 import {GPUDataEvaluator, add} from '@luma.gl/gpgpu';
 
+
+
 const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
+
 const translatedChunk = add(incomingGPUData, offset);
+
+
 
 const translatedVector = await translatedChunk.evaluate(device);
 ```
@@ -29,10 +34,17 @@ const translatedVector = await translatedChunk.evaluate(device);
 ```
 import {GPUDataEvaluator, GPUVectorEvaluator, add} from '@luma.gl/gpgpu';
 
+
+
 const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
+
 const translatedVector = GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(data =>
+
   add(data, offset)
+
 );
+
+
 
 const outputVector = await translatedVector.evaluate(device);
 ```
@@ -43,16 +55,27 @@ const outputVector = await translatedVector.evaluate(device);
 
 ```
 import {add} from '@luma.gl/gpgpu';
+
 import {makeGPUDataViewFromAttribute} from '@luma.gl/tables';
 
+
+
 const positions = makeGPUDataViewFromAttribute({
+
   buffer: interleavedBuffer,
+
   bufferLayout,
+
   attributeName: 'positions',
+
   length: instanceCount
+
 });
 
+
+
 const translatedPositions = add(positions, [10, 0, 0]);
+
 const packedOutput = await translatedPositions.evaluate(device);
 ```
 

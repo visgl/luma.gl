@@ -11,13 +11,22 @@ Use it when geometry data is already on the GPU and should not be re-uploaded fr
 ```
 import {GPUGeometry} from '@luma.gl/engine';
 
+
+
 const gpuGeometry = new GPUGeometry({
+
   topology: 'triangle-list',
+
   vertexCount: 3,
+
   bufferLayout: [{name: 'positions', format: 'float32x3'}],
+
   attributes: {
+
     positions: positionBuffer
+
   }
+
 });
 ```
 
@@ -27,12 +36,19 @@ const gpuGeometry = new GPUGeometry({
 
 ```
 export type GPUGeometryProps = {
+
   id?: string;
+
   topology: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+
   vertexCount: number;
+
   bufferLayout: BufferLayout[];
+
   indices?: Buffer | null;
+
   attributes: Record<string, Buffer>;
+
 };
 ```
 

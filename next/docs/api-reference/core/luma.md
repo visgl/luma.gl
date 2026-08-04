@@ -18,16 +18,23 @@ Create a WebGL 2 context (throws if WebGL2 not supported)
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
+
 
 const webgpuDevice = luma.createDevice({type: 'webgl', adapters: [webgl2Adapter], createCanvasContext: true});
 ```
 
 ```
 const webgpuDevice = luma.createDevice({
+
   type: 'best-available', 
+
   createCanvasContext: true, 
+
   adapters: [webgl2Adapter, WebGPUDevice]
+
 });
 ```
 
@@ -37,8 +44,11 @@ Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
 luma.registerAdapters([webgl2Adapter]);
+
 const webglDevice = luma.createDevice({type: 'webgl', createCanvasContext: {canvas: ...}});
 ```
 
@@ -46,9 +56,13 @@ It is possible to register more than one device to create an application that ca
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
 import {webgpuDevice} from '@luma.gl/webgl';
+
 luma.registerAdapters([webgl2Adapter, webgpuDevice]);
+
 const device = luma.createDevice({type: 'best-available', createCanvasContext: {canvas: ...}});
 ```
 
@@ -58,7 +72,9 @@ Install device modules and register adapters to access backends
 
 ```
 yarn add @luma.gl/core
+
 yarn add @luma.gl/webgl
+
 yarn add @luma.gl/webgpu
 ```
 
@@ -66,9 +82,13 @@ To create a WebGPU device:
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
+
+
 luma.registerAdapters([webgpuAdapter]);
+
 const device = await luma.createDevice({type: 'webgpu', createCanvasContext: ...});
 ```
 
@@ -76,10 +96,15 @@ Pre-register devices
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
+
+
 luma.registerAdapters([webgl2Adapter, webgpuAdapter]);
+
 const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext: ...});
 ```
 
@@ -91,12 +116,19 @@ Properties for creating a new device. See [`DeviceProps`](https://luma.gl/next/d
 
 ```
 type CreateDeviceProps = {
+
   /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
+
   type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
+
   /** List of device types. Will also search any pre-registered device backends */
+
   adapters?: Adapter[];
+
   /** Whether to wait for page to be loaded, which ensures that canvas contexts can refer to existing canvases by id (defaults to true) */
+
   waitForPageLoad?: boolean;
+
 } & DeviceProps
 ```
 
@@ -106,10 +138,15 @@ Properties for attaching an existing WebGL context or WebGPU device to a new lum
 
 ```
 export type AttachDeviceProps = {
+
   /** Externally created WebGL context or WebGPU device */
+
   handle: WebGL2RenderingContext | GPUDevice | null;
+
   /** List of device types. Will also search any pre-registered device backends */
+
   adapters?: Adapter[];
+
 } & DeviceProps;
 ```
 

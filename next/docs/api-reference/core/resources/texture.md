@@ -20,6 +20,7 @@ Setting texture data from an image
 
 ```
 const imageBitmap = // load an image from a URL, perhaps with loaders.gl ImageLoader
+
 texture.copyFromExternalImage({source: imageBitmap});
 ```
 
@@ -27,7 +28,9 @@ Note that setting texture data from 8 bit RGBA arrays can also be done via `text
 
 ```
 const data = new ClampedUint8Array([...]);
+
 const imageData = new ImageData(data, width, height);
+
 texture.copyFromExternalImage({source: imageData});
 ```
 
@@ -39,8 +42,11 @@ This is still WIP
 
 ```
 const commandEncoder = device.createCommandEncoder();
+
 const buffer = device.createBuffer({usage: , byteLength});
+
 const texture = device.createTexture({ })
+
 commandEncoder.end();
 ```
 
@@ -49,25 +55,46 @@ Reading from Textures In Shaders
 ```
 const texture = device.createTexture, ...);
 
+
+
 // For ease of use, the `Model` class can bind textures for a draw call
+
 model.draw({
+
   renderPass,
+
   bindings({texture1: texture, texture2: texture})
+
 });
+
+
+
 
 
 const framebuffer = device.createFramebuffer({
+
   colorAttachments: [texture]
+
 });
 
+
+
 const renderPass = device.createRenderPass({
+
   framebuffer
+
 });
+
+
+
 
 
 // Alternatively, bind the textures using the `Texture` API directly
+
 model.draw({
+
   uniforms({uMVMatrix: matrix})
+
 });
 ```
 
@@ -256,19 +283,33 @@ This function offers a highly granular control but can be called with just an `i
 
 ```
 copyExternalImage(options: {
+
   image: ExternalImage;
+
   sourceX?: number;
+
   sourceY?: number;
+
   width?: number;
+
   height?: number;
+
   depth?: number;
+
   mipLevel?: number;
+
   x?: number;
+
   y?: number;
+
   z?: number;
+
   aspect?: 'all' | 'stencil-only' | 'depth-only';
+
   colorSpace?: 'srgb';
+
   premultipliedAlpha?: boolean;
+
 }: {width: number; height: number}
 ```
 
@@ -333,20 +374,35 @@ On WebGL, those fields are also how you upload padded CPU data: luma.gl maps the
 
 ```
 writeData(
+
   data: ArrayBuffer | ArrayBufferView,
+
   options?: {
+
     byteOffset?: number;
+
     bytesPerRow?: number;
+
     rowsPerImage?: number;
+
     x?: number;
+
     y?: number;
+
     z?: number;
+
     width?: number;
+
     height?: number;
+
     depthOrArrayLayers?: number;
+
     mipLevel?: number;
+
     aspect?: 'all' | 'stencil-only' | 'depth-only';
+
   }
+
 ): void
 ```
 
@@ -370,12 +426,20 @@ Example: write a padded `2x2` mip into `mipLevel: 1`
 ```
 const data = new Uint8Array(16 * 2);
 
+
+
 texture.writeData(data, {
+
   mipLevel: 1,
+
   width: 2,
+
   height: 2,
+
   bytesPerRow: 16,
+
   rowsPerImage: 2
+
 });
 ```
 
@@ -432,12 +496,19 @@ Example: copy from a buffer into array layer `3`
 
 ```
 texture.writeBuffer(uploadBuffer, {
+
   z: 3,
+
   width: 64,
+
   height: 64,
+
   depthOrArrayLayers: 1,
+
   bytesPerRow: 256,
+
   rowsPerImage: 64
+
 });
 ```
 

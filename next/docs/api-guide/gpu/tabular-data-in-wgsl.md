@@ -30,16 +30,27 @@ A columnar vertex table usually binds one buffer per column:
 
 ```
 const shaderLayout = {
+
   attributes: [
+
     {name: 'positions', location: 0, type: 'vec3<f32>'},
+
     {name: 'colors', location: 1, type: 'vec4<f32>'}
+
   ],
+
   bindings: []
+
 };
 
+
+
 const bufferLayout = [
+
   {name: 'positions', format: 'float32x3'},
+
   {name: 'colors', format: 'unorm8x4'}
+
 ];
 ```
 
@@ -47,8 +58,11 @@ The corresponding WGSL vertex input sees shader values, not the source byte form
 
 ```
 struct VertexInputs {
+
   @location(0) position: vec3<f32>,
+
   @location(1) color: vec4<f32>,
+
 };
 ```
 
@@ -60,14 +74,23 @@ Several logical columns can share one row-major buffer:
 
 ```
 const bufferLayout = [
+
   {
+
     name: 'instances',
+
     byteStride: 16,
+
     attributes: [
+
       {attribute: 'instancePositions', format: 'float32x3', byteOffset: 0},
+
       {attribute: 'instanceColors', format: 'unorm8x4', byteOffset: 12}
+
     ]
+
   }
+
 ];
 ```
 
@@ -75,6 +98,7 @@ Each row occupies 16 bytes:
 
 ```
 byte offset:  0                       12          16
+
               | position: float32x3 | color: u8x4 |
 ```
 
@@ -90,7 +114,9 @@ Attribute fetch can broadcast one stored value across every vertex or instance. 
 
 ```
 const bufferLayout = [
+
   {name: 'instanceColors', format: 'float32x4', byteStride: 0}
+
 ];
 ```
 
@@ -108,14 +134,23 @@ Storage constants therefore need explicit shader support. The simplest pattern i
 
 ```
 struct TableConstants {
+
   color: vec4<f32>,
+
 };
 
+
+
 @group(0) @binding(0)
+
 var<uniform> tableConstants: TableConstants;
 
+
+
 fn readColor(_rowIndex: u32) -> vec4<f32> {
+
   return tableConstants.color;
+
 }
 ```
 
@@ -123,21 +158,37 @@ When one shader supports both a real column and a constant, put the choice behin
 
 ```
 struct TableConfig {
+
   useConstantColor: u32,
+
   constantColor: vec4<f32>,
+
 };
 
+
+
 @group(0) @binding(0)
+
 var<uniform> tableConfig: TableConfig;
 
+
+
 @group(0) @binding(1)
+
 var<storage, read> colors: array<vec4<f32>>;
 
+
+
 fn readColor(rowIndex: u32) -> vec4<f32> {
+
   if (tableConfig.useConstantColor != 0u) {
+
     return tableConfig.constantColor;
+
   }
+
   return colors[rowIndex];
+
 }
 ```
 
@@ -149,9 +200,13 @@ Storage bindings expose ordinary WGSL arrays. A columnar table can bind each col
 
 ```
 @group(0) @binding(0)
+
 var<storage, read> positions: array<vec2<f32>>;
 
+
+
 @group(0) @binding(1)
+
 var<storage, read> colors: array<u32>;
 ```
 
@@ -161,11 +216,17 @@ Storage buffers also support row-oriented records:
 
 ```
 struct InstanceRecord {
+
   position: vec3<f32>,
+
   color: u32,
+
 };
 
+
+
 @group(0) @binding(0)
+
 var<storage, read> instances: array<InstanceRecord>;
 ```
 
@@ -177,18 +238,31 @@ There is no portable WGSL `u8`, `i8`, `u16`, or `i16` storage scalar type today.
 
 ```
 @group(0) @binding(0)
+
 var<storage, read> packedValues: array<u32>;
 
+
+
 fn readU8(index: u32) -> u32 {
+
   let word = packedValues[index / 4u];
+
   let shift = (index % 4u) * 8u;
+
   return (word >> shift) & 0xffu;
+
 }
 
+
+
 fn readU16(index: u32) -> u32 {
+
   let word = packedValues[index / 2u];
+
   let shift = (index % 2u) * 16u;
+
   return (word >> shift) & 0xffffu;
+
 }
 ```
 
@@ -205,8 +279,12 @@ For example, `float32x3` describes a 12-byte vertex payload. In storage, `array<
 ```
 array<vec3<f32>>
 
+
+
 row 0: bytes  0..11 value, bytes 12..15 padding
+
 row 1: bytes 16..27 value, bytes 28..31 padding
+
 row 2: bytes 32..43 value, bytes 44..47 padding
 ```
 
@@ -220,8 +298,11 @@ One physical row can sometimes support both attribute and storage access:
 
 ```
 struct InstanceRecord {
+
   position: vec3<f32>,
+
   packedColor: u32,
+
 };
 ```
 
@@ -229,12 +310,19 @@ The canonical storage layout places `position` at byte offset `0`, `packedColor`
 
 ```
 {
+
   name: 'instances',
+
   byteStride: 16,
+
   attributes: [
+
     {attribute: 'instancePositions', format: 'float32x3', byteOffset: 0},
+
     {attribute: 'instanceColors', format: 'unorm8x4', byteOffset: 12}
+
   ]
+
 }
 ```
 

@@ -1,106 +1,137 @@
-# Getting Started
+![Moonlight illuminating a cinematic, GPU-simulated ocean](/next/images/examples/showcase/tempest-ocean.jpg)
 
-luma.gl is a TypeScript toolkit for applications that need direct, portable access to WebGPU and WebGL2. This guide creates a small rendering project that tries WebGPU first and falls back to WebGL2.
+Start with what is possible
 
-## Prerequisites[​](#prerequisites "Direct link to Prerequisites")
+# Your GPU is the canvas.
 
-* A current Node.js LTS release
-* A browser with WebGPU or WebGL2 support
-* Basic TypeScript knowledge
+Build living worlds, simulate light and motion, and move millions of data points—at the speed of the GPU.
 
-tip
+[Explore live examples↗](https://luma.gl/next/examples)[See your first triangle→](https://luma.gl/next/docs/tutorials/hello-triangle.md)
 
-If your goal is a geospatial visualization rather than a GPU framework or custom renderer, start with [deck.gl](https://deck.gl) instead. deck.gl is built on luma.gl and provides higher-level layers, cameras, and interaction.
+No installation. No account. Just your browser.
 
-## Create a project[​](#create-a-project "Direct link to Create a project")
+01 · See it in motion
 
-* npm
-* yarn
-* pnpm
+## This is what your browser can do.
 
-```
-npm create vite@latest luma-demo -- --template vanilla-ts
-cd luma-demo
-npm install @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
-```
+These are interactive scenes, not videos. Open one, explore it, and look under the hood.
 
-```
-yarn create vite luma-demo --template vanilla-ts
-cd luma-demo
-yarn add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
-```
+[![A rain-soaked neon city illuminated by thousands of GPU-driven lights](/next/images/examples/showcase/lightstorm-megacity.jpg)](https://luma.gl/next/examples/showcase/lightstorm-megacity)
 
-```
-pnpm create vite luma-demo --template vanilla-ts
-cd luma-demo
-pnpm add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
-```
+[Real-time lighting](https://luma.gl/next/examples/showcase/lightstorm-megacity)
 
-Replace `src/main.ts` with:
+### [Lightstorm Megacity](https://luma.gl/next/examples/showcase/lightstorm-megacity)
 
-```
-import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop} from '@luma.gl/engine';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+[Fly between rain-soaked towers beneath lightning, reflections, and thousands of lights.](https://luma.gl/next/examples/showcase/lightstorm-megacity)
 
-class App extends AnimationLoopTemplate {
-  override onRender({device}: AnimationProps): void {
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.05, 0.08, 0.14, 1]
-    });
-    renderPass.end();
-  }
-}
+[WebGPUHDR](https://luma.gl/next/examples/showcase/lightstorm-megacity)
 
-makeAnimationLoop(App, {
-  adapters: [webgpuAdapter, webgl2Adapter]
-}).start();
-```
+[![A moonlit storm ocean with physically simulated waves and luminous foam](/next/images/examples/showcase/tempest-ocean.jpg)](https://luma.gl/next/examples/showcase/tempest-ocean)
 
-Start the development server:
+[Physical simulation](https://luma.gl/next/examples/showcase/tempest-ocean)
 
-* npm
-* yarn
-* pnpm
+### [Tempest Ocean](https://luma.gl/next/examples/showcase/tempest-ocean)
 
-```
-npm run dev
-```
+[Cross an endless spectral ocean shaped by wind, whitecaps, and moonlight.](https://luma.gl/next/examples/showcase/tempest-ocean)
 
-```
-yarn dev
-```
+[WebGPUHDR](https://luma.gl/next/examples/showcase/tempest-ocean)
 
-```
-pnpm dev
-```
+[![Rainbow caustics refracting through a crystal inside an atmospheric cathedral](/next/images/examples/experimental/spectral-caustics.jpg)](https://luma.gl/next/examples/experimental/spectral-caustics)
 
-You should see a dark canvas. luma.gl creates the best available device, begins a render pass each frame, and presents the result to the page.
+[Light transport](https://luma.gl/next/examples/experimental/spectral-caustics)
 
-## Choose a learning path[​](#choose-a-learning-path "Direct link to Choose a learning path")
+### [Prism Cathedral](https://luma.gl/next/examples/experimental/spectral-caustics)
 
-[Recommended**Rendering with the Engine API**Draw a triangle, add geometry and textures, then move on to instancing and reusable shaders.Start with Model and AnimationLoop](https://luma.gl/next/docs/tutorials/hello-triangle)[Lower level**GPU resources and compute**Work directly with devices, buffers, textures, bindings, command encoders, and compute passes.Start with the portable GPU API](https://luma.gl/next/docs/api-guide/gpu)
+[Follow spectral light through glass as rainbow caustics travel across stone.](https://luma.gl/next/examples/experimental/spectral-caustics)
 
-## How backend selection works[​](#how-backend-selection-works "Direct link to How backend selection works")
+[WebGPUCaustics](https://luma.gl/next/examples/experimental/spectral-caustics)
 
-The application supplies both adapters in preference order. A WebGPU-capable browser uses `webgpuAdapter`; other supported browsers fall back to `webgl2Adapter`. Application code continues to use the same luma.gl `Device`, resource, and render-pass APIs.
+[![Liquid metal pouring and splashing inside an interactive industrial foundry](/next/images/examples/experimental/fluid-foundry.jpg)](https://luma.gl/next/examples/experimental/fluid-foundry)
 
-Use only `webgpuAdapter` when your application depends on compute shaders, storage textures, or another WebGPU-only feature. The documentation marks backend-specific features explicitly.
+[GPU compute](https://luma.gl/next/examples/experimental/fluid-foundry)
 
-## Troubleshooting[​](#troubleshooting "Direct link to Troubleshooting")
+### [Fluid Foundry](https://luma.gl/next/examples/experimental/fluid-foundry)
 
-### The canvas is blank[​](#the-canvas-is-blank "Direct link to The canvas is blank")
+[Pour, splash, and reshape liquid metal without moving simulation data off the GPU.](https://luma.gl/next/examples/experimental/fluid-foundry)
 
-Check the browser console first. Confirm that `src/main.ts` is imported by `index.html` and that the canvas is not hidden by application CSS.
+[WebGPUSimulation](https://luma.gl/next/examples/experimental/fluid-foundry)
 
-### WebGPU is unavailable[​](#webgpu-is-unavailable "Direct link to WebGPU is unavailable")
+[![A vast desert canyon assembled from continuously streaming virtual geometry](/next/images/examples/experimental/virtual-geometry-canyon.jpg)](https://luma.gl/next/examples/experimental/virtual-geometry-canyon)
 
-The example should fall back to WebGL2. To debug WebGPU specifically, consult the [WebGPU and WebGL comparison](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md) and inspect the selected device in your browser developer tools.
+[Virtual geometry](https://luma.gl/next/examples/experimental/virtual-geometry-canyon)
 
-### TypeScript cannot resolve a package[​](#typescript-cannot-resolve-a-package "Direct link to TypeScript cannot resolve a package")
+### [Virtual Geometry Canyon](https://luma.gl/next/examples/experimental/virtual-geometry-canyon)
 
-Install all three packages shown above. `@luma.gl/engine` provides `AnimationLoop` and `Model`; `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete device adapters.
+[Travel across a massive procedural landscape that streams detail as you move.](https://luma.gl/next/examples/experimental/virtual-geometry-canyon)
 
-## Next step[​](#next-step "Direct link to Next step")
+[WebGPUGeometry](https://luma.gl/next/examples/experimental/virtual-geometry-canyon)
 
-Continue with [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md), where the empty render pass becomes a complete portable draw call.
+[![Colorful animated geometry transformed by a stack of interactive image effects](/next/images/examples/showcase/postprocessing.jpg)](https://luma.gl/next/examples/showcase/postprocessing)
+
+[Composable effects](https://luma.gl/next/examples/showcase/postprocessing)
+
+### [Image Processing](https://luma.gl/next/examples/showcase/postprocessing)
+
+[Layer bloom, color grading, distortion, and film effects over a living scene.](https://luma.gl/next/examples/showcase/postprocessing)
+
+[WebGPUWebGL2](https://luma.gl/next/examples/showcase/postprocessing)
+
+02 · Built for ambitious ideas
+
+## The whole GPU. Your way.
+
+Start with a simple triangle or architect an entire rendering and compute pipeline.
+
+01
+
+### Render without a ceiling.
+
+Compose models, materials, HDR lighting, shader effects, and GPU-driven geometry at interactive frame rates.
+
+02
+
+### Keep the data moving.
+
+Run fluid simulations, spatial queries, and million-point visualizations directly where the data lives: on the GPU.
+
+03
+
+### Write once. Choose your backend.
+
+Build against one clear TypeScript API and run on WebGPU or WebGL2, with natural paths into deck.gl and Apache Arrow.
+
+03 · Find your starting point
+
+## Choose your own first adventure.
+
+[Start here](https://luma.gl/next/docs/tutorials/hello-triangle.md)
+
+### [Draw your first triangle.](https://luma.gl/next/docs/tutorials/hello-triangle.md)
+
+[Watch a live, backend-switchable example, then follow its complete rendering pipeline.](https://luma.gl/next/docs/tutorials/hello-triangle.md)
+
+[Interactive fundamentals →](https://luma.gl/next/docs/tutorials/hello-triangle.md)[Build worlds](https://luma.gl/next/docs/api-guide/engine.md)
+
+### [Meet the rendering engine.](https://luma.gl/next/docs/api-guide/engine.md)
+
+[Explore models, animation loops, geometry, materials, and reusable shader modules.](https://luma.gl/next/docs/api-guide/engine.md)
+
+[Engine API guide →](https://luma.gl/next/docs/api-guide/engine.md)[Move faster](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
+
+### [Think in GPU compute.](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
+
+[Keep data resident for simulation, filtering, aggregation, and spatial processing.](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
+
+[GPU data processing →](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)[Create effects](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
+
+### [Shape every pixel.](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
+
+[Combine post-processing passes, custom shaders, and reusable effects into your look.](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
+
+[Shader and effect passes →](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
+
+## Ready to make something move?
+
+Your first real project is only a few steps away.
+
+[Build your first project→](https://luma.gl/next/docs/developer-guide/installing.md)

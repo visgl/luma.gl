@@ -14,7 +14,9 @@ The module exposes a joint matrix palette:
 
 ```
 {
+
   jointMatrix: ['mat4x4<f32>', 20]
+
 }
 ```
 

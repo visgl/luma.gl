@@ -10,10 +10,15 @@ For the authoring model, see [Writing Customizable Shaders](https://luma.gl/next
 
 ```
 const model = new Model(device, {
+
   source: wgslSource,
+
   vs: glslVertexSource,
+
   fs: glslFragmentSource,
+
   plugins: [tintPlugin]
+
 });
 ```
 
@@ -21,49 +26,93 @@ const model = new Model(device, {
 
 ```
 import type {AttributeShaderType} from '@luma.gl/core';
+
 import type {ShaderInjection, ShaderModule} from '@luma.gl/shadertools';
 
+
+
 export type ShaderPlugin = {
+
   name: string;
+
   modules?: ShaderModule[];
+
   defines?: Record<string, boolean>;
+
   injections?: ShaderPluginInjection[];
+
   vertexInputs?: Record<string, AttributeShaderType>;
+
   varyings?: Record<string, ShaderPluginVarying>;
+
   glsl?: ShaderPluginVariant;
+
   wgsl?: ShaderPluginVariant;
+
 };
 
+
+
 export type ShaderPluginVariant = {
+
   modules?: ShaderModule[];
+
   defines?: Record<string, boolean>;
+
   injections?: ShaderPluginInjection[];
+
   vertexInputs?: Record<string, AttributeShaderType>;
+
   varyings?: Record<string, ShaderPluginVarying>;
+
 };
+
+
 
 export type ShaderPluginVaryingInterpolation = 'smooth' | 'flat';
 
+
+
 export type ShaderPluginVarying = {
+
   type: AttributeShaderType;
+
   interpolation?: ShaderPluginVaryingInterpolation;
+
 };
+
+
 
 export type ShaderPluginInjection = {
+
   target: ShaderPluginInjectionTarget;
+
   injection: string;
+
   order?: number;
+
 };
 
+
+
 export type ResolvedShaderPlugins = {
+
   modules: ShaderModule[];
+
   defines: Record<string, boolean>;
+
   injections: Record<string, ShaderInjection[]>;
+
   vertexInputs: Record<string, AttributeShaderType>;
+
   varyings: Record<string, {
+
     type: AttributeShaderType;
+
     interpolation: ShaderPluginVaryingInterpolation;
+
   }>;
+
 };
 ```
 
@@ -125,8 +174,11 @@ Compatible base shaders register and call the position hook:
 
 ```
 shaderAssembler.addShaderHook('vs:FILTER_POSITION(inout vec4 position)'); // GLSL
+
 shaderAssembler.addShaderHook(
+
   'vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)'
+
 ); // WGSL
 ```
 
@@ -142,11 +194,18 @@ The caller supplies the data and updates only shader inputs when the range chang
 
 ```
 const model = new Model(device, {
+
   plugins: [filterShaderPlugin],
+
   shaderAssembler,
+
   bufferLayout: [{name: 'filterValues', format: 'float32', stepMode: 'instance'}],
+
   attributes: {filterValues: filterValueBuffer}
+
 });
+
+
 
 model.shaderInputs.setProps({filter: {enabled: true, min: 0.2, max: 0.8}});
 ```
@@ -159,9 +218,13 @@ Rejected vertices are moved outside clip space. This first version does not supp
 
 ```
 export type ClipShaderPluginProps = {
+
   enabled?: boolean;
+
   bounds?: readonly [number, number, number, number];
+
   mode?: 'instance' | 'geometry';
+
 };
 ```
 
@@ -171,19 +234,29 @@ Compatible shaders register and call both hooks:
 
 ```
 vs:CLIP_POSITION(
+
   inout vec4 position,
+
   vec2 instanceCoordinates,
+
   vec2 geometryCoordinates
+
 )
+
 fs:CLIP_COLOR(inout vec4 color)
 ```
 
 ```
 vs:CLIP_POSITION(
+
   position: ptr<function, vec4<f32>>,
+
   instanceCoordinates: vec2<f32>,
+
   geometryCoordinates: vec2<f32>
+
 )
+
 fs:CLIP_COLOR(color: ptr<function, vec4<f32>>)
 ```
 
@@ -191,7 +264,9 @@ The vertex hook always stores `geometryCoordinates` in the generated varying. In
 
 ```
 model.shaderInputs.setProps({
+
   clip: {enabled: true, mode: 'geometry', bounds: [-0.5, -0.5, 0.5, 0.5]}
+
 });
 ```
 
@@ -201,23 +276,41 @@ This update changes only the managed clip uniforms. It does not rebuild the mode
 
 ```
 const tintPlugin: ShaderPlugin = {
+
   name: 'tint-plugin',
+
   glsl: {
+
     injections: [
+
       {
+
         target: 'fs:#decl',
+
         injection: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }'
+
       }
+
     ]
+
   },
+
   wgsl: {
+
     injections: [
+
       {
+
         target: 'fs:#decl',
+
         injection: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
+
       }
+
     ]
+
   }
+
 };
 ```
 

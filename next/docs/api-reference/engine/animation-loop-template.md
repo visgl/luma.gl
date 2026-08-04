@@ -11,27 +11,50 @@ The main motivation is TypeScript ergonomics: GPU resources can be created in th
 ```
 import {AnimationLoopTemplate, ClipSpace, makeAnimationLoop} from '@luma.gl/engine';
 
+
+
 class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+
   clipSpaceQuad: ClipSpace;
 
+
+
   constructor(animationProps) {
+
     super(animationProps);
+
     this.clipSpaceQuad = new ClipSpace(animationProps.device, {fs: FRAGMENT_SHADER});
+
   }
+
+
 
   onRender({device, canvasContext}) {
+
     const framebuffer = canvasContext.getCurrentFramebuffer();
+
     const renderPass = device.beginRenderPass({framebuffer});
+
     this.clipSpaceQuad.draw(renderPass);
+
     renderPass.end();
+
   }
+
+
 
   onFinalize() {
+
     this.clipSpaceQuad.destroy();
+
   }
+
 }
 
+
+
 const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate);
+
 await animationLoop.start();
 ```
 
@@ -41,10 +64,15 @@ await animationLoop.start();
 
 ```
 export type MakeAnimationLoopProps = Omit<
+
   AnimationLoopProps,
+
   'onCreateDevice' | 'onInitialize' | 'onRedraw' | 'onFinalize'
+
 > & {
+
   adapters?: Adapter[];
+
 };
 ```
 

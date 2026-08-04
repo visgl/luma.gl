@@ -10,30 +10,56 @@ Unlike older luma.gl APIs, the current `AnimationLoop` does not take a raw WebGL
 
 ```
 import {luma} from '@luma.gl/core';
+
 import {webgl2Adapter} from '@luma.gl/webgl';
+
 import {AnimationLoop} from '@luma.gl/engine';
 
+
+
 const animationLoop = new AnimationLoop({
+
   device: luma.createDevice({
+
     adapters: [webgl2Adapter],
+
     createCanvasContext: true
+
   }),
 
+
+
   async onInitialize({device}) {
+
     // Create GPU resources here.
+
   },
+
+
 
   onRender({device, canvasContext}) {
+
     const framebuffer = canvasContext.getCurrentFramebuffer();
+
     const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1]});
+
     // Draw application models here.
+
     renderPass.end();
+
   },
 
+
+
   onFinalize() {
+
     // Destroy application-owned resources here.
+
   }
+
 });
+
+
 
 await animationLoop.start();
 ```
@@ -44,15 +70,25 @@ await animationLoop.start();
 
 ```
 export type AnimationLoopProps = {
+
   device: Device | Promise<Device>;
+
   onAddHTML?: (div: HTMLDivElement) => string;
+
   onInitialize?: (animationProps: AnimationProps) => Promise<unknown>;
+
   onRender?: (animationProps: AnimationProps) => unknown;
+
   onFinalize?: (animationProps: AnimationProps) => void;
+
   onError?: (reason: Error) => void;
+
   stats?: Stats;
+
   autoResizeViewport?: boolean;
+
   animationFrameProvider?: AnimationFrameProvider;
+
 };
 ```
 
@@ -170,19 +206,34 @@ Triggers a redraw and returns the current HTML canvas as a data URL.
 
 ```
 const animationFrameProvider = {
+
   requestAnimationFrame(callback) {
+
     return customScheduler.requestAnimationFrame((time, frame) => callback(time, frame));
+
   },
+
   cancelAnimationFrame(animationFrameId) {
+
     customScheduler.cancelAnimationFrame(animationFrameId);
+
   }
+
 };
 
+
+
 const animationLoop = new AnimationLoop({
+
   device,
+
   animationFrameProvider,
+
   onRender({animationFrame}) {
+
     // Inspect provider-specific frame state here.
+
   }
+
 });
 ```
