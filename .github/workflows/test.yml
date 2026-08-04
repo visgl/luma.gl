@@ -139,6 +139,10 @@ jobs:
         run: |
           yarn test-node
 
+      - name: Install Spatial Atlas Playwright Chromium
+        if: ${{ matrix.shard == 1 }}
+        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas exec playwright install chromium
+
       - name: Run Billion-Point Spatial Atlas visual smoke
         if: ${{ matrix.shard == 1 }}
         env:
