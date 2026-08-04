@@ -58,12 +58,36 @@ type EPTNode = {
   z: number;
 };
 
-type EPTLasMesh = {
+/** Decoded LAZ attribute surface consumed by {@link NYCEPTTileSource}. */
+export type EPTLASMesh = {
   attributes?: {
     POSITION?: {value?: Float32Array | Float64Array} | Float32Array | Float64Array;
     intensity?: {value?: Uint16Array} | Uint16Array;
     classification?: {value?: Uint8Array} | Uint8Array;
   };
+};
+
+/** Injectable EPT I/O boundary used by deterministic consumers and tests. */
+export type EPTSourceAdapter = {
+  fetchJSON: (url: string | URL, signal?: AbortSignal) => Promise<unknown>;
+  loadLASMesh: (url: string | URL, signal?: AbortSignal) => Promise<EPTLASMesh>;
+};
+
+export type NYCEPTTileSourceOptions = {
+  /** EPT metadata document. Hierarchy and LAZ paths are resolved relative to this URL. */
+  metadataUrl?: string | URL;
+  /** Optional transport and decoder implementation. */
+  adapter?: EPTSourceAdapter;
+};
+
+const DEFAULT_EPT_SOURCE_ADAPTER: EPTSourceAdapter = {
+  fetchJSON,
+  async loadLASMesh(url, signal) {
+    return (await load(String(url), LASLoader, {
+      fetch: {signal},
+      las: {shape: 'mesh', fp64: true}
+    })) as EPTLASMesh;
+  }
 };
 
 /**
@@ -77,18 +101,27 @@ export class NYCEPTTileSource {
   readonly metadata: EPTMetadata;
 
   private readonly root: URL;
+  private readonly adapter: EPTSourceAdapter;
   private readonly nodes = new Map<string, EPTNode>();
   private readonly pendingHierarchyKeys = new Set<string>();
   private readonly loadedHierarchyKeys = new Set<string>();
 
-  private constructor(metadata: EPTMetadata) {
+  private constructor(metadata: EPTMetadata, metadataUrl: string | URL, adapter: EPTSourceAdapter) {
     this.metadata = metadata;
-    this.root = new URL('.', NYC_EPT_URL);
+    this.root = new URL('.', metadataUrl);
+    this.adapter = adapter;
   }
 
-  static async create(signal?: AbortSignal): Promise<NYCEPTTileSource> {
-    const metadata = (await fetchJSON(NYC_EPT_URL, signal)) as EPTMetadata;
-    const source = new NYCEPTTileSource(metadata);
+  static async create(
+    signal?: AbortSignal,
+    options: NYCEPTTileSourceOptions = {}
+  ): Promise<NYCEPTTileSource> {
+    signal?.throwIfAborted();
+    const metadataUrl = options.metadataUrl ?? NYC_EPT_URL;
+    const adapter = options.adapter ?? DEFAULT_EPT_SOURCE_ADAPTER;
+    const metadata = (await adapter.fetchJSON(metadataUrl, signal)) as EPTMetadata;
+    signal?.throwIfAborted();
+    const source = new NYCEPTTileSource(metadata, metadataUrl, adapter);
     await source.loadHierarchy('0-0-0-0', signal);
     return source;
   }
@@ -99,6 +132,7 @@ export class NYCEPTTileSource {
     focus: readonly [number, number],
     signal?: AbortSignal
   ): Promise<EPTTileSelection[]> {
+    signal?.throwIfAborted();
     if (!Number.isSafeInteger(targetPointCount) || targetPointCount <= 0) {
       throw new Error('EPT targetPointCount must be a positive integer');
     }
@@ -132,10 +166,10 @@ export class NYCEPTTileSource {
   /** Downloads and decodes one selected LAZ node. */
   async loadTile(selection: EPTTileSelection, signal?: AbortSignal): Promise<EPTPointTile> {
     signal?.throwIfAborted();
-    const mesh = (await load(new URL(`ept-data/${selection.key}.laz`, this.root).href, LASLoader, {
-      fetch: {signal},
-      las: {shape: 'mesh'}
-    })) as EPTLasMesh;
+    const mesh = await this.adapter.loadLASMesh(
+      new URL(`ept-data/${selection.key}.laz`, this.root),
+      signal
+    );
     signal?.throwIfAborted();
     const source = getPositionValues(mesh);
     const decodedPointCount = Math.floor(source.length / 3);
@@ -158,11 +192,13 @@ export class NYCEPTTileSource {
   }
 
   private async loadHierarchy(key: string, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
     if (this.loadedHierarchyKeys.has(key)) return;
-    const hierarchy = (await fetchJSON(
+    const hierarchy = (await this.adapter.fetchJSON(
       new URL(`ept-hierarchy/${key}.json`, this.root),
       signal
     )) as Record<string, number>;
+    signal?.throwIfAborted();
     this.loadedHierarchyKeys.add(key);
     this.pendingHierarchyKeys.delete(key);
     for (const [nodeKey, pointCount] of Object.entries(hierarchy)) {
@@ -187,8 +223,11 @@ export class NYCEPTTileSource {
 }
 
 /** Creates a reusable source whose hierarchy cache survives repeated spatial refreshes. */
-export async function createNYCEPTTileSource(signal?: AbortSignal): Promise<NYCEPTTileSource> {
-  return NYCEPTTileSource.create(signal);
+export async function createNYCEPTTileSource(
+  signal?: AbortSignal,
+  options?: NYCEPTTileSourceOptions
+): Promise<NYCEPTTileSource> {
+  return NYCEPTTileSource.create(signal, options);
 }
 
 /** Loads enough independently addressable EPT LAZ nodes to fill a resident GPU window. */
@@ -239,7 +278,7 @@ export async function loadNYCEPTPointBatch(
   };
 }
 
-function packPointAttributes(mesh: EPTLasMesh, pointCount: number): Uint32Array {
+function packPointAttributes(mesh: EPTLASMesh, pointCount: number): Uint32Array {
   const intensity = getScalarValues(mesh.attributes?.intensity, Uint16Array);
   const classification = getScalarValues(mesh.attributes?.classification, Uint8Array);
   const output = new Uint32Array(pointCount);
@@ -266,7 +305,7 @@ async function fetchJSON(url: string | URL, signal?: AbortSignal): Promise<unkno
   return response.json();
 }
 
-function getPositionValues(mesh: EPTLasMesh): Float32Array | Float64Array {
+function getPositionValues(mesh: EPTLASMesh): Float32Array | Float64Array {
   const position = mesh.attributes?.POSITION;
   const values = position && 'value' in position ? position.value : position;
   if (!(values instanceof Float32Array) && !(values instanceof Float64Array)) {
@@ -318,12 +357,18 @@ function getNodeDistanceSquared(
   focus: readonly [number, number],
   metadata: EPTMetadata
 ): number {
-  const bounds = metadata.boundsConforming ?? metadata.bounds;
-  const width = bounds[3] - bounds[0];
-  const height = bounds[4] - bounds[1];
-  const maximumHorizontalSpan = Math.max(width, height);
-  const focusX = Math.max(0, Math.min(1, 0.5 + (focus[0] * maximumHorizontalSpan) / (2 * width)));
-  const focusY = Math.max(0, Math.min(1, 0.5 + (focus[1] * maximumHorizontalSpan) / (2 * height)));
+  const displayBounds = metadata.boundsConforming ?? metadata.bounds;
+  const displayWidth = displayBounds[3] - displayBounds[0];
+  const displayHeight = displayBounds[4] - displayBounds[1];
+  const maximumHorizontalSpan = Math.max(displayWidth, displayHeight);
+  const worldFocusX =
+    (displayBounds[0] + displayBounds[3]) / 2 + (focus[0] * maximumHorizontalSpan) / 2;
+  const worldFocusY =
+    (displayBounds[1] + displayBounds[4]) / 2 + (focus[1] * maximumHorizontalSpan) / 2;
+  const octreeWidth = metadata.bounds[3] - metadata.bounds[0];
+  const octreeHeight = metadata.bounds[4] - metadata.bounds[1];
+  const focusX = Math.max(0, Math.min(1, (worldFocusX - metadata.bounds[0]) / octreeWidth));
+  const focusY = Math.max(0, Math.min(1, (worldFocusY - metadata.bounds[1]) / octreeHeight));
   const scale = 2 ** node.depth;
   const minimumX = node.x / scale;
   const maximumX = (node.x + 1) / scale;

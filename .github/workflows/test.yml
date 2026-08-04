@@ -140,6 +140,22 @@ jobs:
         run: |
           yarn test-node
 
+      - name: Run Billion-Point Spatial Atlas visual smoke
+        if: ${{ matrix.shard == 1 }}
+        env:
+          SPATIAL_ATLAS_REQUIRE_GPU_READBACK: 'true'
+          SPATIAL_ATLAS_SCREENSHOT: ${{ runner.temp }}/billion-point-spatial-atlas.png
+        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas test:visual
+
+      - name: Upload Billion-Point Spatial Atlas visual smoke screenshot
+        if: ${{ always() && matrix.shard == 1 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: billion-point-spatial-atlas-visual-smoke
+          path: ${{ runner.temp }}/billion-point-spatial-atlas*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Sanitize lcov for Coveralls
         run: |
           node - <<'NODE'

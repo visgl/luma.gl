@@ -67,7 +67,25 @@
           });
         }
 
-        makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+        if (new URLSearchParams(window.location.search).has('visual-smoke')) {
+          const manualAnimationFrameProvider = {
+            requestAnimationFrame: () => 0,
+            cancelAnimationFrame: () => {}
+          };
+          window.addEventListener('spatial-atlas-pause', () => {
+            animationLoop.setProps({animationFrameProvider: manualAnimationFrameProvider});
+          });
+          window.addEventListener('spatial-atlas-redraw', () => animationLoop.redraw());
+          window.spatialAtlasCaptureFrame = () => {
+            const template = animationLoop.getAnimationLoopTemplate();
+            if (!template || typeof template.captureVisualSmokeFrame !== 'function') {
+              throw new Error('Spatial Atlas visual smoke frame is unavailable');
+            }
+            return template.captureVisualSmokeFrame();
+          };
+        }
+        animationLoop.start();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         document.body.innerHTML = '<main data-error role="alert"><h1>WebGPU unavailable</h1><p></p></main>';
