@@ -143,16 +143,20 @@ describe('responsive GPU data examples', () => {
     const constructorSource = atlasSource.match(
       /constructor\(\{device\}: AnimationProps\)\s*\{([\s\S]*?)\n  \}\n\n  override async onInitialize/
     );
-    const gridCountSource = atlasSource.match(
-      /function makeGridCellCounts\s*\([\s\S]*?\n\}\n\nfunction countCandidates/
-    );
     const rebuildResourcesStart = atlasSource.indexOf('  private rebuildResources(');
     const resizeResourcesStart = atlasSource.indexOf('  private resizeResources(');
     const rebuildResourcesSource = atlasSource.slice(rebuildResourcesStart, resizeResourcesStart);
+    const switchModeStart = atlasSource.indexOf('  private switchMode(');
+    const changeCapacityStart = atlasSource.indexOf('  private changeCapacity(');
+    const switchModeSource = atlasSource.slice(switchModeStart, changeCapacityStart);
 
     expect(constructorSource).not.toBeNull();
-    expect(constructorSource![1]).toMatch(/this\.currentPositions\s*=\s*new Float32Array\(0\)/);
+    expect(constructorSource![1]).toMatch(/makeSyntheticSpatialAtlasTaxiData\(0\)/);
+    expect(constructorSource![1]).toMatch(/this\.currentPositions\s*=\s*this\.taxiData\.positions/);
     expect(constructorSource![1]).not.toMatch(/makeSyntheticTaxiPositions\s*\(/);
+    expect(constructorSource![1]).not.toMatch(
+      /makeSyntheticSpatialAtlasTaxiData\(this\.capacity\)/
+    );
     expect(atlasSource).toMatch(/await this\.loadSyntheticDataset\(this\.mode, this\.capacity\)/);
     expect(atlasSource).toMatch(/await yieldAtlasGeneration\(generationController\.signal\)/);
     expect(atlasSource).toMatch(/this\.dataGenerationAbortController\?\.abort\(\)/);
@@ -161,19 +165,22 @@ describe('responsive GPU data examples', () => {
     expect(atlasSource).toMatch(/const fence = this\.device\.createFence\(\)/);
     expect(atlasSource).toMatch(/transitionGeneration !== this\.modeTransitionGeneration/);
     expect(atlasSource).toMatch(
-      /const pendingReadbacks = \[\.\.\.this\.gpuTimingReadbacks\][\s\S]*const fence = this\.device\.createFence\(\)/
+      /const pendingReadbacks = \[\.\.\.this\.gpuTimingReadbacks\][\s\S]*if \(this\.countReadback\)[\s\S]*const fence = this\.device\.createFence\(\)/
     );
     expect(atlasSource).toMatch(/if \(this\.requestedMode !== null\) return;/);
     expect(atlasSource).toMatch(
       /captureVisualSmokeFrame[\s\S]*if \(this\.requestedMode !== null\)/
     );
     expect(atlasSource).toMatch(/controller\.signal\.throwIfAborted\(\)/);
-    expect(atlasSource).toMatch(/this\.device\.lost/);
+    expect(atlasSource).toMatch(/void device\.lost\.then/);
     expect(atlasSource).toMatch(
       /this\.completeSameModeTransition\(resumeLidarLoad, resumeLidarPublish\)/
     );
     expect(atlasSource).toMatch(
-      /resources\.pointCount === capacity[\s\S]*resources\.renderPositions === this\.lidarTileCache\.positionsBuffer/
+      /this\.taxiData\.sourceKind === 'packed'[\s\S]*resources\.pointCount === this\.taxiData\.pointCount/
+    );
+    expect(atlasSource).toMatch(
+      /resources\.renderPositions === this\.lidarTileCache\.positionsBuffer/
     );
     expect(atlasSource).toMatch(
       /this\.resumeLidarLoadAfterModeTransition \|\|=[\s\S]*this\.resumeLidarPublishAfterModeTransition \|\|=/
@@ -183,16 +190,19 @@ describe('responsive GPU data examples', () => {
       /this\.modeTransitionFailed = true[\s\S]*this\.modeTransitionFailed = false/
     );
     expect(atlasSource).toMatch(
+      /private async loadTaxiSource[\s\S]*?this\.modeTransitionFailed[\s\S]*?private async loadLidar/
+    );
+    expect(atlasSource).toMatch(
       /private async loadLidar[\s\S]*?this\.modeTransitionFailed[\s\S]*?private maybeRefreshLidarTiles/
     );
     expect(atlasSource).toMatch(
       /private changeCapacity[\s\S]*?this\.modeTransitionFailed[\s\S]*?private destroyResources/
     );
+    expect(atlasSource).toMatch(/this\.countReadResources === resources/);
+    expect(atlasSource).toMatch(/this\.deferredResourceDestruction\.add\(resources\)/);
     expect(atlasSource).toMatch(/this\.canvas\.dataset\.atlasDataReadyMode = mode/);
-    expect(atlasSource).toMatch(/const VISUAL_SMOKE_TAXI_GRID_SIZE = \[16, 16\] as const/);
-    expect(atlasSource).toMatch(/const VISUAL_SMOKE_LIDAR_GRID_SIZE = \[16, 16, 4\] as const/);
-    expect(rebuildResourcesSource).toMatch(
-      /IS_VISUAL_SMOKE[\s\S]*VISUAL_SMOKE_TAXI_GRID_SIZE[\s\S]*TAXI_GRID_SIZE[\s\S]*IS_VISUAL_SMOKE[\s\S]*VISUAL_SMOKE_LIDAR_GRID_SIZE[\s\S]*LIDAR_GRID_SIZE/
+    expect(switchModeSource).toMatch(
+      /if \(canReuseTaxiData\)[\s\S]*this\.rebuildResources\(this\.taxiData\.positions\);[\s\S]*this\.canvas\.dataset\.atlasDataReadyMode = mode/
     );
     expect(atlasSource).toMatch(/byteLength: Math\.max\(UINT32_BYTE_LENGTH, data\.byteLength\)/);
     expect(atlasSource).toMatch(/buffer\.write\(data\)/);
@@ -204,14 +214,14 @@ describe('responsive GPU data examples', () => {
       /queryChanged \? this\.getQueryGraph\(resources\) : resources\.renderGraph/
     );
     expect(atlasSource).toMatch(/if\s*\(!graph\)\s*\{\s*graph = this\.createQueryGraph/);
-    expect(gridCountSource).not.toBeNull();
-    expect(gridCountSource![0]).not.toMatch(/new Array<number>\(dimension\)/);
+    expect(atlasSource).not.toMatch(/function makeGridCellCounts\s*\(/);
     expect(atlasSource).toMatch(/resources\.renderGraph\.destroy\(\)/);
     expect(atlasSmokeSource).toMatch(
       /if \(requireGPUReadback\) \{\s*await changeSelect\(page, '#example-panel-host \[data-mode\]', 'lidar'\)/
     );
     expect(atlasSmokeSource).toMatch(/canvas\?\.dataset\.atlasTransitionFailure/);
     expect(atlasSmokeSource).toMatch(/canvas\?\.dataset\.atlasDeviceLost/);
+    expect(atlasSmokeSource).toMatch(/reference-GPU lifecycle skipped/);
     expect(atlasSmokeSource).toMatch(/softwareGpu: !requireGPUReadback/);
     expect(atlasSmokeSource).toMatch(
       /await assertNoAtlasGPUFailure\(page, 'completed visual smoke'\)/
