@@ -212,6 +212,10 @@ module.exports = {
                 '@deck.gl-community/luspatial$': path.resolve(
                   __dirname,
                   '../modules/deck-luspatial/src/index.ts'
+                ),
+                '@deck.gl-community/luspatial/query$': path.resolve(
+                  __dirname,
+                  '../modules/deck-luspatial/src/query/index.ts'
                 )
               }
             },
