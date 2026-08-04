@@ -128,3 +128,14 @@ multi-dimensional presets all reuse one compiled command graph without reading
 source rows back to the CPU. Displayed histogram bins, group counts, and the
 selected-row total share one small packed summary readback; static point clouds
 redraw only after a selection or layout changes.
+
+## Attribution
+
+LuxFilter is inspired by [NVIDIA RAPIDS cuXfilter](https://github.com/rapidsai/cuxfilter) and the
+RAPIDS contributors who pioneered GPU-accelerated crossfiltering across coordinated views of large
+datasets. It independently adapts those interaction patterns to luma.gl and browser-native WebGPU;
+it is not a code port, compatible Python API, or NVIDIA/RAPIDS successor.
+
+The [LuxFilter API reference](/docs/api-reference/experimental/luxfilter) includes the live
+Million-Row Crossfilter Explorer and a detailed feature comparison with cuXfilter's final
+[26.06 release](https://docs.rapids.ai/api/cuxfilter/stable/).

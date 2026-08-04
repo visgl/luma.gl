@@ -7,6 +7,7 @@ type ExperimentalDocsTab = {id: ExperimentalDocsTabId; label: string; href: stri
 export type ExperimentalDocsTabId =
   | 'overview'
   | 'luproj'
+  | 'luxfilter'
   | 'g-buffer'
   | 'deferred-lighting'
   | 'clustered-lighting'
@@ -22,6 +23,7 @@ export type ExperimentalDocsTabId =
 const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/experimental'},
   {id: 'luproj', label: 'GPU Projection', href: '/docs/api-reference/experimental/luproj'},
+  {id: 'luxfilter', label: 'LuxFilter', href: '/docs/api-reference/experimental/luxfilter'},
   {id: 'g-buffer', label: 'GBuffer', href: '/docs/api-reference/experimental/g-buffer'},
   {
     id: 'deferred-lighting',
