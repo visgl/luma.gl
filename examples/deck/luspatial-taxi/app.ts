@@ -780,7 +780,10 @@ function createControlPanel(
       visibleElement.textContent = formatCount(stats.visiblePointCount);
       selectedElement.textContent = formatCount(stats.selectedPointCount);
       queryTimeElement.textContent = `${stats.queryEncodingMilliseconds.toFixed(2)} ms`;
-      graphInspectorPanel.update(stats.inspectorSnapshot, 'luspatial-taxi-query-graph');
+      graphInspectorPanel.update(
+        stats.inspectorSnapshot,
+        LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.query
+      );
     }
   };
 }

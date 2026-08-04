@@ -53,6 +53,37 @@ describe('LuSpatialGeographicPointQueryEffect resource safety', () => {
         })
     ).toThrow('viewportProjectionPaddingKilometres must be a non-negative finite number');
   });
+
+  test('accepts axis-degenerate projected bounds but rejects reversed bounds', () => {
+    const allocationSentinel = 'effect validation reached buffer allocation';
+    const device = {
+      type: 'webgpu',
+      createBuffer: () => {
+        throw new Error(allocationSentinel);
+      }
+    } as unknown as Device;
+
+    for (const projectedBounds of [
+      [0, -1, 0, 1],
+      [0, 0, 0, 0]
+    ] as const) {
+      expect(
+        () =>
+          new LuSpatialGeographicPointQueryEffect(device, {
+            ...TEST_QUERY_PROPS,
+            projectedBounds
+          })
+      ).toThrow(allocationSentinel);
+    }
+
+    expect(
+      () =>
+        new LuSpatialGeographicPointQueryEffect({type: 'webgpu'} as Device, {
+          ...TEST_QUERY_PROPS,
+          projectedBounds: [1, -1, 0, 1]
+        })
+    ).toThrow('projectedBounds minima must not exceed maxima');
+  });
 });
 
 describe('luSpatial geographic point query telemetry', () => {
@@ -146,5 +177,14 @@ describe('@deck.gl-community/luspatial/query package boundary', () => {
     expect(readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8')).not.toContain(
       'LuSpatialGeographicPointQueryEffect'
     );
+  });
+
+  test('uses the public query graph ID in the Taxi inspector', () => {
+    const appSource = readFileSync(
+      new URL('../../../examples/deck/luspatial-taxi/app.ts', import.meta.url),
+      'utf8'
+    );
+    expect(appSource).toContain('LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.query');
+    expect(appSource).not.toContain("'luspatial-taxi-query-graph'");
   });
 });

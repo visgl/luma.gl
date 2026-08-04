@@ -948,10 +948,10 @@ function validateProps(props: LuSpatialGeographicPointQueryEffectProps): void {
     throw new Error('projectedBounds must contain finite values');
   }
   if (
-    props.projectedBounds[0] >= props.projectedBounds[2] ||
-    props.projectedBounds[1] >= props.projectedBounds[3]
+    props.projectedBounds[0] > props.projectedBounds[2] ||
+    props.projectedBounds[1] > props.projectedBounds[3]
   ) {
-    throw new Error('projectedBounds minima must be less than maxima');
+    throw new Error('projectedBounds minima must not exceed maxima');
   }
   const gridSize = props.gridSize ?? DEFAULT_GRID_SIZE;
   if (gridSize.some(value => !Number.isSafeInteger(value) || value <= 0)) {
