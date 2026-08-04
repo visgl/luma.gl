@@ -120,7 +120,7 @@ submission, and any optional readback remain under application control.
 
 ## Flagship example
 
-[Crossfilter Supremacy](../../../../examples/showcase/crossfilter-supremacy)
+[Million-Row Crossfilter Explorer](../../../../examples/showcase/million-row-crossfilter)
 links a GPU-rendered map, scatterplot, three self-excluding histograms, and
 categorical cohorts across one million synthetic GPU-resident rows. Geographic
 brushes, scatterplot selections, histogram ranges, category filters, and

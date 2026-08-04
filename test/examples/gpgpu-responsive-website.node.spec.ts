@@ -35,7 +35,7 @@ describe('responsive GPGPU website examples', () => {
 
     for (const modulePath of [
       '../../examples/showcase/billion-point-spatial-atlas/app',
-      '../../examples/showcase/crossfilter-supremacy/app',
+      '../../examples/showcase/million-row-crossfilter/app',
       '../../examples/deck/luspatial-taxi/app',
       '../../examples/experimental/fp64/app'
     ]) {
@@ -45,7 +45,7 @@ describe('responsive GPGPU website examples', () => {
     }
 
     expect(examplesSource).not.toMatch(
-      /^import\s+(?:BillionPointSpatialAtlasApp|CrossfilterSupremacyApp|FP64App)\s+from/m
+      /^import\s+(?:BillionPointSpatialAtlasApp|MillionRowCrossfilterApp|FP64App)\s+from/m
     );
     expect(examplesSource).not.toMatch(/^import\s+\{createLuSpatialTaxiDeck\}\s+from/m);
     expect(examplesSource).toContain("role={errorMessage ? 'alert' : 'status'}");

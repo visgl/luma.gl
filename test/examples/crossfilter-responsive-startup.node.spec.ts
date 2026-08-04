@@ -5,13 +5,13 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {describe, expect, test, vi} from 'vitest';
-import CrossfilterSupremacyAnimationLoopTemplate from '../../examples/showcase/crossfilter-supremacy/app';
+import MillionRowCrossfilterAnimationLoopTemplate from '../../examples/showcase/million-row-crossfilter/app';
 import {
   makeCrossfilterDataset,
   makeCrossfilterDatasetAsync
-} from '../../examples/showcase/crossfilter-supremacy/crossfilter-data';
+} from '../../examples/showcase/million-row-crossfilter/crossfilter-data';
 
-describe('Crossfilter Supremacy responsive startup', () => {
+describe('Million-Row Crossfilter Explorer responsive startup', () => {
   test('keeps template construction free of synchronous million-row generation and GPU uploads', () => {
     const createBuffer = vi.fn();
     const device = {type: 'webgpu', createBuffer} as unknown as Device;
@@ -20,7 +20,7 @@ describe('Crossfilter Supremacy responsive startup', () => {
       crossfilterRowCount: 1_048_576
     } as AnimationProps;
 
-    const template = new CrossfilterSupremacyAnimationLoopTemplate(animationProps);
+    const template = new MillionRowCrossfilterAnimationLoopTemplate(animationProps);
 
     expect(createBuffer).not.toHaveBeenCalled();
     expect(() => template.onFinalize()).not.toThrow();

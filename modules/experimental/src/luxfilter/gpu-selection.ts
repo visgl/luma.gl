@@ -143,9 +143,11 @@ export class LuxFilterSelection {
       throw new Error(`${this.id} does not support scalar range selection`);
     }
     validateOrderedRange(range[0], range[1], `${this.id} range`);
+    const minimum = encodeScalarValue(range[0], this.dimension.input.format, this.id);
+    const maximum = encodeScalarValue(range[1], this.dimension.input.format, this.id);
     this.stateValues[0] = 1;
-    this.stateValues[1] = encodeScalarValue(range[0], this.dimension.input.format, this.id);
-    this.stateValues[2] = encodeScalarValue(range[1], this.dimension.input.format, this.id);
+    this.stateValues[1] = minimum;
+    this.stateValues[2] = maximum;
     this.writeState();
   }
 
@@ -157,11 +159,15 @@ export class LuxFilterSelection {
     const [minimumX, minimumY, maximumX, maximumY] = bounds;
     validateOrderedRange(minimumX, maximumX, `${this.id} horizontal bounds`);
     validateOrderedRange(minimumY, maximumY, `${this.id} vertical bounds`);
+    const encodedMinimumX = encodeScalarValue(minimumX, this.dimension.x.format, this.id);
+    const encodedMaximumX = encodeScalarValue(maximumX, this.dimension.x.format, this.id);
+    const encodedMinimumY = encodeScalarValue(minimumY, this.dimension.y.format, this.id);
+    const encodedMaximumY = encodeScalarValue(maximumY, this.dimension.y.format, this.id);
     this.stateValues[0] = 1;
-    this.stateValues[1] = encodeScalarValue(minimumX, this.dimension.x.format, this.id);
-    this.stateValues[2] = encodeScalarValue(maximumX, this.dimension.x.format, this.id);
-    this.stateValues[3] = encodeScalarValue(minimumY, this.dimension.y.format, this.id);
-    this.stateValues[4] = encodeScalarValue(maximumY, this.dimension.y.format, this.id);
+    this.stateValues[1] = encodedMinimumX;
+    this.stateValues[2] = encodedMaximumX;
+    this.stateValues[3] = encodedMinimumY;
+    this.stateValues[4] = encodedMaximumY;
     this.writeState();
   }
 
@@ -425,6 +431,9 @@ function validateOrderedRange(minimum: number, maximum: number, name: string): v
 /** Preserves the exact stored scalar bit pattern in the GPU control-state word. */
 function encodeScalarValue(value: number, format: LuxFilterScalarFormat, id: string): number {
   if (format === 'float32') {
+    if (!Number.isFinite(Math.fround(value))) {
+      throw new Error(`${id} selection endpoints must fit their input scalar format`);
+    }
     const valueBytes = new ArrayBuffer(SCALAR_BYTE_LENGTH);
     new Float32Array(valueBytes)[0] = value;
     return new Uint32Array(valueBytes)[0];

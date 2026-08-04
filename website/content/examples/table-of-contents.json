@@ -78,8 +78,8 @@
     "items": [
       {
         "type": "doc",
-        "id": "showcase/crossfilter-supremacy",
-        "label": "LuxFilter: Million-Point Crossfilter"
+        "id": "showcase/million-row-crossfilter",
+        "label": "LuxFilter: Million-Row Crossfilter Explorer"
       },
       "showcase/billion-point-spatial-atlas",
       {

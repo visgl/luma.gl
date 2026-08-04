@@ -9,15 +9,15 @@ import {
   getCrossfilterPreset,
   makeCrossfilterNormalizedBounds,
   makeCrossfilterSelectionBounds
-} from '../../examples/showcase/crossfilter-supremacy/app';
+} from '../../examples/showcase/million-row-crossfilter/app';
 import {
   CROSS_FILTER_CATEGORY_NAMES,
   CROSS_FILTER_DOMAINS,
   CROSS_FILTER_MAP_DOMAIN,
   makeCrossfilterDataset
-} from '../../examples/showcase/crossfilter-supremacy/crossfilter-data';
+} from '../../examples/showcase/million-row-crossfilter/crossfilter-data';
 
-describe('Crossfilter Supremacy synthetic population', () => {
+describe('Million-Row Crossfilter Explorer synthetic population', () => {
   test('creates deterministic, source-aligned GPU upload columns', () => {
     const firstPopulation = makeCrossfilterDataset({rowCount: 512, seed: 2026});
     const secondPopulation = makeCrossfilterDataset({rowCount: 512, seed: 2026});
@@ -72,7 +72,7 @@ describe('Crossfilter Supremacy synthetic population', () => {
   });
 });
 
-describe('Crossfilter Supremacy linked-view coordinates', () => {
+describe('Million-Row Crossfilter Explorer linked-view coordinates', () => {
   test('reflects top-left-origin pointer bounds into upward-positive GPU domains', () => {
     expect(
       makeCrossfilterSelectionBounds(
@@ -125,13 +125,13 @@ describe('Crossfilter Supremacy linked-view coordinates', () => {
   });
 });
 
-describe('Crossfilter Supremacy visual smoke controls', () => {
+describe('Million-Row Crossfilter Explorer visual smoke controls', () => {
   test.each([
     1, 127, 1_048_577
   ])('rejects unsupported resident row count %i before starting the browser', rowCount => {
     const smokeScriptPath = fileURLToPath(
       new URL(
-        '../../examples/showcase/crossfilter-supremacy/scripts/visual-smoke.mjs',
+        '../../examples/showcase/million-row-crossfilter/scripts/visual-smoke.mjs',
         import.meta.url
       )
     );

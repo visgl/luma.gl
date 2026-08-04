@@ -17,7 +17,7 @@ type ExampleCategory = Extract<ExampleSidebarEntry, {type: 'category'}>;
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const DOCUMENTATION_DIRECTORY = path.join(process.cwd(), 'docs');
 const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
-  'showcase/crossfilter-supremacy',
+  'showcase/million-row-crossfilter',
   'showcase/billion-point-spatial-atlas',
   'deck/luspatial-taxi',
   'experimental/gpt-2',
@@ -55,6 +55,10 @@ describe('GPGPU example catalog navigation', () => {
     const crossfilterExample = category.items[0];
     const spatialAtlasExample = category.items[1];
     const taxiExample = category.items[2];
+    const crossfilterExampleSource = readFileSync(
+      path.join(EXAMPLES_DIRECTORY, 'showcase/million-row-crossfilter.mdx'),
+      'utf8'
+    );
     const spatialAtlasSource = readFileSync(
       path.join(process.cwd(), 'examples/showcase/billion-point-spatial-atlas/app.ts'),
       'utf8'
@@ -66,9 +70,19 @@ describe('GPGPU example catalog navigation', () => {
 
     expect(crossfilterExample).toEqual({
       type: 'doc',
-      id: 'showcase/crossfilter-supremacy',
-      label: 'LuxFilter: Million-Point Crossfilter'
+      id: 'showcase/million-row-crossfilter',
+      label: 'LuxFilter: Million-Row Crossfilter Explorer'
     });
+    expect(crossfilterExampleSource).toContain("title: 'Million-Row Crossfilter Explorer'");
+    expect(crossfilterExampleSource).toContain('<MillionRowCrossfilterExample />');
+    expect(
+      existsSync(
+        path.join(
+          process.cwd(),
+          'website/static/images/examples/showcase/million-row-crossfilter.jpg'
+        )
+      )
+    ).toBe(true);
     expect(spatialAtlasExample).toBe('showcase/billion-point-spatial-atlas');
     expect(taxiExample).toEqual({
       type: 'doc',

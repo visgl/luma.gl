@@ -113,8 +113,8 @@ const exampleConfig = {};
 
 const loadBillionPointSpatialAtlasExample = () =>
   import('../../examples/showcase/billion-point-spatial-atlas/app');
-const loadCrossfilterSupremacyExample = () =>
-  import('../../examples/showcase/crossfilter-supremacy/app');
+const loadMillionRowCrossfilterExample = () =>
+  import('../../examples/showcase/million-row-crossfilter/app');
 const loadLuSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
 const loadFP64Example = () => import('../../examples/experimental/fp64/app');
 
@@ -795,14 +795,14 @@ export const BillionPointSpatialAtlasExample: React.FC<WebsiteExampleProps> = pr
   );
 };
 
-export const CrossfilterSupremacyExample: React.FC<WebsiteExampleProps> = props => {
-  const {module, errorMessage} = useDeferredExampleModule(loadCrossfilterSupremacyExample);
+export const MillionRowCrossfilterExample: React.FC<WebsiteExampleProps> = props => {
+  const {module, errorMessage} = useDeferredExampleModule(loadMillionRowCrossfilterExample);
 
   if (!module) {
     return (
       <DeferredGPUExampleStatus
         {...props}
-        title="LuxFilter: Crossfilter Supremacy"
+        title="LuxFilter: Million-Row Crossfilter Explorer"
         description="Loading the million-row linked dashboard and GPU filtering pipeline."
         errorMessage={errorMessage}
       />
@@ -811,8 +811,8 @@ export const CrossfilterSupremacyExample: React.FC<WebsiteExampleProps> = props 
 
   return (
     <LumaExample
-      id="crossfilter-supremacy"
-      title="Crossfilter Supremacy"
+      id="million-row-crossfilter"
+      title="Million-Row Crossfilter Explorer"
       subtitle="One million points · one GPU-resident linked dashboard"
       directory="showcase"
       devices={['webgpu']}

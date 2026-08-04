@@ -15594,20 +15594,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-showcase-crossfilter-supremacy@workspace:examples/showcase/crossfilter-supremacy":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-showcase-crossfilter-supremacy@workspace:examples/showcase/crossfilter-supremacy"
-  dependencies:
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
 "luma.gl-examples-showcase-dof@workspace:examples/showcase/dof":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-dof@workspace:examples/showcase/dof"
@@ -15655,6 +15641,20 @@ __metadata:
     "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-million-row-crossfilter@workspace:examples/showcase/million-row-crossfilter":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-million-row-crossfilter@workspace:examples/showcase/million-row-crossfilter"
+  dependencies:
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/tables": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

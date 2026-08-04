@@ -789,6 +789,137 @@ test('LuxFilter computes grouped floating statistics and preserves custom visibi
   t.end();
 });
 
+test('LuxFilter rejects overflowing float32 endpoints without selecting infinite source rows', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const maximumFiniteFloat32 = Math.fround(3.4028234663852886e38);
+  const rowCount = 7;
+  const graph = new GPUCommandGraph(device, {id: 'lux-filter-float32-overflow'});
+  const buffers = [
+    createBuffer(
+      device,
+      'float32-values',
+      Float32Array.from([
+        Number.NEGATIVE_INFINITY,
+        -maximumFiniteFloat32,
+        -1,
+        0,
+        1,
+        maximumFiniteFloat32,
+        Number.POSITIVE_INFINITY
+      ])
+    ),
+    createBuffer(device, 'float32-coordinates', Float32Array.from([0, 1, 2, 3, 4, 5, 6])),
+    createOutputBuffer(device, 'float32-selection', rowCount)
+  ];
+  const [valueBuffer, coordinateBuffer, outputBuffer] = buffers;
+  const values = importView(graph, 'float32-values', valueBuffer, 'float32', rowCount);
+  const coordinates = importView(
+    graph,
+    'float32-coordinates',
+    coordinateBuffer,
+    'float32',
+    rowCount
+  );
+  const output = importView(graph, 'float32-selection', outputBuffer, 'uint32', rowCount);
+  const filter = new LuxFilter(graph, {
+    id: 'float32-endpoints',
+    dimensions: [
+      {id: 'value', kind: 'range', input: values},
+      {id: 'position', kind: 'bounds', x: values, y: coordinates}
+    ],
+    outputMask: output
+  });
+  filter.addToGraph(graph);
+
+  const compiled = graph.compile();
+  try {
+    filter.setRange('value', [-maximumFiniteFloat32, maximumFiniteFloat32]);
+    submitGraph(device, compiled, 'lux-filter-finite-range');
+    t.deepEqual(
+      await readUint32(outputBuffer, rowCount),
+      [0, 1, 1, 1, 1, 1, 0],
+      'the largest representable float32 endpoints select finite values without either infinity'
+    );
+
+    t.throws(
+      () => filter.setRange('value', [Number.MAX_VALUE, Number.MAX_VALUE]),
+      /input scalar format/,
+      'positive float32 overflow cannot silently select positive-infinity source rows'
+    );
+    t.throws(
+      () => filter.setRange('value', [-Number.MAX_VALUE, -Number.MAX_VALUE]),
+      /input scalar format/,
+      'negative float32 overflow cannot silently select negative-infinity source rows'
+    );
+    submitGraph(device, compiled, 'lux-filter-rejected-range');
+    t.deepEqual(
+      await readUint32(outputBuffer, rowCount),
+      [0, 1, 1, 1, 1, 1, 0],
+      'rejected range updates preserve the previous GPU-resident selection'
+    );
+
+    filter.clear('value');
+    filter.setBounds('position', [-maximumFiniteFloat32, 1, maximumFiniteFloat32, 5]);
+    submitGraph(device, compiled, 'lux-filter-finite-bounds');
+    t.deepEqual(
+      await readUint32(outputBuffer, rowCount),
+      [0, 1, 1, 1, 1, 1, 0],
+      'representable rectangular bounds exclude infinite horizontal source values'
+    );
+
+    t.throws(
+      () => filter.setBounds('position', [-Number.MAX_VALUE, 1, maximumFiniteFloat32, 5]),
+      /input scalar format/,
+      'horizontal minimum endpoints cannot overflow float32'
+    );
+    t.throws(
+      () => filter.setBounds('position', [-maximumFiniteFloat32, 1, Number.MAX_VALUE, 5]),
+      /input scalar format/,
+      'horizontal maximum endpoints cannot overflow float32'
+    );
+    t.throws(
+      () =>
+        filter.setBounds('position', [
+          -maximumFiniteFloat32,
+          -Number.MAX_VALUE,
+          maximumFiniteFloat32,
+          5
+        ]),
+      /input scalar format/,
+      'vertical minimum endpoints cannot overflow float32'
+    );
+    t.throws(
+      () =>
+        filter.setBounds('position', [
+          -maximumFiniteFloat32,
+          1,
+          maximumFiniteFloat32,
+          Number.MAX_VALUE
+        ]),
+      /input scalar format/,
+      'vertical maximum endpoints cannot overflow float32'
+    );
+    submitGraph(device, compiled, 'lux-filter-rejected-bounds');
+    t.deepEqual(
+      await readUint32(outputBuffer, rowCount),
+      [0, 1, 1, 1, 1, 1, 0],
+      'rejected rectangular bounds preserve the previous GPU-resident selection'
+    );
+  } finally {
+    compiled.destroy();
+    filter.destroy();
+    for (const buffer of buffers) buffer.destroy();
+  }
+
+  t.end();
+});
+
 test('LuxFilter validates dimensions, linked views, interaction updates, and lifecycle', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
