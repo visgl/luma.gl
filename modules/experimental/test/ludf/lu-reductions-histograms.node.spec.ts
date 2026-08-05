@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
+import {GPUCommandGraph} from '@luma.gl/experimental';
 import {
   column,
   CompiledLuDataFrameAggregation,
@@ -14,7 +15,8 @@ import {
   parameter,
   type LuDataFrameGlobalAggregationDefinitions,
   type LuDataFrameGlobalAggregationResult,
-  type LuDataFrameHistogramOptions
+  type LuDataFrameHistogramOptions,
+  type LuDataFrameQueryParameters
 } from '@luma.gl/experimental/ludf';
 import {
   GPUData,
@@ -179,6 +181,51 @@ describe('LuDataFrame immutable global-reduction planning', () => {
     source.destroy();
     fixture.table.destroy();
   });
+
+  test('rejects strided scalar metrics before allocating global or histogram GPU outputs', () => {
+    const fixture = createAnalyticSourceFixture([2, 0, 3], {stridedFare: true});
+    Object.defineProperty(fixture.device, 'type', {value: 'webgpu'});
+    const source = new LuDataFrame({table: fixture.table});
+    const globalGraph = new GPUCommandGraph<LuDataFrameQueryParameters>(fixture.device, {
+      id: 'ludf-strided-global-metric'
+    });
+    const histogramGraph = new GPUCommandGraph<LuDataFrameQueryParameters>(fixture.device, {
+      id: 'ludf-strided-histogram-metric'
+    });
+    const createBuffer = vi.spyOn(fixture.device, 'createBuffer');
+    const addGlobalPass = vi.spyOn(globalGraph, 'addComputePass');
+    const addHistogramPass = vi.spyOn(histogramGraph, 'addComputePass');
+    const sourceVector = fixture.table.gpuVectors['fare'];
+
+    expect(sourceVector.byteStride).toBe(8);
+    expect(sourceVector.rowByteLength).toBe(4);
+    expect(sourceVector.stride).toBe(1);
+    expect(sourceVector.data.map(chunk => chunk.byteStride)).toEqual([8, 8, 8]);
+    expect(source.batches.map(batch => batch.numRows)).toEqual([2, 0, 3]);
+
+    expect(() =>
+      source
+        .aggregate({
+          total: {sum: 'fare'},
+          minimum: {min: 'fare'},
+          maximum: {max: 'fare'},
+          average: {mean: 'fare'}
+        })
+        .compile(globalGraph)
+    ).toThrow(/packed|stride|aligned/i);
+    expect(() =>
+      source.histogram('fare', {bins: 4, domain: [0, 80]}).compile(histogramGraph)
+    ).toThrow(/packed|stride|aligned/i);
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(addGlobalPass).not.toHaveBeenCalled();
+    expect(addHistogramPass).not.toHaveBeenCalled();
+
+    createBuffer.mockRestore();
+    addGlobalPass.mockRestore();
+    addHistogramPass.mockRestore();
+    source.destroy();
+    fixture.table.destroy();
+  });
 });
 
 describe('LuDataFrame immutable explicit-domain histogram planning', () => {
@@ -303,7 +350,7 @@ describe('LuDataFrame immutable explicit-domain histogram planning', () => {
 
 function createAnalyticSourceFixture(
   batchLengths: readonly number[],
-  options: {nullableFare?: boolean} = {}
+  options: {nullableFare?: boolean; stridedFare?: boolean} = {}
 ): AnalyticSourceFixture {
   const device = new NullDevice({id: 'ludf-analytic-reductions-node-device'});
   const buffers: Buffer[] = [];
@@ -324,7 +371,13 @@ function createAnalyticSourceFixture(
 
     return new GPURecordBatch<AnalyticSourceColumns>({
       gpuData: {
-        fare: makeAnalyticSourceData(device, buffers, length, 'float32'),
+        fare: makeAnalyticSourceData(
+          device,
+          buffers,
+          length,
+          'float32',
+          options.stridedFare ? {byteStride: 8, rowByteLength: 4, stride: 1} : undefined
+        ),
         distance: makeAnalyticSourceData(device, buffers, length, 'sint32'),
         category: makeAnalyticSourceData(device, buffers, length, 'uint32'),
         coordinates: makeAnalyticSourceData(device, buffers, length, 'float32x2')
@@ -354,13 +407,15 @@ function makeAnalyticSourceData<Format extends AnalyticSourceColumns[keyof Analy
   device: NullDevice,
   buffers: Buffer[],
   length: number,
-  format: Format
+  format: Format,
+  layout?: {byteStride: number; rowByteLength: number; stride: number}
 ): GPUData<Format> {
-  const byteStride = format === 'float32x2' ? 8 : Uint32Array.BYTES_PER_ELEMENT;
+  const byteStride =
+    layout?.byteStride ?? (format === 'float32x2' ? 8 : Uint32Array.BYTES_PER_ELEMENT);
   const buffer = device.createBuffer({
     byteLength: Math.max(length, 1) * byteStride,
     usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
   });
   buffers.push(buffer);
-  return new GPUData({buffer, format, length, ownsBuffer: true});
+  return new GPUData({buffer, format, length, ownsBuffer: true, ...layout});
 }

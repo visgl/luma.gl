@@ -51,6 +51,10 @@ export function validateLuAnalyticsSource<Source extends GPUTypeMap>(
     if (source.table.gpuConstants[name]) {
       throw new Error(`LuDataFrame analytics column "${name}" must contain GPU vector data`);
     }
+    const vector = source.table.gpuVectors[name];
+    if (vector) {
+      validateLuAnalyticsVectorLayout(vector, name);
+    }
     const field = source.schema.fields.find(candidate => candidate.name === name);
     if (field?.nullable && source.numRows > 0 && !source.validity[name as keyof Source & string]) {
       throw new Error(`LuDataFrame nullable analytics column "${name}" requires GPU validity`);
@@ -99,7 +103,29 @@ export function getLuAnalyticsVector<Selection extends GPUTypeMap>(
   if (!vector) {
     return new GPUVector({type: 'data', name, format, data: [], ownsData: false});
   }
+  validateLuAnalyticsVectorLayout(vector, name);
   return vector as GPUVector<LuAnalyticsScalarFormat>;
+}
+
+/** Rejects interleaved, padded, or misaligned rows before packed scalar shaders can consume them. */
+function validateLuAnalyticsVectorLayout(vector: GPUVector, name: string): void {
+  if (
+    vector.bufferLayout ||
+    vector.stride !== 1 ||
+    vector.byteStride !== UINT32_BYTE_LENGTH ||
+    vector.rowByteLength !== UINT32_BYTE_LENGTH ||
+    vector.data.some(
+      chunk =>
+        chunk.stride !== 1 ||
+        chunk.byteStride !== UINT32_BYTE_LENGTH ||
+        chunk.rowByteLength !== UINT32_BYTE_LENGTH ||
+        chunk.byteOffset % UINT32_BYTE_LENGTH !== 0
+    )
+  ) {
+    throw new Error(
+      `LuDataFrame analytics column "${name}" requires packed, uint32-aligned scalar GPU data`
+    );
+  }
 }
 
 /** Intersects query selection with an explicit nullable source/derived validity sidecar. */
