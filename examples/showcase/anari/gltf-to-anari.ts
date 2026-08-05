@@ -1,4 +1,3 @@
-import {Matrix4} from '@math.gl/core';
 import type {
   GLTFAccessorPostprocessed,
   GLTFImagePostprocessed,
@@ -8,8 +7,14 @@ import type {
   GLTFPostprocessed,
   GLTFTexturePostprocessed
 } from '@loaders.gl/gltf';
-import type {ANARIVector3} from '@luma.gl/anari';
-import {getTextureTransformMatrix, resolveTextureTransform} from '@luma.gl/gltf';
+import type {ANARIAnimationNodeDescription, ANARIVector3} from '@luma.gl/anari';
+import {makeANARIAnimationClipsFromGLTF} from '@luma.gl/anari/gltf';
+import {
+  getTextureTransformMatrix,
+  parseGLTFAnimations,
+  resolveTextureTransform
+} from '@luma.gl/gltf';
+import {Matrix4} from '@math.gl/core';
 import type {
   ANARIJSONScene,
   JSONGeometryDeclaration,
@@ -33,6 +38,7 @@ type GLTFTranslationState = {
   textureIdentifiers: Map<string, string>;
   materialIdentifiers: Map<GLTFMaterialPostprocessed, string>;
   surfaceIdentifiers: Map<string, string>;
+  nodeIdentifiers: Record<string, string>;
   nextIdentifier: number;
 };
 
@@ -83,6 +89,7 @@ export async function makeANARIJSONSceneFromGLTF(
     textureIdentifiers: new Map(),
     materialIdentifiers: new Map(),
     surfaceIdentifiers: new Map(),
+    nodeIdentifiers: {},
     nextIdentifier: 0
   };
 
@@ -91,15 +98,106 @@ export async function makeANARIJSONSceneFromGLTF(
     translateNode(node, new Matrix4(), state);
   }
 
+  const materialIdentifiers = gltf.materials.map(material =>
+    state.materialIdentifiers.get(material)
+  );
+  const samplerIdentifiers: Record<string, string> = {};
+  for (const [materialIndex, identifier] of materialIdentifiers.entries()) {
+    if (!identifier) {
+      continue;
+    }
+    const material = scene.materials[identifier];
+    for (const slot of [
+      'baseColor',
+      'normal',
+      'metallicRoughness',
+      'emissive',
+      'occlusion',
+      'clearcoat',
+      'transmission',
+      'sheenColor'
+    ] as const) {
+      const textureIdentifier = material[`${slot}Texture`];
+      if (textureIdentifier) {
+        samplerIdentifiers[`${materialIndex}:${slot}`] = textureIdentifier;
+      }
+    }
+  }
+  const clips = makeANARIAnimationClipsFromGLTF(parseGLTFAnimations(gltf), {
+    nodeIdentifiers: state.nodeIdentifiers,
+    materialIdentifiers,
+    materialAlphaModes: gltf.materials.map(material =>
+      material.alphaMode === 'BLEND' ? 'BLEND' : material.alphaMode === 'MASK' ? 'MASK' : 'OPAQUE'
+    ),
+    samplerIdentifiers
+  });
+  if (clips.length > 0) {
+    scene.clips = clips;
+    scene.playback = {clip: clips[0].name, playing: true, loop: 'repeat'};
+    scene.description = `Imported glTF · ${clips.length} animation clip${clips.length === 1 ? '' : 's'} · retained PBR scene`;
+  }
+
+  const presentationTransform = makePresentationTransform(state.bounds);
   addImportedScenePresentation(scene, state.bounds);
+  if (scene.nodes && Object.keys(scene.nodes).length > 0) {
+    let presentationNodeIdentifier = 'anari-presentation-root';
+    while (presentationNodeIdentifier in scene.nodes) {
+      presentationNodeIdentifier += '-root';
+    }
+    for (const declaration of Object.values(scene.nodes)) {
+      if (!declaration.parent) {
+        declaration.parent = presentationNodeIdentifier;
+      }
+    }
+    scene.nodes[presentationNodeIdentifier] = {matrix: Array.from(presentationTransform)};
+  }
   return scene;
+}
+
+function makePresentationTransform(bounds: ImportedSceneBounds): Matrix4 {
+  const extent = Math.max(
+    bounds.maximum[0] - bounds.minimum[0],
+    bounds.maximum[1] - bounds.minimum[1],
+    bounds.maximum[2] - bounds.minimum[2],
+    0.001
+  );
+  return new Matrix4()
+    .scale(11.5 / extent)
+    .translate([
+      -(bounds.minimum[0] + bounds.maximum[0]) / 2,
+      -bounds.minimum[1],
+      -(bounds.minimum[2] + bounds.maximum[2]) / 2
+    ]);
 }
 
 function translateNode(
   node: GLTFNodePostprocessed,
   parentTransform: Matrix4,
-  state: GLTFTranslationState
+  state: GLTFTranslationState,
+  parentIdentifier?: string
 ): void {
+  const nodeIdentifier = node.id;
+  state.nodeIdentifiers[node.id] = nodeIdentifier;
+  state.scene.nodes ||= {};
+  const declaration: ANARIAnimationNodeDescription = {
+    ...(parentIdentifier ? {parent: parentIdentifier} : {}),
+    ...(node.translation
+      ? {translation: [node.translation[0], node.translation[1], node.translation[2]] as const}
+      : {}),
+    ...(node.rotation
+      ? {
+          rotation: [
+            node.rotation[0],
+            node.rotation[1],
+            node.rotation[2],
+            node.rotation[3]
+          ] as const
+        }
+      : {}),
+    ...(node.scale ? {scale: [node.scale[0], node.scale[1], node.scale[2]] as const} : {}),
+    ...(node.matrix ? {matrix: Array.from(node.matrix)} : {})
+  };
+  state.scene.nodes[nodeIdentifier] = declaration;
   const transform = new Matrix4(parentTransform);
   if (node.matrix) {
     transform.multiplyRight(node.matrix);
@@ -144,11 +242,12 @@ function translateNode(
         ...(state.scene.instances || []),
         {'@@id': identifier, surface, matrix: Array.from(transform)}
       ];
+      declaration.instances = [...(declaration.instances || []), identifier];
     }
   }
 
   for (const child of node.children || []) {
-    translateNode(child, transform, state);
+    translateNode(child, transform, state, nodeIdentifier);
   }
 }
 
@@ -190,6 +289,10 @@ function getSurfaceIdentifier(
   if (textureCoordinates) {
     geometry['vertex.attribute1'] = Array.from(textureCoordinates.value);
   }
+  const additionalTextureCoordinates = primitive.attributes['TEXCOORD_1'];
+  if (additionalTextureCoordinates) {
+    geometry['vertex.attribute2'] = Array.from(additionalTextureCoordinates.value);
+  }
 
   const material = getMaterialIdentifier(primitive.material, state);
   state.scene.geometries[surfaceIdentifier] = geometry;
@@ -206,10 +309,10 @@ function getMaterialIdentifier(
     const identifier = 'default-material';
     state.scene.materials[identifier] ||= {
       '@@type': 'physicallyBased',
-      baseColor: [0.72, 0.75, 0.82],
-      metallic: 0.35,
-      roughness: 0.32,
-      clearcoat: 0.24
+      baseColor: [1, 1, 1],
+      metallic: 1,
+      roughness: 1,
+      clearcoat: 0
     };
     return identifier;
   }
@@ -222,7 +325,12 @@ function getMaterialIdentifier(
   const identifier = createIdentifier(sourceMaterial.name || sourceMaterial.id, 'material', state);
   const parameters = sourceMaterial.pbrMetallicRoughness;
   const baseColor = parameters?.baseColorFactor || [1, 1, 1, 1];
-  const isTransparent = sourceMaterial.alphaMode === 'BLEND' || baseColor[3] < 1;
+  const alphaMode =
+    sourceMaterial.alphaMode === 'BLEND'
+      ? 'blend'
+      : sourceMaterial.alphaMode === 'MASK'
+        ? 'mask'
+        : 'opaque';
   const clearcoat = sourceMaterial.extensions?.['KHR_materials_clearcoat'];
   const iridescence = sourceMaterial.extensions?.['KHR_materials_iridescence'];
   const transmission = sourceMaterial.extensions?.['KHR_materials_transmission'];
@@ -231,15 +339,17 @@ function getMaterialIdentifier(
   const material: JSONMaterialDeclaration = {
     '@@type': 'physicallyBased',
     baseColor: [baseColor[0], baseColor[1], baseColor[2]],
+    alphaMode,
+    doubleSided: sourceMaterial.doubleSided ?? false,
     metallic: clamp(parameters?.metallicFactor ?? 1, 0, 1),
-    roughness: clamp(parameters?.roughnessFactor ?? 1, 0.045, 1),
-    clearcoat: clamp(clearcoat?.clearcoatFactor ?? (isTransparent ? 0.82 : 0.18), 0, 1),
-    clearcoatRoughness: clamp(clearcoat?.clearcoatRoughnessFactor ?? 0.18, 0, 1),
+    roughness: clamp(parameters?.roughnessFactor ?? 1, 0, 1),
+    clearcoat: clamp(clearcoat?.clearcoatFactor ?? 0, 0, 1),
+    clearcoatRoughness: clamp(clearcoat?.clearcoatRoughnessFactor ?? 0, 0, 1),
     iridescence: clamp(iridescence?.iridescenceFactor ?? 0, 0, 1),
     transmission: clamp(transmission?.transmissionFactor ?? 0, 0, 1),
     indexOfRefraction: clamp(indexOfRefraction?.ior ?? 1.5, 1, 2.5),
     sheenColor: toVector3(sheen?.sheenColorFactor, [0, 0, 0]),
-    sheenRoughness: clamp(sheen?.sheenRoughnessFactor ?? 0.5, 0, 1),
+    sheenRoughness: clamp(sheen?.sheenRoughnessFactor ?? 0, 0, 1),
     normalScale: clamp(sourceMaterial.normalTexture?.scale ?? 1, 0, 4),
     occlusionStrength: clamp(sourceMaterial.occlusionTexture?.strength ?? 1, 0, 1)
   };
@@ -275,13 +385,15 @@ function getMaterialIdentifier(
   if (sourceMaterial.emissiveTexture || emissiveFactor.some(value => value > 0)) {
     material.emissive = toVector3(emissiveFactor, [1, 1, 1]);
     material.emissiveStrength =
-      sourceMaterial.extensions?.['KHR_materials_emissive_strength']?.emissiveStrength ??
-      (sourceMaterial.emissiveTexture ? 4.8 : 1);
+      sourceMaterial.extensions?.['KHR_materials_emissive_strength']?.emissiveStrength ?? 1;
   }
 
-  if (isTransparent || (material.transmission || 0) > 0) {
-    material.opacity = clamp(baseColor[3] < 1 ? baseColor[3] : 0.42, 0.08, 1);
-    material.alphaMode = 'blend';
+  if (alphaMode === 'mask') {
+    material.alphaCutoff = clamp(sourceMaterial.alphaCutoff ?? 0.5, 0, 1);
+  }
+
+  if (alphaMode === 'blend' || alphaMode === 'mask') {
+    material.opacity = clamp(baseColor[3], 0, 1);
   }
 
   state.scene.materials[identifier] = material;
@@ -357,7 +469,10 @@ function addMaterialTexture(
   }
 
   const transform = getTextureTransform(textureInfo);
-  const cacheKey = `${image.id}:${colorSpace}:${transform?.join(',') || 'identity'}`;
+  const requestedTextureCoordinateSet =
+    textureInfo.extensions?.['KHR_texture_transform']?.texCoord ?? textureInfo.texCoord ?? 0;
+  const textureCoordinateSet = requestedTextureCoordinateSet === 1 ? 1 : 0;
+  const cacheKey = `${image.id}:${colorSpace}:${textureCoordinateSet}:${transform?.join(',') || 'identity'}`;
   let identifier = state.textureIdentifiers.get(cacheKey);
   if (!identifier) {
     const source = getImageSource(image, state);
@@ -366,6 +481,9 @@ function addMaterialTexture(
     }
     identifier = createIdentifier(image.name || image.id, 'texture', state);
     const declaration: JSONTextureDeclaration = {source, colorSpace};
+    if (textureCoordinateSet === 1) {
+      declaration.textureCoordinateSet = textureCoordinateSet;
+    }
     if (transform) {
       declaration.transform = transform;
     }

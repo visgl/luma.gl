@@ -1,9 +1,9 @@
 import {Matrix4} from '@math.gl/core';
 import {
+  type ANARIJSONScene,
   createGeneratedGeometry,
   createInstanceTransform,
   createStarfieldInstances,
-  type ANARIJSONScene,
   type JSONGeometryDeclaration,
   type JSONMaterialDeclaration
 } from './playground-scene';
@@ -361,8 +361,14 @@ function makeGLTFMaterial(
       roughnessFactor: material.roughness ?? 0.38
     }
   };
-  if (alpha < 1 || material.alphaMode === 'blend') {
+  if (material.alphaMode === 'mask') {
+    result['alphaMode'] = 'MASK';
+    result['alphaCutoff'] = material.alphaCutoff ?? 0.5;
+  } else if (material.alphaMode === 'blend' || (alpha < 1 && material.alphaMode !== 'opaque')) {
     result['alphaMode'] = 'BLEND';
+  }
+  if (material.doubleSided) {
+    result['doubleSided'] = true;
   }
   if (material.emissive) {
     result['emissiveFactor'] = Array.from(material.emissive);

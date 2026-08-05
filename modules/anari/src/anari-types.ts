@@ -1,5 +1,5 @@
-import type {NumberArray9, TypedArray} from '@math.gl/core';
 import type {Texture} from '@luma.gl/core';
+import type {NumberArray9, TypedArray} from '@math.gl/core';
 import type {
   ANARIArray,
   ANARICamera,
@@ -8,8 +8,8 @@ import type {
   ANARIInstance,
   ANARILight,
   ANARIMaterial,
-  ANARISampler,
   ANARIRenderer,
+  ANARISampler,
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
@@ -79,7 +79,12 @@ export type ANARIMaterialParameters = {
   metallic?: number;
   roughness?: number;
   opacity?: number;
-  alphaMode?: 'opaque' | 'blend';
+  alphaMode?: 'opaque' | 'mask' | 'blend';
+  alphaCutoff?: number;
+  doubleSided?: boolean;
+  unlit?: boolean;
+  specularColor?: ANARIVector3;
+  specularIntensity?: number;
   clearcoat?: number;
   iridescence?: number;
   clearcoatRoughness?: number;

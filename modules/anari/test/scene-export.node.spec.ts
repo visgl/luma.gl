@@ -40,3 +40,33 @@ test('ANARI scene exporter writes static USDA stages', testContext => {
   testContext.match(usd, /xformOp:transform/, 'retained instances become USD transforms');
   testContext.end();
 });
+
+test('ANARI glTF export preserves alpha masking, authored cutoff, and material sidedness', async testContext => {
+  const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
+  const materialIdentifier = Object.keys(scene.materials)[0];
+  const material = scene.materials[materialIdentifier];
+  material.alphaMode = 'mask';
+  material.alphaCutoff = 0.35;
+  material.doubleSided = true;
+  material.opacity = 0.4;
+
+  const maskedDocument = JSON.parse(await exportANARIJSONSceneToGLTF(scene));
+  const maskedMaterial = maskedDocument.materials.find(
+    candidate => candidate.name === materialIdentifier
+  );
+  testContext.equal(maskedMaterial.alphaMode, 'MASK', 'masked materials preserve their alpha mode');
+  testContext.equal(maskedMaterial.alphaCutoff, 0.35, 'masked materials preserve their cutoff');
+  testContext.equal(maskedMaterial.doubleSided, true, 'authored two-sided rendering round-trips');
+
+  material.alphaMode = 'opaque';
+  const opaqueDocument = JSON.parse(await exportANARIJSONSceneToGLTF(scene));
+  const opaqueMaterial = opaqueDocument.materials.find(
+    candidate => candidate.name === materialIdentifier
+  );
+  testContext.equal(
+    opaqueMaterial.alphaMode,
+    undefined,
+    'explicit opaque materials do not become blended solely because their alpha changes'
+  );
+  testContext.end();
+});
