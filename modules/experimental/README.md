@@ -18,3 +18,5 @@ Optional algorithm entry points keep specialized workflows out of the default ex
 - `@luma.gl/experimental/geospatial` provides graph-native spatial operations and distance kernels.
 - `@luma.gl/experimental/luproj` compiles arbitrary CPU coordinate transformations into
   precision-preserving, GPU-evaluated local projection patches.
+- `@luma.gl/experimental/lutrace` keeps execution-trace scenes, process/thread interactions,
+  dependency focus, and timeline picking separate from generic command-graph primitives.

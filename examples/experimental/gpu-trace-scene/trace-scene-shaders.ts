@@ -67,36 +67,3 @@ struct VertexOutput {
   let brightness = mix(0.68, 1.0, smoothstep(0.0, 0.12, edge));
   return vec4f(input.color * brightness, 0.92);
 }`;
-
-/** Resolves a requested timeline coordinate against GPU-visible canonical source rows. */
-export function getTraceScenePickingShader(spanCount: number): string {
-  return /* wgsl */ `
-struct PickRequest {
-  time: f32,
-  lane: f32,
-  active: u32,
-  padding: u32,
-};
-
-@group(0) @binding(0) var<storage, read> spans: array<vec4<u32>>;
-@group(0) @binding(1) var<storage, read> threadOffsets: array<u32>;
-@group(0) @binding(2) var<storage, read> visibleMask: array<u32>;
-@group(0) @binding(3) var<storage, read> request: PickRequest;
-@group(0) @binding(4) var<storage, read_write> result: atomic<u32>;
-
-@compute @workgroup_size(256) fn main(@builtin(global_invocation_id) globalId: vec3u) {
-  let sourceIndex = globalId.x;
-  if (sourceIndex >= ${spanCount}u || request.active == 0u || visibleMask[sourceIndex] == 0u) {
-    return;
-  }
-  let timing = spans[sourceIndex * 2u];
-  let ownership = spans[sourceIndex * 2u + 1u];
-  let start = bitcast<f32>(timing.x);
-  let duration = bitcast<f32>(timing.y);
-  let lane = f32(threadOffsets[ownership.y] + timing.z % ${TRACE_LANES_PER_THREAD}u);
-  if (request.time >= start && request.time <= start + duration &&
-      request.lane >= lane && request.lane < lane + 1.0) {
-    atomicMin(&result, sourceIndex);
-  }
-}`;
-}
