@@ -12,3 +12,13 @@ export type {
   LuDataFrameSourceInfo,
   LuDataFrameValidity
 } from './lu-data-frame';
+export {LuDataFrameQuery} from './lu-data-frame-query';
+export {and, column, literal, LuExpression, not, or, parameter} from './lu-expression';
+export type {
+  LuExpressionBinaryOperator,
+  LuExpressionNode,
+  LuExpressionUnaryOperator,
+  LuExpressionValue
+} from './lu-expression';
+export {CompiledLuDataFrameQuery} from './lu-query-compiler';
+export type {LuDataFrameQueryParameters} from './lu-query-compiler';
