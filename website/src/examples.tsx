@@ -1,6 +1,6 @@
 //
 
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   DeviceTabs,
@@ -1466,13 +1466,25 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
   type XRMode = 'immersive-ar' | 'immersive-vr';
 
   const selectedDevice = useStore(store => store.device);
+  const activeApplication = useSyncExternalStore(
+    WebXRKaleidoscopeApp.subscribeToCurrent,
+    () => WebXRKaleidoscopeApp.current,
+    () => null
+  );
   const [xrStatus, setXRStatus] = useState<XRStatus>('idle');
   const [xrMode, setXRMode] = useState<XRMode | null>(null);
   const [xrError, setXRError] = useState<string | null>(null);
-  const usesWebGPU = selectedDevice?.type === 'webgpu';
+  const effectiveDevice = activeApplication?.device;
+  const usesWebGPU =
+    selectedDevice?.type === 'webgpu' || (!selectedDevice && effectiveDevice?.type === 'webgpu');
   const hasWebGPUBinding = typeof window !== 'undefined' && 'XRGPUBinding' in window;
+  const hasNativeWebGPUXR =
+    usesWebGPU &&
+    selectedDevice?.type === effectiveDevice?.type &&
+    effectiveDevice?.props.xrCompatible === true &&
+    hasWebGPUBinding;
   const backendDescription = usesWebGPU
-    ? hasWebGPUBinding
+    ? hasNativeWebGPUXR
       ? 'WebGPU · native stereo projection layers when supported'
       : 'WebGPU desktop preview · choose WebGL2 for immersive fallback'
     : 'WebGL2 · immersive stereo and optional AR camera access';

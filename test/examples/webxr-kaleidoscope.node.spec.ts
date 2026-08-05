@@ -121,6 +121,13 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod.indexOf('this.preparePortal({')).toBeLessThan(
       renderMethod.indexOf('this.device.beginRenderPass({')
     );
+    expect(renderMethod).toContain('renderPass.setParameters({viewport: view.viewport})');
+    expect(renderMethod.indexOf('this.device.beginRenderPass({')).toBeLessThan(
+      renderMethod.indexOf('renderPass.setParameters({viewport: view.viewport})')
+    );
+    expect(
+      renderMethod.indexOf('renderPass.setParameters({viewport: view.viewport})')
+    ).toBeLessThan(renderMethod.indexOf('this.drawPortal(renderPass)'));
     expect(prepareMethod).toContain('this.uniformStore.setUniforms(');
     expect(prepareMethod).toContain('this.device.commandEncoder');
     expect(prepareMethod).toContain('this.model.predraw(this.device.commandEncoder)');
@@ -148,6 +155,26 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(wrapperSource).toContain('continuing with desktop preview');
     expect(deviceStoreSource).toContain(':xr-compatible');
     expect(deviceStoreSource).toContain('{xrCompatible: true}');
+  });
+
+  test('advertises native WebGPU XR only when the active application device supports it', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const examplesSource = readFileSync(WEBSITE_EXAMPLES_PATH, 'utf8');
+    const exampleStart = examplesSource.indexOf('export const WebXRKaleidoscopeExample');
+    const exampleEnd = examplesSource.indexOf('\nfunction isCameraPermissionBlocked', exampleStart);
+    const exampleSource = examplesSource.slice(exampleStart, exampleEnd);
+
+    expect(applicationSource).toContain('static subscribeToCurrent(listener: () => void)');
+    expect(applicationSource).toContain('AppAnimationLoopTemplate.setCurrent(this)');
+    expect(applicationSource).toContain('AppAnimationLoopTemplate.setCurrent(null)');
+    expect(exampleSource).toContain('useSyncExternalStore(');
+    expect(exampleSource).toContain('WebXRKaleidoscopeApp.subscribeToCurrent');
+    expect(exampleSource).toContain('const effectiveDevice = activeApplication?.device');
+    expect(exampleSource).toContain('selectedDevice?.type === effectiveDevice?.type');
+    expect(exampleSource).toContain('effectiveDevice?.props.xrCompatible === true');
+    expect(exampleSource).toMatch(
+      /const backendDescription\s*=\s*usesWebGPU\s*\?\s*hasNativeWebGPUXR/
+    );
   });
 
   test('keeps standalone launch, sidebar, and backend metadata accurate', () => {

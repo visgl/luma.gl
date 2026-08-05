@@ -243,6 +243,21 @@ void main(void) {
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static current: AppAnimationLoopTemplate | null = null;
+  private static readonly currentListeners = new Set<() => void>();
+
+  static subscribeToCurrent(listener: () => void): () => void {
+    AppAnimationLoopTemplate.currentListeners.add(listener);
+    return () => {
+      AppAnimationLoopTemplate.currentListeners.delete(listener);
+    };
+  }
+
+  private static setCurrent(current: AppAnimationLoopTemplate | null): void {
+    AppAnimationLoopTemplate.current = current;
+    for (const listener of AppAnimationLoopTemplate.currentListeners) {
+      listener();
+    }
+  }
 
   static info = `\
   <p>
@@ -284,7 +299,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({animationLoop, device}: AnimationProps) {
     super();
-    AppAnimationLoopTemplate.current = this;
     this.animationLoop = animationLoop;
     this.device = device;
     this.uniformStore = new UniformStore(device, {app});
@@ -322,12 +336,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', this._keyDownListener);
     }
+    AppAnimationLoopTemplate.setCurrent(this);
   }
 
   onFinalize(): void {
     this._isFinalized = true;
     if (AppAnimationLoopTemplate.current === this) {
-      AppAnimationLoopTemplate.current = null;
+      AppAnimationLoopTemplate.setCurrent(null);
     }
     void this.exitAR();
     if (typeof window !== 'undefined') {
@@ -457,11 +472,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
       const renderPass = this.device.beginRenderPass({
         framebuffer,
-        parameters: {viewport: view.viewport},
         clearColor: clearView ? clearColor : false,
         clearDepth: clearView ? 1 : false,
         clearStencil: false
       });
+      renderPass.setParameters({viewport: view.viewport});
       this.drawPortal(renderPass);
     }
   }
