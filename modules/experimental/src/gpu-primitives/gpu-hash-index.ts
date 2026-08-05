@@ -35,6 +35,24 @@ export type GPUHashIndexView = {
   maxProbeCount: number;
 };
 
+/** One preserved packed source chunk contributed to a shared hash-index rebuild. @internal */
+export type GPUHashIndexBuildBatch = {
+  keys: GraphDataView<'uint32'>;
+  values?: GraphDataView<'uint32'>;
+  validity?: GraphDataView<'uint32'>;
+  firstValue: number;
+};
+
+type GPUHashIndexBuildTarget = GPUHashIndexView & {
+  id: string;
+  statistics: GraphDataView<'uint32'>;
+};
+
+type GPUHashIndexBuildPass = GPUHashIndexBuildBatch & {
+  id: string;
+  firstSourceRow: number;
+};
+
 /** Properties for one packed fixed-capacity hash-index rebuild. */
 export type GPUHashIndexProps = {
   id?: string;
@@ -161,9 +179,45 @@ export class GPUHashIndex implements GPUHashIndexView {
       'uint32',
       this.tableKeys.length
     );
+    const batch: GPUHashIndexBuildPass = {
+      id: this.id,
+      keys: this.keys,
+      ...(this.values ? {values: this.values} : {}),
+      firstValue: this.firstValue,
+      firstSourceRow: 0
+    };
     addBuildInitializePass(graph, this, sourceRows);
-    if (this.keys.length > 0) addBuildPass(graph, this, sourceRows);
-    addBuildFinalizePass(graph, this, sourceRows);
+    if (this.keys.length > 0) addBuildPass(graph, this, sourceRows, batch);
+    addBuildFinalizePass(graph, this, sourceRows, batch);
+  }
+}
+
+/** Rebuilds one shared index from ordered source chunks without concatenating their buffers. @internal */
+export function addGPUHashIndexBuildBatchesToGraph<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  index: GPUHashIndexBuildTarget,
+  batches: readonly GPUHashIndexBuildBatch[]
+): void {
+  const sourceRows = createTransientView(
+    graph,
+    `${index.id}-source-rows`,
+    'uint32',
+    index.tableKeys.length
+  );
+  addBuildInitializePass(graph, index, sourceRows);
+
+  let firstSourceRow = 0;
+  for (const [batchIndex, batch] of batches.entries()) {
+    if (batch.keys.length > 0) {
+      const pass: GPUHashIndexBuildPass = {
+        ...batch,
+        id: `${index.id}-batch-${batchIndex}`,
+        firstSourceRow
+      };
+      addBuildPass(graph, index, sourceRows, pass);
+      addBuildFinalizePass(graph, index, sourceRows, pass);
+    }
+    firstSourceRow += batch.keys.length;
   }
 }
 
@@ -261,7 +315,7 @@ export class GPUHashIndexQuery {
 
 function addBuildInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  index: GPUHashIndex,
+  index: GPUHashIndexBuildTarget,
   sourceRows: GraphDataView<'uint32'>
 ): void {
   const layout = getDispatchLayout(
@@ -316,27 +370,38 @@ const STATISTICS_OFFSET: u32 = ${getViewElementOffset(index.statistics)}u;
 
 function addBuildPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  index: GPUHashIndex,
-  sourceRows: GraphDataView<'uint32'>
+  index: GPUHashIndexBuildTarget,
+  sourceRows: GraphDataView<'uint32'>,
+  batch: GPUHashIndexBuildPass
 ): void {
   const layout = getDispatchLayout(
-    index.keys.length,
+    batch.keys.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
+  const validityBinding = batch.validity
+    ? '@group(0) @binding(1) var<storage, read> inputValidity: array<u32>;'
+    : '';
+  const firstTableBinding = batch.validity ? 2 : 1;
+  const validityOffset = batch.validity ? getViewElementOffset(batch.validity) : 0;
+  const rejectInvalid = batch.validity
+    ? `if (inputValidity[${validityOffset}u + inputIndex] == 0u) { return; }`
+    : '';
   const source = /* wgsl */ `
-const ELEMENT_COUNT: u32 = ${index.keys.length}u;
+const ELEMENT_COUNT: u32 = ${batch.keys.length}u;
 const CAPACITY_MASK: u32 = ${index.tableKeys.length - 1}u;
 const MAX_PROBES: u32 = ${index.maxProbeCount}u;
 const DISPATCH_X: u32 = ${layout.x}u;
 const DISPATCH_Y: u32 = ${layout.y}u;
-const KEYS_OFFSET: u32 = ${getViewElementOffset(index.keys)}u;
+const KEYS_OFFSET: u32 = ${getViewElementOffset(batch.keys)}u;
 const TABLE_KEYS_OFFSET: u32 = ${getViewElementOffset(index.tableKeys)}u;
 const SOURCE_ROWS_OFFSET: u32 = ${getViewElementOffset(sourceRows)}u;
 const STATISTICS_OFFSET: u32 = ${getViewElementOffset(index.statistics)}u;
+const FIRST_SOURCE_ROW: u32 = ${batch.firstSourceRow}u;
 @group(0) @binding(0) var<storage, read> inputKeys: array<u32>;
-@group(0) @binding(1) var<storage, read_write> tableKeys: array<atomic<u32>>;
-@group(0) @binding(2) var<storage, read_write> sourceRows: array<atomic<u32>>;
-@group(0) @binding(3) var<storage, read_write> statistics: array<atomic<u32>>;
+${validityBinding}
+@group(0) @binding(${firstTableBinding}) var<storage, read_write> tableKeys: array<atomic<u32>>;
+@group(0) @binding(${firstTableBinding + 1}) var<storage, read_write> sourceRows: array<atomic<u32>>;
+@group(0) @binding(${firstTableBinding + 2}) var<storage, read_write> statistics: array<atomic<u32>>;
 
 fn hashKey(key: u32) -> u32 {
   var value = key;
@@ -352,6 +417,7 @@ fn hashKey(key: u32) -> u32 {
   let workgroupIndex = (workgroupId.z * DISPATCH_Y + workgroupId.y) * DISPATCH_X + workgroupId.x;
   let inputIndex = workgroupIndex * ${HASH_INDEX_WORKGROUP_SIZE}u + localIndex;
   if (inputIndex >= ELEMENT_COUNT) { return; }
+  ${rejectInvalid}
   let key = inputKeys[KEYS_OFFSET + inputIndex];
   if (key == ${GPU_HASH_INDEX_EMPTY_KEY}u) {
     atomicAdd(&statistics[STATISTICS_OFFSET + 3u], 1u);
@@ -383,7 +449,7 @@ fn hashKey(key: u32) -> u32 {
       break;
     }
     if (result.exchanged || result.old_value == key) {
-      atomicMin(&sourceRows[SOURCE_ROWS_OFFSET + slot], inputIndex);
+      atomicMin(&sourceRows[SOURCE_ROWS_OFFSET + slot], FIRST_SOURCE_ROW + inputIndex);
       inserted = result.exchanged;
       duplicate = !result.exchanged;
       break;
@@ -400,16 +466,20 @@ fn hashKey(key: u32) -> u32 {
   }
 }`;
   addComputationPass(graph, {
-    id: `${index.id}-build`,
+    id: `${batch.id}-build`,
     source,
     resources: [
-      {buffer: index.keys, usage: 'storage-read'},
+      {buffer: batch.keys, usage: 'storage-read'},
+      ...(batch.validity
+        ? ([{buffer: batch.validity, usage: 'storage-read'}] as GraphBufferUse[])
+        : []),
       {buffer: index.tableKeys, usage: 'storage-read-write'},
       {buffer: sourceRows, usage: 'storage-read-write'},
       {buffer: index.statistics, usage: 'storage-read-write'}
     ],
     bindings: {
-      inputKeys: index.keys,
+      inputKeys: batch.keys,
+      ...(batch.validity ? {inputValidity: batch.validity} : {}),
       tableKeys: index.tableKeys,
       sourceRows,
       statistics: index.statistics
@@ -420,22 +490,25 @@ fn hashKey(key: u32) -> u32 {
 
 function addBuildFinalizePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  index: GPUHashIndex,
-  sourceRows: GraphDataView<'uint32'>
+  index: GPUHashIndexBuildTarget,
+  sourceRows: GraphDataView<'uint32'>,
+  batch: GPUHashIndexBuildPass
 ): void {
   const layout = getDispatchLayout(
     index.tableKeys.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
-  const hasExplicitValues = Boolean(index.values && index.keys.length > 0);
+  const hasExplicitValues = Boolean(batch.values && batch.keys.length > 0);
   const valueBinding = hasExplicitValues
     ? '@group(0) @binding(3) var<storage, read> inputValues: array<u32>;'
     : '';
   const valueExpression = hasExplicitValues
-    ? `inputValues[${getViewElementOffset(index.values!)}u + sourceRow]`
-    : `${index.firstValue}u + sourceRow`;
+    ? `inputValues[${getViewElementOffset(batch.values!)}u + localSourceRow]`
+    : `${batch.firstValue}u + localSourceRow`;
   const source = /* wgsl */ `
 const CAPACITY: u32 = ${index.tableKeys.length}u;
+const FIRST_SOURCE_ROW: u32 = ${batch.firstSourceRow}u;
+const SOURCE_ROW_COUNT: u32 = ${batch.keys.length}u;
 const DISPATCH_X: u32 = ${layout.x}u;
 const DISPATCH_Y: u32 = ${layout.y}u;
 const TABLE_KEYS_OFFSET: u32 = ${getViewElementOffset(index.tableKeys)}u;
@@ -453,24 +526,26 @@ ${valueBinding}
   let slot = workgroupIndex * ${HASH_INDEX_WORKGROUP_SIZE}u + localIndex;
   if (slot >= CAPACITY || tableKeys[TABLE_KEYS_OFFSET + slot] == ${GPU_HASH_INDEX_EMPTY_KEY}u) { return; }
   let sourceRow = sourceRows[SOURCE_ROWS_OFFSET + slot];
+  if (sourceRow < FIRST_SOURCE_ROW || sourceRow - FIRST_SOURCE_ROW >= SOURCE_ROW_COUNT) { return; }
+  let localSourceRow = sourceRow - FIRST_SOURCE_ROW;
   tableValues[TABLE_VALUES_OFFSET + slot] = ${valueExpression};
 }`;
   addComputationPass(graph, {
-    id: `${index.id}-finalize`,
+    id: `${batch.id}-finalize`,
     source,
     resources: [
       {buffer: index.tableKeys, usage: 'storage-read'},
       {buffer: sourceRows, usage: 'storage-read'},
       {buffer: index.tableValues, usage: 'storage-write'},
       ...(hasExplicitValues
-        ? ([{buffer: index.values!, usage: 'storage-read'}] as GraphBufferUse[])
+        ? ([{buffer: batch.values!, usage: 'storage-read'}] as GraphBufferUse[])
         : [])
     ],
     bindings: {
       tableKeys: index.tableKeys,
       sourceRows,
       tableValues: index.tableValues,
-      ...(hasExplicitValues ? {inputValues: index.values!} : {})
+      ...(hasExplicitValues ? {inputValues: batch.values!} : {})
     },
     dispatchSize: layout
   });
