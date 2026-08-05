@@ -781,7 +781,7 @@ fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
   return pbrInfo.NdotL * lightColor * (diffuseContrib + specContrib);
 }
 
-fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
+fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   let baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   let metallicRoughnessUV = getMaterialUV(
     pbrMaterial.metallicRoughnessUVSet,
@@ -834,11 +834,11 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
   );
 
   // The albedo may be defined from a base texture or a flat color
-  var baseColor: vec4<f32> = pbrMaterial.baseColorFactor;
+  var baseColor: vec4<f32> = pbrMaterial.baseColorFactor * vertexColor;
   #ifdef HAS_BASECOLORMAP
   baseColor = SRGBtoLINEAR(
     textureSample(pbr_baseColorSampler, pbr_baseColorSamplerSampler, baseColorUV)
-  ) * pbrMaterial.baseColorFactor;
+  ) * pbrMaterial.baseColorFactor * vertexColor;
   #endif
 
   #ifdef ALPHA_CUTOFF

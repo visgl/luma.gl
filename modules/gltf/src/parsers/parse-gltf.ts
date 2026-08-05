@@ -2,27 +2,25 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, type PrimitiveTopology} from '@luma.gl/core';
-import {
-  Geometry,
-  GeometryAttribute,
-  GroupNode,
-  Material,
-  MaterialFactory,
-  ModelNode,
-  type ModelProps
-} from '@luma.gl/engine';
 import {
   type GLTFMaterialPostprocessed,
   type GLTFMeshPostprocessed,
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
 } from '@loaders.gl/gltf';
-import {pbrMaterial} from '@luma.gl/shadertools';
-
+import {Device, type PrimitiveTopology} from '@luma.gl/core';
+import {
+  createPBRMaterialFactory,
+  Geometry,
+  GeometryAttribute,
+  GroupNode,
+  Material,
+  ModelNode,
+  type ModelProps
+} from '@luma.gl/engine';
+import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
-import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
 
 import {parsePBRMaterial} from './parse-pbr-material';
 
@@ -72,7 +70,7 @@ export function parseGLTF(
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
 } {
   const combinedOptions = {...defaultOptions, ...options};
-  const materialFactory = new MaterialFactory(device, {modules: [pbrMaterial]});
+  const materialFactory = createPBRMaterialFactory(device);
   const materials = (gltf.materials || []).map((gltfMaterial, materialIndex) =>
     createGLTFMaterial(device, {
       id: getGLTFMaterialId(gltfMaterial, materialIndex),

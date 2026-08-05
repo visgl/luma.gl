@@ -31,6 +31,7 @@ import './animation/animator.spec';
 import './scenegraph/group-node.spec';
 import './scenegraph/scenegraph-node.spec';
 import './scenegraph/model-node.spec';
+import './scenegraph/scene-renderer.spec';
 
 // debug
 import './debug/get-debug-table-from-shader-layout.spec';

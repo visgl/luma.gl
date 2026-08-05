@@ -30,6 +30,16 @@ export type {MaterialProps} from './material/material';
 export {Material} from './material/material';
 export type {MaterialFactoryProps} from './material/material-factory';
 export {MaterialFactory} from './material/material-factory';
+export type {
+  CreatePBRMaterialOptions,
+  PBRMaterial,
+  PBRMaterialResources
+} from './material/pbr-material';
+export {
+  createPBRMaterial,
+  createPBRMaterialFactory,
+  getPBRMaterialMapUniforms
+} from './material/pbr-material';
 
 // Transforms
 export type {BufferTransformProps} from './compute/buffer-transform';
@@ -51,6 +61,8 @@ export type {
 export {PointLightModel} from './models/point-light-model';
 export {SpotLightModel} from './models/spot-light-model';
 export {DirectionalLightModel} from './models/directional-light-model';
+export type {CreatePBRModelOptions} from './models/pbr-model';
+export {createPBRModel, getPBRGeometryDefines, getPBRTextureDefines} from './models/pbr-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
@@ -63,6 +75,17 @@ export type {
 export {GroupNode} from './scenegraph/group-node';
 export type {ModelNodeProps} from './scenegraph/model-node';
 export {ModelNode} from './scenegraph/model-node';
+export type {
+  PreparedScene,
+  SceneAlphaMode,
+  SceneCamera,
+  SceneEnvironment,
+  SceneMaterial,
+  SceneRenderOptions,
+  SceneRenderStatistics,
+  SceneSurface
+} from './scenegraph/scene-renderer';
+export {getSceneAlphaMode, SceneRenderer} from './scenegraph/scene-renderer';
 
 // Geometries
 export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './geometry/geometry';

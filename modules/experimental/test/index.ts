@@ -9,6 +9,7 @@ import './oit/wboit-renderer.spec';
 import './shadows/shadow-map-renderer.spec';
 import './shadows/shadow-wgsl.spec';
 import './rendering/deferred-lighting.spec';
+import './rendering/deferred-scene-renderer.spec';
 import './rendering/g-buffer.spec';
 import './rendering/volumetric-fire-simulation.spec';
 

@@ -117,6 +117,7 @@ export type {
   GBufferShaderPassBindings
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
+export {DeferredSceneRenderer, supportsDeferredScene} from './rendering/deferred-scene-renderer';
 export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';
 export {
   createDeferredAmbientLightingShaderPassPipeline,
