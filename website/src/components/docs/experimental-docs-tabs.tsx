@@ -10,6 +10,7 @@ export type ExperimentalDocsTabId =
   | 'deferred-scene-renderer'
   | 'pbr-environment'
   | 'luproj'
+  | 'lugraph'
   | 'luxfilter'
   | 'lutrace'
   | 'g-buffer'
@@ -42,6 +43,7 @@ const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
     href: '/docs/api-reference/experimental/pbr-environment'
   },
   {id: 'luproj', label: 'GPU Projection', href: '/docs/api-reference/experimental/luproj'},
+  {id: 'lugraph', label: 'GPU Graphs', href: '/docs/api-reference/experimental/lugraph'},
   {id: 'luxfilter', label: 'LuxFilter', href: '/docs/api-reference/experimental/luxfilter'},
   {id: 'lutrace', label: 'GPU Traces', href: '/docs/api-reference/experimental/lutrace'},
   {id: 'g-buffer', label: 'GBuffer', href: '/docs/api-reference/experimental/g-buffer'},

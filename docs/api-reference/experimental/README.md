@@ -114,6 +114,18 @@ schemas, GPU-resident spans, process/thread hierarchy, dependency focus, interac
 and timeline picking in a dedicated optional submodule. It composes generic command graphs,
 visibility, flat scenes, and indirect rendering without adding trace concepts to their APIs.
 
+## GPU-resident Graph Analytics
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`@luma.gl/experimental/lugraph`](/docs/api-reference/experimental/lugraph) turns existing GPU
+edge columns into reusable compressed adjacency, vertex degrees, bounded shortest-path searches,
+weakly connected components, and dangling-aware PageRank scores. Social networks, dependency graphs,
+transaction investigations, and infrastructure maps can compose those operations into one WebGPU
+command graph without copying source batches or reading complete results back to JavaScript.
+
 ## GPU-resident Linked Crossfiltering
 
 <p class="badges">
