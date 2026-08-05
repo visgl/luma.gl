@@ -198,9 +198,9 @@ module.exports = {
         }
       }
     ],
-    function arrowLayersSourceAlias() {
+    function deckCommunitySourceAliases() {
       return {
-        name: 'arrow-layers-source-alias',
+        name: 'deck-community-source-aliases',
         configureWebpack(_configuration, isServer) {
           return {
             resolve: {
@@ -208,6 +208,10 @@ module.exports = {
                 '@deck.gl-community/arrow-layers$': path.resolve(
                   __dirname,
                   '../modules/arrow-layers/src/index.ts'
+                ),
+                '@deck.gl-community/luspatial$': path.resolve(
+                  __dirname,
+                  '../modules/deck-luspatial/src/index.ts'
                 )
               }
             },
