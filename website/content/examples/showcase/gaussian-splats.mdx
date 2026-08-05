@@ -29,12 +29,14 @@ Spherical-harmonic DC colors remain unclamped floating-point radiance from loadi
 rendering. Standard displays use configurable exposure and tone mapping, while compatible WebGPU
 displays can present directly to an extended-range `rgba16float` canvas.
 
-The standalone example also supports an optional neighboring loaders.gl 5 alpha checkout. Start
-it with `VITE_LOADERS_GL_ROOT=/path/to/loaders.gl` and open `?loaders=local` to stream the complete
-741,883-splat Train scene from the same Hugging Face catalog used by loaders.gl. The source picker
-also includes Dr Johnson, Playroom, and Truck; Train falls back to two GitHub-hosted segments when
-the Hugging Face CDN is unavailable. Use `?loaders=local&scene=fixture` for the small parser test
-asset or provide a custom `source` URL to load another supported Gaussian format.
+To explore complete captured scenes, open the
+[Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer). It starts with the
+741,883-splat Train capture and offers Truck, Dr Johnson, Playroom, GitHub fallback, and custom
+public source URLs without requiring a local loaders.gl checkout.
+
+The standalone example also supports an optional neighboring loaders.gl 5 alpha checkout. Start it
+with `VITE_LOADERS_GL_ROOT=/path/to/loaders.gl` and open `?loaders=local`; use
+`?loaders=local&scene=fixture` for the small parser test asset.
 
 Known GraphDECO captures use scene-specific camera-up conventions instead of assuming every scene
 is Z-up; Truck also starts from its published camera position. Foreground-based framing keeps the

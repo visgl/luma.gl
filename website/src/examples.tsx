@@ -742,20 +742,50 @@ export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
-export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="gaussian-splats"
-    title="Gaussian Splats"
-    subtitle="Progressive HDR Gaussian splat rendering"
-    directory="showcase"
-    devices={['webgpu', 'webgl2']}
-    template={GaussianSplatsApp}
-    config={exampleConfig}
-    canvasContextProfile="high-dynamic-range"
-    showStats
-    {...props}
-  />
-);
+export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
+  if (typeof window !== 'undefined') {
+    delete window.__lumaGaussianSplatsLoaderBundleUrl;
+  }
+
+  return (
+    <LumaExample
+      id="gaussian-splats"
+      title="Gaussian Splats"
+      subtitle="Progressive HDR Gaussian splat rendering"
+      directory="showcase"
+      devices={['webgpu', 'webgl2']}
+      template={GaussianSplatsApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      showStats
+      {...props}
+    />
+  );
+};
+
+export const GaussianSplatViewerExample: React.FC<WebsiteExampleProps> = props => {
+  const loaderBundleUrl = useBaseUrl('/standalone-examples/gaussian-splats/loaders-gl.mjs');
+
+  if (typeof window !== 'undefined') {
+    window.__lumaGaussianSplatsLoaderBundleUrl = loaderBundleUrl;
+  }
+
+  return (
+    <LumaExample
+      id="gaussian-splat-viewer"
+      title="Gaussian Splat Viewer"
+      subtitle="Complete captured scenes streamed from Hugging Face"
+      directory="showcase"
+      sourcePath="examples/showcase/gaussian-splats/app.ts"
+      devices={['webgpu', 'webgl2']}
+      template={GaussianSplatsApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      showStats
+      {...props}
+    />
+  );
+};
 
 export const InstancingExample: React.FC = props => (
   <LumaExample
