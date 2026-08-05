@@ -9,11 +9,11 @@ import {
   GPUCommandGraph,
   GPUSceneDrawGeneration,
   GPUSceneResourceGroups,
-  GPUTraceScene,
   GPU_SCENE_INVALID_REFERENCE,
   GPU_SCENE_RECORD_BYTE_LENGTH,
   type GraphDataView
 } from '@luma.gl/experimental';
+import {GPUTraceScene} from '@luma.gl/experimental/lutrace';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const BUFFER_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;

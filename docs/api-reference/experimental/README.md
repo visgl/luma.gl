@@ -60,6 +60,17 @@ introduces explicit command scheduling, typed table-backed graph views, hierarch
 compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written
 indirect draw commands.
 
+## GPU-native Trace Exploration
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`@luma.gl/experimental/lutrace`](/docs/api-reference/experimental/lutrace) keeps execution-trace
+schemas, GPU-resident spans, process/thread hierarchy, dependency focus, interactive filtering,
+and timeline picking in a dedicated optional submodule. It composes generic command graphs,
+visibility, flat scenes, and indirect rendering without adding trace concepts to their APIs.
+
 ## GPU-resident Linked Crossfiltering
 
 <p class="badges">

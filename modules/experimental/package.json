@@ -37,6 +37,11 @@
       "require": "./dist/luxfilter/index.cjs",
       "types": "./dist/luxfilter/index.d.ts"
     },
+    "./lutrace": {
+      "import": "./dist/lutrace/index.js",
+      "require": "./dist/lutrace/index.cjs",
+      "types": "./dist/lutrace/index.d.ts"
+    },
     "./luproj": {
       "import": "./dist/luproj/index.js",
       "require": "./dist/luproj/index.cjs",

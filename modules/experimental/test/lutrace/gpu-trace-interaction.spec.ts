@@ -7,13 +7,15 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {
   DrawCommandBuffer,
   GPUCommandGraph,
-  GPUTraceInteraction,
-  GPUTraceScene,
   GPU_SCENE_INVALID_REFERENCE,
   type CompiledGPUCommandGraph,
-  type GPUTraceInteractionProps,
   type GraphDataView
 } from '@luma.gl/experimental';
+import {
+  GPUTraceInteraction,
+  GPUTraceScene,
+  type GPUTraceInteractionProps
+} from '@luma.gl/experimental/lutrace';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
