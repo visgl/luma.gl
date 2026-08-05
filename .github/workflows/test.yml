@@ -124,21 +124,8 @@ jobs:
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
-      - name: Run headless tests and generate coverage
-        run: |
-          yarn test-coverage --shard=${{ matrix.shard }}/3
-
-      - name: Report disk usage after coverage
-        if: always()
-        run: |
-          df -h .
-          du -sh . coverage "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
-
-      - name: Run node tests
-        if: ${{ matrix.shard == 1 }}
-        run: |
-          yarn test-node
-
+      # Run the standalone WebGPU smoke before the coverage suite so its SwiftShader device starts
+      # from a clean runner state instead of inheriting resource pressure from prior browser tests.
       - name: Install Spatial Atlas Playwright Chromium
         if: ${{ matrix.shard == 1 }}
         run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas exec playwright install chromium
@@ -157,6 +144,21 @@ jobs:
           path: ${{ runner.temp }}/billion-point-spatial-atlas*.png
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Run headless tests and generate coverage
+        run: |
+          yarn test-coverage --shard=${{ matrix.shard }}/3
+
+      - name: Report disk usage after coverage
+        if: always()
+        run: |
+          df -h .
+          du -sh . coverage "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
+
+      - name: Run node tests
+        if: ${{ matrix.shard == 1 }}
+        run: |
+          yarn test-node
 
       - name: Sanitize lcov for Coveralls
         run: |

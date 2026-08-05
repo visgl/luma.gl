@@ -17,6 +17,8 @@ import {TAXI_GRID_SIZE, projectTaxiLongitudeLatitude, type LuSpatialTaxiData} fr
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
+type DestroyableResource = {destroy(): void};
+
 export type LuSpatialTaxiQueryStats = {
   residentPointCount: number;
   visiblePointCount: number;
@@ -28,12 +30,14 @@ export type LuSpatialTaxiQueryStats = {
 };
 
 export type LuSpatialTaxiQueryEffectOptions = {
+  /** Stable effect identity for this resident data revision. */
+  id?: string;
   onStats?: (stats: LuSpatialTaxiQueryStats) => void;
 };
 
 /** Deck effect that projects, indexes, and queries the resident taxi window on WebGPU. */
 export class LuSpatialTaxiQueryEffect implements Effect {
-  readonly id = 'luspatial-taxi-query-effect';
+  readonly id: string;
   readonly props = {};
   readonly useInPicking = true;
   readonly longitudeLatitudes: Buffer;
@@ -80,6 +84,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private queryInputsChanged = true;
   private lastViewportBounds: Float32Array | null = null;
   private destroyed = false;
+  private readonly ownedResources: DestroyableResource[] = [];
 
   constructor(
     device: Device,
@@ -91,80 +96,116 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     }
     this.device = device;
     this.data = data;
+    this.id = options.id ?? 'luspatial-taxi-query-effect';
     this.onStats = options.onStats;
 
-    const cellCount = TAXI_GRID_SIZE[0] * TAXI_GRID_SIZE[1];
-    this.longitudeLatitudes = device.createBuffer({
-      id: 'luspatial-taxi-longitude-latitudes',
-      data: data.longitudeLatitudes,
-      usage: Buffer.STORAGE
-    });
-    this.projectedPositions = device.createBuffer({
-      id: 'luspatial-taxi-projected-positions',
-      byteLength: data.pointCount * 2 * Float32Array.BYTES_PER_ELEMENT,
-      usage: Buffer.STORAGE
-    });
-    this.cellOffsets = device.createBuffer({
-      id: 'luspatial-taxi-cell-offsets',
-      byteLength: (cellCount + 1) * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
-    });
-    this.indexRowIndices = device.createBuffer({
-      id: 'luspatial-taxi-index-row-indices',
-      byteLength: data.pointCount * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
-    });
-    this.indexCount = createScalarBuffer(device, 'luspatial-taxi-index-count');
-    this.indexOverflow = createScalarBuffer(device, 'luspatial-taxi-index-overflow');
-    this.viewportIds = device.createBuffer({
-      id: 'luspatial-taxi-viewport-ids',
-      byteLength: data.pointCount * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
-    });
-    this.selectedIds = device.createBuffer({
-      id: 'luspatial-taxi-selected-ids',
-      byteLength: data.pointCount * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
-    });
-    this.viewportQuery = device.createBuffer({
-      id: 'luspatial-taxi-viewport-query',
-      byteLength: 4 * Float32Array.BYTES_PER_ELEMENT,
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    });
-    this.selectionQuery = device.createBuffer({
-      id: 'luspatial-taxi-selection-query',
-      byteLength: 3 * Float32Array.BYTES_PER_ELEMENT,
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    });
-    this.viewportTotalCount = createScalarBuffer(device, 'luspatial-taxi-viewport-total-count');
-    this.selectionTotalCount = createScalarBuffer(device, 'luspatial-taxi-selection-total-count');
-    this.viewportOverflow = createScalarBuffer(device, 'luspatial-taxi-viewport-overflow');
-    this.selectionOverflow = createScalarBuffer(device, 'luspatial-taxi-selection-overflow');
-    this.drawCommands = new DrawCommandBuffer(device, {
-      id: 'luspatial-taxi-draw-commands',
-      type: 'draw',
-      capacity: 2,
-      commands: [
-        {vertexCount: 6, instanceCount: 0},
-        {vertexCount: 6, instanceCount: 0}
-      ]
-    });
+    try {
+      const cellCount = TAXI_GRID_SIZE[0] * TAXI_GRID_SIZE[1];
+      this.longitudeLatitudes = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-longitude-latitudes',
+          data: data.longitudeLatitudes,
+          usage: Buffer.STORAGE
+        })
+      );
+      this.projectedPositions = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-projected-positions',
+          byteLength: data.pointCount * 2 * Float32Array.BYTES_PER_ELEMENT,
+          usage: Buffer.STORAGE
+        })
+      );
+      this.cellOffsets = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-cell-offsets',
+          byteLength: (cellCount + 1) * UINT32_BYTE_LENGTH,
+          usage: Buffer.STORAGE | Buffer.COPY_SRC
+        })
+      );
+      this.indexRowIndices = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-index-row-indices',
+          byteLength: data.pointCount * UINT32_BYTE_LENGTH,
+          usage: Buffer.STORAGE | Buffer.COPY_SRC
+        })
+      );
+      this.indexCount = this.ownResource(createScalarBuffer(device, 'luspatial-taxi-index-count'));
+      this.indexOverflow = this.ownResource(
+        createScalarBuffer(device, 'luspatial-taxi-index-overflow')
+      );
+      this.viewportIds = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-viewport-ids',
+          byteLength: data.pointCount * UINT32_BYTE_LENGTH,
+          usage: Buffer.STORAGE | Buffer.COPY_SRC
+        })
+      );
+      this.selectedIds = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-selected-ids',
+          byteLength: data.pointCount * UINT32_BYTE_LENGTH,
+          usage: Buffer.STORAGE | Buffer.COPY_SRC
+        })
+      );
+      this.viewportQuery = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-viewport-query',
+          byteLength: 4 * Float32Array.BYTES_PER_ELEMENT,
+          usage: Buffer.STORAGE | Buffer.COPY_DST
+        })
+      );
+      this.selectionQuery = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-selection-query',
+          byteLength: 3 * Float32Array.BYTES_PER_ELEMENT,
+          usage: Buffer.STORAGE | Buffer.COPY_DST
+        })
+      );
+      this.viewportTotalCount = this.ownResource(
+        createScalarBuffer(device, 'luspatial-taxi-viewport-total-count')
+      );
+      this.selectionTotalCount = this.ownResource(
+        createScalarBuffer(device, 'luspatial-taxi-selection-total-count')
+      );
+      this.viewportOverflow = this.ownResource(
+        createScalarBuffer(device, 'luspatial-taxi-viewport-overflow')
+      );
+      this.selectionOverflow = this.ownResource(
+        createScalarBuffer(device, 'luspatial-taxi-selection-overflow')
+      );
+      this.drawCommands = this.ownResource(
+        new DrawCommandBuffer(device, {
+          id: 'luspatial-taxi-draw-commands',
+          type: 'draw',
+          capacity: 2,
+          commands: [
+            {vertexCount: 6, instanceCount: 0},
+            {vertexCount: 6, instanceCount: 0}
+          ]
+        })
+      );
 
-    this.buildGraph = this.createBuildGraph();
-    this.queryGraph = this.createQueryGraph();
-    this.inspector.registerGraph(this.buildGraph);
-    this.inspector.registerGraph(this.queryGraph);
-    const commandEncoder = device.createCommandEncoder({id: 'luspatial-taxi-index-build'});
-    const encoding = this.buildGraph.encode(commandEncoder, {parameters: undefined});
-    this.inspector.recordEncoding(this.buildGraph.id, encoding);
-    this.buildEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
-    device.submit(commandEncoder.finish());
-    if (encoding.canReadGPUTimings) {
-      setTimeout(() => {
-        if (!this.destroyed) void this.inspector.recordGPUTimings(this.buildGraph.id, encoding);
-      }, 0);
+      this.buildGraph = this.ownResource(this.createBuildGraph());
+      this.queryGraph = this.ownResource(this.createQueryGraph());
+      this.inspector.registerGraph(this.buildGraph);
+      this.inspector.registerGraph(this.queryGraph);
+      const commandEncoder = device.createCommandEncoder({id: 'luspatial-taxi-index-build'});
+      const encoding = this.buildGraph.encode(commandEncoder, {parameters: undefined});
+      this.inspector.recordEncoding(this.buildGraph.id, encoding);
+      this.buildEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
+      device.submit(commandEncoder.finish());
+      this.publishStats();
+      if (encoding.canReadGPUTimings) {
+        setTimeout(() => {
+          if (!this.destroyed) {
+            void this.inspector.recordGPUTimings(this.buildGraph.id, encoding);
+          }
+        }, 0);
+      }
+    } catch (error) {
+      this.destroyOwnedResources();
+      throw error;
     }
-    this.publishStats();
   }
 
   setup(_context: EffectContext): void {}
@@ -232,7 +273,9 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       this.scheduleCountSample(0);
       if (encoding.canReadGPUTimings) {
         setTimeout(() => {
-          if (!this.destroyed) void this.inspector.recordGPUTimings(this.queryGraph.id, encoding);
+          if (!this.destroyed) {
+            void this.inspector.recordGPUTimings(this.queryGraph.id, encoding);
+          }
         }, 0);
       }
     }
@@ -240,28 +283,32 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   }
 
   cleanup(_context: EffectContext): void {
+    this.destroy();
+  }
+
+  /** Releases GPU resources when a newly constructed effect cannot be adopted by deck.gl. */
+  destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
     if (this.countSampleTimer !== null) clearTimeout(this.countSampleTimer);
-    this.buildGraph.destroy();
-    this.queryGraph.destroy();
-    this.projection?.destroy();
+    this.destroyOwnedResources();
     this.projection = null;
-    this.drawCommands.destroy();
-    this.longitudeLatitudes.destroy();
-    this.projectedPositions.destroy();
-    this.cellOffsets.destroy();
-    this.indexRowIndices.destroy();
-    this.indexCount.destroy();
-    this.indexOverflow.destroy();
-    this.viewportIds.destroy();
-    this.selectedIds.destroy();
-    this.viewportQuery.destroy();
-    this.selectionQuery.destroy();
-    this.viewportTotalCount.destroy();
-    this.selectionTotalCount.destroy();
-    this.viewportOverflow.destroy();
-    this.selectionOverflow.destroy();
+  }
+
+  private ownResource<T extends DestroyableResource>(resource: T): T {
+    this.ownedResources.push(resource);
+    return resource;
+  }
+
+  private destroyOwnedResources(): void {
+    for (let index = this.ownedResources.length - 1; index >= 0; index--) {
+      try {
+        this.ownedResources[index]?.destroy();
+      } catch {
+        // Continue releasing the remaining resources after device loss or partial construction.
+      }
+    }
+    this.ownedResources.length = 0;
   }
 
   private createBuildGraph(): CompiledGPUCommandGraph<void> {
@@ -301,12 +348,14 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       tolerance: 0.0005,
       maxDepth: 4
     });
-    const projection = new GPUProjection({
-      id: 'luspatial-taxi-luproj-project',
-      positions: source,
-      output: projected,
-      plan: projectionPlan
-    });
+    const projection = this.ownResource(
+      new GPUProjection({
+        id: 'luspatial-taxi-luproj-project',
+        positions: source,
+        output: projected,
+        plan: projectionPlan
+      })
+    );
     projection.addToGraph(graph);
     this.projection = projection;
     new GPUGridIndex({

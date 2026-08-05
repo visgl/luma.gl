@@ -28,7 +28,7 @@ test('taxi preprocessing preserves invalid rows, stored bounds, and little-endia
     });
     await writeFile(inputPath, arrow.tableToIPC(table, 'file'));
 
-    await runPreprocessor(inputPath, outputDirectory);
+    await runPreprocessor(inputPath, outputDirectory, ['--crs', 'OGC:CRS84']);
 
     const manifest: {
       version: number;
@@ -39,7 +39,7 @@ test('taxi preprocessing preserves invalid rows, stored bounds, and little-endia
     expect(manifest).toMatchObject({
       version: 2,
       coordinateColumns: ['x', 'y'],
-      coordinateSpace: {kind: 'source-xy', crs: null}
+      coordinateSpace: {kind: 'source-xy', crs: 'OGC:CRS84'}
     });
     expect(manifest.shards[0]?.bounds).toEqual([
       Math.fround(-0.1),
@@ -79,10 +79,12 @@ test('taxi preprocessing selects complete coordinate pairs without mixing aliase
 
     await runPreprocessor(inputPath, outputDirectory);
 
-    const manifest: {coordinateColumns: string[]} = JSON.parse(
-      await readFile(join(outputDirectory, 'manifest.json'), 'utf8')
-    );
+    const manifest: {
+      coordinateColumns: string[];
+      coordinateSpace: {kind: string; crs: string | null};
+    } = JSON.parse(await readFile(join(outputDirectory, 'manifest.json'), 'utf8'));
     expect(manifest.coordinateColumns).toEqual(['longitude', 'latitude']);
+    expect(manifest.coordinateSpace).toEqual({kind: 'source-xy', crs: null});
     const bytes = await readFile(join(outputDirectory, 'points-0000.f32'));
     const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     expect([dataView.getFloat32(0, true), dataView.getFloat32(4, true)]).toEqual([-73, 40]);
@@ -91,11 +93,24 @@ test('taxi preprocessing selects complete coordinate pairs without mixing aliase
   }
 });
 
-async function runPreprocessor(inputPath: string, outputDirectory: string): Promise<void> {
+async function runPreprocessor(
+  inputPath: string,
+  outputDirectory: string,
+  extraArguments: string[] = []
+): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     execFile(
       process.execPath,
-      [PREPROCESSOR_PATH, '--input', inputPath, '--output', outputDirectory, '--shard-points', '3'],
+      [
+        PREPROCESSOR_PATH,
+        '--input',
+        inputPath,
+        '--output',
+        outputDirectory,
+        '--shard-points',
+        '3',
+        ...extraArguments
+      ],
       error => (error ? reject(error) : resolve())
     );
   });
