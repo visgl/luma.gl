@@ -13,8 +13,9 @@ represent their relationships.
 
 `@luma.gl/experimental/lugraph` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
-degrees, shortest-path neighborhoods, weakly connected groups, and PageRank importance into
-caller-owned GPU buffers. Every operation composes with the existing `GPUCommandGraph`.
+degrees, shortest-path neighborhoods, weakly connected groups, PageRank importance, and progressive
+two-dimensional graph layouts into caller-owned GPU buffers. Every operation composes with the
+existing `GPUCommandGraph`.
 
 This is an experimental, headless graph analytics API, not a graph database, visualization
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
@@ -31,8 +32,8 @@ luGraph keeps the complete intermediate pipeline on one WebGPU device:
 ```text
 Existing GPU edge columns
     -> compressed adjacency
-    -> degree / shortest paths / weak components / PageRank
-    -> caller-owned GPU result columns
+    -> degree / shortest paths / weak components / PageRank / force layout
+    -> caller-owned GPU result columns and directly renderable positions
 ```
 
 The original source and target chunks keep their identities, including empty batches. Adjacency and
@@ -51,7 +52,8 @@ Use luGraph for browser applications that already own typed GPU relationship col
 combine graph analytics with further GPU work:
 
 - **Social and communication networks:** count contacts, highlight friends within a bounded number
-  of introductions, group disconnected networks, and rank influential accounts.
+  of introductions, group disconnected networks, rank influential accounts, and arrange connected
+  people into a readable map.
 - **Software and service dependencies:** follow incoming or outgoing dependency chains, find
   isolated dependency islands, and identify packages that many important packages depend on.
 - **Transaction and fraud investigations:** follow transfers around a selected account, identify
@@ -63,8 +65,9 @@ combine graph analytics with further GPU work:
 
 Choose another tool when the application needs weighted shortest paths, a graph query language,
 automatic CPU fallback, distributed execution, or compatibility with a CUDA or Python graph API.
-luGraph currently operates on one browser WebGPU device and intentionally does not provide those
-features.
+Exact force-directed layout also becomes expensive on very large graphs because it evaluates every
+pair of vertices. luGraph currently operates on one browser WebGPU device and intentionally does
+not provide those features or an approximate layout method.
 
 ## Choose the right graph operation
 
@@ -76,6 +79,7 @@ features.
 | `LuGraphBreadthFirstSearch` | Which vertices are within a chosen number of unweighted hops? | Distances, deterministic predecessors, and an optional selection mask | At most `O(D × (V + E))` for `D` compiled hops |
 | `LuGraphConnectedComponents` | Which vertices belong to the same weakly connected group? | One `uint32` component identifier per vertex | At most `O(K × (V + E))` for `K` bounded iterations |
 | `LuGraphPageRank` | Which vertices receive influence from other important vertices? | One normalized `float32` score per vertex | `O(K × (V + E))` for `K` iterations |
+| `LuGraphForceLayout` | How can related vertices be positioned as a readable network? | Directly renderable `float32x2` positions and persistent velocities | `O(V² + E)` per exact force iteration |
 
 `V` is the graph's explicit vertex count and `E` is its source-edge count. Undirected adjacency
 contains both directions for ordinary edges; an undirected self-loop appears once.
@@ -306,6 +310,82 @@ signal, not an automatic convergence threshold, early-termination mechanism, or 
 fixed budget reached the stationary distribution. Reductions use portable WebGPU workgroups and
 ordinary `float32` arithmetic, not floating-point atomics or native GPU `float64`.
 
+## Reveal relationships with LuGraphForceLayout
+
+**Question: How can I position connected entities so the structure of their relationships becomes
+visible?**
+
+`LuGraphForceLayout` progressively assigns two-dimensional positions to graph vertices. Imagine
+every vertex pushing away from every other vertex while each edge acts like a spring pulling its
+two endpoints together. Over successive frames, tightly connected entities move closer together,
+unrelated vertices spread apart, and a gentle pull toward the origin keeps the network in view.
+
+Use it to arrange a social graph so overlapping circles of friends become easier to inspect, map
+service dependencies around their most connected systems, expose connected counterparties in a
+transaction investigation, or turn a citation list into a navigable document network. Unlike
+degree, connected components, and PageRank, which answer numerical questions about a vertex, force
+layout answers where an application can draw that vertex. Your application still owns its
+renderer, colors, labels, and interaction design.
+
+```ts
+import {LuGraphForceLayout} from '@luma.gl/experimental/lugraph';
+
+const layout = new LuGraphForceLayout({
+  topology,
+  positions: nodePositions,
+  velocities: nodeVelocities,
+  pinned: pinnedVertices,
+  reset: resetRequested,
+  seed: 42,
+  iterationsPerFrame: 4,
+  repulsion: 1,
+  attraction: 0.1,
+  gravity: 0.01,
+  damping: 0.9,
+  maxVelocity: 1,
+  timeStep: 1
+});
+```
+
+`positions` and `velocities` are distinct, caller-owned, packed `GPUVector<'float32x2'>` values
+with one row per vertex. The physical position buffer must have both `Buffer.STORAGE` and
+`Buffer.VERTEX` usage: compute updates the exact same allocation that an application can bind as a
+render vertex attribute. Velocity storage requires `Buffer.STORAGE`. There is no intermediate
+position copy, CPU coordinate readback, or graph-owned layout scratch buffer.
+
+Every exact iteration evaluates repulsion against all other vertices, equal-strength attraction
+over every incident edge, gravity toward the origin, velocity damping, and a configurable maximum
+speed. The force pass finishes for every vertex before a separate integration pass writes the next
+positions. This globally ordered separation keeps the old position field stable during force
+evaluation without requiring floating-point atomics.
+
+Edges pull both endpoints together even when the source graph is directed, so directed layout
+requires both forward and reverse adjacency. Undirected layout reuses symmetric forward adjacency.
+Existing edge weights are preserved by topology but intentionally ignored by this unweighted
+spring model; a duplicate edge contributes another spring and a self-loop adds no displacement.
+
+Set a vertex's optional `uint32` `pinned` row to any nonzero value to preserve its current position
+and clear its velocity. This supports dragging a node into place, holding a selected account
+steady, or anchoring known reference vertices while their neighbors continue to settle.
+
+Writing a nonzero value to the optional one-row `uint32` `reset` vector requests deterministic
+initialization from `seed` and clears existing velocities. Pinned coordinates remain unchanged,
+and the GPU consumes the reset request by clearing it. Subsequent encodings warm-start from the
+current positions and velocities instead of restarting the simulation on every frame.
+
+The defaults are `seed: 0`, `iterationsPerFrame: 4`, `repulsion: 1`, `attraction: 0.1`,
+`gravity: 0.01`, `damping: 0.9`, `maxVelocity: 1`, and `timeStep: 1`. Increase the per-frame step
+count when visual responsiveness matters more than frame cost; lower it when other GPU work needs
+the same frame budget. If required forward or reverse adjacency overflows, the layout preserves
+every existing position and clears all velocities rather than drawing a misleading partial graph.
+
+Each force step performs exact `O(V² + E)` work: doubling the vertex count roughly quadruples the
+all-pairs repulsion. Choose this layout for graph sizes where exact pairwise interactions fit the
+available frame budget, especially when the result is consumed directly by GPU rendering. Avoid
+it for very large networks, already meaningful geographic coordinates, or applications requiring
+weighted springs. This implementation does not approximate pairwise interactions and does not
+claim to implement ForceAtlas2 or Barnes–Hut.
+
 ## Compose one GPU-resident workflow
 
 All graph contributors add work to the same caller-owned `GPUCommandGraph`. The following example
@@ -319,6 +399,7 @@ import {
   LuGraphBreadthFirstSearch,
   LuGraphConnectedComponents,
   LuGraphDegree,
+  LuGraphForceLayout,
   LuGraphPageRank,
   LuGraphTopology
 } from '@luma.gl/experimental/lugraph';
@@ -375,6 +456,14 @@ new LuGraphPageRank({
   iterations: 40,
   residual: finalRankChange
 }).addToGraph(workflow);
+new LuGraphForceLayout({
+  topology,
+  positions: nodePositions,
+  velocities: nodeVelocities,
+  pinned: pinnedVertices,
+  reset: resetRequested,
+  iterationsPerFrame: 4
+}).addToGraph(workflow);
 
 const compiled = workflow.compile();
 const encoder = device.createCommandEncoder({id: 'analyze-network'});
@@ -385,7 +474,8 @@ device.submit(encoder.finish());
 Constructors validate existing metadata; they do not upload graph data, submit commands, or read
 results. `addToGraph()` declares GPU work, `compile()` resolves the workflow, and the application
 explicitly encodes and submits it. Re-encoding rebuilds topology and recomputes the declared
-results from the current source and control buffers.
+results from the current source and control buffers while progressively advancing the existing
+layout positions and velocities.
 
 ## Ownership, capacity, and failure boundaries
 
@@ -395,8 +485,11 @@ results from the current source and control buffers.
   `DynamicBuffer` wrapper exposes the same underlying allocation through different views.
 - Adjacency capacities and overflow statuses are explicit. Breadth-first search fails closed to
   unreachable distances, weak components publish `0xffffffff`, and PageRank publishes zero scores
-  when a required neighbor list overflowed.
+  when a required neighbor list overflowed. Force layout preserves its existing positions and
+  clears velocities on required adjacency overflow.
 - Degree remains exact under neighbor overflow because its input is the complete CSR offset range.
+- Renderable layout positions require both `Buffer.STORAGE` and `Buffer.VERTEX` usage on their
+  original caller-owned allocation; position readback or repacking is never implicit.
 - Fixed component and PageRank iteration budgets do not imply convergence. Their optional status
   and final-change outputs remain GPU-resident until an application explicitly requests readback.
 - Work uses bounded WebGPU dispatch and portable storage bindings on one device. Original chunk
