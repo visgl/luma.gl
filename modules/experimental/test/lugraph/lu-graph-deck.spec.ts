@@ -174,6 +174,7 @@ test('luGraph deck.gl renders real source-chunk layers and asynchronously picks 
   const originalShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
   try {
     deck = createLuGraphExplorerDeck(container, {device});
+    deck.setProps({_animate: false});
     await waitForDeckEffect(deck);
     tapeTest.equal(
       ShaderAssembler.getDefaultShaderAssembler,
@@ -237,7 +238,6 @@ test('luGraph deck.gl renders real source-chunk layers and asynchronously picks 
     );
 
     await waitForDeckLayerModels([nodeLayer, ...edgeLayers]);
-    deck.setProps({_animate: false});
     effect.setPinnedVertex(0, true);
     effect.setVertexPosition(0, [0, 0]);
     const positionsReadSpy = vi.spyOn(effect.positions, 'readAsync');
