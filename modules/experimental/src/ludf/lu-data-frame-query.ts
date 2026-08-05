@@ -7,10 +7,16 @@ import type {GPUCommandGraph} from '../gpu-primitives/gpu-command-graph';
 import type {LuDataFrame} from './lu-data-frame';
 import {getLuExpressionColumnNames, LuExpression, type LuExpressionNode} from './lu-expression';
 import {
+  LuDataFrameAggregationQuery,
+  type LuDataFrameGlobalAggregationDefinitions,
+  type LuDataFrameScalarColumnNames
+} from './lu-global-aggregation-query';
+import {
   LuDataFrameGroupByQuery,
   type LuDataFrameColumnNamesOfFormat,
   type LuDataFrameGroupByOptions
 } from './lu-group-by-query';
+import {LuDataFrameHistogramQuery, type LuDataFrameHistogramOptions} from './lu-histogram-query';
 import {
   compileLuDataFrameQuery,
   type CompiledLuDataFrameQuery,
@@ -155,6 +161,21 @@ export class LuDataFrameQuery<
     options: LuDataFrameGroupByOptions = {}
   ): LuDataFrameGroupByQuery<Logical, SelectedColumns, Key, Source> {
     return new LuDataFrameGroupByQuery(this, key, options);
+  }
+
+  /** Plans globally reduced scalar statistics without allocating or submitting GPU work. */
+  aggregate<Definitions extends LuDataFrameGlobalAggregationDefinitions<Logical, SelectedColumns>>(
+    definitions: Definitions
+  ): LuDataFrameAggregationQuery<Logical, SelectedColumns, Definitions, Source> {
+    return new LuDataFrameAggregationQuery(this, definitions);
+  }
+
+  /** Plans explicit-domain histogram binning without reading or materializing source data. */
+  histogram<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    options: LuDataFrameHistogramOptions
+  ): LuDataFrameHistogramQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameHistogramQuery(this, column, options);
   }
 
   /** Materializes reusable GPU graph passes and compiler-owned selection/index/count outputs. */

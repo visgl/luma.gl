@@ -23,10 +23,16 @@ import {
 } from './lu-data-frame-query';
 import type {LuExpression} from './lu-expression';
 import type {
+  LuDataFrameAggregationQuery,
+  LuDataFrameGlobalAggregationDefinitions,
+  LuDataFrameScalarColumnNames
+} from './lu-global-aggregation-query';
+import type {
   LuDataFrameColumnNamesOfFormat,
   LuDataFrameGroupByOptions,
   LuDataFrameGroupByQuery
 } from './lu-group-by-query';
+import type {LuDataFrameHistogramOptions, LuDataFrameHistogramQuery} from './lu-histogram-query';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
 export type LuDataFrameOwnership = 'borrowed' | 'owned';
@@ -204,6 +210,28 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     this.assertAvailable();
     return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).groupBy(
       key,
+      options
+    );
+  }
+
+  /** Plans global numeric reductions without allocating or retaining any GPU resources. */
+  aggregate<Definitions extends LuDataFrameGlobalAggregationDefinitions<T>>(
+    definitions: Definitions
+  ): LuDataFrameAggregationQuery<T, keyof T & string, Definitions, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).aggregate(
+      definitions
+    );
+  }
+
+  /** Plans fixed-domain or irregular-edge histogram binning entirely on the CPU. */
+  histogram<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    options: LuDataFrameHistogramOptions
+  ): LuDataFrameHistogramQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).histogram(
+      column,
       options
     );
   }
