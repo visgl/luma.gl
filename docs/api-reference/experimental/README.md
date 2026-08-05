@@ -139,6 +139,8 @@ transaction investigations, and infrastructure maps can compose those operations
 command graph without copying source batches or reading complete results back to JavaScript.
 The [interactive graph explorer](/examples/experimental/lugraph-explorer) adds directly renderable
 exact force-layout coordinates, neighborhood highlighting, stable GPU picking, dragging, and pinning.
+An opt-in live benchmark compares six actual CPU and WebGPU graph workloads across five graph
+families while reporting command encoding, completion fences, setup costs, and layout accuracy.
 
 ## GPU-resident Linked Crossfiltering
 

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device} from '@luma.gl/core';
 import {
@@ -64,7 +64,8 @@ for (const kind of BENCHMARK_DATASETS) {
         vertexCount: 12,
         edgeCount: expectedDataset.edgeCount,
         cellCount: 16,
-        theta
+        theta,
+        pageRankIterations: 4
       });
       tapeTest.ok(
         submitSpy.mock.calls.length >= 7,
@@ -99,6 +100,7 @@ function assertBenchmarkReport(
     edgeCount: number;
     cellCount: number;
     theta: number;
+    pageRankIterations: number;
   }
 ): void {
   tapeTest.equal(
@@ -195,6 +197,38 @@ function assertBenchmarkReport(
       );
     } else if (path.gpuTimeMilliseconds) {
       assertDistribution(tapeTest, path.gpuTimeMilliseconds, `${path.algorithm} GPU timestamps`);
+    }
+
+    if (path.algorithm === 'connected-components') {
+      tapeTest.equal(path.iterations, 32, 'weak components report their actual bounded GPU passes');
+      tapeTest.equal(
+        path.converged,
+        true,
+        'weak components report the real final GPU fixed-point convergence status'
+      );
+      tapeTest.equal(
+        path.residual,
+        undefined,
+        'integer weak components never fabricate a residual'
+      );
+    } else if (path.algorithm === 'page-rank') {
+      tapeTest.equal(
+        path.iterations,
+        expected.pageRankIterations,
+        'PageRank reports its actual independently configured GPU pass count'
+      );
+      tapeTest.ok(
+        typeof path.residual === 'number' &&
+          Number.isFinite(path.residual) &&
+          path.residual >= 0 &&
+          path.residual <= 2,
+        'PageRank exposes the real finite, normalized final GPU L1 residual'
+      );
+      tapeTest.equal(path.converged, undefined, 'PageRank never invents a binary convergence flag');
+    } else {
+      tapeTest.equal(path.iterations, undefined, `${path.algorithm} omits unrelated pass counts`);
+      tapeTest.equal(path.converged, undefined, `${path.algorithm} omits unrelated convergence`);
+      tapeTest.equal(path.residual, undefined, `${path.algorithm} omits unrelated GPU residuals`);
     }
   }
   tapeTest.equal(

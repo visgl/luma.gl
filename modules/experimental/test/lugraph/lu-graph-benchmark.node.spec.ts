@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
 
@@ -10,9 +10,10 @@ import * as benchmarkModule from '@luma.gl/experimental/lugraph/benchmarks';
 import {
   makeLuGraphBenchmarkDataset,
   type LuGraphBenchmarkDatasetKind,
-  type LuGraphBenchmarkOptions
+  type LuGraphBenchmarkOptions,
+  type LuGraphBenchmarkPathReport
 } from '@luma.gl/experimental/lugraph/benchmarks';
-import {describe, expect, test} from 'vitest';
+import {describe, expect, expectTypeOf, test} from 'vitest';
 
 import {
   prepareLuGraphBenchmark,
@@ -63,6 +64,33 @@ describe('luGraph benchmark optional package boundary', () => {
     ]) {
       expect(dependencies?.['apache-arrow']).toBeUndefined();
     }
+  });
+
+  test('keeps bounded convergence and final residual metadata optional and backward compatible', () => {
+    expectTypeOf<LuGraphBenchmarkPathReport>()
+      .toHaveProperty('iterations')
+      .toEqualTypeOf<number | undefined>();
+    expectTypeOf<LuGraphBenchmarkPathReport>()
+      .toHaveProperty('converged')
+      .toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<LuGraphBenchmarkPathReport>()
+      .toHaveProperty('residual')
+      .toEqualTypeOf<number | undefined>();
+
+    const distribution = {minimum: 1, median: 1, percentile95: 1, maximum: 1};
+    const legacyPath: LuGraphBenchmarkPathReport = {
+      algorithm: 'topology',
+      cpuTimeMilliseconds: distribution,
+      cpuEncodeTimeMilliseconds: distribution,
+      synchronizedTimeMilliseconds: distribution,
+      maxAbsoluteError: 0,
+      importedBufferBytes: 4,
+      transientBufferBytes: 0
+    };
+
+    expect('iterations' in legacyPath).toBe(false);
+    expect('converged' in legacyPath).toBe(false);
+    expect('residual' in legacyPath).toBe(false);
   });
 });
 

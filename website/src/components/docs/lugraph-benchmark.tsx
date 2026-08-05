@@ -129,7 +129,7 @@ function LuGraphBenchmarkResults({
       </p>
 
       <div style={{overflowX: 'auto'}}>
-        <table style={{fontSize: 13, minWidth: 880, width: '100%'}}>
+        <table style={{fontSize: 13, minWidth: 1060, width: '100%'}}>
           <thead>
             <tr>
               <th>Graph operation</th>
@@ -138,6 +138,7 @@ function LuGraphBenchmarkResults({
               <th>Fenced GPU median</th>
               {report.timestampQueries ? <th>GPU timestamp</th> : null}
               <th>GPU versus CPU</th>
+              <th>Bounded convergence</th>
               <th>Oracle error</th>
               <th>GPU working memory</th>
             </tr>
@@ -173,6 +174,12 @@ function LuGraphBenchmarkResults({
         compared with the exact force reference. Measurements describe this browser and adapter,
         not cross-device performance guarantees.
       </p>
+
+      <p style={{fontSize: 12, margin: '8px 0 0'}}>
+        Weak-component convergence is read from its final GPU status after the stated bounded pass
+        count. PageRank reports its actual final GPU L₁ residual after its separately stated pass
+        count; neither metric changes the measured timing or implies early termination.
+      </p>
     </div>
   );
 }
@@ -202,6 +209,7 @@ function LuGraphBenchmarkRow({
         </td>
       ) : null}
       <td>{speedup.toFixed(2)}×</td>
+      <td>{formatConvergence(path)}</td>
       <td>{formatError(path.maxAbsoluteError)}</td>
       <td>
         {formatBytes(path.importedBufferBytes)} source · {formatBytes(path.transientBufferBytes)}{' '}
@@ -233,4 +241,20 @@ function formatBytes(bytes: number): string {
 
 function formatError(error: number): string {
   return error === 0 ? 'Exact' : error.toExponential(2);
+}
+
+function formatConvergence(path: LuGraphBenchmarkPathReport): string {
+  if (path.algorithm === 'connected-components' && path.iterations !== undefined) {
+    const status =
+      path.converged === undefined
+        ? 'status unavailable'
+        : path.converged
+          ? 'converged'
+          : 'not converged';
+    return `${path.iterations} passes · ${status}`;
+  }
+  if (path.algorithm === 'page-rank' && path.iterations !== undefined) {
+    return `${path.iterations} passes · L₁ ${path.residual?.toExponential(2) ?? 'unavailable'}`;
+  }
+  return '—';
 }

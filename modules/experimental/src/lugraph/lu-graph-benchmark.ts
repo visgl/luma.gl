@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 import {Buffer, type Device, type QuerySet} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/tables';
@@ -52,6 +53,8 @@ type BenchmarkExecution = {
 type BenchmarkValidation = {
   maxAbsoluteError: number;
   approximationMaxAbsoluteError?: number;
+  converged?: boolean;
+  residual?: number;
   readbackTimeMilliseconds: number;
 };
 
@@ -143,6 +146,12 @@ export async function runLuGraphBenchmark(
       );
       paths.push({
         algorithm: path.algorithm,
+        ...(finalValidation.converged === undefined
+          ? {}
+          : {iterations: resources.components.iterations, converged: finalValidation.converged}),
+        ...(finalValidation.residual === undefined
+          ? {}
+          : {iterations: resources.pageRank.iterations, residual: finalValidation.residual}),
         cpuTimeMilliseconds: context.cpuTimeMilliseconds[path.algorithm],
         cpuEncodeTimeMilliseconds: summarizeLuGraphBenchmarkSamples(
           executions.map(execution => execution.cpuEncodeTimeMilliseconds)
@@ -526,6 +535,8 @@ async function readBenchmarkPath(
   let readbackTimeMilliseconds = 0;
   let maxAbsoluteError = 0;
   let approximationMaxAbsoluteError: number | undefined;
+  let converged: boolean | undefined;
+  let residual: number | undefined;
   const readOutputs = async (
     ...vectors: (GPUVector<'uint32'> | GPUVector<'float32'> | GPUVector<'float32x2'>)[]
   ): Promise<number[][]> => {
@@ -576,18 +587,28 @@ async function readBenchmarkPath(
       break;
     }
     case 'connected-components': {
-      const [components, converged] = await readOutputs(
+      const [components, convergenceValues] = await readOutputs(
         resources.components.output,
         resources.components.converged!
       );
+      converged = convergenceValues[0] === 1;
       maxAbsoluteError = Math.max(
         getMaximumAbsoluteError(components, context.reference.components),
-        Math.abs(converged[0] - 1)
+        Math.abs(convergenceValues[0] - 1)
       );
       break;
     }
     case 'page-rank': {
-      const [values] = await readOutputs(resources.pageRank.output);
+      const [values, residualValues] = await readOutputs(
+        resources.pageRank.output,
+        resources.pageRank.residual!
+      );
+      residual = residualValues[0];
+      if (!Number.isFinite(residual) || residual < 0) {
+        throw new Error(
+          `luGraph benchmark page-rank produced an invalid GPU residual: ${residual}`
+        );
+      }
       maxAbsoluteError = Math.max(
         getMaximumAbsoluteError(values, context.reference.pageRank),
         Math.abs(values.reduce((sum, value) => sum + value, 0) - 1)
@@ -641,6 +662,8 @@ async function readBenchmarkPath(
   return {
     maxAbsoluteError,
     ...(approximationMaxAbsoluteError === undefined ? {} : {approximationMaxAbsoluteError}),
+    ...(converged === undefined ? {} : {converged}),
+    ...(residual === undefined ? {} : {residual}),
     readbackTimeMilliseconds
   };
 }

@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 /** Deterministic graph families compared against their actual browser GPU execution. */
 export type LuGraphBenchmarkDatasetKind =
@@ -54,6 +55,12 @@ export type LuGraphBenchmarkDistribution = {
 /** Correctness-gated timings and physical allocations for one real GPU algorithm. */
 export type LuGraphBenchmarkPathReport = {
   algorithm: LuGraphBenchmarkAlgorithm;
+  /** Compiled algorithm-iteration budget; this does not imply early stopping or convergence. */
+  iterations?: number;
+  /** Actual final GPU fixed-point status when the implementation publishes one. */
+  converged?: boolean;
+  /** Actual final GPU L1 residual when the implementation publishes that metric. */
+  residual?: number;
   cpuTimeMilliseconds: LuGraphBenchmarkDistribution;
   cpuEncodeTimeMilliseconds: LuGraphBenchmarkDistribution;
   synchronizedTimeMilliseconds: LuGraphBenchmarkDistribution;
