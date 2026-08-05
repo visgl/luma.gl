@@ -25,7 +25,8 @@ import {
   type ANARIVector3
 } from '@luma.gl/anari';
 import {type ANARIAnimationSceneHandle, makeANARIAnimationScene} from '@luma.gl/anari/gltf';
-import type {Texture} from '@luma.gl/core';
+import type {SamplerProps, Texture} from '@luma.gl/core';
+import {createGLTFTexture} from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 
 type JSONTypedObject<Subtype extends string> = {'@@type': Subtype};
@@ -88,6 +89,10 @@ export type JSONTextureDeclaration = {
   colorSpace?: 'srgb' | 'linear';
   textureCoordinateSet?: 0 | 1;
   transform?: readonly [number, number, number, number, number, number, number, number, number];
+  sampler?: Pick<
+    SamplerProps,
+    'addressModeU' | 'addressModeV' | 'minFilter' | 'magFilter' | 'mipmapFilter'
+  >;
 };
 
 export type JSONSurfaceDeclaration = {
@@ -344,17 +349,17 @@ export function createANARIJSONScene(
     if (!image) {
       throw new Error(`Texture "${identifier}" must be loaded before creating its ANARI scene.`);
     }
-    const texture = device.device.createTexture({
+    const texture = createGLTFTexture(device.device, image, {
       id: `anari-${identifier}`,
       width: image.width,
       height: image.height,
-      format: declaration.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : 'rgba8unorm',
-      data: image,
+      colorSpace: declaration.colorSpace || 'linear',
       sampler: {
         addressModeU: 'repeat',
         addressModeV: 'repeat',
         minFilter: 'linear',
-        magFilter: 'linear'
+        magFilter: 'linear',
+        ...declaration.sampler
       }
     });
     textures.push(texture);

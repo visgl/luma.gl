@@ -1,3 +1,4 @@
+import {convertSamplerToGLTF, getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 import {
   type ANARIJSONScene,
@@ -5,13 +6,15 @@ import {
   createInstanceTransform,
   createStarfieldInstances,
   type JSONGeometryDeclaration,
-  type JSONMaterialDeclaration
+  type JSONMaterialDeclaration,
+  type JSONTextureDeclaration
 } from './playground-scene';
 
 type MeshData = {
   positions: number[];
   normals: number[];
   textureCoordinates?: number[];
+  additionalTextureCoordinates?: number[];
   colors?: number[];
   indices: number[];
 };
@@ -49,8 +52,8 @@ export async function exportANARIJSONSceneToGLTF(scene: ANARIJSONScene): Promise
     }))
   );
   const textureIndices = new Map(textureEntries.map((entry, index) => [entry.identifier, index]));
-  for (const material of materials) {
-    resolveGLTFMaterialTextures(material, textureIndices);
+  for (const [materialIndex, sourceMaterial] of Object.values(scene.materials).entries()) {
+    resolveGLTFMaterialTextures(materials[materialIndex], sourceMaterial, textureIndices, scene);
   }
 
   const meshes: object[] = [];
@@ -81,6 +84,15 @@ export async function exportANARIJSONSceneToGLTF(scene: ANARIJSONScene): Promise
     if (meshData.textureCoordinates) {
       attributes['TEXCOORD_0'] = addFloatAccessor(
         meshData.textureCoordinates,
+        2,
+        bufferBuilder,
+        bufferViews,
+        accessors
+      );
+    }
+    if (meshData.additionalTextureCoordinates) {
+      attributes['TEXCOORD_1'] = addFloatAccessor(
+        meshData.additionalTextureCoordinates,
         2,
         bufferBuilder,
         bufferViews,
@@ -124,22 +136,39 @@ export async function exportANARIJSONSceneToGLTF(scene: ANARIJSONScene): Promise
   };
   if (textureEntries.length > 0) {
     gltf['images'] = textureEntries.map(entry => ({name: entry.identifier, uri: entry.uri}));
-    gltf['samplers'] = [{magFilter: 9729, minFilter: 9729, wrapS: 10497, wrapT: 10497}];
-    gltf['textures'] = textureEntries.map((entry, index) => ({
-      name: entry.identifier,
-      source: index,
-      sampler: 0
-    }));
+    const samplerIndices = new Map<string, number>();
+    const samplers: ReturnType<typeof convertSamplerToGLTF>[] = [];
+    gltf['textures'] = textureEntries.map((entry, index) => {
+      const sampler = convertSamplerToGLTF({
+        addressModeU: 'repeat',
+        addressModeV: 'repeat',
+        minFilter: 'linear',
+        magFilter: 'linear',
+        ...scene.textures?.[entry.identifier]?.sampler
+      });
+      const samplerKey = JSON.stringify(sampler);
+      let samplerIndex = samplerIndices.get(samplerKey);
+      if (samplerIndex === undefined) {
+        samplerIndex = samplers.length;
+        samplers.push(sampler);
+        samplerIndices.set(samplerKey, samplerIndex);
+      }
+      return {name: entry.identifier, source: index, sampler: samplerIndex};
+    });
+    gltf['samplers'] = samplers;
   }
   if (cameraNode) {
     gltf['cameras'] = [cameraNode.camera];
   }
-  const materialExtensions = collectMaterialExtensions(materials);
-  if (lightExtension || materialExtensions.length > 0) {
-    gltf['extensionsUsed'] = [
-      ...materialExtensions,
-      ...(lightExtension ? ['KHR_lights_punctual'] : [])
-    ];
+  const extensionsUsed = [
+    ...collectMaterialExtensions(materials),
+    ...(Object.values(scene.textures || {}).some(texture => texture.transform)
+      ? ['KHR_texture_transform']
+      : []),
+    ...(lightExtension ? ['KHR_lights_punctual'] : [])
+  ];
+  if (extensionsUsed.length > 0) {
+    gltf['extensionsUsed'] = extensionsUsed;
   }
   if (lightExtension) {
     gltf['extensions'] = {KHR_lights_punctual: {lights: lightExtension}};
@@ -239,6 +268,9 @@ function bakeGeometry(geometry: JSONGeometryDeclaration): MeshData {
       normals,
       textureCoordinates: geometry['vertex.attribute1']
         ? Array.from(geometry['vertex.attribute1'])
+        : undefined,
+      additionalTextureCoordinates: geometry['vertex.attribute2']
+        ? Array.from(geometry['vertex.attribute2'])
         : undefined,
       colors: geometry['vertex.attribute0'] ? Array.from(geometry['vertex.attribute0']) : undefined,
       indices: indices.length > 0 ? indices : makeSequentialIndices(positions.length / 3)
@@ -378,41 +410,88 @@ function makeGLTFMaterial(
       emissiveStrength: material.emissiveStrength
     });
   }
-  if (material.clearcoat !== undefined || material.clearcoatTexture) {
+  if (
+    (material.clearcoat ?? 0) > 0 ||
+    (material.clearcoatRoughness ?? 0) > 0 ||
+    material.clearcoatTexture ||
+    material.clearcoatRoughnessTexture ||
+    material.clearcoatNormalTexture
+  ) {
     addGLTFMaterialExtension(result, 'KHR_materials_clearcoat', {
       clearcoatFactor: material.clearcoat ?? 0,
-      clearcoatRoughnessFactor: material.clearcoatRoughness ?? 0,
-      clearcoatTexture: material.clearcoatTexture
+      clearcoatRoughnessFactor: material.clearcoatRoughness ?? 0
     });
   }
-  if (material.transmission !== undefined || material.transmissionTexture) {
+  if ((material.transmission ?? 0) > 0 || material.transmissionTexture) {
     addGLTFMaterialExtension(result, 'KHR_materials_transmission', {
-      transmissionFactor: material.transmission ?? 0,
-      transmissionTexture: material.transmissionTexture
+      transmissionFactor: material.transmission ?? 0
     });
   }
-  if (material.indexOfRefraction !== undefined) {
+  if (material.indexOfRefraction !== undefined && material.indexOfRefraction !== 1.5) {
     addGLTFMaterialExtension(result, 'KHR_materials_ior', {
       ior: material.indexOfRefraction
     });
   }
-  if (material.sheenColor || material.sheenColorTexture) {
+  if (
+    material.sheenColor?.some(component => component !== 0) ||
+    (material.sheenRoughness ?? 0) > 0 ||
+    material.sheenColorTexture ||
+    material.sheenRoughnessTexture
+  ) {
     addGLTFMaterialExtension(result, 'KHR_materials_sheen', {
       sheenColorFactor: material.sheenColor || [0, 0, 0],
-      sheenRoughnessFactor: material.sheenRoughness ?? 0,
-      sheenColorTexture: material.sheenColorTexture
+      sheenRoughnessFactor: material.sheenRoughness ?? 0
     });
   }
-  for (const name of [
-    'baseColorTexture',
-    'normalTexture',
-    'metallicRoughnessTexture',
-    'emissiveTexture',
-    'occlusionTexture'
-  ] as const) {
-    const texture = material[name];
+  if (
+    material.specularColor?.some(component => component !== 1) ||
+    (material.specularIntensity !== undefined && material.specularIntensity !== 1) ||
+    material.specularColorTexture ||
+    material.specularIntensityTexture
+  ) {
+    addGLTFMaterialExtension(result, 'KHR_materials_specular', {
+      specularFactor: material.specularIntensity ?? 1,
+      specularColorFactor: material.specularColor || [1, 1, 1]
+    });
+  }
+  if (
+    (material.thickness ?? 0) > 0 ||
+    material.attenuationDistance !== undefined ||
+    material.attenuationColor?.some(component => component !== 1) ||
+    material.thicknessTexture
+  ) {
+    addGLTFMaterialExtension(result, 'KHR_materials_volume', {
+      thicknessFactor: material.thickness ?? 0,
+      attenuationDistance: material.attenuationDistance,
+      attenuationColor: material.attenuationColor
+    });
+  }
+  if (
+    (material.iridescence ?? 0) > 0 ||
+    material.iridescenceTexture ||
+    material.iridescenceThicknessTexture
+  ) {
+    addGLTFMaterialExtension(result, 'KHR_materials_iridescence', {
+      iridescenceFactor: material.iridescence ?? 0,
+      iridescenceIor: material.iridescenceIndexOfRefraction,
+      iridescenceThicknessMinimum: material.iridescenceThicknessMinimum,
+      iridescenceThicknessMaximum: material.iridescenceThicknessMaximum
+    });
+  }
+  if ((material.anisotropyStrength ?? 0) > 0 || material.anisotropyTexture) {
+    addGLTFMaterialExtension(result, 'KHR_materials_anisotropy', {
+      anisotropyStrength: material.anisotropyStrength ?? 0,
+      anisotropyRotation: material.anisotropyRotation ?? 0
+    });
+  }
+  if (material.unlit) {
+    addGLTFMaterialExtension(result, 'KHR_materials_unlit', {});
+  }
+
+  for (const {slot, pathSegments} of getTextureTransformSlotDefinitions()) {
+    const texture = material[`${slot}Texture`];
     if (texture && scene.textures?.[texture]) {
-      result[name] = texture;
+      setNestedGLTFProperty(result, pathSegments, texture);
     }
   }
   return result;
@@ -420,31 +499,68 @@ function makeGLTFMaterial(
 
 function resolveGLTFMaterialTextures(
   material: Record<string, unknown>,
-  textureIndices: Map<string, number>
+  sourceMaterial: JSONMaterialDeclaration,
+  textureIndices: Map<string, number>,
+  scene: ANARIJSONScene
 ): void {
-  const pbr = material['pbrMetallicRoughness'] as Record<string, unknown>;
-  for (const name of ['baseColorTexture', 'metallicRoughnessTexture'] as const) {
-    const identifier = pbr[name] || material[name];
-    if (typeof identifier === 'string') {
-      pbr[name] = {index: textureIndices.get(identifier)};
-      delete material[name];
+  for (const {slot, pathSegments} of getTextureTransformSlotDefinitions()) {
+    const identifier = sourceMaterial[`${slot}Texture`];
+    if (!identifier || !scene.textures?.[identifier]) {
+      continue;
     }
-  }
-  for (const name of ['normalTexture', 'emissiveTexture', 'occlusionTexture'] as const) {
-    const identifier = material[name];
-    if (typeof identifier === 'string') {
-      material[name] = {index: textureIndices.get(identifier)};
+    const textureIndex = textureIndices.get(identifier);
+    if (textureIndex === undefined) {
+      continue;
     }
-  }
-  const extensions = material['extensions'] as Record<string, Record<string, unknown>> | undefined;
-  for (const extension of Object.values(extensions || {})) {
-    for (const name of ['clearcoatTexture', 'transmissionTexture', 'sheenColorTexture'] as const) {
-      const identifier = extension[name];
-      if (typeof identifier === 'string') {
-        extension[name] = {index: textureIndices.get(identifier)};
-      }
+    const textureInfo = makeGLTFTextureInfo(textureIndex, scene.textures[identifier]);
+    if (slot === 'normal' && sourceMaterial.normalScale !== undefined) {
+      textureInfo.scale = sourceMaterial.normalScale;
     }
+    if (slot === 'occlusion' && sourceMaterial.occlusionStrength !== undefined) {
+      textureInfo.strength = sourceMaterial.occlusionStrength;
+    }
+    setNestedGLTFProperty(material, pathSegments, textureInfo);
   }
+}
+
+function makeGLTFTextureInfo(
+  textureIndex: number,
+  texture: JSONTextureDeclaration
+): Record<string, unknown> {
+  const textureInfo: Record<string, unknown> = {index: textureIndex};
+  if (texture.textureCoordinateSet !== undefined) {
+    textureInfo.texCoord = texture.textureCoordinateSet;
+  }
+  if (texture.transform) {
+    const [firstColumnX, firstColumnY, , secondColumnX, secondColumnY, , offsetX, offsetY] =
+      texture.transform;
+    const scaleX = Math.hypot(firstColumnX, firstColumnY);
+    const determinant = firstColumnX * secondColumnY - firstColumnY * secondColumnX;
+    const scaleY = Math.sign(determinant || 1) * Math.hypot(secondColumnX, secondColumnY);
+    const transform: Record<string, unknown> = {
+      offset: [offsetX, offsetY],
+      rotation: Math.atan2(firstColumnY, firstColumnX),
+      scale: [scaleX, scaleY]
+    };
+    if (texture.textureCoordinateSet !== undefined) {
+      transform.texCoord = texture.textureCoordinateSet;
+    }
+    textureInfo.extensions = {KHR_texture_transform: transform};
+  }
+  return textureInfo;
+}
+
+function setNestedGLTFProperty(
+  target: Record<string, unknown>,
+  pathSegments: readonly string[],
+  value: unknown
+): void {
+  let object = target;
+  for (const segment of pathSegments.slice(0, -1)) {
+    object[segment] ||= {};
+    object = object[segment] as Record<string, unknown>;
+  }
+  object[pathSegments[pathSegments.length - 1]] = value;
 }
 
 function addGLTFMaterialExtension(
@@ -513,15 +629,44 @@ function addGLTFLights(scene: ANARIJSONScene, nodes: object[]): object[] | undef
       name: light['@@id'],
       type,
       color: light.color || [1, 1, 1],
-      intensity: light.intensity || light.irradiance || 1
+      intensity: light.intensity ?? light.irradiance ?? 1,
+      ...(type === 'spot'
+        ? {
+            spot: {
+              innerConeAngle: light.falloffAngle ?? 0,
+              outerConeAngle: light.openingAngle ?? Math.PI / 4
+            }
+          }
+        : {})
     });
     nodes.push({
       name: light['@@id'],
       translation: light.position || [0, 0, 0],
+      ...(light.direction ? {rotation: makeGLTFLightRotation(light.direction)} : {}),
       extensions: {KHR_lights_punctual: {light: result.length - 1}}
     });
   }
   return result;
+}
+
+function makeGLTFLightRotation(direction: readonly number[]): [number, number, number, number] {
+  const length = Math.hypot(direction[0], direction[1], direction[2]);
+  if (length === 0) {
+    return [0, 0, 0, 1];
+  }
+  const normalizedX = direction[0] / length;
+  const normalizedY = direction[1] / length;
+  const normalizedZ = direction[2] / length;
+  const cosine = -normalizedZ;
+  if (cosine <= -0.999999) {
+    return [0, 1, 0, 0];
+  }
+  if (cosine >= 0.999999) {
+    return [0, 0, 0, 1];
+  }
+
+  const scale = Math.sqrt((1 + cosine) * 2);
+  return [normalizedY / scale, -normalizedX / scale, 0, scale * 0.5];
 }
 
 function appendUSDMaterial(

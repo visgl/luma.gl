@@ -101,6 +101,13 @@ test('ANARI scene schemas validate retained texture references and UVs', testCon
   const texture = ANARITextureSchema.safeParse({
     source: '/textures/brass.png',
     colorSpace: 'srgb',
+    sampler: {
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'mirror-repeat',
+      minFilter: 'nearest',
+      magFilter: 'linear',
+      mipmapFilter: 'linear'
+    },
     transform: [3, 0, 0, 0, 3, 0, 0, 0, 1]
   });
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
@@ -112,7 +119,10 @@ test('ANARI scene schemas validate retained texture references and UVs', testCon
     scene.geometries[geometryIdentifier]['vertex.attribute1'] = [0, 0, 1, 0, 0, 1];
   }
 
-  testContext.ok(texture.success, 'texture declarations accept color space and UV transforms');
+  testContext.ok(
+    texture.success,
+    'texture declarations accept authored color space, sampler filtering, and UV transforms'
+  );
   testContext.ok(ANARISceneSchema.safeParse(scene).success, 'retained texture references validate');
 
   scene.materials[materialIdentifier].baseColorTexture = 'missing-texture';
@@ -124,6 +134,21 @@ test('ANARI scene schemas validate retained texture references and UVs', testCon
         issue => issue.path.join('.') === `materials.${materialIdentifier}.baseColorTexture`
       ),
       'missing texture errors identify the exact material property'
+    );
+  }
+  testContext.end();
+});
+
+test('ANARI texture schemas reject unsupported authored sampler settings', testContext => {
+  for (const sampler of [
+    {addressModeU: 'clamp-to-border'},
+    {minFilter: 'cubic'},
+    {mipmapFilter: 'bicubic'},
+    {addressModeW: 'repeat'}
+  ]) {
+    testContext.notOk(
+      ANARITextureSchema.safeParse({source: '/textures/invalid.png', sampler}).success,
+      'only supported portable glTF sampler settings survive strict JSON validation'
     );
   }
   testContext.end();
