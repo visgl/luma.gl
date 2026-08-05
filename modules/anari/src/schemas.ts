@@ -137,6 +137,15 @@ export const ANARITextureSchema = z
     source: identifierSchema,
     colorSpace: z.enum(['srgb', 'linear']).optional(),
     textureCoordinateSet: z.union([z.literal(0), z.literal(1)]).optional(),
+    sampler: z
+      .strictObject({
+        addressModeU: z.enum(['clamp-to-edge', 'repeat', 'mirror-repeat']).optional(),
+        addressModeV: z.enum(['clamp-to-edge', 'repeat', 'mirror-repeat']).optional(),
+        minFilter: z.enum(['nearest', 'linear']).optional(),
+        magFilter: z.enum(['nearest', 'linear']).optional(),
+        mipmapFilter: z.enum(['none', 'nearest', 'linear']).optional()
+      })
+      .optional(),
     transform: z
       .tuple([
         numberSchema,

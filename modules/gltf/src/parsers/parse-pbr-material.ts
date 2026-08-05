@@ -2,23 +2,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
-import {Texture, log, textureFormatDecoder} from '@luma.gl/core';
-import type {GLTFPostprocessed, GLTFSampler} from '@loaders.gl/gltf';
-
-import {type ParsedPBRMaterial} from '../pbr/pbr-material';
-import {type PBREnvironment} from '../pbr/pbr-environment';
+import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {Device, ExternalImage, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
+import {log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
-import {GLEnum} from '../webgl-to-webgpu/gltf-webgl-constants';
-import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
+import {type PBREnvironment} from '../pbr/pbr-environment';
+import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {
+  getTextureTransformMatrix,
   getTextureTransformSlotDefinition,
   getTextureTransformSlotDefinitions,
-  getTextureTransformMatrix,
+  type PBRTextureTransformSlot,
   resolveTextureCoordinateSet,
-  resolveTextureTransform,
-  type PBRTextureTransformSlot
+  resolveTextureTransform
 } from '../pbr/texture-transform';
+import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
+import {GLEnum} from '../webgl-to-webgpu/gltf-webgl-constants';
 
 // TODO - synchronize the GLTF... types with loaders.gl
 // TODO - remove the glParameters, use only parameters
@@ -923,32 +922,18 @@ function addTexture(
     return;
   }
 
-  const gltfSampler = {
-    wrapS: 10497, // default REPEAT S (U) wrapping mode.
-    wrapT: 10497, // default REPEAT T (V) wrapping mode.
-    minFilter: 9729, // default LINEAR filtering
-    magFilter: 9729, // default LINEAR filtering
-    ...resolvedTextureInfo?.texture?.sampler
-  } as GLTFSampler;
-
   const baseOptions = {
     id: resolvedTextureInfo.uniformName || resolvedTextureInfo.id,
-    sampler: convertSampler(gltfSampler)
+    sampler: {
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+      minFilter: 'linear',
+      magFilter: 'linear',
+      ...convertSampler(resolvedTextureInfo.texture.sampler)
+    } satisfies SamplerProps
   };
 
-  let texture: Texture;
-
-  if (image.compressed) {
-    texture = createCompressedTexture(device, image, baseOptions);
-  } else {
-    const {width, height} = device.getExternalImageSize(image);
-    texture = device.createTexture({
-      ...baseOptions,
-      width,
-      height,
-      data: image
-    });
-  }
+  const texture = createGLTFTexture(device, image, baseOptions);
 
   parsedMaterial.bindings[uniformName] = texture;
   if (define) parsedMaterial.defines[define] = true;
@@ -964,6 +949,61 @@ function addTexture(
     ] = getTextureTransformMatrix(resolveTextureTransform(gltfTexture as Record<string, any>));
   }
   parsedMaterial.generatedTextures.push(texture);
+}
+
+/** Portable glTF image/sampler settings shared by format parsing and retained-scene importers. */
+export type CreateGLTFTextureOptions = {
+  id: string;
+  sampler: SamplerProps;
+  colorSpace?: 'srgb' | 'linear';
+  width?: number;
+  height?: number;
+};
+
+/** Uploads a source image and materializes any authored mipmap chain without duplicating loaders. */
+export function createGLTFTexture(
+  device: Device,
+  image: ExternalImage | CompressedImage,
+  options: CreateGLTFTextureOptions
+): Texture {
+  if ('compressed' in image) {
+    return createCompressedTexture(device, image, {
+      id: options.id,
+      sampler: options.sampler
+    });
+  }
+
+  const dimensions =
+    options.width !== undefined && options.height !== undefined
+      ? {width: options.width, height: options.height}
+      : device.getExternalImageSize(image);
+  const usesMipmaps =
+    options.sampler.mipmapFilter === 'nearest' || options.sampler.mipmapFilter === 'linear';
+  const mipLevels = usesMipmaps ? device.getMipLevelCount(dimensions.width, dimensions.height) : 1;
+  const texture = device.createTexture({
+    id: options.id,
+    sampler: options.sampler,
+    width: dimensions.width,
+    height: dimensions.height,
+    mipLevels,
+    ...(usesMipmaps
+      ? {usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC}
+      : {}),
+    ...(options.colorSpace
+      ? {format: options.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : 'rgba8unorm'}
+      : {}),
+    data: image
+  });
+
+  if (mipLevels > 1) {
+    if (device.type === 'webgl') {
+      texture.generateMipmapsWebGL();
+    } else if (device.type === 'webgpu') {
+      device.generateMipmapsWebGPU(texture);
+    }
+  }
+
+  return texture;
 }
 
 function resolveTextureInfo(gltfTexture: GLTFTexture, gltf?: GLTFPostprocessed): GLTFTexture {

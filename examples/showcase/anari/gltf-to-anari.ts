@@ -10,14 +10,19 @@ import type {
 import type {ANARIAnimationNodeDescription, ANARIVector3} from '@luma.gl/anari';
 import {makeANARIAnimationClipsFromGLTF} from '@luma.gl/anari/gltf';
 import {
+  convertGLTFSampler,
   getTextureTransformMatrix,
+  getTextureTransformSlotDefinitions,
   parseGLTFAnimations,
+  parseGLTFLights,
+  resolveTextureCoordinateSet,
   resolveTextureTransform
 } from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 import type {
   ANARIJSONScene,
   JSONGeometryDeclaration,
+  JSONLightDeclaration,
   JSONMaterialDeclaration,
   JSONTextureDeclaration
 } from './playground-scene';
@@ -97,6 +102,7 @@ export async function makeANARIJSONSceneFromGLTF(
   for (const node of rootNodes) {
     translateNode(node, new Matrix4(), state);
   }
+  state.scene.lights = makeImportedLights(gltf, state);
 
   const materialIdentifiers = gltf.materials.map(material =>
     state.materialIdentifiers.get(material)
@@ -107,16 +113,7 @@ export async function makeANARIJSONSceneFromGLTF(
       continue;
     }
     const material = scene.materials[identifier];
-    for (const slot of [
-      'baseColor',
-      'normal',
-      'metallicRoughness',
-      'emissive',
-      'occlusion',
-      'clearcoat',
-      'transmission',
-      'sheenColor'
-    ] as const) {
+    for (const {slot} of getTextureTransformSlotDefinitions()) {
       const textureIdentifier = material[`${slot}Texture`];
       if (textureIdentifier) {
         samplerIdentifiers[`${materialIndex}:${slot}`] = textureIdentifier;
@@ -152,6 +149,35 @@ export async function makeANARIJSONSceneFromGLTF(
     scene.nodes[presentationNodeIdentifier] = {matrix: Array.from(presentationTransform)};
   }
   return scene;
+}
+
+function makeImportedLights(
+  gltf: GLTFPostprocessed,
+  state: GLTFTranslationState
+): JSONLightDeclaration[] {
+  return parseGLTFLights(gltf, {useByteColors: false}).flatMap(light => {
+    if (light.type === 'ambient') {
+      return [];
+    }
+
+    const declaration: JSONLightDeclaration = {
+      '@@id': createIdentifier(`source-${light.type}`, 'light', state),
+      '@@type': light.type,
+      color: toVector3(light.color, [1, 1, 1]),
+      intensity: light.intensity ?? 1
+    };
+    if ('position' in light) {
+      declaration.position = toVector3(light.position, [0, 0, 0]);
+    }
+    if ('direction' in light) {
+      declaration.direction = toVector3(light.direction, [0, 0, -1]);
+    }
+    if (light.type === 'spot') {
+      declaration.openingAngle = light.outerConeAngle ?? Math.PI / 4;
+      declaration.falloffAngle = light.innerConeAngle ?? 0;
+    }
+    return [declaration];
+  });
 }
 
 function makePresentationTransform(bounds: ImportedSceneBounds): Matrix4 {
@@ -335,6 +361,9 @@ function getMaterialIdentifier(
   const iridescence = sourceMaterial.extensions?.['KHR_materials_iridescence'];
   const transmission = sourceMaterial.extensions?.['KHR_materials_transmission'];
   const sheen = sourceMaterial.extensions?.['KHR_materials_sheen'];
+  const specular = sourceMaterial.extensions?.['KHR_materials_specular'];
+  const volume = sourceMaterial.extensions?.['KHR_materials_volume'];
+  const anisotropy = sourceMaterial.extensions?.['KHR_materials_anisotropy'];
   const indexOfRefraction = sourceMaterial.extensions?.['KHR_materials_ior'];
   const material: JSONMaterialDeclaration = {
     '@@type': 'physicallyBased',
@@ -343,43 +372,43 @@ function getMaterialIdentifier(
     doubleSided: sourceMaterial.doubleSided ?? false,
     metallic: clamp(parameters?.metallicFactor ?? 1, 0, 1),
     roughness: clamp(parameters?.roughnessFactor ?? 1, 0, 1),
+    unlit: Boolean(
+      ('unlit' in sourceMaterial && sourceMaterial.unlit) ||
+        sourceMaterial.extensions?.['KHR_materials_unlit']
+    ),
+    specularColor: toVector3(specular?.specularColorFactor, [1, 1, 1]),
+    specularIntensity: clamp(specular?.specularFactor ?? 1, 0, 1),
     clearcoat: clamp(clearcoat?.clearcoatFactor ?? 0, 0, 1),
     clearcoatRoughness: clamp(clearcoat?.clearcoatRoughnessFactor ?? 0, 0, 1),
     iridescence: clamp(iridescence?.iridescenceFactor ?? 0, 0, 1),
     transmission: clamp(transmission?.transmissionFactor ?? 0, 0, 1),
+    thickness: Math.max(volume?.thicknessFactor ?? 0, 0),
+    attenuationColor: toVector3(volume?.attenuationColor, [1, 1, 1]),
     indexOfRefraction: clamp(indexOfRefraction?.ior ?? 1.5, 1, 2.5),
     sheenColor: toVector3(sheen?.sheenColorFactor, [0, 0, 0]),
     sheenRoughness: clamp(sheen?.sheenRoughnessFactor ?? 0, 0, 1),
+    iridescenceIndexOfRefraction: Math.max(iridescence?.iridescenceIor ?? 1.3, 1),
+    iridescenceThicknessMinimum: Math.max(iridescence?.iridescenceThicknessMinimum ?? 100, 0),
+    iridescenceThicknessMaximum: Math.max(iridescence?.iridescenceThicknessMaximum ?? 400, 0),
+    anisotropyStrength: clamp(anisotropy?.anisotropyStrength ?? 0, 0, 1),
+    anisotropyRotation: anisotropy?.anisotropyRotation ?? 0,
     normalScale: clamp(sourceMaterial.normalTexture?.scale ?? 1, 0, 4),
     occlusionStrength: clamp(sourceMaterial.occlusionTexture?.strength ?? 1, 0, 1)
   };
 
-  addMaterialTexture(material, 'baseColorTexture', parameters?.baseColorTexture, 'srgb', state);
-  addMaterialTexture(material, 'normalTexture', sourceMaterial.normalTexture, 'linear', state);
-  addMaterialTexture(
-    material,
-    'metallicRoughnessTexture',
-    parameters?.metallicRoughnessTexture,
-    'linear',
-    state
-  );
-  addMaterialTexture(material, 'emissiveTexture', sourceMaterial.emissiveTexture, 'srgb', state);
-  addMaterialTexture(
-    material,
-    'occlusionTexture',
-    sourceMaterial.occlusionTexture,
-    'linear',
-    state
-  );
-  addMaterialTexture(material, 'clearcoatTexture', clearcoat?.clearcoatTexture, 'linear', state);
-  addMaterialTexture(
-    material,
-    'transmissionTexture',
-    transmission?.transmissionTexture,
-    'linear',
-    state
-  );
-  addMaterialTexture(material, 'sheenColorTexture', sheen?.sheenColorTexture, 'srgb', state);
+  if (volume?.attenuationDistance !== undefined && volume.attenuationDistance > 0) {
+    material.attenuationDistance = volume.attenuationDistance;
+  }
+
+  for (const {slot, pathSegments, colorSpace} of getTextureTransformSlotDefinitions()) {
+    addMaterialTexture(
+      material,
+      `${slot}Texture`,
+      getNestedTextureInfo(sourceMaterial, pathSegments),
+      colorSpace,
+      state
+    );
+  }
 
   const emissiveFactor = sourceMaterial.emissiveFactor || [0, 0, 0];
   if (sourceMaterial.emissiveTexture || emissiveFactor.some(value => value > 0)) {
@@ -444,15 +473,7 @@ function getAccessorColor(
 
 function addMaterialTexture(
   material: JSONMaterialDeclaration,
-  parameterName:
-    | 'baseColorTexture'
-    | 'normalTexture'
-    | 'metallicRoughnessTexture'
-    | 'emissiveTexture'
-    | 'occlusionTexture'
-    | 'clearcoatTexture'
-    | 'transmissionTexture'
-    | 'sheenColorTexture',
+  parameterName: `${ReturnType<typeof getTextureTransformSlotDefinitions>[number]['slot']}Texture`,
   textureInfo: GLTFTextureReference | undefined,
   colorSpace: 'srgb' | 'linear',
   state: GLTFTranslationState
@@ -469,10 +490,13 @@ function addMaterialTexture(
   }
 
   const transform = getTextureTransform(textureInfo);
-  const requestedTextureCoordinateSet =
-    textureInfo.extensions?.['KHR_texture_transform']?.texCoord ?? textureInfo.texCoord ?? 0;
+  const requestedTextureCoordinateSet = resolveTextureCoordinateSet(textureInfo);
   const textureCoordinateSet = requestedTextureCoordinateSet === 1 ? 1 : 0;
-  const cacheKey = `${image.id}:${colorSpace}:${textureCoordinateSet}:${transform?.join(',') || 'identity'}`;
+  const sampler = convertGLTFSampler(texture.sampler);
+  const samplerKey = Object.entries(sampler)
+    .map(([name, value]) => `${name}:${value}`)
+    .join(',');
+  const cacheKey = `${image.id}:${colorSpace}:${textureCoordinateSet}:${transform?.join(',') || 'identity'}:${samplerKey}`;
   let identifier = state.textureIdentifiers.get(cacheKey);
   if (!identifier) {
     const source = getImageSource(image, state);
@@ -487,11 +511,28 @@ function addMaterialTexture(
     if (transform) {
       declaration.transform = transform;
     }
+    if (Object.keys(sampler).length > 0) {
+      declaration.sampler = sampler;
+    }
     state.scene.textures ||= {};
     state.scene.textures[identifier] = declaration;
     state.textureIdentifiers.set(cacheKey, identifier);
   }
   material[parameterName] = identifier;
+}
+
+function getNestedTextureInfo(
+  material: GLTFMaterialPostprocessed,
+  pathSegments: readonly string[]
+): GLTFTextureReference | undefined {
+  let value: unknown = material;
+  for (const pathSegment of pathSegments) {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+    value = Reflect.get(value, pathSegment);
+  }
+  return value && typeof value === 'object' ? (value as GLTFTextureReference) : undefined;
 }
 
 function getImageSource(
@@ -532,7 +573,7 @@ function getTextureTransform(
   ];
 }
 
-function toVector3(value: number[] | undefined, fallback: ANARIVector3): ANARIVector3 {
+function toVector3(value: ArrayLike<number> | undefined, fallback: ANARIVector3): ANARIVector3 {
   return value && value.length >= 3 ? [value[0], value[1], value[2]] : fallback;
 }
 
