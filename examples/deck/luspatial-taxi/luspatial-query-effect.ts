@@ -17,13 +17,41 @@ import {compileProjectionPlan, GPUProjection} from '@luma.gl/experimental/luproj
 import {TAXI_GRID_SIZE, projectTaxiLongitudeLatitude, type LuSpatialTaxiData} from './taxi-data';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
+const STORAGE_BUFFER_OFFSET_ALIGNMENT = 256;
+
+export const LU_SPATIAL_TAXI_QUERY_COUNTER_IDS = {
+  viewportIntersectedCells: 'viewport-intersected-cells',
+  viewportCandidates: 'viewport-candidates',
+  viewportMatches: 'viewport-matches',
+  selectionIntersectedCells: 'selection-intersected-cells',
+  selectionCandidates: 'selection-candidates',
+  selectionMatches: 'selection-matches'
+} as const;
+
+export const LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS = {
+  viewportIntersectedCellCount: 0,
+  viewportCandidateCount: STORAGE_BUFFER_OFFSET_ALIGNMENT,
+  selectionIntersectedCellCount: STORAGE_BUFFER_OFFSET_ALIGNMENT * 2,
+  selectionCandidateCount: STORAGE_BUFFER_OFFSET_ALIGNMENT * 3
+} as const;
+
+const QUERY_DIAGNOSTIC_BUFFER_BYTE_LENGTH =
+  LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.selectionCandidateCount + UINT32_BYTE_LENGTH;
 
 type DestroyableResource = {destroy(): void};
 
-export type LuSpatialTaxiQueryStats = {
-  residentPointCount: number;
+/** Exact work and result counts sampled from the two GPU spatial queries. */
+export type LuSpatialTaxiQueryCounters = {
+  viewportIntersectedCellCount: number;
+  viewportCandidateCount: number;
   visiblePointCount: number;
+  selectionIntersectedCellCount: number;
+  selectionCandidateCount: number;
   selectedPointCount: number;
+};
+
+export type LuSpatialTaxiQueryStats = LuSpatialTaxiQueryCounters & {
+  residentPointCount: number;
   graphNodeCount: number;
   buildEncodingMilliseconds: number;
   queryEncodingMilliseconds: number;
@@ -68,6 +96,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private readonly selectionTotalCount: Buffer;
   private readonly viewportOverflow: Buffer;
   private readonly selectionOverflow: Buffer;
+  private readonly queryDiagnostics: Buffer;
   private readonly buildGraph: CompiledGPUCommandGraph<void>;
   private readonly queryGraph: CompiledGPUCommandGraph<void>;
   private readonly buildGraphObservation: GPUCommandGraphInspectorObservation<void>;
@@ -78,6 +107,10 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private selectionRadiusKilometres = 0.35;
   private visiblePointCount = 0;
   private selectedPointCount = 0;
+  private viewportIntersectedCellCount = 0;
+  private viewportCandidateCount = 0;
+  private selectionIntersectedCellCount = 0;
+  private selectionCandidateCount = 0;
   private buildEncodingMilliseconds = 0;
   private queryEncodingMilliseconds = 0;
   private frameIndex = 0;
@@ -175,6 +208,13 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       );
       this.selectionOverflow = this.ownResource(
         createScalarBuffer(device, 'luspatial-taxi-selection-overflow')
+      );
+      this.queryDiagnostics = this.ownResource(
+        device.createBuffer({
+          id: 'luspatial-taxi-query-diagnostics',
+          byteLength: QUERY_DIAGNOSTIC_BUFFER_BYTE_LENGTH,
+          usage: Buffer.STORAGE | Buffer.COPY_SRC
+        })
       );
       this.drawCommands = this.ownResource(
         new DrawCommandBuffer(device, {
@@ -410,6 +450,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       'selection-overflow',
       this.selectionOverflow
     );
+    const queryDiagnosticsBuffer = importBuffer(graph, 'query-diagnostics', this.queryDiagnostics);
     const drawCommandBuffer = importBuffer(graph, 'draw-commands', this.drawCommands.buffer);
 
     const positions = graph.createDataView(projectedBuffer, {
@@ -432,6 +473,26 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       count: graph.createDataView(indexCountBuffer, {format: 'uint32', length: 1}),
       overflow: graph.createDataView(indexOverflowBuffer, {format: 'uint32', length: 1})
     };
+    const viewportIntersectedCellCount = graph.createDataView(queryDiagnosticsBuffer, {
+      format: 'uint32',
+      length: 1,
+      byteOffset: LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.viewportIntersectedCellCount
+    });
+    const viewportCandidateCount = graph.createDataView(queryDiagnosticsBuffer, {
+      format: 'uint32',
+      length: 1,
+      byteOffset: LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.viewportCandidateCount
+    });
+    const selectionIntersectedCellCount = graph.createDataView(queryDiagnosticsBuffer, {
+      format: 'uint32',
+      length: 1,
+      byteOffset: LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.selectionIntersectedCellCount
+    });
+    const selectionCandidateCount = graph.createDataView(queryDiagnosticsBuffer, {
+      format: 'uint32',
+      length: 1,
+      byteOffset: LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.selectionCandidateCount
+    });
 
     new GPUPointSpatialQuery({
       id: 'luspatial-taxi-viewport-query',
@@ -439,6 +500,8 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       index,
       kind: 'bounds',
       query: graph.createDataView(viewportQueryBuffer, {format: 'float32', length: 4}),
+      intersectedCellCount: viewportIntersectedCellCount,
+      candidateCount: viewportCandidateCount,
       output: {
         ids: graph.createDataView(viewportIdsBuffer, {
           format: 'uint32',
@@ -463,6 +526,8 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       index,
       kind: 'radius',
       query: graph.createDataView(selectionQueryBuffer, {format: 'float32', length: 3}),
+      intersectedCellCount: selectionIntersectedCellCount,
+      candidateCount: selectionCandidateCount,
       output: {
         ids: graph.createDataView(selectedIdsBuffer, {
           format: 'uint32',
@@ -491,15 +556,22 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     }
     this.countReadPending = true;
     try {
-      const bytes = await this.drawCommands.buffer.readAsync();
+      const [drawCommandBytes, queryDiagnosticBytes] = await Promise.all([
+        this.drawCommands.buffer.readAsync(),
+        this.queryDiagnostics.readAsync()
+      ]);
       if (this.destroyed) return;
-      const values = new Uint32Array(
-        bytes.buffer,
-        bytes.byteOffset,
-        bytes.byteLength / UINT32_BYTE_LENGTH
-      );
-      this.visiblePointCount = values[this.drawCommands.getInstanceCountByteOffset(0) / 4] ?? 0;
-      this.selectedPointCount = values[this.drawCommands.getInstanceCountByteOffset(1) / 4] ?? 0;
+      const counters = decodeLuSpatialTaxiQueryCounters(drawCommandBytes, queryDiagnosticBytes, {
+        viewportInstanceCountByteOffset: this.drawCommands.getInstanceCountByteOffset(0),
+        selectionInstanceCountByteOffset: this.drawCommands.getInstanceCountByteOffset(1)
+      });
+      this.viewportIntersectedCellCount = counters.viewportIntersectedCellCount;
+      this.viewportCandidateCount = counters.viewportCandidateCount;
+      this.visiblePointCount = counters.visiblePointCount;
+      this.selectionIntersectedCellCount = counters.selectionIntersectedCellCount;
+      this.selectionCandidateCount = counters.selectionCandidateCount;
+      this.selectedPointCount = counters.selectedPointCount;
+      this.queryGraphObservation.recordCounters(makeLuSpatialTaxiQueryInspectorCounters(counters));
       this.publishStats();
     } catch {
       // Device loss or teardown can reject optional diagnostics after the render path has ended.
@@ -526,7 +598,11 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private publishStats(): void {
     this.onStats?.({
       residentPointCount: this.data.pointCount,
+      viewportIntersectedCellCount: this.viewportIntersectedCellCount,
+      viewportCandidateCount: this.viewportCandidateCount,
       visiblePointCount: this.visiblePointCount,
+      selectionIntersectedCellCount: this.selectionIntersectedCellCount,
+      selectionCandidateCount: this.selectionCandidateCount,
       selectedPointCount: this.selectedPointCount,
       graphNodeCount:
         this.buildGraph.stats.nodeOrder.length + this.queryGraph.stats.nodeOrder.length,
@@ -535,6 +611,63 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       inspectorSnapshot: this.inspector.getSnapshot()
     });
   }
+}
+
+/** Decodes one pair of sparse GPU query-counter and indirect-draw readbacks. */
+export function decodeLuSpatialTaxiQueryCounters(
+  drawCommandBytes: Uint8Array,
+  queryDiagnosticBytes: Uint8Array,
+  drawCommandLayout: {
+    viewportInstanceCountByteOffset: number;
+    selectionInstanceCountByteOffset: number;
+  }
+): LuSpatialTaxiQueryCounters {
+  return {
+    viewportIntersectedCellCount: readUint32AtByteOffset(
+      queryDiagnosticBytes,
+      LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.viewportIntersectedCellCount
+    ),
+    viewportCandidateCount: readUint32AtByteOffset(
+      queryDiagnosticBytes,
+      LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.viewportCandidateCount
+    ),
+    visiblePointCount: readUint32AtByteOffset(
+      drawCommandBytes,
+      drawCommandLayout.viewportInstanceCountByteOffset
+    ),
+    selectionIntersectedCellCount: readUint32AtByteOffset(
+      queryDiagnosticBytes,
+      LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.selectionIntersectedCellCount
+    ),
+    selectionCandidateCount: readUint32AtByteOffset(
+      queryDiagnosticBytes,
+      LU_SPATIAL_TAXI_QUERY_DIAGNOSTIC_BYTE_OFFSETS.selectionCandidateCount
+    ),
+    selectedPointCount: readUint32AtByteOffset(
+      drawCommandBytes,
+      drawCommandLayout.selectionInstanceCountByteOffset
+    )
+  };
+}
+
+/** Maps an exact query sample onto stable inspector counter identifiers. */
+export function makeLuSpatialTaxiQueryInspectorCounters(
+  counters: LuSpatialTaxiQueryCounters
+): Readonly<Record<string, number>> {
+  return {
+    [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.viewportIntersectedCells]:
+      counters.viewportIntersectedCellCount,
+    [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.viewportCandidates]: counters.viewportCandidateCount,
+    [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.viewportMatches]: counters.visiblePointCount,
+    [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.selectionIntersectedCells]:
+      counters.selectionIntersectedCellCount,
+    [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.selectionCandidates]: counters.selectionCandidateCount,
+    [LU_SPATIAL_TAXI_QUERY_COUNTER_IDS.selectionMatches]: counters.selectedPointCount
+  };
+}
+
+function readUint32AtByteOffset(bytes: Uint8Array, byteOffset: number): number {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(byteOffset, true);
 }
 
 function createScalarBuffer(device: Device, id: string): Buffer {
