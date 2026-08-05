@@ -246,7 +246,7 @@ function addLuSortEncodeKeysPass(
   const keyBindingIndex = nullable ? 2 : 1;
   const validityOffset = chunk.validity ? getViewElementOffset(chunk.validity) : 0;
   const isNull = nullable ? 'validityValues[VALIDITY_OFFSET + index] == 0u' : 'false';
-  const isNaN =
+  const nanExpression =
     chunk.input.format === 'float32'
       ? '(bitcast<u32>(value) & 0x7fffffffu) > 0x7f800000u'
       : 'false';
@@ -268,7 +268,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   if (index < ELEMENT_COUNT) {
     let value = inputValues[INPUT_OFFSET + index];
     let isNull = ${isNull};
-    let isNaN = ${isNaN};
+    let isNaN = ${nanExpression};
     outputKeys[KEY_OFFSET + index] = select(${key}, 0u, isNull || isNaN);
     outputIndices[INDEX_OFFSET + index] = index;
   }
@@ -321,7 +321,7 @@ function addLuSortEncodeClassesPass(
   const outputBindingIndex = nullable ? 4 : 3;
   const validityOffset = chunk.validity ? getViewElementOffset(chunk.validity) : 0;
   const isNull = nullable ? 'validityValues[VALIDITY_OFFSET + localIndex] == 0u' : 'false';
-  const isNaN =
+  const nanExpression =
     chunk.input.format === 'float32'
       ? '(bitcast<u32>(value) & 0x7fffffffu) > 0x7f800000u'
       : 'false';
@@ -362,7 +362,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     let localIndex = sortedIndices[INDEX_OFFSET + index];
     let value = inputValues[INPUT_OFFSET + localIndex];
     let isNull = ${isNull};
-    let isNaN = ${isNaN};
+    let isNaN = ${nanExpression};
     var rank = ${numericRank}u;
     if (isNaN) { rank = ${nanRank}u; }
     if (isNull) { rank = ${nullRank}u; }
