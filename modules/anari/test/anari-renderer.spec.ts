@@ -1,10 +1,11 @@
 import {ANARIDevice} from '@luma.gl/anari';
-import {getTestDevices} from '@luma.gl/test-utils';
+import type {Device} from '@luma.gl/core';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import test from 'test/utils/vitest-tape';
 
 test('ANARI renderer draws instanced physically based surfaces on available GPU backends', async testContext => {
-  for (const graphicsDevice of await getTestDevices()) {
+  for (const graphicsDevice of await getLiveTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
     const geometry = device.newGeometry('sphere', {radius: 0.6, segments: 8});
     const material = device.newMaterial('physicallyBased', {
@@ -72,7 +73,7 @@ test('ANARI renderer draws instanced physically based surfaces on available GPU 
 });
 
 test('ANARI renderer binds indexed RGB vertex colors on available GPU backends', async testContext => {
-  for (const graphicsDevice of await getTestDevices()) {
+  for (const graphicsDevice of await getLiveTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
     const geometry = device.newGeometry('triangle', {
       'vertex.position': new Float32Array([-1, -1, 0, 1, -1, 0, 0, 1, 0]),
@@ -103,7 +104,7 @@ test('ANARI renderer binds indexed RGB vertex colors on available GPU backends',
 });
 
 test('ANARI renderer samples PBR image maps on available GPU backends', async testContext => {
-  for (const graphicsDevice of await getTestDevices()) {
+  for (const graphicsDevice of await getLiveTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
     const image = graphicsDevice.createTexture({
       width: 1,
@@ -123,36 +124,43 @@ test('ANARI renderer samples PBR image maps on available GPU backends', async te
       emissive: [1, 0.5, 0.1],
       baseColorTexture: sampler,
       normalTexture: sampler,
-      metallicRoughnessTexture: sampler,
-      emissiveTexture: sampler,
-      occlusionTexture: sampler,
-      clearcoatTexture: sampler,
-      transmissionTexture: sampler,
-      sheenColorTexture: sampler
+      ...(isSoftwareBackedWebGLDevice(graphicsDevice)
+        ? {}
+        : {
+            metallicRoughnessTexture: sampler,
+            emissiveTexture: sampler,
+            occlusionTexture: sampler,
+            clearcoatTexture: sampler,
+            transmissionTexture: sampler,
+            sheenColorTexture: sampler
+          })
     });
     const surface = device.newSurface({geometry, material});
     const world = device.newWorld({surface: [surface]});
     const camera = device.newCamera('perspective', {position: [0, 0, 4]});
     const renderer = device.newRenderer('default');
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
-    const statistics = frame.render();
-    graphicsDevice.submit();
+    try {
+      const statistics = frame.render();
+      graphicsDevice.submit();
 
-    testContext.equal(statistics.drawCount, 1, `${graphicsDevice.type} draws textured meshes`);
-    testContext.equal(
-      statistics.triangleCount,
-      1,
-      `${graphicsDevice.type} preserves textured mesh geometry`
-    );
-
-    frame.destroy();
-    device.destroy();
+      testContext.equal(statistics.drawCount, 1, `${graphicsDevice.type} draws textured meshes`);
+      testContext.equal(
+        statistics.triangleCount,
+        1,
+        `${graphicsDevice.type} preserves textured mesh geometry`
+      );
+    } finally {
+      frame.destroy();
+      device.destroy();
+      image.destroy();
+    }
   }
   testContext.end();
 });
 
 test('ANARI renderer samples optional secondary texture coordinates on GPU backends', async testContext => {
-  for (const graphicsDevice of await getTestDevices()) {
+  for (const graphicsDevice of await getLiveTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
     const image = graphicsDevice.createTexture({
       width: 1,
@@ -177,24 +185,31 @@ test('ANARI renderer samples optional secondary texture coordinates on GPU backe
     const camera = device.newCamera('perspective', {position: [0, 0, 4]});
     const renderer = device.newRenderer('default');
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
-    const statistics = frame.render();
-    graphicsDevice.submit();
+    try {
+      const statistics = frame.render();
+      graphicsDevice.submit();
 
-    testContext.equal(
-      statistics.drawCount,
-      1,
-      `${graphicsDevice.type} binds TEXCOORD_1 and compiles the shared secondary-UV shader path`
-    );
-    testContext.equal(statistics.triangleCount, 1, `${graphicsDevice.type} preserves UV1 geometry`);
-
-    frame.destroy();
-    device.destroy();
+      testContext.equal(
+        statistics.drawCount,
+        1,
+        `${graphicsDevice.type} binds TEXCOORD_1 and compiles the shared secondary-UV shader path`
+      );
+      testContext.equal(
+        statistics.triangleCount,
+        1,
+        `${graphicsDevice.type} preserves UV1 geometry`
+      );
+    } finally {
+      frame.destroy();
+      device.destroy();
+      image.destroy();
+    }
   }
   testContext.end();
 });
 
 test('ANARI renderer delegates masked extension materials to canonical PBR shaders', async testContext => {
-  for (const graphicsDevice of await getTestDevices()) {
+  for (const graphicsDevice of await getLiveTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
     const image = graphicsDevice.createTexture({
       width: 1,
@@ -229,29 +244,32 @@ test('ANARI renderer delegates masked extension materials to canonical PBR shade
     const renderer = device.newRenderer('default');
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
 
-    testContext.equal(
-      frame.render().drawCount,
-      1,
-      `${graphicsDevice.type} compiles masked PBR extension samplers`
-    );
-    graphicsDevice.submit();
+    try {
+      testContext.equal(
+        frame.render().drawCount,
+        1,
+        `${graphicsDevice.type} compiles masked PBR extension samplers`
+      );
+      graphicsDevice.submit();
 
-    material.setParameters({alphaMode: 'blend', opacity: 0.45}).commitParameters();
-    testContext.equal(
-      frame.render().drawCount,
-      1,
-      `${graphicsDevice.type} recompiles the shared pipeline when committed alpha mode changes`
-    );
-    graphicsDevice.submit();
-
-    frame.destroy();
-    device.destroy();
+      material.setParameters({alphaMode: 'blend', opacity: 0.45}).commitParameters();
+      testContext.equal(
+        frame.render().drawCount,
+        1,
+        `${graphicsDevice.type} recompiles the shared pipeline when committed alpha mode changes`
+      );
+      graphicsDevice.submit();
+    } finally {
+      frame.destroy();
+      device.destroy();
+      image.destroy();
+    }
   }
   testContext.end();
 });
 
 test('ANARI deferred renderer resolves PBR surfaces on WebGPU', async testContext => {
-  for (const graphicsDevice of await getTestDevices()) {
+  for (const graphicsDevice of await getLiveTestDevices()) {
     if (graphicsDevice.type !== 'webgpu') {
       continue;
     }
@@ -321,3 +339,21 @@ test('ANARI deferred renderer resolves PBR surfaces on WebGPU', async testContex
   }
   testContext.end();
 });
+
+async function getLiveTestDevices(): Promise<Device[]> {
+  const [webglDevice, webgpuDevices] = await Promise.all([
+    getWebGLTestDevice(),
+    getTestDevices(['webgpu'])
+  ]);
+
+  return webglDevice ? [webglDevice, ...webgpuDevices] : webgpuDevices;
+}
+
+function isSoftwareBackedWebGLDevice(device: Device): boolean {
+  return (
+    device.type === 'webgl' &&
+    (device.info.gpu === 'software' ||
+      device.info.gpuType === 'cpu' ||
+      Boolean(device.info.fallback))
+  );
+}
