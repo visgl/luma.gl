@@ -44,6 +44,7 @@ import './ludf/lu-data-frame-query.spec';
 import './ludf/lu-derived-columns.spec';
 import './ludf/lu-group-aggregation.spec';
 import './ludf/lu-global-aggregation.spec';
+import './ludf/lu-sort.spec';
 import './luraster';
 import './luxfilter';
 import './luproj/luproj.spec';
