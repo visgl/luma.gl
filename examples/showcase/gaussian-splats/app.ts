@@ -254,11 +254,14 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       gaussianSupportRadius: 3,
       kernel2DSize: 0.35
     };
-    // Captured scenes keep the existing progressive preview until all source batches arrive.
-    // Compiling the immutable full-scene graph once avoids rebuilding it for every Arrow batch.
     this.renderer =
-      this.executionMode === 'graph' && !this.localLoadersConfiguration
-        ? new GPUSplatGraphRenderer(device, {...rendererProps, clearColor: CLEAR_COLOR})
+      this.executionMode === 'graph'
+        ? new GPUSplatGraphRenderer(device, {
+            ...rendererProps,
+            clearColor: CLEAR_COLOR,
+            expectedSplatCount: this.localLoadersConfiguration?.expectedSplatCount,
+            expectedBatchCount: this.localLoadersConfiguration?.expectedBatchCount
+          })
         : new SplatRenderer(device, rendererProps);
   }
 
@@ -460,26 +463,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     this.isLoading = false;
     this.expectedBatchCount = this.batches.length;
     this.expectedSplatCount = this.loadedSplatCount;
-    if (this.executionMode === 'graph') {
-      this.activateGraphRenderer();
-    }
     this.updatePanel();
-  }
-
-  /** Replaces the progressive CPU preview without changing caller-owned Arrow source batches. */
-  private activateGraphRenderer(): void {
-    if (this.renderer instanceof GPUSplatGraphRenderer) {
-      return;
-    }
-    const previousRenderer = this.renderer;
-    const graphRenderer = new GPUSplatGraphRenderer(this.device, {
-      ...previousRenderer.props,
-      data: this.batches,
-      clearColor: CLEAR_COLOR
-    });
-    this.renderer = graphRenderer;
-    previousRenderer.destroy();
-    this.requestRedraw();
   }
 
   /** Keeps a captured scene usable when the selected WebGPU adapter cannot compile its graph. */
@@ -851,11 +835,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
           ? this.renderer.compiledGraph
             ? 'GPU command graph'
             : 'Compiling GPU graph…'
-          : this.executionMode === 'graph'
-            ? 'CPU preview → GPU graph'
-            : this.device.type === 'webgpu'
-              ? 'CPU depth ordering'
-              : 'WebGL2 fallback';
+          : this.device.type === 'webgpu'
+            ? 'CPU depth ordering'
+            : 'WebGL2 fallback';
     }
     for (const pipelineErrorElement of document.querySelectorAll<HTMLElement>(
       '[data-gaussian-splats-pipeline-error]'

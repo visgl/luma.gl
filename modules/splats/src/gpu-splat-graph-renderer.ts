@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type CommandEncoder, type Device, type ShaderLayout} from '@luma.gl/core';
+import {assert, Buffer, type CommandEncoder, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
 import {
   DrawCommandBuffer,
@@ -12,11 +12,13 @@ import {
   type GPUCommandGraphEncoding,
   type GPUCommandGraphStats,
   type GraphBufferHandle,
-  type GraphDataView
+  type GraphDataView,
+  type GraphImportedBuffer
 } from '@luma.gl/experimental';
 import {GPUSplatData} from './splat-data';
 import {
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
+  GPU_SPLAT_INVALID_DEPTH_KEY,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH,
   GPU_SPLAT_PROJECTION_SHADER,
   GPU_SPLAT_PROJECTION_SHADER_LAYOUT,
@@ -30,6 +32,10 @@ import type {SplatSortMode} from './splat-sort';
 export type GPUSplatGraphRendererProps = SplatRendererProps & {
   /** Color used when the graph opens its single default-framebuffer render pass. */
   clearColor?: [number, number, number, number];
+  /** Optional final row count used to reserve one persistent progressively populated graph. */
+  expectedSplatCount?: number;
+  /** Optional final Arrow batch count used to reserve immutable borrowed-source binding slots. */
+  expectedBatchCount?: number;
 };
 
 type ResolvedGPUSplatGraphRendererProps = {
@@ -68,9 +74,20 @@ const INITIALIZE_SHADER_LAYOUT = {
   attributes: [],
   bindings: [
     {name: 'sortValues', type: 'storage', group: 0, location: 0},
-    {name: 'drawCommands', type: 'storage', group: 0, location: 1}
+    {name: 'drawCommands', type: 'storage', group: 0, location: 1},
+    {name: 'depthKeys', type: 'storage', group: 0, location: 2}
   ]
 } satisfies ShaderLayout;
+
+const SOURCE_SLOT_COLUMNS = [
+  {name: 'positions', minimumByteLength: 12},
+  {name: 'scales', minimumByteLength: 12},
+  {name: 'rotations', minimumByteLength: 16},
+  {name: 'colors', minimumByteLength: 4},
+  {name: 'opacities', minimumByteLength: 4}
+] as const;
+
+type SourceSlotColumnName = (typeof SOURCE_SLOT_COLUMNS)[number]['name'];
 
 /**
  * WebGPU-only Gaussian renderer composed entirely from reusable GPU command-graph nodes.
@@ -94,12 +111,16 @@ export class GPUSplatGraphRenderer {
   lastEncoding?: GPUCommandGraphEncoding;
 
   private readonly clearColor: [number, number, number, number];
+  private readonly expectedSplatCount?: number;
+  private readonly expectedBatchCount?: number;
   private readonly ownedBuffers: Buffer[] = [];
   private readonly batchUniforms: Buffer[] = [];
   private model?: Model;
   private sortedValuesBuffer?: Buffer;
   private requiresGraphRebuild = true;
   private requiresEncoding = true;
+  private allocatedSplatCapacity = 0;
+  private allocatedBatchCapacity = 0;
   private hasExplicitToneMapping: boolean;
   private isDestroyed = false;
 
@@ -108,8 +129,19 @@ export class GPUSplatGraphRenderer {
     if (device.type !== 'webgpu') {
       throw new Error('GPUSplatGraphRenderer requires a WebGPU device');
     }
+    // Expected stream capacities must be positive safe integers.
+    assert(
+      props.expectedSplatCount === undefined ||
+        (Number.isSafeInteger(props.expectedSplatCount) && props.expectedSplatCount > 0)
+    );
+    assert(
+      props.expectedBatchCount === undefined ||
+        (Number.isSafeInteger(props.expectedBatchCount) && props.expectedBatchCount > 0)
+    );
 
     this.device = device;
+    this.expectedSplatCount = props.expectedSplatCount;
+    this.expectedBatchCount = props.expectedBatchCount;
     this.clearColor = [...(props.clearColor ?? [0, 0, 0, 0])];
     this.props = {
       modelViewProjectionMatrix: toSplatGraphMatrix(props.modelViewProjectionMatrix),
@@ -141,6 +173,11 @@ export class GPUSplatGraphRenderer {
     return this.compiledGraph?.stats;
   }
 
+  /** Current immutable graph capacities; only overflow requires rebuilding its slots or rows. */
+  get capacity(): {splatCount: number; batchCount: number} {
+    return {splatCount: this.allocatedSplatCapacity, batchCount: this.allocatedBatchCapacity};
+  }
+
   /** GPU-produced globally sorted projected-record indices, available after compilation. */
   get sortedIndexBuffer(): Buffer | undefined {
     return this.sortedValuesBuffer;
@@ -169,7 +206,13 @@ export class GPUSplatGraphRenderer {
     ) {
       this.props.toneMapping = 'reinhard';
     }
-    this.requiresGraphRebuild = true;
+    if (
+      !this.compiledGraph ||
+      this.getRowCount() > this.allocatedSplatCapacity ||
+      this.batches.length > this.allocatedBatchCapacity
+    ) {
+      this.requiresGraphRebuild = true;
+    }
     this.requiresEncoding = true;
   }
 
@@ -257,7 +300,10 @@ export class GPUSplatGraphRenderer {
     }
 
     this.writeBatchUniforms();
-    this.lastEncoding = this.compiledGraph.encode(commandEncoder, {parameters: undefined});
+    this.lastEncoding = this.compiledGraph.encode(commandEncoder, {
+      parameters: undefined,
+      buffers: this.getSourceBufferOverrides()
+    });
     this.requiresEncoding = false;
     return this.lastEncoding;
   }
@@ -312,7 +358,10 @@ export class GPUSplatGraphRenderer {
       return;
     }
 
-    const projectedByteLength = rowCount * GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH;
+    this.allocatedSplatCapacity = this.resolveSplatCapacity(rowCount);
+    this.allocatedBatchCapacity = this.resolveBatchCapacity(this.batches.length);
+    const projectedByteLength =
+      this.allocatedSplatCapacity * GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH;
     if (
       this.device.limits.maxStorageBufferBindingSize > 0 &&
       projectedByteLength > this.device.limits.maxStorageBufferBindingSize
@@ -327,35 +376,50 @@ export class GPUSplatGraphRenderer {
     );
     const depthKeysBuffer = this.createOwnedBuffer(
       'gaussian-splat-depth-keys',
-      rowCount * Uint32Array.BYTES_PER_ELEMENT
+      this.allocatedSplatCapacity * Uint32Array.BYTES_PER_ELEMENT
     );
     const sourceIndicesBuffer = this.createOwnedBuffer(
       'gaussian-splat-source-indices',
-      rowCount * Uint32Array.BYTES_PER_ELEMENT
+      this.allocatedSplatCapacity * Uint32Array.BYTES_PER_ELEMENT
     );
     const sortedKeysBuffer = this.createOwnedBuffer(
       'gaussian-splat-sorted-keys',
-      rowCount * Uint32Array.BYTES_PER_ELEMENT
+      this.allocatedSplatCapacity * Uint32Array.BYTES_PER_ELEMENT
     );
     this.sortedValuesBuffer = this.createOwnedBuffer(
       'gaussian-splat-sorted-indices',
-      rowCount * Uint32Array.BYTES_PER_ELEMENT
+      this.allocatedSplatCapacity * Uint32Array.BYTES_PER_ELEMENT
     );
 
     const projectedRecords = this.importOwnedBuffer(graph, projectedRecordsBuffer);
-    const depthKeys = this.importUint32Buffer(graph, depthKeysBuffer, rowCount);
-    const sourceIndices = this.importUint32Buffer(graph, sourceIndicesBuffer, rowCount);
-    const sortedKeys = this.importUint32Buffer(graph, sortedKeysBuffer, rowCount);
-    const sortedIndices = this.importUint32Buffer(graph, this.sortedValuesBuffer, rowCount);
+    const depthKeys = this.importUint32Buffer(graph, depthKeysBuffer, this.allocatedSplatCapacity);
+    const sourceIndices = this.importUint32Buffer(
+      graph,
+      sourceIndicesBuffer,
+      this.allocatedSplatCapacity
+    );
+    const sortedKeys = this.importUint32Buffer(
+      graph,
+      sortedKeysBuffer,
+      this.allocatedSplatCapacity
+    );
+    const sortedIndices = this.importUint32Buffer(
+      graph,
+      this.sortedValuesBuffer,
+      this.allocatedSplatCapacity
+    );
     const drawCommandViews = this.drawCommands.importToGraph(graph);
 
-    this.addInitializationPass(graph, sourceIndices, drawCommandViews.buffer, rowCount);
+    this.addInitializationPass(
+      graph,
+      sourceIndices,
+      depthKeys,
+      drawCommandViews.buffer,
+      this.allocatedSplatCapacity
+    );
 
     let firstUniform: GraphBufferHandle | undefined;
-    for (const [batchIndex, batch] of this.batches.entries()) {
-      if (batch.length === 0) {
-        continue;
-      }
+    for (let batchIndex = 0; batchIndex < this.allocatedBatchCapacity; batchIndex++) {
       const uniformBuffer = this.device.createBuffer({
         id: `gaussian-splat-graph-uniforms-${batchIndex}`,
         byteLength: GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
@@ -368,7 +432,6 @@ export class GPUSplatGraphRenderer {
       );
       firstUniform ??= uniforms;
       this.addProjectionPass(graph, {
-        batch,
         batchIndex,
         projectedRecords,
         depthKeys,
@@ -397,7 +460,7 @@ export class GPUSplatGraphRenderer {
       source: GPU_SPLAT_RENDER_SHADER,
       shaderLayout: GPU_SPLAT_RENDER_SHADER_LAYOUT,
       isInstanced: true,
-      instanceCount: rowCount,
+      instanceCount: this.allocatedSplatCapacity,
       vertexCount: 4,
       topology: 'triangle-strip',
       bindings: {
@@ -456,18 +519,22 @@ export class GPUSplatGraphRenderer {
   private addInitializationPass(
     graph: GPUCommandGraph,
     sourceIndices: GraphDataView<'uint32'>,
+    depthKeys: GraphDataView<'uint32'>,
     drawCommands: GraphBufferHandle,
     rowCount: number
   ): void {
     const shader = /* wgsl */ `
 const ROW_COUNT: u32 = ${rowCount}u;
+const INVALID_DEPTH_KEY: u32 = ${GPU_SPLAT_INVALID_DEPTH_KEY}u;
 @group(0) @binding(0) var<storage, read_write> sortValues: array<u32>;
 @group(0) @binding(1) var<storage, read_write> drawCommands: array<atomic<u32>>;
+@group(0) @binding(2) var<storage, read_write> depthKeys: array<u32>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   if (invocation.x < ROW_COUNT) {
     sortValues[invocation.x] = invocation.x;
+    depthKeys[invocation.x] = INVALID_DEPTH_KEY;
   }
   if (invocation.x == 0u) {
     atomicStore(&drawCommands[1], 0u);
@@ -477,7 +544,8 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       id: 'gaussian-splat-initialize',
       resources: [
         {buffer: sourceIndices, usage: 'storage-write'},
-        {buffer: drawCommands, usage: 'storage-write'}
+        {buffer: drawCommands, usage: 'storage-write'},
+        {buffer: depthKeys, usage: 'storage-write'}
       ],
       compile: ({device}) => {
         const computation = new Computation(device, {
@@ -489,7 +557,8 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
           encode: ({computePass, getBuffer}) => {
             computation.setBindings({
               sortValues: getBuffer(sourceIndices),
-              drawCommands: getBuffer(drawCommands)
+              drawCommands: getBuffer(drawCommands),
+              depthKeys: getBuffer(depthKeys)
             });
             computation.dispatch(computePass, Math.ceil(rowCount / 256));
           },
@@ -502,7 +571,6 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   private addProjectionPass(
     graph: GPUCommandGraph,
     props: {
-      batch: GPUSplatData;
       batchIndex: number;
       projectedRecords: GraphBufferHandle;
       depthKeys: GraphDataView<'uint32'>;
@@ -510,27 +578,12 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       uniforms: GraphBufferHandle;
     }
   ): void {
-    const {batch, batchIndex, projectedRecords, depthKeys, drawCommands, uniforms} = props;
-    const positions = graph.importGPUData(
-      `gaussian-splat-batch-${batchIndex}-positions`,
-      batch.positions.data[0]
-    );
-    const scales = graph.importGPUData(
-      `gaussian-splat-batch-${batchIndex}-scales`,
-      batch.scales.data[0]
-    );
-    const rotations = graph.importGPUData(
-      `gaussian-splat-batch-${batchIndex}-rotations`,
-      batch.rotations.data[0]
-    );
-    const colors = graph.importGPUData(
-      `gaussian-splat-batch-${batchIndex}-colors`,
-      batch.colors.data[0]
-    );
-    const opacities = graph.importGPUData(
-      `gaussian-splat-batch-${batchIndex}-opacities`,
-      batch.opacities.data[0]
-    );
+    const {batchIndex, projectedRecords, depthKeys, drawCommands, uniforms} = props;
+    const positions = this.importSourceSlotBuffer(graph, batchIndex, 'positions', 12);
+    const scales = this.importSourceSlotBuffer(graph, batchIndex, 'scales', 12);
+    const rotations = this.importSourceSlotBuffer(graph, batchIndex, 'rotations', 16);
+    const colors = this.importSourceSlotBuffer(graph, batchIndex, 'colors', 4);
+    const opacities = this.importSourceSlotBuffer(graph, batchIndex, 'opacities', 4);
 
     graph.addComputePass({
       id: `gaussian-splat-project-batch-${batchIndex}`,
@@ -553,6 +606,10 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
         });
         return {
           encode: ({computePass, getBuffer}) => {
+            const batch = this.batches[batchIndex];
+            if (!batch || batch.length === 0) {
+              return;
+            }
             computation.setBindings({
               positions: getBuffer(positions),
               scales: getBuffer(scales),
@@ -574,11 +631,8 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
 
   private writeBatchUniforms(): void {
     let batchOffset = 0;
-    let uniformIndex = 0;
-    for (const batch of this.batches) {
-      if (batch.length === 0) {
-        continue;
-      }
+    for (let batchIndex = 0; batchIndex < this.allocatedBatchCapacity; batchIndex++) {
+      const batch = this.batches[batchIndex];
       const uniformData = new ArrayBuffer(GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH);
       const floatValues = new Float32Array(uniformData);
       const integerValues = new Uint32Array(uniformData);
@@ -594,12 +648,75 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       floatValues[25] = this.props.exposure;
       integerValues[26] = this.props.toneMapping === 'reinhard' ? 1 : 0;
       integerValues[27] = batchOffset;
-      integerValues[28] = batch.length;
-      integerValues[29] = batch.colors.format === 'float32x4' ? 1 : 0;
-      this.batchUniforms[uniformIndex].write(new Uint8Array(uniformData));
-      batchOffset += batch.length;
-      uniformIndex++;
+      integerValues[28] = batch?.length ?? 0;
+      integerValues[29] = batch?.colors.format === 'float32x4' ? 1 : 0;
+      this.batchUniforms[batchIndex].write(new Uint8Array(uniformData));
+      batchOffset += batch?.length ?? 0;
     }
+  }
+
+  private getSourceBufferOverrides(): Record<string, GraphImportedBuffer> {
+    const overrides: Record<string, GraphImportedBuffer> = {};
+    for (const [batchIndex, batch] of this.batches.entries()) {
+      if (batch.length === 0) {
+        continue;
+      }
+      for (const {name} of SOURCE_SLOT_COLUMNS) {
+        overrides[getSourceSlotBufferId(batchIndex, name)] = batch[name].data[0].buffer;
+      }
+    }
+    return overrides;
+  }
+
+  private importSourceSlotBuffer(
+    graph: GPUCommandGraph,
+    batchIndex: number,
+    columnName: SourceSlotColumnName,
+    minimumByteLength: number
+  ): GraphBufferHandle {
+    const sourceId = getSourceSlotBufferId(batchIndex, columnName);
+    const placeholder = this.createOwnedBuffer(`${sourceId}-placeholder`, minimumByteLength);
+    return graph.importBuffer(
+      {id: sourceId, byteLength: minimumByteLength, usage: Buffer.STORAGE},
+      placeholder
+    );
+  }
+
+  private resolveSplatCapacity(rowCount: number): number {
+    const maximumStorageByteLength = this.device.limits.maxStorageBufferBindingSize;
+    const maximumRowCapacity =
+      maximumStorageByteLength > 0
+        ? Math.floor(maximumStorageByteLength / GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH)
+        : Number.MAX_SAFE_INTEGER;
+    if (rowCount > maximumRowCapacity || (this.expectedSplatCount ?? 0) > maximumRowCapacity) {
+      throw new Error('Gaussian splat projected records exceed the device storage binding limit');
+    }
+
+    if (this.allocatedSplatCapacity === 0) {
+      if (this.expectedSplatCount !== undefined) {
+        this.allocatedSplatCapacity = this.expectedSplatCount;
+      } else {
+        const firstNonemptyBatchLength = this.batches.find(batch => batch.length > 0)?.length ?? 1;
+        this.allocatedSplatCapacity = Math.min(
+          maximumRowCapacity,
+          Math.max(rowCount, firstNonemptyBatchLength * 4)
+        );
+      }
+    }
+    while (this.allocatedSplatCapacity < rowCount) {
+      this.allocatedSplatCapacity = Math.min(maximumRowCapacity, this.allocatedSplatCapacity * 2);
+    }
+    return this.allocatedSplatCapacity;
+  }
+
+  private resolveBatchCapacity(batchCount: number): number {
+    if (this.allocatedBatchCapacity === 0) {
+      this.allocatedBatchCapacity = this.expectedBatchCount ?? Math.max(batchCount, 4);
+    }
+    while (this.allocatedBatchCapacity < batchCount) {
+      this.allocatedBatchCapacity *= 2;
+    }
+    return this.allocatedBatchCapacity;
   }
 
   private createOwnedBuffer(id: string, byteLength: number): Buffer {
@@ -648,6 +765,10 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     this.sortedValuesBuffer = undefined;
     this.requiresGraphRebuild = true;
   }
+}
+
+function getSourceSlotBufferId(batchIndex: number, columnName: SourceSlotColumnName): string {
+  return `gaussian-splat-batch-${batchIndex}-${columnName}`;
 }
 
 function normalizeSplatGraphBatches(
