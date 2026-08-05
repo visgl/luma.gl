@@ -8,6 +8,31 @@ import type {Device} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
 
+test('LuSpatialGeographicPointQueryEffect validates props before browser GPU allocation', () => {
+  const props = {
+    longitudeLatitudes: new Float32Array([-73.97, 40.75]),
+    sourceBounds: [-74, 40.72, -73.94, 40.78] as const,
+    projectedBounds: [-1, -1, 1, 1] as const,
+    projectionOrigin: [-73.97, 40.75] as const
+  };
+  expect(
+    () =>
+      new LuSpatialGeographicPointQueryEffect({type: 'webgpu'} as Device, {
+        ...props,
+        viewportProjectionPaddingKilometres: -1
+      })
+  ).toThrow('viewportProjectionPaddingKilometres must be a non-negative finite number');
+
+  const allocationSentinel = 'browser validation reached buffer allocation';
+  const device = {
+    type: 'webgpu',
+    createBuffer: () => {
+      throw new Error(allocationSentinel);
+    }
+  } as unknown as Device;
+  expect(() => new LuSpatialGeographicPointQueryEffect(device, props)).toThrow(allocationSentinel);
+});
+
 test('LuSpatialGeographicPointQueryEffect builds and updates real hardware WebGPU queries', async () => {
   const device = await getWebGPUTestDevice();
   // The precise radius kernel uses integer fp64 emulation and is intentionally not exercised on
