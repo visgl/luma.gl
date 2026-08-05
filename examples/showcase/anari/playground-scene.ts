@@ -1,4 +1,7 @@
 import {
+  type ANARIAnimationClipDescription,
+  type ANARIAnimationNodeDescription,
+  type ANARIAnimationPlaybackDescription,
   type ANARICameraParameters,
   type ANARICameraSubtype,
   type ANARIDevice,
@@ -21,6 +24,7 @@ import {
   type ANARISurface,
   type ANARIVector3
 } from '@luma.gl/anari';
+import {type ANARIAnimationSceneHandle, makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 import type {Texture} from '@luma.gl/core';
 import {Matrix4} from '@math.gl/core';
 
@@ -32,12 +36,14 @@ type JSONGeometryParameters = Omit<
   | 'vertex.normal'
   | 'vertex.attribute0'
   | 'vertex.attribute1'
+  | 'vertex.attribute2'
   | 'primitive.index'
 > & {
   'vertex.position'?: readonly number[];
   'vertex.normal'?: readonly number[];
   'vertex.attribute0'?: readonly number[];
   'vertex.attribute1'?: readonly number[];
+  'vertex.attribute2'?: readonly number[];
   'primitive.index'?: readonly number[];
 };
 
@@ -162,6 +168,9 @@ export type ANARIJSONScene = {
   distributions?: readonly JSONStarfieldDeclaration[];
   lights?: readonly JSONLightDeclaration[];
   world?: {surfaces?: readonly string[]; instances?: readonly string[]; lights?: readonly string[]};
+  nodes?: Record<string, ANARIAnimationNodeDescription>;
+  clips?: readonly ANARIAnimationClipDescription[];
+  playback?: ANARIAnimationPlaybackDescription;
 };
 
 export type ANARIJSONSceneHandle = {
@@ -171,6 +180,7 @@ export type ANARIJSONSceneHandle = {
   cameraTarget: ANARIVector3;
   cameraPosition: ANARIVector3;
   cameraOrbitSpeed: number;
+  animations?: ANARIAnimationSceneHandle;
   update: (time: number) => void;
   destroy: () => void;
 };
@@ -278,7 +288,9 @@ export function createANARIJSONScene(
   const surfaceGroups = new Map<string, ANARIGroup>();
   const instanceAnimations: SceneAnimation[] = [];
   const lightAnimations: SceneAnimation[] = [];
+  const authoredAnimationTargets = getAuthoredAnimationTargets(scene);
   const pendingLightAnimations: {
+    identifier: string;
     light: ANARILight;
     parameters: ANARILightParameters;
     animation: JSONAnimationDeclaration;
@@ -291,6 +303,7 @@ export function createANARIJSONScene(
       'vertex.normal': normals,
       'vertex.attribute0': attributes,
       'vertex.attribute1': textureCoordinates,
+      'vertex.attribute2': additionalTextureCoordinates,
       'primitive.index': indices,
       generator,
       ...parameters
@@ -308,6 +321,11 @@ export function createANARIJSONScene(
     }
     if (textureCoordinates) {
       geometryParameters['vertex.attribute1'] = new Float32Array(textureCoordinates);
+    }
+    if (additionalTextureCoordinates) {
+      Object.assign(geometryParameters, {
+        'vertex.attribute2': new Float32Array(additionalTextureCoordinates)
+      });
     }
     if (indices) {
       geometryParameters['primitive.index'] = new Uint32Array(indices);
@@ -381,7 +399,7 @@ export function createANARIJSONScene(
     const light = device.newLight(subtype, parameters);
     lights.set(identifier, light);
     if (animation) {
-      pendingLightAnimations.push({light, parameters, animation});
+      pendingLightAnimations.push({identifier, light, parameters, animation});
     }
   }
 
@@ -419,7 +437,7 @@ export function createANARIJSONScene(
     instances.set(identifier, instance);
     const animations =
       declaration.animations || (declaration.animation ? [declaration.animation] : []);
-    if (animations.length > 0) {
+    if (animations.length > 0 && !authoredAnimationTargets.instances.has(identifier)) {
       instanceAnimations.push(createInstanceAnimation(instance, declaration, animations));
     }
   };
@@ -437,8 +455,10 @@ export function createANARIJSONScene(
     }
   }
 
-  for (const {light, parameters, animation} of pendingLightAnimations) {
-    lightAnimations.push(createLightAnimation(light, parameters, animation, instances));
+  for (const {identifier, light, parameters, animation} of pendingLightAnimations) {
+    if (!authoredAnimationTargets.lights.has(identifier)) {
+      lightAnimations.push(createLightAnimation(light, parameters, animation, instances));
+    }
   }
 
   const world = device.newWorld({
@@ -468,6 +488,9 @@ export function createANARIJSONScene(
   assertSubtype('renderer', rendererSubtype, RENDERER_SUBTYPES);
   const renderer = device.newRenderer(rendererSubtype, rendererParameters);
   const frame = device.newFrame({world, camera, renderer});
+  const animations = scene.clips?.length
+    ? makeANARIAnimationScene(scene, {instances, materials, samplers, lights, camera})
+    : undefined;
 
   return {
     frame,
@@ -476,7 +499,9 @@ export function createANARIJSONScene(
     cameraTarget: target,
     cameraPosition: position,
     cameraOrbitSpeed: orbit?.speed || 0,
+    animations,
     update(time: number): void {
+      animations?.update(time);
       for (const animation of instanceAnimations) {
         animation(time);
       }
@@ -491,6 +516,44 @@ export function createANARIJSONScene(
       }
     }
   };
+}
+
+function getAuthoredAnimationTargets(scene: ANARIJSONScene): {
+  instances: Set<string>;
+  lights: Set<string>;
+} {
+  const instances = new Set<string>();
+  const lights = new Set<string>();
+  const animatedNodes = new Set<string>();
+
+  for (const clip of scene.clips || []) {
+    for (const {target} of clip.tracks) {
+      if (target.type === 'instance') {
+        instances.add(target.identifier);
+      } else if (target.type === 'light') {
+        lights.add(target.identifier);
+      } else if (target.type === 'node') {
+        animatedNodes.add(target.identifier);
+      }
+    }
+  }
+
+  for (const [identifier, node] of Object.entries(scene.nodes || {})) {
+    const visitedNodes = new Set<string>();
+    let ancestorIdentifier: string | undefined = identifier;
+    while (ancestorIdentifier && !visitedNodes.has(ancestorIdentifier)) {
+      if (animatedNodes.has(ancestorIdentifier)) {
+        for (const instanceIdentifier of node.instances || []) {
+          instances.add(instanceIdentifier);
+        }
+        break;
+      }
+      visitedNodes.add(ancestorIdentifier);
+      ancestorIdentifier = scene.nodes?.[ancestorIdentifier]?.parent;
+    }
+  }
+
+  return {instances, lights};
 }
 
 function createInstanceAnimation(

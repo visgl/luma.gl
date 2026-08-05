@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {AnimationSampler} from '@luma.gl/engine';
+
 /** Parsed glTF animation definition. */
 export type GLTFAnimation = {
   /** Application-visible animation name. */
@@ -94,7 +96,7 @@ export type GLTFAnimationChannel =
   | GLTFTextureTransformAnimationChannel;
 
 /** Parsed glTF animation sampler. */
-export type GLTFAnimationSampler = {
+export type GLTFAnimationSampler = AnimationSampler & {
   /** Keyframe times in seconds. */
   input: number[];
   /** glTF interpolation mode. */

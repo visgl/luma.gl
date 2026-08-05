@@ -12,6 +12,7 @@
     {"path": "../effects"},
     {"path": "../engine"},
     {"path": "../experimental"},
+    {"path": "../gltf"},
     {"path": "../shadertools"}
   ]
 }

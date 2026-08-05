@@ -174,18 +174,35 @@ format is experimental and is not an official ANARI serialization format.
 
 ### Experimental OpenUSD and glTF import
 
-Both showcase pages include a 3D asset selector with production-quality CC0 glTF Antique Camera,
-Lantern, and Toy Car assets; a detailed public-domain OpenUSD Utah/Fancy teapot atelier; an
-attributed Open Chess Set knight triptych; bundled CC0 USD vehicle assets; a composed vehicle
-gallery; and a procedural material laboratory. Choosing an asset imports its meshes, material
+Both showcase pages include a 3D asset selector with production-quality CC0 glTF Animated Colors,
+Antique Camera, Lantern, and Toy Car assets; a detailed public-domain OpenUSD Utah/Fancy teapot
+atelier; an attributed Open Chess Set knight triptych; bundled CC0 USD vehicle assets; a composed
+vehicle gallery; and a procedural material laboratory. Choosing an asset imports its meshes, material
 bindings, transforms, retained instances, and supported lights into editable ANARI JSON. Imported
 models receive a normalized studio presentation with animated cyan and amber point lights, glossy
 materials, HDR emissive accents, and bloom.
 
 The glTF adapter uses `@loaders.gl/gltf`, preserves indexed meshes and physically based material
 parameters, and retains base-color, normal, metallic-roughness, emissive, occlusion, clearcoat,
-transmission, and sheen maps as real GPU image samplers. It reuses `@luma.gl/gltf` texture-transform
-math for `KHR_texture_transform`. Skinning and glTF animations remain unsupported.
+transmission, and sheen maps as real GPU image samplers. It preserves authored material factors and
+reuses `@luma.gl/gltf` texture-transform math for `KHR_texture_transform`.
+
+The optional `@luma.gl/anari/gltf` entry point adapts glTF-owned node hierarchies and decoded clips
+into editable ANARI JSON without importing a format loader into the core ANARI package:
+
+```ts
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+
+const animations = makeANARIAnimationScene(scene, {instances, materials, samplers});
+animations.selectClip('Walk');
+animations.update(elapsedSeconds);
+```
+
+Scenes can optionally declare `nodes`, `clips`, and `playback`. Transform, material, and UV tracks
+use the shared engine animation mixer, preserve meshless parents and shared surfaces, and commit
+each changed retained object once per frame. The playground provides clip selection, play/pause,
+scrubbing, and playback speed controls. Skeletal animation, morph targets, and animated glTF export
+remain unsupported.
 
 The format loader lives under `examples/showcase/anari/usd-loader` and follows the loaders.gl
 loader contract so it can eventually move into a dedicated `@loaders.gl/usd` module. It currently
