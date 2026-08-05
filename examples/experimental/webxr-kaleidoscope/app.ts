@@ -2,24 +2,32 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, NumberArray, Texture, VariableShaderType} from '@luma.gl/core';
+import type {Device, Framebuffer, NumberArray, Texture, VariableShaderType} from '@luma.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Geometry, Model} from '@luma.gl/engine';
 import {
+  OrbitControls,
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
   WebXRManager,
   type WebXRFrameState
 } from '@luma.gl/experimental';
-import type {WebGLDevice} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
-export const title = 'WebXR Kaleidoscope';
+export const title = 'WebXR: Immersive Prism Portal';
 export const description =
-  'Folds WebXR camera frames or a procedural fallback through animated XR shards.';
+  'Explore a stereoscopic prism tunnel with native WebGPU projection layers and WebGL2 camera fallback.';
 
 export type ImmersiveXRSessionMode = 'immersive-ar' | 'immersive-vr';
+
+const PORTAL_RING_COUNT = 12;
+const SHARDS_PER_RING = 34;
+const RIBBON_COUNT = 5;
+const RIBBON_SEGMENT_COUNT = 34;
+const PARTICLE_COUNT = 220;
+const PORTAL_DEPTH = 10.4;
+const CAMERA_TARGET: [number, number, number] = [0, 0, -2.6];
 
 type AppUniforms = {
   modelViewProjectionMatrix: NumberArray;
@@ -35,11 +43,108 @@ const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
   }
 };
 
-const vs = /* glsl */ `\
+const WGSL_SHADER = /* wgsl */ `\
+struct AppUniforms {
+  modelViewProjectionMatrix: mat4x4<f32>,
+  time: f32,
+  cameraMix: f32,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+@group(0) @binding(auto) var cameraTexture: texture_2d<f32>;
+@group(0) @binding(auto) var cameraTextureSampler: sampler;
+
+struct VertexInputs {
+  @location(0) positions: vec3<f32>,
+  @location(1) texCoords: vec2<f32>,
+  @location(2) shardData: vec4<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) localPosition: vec3<f32>,
+  @location(2) energy: f32,
+  @location(3) depthFactor: f32,
+  @location(4) shardKind: f32,
+};
+
+fn rotatePoint(point: vec2<f32>, angle: f32) -> vec2<f32> {
+  let sine = sin(angle);
+  let cosine = cos(angle);
+  return vec2<f32>(
+    point.x * cosine - point.y * sine,
+    point.x * sine + point.y * cosine
+  );
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  var position = inputs.positions;
+  let depthFactor = inputs.shardData.x;
+  let orbitPhase = inputs.shardData.y;
+  let shardKind = inputs.shardData.w;
+  let orbitDirection = select(-1.0, 1.0, fract(depthFactor * 7.0) > 0.5);
+  let orbitAngle = app.time * (0.10 + depthFactor * 0.17) * orbitDirection;
+  position = vec3<f32>(rotatePoint(position.xy, orbitAngle), position.z);
+  position.z += sin(app.time * 1.65 + orbitPhase * 6.28318) * (0.045 + shardKind * 0.055);
+  let radialBreathing = 1.0 + sin(app.time * 1.15 + depthFactor * 7.2) * 0.025;
+  position = vec3<f32>(position.xy * radialBreathing, position.z);
+
+  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
+  outputs.uv = inputs.texCoords;
+  outputs.localPosition = position;
+  outputs.energy = inputs.shardData.z *
+    (0.75 + 0.25 * sin(app.time * 2.1 + orbitPhase * 8.0 - depthFactor * 9.0));
+  outputs.depthFactor = depthFactor;
+  outputs.shardKind = shardKind;
+  return outputs;
+}
+
+fn kaleidoscopeUv(uv: vec2<f32>) -> vec2<f32> {
+  let centered = uv * 2.0 - vec2<f32>(1.0);
+  let radius = length(centered);
+  let segment = 6.2831853 / 9.0;
+  var angle = atan2(centered.y, centered.x);
+  angle = abs((angle + segment * 0.5) - segment * floor((angle + segment * 0.5) / segment));
+  angle = abs(angle - segment * 0.5);
+  return vec2<f32>(cos(angle), sin(angle)) * radius * 0.5 + vec2<f32>(0.5);
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let edgeDistance = min(min(inputs.uv.x, 1.0 - inputs.uv.x),
+                         min(inputs.uv.y, 1.0 - inputs.uv.y));
+  let edgeGlow = 1.0 - smoothstep(0.025, 0.22, edgeDistance);
+  let coreGlow = pow(max(0.0, 1.0 - length(inputs.uv - vec2<f32>(0.5)) * 1.75), 3.2);
+  let prismPhase = inputs.depthFactor * 8.5 + inputs.localPosition.x * 0.6 + app.time * 0.42;
+  let cyan = vec3<f32>(0.03, 0.86, 1.18);
+  let violet = vec3<f32>(0.66, 0.13, 1.18);
+  let coral = vec3<f32>(1.0, 0.29, 0.44);
+  let spectralColor = mix(mix(cyan, violet, 0.5 + 0.5 * sin(prismPhase)),
+                          coral, (0.5 + 0.5 * sin(prismPhase * 0.63 + 2.1)) * 0.28);
+  let distanceFade = mix(1.0, 0.36, inputs.depthFactor);
+  let shimmer = 0.73 + 0.27 * sin(app.time * 3.4 + inputs.localPosition.z * 1.9);
+  var color = spectralColor * (0.35 + edgeGlow * 1.05 + coreGlow * 0.6) *
+              inputs.energy * distanceFade * shimmer;
+
+  let cameraUv = kaleidoscopeUv(vec2<f32>(inputs.uv.x, 1.0 - inputs.uv.y));
+  let cameraColor = textureSample(cameraTexture, cameraTextureSampler, cameraUv).rgb;
+  color = mix(color, cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
+              app.cameraMix * (1.0 - inputs.depthFactor * 0.7));
+  let alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
+                    (0.75 + inputs.shardKind * 0.12), 0.0, 0.98);
+  return vec4<f32>(color, alpha);
+}
+`;
+
+const VS_GLSL = /* glsl */ `\
 #version 300 es
 
 in vec3 positions;
 in vec2 texCoords;
+in vec4 shardData;
 
 uniform appUniforms {
   mat4 modelViewProjectionMatrix;
@@ -48,21 +153,38 @@ uniform appUniforms {
 } app;
 
 out vec2 vUV;
-out float vPulse;
+out vec3 vLocalPosition;
+out float vEnergy;
+out float vDepthFactor;
+out float vShardKind;
+
+vec2 rotatePoint(vec2 point, float angle) {
+  float sine = sin(angle);
+  float cosine = cos(angle);
+  return vec2(point.x * cosine - point.y * sine, point.x * sine + point.y * cosine);
+}
 
 void main(void) {
   vec3 position = positions;
-  float angle = atan(position.y, position.x);
-  float radius = length(position.xy);
-  position.z += sin(angle * 7.0 - app.time * 2.4) * radius * 0.10;
-  position.z += cos(radius * 13.0 + app.time * 3.1) * 0.045;
+  float depthFactor = shardData.x;
+  float orbitPhase = shardData.y;
+  float orbitDirection = fract(depthFactor * 7.0) > 0.5 ? 1.0 : -1.0;
+  float orbitAngle = app.time * (0.10 + depthFactor * 0.17) * orbitDirection;
+  position.xy = rotatePoint(position.xy, orbitAngle);
+  position.z += sin(app.time * 1.65 + orbitPhase * 6.28318) * (0.045 + shardData.w * 0.055);
+  position.xy *= 1.0 + sin(app.time * 1.15 + depthFactor * 7.2) * 0.025;
+
   gl_Position = app.modelViewProjectionMatrix * vec4(position, 1.0);
   vUV = texCoords;
-  vPulse = 0.5 + 0.5 * sin(angle * 5.0 + radius * 9.0 - app.time * 2.8);
+  vLocalPosition = position;
+  vEnergy = shardData.z *
+    (0.75 + 0.25 * sin(app.time * 2.1 + orbitPhase * 8.0 - depthFactor * 9.0));
+  vDepthFactor = depthFactor;
+  vShardKind = shardData.w;
 }
 `;
 
-const fs = /* glsl */ `\
+const FS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 
@@ -75,55 +197,77 @@ uniform appUniforms {
 } app;
 
 in vec2 vUV;
-in float vPulse;
+in vec3 vLocalPosition;
+in float vEnergy;
+in float vDepthFactor;
+in float vShardKind;
 
 out vec4 fragColor;
 
-const float PI = 3.141592653589793;
 const float TAU = 6.283185307179586;
 
 vec2 kaleidoscopeUv(vec2 uv) {
   vec2 centered = uv * 2.0 - 1.0;
   float radius = length(centered);
   float angle = atan(centered.y, centered.x);
-  float segment = TAU / 8.0;
+  float segment = TAU / 9.0;
   angle = abs(mod(angle + segment * 0.5, segment) - segment * 0.5);
   return vec2(cos(angle), sin(angle)) * radius * 0.5 + 0.5;
 }
 
-vec3 proceduralColor(vec2 uv) {
-  vec2 centered = uv * 2.0 - 1.0;
-  float radius = length(centered);
-  float angle = atan(centered.y, centered.x);
-  float aurora = 0.5 + 0.5 * sin(angle * 9.0 - radius * 16.0 - app.time * 2.2);
-  float flare = exp(-abs(radius - 0.54) * 18.0);
-  return mix(vec3(0.02, 0.04, 0.14), vec3(0.05, 0.95, 0.88), aurora) +
-    vec3(0.75, 0.12, 1.0) * flare;
-}
-
 void main(void) {
+  float edgeDistance = min(min(vUV.x, 1.0 - vUV.x), min(vUV.y, 1.0 - vUV.y));
+  float edgeGlow = 1.0 - smoothstep(0.025, 0.22, edgeDistance);
+  float coreGlow = pow(max(0.0, 1.0 - length(vUV - vec2(0.5)) * 1.75), 3.2);
+  float prismPhase = vDepthFactor * 8.5 + vLocalPosition.x * 0.6 + app.time * 0.42;
+  vec3 cyan = vec3(0.03, 0.86, 1.18);
+  vec3 violet = vec3(0.66, 0.13, 1.18);
+  vec3 coral = vec3(1.0, 0.29, 0.44);
+  vec3 spectralColor = mix(mix(cyan, violet, 0.5 + 0.5 * sin(prismPhase)),
+    coral, (0.5 + 0.5 * sin(prismPhase * 0.63 + 2.1)) * 0.28);
+  float distanceFade = mix(1.0, 0.36, vDepthFactor);
+  float shimmer = 0.73 + 0.27 * sin(app.time * 3.4 + vLocalPosition.z * 1.9);
+  vec3 color = spectralColor * (0.35 + edgeGlow * 1.05 + coreGlow * 0.6) *
+    vEnergy * distanceFade * shimmer;
+
   vec2 cameraUv = kaleidoscopeUv(vec2(vUV.x, 1.0 - vUV.y));
   vec3 cameraColor = texture(cameraTexture, cameraUv).rgb;
-  vec3 color = mix(proceduralColor(vUV), cameraColor, app.cameraMix);
-  float shardEdge = smoothstep(0.0, 0.08, min(min(vUV.x, 1.0 - vUV.x), min(vUV.y, 1.0 - vUV.y)));
-  float scan = 0.88 + 0.12 * sin(vUV.y * 100.0 - app.time * 7.0);
-  color = color * scan + vec3(0.08, 0.82, 1.0) * (1.0 - shardEdge) + vec3(0.48, 0.05, 0.92) * vPulse * 0.22;
-  fragColor = vec4(color, 0.92);
+  color = mix(color,
+    cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
+    app.cameraMix * (1.0 - vDepthFactor * 0.7));
+  float alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
+    (0.75 + vShardKind * 0.12), 0.0, 0.98);
+  fragColor = vec4(color, alpha);
 }
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static current: AppAnimationLoopTemplate | null = null;
+  private static readonly currentListeners = new Set<() => void>();
+
+  static subscribeToCurrent(listener: () => void): () => void {
+    AppAnimationLoopTemplate.currentListeners.add(listener);
+    return () => {
+      AppAnimationLoopTemplate.currentListeners.delete(listener);
+    };
+  }
+
+  private static setCurrent(current: AppAnimationLoopTemplate | null): void {
+    AppAnimationLoopTemplate.current = current;
+    for (const listener of AppAnimationLoopTemplate.currentListeners) {
+      listener();
+    }
+  }
 
   static info = `\
   <p>
-  Experimental v10 WebXR work in progress. Enter AR to fold raw camera frames into a ring
-  of animated portal shards when the browser exposes them; enter VR to view the procedural
-  fallback in an Immersive Web Emulator headset.
+  Fly through a stereoscopic field of animated prism shards. WebGPU renders directly into
+  native WebXR projection layers when supported. WebGL2 remains available on older XR
+  browsers and can fold raw AR camera imagery into the portal when access is granted.
   </p>
   `;
 
-  readonly device: WebGLDevice;
+  readonly device: Device;
   readonly animationLoop: AnimationProps['animationLoop'];
   readonly uniformStore: UniformStore<{app: AppUniforms}>;
   readonly fallbackTexture: Texture;
@@ -131,10 +275,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly webXRManager: WebXRManager;
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
-  readonly viewMatrix = new Matrix4().lookAt({eye: [0, 0, 3.5], center: [0, 0, 0]});
+  readonly viewMatrix = new Matrix4().lookAt({
+    eye: [0.32, 0.24, 4.4],
+    center: CAMERA_TARGET
+  });
   readonly xrViewMatrix = new Matrix4();
 
   cameraTexture: WebXRCameraTexture | null = null;
+  orbitControls: OrbitControls | null = null;
   xrSession: XRSession | null = null;
   xrSessionMode: ImmersiveXRSessionMode | null = null;
   private _isFinalized = false;
@@ -151,13 +299,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({animationLoop, device}: AnimationProps) {
     super();
-    if (device.type !== 'webgl') {
-      throw new Error('WebXR Kaleidoscope requires WebGL2');
-    }
-
-    AppAnimationLoopTemplate.current = this;
     this.animationLoop = animationLoop;
-    this.device = device as WebGLDevice;
+    this.device = device;
     this.uniformStore = new UniformStore(device, {app});
     this.fallbackTexture = device.createTexture({
       data: new Uint8Array([6, 12, 42, 255]),
@@ -167,16 +310,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.webXRManager = new WebXRManager(device);
     this.model = new Model(device, {
-      id: 'passthrough-kaleidoscope',
-      vs,
-      fs,
-      geometry: makePortalShardGeometry(),
+      id: 'immersive-prism-portal',
+      source: WGSL_SHADER,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
+      geometry: makeSpatialPortalGeometry(),
       bindings: {
-        appUniforms: this.uniformStore.getManagedUniformBuffer('app'),
+        app: this.uniformStore.getManagedUniformBuffer('app'),
         cameraTexture: this.fallbackTexture
       },
       parameters: {
-        depthWriteEnabled: true,
+        depthWriteEnabled: false,
         depthCompare: 'less-equal',
         blend: true,
         blendColorOperation: 'add',
@@ -187,29 +331,32 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
+    this.initializePreviewControls();
 
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', this._keyDownListener);
     }
+    AppAnimationLoopTemplate.setCurrent(this);
   }
 
   onFinalize(): void {
     this._isFinalized = true;
     if (AppAnimationLoopTemplate.current === this) {
-      AppAnimationLoopTemplate.current = null;
+      AppAnimationLoopTemplate.setCurrent(null);
     }
     void this.exitAR();
     if (typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._keyDownListener);
     }
+    this.orbitControls?.destroy();
     this.model.destroy();
     this.fallbackTexture.destroy();
     this.uniformStore.destroy();
     this.webXRManager.destroy();
   }
 
-  onRender({animationFrame, aspect, device, tick}: AnimationProps): void {
-    const time = tick * 0.001;
+  onRender({animationFrame, aspect, device, time: elapsedTimeMilliseconds}: AnimationProps): void {
+    const time = elapsedTimeMilliseconds * 0.001;
     const xrFrame = animationFrame as XRFrame | null;
     const frameState = xrFrame && this.xrSession ? this.webXRManager.getFrameState(xrFrame) : null;
 
@@ -218,6 +365,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
+    if (this.orbitControls) {
+      this.orbitControls.update(elapsedTimeMilliseconds);
+      this.viewMatrix.lookAt({eye: this.orbitControls.getEyePosition(), center: CAMERA_TARGET});
+    }
     this.renderPreviewFrame(device, aspect, time);
   }
 
@@ -236,16 +387,33 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (typeof navigator === 'undefined' || !navigator.xr) {
       throw new Error('WebXR is not supported in this browser');
     }
+    if (
+      this.device.type === 'webgpu' &&
+      (!('xrCompatible' in this.device.props) ||
+        !this.device.props.xrCompatible ||
+        !('XRGPUBinding' in globalThis))
+    ) {
+      throw new Error(
+        'Native WebGPU WebXR is unavailable. Switch to WebGL2 for immersive fallback.'
+      );
+    }
 
-    const session = await navigator.xr.requestSession(sessionMode, getXRSessionInit(sessionMode));
+    const session = await navigator.xr.requestSession(
+      sessionMode,
+      getXRSessionInit(sessionMode, this.device.type)
+    );
 
     try {
       await this.webXRManager.setSession(session, {
         referenceSpaceType: 'local',
-        layerInit: {alpha: sessionMode === 'immersive-ar'}
+        ...(this.device.type === 'webgl'
+          ? {layerInit: {alpha: sessionMode === 'immersive-ar'}}
+          : {})
       });
       this.cameraTexture =
-        sessionMode === 'immersive-ar' ? this.createCameraTexture(session) : null;
+        sessionMode === 'immersive-ar' && this.device.type === 'webgl'
+          ? this.createCameraTexture(session)
+          : null;
       this.xrSession = session;
       this.xrSessionMode = sessionMode;
       session.addEventListener('end', this._xrSessionEndListener);
@@ -274,54 +442,65 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private renderPreviewFrame(device: Device, aspect: number, time: number): void {
     this.updateModelMatrix(time, false);
     this.modelViewProjectionMatrix
-      .perspective({fovy: Math.PI / 3.1, aspect, near: 0.1, far: 20})
+      .perspective({fovy: Math.PI / 3.05, aspect, near: 0.08, far: 36})
       .multiplyRight(this.viewMatrix)
       .multiplyRight(this.modelMatrix);
-    this.drawPortal(device.beginRenderPass({clearColor: [0.004, 0.006, 0.025, 1], clearDepth: 1}), {
-      cameraMix: 0,
-      texture: this.fallbackTexture,
-      time
-    });
+    this.preparePortal({cameraMix: 0, texture: this.fallbackTexture, time});
+    this.drawPortal(device.beginRenderPass({clearColor: [0.006, 0.008, 0.028, 1], clearDepth: 1}));
   }
 
   private renderXRFrame(time: number, frameState: WebXRFrameState): void {
     this.updateModelMatrix(time, true);
-    const clearAlpha = this.xrSessionMode === 'immersive-ar' ? 0 : 1;
+    const clearColor: [number, number, number, number] =
+      this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
+    const renderedFramebuffers = new Set<Framebuffer>();
 
-    for (const [viewIndex, view] of frameState.views.entries()) {
+    for (const view of frameState.views) {
       this.modelViewProjectionMatrix
         .copy(view.projectionMatrix)
         .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
         .multiplyRight(this.modelMatrix);
       const cameraTexture = view.camera ? this.cameraTexture : null;
       cameraTexture?.setView(view.xrView);
-      const renderPass = this.device.beginRenderPass({
-        framebuffer: frameState.framebuffer,
-        parameters: {viewport: view.viewport},
-        clearColor: viewIndex === 0 ? [0.004, 0.006, 0.025, clearAlpha] : false,
-        clearDepth: viewIndex === 0 ? 1 : false,
-        clearStencil: false
-      });
-      this.drawPortal(renderPass, {
+      const framebuffer = view.framebuffer ?? frameState.framebuffer;
+      const clearView = !renderedFramebuffers.has(framebuffer);
+      renderedFramebuffers.add(framebuffer);
+      this.preparePortal({
         cameraMix: cameraTexture ? 1 : 0,
         texture: cameraTexture || this.fallbackTexture,
         time
       });
+      const renderPass = this.device.beginRenderPass({
+        framebuffer,
+        clearColor: clearView ? clearColor : false,
+        clearDepth: clearView ? 1 : false,
+        clearStencil: false
+      });
+      renderPass.setParameters({viewport: view.viewport});
+      this.drawPortal(renderPass);
     }
   }
 
-  private drawPortal(
-    renderPass: ReturnType<Device['beginRenderPass']>,
-    options: {cameraMix: number; texture: Texture | WebXRCameraTexture; time: number}
-  ): void {
-    this.uniformStore.setUniforms({
-      app: {
-        modelViewProjectionMatrix: this.modelViewProjectionMatrix,
-        time: options.time,
-        cameraMix: options.cameraMix
-      }
-    });
+  private preparePortal(options: {
+    cameraMix: number;
+    texture: Texture | WebXRCameraTexture;
+    time: number;
+  }): void {
+    this.uniformStore.setUniforms(
+      {
+        app: {
+          modelViewProjectionMatrix: this.modelViewProjectionMatrix,
+          time: options.time,
+          cameraMix: options.cameraMix
+        }
+      },
+      this.device.commandEncoder
+    );
     this.model.shaderInputs.setProps({bindings: {cameraTexture: options.texture}});
+    this.model.predraw(this.device.commandEncoder);
+  }
+
+  private drawPortal(renderPass: ReturnType<Device['beginRenderPass']>): void {
     this.model.draw(renderPass);
     renderPass.end();
   }
@@ -330,33 +509,53 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.modelMatrix.identity();
     if (isXR) {
       this.modelMatrix
-        .translate([0, 0, -2.2])
-        .scale([0.82, 0.82, 0.82])
-        .rotateZ(time * 0.22)
-        .rotateX(Math.sin(time * 0.8) * 0.12);
+        .translate([0, 0.12, -2.15])
+        .scale([0.88, 0.88, 0.88])
+        .rotateZ(Math.sin(time * 0.2) * 0.055)
+        .rotateX(Math.sin(time * 0.38) * 0.045);
     } else {
       this.modelMatrix
-        .rotateZ(time * 0.22)
-        .rotateX(Math.sin(time * 0.8) * 0.24)
-        .rotateY(Math.cos(time * 0.55) * 0.18);
+        .rotateZ(Math.sin(time * 0.24) * 0.12)
+        .rotateX(Math.sin(time * 0.31) * 0.055)
+        .rotateY(Math.cos(time * 0.26) * 0.075);
     }
   }
 
   private createCameraTexture(session: XRSession): WebXRCameraTexture | null {
-    if (typeof XRWebGLBinding === 'undefined') {
+    if (this.device.type !== 'webgl' || typeof XRWebGLBinding === 'undefined') {
       return null;
     }
 
     try {
+      const webGLDevice = this.device as Device & {gl: WebGL2RenderingContext};
       const XRWebGLBindingConstructor = XRWebGLBinding as unknown as new (
         session: XRSession,
         context: WebGL2RenderingContext
       ) => XRWebGLBinding;
-      const xrWebGLBinding = new XRWebGLBindingConstructor(session, this.device.gl);
+      const xrWebGLBinding = new XRWebGLBindingConstructor(session, webGLDevice.gl);
       return new WebXRCameraTexture(this.device, xrWebGLBinding);
     } catch {
       return null;
     }
+  }
+
+  private initializePreviewControls(): void {
+    const canvas = this.device.getDefaultCanvasContext().canvas;
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    this.orbitControls = new OrbitControls(canvas, {
+      target: CAMERA_TARGET,
+      distance: 7.1,
+      yaw: 0.055,
+      pitch: 0.035,
+      minDistance: 3.8,
+      maxDistance: 11,
+      minPitch: -0.35,
+      maxPitch: 0.35,
+      rotateSpeed: 0.003
+    });
   }
 
   private _clearXRSession(): void {
@@ -374,64 +573,175 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-function getXRSessionInit(sessionMode: ImmersiveXRSessionMode): XRSessionInit {
+function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: string): XRSessionInit {
+  if (deviceType === 'webgpu') {
+    return {requiredFeatures: ['webgpu'], optionalFeatures: ['local-floor']};
+  }
+
   return sessionMode === 'immersive-ar'
     ? {optionalFeatures: ['camera-access', 'local-floor']}
     : {optionalFeatures: ['local-floor']};
 }
 
-function makePortalShardGeometry(): Geometry {
+function makeSpatialPortalGeometry(): Geometry {
   const positions: number[] = [];
   const texCoords: number[] = [];
-  const shardCount = 18;
-  const innerRadius = 0.22;
-  const outerRadius = 1.16;
+  const shardAttributes: number[] = [];
 
-  for (let shardIndex = 0; shardIndex < shardCount; shardIndex++) {
-    const centerAngle = (shardIndex / shardCount) * Math.PI * 2;
-    const halfAngle = (Math.PI / shardCount) * 0.72;
-    const innerLeft = makePolarPoint(innerRadius, centerAngle - halfAngle);
-    const innerRight = makePolarPoint(innerRadius, centerAngle + halfAngle);
-    const outerLeft = makePolarPoint(outerRadius, centerAngle - halfAngle * 0.78);
-    const outerRight = makePolarPoint(outerRadius, centerAngle + halfAngle * 0.78);
-    appendQuad(positions, texCoords, innerLeft, innerRight, outerRight, outerLeft);
-  }
+  appendPortalRings(positions, texCoords, shardAttributes);
+  appendHelicalRibbons(positions, texCoords, shardAttributes);
+  appendFloatingPrisms(positions, texCoords, shardAttributes);
 
   return new Geometry({
     topology: 'triangle-list',
     attributes: {
       positions: {size: 3, value: new Float32Array(positions)},
-      texCoords: {size: 2, value: new Float32Array(texCoords)}
+      texCoords: {size: 2, value: new Float32Array(texCoords)},
+      shardData: {size: 4, value: new Float32Array(shardAttributes)}
     }
   });
 }
 
-function makePolarPoint(radius: number, angle: number): [number, number, number] {
-  return [Math.cos(angle) * radius, Math.sin(angle) * radius, 0];
+function appendPortalRings(
+  positions: number[],
+  texCoords: number[],
+  shardAttributes: number[]
+): void {
+  for (let ringIndex = 0; ringIndex < PORTAL_RING_COUNT; ringIndex++) {
+    const depthFactor = ringIndex / (PORTAL_RING_COUNT - 1);
+    const depth = -depthFactor * PORTAL_DEPTH;
+    const innerRadius = 1.02 + Math.sin(ringIndex * 0.73) * 0.14 + depthFactor * 0.23;
+    const outerRadius = innerRadius + 0.11 + (ringIndex % 3) * 0.045;
+
+    for (let shardIndex = 0; shardIndex < SHARDS_PER_RING; shardIndex++) {
+      const orbitPhase = shardIndex / SHARDS_PER_RING;
+      const centerAngle = orbitPhase * Math.PI * 2 + ringIndex * 0.14;
+      const halfAngle = (Math.PI / SHARDS_PER_RING) * (0.57 + (shardIndex % 3) * 0.1);
+      const innerLeft = makePolarPoint(innerRadius, centerAngle - halfAngle, depth);
+      const innerRight = makePolarPoint(innerRadius, centerAngle + halfAngle, depth);
+      const outerRight = makePolarPoint(outerRadius, centerAngle + halfAngle * 0.72, depth - 0.055);
+      const outerLeft = makePolarPoint(outerRadius, centerAngle - halfAngle * 0.72, depth - 0.055);
+      appendQuad(positions, texCoords, shardAttributes, {
+        corners: [innerLeft, innerRight, outerRight, outerLeft],
+        depthFactor,
+        orbitPhase,
+        energy: 0.68 + ((shardIndex + ringIndex) % 5) * 0.075,
+        kind: 0
+      });
+    }
+  }
+}
+
+function appendHelicalRibbons(
+  positions: number[],
+  texCoords: number[],
+  shardAttributes: number[]
+): void {
+  for (let ribbonIndex = 0; ribbonIndex < RIBBON_COUNT; ribbonIndex++) {
+    const ribbonPhase = (ribbonIndex / RIBBON_COUNT) * Math.PI * 2;
+
+    for (let segmentIndex = 0; segmentIndex < RIBBON_SEGMENT_COUNT; segmentIndex++) {
+      const depthFactor = segmentIndex / RIBBON_SEGMENT_COUNT;
+      const nextDepthFactor = (segmentIndex + 0.76) / RIBBON_SEGMENT_COUNT;
+      const startAngle = ribbonPhase + depthFactor * Math.PI * 3.4;
+      const endAngle = ribbonPhase + nextDepthFactor * Math.PI * 3.4;
+      const ribbonRadius = 1.78 + Math.sin(depthFactor * Math.PI * 4 + ribbonPhase) * 0.13;
+      const ribbonWidth = 0.035;
+      appendQuad(positions, texCoords, shardAttributes, {
+        corners: [
+          makePolarPoint(ribbonRadius - ribbonWidth, startAngle, -depthFactor * PORTAL_DEPTH),
+          makePolarPoint(ribbonRadius + ribbonWidth, startAngle, -depthFactor * PORTAL_DEPTH),
+          makePolarPoint(ribbonRadius + ribbonWidth, endAngle, -nextDepthFactor * PORTAL_DEPTH),
+          makePolarPoint(ribbonRadius - ribbonWidth, endAngle, -nextDepthFactor * PORTAL_DEPTH)
+        ],
+        depthFactor,
+        orbitPhase: ribbonIndex / RIBBON_COUNT,
+        energy: 0.72,
+        kind: 1
+      });
+    }
+  }
+}
+
+function appendFloatingPrisms(
+  positions: number[],
+  texCoords: number[],
+  shardAttributes: number[]
+): void {
+  for (let particleIndex = 0; particleIndex < PARTICLE_COUNT; particleIndex++) {
+    const depthFactor = makeDeterministicNoise(particleIndex * 3 + 1);
+    const orbitPhase = makeDeterministicNoise(particleIndex * 3 + 2);
+    const radius = 0.22 + makeDeterministicNoise(particleIndex * 3 + 3) * 2.12;
+    const angle = orbitPhase * Math.PI * 2;
+    const centerX = Math.cos(angle) * radius;
+    const centerY = Math.sin(angle) * radius;
+    const depth = -depthFactor * PORTAL_DEPTH;
+    const halfSize = 0.013 + makeDeterministicNoise(particleIndex * 7 + 5) * 0.047;
+    appendQuad(positions, texCoords, shardAttributes, {
+      corners: [
+        [centerX - halfSize, centerY, depth],
+        [centerX, centerY - halfSize * 1.75, depth + halfSize],
+        [centerX + halfSize, centerY, depth],
+        [centerX, centerY + halfSize * 1.75, depth - halfSize]
+      ],
+      depthFactor,
+      orbitPhase,
+      energy: 0.9 + makeDeterministicNoise(particleIndex * 11 + 9) * 0.45,
+      kind: 2
+    });
+  }
+}
+
+function makeDeterministicNoise(index: number): number {
+  const value = Math.sin(index * 127.1 + 311.7) * 43758.5453123;
+  return value - Math.floor(value);
+}
+
+function makePolarPoint(radius: number, angle: number, depth: number): [number, number, number] {
+  return [Math.cos(angle) * radius, Math.sin(angle) * radius, depth];
 }
 
 function appendQuad(
   positions: number[],
   texCoords: number[],
-  bottomLeft: [number, number, number],
-  bottomRight: [number, number, number],
-  topRight: [number, number, number],
-  topLeft: [number, number, number]
+  shardAttributes: number[],
+  options: {
+    corners: [
+      [number, number, number],
+      [number, number, number],
+      [number, number, number],
+      [number, number, number]
+    ];
+    depthFactor: number;
+    orbitPhase: number;
+    energy: number;
+    kind: number;
+  }
 ): void {
-  appendVertex(positions, texCoords, bottomLeft, [0, 0]);
-  appendVertex(positions, texCoords, bottomRight, [1, 0]);
-  appendVertex(positions, texCoords, topRight, [1, 1]);
-  appendVertex(positions, texCoords, bottomLeft, [0, 0]);
-  appendVertex(positions, texCoords, topRight, [1, 1]);
-  appendVertex(positions, texCoords, topLeft, [0, 1]);
+  const [bottomLeft, bottomRight, topRight, topLeft] = options.corners;
+  const shardData: [number, number, number, number] = [
+    options.depthFactor,
+    options.orbitPhase,
+    options.energy,
+    options.kind
+  ];
+  appendVertex(positions, texCoords, shardAttributes, bottomLeft, [0, 0], shardData);
+  appendVertex(positions, texCoords, shardAttributes, bottomRight, [1, 0], shardData);
+  appendVertex(positions, texCoords, shardAttributes, topRight, [1, 1], shardData);
+  appendVertex(positions, texCoords, shardAttributes, bottomLeft, [0, 0], shardData);
+  appendVertex(positions, texCoords, shardAttributes, topRight, [1, 1], shardData);
+  appendVertex(positions, texCoords, shardAttributes, topLeft, [0, 1], shardData);
 }
 
 function appendVertex(
   positions: number[],
   texCoords: number[],
+  shardAttributes: number[],
   position: [number, number, number],
-  texCoord: [number, number]
+  texCoord: [number, number],
+  shardData: [number, number, number, number]
 ): void {
   positions.push(...position);
   texCoords.push(...texCoord);
+  shardAttributes.push(...shardData);
 }

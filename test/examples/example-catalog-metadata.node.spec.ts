@@ -38,8 +38,7 @@ const WEBGL_ONLY_EXAMPLES = new Set([
   'integrations/external-context',
   'integrations/react-strict-mode',
   'tutorials/transform-feedback',
-  'tutorials/transform',
-  'experimental/webxr-kaleidoscope'
+  'tutorials/transform'
 ]);
 const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
