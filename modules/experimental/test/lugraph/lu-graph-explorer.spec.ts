@@ -140,9 +140,17 @@ test('luGraph explorer renders original GPU chunks, highlights neighborhoods, pi
   let color: Texture | undefined;
   let depth: Texture | undefined;
   let pickingReadback: Buffer | undefined;
+  const devicePixelSizeSpy = vi
+    .spyOn(device.getDefaultCanvasContext(), 'getDevicePixelSize')
+    .mockReturnValue([320, 240]);
   try {
     explorer = new LuGraphExplorerAnimationLoopTemplate({device} as AnimationProps);
     const bindings = explorer as unknown as ExplorerGraphBindings;
+    tapeTest.deepEqual(
+      [bindings.frameWidth, bindings.frameHeight],
+      [320, 240],
+      'GPU picking uses real centered device pixels rather than assuming a one-pixel test canvas'
+    );
     color = device.createTexture({
       id: 'lugraph-explorer-test-color',
       format: device.preferredColorFormat,
@@ -163,7 +171,7 @@ test('luGraph explorer renders original GPU chunks, highlights neighborhoods, pi
       usage: Buffer.COPY_DST | Buffer.MAP_READ
     });
 
-    // Preserve one centered instance so its true rendered circle deterministically covers pixel 0.
+    // Preserve one centered instance so its true rendered circle covers the current canvas center.
     (explorer.layout.positions.data[0].buffer as Buffer).write(Float32Array.from([0, 0]));
     (explorer.layout.pinned!.data[0].buffer as Buffer).write(Uint32Array.from([1]));
 
@@ -177,7 +185,9 @@ test('luGraph explorer renders original GPU chunks, highlights neighborhoods, pi
       }
     });
     explorer.pickingGraph.encode(encoder, {
-      parameters: {pixel: [0, 0]},
+      parameters: {
+        pixel: [Math.floor(bindings.frameWidth / 2), Math.floor(bindings.frameHeight / 2)]
+      },
       buffers: {[bindings.pickingReadbackId]: pickingReadback}
     });
     device.submit(encoder.finish());
@@ -208,6 +218,7 @@ test('luGraph explorer renders original GPU chunks, highlights neighborhoods, pi
       'integer GPU picking recovers the original stable vertex ID'
     );
   } finally {
+    devicePixelSizeSpy.mockRestore();
     pickingReadback?.destroy();
     depth?.destroy();
     color?.destroy();
