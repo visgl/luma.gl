@@ -14,6 +14,31 @@ Install the package alongside matching luma.gl core, engine, and shadertools ver
 yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
 ```
 
+## Physically Based Scene Rendering
+
+[`SceneRenderer`](/docs/api-reference/experimental/scene-renderer) renders retained, physically
+based surfaces on WebGPU and WebGL using the canonical `@luma.gl/shadertools` PBR modules. Its
+format-independent scene descriptors support one-draw instancing, opaque/masked/blended materials,
+source-faithful geometry attributes and UV sets, existing skinning and morph-target primitives,
+advanced physical material factors, roughness-aware image-based lighting, physically based
+refraction through captured opaque scene color, transparent ordering, and retained pipeline
+invalidation.
+
+[`PBREnvironmentGenerator`](/docs/api-reference/experimental/pbr-environment) prepares a complete
+lighting environment from a caller-owned equirectangular GPU texture. Portable WGSL/GLSL passes
+integrate a GGX-prefiltered specular cubemap at every roughness mip, a cosine-weighted diffuse
+irradiance cubemap, and a split-sum BRDF lookup texture with explicit linear/sRGB source handling.
+
+[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) consumes the
+same scene descriptors on WebGPU and resolves compatible opaque/masked metallic-roughness surfaces
+through the shared G-buffer and deferred-lighting pass. Advanced materials, blended surfaces,
+environment lighting, and debug views automatically fall back to the forward renderer.
+
+`createPBRMaterialFactory`, `createPBRMaterial`, and `createPBRModel` are also available when an
+application needs lower-level composition with the same canonical material and shader contracts.
+These opinionated orchestration helpers remain experimental; `@luma.gl/engine` continues to own
+stable, generic rendering and animation primitives.
+
 ## WebXR
 
 <p class="badges">
