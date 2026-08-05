@@ -70,6 +70,24 @@ network, dependency map, fraud investigation, or other relationship visualizatio
 WebGPU-only educational example, not a large-graph performance benchmark: its exact layout costs
 `O(V² + E)` per force iteration and intentionally uses only 128 vertices.
 
+### Use luGraph from deck.gl without copying graph buffers
+
+The optional [luGraph + deck.gl network explorer](/examples/deck/lugraph-explorer) demonstrates
+the same resident analytics through a real deck.gl `Effect`, custom node and edge layers,
+`OrthographicView` navigation, GPU neighborhood selection, progressive layout, pinning, and
+asynchronous WebGPU picking. The effect encodes one-time topology, PageRank, and weak components
+followed by per-frame breadth-first selection and force integration into deck.gl's own command
+encoder; deck.gl remains responsible for queue submission.
+
+Node positions are simultaneously the layout's writable storage allocation and the node layer's
+`float32x2` instance vertex attribute. Importance scores, component labels, hop distances, and the
+selection mask remain storage inputs; each nonempty original edge partition gets its own edge layer,
+without concatenation, buffer copies, or per-frame graph readback. Only explicitly requested
+deck.gl picking results cross to JavaScript.
+
+The integration lives exclusively under `examples/deck/lugraph-explorer`; neither
+`@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl.
+
 ## Measure real CPU and WebGPU graph workloads
 
 **Question: Does this graph workflow benefit from GPU execution on my actual browser, and what do

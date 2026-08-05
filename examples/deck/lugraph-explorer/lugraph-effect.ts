@@ -1,0 +1,342 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import type {Effect, EffectContext} from '@deck.gl/core';
+import {Buffer, type Device} from '@luma.gl/core';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/experimental';
+import {
+  LuGraph,
+  LuGraphBreadthFirstSearch,
+  LuGraphConnectedComponents,
+  LuGraphForceLayout,
+  LuGraphPageRank,
+  LuGraphTopology,
+  type LuGraphAdjacency
+} from '@luma.gl/experimental/lugraph';
+import {GPUData, GPUVector} from '@luma.gl/tables';
+import {
+  makeGraphExplorerDataset,
+  type GraphExplorerDataset
+} from '../../experimental/lugraph-explorer/graph-data';
+
+const SCALAR_BYTE_LENGTH = 4;
+const MAXIMUM_NEIGHBORHOOD_DEPTH = 8;
+const DEFAULT_NEIGHBORHOOD_DEPTH = 2;
+
+type ScalarFormat = 'uint32' | 'float32';
+
+/**
+ * Declares resident luGraph analytics and progressive layout inside deck.gl's own render encoder.
+ *
+ * Construction compiles persistent graphs but never submits commands or reads a buffer. Original
+ * source edge batches, including their empty middle partition, remain directly available to Deck
+ * edge layers. The first ordinary frame encodes topology, PageRank, and weak components once;
+ * every ordinary frame then encodes bounded neighborhood search and force integration.
+ */
+export class LuGraphDeckEffect implements Effect {
+  readonly id = 'lugraph-deck-effect';
+  readonly props = {};
+  readonly useInPicking = false;
+  readonly device: Device;
+  readonly dataset: GraphExplorerDataset;
+  readonly graph: LuGraph;
+  readonly topology: LuGraphTopology;
+  readonly pageRank: LuGraphPageRank;
+  readonly components: LuGraphConnectedComponents;
+  readonly search: LuGraphBreadthFirstSearch;
+  readonly layout: LuGraphForceLayout;
+  readonly analysisGraph: CompiledGPUCommandGraph<void>;
+  readonly frameGraph: CompiledGPUCommandGraph<void>;
+
+  private readonly buffers: Buffer[] = [];
+  private readonly vectors: GPUVector[] = [];
+  private readonly seeds: GPUVector<'uint32'>;
+  private readonly seedCount: GPUVector<'uint32'>;
+  private readonly activeDepth: GPUVector<'uint32'>;
+  private readonly pinned: GPUVector<'uint32'>;
+  private readonly reset: GPUVector<'uint32'>;
+  private readonly pinnedVertices = new Set<number>();
+  private selectedVertex: number | null = 0;
+  private neighborhoodDepth = DEFAULT_NEIGHBORHOOD_DEPTH;
+  private analyticsPending = true;
+  private destroyed = false;
+
+  constructor(device: Device, dataset: GraphExplorerDataset = makeGraphExplorerDataset()) {
+    if (device.type !== 'webgpu') throw new Error('LuGraphDeckEffect requires WebGPU');
+    this.device = device;
+    this.dataset = dataset;
+
+    this.graph = new LuGraph({
+      vertexCount: dataset.vertexCount,
+      directed: true,
+      sourceVertices: this.createChunkedVector('source-vertices', dataset.sourceChunks),
+      targetVertices: this.createChunkedVector('target-vertices', dataset.targetChunks)
+    });
+    this.topology = new LuGraphTopology({
+      id: 'lugraph-deck-topology',
+      graph: this.graph,
+      forward: this.createAdjacency('forward', dataset.vertexCount, this.graph.edgeCount),
+      reverse: this.createAdjacency('reverse', dataset.vertexCount, this.graph.edgeCount),
+      invalidEdgeCount: this.createScalarVector('invalid-edges', 'uint32', 1)
+    });
+    this.pageRank = new LuGraphPageRank({
+      id: 'lugraph-deck-page-rank',
+      topology: this.topology,
+      output: this.createScalarVector('importance', 'float32', dataset.vertexCount),
+      iterations: 12
+    });
+    this.components = new LuGraphConnectedComponents({
+      id: 'lugraph-deck-components',
+      topology: this.topology,
+      output: this.createScalarVector('components', 'uint32', dataset.vertexCount),
+      iterations: 16
+    });
+
+    this.seeds = this.createScalarVector('seeds', 'uint32', 1, Uint32Array.of(0));
+    this.seedCount = this.createScalarVector('seed-count', 'uint32', 1, Uint32Array.of(1));
+    this.activeDepth = this.createScalarVector(
+      'active-depth',
+      'uint32',
+      1,
+      Uint32Array.of(DEFAULT_NEIGHBORHOOD_DEPTH)
+    );
+    this.search = new LuGraphBreadthFirstSearch({
+      id: 'lugraph-deck-neighborhood',
+      topology: this.topology,
+      seeds: this.seeds,
+      seedCount: this.seedCount,
+      distances: this.createScalarVector('distances', 'uint32', dataset.vertexCount),
+      predecessors: this.createScalarVector('predecessors', 'uint32', dataset.vertexCount),
+      mask: this.createScalarVector('selection-mask', 'uint32', dataset.vertexCount),
+      maxDepth: MAXIMUM_NEIGHBORHOOD_DEPTH,
+      activeDepth: this.activeDepth,
+      direction: 'both'
+    });
+
+    this.pinned = this.createScalarVector('pinned', 'uint32', dataset.vertexCount);
+    this.reset = this.createScalarVector('reset', 'uint32', 1, Uint32Array.of(0));
+    this.layout = new LuGraphForceLayout({
+      id: 'lugraph-deck-force-layout',
+      topology: this.topology,
+      positions: this.createCoordinateVector('positions', dataset.positions, Buffer.VERTEX),
+      velocities: this.createCoordinateVector('velocities', dataset.velocities),
+      pinned: this.pinned,
+      reset: this.reset,
+      seed: 0x1a2b3c4d,
+      iterationsPerFrame: 2,
+      repulsion: 0.005,
+      attraction: 0.045,
+      gravity: 0.025,
+      damping: 0.85,
+      maxVelocity: 0.045
+    });
+
+    const analysis = new GPUCommandGraph<void>(device, {id: 'lugraph-deck-analysis'});
+    this.topology.addToGraph(analysis);
+    this.components.addToGraph(analysis);
+    this.pageRank.addToGraph(analysis);
+    this.analysisGraph = analysis.compile();
+
+    const frame = new GPUCommandGraph<void>(device, {id: 'lugraph-deck-frame'});
+    this.search.addToGraph(frame);
+    this.layout.addToGraph(frame);
+    this.frameGraph = frame.compile();
+  }
+
+  /** Supplies the exact progressive allocation also bound as a Deck instance vertex attribute. */
+  get positions(): Buffer {
+    return this.getVectorBuffer(this.layout.positions);
+  }
+
+  get importance(): Buffer {
+    return this.getVectorBuffer(this.pageRank.output);
+  }
+
+  get componentLabels(): Buffer {
+    return this.getVectorBuffer(this.components.output);
+  }
+
+  get distances(): Buffer {
+    return this.getVectorBuffer(this.search.distances);
+  }
+
+  get selectionMask(): Buffer {
+    return this.getVectorBuffer(this.search.mask!);
+  }
+
+  get currentSelection(): number | null {
+    return this.selectedVertex;
+  }
+
+  get currentNeighborhoodDepth(): number {
+    return this.neighborhoodDepth;
+  }
+
+  setup(_context: EffectContext): void {}
+
+  /** Appends compute to Deck's current frame; Deck remains the sole queue submission owner. */
+  preRender(options: Parameters<Effect['preRender']>[0]): void {
+    if (this.destroyed || !options.viewports[0]) return;
+    if (this.analyticsPending) {
+      this.analysisGraph.encode(this.device.commandEncoder, {parameters: undefined});
+      this.analyticsPending = false;
+    }
+    this.frameGraph.encode(this.device.commandEncoder, {parameters: undefined});
+  }
+
+  /** Publishes a genuinely picked stable source vertex without reading any graph column. */
+  setSelectedVertex(vertex: number | null): void {
+    if (vertex !== null && !this.isValidVertex(vertex)) return;
+    this.selectedVertex = vertex;
+    if (vertex === null) {
+      this.getVectorBuffer(this.seedCount).write(Uint32Array.of(0));
+    } else {
+      this.getVectorBuffer(this.seeds).write(Uint32Array.of(vertex));
+      this.getVectorBuffer(this.seedCount).write(Uint32Array.of(1));
+    }
+  }
+
+  /** Updates the existing GPU-resident dynamic hop limit without recompiling traversal passes. */
+  setNeighborhoodDepth(depth: number): void {
+    this.neighborhoodDepth = Math.max(0, Math.min(MAXIMUM_NEIGHBORHOOD_DEPTH, Math.round(depth)));
+    this.getVectorBuffer(this.activeDepth).write(Uint32Array.of(this.neighborhoodDepth));
+  }
+
+  /** Pins or releases exactly one original source vertex; no other rows are repacked. */
+  setPinnedVertex(vertex: number, pinned: boolean): void {
+    if (!this.isValidVertex(vertex)) return;
+    this.getVectorBuffer(this.pinned).write(
+      Uint32Array.of(pinned ? 1 : 0),
+      vertex * SCALAR_BYTE_LENGTH
+    );
+    if (pinned) this.pinnedVertices.add(vertex);
+    else this.pinnedVertices.delete(vertex);
+  }
+
+  isVertexPinned(vertex: number): boolean {
+    return this.pinnedVertices.has(vertex);
+  }
+
+  /** Moves the same physical vertex allocation consumed by the active Deck node model. */
+  setVertexPosition(vertex: number, position: readonly [number, number]): void {
+    if (!this.isValidVertex(vertex) || !position.every(Number.isFinite)) return;
+    this.positions.write(Float32Array.from(position), vertex * 2 * SCALAR_BYTE_LENGTH);
+    this.getVectorBuffer(this.layout.velocities).write(
+      Float32Array.of(0, 0),
+      vertex * 2 * SCALAR_BYTE_LENGTH
+    );
+  }
+
+  clearPins(): void {
+    this.getVectorBuffer(this.pinned).write(new Uint32Array(this.graph.vertexCount));
+    this.pinnedVertices.clear();
+  }
+
+  requestReset(): void {
+    this.getVectorBuffer(this.reset).write(Uint32Array.of(1));
+  }
+
+  /** Releases only effect-owned graphs and buffers; aggregate vectors remain borrowing views. */
+  cleanup(_context: EffectContext): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.analysisGraph.destroy();
+    this.frameGraph.destroy();
+    for (const vector of this.vectors.reverse()) vector.destroy();
+    for (const buffer of this.buffers.reverse()) buffer.destroy();
+  }
+
+  private isValidVertex(vertex: number): boolean {
+    return Number.isSafeInteger(vertex) && vertex >= 0 && vertex < this.graph.vertexCount;
+  }
+
+  /** Preserves all original aligned GPUData partitions, including zero-length source batches. */
+  private createChunkedVector(name: string, chunks: Uint32Array[]): GPUVector<'uint32'> {
+    const data = chunks.map((values, chunkIndex) => {
+      const buffer = this.device.createBuffer({
+        id: `lugraph-deck-${name}-${chunkIndex}`,
+        data: values.length === 0 ? new Uint32Array(1) : values,
+        usage: Buffer.STORAGE | Buffer.COPY_DST
+      });
+      this.buffers.push(buffer);
+      return new GPUData<'uint32'>({
+        buffer,
+        format: 'uint32',
+        length: values.length,
+        ownsBuffer: false
+      });
+    });
+    const vector = new GPUVector<'uint32'>({
+      type: 'data',
+      name,
+      format: 'uint32',
+      data,
+      ownsData: false
+    });
+    this.vectors.push(vector);
+    return vector;
+  }
+
+  private createScalarVector<Format extends ScalarFormat>(
+    name: string,
+    format: Format,
+    length: number,
+    values?: Uint32Array | Float32Array
+  ): GPUVector<Format> {
+    const buffer = this.device.createBuffer({
+      id: `lugraph-deck-${name}`,
+      byteLength: Math.max(length, 1) * SCALAR_BYTE_LENGTH,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+    });
+    if (values?.length) buffer.write(values);
+    this.buffers.push(buffer);
+    const vector = new GPUVector<Format>({
+      type: 'buffer',
+      name,
+      format,
+      buffer,
+      length,
+      ownsBuffer: false
+    });
+    this.vectors.push(vector);
+    return vector;
+  }
+
+  private createCoordinateVector(
+    name: string,
+    values: Float32Array,
+    additionalUsage = 0
+  ): GPUVector<'float32x2'> {
+    const buffer = this.device.createBuffer({
+      id: `lugraph-deck-${name}`,
+      data: values,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC | additionalUsage
+    });
+    this.buffers.push(buffer);
+    const vector = new GPUVector<'float32x2'>({
+      type: 'buffer',
+      name,
+      format: 'float32x2',
+      buffer,
+      length: values.length / 2,
+      ownsBuffer: false
+    });
+    this.vectors.push(vector);
+    return vector;
+  }
+
+  private createAdjacency(name: string, vertexCount: number, capacity: number): LuGraphAdjacency {
+    return {
+      offsets: this.createScalarVector(`${name}-offsets`, 'uint32', vertexCount + 1),
+      neighbors: this.createScalarVector(`${name}-neighbors`, 'uint32', capacity),
+      edgeIds: this.createScalarVector(`${name}-edge-ids`, 'uint32', capacity),
+      count: this.createScalarVector(`${name}-count`, 'uint32', 1),
+      overflow: this.createScalarVector(`${name}-overflow`, 'uint32', 1)
+    };
+  }
+
+  private getVectorBuffer(vector: GPUVector): Buffer {
+    return vector.data[0].buffer as Buffer;
+  }
+}

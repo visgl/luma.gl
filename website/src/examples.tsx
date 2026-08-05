@@ -118,6 +118,7 @@ const loadMillionRowCrossfilterExample = () =>
   import('../../examples/showcase/million-row-crossfilter/app');
 const loadRasterLabExample = () => import('../../examples/showcase/raster-lab/app');
 const loadLuSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
+const loadLuGraphExplorerDeckExample = () => import('../../examples/deck/lugraph-explorer/app');
 const loadFP64Example = () => import('../../examples/experimental/fp64/app');
 
 type WebsiteExampleProps = React.PropsWithChildren<
@@ -459,6 +460,41 @@ export const DeckLuSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
         panel: {
           id: 'luspatial-taxi',
           title: 'luProj + luSpatial Taxi Explorer',
+          devices: ['webgpu']
+        }
+      }}
+      showStats={false}
+      style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+    />
+  );
+};
+
+/** Loads the optional deck.gl graph integration only when its WebGPU example is opened. */
+export const DeckLuGraphExplorerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => {
+  const {module, errorMessage} = useDeferredExampleModule(loadLuGraphExplorerDeckExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        title="luGraph + deck.gl Network Explorer"
+        description="Loading GPU graph analytics, progressive layout, and direct deck.gl layers."
+        errorMessage={errorMessage}
+        embedded={embedded}
+        style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+      />
+    );
+  }
+
+  return (
+    <ReactExample
+      component={DeckArrowLayerCanvas}
+      componentProps={{
+        createDeck: module.createLuGraphExplorerDeck,
+        panel: {
+          id: 'lugraph-explorer',
+          title: 'luGraph + deck.gl Network Explorer',
           devices: ['webgpu']
         }
       }}

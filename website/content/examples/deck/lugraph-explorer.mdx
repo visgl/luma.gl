@@ -1,0 +1,31 @@
+---
+title: luGraph + deck.gl Network Explorer
+description: Analyze, progressively lay out, and directly render one GPU-resident property graph using real deck.gl layers and asynchronous WebGPU picking.
+sidebar_custom_props:
+  description: Explore a resident graph through GPU PageRank, components, layout, neighborhood selection, and direct deck.gl layers.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, graphs, visualization, picking, deck.gl]
+---
+
+import {DeckLuGraphExplorerExample} from '@site/src/examples';
+
+<DeckLuGraphExplorerExample />
+
+This optional integration keeps graph analytics inside `@luma.gl/experimental/lugraph` and
+deck.gl-specific rendering inside an unpackaged example. A real deck.gl `Effect` builds forward and
+reverse GPU adjacency, computes dangling-aware PageRank and weak-component labels once, then
+progressively advances bounded neighborhood search and force-directed layout on deck.gl's existing
+WebGPU command encoder.
+
+The custom node layer binds the exact `float32x2` position allocation as its instance vertex
+attribute. PageRank scores control node size, weak-component identifiers control color, and
+source-aligned breadth-first outputs highlight selected neighborhoods. One custom edge layer reads
+each original nonempty source/target GPU chunk directly; the empty partition is retained in the
+graph and never repacked.
+
+Use the orthographic view to pan and zoom. Click a node to select its neighborhood, drag to pin its
+GPU-resident coordinates, adjust the hop limit, clear pins, or reset the deterministic layout.
+deck.gl's asynchronous WebGPU picking resolves stable original vertex identifiers only when
+interaction requests a pick; ordinary animation never reads graph columns back to the CPU.
