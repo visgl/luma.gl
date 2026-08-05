@@ -4,12 +4,14 @@ import {
   CylinderGeometry,
   Geometry,
   PlaneGeometry,
-  type SceneCamera,
-  type SceneMaterial,
-  type SceneRenderOptions,
-  type SceneSurface,
   SphereGeometry
 } from '@luma.gl/engine';
+import type {
+  SceneCamera,
+  SceneMaterial,
+  SceneRenderOptions,
+  SceneSurface
+} from '@luma.gl/experimental';
 import {
   type Light,
   type PBRMaterialBindings,

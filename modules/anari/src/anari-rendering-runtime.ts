@@ -1,7 +1,7 @@
 import {type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {bloomShaderPassPipeline} from '@luma.gl/effects';
-import {SceneRenderer, ShaderPassRenderer} from '@luma.gl/engine';
-import {DeferredSceneRenderer} from '@luma.gl/experimental';
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {DeferredSceneRenderer, SceneRenderer} from '@luma.gl/experimental';
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import {ANARISceneAdapter, getFrameSize} from './anari-scene-adapter';

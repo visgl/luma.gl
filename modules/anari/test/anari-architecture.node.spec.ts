@@ -1,6 +1,25 @@
 import {readdirSync, readFileSync} from 'node:fs';
 import test from 'test/utils/vitest-tape';
 
+const EXPERIMENTAL_RENDERING_SYMBOLS = new Set([
+  'SceneAlphaMode',
+  'SceneCamera',
+  'SceneEnvironment',
+  'SceneMaterial',
+  'SceneRenderOptions',
+  'SceneRenderStatistics',
+  'SceneRenderer',
+  'SceneSurface',
+  'DeferredSceneRenderer',
+  'createPBRMaterial',
+  'createPBRMaterialFactory',
+  'createPBRModel',
+  'getPBRGeometryDefines',
+  'getPBRMaterialMapUniforms',
+  'getPBRTextureDefines',
+  'supportsDeferredScene'
+]);
+
 test('ANARI remains a declarative facade over shared rendering implementations', testContext => {
   const sourceDirectory = new URL('../src/', import.meta.url);
   const sourceFiles = readdirSync(sourceDirectory).filter(fileName => fileName.endsWith('.ts'));
@@ -16,11 +35,18 @@ test('ANARI remains a declarative facade over shared rendering implementations',
     );
     testContext.notOk(
       /\bnew\s+(?:Model|MaterialFactory)\b/.test(source),
-      `${fileName} delegates model and material implementations to the engine`
+      `${fileName} delegates model and material implementations to shared rendering packages`
     );
     testContext.notOk(
       /\b(?:anariMaterialModule|ANARI_MATERIAL_WGSL|ANARI_DEFERRED_WGSL_SHADER)\b/.test(source),
       `${fileName} does not recreate an ANARI-only material or renderer shader`
+    );
+    testContext.deepEqual(
+      getNamedImports(source, '@luma.gl/engine').filter(symbol =>
+        EXPERIMENTAL_RENDERING_SYMBOLS.has(symbol)
+      ),
+      [],
+      `${fileName} does not import experimental scene rendering APIs from the stable engine`
     );
   }
 
@@ -35,13 +61,37 @@ test('ANARI remains a declarative facade over shared rendering implementations',
     'material translation uses the canonical shadertools PBR implementation'
   );
   testContext.ok(
-    runtimeSource.includes('SceneRenderer') && runtimeSource.includes("'@luma.gl/engine'"),
-    'forward rendering belongs to the shared engine renderer'
+    getNamedImports(runtimeSource, '@luma.gl/experimental').includes('SceneRenderer'),
+    'forward rendering belongs to the shared experimental renderer'
   );
   testContext.ok(
-    runtimeSource.includes('DeferredSceneRenderer') &&
-      runtimeSource.includes("'@luma.gl/experimental'"),
+    getNamedImports(runtimeSource, '@luma.gl/experimental').includes('DeferredSceneRenderer'),
     'deferred rendering belongs to the shared experimental renderer'
+  );
+  testContext.deepEqual(
+    getNamedImports(adapterSource, '@luma.gl/experimental').sort(),
+    ['SceneCamera', 'SceneMaterial', 'SceneRenderOptions', 'SceneSurface'],
+    'scene descriptor contracts are owned by the same experimental rendering package'
+  );
+
+  const enginePublicSource = readFileSync(
+    new URL('../../engine/src/index.ts', sourceDirectory),
+    'utf8'
+  );
+  testContext.notOk(
+    /\b(?:SceneRenderer|DeferredSceneRenderer|createPBRModel|createPBRMaterial|createPBRMaterialFactory)\b/.test(
+      enginePublicSource
+    ),
+    'the stable engine does not publicly own experimental scene or PBR rendering APIs'
+  );
+
+  const gltfSourceDirectory = new URL('../../gltf/src/', sourceDirectory);
+  testContext.deepEqual(
+    collectTypeScriptSources(gltfSourceDirectory).filter(source =>
+      /['"]@luma\.gl\/experimental(?:\/[^'"]*)?['"]/.test(readFileSync(source, 'utf8'))
+    ),
+    [],
+    'the standalone glTF package does not depend on experimental rendering'
   );
   testContext.ok(
     '@luma.gl/engine' in packageManifest.peerDependencies &&
@@ -53,3 +103,29 @@ test('ANARI remains a declarative facade over shared rendering implementations',
   testContext.notOk(publicSource.includes('./schemas'), 'core imports do not eagerly load schemas');
   testContext.end();
 });
+
+function getNamedImports(source: string, moduleName: string): string[] {
+  const imports = source.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]/g);
+  return Array.from(imports)
+    .filter(importDeclaration => importDeclaration[2] === moduleName)
+    .flatMap(importDeclaration => importDeclaration[1].split(','))
+    .map(
+      symbol =>
+        symbol
+          .trim()
+          .replace(/^type\s+/, '')
+          .split(/\s+as\s+/)[0]
+    )
+    .filter(Boolean);
+}
+
+function collectTypeScriptSources(directory: URL): URL[] {
+  return readdirSync(directory, {withFileTypes: true}).flatMap(entry => {
+    const path = new URL(entry.isDirectory() ? `${entry.name}/` : entry.name, directory);
+    return entry.isDirectory()
+      ? collectTypeScriptSources(path)
+      : entry.name.endsWith('.ts')
+        ? [path]
+        : [];
+  });
+}
