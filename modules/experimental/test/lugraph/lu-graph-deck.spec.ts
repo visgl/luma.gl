@@ -132,7 +132,7 @@ test('luGraph deck.gl effect composes actual GPU analytics, zero-copy selection,
 });
 
 test('luGraph deck.gl renders real source-chunk layers and asynchronously picks stable GPU node IDs', async tapeTest => {
-  const device = await getWebGPUTestDevice();
+  const device = await getWebGPUTestDevice('core');
   if (!device) {
     tapeTest.comment('WebGPU is not available');
     tapeTest.end();
