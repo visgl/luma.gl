@@ -235,6 +235,42 @@ test('Animation#AnimationMixer blends weighted actions against shared property b
   t.end();
 });
 
+test('Animation#AnimationMixer preserves bind poses across partial weights and completed fades', t => {
+  let value = 2;
+  const clip = createScalarClip(
+    'bind-pose',
+    {
+      id: 'bind-pose',
+      getValue: () => [value],
+      setValue: next => (value = next[0])
+    },
+    10,
+    10,
+    2
+  );
+  const mixer = new AnimationMixer([clip]);
+  const action = mixer.clipAction('bind-pose', {weight: 0.5}).play();
+
+  mixer.update(0.25);
+  t.equal(value, 6, 'partial influence initially blends against the original bind pose');
+
+  mixer.update(0.25);
+  t.equal(value, 6, 'later samples keep blending against the immutable original bind pose');
+
+  action.setEffectiveWeight(1);
+  mixer.update(0);
+  t.equal(value, 10, 'full influence applies the animated value');
+
+  action.fadeOut(1);
+  mixer.update(0.5);
+  t.equal(value, 6, 'fade-outs continue blending against the original bind pose');
+
+  mixer.update(0.5);
+  t.equal(value, 2, 'zero-weight completed fades restore the original bind pose');
+
+  t.end();
+});
+
 test('Animation#AnimationMixer crossfades clips and normalizes blended quaternions', t => {
   let value = 0;
   const binding: AnimationBinding = {id: 'shared', setValue: next => (value = next[0])};

@@ -330,6 +330,148 @@ test('gltf#GLTFAnimator preserves legacy speed, start time, and paused clip cont
   t.end();
 });
 
+test('gltf#GLTFAnimator removes disabled clips from shared target blending', t => {
+  const node = new GroupNode({id: 'node-0'});
+  const animator = new GLTFAnimator({
+    animations: [
+      {
+        name: 'Enabled clip',
+        channels: [
+          {
+            type: 'node',
+            path: 'translation',
+            sampler: {
+              input: [0, 1],
+              interpolation: 'LINEAR',
+              output: [
+                [0, 0, 0],
+                [10, 0, 0]
+              ]
+            },
+            targetNodeId: 'node-0'
+          }
+        ]
+      },
+      {
+        name: 'Disabled clip',
+        channels: [
+          {
+            type: 'node',
+            path: 'translation',
+            sampler: {
+              input: [0, 1],
+              interpolation: 'LINEAR',
+              output: [
+                [20, 0, 0],
+                [30, 0, 0]
+              ]
+            },
+            targetNodeId: 'node-0'
+          }
+        ]
+      }
+    ],
+    gltfNodeIdToNodeMap: new Map([['node-0', node]])
+  });
+
+  animator.setTime(250);
+  t.deepEqual(Array.from(node.position), [12.5, 0, 0], 'enabled clips initially blend together');
+
+  animator.clips[1].playing = false;
+  animator.setTime(500);
+  t.deepEqual(
+    Array.from(node.position),
+    [5, 0, 0],
+    'disabled clips no longer influence the target'
+  );
+
+  animator.clips[1].playing = true;
+  animator.setTime(500);
+  t.deepEqual(Array.from(node.position), [15, 0, 0], 're-enabled clips rejoin target blending');
+
+  t.end();
+});
+
+test('gltf#GLTFAnimator clamps samples before a delayed clip start', t => {
+  const node = new GroupNode({id: 'node-0'});
+  const animator = new GLTFAnimator({
+    animations: [
+      {
+        name: 'Delayed clip',
+        channels: [
+          {
+            type: 'node',
+            path: 'translation',
+            sampler: {
+              input: [0, 2],
+              interpolation: 'LINEAR',
+              output: [
+                [1, 0, 0],
+                [5, 0, 0]
+              ]
+            },
+            targetNodeId: 'node-0'
+          }
+        ]
+      }
+    ],
+    gltfNodeIdToNodeMap: new Map([['node-0', node]])
+  });
+  animator.clips[0].startTime = 2;
+
+  animator.setTime(1000);
+  t.deepEqual(Array.from(node.position), [1, 0, 0], 'future clips retain their first keyframe');
+
+  animator.setTime(2500);
+  t.deepEqual(Array.from(node.position), [2, 0, 0], 'clips advance normally after their start');
+
+  t.end();
+});
+
+test('gltf#GLTFAnimator keeps node bind poses stable during partial-weight playback', t => {
+  const node = new GroupNode({id: 'node-0', position: [2, 0, 0]});
+  const animator = new GLTFAnimator({
+    animations: [
+      {
+        name: 'Weighted clip',
+        channels: [
+          {
+            type: 'node',
+            path: 'translation',
+            sampler: {
+              input: [0, 2],
+              interpolation: 'LINEAR',
+              output: [
+                [10, 0, 0],
+                [10, 0, 0]
+              ]
+            },
+            targetNodeId: 'node-0'
+          }
+        ]
+      }
+    ],
+    gltfNodeIdToNodeMap: new Map([['node-0', node]])
+  });
+  const action = animator.clips[0].action.setEffectiveWeight(0.5);
+
+  animator.mixer.update(0.25);
+  t.deepEqual(Array.from(node.position), [6, 0, 0], 'half weight blends against the original pose');
+
+  animator.mixer.update(0.25);
+  t.deepEqual(
+    Array.from(node.position),
+    [6, 0, 0],
+    'repeated samples do not drift toward full weight'
+  );
+
+  action.fadeOut(1);
+  animator.mixer.update(1);
+  t.deepEqual(Array.from(node.position), [2, 0, 0], 'completed fade-outs restore the bind pose');
+
+  t.end();
+});
+
 test('gltf#GLTFAnimator normalizes cubic quaternion animation tracks', t => {
   const node = new GroupNode({id: 'node-0'});
   const animator = new GLTFAnimator({

@@ -236,6 +236,7 @@ export class AnimationMixer {
 
   private readonly clips = new Map<string, AnimationClip>();
   private readonly actions = new Map<AnimationClip, AnimationAction>();
+  private readonly initialValues = new Map<string | AnimationBinding, number[]>();
 
   constructor(clips: AnimationClip[] = []) {
     clips.forEach(clip => this.addClip(clip));
@@ -300,7 +301,7 @@ export class AnimationMixer {
     const accumulatedValues = new Map<string | AnimationBinding, AccumulatedAnimationValue>();
 
     this.actions.forEach(action => {
-      if (!action.shouldApply) {
+      if (!action.shouldApply && !(action.playing && action.weight === 0)) {
         return;
       }
 
@@ -311,6 +312,16 @@ export class AnimationMixer {
         }
 
         const bindingKey = track.binding.id || track.binding;
+        if (!this.initialValues.has(bindingKey)) {
+          const initialValue = track.binding.getValue?.();
+          if (initialValue) {
+            this.initialValues.set(bindingKey, [...initialValue]);
+          }
+        }
+        if (action.weight === 0 && !this.initialValues.has(bindingKey)) {
+          return;
+        }
+
         const accumulatedValue = accumulatedValues.get(bindingKey);
         if (!accumulatedValue) {
           accumulatedValues.set(bindingKey, {
@@ -319,6 +330,9 @@ export class AnimationMixer {
             valueType: track.valueType,
             weight: action.weight
           });
+          return;
+        }
+        if (action.weight === 0) {
           return;
         }
 
@@ -334,8 +348,8 @@ export class AnimationMixer {
       });
     });
 
-    accumulatedValues.forEach(({binding, value, valueType, weight}) => {
-      const baseline = weight < 1 ? binding.getValue?.() : undefined;
+    accumulatedValues.forEach(({binding, value, valueType, weight}, bindingKey) => {
+      const baseline = weight < 1 ? this.initialValues.get(bindingKey) : undefined;
       if (baseline && baseline.length === value.length) {
         value =
           valueType === 'quaternion'

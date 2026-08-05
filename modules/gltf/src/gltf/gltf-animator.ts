@@ -224,11 +224,11 @@ export class GLTFAnimator extends Animator<GLTFAnimationClip> {
     const absoluteTimeSeconds = timeMs / 1000;
     this.clips.forEach(clip => {
       if (!clip.playing) {
-        clip.action.pause();
+        clip.action.stop();
         return;
       }
       clip.action.resume();
-      clip.action.setTime((absoluteTimeSeconds - clip.startTime) * clip.speed);
+      clip.action.setTime(Math.max(0, absoluteTimeSeconds - clip.startTime) * clip.speed);
     });
     this.mixer.update(0);
   }
