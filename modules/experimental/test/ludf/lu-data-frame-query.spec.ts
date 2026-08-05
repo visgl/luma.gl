@@ -13,7 +13,7 @@ import {
   parameter,
   type LuDataFrameQueryParameters
 } from '@luma.gl/experimental/ludf';
-import {GPUData, GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
+import {GPUConstant, GPUData, GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 import {vi} from 'vitest';
@@ -22,6 +22,13 @@ type LuDataFrameQuerySchema = {
   fare: 'float32';
   category: 'uint32';
   signed: 'sint32';
+};
+
+type LuDataFrameConstantQuerySchema = LuDataFrameQuerySchema & {
+  tier: 'uint32';
+  radius: 'float32';
+  direction: 'sint32';
+  position: 'float32x2';
 };
 
 type LuDataFrameQueryFixture = {
@@ -293,6 +300,109 @@ test('LuDataFrame reuses a compiled graph with ordered parameter updates in one 
     for (const buffer of countSnapshots) buffer.destroy();
     for (const buffer of maskSnapshots) buffer?.destroy();
     compiled.destroy();
+    fixture.frame.destroy();
+  }
+
+  testContext.end();
+});
+
+test('LuDataFrame lowers scalar constant columns into safe GPU expression controls', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const fixture = createLuDataFrameQueryFixture(device);
+  const constants = {
+    tier: new GPUConstant({format: 'uint32', value: Uint32Array.of(7)}),
+    radius: new GPUConstant({format: 'float32', value: Float32Array.of(20)}),
+    direction: new GPUConstant({format: 'sint32', value: Int32Array.of(-2)}),
+    position: new GPUConstant({format: 'float32x2', value: Float32Array.of(1, 2)})
+  };
+  const frame = new LuDataFrame<LuDataFrameConstantQuerySchema>({
+    table: new GPUTable<LuDataFrameConstantQuerySchema>({
+      batches: fixture.frame.table.batches,
+      constants
+    }),
+    validity: fixture.frame.validity,
+    ownership: 'borrowed'
+  });
+
+  const constantOnlyGraph = new GPUCommandGraph<LuDataFrameQueryParameters>(device, {
+    id: 'ludf-constant-only-filter'
+  });
+  const constantOnly = frame
+    .filter(column('tier').equal(literal(7)))
+    .select(['tier'])
+    .compile(constantOnlyGraph);
+  const mixedFloatGraph = new GPUCommandGraph<LuDataFrameQueryParameters>(device, {
+    id: 'ludf-mixed-float-constant-filter'
+  });
+  const mixedFloat = frame
+    .filter(column('fare').greaterThan(column('radius')))
+    .select(['fare'])
+    .compile(mixedFloatGraph);
+  const mixedIntegerGraph = new GPUCommandGraph<LuDataFrameQueryParameters>(device, {
+    id: 'ludf-mixed-integer-constant-filter'
+  });
+  const mixedInteger = frame
+    .filter(
+      and(
+        column('signed').greaterThan(column('direction')),
+        column('category').lessThan(column('tier'))
+      )
+    )
+    .select(['category'])
+    .compile(mixedIntegerGraph);
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'ludf-constant-expression-controls'});
+    constantOnly.encode(commandEncoder);
+    mixedFloat.encode(commandEncoder);
+    mixedInteger.encode(commandEncoder);
+    device.submit(commandEncoder.finish());
+
+    testContext.deepEqual(
+      await readGPUVectorChunks(constantOnly.selectionMask),
+      [[1, 1], [], [1, 1, 1]],
+      'a uint32 constant-only predicate accepts every original source row'
+    );
+    testContext.equal(
+      constantOnly.table.gpuConstants.tier,
+      constants.tier,
+      'constant-only projections preserve the caller-owned immutable GPUConstant identity'
+    );
+    testContext.deepEqual(
+      await readGPUVectorChunks(mixedFloat.selectionMask),
+      [[0, 0], [], [1, 0, 1]],
+      'float32 constants combine with nullable GPU vector values without dropping validity'
+    );
+    testContext.deepEqual(
+      await readGPUVectorChunks(mixedInteger.selectionMask),
+      [[0, 1], [], [1, 1, 0]],
+      'signed and unsigned constant controls preserve exact native scalar types'
+    );
+    testContext.deepEqual(
+      await readSelectedSourceRows(mixedInteger.rowIndices, mixedInteger.selectedCounts),
+      [[41], [], [42, 43]],
+      'mixed constant/vector filtering retains source identities and nullable categorical rows'
+    );
+
+    const invalidGraph = new GPUCommandGraph<LuDataFrameQueryParameters>(device, {
+      id: 'ludf-unsupported-vector-constant'
+    });
+    testContext.throws(
+      () => frame.filter(column('position').greaterThan(literal(0))).compile(invalidGraph),
+      /scalar|format|32-bit/i,
+      'non-scalar GPUConstant formats are rejected before shader generation'
+    );
+  } finally {
+    constantOnly.destroy();
+    mixedFloat.destroy();
+    mixedInteger.destroy();
+    frame.destroy();
     fixture.frame.destroy();
   }
 

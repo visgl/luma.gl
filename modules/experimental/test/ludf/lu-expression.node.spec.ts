@@ -7,12 +7,14 @@ import {
   and,
   column,
   literal,
+  LuDataFrame,
   LuExpression,
   not,
   or,
   parameter,
   type LuExpressionNode
 } from '@luma.gl/experimental/ludf';
+import {GPUTable} from '@luma.gl/tables';
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 describe('luDF immutable expression construction', () => {
@@ -47,6 +49,65 @@ describe('luDF immutable expression construction', () => {
     expectTypeOf(fare).toEqualTypeOf<LuExpression<number | null, 'fare'>>();
     expectTypeOf(minimumFare).toEqualTypeOf<LuExpression<10, never>>();
     expectTypeOf(enabled).toEqualTypeOf<LuExpression<true, never>>();
+  });
+
+  test('deep-clones and freezes direct constructor inputs before immutable query planning', () => {
+    const mutableColumn = {kind: 'column' as const, name: 'fare'};
+    const mutableThreshold = {kind: 'literal' as const, value: 10};
+    const mutableComparison = {
+      kind: 'binary' as const,
+      operator: 'greater-than' as const,
+      left: mutableColumn,
+      right: mutableThreshold
+    };
+    const mutableRoot = {
+      kind: 'unary' as const,
+      operator: 'not' as const,
+      operand: mutableComparison
+    };
+    const predicate = new LuExpression<boolean, 'fare'>(mutableRoot);
+    const table = new GPUTable<{fare: 'float32'; category: 'uint32'}>({
+      schema: {
+        fields: [
+          {name: 'fare', format: 'float32'},
+          {name: 'category', format: 'uint32'}
+        ],
+        metadata: new Map()
+      },
+      bufferLayout: [
+        {name: 'fare', format: 'float32'},
+        {name: 'category', format: 'uint32'}
+      ]
+    });
+    const source = new LuDataFrame({table});
+    const planned = source.filter(predicate).select(['category']);
+
+    mutableColumn.name = 'unknown-after-validation';
+    mutableThreshold.value = 1000;
+
+    expect(planned.predicates[0].node).toEqual({
+      kind: 'unary',
+      operator: 'not',
+      operand: {
+        kind: 'binary',
+        operator: 'greater-than',
+        left: {kind: 'column', name: 'fare'},
+        right: {kind: 'literal', value: 10}
+      }
+    });
+    expect(Object.isFrozen(predicate.node)).toBe(true);
+    if (predicate.node.kind !== 'unary' || predicate.node.operand.kind !== 'binary') {
+      throw new Error('Expected a nested unary and binary expression');
+    }
+    expect(Object.isFrozen(predicate.node.operand)).toBe(true);
+    expect(Object.isFrozen(predicate.node.operand.left)).toBe(true);
+    expect(Object.isFrozen(predicate.node.operand.right)).toBe(true);
+    expect(Object.isFrozen(mutableColumn)).toBe(false);
+    expect(Object.isFrozen(mutableThreshold)).toBe(false);
+    expect(() => source.filter(predicate)).not.toThrow();
+
+    source.destroy();
+    table.destroy();
   });
 
   test('preserves sibling arithmetic expressions and exact referenced-column unions', () => {

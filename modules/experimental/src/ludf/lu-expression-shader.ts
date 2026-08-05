@@ -50,6 +50,11 @@ type LuQueryExpressionShaderValue = {
   valid: string;
 };
 
+type LuQueryExpressionConstant = {
+  format: LuQueryScalarFormat;
+  value: number;
+};
+
 /** Lowers immutable expressions without embedding user-controlled identifiers or values in WGSL. */
 export function makeLuQueryExpressionShaderPlan<T extends GPUTypeMap>(
   source: LuDataFrame<T>,
@@ -135,6 +140,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
 
   private readonly source: LuDataFrame<T>;
   private readonly columnsByName = new Map<string, LuQueryExpressionColumn>();
+  private readonly constantsByName = new Map<string, LuQueryExpressionConstant>();
   private expressionCount = 0;
 
   constructor(source: LuDataFrame<T>) {
@@ -159,6 +165,13 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   }
 
   private emitColumn(name: string, expected?: LuQueryValueFormat): LuQueryExpressionShaderValue {
+    const constant = this.getConstant(name);
+    if (constant) {
+      if (expected && expected !== constant.format && expected !== 'boolean') {
+        throw new Error('LuDataFrame expression combines incompatible scalar column formats');
+      }
+      return this.emitControl(constant.value, undefined, constant.format);
+    }
     const column = this.getColumn(name);
     if (expected && expected !== column.format && expected !== 'boolean') {
       throw new Error('LuDataFrame expression combines incompatible scalar column formats');
@@ -281,7 +294,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   private inferFormat(node: LuExpressionNode): LuQueryValueFormat | undefined {
     switch (node.kind) {
       case 'column':
-        return this.getColumn(node.name).format;
+        return this.getConstant(node.name)?.format ?? this.getColumn(node.name).format;
       case 'literal':
       case 'parameter':
         return typeof node.value === 'boolean' ? 'boolean' : undefined;
@@ -305,6 +318,29 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       default:
         throw new Error('LuDataFrame expression contains an unsupported operation');
     }
+  }
+
+  /** Resolves trusted table-wide scalar values without creating source-vector bindings. */
+  private getConstant(name: string): LuQueryExpressionConstant | undefined {
+    const existing = this.constantsByName.get(name);
+    if (existing) {
+      return existing;
+    }
+    const constant = this.source.table.gpuConstants[name];
+    if (!constant) {
+      return undefined;
+    }
+    const format = constant.format;
+    if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
+      throw new Error(`LuDataFrame constant column "${name}" requires a 32-bit scalar format`);
+    }
+    const value = constant.value[0];
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      throw new Error(`LuDataFrame constant column "${name}" requires a finite scalar value`);
+    }
+    const resolved = {format, value};
+    this.constantsByName.set(name, resolved);
+    return resolved;
   }
 
   private getColumn(name: string): LuQueryExpressionColumn {

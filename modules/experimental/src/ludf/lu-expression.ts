@@ -55,7 +55,7 @@ export class LuExpression<Value = unknown, Columns extends string = string> {
   declare readonly expressionColumns: Columns;
 
   constructor(node: LuExpressionNode) {
-    this.node = Object.freeze({...node}) as LuExpressionNode;
+    this.node = cloneFrozenLuExpressionNode(node);
     Object.freeze(this);
   }
 
@@ -228,6 +228,33 @@ export function getLuExpressionColumnNames(expression: LuExpression<any, string>
   const columnNames = new Set<string>();
   collectLuExpressionColumnNames(expression.node, columnNames);
   return Array.from(columnNames);
+}
+
+/** Clones every closed node so caller-owned child objects cannot alter an immutable query plan. */
+function cloneFrozenLuExpressionNode(node: LuExpressionNode): LuExpressionNode {
+  switch (node.kind) {
+    case 'column':
+      return Object.freeze({kind: 'column', name: node.name});
+    case 'literal':
+      return Object.freeze({kind: 'literal', value: node.value});
+    case 'parameter':
+      return Object.freeze({kind: 'parameter', name: node.name, value: node.value});
+    case 'unary':
+      return Object.freeze({
+        kind: 'unary',
+        operator: node.operator,
+        operand: cloneFrozenLuExpressionNode(node.operand)
+      });
+    case 'binary':
+      return Object.freeze({
+        kind: 'binary',
+        operator: node.operator,
+        left: cloneFrozenLuExpressionNode(node.left),
+        right: cloneFrozenLuExpressionNode(node.right)
+      });
+    default:
+      throw new Error('LuDataFrame expression contains an unsupported operation');
+  }
 }
 
 function collectLuExpressionColumnNames(node: LuExpressionNode, columnNames: Set<string>): void {
