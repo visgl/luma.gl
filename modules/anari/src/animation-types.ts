@@ -55,6 +55,10 @@ export type ANARIAnimationNodeDescription = {
   scale?: ANARIVector3;
   matrix?: ANARIMatrix4;
   instances?: readonly string[];
+  /** Initial glTF morph-target weights owned by this source node. */
+  weights?: readonly number[];
+  /** Retained primitive geometries affected only by this node's morph channels. */
+  geometries?: readonly string[];
 };
 
 /** Initial action settings for a serialized animated scene. */

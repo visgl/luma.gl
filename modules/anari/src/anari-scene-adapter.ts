@@ -31,7 +31,7 @@ import {
   type ANARISurface,
   type ANARIWorld
 } from './anari-objects';
-import type {ANARIVector3} from './anari-types';
+import type {ANARIGeometryParameters, ANARIVector3} from './anari-types';
 
 type SurfacePlacement = {
   surface: ANARISurface;
@@ -40,7 +40,9 @@ type SurfacePlacement = {
 
 type CachedGeometry = {
   version: number;
+  structuralVersion: number;
   geometry: Geometry;
+  parameters: Readonly<Partial<ANARIGeometryParameters>>;
 };
 
 type MaterialMapEnabledUniform =
@@ -261,12 +263,21 @@ export class ANARISceneAdapter {
         continue;
       }
 
+      const engineGeometry = this.getGeometry(geometry);
+      const cachedGeometry = this.geometries.get(geometry)!;
       sceneSurfaces.push({
         id: surface.id,
-        geometry: this.getGeometry(geometry),
-        geometryVersion: geometry.version,
+        geometry: engineGeometry,
+        geometryVersion: cachedGeometry.structuralVersion,
         material: makeSceneMaterial(material),
-        transforms: placements.map(placement => placement.transform)
+        transforms: placements.map(placement => placement.transform),
+        ...(surface.getParameter('skin') ? {skin: surface.getParameter('skin')} : {}),
+        ...(geometry.getParameter('morphTargets')
+          ? {
+              morphTargets: geometry.getParameter('morphTargets'),
+              morphWeights: geometry.getParameter('morphWeights') || []
+            }
+          : {})
       });
     }
     return sceneSurfaces;
@@ -278,10 +289,34 @@ export class ANARISceneAdapter {
       return cachedGeometry.geometry;
     }
 
+    const parameters = geometry.getParameters();
+    if (cachedGeometry && areGeometryStructuresEqual(cachedGeometry.parameters, parameters)) {
+      cachedGeometry.version = geometry.version;
+      cachedGeometry.parameters = parameters;
+      return cachedGeometry.geometry;
+    }
+
     const engineGeometry = makeEngineGeometry(geometry);
-    this.geometries.set(geometry, {version: geometry.version, geometry: engineGeometry});
+    this.geometries.set(geometry, {
+      version: geometry.version,
+      structuralVersion: geometry.version,
+      geometry: engineGeometry,
+      parameters
+    });
     return engineGeometry;
   }
+}
+
+function areGeometryStructuresEqual(
+  previous: Readonly<Partial<ANARIGeometryParameters>>,
+  next: Readonly<Partial<ANARIGeometryParameters>>
+): boolean {
+  const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
+  keys.delete('morphWeights');
+  return Array.from(keys).every(key => {
+    const parameterName = key as keyof ANARIGeometryParameters;
+    return previous[parameterName] === next[parameterName];
+  });
 }
 
 /** Maps an ANARI material handle into canonical shared PBR uniforms and bindings. */
@@ -291,7 +326,7 @@ export function makeSceneMaterial(material: ANARIMaterial): SceneMaterial {
   const opacity = parameters.opacity ?? (color.length > 3 ? (color[3] ?? 1) : 1);
   const alphaMode = parameters.alphaMode
     ? parameters.alphaMode.toUpperCase()
-    : opacity < 1 || (parameters.transmission ?? 0) > 0
+    : opacity < 1
       ? 'BLEND'
       : 'OPAQUE';
   const uniforms: PBRMaterialUniforms = {
@@ -484,7 +519,7 @@ function addSceneLight(light: ANARILight, lights: Light[]): void {
         direction: parameters.direction || [0, -1, 0],
         intensity: parameters.intensity ?? 1,
         attenuation: [1, 0, 0.018],
-        innerConeAngle: (parameters.openingAngle ?? 0.5) * 0.7,
+        innerConeAngle: parameters.falloffAngle ?? (parameters.openingAngle ?? 0.5) * 0.7,
         outerConeAngle: parameters.openingAngle ?? 0.5
       });
       break;
@@ -564,6 +599,9 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
     case 'triangle': {
       const positions = unwrapArray(parameters['vertex.position']);
       const normals = unwrapArray(parameters['vertex.normal']);
+      const tangents = unwrapArray(parameters['vertex.tangent']);
+      const joints = unwrapArray(parameters['vertex.joint']);
+      const jointWeights = unwrapArray(parameters['vertex.weight']);
       const textureCoordinates = unwrapArray(parameters['vertex.attribute1']);
       const secondTextureCoordinates = unwrapArray(parameters['vertex.attribute2']);
       const indices = unwrapArray(parameters['primitive.index']);
@@ -578,6 +616,15 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
             size: 3,
             value: normals instanceof Float32Array ? normals : makeVertexNormals(positions)
           },
+          ...(tangents instanceof Float32Array ? {TANGENT: {size: 4, value: tangents}} : {}),
+          ...(joints instanceof Uint8Array ||
+          joints instanceof Uint16Array ||
+          joints instanceof Uint32Array
+            ? {JOINTS_0: {size: 4, value: joints}}
+            : {}),
+          ...(jointWeights instanceof Float32Array
+            ? {WEIGHTS_0: {size: 4, value: jointWeights}}
+            : {}),
           TEXCOORD_0: {
             size: 2,
             value:
@@ -601,13 +648,14 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
   const attributes = unwrapArray(parameters['vertex.attribute0']);
   const vertexColors =
     attributes instanceof Float32Array ? attributes : new Float32Array(vertexCount * 3).fill(1);
+  const colorSize = vertexColors.length === vertexCount * 4 ? 4 : 3;
   const textureCoordinates = sourceGeometry.attributes['TEXCOORD_0']?.value;
 
   return new Geometry({
     topology: sourceGeometry.topology || 'triangle-list',
     attributes: {
       ...sourceGeometry.attributes,
-      COLOR_0: {size: 3, value: vertexColors},
+      COLOR_0: {size: colorSize, value: vertexColors},
       TEXCOORD_0: {
         size: 2,
         value:

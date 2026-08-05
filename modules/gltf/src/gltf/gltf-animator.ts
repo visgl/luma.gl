@@ -4,16 +4,22 @@
 
 import {log} from '@luma.gl/core';
 import {
+  type AnimationAction,
   AnimationClip,
   AnimationClipController,
+  type AnimationInterpolation,
   AnimationMixer,
   AnimationTrack,
   Animator,
   GroupNode,
-  Material,
-  type AnimationAction,
-  type AnimationInterpolation
+  Material
 } from '@luma.gl/engine';
+import {
+  getTextureTransformDeltaMatrix,
+  getTextureTransformSlotDefinition,
+  type PBRTextureTransform,
+  type PBRTextureTransformSlot
+} from '../pbr/texture-transform';
 import {
   GLTFAnimation,
   GLTFAnimationChannel,
@@ -22,12 +28,7 @@ import {
   GLTFMaterialAnimationProperty,
   GLTFTextureTransformAnimationChannel
 } from './animations/animations';
-import {
-  getTextureTransformDeltaMatrix,
-  getTextureTransformSlotDefinition,
-  type PBRTextureTransform,
-  type PBRTextureTransformSlot
-} from '../pbr/texture-transform';
+import {setGLTFMorphWeights} from './morph-targets';
 
 /** Construction props for a single glTF animation controller. */
 export type GLTFAnimationClipProps = {
@@ -152,6 +153,10 @@ export class GLTFAnimationClip extends AnimationClipController {
         return Array.from(targetNode.rotation);
       case 'scale':
         return Array.from(targetNode.scale);
+      case 'weights':
+        return Array.from(
+          (targetNode.userData['morphWeights'] as readonly number[] | undefined) || []
+        );
       default:
         return [];
     }
@@ -172,6 +177,9 @@ export class GLTFAnimationClip extends AnimationClipController {
         break;
       case 'scale':
         targetNode.setScale(value).updateMatrix();
+        break;
+      case 'weights':
+        setGLTFMorphWeights(targetNode, value);
         break;
       default:
         log.warn(`Bad animation path ${path}`)();

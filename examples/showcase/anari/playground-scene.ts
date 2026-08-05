@@ -34,17 +34,29 @@ type JSONGeometryParameters = Omit<
   ANARIGeometryParameters,
   | 'vertex.position'
   | 'vertex.normal'
+  | 'vertex.tangent'
+  | 'vertex.joint'
+  | 'vertex.weight'
   | 'vertex.attribute0'
   | 'vertex.attribute1'
   | 'vertex.attribute2'
   | 'primitive.index'
+  | 'morphTargets'
 > & {
   'vertex.position'?: readonly number[];
   'vertex.normal'?: readonly number[];
+  'vertex.tangent'?: readonly number[];
+  'vertex.joint'?: readonly number[];
+  'vertex.weight'?: readonly number[];
   'vertex.attribute0'?: readonly number[];
   'vertex.attribute1'?: readonly number[];
   'vertex.attribute2'?: readonly number[];
   'primitive.index'?: readonly number[];
+  morphTargets?: readonly {
+    POSITION?: readonly number[];
+    NORMAL?: readonly number[];
+    TANGENT?: readonly number[];
+  }[];
 };
 
 export type JSONGeometryGenerator =
@@ -301,10 +313,14 @@ export function createANARIJSONScene(
       '@@type': subtype,
       'vertex.position': positions,
       'vertex.normal': normals,
+      'vertex.tangent': tangents,
+      'vertex.joint': joints,
+      'vertex.weight': jointWeights,
       'vertex.attribute0': attributes,
       'vertex.attribute1': textureCoordinates,
       'vertex.attribute2': additionalTextureCoordinates,
       'primitive.index': indices,
+      morphTargets,
       generator,
       ...parameters
     } = declaration;
@@ -315,6 +331,15 @@ export function createANARIJSONScene(
     }
     if (normals) {
       geometryParameters['vertex.normal'] = new Float32Array(normals);
+    }
+    if (tangents) {
+      geometryParameters['vertex.tangent'] = new Float32Array(tangents);
+    }
+    if (joints) {
+      geometryParameters['vertex.joint'] = new Uint16Array(joints);
+    }
+    if (jointWeights) {
+      geometryParameters['vertex.weight'] = new Float32Array(jointWeights);
     }
     if (attributes) {
       geometryParameters['vertex.attribute0'] = new Float32Array(attributes);
@@ -329,6 +354,13 @@ export function createANARIJSONScene(
     }
     if (indices) {
       geometryParameters['primitive.index'] = new Uint32Array(indices);
+    }
+    if (morphTargets) {
+      geometryParameters.morphTargets = morphTargets.map(target => ({
+        ...(target.POSITION ? {POSITION: new Float32Array(target.POSITION)} : {}),
+        ...(target.NORMAL ? {NORMAL: new Float32Array(target.NORMAL)} : {}),
+        ...(target.TANGENT ? {TANGENT: new Float32Array(target.TANGENT)} : {})
+      }));
     }
     if (generator) {
       if (subtype !== 'triangle') {
@@ -489,7 +521,7 @@ export function createANARIJSONScene(
   const renderer = device.newRenderer(rendererSubtype, rendererParameters);
   const frame = device.newFrame({world, camera, renderer});
   const animations = scene.clips?.length
-    ? makeANARIAnimationScene(scene, {instances, materials, samplers, lights, camera})
+    ? makeANARIAnimationScene(scene, {instances, geometries, materials, samplers, lights, camera})
     : undefined;
 
   return {

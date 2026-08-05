@@ -2,10 +2,104 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
-import {GroupNode} from '@luma.gl/engine';
-
+import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
 import {GLTFAnimator, parseGLTFAnimations} from '@luma.gl/gltf';
+import test from 'test/utils/vitest-tape';
+
+function makeMorphModelNode(identifier: string) {
+  const writes: Uint8Array[] = [];
+  const geometry = new Geometry({
+    topology: 'triangle-list',
+    attributes: {
+      POSITION: {size: 3, value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])},
+      NORMAL: {size: 3, value: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])},
+      TANGENT: {size: 4, value: new Float32Array([1, 0, 0, -1, 1, 0, 0, -1, 1, 0, 0, -1])}
+    }
+  });
+  const packedBuffer = {
+    write(values: ArrayBufferView) {
+      writes.push(
+        new Uint8Array(
+          values.buffer.slice(values.byteOffset, values.byteOffset + values.byteLength)
+        )
+      );
+    }
+  };
+  const modelNode = new ModelNode({
+    id: identifier,
+    model: {
+      bufferAttributes: {geometry: packedBuffer},
+      _gpuGeometry: {attributes: {geometry: packedBuffer}}
+    } as any
+  });
+  modelNode.userData['morphTargets'] = {
+    geometry,
+    baseAttributes: {
+      POSITION: geometry.attributes['POSITION']?.value,
+      NORMAL: geometry.attributes['NORMAL']?.value,
+      TANGENT: geometry.attributes['TANGENT']?.value
+    },
+    targets: [
+      {
+        POSITION: new Float32Array([2, 0, 0, 0, 2, 0, 0, 0, 2]),
+        NORMAL: new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0]),
+        TANGENT: new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0])
+      },
+      {POSITION: new Float32Array([0, 2, 0, 2, 0, 0, 0, 2, 0])}
+    ]
+  };
+  return {modelNode, writes};
+}
+
+test('gltf#GLTFAnimator morphs existing packed vertex buffers without touching child nodes', t => {
+  const parent = new GroupNode({id: 'parent-node'});
+  const child = new GroupNode({id: 'child-node'});
+  const parentPrimitive = makeMorphModelNode('parent-primitive');
+  const childPrimitive = makeMorphModelNode('child-primitive');
+  const parentMesh = new GroupNode({id: 'parent-mesh', children: [parentPrimitive.modelNode]});
+  const childMesh = new GroupNode({id: 'child-mesh', children: [childPrimitive.modelNode]});
+  parent.add(parentMesh, child);
+  child.add(childMesh);
+  parent.userData['morphMeshes'] = [parentMesh];
+  parent.userData['morphWeights'] = [0, 0];
+  child.userData['morphMeshes'] = [childMesh];
+  child.userData['morphWeights'] = [0, 0];
+
+  const animator = new GLTFAnimator({
+    animations: [
+      {
+        name: 'MorphAnimation',
+        channels: [
+          {
+            type: 'node',
+            path: 'weights',
+            sampler: {
+              input: [0, 1],
+              interpolation: 'LINEAR',
+              output: [
+                [0, 0],
+                [1, 0.5]
+              ]
+            },
+            targetNodeId: 'parent-node'
+          }
+        ]
+      }
+    ],
+    gltfNodeIdToNodeMap: new Map([
+      ['parent-node', parent],
+      ['child-node', child]
+    ])
+  });
+
+  animator.setTime(500);
+
+  t.deepEqual(parent.userData['morphWeights'], [0.5, 0.25], 'interpolates all parent weights');
+  t.ok(parentPrimitive.writes.length > 0, 'updates the existing interleaved GPU vertex buffer');
+  t.equal(childPrimitive.writes.length, 0, 'never mutates an independently animated child mesh');
+  t.deepEqual(child.userData['morphWeights'], [0, 0], 'preserves child morph bind weights');
+  t.end();
+});
 
 function makeMockMaterial(initialUniforms: Record<string, unknown>) {
   const uniformValues = {

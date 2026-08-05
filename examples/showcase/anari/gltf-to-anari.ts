@@ -177,6 +177,12 @@ function translateNode(
   parentIdentifier?: string
 ): void {
   const nodeIdentifier = node.id;
+  const morphTargetCount =
+    node.mesh?.primitives.find(primitive => primitive.targets?.length)?.targets?.length || 0;
+  const morphWeights =
+    node.weights ||
+    node.mesh?.weights ||
+    (morphTargetCount ? new Array<number>(morphTargetCount).fill(0) : undefined);
   state.nodeIdentifiers[node.id] = nodeIdentifier;
   state.scene.nodes ||= {};
   const declaration: ANARIAnimationNodeDescription = {
@@ -195,7 +201,8 @@ function translateNode(
         }
       : {}),
     ...(node.scale ? {scale: [node.scale[0], node.scale[1], node.scale[2]] as const} : {}),
-    ...(node.matrix ? {matrix: Array.from(node.matrix)} : {})
+    ...(node.matrix ? {matrix: Array.from(node.matrix)} : {}),
+    ...(morphWeights ? {weights: [...morphWeights]} : {})
   };
   state.scene.nodes[nodeIdentifier] = declaration;
   const transform = new Matrix4(parentTransform);
@@ -218,7 +225,7 @@ function translateNode(
       if (primitive.mode !== undefined && primitive.mode !== 4) {
         continue;
       }
-      const surface = getSurfaceIdentifier(node.mesh.id, primitiveIndex, primitive, state);
+      const surface = getSurfaceIdentifier(node.mesh.id, primitiveIndex, primitive, state, node);
       if (!surface) {
         continue;
       }
@@ -243,6 +250,9 @@ function translateNode(
         {'@@id': identifier, surface, matrix: Array.from(transform)}
       ];
       declaration.instances = [...(declaration.instances || []), identifier];
+      if (primitive.targets?.length) {
+        declaration.geometries = [...(declaration.geometries || []), surface];
+      }
     }
   }
 
@@ -255,14 +265,15 @@ function getSurfaceIdentifier(
   meshIdentifier: string,
   primitiveIndex: number,
   primitive: GLTFMeshPrimitivePostprocessed,
-  state: GLTFTranslationState
+  state: GLTFTranslationState,
+  node: GLTFNodePostprocessed
 ): string | undefined {
   const positionAccessor = primitive.attributes['POSITION'];
   if (!positionAccessor) {
     return undefined;
   }
 
-  const cacheKey = `${meshIdentifier}:${primitiveIndex}`;
+  const cacheKey = `${meshIdentifier}:${primitiveIndex}${primitive.targets?.length ? `:${node.id}` : ''}`;
   let surfaceIdentifier = state.surfaceIdentifiers.get(cacheKey);
   if (surfaceIdentifier) {
     return surfaceIdentifier;
@@ -276,6 +287,28 @@ function getSurfaceIdentifier(
   const normalAccessor = primitive.attributes['NORMAL'];
   if (normalAccessor) {
     geometry['vertex.normal'] = Array.from(normalAccessor.value);
+  }
+  const tangentAccessor = primitive.attributes['TANGENT'];
+  if (tangentAccessor) {
+    geometry['vertex.tangent'] = Array.from(tangentAccessor.value);
+  }
+  const jointAccessor = primitive.attributes['JOINTS_0'];
+  if (jointAccessor) {
+    geometry['vertex.joint'] = Array.from(jointAccessor.value);
+  }
+  const jointWeightAccessor = primitive.attributes['WEIGHTS_0'];
+  if (jointWeightAccessor) {
+    const maximumJointWeight = jointWeightAccessor.normalized
+      ? jointWeightAccessor.value instanceof Uint8Array
+        ? 255
+        : jointWeightAccessor.value instanceof Uint16Array
+          ? 65535
+          : 1
+      : 1;
+    geometry['vertex.weight'] = Array.from(
+      jointWeightAccessor.value,
+      weight => weight / maximumJointWeight
+    );
   }
   if (primitive.indices) {
     geometry['primitive.index'] = Array.from(primitive.indices.value);
@@ -292,6 +325,25 @@ function getSurfaceIdentifier(
   const additionalTextureCoordinates = primitive.attributes['TEXCOORD_1'];
   if (additionalTextureCoordinates) {
     geometry['vertex.attribute2'] = Array.from(additionalTextureCoordinates.value);
+  }
+  if (primitive.targets?.length) {
+    geometry.morphTargets = primitive.targets.map(target => {
+      const attributes: NonNullable<JSONGeometryDeclaration['morphTargets']>[number] = {};
+      for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
+        const accessorReference = target[attributeName];
+        const accessor =
+          typeof accessorReference === 'number'
+            ? state.gltf.accessors[accessorReference]
+            : accessorReference;
+        if (accessor) {
+          attributes[attributeName] = Array.from(accessor.value);
+        }
+      }
+      return attributes;
+    });
+    geometry.morphWeights = [
+      ...(node.weights || node.mesh?.weights || new Array<number>(primitive.targets.length).fill(0))
+    ];
   }
 
   const material = getMaterialIdentifier(primitive.material, state);
@@ -410,12 +462,25 @@ function getVertexColors(
     return undefined;
   }
 
-  const colors = new Array<number>(vertexCount * 3);
+  const colorSize = colorAccessor.components === 4 ? 4 : 3;
+  const colors = new Array<number>(vertexCount * colorSize);
   for (let vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++) {
     const sourceColor = getAccessorColor(colorAccessor, vertexIndex);
-    colors[vertexIndex * 3] = sourceColor[0];
-    colors[vertexIndex * 3 + 1] = sourceColor[1];
-    colors[vertexIndex * 3 + 2] = sourceColor[2];
+    const offset = vertexIndex * colorSize;
+    colors[offset] = sourceColor[0];
+    colors[offset + 1] = sourceColor[1];
+    colors[offset + 2] = sourceColor[2];
+    if (colorSize === 4) {
+      const sourceAlpha = colorAccessor.value[vertexIndex * colorAccessor.components + 3];
+      const divisor = colorAccessor.normalized
+        ? colorAccessor.componentType === 5121
+          ? 255
+          : colorAccessor.componentType === 5123
+            ? 65535
+            : 1
+        : 1;
+      colors[offset + 3] = sourceAlpha / divisor;
+    }
   }
   return colors;
 }

@@ -50,10 +50,23 @@ export const ANARIGeometrySchema = z
       '@@type': z.literal('triangle'),
       'vertex.position': z.array(numberSchema).optional(),
       'vertex.normal': z.array(numberSchema).optional(),
+      'vertex.tangent': z.array(numberSchema).optional(),
+      'vertex.joint': z.array(z.number().int().nonnegative()).optional(),
+      'vertex.weight': z.array(numberSchema).optional(),
       'vertex.attribute0': z.array(numberSchema).optional(),
       'vertex.attribute1': z.array(numberSchema).optional(),
       'vertex.attribute2': z.array(numberSchema).optional(),
       'primitive.index': z.array(z.number().int().nonnegative()).optional(),
+      morphTargets: z
+        .array(
+          z.strictObject({
+            POSITION: z.array(numberSchema).optional(),
+            NORMAL: z.array(numberSchema).optional(),
+            TANGENT: z.array(numberSchema).optional()
+          })
+        )
+        .optional(),
+      morphWeights: z.array(numberSchema).optional(),
       generator: ANARIGeometryGeneratorSchema.optional()
     }),
     z.strictObject({
@@ -299,7 +312,9 @@ export const ANARIAnimationNodeSchema = z
     rotation: ANARIVector4Schema.optional(),
     scale: ANARIVector3Schema.optional(),
     matrix: ANARIMatrix4Schema.optional(),
-    instances: z.array(identifierSchema).optional()
+    instances: z.array(identifierSchema).optional(),
+    weights: z.array(numberSchema).optional(),
+    geometries: z.array(identifierSchema).optional()
   })
   .describe('A retained source node with a local transform and optional mesh instances.');
 
