@@ -162,6 +162,11 @@ test('ANARI renderer samples PBR image maps on available GPU backends', async te
 
 test('ANARI renderer samples optional secondary texture coordinates on GPU backends', async testContext => {
   for (const graphicsDevice of await getLiveTestDevices()) {
+    if (isSoftwareBackedWebGLDevice(graphicsDevice)) {
+      testContext.comment('Skipping unstable secondary-UV shaders on software WebGL');
+      continue;
+    }
+
     const device = new ANARIDevice(graphicsDevice);
     const image = graphicsDevice.createTexture({
       width: 1,
