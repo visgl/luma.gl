@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Four floating-point framing words followed by four unsigned interaction words. */
 export const GRAPH_EXPLORER_VIEW_BYTE_LENGTH = 32;
@@ -9,7 +9,7 @@ export const GRAPH_EXPLORER_VIEW_BYTE_LENGTH = 32;
 export const GRAPH_EXPLORER_INVALID_VERTEX = 0xffffffff;
 
 // Framing: center x, center y, zoom, viewport aspect ratio.
-// Interaction: selected vertex, maximum traversal depth, vertex count, application flags.
+// Interaction: selected vertex, maximum traversal depth, vertex count, packed display modes.
 const GRAPH_EXPLORER_VIEW_SOURCE = /* wgsl */ `
 struct GraphExplorerView {
   framing: vec4<f32>,
@@ -69,7 +69,7 @@ struct EdgeVertexOutput {
  * Draws source-aligned circular nodes from the original float32x2 instance vertex buffer.
  *
  * Attribute: nodePosition at location zero, stepMode instance.
- * Bindings: importance=0, components=1, distances=2, selectionMask=3, view=4.
+ * Bindings: importance=0, components=1, distances=2, selectionMask=3, degrees=4, view=5.
  */
 export const GRAPH_EXPLORER_NODE_SHADER = /* wgsl */ `
 ${GRAPH_EXPLORER_VIEW_SOURCE}
@@ -78,7 +78,8 @@ ${GRAPH_EXPLORER_VIEW_SOURCE}
 @group(0) @binding(1) var<storage, read> components: array<u32>;
 @group(0) @binding(2) var<storage, read> distances: array<u32>;
 @group(0) @binding(3) var<storage, read> selectionMask: array<u32>;
-@group(0) @binding(4) var<uniform> view: GraphExplorerView;
+@group(0) @binding(4) var<storage, read> degrees: array<u32>;
+@group(0) @binding(5) var<uniform> view: GraphExplorerView;
 
 struct NodeVertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -103,7 +104,15 @@ struct NodeVertexOutput {
     vec3<f32>(1.0, 0.45, 0.65),
     vec3<f32>(0.91, 0.92, 0.52)
   );
-  let radius = clamp(0.012 + sqrt(max(importance[sourceIndex], 0.0)) * 0.085, 0.012, 0.050);
+  let pageRankRadius = clamp(
+    0.012 + sqrt(max(importance[sourceIndex], 0.0)) * 0.085,
+    0.012,
+    0.050
+  );
+  let degreeRadius = clamp(0.011 + sqrt(f32(degrees[sourceIndex])) * 0.008, 0.012, 0.050);
+  let sizeMode = (view.interaction.w >> 8u) & 3u;
+  let metricRadius = select(pageRankRadius, degreeRadius, sizeMode == 1u);
+  let radius = select(metricRadius, 0.018, sizeMode == 2u);
   let corner = corners[vertexIndex];
   let centered = (nodePosition - view.framing.xy) * view.framing.z;
   let aspect = max(view.framing.w, 0.001);
@@ -113,7 +122,39 @@ struct NodeVertexOutput {
   let reachable = selectionMask[sourceIndex] != 0u &&
     distances[sourceIndex] != ${GRAPH_EXPLORER_INVALID_VERTEX}u;
   let selected = sourceIndex == view.interaction.x;
+  let colorMode = (view.interaction.w >> 4u) & 3u;
+  let degreeIntensity = clamp(log2(f32(degrees[sourceIndex]) + 1.0) / 4.0, 0.0, 1.0);
+  let degreeColor = mix(vec3<f32>(0.22, 0.48, 1.0), vec3<f32>(1.0, 0.71, 0.31), degreeIntensity);
+  let importanceIntensity = clamp(
+    sqrt(max(importance[sourceIndex], 0.0) * f32(view.interaction.z)) * 0.55,
+    0.0,
+    1.0
+  );
+  let importanceColor = mix(
+    vec3<f32>(0.19, 0.86, 0.76),
+    vec3<f32>(0.79, 0.45, 1.0),
+    importanceIntensity
+  );
+  let distance = distances[sourceIndex];
+  let distanceIntensity = clamp(
+    f32(distance) / f32(max(view.interaction.y, 1u)),
+    0.0,
+    1.0
+  );
+  let reachableDistanceColor = mix(
+    vec3<f32>(0.39, 0.95, 1.0),
+    vec3<f32>(0.71, 0.43, 0.89),
+    distanceIntensity
+  );
+  let distanceColor = select(
+    vec3<f32>(0.24, 0.29, 0.40),
+    reachableDistanceColor,
+    distance != ${GRAPH_EXPLORER_INVALID_VERTEX}u
+  );
   var color = palette[components[sourceIndex] % 6u];
+  color = select(color, degreeColor, colorMode == 1u);
+  color = select(color, importanceColor, colorMode == 2u);
+  color = select(color, distanceColor, colorMode == 3u);
   color = select(color, color * 0.24, hasSelection && !reachable);
   color = select(color, vec3<f32>(1.0, 0.96, 0.66), selected);
 
@@ -135,13 +176,14 @@ struct NodeVertexOutput {
  * Emits GPUIndexPickingTarget-compatible object IDs from the same true instance vertex buffer.
  *
  * Attribute: nodePosition at location zero, stepMode instance.
- * Bindings: importance=0, view=1. Fragment targets: rgba8unorm and rg32sint.
+ * Bindings: importance=0, degrees=1, view=2. Fragment targets: rgba8unorm and rg32sint.
  */
 export const GRAPH_EXPLORER_PICKING_SHADER = /* wgsl */ `
 ${GRAPH_EXPLORER_VIEW_SOURCE}
 
 @group(0) @binding(0) var<storage, read> importance: array<f32>;
-@group(0) @binding(1) var<uniform> view: GraphExplorerView;
+@group(0) @binding(1) var<storage, read> degrees: array<u32>;
+@group(0) @binding(2) var<uniform> view: GraphExplorerView;
 
 struct PickingVertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -164,7 +206,15 @@ struct PickingFragmentOutput {
     vec2<f32>(-1.0, 1.0), vec2<f32>(1.0, -1.0), vec2<f32>(1.0, 1.0)
   );
   let corner = corners[vertexIndex];
-  let radius = clamp(0.012 + sqrt(max(importance[sourceIndex], 0.0)) * 0.085, 0.012, 0.050);
+  let pageRankRadius = clamp(
+    0.012 + sqrt(max(importance[sourceIndex], 0.0)) * 0.085,
+    0.012,
+    0.050
+  );
+  let degreeRadius = clamp(0.011 + sqrt(f32(degrees[sourceIndex])) * 0.008, 0.012, 0.050);
+  let sizeMode = (view.interaction.w >> 8u) & 3u;
+  let metricRadius = select(pageRankRadius, degreeRadius, sizeMode == 1u);
+  let radius = select(metricRadius, 0.018, sizeMode == 2u);
   let centered = (nodePosition - view.framing.xy) * view.framing.z;
   let aspect = max(view.framing.w, 0.001);
   let projected = vec2<f32>(centered.x / aspect, centered.y) +

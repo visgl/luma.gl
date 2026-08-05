@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {existsSync, readFileSync} from 'node:fs';
 import {describe, expect, test} from 'vitest';
@@ -110,6 +110,40 @@ describe('interactive luGraph explorer dependency-free rendering integration', (
     }
     expect(GRAPH_EXPLORER_PICKING_SHADER).toMatch(/@location\(1\)/);
     expect(GRAPH_EXPLORER_PICKING_SHADER).toMatch(/vec2<i32>/);
+  });
+
+  test('exposes genuine existing GPU analytics without inventing community or spatial contributors', () => {
+    const explorerSource = readFileSync(
+      new URL('../../../../examples/experimental/lugraph-explorer/app.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(GRAPH_EXPLORER_NODE_SHADER).toMatch(/@binding\(4\).*degrees/u);
+    expect(GRAPH_EXPLORER_PICKING_SHADER).toMatch(/@binding\(1\).*degrees/u);
+    expect(GRAPH_EXPLORER_NODE_SHADER).toContain('degrees[sourceIndex]');
+    expect(GRAPH_EXPLORER_PICKING_SHADER).toContain('degrees[sourceIndex]');
+
+    for (const selector of [
+      'data-color-mode',
+      'data-node-size',
+      'data-pause',
+      'data-edge-toggle',
+      'data-depth',
+      'data-reset',
+      'data-unpin',
+      'data-graph-legend',
+      'data-graph-adapter',
+      'data-graph-memory',
+      'data-graph-fps'
+    ]) {
+      expect(explorerSource, selector).toContain(selector);
+    }
+
+    expect(explorerSource).toContain('aria-live="polite"');
+    expect(explorerSource).toContain('Expand info box');
+    expect(explorerSource).toContain('[data-info-box-appearance]');
+    expect(explorerSource).not.toContain('LuGraphLabelPropagation');
+    expect(explorerSource).not.toContain('LuGraphSpatialForceLayout');
   });
 
   test('registers the API guide in both documentation navigation trees', () => {

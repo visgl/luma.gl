@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, type AnimationProps} from '@luma.gl/engine';
@@ -48,6 +48,20 @@ const INVALID_VERTEX = 0xffffffff;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
 type ScalarVectorFormat = 'uint32' | 'float32';
+type GraphExplorerColorMode = 'component' | 'degree' | 'pagerank' | 'distance';
+type GraphExplorerNodeSizeMode = 'pagerank' | 'degree' | 'uniform';
+
+const GRAPH_EXPLORER_COLOR_MODES: GraphExplorerColorMode[] = [
+  'component',
+  'degree',
+  'pagerank',
+  'distance'
+];
+const GRAPH_EXPLORER_NODE_SIZE_MODES: GraphExplorerNodeSizeMode[] = [
+  'pagerank',
+  'degree',
+  'uniform'
+];
 
 type FrameParameters = {
   width: number;
@@ -104,14 +118,32 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
   private analyticsPending = true;
   private selectedVertex: number | null = 0;
   private pendingPick: readonly [number, number] | null = null;
+  private pendingPickSession: number | null = null;
+  private pointerSession = 0;
+  private activePointerId: number | null = null;
+  private dragPickResolved = false;
+  private dragVertex: number | null = null;
+  private finalized = false;
   private neighborhoodDepth = INITIAL_NEIGHBORHOOD_DEPTH;
   private centerX = 0;
   private centerY = 0;
   private zoom = 0.55;
   private dragging = false;
+  private paused = false;
+  private edgesVisible = true;
+  private colorMode: GraphExplorerColorMode = 'component';
+  private nodeSizeMode: GraphExplorerNodeSizeMode = 'pagerank';
+  private sampledFrameCount = 0;
+  private sampledFrameTime = 0;
+  private framesPerSecond = 0;
+  private cpuEncodeTimeMilliseconds = 0;
   private lastPointer: [number, number] | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private statusElement: HTMLElement | null = null;
+  private legendElement: HTMLElement | null = null;
+  private adapterElement: HTMLElement | null = null;
+  private memoryElement: HTMLElement | null = null;
+  private frameRateElement: HTMLElement | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -234,6 +266,15 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
       })
     });
     this.panels.mount();
+    if (typeof document !== 'undefined') {
+      document
+        .getElementById('example-panel-host')
+        ?.closest('[data-info-box-appearance]')
+        ?.querySelector<HTMLButtonElement>(
+          'button[aria-expanded="false"][aria-label="Expand info box"]'
+        )
+        ?.click();
+    }
     this.writeViewUniforms(width, height);
   }
 
@@ -267,7 +308,7 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
     const framebuffer = device
       .getDefaultCanvasContext()
       .getCurrentFramebuffer({depthStencilFormat: 'depth24plus'});
-    this.frameGraph.encode(device.commandEncoder, {
+    const frameEncoding = this.frameGraph.encode(device.commandEncoder, {
       parameters: {width, height},
       frameTextures: {
         [this.frameColorId]: {
@@ -280,24 +321,35 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
         }
       }
     });
+    this.cpuEncodeTimeMilliseconds = frameEncoding.stats.cpuEncodeTimeMilliseconds;
+    this.updateFrameRate();
 
     if (this.pendingPick) {
       const ticket = this.readbackRing.tryAcquire();
       if (ticket) {
         const pixel = this.pendingPick;
+        const pointerSession = this.pendingPickSession;
         this.pendingPick = null;
+        this.pendingPickSession = null;
         this.pickingGraph.encode(device.commandEncoder, {
           parameters: {pixel},
           buffers: {[this.pickingReadbackId]: ticket.buffer}
         });
         ticket.markEncoded({byteLength: 8});
-        queueMicrotask(() => void this.readPickedVertex(ticket));
+        queueMicrotask(() => void this.readPickedVertex(ticket, pointerSession ?? undefined));
       }
     }
     this.frameIndex++;
   }
 
   override onFinalize(): void {
+    this.finalized = true;
+    this.pointerSession++;
+    this.activePointerId = null;
+    this.dragPickResolved = false;
+    this.dragVertex = null;
+    this.pendingPick = null;
+    this.pendingPickSession = null;
     if (this.canvas) {
       this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
       this.canvas.removeEventListener('pointermove', this.handlePointerMove);
@@ -338,11 +390,12 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
     const graph = new GPUCommandGraph<FrameParameters>(this.device, {
       id: 'lugraph-explorer-frame'
     });
-    this.layout.addToGraph(graph);
+    if (!this.paused) this.layout.addToGraph(graph);
     this.search.addToGraph(graph);
 
     const positions = graph.importGPUVector('render-positions', this.layout.positions).data[0];
     const importance = graph.importGPUVector('render-importance', this.pageRank.output).data[0];
+    const degrees = graph.importGPUVector('render-degrees', this.degree.output).data[0];
     const componentLabels = graph.importGPUVector('render-components', this.components.output)
       .data[0];
     const distances = graph.importGPUVector('render-distances', this.search.distances).data[0];
@@ -377,6 +430,7 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
     const resources: GraphBufferUse[] = [
       {buffer: positions, usage: 'storage-read'},
       {buffer: importance, usage: 'storage-read'},
+      {buffer: degrees, usage: 'storage-read'},
       {buffer: componentLabels, usage: 'storage-read'},
       {buffer: distances, usage: 'storage-read'},
       {buffer: mask, usage: 'storage-read'},
@@ -403,7 +457,9 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
           clearStencil: false
         }),
         encode: ({renderPass}) => {
-          for (const {model} of this.edgeModels) model.draw(renderPass);
+          if (this.edgesVisible) {
+            for (const {model} of this.edgeModels) model.draw(renderPass);
+          }
           this.nodeModel.draw(renderPass);
         }
       })
@@ -421,6 +477,7 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
     });
     const positions = graph.importGPUVector('picking-positions', this.layout.positions).data[0];
     const importance = graph.importGPUVector('picking-importance', this.pageRank.output).data[0];
+    const degrees = graph.importGPUVector('picking-degrees', this.degree.output).data[0];
     const view = graph.importBuffer(
       {
         id: 'picking-view',
@@ -441,6 +498,7 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
       resources: [
         {buffer: positions, usage: 'vertex'},
         {buffer: importance, usage: 'storage-read'},
+        {buffer: degrees, usage: 'storage-read'},
         {buffer: view, usage: 'uniform'}
       ],
       compile: () => ({
@@ -473,6 +531,7 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
         components: this.getVectorBuffer(this.components.output),
         distances: this.getVectorBuffer(this.search.distances),
         selectionMask: this.getVectorBuffer(this.neighborhoodMask),
+        degrees: this.getVectorBuffer(this.degree.output),
         view: this.viewUniforms
       },
       shaderLayout: {
@@ -482,7 +541,8 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
           {name: 'components', type: 'read-only-storage', group: 0, location: 1},
           {name: 'distances', type: 'read-only-storage', group: 0, location: 2},
           {name: 'selectionMask', type: 'read-only-storage', group: 0, location: 3},
-          {name: 'view', type: 'uniform', group: 0, location: 4}
+          {name: 'degrees', type: 'read-only-storage', group: 0, location: 4},
+          {name: 'view', type: 'uniform', group: 0, location: 5}
         ]
       },
       parameters: {depthCompare: 'less-equal', depthWriteEnabled: true}
@@ -545,13 +605,15 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
       bufferLayout: [{name: 'nodePosition', format: 'float32x2', stepMode: 'instance'}],
       bindings: {
         importance: this.getVectorBuffer(this.pageRank.output),
+        degrees: this.getVectorBuffer(this.degree.output),
         view: this.viewUniforms
       },
       shaderLayout: {
         attributes: [{name: 'nodePosition', location: 0, type: 'vec2<f32>'}],
         bindings: [
           {name: 'importance', type: 'read-only-storage', group: 0, location: 0},
-          {name: 'view', type: 'uniform', group: 0, location: 1}
+          {name: 'degrees', type: 'read-only-storage', group: 0, location: 1},
+          {name: 'view', type: 'uniform', group: 0, location: 2}
         ]
       },
       parameters: {depthCompare: 'less-equal', depthWriteEnabled: true}
@@ -669,15 +731,25 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
       this.selectedVertex ?? INVALID_VERTEX,
       this.neighborhoodDepth,
       this.graph.vertexCount,
-      this.dragging ? 1 : 0
+      (this.dragging ? 1 : 0) |
+        (GRAPH_EXPLORER_COLOR_MODES.indexOf(this.colorMode) << 4) |
+        (GRAPH_EXPLORER_NODE_SIZE_MODES.indexOf(this.nodeSizeMode) << 8)
     ]);
     this.viewUniforms.write(new Uint8Array(values));
   }
 
-  private async readPickedVertex(ticket: GPUReadbackTicket): Promise<void> {
+  private async readPickedVertex(
+    ticket: GPUReadbackTicket,
+    pointerSession: number = this.pointerSession
+  ): Promise<void> {
     try {
       const pickedVertex = decodeGPUIndexPickInfo(await ticket.read()).objectIndex;
+      if (this.finalized || pointerSession !== this.pointerSession) return;
       this.selectedVertex = pickedVertex;
+      if (this.dragging && this.activePointerId !== null) {
+        this.dragPickResolved = true;
+        this.dragVertex = pickedVertex;
+      }
       if (pickedVertex === null) {
         this.getVectorBuffer(this.seedCount).write(Uint32Array.of(0));
       } else {
@@ -691,7 +763,11 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!this.canvas) return;
+    if (!this.canvas || this.finalized) return;
+    this.pointerSession++;
+    this.activePointerId = event.pointerId;
+    this.dragPickResolved = false;
+    this.dragVertex = null;
     this.dragging = true;
     this.lastPointer = [event.clientX, event.clientY];
     this.canvas.style.cursor = 'grabbing';
@@ -703,13 +779,22 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
       Math.max(0, Math.min(this.frameWidth - 1, devicePixels.x)),
       Math.max(0, Math.min(this.frameHeight - 1, devicePixels.y))
     ];
+    this.pendingPickSession = this.pointerSession;
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.dragging || !this.canvas || !this.lastPointer) return;
+    if (
+      !this.dragging ||
+      !this.canvas ||
+      !this.lastPointer ||
+      event.pointerId !== this.activePointerId
+    ) {
+      return;
+    }
     const previous = this.lastPointer;
     this.lastPointer = [event.clientX, event.clientY];
-    if (this.selectedVertex === null || event.shiftKey) {
+    if (!this.dragPickResolved && !event.shiftKey) return;
+    if (this.dragVertex === null || event.shiftKey) {
       const rectangle = this.canvas.getBoundingClientRect();
       this.centerX -= (2 * (event.clientX - previous[0])) / (rectangle.height * this.zoom);
       this.centerY += (2 * (event.clientY - previous[1])) / (rectangle.height * this.zoom);
@@ -726,24 +811,28 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
     ];
     this.getVectorBuffer(this.pinned).write(
       Uint32Array.of(1),
-      this.selectedVertex * UINT32_BYTE_LENGTH
+      this.dragVertex * UINT32_BYTE_LENGTH
     );
     this.getVectorBuffer(this.layout.positions).write(
       Float32Array.from(position),
-      this.selectedVertex * 2 * Float32Array.BYTES_PER_ELEMENT
+      this.dragVertex * 2 * Float32Array.BYTES_PER_ELEMENT
     );
     this.getVectorBuffer(this.layout.velocities).write(
       Float32Array.of(0, 0),
-      this.selectedVertex * 2 * Float32Array.BYTES_PER_ELEMENT
+      this.dragVertex * 2 * Float32Array.BYTES_PER_ELEMENT
     );
     this.updateStatus();
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
+    if (event.pointerId !== this.activePointerId) return;
     if (this.canvas?.hasPointerCapture(event.pointerId)) {
       this.canvas.releasePointerCapture(event.pointerId);
     }
     this.dragging = false;
+    this.activePointerId = null;
+    this.dragPickResolved = false;
+    this.dragVertex = null;
     this.lastPointer = null;
     if (this.canvas) this.canvas.style.cursor = 'grab';
   };
@@ -755,49 +844,141 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
   };
 
   private getControlsHtml(): string {
-    return `<div style="font:13px/1.5 system-ui,sans-serif">
-      <p style="margin:0 0 10px">GPU topology, PageRank, components, bounded breadth-first selection,
-      and progressive force integration feed these node and edge draws without per-frame readback.</p>
-      <label style="display:block;margin:8px 0">Neighborhood depth
-        <input data-depth type="range" min="0" max="${MAXIMUM_NEIGHBORHOOD_DEPTH}"
-          value="${INITIAL_NEIGHBORHOOD_DEPTH}" style="width:100%" />
-      </label>
-      <div style="display:flex;gap:8px">
-        <button data-reset type="button">Reset layout</button>
-        <button data-unpin type="button">Release pins</button>
+    const selectStyle =
+      'width:100%;padding:7px 9px;border:1px solid rgba(148,163,184,.26);' +
+      'border-radius:8px;background:rgba(15,23,42,.8);color:inherit';
+    const buttonStyle =
+      'padding:7px 10px;border:1px solid rgba(148,163,184,.28);border-radius:8px;' +
+      'background:rgba(30,41,59,.8);color:inherit;cursor:pointer';
+    return `<section data-graph-dashboard aria-label="Live GPU graph analytics"
+        style="min-width:260px;font:12px/1.5 system-ui,sans-serif;color:inherit">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <strong style="font-size:15px;letter-spacing:.02em">Graph analytics</strong>
+        <span style="padding:2px 8px;border:1px solid rgba(56,189,248,.45);border-radius:99px;
+          color:#7dd3fc;font-size:10px">WEBGPU · LIVE</span>
       </div>
-      <p data-status style="margin:10px 0 0"></p>
-      <p style="margin:8px 0 0;opacity:.7">Click nodes to inspect neighborhoods. Drag to pin;
-      shift-drag to pan; scroll to zoom.</p>
-    </div>`;
+      <p style="margin:6px 0 12px;color:#aebed4">Real GPU topology, influence,
+        connected components, and neighborhood traversal.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <label>Node color
+          <select data-color-mode aria-label="Node color metric" style="${selectStyle}">
+            <option value="component">Connected component</option>
+            <option value="degree">Vertex degree</option>
+            <option value="pagerank">PageRank influence</option>
+            <option value="distance">Neighborhood distance</option>
+          </select>
+        </label>
+        <label>Node size
+          <select data-node-size aria-label="Node size metric" style="${selectStyle}">
+            <option value="pagerank">PageRank</option>
+            <option value="degree">Vertex degree</option>
+            <option value="uniform">Uniform</option>
+          </select>
+        </label>
+      </div>
+      <label style="display:block;margin:12px 0 8px">Neighborhood depth
+        <input data-depth aria-label="Neighborhood depth" type="range" min="0"
+          max="${MAXIMUM_NEIGHBORHOOD_DEPTH}" value="${INITIAL_NEIGHBORHOOD_DEPTH}"
+          style="width:100%;accent-color:#38bdf8" />
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+        <button data-pause type="button" aria-pressed="false" style="${buttonStyle}">
+          Pause layout
+        </button>
+        <button data-edge-toggle type="button" aria-pressed="true" style="${buttonStyle}">
+          Hide edges
+        </button>
+        <button data-reset type="button" style="${buttonStyle}">Reset layout</button>
+        <button data-unpin type="button" style="${buttonStyle}">Release pins</button>
+      </div>
+      <div data-graph-legend aria-label="Active graph color legend"
+        style="margin:12px 0 8px;padding:8px 10px;border-radius:8px;
+        background:rgba(56,189,248,.08);color:#dbeafe"></div>
+      <p data-status role="status" aria-live="polite"
+        style="margin:0;color:#f1f5f9;font-variant-numeric:tabular-nums"></p>
+      <p data-graph-adapter style="margin:5px 0 0;color:#aebed4"></p>
+      <p data-graph-memory style="margin:3px 0 0;color:#aebed4"></p>
+      <p data-graph-fps style="margin:3px 0 0;color:#aebed4"></p>
+      <p style="margin:10px 0 0;color:#94a3b8">Click to select · drag to pin ·
+        Shift-drag to pan · scroll to zoom</p>
+    </section>`;
   }
 
   private attachControls(root: HTMLElement): () => void {
     const depth = root.querySelector<HTMLInputElement>('[data-depth]');
+    const color = root.querySelector<HTMLSelectElement>('[data-color-mode]');
+    const size = root.querySelector<HTMLSelectElement>('[data-node-size]');
+    const pause = root.querySelector<HTMLButtonElement>('[data-pause]');
+    const edges = root.querySelector<HTMLButtonElement>('[data-edge-toggle]');
     const reset = root.querySelector<HTMLButtonElement>('[data-reset]');
     const unpin = root.querySelector<HTMLButtonElement>('[data-unpin]');
     this.statusElement = root.querySelector('[data-status]');
+    this.legendElement = root.querySelector('[data-graph-legend]');
+    this.adapterElement = root.querySelector('[data-graph-adapter]');
+    this.memoryElement = root.querySelector('[data-graph-memory]');
+    this.frameRateElement = root.querySelector('[data-graph-fps]');
+    const updateColor = () => {
+      const selectedMode = GRAPH_EXPLORER_COLOR_MODES.find(mode => mode === color?.value);
+      if (selectedMode) this.colorMode = selectedMode;
+      this.updateStatus();
+    };
+    const updateSize = () => {
+      const selectedMode = GRAPH_EXPLORER_NODE_SIZE_MODES.find(mode => mode === size?.value);
+      if (selectedMode) this.nodeSizeMode = selectedMode;
+      this.updateStatus();
+    };
     const updateDepth = () => {
       this.neighborhoodDepth = Number(depth?.value ?? INITIAL_NEIGHBORHOOD_DEPTH);
       this.getVectorBuffer(this.activeDepth).write(Uint32Array.of(this.neighborhoodDepth));
       this.updateStatus();
     };
+    const togglePause = () => {
+      this.paused = !this.paused;
+      if (pause) {
+        pause.textContent = this.paused ? 'Resume layout' : 'Pause layout';
+        pause.setAttribute('aria-pressed', String(this.paused));
+      }
+      this.frameGraph.destroy();
+      this.frameGraph = this.createFrameGraph(this.frameWidth, this.frameHeight);
+      this.updateStatus();
+    };
+    const toggleEdges = () => {
+      this.edgesVisible = !this.edgesVisible;
+      if (edges) {
+        edges.textContent = this.edgesVisible ? 'Hide edges' : 'Show edges';
+        edges.setAttribute('aria-pressed', String(this.edgesVisible));
+      }
+      this.updateStatus();
+    };
     const resetLayout = () => {
       this.getVectorBuffer(this.reset).write(Uint32Array.of(1));
+      this.updateStatus();
     };
     const clearPins = () => {
       this.getVectorBuffer(this.pinned).write(new Uint32Array(this.graph.vertexCount));
       this.updateStatus();
     };
     depth?.addEventListener('input', updateDepth);
+    color?.addEventListener('change', updateColor);
+    size?.addEventListener('change', updateSize);
+    pause?.addEventListener('click', togglePause);
+    edges?.addEventListener('click', toggleEdges);
     reset?.addEventListener('click', resetLayout);
     unpin?.addEventListener('click', clearPins);
     this.updateStatus();
     return () => {
       depth?.removeEventListener('input', updateDepth);
+      color?.removeEventListener('change', updateColor);
+      size?.removeEventListener('change', updateSize);
+      pause?.removeEventListener('click', togglePause);
+      edges?.removeEventListener('click', toggleEdges);
       reset?.removeEventListener('click', resetLayout);
       unpin?.removeEventListener('click', clearPins);
       this.statusElement = null;
+      this.legendElement = null;
+      this.adapterElement = null;
+      this.memoryElement = null;
+      this.frameRateElement = null;
     };
   }
 
@@ -805,5 +986,45 @@ export default class LuGraphExplorerAnimationLoopTemplate extends AnimationLoopT
     if (!this.statusElement) return;
     const selection = this.selectedVertex === null ? 'none' : String(this.selectedVertex);
     this.statusElement.textContent = `${this.graph.vertexCount} vertices · ${this.graph.edgeCount} chunked edges · selected ${selection} · depth ${this.neighborhoodDepth}`;
+    if (this.legendElement) {
+      const legends: Record<GraphExplorerColorMode, string> = {
+        component: '● Colors identify GPU weakly connected components',
+        degree: '● Blue → amber shows GPU-computed vertex degree',
+        pagerank: '● Teal → violet shows GPU PageRank influence',
+        distance: '● Bright → dim shows bounded GPU traversal distance'
+      };
+      this.legendElement.textContent = legends[this.colorMode];
+    }
+    if (this.adapterElement) {
+      const adapter = this.device.info.renderer || this.device.info.vendor || this.device.info.gpu;
+      this.adapterElement.textContent = `GPU adapter: ${adapter}`;
+    }
+    if (this.memoryElement) {
+      const residentBytes = this.buffers.reduce((total, buffer) => total + buffer.byteLength, 0);
+      const transientBytes =
+        this.analysisGraph.stats.physicalTransientBytes +
+        this.frameGraph.stats.physicalTransientBytes +
+        this.pickingGraph.stats.physicalTransientBytes;
+      this.memoryElement.textContent =
+        `GPU buffers: ${(residentBytes / 1024).toFixed(1)} KiB resident · ` +
+        `${(transientBytes / 1024).toFixed(1)} KiB transient`;
+    }
+    if (this.frameRateElement) {
+      this.frameRateElement.textContent =
+        `${this.framesPerSecond.toFixed(0)} FPS · ` +
+        `${this.cpuEncodeTimeMilliseconds.toFixed(2)} ms CPU command encoding`;
+    }
+  }
+
+  private updateFrameRate(): void {
+    const currentTime = performance.now();
+    if (this.sampledFrameTime === 0) this.sampledFrameTime = currentTime;
+    this.sampledFrameCount++;
+    const elapsedMilliseconds = currentTime - this.sampledFrameTime;
+    if (elapsedMilliseconds < 500) return;
+    this.framesPerSecond = (this.sampledFrameCount * 1000) / elapsedMilliseconds;
+    this.sampledFrameTime = currentTime;
+    this.sampledFrameCount = 0;
+    this.updateStatus();
   }
 }

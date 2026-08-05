@@ -17,6 +17,10 @@ const experimentalOverview = readFileSync(
   new URL('../../docs/api-reference/experimental/README.md', import.meta.url),
   'utf8'
 );
+const graphExplorerExample = readFileSync(
+  new URL('../../website/content/examples/experimental/lugraph-explorer.mdx', import.meta.url),
+  'utf8'
+);
 const sidebar = readFileSync(new URL('../../docs/table-of-contents.json', import.meta.url), 'utf8');
 const experimentalTabs = readFileSync(
   new URL('../../website/src/components/docs/experimental-docs-tabs.tsx', import.meta.url),
@@ -31,8 +35,54 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(experimentalTabs).toContain("| 'lugraph'");
     expect(experimentalTabs).toContain("href: '/docs/api-reference/experimental/lugraph'");
     expect(experimentalOverview).toContain('## GPU-resident Graph Analytics');
+    expect(experimentalOverview.match(/^## GPU-resident Graph Analytics$/gmu)).toHaveLength(1);
     expect(experimentalOverview).toContain('/docs/api-reference/experimental/lugraph');
+    expect(experimentalOverview).toContain('/examples/experimental/lugraph-explorer');
     expect(packageDocumentation).toContain('/docs/api-reference/experimental/lugraph');
+  });
+
+  test('embeds an honest 128-vertex GPU explorer and explains its practical interactions', () => {
+    expect(graphDocumentation).toContain(
+      "import {LuGraphExplorerExample} from '@site/src/examples';"
+    );
+    expect(graphDocumentation).toContain('## Explore a live GPU graph');
+    expect(graphDocumentation).toContain(
+      '<LuGraphExplorerExample embedded embeddedHeight={680} />'
+    );
+
+    for (const documentation of [graphDocumentation, graphExplorerExample]) {
+      expect(documentation).toContain('128-vertex');
+      expect(documentation).toContain('weakly connected');
+      expect(documentation).toContain('not community-detection');
+      expect(documentation).toContain('PageRank');
+      expect(documentation).toContain('8-byte');
+      expect(documentation).toContain('`O(V² + E)`');
+    }
+
+    expect(graphExplorerExample).toContain('## Overview');
+    expect(graphExplorerExample).toContain('## How to read the network');
+    expect(graphExplorerExample).toContain('## Try the controls');
+    expect(graphExplorerExample).toContain('## What actually stays on the GPU');
+    expect(graphExplorerExample).toContain('<LuGraphExplorerExample />');
+    expect(graphExplorerExample).toContain('**Choose a node color mode**');
+    expect(graphExplorerExample).toContain('**Choose a node size mode**');
+    expect(graphExplorerExample).toContain('**Adjust neighborhood depth**');
+    expect(graphExplorerExample).toContain('**Toggle original edges**');
+    expect(graphExplorerExample).toContain('**Pause or resume the layout**');
+    expect(graphExplorerExample).toContain('**Release pins**');
+    expect(graphExplorerExample).toContain('**Reset layout**');
+    expect(graphExplorerExample).toContain('**Hold Shift and drag**');
+    expect(graphExplorerExample).toContain('nonempty, empty, and nonempty');
+    expect(graphExplorerExample).toContain('/docs/api-reference/experimental/lugraph');
+
+    for (const documentation of [graphDocumentation, graphExplorerExample]) {
+      expect(documentation).toContain('**Weak components**');
+      expect(documentation).toContain('**Vertex degree**');
+      expect(documentation).toContain('**PageRank importance**');
+      expect(documentation).toContain('**Neighborhood distance**');
+      expect(documentation).toContain('legend');
+      expect(documentation).toContain('execution times');
+    }
   });
 
   test('explains graph motivation, appropriate workloads, and concrete application use cases', () => {

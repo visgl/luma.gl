@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Four source communities keep component coloring and hub importance visually distinguishable. */
 export const GRAPH_EXPLORER_COMMUNITY_COUNT = 4;

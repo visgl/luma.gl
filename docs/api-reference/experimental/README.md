@@ -137,6 +137,8 @@ edge columns into reusable compressed adjacency, vertex degrees, bounded shortes
 weakly connected components, and dangling-aware PageRank scores. Social networks, dependency graphs,
 transaction investigations, and infrastructure maps can compose those operations into one WebGPU
 command graph without copying source batches or reading complete results back to JavaScript.
+The [interactive graph explorer](/examples/experimental/lugraph-explorer) adds directly renderable
+exact force-layout coordinates, neighborhood highlighting, stable GPU picking, dragging, and pinning.
 
 ## GPU-resident Linked Crossfiltering
 
@@ -148,19 +150,6 @@ command graph without copying source batches or reading complete results back to
 brushes to linked histograms, grouped aggregates, stable visible-row identifiers, and rendering
 masks through one reusable WebGPU command graph. Source rows stay on the GPU; applications control
 chart rendering, command submission, and any compact summary readback.
-
-## GPU-resident Graph Analytics
-
-<p class="badges">
-  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
-</p>
-
-[`@luma.gl/experimental/lugraph`](/docs/api-reference/experimental/lugraph) builds bounded graph
-adjacency, searches multi-seed neighborhoods, publishes exact vertex degrees and weak components,
-computes normalized PageRank, and progressively updates render-ready force-layout coordinates.
-Caller-owned source chunks, selection masks, scores, component identifiers, and position buffers
-remain GPU-resident. The [interactive graph explorer](/examples/experimental/lugraph-explorer)
-combines those outputs with stable GPU picking, neighborhood highlighting, dragging, and pinning.
 
 ## WebGPU Geospatial Kernels
 

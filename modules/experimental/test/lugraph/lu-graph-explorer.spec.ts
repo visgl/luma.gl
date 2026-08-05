@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -20,6 +20,19 @@ type ExplorerGraphBindings = {
   frameHeight: number;
 };
 
+type ExplorerPointerBindings = {
+  readPickedVertex(ticket: {read: () => Promise<Uint8Array>}): Promise<void>;
+};
+
+type ExplorerDashboardBindings = {
+  colorMode: string;
+  nodeSizeMode: string;
+  paused: boolean;
+  edgesVisible: boolean;
+  viewUniforms: Buffer;
+  writeViewUniforms(width: number, height: number): void;
+};
+
 test('luGraph explorer constructs actual GPU models and computes source-aligned graph analytics', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -31,7 +44,7 @@ test('luGraph explorer constructs actual GPU models and computes source-aligned 
   const submitSpy = vi.spyOn(device, 'submit');
   let explorer: LuGraphExplorerAnimationLoopTemplate | undefined;
   try {
-    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as AnimationProps);
+    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
     tapeTest.equal(submitSpy.mock.calls.length, 0, 'construction never submits hidden GPU work');
     submitSpy.mockRestore();
 
@@ -58,6 +71,16 @@ test('luGraph explorer constructs actual GPU models and computes source-aligned 
     tapeTest.ok(
       explorer.pickingModel.pipeline,
       'actual integer picking shader and pipeline compile'
+    );
+    tapeTest.equal(
+      explorer.nodeModel.bindings['degrees'],
+      explorer.degree.output.data[0].buffer,
+      'node color and sizing consume the actual GPU-computed degree buffer'
+    );
+    tapeTest.equal(
+      explorer.pickingModel.bindings['degrees'],
+      explorer.degree.output.data[0].buffer,
+      'integer picking uses the same degree-dependent radius as visible nodes'
     );
     tapeTest.equal(
       explorer.layout.positions.data[0].buffer.usage & (Buffer.STORAGE | Buffer.VERTEX),
@@ -144,7 +167,7 @@ test('luGraph explorer renders original GPU chunks, highlights neighborhoods, pi
     .spyOn(device.getDefaultCanvasContext(), 'getDevicePixelSize')
     .mockReturnValue([320, 240]);
   try {
-    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as AnimationProps);
+    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
     const bindings = explorer as unknown as ExplorerGraphBindings;
     tapeTest.deepEqual(
       [bindings.frameWidth, bindings.frameHeight],
@@ -223,6 +246,278 @@ test('luGraph explorer renders original GPU chunks, highlights neighborhoods, pi
     depth?.destroy();
     color?.destroy();
     explorer?.onFinalize();
+  }
+
+  tapeTest.end();
+});
+
+test('luGraph explorer exposes genuine GPU analytics and only expands its own graph inspector', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const unrelatedInfoBox = document.createElement('section');
+  unrelatedInfoBox.setAttribute('data-info-box-appearance', 'cinematic');
+  const unrelatedToggle = document.createElement('button');
+  unrelatedToggle.setAttribute('aria-expanded', 'false');
+  unrelatedToggle.setAttribute('aria-label', 'Expand info box');
+  unrelatedInfoBox.append(unrelatedToggle);
+
+  const graphInfoBox = document.createElement('section');
+  graphInfoBox.setAttribute('data-info-box-appearance', 'cinematic');
+  const graphToggle = document.createElement('button');
+  graphToggle.setAttribute('aria-expanded', 'false');
+  graphToggle.setAttribute('aria-label', 'Expand info box');
+  const host = document.createElement('div');
+  host.id = 'example-panel-host';
+  graphInfoBox.append(graphToggle, host);
+  document.body.append(unrelatedInfoBox, graphInfoBox);
+
+  const unrelatedExpansion = vi.fn();
+  const graphExpansion = vi.fn(() => graphToggle.setAttribute('aria-expanded', 'true'));
+  unrelatedToggle.addEventListener('click', unrelatedExpansion);
+  graphToggle.addEventListener('click', graphExpansion);
+
+  let explorer: LuGraphExplorerAnimationLoopTemplate | undefined;
+  try {
+    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
+    const dashboard = explorer as unknown as ExplorerDashboardBindings;
+    tapeTest.equal(graphExpansion.mock.calls.length, 1, 'the graph inspector opens exactly once');
+    tapeTest.equal(
+      unrelatedExpansion.mock.calls.length,
+      0,
+      'unrelated collapsed example inspectors are never opened'
+    );
+
+    const color = host.querySelector<HTMLSelectElement>('[data-color-mode]');
+    const size = host.querySelector<HTMLSelectElement>('[data-node-size]');
+    const pause = host.querySelector<HTMLButtonElement>('[data-pause]');
+    const edges = host.querySelector<HTMLButtonElement>('[data-edge-toggle]');
+    const depth = host.querySelector<HTMLInputElement>('[data-depth]');
+    tapeTest.deepEqual(
+      Array.from(color!.options, option => option.value),
+      ['component', 'degree', 'pagerank', 'distance'],
+      'all four available GPU analytics are selectable as node colors'
+    );
+    tapeTest.deepEqual(
+      Array.from(size!.options, option => option.value),
+      ['pagerank', 'degree', 'uniform'],
+      'importance, degree, and uniform node sizing are independently selectable'
+    );
+
+    color!.value = 'degree';
+    color!.dispatchEvent(new Event('change', {bubbles: true}));
+    size!.value = 'degree';
+    size!.dispatchEvent(new Event('change', {bubbles: true}));
+    tapeTest.equal(dashboard.colorMode, 'degree', 'degree coloring updates the real render state');
+    tapeTest.equal(dashboard.nodeSizeMode, 'degree', 'degree sizing updates the real render state');
+    tapeTest.ok(
+      host.querySelector('[data-graph-legend]')?.textContent?.includes('vertex degree'),
+      'the visible legend describes the active GPU-computed color metric'
+    );
+
+    const uniformWrite = vi.spyOn(dashboard.viewUniforms, 'write');
+    dashboard.writeViewUniforms(320, 240);
+    const uniformBytes = uniformWrite.mock.calls[0][0] as Uint8Array;
+    tapeTest.equal(
+      new DataView(uniformBytes.buffer, uniformBytes.byteOffset, uniformBytes.byteLength).getUint32(
+        28,
+        true
+      ),
+      (1 << 4) | (1 << 8),
+      'the shared node and picking uniform packs the selected genuine GPU metric modes'
+    );
+    uniformWrite.mockRestore();
+
+    depth!.value = '4';
+    depth!.dispatchEvent(new Event('input', {bubbles: true}));
+    tapeTest.equal(
+      (await readUint32Vector(explorer.search.activeDepth!))[0],
+      4,
+      'the depth slider writes the existing GPU traversal control'
+    );
+
+    const layoutNode = 'lugraph-explorer-layout-initialize';
+    tapeTest.ok(explorer.frameGraph.stats.nodeOrder.includes(layoutNode), 'layout starts active');
+    pause!.click();
+    tapeTest.equal(dashboard.paused, true, 'pausing changes actual graph execution state');
+    tapeTest.equal(pause!.getAttribute('aria-pressed'), 'true', 'pause state remains accessible');
+    tapeTest.equal(
+      explorer.frameGraph.stats.nodeOrder.includes(layoutNode),
+      false,
+      'pausing removes actual force-layout compute from the compiled frame graph'
+    );
+    tapeTest.ok(
+      explorer.frameGraph.stats.nodeOrder.includes('lugraph-explorer-neighborhood-initialize'),
+      'selection and neighborhood traversal remain active while layout is paused'
+    );
+    pause!.click();
+    tapeTest.ok(
+      explorer.frameGraph.stats.nodeOrder.includes(layoutNode),
+      'resuming restores real force-layout compute'
+    );
+
+    edges!.click();
+    tapeTest.equal(dashboard.edgesVisible, false, 'edge visibility changes actual rendering state');
+    tapeTest.equal(edges!.getAttribute('aria-pressed'), 'false', 'edge state remains accessible');
+    tapeTest.ok(host.querySelector('[data-status]')?.textContent?.includes('depth 4'));
+    tapeTest.ok(host.querySelector('[data-graph-adapter]')?.textContent?.includes('GPU adapter:'));
+    tapeTest.ok(host.querySelector('[data-graph-memory]')?.textContent?.includes('KiB resident'));
+    tapeTest.ok(
+      host.querySelector('[data-graph-fps]')?.textContent?.includes('CPU command encoding'),
+      'telemetry identifies CPU encoding honestly instead of inventing GPU execution timings'
+    );
+    tapeTest.equal(graphExpansion.mock.calls.length, 1, 'interaction never reopens the inspector');
+  } finally {
+    explorer?.onFinalize();
+    graphInfoBox.remove();
+    unrelatedInfoBox.remove();
+  }
+
+  tapeTest.end();
+});
+
+test('luGraph explorer waits for the current asynchronous GPU pick before dragging a different node', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  let explorer: LuGraphExplorerAnimationLoopTemplate | undefined;
+  const cleanup: Array<() => void> = [];
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 240;
+  let capturedPointerId: number | null = null;
+
+  const devicePixelSizeSpy = vi
+    .spyOn(device.getDefaultCanvasContext(), 'getDevicePixelSize')
+    .mockReturnValue([320, 240]);
+  cleanup.push(() => devicePixelSizeSpy.mockRestore());
+  const pixelConversionSpy = vi
+    .spyOn(device.getDefaultCanvasContext(), 'cssToDevicePixels')
+    .mockReturnValue({x: 160, y: 120, width: 1, height: 1});
+  cleanup.push(() => pixelConversionSpy.mockRestore());
+  const boundsSpy = vi
+    .spyOn(canvas, 'getBoundingClientRect')
+    .mockReturnValue(new DOMRect(0, 0, 320, 240));
+  cleanup.push(() => boundsSpy.mockRestore());
+  const captureSpy = vi.spyOn(canvas, 'setPointerCapture').mockImplementation(pointerId => {
+    capturedPointerId = pointerId;
+  });
+  cleanup.push(() => captureSpy.mockRestore());
+  const hasCaptureSpy = vi
+    .spyOn(canvas, 'hasPointerCapture')
+    .mockImplementation(pointerId => capturedPointerId === pointerId);
+  cleanup.push(() => hasCaptureSpy.mockRestore());
+  const releaseCaptureSpy = vi.spyOn(canvas, 'releasePointerCapture').mockImplementation(() => {
+    capturedPointerId = null;
+  });
+  cleanup.push(() => releaseCaptureSpy.mockRestore());
+
+  try {
+    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
+    await explorer.onInitialize({device, canvas} as unknown as AnimationProps);
+    const pointerBindings = explorer as unknown as ExplorerPointerBindings;
+    const pinnedBuffer = explorer.layout.pinned!.data[0].buffer as Buffer;
+    const positionsBuffer = explorer.layout.positions.data[0].buffer as Buffer;
+    const velocitiesBuffer = explorer.layout.velocities.data[0].buffer as Buffer;
+    const pinWriteSpy = vi.spyOn(pinnedBuffer, 'write');
+    const positionWriteSpy = vi.spyOn(positionsBuffer, 'write');
+    const velocityWriteSpy = vi.spyOn(velocitiesBuffer, 'write');
+    cleanup.push(
+      () => pinWriteSpy.mockRestore(),
+      () => positionWriteSpy.mockRestore(),
+      () => velocityWriteSpy.mockRestore()
+    );
+
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {pointerId: 11, clientX: 160, clientY: 120})
+    );
+
+    let resolveCurrentPick: ((value: Uint8Array) => void) | undefined;
+    const currentPick = new Promise<Uint8Array>(resolve => {
+      resolveCurrentPick = resolve;
+    });
+    const currentReadback = pointerBindings.readPickedVertex({read: () => currentPick});
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {pointerId: 11, clientX: 190, clientY: 135})
+    );
+
+    tapeTest.equal(pinWriteSpy.mock.calls.length, 0, 'the previously selected node is not pinned');
+    tapeTest.equal(
+      positionWriteSpy.mock.calls.length,
+      0,
+      'the previously selected node coordinates are not changed before GPU picking resolves'
+    );
+    tapeTest.equal(
+      velocityWriteSpy.mock.calls.length,
+      0,
+      'the previously selected node velocity is not cleared while picking remains asynchronous'
+    );
+
+    resolveCurrentPick!(new Uint8Array(Int32Array.of(7, 0).buffer));
+    await currentReadback;
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {pointerId: 11, clientX: 205, clientY: 145})
+    );
+
+    tapeTest.equal(pinWriteSpy.mock.calls.length, 1, 'the resolved current node is pinned once');
+    tapeTest.equal(
+      pinWriteSpy.mock.calls[0][1],
+      7 * Uint32Array.BYTES_PER_ELEMENT,
+      'pinning targets the newly picked stable vertex, never the stale selected node'
+    );
+    tapeTest.equal(
+      positionWriteSpy.mock.calls[0][1],
+      7 * 2 * Float32Array.BYTES_PER_ELEMENT,
+      'position writes target only the newly picked vertex row'
+    );
+    tapeTest.equal(
+      velocityWriteSpy.mock.calls[0][1],
+      7 * 2 * Float32Array.BYTES_PER_ELEMENT,
+      'velocity writes target only the newly picked vertex row'
+    );
+    const pinValues = await readUint32Vector(explorer.layout.pinned!);
+    tapeTest.equal(pinValues[0], 0, 'the old selected vertex remains unpinned on the actual GPU');
+    tapeTest.equal(pinValues[7], 1, 'the resolved drag target is pinned on the actual GPU');
+
+    canvas.dispatchEvent(new PointerEvent('pointerup', {pointerId: 11}));
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {pointerId: 12, clientX: 215, clientY: 155})
+    );
+    let resolveReleasedPick: ((value: Uint8Array) => void) | undefined;
+    const releasedPick = new Promise<Uint8Array>(resolve => {
+      resolveReleasedPick = resolve;
+    });
+    const releasedReadback = pointerBindings.readPickedVertex({read: () => releasedPick});
+    canvas.dispatchEvent(new PointerEvent('pointerup', {pointerId: 12}));
+    resolveReleasedPick!(new Uint8Array(Int32Array.of(9, 0).buffer));
+    await releasedReadback;
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {pointerId: 12, clientX: 235, clientY: 170})
+    );
+
+    tapeTest.equal(
+      pinWriteSpy.mock.calls.length,
+      1,
+      'a GPU pick resolving after pointer release never resurrects a stale drag'
+    );
+    tapeTest.equal(positionWriteSpy.mock.calls.length, 1, 'released pointers never move a node');
+    tapeTest.equal(
+      velocityWriteSpy.mock.calls.length,
+      1,
+      'released pointers never clear velocities'
+    );
+  } finally {
+    for (const restore of cleanup.reverse()) restore();
+    explorer?.onFinalize();
+    canvas.remove();
   }
 
   tapeTest.end();

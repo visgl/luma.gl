@@ -11,22 +11,73 @@ sidebar_custom_props:
 
 import {LuGraphExplorerExample} from '@site/src/examples';
 
+## Overview
+
+A list of relationships can tell you which two entities are connected, but it cannot immediately
+show which account influences a network, how far a problem can spread, or which systems form an
+isolated group. This interactive example answers those questions with a deterministic 128-vertex
+graph whose relationship analysis, progressive layout, and rendering all run on WebGPU.
+
 <LuGraphExplorerExample />
 
-Click a node to select its stable source vertex identifier and highlight its bounded neighborhood.
-Node size reflects GPU-computed PageRank; color reflects its weakly connected component. Drag the
-selected node, pin or unpin it, adjust traversal depth, and reset the progressive layout to its
-deterministic initial coordinates.
+## How to read the network
 
-Source edge batches remain separate throughout adjacency construction and rendering. GPU-built
-forward and reverse CSR feeds shortest-path selection, degree, connected components, normalized
-PageRank, and exact force simulation. Node and edge models consume those original GPU buffers
-directly: there is no per-frame CPU position readback, implicit source concatenation, or copied
-render attribute.
+The graph contains four intentionally generated source groups, unequal-importance hubs, a single
+bridge connecting the first two groups, and one isolated final vertex. Its graph inspector compares
+four actual GPU-computed perspectives:
+
+- **Weak components** show which entities remain connected when relationship direction is ignored.
+  A bridge merges its two source groups into one component, while disconnected groups and the
+  isolated vertex remain separate. These are not community-detection labels.
+- **Vertex degree** counts immediate relationships, revealing directly connected local hubs.
+- **PageRank importance** reflects influence arriving from other important vertices, which is not
+  equivalent to simply counting direct edges.
+- **Neighborhood distance** shows bounded shortest-path distance from the selected vertex.
+
+Node size can independently represent **PageRank**, **vertex degree**, or a **uniform radius**.
+All color and sizing modes consume existing GPU result buffers; they do not download graph columns
+to JavaScript.
+
+## Try the controls
+
+- **Click a node** to select its stable original vertex identifier and highlight its neighborhood.
+- **Choose a node color mode** to compare weak components, direct degree, PageRank influence, or
+  shortest-path distance.
+- **Choose a node size mode** to compare PageRank, degree, or uniform-size vertices.
+- **Adjust neighborhood depth** to include more or fewer unweighted relationship hops.
+- **Toggle original edges** to inspect vertices without hiding or repacking source edge batches.
+- **Pause or resume the layout** while keeping the graph, selection, and rendering interactive.
+- **Drag a selected node** to move it and pin its position while the rest of the graph evolves.
+- **Release pins** to allow pinned vertices to move again.
+- **Reset layout** to restore deterministic initial positions and restart the progressive layout.
+- **Hold Shift and drag** to pan; use the scroll wheel to zoom.
+
+These interactions are useful when exploring social relationships, tracing service dependencies,
+investigating transactions, or explaining why a structurally important account differs from one
+that simply has many direct connections.
+
+The graph inspector opens automatically for this example. Its accessible color legend, live graph
+status, actual WebGPU adapter, frame cadence, and owned or transient GPU memory make the active
+pipeline understandable without claiming unmeasured GPU execution times.
+
+## What actually stays on the GPU
+
+The original source and target edge columns remain in their aligned nonempty, empty, and nonempty
+batches throughout adjacency construction and rendering. GPU-built forward and reverse compressed
+adjacency feeds exact vertex degree, bounded breadth-first selection, weakly connected components,
+normalized PageRank, and progressive exact force simulation. Node models bind the same writable
+position buffer directly as a vertex attribute, and edge models consume their original source
+batches; no implicit source concatenation, copied render attribute, or per-frame CPU position
+readback is required.
 
 Picking renders stable vertex identifiers into an integer attachment. Only an explicitly requested
-single-pixel selection is asynchronously copied back through a small caller-owned readback ring;
-ordinary analytics, simulation, and drawing remain GPU-resident.
+single-pixel selection copies one **8-byte** result back asynchronously through a caller-owned
+readback ring; ordinary analytics, simulation, and drawing remain GPU-resident.
+
+This WebGPU-only example deliberately uses 128 vertices because exact force-directed layout
+evaluates all vertex pairs and costs `O(V² + E)` per iteration. It demonstrates real GPU ownership,
+composition, and interaction; it does not claim approximate layout, automatic community detection,
+or large-graph benchmark performance.
 
 See the [luGraph API guide](/docs/api-reference/experimental/lugraph) for ownership, overflow,
 selection, convergence, and force-layout contracts.
