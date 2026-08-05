@@ -11,6 +11,7 @@ import {
 } from '@luma.gl/shadertools';
 import {ArrowDeck} from '../arrow-deck';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import type {GraphExplorerDataset} from '../../experimental/lugraph-explorer/graph-data';
 import {LuGraphDeckEffect} from './lugraph-effect';
 import {LuGraphEdgeLayer} from './lugraph-edge-layer';
 import {LuGraphNodeLayer} from './lugraph-node-layer';
@@ -22,6 +23,10 @@ type GraphExplorerControls = {
   destroy: () => void;
 };
 
+type LuGraphExplorerDeckOptions = DeckExampleDeviceOptions & {
+  dataset?: GraphExplorerDataset;
+};
+
 /**
  * Creates an optional deck.gl explorer using resident luGraph analytics and original edge chunks.
  *
@@ -31,8 +36,9 @@ type GraphExplorerControls = {
  */
 export function createLuGraphExplorerDeck(
   parent?: HTMLDivElement,
-  options: DeckExampleDeviceOptions = {}
+  options: LuGraphExplorerDeckOptions = {}
 ): ArrowDeck<OrthographicView> {
+  const {dataset, ...deviceOptions} = options;
   const ownsContainer = !parent;
   const container = parent ?? createStandaloneContainer();
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
@@ -48,7 +54,7 @@ export function createLuGraphExplorerDeck(
 
   deck = new ArrowDeck<OrthographicView>({
     parent: container,
-    ...getDeckExampleProps({...options, deviceType: 'webgpu'}),
+    ...getDeckExampleProps({...deviceOptions, deviceType: 'webgpu'}),
     views: new OrthographicView({id: 'lugraph-orthographic'}),
     initialViewState: {target: [0, 0, 0], zoom: 7.7, minZoom: 5, maxZoom: 11},
     controller: {
@@ -101,7 +107,7 @@ export function createLuGraphExplorerDeck(
     },
     onLoad: ({deck: loadedDeck, device}) => {
       if (device.type !== 'webgpu') throw new Error('luGraph deck explorer requires WebGPU');
-      effect = new LuGraphDeckEffect(device);
+      effect = new LuGraphDeckEffect(device, dataset);
       const edgeLayers = effect.graph.sourceVertices.data.flatMap((source, chunkIndex) => {
         if (source.length === 0) return [];
         const target = effect!.graph.targetVertices.data[chunkIndex];

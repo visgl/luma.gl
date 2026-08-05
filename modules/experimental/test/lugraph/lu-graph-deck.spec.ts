@@ -173,7 +173,7 @@ test('luGraph deck.gl renders real source-chunk layers and asynchronously picks 
   let deck: ReturnType<typeof createLuGraphExplorerDeck> | undefined;
   const originalShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
   try {
-    deck = createLuGraphExplorerDeck(container, {device});
+    deck = createLuGraphExplorerDeck(container, {device, dataset: makeGraphExplorerDataset(8)});
     deck.setProps({_animate: false});
     await waitForDeckEffect(deck);
     tapeTest.equal(
