@@ -2,19 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {makeShaderBlockLayout} from '@luma.gl/core';
 import {
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformLayoutValidationResult,
   pbrScene
 } from '@luma.gl/shadertools';
+import test from 'test/utils/vitest-tape';
 
 const EXPECTED_UNIFORM_NAMES = [
   'exposure',
   'toneMapMode',
   'environmentIntensity',
   'environmentRotation',
+  'environmentMipCount',
   'framebufferSize',
   'viewMatrix',
   'projectionMatrix'
@@ -47,9 +48,20 @@ test('shadertools#pbrScene exposes stable uniform layout metadata', testCase => 
   );
 
   const shaderBlockLayout = makeShaderBlockLayout(pbrScene.uniformTypes);
-  testCase.ok(
-    shaderBlockLayout.byteLength >= 160,
-    'uniform block is large enough for matrices and scene controls'
+  testCase.equal(
+    shaderBlockLayout.byteLength,
+    160,
+    'scene controls preserve the packed block size'
+  );
+  testCase.equal(
+    shaderBlockLayout.fields.environmentMipCount.offset,
+    4,
+    'environment mip count occupies the previously unused scalar position'
+  );
+  testCase.equal(
+    shaderBlockLayout.fields.framebufferSize.offset,
+    6,
+    'framebuffer dimensions retain vector alignment after the mip count'
   );
   testCase.deepEqual(
     Object.keys(shaderBlockLayout.fields),

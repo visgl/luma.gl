@@ -26,6 +26,12 @@ export type {
 } from './engine/scene-renderer';
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
 export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
+export type {PreparePBREnvironmentOptions} from './engine/pbr-environment';
+export {
+  PBREnvironmentGenerator,
+  PreparedPBREnvironment,
+  preparePBREnvironment
+} from './engine/pbr-environment';
 
 export {type TextureFormatPacked, RGBADecoder} from './textures/rgba-decoder';
 

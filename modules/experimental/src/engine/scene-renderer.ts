@@ -8,7 +8,7 @@ import {
   type Device,
   type Framebuffer,
   type RenderPass,
-  type Texture
+  Texture
 } from '@luma.gl/core';
 import {
   type Geometry,
@@ -121,6 +121,8 @@ export type SceneRenderOptions = {
   height?: number;
   /** Optional complete image-based-lighting environment. */
   environment?: SceneEnvironment;
+  /** Captures opaque scene color for physical transmission. Enabled automatically by default. */
+  transmission?: boolean;
   /** Scene exposure multiplier. */
   exposure?: number;
   /** Shared scene tone-mapping mode. */
@@ -152,18 +154,31 @@ type CompiledSceneSurface = {
   textureBindings: [string, unknown][];
   triangleCount: number;
   alphaMode: SceneAlphaMode;
+  transmissive: boolean;
   depth: number;
   morphWeights?: readonly number[];
 };
 
+type SceneTransmissionResources = {
+  colorTexture: Texture;
+  depthTexture: Texture;
+  framebuffer: Framebuffer;
+};
+
 type SceneFrameResources = {
   surfaces: Map<string, CompiledSceneSurface>;
+  transmission?: SceneTransmissionResources;
 };
 
 /** Prepared scene data available to specialized renderers before opening a render pass. */
 export type PreparedScene = {
   /** Prepared opaque and blended model batches in draw order. */
-  surfaces: readonly {model: Model; alphaMode: SceneAlphaMode; depth: number}[];
+  surfaces: readonly {
+    model: Model;
+    alphaMode: SceneAlphaMode;
+    depth: number;
+    transmissive?: boolean;
+  }[];
   /** Surface, instance, and triangle counts; draw count is populated after the render pass. */
   statistics: SceneRenderStatistics;
 };
@@ -190,8 +205,29 @@ export class SceneRenderer {
 
   /** Compiles, updates, orders, and draws one retained frame. */
   render(options: SceneRenderOptions): SceneRenderStatistics {
-    const scene = this.prepareScene(options);
+    const transmission = this.getTransmissionResources(options);
+    const scene = this.prepareScene(options, transmission?.colorTexture);
     const background = options.background || [0, 0, 0, 1];
+
+    if (transmission) {
+      const capturePass = this.device.beginRenderPass({
+        id: `scene-${options.id}-transmission`,
+        framebuffer: transmission.framebuffer,
+        clearColor: [background[0], background[1], background[2], background[3] ?? 1],
+        clearDepth: 1
+      });
+      this.drawPreparedScene(
+        {
+          ...scene,
+          surfaces: scene.surfaces.filter(
+            surface => !surface.transmissive && surface.alphaMode !== 'BLEND'
+          )
+        },
+        capturePass
+      );
+      capturePass.end();
+    }
+
     const renderPass = this.device.beginRenderPass({
       id: `scene-${options.id}`,
       framebuffer: options.framebuffer,
@@ -213,6 +249,7 @@ export class SceneRenderer {
     for (const surface of resources.surfaces.values()) {
       destroyCompiledSceneSurface(surface);
     }
+    destroyTransmissionResources(resources.transmission);
     this.frames.delete(frameIdentifier);
   }
 
@@ -224,7 +261,10 @@ export class SceneRenderer {
   }
 
   /** Creates or updates all models and uploads uniforms before a render pass begins. */
-  protected prepareScene(options: SceneRenderOptions): PreparedScene {
+  protected prepareScene(
+    options: SceneRenderOptions,
+    transmissionTexture?: Texture
+  ): PreparedScene {
     let resources = this.frames.get(options.id);
     if (!resources) {
       resources = {surfaces: new Map()};
@@ -241,7 +281,15 @@ export class SceneRenderer {
         continue;
       }
 
-      const compiledSurface = this.getCompiledSurface(resources, surface, options);
+      const surfaceTransmissionTexture = isTransmissiveSurface(surface)
+        ? transmissionTexture
+        : undefined;
+      const compiledSurface = this.getCompiledSurface(
+        resources,
+        surface,
+        options,
+        surfaceTransmissionTexture
+      );
       updateInstanceTransforms(compiledSurface, surface.transforms);
       if (surface.skin && getPBRGeometryDefines(surface.geometry)['HAS_SKIN']) {
         compiledSurface.model.shaderInputs.setProps({skin: surface.skin});
@@ -255,7 +303,7 @@ export class SceneRenderer {
           IBLenabled: hasCompleteEnvironment(options.environment)
         }
       });
-      setSceneShaderInputs(compiledSurface.model, options);
+      setSceneShaderInputs(compiledSurface.model, options, surfaceTransmissionTexture);
       compiledSurface.model.predraw(this.device.commandEncoder);
       compiledSurface.depth = getSurfaceDepth(surface.transforms, options.camera.viewMatrix);
       surfaceIdentifiers.add(surface.id);
@@ -276,6 +324,9 @@ export class SceneRenderer {
       const secondIsTransparent = secondSurface.alphaMode === 'BLEND';
       if (firstIsTransparent !== secondIsTransparent) {
         return firstIsTransparent ? 1 : -1;
+      }
+      if (!firstIsTransparent && firstSurface.transmissive !== secondSurface.transmissive) {
+        return firstSurface.transmissive ? 1 : -1;
       }
       return firstIsTransparent ? secondSurface.depth - firstSurface.depth : 0;
     });
@@ -313,10 +364,11 @@ export class SceneRenderer {
   private getCompiledSurface(
     resources: SceneFrameResources,
     surface: SceneSurface,
-    options: SceneRenderOptions
+    options: SceneRenderOptions,
+    transmissionTexture?: Texture
   ): CompiledSceneSurface {
     const alphaMode = getSceneAlphaMode(surface.material);
-    const signature = getSceneSurfaceSignature(surface, options, alphaMode);
+    const signature = getSceneSurfaceSignature(surface, options, alphaMode, transmissionTexture);
     const textureBindings = Object.entries(surface.material.bindings || {}).filter(([, texture]) =>
       Boolean(texture)
     );
@@ -387,6 +439,9 @@ export class SceneRenderer {
           USE_MATERIAL_EXTENSIONS: true,
           ALPHA_CUTOFF: alphaMode === 'MASK',
           USE_IBL: hasCompleteEnvironment(options.environment),
+          USE_SCENE_ENVIRONMENT: hasCompleteEnvironment(options.environment),
+          USE_TEX_LOD: hasMipmappedEnvironment(options.environment),
+          USE_TRANSMISSION_FRAMEBUFFER: Boolean(transmissionTexture),
           DEBUG_NORMALS: options.renderMode === 'debugNormals',
           DEBUG_DEPTH: options.renderMode === 'debugDepth',
           ...surface.material.defines,
@@ -407,6 +462,7 @@ export class SceneRenderer {
           (surface.geometry.indices?.value.length || surface.geometry.vertexCount) / 3
         ),
         alphaMode,
+        transmissive: Boolean(transmissionTexture),
         depth: 0
       };
       resources.surfaces.set(surface.id, compiledSurface);
@@ -414,6 +470,72 @@ export class SceneRenderer {
 
     compiledSurface.source = surface;
     return compiledSurface;
+  }
+
+  private getTransmissionResources(
+    options: SceneRenderOptions
+  ): SceneTransmissionResources | undefined {
+    const captureEnabled =
+      options.transmission !== false &&
+      (!options.renderMode || options.renderMode === 'default') &&
+      options.surfaces.some(isTransmissiveSurface);
+    let resources = this.frames.get(options.id);
+
+    if (!captureEnabled) {
+      if (resources?.transmission) {
+        destroyTransmissionResources(resources.transmission);
+        resources.transmission = undefined;
+      }
+      return undefined;
+    }
+
+    if (!resources) {
+      resources = {surfaces: new Map()};
+      this.frames.set(options.id, resources);
+    }
+
+    const [width, height] = getSceneRenderSize(this.device, options);
+    if (
+      resources.transmission &&
+      (resources.transmission.colorTexture.width !== width ||
+        resources.transmission.colorTexture.height !== height)
+    ) {
+      destroyTransmissionResources(resources.transmission);
+      resources.transmission = undefined;
+    }
+
+    if (!resources.transmission) {
+      const colorTexture = this.device.createTexture({
+        id: `scene-${options.id}-transmission-color`,
+        width,
+        height,
+        format: this.device.preferredColorFormat,
+        usage: Texture.SAMPLE | Texture.RENDER,
+        sampler: {
+          minFilter: 'linear',
+          magFilter: 'linear',
+          addressModeU: 'clamp-to-edge',
+          addressModeV: 'clamp-to-edge'
+        }
+      });
+      const depthTexture = this.device.createTexture({
+        id: `scene-${options.id}-transmission-depth`,
+        width,
+        height,
+        format: 'depth24plus',
+        usage: Texture.RENDER
+      });
+      const framebuffer = this.device.createFramebuffer({
+        id: `scene-${options.id}-transmission-framebuffer`,
+        width,
+        height,
+        colorAttachments: [colorTexture],
+        depthStencilAttachment: depthTexture
+      });
+      resources.transmission = {colorTexture, depthTexture, framebuffer};
+    }
+
+    return resources.transmission;
   }
 }
 
@@ -445,7 +567,8 @@ export function getSceneAlphaMode(material: SceneMaterial): SceneAlphaMode {
 function getSceneSurfaceSignature(
   surface: SceneSurface,
   options: SceneRenderOptions,
-  alphaMode: SceneAlphaMode
+  alphaMode: SceneAlphaMode,
+  transmissionTexture?: Texture
 ): string {
   return JSON.stringify({
     geometryVersion: surface.geometryVersion,
@@ -457,6 +580,10 @@ function getSceneSurfaceSignature(
       first.localeCompare(second)
     ),
     environment: hasCompleteEnvironment(options.environment),
+    environmentMipmapped: hasMipmappedEnvironment(options.environment),
+    transmission: Boolean(transmissionTexture),
+    transmissionWidth: transmissionTexture?.width,
+    transmissionHeight: transmissionTexture?.height,
     renderMode: options.renderMode || 'default'
   });
 }
@@ -494,11 +621,17 @@ function updateInstanceTransforms(
   }
 }
 
-function setSceneShaderInputs(model: Model, options: SceneRenderOptions): void {
+function setSceneShaderInputs(
+  model: Model,
+  options: SceneRenderOptions,
+  transmissionTexture?: Texture
+): void {
   const viewMatrix = new Matrix4(options.camera.viewMatrix);
   const projectionMatrix = new Matrix4(options.camera.projectionMatrix);
-  const framebufferWidth = options.framebuffer?.width || options.width || 1;
-  const framebufferHeight = options.framebuffer?.height || options.height || 1;
+  const framebufferWidth =
+    options.framebuffer?.width || options.width || transmissionTexture?.width || 1;
+  const framebufferHeight =
+    options.framebuffer?.height || options.height || transmissionTexture?.height || 1;
 
   model.shaderInputs.setProps({
     pbrProjection: {
@@ -512,9 +645,11 @@ function setSceneShaderInputs(model: Model, options: SceneRenderOptions): void {
       toneMapMode: options.toneMapMode ?? 2,
       environmentIntensity: options.environment?.intensity ?? 1,
       environmentRotation: options.environment?.rotation ?? 0,
+      environmentMipCount: options.environment?.specularTexture?.mipLevels ?? 1,
       framebufferSize: [framebufferWidth, framebufferHeight],
       viewMatrix,
-      projectionMatrix
+      projectionMatrix,
+      ...(transmissionTexture ? {pbr_transmissionFramebufferSampler: transmissionTexture} : {})
     },
     lighting: {lights: Array.from(options.lights || []), useByteColors: false},
     ...(hasCompleteEnvironment(options.environment)
@@ -533,6 +668,33 @@ function hasCompleteEnvironment(environment?: SceneEnvironment): boolean {
   return Boolean(
     environment?.diffuseTexture && environment.specularTexture && environment.brdfLUTTexture
   );
+}
+
+function hasMipmappedEnvironment(environment?: SceneEnvironment): boolean {
+  return hasCompleteEnvironment(environment) && (environment?.specularTexture?.mipLevels ?? 1) > 1;
+}
+
+function isTransmissiveSurface(surface: SceneSurface): boolean {
+  return (surface.material.uniforms?.transmissionFactor ?? 0) > 0;
+}
+
+function getSceneRenderSize(device: Device, options: SceneRenderOptions): [number, number] {
+  if (options.framebuffer) {
+    return [options.framebuffer.width, options.framebuffer.height];
+  }
+  if (options.width && options.height) {
+    return [options.width, options.height];
+  }
+  return device.getDefaultCanvasContext().getDrawingBufferSize();
+}
+
+function destroyTransmissionResources(resources?: SceneTransmissionResources): void {
+  if (!resources) {
+    return;
+  }
+  resources.framebuffer.destroy();
+  resources.colorTexture.destroy();
+  resources.depthTexture.destroy();
 }
 
 function getSurfaceDepth(

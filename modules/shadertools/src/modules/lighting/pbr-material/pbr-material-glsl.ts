@@ -335,17 +335,29 @@ vec3 getClearcoatNormal(mat3 tbn, vec3 baseNormal, vec2 uv)
 #ifdef USE_IBL
 vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
 {
-  float mipCount = 9.0; // resolution of 512x512
-  float lod = (pbrInfo.perceptualRoughness * mipCount);
+#ifdef USE_SCENE_ENVIRONMENT
+  float maximumMipLevel = max(pbrScene.environmentMipCount - 1.0, 0.0);
+  float rotationSine = sin(pbrScene.environmentRotation);
+  float rotationCosine = cos(pbrScene.environmentRotation);
+  mat2 environmentRotation = mat2(rotationCosine, rotationSine, -rotationSine, rotationCosine);
+  vec3 environmentNormal = vec3(environmentRotation * n.xz, n.y).xzy;
+  vec3 environmentReflection = vec3(environmentRotation * reflection.xz, reflection.y).xzy;
+#else
+  float maximumMipLevel = 9.0;
+  vec3 environmentNormal = n;
+  vec3 environmentReflection = reflection;
+#endif
+  float lod = pbrInfo.perceptualRoughness * maximumMipLevel;
   // retrieve a scale and bias to F0. See [1], Figure 3
   vec3 brdf = SRGBtoLINEAR(texture(pbr_brdfLUT,
     vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
-  vec3 diffuseLight = SRGBtoLINEAR(texture(pbr_diffuseEnvSampler, n)).rgb;
+  vec3 diffuseLight = SRGBtoLINEAR(texture(pbr_diffuseEnvSampler, environmentNormal)).rgb;
 
 #ifdef USE_TEX_LOD
-  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, reflection, lod)).rgb;
+  vec3 specularLight =
+    SRGBtoLINEAR(textureLod(pbr_specularEnvSampler, environmentReflection, lod)).rgb;
 #else
-  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, reflection)).rgb;
+  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, environmentReflection)).rgb;
 #endif
 
   vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;
@@ -355,7 +367,11 @@ vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
   diffuse *= pbrMaterial.scaleIBLAmbient.x;
   specular *= pbrMaterial.scaleIBLAmbient.y;
 
+#ifdef USE_SCENE_ENVIRONMENT
+  return (diffuse + specular) * max(pbrScene.environmentIntensity, 0.0);
+#else
   return diffuse + specular;
+#endif
 }
 #endif
 
@@ -452,6 +468,49 @@ vec3 getVolumeAttenuation(float thickness)
     max(pbrMaterial.attenuationDistance, 0.0001);
   return exp(-attenuationCoefficient * thickness);
 }
+
+#ifdef USE_TRANSMISSION_FRAMEBUFFER
+vec3 getTransmittedSceneColor(
+  vec3 position,
+  vec3 normal,
+  vec3 viewDirection,
+  float thickness,
+  float perceptualRoughness
+)
+{
+  vec3 refractionDirection = refract(
+    -viewDirection,
+    normal,
+    1.0 / max(pbrMaterial.ior, 1.0)
+  );
+  vec3 refractedPosition = position + refractionDirection * thickness;
+  vec4 clipPosition = pbrScene.projectionMatrix *
+    pbrScene.viewMatrix * vec4(refractedPosition, 1.0);
+  vec2 textureCoordinate = clipPosition.xy / max(clipPosition.w, 0.0001) * 0.5 + 0.5;
+  textureCoordinate = clamp(textureCoordinate, vec2(0.001), vec2(0.999));
+
+  vec2 blurRadius = perceptualRoughness * perceptualRoughness * 8.0 /
+    max(pbrScene.framebufferSize, vec2(1.0));
+  vec3 sceneColor = texture(pbr_transmissionFramebufferSampler, textureCoordinate).rgb * 0.4;
+  sceneColor += texture(
+    pbr_transmissionFramebufferSampler,
+    textureCoordinate + vec2(blurRadius.x, 0.0)
+  ).rgb * 0.15;
+  sceneColor += texture(
+    pbr_transmissionFramebufferSampler,
+    textureCoordinate - vec2(blurRadius.x, 0.0)
+  ).rgb * 0.15;
+  sceneColor += texture(
+    pbr_transmissionFramebufferSampler,
+    textureCoordinate + vec2(0.0, blurRadius.y)
+  ).rgb * 0.15;
+  sceneColor += texture(
+    pbr_transmissionFramebufferSampler,
+    textureCoordinate - vec2(0.0, blurRadius.y)
+  ).rgb * 0.15;
+  return pow(max(sceneColor, vec3(0.0)), vec3(2.2));
+}
+#endif
 
 PBRInfo createClearcoatPBRInfo(PBRInfo basePBRInfo, vec3 clearcoatNormal, float clearcoatRoughness)
 {
@@ -1080,7 +1139,22 @@ vec4 pbr_filterColor(vec4 vertexColor)
     color += emissive * pbrMaterial.emissiveStrength;
 
     if (transmission > 0.0) {
+#ifdef USE_TRANSMISSION_FRAMEBUFFER
+      float dielectricFresnel = getDielectricF0(pbrMaterial.ior);
+      float transmissionFresnel = dielectricFresnel +
+        (1.0 - dielectricFresnel) * pow(1.0 - NdotV, 5.0);
+      vec3 transmittedColor = getTransmittedSceneColor(
+        pbr_vPosition,
+        n,
+        v,
+        thickness,
+        perceptualRoughness
+      );
+      color += transmittedColor * getVolumeAttenuation(thickness) *
+        transmission * (1.0 - transmissionFresnel);
+#else
       color = mix(color, color * getVolumeAttenuation(thickness), transmission);
+#endif
     }
 
     // This section uses mix to override final color for reference app visualization
@@ -1101,7 +1175,11 @@ vec4 pbr_filterColor(vec4 vertexColor)
 
   }
 
+#ifdef USE_TRANSMISSION_FRAMEBUFFER
+  float alpha = clamp(baseColor.a, 0.0, 1.0);
+#else
   float alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
+#endif
   return vec4(pow(color,vec3(1.0/2.2)), alpha);
 }
 `;
