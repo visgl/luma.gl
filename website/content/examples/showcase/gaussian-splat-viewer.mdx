@@ -1,0 +1,37 @@
+---
+title: Gaussian Splat Viewer
+description: Stream complete captured Gaussian splat scenes from Hugging Face on WebGPU and WebGL2.
+sidebar_custom_props:
+  description: Stream complete captured Gaussian splat scenes from Hugging Face on WebGPU and WebGL2.
+  backends: [webgpu, webgl2]
+  display: hdr-capable
+  difficulty: intermediate
+  maturity: experimental
+  topics: [rendering, transparency, data, streaming, hdr]
+---
+
+import {GaussianSplatViewerExample} from '@site/src/examples';
+
+<GaussianSplatViewerExample />
+
+The Gaussian Splat Viewer opens the complete **741,883-splat Train capture** from the public
+Hugging Face catalog. Use the scene selector to explore Train, Truck, Dr Johnson, or Playroom;
+the Train capture automatically falls back to its two GitHub-hosted segments when the Hugging
+Face CDN is unavailable. Source identification, downloaded bytes, progressive batches, and
+actual splat counts remain visible while each capture streams.
+
+A separate, dynamically imported loaders.gl 5 alpha browser bundle handles `.ply`, `.splat`,
+and `.ksplat` files without replacing the website's existing loaders.gl
+installation. [`@luma.gl/arrow`](/docs/api-reference/arrow) adapts each Apache Arrow record batch
+directly to [`@luma.gl/splats`](/docs/api-reference/splats), preserving batch ownership,
+floating-point HDR radiance, camera-aware transparency, and the WebGL2 fallback.
+
+Append `?scene=truck`, `?scene=drjohnson`, `?scene=playroom`, or `?scene=train-github` to select a
+capture directly. Provide `?source=https://example.com/scene.ply` for another compatible public
+file. Choose **Synthetic chromatic showcase** in the scene selector or visit the separate
+[Gaussian Splats showcase](/examples/showcase/gaussian-splats) for the deterministic generated
+scene.
+
+Local development can still override the bundled parser with a neighboring loaders.gl checkout:
+start the standalone example with `VITE_LOADERS_GL_ROOT=/path/to/loaders.gl` and open
+`?loaders=local`. The lightweight parser fixture remains available as `?loaders=local&scene=fixture`.

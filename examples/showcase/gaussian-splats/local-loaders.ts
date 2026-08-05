@@ -7,6 +7,7 @@ import type {GPUSplatArrowRecordBatchLike, GPUSplatArrowSource} from '@luma.gl/a
 declare global {
   interface Window {
     __lumaGaussianSplatsLocalLoadersRoot?: string;
+    __lumaGaussianSplatsLoaderBundleUrl?: string;
   }
 }
 
@@ -29,9 +30,11 @@ export type GaussianSplatSourceCatalogEntry = {
   camera?: GaussianSplatCameraPreset;
 };
 
-/** Local loaders.gl checkout and optional Gaussian source selected by the standalone URL. */
+/** Isolated loaders.gl bundle or local checkout and optional selected Gaussian source. */
 export type LocalGaussianSplatLoadersConfiguration = {
+  loaderMode: 'local' | 'bundled';
   loadersRoot: string;
+  loaderBundleUrl?: string;
   sourceUrl: string;
   sourceUrls: readonly string[];
   fallbackSourceUrls: readonly string[];
@@ -147,7 +150,7 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
   }
 ];
 
-/** Returns the opt-in local loader configuration without changing the default synthetic showcase. */
+/** Keeps standalone synthetic by default while enabling real scenes in the published viewer. */
 export function getLocalGaussianSplatLoadersConfiguration():
   | LocalGaussianSplatLoadersConfiguration
   | undefined {
@@ -156,19 +159,29 @@ export function getLocalGaussianSplatLoadersConfiguration():
   }
 
   const parameters = new URLSearchParams(window.location.search);
-  if (parameters.get('loaders') !== 'local') {
+  const requestedLoaderMode = parameters.get('loaders');
+  if (requestedLoaderMode === 'synthetic' || parameters.get('mode') === 'synthetic') {
     return undefined;
   }
 
-  const loadersRoot = window.__lumaGaussianSplatsLocalLoadersRoot?.replace(/\/+$/, '');
-  if (!loadersRoot) {
-    throw new Error('Start the showcase with VITE_LOADERS_GL_ROOT=/path/to/loaders.gl.');
+  const loadersRoot = window.__lumaGaussianSplatsLocalLoadersRoot?.replace(/\/+$/, '') || '';
+  const loaderBundleUrl = window.__lumaGaussianSplatsLoaderBundleUrl;
+  const loaderMode: LocalGaussianSplatLoadersConfiguration['loaderMode'] =
+    requestedLoaderMode === 'local' ? 'local' : 'bundled';
+  if (loaderMode === 'local') {
+    if (!loadersRoot) {
+      throw new Error('Start the showcase with VITE_LOADERS_GL_ROOT=/path/to/loaders.gl.');
+    }
+  } else if (!loaderBundleUrl) {
+    return undefined;
   }
 
   const customSourceUrl = parameters.get('source');
   if (customSourceUrl) {
     return {
+      loaderMode,
       loadersRoot,
+      loaderBundleUrl,
       sourceUrl: customSourceUrl,
       sourceUrls: [customSourceUrl],
       fallbackSourceUrls: [],
@@ -185,6 +198,9 @@ export function getLocalGaussianSplatLoadersConfiguration():
   if (!scene) {
     throw new Error(`Unknown Gaussian splat scene: ${sceneId}.`);
   }
+  if (scene.id === 'fixture' && loaderMode !== 'local') {
+    throw new Error('The lightweight parser fixture requires ?loaders=local.');
+  }
 
   const sourceUrl =
     scene.id === 'fixture'
@@ -193,7 +209,9 @@ export function getLocalGaussianSplatLoadersConfiguration():
   const sourceUrls = scene.sourceUrls || [sourceUrl];
 
   return {
+    loaderMode,
     loadersRoot,
+    loaderBundleUrl,
     sourceUrl,
     sourceUrls,
     fallbackSourceUrls: scene.fallbackSourceUrls || [],
@@ -208,7 +226,7 @@ export function getLocalGaussianSplatLoadersConfiguration():
   };
 }
 
-/** Progressively loads source Arrow batches through the overridden loaders.gl 5 checkout. */
+/** Progressively loads Arrow batches through an isolated loaders.gl 5 bundle or checkout. */
 export async function* loadLocalGaussianSplatArrowSources(
   configuration: LocalGaussianSplatLoadersConfiguration,
   options: LocalGaussianSplatLoadOptions = {}
@@ -417,6 +435,25 @@ async function* loadGaussianSplatSourceUrls(
 async function loadLocalGaussianSplatLoaderModules(
   configuration: LocalGaussianSplatLoadersConfiguration
 ): Promise<LocalGaussianSplatLoaderModules> {
+  const loaderName = `${configuration.sourceFormat}Loader`;
+  if (configuration.loaderMode === 'bundled') {
+    if (!configuration.loaderBundleUrl) {
+      throw new Error('The Gaussian splat loader bundle is unavailable.');
+    }
+    const loaderBundleUrl = new URL(configuration.loaderBundleUrl, window.location.href);
+    if (loaderBundleUrl.origin !== window.location.origin) {
+      throw new Error('The Gaussian splat loader bundle must use the current website origin.');
+    }
+    const loaderBundleModule: Record<string, any> = await import(
+      /* webpackIgnore: true */ /* @vite-ignore */ loaderBundleUrl.href
+    );
+    const loader: unknown = loaderBundleModule[loaderName];
+    if (!loader) {
+      throw new Error(`The Gaussian splat loader bundle does not export ${loaderName}.`);
+    }
+    return {coreModule: loaderBundleModule, loader, loaderName};
+  }
+
   const coreModuleUrl = makeLocalLoadersFileUrl(
     configuration.loadersRoot,
     'modules/core/src/index.ts'
@@ -429,7 +466,6 @@ async function loadLocalGaussianSplatLoaderModules(
     import(/* webpackIgnore: true */ /* @vite-ignore */ coreModuleUrl),
     import(/* webpackIgnore: true */ /* @vite-ignore */ formatModuleUrl)
   ]);
-  const loaderName = `${configuration.sourceFormat}Loader`;
   const loader: unknown = formatModule[loaderName];
   if (!loader) {
     throw new Error(`The local loaders.gl checkout does not export ${loaderName}.`);

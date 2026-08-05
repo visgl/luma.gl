@@ -508,17 +508,34 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     if (this.localLoadersConfiguration && descriptionElement) {
       descriptionElement.textContent =
-        'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; scroll to zoom.';
+        this.localLoadersConfiguration.loaderMode === 'local'
+          ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; scroll to zoom.'
+          : 'Complete Gaussian splat scenes streamed through loaders.gl 5 alpha. Drag to orbit; scroll to zoom.';
     }
 
-    if (this.localLoadersConfiguration && sceneControl && sceneElement) {
+    const hasBundledLoaders = Boolean(window.__lumaGaussianSplatsLoaderBundleUrl);
+    const hasLocalLoaders = Boolean(window.__lumaGaussianSplatsLocalLoadersRoot);
+    if (
+      (this.localLoadersConfiguration || hasBundledLoaders || hasLocalLoaders) &&
+      sceneControl &&
+      sceneElement
+    ) {
       sceneControl.hidden = false;
       sceneControl.style.display = 'grid';
-      const sceneOptions: PanelSelectOption[] = GAUSSIAN_SPLAT_SOURCE_CATALOG.map(source => ({
-        value: source.id,
-        label: source.label
-      }));
+      const shouldUseLocalLoaders =
+        this.localLoadersConfiguration?.loaderMode === 'local' ||
+        (!hasBundledLoaders && hasLocalLoaders);
+      const sceneOptions: PanelSelectOption[] = [
+        {value: 'synthetic', label: 'Synthetic chromatic showcase'},
+        ...GAUSSIAN_SPLAT_SOURCE_CATALOG.filter(
+          source => shouldUseLocalLoaders || source.id !== 'fixture'
+        ).map(source => ({
+          value: source.id,
+          label: source.label
+        }))
+      ];
       if (
+        this.localLoadersConfiguration &&
         !GAUSSIAN_SPLAT_SOURCE_CATALOG.some(
           source => source.id === this.localLoadersConfiguration?.sceneId
         )
@@ -531,12 +548,22 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       render(
         h(PanelSelect, {
           ariaLabel: 'Gaussian splat scene',
-          value: this.localLoadersConfiguration.sceneId,
+          value: this.localLoadersConfiguration?.sceneId || 'synthetic',
           options: sceneOptions,
           onChange: value => {
             const nextUrl = new URL(window.location.href);
-            nextUrl.searchParams.set('loaders', 'local');
-            nextUrl.searchParams.set('scene', String(value));
+            nextUrl.searchParams.delete('mode');
+            if (value === 'synthetic') {
+              nextUrl.searchParams.set('loaders', 'synthetic');
+              nextUrl.searchParams.delete('scene');
+            } else {
+              if (shouldUseLocalLoaders) {
+                nextUrl.searchParams.set('loaders', 'local');
+              } else {
+                nextUrl.searchParams.delete('loaders');
+              }
+              nextUrl.searchParams.set('scene', String(value));
+            }
             nextUrl.searchParams.delete('source');
             window.location.assign(nextUrl.toString());
           }
