@@ -6,6 +6,8 @@
 
 `GPUTraceInteraction` turns a canonical [`GPUTraceScene`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md) into an interactive, GPU-resident trace exploration pipeline. One caller-owned command graph combines process/thread expansion, scanned row layout, temporal filtering, classification masks, bidirectional dependency focus, ancestor projection, stable visibility compaction, and indirect scene draw generation.
 
+Import this trace-specific workflow from [`@luma.gl/experimental/lutrace`](https://luma.gl/next/docs/api-reference/experimental/lutrace.md). Its generic hierarchy, traversal, visibility, command-graph, and indirect-rendering building blocks remain independent of the trace domain.
+
 The motivating problem is that interactive trace controls change much more frequently than the trace itself. Panning through a distributed execution timeline, collapsing a noisy process, isolating a selected span's upstream dependencies, or hiding low-duration runtime events should update small GPU-resident control buffers instead of scanning millions of JavaScript span objects, reading visibility back to the CPU, rebuilding draw lists, or recompiling graph topology.
 
 Representative uses include service latency investigations, browser performance recordings, GPU capture timelines, build-system scheduling views, and scientific workflows with both hierarchical ownership and cross-process dependency edges.
@@ -92,6 +94,10 @@ This distinction lets one application use compacted rows for labels or picking w
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
+import {GPUTraceInteraction} from '@luma.gl/experimental/lutrace';
+
+
+
 const source = trace.importToGraph(graph);
 
 

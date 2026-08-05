@@ -6,6 +6,8 @@
 
 `GPUTraceScene` uploads a canonical execution trace once and projects its spans into the existing generic [`GPUScene`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md) draw database. Timing, lanes, processes, threads, parent relationships, dependency links, and bidirectional adjacency remain GPU-resident beside the scene rather than becoming trace-specific fields inside the shared scene abstraction.
 
+This domain-specific model is exported from [`@luma.gl/experimental/lutrace`](https://luma.gl/next/docs/api-reference/experimental/lutrace.md), not from the generic `@luma.gl/experimental` root. Command scheduling and flat scene storage remain reusable without importing trace schemas.
+
 The motivation is interactive trace exploration at a scale where rebuilding JavaScript span lists for every pan, filter, expansion, or dependency selection becomes the bottleneck. One stable source-row identity can feed time-range filtering, process/thread layout, ancestor projection, graph traversal, picking, visibility compaction, indirect draw generation, and renderer-owned resource groups without translating identities between those stages.
 
 Useful consumers include distributed execution timelines, browser performance recordings, GPU capture visualizers, task schedulers, service dependency traces, and scientific workflows whose operations have both temporal ownership and explicit cross-process links.
@@ -77,6 +79,12 @@ The trace model owns its canonical source buffers, CSR buffers, scene record buf
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
+import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/experimental';
+
+import {GPUTraceScene} from '@luma.gl/experimental/lutrace';
+
+
+
 const trace = new GPUTraceScene(device, {
 
   spans: canonicalSpanWords,

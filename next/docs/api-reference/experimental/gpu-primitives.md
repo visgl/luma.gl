@@ -44,6 +44,8 @@ These layers deliberately preserve GPU-resident identity and dataflow. Source ro
 
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`, `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUVirtualGeometrySelection`, `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT2D`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to process and thread collapse, source and topology filtering, dependency focusing, visible-parent projection, GPU picking, activity histograms, and indirect span and edge rendering over up to four million spans. The sort and data-analysis examples demonstrate independent composable buffer-native algorithms. The implementation is intentionally experimental: it is concrete enough to measure and use, but small enough that its API can still respond to experience.
 
+Trace-domain scene schemas, process/thread interaction policies, dependency focus, and timeline picking live in the optional [`@luma.gl/experimental/lutrace`](https://luma.gl/next/docs/api-reference/experimental/lutrace.md) submodule. Generic command graphs and scene primitives remain available without importing trace-specific APIs.
+
 ![GPU-native trace manipulation pipeline showing canonical trace data, GPU mask filtering, hierarchy and graph operations, and indirect GPU rendering](/next/assets/images/gpu-trace-manipulation-infographic-71168b5ca7e9401c19506a6ac83f6c7d.png)
 
 ### GPU Hierarchical Trace Viewer

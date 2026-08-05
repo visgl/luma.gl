@@ -1,6 +1,6 @@
 # Overview
 
-[Overview](https://luma.gl/next/docs/api-reference/experimental.md)[GPU Projection](https://luma.gl/next/docs/api-reference/experimental/luproj.md)[LuxFilter](https://luma.gl/next/docs/api-reference/experimental/luxfilter.md)[GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md)[Deferred Lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md)[Clustered Lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md)[MLS-MPM Fluid](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md)[Spectral Ocean](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md)[ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md)[Spectral Caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md)[Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)[Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)[ABufferRenderer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)[WBOITRenderer](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)
+[Overview](https://luma.gl/next/docs/api-reference/experimental.md)[GPU Projection](https://luma.gl/next/docs/api-reference/experimental/luproj.md)[LuxFilter](https://luma.gl/next/docs/api-reference/experimental/luxfilter.md)[GPU Traces](https://luma.gl/next/docs/api-reference/experimental/lutrace.md)[GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md)[Deferred Lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md)[Clustered Lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md)[MLS-MPM Fluid](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md)[Spectral Ocean](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md)[ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md)[Spectral Caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md)[Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)[Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)[ABufferRenderer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)[WBOITRenderer](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)
 
 `@luma.gl/experimental` publishes incubating luma.gl APIs that are usable by applications but may change or be removed without the compatibility guarantees applied to stable modules.
 
@@ -33,6 +33,12 @@ The [Shader Passes guide](https://luma.gl/next/docs/api-guide/shaders/shader-pas
 ![From-v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![WebGPU required](https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square)
 
 The [GPU Primitives and Command Graphs guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md) introduces explicit command scheduling, typed table-backed graph views, hierarchical scan, stable compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written indirect draw commands.
+
+## GPU-native Trace Exploration[​](#gpu-native-trace-exploration "Direct link to GPU-native Trace Exploration")
+
+![WebGPU required](https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square)
+
+[`@luma.gl/experimental/lutrace`](https://luma.gl/next/docs/api-reference/experimental/lutrace.md) keeps execution-trace schemas, GPU-resident spans, process/thread hierarchy, dependency focus, interactive filtering, and timeline picking in a dedicated optional submodule. It composes generic command graphs, visibility, flat scenes, and indirect rendering without adding trace concepts to their APIs.
 
 ## GPU-resident Linked Crossfiltering[​](#gpu-resident-linked-crossfiltering "Direct link to GPU-resident Linked Crossfiltering")
 

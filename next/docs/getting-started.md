@@ -16,15 +16,15 @@ No installation. No account. Just your browser.
 
 Focused packages turn captured scenes, declarative worlds, and GPU-resident workflows into interactive experiences.
 
-[![A luminous field of three-dimensional Gaussian splats](/next/images/examples/showcase/gaussian-splats.jpg)](https://luma.gl/next/examples/showcase/gaussian-splats)
+[![A luminous field of three-dimensional Gaussian splats](/next/images/examples/showcase/gaussian-splats.jpg)](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
-[@luma.gl/splats](https://luma.gl/next/examples/showcase/gaussian-splats)
+[@luma.gl/splats](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
-### [Gaussian Splats](https://luma.gl/next/examples/showcase/gaussian-splats)
+### [Gaussian Splats](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
-[Stream captured 3D worlds with HDR color, depth-sorted transparency, and portable GPU rendering.](https://luma.gl/next/examples/showcase/gaussian-splats)
+[Stream complete captured Train and Truck scenes with HDR color, depth-sorted transparency, and portable GPU rendering.](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
-[Explore the renderer →](https://luma.gl/next/examples/showcase/gaussian-splats)
+[Explore captured scenes →](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
 [![A physically lit declarative ANARI scene with materials and geometric primitives](/next/images/examples/experimental/anari-playground.jpg)](https://luma.gl/next/examples/experimental/anari-playground)
 

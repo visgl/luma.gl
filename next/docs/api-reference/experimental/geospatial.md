@@ -173,6 +173,22 @@ type GPUSpatialQueryOutput = {
 
 `count` is clamped to `ids.length` and can alias an indirect draw count. `totalCount`, when provided, receives the unclamped number of matches among candidates actually examined by refinement. If the index overflowed, its stored candidates are only a subset of the accepted source rows, so `totalCount` is incomplete relative to the original positions. `overflow` is set when either the index or result capacity overflows. The four writable output views must have mutually disjoint aligned storage-binding ranges and must not overlap positions, source IDs, query values, index storage, or polygon storage. This includes the one-row binding footprint of a zero-capacity `ids` view. Result order is unspecified; no CPU readback is required for rendering.
 
+Two optional packed scalar views can be supplied directly to `GPUPointSpatialQuery` for GPU-resident broad-phase diagnostics:
+
+```
+new GPUPointSpatialQuery({
+
+  // ...query inputs and output...
+
+  intersectedCellCount,
+
+  candidateCount
+
+});
+```
+
+`intersectedCellCount` is the exact number of indexed cells dispatched for refinement. It is zero for scan queries, invalid queries, and indexed query envelopes outside the index domain. `candidateCount` is the exact number of rows presented to the narrow phase: every position row for a valid scan, or every retained row ID in the intersected indexed cells. It deliberately includes duplicate row IDs and invalid retained row IDs that the narrow phase later rejects. When an index overflows, the count covers only candidates retained by the capacity-bounded `rowIndices` view, not the missing source rows. These diagnostics are finalized by the existing query passes, require no CPU synchronization, and do not change `GPUSpatialQueryOutput` or its indirect-draw layout. Like the query outputs, both diagnostic views must be disjoint packed `uint32` scalars belonging to the same graph as every other binding.
+
 ### Run a live spatial-query benchmark[​](#run-a-live-spatial-query-benchmark "Direct link to Run a live spatial-query benchmark")
 
 Compare this real query kernel against an equivalent CPU bounds scan using your browser and GPU. The indexed path builds a reusable grid once, reports that construction cost separately, and checks all compacted IDs against the CPU result before displaying fence-synchronized timings.
