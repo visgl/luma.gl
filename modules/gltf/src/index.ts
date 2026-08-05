@@ -4,6 +4,7 @@ export {loadPBREnvironment, type PBREnvironment} from './pbr/pbr-environment';
 export {type ParsedPBRMaterial} from './pbr/pbr-material';
 export {parsePBRMaterial, type ParsePBRMaterialOptions} from './parsers/parse-pbr-material';
 export {parseGLTFLights, type ParseGLTFLightsOptions} from './parsers/parse-gltf-lights';
+export {parseGLTFAnimations} from './parsers/parse-gltf-animations';
 export {
   getTextureTransformMatrix,
   resolveTextureCoordinateSet,
@@ -22,4 +23,19 @@ export {
   type GLTFExtensionSupport,
   type GLTFExtensionSupportLevel
 } from './gltf/gltf-extension-support';
-export {GLTFAnimator} from './gltf/gltf-animator';
+export {
+  GLTFAnimationClip,
+  GLTFAnimator,
+  type GLTFAnimationClipProps,
+  type GLTFAnimatorProps
+} from './gltf/gltf-animator';
+export type {
+  GLTFAnimation,
+  GLTFAnimationChannel,
+  GLTFAnimationPath,
+  GLTFAnimationSampler,
+  GLTFMaterialAnimationChannel,
+  GLTFMaterialAnimationProperty,
+  GLTFNodeAnimationChannel,
+  GLTFTextureTransformAnimationChannel
+} from './gltf/animations/animations';
