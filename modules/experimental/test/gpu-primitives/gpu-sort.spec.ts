@@ -4,6 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
 import {
   GPUBatchSort,
   GPUCommandGraph,
@@ -14,6 +15,8 @@ import {
 } from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {vi} from 'vitest';
+import {addGPUSortToGraphWithDispatchLimit} from '../../src/gpu-primitives/gpu-sort';
 
 test('GPUSort bitonic stably sorts paired uint32 values in both directions', async t => {
   const device = await getWebGPUTestDevice();
@@ -88,6 +91,88 @@ test('GPUSort radix processes only the requested significant key bits', async t 
       'odd key widths copy their final scratch result into the caller-owned outputs'
     );
   }
+
+  t.end();
+});
+
+test('GPUSort bounds bitonic and radix stages across all three dispatch dimensions', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const rowCount = 1_025;
+  const keys = Uint32Array.from({length: rowCount}, (_, index) =>
+    index % 23 === 0 ? 7 : (Math.imul(index, 1_664_525) + 1_013_904_223) >>> 0
+  );
+  const values = Uint32Array.from({length: rowCount}, (_, index) => 2_000 + index);
+
+  for (const [algorithm, direction] of [
+    ['bitonic', 'ascending'],
+    ['radix', 'descending']
+  ] as const) {
+    const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+
+    try {
+      const result = await runSort(device, keys, values, algorithm, direction, undefined, 2);
+      const expected = getStableSortedPairs(keys, values, direction);
+      t.deepEqual(result.keys, expected.keys, `${algorithm} sorts every multidimensional key`);
+      t.deepEqual(
+        result.values,
+        expected.values,
+        `${algorithm} preserves duplicate-key payload order across workgroups`
+      );
+
+      const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
+        id: (computation as Computation).id,
+        dimensions: dispatchSpy.mock.calls[index].slice(1)
+      }));
+      const expectedPasses =
+        algorithm === 'bitonic'
+          ? ['sort-bitonic-initialize', 'sort-bitonic-2048-1', 'sort-bitonic-gather']
+          : [
+              'sort-radix-bit-0-classify',
+              'sort-radix-bit-0-scan-level-0-scan',
+              'sort-radix-bit-0-scan-level-0-add-offsets',
+              'sort-radix-bit-0-scatter',
+              'sort-radix-bit-31-classify',
+              'sort-radix-bit-31-scatter'
+            ];
+
+      for (const identifier of expectedPasses) {
+        t.deepEqual(
+          dispatches.find(dispatch => dispatch.id === identifier)?.dimensions,
+          [2, 2, 2],
+          `${identifier} respects the synthetic per-dimension dispatch limit`
+        );
+      }
+    } finally {
+      dispatchSpy.mockRestore();
+    }
+  }
+
+  const limitedKeys = Uint32Array.from(keys, key => key & 0x7fff);
+  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  try {
+    const result = await runSort(device, limitedKeys, values, 'radix', 'ascending', 15, 2);
+    const expected = getStableSortedPairs(limitedKeys, values, 'ascending');
+    t.deepEqual(result.keys, expected.keys, 'odd-width multidimensional radix keys match');
+    t.deepEqual(result.values, expected.values, 'odd-width multidimensional radix remains stable');
+
+    const finalCopyDispatchIndex = dispatchSpy.mock.instances.findIndex(
+      computation => (computation as Computation).id === 'sort-radix-final-copy'
+    );
+    t.deepEqual(
+      dispatchSpy.mock.calls[finalCopyDispatchIndex]?.slice(1),
+      [2, 2, 2],
+      'odd-width radix final copy respects the synthetic per-dimension dispatch limit'
+    );
+  } finally {
+    dispatchSpy.mockRestore();
+  }
+
   t.end();
 });
 
@@ -375,7 +460,8 @@ async function runSort(
   values: Uint32Array,
   algorithm: GPUSortAlgorithm,
   direction: GPUSortDirection,
-  keyBits?: number
+  keyBits?: number,
+  maxComputeWorkgroupsPerDimension?: number
 ): Promise<SortResult> {
   const byteLength = Math.max(keys.length, 1) * Uint32Array.BYTES_PER_ELEMENT;
   const keysBuffer = device.createBuffer({
@@ -413,7 +499,11 @@ async function runSort(
     direction,
     keyBits
   });
-  sort.addToGraph(graph);
+  if (maxComputeWorkgroupsPerDimension === undefined) {
+    sort.addToGraph(graph);
+  } else {
+    addGPUSortToGraphWithDispatchLimit(sort, graph, maxComputeWorkgroupsPerDimension);
+  }
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'sort-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
