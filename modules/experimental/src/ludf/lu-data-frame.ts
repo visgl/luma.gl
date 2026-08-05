@@ -33,6 +33,12 @@ import type {
   LuDataFrameGroupByQuery
 } from './lu-group-by-query';
 import type {LuDataFrameHistogramOptions, LuDataFrameHistogramQuery} from './lu-histogram-query';
+import type {
+  LuDataFrameJoinOptions,
+  LuDataFrameJoinQuery,
+  LuDataFrameLookupOptions,
+  LuDataFrameLookupQuery
+} from './lu-join-query';
 import type {LuDataFrameSortOptions, LuDataFrameSortQuery} from './lu-sort-query';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
@@ -259,6 +265,38 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).topK(
       column,
       limit,
+      options
+    );
+  }
+
+  /** Plans a stable unique-right unsigned inner join without materializing either dataframe. */
+  innerJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<T, keyof T & string, Right, LeftKey, RightKey, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).innerJoin(
+      right,
+      options
+    );
+  }
+
+  /** Plans bounded, source-aligned unique-right lookups without flattening source batches. */
+  lookup<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameLookupOptions<LeftKey, RightKey>
+  ): LuDataFrameLookupQuery<T, keyof T & string, Right, LeftKey, RightKey, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).lookup(
+      right,
       options
     );
   }

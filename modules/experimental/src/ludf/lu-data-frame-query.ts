@@ -18,6 +18,12 @@ import {
 } from './lu-group-by-query';
 import {LuDataFrameHistogramQuery, type LuDataFrameHistogramOptions} from './lu-histogram-query';
 import {
+  LuDataFrameJoinQuery,
+  LuDataFrameLookupQuery,
+  type LuDataFrameJoinOptions,
+  type LuDataFrameLookupOptions
+} from './lu-join-query';
+import {
   compileLuDataFrameQuery,
   type CompiledLuDataFrameQuery,
   type LuDataFrameQueryParameters
@@ -194,6 +200,30 @@ export class LuDataFrameQuery<
     options: LuDataFrameSortOptions = {}
   ): LuDataFrameSortQuery<Logical, SelectedColumns, Column, Source> {
     return new LuDataFrameSortQuery(this, column, options, limit, 'descending');
+  }
+
+  /** Plans a stable, unique-right inner join without allocating, repacking, or retaining rows. */
+  innerJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options);
+  }
+
+  /** Plans a bounded, source-aligned unique-right lookup while preserving both batch topologies. */
+  lookup<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameLookupOptions<LeftKey, RightKey>
+  ): LuDataFrameLookupQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameLookupQuery(this, right, options);
   }
 
   /** Materializes reusable GPU graph passes and compiler-owned selection/index/count outputs. */
