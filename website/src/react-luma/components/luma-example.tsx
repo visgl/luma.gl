@@ -87,6 +87,7 @@ export type LumaExampleProps = React.PropsWithChildren<
       Pick<DeviceLimits, 'maxColorAttachments' | 'maxColorAttachmentBytesPerSample'>
     >;
     canvasContextProfile?: CanvasContextProfile;
+    xrCompatible?: boolean;
     templateInfoPlacement?: 'header' | 'page';
     headerControls?: React.ReactNode;
   }
@@ -263,6 +264,37 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     let isCancelled = false;
     const requestedDeviceTypes = getRequestedDeviceTypes(props.devices);
 
+    const createExampleDevice = async (
+      exampleDeviceType: DeviceType,
+      sharedDevice?: Device
+    ): Promise<Device> => {
+      const requiresXRCompatibleDevice =
+        props.xrCompatible === true && exampleDeviceType.startsWith('webgpu-');
+      const usesCustomCanvasContext =
+        props.canvasContextProfile !== undefined && props.canvasContextProfile !== 'default';
+
+      if (!requiresXRCompatibleDevice && !usesCustomCanvasContext && sharedDevice) {
+        return sharedDevice;
+      }
+
+      try {
+        return await createDevice(exampleDeviceType, props.canvasContextProfile, {
+          xrCompatible: requiresXRCompatibleDevice
+        });
+      } catch (error) {
+        if (!requiresXRCompatibleDevice) {
+          throw error;
+        }
+
+        logError('XR-compatible WebGPU unavailable; continuing with desktop preview', error);
+        if (!usesCustomCanvasContext && sharedDevice) {
+          return sharedDevice;
+        }
+
+        return await createDevice(exampleDeviceType, props.canvasContextProfile);
+      }
+    };
+
     const selectEffectiveDevice = async () => {
       if (!deviceType || !device) {
         if (!isCancelled) {
@@ -273,10 +305,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
 
       if (!requestedDeviceTypes || requestedDeviceTypes.includes(deviceType)) {
-        const exampleDevice =
-          props.canvasContextProfile && props.canvasContextProfile !== 'default'
-            ? await createDevice(deviceType, props.canvasContextProfile)
-            : device;
+        const exampleDevice = await createExampleDevice(deviceType, device);
         assertExampleDeviceLimits(exampleDevice, props.requiredDeviceLimits);
         if (!isCancelled) {
           setEffectiveDeviceType(deviceType);
@@ -295,7 +324,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         return;
       }
 
-      const fallbackDevice = await createDevice(fallbackDeviceType, props.canvasContextProfile);
+      const fallbackDevice = await createExampleDevice(fallbackDeviceType);
       assertExampleDeviceLimits(fallbackDevice, props.requiredDeviceLimits);
       await createPresentationDevice(fallbackDeviceType);
       if (!isCancelled) {
@@ -321,6 +350,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     deviceType,
     device,
     props.canvasContextProfile,
+    props.xrCompatible,
     props.requiredDeviceLimits?.maxColorAttachments,
     props.requiredDeviceLimits?.maxColorAttachmentBytesPerSample,
     requestedDeviceTypesKey

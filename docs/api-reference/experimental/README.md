@@ -21,7 +21,7 @@ yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertool
   <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
 </p>
 
-- [WebXR](/docs/api-reference/experimental/webxr): WebGL-only session, frame, and raw camera helpers.
+- [WebXR](/docs/api-reference/experimental/webxr): WebGPU/WebGL session and frame helpers, with WebGL-only raw camera textures.
 
 ## Surface Targets and Composable Effects
 

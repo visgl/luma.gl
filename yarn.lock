@@ -15291,6 +15291,7 @@ __metadata:
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
