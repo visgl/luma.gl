@@ -1004,7 +1004,9 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
 - Visibility, picking, volumes, clipping planes, shadows, and asynchronous frame mapping are not implemented.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
-- Experimental glTF import supports common PBR textures and selected material extensions, but not skinning or animations.
+- Experimental glTF import supports common PBR textures, selected material extensions, and
+  transform, material, and texture-coordinate animation; skeletal animation, morph targets, and
+  animated export are not yet supported.
 - WebGL 2 preserves the same scene API but does not support the WebGPU HDR presentation path.
 - The ANARI device releases its renderer resources but does not destroy the underlying shared luma.gl graphics device.
 

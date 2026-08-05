@@ -1,0 +1,329 @@
+---
+title: Framework Capabilities
+description: Explore luma.gl's portable GPU architecture, real-time rendering, shader effects, GPU-native data, simulation, immersive experiences, and experimental modules.
+---
+
+# Everything your GPU can do.
+
+Build cinematic worlds, responsive simulations, immersive experiences, and massive data
+visualizations with one composable GPU framework. luma.gl connects portable rendering,
+expressive shader programming, advanced image effects, and GPU-native computation without
+forcing every application into the same abstraction.
+
+Start with a scene. Drop down to an individual render pass. Keep millions of records on the
+GPU. Compose the pieces your application needs and retain control over how they work together.
+
+**WebGPU and WebGL2. Rendering and compute. Graphics and data. One TypeScript-first toolkit.**
+
+## The framework, module by module
+
+<div className="docs-api-card-grid">
+  <a className="docs-api-card" href="/docs/api-reference/core">
+    <span className="docs-api-card__kind">Portable GPU foundation</span>
+    <strong>Core, WebGPU, and WebGL</strong>
+    <span>One application-facing device API for buffers, textures, pipelines, commands, and explicit GPU resource ownership.</span>
+    <span className="docs-api-card__meta">@luma.gl/core · @luma.gl/webgpu · @luma.gl/webgl</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/engine">
+    <span className="docs-api-card__kind">Rendering engine</span>
+    <strong>Models, geometry, and animation</strong>
+    <span>Build with the classic luma.gl API: models, render loops, GPU geometry, instancing, and reusable animation mixing.</span>
+    <span className="docs-api-card__meta">@luma.gl/engine</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/shadertools">
+    <span className="docs-api-card__kind">Shader programming</span>
+    <strong>Reusable shaders and modules</strong>
+    <span>Compose WGSL and GLSL with typed shader modules, injection hooks, shared uniforms, lighting, and precision utilities.</span>
+    <span className="docs-api-card__meta">@luma.gl/shadertools</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-guide/shaders/shader-passes">
+    <span className="docs-api-card__kind">Visual effects</span>
+    <strong>Composable image processing</strong>
+    <span>Chain bloom, ambient occlusion, reflections, indirect light, volumetrics, motion blur, and temporal antialiasing.</span>
+    <span className="docs-api-card__meta">@luma.gl/effects</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/anari">
+    <span className="docs-api-card__kind">Experimental retained scenes</span>
+    <strong>Declarative 3D and scene import</strong>
+    <span>Describe cameras, geometry, lights, and renderers; explore glTF and experimental OpenUSD import in the ANARI Playground.</span>
+    <span className="docs-api-card__meta">@luma.gl/anari · experimental / private</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/gltf">
+    <span className="docs-api-card__kind">Assets and materials</span>
+    <strong>glTF scenes and physically based shading</strong>
+    <span>Bring in portable 3D assets, PBR material extensions, compressed geometry and textures, and supported animation clips.</span>
+    <span className="docs-api-card__meta">@luma.gl/gltf</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/splats">
+    <span className="docs-api-card__kind">Experimental neural rendering</span>
+    <strong>Streaming Gaussian splats</strong>
+    <span>Render captured scenes with anisotropic splats, GPU depth ordering, progressive batches, HDR color, and portable fallback.</span>
+    <span className="docs-api-card__meta">@luma.gl/splats · experimental / private</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-guide/gpu/gpu-data-processing">
+    <span className="docs-api-card__kind">GPU-native computation</span>
+    <strong>Compute, tables, and Arrow</strong>
+    <span>Connect GPU-resident columns, reusable operations, command graphs, filtering, aggregation, and zero-copy-aware data flows.</span>
+    <span className="docs-api-card__meta">@luma.gl/gpgpu · @luma.gl/tables</span>
+    <span className="docs-api-card__meta">@luma.gl/arrow · experimental / private</span>
+  </a>
+</div>
+
+The published GPU, engine, shader, effects, glTF, and data foundations can be combined
+independently. Some newer modules remain **experimental and private**: they are available in
+the repository but are not yet published as standalone npm packages.
+
+## What you can build today
+
+### One application-facing GPU API
+
+The [portable GPU API](/docs/api-reference/core) provides a common vocabulary across WebGPU and
+WebGL2 while preserving meaningful control over the hardware:
+
+- Select and initialize a GPU device, inspect supported features, and choose the appropriate
+  backend for your application.
+- Allocate buffers, textures, samplers, framebuffers, bindings, and render or compute pipelines.
+- Encode render passes and, on WebGPU, compute passes with explicit resource ownership and
+  submission boundaries.
+- Share shader inputs, uniform blocks, vertex layouts, texture views, and typed GPU data between
+  higher-level systems.
+- Present to canvases with backend-aware configuration, high-DPI sizing, and supported extended
+  color or HDR output.
+
+**Portability does not mean every backend has identical capabilities.** Compute shaders, storage
+textures, indirect GPU workflows, native WebGPU immersive layers, and selected presentation modes
+require compatible WebGPU hardware and browser support. Portable rendering and many effects also
+run on WebGL2.
+
+### Real-time rendering and image quality
+
+The [engine](/docs/api-reference/engine), [glTF module](/docs/api-reference/gltf), and
+[experimental rendering systems](/docs/api-reference/experimental) support a broad range of
+real-time techniques:
+
+- Forward and deferred rendering, instanced geometry, indirect draws, and GPU-driven visibility.
+- Physically based metallic-roughness materials, image-based lighting, normal maps, emissive
+  surfaces, and selected specular, clearcoat, sheen, iridescence, anisotropy, and transmission
+  extensions.
+- Directional, point, and spot lighting, including compute-clustered lighting for dense scenes.
+- Directional, spot, point, cascaded, soft, and contact shadows where the selected renderer
+  supports them.
+- High-dynamic-range scene buffers, adaptive exposure, tone mapping, wide-gamut presentation,
+  and floating-point bloom on supported devices.
+- Exact and weighted-blended order-independent transparency for overlapping transparent surfaces.
+- Optical glass, reflections, refraction, dispersion-inspired shading, and compute-generated
+  spectral caustics.
+- Hierarchical GPU geometry selection, frustum culling, stable compaction, and indirect draw
+  generation without per-frame CPU inspection.
+
+Explore these capabilities in [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
+[Illumination Lab](/examples/experimental/deferred-rendering),
+[Prism Cathedral](/examples/experimental/spectral-caustics), and
+[Virtual Geometry Canyon](/examples/experimental/virtual-geometry-canyon).
+
+### Shaders that work together
+
+[Shader tools](/docs/api-reference/shadertools) turn shader code into reusable application
+building blocks:
+
+- Author WebGPU shaders in WGSL and WebGL shaders in GLSL.
+- Assemble programs from composable shader modules, application hooks, and reusable shader
+  injections.
+- Share lighting, picking, materials, geometry deformation, color management, and precision
+  helpers across renderers.
+- Describe uniform layouts and bindings in a way that integrates with the core GPU and engine
+  APIs.
+- Apply high-precision visualization techniques when world coordinates or geospatial transforms
+  would otherwise lose detail.
+
+The goal is not to hide shaders. It is to make sophisticated shader programs easier to maintain,
+compose, and reuse.
+
+### Effects that compose into complete pipelines
+
+[Shader passes and effect pipelines](/docs/api-guide/shaders/shader-passes) consume rendered
+scene color and, when needed, depth, normals, velocity, or intermediate render targets:
+
+- Bloom, exposure control, color adjustment, blur, vignettes, and image-processing passes.
+- Screen-space ambient occlusion and higher-quality ground-truth ambient occlusion.
+- Screen-space global illumination and reflections with temporal stabilization.
+- Volumetric fog, participating media, clustered light scattering, and camera-depth god rays.
+- Temporal antialiasing, motion blur, outlines, and reusable multipass effect chains.
+- Explicit named targets and history resources so multiple effects can share a coherent frame.
+
+Try interactive combinations in [Effects: Image Processing](/examples/showcase/postprocessing)
+and [Visualization City](/examples/experimental/advanced-effects).
+
+### Data that stays on the GPU
+
+[GPU tables](/docs/api-reference/tables), [GPU operations](/docs/api-reference/gpgpu),
+[Apache Arrow adapters](/docs/api-reference/arrow), and
+[experimental GPU primitives](/docs/api-reference/experimental/gpu-primitives) connect
+computation directly to rendering:
+
+- Model GPU-resident columns and batches with `GPUData`, `GPUVector`, `GPURecordBatch`, and
+  `GPUTable`.
+- Upload Arrow-compatible data while preserving ownership, source chunk boundaries, and streamed
+  batches.
+- Compose command graphs that sequence compute passes, reuse transient resources, and generate
+  draw commands.
+- Filter, scan, compact, sort, reduce, bin, and aggregate large datasets without pulling every
+  source row back to the CPU.
+- Build histograms, spatial grids, bounding-volume hierarchies, hash indices, joins, and
+  two-dimensional fast Fourier transforms.
+- Drive linked crossfilter views, geospatial projection, spatial queries, hierarchical traces,
+  and visible-row rendering from GPU-resident data.
+
+Applications can still read back concise summaries or interaction results when needed; the point
+is to avoid unnecessary full-dataset round trips.
+
+See [Million-Row Crossfilter](/examples/showcase/million-row-crossfilter),
+[Billion-Point Spatial Atlas](/examples/showcase/billion-point-spatial-atlas),
+[GPU data analysis](/examples/experimental/gpu-data-analysis), and
+[GPU sorting](/examples/experimental/gpu-sort). Large source datasets are streamed within a
+bounded GPU-residency budget rather than assumed to fit entirely in GPU memory.
+
+### glTF, PBR, and standards-driven animation
+
+The [glTF integration](/docs/api-reference/gltf) reuses shared rendering and animation systems
+instead of creating separate asset-specific engines:
+
+- Load glTF and GLB scenes, including supported Draco and Meshopt compression, quantized
+  geometry, and Basis Universal/KTX2 textures through the asset-loading pipeline.
+- Render metallic-roughness materials with supported normal, occlusion, emissive, and
+  image-based-lighting inputs.
+- Interpret selected material extensions for specular response, index of refraction, clearcoat,
+  sheen, iridescence, anisotropy, and emissive intensity; initial transmission and volume effects
+  remain approximations rather than full scene-color refraction.
+- Represent supported authored tangents, vertex colors, UV transforms, and punctual lights;
+  end-to-end behavior varies by renderer and feature.
+- Play, blend, crossfade, pause, scrub, and loop animation clips using shared engine tracks and
+  step, linear, or cubic-spline interpolation.
+- Animate supported node transforms, material factors, and texture transforms through initial
+  `KHR_animation_pointer` integration.
+- Reuse existing joint-driven skinning in supported rendering paths while newer retained-scene
+  integration continues to mature.
+
+The ownership boundaries are intentional: `@luma.gl/gltf` interprets assets,
+`@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,
+`@luma.gl/experimental` explores higher-level rendering, and `@luma.gl/anari` orchestrates
+retained scene objects. A capability implemented in one layer should be reused rather than
+recreated in another.
+
+The [glTF extension support matrix](/docs/api-reference/gltf/gltf-extensions) distinguishes
+complete support, in-progress rendering paths, application-managed features, and unsupported
+extensions.
+
+### Declarative scenes and portable assets
+
+The experimental [ANARI-inspired scene API](/docs/api-reference/anari) adds a retained,
+declarative layer for applications that want scene objects rather than individual draw calls:
+
+- Describe cameras, lights, materials, surfaces, groups, instances, and worlds.
+- Switch between forward, deferred, normals, and depth-oriented renderer configurations.
+- Edit JSON scene descriptions and, in the ANARI Playground, import supported glTF and
+  experimental OpenUSD content.
+- Play supported transform, material, and texture-coordinate animation clips using the shared
+  engine animation system, including clip selection and interactive playback controls.
+- Reuse geometry and materials across many retained instances.
+- Select WebGPU or WebGL2 when the chosen renderer and device support the requested features.
+
+This API is **ANARI-inspired**, experimental, and not a claim of full standards conformance.
+OpenUSD and glTF coverage is intentionally scoped; consult the
+[glTF extension support matrix](/docs/api-reference/gltf/gltf-extensions) for precise asset
+capabilities.
+
+Explore the [ANARI Playground](/examples/experimental/anari-playground).
+
+### Simulation with visible results
+
+GPU simulation modules can share the same resources and command encoding model as the renderer:
+
+- A **three-dimensional fire** and smoke solver evolves velocity, pressure, fuel, temperature,
+  combustion, and obstacle interaction in a volumetric field.
+- Spectral ocean simulation uses GPU fast Fourier transforms to create animated waves,
+  displacement-derived normals, and compression-driven whitecaps.
+- A **two-dimensional MLS-MPM** liquid simulation supports particle/grid transfers, responsive
+  splashes, and interactive boundaries.
+- Spectral photon tracing creates wavelength-separated caustics beneath a refractive object.
+- GPU particles and procedural motion can feed directly into scene rendering without redundant
+  CPU copies.
+
+Try [Volumetric Fire Forge](/examples/experimental/volumetric-fire-forge),
+[Tempest Ocean](/examples/showcase/tempest-ocean), and
+[Fluid Foundry](/examples/experimental/fluid-foundry).
+
+### Captured worlds and Gaussian splats
+
+The experimental [Gaussian splat renderer](/docs/api-reference/splats) turns captured scenes
+into interactive renderable data:
+
+- Stream anisotropic splats in independently owned batches.
+- Preserve Arrow-oriented data layouts and explicit GPU ownership.
+- Project, cull, sort, and issue indirect rendering commands through reusable GPU workflows.
+- Preserve high-dynamic-range spherical-harmonic DC color on supported WebGPU targets.
+- Offer portable rendering paths and standard-dynamic-range fallback where appropriate.
+
+View a complete captured scene in the
+[Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer). Higher-order,
+view-dependent spherical harmonics and dedicated GPU picking are still areas of active work.
+
+### Immersive AR and VR
+
+Experimental [WebXR integration](/docs/api-reference/experimental/webxr) connects immersive
+sessions to luma.gl rendering:
+
+- Drive rendering from WebXR animation frames and reference spaces.
+- Render immersive **AR and VR** views with per-eye transforms, viewports, and framebuffers.
+- Use WebGPU projection layers when the browser, device, and XR-compatible adapter support
+  them.
+- Preserve a WebGL2 immersive path and WebGL raw-camera access where available.
+
+Browser support and hardware support vary. Advanced spatial features such as hit testing,
+anchors, depth sensing, hand tracking, and WebGPU camera textures are not yet part of the
+experimental API.
+
+## Know what is stable—and what is still evolving
+
+| Capability area | Availability |
+| --- | --- |
+| Portable GPU devices, WebGPU/WebGL2 adapters, models, shader assembly, and effects | Published framework modules. Specific features depend on backend and device support. |
+| glTF loading, selected PBR extensions, animation foundations, GPU operations, and GPU tables | Published modules with documented, feature-specific support boundaries. |
+| Apache Arrow integration, ANARI-inspired scenes, Gaussian splats, GPU command graphs, advanced scene techniques, and WebXR | Experimental capabilities available in the repository. Several packages are private and not yet published independently. |
+| Full three-dimensional liquids, deformable physics, general scientific volume rendering, advanced asset virtualization, visual shader graphs, and path tracing | Areas for future development, not capabilities to assume in the current release. |
+
+The [`@luma.gl/experimental`](/docs/api-reference/experimental), `@luma.gl/anari`,
+`@luma.gl/splats`, and `@luma.gl/arrow` packages evolve independently of the published foundation.
+Their APIs, packaging, and browser requirements may change. No hardware ray-tracing API is
+required or implied.
+
+## Where the framework is growing
+
+luma.gl already spans portable graphics, GPU-native data, visual effects, physical simulation,
+and immersive rendering. Important opportunities remain:
+
+- **Full three-dimensional liquids** with free surfaces, richer collision behavior, and volumetric
+  fluid interaction.
+- **Cloth and soft-body simulation**, including ropes, flexible materials, and other deformable
+  systems.
+- **General scientific volume rendering** with measured three-dimensional fields, transfer
+  functions, clipping, and extracted isosurfaces.
+- **Production character deformation**, including robust skeletal animation, morph targets, and
+  richer animation retargeting; existing skinning and clip-mixing foundations should be shared
+  across the newer rendering paths rather than replaced.
+- **Complete asset fidelity**, including richer sampler and color handling, broader glTF material
+  and animation-pointer coverage, imported instancing, visibility, physically richer
+  transmission, and more faithful import/export round trips.
+- **Asset-backed virtual geometry** with imported mesh clusters, occlusion-driven selection, and
+  streamed residency; existing virtual geometry showcases currently use procedural geometry.
+- **Progressive path tracing** and other forms of off-screen light transport built on portable
+  GPU compute.
+- **Visual shader authoring** with live material graphs and reusable shader-module composition.
+- **More integrated scene rendering**, bringing advanced effects, shadows, simulation, splats,
+  and retained scenes together behind reusable application-level interfaces.
+
+These are development directions, not promises about release dates or browser availability.
+
+Ready to explore? [Open the interactive examples](/examples),
+[follow the fundamentals](/docs/tutorials), or
+[choose the API layer that fits your application](/docs/api-guide).

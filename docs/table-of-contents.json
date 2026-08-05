@@ -1,6 +1,7 @@
 [
   "README",
   "getting-started",
+  "capabilities",
   {
     "type": "category",
     "label": "Fundamentals",
