@@ -1,0 +1,32 @@
+---
+title: luGraph Interactive Graph Explorer
+sidebar_label: luGraph explorer
+description: Explore GPU-native graph topology, PageRank, weak components, neighborhood selection, picking, and progressive force layout.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, visualization, command-graphs, picking, graph-analytics]
+---
+
+import {LuGraphExplorerExample} from '@site/src/examples';
+
+<LuGraphExplorerExample />
+
+Click a node to select its stable source vertex identifier and highlight its bounded neighborhood.
+Node size reflects GPU-computed PageRank; color reflects its weakly connected component. Drag the
+selected node, pin or unpin it, adjust traversal depth, and reset the progressive layout to its
+deterministic initial coordinates.
+
+Source edge batches remain separate throughout adjacency construction and rendering. GPU-built
+forward and reverse CSR feeds shortest-path selection, degree, connected components, normalized
+PageRank, and exact force simulation. Node and edge models consume those original GPU buffers
+directly: there is no per-frame CPU position readback, implicit source concatenation, or copied
+render attribute.
+
+Picking renders stable vertex identifiers into an integer attachment. Only an explicitly requested
+single-pixel selection is asynchronously copied back through a small caller-owned readback ring;
+ordinary analytics, simulation, and drawing remain GPU-resident.
+
+See the [luGraph API guide](/docs/api-reference/experimental/lugraph) for ownership, overflow,
+selection, convergence, and force-layout contracts.

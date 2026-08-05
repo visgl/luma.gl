@@ -35,6 +35,7 @@ import GPUFrustumCullingApp from '../../examples/experimental/gpu-frustum-cullin
 import GPUSceneGraphApp from '../../examples/experimental/gpu-scene-graph/app';
 import GPUTraceSceneApp from '../../examples/experimental/gpu-trace-scene/app';
 import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
+import LuGraphExplorerApp from '../../examples/experimental/lugraph-explorer/app';
 import {
   initializeGPUSortExample,
   type GPUSortExampleHandle
@@ -1653,6 +1654,19 @@ export const GPUTraceViewerExample: React.FC = props => (
     directory="experimental"
     devices={['webgpu']}
     template={GPUTraceViewerApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const LuGraphExplorerExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="lugraph-explorer"
+    title="luGraph Interactive Graph Explorer"
+    subtitle="GPU-native topology, analytics, selection, and progressive force layout"
+    directory="experimental"
+    devices={['webgpu']}
+    template={LuGraphExplorerApp}
     config={exampleConfig}
     {...props}
   />
