@@ -147,6 +147,20 @@ exact force-layout coordinates, neighborhood highlighting, stable GPU picking, d
 An opt-in live benchmark compares six actual CPU and WebGPU graph workloads across five graph
 families while reporting command encoding, completion fences, setup costs, and layout accuracy.
 
+## GPU-Resident Dataframes
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`luDF`](/docs/api-reference/experimental/ludf) adds immutable, GPU-resident dataframe queries on
+top of existing `GPUTable` batches. Its optional `@luma.gl/experimental/ludf` entry point provides
+nullable expressions, derived columns, categorical and global aggregation, histograms, stable
+per-batch sorting, top-K selection, and bounded unique-right joins without hidden GPU submission,
+source repacking, or CPU readback. The existing
+[GPU Data Analysis example](/examples/experimental/gpu-data-analysis) demonstrates Arrow ingestion
+and opt-in, explicitly fenced GPU-versus-CPU benchmarks.
+
 ## GPU-resident Linked Crossfiltering
 
 <p class="badges">
