@@ -9,3 +9,8 @@ export {LuGraphTopology} from './lu-graph-topology';
 export type {LuGraphAdjacency, LuGraphTopologyProps} from './lu-graph-topology';
 export {LuGraphDegree} from './lu-graph-degree';
 export type {LuGraphDegreeDirection, LuGraphDegreeProps} from './lu-graph-degree';
+export {LuGraphBreadthFirstSearch} from './lu-graph-breadth-first-search';
+export type {
+  LuGraphBreadthFirstSearchDirection,
+  LuGraphBreadthFirstSearchProps
+} from './lu-graph-breadth-first-search';
