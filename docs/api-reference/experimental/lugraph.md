@@ -15,10 +15,10 @@ represent their relationships.
 
 `@luma.gl/experimental/lugraph` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
-degrees, shortest-path neighborhoods, weakly connected groups, PageRank importance, and progressive
-two-dimensional graph layouts into caller-owned GPU buffers. Layout can evaluate every repulsive
-interaction exactly or explicitly approximate distant groups through a caller-owned uniform grid.
-Every operation composes with the existing `GPUCommandGraph`.
+degrees, shortest-path neighborhoods, weakly connected groups, densely connected communities,
+PageRank importance, and progressive two-dimensional graph layouts into caller-owned GPU buffers.
+Layout can evaluate every repulsive interaction exactly or explicitly approximate distant groups
+through a caller-owned uniform grid. Every operation composes with the existing `GPUCommandGraph`.
 
 This is an experimental, headless graph analytics API, not a graph database, visualization
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
@@ -449,6 +449,45 @@ The caller chooses a bounded iteration budget. The optional one-row `uint32` `co
 one only when the final iteration reaches a fixed point; zero means convergence was not established
 or the required adjacency overflowed. A connected component answers whether entities connect at
 all; it does not claim to discover densely connected communities within one connected network.
+
+## Discover densely connected communities with LuGraphLabelPropagation
+
+**Question: Which vertices form closely connected communities inside a network that is otherwise
+connected?**
+
+`LuGraphLabelPropagation` groups vertices by the labels most common in their immediate
+neighborhood. Use it to reveal circles of friends within a social network, identify related
+transaction accounts within a larger fraud investigation, separate service ownership groups inside
+a connected dependency graph, or color locally cohesive regions of a citation network.
+
+A connected component answers whether any path links two vertices. Community detection asks a
+different question: are these vertices more strongly connected to one another than to the rest of
+the same network? Two tightly linked teams connected by one shared service remain in a single weak
+component but can receive different community labels.
+
+```ts
+import {LuGraphLabelPropagation} from '@luma.gl/experimental/lugraph';
+
+const communities = new LuGraphLabelPropagation({
+  topology,
+  output: communityIds,
+  iterations: 32,
+  converged: communitiesConverged
+});
+```
+
+Each vertex starts with its stable identifier. Every iteration considers one self vote and every
+incoming or outgoing neighbor occurrence, choosing the most frequent label and breaking ties with
+the lowest identifier. Self-loops add no extra votes; duplicate and reciprocal edges vote
+independently. Directed graphs therefore require both forward and reverse adjacency; undirected
+graphs reuse their symmetric forward adjacency. A narrow bridge can leave two dense communities
+distinct even when they belong to the same weakly connected component.
+
+The optional GPU convergence scalar is one only when the final synchronous iteration changes no
+labels; bounded propagation can oscillate or stop without proving convergence. Required adjacency
+overflow publishes `0xffffffff` labels and zero convergence. This deterministic heuristic is not
+Louvain, Leiden, or modularity optimization, and its worst-case work per iteration is
+`O(sum(degree²))`.
 
 ## Rank incoming influence with LuGraphPageRank
 
