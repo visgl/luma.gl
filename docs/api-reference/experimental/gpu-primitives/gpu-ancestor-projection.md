@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUTraceSceneExample} from '@site/src/examples';
 
 # GPUAncestorProjection
 
@@ -9,6 +10,12 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 `GPUAncestorProjection` reconnects filtered graph nodes to their nearest visible canonical
 parents. This lets dependency lines remain meaningful when intermediate spans disappear under
 duration, status, runtime, or topology filters.
+
+In the live trace explorer, collapsing a process or excluding a classification can hide an
+operation that remains the endpoint of a dependency. Ancestor projection gives the renderer a
+visible canonical representative while preserving the hidden operation's original source identity.
+
+<GPUTraceSceneExample embedded />
 
 ## Concepts
 
