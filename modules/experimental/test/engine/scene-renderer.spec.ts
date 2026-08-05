@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Geometry, SceneRenderer, type SceneSurface} from '@luma.gl/engine';
+import {Geometry} from '@luma.gl/engine';
+import {SceneRenderer, type SceneSurface} from '@luma.gl/experimental';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import test from 'test/utils/vitest-tape';

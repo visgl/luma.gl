@@ -3,14 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
+import {type Material, MaterialFactory, type TextureBindingSource} from '@luma.gl/engine';
 import {
   type PBRMaterialBindings,
   type PBRMaterialUniforms,
   pbrMaterial
 } from '@luma.gl/shadertools';
-import type {TextureBindingSource} from '../dynamic-texture/texture-binding-source';
-import type {Material} from './material';
-import {MaterialFactory} from './material-factory';
 
 /** Concrete or deferred texture resources accepted by the shared PBR material factory. */
 export type PBRMaterialResources = Record<string, Binding | TextureBindingSource>;

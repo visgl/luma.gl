@@ -3,15 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type TextureFormatColor} from '@luma.gl/core';
-import {
-  getSceneAlphaMode,
-  type ModelProps,
-  SceneRenderer,
-  type SceneRenderOptions,
-  type SceneRenderStatistics,
-  type SceneSurface,
-  ShaderPassRenderer
-} from '@luma.gl/engine';
+import {type ModelProps, ShaderPassRenderer} from '@luma.gl/engine';
 import type {Light} from '@luma.gl/shadertools';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {
@@ -19,9 +11,16 @@ import {
   type DeferredPointLight,
   MAX_DEFERRED_POINT_LIGHTS,
   makeDeferredPointLightBufferData
-} from './deferred-lighting';
+} from '../rendering/deferred-lighting';
+import {GBuffer} from '../rendering/g-buffer';
 import {DEFERRED_SCENE_WGSL_SHADER} from './deferred-scene-shaders';
-import {GBuffer} from './g-buffer';
+import {
+  getSceneAlphaMode,
+  SceneRenderer,
+  type SceneRenderOptions,
+  type SceneRenderStatistics,
+  type SceneSurface
+} from './scene-renderer';
 
 const COLOR_ATTACHMENT_FORMATS = [
   'rgba16float',
@@ -66,7 +65,7 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
  * Captures generic PBR surfaces into a WebGPU G-buffer and resolves scene lighting.
  *
  * Scenes requiring physical extensions unsupported by the G-buffer transparently use the shared
- * engine forward renderer while retaining the same scene descriptor and statistics contract.
+ * forward renderer while retaining the same scene descriptor and statistics contract.
  */
 export class DeferredSceneRenderer extends SceneRenderer {
   private readonly buffers = new Map<string, GBuffer>();

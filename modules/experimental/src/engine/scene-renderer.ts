@@ -10,6 +10,7 @@ import {
   type RenderPass,
   type Texture
 } from '@luma.gl/core';
+import {type Geometry, type Model, type ModelProps, ShaderInputs} from '@luma.gl/engine';
 import {
   type Light,
   type PBRMaterialBindings,
@@ -18,16 +19,13 @@ import {
   pbrScene
 } from '@luma.gl/shadertools';
 import {Matrix4, type NumericArray} from '@math.gl/core';
-import type {Geometry} from '../geometry/geometry';
 import {
   createPBRMaterial,
   createPBRMaterialFactory,
   getPBRMaterialMapUniforms,
   type PBRMaterial
-} from '../material/pbr-material';
-import type {Model, ModelProps} from '../model/model';
-import {createPBRModel} from '../models/pbr-model';
-import {ShaderInputs} from '../shader-inputs';
+} from './pbr-material';
+import {createPBRModel} from './pbr-model';
 
 /** Pipeline-level alpha representation for one retained physically based scene material. */
 export type SceneAlphaMode = 'OPAQUE' | 'MASK' | 'BLEND';

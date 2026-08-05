@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {readFileSync} from 'node:fs';
+import {Geometry} from '@luma.gl/engine';
 import {
   createPBRMaterial,
   createPBRMaterialFactory,
-  Geometry,
   getPBRGeometryDefines,
   getPBRTextureDefines,
   getSceneAlphaMode,
@@ -13,13 +14,13 @@ import {
   SceneRenderer,
   type SceneRenderOptions,
   type SceneSurface
-} from '@luma.gl/engine';
+} from '@luma.gl/experimental';
 import {pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {getNullTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
-import {PBR_MODEL_WGSL_SHADER} from '../../src/models/pbr-model';
+import {PBR_MODEL_WGSL_SHADER} from '../../src/engine/pbr-model';
 
 const WEBGPU_PLATFORM = {
   type: 'webgpu' as const,
@@ -28,6 +29,45 @@ const WEBGPU_PLATFORM = {
   gpu: 'test',
   features: new Set<string>()
 };
+
+describe('scene rendering package architecture', () => {
+  test('keeps opinionated rendering and PBR factories out of the stable engine', async () => {
+    const engineExports = await import('@luma.gl/engine');
+
+    for (const exportName of [
+      'SceneRenderer',
+      'createPBRModel',
+      'createPBRMaterial',
+      'createPBRMaterialFactory'
+    ]) {
+      expect(engineExports).not.toHaveProperty(exportName);
+    }
+  });
+
+  test('keeps glTF model construction independent of experimental rendering', () => {
+    const gltfPackage = JSON.parse(
+      readFileSync(new URL('../../../gltf/package.json', import.meta.url), 'utf8')
+    ) as {
+      dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
+
+    expect({
+      ...gltfPackage.dependencies,
+      ...gltfPackage.optionalDependencies,
+      ...gltfPackage.peerDependencies
+    }).not.toHaveProperty('@luma.gl/experimental');
+
+    for (const sourcePath of ['gltf/create-gltf-model.ts', 'parsers/parse-gltf.ts']) {
+      const source = readFileSync(
+        new URL(`../../../gltf/src/${sourcePath}`, import.meta.url),
+        'utf8'
+      );
+      expect(source).not.toContain('@luma.gl/experimental');
+    }
+  });
+});
 
 class InspectableSceneRenderer extends SceneRenderer {
   inspect(options: SceneRenderOptions) {

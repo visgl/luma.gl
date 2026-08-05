@@ -2,14 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Geometry, type SceneMaterial, type SceneRenderOptions} from '@luma.gl/engine';
-import {DeferredSceneRenderer, supportsDeferredScene} from '@luma.gl/experimental';
+import {Geometry} from '@luma.gl/engine';
+import {
+  DeferredSceneRenderer,
+  type SceneMaterial,
+  type SceneRenderOptions,
+  supportsDeferredScene
+} from '@luma.gl/experimental';
 import {pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {getNullTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
-import {DEFERRED_SCENE_WGSL_SHADER} from '../../src/rendering/deferred-scene-shaders';
+import {DEFERRED_SCENE_WGSL_SHADER} from '../../src/engine/deferred-scene-shaders';
 
 const WEBGPU_PLATFORM = {
   type: 'webgpu' as const,

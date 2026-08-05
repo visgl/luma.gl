@@ -3,9 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
+import {type Material, Model, type ModelProps} from '@luma.gl/engine';
 import {pbrMaterial, pbrScene} from '@luma.gl/shadertools';
-import type {Material} from '../material/material';
-import {Model, type ModelProps} from '../model/model';
 
 /** WGSL mesh entry points composed with canonical PBR shader modules by {@link createPBRModel}. */
 export const PBR_MODEL_WGSL_SHADER = /* wgsl */ `
