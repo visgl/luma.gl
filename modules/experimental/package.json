@@ -32,6 +32,11 @@
       "require": "./dist/geospatial/index.cjs",
       "types": "./dist/geospatial/index.d.ts"
     },
+    "./lugraph": {
+      "import": "./dist/lugraph/index.js",
+      "require": "./dist/lugraph/index.cjs",
+      "types": "./dist/lugraph/index.d.ts"
+    },
     "./luxfilter": {
       "import": "./dist/luxfilter/index.js",
       "require": "./dist/luxfilter/index.cjs",
