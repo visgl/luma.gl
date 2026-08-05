@@ -32,16 +32,31 @@ const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
 type DispatchLayout = {x: number; y: number; z: number};
 
-/** Caller-owned indirect draw outputs composed after trace interaction filtering. */
+/**
+ * Caller-owned indirect draw outputs published after trace visibility has been resolved.
+ *
+ * Draw slots retain canonical source-row identity and are written by the generic scene draw
+ * workflow. Diagnostic counts remain GPU-resident unless the application explicitly reads them.
+ */
 export type GPUTraceInteractionDraw = {
+  /** Renderer-authored indirect command records whose visibility is updated in place. */
   commands: DrawCommandBufferView;
+  /** Single-element output containing the total number of requested visible draw commands. */
   requiredCount: GraphDataView<'uint32'>;
+  /** Single-element output containing the number of commands published within capacity. */
   publishedCount: GraphDataView<'uint32'>;
+  /** Single-element output indicating that the requested draw count exceeded capacity. */
   overflow: GraphDataView<'uint32'>;
 };
 
-/** Fixed topology and mutable GPU-resident interaction state for one trace command graph. */
+/**
+ * Fixed topology and mutable GPU-resident controls for one reusable trace command graph.
+ *
+ * Every view belongs to the caller's graph and remains caller-owned. Time, policy, expansion,
+ * selection, and focus inputs can be rewritten between encodings without rebuilding graph topology.
+ */
 export type GPUTraceInteractionProps = {
+  /** Optional diagnostic prefix applied to every composed graph operation. */
   id?: string;
   /** Canonical trace span, topology, and generic scene views from GPUTraceScene.importToGraph(). */
   trace: GPUTraceSceneView;
@@ -87,14 +102,26 @@ export type GPUTraceInteractionProps = {
   maxAncestorDepth?: number;
 };
 
-/** CPU-visible topology facts for one compiled trace interaction policy. */
+/**
+ * Immutable CPU-visible topology facts for a trace interaction workflow.
+ *
+ * These values describe the compiled workload without synchronizing the device or reading mutable
+ * visibility, selection, or draw outputs back to the CPU.
+ */
 export type GPUTraceInteractionStats = {
+  /** Number of canonical source spans evaluated by every interaction update. */
   spanCount: number;
+  /** Fixed generic-scene capacity used by visibility masks and indirect draw publication. */
   sceneCapacity: number;
+  /** Number of process expansion-state entries. */
   processCount: number;
+  /** Number of globally numbered thread expansion-state entries. */
   threadCount: number;
+  /** Number of consecutive globally numbered threads owned by each process. */
   threadsPerProcess: number;
+  /** Number of consecutive original timeline lanes owned by each thread. */
   lanesPerThread: number;
+  /** Maximum dependency-hop depth compiled into the bounded traversal workflow. */
   maxFocusDepth: number;
 };
 
@@ -104,32 +131,89 @@ export type GPUTraceInteractionStats = {
  * Process/thread states, temporal ranges, classification masks, selected source IDs, and traversal
  * depth remain caller-owned GPU inputs. Updating those buffers and re-encoding the same graph
  * refreshes every output without CPU span filtering, graph recompilation, or hidden submission.
+ *
+ * @example
+ * ```ts
+ * import {GPUTraceInteraction} from '@luma.gl/experimental/lutrace';
+ *
+ * new GPUTraceInteraction({
+ *   trace: trace.importToGraph(graph),
+ *   timeWindow,
+ *   policy,
+ *   processStates,
+ *   threadStates,
+ *   selectedSpans,
+ *   selectedCount,
+ *   focusDepth,
+ *   threadHeights,
+ *   threadOffsets,
+ *   reachedSpans,
+ *   visibleMask,
+ *   visibleSpans,
+ *   visibleCount,
+ *   projectedAncestors,
+ *   draw: {commands, requiredCount, publishedCount, overflow},
+ *   threadsPerProcess: 4,
+ *   lanesPerThread: 4
+ * }).addToGraph(graph);
+ * ```
  */
 export class GPUTraceInteraction {
+  /** Diagnostic identifier shared by all graph operations composed by this workflow. */
   readonly id: string;
+  /** Borrowed canonical trace fields, dependency topology, and generic scene views. */
   readonly trace: GPUTraceSceneView;
+  /** Mutable `[minimumTime, maximumTime, minimumDuration]` control buffer. */
   readonly timeWindow: GraphDataView<'float32'>;
+  /** Mutable `[requiredClassificationBits, excludedClassificationBits, focusEnabled]` controls. */
   readonly policy: GraphDataView<'uint32'>;
+  /** Mutable zero/nonzero expansion states for each process. */
   readonly processStates: GraphDataView<'uint32'>;
+  /** Mutable zero/nonzero expansion states for each globally numbered thread. */
   readonly threadStates: GraphDataView<'uint32'>;
+  /** Canonical source rows serving as dependency-focus selection seeds. */
   readonly selectedSpans: GraphDataView<'uint32'>;
+  /** Single-element mutable count of active dependency-focus seeds. */
   readonly selectedCount: GraphDataView<'uint32'>;
+  /** Single-element mutable dependency-hop count bounded by {@link maxFocusDepth}. */
   readonly focusDepth: GraphDataView<'uint32'>;
+  /** Per-thread effective heights after process and thread expansion are applied. */
   readonly threadHeights: GraphDataView<'uint32'>;
+  /** Exclusive-scanned per-thread display offsets used by rendering and trace picking. */
   readonly threadOffsets: GraphDataView<'uint32'>;
+  /** Canonical source-aligned dependency reachability mask. */
   readonly reachedSpans: GraphDataView<'uint32'>;
+  /** Scene-capacity-aligned final visibility mask consumed by indirect drawing and picking. */
   readonly visibleMask: GraphDataView<'uint32'>;
+  /** Stable, source-ordered compacted canonical rows that satisfy the active policies. */
   readonly visibleSpans: GraphDataView<'uint32'>;
+  /** Single-element exact count of compacted visible canonical rows. */
   readonly visibleCount: GraphDataView<'uint32'>;
+  /** Nearest visible canonical ancestor for every source span. */
   readonly projectedAncestors: GraphDataView<'uint32'>;
+  /** Caller-owned indirect draw slots and draw-publication diagnostics. */
   readonly draw: GPUTraceInteractionDraw;
+  /** Fixed number of consecutive globally numbered threads per process. */
   readonly threadsPerProcess: number;
+  /** Fixed number of consecutive original timeline lanes per thread. */
   readonly lanesPerThread: number;
+  /** Maximum dependency-hop count compiled into the bounded traversal passes. */
   readonly maxFocusDepth: number;
+  /** Direction in which selected spans expand through dependency adjacency. */
   readonly focusDirection: GPUGraphTraversalDirection;
+  /** Maximum parent-chain depth followed while projecting hidden dependency endpoints. */
   readonly maxAncestorDepth: number;
+  /** Immutable topology and capacity facts available without GPU readback. */
   readonly stats: Readonly<GPUTraceInteractionStats>;
 
+  /**
+   * Validates caller-owned trace controls and captures the workflow's fixed topology.
+   *
+   * Construction does not add passes, compile the graph, submit work, or take buffer ownership.
+   * Call {@link addToGraph} to compose the complete interaction pipeline explicitly.
+   *
+   * @param props - Canonical trace views, mutable controls, caller-owned outputs, and hierarchy.
+   */
   constructor(props: GPUTraceInteractionProps) {
     this.id = props.id ?? 'gpu-trace-interaction';
     this.trace = props.trace;
@@ -166,7 +250,14 @@ export class GPUTraceInteraction {
     });
   }
 
-  /** Adds reusable hierarchy, traversal, policy, compaction, ancestor, and indirect-draw passes. */
+  /**
+   * Adds hierarchy, dependency focus, filtering, compaction, ancestor, and indirect-draw passes.
+   *
+   * Every input and output view must belong to `graph`. Compilation, encoding, queue submission,
+   * and optional readback remain application-owned after the workflow has registered its passes.
+   *
+   * @param graph - Caller-owned command graph containing every trace, control, and output view.
+   */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     if (getInteractionViews(this).some(view => view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);

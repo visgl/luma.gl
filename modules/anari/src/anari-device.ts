@@ -13,9 +13,8 @@ import {
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
-import {ANARIRenderingRuntime} from './anari-rendering-runtime';
-import {ANARIDeferredRenderingRuntime} from './anari-deferred-rendering-runtime';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
+import {ANARIRenderingRuntime} from './anari-rendering-runtime';
 import type {
   ANARIArrayParameters,
   ANARICameraParameters,
@@ -152,10 +151,9 @@ export class ANARIDevice {
     const runtimeType = rendererSubtype === 'deferred' ? 'deferred' : 'forward';
     let renderingRuntime = this.renderingRuntimes.get(runtimeType);
     if (!renderingRuntime) {
-      renderingRuntime =
-        runtimeType === 'deferred'
-          ? new ANARIDeferredRenderingRuntime(this.device)
-          : new ANARIRenderingRuntime(this.device);
+      renderingRuntime = new ANARIRenderingRuntime(this.device, {
+        deferred: runtimeType === 'deferred'
+      });
       this.renderingRuntimes.set(runtimeType, renderingRuntime);
     }
     return renderingRuntime.render(frame);

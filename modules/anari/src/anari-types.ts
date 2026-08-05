@@ -51,6 +51,7 @@ export type ANARIObjectReference =
 export type ANARISamplerParameters = {
   image: Texture;
   transform?: Readonly<NumberArray9>;
+  textureCoordinateSet?: 0 | 1;
 };
 
 export type ANARIArrayParameters = {
@@ -64,6 +65,7 @@ export type ANARIGeometryParameters = {
   'vertex.normal'?: Float32Array | ANARIArray;
   'vertex.attribute0'?: Float32Array | ANARIArray;
   'vertex.attribute1'?: Float32Array | ANARIArray;
+  'vertex.attribute2'?: Float32Array | ANARIArray;
   'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
   radius?: number;
   height?: number;
@@ -89,9 +91,18 @@ export type ANARIMaterialParameters = {
   iridescence?: number;
   clearcoatRoughness?: number;
   transmission?: number;
+  thickness?: number;
+  attenuationDistance?: number;
+  attenuationColor?: ANARIVector3;
   indexOfRefraction?: number;
   sheenColor?: ANARIVector3;
   sheenRoughness?: number;
+  iridescenceIndexOfRefraction?: number;
+  iridescenceThicknessMinimum?: number;
+  iridescenceThicknessMaximum?: number;
+  anisotropyStrength?: number;
+  anisotropyRotation?: number;
+  anisotropyDirection?: readonly [number, number];
   normalScale?: number;
   occlusionStrength?: number;
   baseColorTexture?: ANARISampler;
@@ -99,9 +110,18 @@ export type ANARIMaterialParameters = {
   metallicRoughnessTexture?: ANARISampler;
   emissiveTexture?: ANARISampler;
   occlusionTexture?: ANARISampler;
+  specularColorTexture?: ANARISampler;
+  specularIntensityTexture?: ANARISampler;
   clearcoatTexture?: ANARISampler;
+  clearcoatRoughnessTexture?: ANARISampler;
+  clearcoatNormalTexture?: ANARISampler;
   transmissionTexture?: ANARISampler;
+  thicknessTexture?: ANARISampler;
   sheenColorTexture?: ANARISampler;
+  sheenRoughnessTexture?: ANARISampler;
+  iridescenceTexture?: ANARISampler;
+  iridescenceThicknessTexture?: ANARISampler;
+  anisotropyTexture?: ANARISampler;
 };
 
 export type ANARISurfaceParameters = {
@@ -155,6 +175,13 @@ export type ANARICameraParameters = {
 export type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
+  environment?: {
+    diffuseTexture?: Texture;
+    specularTexture?: Texture;
+    brdfLUTTexture?: Texture;
+    intensity?: number;
+    rotation?: number;
+  };
   exposure?: number;
   bloomIntensity?: number;
   bloomThreshold?: number;

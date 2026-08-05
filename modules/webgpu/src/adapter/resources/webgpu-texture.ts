@@ -69,7 +69,9 @@ export class WebGPUTexture extends Texture {
     });
 
     if (this.props.handle) {
-      this.handle.label ||= this.id;
+      if (!this.isHandleBorrowed) {
+        this.handle.label ||= this.id;
+      }
       // @ts-expect-error readonly
       this.width = this.handle.width;
       // @ts-expect-error readonly
@@ -425,7 +427,9 @@ export class WebGPUTexture extends Texture {
       nextHeight !== this.height ||
       nextDepth !== this.depth ||
       nextFormat !== this.format;
-    handle.label ||= this.id;
+    if (!this.isHandleBorrowed) {
+      handle.label ||= this.id;
+    }
 
     // @ts-expect-error readonly
     this.handle = handle;

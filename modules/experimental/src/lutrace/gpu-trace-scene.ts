@@ -16,31 +16,63 @@ import {
   type GPUSceneView
 } from '../gpu-primitives/gpu-scene';
 
-/** Number of uint32 words in one canonical packed trace span. */
+/**
+ * Number of 32-bit words in a canonical execution span.
+ *
+ * Records contain start time, duration, lane, group, process, thread, stable object identity,
+ * and classification bits. The first two words are interpreted as `float32`; the remaining words
+ * are `uint32` values. Multiply this constant by `Uint32Array.BYTES_PER_ELEMENT` for byte stride.
+ */
 export const GPU_TRACE_SPAN_RECORD_WORD_LENGTH = 8;
-/** Number of uint32 words in one canonical source/destination dependency. */
+/**
+ * Number of 32-bit words in one directed dependency record.
+ *
+ * Records contain the canonical source row, canonical destination row, application-defined link
+ * family, and application-defined flags. Source and destination refer to rows, not object IDs.
+ */
 export const GPU_TRACE_LINK_RECORD_WORD_LENGTH = 4;
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const SOURCE_BUFFER_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 
-/** One explicitly preserved source batch in global span-row order. */
+/**
+ * One explicitly preserved source batch in global canonical-span order.
+ *
+ * Adjacent partitions must cover every source row without gaps or overlap. Empty partitions are
+ * retained so streaming producers do not lose their original batch boundaries.
+ */
 export type GPUTraceScenePartition = {
+  /** Global canonical row at which this source batch begins. */
   firstSpan: number;
+  /** Number of canonical span rows in the batch; zero-length batches remain observable. */
   spanCount: number;
+  /** Optional renderer group that every span in this partition must share. */
   groupId?: number;
 };
 
-/** Source-ordered compressed sparse adjacency over global span-row indices. */
+/**
+ * Source-ordered compressed-sparse-row dependency adjacency over canonical span rows.
+ *
+ * `offsets` has `spanCount + 1` entries. Neighbors for source row `index` occupy
+ * `neighbors.subarray(offsets[index], offsets[index + 1])` and retain source-edge order.
+ */
 export type GPUTraceSceneAdjacency = {
+  /** Monotonic neighbor-range boundaries; the final entry equals `neighbors.length`. */
   offsets: Uint32Array;
+  /** Canonical target rows arranged by source row in original dependency order. */
   neighbors: Uint32Array;
 };
 
-/** Canonical trace inputs projected once into a generic flat GPU scene. */
+/**
+ * Canonical trace inputs projected once into a generic flat GPU scene.
+ *
+ * The constructor copies these CPU-side arrays into trace-owned GPU allocations. Parent and
+ * dependency references always use canonical source rows, never compacted positions or object IDs.
+ */
 export type GPUTraceSceneProps = {
+  /** Optional diagnostic identifier used as the prefix for owned GPU resources. */
   id?: string;
-  /** Packed start, duration, lane, group, process, thread, stable ID, and classification words. */
+  /** Eight-word records containing start, duration, lane, group, process, thread, ID, and flags. */
   spans: Uint32Array;
   /** One parent span-row index or GPU_SCENE_INVALID_REFERENCE per canonical row. */
   parents: Uint32Array;
@@ -60,52 +92,104 @@ export type GPUTraceSceneProps = {
   incoming?: GPUTraceSceneAdjacency;
 };
 
-/** Physical buffers owned by one canonical trace model. */
+/**
+ * Physical GPU buffers owned by one canonical trace model.
+ *
+ * These buffers remain valid until their owning {@link GPUTraceScene} is destroyed. Consumers must
+ * borrow them through {@link GPUTraceScene.importToGraph} instead of destroying them independently.
+ */
 export type GPUTraceSceneBuffers = {
+  /** Packed eight-word canonical span records, including time and hierarchy ownership. */
   spans: Buffer;
+  /** One canonical parent row or invalid-reference sentinel per span. */
   parents: Buffer;
+  /** Packed four-word directed dependency records. */
   links: Buffer;
+  /** Forward compressed-sparse-row boundaries with `spanCount + 1` logical entries. */
   outgoingOffsets: Buffer;
+  /** Forward dependency destinations addressed by canonical span row. */
   outgoingNeighbors: Buffer;
+  /** Reverse compressed-sparse-row boundaries with `spanCount + 1` logical entries. */
   incomingOffsets: Buffer;
+  /** Reverse dependency sources addressed by canonical span row. */
   incomingNeighbors: Buffer;
 };
 
-/** Typed graph views over canonical trace data and its generic GPU scene projection. */
+/**
+ * Borrowed command-graph views over canonical trace data and its generic GPU scene projection.
+ *
+ * Every span-field view preserves canonical source order. Link views preserve source-edge order,
+ * while adjacency views expose forward and reverse dependency neighborhoods without repacking.
+ */
 export type GPUTraceSceneView = {
+  /** Generic, renderer-independent flat scene projected from the canonical span records. */
   scene: GPUSceneView;
+  /** Imported handle for the packed canonical span-record buffer. */
   spans: GraphBufferHandle;
+  /** Imported handle for the packed directed dependency-record buffer. */
   links: GraphBufferHandle;
+  /** Source-aligned `float32` span start times. */
   startTimes: GraphDataView<'float32'>;
+  /** Source-aligned, nonnegative `float32` span durations. */
   durations: GraphDataView<'float32'>;
+  /** Source-aligned original timeline lane identities before hierarchy collapse. */
   lanes: GraphDataView<'uint32'>;
+  /** Source-aligned renderer-owned pipeline or resource-group identities. */
   groupIds: GraphDataView<'uint32'>;
+  /** Source-aligned process identities used by the expansion hierarchy. */
   processIds: GraphDataView<'uint32'>;
+  /** Source-aligned globally numbered thread identities. */
   threadIds: GraphDataView<'uint32'>;
+  /** Source-aligned, stable application object identities distinct from canonical row indices. */
   objectIds: GraphDataView<'uint32'>;
+  /** Source-aligned application-defined classification and filtering bits. */
   classifications: GraphDataView<'uint32'>;
+  /** Source-aligned canonical parent rows or invalid-reference sentinels. */
   parents: GraphDataView<'uint32'>;
+  /** Canonical source row for each directed dependency. */
   linkSources: GraphDataView<'uint32'>;
+  /** Canonical destination row for each directed dependency. */
   linkDestinations: GraphDataView<'uint32'>;
+  /** Application-defined dependency family for each directed edge. */
   linkFamilies: GraphDataView<'uint32'>;
+  /** Application-defined dependency flags for each directed edge. */
   linkFlags: GraphDataView<'uint32'>;
+  /** Forward compressed-sparse-row neighbor boundaries indexed by canonical source row. */
   outgoingOffsets: GraphDataView<'uint32'>;
+  /** Forward dependency destinations in preserved source-edge order. */
   outgoingNeighbors: GraphDataView<'uint32'>;
+  /** Reverse compressed-sparse-row neighbor boundaries indexed by canonical destination row. */
   incomingOffsets: GraphDataView<'uint32'>;
+  /** Reverse dependency sources in preserved source-edge order. */
   incomingNeighbors: GraphDataView<'uint32'>;
+  /** Immutable source batch descriptors, including explicitly supplied empty partitions. */
   partitions: readonly Readonly<GPUTraceScenePartition>[];
 };
 
-/** Allocation and topology facts available without GPU readback. */
+/**
+ * Immutable allocation and topology facts available without GPU readback.
+ *
+ * Byte lengths report actual backing allocations, so empty logical inputs may still reserve the
+ * minimum valid storage-buffer size. Scene projection is accounted for separately from topology.
+ */
 export type GPUTraceSceneStats = {
+  /** Number of canonical source spans and projected logical scene records. */
   spanCount: number;
+  /** Number of directed dependency records. */
   linkCount: number;
+  /** Number of preserved source partitions, including zero-span batches. */
   partitionCount: number;
+  /** Number of addressable process identities. */
   processCount: number;
+  /** Number of addressable globally numbered thread identities. */
   threadCount: number;
+  /** Actual allocated byte length of the packed canonical span buffer. */
   canonicalByteLength: number;
+  /** Combined allocated byte length of parents, links, and both CSR representations. */
   topologyByteLength: number;
+  /** Allocated byte length of the projected generic scene records and scene state. */
   sceneByteLength: number;
+  /** Sum of canonical, topology, and generic scene allocation costs. */
   totalByteLength: number;
 };
 
@@ -115,16 +199,44 @@ export type GPUTraceSceneStats = {
  * Time, process/thread ownership, parents, dependency links, and CSR adjacency remain separate
  * from `GPUScene`. The scene projection contains only stable IDs, temporal/lane bounds, group and
  * geometry references, and explicit indirect-command slots.
+ *
+ * @example
+ * ```ts
+ * import {GPUCommandGraph} from '@luma.gl/experimental';
+ * import {GPUTraceScene} from '@luma.gl/experimental/lutrace';
+ *
+ * const trace = new GPUTraceScene(device, {
+ *   spans: canonicalSpanWords,
+ *   parents: canonicalParentRows,
+ *   links: dependencyWords,
+ *   processCount: 4,
+ *   threadCount: 16
+ * });
+ * const graph = new GPUCommandGraph(device);
+ * const source = trace.importToGraph(graph);
+ * ```
  */
 export class GPUTraceScene {
+  /** WebGPU device that owns the canonical buffers and projected generic scene. */
   readonly device: Device;
+  /** Diagnostic identifier shared by this trace model and its owned resources. */
   readonly id: string;
+  /** Generic flat scene containing stable span identities and timeline bounds. */
   readonly scene: GPUScene;
+  /** Immutable collection of trace-owned canonical and topology GPU buffers. */
   readonly buffers: Readonly<GPUTraceSceneBuffers>;
+  /** Immutable source partitions in canonical global row order. */
   readonly partitions: readonly Readonly<GPUTraceScenePartition>[];
+  /** Immutable topology counts and allocation costs available without readback. */
   readonly stats: Readonly<GPUTraceSceneStats>;
   private destroyed = false;
 
+  /**
+   * Uploads canonical span and topology data and creates its generic flat scene projection.
+   *
+   * @param device - WebGPU device used for all trace-owned allocations.
+   * @param props - Packed span records, hierarchy parents, dependencies, and source partitions.
+   */
   constructor(device: Device, props: GPUTraceSceneProps) {
     if (device.type !== 'webgpu') throw new Error('GPUTraceScene requires a WebGPU device');
     validateProps(props);
@@ -203,7 +315,15 @@ export class GPUTraceScene {
     });
   }
 
-  /** Imports source-owned buffers once and exposes source-aligned field and topology views. */
+  /**
+   * Borrows trace-owned buffers into a caller-owned graph and creates source-aligned field views.
+   *
+   * The returned views do not transfer ownership, submit work, or read GPU data back. The graph
+   * must belong to this trace model's device, and the trace must outlive every graph execution.
+   *
+   * @param graph - Command graph that will schedule consumers of the canonical trace buffers.
+   * @returns Typed span fields, dependency topology, preserved partitions, and generic scene views.
+   */
   importToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): GPUTraceSceneView {
     if (this.destroyed) throw new Error('GPUTraceScene has been destroyed');
     if (graph.device !== this.device) throw new Error('GPUTraceScene graph must use its device');
@@ -265,7 +385,12 @@ export class GPUTraceScene {
     };
   }
 
-  /** Releases canonical trace and scene allocations exactly once. */
+  /**
+   * Releases every trace-owned canonical, topology, and generic scene allocation exactly once.
+   *
+   * Destruction is idempotent. Imported graph views become invalid after destruction, so callers
+   * must complete or stop using dependent graph work before releasing the trace.
+   */
   destroy(): void {
     if (this.destroyed) return;
     this.scene.destroy();

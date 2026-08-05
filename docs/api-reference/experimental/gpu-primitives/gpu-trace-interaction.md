@@ -136,6 +136,13 @@ its existing required-count, published-count, overflow, and `indirect-first-inst
 This distinction lets one application use compacted rows for labels or picking while another
 replays stable resource-grouped indirect draws from the same interaction state.
 
+### Picking follows the same visible hierarchy
+
+[`getGPUTracePickingShader`](./gpu-trace-picking) consumes `threadOffsets` and `visibleMask`
+directly. A click therefore resolves against the effective post-collapse row and current filtering
+policy instead of an outdated original lane. The returned value remains the canonical source row,
+so it can feed `selectedSpans` directly when linked-span focus should follow the current selection.
+
 ## Usage
 
 ```ts

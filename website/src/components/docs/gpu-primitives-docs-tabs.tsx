@@ -30,6 +30,7 @@ export type GPUPrimitivesDocsTabId =
   | 'scene-resource-groups'
   | 'trace-scene'
   | 'trace-interaction'
+  | 'trace-picking'
   | 'group-aggregation'
   | 'hash-index'
   | 'hash-join'
@@ -178,6 +179,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'trace-interaction',
     label: 'Trace Interaction',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction'
+  },
+  {
+    id: 'trace-picking',
+    label: 'Trace Picking',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking'
   },
   {
     id: 'group-aggregation',

@@ -105,6 +105,10 @@ export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAd
     options.powerPreference = props.powerPreference;
   }
 
+  if (props.xrCompatible) {
+    options.xrCompatible = true;
+  }
+
   return options;
 }
 
@@ -258,7 +262,8 @@ export class WebGPUAdapter extends Adapter {
     return [
       featureLevel,
       requestAdapterOptions.featureLevel || 'core',
-      requestAdapterOptions.powerPreference || 'default'
+      requestAdapterOptions.powerPreference || 'default',
+      ...(requestAdapterOptions.xrCompatible ? ['xr-compatible'] : [])
     ].join(':');
   }
 }
