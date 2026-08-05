@@ -60,9 +60,18 @@ type JSONMaterialTextureName =
   | 'metallicRoughnessTexture'
   | 'emissiveTexture'
   | 'occlusionTexture'
+  | 'specularColorTexture'
+  | 'specularIntensityTexture'
   | 'clearcoatTexture'
+  | 'clearcoatRoughnessTexture'
+  | 'clearcoatNormalTexture'
   | 'transmissionTexture'
-  | 'sheenColorTexture';
+  | 'thicknessTexture'
+  | 'sheenColorTexture'
+  | 'sheenRoughnessTexture'
+  | 'iridescenceTexture'
+  | 'iridescenceThicknessTexture'
+  | 'anisotropyTexture';
 
 export type JSONMaterialDeclaration = JSONTypedObject<ANARIMaterialSubtype> &
   Omit<ANARIMaterialParameters, JSONMaterialTextureName> &
@@ -71,6 +80,7 @@ export type JSONMaterialDeclaration = JSONTypedObject<ANARIMaterialSubtype> &
 export type JSONTextureDeclaration = {
   source: string;
   colorSpace?: 'srgb' | 'linear';
+  textureCoordinateSet?: 0 | 1;
   transform?: readonly [number, number, number, number, number, number, number, number, number];
 };
 
@@ -202,9 +212,18 @@ const MATERIAL_TEXTURE_NAMES: readonly JSONMaterialTextureName[] = [
   'metallicRoughnessTexture',
   'emissiveTexture',
   'occlusionTexture',
+  'specularColorTexture',
+  'specularIntensityTexture',
   'clearcoatTexture',
+  'clearcoatRoughnessTexture',
+  'clearcoatNormalTexture',
   'transmissionTexture',
-  'sheenColorTexture'
+  'thicknessTexture',
+  'sheenColorTexture',
+  'sheenRoughnessTexture',
+  'iridescenceTexture',
+  'iridescenceThicknessTexture',
+  'anisotropyTexture'
 ];
 
 const loadedTextureImages = new Map<string, ImageBitmap>();
@@ -323,7 +342,11 @@ export function createANARIJSONScene(
     textures.push(texture);
     samplers.set(
       identifier,
-      device.newSampler('image2D', {image: texture, transform: declaration.transform})
+      device.newSampler('image2D', {
+        image: texture,
+        transform: declaration.transform,
+        textureCoordinateSet: declaration.textureCoordinateSet
+      })
     );
   }
 

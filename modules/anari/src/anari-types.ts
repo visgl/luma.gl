@@ -1,5 +1,5 @@
-import type {NumberArray9, TypedArray} from '@math.gl/core';
 import type {Texture} from '@luma.gl/core';
+import type {NumberArray9, TypedArray} from '@math.gl/core';
 import type {
   ANARIArray,
   ANARICamera,
@@ -8,8 +8,8 @@ import type {
   ANARIInstance,
   ANARILight,
   ANARIMaterial,
-  ANARISampler,
   ANARIRenderer,
+  ANARISampler,
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
@@ -51,6 +51,7 @@ export type ANARIObjectReference =
 export type ANARISamplerParameters = {
   image: Texture;
   transform?: Readonly<NumberArray9>;
+  textureCoordinateSet?: 0 | 1;
 };
 
 export type ANARIArrayParameters = {
@@ -79,14 +80,28 @@ export type ANARIMaterialParameters = {
   metallic?: number;
   roughness?: number;
   opacity?: number;
-  alphaMode?: 'opaque' | 'blend';
+  alphaMode?: 'opaque' | 'mask' | 'blend';
+  alphaCutoff?: number;
+  doubleSided?: boolean;
+  unlit?: boolean;
+  specularColor?: ANARIVector3;
+  specularIntensity?: number;
   clearcoat?: number;
   iridescence?: number;
   clearcoatRoughness?: number;
   transmission?: number;
+  thickness?: number;
+  attenuationDistance?: number;
+  attenuationColor?: ANARIVector3;
   indexOfRefraction?: number;
   sheenColor?: ANARIVector3;
   sheenRoughness?: number;
+  iridescenceIndexOfRefraction?: number;
+  iridescenceThicknessMinimum?: number;
+  iridescenceThicknessMaximum?: number;
+  anisotropyStrength?: number;
+  anisotropyRotation?: number;
+  anisotropyDirection?: readonly [number, number];
   normalScale?: number;
   occlusionStrength?: number;
   baseColorTexture?: ANARISampler;
@@ -94,9 +109,18 @@ export type ANARIMaterialParameters = {
   metallicRoughnessTexture?: ANARISampler;
   emissiveTexture?: ANARISampler;
   occlusionTexture?: ANARISampler;
+  specularColorTexture?: ANARISampler;
+  specularIntensityTexture?: ANARISampler;
   clearcoatTexture?: ANARISampler;
+  clearcoatRoughnessTexture?: ANARISampler;
+  clearcoatNormalTexture?: ANARISampler;
   transmissionTexture?: ANARISampler;
+  thicknessTexture?: ANARISampler;
   sheenColorTexture?: ANARISampler;
+  sheenRoughnessTexture?: ANARISampler;
+  iridescenceTexture?: ANARISampler;
+  iridescenceThicknessTexture?: ANARISampler;
+  anisotropyTexture?: ANARISampler;
 };
 
 export type ANARISurfaceParameters = {

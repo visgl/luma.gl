@@ -88,14 +88,28 @@ const materialProperties = {
   metallic: unitNumberSchema.optional(),
   roughness: unitNumberSchema.optional(),
   opacity: unitNumberSchema.optional(),
-  alphaMode: z.enum(['opaque', 'blend']).optional(),
+  alphaMode: z.enum(['opaque', 'mask', 'blend']).optional(),
+  alphaCutoff: unitNumberSchema.optional(),
+  doubleSided: z.boolean().optional(),
+  unlit: z.boolean().optional(),
+  specularColor: ANARIVector3Schema.optional(),
+  specularIntensity: nonnegativeNumberSchema.optional(),
   clearcoat: unitNumberSchema.optional(),
   clearcoatRoughness: unitNumberSchema.optional(),
   iridescence: unitNumberSchema.optional(),
   transmission: unitNumberSchema.optional(),
+  thickness: nonnegativeNumberSchema.optional(),
+  attenuationDistance: positiveNumberSchema.optional(),
+  attenuationColor: ANARIVector3Schema.optional(),
   indexOfRefraction: positiveNumberSchema.optional(),
   sheenColor: ANARIVector3Schema.optional(),
   sheenRoughness: unitNumberSchema.optional(),
+  iridescenceIndexOfRefraction: positiveNumberSchema.optional(),
+  iridescenceThicknessMinimum: nonnegativeNumberSchema.optional(),
+  iridescenceThicknessMaximum: nonnegativeNumberSchema.optional(),
+  anisotropyStrength: unitNumberSchema.optional(),
+  anisotropyRotation: numberSchema.optional(),
+  anisotropyDirection: z.tuple([numberSchema, numberSchema]).optional(),
   normalScale: nonnegativeNumberSchema.optional(),
   occlusionStrength: unitNumberSchema.optional(),
   baseColorTexture: identifierSchema.optional(),
@@ -103,15 +117,25 @@ const materialProperties = {
   metallicRoughnessTexture: identifierSchema.optional(),
   emissiveTexture: identifierSchema.optional(),
   occlusionTexture: identifierSchema.optional(),
+  specularColorTexture: identifierSchema.optional(),
+  specularIntensityTexture: identifierSchema.optional(),
   clearcoatTexture: identifierSchema.optional(),
+  clearcoatRoughnessTexture: identifierSchema.optional(),
+  clearcoatNormalTexture: identifierSchema.optional(),
   transmissionTexture: identifierSchema.optional(),
-  sheenColorTexture: identifierSchema.optional()
+  thicknessTexture: identifierSchema.optional(),
+  sheenColorTexture: identifierSchema.optional(),
+  sheenRoughnessTexture: identifierSchema.optional(),
+  iridescenceTexture: identifierSchema.optional(),
+  iridescenceThicknessTexture: identifierSchema.optional(),
+  anisotropyTexture: identifierSchema.optional()
 };
 
 export const ANARITextureSchema = z
   .strictObject({
     source: identifierSchema,
     colorSpace: z.enum(['srgb', 'linear']).optional(),
+    textureCoordinateSet: z.union([z.literal(0), z.literal(1)]).optional(),
     transform: z
       .tuple([
         numberSchema,
@@ -308,9 +332,18 @@ export const ANARISceneSchema = z
       'metallicRoughnessTexture',
       'emissiveTexture',
       'occlusionTexture',
+      'specularColorTexture',
+      'specularIntensityTexture',
       'clearcoatTexture',
+      'clearcoatRoughnessTexture',
+      'clearcoatNormalTexture',
       'transmissionTexture',
-      'sheenColorTexture'
+      'thicknessTexture',
+      'sheenColorTexture',
+      'sheenRoughnessTexture',
+      'iridescenceTexture',
+      'iridescenceThicknessTexture',
+      'anisotropyTexture'
     ] as const;
     for (const [identifier, material] of Object.entries(scene.materials)) {
       for (const textureName of textureNames) {
