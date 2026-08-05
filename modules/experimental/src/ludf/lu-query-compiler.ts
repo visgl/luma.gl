@@ -72,7 +72,8 @@ type LuQueryDerivedView = {
   validity?: GraphVectorView<'uint32'>;
 };
 
-type CompiledLuDataFrameQueryProps<T extends GPUTypeMap> = {
+/** Internal ownership and graph state transferred exactly once to a compiled dataframe query. */
+export type CompiledLuDataFrameQueryProps<T extends GPUTypeMap> = {
   table: GPUTable<T>;
   validity: Readonly<LuDataFrameValidity<T>>;
   dictionaries: Readonly<LuDataFrameDictionaries<T>>;
@@ -81,8 +82,43 @@ type CompiledLuDataFrameQueryProps<T extends GPUTypeMap> = {
   selectedCounts: GPUVector<'uint32'>;
   graph: CompiledGPUCommandGraph<LuDataFrameQueryParameters>;
   sourceViews: readonly Pick<LuDataFrame, 'destroy'>[];
-  ownedTable?: GPUTable<T>;
+  ownedTables?: readonly Pick<GPUTable, 'destroy'>[];
   ownedVectors?: readonly GPUVector[];
+};
+
+/** Source-row GPU outputs available to one graph contribution before graph compilation. @internal */
+export type LuDataFrameQueryExtensionContext<T extends GPUTypeMap> = {
+  graph: GPUCommandGraph<LuDataFrameQueryParameters>;
+  queryId: string;
+  table: GPUTable<T>;
+  validity: Readonly<LuDataFrameValidity<T>>;
+  dictionaries: Readonly<LuDataFrameDictionaries<T>>;
+  selectionMask: GraphVectorView<'uint32'>;
+};
+
+/** Result resources contributed by one graph-native extension. @internal */
+export type LuDataFrameQueryExtensionResult<
+  T extends GPUTypeMap,
+  Compiled extends CompiledLuDataFrameQuery<T> = CompiledLuDataFrameQuery<T>
+> = {
+  table: GPUTable<T>;
+  validity: Readonly<LuDataFrameValidity<T>>;
+  dictionaries: Readonly<LuDataFrameDictionaries<T>>;
+  ownedTables?: readonly Pick<GPUTable, 'destroy'>[];
+  ownedVectors?: readonly GPUVector[];
+  createCompiled: (props: CompiledLuDataFrameQueryProps<T>) => Compiled;
+};
+
+/** Declares downstream GPU work after row filtering but before the graph is frozen. @internal */
+export type LuDataFrameQueryCompilationExtension<
+  Row extends GPUTypeMap,
+  Result extends GPUTypeMap,
+  Compiled extends CompiledLuDataFrameQuery<Result> = CompiledLuDataFrameQuery<Result>
+> = {
+  allowEmptyPredicates?: boolean;
+  prepare: (
+    context: LuDataFrameQueryExtensionContext<Row>
+  ) => LuDataFrameQueryExtensionResult<Result, Compiled>;
 };
 
 /**
@@ -107,7 +143,7 @@ export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
 
   private readonly graph: CompiledGPUCommandGraph<LuDataFrameQueryParameters>;
   private readonly sourceViews: readonly Pick<LuDataFrame, 'destroy'>[];
-  private readonly ownedTable?: GPUTable<T>;
+  private readonly ownedTables: readonly Pick<GPUTable, 'destroy'>[];
   private readonly ownedVectors: readonly GPUVector[];
   private destroyed = false;
 
@@ -121,7 +157,7 @@ export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
     this.selectedCounts = props.selectedCounts;
     this.graph = props.graph;
     this.sourceViews = props.sourceViews;
-    this.ownedTable = props.ownedTable;
+    this.ownedTables = props.ownedTables ?? [];
     this.ownedVectors = props.ownedVectors ?? [];
   }
 
@@ -146,7 +182,9 @@ export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
     this.selectionMask.destroy();
     this.rowIndices.destroy();
     this.selectedCounts.destroy();
-    this.ownedTable?.destroy();
+    for (const table of this.ownedTables) {
+      table.destroy();
+    }
     for (const vector of this.ownedVectors) {
       vector.destroy();
     }
@@ -157,16 +195,23 @@ export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
 }
 
 /** Compiles immutable dataframe predicates into source-batch-preserving WebGPU command work. */
-export function compileLuDataFrameQuery<Source extends GPUTypeMap, Result extends GPUTypeMap>(
+export function compileLuDataFrameQuery<
+  Source extends GPUTypeMap,
+  Row extends GPUTypeMap,
+  Result extends GPUTypeMap = Row,
+  Compiled extends CompiledLuDataFrameQuery<Result> = CompiledLuDataFrameQuery<Result>
+>(
   source: LuDataFrame<Source>,
   predicates: readonly LuExpression<boolean, string>[],
-  selectedColumns: readonly (keyof Result & string)[],
+  selectedColumns: readonly (keyof Row & string)[],
   graph: GPUCommandGraph<LuDataFrameQueryParameters>,
-  derivedColumns: readonly LuDataFrameDerivedColumn[] = []
-): CompiledLuDataFrameQuery<Result> {
+  derivedColumns: readonly LuDataFrameDerivedColumn[] = [],
+  extension?: LuDataFrameQueryCompilationExtension<Row, Result, Compiled>
+): Compiled {
   const retainedSource = source.select<keyof Source & string>(source.columnNames);
   let selectedSource: LuDataFrame | undefined;
-  let ownedTable: GPUTable<Result> | undefined;
+  let ownedTable: GPUTable<Row> | undefined;
+  let extensionResult: LuDataFrameQueryExtensionResult<Result, Compiled> | undefined;
   const derivedOutputs: LuQueryDerivedOutput[] = [];
   let selectionMask: GPUVector<'uint32'> | undefined;
   let rowIndices: GPUVector<'uint32'> | undefined;
@@ -182,7 +227,8 @@ export function compileLuDataFrameQuery<Source extends GPUTypeMap, Result extend
       retainedSource,
       predicates,
       derivedColumns,
-      selectedColumns
+      selectedColumns,
+      extension?.allowEmptyPredicates === true
     );
     validateLuQueryBatchCapacity(retainedSource, graph);
     validateLuQueryBindingCapacity(plan, graph);
@@ -227,17 +273,17 @@ export function compileLuDataFrameQuery<Source extends GPUTypeMap, Result extend
       }
     }
     if (derivedOutputs.length > 0) {
-      ownedTable = createLuQueryDerivedTable<Result>(
+      ownedTable = createLuQueryDerivedTable<Row>(
         selectedSource.table,
         selectedColumns,
         derivedOutputs
       );
     }
 
-    const validity = selectLuQueryValidity<Result>(selectedSource, derivedOutputs);
+    const validity = selectLuQueryValidity<Row>(selectedSource, derivedOutputs);
     const dictionaries = Object.freeze({
       ...selectedSource.dictionaries
-    }) as Readonly<LuDataFrameDictionaries<Result>>;
+    }) as Readonly<LuDataFrameDictionaries<Row>>;
 
     const queryId = `${graph.id}-ludf-query`;
     const sourceViews = importLuQuerySourceViews(graph, retainedSource, plan, queryId);
@@ -288,26 +334,53 @@ export function compileLuDataFrameQuery<Source extends GPUTypeMap, Result extend
       sourceRowOffset += batch.numRows;
     }
 
+    const rowTable = ownedTable ?? (selectedSource.table as GPUTable<Row>);
+    if (extension) {
+      extensionResult = extension.prepare({
+        graph,
+        queryId,
+        table: rowTable,
+        validity,
+        dictionaries,
+        selectionMask: maskView
+      });
+    }
+
     compiledGraph = graph.compile();
-    return new CompiledLuDataFrameQuery<Result>({
-      table: ownedTable ?? (selectedSource.table as GPUTable<Result>),
-      validity,
-      dictionaries,
+    const props: CompiledLuDataFrameQueryProps<Result> = {
+      table: extensionResult?.table ?? (rowTable as unknown as GPUTable<Result>),
+      validity:
+        extensionResult?.validity ?? (validity as unknown as Readonly<LuDataFrameValidity<Result>>),
+      dictionaries:
+        extensionResult?.dictionaries ??
+        (dictionaries as unknown as Readonly<LuDataFrameDictionaries<Result>>),
       selectionMask,
       rowIndices,
       selectedCounts,
       graph: compiledGraph,
       sourceViews: [selectedSource, retainedSource],
-      ...(ownedTable ? {ownedTable} : {}),
-      ownedVectors: derivedOutputs.flatMap(output =>
-        output.validity ? [output.values, output.validity] : [output.values]
-      )
-    });
+      ownedTables: [...(ownedTable ? [ownedTable] : []), ...(extensionResult?.ownedTables ?? [])],
+      ownedVectors: [
+        ...derivedOutputs.flatMap(output =>
+          output.validity ? [output.values, output.validity] : [output.values]
+        ),
+        ...(extensionResult?.ownedVectors ?? [])
+      ]
+    };
+    return extensionResult
+      ? extensionResult.createCompiled(props)
+      : (new CompiledLuDataFrameQuery(props) as Compiled);
   } catch (error) {
     compiledGraph?.destroy();
     selectionMask?.destroy();
     rowIndices?.destroy();
     selectedCounts?.destroy();
+    for (const table of extensionResult?.ownedTables ?? []) {
+      table.destroy();
+    }
+    for (const vector of extensionResult?.ownedVectors ?? []) {
+      vector.destroy();
+    }
     ownedTable?.destroy();
     for (const output of derivedOutputs) {
       output.values.destroy();

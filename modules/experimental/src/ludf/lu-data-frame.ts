@@ -22,6 +22,11 @@ import {
   type LuDataFrameDerivedColumnOptions
 } from './lu-data-frame-query';
 import type {LuExpression} from './lu-expression';
+import type {
+  LuDataFrameColumnNamesOfFormat,
+  LuDataFrameGroupByOptions,
+  LuDataFrameGroupByQuery
+} from './lu-group-by-query';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
 export type LuDataFrameOwnership = 'borrowed' | 'owned';
@@ -189,6 +194,18 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     this.assertAvailable();
     const query = new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames);
     return query.withColumn<Name, ReferencedColumns, Format>(name, expression, options);
+  }
+
+  /** Plans dense unsigned grouping without allocating GPU resources or retaining source leases. */
+  groupBy<Key extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>>(
+    key: Key,
+    options: LuDataFrameGroupByOptions = {}
+  ): LuDataFrameGroupByQuery<T, keyof T & string, Key, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).groupBy(
+      key,
+      options
+    );
   }
 
   /**

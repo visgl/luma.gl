@@ -73,9 +73,10 @@ export function makeLuQueryExpressionShaderPlan<T extends GPUTypeMap>(
   source: LuDataFrame<T>,
   predicates: readonly LuExpression<boolean, string>[],
   derivedColumns: readonly LuDataFrameDerivedColumn[] = [],
-  selectedColumns: readonly string[] = []
+  selectedColumns: readonly string[] = [],
+  allowEmptyPredicates = false
 ): LuQueryExpressionShaderPlan {
-  if (predicates.length === 0 && derivedColumns.length === 0) {
+  if (predicates.length === 0 && derivedColumns.length === 0 && !allowEmptyPredicates) {
     throw new Error('LuDataFrame filtering requires at least one predicate');
   }
 
