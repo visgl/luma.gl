@@ -217,6 +217,13 @@ export {
   type PrepareArrowInputProps
 } from './arrow/gpu/arrow-input-schema';
 export {
+  makeGPUAnalyticsTableFromArrowTable,
+  type GPUAnalyticsDictionary,
+  type GPUAnalyticsTableFromArrowTableProps,
+  type GPUAnalyticsTableFromArrowTableResult,
+  type GPUAnalyticsTypeMapForArrow
+} from './arrow/gpu/arrow-gpu-analytics-adapters';
+export {
   getRequiredArrowGPUVectorDataType,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,
