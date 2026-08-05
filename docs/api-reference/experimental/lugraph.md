@@ -261,6 +261,7 @@ provide the other unsupported features above.
 | `LuGraphDegree` | How many relationships touch each vertex in one direction? | One `uint32` degree per vertex | `O(V)` after adjacency exists |
 | `LuGraphBreadthFirstSearch` | Which vertices are within a chosen number of unweighted hops? | Distances, deterministic predecessors, and an optional selection mask | At most `O(D × (V + E))` for `D` compiled hops |
 | `LuGraphConnectedComponents` | Which vertices belong to the same weakly connected group? | One `uint32` component identifier per vertex | At most `O(K × (V + E))` for `K` bounded iterations |
+| `LuGraphLabelPropagation` | Which densely connected communities exist inside a connected network? | One deterministic `uint32` community label per vertex | At most `O(K × sum(degree²))` for `K` bounded iterations |
 | `LuGraphPageRank` | Which vertices receive influence from other important vertices? | One normalized `float32` score per vertex | `O(K × (V + E))` for `K` iterations |
 | `LuGraphForceLayout` | How can related vertices be positioned as a readable network? | Directly renderable `float32x2` positions and persistent velocities | `O(V² + E)` per exact force iteration |
 | `LuGraphSpatialForceLayout` | Can distant graph regions be approximated while nearby relationships remain exact? | The existing renderable layout positions plus explicit uniform-grid diagnostics | `Θ(V × G + P + E)` per spatial force iteration |
@@ -735,6 +736,7 @@ import {
   LuGraphConnectedComponents,
   LuGraphDegree,
   LuGraphForceLayout,
+  LuGraphLabelPropagation,
   LuGraphPageRank,
   LuGraphSpatialForceLayout,
   LuGraphTopology
@@ -784,6 +786,12 @@ new LuGraphConnectedComponents({
   output: componentIds,
   iterations: 32,
   converged: componentsConverged
+}).addToGraph(workflow);
+new LuGraphLabelPropagation({
+  topology,
+  output: communityIds,
+  iterations: 32,
+  converged: communitiesConverged
 }).addToGraph(workflow);
 new LuGraphPageRank({
   topology,
