@@ -405,35 +405,46 @@ buffers, textures, and external-image bindings remain caller-owned.
 
 ## `GPUCommandGraphInspector`
 
-`GPUCommandGraphInspector` is a data-only collector for one or more compiled graphs. Register each
-compiled graph once, record synchronous CPU measurements immediately after `encode()`, and request
-optional GPU timestamp readback only after submitting the command buffer:
+`GPUCommandGraphInspector` is a data-only collector for one or more compiled graphs. Its non-owning
+observation handle registers a graph and records synchronous CPU measurements whenever encoding is
+routed through the handle. Optional GPU timestamp readback remains explicit and happens only after
+the caller submits the command buffer:
 
 ```ts
 import {GPUCommandGraphInspector} from '@luma.gl/experimental';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
-inspector.registerGraph(compiled);
+const observation = inspector.observeGraph(compiled);
 
 const commandEncoder = device.createCommandEncoder();
-const encoding = compiled.encode(commandEncoder, {parameters: {time}});
-inspector.recordEncoding(compiled.id, encoding);
+const encoding = observation.encode(commandEncoder, {parameters: {time}});
 device.submit(commandEncoder.finish());
 
 if (encoding.canReadGPUTimings) {
-  await inspector.recordGPUTimings(compiled.id, encoding);
+  await observation.recordGPUTimings(encoding);
 }
 
+// The application remains responsible for any diagnostic-buffer readback.
+observation.recordCounters({candidates, matches});
+
 const snapshot = inspector.getSnapshot();
+observation.detach();
 ```
 
 `getSnapshot()` returns an immutable view of every registered graph in registration order. Each
 graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read
-counts, bounded whole-graph CPU and GPU duration summaries, and per-node summaries in compiled
-schedule order. Duration summaries contain the retained sample count plus latest, p50, and p95
-milliseconds when samples exist. Pass `getNodeGroup` to the constructor to add application-specific
-semantic groups to node snapshots; pass `maxSamples` to bound each retained timing history.
+counts, bounded whole-graph CPU and GPU duration summaries, application-defined scalar counter
+summaries, and per-node summaries in compiled schedule order. Duration and counter summaries contain
+the retained sample count plus latest, p50, and p95 values. Counters remain in first-observed order.
+Pass `getNodeGroup` to the constructor to add application-specific semantic groups to node snapshots;
+pass `maxSamples` to bound every retained history.
 
 The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps
-automatically. `clear()` removes all registrations, while registering a new compiled graph with an
-existing ID replaces its captured metadata and resets its measurements.
+automatically. An observation does not own or destroy its graph. `detach()` stops that observation
+and removes its registration when it is still current; an old handle cannot remove a replacement
+with the same graph ID or publish delayed counters into it. A handle accepts timing reads only for
+encodings it produced and records at most one GPU sample per encoding. `recordCounters()` only
+stores caller-provided finite, non-negative values; it does not read a buffer or synchronize the
+device. `clear()` removes all registrations. The lower-level `registerGraph()`, `recordEncoding()`,
+`recordGPUTimings()`, and `recordCounters()` methods remain available for applications that cannot
+route graph activity through an observation handle.

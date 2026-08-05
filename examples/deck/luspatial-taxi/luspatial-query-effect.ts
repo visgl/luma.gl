@@ -8,6 +8,7 @@ import {
   DrawCommandBuffer,
   GPUCommandGraph,
   GPUCommandGraphInspector,
+  type GPUCommandGraphInspectorObservation,
   type GPUCommandGraphInspectorSnapshot,
   type CompiledGPUCommandGraph
 } from '@luma.gl/experimental';
@@ -69,6 +70,8 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private readonly selectionOverflow: Buffer;
   private readonly buildGraph: CompiledGPUCommandGraph<void>;
   private readonly queryGraph: CompiledGPUCommandGraph<void>;
+  private readonly buildGraphObservation: GPUCommandGraphInspectorObservation<void>;
+  private readonly queryGraphObservation: GPUCommandGraphInspectorObservation<void>;
   private readonly onStats?: (stats: LuSpatialTaxiQueryStats) => void;
   private projection: GPUProjection | null = null;
   private selectionCenter: readonly [number, number] = [-73.9855, 40.758];
@@ -187,18 +190,21 @@ export class LuSpatialTaxiQueryEffect implements Effect {
 
       this.buildGraph = this.ownResource(this.createBuildGraph());
       this.queryGraph = this.ownResource(this.createQueryGraph());
-      this.inspector.registerGraph(this.buildGraph);
-      this.inspector.registerGraph(this.queryGraph);
+      this.buildGraphObservation = this.ownObservation(
+        this.inspector.observeGraph(this.buildGraph)
+      );
+      this.queryGraphObservation = this.ownObservation(
+        this.inspector.observeGraph(this.queryGraph)
+      );
       const commandEncoder = device.createCommandEncoder({id: 'luspatial-taxi-index-build'});
-      const encoding = this.buildGraph.encode(commandEncoder, {parameters: undefined});
-      this.inspector.recordEncoding(this.buildGraph.id, encoding);
+      const encoding = this.buildGraphObservation.encode(commandEncoder, {parameters: undefined});
       this.buildEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
       device.submit(commandEncoder.finish());
       this.publishStats();
       if (encoding.canReadGPUTimings) {
         setTimeout(() => {
           if (!this.destroyed) {
-            void this.inspector.recordGPUTimings(this.buildGraph.id, encoding);
+            void this.buildGraphObservation.recordGPUTimings(encoding);
           }
         }, 0);
       }
@@ -263,8 +269,9 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       ])
     );
 
-    const encoding = this.queryGraph.encode(this.device.commandEncoder, {parameters: undefined});
-    this.inspector.recordEncoding(this.queryGraph.id, encoding);
+    const encoding = this.queryGraphObservation.encode(this.device.commandEncoder, {
+      parameters: undefined
+    });
     this.queryEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
     this.queryInputsChanged = false;
@@ -274,7 +281,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       if (encoding.canReadGPUTimings) {
         setTimeout(() => {
           if (!this.destroyed) {
-            void this.inspector.recordGPUTimings(this.queryGraph.id, encoding);
+            void this.queryGraphObservation.recordGPUTimings(encoding);
           }
         }, 0);
       }
@@ -298,6 +305,11 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private ownResource<T extends DestroyableResource>(resource: T): T {
     this.ownedResources.push(resource);
     return resource;
+  }
+
+  private ownObservation<T extends {detach: () => void}>(observation: T): T {
+    this.ownedResources.push({destroy: () => observation.detach()});
+    return observation;
   }
 
   private destroyOwnedResources(): void {

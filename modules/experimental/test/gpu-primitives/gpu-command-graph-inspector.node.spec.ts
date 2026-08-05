@@ -3,15 +3,24 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
+import type {CommandEncoder} from '@luma.gl/core';
 import {
   GPUCommandGraphInspector,
   type GPUCommandGraphCapabilities,
   type GPUCommandGraphEncodingStats,
   type GPUCommandGraphInspectorEncoding,
   type GPUCommandGraphInspectorGraph,
+  type GPUCommandGraphInspectorObservableGraph,
   type GPUCommandGraphStats,
   type GPUCommandGraphTimingReport
 } from '@luma.gl/experimental';
+
+type ObservationParameters = {
+  cpuTimeMilliseconds: number;
+  gpuTimeMilliseconds: number;
+};
+
+const COMMAND_ENCODER = {} as CommandEncoder;
 
 const GRAPH_STATS: GPUCommandGraphStats = {
   nodeOrder: ['prepare', 'render'],
@@ -99,6 +108,46 @@ test('GPUCommandGraphInspector summarizes bounded CPU and GPU samples', async te
   testCase.end();
 });
 
+test('GPUCommandGraphInspector summarizes bounded scalar counters', testCase => {
+  const inspector = new GPUCommandGraphInspector({maxSamples: 2});
+  inspector.registerGraph(makeGraph('counters'));
+  inspector.recordCounters('counters', {candidates: 30, intersectedCells: 3});
+  inspector.recordCounters('counters', {candidates: 10, intersectedCells: 1});
+  inspector.recordCounters('counters', {candidates: 20, intersectedCells: 2});
+
+  testCase.deepEqual(
+    inspector.getSnapshot().graphs[0].counters,
+    [
+      {
+        id: 'candidates',
+        sampleCount: 2,
+        latestValue: 20,
+        p50Value: 10,
+        p95Value: 20
+      },
+      {
+        id: 'intersectedCells',
+        sampleCount: 2,
+        latestValue: 2,
+        p50Value: 1,
+        p95Value: 2
+      }
+    ],
+    'retains bounded samples and preserves first-observed counter order'
+  );
+  testCase.throws(
+    () => inspector.recordCounters('counters', {valid: 1, invalid: Number.NaN}),
+    /finite, non-negative value/,
+    'rejects invalid counter batches'
+  );
+  testCase.equal(
+    inspector.getSnapshot().graphs[0].counters.length,
+    2,
+    'validates the complete batch before recording any sample'
+  );
+  testCase.end();
+});
+
 test('GPUCommandGraphInspector returns immutable snapshots and copied graph metadata', testCase => {
   const stats = {...GRAPH_STATS, nodeOrder: [...GRAPH_STATS.nodeOrder]};
   const capabilities = {...GRAPH_CAPABILITIES};
@@ -106,6 +155,7 @@ test('GPUCommandGraphInspector returns immutable snapshots and copied graph meta
   const inspector = new GPUCommandGraphInspector();
   inspector.registerGraph(graph);
   inspector.recordEncoding('immutable', makeEncoding(1, 0.25, 0.5));
+  inspector.recordCounters('immutable', {candidates: 12});
 
   stats.nodeOrder[0] = 'changed';
   capabilities.timestampQueries = false;
@@ -120,8 +170,146 @@ test('GPUCommandGraphInspector returns immutable snapshots and copied graph meta
   testCase.ok(Object.isFrozen(graphSnapshot.stats.nodeOrder), 'freezes compiled node order');
   testCase.ok(Object.isFrozen(graphSnapshot.totals), 'freezes graph totals');
   testCase.ok(Object.isFrozen(graphSnapshot.totals.cpu), 'freezes duration summaries');
+  testCase.ok(Object.isFrozen(graphSnapshot.counters), 'freezes the counter list');
+  testCase.ok(Object.isFrozen(graphSnapshot.counters[0]), 'freezes each counter summary');
   testCase.ok(Object.isFrozen(graphSnapshot.nodes), 'freezes the node list');
   testCase.ok(Object.isFrozen(graphSnapshot.nodes[0]), 'freezes each node summary');
+  testCase.end();
+});
+
+test('GPUCommandGraphInspector observes encode and post-submit timing lifecycles', async testCase => {
+  const inspector = new GPUCommandGraphInspector();
+  const graph = makeObservableGraph('observed');
+  const observation = inspector.observeGraph(graph);
+  const encoding = observation.encode(COMMAND_ENCODER, {
+    parameters: {cpuTimeMilliseconds: 8, gpuTimeMilliseconds: 80}
+  });
+  await observation.recordGPUTimings(encoding);
+
+  const graphSnapshot = inspector.getSnapshot().graphs[0];
+  testCase.equal(observation.graph, graph, 'exposes the observed graph without wrapping ownership');
+  testCase.ok(Object.isFrozen(observation), 'returns an immutable observation handle');
+  testCase.equal(graphSnapshot.encodingCount, 1, 'records CPU stats while delegating encode');
+  testCase.equal(graphSnapshot.totals.cpu.latestMilliseconds, 8, 'records delegated CPU time');
+  testCase.equal(
+    graphSnapshot.totals.gpu.latestMilliseconds,
+    80,
+    'records explicit post-submit GPU time without a repeated graph id'
+  );
+
+  observation.detach();
+  observation.detach();
+  observation.encode(COMMAND_ENCODER, {
+    parameters: {cpuTimeMilliseconds: 16, gpuTimeMilliseconds: 160}
+  });
+  testCase.deepEqual(
+    inspector.getSnapshot().graphs,
+    [],
+    'detach is idempotent and stops observation without disabling graph encoding'
+  );
+  testCase.end();
+});
+
+test('GPUCommandGraphInspector observations isolate same-id replacement lifecycles', async testCase => {
+  const inspector = new GPUCommandGraphInspector();
+  const oldObservation = inspector.observeGraph(makeObservableGraph('replaceable'));
+  const oldEncoding = oldObservation.encode(COMMAND_ENCODER, {
+    parameters: {cpuTimeMilliseconds: 3, gpuTimeMilliseconds: 30}
+  });
+  const currentObservation = inspector.observeGraph(makeObservableGraph('replaceable'));
+
+  oldObservation.detach();
+  await oldObservation.recordGPUTimings(oldEncoding);
+  oldObservation.recordCounters({candidates: 99});
+  oldObservation.encode(COMMAND_ENCODER, {
+    parameters: {cpuTimeMilliseconds: 5, gpuTimeMilliseconds: 50}
+  });
+  currentObservation.encode(COMMAND_ENCODER, {
+    parameters: {cpuTimeMilliseconds: 7, gpuTimeMilliseconds: 70}
+  });
+  currentObservation.recordCounters({candidates: 7});
+
+  const graph = inspector.getSnapshot().graphs[0];
+  testCase.equal(graph.encodingCount, 1, 'an old handle cannot record into its replacement');
+  testCase.equal(graph.totals.cpu.latestMilliseconds, 7, 'keeps only the current observation');
+  testCase.equal(
+    graph.totals.gpu.sampleCount,
+    0,
+    'an old handle cannot attach pending timings to its replacement'
+  );
+  testCase.equal(
+    graph.counters[0].latestValue,
+    7,
+    'an old handle cannot publish delayed counters into its replacement'
+  );
+  currentObservation.detach();
+  currentObservation.recordCounters({candidates: 70});
+  testCase.deepEqual(
+    inspector.getSnapshot().graphs,
+    [],
+    'the current handle owns its registration'
+  );
+  testCase.end();
+});
+
+test('GPUCommandGraphInspector observations reject foreign encodings', async testCase => {
+  const inspector = new GPUCommandGraphInspector();
+  const firstObservation = inspector.observeGraph(makeObservableGraph('first'));
+  const secondObservation = inspector.observeGraph(makeObservableGraph('second'));
+  const firstEncoding = firstObservation.encode(COMMAND_ENCODER, {
+    parameters: {cpuTimeMilliseconds: 4, gpuTimeMilliseconds: 40}
+  });
+
+  await secondObservation.recordGPUTimings(firstEncoding);
+  testCase.deepEqual(
+    inspector.getSnapshot().graphs.map(graph => graph.totals.gpu.sampleCount),
+    [0, 0],
+    "does not attribute another observation's timing report to the current graph"
+  );
+  await firstObservation.recordGPUTimings(firstEncoding);
+  testCase.equal(
+    inspector.getSnapshot().graphs[0].totals.gpu.latestMilliseconds,
+    40,
+    'the originating observation can read its own encoding'
+  );
+  firstObservation.detach();
+  secondObservation.detach();
+  testCase.end();
+});
+
+test('GPUCommandGraphInspector observations coalesce repeated timing reads', async testCase => {
+  const inspector = new GPUCommandGraphInspector();
+  let timingReadCount = 0;
+  let resolveTiming: ((report: GPUCommandGraphTimingReport) => void) | undefined;
+  const encoding = makeEncoding(6, 1, 2, undefined, undefined, undefined, () => {
+    timingReadCount++;
+    return new Promise(resolve => {
+      resolveTiming = resolve;
+    });
+  });
+  const graph: GPUCommandGraphInspectorObservableGraph<
+    ObservationParameters,
+    GPUCommandGraphInspectorEncoding
+  > = {
+    ...makeGraph('coalesced'),
+    encode: () => encoding
+  };
+  const observation = inspector.observeGraph(graph);
+  observation.encode(COMMAND_ENCODER, {
+    parameters: {cpuTimeMilliseconds: 6, gpuTimeMilliseconds: 60}
+  });
+
+  const firstRead = observation.recordGPUTimings(encoding);
+  const secondRead = observation.recordGPUTimings(encoding);
+  testCase.equal(timingReadCount, 1, 'starts only one timing read for concurrent calls');
+  resolveTiming?.(makeTimingReport(6, 60, 10, 20));
+  await Promise.all([firstRead, secondRead]);
+  await observation.recordGPUTimings(encoding);
+
+  const graphSnapshot = inspector.getSnapshot().graphs[0];
+  testCase.equal(timingReadCount, 1, 'reuses the completed timing read');
+  testCase.equal(graphSnapshot.totals.gpu.sampleCount, 1, 'records one GPU sample per encoding');
+  observation.detach();
   testCase.end();
 });
 
@@ -173,6 +361,26 @@ function makeGraph(id: string, timestampQueries = true): GPUCommandGraphInspecto
     id,
     stats: {...GRAPH_STATS, nodeOrder: [...GRAPH_STATS.nodeOrder]},
     capabilities: {...GRAPH_CAPABILITIES, timestampQueries}
+  };
+}
+
+function makeObservableGraph(
+  id: string
+): GPUCommandGraphInspectorObservableGraph<
+  ObservationParameters,
+  GPUCommandGraphInspectorEncoding
+> {
+  return {
+    ...makeGraph(id),
+    encode: (_commandEncoder, options) =>
+      makeEncoding(
+        options.parameters.cpuTimeMilliseconds,
+        options.parameters.cpuTimeMilliseconds / 4,
+        options.parameters.cpuTimeMilliseconds / 2,
+        options.parameters.gpuTimeMilliseconds,
+        options.parameters.gpuTimeMilliseconds / 4,
+        options.parameters.gpuTimeMilliseconds / 2
+      )
   };
 }
 
