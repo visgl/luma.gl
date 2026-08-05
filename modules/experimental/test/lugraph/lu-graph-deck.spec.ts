@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {EffectContext} from '@deck.gl/core';
 import {Buffer} from '@luma.gl/core';
@@ -170,6 +170,18 @@ test('luGraph deck.gl renders real source-chunk layers and asynchronously picks 
   canvas.style.height = '240px';
   canvasContext.setDrawingBufferSize(320, 240);
 
+  const framebuffer = device.createFramebuffer({
+    id: 'lugraph-deck-presentation-test-framebuffer',
+    width: 320,
+    height: 240,
+    colorAttachments: [device.preferredColorFormat],
+    depthStencilAttachment: 'depth24plus'
+  });
+  // Shared SwiftShader suites can outlive Dawn's external presentation instance. Retain the real
+  // Deck render pass, layer pipelines, queue submission, and native GPU picking on an owned target.
+  const currentFramebuffer = vi
+    .spyOn(canvasContext, 'getCurrentFramebuffer')
+    .mockReturnValue(framebuffer);
   let deck: ReturnType<typeof createLuGraphExplorerDeck> | undefined;
   const originalShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
   try {
@@ -242,8 +254,14 @@ test('luGraph deck.gl renders real source-chunk layers and asynchronously picks 
     effect.setVertexPosition(0, [0, 0]);
     const positionsReadSpy = vi.spyOn(effect.positions, 'readAsync');
     const importanceReadSpy = vi.spyOn(effect.importance, 'readAsync');
+    const submitSpy = vi.spyOn(device, 'submit');
     try {
       deck.redraw('real WebGPU luGraph deck rendering and picking regression');
+      tapeTest.ok(
+        currentFramebuffer.mock.calls.length > 0,
+        'real Deck rendering targets an owned WebGPU framebuffer instead of a stale surface'
+      );
+      tapeTest.ok(submitSpy.mock.calls.length > 0, 'real Deck layer passes submit GPU commands');
       tapeTest.ok(
         nodeLayer.getModels()[0]?.pipeline,
         'actual node WGSL and vertex pipeline compile'
@@ -287,9 +305,12 @@ test('luGraph deck.gl renders real source-chunk layers and asynchronously picks 
     } finally {
       positionsReadSpy.mockRestore();
       importanceReadSpy.mockRestore();
+      submitSpy.mockRestore();
     }
   } finally {
     deck?.finalize();
+    currentFramebuffer.mockRestore();
+    framebuffer.destroy();
     canvas.width = originalWidth;
     canvas.height = originalHeight;
     if (originalStyle === null) canvas.removeAttribute('style');

@@ -72,18 +72,30 @@ WebGPU-only educational example, not a large-graph performance benchmark: its ex
 
 ### Use luGraph from deck.gl without copying graph buffers
 
-The optional [luGraph + deck.gl network explorer](/examples/deck/lugraph-explorer) demonstrates
-the same resident analytics through a real deck.gl `Effect`, custom node and edge layers,
-`OrthographicView` navigation, GPU neighborhood selection, progressive layout, pinning, and
-asynchronous WebGPU picking. The effect encodes one-time topology, PageRank, and weak components
-followed by per-frame breadth-first selection and force integration into deck.gl's own command
-encoder; deck.gl remains responsible for queue submission.
+**Question: How can an existing deck.gl application explore a graph without converting GPU
+relationships, analytics, or moving node positions into JavaScript objects?**
 
-Node positions are simultaneously the layout's writable storage allocation and the node layer's
-`float32x2` instance vertex attribute. Importance scores, component labels, hop distances, and the
-selection mask remain storage inputs; each nonempty original edge partition gets its own edge layer,
-without concatenation, buffer copies, or per-frame graph readback. Only explicitly requested
-deck.gl picking results cross to JavaScript.
+The optional [luGraph + deck.gl network explorer](/examples/deck/lugraph-explorer) answers that
+question with a real deck.gl `Effect`, custom node and edge `Layer` implementations, an
+`OrthographicView`, and deck.gl's existing interaction and asynchronous WebGPU picking systems.
+Use it when a social-network, service-dependency, fraud-investigation, or citation visualization
+already uses deck.gl and needs GPU graph results to become directly drawable attributes.
+
+The effect first encodes forward and reverse adjacency, normalized PageRank, and weak components.
+Later frames encode bounded neighborhood selection and exact force-directed layout into
+deck.gl's own command encoder; deck.gl remains responsible for queue submission. The writable layout
+allocation is also the node layer's `float32x2` instance vertex attribute. PageRank scores,
+component labels, hop distances, and the selection mask remain GPU storage inputs; each nonempty
+original edge partition gets its own edge layer,
+without concatenation, buffer copies, or per-frame graph readback.
+
+The deterministic example fixture is uploaded once. Selecting, pinning, dragging, and changing
+neighborhood depth write only the necessary interaction controls or coordinates; they do not
+download graph columns. An explicitly requested native deck.gl pick returns the selected original
+vertex identifier to JavaScript. Its implementation and transfer size belong to deck.gl; it is
+separate from the native explorer's custom **8-byte** integer-picking path above. The example uses
+exact `O(V² + E)` layout, not the optional spatial approximation, and does not promise large-graph
+throughput.
 
 The integration lives exclusively under `examples/deck/lugraph-explorer`; neither
 `@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl.
