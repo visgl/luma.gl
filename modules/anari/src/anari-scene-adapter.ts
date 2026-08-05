@@ -228,6 +228,7 @@ export class ANARISceneAdapter {
       background: renderer.getParameter('background') || [0.015, 0.018, 0.038, 1],
       width,
       height,
+      environment: renderer.getParameter('environment'),
       exposure: renderer.getParameter('exposure') ?? 1.35,
       fogColor: renderer.getParameter('fogColor') || [0.025, 0.035, 0.075],
       fogDensity: renderer.getParameter('fogDensity') ?? 0,
@@ -562,6 +563,7 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
       const positions = unwrapArray(parameters['vertex.position']);
       const normals = unwrapArray(parameters['vertex.normal']);
       const textureCoordinates = unwrapArray(parameters['vertex.attribute1']);
+      const secondTextureCoordinates = unwrapArray(parameters['vertex.attribute2']);
       const indices = unwrapArray(parameters['primitive.index']);
       if (!(positions instanceof Float32Array)) {
         throw new Error('Triangle geometry requires vertex.position');
@@ -580,7 +582,10 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
               textureCoordinates instanceof Float32Array
                 ? textureCoordinates
                 : new Float32Array((positions.length / 3) * 2)
-          }
+          },
+          ...(secondTextureCoordinates instanceof Float32Array
+            ? {TEXCOORD_1: {size: 2, value: secondTextureCoordinates}}
+            : {})
         },
         indices:
           indices instanceof Uint16Array || indices instanceof Uint32Array ? indices : undefined

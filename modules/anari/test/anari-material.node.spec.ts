@@ -1,7 +1,7 @@
 import {ANARIDevice} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
-import {makeSceneMaterial} from '../src/anari-scene-adapter';
+import {ANARISceneAdapter, makeSceneMaterial} from '../src/anari-scene-adapter';
 
 test('ANARI material parameters translate into canonical shared PBR uniforms', testContext => {
   const device = new ANARIDevice(new NullDevice({}));
@@ -148,6 +148,104 @@ test('ANARI maps every advanced texture slot to canonical PBR sampler bindings',
     'preserves per-sampler UV transforms for every extension map'
   );
 
+  device.destroy();
+  testContext.end();
+});
+
+test('ANARI preserves optional secondary geometry texture coordinates', testContext => {
+  const graphicsDevice = new NullDevice({});
+  const device = new ANARIDevice(graphicsDevice);
+  const image = graphicsDevice.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
+  const firstTextureCoordinates = new Float32Array([0, 0, 1, 0, 0, 1]);
+  const secondTextureCoordinates = new Float32Array([0.25, 0.5, 0.75, 0.5, 0.5, 1]);
+  const geometry = device.newGeometry('triangle', {
+    'vertex.position': new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    'vertex.attribute1': firstTextureCoordinates,
+    'vertex.attribute2': device.newArray({data: secondTextureCoordinates})
+  });
+  const material = device.newMaterial('physicallyBased', {
+    baseColorTexture: device.newSampler('image2D', {image, textureCoordinateSet: 1})
+  });
+  const surface = device.newSurface({geometry, material});
+  const world = device.newWorld({surface: [surface]});
+  const camera = device.newCamera('perspective', {position: [0, 0, 4]});
+  const renderer = device.newRenderer('default');
+  const frame = device.newFrame({world, camera, renderer, size: [16, 16]});
+  const adapter = new ANARISceneAdapter();
+  const sceneSurface = adapter.makeRenderOptions(frame)?.surfaces[0];
+
+  testContext.equal(
+    sceneSurface?.geometry.attributes['TEXCOORD_0']?.value,
+    firstTextureCoordinates,
+    'the primary texture-coordinate set preserves its canonical geometry semantic'
+  );
+  testContext.equal(
+    sceneSurface?.geometry.attributes['TEXCOORD_1']?.value,
+    secondTextureCoordinates,
+    'retained array handles expose the secondary canonical texture-coordinate set'
+  );
+  testContext.equal(
+    sceneSurface?.material.uniforms?.baseColorUVSet,
+    1,
+    'material samplers select the secondary geometry coordinates'
+  );
+
+  geometry.unsetParameter('vertex.attribute2').commitParameters();
+  testContext.equal(
+    adapter.makeRenderOptions(frame)?.surfaces[0]?.geometry.attributes['TEXCOORD_1'],
+    undefined,
+    'absent secondary coordinates do not allocate a placeholder or enable their shader feature'
+  );
+
+  adapter.destroy();
+  device.destroy();
+  testContext.end();
+});
+
+test('ANARI forwards committed image-based-lighting resources to shared renderers', testContext => {
+  const graphicsDevice = new NullDevice({});
+  const device = new ANARIDevice(graphicsDevice);
+  const environment = {
+    diffuseTexture: graphicsDevice.createTexture({width: 1, height: 1, format: 'rgba8unorm'}),
+    specularTexture: graphicsDevice.createTexture({width: 1, height: 1, format: 'rgba8unorm'}),
+    brdfLUTTexture: graphicsDevice.createTexture({width: 1, height: 1, format: 'rgba8unorm'}),
+    intensity: 1.75,
+    rotation: 0.5
+  };
+  const world = device.newWorld();
+  const camera = device.newCamera('perspective', {position: [0, 0, 4]});
+  const renderer = device.newRenderer('default', {environment});
+  const frame = device.newFrame({world, camera, renderer, size: [16, 16]});
+  const adapter = new ANARISceneAdapter();
+
+  testContext.equal(
+    adapter.makeRenderOptions(frame)?.environment,
+    environment,
+    'caller-owned cubemaps, lookup texture, intensity, and rotation reach the shared scene'
+  );
+
+  const updatedEnvironment = {...environment, intensity: 0.75, rotation: 1.25};
+  renderer.setParameter('environment', updatedEnvironment);
+  testContext.equal(
+    adapter.makeRenderOptions(frame)?.environment,
+    environment,
+    'staged environment changes remain invisible until the renderer is committed'
+  );
+  renderer.commitParameters();
+  testContext.equal(
+    adapter.makeRenderOptions(frame)?.environment,
+    updatedEnvironment,
+    'committed environment changes reach shared forward and deferred renderers'
+  );
+
+  renderer.unsetParameter('environment').commitParameters();
+  testContext.equal(
+    adapter.makeRenderOptions(frame)?.environment,
+    undefined,
+    'removing environment resources restores ordinary direct-light rendering'
+  );
+
+  adapter.destroy();
   device.destroy();
   testContext.end();
 });

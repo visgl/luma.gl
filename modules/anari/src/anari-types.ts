@@ -65,6 +65,7 @@ export type ANARIGeometryParameters = {
   'vertex.normal'?: Float32Array | ANARIArray;
   'vertex.attribute0'?: Float32Array | ANARIArray;
   'vertex.attribute1'?: Float32Array | ANARIArray;
+  'vertex.attribute2'?: Float32Array | ANARIArray;
   'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
   radius?: number;
   height?: number;
@@ -174,6 +175,13 @@ export type ANARICameraParameters = {
 export type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
+  environment?: {
+    diffuseTexture?: Texture;
+    specularTexture?: Texture;
+    brdfLUTTexture?: Texture;
+    intensity?: number;
+    rotation?: number;
+  };
   exposure?: number;
   bloomIntensity?: number;
   bloomThreshold?: number;

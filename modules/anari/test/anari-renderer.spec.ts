@@ -151,6 +151,48 @@ test('ANARI renderer samples PBR image maps on available GPU backends', async te
   testContext.end();
 });
 
+test('ANARI renderer samples optional secondary texture coordinates on GPU backends', async testContext => {
+  for (const graphicsDevice of await getTestDevices()) {
+    const device = new ANARIDevice(graphicsDevice);
+    const image = graphicsDevice.createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+      data: new Uint8Array([224, 160, 96, 255])
+    });
+    const sampler = device.newSampler('image2D', {image, textureCoordinateSet: 1});
+    const geometry = device.newGeometry('triangle', {
+      'vertex.position': new Float32Array([-1, -1, 0, 1, -1, 0, 0, 1, 0]),
+      'vertex.normal': new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+      'vertex.attribute1': new Float32Array([0, 0, 1, 0, 0.5, 1]),
+      'vertex.attribute2': new Float32Array([0.25, 0.5, 0.75, 0.5, 0.5, 1])
+    });
+    const material = device.newMaterial('physicallyBased', {
+      baseColor: [1, 1, 1],
+      baseColorTexture: sampler,
+      clearcoatTexture: sampler
+    });
+    const surface = device.newSurface({geometry, material});
+    const world = device.newWorld({surface: [surface]});
+    const camera = device.newCamera('perspective', {position: [0, 0, 4]});
+    const renderer = device.newRenderer('default');
+    const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
+    const statistics = frame.render();
+    graphicsDevice.submit();
+
+    testContext.equal(
+      statistics.drawCount,
+      1,
+      `${graphicsDevice.type} binds TEXCOORD_1 and compiles the shared secondary-UV shader path`
+    );
+    testContext.equal(statistics.triangleCount, 1, `${graphicsDevice.type} preserves UV1 geometry`);
+
+    frame.destroy();
+    device.destroy();
+  }
+  testContext.end();
+});
+
 test('ANARI renderer delegates masked extension materials to canonical PBR shaders', async testContext => {
   for (const graphicsDevice of await getTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
