@@ -157,6 +157,7 @@ module.exports = {
         enableDescriptions: true,
         includeOrder: [
           '/docs/getting-started',
+          '/docs/capabilities',
           '/docs/tutorials/**',
           '/docs/api-guide/**',
           '/docs/api-reference/**',

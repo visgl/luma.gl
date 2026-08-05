@@ -225,6 +225,23 @@ describe('getting-started onboarding', () => {
     ]);
   });
 
+  test('makes the complete capability overview discoverable from introductory pages', () => {
+    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
+    const documentationOverview = readFileSync(path.join(process.cwd(), 'docs/README.mdx'), 'utf8');
+    const tableOfContents = JSON.parse(
+      readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
+    ) as Array<string | {label?: string}>;
+
+    expect(tableOfContents.slice(0, 3)).toEqual(['README', 'getting-started', 'capabilities']);
+    expect(documentationOverview).toMatch(
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/capabilities")[^>]*>/
+    );
+    expect(onboardingSource).toMatch(
+      /<Link\b(?=[^>]*\bclassName="luma-onboarding__action luma-onboarding__action--secondary")(?=[^>]*\bto="\/docs\/capabilities")[^>]*>/
+    );
+    expect(documentationOverview).not.toMatch(/\b(?:Three\.js|Babylon\.js)\b/i);
+  });
+
   test('validates runnable LLM setup against Installing while keeping onboarding readable', () => {
     const extractionCheckerSource = readFileSync(EXTRACTION_CHECKER_PATH, 'utf8');
 

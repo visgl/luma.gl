@@ -120,6 +120,7 @@ if (llmsTxt.includes('/examples/')) {
 
 const requiredIndexLinks = [
   'docs/getting-started.md',
+  'docs/capabilities.md',
   'docs/tutorials/hello-triangle.md',
   'docs/api-guide.md',
   'docs/api-reference.md',
@@ -136,6 +137,7 @@ const gettingStartedPath = requireFile('docs/getting-started.md');
 const installingPath = requireFile('docs/developer-guide/installing.md');
 const workingWithAiPath = requireFile('docs/developer-guide/working-with-ai.md');
 requireFile('docs.md');
+requireFile('docs/capabilities.md');
 requireFile('docs/api-guide.md');
 requireFile('docs/api-reference.md');
 
