@@ -62,6 +62,35 @@ test('GPUSort radix stably sorts paired uint32 values in both directions', async
   t.end();
 });
 
+test('GPUSort radix processes only the requested significant key bits', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keys = Uint32Array.from([32_767, 12, 0, 4_096, 12, 255, 1]);
+  const values = Uint32Array.from(keys, (_, index) => index);
+  for (const keyBits of [15, 16]) {
+    const result = await runSort(device, keys, values, 'radix', 'ascending', keyBits);
+    const expected = getStableSortedPairs(keys, values, 'ascending');
+    t.deepEqual(result.keys, expected.keys, `${keyBits}-bit radix sorts every key`);
+    t.deepEqual(result.values, expected.values, `${keyBits}-bit radix remains stable`);
+    t.equal(
+      result.nodeOrder.filter(identifier => identifier.endsWith('-classify')).length,
+      keyBits,
+      `${keyBits}-bit radix emits only the required classify passes`
+    );
+    t.equal(
+      result.nodeOrder.includes('sort-radix-final-copy'),
+      keyBits % 2 !== 0,
+      'odd key widths copy their final scratch result into the caller-owned outputs'
+    );
+  }
+  t.end();
+});
+
 test('GPUSort handles empty and single-row inputs', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -307,6 +336,13 @@ test('GPUSort validates layouts, lengths, graph ownership, and output buffers', 
     /separate buffers/,
     'input/output alias is rejected'
   );
+  for (const keyBits of [0, 33, 1.5, Number.NaN]) {
+    t.throws(
+      () => new GPUSort({keys, values, outputKeys, outputValues, keyBits}),
+      /keyBits must be an integer from 1 to 32/,
+      `invalid key width ${keyBits} is rejected`
+    );
+  }
   const unaligned = graph.createDataView(outputKeysHandle, {
     format: 'uint32',
     length: 1,
@@ -338,7 +374,8 @@ async function runSort(
   keys: Uint32Array,
   values: Uint32Array,
   algorithm: GPUSortAlgorithm,
-  direction: GPUSortDirection
+  direction: GPUSortDirection,
+  keyBits?: number
 ): Promise<SortResult> {
   const byteLength = Math.max(keys.length, 1) * Uint32Array.BYTES_PER_ELEMENT;
   const keysBuffer = device.createBuffer({
@@ -373,7 +410,8 @@ async function runSort(
     outputKeys: outputKeyView,
     outputValues: outputValueView,
     algorithm,
-    direction
+    direction,
+    keyBits
   });
   sort.addToGraph(graph);
   const compiled = graph.compile();

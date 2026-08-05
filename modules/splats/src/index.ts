@@ -34,6 +34,10 @@ export {
   type SplatRendererStats
 } from './splat-renderer';
 export {
+  GPUSplatGraphRenderer,
+  type GPUSplatGraphRendererProps
+} from './gpu-splat-graph-renderer';
+export {
   SPLAT_ATTRIBUTE_SHADER_LAYOUT,
   SPLAT_ATTRIBUTE_WGSL_SHADER,
   SPLAT_FS_GLSL,
