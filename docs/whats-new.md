@@ -25,8 +25,32 @@ Target Release Date: Q3, 2026
 - **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering, atlas construction, and Arrow text adapters.
 - **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 
+**@luma.gl/engine**
+
+- **[Shared keyframe animation](/docs/api-guide/engine/animation)** - `AnimationMixer`, `AnimationClip`, `AnimationTrack`, and `AnimationAction` provide reusable bindings, weighted clip blending, crossfades, playback speed, seeking, and once, repeat, or ping-pong looping.
+- **glTF-compatible interpolation** - Shared samplers evaluate `STEP`, `LINEAR`, and `CUBICSPLINE` tracks, including normalized quaternion interpolation, without depending on glTF-specific scene classes.
+- **[Portable morph-target deformation](/docs/api-reference/engine/animation/morph-targets)** - `applyMorphTargets()` and `updateMorphTargetBuffers()` blend position, normal, and tangent targets into existing interleaved GPU buffers while preserving immutable source geometry and tangent handedness.
+
+**@luma.gl/gltf**
+
+- **[Source-faithful physical materials](/docs/api-reference/gltf/gltf-materials)** - One canonical texture-slot registry preserves all 17 supported PBR map slots, extension factors, UV sets, `KHR_texture_transform`, source color spaces, alpha masking, and double-sided materials.
+- **Authored samplers and mipmaps** - glTF and postprocessed loaders.gl sampler representations retain their wrapping, filtering, and mipmap settings; shared texture creation generates requested mip chains on both WebGL and WebGPU.
+- **[Skeletal and morph animation](/docs/api-reference/gltf/gltf-animation)** - Existing joint skinning now supports multiple skins, larger joint palettes, optional bind data, and normalized joint weights. Morph samplers correctly group multi-target weight channels, including cubic-spline data, and animate position, normal, and tangent deformation.
+- **Animated glTF properties** - `KHR_animation_pointer` channels drive supported node transforms, physical-material factors, and texture transforms through the shared engine animation mixer.
+- **Punctual lights and static interchange** - Source directional, point, and spot lights retain authored colors, intensity, and cones; static glTF export round-trips supported materials, all map slots, UV sets, texture transforms, and sampler settings.
+
+**@luma.gl/anari (Experimental)**
+
+- **[Retained physically based rendering](/docs/api-guide/engine/anari-rendering)** - The private ANARI-inspired workspace maps committed handles, staged parameters, instances, cameras, lights, and 17 material texture slots onto shared forward and WebGPU deferred scene renderers, including automatic opaque-scene capture for transmissive materials.
+- **[Optional glTF animation integration](/docs/api-reference/anari/anari-animation)** - The isolated `@luma.gl/anari/gltf` entry point binds imported node hierarchies, material and sampler pointers, and morph-weight tracks to retained objects while committing each changed object at most once per frame.
+- **Source-faithful retained assets** - JSON scenes preserve indexed geometry, both UV sets, tangents, RGBA vertex colors, joint attributes, morph targets, authored samplers, punctual lights, and `OPAQUE`/`MASK`/`BLEND` modes; programmatic renderer parameters can additionally supply caller-owned image-based-lighting textures.
+
 **@luma.gl/experimental**
 
+- **[Shared physical scene rendering](/docs/api-reference/experimental/scene-renderer)** - `SceneRenderer` renders format-independent physically based surfaces on WebGL and WebGPU with reusable instanced geometry, staged material updates, explicit joint palettes, morph deformation, punctual lights, and caller-provided image-based-lighting textures.
+- **[Deferred physical scene rendering](/docs/api-reference/experimental/deferred-scene-renderer)** - `DeferredSceneRenderer` reuses the same scene descriptors through the WebGPU G-buffer and lighting resolve, automatically falling back to the shared forward renderer for unsupported scenes.
+- **[Generated physical lighting environments](/docs/api-reference/experimental/pbr-environment)** - `PBREnvironmentGenerator` and `preparePBREnvironment()` integrate equirectangular source textures into GGX-prefiltered specular cubemap mip chains, diffuse irradiance cubemaps, and split-sum BRDF lookup textures on both WebGL and WebGPU.
+- **Scene-color transmission and volume attenuation** - The shared forward renderer captures opaque scene color automatically for transmissive surfaces, then applies screen-space refraction, roughness, Fresnel response, index of refraction, thickness, and Beer-Lambert attenuation while preserving physically opaque output.
 - **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
 - **OIT resolve pipelines** - A-buffer and weighted-blended order-independent transparency now
   resolve captured fragments through exported `ShaderPassPipeline` factories, allowing WBOIT to
