@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
+import type {RenderPass, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {
   createPBRMaterial,
@@ -10,6 +11,10 @@ import {
   getPBRGeometryDefines,
   getPBRTextureDefines,
   getSceneAlphaMode,
+  PBREnvironmentGenerator,
+  PreparedPBREnvironment,
+  type PreparedScene,
+  preparePBREnvironment,
   type SceneMaterial,
   SceneRenderer,
   type SceneRenderOptions,
@@ -70,8 +75,15 @@ describe('scene rendering package architecture', () => {
 });
 
 class InspectableSceneRenderer extends SceneRenderer {
+  readonly draws: {id: string; scene: PreparedScene}[] = [];
+
   inspect(options: SceneRenderOptions) {
     return this.prepareScene(options);
+  }
+
+  protected override drawPreparedScene(scene: PreparedScene, renderPass: RenderPass): number {
+    this.draws.push({id: renderPass.id, scene});
+    return super.drawPreparedScene(scene, renderPass);
   }
 }
 
@@ -204,6 +216,47 @@ describe('shared PBR material factories', () => {
       ])
     );
   });
+
+  test('specializes scene refraction bindings and roughness-aware IBL independently', () => {
+    const shader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source: PBR_MODEL_WGSL_SHADER,
+      modules: [pbrMaterial, pbrScene],
+      defines: {
+        HAS_NORMALS: true,
+        HAS_UV: true,
+        HAS_INSTANCING: true,
+        USE_MATERIAL_EXTENSIONS: true,
+        USE_IBL: true,
+        USE_SCENE_ENVIRONMENT: true,
+        USE_TEX_LOD: true,
+        USE_TRANSMISSION_FRAMEBUFFER: true
+      }
+    });
+    const reflection = new WgslReflect(shader.source);
+
+    expect(reflection.entry.vertex.map(entry => entry.name)).toEqual(['vertexMain']);
+    expect(reflection.entry.fragment.map(entry => entry.name)).toEqual(['fragmentMain']);
+    expect(shader.source).toContain('pbrScene.environmentMipCount - 1.0');
+    expect(shader.source).toContain('sin(pbrScene.environmentRotation)');
+    expect(shader.source).toContain('max(pbrScene.environmentIntensity, 0.0)');
+    expect(shader.source).toContain('getTransmittedSceneColor(');
+    expect(shader.source).toContain('pbr_transmissionFramebufferSampler');
+    expect(shader.source).toContain('let alpha = clamp(baseColor.a, 0.0, 1.0)');
+  });
+
+  test('retains legacy glTF IBL without requiring scene-only uniforms', () => {
+    const shader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source: PBR_MODEL_WGSL_SHADER,
+      modules: [pbrMaterial],
+      defines: {HAS_NORMALS: true, USE_IBL: true, USE_TEX_LOD: true}
+    });
+
+    expect(shader.source).toContain('let maximumMipLevel = 9.0');
+    expect(shader.source).not.toContain('pbrScene.environmentMipCount');
+    expect(shader.source).not.toContain('pbr_transmissionFramebufferSampler');
+  });
 });
 
 describe('SceneRenderer', () => {
@@ -312,6 +365,305 @@ describe('SceneRenderer', () => {
     } finally {
       renderer.destroy();
       texture.destroy();
+    }
+  });
+
+  test('captures only opaque scene color and binds it only to transmissive models', async () => {
+    const device = await getNullTestDevice();
+    const renderer = new InspectableSceneRenderer(device);
+    const geometry = makeGeometry();
+    const glass: SceneSurface = {
+      id: 'glass-surface',
+      geometry,
+      material: {
+        id: 'glass-material',
+        alphaMode: 'OPAQUE',
+        uniforms: {
+          baseColorFactor: [1, 1, 1, 1],
+          transmissionFactor: 0.9,
+          thicknessFactor: 0.5,
+          attenuationDistance: 1.5,
+          attenuationColor: [0.8, 0.9, 1],
+          ior: 1.45
+        }
+      },
+      transforms: [new Matrix4()]
+    };
+    const opaque: SceneSurface = {
+      id: 'opaque-background',
+      geometry,
+      material: {id: 'opaque-background-material'},
+      transforms: [new Matrix4().translate([0, 0, -1])]
+    };
+    const translucent: SceneSurface = {
+      id: 'blended-background',
+      geometry,
+      material: {id: 'blended-background-material', alphaMode: 'BLEND'},
+      transforms: [new Matrix4().translate([0, 0, -2])]
+    };
+
+    try {
+      const statistics = renderer.render(makeOptions([glass, opaque, translucent]));
+      expect(statistics).toMatchObject({surfaceCount: 3, instanceCount: 3, drawCount: 3});
+      expect(renderer.draws.map(draw => draw.id)).toEqual([
+        'scene-shared-scene-transmission',
+        'scene-shared-scene'
+      ]);
+      expect(renderer.draws[0].scene.surfaces.map(surface => surface.model.id)).toEqual([
+        'opaque-background-model'
+      ]);
+      expect(renderer.draws[1].scene.surfaces.map(surface => surface.model.id)).toEqual([
+        'opaque-background-model',
+        'glass-surface-model',
+        'blended-background-model'
+      ]);
+
+      const opaqueModel = renderer.draws[1].scene.surfaces[0].model;
+      const glassModel = renderer.draws[1].scene.surfaces[1].model;
+      const captureTexture = glassModel.shaderInputs.getBindingValues()
+        .pbr_transmissionFramebufferSampler as Texture;
+      expect(captureTexture).toMatchObject({width: 8, height: 8, format: 'rgba8unorm'});
+      expect(opaqueModel.shaderInputs.getBindingValues()).not.toHaveProperty(
+        'pbr_transmissionFramebufferSampler'
+      );
+      expect(glassModel.parameters.blend).toBe(false);
+      expect(glassModel.parameters.depthWriteEnabled).toBe(true);
+
+      renderer.destroyFrame('shared-scene');
+      expect(captureTexture.destroyed).toBe(true);
+    } finally {
+      renderer.destroy();
+    }
+  });
+
+  test('reuses, resizes, disables, and structurally invalidates scene-color capture', async () => {
+    const device = await getNullTestDevice();
+    const renderer = new InspectableSceneRenderer(device);
+    const surface: SceneSurface = {
+      id: 'resizable-glass',
+      geometry: makeGeometry(),
+      material: {id: 'resizable-glass-material', uniforms: {transmissionFactor: 0.75}},
+      transforms: [new Matrix4()]
+    };
+    const options = makeOptions([surface]);
+
+    try {
+      renderer.render(options);
+      const originalModel = renderer.draws.at(-1)!.scene.surfaces[0].model;
+      const originalTexture = originalModel.shaderInputs.getBindingValues()
+        .pbr_transmissionFramebufferSampler as Texture;
+
+      renderer.render(options);
+      const reusedModel = renderer.draws.at(-1)!.scene.surfaces[0].model;
+      expect(reusedModel).toBe(originalModel);
+      expect(reusedModel.shaderInputs.getBindingValues().pbr_transmissionFramebufferSampler).toBe(
+        originalTexture
+      );
+
+      options.width = 16;
+      options.height = 12;
+      renderer.render(options);
+      const resizedModel = renderer.draws.at(-1)!.scene.surfaces[0].model;
+      const resizedTexture = resizedModel.shaderInputs.getBindingValues()
+        .pbr_transmissionFramebufferSampler as Texture;
+      expect(resizedModel).not.toBe(originalModel);
+      expect(resizedTexture).toMatchObject({width: 16, height: 12});
+      expect(originalTexture.destroyed).toBe(true);
+
+      options.transmission = false;
+      renderer.draws.length = 0;
+      renderer.render(options);
+      expect(renderer.draws).toHaveLength(1);
+      expect(renderer.draws[0].scene.surfaces[0].model).not.toBe(resizedModel);
+      expect(
+        renderer.draws[0].scene.surfaces[0].model.shaderInputs.getBindingValues()
+      ).not.toHaveProperty('pbr_transmissionFramebufferSampler');
+      expect(resizedTexture.destroyed).toBe(true);
+    } finally {
+      renderer.destroy();
+    }
+  });
+
+  test('passes exact specular mip counts without imposing environment bindings on ordinary scenes', async () => {
+    const device = await getNullTestDevice();
+    const renderer = new InspectableSceneRenderer(device);
+    const diffuseTexture = device.createTexture({
+      dimension: 'cube',
+      width: 4,
+      height: 4,
+      format: 'rgba8unorm'
+    });
+    const specularTexture = device.createTexture({
+      dimension: 'cube',
+      width: 8,
+      height: 8,
+      mipLevels: 4,
+      format: 'rgba8unorm'
+    });
+    const brdfLUTTexture = device.createTexture({width: 4, height: 4, format: 'rgba8unorm'});
+    const surface: SceneSurface = {
+      id: 'environment-surface',
+      geometry: makeGeometry(),
+      material: {id: 'environment-material'},
+      transforms: [new Matrix4()]
+    };
+    const options = makeOptions([surface]);
+
+    try {
+      renderer.render(options);
+      const noEnvironmentModel = renderer.draws.at(-1)!.scene.surfaces[0].model;
+      expect(noEnvironmentModel.shaderInputs.getUniformValues().pbrScene).toMatchObject({
+        environmentMipCount: 1
+      });
+
+      options.environment = {diffuseTexture, specularTexture, brdfLUTTexture};
+      renderer.render(options);
+      const environmentModel = renderer.draws.at(-1)!.scene.surfaces[0].model;
+      expect(environmentModel).not.toBe(noEnvironmentModel);
+      expect(environmentModel.shaderInputs.getUniformValues().pbrScene).toMatchObject({
+        environmentMipCount: 4
+      });
+      expect(environmentModel.shaderInputs.getBindingValues()).toMatchObject({
+        pbr_diffuseEnvSampler: diffuseTexture,
+        pbr_specularEnvSampler: specularTexture,
+        pbr_brdfLUT: brdfLUTTexture
+      });
+    } finally {
+      renderer.destroy();
+      diffuseTexture.destroy();
+      specularTexture.destroy();
+      brdfLUTTexture.destroy();
+    }
+  });
+});
+
+describe('PBREnvironmentGenerator', () => {
+  test('prepares complete roughness-mapped cubemaps, irradiance, and BRDF resources', async () => {
+    const device = await getNullTestDevice();
+    const source = device.createTexture({width: 16, height: 8, format: 'rgba8unorm'});
+    const generator = new PBREnvironmentGenerator(device);
+
+    try {
+      const environment = generator.prepare({
+        source,
+        size: 8,
+        irradianceSize: 4,
+        brdfLUTSize: 4,
+        sampleCount: 8,
+        format: 'rgba8unorm',
+        sourceEncoding: 'srgb',
+        intensity: 2,
+        rotation: 0.5
+      });
+
+      expect(environment).toBeInstanceOf(PreparedPBREnvironment);
+      expect(environment.specularTexture).toMatchObject({
+        dimension: 'cube',
+        width: 8,
+        depth: 6,
+        mipLevels: 4
+      });
+      expect(environment.diffuseTexture).toMatchObject({
+        dimension: 'cube',
+        width: 4,
+        depth: 6,
+        mipLevels: 1
+      });
+      expect(environment.brdfLUTTexture).toMatchObject({
+        dimension: '2d',
+        width: 4,
+        mipLevels: 1
+      });
+      expect(environment.intensity).toBe(2);
+      expect(environment.rotation).toBe(0.5);
+
+      environment.destroy();
+      expect(environment.specularTexture.destroyed).toBe(true);
+      expect(environment.diffuseTexture.destroyed).toBe(true);
+      expect(environment.brdfLUTTexture.destroyed).toBe(true);
+      expect(source.destroyed).toBe(false);
+    } finally {
+      generator.destroy();
+      source.destroy();
+    }
+  });
+
+  test('supports one-shot generation and rejects non-equirectangular texture dimensions', async () => {
+    const device = await getNullTestDevice();
+    const source = device.createTexture({width: 4, height: 2, format: 'rgba8unorm'});
+    const cube = device.createTexture({
+      dimension: 'cube',
+      width: 4,
+      height: 4,
+      format: 'rgba8unorm'
+    });
+    const generator = new PBREnvironmentGenerator(device);
+
+    try {
+      expect(() => generator.prepare({source: cube})).toThrow();
+      const environment = preparePBREnvironment(device, {
+        source,
+        size: 2,
+        irradianceSize: 2,
+        brdfLUTSize: 2,
+        sampleCount: 2,
+        format: 'rgba8unorm'
+      });
+      expect(environment.specularTexture.mipLevels).toBe(2);
+      environment.destroy();
+    } finally {
+      generator.destroy();
+      source.destroy();
+      cube.destroy();
+    }
+  });
+
+  test('never manually decodes hardware-sRGB source textures a second time', async () => {
+    const device = await getNullTestDevice();
+    const rawSRGBSource = device.createTexture({
+      width: 4,
+      height: 2,
+      format: 'rgba8unorm'
+    });
+    const hardwareSRGBSource = device.createTexture({
+      width: 4,
+      height: 2,
+      format: 'rgba8unorm-srgb'
+    });
+    const generator = new PBREnvironmentGenerator(device);
+    const prepareOptions = {
+      size: 2,
+      irradianceSize: 2,
+      brdfLUTSize: 2,
+      sampleCount: 2,
+      format: 'rgba8unorm' as const,
+      sourceEncoding: 'srgb' as const
+    };
+
+    try {
+      const rawEnvironment = generator.prepare({...prepareOptions, source: rawSRGBSource});
+      const filterModel = (
+        generator as unknown as {
+          model: {shaderInputs: {getUniformValues(): Record<string, {sourceEncoding: number}>}};
+        }
+      ).model;
+      expect(filterModel.shaderInputs.getUniformValues().pbrEnvironmentFilter.sourceEncoding).toBe(
+        1
+      );
+      rawEnvironment.destroy();
+
+      const hardwareEnvironment = generator.prepare({
+        ...prepareOptions,
+        source: hardwareSRGBSource
+      });
+      expect(filterModel.shaderInputs.getUniformValues().pbrEnvironmentFilter.sourceEncoding).toBe(
+        0
+      );
+      hardwareEnvironment.destroy();
+    } finally {
+      generator.destroy();
+      rawSRGBSource.destroy();
+      hardwareSRGBSource.destroy();
     }
   });
 });

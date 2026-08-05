@@ -288,7 +288,7 @@ export type CreatePBRModelOptions = ModelProps & {
 
 /** Creates a WebGPU/WebGL PBR model shared by retained scenes and format adapters. */
 export function createPBRModel(device: Device, options: CreatePBRModelOptions): Model {
-  const shaderModules = [pbrMaterial, pbrScene, ...(options.modules || [])];
+  const shaderModules = [pbrScene, pbrMaterial, ...(options.modules || [])];
   const modules = shaderModules.filter(
     (module, moduleIndex) =>
       shaderModules.findIndex(candidate => candidate.name === module.name) === moduleIndex

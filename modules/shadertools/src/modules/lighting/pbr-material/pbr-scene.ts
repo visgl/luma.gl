@@ -16,6 +16,7 @@ export type PBRSceneUniforms = {
   toneMapMode?: number;
   environmentIntensity?: number;
   environmentRotation?: number;
+  environmentMipCount?: number;
   framebufferSize?: NumberArray2;
   viewMatrix?: NumberArray16;
   projectionMatrix?: NumberArray16;
@@ -31,6 +32,7 @@ layout(std140) uniform pbrSceneUniforms {
   int toneMapMode;
   float environmentIntensity;
   float environmentRotation;
+  float environmentMipCount;
   vec2 framebufferSize;
   mat4 viewMatrix;
   mat4 projectionMatrix;
@@ -47,6 +49,7 @@ struct pbrSceneUniforms {
   toneMapMode: i32,
   environmentIntensity: f32,
   environmentRotation: f32,
+  environmentMipCount: f32,
   framebufferSize: vec2<f32>,
   viewMatrix: mat4x4<f32>,
   projectionMatrix: mat4x4<f32>
@@ -75,6 +78,7 @@ export const pbrScene = {
     toneMapMode: 'i32',
     environmentIntensity: 'f32',
     environmentRotation: 'f32',
+    environmentMipCount: 'f32',
     framebufferSize: 'vec2<f32>',
     viewMatrix: 'mat4x4<f32>',
     projectionMatrix: 'mat4x4<f32>'
@@ -84,6 +88,7 @@ export const pbrScene = {
     toneMapMode: 2,
     environmentIntensity: 1,
     environmentRotation: Math.PI * 0.5,
+    environmentMipCount: 1,
     framebufferSize: [1, 1],
     viewMatrix: IDENTITY_MATRIX,
     projectionMatrix: IDENTITY_MATRIX
