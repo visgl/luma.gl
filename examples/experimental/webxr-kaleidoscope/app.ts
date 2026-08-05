@@ -7,6 +7,7 @@ import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Geometry, Model, OrbitControls} from '@luma.gl/engine';
 import {
+  OrbitControls,
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
   WebXRManager,
