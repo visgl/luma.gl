@@ -13,6 +13,12 @@ export type {
   LuDataFrameValidity
 } from './lu-data-frame';
 export {LuDataFrameQuery} from './lu-data-frame-query';
+export type {
+  LuDataFrameDerivedColumn,
+  LuDataFrameDerivedColumnFormat,
+  LuDataFrameDerivedColumnFormatForExpression,
+  LuDataFrameDerivedColumnOptions
+} from './lu-data-frame-query';
 export {and, column, literal, LuExpression, not, or, parameter} from './lu-expression';
 export type {
   LuExpressionBinaryOperator,

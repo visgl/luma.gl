@@ -4,6 +4,7 @@
 
 import type {GPUTypeMap} from '@luma.gl/tables';
 import type {LuDataFrame} from './lu-data-frame';
+import type {LuDataFrameDerivedColumn} from './lu-data-frame-query';
 import type {
   LuExpression,
   LuExpressionBinaryOperator,
@@ -34,10 +35,21 @@ export type LuQueryExpressionControl = {
   index: number;
 };
 
+/** One selected numeric expression materialized into a source-aligned GPU vector. @internal */
+export type LuQueryExpressionOutput = {
+  name: string;
+  format: LuQueryScalarFormat;
+  nullable: boolean;
+  value: string;
+  valid: string;
+  index: number;
+};
+
 /** Closed WGSL statements and metadata required by a graph-native dataframe predicate. @internal */
 export type LuQueryExpressionShaderPlan = {
   columns: readonly LuQueryExpressionColumn[];
   controls: readonly LuQueryExpressionControl[];
+  outputs: readonly LuQueryExpressionOutput[];
   statements: readonly string[];
   condition: string;
 };
@@ -48,6 +60,7 @@ type LuQueryExpressionShaderValue = {
   format: LuQueryValueFormat;
   value: string;
   valid: string;
+  nullable: boolean;
 };
 
 type LuQueryExpressionConstant = {
@@ -58,13 +71,38 @@ type LuQueryExpressionConstant = {
 /** Lowers immutable expressions without embedding user-controlled identifiers or values in WGSL. */
 export function makeLuQueryExpressionShaderPlan<T extends GPUTypeMap>(
   source: LuDataFrame<T>,
-  predicates: readonly LuExpression<boolean, string>[]
+  predicates: readonly LuExpression<boolean, string>[],
+  derivedColumns: readonly LuDataFrameDerivedColumn[] = [],
+  selectedColumns: readonly string[] = []
 ): LuQueryExpressionShaderPlan {
-  if (predicates.length === 0) {
+  if (predicates.length === 0 && derivedColumns.length === 0) {
     throw new Error('LuDataFrame filtering requires at least one predicate');
   }
 
-  const planner = new LuQueryExpressionShaderPlanner(source);
+  const planner = new LuQueryExpressionShaderPlanner(source, derivedColumns);
+  const outputs = selectedColumns.flatMap(name => {
+    const derived = derivedColumns.find(column => column.name === name);
+    if (!derived) {
+      return [];
+    }
+    const expression = planner.emitDerived(derived);
+    if (expression.format === 'boolean') {
+      throw new Error('LuDataFrame derived columns require numeric expressions');
+    }
+    return [
+      {
+        name,
+        format: expression.format,
+        nullable: expression.nullable,
+        value: expression.value,
+        valid: expression.valid,
+        index: 0
+      }
+    ];
+  });
+  outputs.forEach((output, index) => {
+    output.index = index;
+  });
   const conditions = predicates.map(predicate => {
     const expression = planner.emit(predicate.node, 'boolean');
     if (expression.format !== 'boolean') {
@@ -76,8 +114,9 @@ export function makeLuQueryExpressionShaderPlan<T extends GPUTypeMap>(
   return {
     columns: planner.columns,
     controls: planner.controls,
+    outputs,
     statements: planner.statements,
-    condition: conditions.join(' && ')
+    condition: conditions.join(' && ') || 'true'
   };
 }
 
@@ -141,10 +180,45 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   private readonly source: LuDataFrame<T>;
   private readonly columnsByName = new Map<string, LuQueryExpressionColumn>();
   private readonly constantsByName = new Map<string, LuQueryExpressionConstant>();
+  private readonly derivedByName: ReadonlyMap<string, LuDataFrameDerivedColumn>;
+  private readonly derivedValues = new Map<string, LuQueryExpressionShaderValue>();
+  private readonly resolvingDerived = new Set<string>();
   private expressionCount = 0;
 
-  constructor(source: LuDataFrame<T>) {
+  constructor(source: LuDataFrame<T>, derivedColumns: readonly LuDataFrameDerivedColumn[]) {
     this.source = source;
+    this.derivedByName = new Map(derivedColumns.map(column => [column.name, column]));
+  }
+
+  emitDerived(column: LuDataFrameDerivedColumn): LuQueryExpressionShaderValue {
+    const existing = this.derivedValues.get(column.name);
+    if (existing) {
+      return existing;
+    }
+    if (this.resolvingDerived.has(column.name)) {
+      throw new Error('LuDataFrame derived column references a cyclic expression');
+    }
+    this.resolvingDerived.add(column.name);
+    try {
+      const inferred = this.inferFormat(column.expression.node);
+      if (inferred === 'boolean') {
+        throw new Error('LuDataFrame derived columns require numeric expressions');
+      }
+      if (column.format && inferred && column.format !== inferred) {
+        throw new Error('LuDataFrame derived column format does not match its expression');
+      }
+      const expression = this.emit(column.expression.node, column.format ?? inferred ?? 'float32');
+      if (
+        expression.format === 'boolean' ||
+        (column.format && expression.format !== column.format)
+      ) {
+        throw new Error('LuDataFrame derived column format does not match its expression');
+      }
+      this.derivedValues.set(column.name, expression);
+      return expression;
+    } finally {
+      this.resolvingDerived.delete(column.name);
+    }
   }
 
   emit(node: LuExpressionNode, expected?: LuQueryValueFormat): LuQueryExpressionShaderValue {
@@ -165,6 +239,14 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   }
 
   private emitColumn(name: string, expected?: LuQueryValueFormat): LuQueryExpressionShaderValue {
+    const derived = this.derivedByName.get(name);
+    if (derived) {
+      const expression = this.emitDerived(derived);
+      if (expected && expected !== expression.format && expected !== 'boolean') {
+        throw new Error('LuDataFrame expression combines incompatible scalar column formats');
+      }
+      return expression;
+    }
     const constant = this.getConstant(name);
     if (constant) {
       if (expected && expected !== constant.format && expected !== 'boolean') {
@@ -180,7 +262,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     const valid = column.nullable
       ? `validity${column.index}[VALIDITY_${column.index}_OFFSET + index] != 0u`
       : 'true';
-    return this.addValue(column.format, value, valid);
+    return this.addValue(column.format, value, valid, column.nullable);
   }
 
   private emitControl(
@@ -209,7 +291,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
           : inferred === 'boolean'
             ? `${valueWord} != 0u`
             : valueWord;
-    return this.addValue(inferred, decoded, validity);
+    return this.addValue(inferred, decoded, validity, value === null || name !== undefined);
   }
 
   private emitUnary(
@@ -221,7 +303,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'not': {
         const operand = this.emit(operandNode, 'boolean');
         this.assertBoolean(operand);
-        return this.addValue('boolean', `!${operand.value}`, operand.valid);
+        return this.addValue('boolean', `!${operand.value}`, operand.valid, operand.nullable);
       }
       case 'is-valid': {
         const operand = this.emit(operandNode, this.inferFormat(operandNode));
@@ -237,7 +319,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
           throw new Error('LuDataFrame negation requires a signed numeric expression');
         }
         const operand = this.emit(operandNode, format);
-        return this.addValue(format, `-${operand.value}`, operand.valid);
+        return this.addValue(format, `-${operand.value}`, operand.valid, operand.nullable);
       }
       default:
         throw new Error('LuDataFrame expression contains an unsupported unary operation');
@@ -262,7 +344,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       const decisiveLeft = operator === 'and' ? `!${left.value}` : left.value;
       const decisiveRight = operator === 'and' ? `!${right.value}` : right.value;
       const valid = `(${left.valid} && ${right.valid}) || (${left.valid} && ${decisiveLeft}) || (${right.valid} && ${decisiveRight})`;
-      return this.addValue('boolean', value, valid);
+      return this.addValue('boolean', value, valid, left.nullable || right.nullable);
     }
 
     const leftFormat = this.inferFormat(leftNode);
@@ -288,13 +370,20 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     const symbol = getLuQueryBinaryOperator(operator);
     const value = `(${left.value} ${symbol} ${right.value})`;
     const valid = `${left.valid} && ${right.valid}`;
-    return this.addValue(arithmetic ? format : 'boolean', value, valid);
+    return this.addValue(
+      arithmetic ? format : 'boolean',
+      value,
+      valid,
+      left.nullable || right.nullable
+    );
   }
 
   private inferFormat(node: LuExpressionNode): LuQueryValueFormat | undefined {
     switch (node.kind) {
       case 'column':
-        return this.getConstant(node.name)?.format ?? this.getColumn(node.name).format;
+        return this.derivedByName.has(node.name)
+          ? this.emitDerived(this.derivedByName.get(node.name)!).format
+          : (this.getConstant(node.name)?.format ?? this.getColumn(node.name).format);
       case 'literal':
       case 'parameter':
         return typeof node.value === 'boolean' ? 'boolean' : undefined;
@@ -375,7 +464,8 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   private addValue(
     format: LuQueryValueFormat,
     source: string,
-    validity: string
+    validity: string,
+    nullable = false
   ): LuQueryExpressionShaderValue {
     const index = this.expressionCount++;
     const value = `expression${index}Value`;
@@ -383,7 +473,7 @@ class LuQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     const type = getLuQueryShaderType(format);
     this.statements.push(`let ${value}: ${type} = ${source};`);
     this.statements.push(`let ${valid}: bool = ${validity};`);
-    return {format, value, valid};
+    return {format, value, valid, nullable};
   }
 
   private assertBoolean(expression: LuQueryExpressionShaderValue): void {

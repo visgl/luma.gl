@@ -15,7 +15,12 @@ import {
   type GPUTypeMap,
   type GPUVectorFormat
 } from '@luma.gl/tables';
-import {LuDataFrameQuery} from './lu-data-frame-query';
+import {
+  LuDataFrameQuery,
+  type LuDataFrameDerivedColumnFormat,
+  type LuDataFrameDerivedColumnFormatForExpression,
+  type LuDataFrameDerivedColumnOptions
+} from './lu-data-frame-query';
 import type {LuExpression} from './lu-expression';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
@@ -166,6 +171,24 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
   ): LuDataFrameQuery<T> {
     this.assertAvailable();
     return new LuDataFrameQuery(this, [predicate], this.columnNames);
+  }
+
+  /** Plans one selected numeric derived column without allocating or submitting GPU work. */
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends keyof T & string,
+    Format extends LuDataFrameDerivedColumnFormat = LuDataFrameDerivedColumnFormatForExpression<
+      T,
+      ReferencedColumns
+    >
+  >(
+    name: Name,
+    expression: LuExpression<number | null, ReferencedColumns>,
+    options: LuDataFrameDerivedColumnOptions<Format> = {}
+  ): LuDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T> {
+    this.assertAvailable();
+    const query = new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames);
+    return query.withColumn<Name, ReferencedColumns, Format>(name, expression, options);
   }
 
   /**

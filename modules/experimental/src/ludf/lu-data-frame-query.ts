@@ -12,41 +12,74 @@ import {
   type LuDataFrameQueryParameters
 } from './lu-query-compiler';
 
+/** Portable scalar storage formats supported by computed dataframe columns. */
+export type LuDataFrameDerivedColumnFormat = 'float32' | 'sint32' | 'uint32';
+
+/** Immutable numerical expression materialized only when its dataframe query is compiled. */
+export type LuDataFrameDerivedColumn = Readonly<{
+  /** Logical dataframe field name, distinct from every existing source and derived field. */
+  name: string;
+  /** Numeric expression referencing currently available source or derived columns. */
+  expression: LuExpression<number | null, string>;
+  /** Optional explicit scalar format, which must agree with the referenced input format. */
+  format?: LuDataFrameDerivedColumnFormat;
+}>;
+
+/** Optional explicit scalar storage metadata for one computed dataframe column. */
+export type LuDataFrameDerivedColumnOptions<
+  Format extends LuDataFrameDerivedColumnFormat = LuDataFrameDerivedColumnFormat
+> = Readonly<{format?: Format}>;
+
+/** Infers a derived scalar format from its inputs, defaulting pure scalar expressions to float32. */
+export type LuDataFrameDerivedColumnFormatForExpression<
+  T extends GPUTypeMap,
+  ReferencedColumns extends keyof T & string
+> = [ReferencedColumns] extends [never]
+  ? 'float32'
+  : Extract<T[ReferencedColumns], LuDataFrameDerivedColumnFormat>;
+
 /**
  * Immutable dataframe query planned entirely on the CPU.
  *
- * Predicates always retain access to their complete source schema, while projection changes only
- * the eventual output columns. Planning borrows its source and never acquires a resource lease;
- * explicit compilation retains the source only for the compiled graph's actual lifetime.
+ * Predicates and derived expressions retain access to their complete source schema, while
+ * projection changes only the eventual output columns. Planning borrows its source and never
+ * acquires a resource lease; explicit compilation retains the source only for the compiled
+ * graph's actual lifetime.
  */
 export class LuDataFrameQuery<
-  T extends GPUTypeMap = GPUTypeMap,
-  SelectedColumns extends keyof T & string = keyof T & string
+  Logical extends GPUTypeMap = GPUTypeMap,
+  SelectedColumns extends keyof Logical & string = keyof Logical & string,
+  Source extends GPUTypeMap = Logical
 > {
   /** Original dataframe whose GPU buffers remain borrowed until explicit compilation. */
-  readonly source: LuDataFrame<T>;
+  readonly source: LuDataFrame<Source>;
   /** Immutable boolean predicates combined in source order. */
   readonly predicates: readonly LuExpression<boolean, string>[];
-  /** Source columns retained in the eventually compiled output dataframe. */
+  /** Source and derived columns retained in the eventually compiled output dataframe. */
   readonly selectedColumns: readonly SelectedColumns[];
+  /** Derived expressions in immutable dependency order, including hidden intermediate values. */
+  readonly derivedColumns: readonly LuDataFrameDerivedColumn[];
 
   constructor(
-    source: LuDataFrame<T>,
+    source: LuDataFrame<Source>,
     predicates: readonly LuExpression<boolean, string>[],
-    selectedColumns: readonly SelectedColumns[]
+    selectedColumns: readonly SelectedColumns[],
+    derivedColumns: readonly LuDataFrameDerivedColumn[] = []
   ) {
-    assertSelectedQueryColumns(source, selectedColumns);
+    const logicalColumns = assertDataFrameDerivedColumns(source, derivedColumns);
+    assertSelectedQueryColumns(selectedColumns, logicalColumns);
     for (const predicate of predicates) {
-      assertDataFrameQueryPredicate(source, predicate, source.columnNames);
+      assertDataFrameQueryPredicate(source, predicate, logicalColumns, logicalColumns);
     }
 
     this.source = source;
     this.predicates = Object.freeze([...predicates]);
     this.selectedColumns = Object.freeze([...selectedColumns]);
+    this.derivedColumns = Object.freeze([...derivedColumns]);
     Object.freeze(this);
   }
 
-  /** Selected source-column names in immutable output-projection order. */
+  /** Selected logical-column names in immutable output-projection order. */
   get columnNames(): readonly SelectedColumns[] {
     return this.selectedColumns;
   }
@@ -54,52 +87,176 @@ export class LuDataFrameQuery<
   /** Adds one boolean predicate without mutating sibling query plans or touching GPU resources. */
   filter<ReferencedColumns extends SelectedColumns>(
     predicate: LuExpression<boolean, ReferencedColumns>
-  ): LuDataFrameQuery<T, SelectedColumns> {
-    assertDataFrameQueryPredicate(this.source, predicate, this.selectedColumns);
-    return new LuDataFrameQuery(this.source, [...this.predicates, predicate], this.selectedColumns);
+  ): LuDataFrameQuery<Logical, SelectedColumns, Source> {
+    const logicalColumns = [
+      ...this.source.columnNames,
+      ...this.derivedColumns.map(({name}) => name)
+    ];
+    assertDataFrameQueryPredicate(this.source, predicate, this.selectedColumns, logicalColumns);
+    return new LuDataFrameQuery<Logical, SelectedColumns, Source>(
+      this.source,
+      [...this.predicates, predicate],
+      this.selectedColumns,
+      this.derivedColumns
+    );
   }
 
-  /** Narrows only the eventual output columns while retaining all source predicate inputs. */
+  /** Narrows only eventual output columns while retaining all predicate and derived dependencies. */
   select<ColumnName extends SelectedColumns>(
     columnNames: readonly ColumnName[]
-  ): LuDataFrameQuery<T, ColumnName> {
-    assertSelectedQueryColumns(this.source, columnNames, this.selectedColumns);
-    return new LuDataFrameQuery(this.source, this.predicates, columnNames);
+  ): LuDataFrameQuery<Logical, ColumnName, Source> {
+    assertSelectedQueryColumns(columnNames, this.selectedColumns);
+    return new LuDataFrameQuery<Logical, ColumnName, Source>(
+      this.source,
+      this.predicates,
+      columnNames,
+      this.derivedColumns
+    );
+  }
+
+  /** Adds one selected derived column without allocating GPU storage or retaining source leases. */
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends SelectedColumns,
+    Format extends LuDataFrameDerivedColumnFormat = LuDataFrameDerivedColumnFormatForExpression<
+      Logical,
+      ReferencedColumns
+    >
+  >(
+    name: Name,
+    expression: LuExpression<number | null, ReferencedColumns>,
+    options: LuDataFrameDerivedColumnOptions<Format> = {}
+  ): LuDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source> {
+    assertDataFrameDerivedColumnName(name);
+    assertDataFrameDerivedExpression(expression, this.selectedColumns);
+
+    const definition: LuDataFrameDerivedColumn = Object.freeze({
+      name,
+      expression,
+      ...(options.format ? {format: options.format} : {})
+    });
+
+    return new LuDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source>(
+      this.source,
+      this.predicates,
+      [...this.selectedColumns, name],
+      [...this.derivedColumns, definition]
+    );
   }
 
   /** Materializes reusable GPU graph passes and compiler-owned selection/index/count outputs. */
   compile(
     graph: GPUCommandGraph<LuDataFrameQueryParameters>
-  ): CompiledLuDataFrameQuery<Pick<T, SelectedColumns>> {
-    return compileLuDataFrameQuery(this.source, this.predicates, this.selectedColumns, graph);
+  ): CompiledLuDataFrameQuery<Pick<Logical, SelectedColumns>> {
+    return compileLuDataFrameQuery<Source, Pick<Logical, SelectedColumns>>(
+      this.source,
+      this.predicates,
+      this.selectedColumns,
+      graph,
+      this.derivedColumns
+    );
   }
 }
 
-/** Rejects nonboolean predicates and unknown or currently unselected source references. */
+/** Rejects nonboolean predicates and unknown or currently unselected logical references. */
 export function assertDataFrameQueryPredicate<T extends GPUTypeMap>(
   source: LuDataFrame<T>,
   predicate: LuExpression<boolean, string>,
-  selectedColumns: readonly (keyof T & string)[]
+  selectedColumns: readonly string[],
+  logicalColumns: readonly string[] = source.columnNames
 ): void {
   if (!(predicate instanceof LuExpression) || !isBooleanExpressionNode(predicate.node)) {
     throw new Error('LuDataFrame filters require a boolean expression');
   }
 
-  const availableNames = new Set<string>(selectedColumns);
-  for (const columnName of getLuExpressionColumnNames(predicate)) {
-    if (!source.schema.fields.some(field => field.name === columnName)) {
+  assertDataFrameExpressionColumns(predicate, selectedColumns, logicalColumns);
+}
+
+/** Validates computed definitions in dependency order and returns all available logical fields. */
+function assertDataFrameDerivedColumns<T extends GPUTypeMap>(
+  source: LuDataFrame<T>,
+  derivedColumns: readonly LuDataFrameDerivedColumn[]
+): string[] {
+  const logicalColumns = [...source.columnNames];
+  const logicalFormats = new Map<string, string | undefined>(
+    source.schema.fields.map(
+      field => [field.name, source.table.gpuColumns[field.name]?.format ?? field.format] as const
+    )
+  );
+
+  for (const derivedColumn of derivedColumns) {
+    assertDataFrameDerivedColumnName(derivedColumn.name);
+    if (logicalFormats.has(derivedColumn.name)) {
+      throw new Error(`LuDataFrame derived column "${derivedColumn.name}" already exists`);
+    }
+    assertDataFrameDerivedExpression(derivedColumn.expression, logicalColumns);
+
+    const referencedFormats = new Set(
+      getLuExpressionColumnNames(derivedColumn.expression).map(columnName =>
+        logicalFormats.get(columnName)
+      )
+    );
+    if (referencedFormats.size > 1) {
+      throw new Error(`LuDataFrame derived column "${derivedColumn.name}" mixes scalar formats`);
+    }
+    const inferredFormat = referencedFormats.values().next().value ?? 'float32';
+    if (
+      inferredFormat !== 'float32' &&
+      inferredFormat !== 'sint32' &&
+      inferredFormat !== 'uint32'
+    ) {
+      throw new Error(`LuDataFrame derived column "${derivedColumn.name}" requires scalar inputs`);
+    }
+    if (derivedColumn.format !== undefined && derivedColumn.format !== inferredFormat) {
+      throw new Error(`LuDataFrame derived column "${derivedColumn.name}" format does not match`);
+    }
+
+    logicalFormats.set(derivedColumn.name, inferredFormat);
+    logicalColumns.push(derivedColumn.name);
+  }
+
+  return logicalColumns;
+}
+
+/** Validates one numerical derived expression against its currently selected logical inputs. */
+function assertDataFrameDerivedExpression(
+  expression: LuExpression<number | null, string>,
+  selectedColumns: readonly string[]
+): void {
+  if (!(expression instanceof LuExpression) || !isNumericExpressionNode(expression.node)) {
+    throw new Error('LuDataFrame derived columns require a numeric expression');
+  }
+
+  assertDataFrameExpressionColumns(expression, selectedColumns, selectedColumns);
+}
+
+/** Rejects unknown and currently hidden expression inputs before touching GPU resources. */
+function assertDataFrameExpressionColumns(
+  expression: LuExpression<any, string>,
+  selectedColumns: readonly string[],
+  logicalColumns: readonly string[]
+): void {
+  const selectedNames = new Set(selectedColumns);
+  const logicalNames = new Set(logicalColumns);
+  for (const columnName of getLuExpressionColumnNames(expression)) {
+    if (!logicalNames.has(columnName)) {
       throw new Error(`LuDataFrame expression column "${columnName}" does not exist`);
     }
-    if (!availableNames.has(columnName)) {
+    if (!selectedNames.has(columnName)) {
       throw new Error(`LuDataFrame expression column "${columnName}" is not selected`);
     }
   }
 }
 
-function assertSelectedQueryColumns<T extends GPUTypeMap>(
-  source: LuDataFrame<T>,
+function assertDataFrameDerivedColumnName(name: string): void {
+  if (typeof name !== 'string' || name.length === 0) {
+    throw new Error('LuDataFrame derived columns require a nonempty name');
+  }
+}
+
+function assertSelectedQueryColumns(
   columnNames: readonly string[],
-  availableColumns: readonly string[] = source.columnNames
+  availableColumns: readonly string[]
 ): void {
   const availableNames = new Set(availableColumns);
   const selectedNames = new Set<string>();
@@ -112,6 +269,27 @@ function assertSelectedQueryColumns<T extends GPUTypeMap>(
       throw new Error(`LuDataFrame query column "${columnName}" cannot be selected more than once`);
     }
     selectedNames.add(columnName);
+  }
+}
+
+function isNumericExpressionNode(node: LuExpressionNode): boolean {
+  switch (node.kind) {
+    case 'column':
+      return true;
+    case 'literal':
+    case 'parameter':
+      return node.value === null || typeof node.value === 'number';
+    case 'unary':
+      return node.operator === 'negate';
+    case 'binary':
+      return (
+        node.operator === 'add' ||
+        node.operator === 'subtract' ||
+        node.operator === 'multiply' ||
+        node.operator === 'divide'
+      );
+    default:
+      return false;
   }
 }
 

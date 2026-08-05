@@ -40,6 +40,7 @@ import './simulation/spectral-ocean-simulation.spec';
 import './geospatial/geospatial-projection-distance.spec';
 import './ludf/lu-data-frame.spec';
 import './ludf/lu-data-frame-query.spec';
+import './ludf/lu-derived-columns.spec';
 import './luraster';
 import './luxfilter';
 import './luproj/luproj.spec';
