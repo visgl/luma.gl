@@ -4694,7 +4694,11 @@ __metadata:
     "@luma.gl/effects": ~9.4.0-alpha.2
     "@luma.gl/engine": ~9.4.0-alpha.2
     "@luma.gl/experimental": ~9.4.0-alpha.2
+    "@luma.gl/gltf": ~9.4.0-alpha.2
     "@luma.gl/shadertools": ~9.4.0-alpha.2
+  peerDependenciesMeta:
+    "@luma.gl/gltf":
+      optional: true
   languageName: unknown
   linkType: soft
 
