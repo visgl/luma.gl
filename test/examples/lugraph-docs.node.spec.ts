@@ -110,7 +110,8 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
       'LuGraphBreadthFirstSearch',
       'LuGraphConnectedComponents',
       'LuGraphPageRank',
-      'LuGraphForceLayout'
+      'LuGraphForceLayout',
+      'LuGraphSpatialForceLayout'
     ]) {
       expect(graphDocumentation, graphOperation).toContain(graphOperation);
     }
@@ -121,6 +122,10 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('weakly connected components');
     expect(packageDocumentation).toContain('normalized PageRank');
     expect(packageDocumentation).toContain('progressive exact force-directed layout');
+    expect(packageDocumentation).toContain('LuGraphSpatialForceLayout');
+    expect(packageDocumentation).toContain('## Overview');
+    expect(packageDocumentation).toContain('## When to use luGraph');
+    expect(packageDocumentation).toContain('flat-grid approximation');
     expect(graphDocumentation).toContain("from '@luma.gl/experimental/lugraph';");
     expect(graphDocumentation).toContain('topology.addToGraph(workflow);');
     expect(graphDocumentation).toContain('const compiled = workflow.compile();');
@@ -175,6 +180,61 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('does not approximate pairwise interactions');
     expect(graphDocumentation).toContain('ForceAtlas2 or Barnes–Hut');
     expect(graphDocumentation).toContain('new LuGraphForceLayout({');
+  });
+
+  test('explains optional spatial approximation, practical use cases, and honest scaling', () => {
+    expect(graphDocumentation).toContain(
+      '## Approximate distant forces with LuGraphSpatialForceLayout'
+    );
+    expect(graphDocumentation).toContain('**Question: How can I make a larger relationship map');
+    expect(graphDocumentation).toContain('nearby pedestrians need individual attention');
+    expect(graphDocumentation).toContain('interactive dependency map');
+    expect(graphDocumentation).toContain('transaction investigation');
+    expect(graphDocumentation).toContain('### Accuracy and spatial controls');
+    expect(graphDocumentation).toContain('### Bounds, buffers, and failure behavior');
+    expect(graphDocumentation).toContain('### Cost and when acceleration helps');
+    expect(graphDocumentation).toContain('population-weighted center of mass');
+    expect(graphDocumentation).toContain('`cellDiagonal / distanceToCellCenter < theta`');
+    expect(graphDocumentation).toContain('default `theta: 0.6`');
+    expect(graphDocumentation).toContain('`theta: 0`');
+    expect(graphDocumentation).toContain('`nearCellRadius`');
+    expect(graphDocumentation).toContain('up to eight surrounding cells');
+    expect(graphDocumentation).toContain('No distant vertex is silently dropped');
+    expect(graphDocumentation).toContain('flat uniform-grid monopole approximation');
+    expect(graphDocumentation).toContain('not hierarchical');
+    expect(graphDocumentation).toContain('Barnes–Hut, ForceAtlas2');
+    expect(graphDocumentation).toContain('not guarantee subquadratic complexity');
+    expect(graphDocumentation).toContain('`Θ(V × G + P + E)`');
+    expect(graphDocumentation).toContain('`Θ(V + G)` caller-owned grid storage');
+    expect(graphDocumentation).toContain('worst case can return to `Θ(V² + E)`');
+    expect(graphDocumentation).toContain('without floating-point atomics');
+  });
+
+  test('documents explicit spatial buffers, complete indexing, and fail-closed ownership', () => {
+    expect(graphDocumentation).toContain(
+      'inclusive `bounds: [minimumX, minimumY, maximumX, maximumY]`'
+    );
+    expect(graphDocumentation).toContain("`cellOffsets`: `GPUVector<'uint32'>`");
+    expect(graphDocumentation).toContain('exactly `G + 1` rows');
+    expect(graphDocumentation).toContain("`vertexIds`: `GPUVector<'uint32'>`");
+    expect(graphDocumentation).toContain("`cellCenters`: `GPUVector<'float32x2'>`");
+    expect(graphDocumentation).toContain('exactly `G` rows');
+    expect(graphDocumentation).toContain("`count`: a one-row `GPUVector<'uint32'>`");
+    expect(graphDocumentation).toContain("`overflow`: a one-row `GPUVector<'uint32'>`");
+    expect(graphDocumentation).toContain('physically distinct buffer allocations');
+    expect(graphDocumentation).toContain('on every spatial force iteration');
+    expect(graphDocumentation).toContain('Bounds do not');
+    expect(graphDocumentation).toContain('expand automatically');
+    expect(graphDocumentation).toContain('`count` smaller than `vertexCount`');
+    expect(graphDocumentation).toContain('it preserves every existing position and clears all');
+    expect(graphDocumentation).toContain(
+      'existing edge-weight columns remain intentionally unused'
+    );
+    expect(graphDocumentation).toContain('new LuGraphSpatialForceLayout({');
+    expect(graphDocumentation).toContain('spatialLayout.addToGraph(workflow);');
+    expect(graphDocumentation).toContain(
+      'Replace the spatial contributor with `layout.addToGraph(workflow)`'
+    );
   });
 
   test('preserves independent MIT ownership and accurate NVIDIA RAPIDS inspiration', () => {
