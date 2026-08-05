@@ -339,9 +339,12 @@ describe('framework capabilities documentation', () => {
     }
 
     expect(anariGuide).not.toMatch(/\bnot\s+skinning\s+or\s+animations\b/i);
-    expect(anariGuide).toMatch(/transform[\s\S]{0,80}texture[\s-]+coordinate\s+animation/i);
+    expect(anariGuide).toMatch(/both\s+UV\s+sets[\s\S]{0,80}KHR_texture_transform/i);
     expect(anariGuide).toMatch(
-      /skeletal\s+animation[\s\S]{0,100}morph\s+targets[\s\S]{0,100}not\s+yet\s+supported/i
+      /joint\s+attributes[\s\S]{0,180}application-provided[\s\S]{0,100}jointMatrices/i
+    );
+    expect(anariGuide).toMatch(
+      /morph\s+targets[\s\S]{0,80}animated\s+morph\s+weights[\s\S]{0,80}automatically/i
     );
   });
 
