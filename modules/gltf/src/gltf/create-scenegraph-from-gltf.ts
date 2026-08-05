@@ -10,6 +10,7 @@ import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {parseGLTFLights} from '../parsers/parse-gltf-lights';
 import {GLTFAnimator} from './gltf-animator';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
+import type {GLTFAnimation} from './animations/animations';
 import {getGLTFExtensionSupport, type GLTFExtensionSupport} from './gltf-extension-support';
 
 export type GLTFScenegraphBounds = {
@@ -33,6 +34,8 @@ export type GLTFScenegraphs = {
   materials: Material[];
   /** Animation controller for glTF animations. */
   animator: GLTFAnimator;
+  /** Parsed source animations, including supported material and texture-transform pointers. */
+  animations: GLTFAnimation[];
   /** Parsed punctual lights from the asset. */
   lights: Light[];
   /** Extensions reported by the asset and whether luma.gl supports them. */
@@ -73,6 +76,7 @@ export function createScenegraphsFromGLTF(
     scenes,
     materials,
     animator,
+    animations,
     lights,
     extensionSupport,
     sceneBounds,
