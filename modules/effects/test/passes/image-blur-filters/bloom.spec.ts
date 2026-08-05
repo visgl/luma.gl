@@ -77,7 +77,10 @@ test('bloomShaderPassPipeline#routing', t => {
   }
   const configurablePipeline = createBloomShaderPassPipeline({
     resolutionScale: 0.5,
-    colorFormat: 'rgba8unorm'
+    colorFormat: 'rgba8unorm',
+    threshold: 0.55,
+    radius: 12,
+    intensity: 1.75
   });
   const configurableTargets = configurablePipeline.renderTargets;
   t.ok(configurableTargets, 'configurable bloom declares intermediate targets');
@@ -101,6 +104,27 @@ test('bloomShaderPassPipeline#routing', t => {
       );
     }
   }
+  t.equal(
+    configurablePipeline.steps.find(step => step.shaderPass.name === 'bloomExtract')?.uniforms?.[
+      'threshold'
+    ],
+    0.55,
+    'configurable bloom applies the requested threshold'
+  );
+  t.equal(
+    configurablePipeline.steps.find(step => step.shaderPass.name === 'bloomBlur')?.uniforms?.[
+      'radius'
+    ],
+    12,
+    'configurable bloom applies the requested blur radius'
+  );
+  t.equal(
+    configurablePipeline.steps.find(step => step.shaderPass.name === 'bloomComposite')?.uniforms?.[
+      'intensity'
+    ],
+    1.75,
+    'configurable bloom applies the requested intensity'
+  );
   const blurPass = bloomShaderPassPipeline.steps.find(
     step => step.shaderPass.name === 'bloomBlur'
   )?.shaderPass;

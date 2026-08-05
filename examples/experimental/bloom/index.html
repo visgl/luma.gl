@@ -2,10 +2,23 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    html,
     body {
-      background: black;
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      overflow: hidden;
+      background: #020617;
       color-scheme: dark;
       margin: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw !important;
+      height: 100vh !important;
     }
 
     #example-panel-container {
