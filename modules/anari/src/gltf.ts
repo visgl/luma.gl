@@ -20,6 +20,7 @@ import {
 import {Matrix4, type NumberArray9} from '@math.gl/core';
 import type {
   ANARICamera,
+  ANARIGeometry,
   ANARIInstance,
   ANARILight,
   ANARIMaterial,
@@ -27,6 +28,7 @@ import type {
 } from './anari-objects';
 import type {
   ANARICameraParameters,
+  ANARIGeometryParameters,
   ANARILightParameters,
   ANARIMaterialParameters
 } from './anari-types';
@@ -46,11 +48,13 @@ export type ANARIGLTFAnimationMappings = {
   materialAlphaModes?: readonly ('OPAQUE' | 'MASK' | 'BLEND' | undefined)[];
   samplerIdentifiers?: Readonly<Record<string, string>>;
   instanceIdentifiers?: Readonly<Record<string, readonly string[]>>;
+  geometryIdentifiers?: Readonly<Record<string, readonly string[]>>;
 };
 
 /** Retained objects supplied by the caller rather than owned by this adapter. */
 export type ANARIAnimationBindings = {
   instances: ReadonlyMap<string, ANARIInstance>;
+  geometries?: ReadonlyMap<string, ANARIGeometry>;
   materials?: ReadonlyMap<string, ANARIMaterial>;
   samplers?: ReadonlyMap<string, ANARISampler>;
   lights?: ReadonlyMap<string, ANARILight>;
@@ -71,6 +75,7 @@ export type ANARIAnimationSceneHandle = {
 };
 
 type RetainedAnimationObject =
+  | ANARIGeometry
   | ANARIInstance
   | ANARIMaterial
   | ANARISampler
@@ -143,6 +148,12 @@ export function makeANARIAnimationDataFromGLTF(
         translation: [node.position[0], node.position[1], node.position[2]],
         ...(rotation ? {rotation} : {}),
         scale: [node.scale[0], node.scale[1], node.scale[2]],
+        ...(sourceNode?.weights || sourceNode?.mesh?.weights
+          ? {weights: [...(sourceNode?.weights || sourceNode?.mesh?.weights || [])]}
+          : {}),
+        ...(mappings.geometryIdentifiers?.[sourceNode?.id || '']
+          ? {geometries: [...mappings.geometryIdentifiers[sourceNode?.id || '']]}
+          : {}),
         ...(sourceNode?.matrix ? {matrix: Array.from(node.matrix)} : {}),
         ...(mappings.instanceIdentifiers?.[identifier]
           ? {instances: mappings.instanceIdentifiers[identifier]}
@@ -189,6 +200,9 @@ export function makeANARIAnimationScene(
       ...(declaration.scale ? {scale: [...declaration.scale]} : {}),
       ...(declaration.matrix ? {matrix: [...declaration.matrix]} : {})
     });
+    if (declaration.weights) {
+      node.userData['morphWeights'] = [...declaration.weights];
+    }
     nodes.set(identifier, node);
   }
 
@@ -232,7 +246,9 @@ export function makeANARIAnimationScene(
             ? node.position
             : target.path === 'rotation'
               ? node.rotation
-              : node.scale,
+              : target.path === 'scale'
+                ? node.scale
+                : (node.userData['morphWeights'] as readonly number[] | undefined) || [],
         setValue: value => {
           if (target.path === 'translation') {
             node.setPosition(value);
@@ -240,6 +256,18 @@ export function makeANARIAnimationScene(
             node.setRotation(value);
           } else if (target.path === 'scale') {
             node.setScale(value);
+          } else if (target.path === 'weights') {
+            node.userData['morphWeights'] = [...value];
+            for (const geometryIdentifier of nodeDeclarations[target.identifier]?.geometries ||
+              []) {
+              const geometry = bindings.geometries?.get(geometryIdentifier);
+              if (geometry) {
+                const pendingValues = pendingObjects.get(geometry) || {};
+                pendingValues['morphWeights'] = [...value];
+                pendingObjects.set(geometry, pendingValues);
+              }
+            }
+            return;
           }
           node.updateMatrix();
           hierarchyChanged = true;
@@ -392,7 +420,9 @@ export function makeANARIAnimationScene(
       if (Object.keys(changedValues).length === 0) {
         continue;
       }
-      if (object.type === 'material') {
+      if (object.type === 'geometry') {
+        (object as ANARIGeometry).setParameters(changedValues as Partial<ANARIGeometryParameters>);
+      } else if (object.type === 'material') {
         (object as ANARIMaterial).setParameters(changedValues as Partial<ANARIMaterialParameters>);
       } else if (object.type === 'light') {
         (object as ANARILight).setParameters(changedValues as Partial<ANARILightParameters>);
@@ -479,9 +509,6 @@ function makeAnimationTracks(
   let baseTransform: ANARIAnimationTrackDescription['baseTransform'];
 
   if (channel.type === 'node') {
-    if (channel.path === 'weights') {
-      return [];
-    }
     target = {
       type: 'node',
       identifier: mappings.nodeIdentifiers?.[channel.targetNodeId] || channel.targetNodeId,

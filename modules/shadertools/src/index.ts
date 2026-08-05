@@ -137,7 +137,8 @@ export type {FilterShaderPluginProps} from './modules/engine/filter/filter';
 export {filterShaderPlugin} from './modules/engine/filter/filter';
 export type {ClipShaderPluginProps} from './modules/engine/clip/clip';
 export {clipShaderPlugin} from './modules/engine/clip/clip';
-export {skin} from './modules/engine/skin/skin';
+export type {SkinProps, SkinUniforms} from './modules/engine/skin/skin';
+export {skin, SKIN_MAX_JOINTS} from './modules/engine/skin/skin';
 
 // lighting
 export {

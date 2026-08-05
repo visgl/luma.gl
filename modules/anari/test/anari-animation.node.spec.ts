@@ -172,15 +172,16 @@ test('ANARI projects glTF node, material, and UV pointer channels without parsin
   testContext.equal(clips.length, 1, 'the parsed source animation becomes one declarative clip');
   testContext.equal(
     clips[0].tracks.length,
-    3,
-    'unsupported morph weights remain explicitly skipped'
+    4,
+    'transform, material, sampler, and morph-weight channels are preserved'
   );
   testContext.deepEqual(
     clips[0].tracks.map(track => track.target),
     [
       {type: 'node', identifier: 'retained-parent', path: 'translation'},
       {type: 'material', identifier: 'retained-material', path: 'baseColor', component: 0},
-      {type: 'sampler', identifier: 'retained-sampler', path: 'offset', component: 1}
+      {type: 'sampler', identifier: 'retained-sampler', path: 'offset', component: 1},
+      {type: 'node', identifier: 'retained-parent', path: 'weights'}
     ],
     'format-owned channels target stable retained scene objects'
   );

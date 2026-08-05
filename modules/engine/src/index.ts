@@ -19,6 +19,8 @@ export type {AnimationClipProps} from './animation/animation-clip';
 export {AnimationClip} from './animation/animation-clip';
 export type {AnimationActionProps, AnimationLoopMode} from './animation/animation-mixer';
 export {AnimationAction, AnimationMixer} from './animation/animation-mixer';
+export type {MorphTargetAttributes} from './animation/morph-targets';
+export {applyMorphTargets, updateMorphTargetBuffers} from './animation/morph-targets';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';

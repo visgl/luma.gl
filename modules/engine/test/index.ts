@@ -27,6 +27,7 @@ import './animation/timeline.spec';
 import './animation/key-frames.spec';
 import './animation/animator.spec';
 import './animation/animation-mixer.spec';
+import './animation/morph-targets.spec';
 
 // Scenegraph
 import './scenegraph/group-node.spec';

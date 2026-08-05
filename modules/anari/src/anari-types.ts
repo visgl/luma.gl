@@ -60,13 +60,25 @@ export type ANARIArrayParameters = {
   dimensions?: readonly number[];
 };
 
+/** CPU-side displacement attributes belonging to one retained morph target. */
+export type ANARIMorphTargetParameters = {
+  POSITION?: Float32Array;
+  NORMAL?: Float32Array;
+  TANGENT?: Float32Array;
+};
+
 export type ANARIGeometryParameters = {
   'vertex.position'?: Float32Array | ANARIArray;
   'vertex.normal'?: Float32Array | ANARIArray;
+  'vertex.tangent'?: Float32Array | ANARIArray;
+  'vertex.joint'?: Uint8Array | Uint16Array | Uint32Array | ANARIArray;
+  'vertex.weight'?: Float32Array | ANARIArray;
   'vertex.attribute0'?: Float32Array | ANARIArray;
   'vertex.attribute1'?: Float32Array | ANARIArray;
   'vertex.attribute2'?: Float32Array | ANARIArray;
   'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
+  morphTargets?: readonly ANARIMorphTargetParameters[];
+  morphWeights?: readonly number[];
   radius?: number;
   height?: number;
   width?: number;
@@ -124,9 +136,15 @@ export type ANARIMaterialParameters = {
   anisotropyTexture?: ANARISampler;
 };
 
+/** Format-independent joint palette retained by one deformable surface. */
+export type ANARISkinParameters = {
+  jointMatrices: Float32Array | readonly number[];
+};
+
 export type ANARISurfaceParameters = {
   geometry: ANARIGeometry;
   material: ANARIMaterial;
+  skin?: ANARISkinParameters;
 };
 
 export type ANARIGroupParameters = {

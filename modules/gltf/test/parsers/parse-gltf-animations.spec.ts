@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {log} from '@luma.gl/core';
-
 import {parseGLTFAnimations} from '@luma.gl/gltf/parsers/parse-gltf-animations';
+import test from 'test/utils/vitest-tape';
 
 function makeAccessor(values: number[], type: 'SCALAR' | 'VEC3' | 'VEC4') {
   const componentsByType = {
@@ -88,6 +87,63 @@ test('gltf#parseGLTFAnimations supports scalar output accessors', t => {
     'scalar keyframe outputs are wrapped as single-element arrays'
   );
 
+  t.end();
+});
+
+test('gltf#parseGLTFAnimations groups scalar morph weights by target count', t => {
+  const gltf = makeBaseGLTF({
+    accessors: [
+      makeAccessor([0, 1], 'SCALAR'),
+      makeAccessor([0.25, 0.75, 0.875, 0.125], 'SCALAR')
+    ] as any,
+    animations: [
+      {
+        channels: [{sampler: 0, target: {node: 0, path: 'weights'}}],
+        samplers: [{input: 0, interpolation: 'LINEAR', output: 1}]
+      }
+    ] as any,
+    nodes: [{id: 'morph-node', mesh: {weights: [0, 0], primitives: [{targets: [{}, {}]}]}}] as any
+  });
+
+  const channels = parseGLTFAnimations(gltf)[0].channels;
+  t.deepEqual(
+    channels[0].sampler.output,
+    [
+      [0.25, 0.75],
+      [0.875, 0.125]
+    ],
+    'groups both AnimatedMorphCube target weights at every keyframe'
+  );
+  t.end();
+});
+
+test('gltf#parseGLTFAnimations groups cubic morph tangents with their target weights', t => {
+  const gltf = makeBaseGLTF({
+    accessors: [
+      makeAccessor([0, 1], 'SCALAR'),
+      makeAccessor([0, 0, 0.125, 0.25, 1, 1, 2, 2, 0.875, 0.625, 0, 0], 'SCALAR')
+    ] as any,
+    animations: [
+      {
+        channels: [{sampler: 0, target: {node: 0, path: 'weights'}}],
+        samplers: [{input: 0, interpolation: 'CUBICSPLINE', output: 1}]
+      }
+    ] as any,
+    nodes: [{id: 'morph-node', mesh: {primitives: [{targets: [{}, {}]}]}}] as any
+  });
+
+  t.deepEqual(
+    parseGLTFAnimations(gltf)[0].channels[0].sampler.output,
+    [
+      [0, 0],
+      [0.125, 0.25],
+      [1, 1],
+      [2, 2],
+      [0.875, 0.625],
+      [0, 0]
+    ],
+    'preserves in-tangent, value, and out-tangent vectors for each morph keyframe'
+  );
   t.end();
 });
 
@@ -226,39 +282,37 @@ test('gltf#parseGLTFAnimations warns specifically for unsupported KHR_animation_
   t.end();
 });
 
-test('gltf#parseGLTFAnimations warns specifically for morph weight pointers', t => {
-  const warnings = captureWarnings(() => {
-    const gltf = makeBaseGLTF({
-      accessors: [makeAccessor([0, 1], 'SCALAR'), makeAccessor([0.25, 0.75], 'SCALAR')] as any,
-      animations: [
-        {
-          channels: [
-            {
-              sampler: 0,
-              target: {
-                path: 'pointer',
-                extensions: {
-                  KHR_animation_pointer: {
-                    pointer: '/nodes/0/weights'
-                  }
+test('gltf#parseGLTFAnimations supports KHR_animation_pointer morph weight channels', t => {
+  const gltf = makeBaseGLTF({
+    accessors: [makeAccessor([0, 1], 'SCALAR'), makeAccessor([0.25, 0.75], 'SCALAR')] as any,
+    animations: [
+      {
+        channels: [
+          {
+            sampler: 0,
+            target: {
+              path: 'pointer',
+              extensions: {
+                KHR_animation_pointer: {
+                  pointer: '/nodes/0/weights'
                 }
               }
             }
-          ],
-          samplers: [{input: 0, interpolation: 'LINEAR', output: 1}]
-        }
-      ] as any,
-      nodes: [{id: 'node-0'}] as any
-    });
-
-    t.deepEqual(parseGLTFAnimations(gltf), [], 'unsupported morph-weight pointer is skipped');
+          }
+        ],
+        samplers: [{input: 0, interpolation: 'LINEAR', output: 1}]
+      }
+    ] as any,
+    nodes: [{id: 'node-0'}] as any
   });
 
-  t.ok(
-    warnings.some(warning =>
-      warning.includes('will be skipped because morph weights are not implemented in GLTFAnimator')
-    ),
-    'warning explains morph weights are not implemented'
+  const animations = parseGLTFAnimations(gltf);
+  t.equal(animations.length, 1, 'preserves the morph pointer clip');
+  t.equal(animations[0].channels[0].type, 'node', 'maps the pointer onto the existing node track');
+  t.equal(
+    animations[0].channels[0].type === 'node' ? animations[0].channels[0].path : '',
+    'weights',
+    'retains morph weight playback'
   );
 
   t.end();

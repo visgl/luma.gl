@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import {type Material, Model, type ModelProps} from '@luma.gl/engine';
-import {pbrMaterial, pbrScene} from '@luma.gl/shadertools';
+import {pbrMaterial, pbrScene, skin} from '@luma.gl/shadertools';
 
 /** WGSL mesh entry points composed with canonical PBR shader modules by {@link createPBRModel}. */
 export const PBR_MODEL_WGSL_SHADER = /* wgsl */ `
@@ -288,11 +288,15 @@ export type CreatePBRModelOptions = ModelProps & {
 
 /** Creates a WebGPU/WebGL PBR model shared by retained scenes and format adapters. */
 export function createPBRModel(device: Device, options: CreatePBRModelOptions): Model {
-  const shaderModules = [pbrMaterial, pbrScene, ...(options.modules || [])];
+  const shaderModules = [pbrScene, pbrMaterial, ...(options.modules || [])];
   const modules = shaderModules.filter(
     (module, moduleIndex) =>
       shaderModules.findIndex(candidate => candidate.name === module.name) === moduleIndex
   );
+  const geometryDefines = getPBRGeometryDefines(options.geometry);
+  if (geometryDefines['HAS_SKIN'] && !modules.some(module => module.name === skin.name)) {
+    modules.push(skin);
+  }
 
   return new Model(device, {
     source: PBR_MODEL_WGSL_SHADER,
@@ -301,7 +305,7 @@ export function createPBRModel(device: Device, options: CreatePBRModelOptions): 
     ...options,
     modules,
     defines: {
-      ...getPBRGeometryDefines(options.geometry),
+      ...geometryDefines,
       ...getPBRTextureDefines(options.material.getResourceBindings()),
       ...options.defines
     }
@@ -318,6 +322,7 @@ export function getPBRGeometryDefines(geometry: ModelProps['geometry']): Record<
     HAS_TANGENTS: Boolean(attributes['TANGENT'] || attributes['tangents']),
     HAS_UV: Boolean(attributes['TEXCOORD_0'] || attributes['texCoords']),
     HAS_UV_1: Boolean(attributes['TEXCOORD_1'] || attributes['texCoords1']),
+    HAS_SKIN: Boolean(attributes['JOINTS_0'] && attributes['WEIGHTS_0']),
     HAS_COLORS: Boolean(colors),
     HAS_RGBA_COLORS: Boolean(colors && 'size' in colors && colors.size === 4)
   };

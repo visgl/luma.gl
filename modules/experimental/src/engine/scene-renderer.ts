@@ -10,13 +10,22 @@ import {
   type RenderPass,
   type Texture
 } from '@luma.gl/core';
-import {type Geometry, type Model, type ModelProps, ShaderInputs} from '@luma.gl/engine';
+import {
+  type Geometry,
+  type Model,
+  type ModelProps,
+  type MorphTargetAttributes,
+  ShaderInputs,
+  updateMorphTargetBuffers
+} from '@luma.gl/engine';
 import {
   type Light,
   type PBRMaterialBindings,
   type PBRMaterialUniforms,
   pbrMaterial,
-  pbrScene
+  pbrScene,
+  type SkinProps,
+  skin
 } from '@luma.gl/shadertools';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import {
@@ -25,7 +34,7 @@ import {
   getPBRMaterialMapUniforms,
   type PBRMaterial
 } from './pbr-material';
-import {createPBRModel} from './pbr-model';
+import {createPBRModel, getPBRGeometryDefines} from './pbr-model';
 
 /** Pipeline-level alpha representation for one retained physically based scene material. */
 export type SceneAlphaMode = 'OPAQUE' | 'MASK' | 'BLEND';
@@ -60,6 +69,12 @@ export type SceneSurface = {
   material: SceneMaterial;
   /** Column-major world matrices; all placements remain in a single instanced draw. */
   transforms: readonly Readonly<NumericArray>[];
+  /** Optional adapter-owned joint palette for geometry with JOINTS_0 and WEIGHTS_0. */
+  skin?: SkinProps;
+  /** Immutable glTF-style displacement attributes for each morph target. */
+  morphTargets?: readonly MorphTargetAttributes[];
+  /** Current morph weights; uniform-only changes never recreate the model. */
+  morphWeights?: readonly number[];
 };
 
 /** Camera state shared by forward and deferred scene renderers. */
@@ -138,6 +153,7 @@ type CompiledSceneSurface = {
   triangleCount: number;
   alphaMode: SceneAlphaMode;
   depth: number;
+  morphWeights?: readonly number[];
 };
 
 type SceneFrameResources = {
@@ -227,6 +243,10 @@ export class SceneRenderer {
 
       const compiledSurface = this.getCompiledSurface(resources, surface, options);
       updateInstanceTransforms(compiledSurface, surface.transforms);
+      if (surface.skin && getPBRGeometryDefines(surface.geometry)['HAS_SKIN']) {
+        compiledSurface.model.shaderInputs.setProps({skin: surface.skin});
+      }
+      updateMorphAttributes(compiledSurface, surface);
       compiledSurface.material.setProps({
         pbrMaterial: {
           ...getPBRMaterialMapUniforms(surface.material.bindings || {}),
@@ -340,6 +360,7 @@ export class SceneRenderer {
       }
 
       const overrides = this.getSurfaceModelOptions(surface, options);
+      const hasSkin = getPBRGeometryDefines(surface.geometry)['HAS_SKIN'];
       const model = createPBRModel(this.device, {
         id: `${surface.id}-model`,
         geometry: surface.geometry,
@@ -348,7 +369,7 @@ export class SceneRenderer {
         attributes,
         bufferLayout,
         instanceCount: surface.transforms.length,
-        shaderInputs: new ShaderInputs({pbrMaterial, pbrScene}),
+        shaderInputs: new ShaderInputs({pbrMaterial, pbrScene, ...(hasSkin ? {skin} : {})}),
         parameters: {
           cullMode: surface.material.doubleSided ? 'none' : 'back',
           depthWriteEnabled: alphaMode !== 'BLEND',
@@ -394,6 +415,23 @@ export class SceneRenderer {
     compiledSurface.source = surface;
     return compiledSurface;
   }
+}
+
+function updateMorphAttributes(compiledSurface: CompiledSceneSurface, surface: SceneSurface): void {
+  if (!surface.morphTargets?.length) {
+    return;
+  }
+
+  const weights = surface.morphWeights || [];
+  if (
+    compiledSurface.morphWeights?.length === weights.length &&
+    compiledSurface.morphWeights.every((weight, index) => weight === weights[index])
+  ) {
+    return;
+  }
+
+  updateMorphTargetBuffers(compiledSurface.model, surface.geometry, surface.morphTargets, weights);
+  compiledSurface.morphWeights = [...weights];
 }
 
 /** Resolves the structural alpha mode, including legacy materials that only supply opacity. */

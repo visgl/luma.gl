@@ -2,24 +2,24 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {log} from '@luma.gl/core';
 import {type GLTFAccessorPostprocessed, type GLTFPostprocessed} from '@loaders.gl/gltf';
+import {log} from '@luma.gl/core';
 import {
-  GLTFAnimationPath,
   type GLTFAnimation,
   type GLTFAnimationChannel,
+  GLTFAnimationPath,
+  type GLTFAnimationSampler,
   type GLTFMaterialAnimationChannel,
   type GLTFMaterialAnimationProperty,
   type GLTFNodeAnimationChannel,
-  type GLTFAnimationSampler,
   type GLTFTextureTransformAnimationChannel
 } from '../gltf/animations/animations';
-import {
-  resolveTextureTransform,
-  resolveTextureTransformSlot,
-  type PBRTextureTransformPath
-} from '../pbr/texture-transform';
 import {getRegisteredGLTFExtensionSupport} from '../gltf/gltf-extension-support';
+import {
+  type PBRTextureTransformPath,
+  resolveTextureTransform,
+  resolveTextureTransformSlot
+} from '../pbr/texture-transform';
 
 import {accessorToTypedArray} from '../webgl-to-webgpu/convert-webgl-attribute';
 
@@ -35,21 +35,33 @@ export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
 
   return gltfAnimations.flatMap((animation, index) => {
     const name = animation.name || `Animation-${index}`;
-    const samplerCache = new Map<number, GLTFAnimationSampler>();
+    const samplerCache = new Map<string, GLTFAnimationSampler>();
     const channels: GLTFAnimationChannel[] = animation.channels.flatMap(({sampler, target}) => {
-      let parsedSampler = samplerCache.get(sampler);
+      const morphTargetCount = getMorphTargetCount(gltf, target);
+      const samplerIdentifier = `${sampler}:${morphTargetCount ?? 0}`;
+      let parsedSampler = samplerCache.get(samplerIdentifier);
       if (!parsedSampler) {
         const gltfSampler = animation.samplers[sampler];
         if (!gltfSampler) {
           throw new Error(`Cannot find animation sampler ${sampler}`);
         }
         const {input, interpolation = 'LINEAR', output} = gltfSampler;
+        const keyframeTimes = accessorToJsArray1D(gltf.accessors[input], accessorCache1D);
+        const keyframeValues = accessorToJsArray2D(gltf.accessors[output], accessorCache2D);
         parsedSampler = {
-          input: accessorToJsArray1D(gltf.accessors[input], accessorCache1D),
+          input: keyframeTimes,
           interpolation,
-          output: accessorToJsArray2D(gltf.accessors[output], accessorCache2D)
+          output:
+            morphTargetCount !== undefined
+              ? groupMorphTargetValues(
+                  keyframeValues,
+                  keyframeTimes.length,
+                  interpolation,
+                  morphTargetCount
+                )
+              : keyframeValues
         };
-        samplerCache.set(sampler, parsedSampler);
+        samplerCache.set(samplerIdentifier, parsedSampler);
       }
 
       const parsedChannel = parseAnimationChannel(gltf, target, parsedSampler);
@@ -146,19 +158,69 @@ function parseNodePointerAnimationChannel(
     );
     return null;
   }
-  if (path === 'weights') {
-    log.warn(
-      `KHR_animation_pointer target ${pointer} will be skipped because morph weights are not implemented in GLTFAnimator`
-    )();
-    return null;
-  }
-
   return {
     type: 'node',
     sampler,
     targetNodeId: targetNode.id,
     path
   };
+}
+
+function getMorphTargetCount(
+  gltf: GLTFPostprocessed,
+  target: {node?: number; path: string; extensions?: Record<string, any>}
+): number | undefined {
+  let nodeIndex: number | undefined;
+  if (target.path === 'weights') {
+    nodeIndex = target.node;
+  } else if (target.path === 'pointer') {
+    const pointer = target.extensions?.['KHR_animation_pointer']?.pointer;
+    const pointerMatch =
+      typeof pointer === 'string' ? /^\/nodes\/(\d+)\/weights$/.exec(pointer) : null;
+    if (!pointerMatch) {
+      return undefined;
+    }
+    nodeIndex = Number(pointerMatch[1]);
+  } else {
+    return undefined;
+  }
+
+  const node = gltf.nodes[nodeIndex ?? 0] as
+    | {
+        weights?: readonly number[];
+        mesh?: number | {weights?: readonly number[]; primitives?: any[]};
+      }
+    | undefined;
+  const mesh = typeof node?.mesh === 'number' ? gltf.meshes[node.mesh] : node?.mesh;
+  return (
+    node?.weights?.length || mesh?.weights?.length || mesh?.primitives?.[0]?.targets?.length || 1
+  );
+}
+
+function groupMorphTargetValues(
+  values: number[][],
+  keyframeCount: number,
+  interpolation: string,
+  declaredTargetCount: number
+): number[][] {
+  const valuesPerKeyframe = interpolation === 'CUBICSPLINE' ? 3 : 1;
+  const inferredTargetCount = values.length / (Math.max(keyframeCount, 1) * valuesPerKeyframe);
+  const targetCount =
+    declaredTargetCount > 1
+      ? declaredTargetCount
+      : Number.isInteger(inferredTargetCount) && inferredTargetCount > 1
+        ? inferredTargetCount
+        : declaredTargetCount;
+  if (targetCount <= 1) {
+    return values;
+  }
+
+  const scalarValues = values.flat();
+  const groupedValues: number[][] = [];
+  for (let offset = 0; offset < scalarValues.length; offset += targetCount) {
+    groupedValues.push(scalarValues.slice(offset, offset + targetCount));
+  }
+  return groupedValues;
 }
 
 function parseMaterialPointerAnimationChannel(

@@ -265,8 +265,8 @@ test('ANARI preserves matte defaults and resolves blend versus mask modes', test
   testContext.equal(makeSceneMaterial(translucent).alphaMode, 'BLEND', 'opacity enables blending');
   testContext.equal(
     makeSceneMaterial(transmissive).alphaMode,
-    'BLEND',
-    'transmission enables existing blend behavior'
+    'OPAQUE',
+    'physical transmission preserves the authored opaque pipeline'
   );
   testContext.equal(
     makeSceneMaterial(opaque).alphaMode,
