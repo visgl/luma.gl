@@ -1,13 +1,13 @@
 ---
 title: Gaussian Splats
-description: Render progressive anisotropic Gaussian splat batches on WebGPU and WebGL2.
+description: Render progressive Gaussian splats through a WebGPU command graph or WebGL2 fallback.
 sidebar_custom_props:
-  description: Render progressive anisotropic Gaussian splat batches on WebGPU and WebGL2.
+  description: Render progressive Gaussian splats through a WebGPU graph or WebGL2 fallback.
   backends: [webgpu, webgl2]
   display: hdr-capable
   difficulty: intermediate
   maturity: experimental
-  topics: [rendering, transparency, data, streaming, hdr]
+  topics: [rendering, transparency, streaming, gpu-graph, hdr]
 ---
 
 import {GaussianSplatsExample} from '@site/src/examples';
@@ -19,8 +19,10 @@ The Gaussian Splats showcase renders a deterministic, colorful scene with the ex
 owned, so additional splats can appear progressively without concatenating or reuploading the
 previously prepared GPU data.
 
-WebGPU uses storage-backed, camera-aware Gaussian rendering. WebGL2 provides an attribute-backed
-fallback using the same public renderer and prepared-data interfaces. The example keeps file
+WebGPU uses a compiled GPU command graph for camera-aware Gaussian projection, visibility,
+transparency ordering, and rendering. Expand **GPU graph inspector** for per-node encoding
+diagnostics, or select **CPU depth ordering** to compare against the original renderer. WebGL2
+provides its existing attribute-backed fallback. The example keeps file
 format parsing separate: loaders.gl owns `.ply`, `.splat`, `.ksplat`, and related loaders, while
 [`@luma.gl/arrow`](/docs/api-reference/arrow) converts Gaussian Apache Arrow batches into the
 framework-independent GPU representation.

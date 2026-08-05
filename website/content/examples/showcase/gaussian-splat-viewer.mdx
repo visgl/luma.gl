@@ -1,13 +1,13 @@
 ---
 title: Gaussian Splat Viewer
-description: Stream complete captured Gaussian splat scenes from Hugging Face on WebGPU and WebGL2.
+description: Stream captured Gaussian splat scenes through a WebGPU command graph or WebGL2 fallback.
 sidebar_custom_props:
-  description: Stream complete captured Gaussian splat scenes from Hugging Face on WebGPU and WebGL2.
+  description: Stream complete Gaussian scenes through a WebGPU graph or WebGL2 fallback.
   backends: [webgpu, webgl2]
   display: hdr-capable
   difficulty: intermediate
   maturity: experimental
-  topics: [rendering, transparency, data, streaming, hdr]
+  topics: [rendering, transparency, streaming, gpu-graph, hdr]
 ---
 
 import {GaussianSplatViewerExample} from '@site/src/examples';
@@ -25,6 +25,13 @@ and `.ksplat` files without replacing the website's existing loaders.gl
 installation. [`@luma.gl/arrow`](/docs/api-reference/arrow) adapts each Apache Arrow record batch
 directly to [`@luma.gl/splats`](/docs/api-reference/splats), preserving batch ownership,
 floating-point HDR radiance, camera-aware transparency, and the WebGL2 fallback.
+
+On WebGPU, completed captures switch from their progressive preview to a compiled **GPU command
+graph**. Projection, visibility, depth ordering, and rendering remain GPU work rather than
+reprojecting hundreds of thousands of source rows on the main thread for every camera movement.
+Expand **GPU graph inspector** to see the real graph nodes, encoding timings, and transient-memory
+reuse. Choose **CPU depth ordering** in the execution selector, or append `?renderer=cpu`, to
+compare against the original renderer. WebGL2 always retains its compatible CPU-ordered fallback.
 
 Append `?scene=truck`, `?scene=drjohnson`, `?scene=playroom`, or `?scene=train-github` to select a
 capture directly. Provide `?source=https://example.com/scene.ply` for another compatible public

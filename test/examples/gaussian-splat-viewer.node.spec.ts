@@ -7,6 +7,10 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 import {
+  getGaussianSplatExecutionMode,
+  makeGaussianSplatInfoHtml
+} from '../../examples/showcase/gaussian-splats/app';
+import {
   GAUSSIAN_SPLAT_SOURCE_CATALOG,
   getLocalGaussianSplatLoadersConfiguration,
   loadLocalGaussianSplatArrowSources,
@@ -23,6 +27,36 @@ afterEach(() => {
 });
 
 describe('published Gaussian splat viewer', () => {
+  test('defaults WebGPU to graph execution while preserving explicit CPU and WebGL fallbacks', () => {
+    expect(getGaussianSplatExecutionMode('webgpu')).toBe('graph');
+    expect(getGaussianSplatExecutionMode('webgpu', '?scene=truck')).toBe('graph');
+    expect(getGaussianSplatExecutionMode('webgpu', '?renderer=graph')).toBe('graph');
+    expect(getGaussianSplatExecutionMode('webgpu', '?renderer=cpu')).toBe('cpu');
+    expect(getGaussianSplatExecutionMode('webgl')).toBe('cpu');
+    expect(getGaussianSplatExecutionMode('webgl', '?renderer=graph')).toBe('cpu');
+  });
+
+  test('exposes the execution selector and graph diagnostics in the shared viewer panel', () => {
+    const viewerPanel = makeGaussianSplatInfoHtml();
+    const viewerSource = readFileSync(
+      path.join(process.cwd(), 'examples/showcase/gaussian-splats/app.ts'),
+      'utf8'
+    );
+    const viewerDocumentation = readFileSync(
+      path.join(process.cwd(), 'website/content/examples/showcase/gaussian-splat-viewer.mdx'),
+      'utf8'
+    );
+
+    expect(viewerPanel).toContain('data-gaussian-splats-pipeline');
+    expect(viewerPanel).toContain('data-gaussian-splats-execution');
+    expect(viewerPanel).toContain('data-gaussian-splats-graph-inspector');
+    expect(viewerSource).toContain('activeRenderer.encode(device.commandEncoder)');
+    expect(viewerSource).toContain('this.activateGraphRenderer()');
+    expect(viewerDocumentation).toContain('GPU command');
+    expect(viewerDocumentation).toContain('?renderer=cpu');
+    expect(viewerDocumentation).toContain('WebGL2');
+  });
+
   test('links the captured-scene viewer while preserving the synthetic showcase', () => {
     const tableOfContents = JSON.parse(
       readFileSync(

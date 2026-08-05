@@ -41,6 +41,8 @@ export type GPUSortProps = {
   algorithm?: GPUSortAlgorithm;
   /** Requested final order. Defaults to `'ascending'`. */
   direction?: GPUSortDirection;
+  /** Number of significant least-significant key bits processed by radix sort. Defaults to `32`. */
+  keyBits?: number;
 };
 
 type BitonicStage = {
@@ -71,6 +73,8 @@ export class GPUSort {
   readonly algorithm: GPUSortAlgorithm;
   /** Final key ordering. */
   readonly direction: GPUSortDirection;
+  /** Significant least-significant key bits processed by the radix implementation. */
+  readonly keyBits: number;
   /** Concrete implementation selected after resolving `'auto'`. */
   readonly resolvedAlgorithm: Exclude<GPUSortAlgorithm, 'auto'>;
 
@@ -88,6 +92,7 @@ export class GPUSort {
     this.outputValues = props.outputValues;
     this.algorithm = props.algorithm ?? 'auto';
     this.direction = props.direction ?? 'ascending';
+    this.keyBits = props.keyBits ?? 32;
 
     for (const [name, view] of [
       ['keys', this.keys],
@@ -102,6 +107,9 @@ export class GPUSort {
     }
     if (!['ascending', 'descending'].includes(this.direction)) {
       throw new Error(`${this.id} direction must be ascending or descending`);
+    }
+    if (!Number.isInteger(this.keyBits) || this.keyBits < 1 || this.keyBits > 32) {
+      throw new Error(`${this.id} keyBits must be an integer from 1 to 32`);
     }
     if (
       this.values.length !== this.keys.length ||
@@ -163,11 +171,18 @@ function validateSeparateWritableBuffers(sort: GPUSort): void {
   }
 }
 
-/** Copies a one-row key/value pair without allocating sort scratch. */
-function addCopyPairPass<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUSort): void {
+/** Copies key/value pairs without allocating additional sort scratch. */
+function addCopyPairPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  sort: GPUSort,
+  inputKeys: GraphDataView<'uint32'> = sort.keys,
+  inputValues: GraphDataView<'uint32'> = sort.values,
+  identifier = 'copy-pair'
+): void {
   const source = /* wgsl */ `
-const KEYS_OFFSET: u32 = ${getViewElementOffset(sort.keys)}u;
-const VALUES_OFFSET: u32 = ${getViewElementOffset(sort.values)}u;
+const ELEMENT_COUNT: u32 = ${sort.keys.length}u;
+const KEYS_OFFSET: u32 = ${getViewElementOffset(inputKeys)}u;
+const VALUES_OFFSET: u32 = ${getViewElementOffset(inputValues)}u;
 const OUTPUT_KEYS_OFFSET: u32 = ${getViewElementOffset(sort.outputKeys)}u;
 const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
 @group(0) @binding(0) var<storage, read> keys: array<u32>;
@@ -175,26 +190,30 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
 @group(0) @binding(2) var<storage, read_write> outputKeys: array<u32>;
 @group(0) @binding(3) var<storage, read_write> outputValues: array<u32>;
 
-@compute @workgroup_size(1) fn main() {
-  outputKeys[OUTPUT_KEYS_OFFSET] = keys[KEYS_OFFSET];
-  outputValues[OUTPUT_VALUES_OFFSET] = values[VALUES_OFFSET];
+@compute @workgroup_size(${RADIX_WORKGROUP_SIZE}) fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>
+) {
+  let index = globalId.x;
+  if (index >= ELEMENT_COUNT) { return; }
+  outputKeys[OUTPUT_KEYS_OFFSET + index] = keys[KEYS_OFFSET + index];
+  outputValues[OUTPUT_VALUES_OFFSET + index] = values[VALUES_OFFSET + index];
 }`;
   addComputationPass(graph, {
-    id: `${sort.id}-copy-pair`,
+    id: `${sort.id}-${identifier}`,
     source,
     resources: [
-      {buffer: sort.keys, usage: 'storage-read'},
-      {buffer: sort.values, usage: 'storage-read'},
+      {buffer: inputKeys, usage: 'storage-read'},
+      {buffer: inputValues, usage: 'storage-read'},
       {buffer: sort.outputKeys, usage: 'storage-write'},
       {buffer: sort.outputValues, usage: 'storage-write'}
     ],
     bindings: {
-      keys: sort.keys,
-      values: sort.values,
+      keys: inputKeys,
+      values: inputValues,
       outputKeys: sort.outputKeys,
       outputValues: sort.outputValues
     },
-    dispatchCount: 1
+    dispatchCount: Math.ceil(sort.keys.length / RADIX_WORKGROUP_SIZE)
   });
 }
 
@@ -373,7 +392,7 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
   });
 }
 
-/** Adds 32 stable least-significant-bit radix partitions and the final output copy if needed. */
+/** Adds stable least-significant-bit radix partitions and the final output copy if needed. */
 function addRadixSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUSort): void {
   const scratchKeys = createTransientView(
     graph,
@@ -390,7 +409,7 @@ function addRadixSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUS
   let currentKeys = sort.keys;
   let currentValues = sort.values;
 
-  for (let bit = 0; bit < 32; bit++) {
+  for (let bit = 0; bit < sort.keyBits; bit++) {
     const flags = createTransientView(
       graph,
       `${sort.id}-radix-bit-${bit}-flags`,
@@ -424,6 +443,10 @@ function addRadixSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUS
     );
     currentKeys = nextKeys;
     currentValues = nextValues;
+  }
+
+  if (sort.keyBits % 2 !== 0) {
+    addCopyPairPass(graph, sort, currentKeys, currentValues, 'radix-final-copy');
   }
 }
 

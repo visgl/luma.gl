@@ -41,6 +41,31 @@ renderer automatically applies Reinhard highlight compression on standard dynami
 preserves extended WebGPU presentation output, and supports explicit `exposure` and `toneMapping`
 controls.
 
+## WebGPU command-graph rendering
+
+`GPUSplatGraphRenderer` is a WebGPU-only alternative for large captured scenes. Its compiled GPU
+command graph projects and culls each borrowed source batch, globally sorts camera-dependent depth
+keys, and renders every visible Gaussian with one GPU-driven indirect draw:
+
+```ts
+import {GPUSplatGraphRenderer} from '@luma.gl/splats';
+
+const renderer = new GPUSplatGraphRenderer(webgpuDevice, {
+  data: preparedBatches,
+  viewportSize: [width, height]
+});
+
+const commandEncoder = webgpuDevice.createCommandEncoder();
+renderer.encode(commandEncoder);
+webgpuDevice.submit(commandEncoder.finish());
+```
+
+Projection, visibility, ordering, and the indirect instance count remain on the GPU; rendering does
+not read results back or sort source rows on the CPU. Original source batches remain independently
+owned and unchanged. Only camera-dependent projected records, depth keys, sort scratch, and the
+indirect command are owned by the graph renderer. Use `SplatRenderer` for WebGL2 or when CPU
+ordering is explicitly preferred.
+
 Keep format parsing in `@loaders.gl/splats`, Apache Arrow conversion and GPU upload in
 `@luma.gl/arrow`, and deck.gl-specific layers in downstream adapters. The luma.gl splat renderer
 consumes framework-neutral GPU data.

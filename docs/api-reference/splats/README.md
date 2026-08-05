@@ -37,6 +37,38 @@ nextSplatBatch.destroy();
 but never destroys caller-owned splat data. Appending new batches preserves their original order
 and does not concatenate source data or reupload existing batches.
 
+## WebGPU command-graph renderer
+
+`GPUSplatGraphRenderer` is a WebGPU-only renderer designed for large streamed captures:
+
+```ts
+import {GPUSplatGraphRenderer} from '@luma.gl/splats';
+
+const renderer = new GPUSplatGraphRenderer(webgpuDevice, {
+  data: preparedBatches,
+  viewportSize: [width, height]
+});
+
+const commandEncoder = webgpuDevice.createCommandEncoder();
+const encoding = renderer.encode(commandEncoder);
+webgpuDevice.submit(commandEncoder.finish());
+
+console.log(encoding?.stats.nodeCount, renderer.stats);
+```
+
+The compiled command graph projects and culls each original source batch into explicitly
+renderer-owned, camera-dependent records. One stable global radix sort orders all batches together,
+while GPU-written indirect draw arguments ensure that one render pass draws only visible rows. The
+graph processes 16 significant depth-key bits instead of executing the full 32-bit radix schedule.
+There are no per-frame CPU row projections, CPU depth sorts, sorted-index uploads, or implicit GPU
+readbacks.
+
+Source `GPUSplatData` objects remain borrowed, retain their original batch boundaries, and must
+outlive the renderer. Derived projected records, sort keys, graph scratch, per-batch uniforms, and
+indirect commands are explicitly owned by the graph renderer. HDR floating-point source colors,
+anisotropic covariance, opacity thresholds, exposure, and tone mapping are preserved. Continue to
+use `SplatRenderer` for WebGL2 devices or when comparing against CPU-based ordering.
+
 ## Source columns and rendering
 
 `SplatSource` contains framework-independent, decoded typed arrays. Positions and linear
