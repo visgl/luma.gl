@@ -13,6 +13,7 @@ type ExampleSidebarEntry =
 
 const HOMEPAGE_SOURCE_PATH = path.join(process.cwd(), 'website/src/pages/index.jsx');
 const HOMEPAGE_STYLES_PATH = path.join(process.cwd(), 'website/src/pages/index.module.css');
+const WEBSITE_CONFIGURATION_PATH = path.join(process.cwd(), 'website/docusaurus.config.js');
 const EXAMPLE_CARD_SOURCE_PATH = path.join(
   process.cwd(),
   'website/src/components/example-card.tsx'
@@ -46,25 +47,68 @@ describe('homepage navigation', () => {
 
   test('introduces getting started as a zero-install guided discovery experience', () => {
     const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
+    const websiteConfiguration = readFileSync(WEBSITE_CONFIGURATION_PATH, 'utf8');
+    const homepageStyles = readFileSync(HOMEPAGE_STYLES_PATH, 'utf8');
+    const projectNameRule = homepageStyles.match(/\.projectName\s*\{([^}]*)\}/);
 
+    expect(websiteConfiguration).toContain('WebGPU and WebGL2 for visualization and compute');
+    expect(websiteConfiguration).not.toContain('WebGPU and WebGL2 API for visualization');
+    expect(homepageSource).toContain('and massive data visualizations');
     expect(homepageSource).toContain('Start with a guided tour. No installation required.');
     expect(homepageSource).toContain('Explore live examples');
     expect(homepageSource).toContain('Choose your starting point');
+    expect(projectNameRule).not.toBeNull();
+    expect(projectNameRule![1]).toContain('letter-spacing: -0.045em;');
+    expect(projectNameRule![1]).toContain('line-height: 0.96;');
   });
 
-  test('connects the example gallery to the guided tour and first tutorial with base-aware links', () => {
-    const examplesIndexSource = readFileSync(EXAMPLES_INDEX_SOURCE_PATH, 'utf8');
+  test('reveals the flagship examples with an accessible, first-fold discovery cue', () => {
+    const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
+    const homepageStyles = readFileSync(HOMEPAGE_STYLES_PATH, 'utf8');
+    const discoveryCueRule = homepageStyles.match(/\.discoveryCue\s*\{([^}]*)\}/);
+    const reducedMotionStyles = homepageStyles.split('@media (prefers-reduced-motion: reduce)')[1];
 
-    expect(examplesIndexSource).toMatch(
-      /const\s+gettingStartedUrl\s*=\s*useBaseUrl\(\s*['"]\/docs\/getting-started['"]\s*\)/
+    expect(homepageSource).toMatch(
+      /<a\b(?=[^>]*\bclassName=\{styles\.discoveryCue\})(?=[^>]*\bhref="#flagship-examples")(?=[^>]*\baria-label="Explore the live examples and GPU capabilities below")[^>]*>/
     );
-    expect(examplesIndexSource).toMatch(
-      /const\s+firstTriangleUrl\s*=\s*useBaseUrl\(\s*['"]\/docs\/tutorials\/hello-triangle['"]\s*\)/
+    expect(homepageSource).toContain('Explore what’s below');
+    expect(homepageSource).toContain('Build with luma.gl');
+    expect(homepageSource).toContain('See what your GPU can do.');
+    expect(homepageSource).toMatch(
+      /<span\b(?=[^>]*\bclassName=\{styles\.discoveryCueArrow\})(?=[^>]*\baria-hidden="true")[^>]*>/
     );
-    expect(examplesIndexSource).toContain('New here? Take the guided tour');
-    expect(examplesIndexSource).toContain('Draw your first triangle');
-    expect(examplesIndexSource).toMatch(/<a\b[^>]*\bhref=\{gettingStartedUrl\}[^>]*>/);
-    expect(examplesIndexSource).toMatch(/<a\b[^>]*\bhref=\{firstTriangleUrl\}[^>]*>/);
+    expect(homepageSource).toMatch(
+      /<section\b(?=[^>]*\bclassName=\{styles\.flagshipSection\})(?=[^>]*\bid="flagship-examples")[^>]*>/
+    );
+    expect(discoveryCueRule).not.toBeNull();
+    expect(discoveryCueRule![1]).toMatch(/\bmin-height:\s*44px\s*;/);
+    expect(discoveryCueRule![1]).toMatch(/\bbottom:\s*max\([^;]*100svh[^;]*\)\s*;/);
+    expect(homepageStyles).toMatch(/\.discoveryCue:focus-visible\s*\{/);
+    expect(homepageStyles).toMatch(
+      /\.flagshipSection\s*\{[^}]*\bscroll-margin-top:\s*calc\(var\(--ifm-navbar-height/
+    );
+    expect(reducedMotionStyles).toMatch(/\.discoveryCueArrow\s*\{\s*animation:\s*none\s*;/);
+    expect(reducedMotionStyles).toMatch(/\.discoveryCue\s*\{\s*transition:\s*none\s*;/);
+  });
+
+  test('keeps the example gallery focused on straightforward search and filtering', () => {
+    const examplesIndexSource = readFileSync(EXAMPLES_INDEX_SOURCE_PATH, 'utf8');
+    const examplesLandingSource = readFileSync(
+      path.join(EXAMPLE_CONTENT_DIRECTORY, 'index.mdx'),
+      'utf8'
+    );
+
+    expect(examplesIndexSource).toContain('aria-label="Find examples"');
+    expect(examplesIndexSource).toContain('>Find examples</p>');
+    expect(examplesIndexSource).toContain('Search by name, topic, graphics API, or difficulty.');
+    expect(examplesIndexSource).toContain('{catalog.length} examples');
+    expect(examplesIndexSource).toContain("'Featured examples'");
+    expect(examplesIndexSource).not.toContain('New here?');
+    expect(examplesIndexSource).not.toContain('Draw your first triangle');
+    expect(examplesIndexSource).not.toContain('experiences');
+    expect(examplesLandingSource).toContain('>Examples</h1>');
+    expect(examplesLandingSource).not.toContain('laboratory');
+    expect(examplesLandingSource).not.toContain('luma-example-catalog-capabilities');
   });
 
   test('continues from the community showcase into first-party discovery and live examples', () => {

@@ -38,26 +38,6 @@
   line-height: 1.7;
 }
 
-.catalogContainer :global(.luma-example-catalog-capabilities) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1.3rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.catalogContainer :global(.luma-example-catalog-capability) {
-  border: 1px solid var(--ifm-color-emphasis-300);
-  border-radius: 999px;
-  background: var(--ifm-background-surface-color);
-  color: var(--ifm-color-emphasis-800);
-  font-size: 0.7rem;
-  font-weight: 640;
-  line-height: 1.1;
-  padding: 0.4rem 0.62rem;
-}
-
 .demoContainer {
   position: absolute;
   overflow: hidden !important;
