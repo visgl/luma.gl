@@ -154,13 +154,17 @@ test('SceneRenderer refracts captured opaque color while preserving opaque trans
         makePhysicalRenderOptions(device, [glassSurface, backgroundSurface], framebuffer)
       );
       device.submit();
-      const pixel = await readPhysicalTestPixel(colorTexture, 16, 16);
-      const red = colorTexture.format.startsWith('bgra') ? pixel[2] : pixel[0];
-      const green = pixel[1];
-
       testCase.equal(statistics.drawCount, 2, `${device.type} counts only final scene draws`);
-      testCase.ok(red > green * 2, `${device.type} refracts captured red opaque scene color`);
-      testCase.equal(pixel[3], 255, `${device.type} keeps physical transmission opaque`);
+
+      if (supportsPhysicalPixelReadback(device)) {
+        const pixel = await readPhysicalTestPixel(colorTexture, 16, 16);
+        const red = colorTexture.format.startsWith('bgra') ? pixel[2] : pixel[0];
+        const green = pixel[1];
+        testCase.ok(red > green * 2, `${device.type} refracts captured red opaque scene color`);
+        testCase.equal(pixel[3], 255, `${device.type} keeps physical transmission opaque`);
+      } else {
+        testCase.comment('software WebGPU renders transmission without unsupported pixel readback');
+      }
     } finally {
       renderer.destroy();
       framebuffer.destroy();
@@ -214,25 +218,30 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
           3,
           `${device.type} generates all mips`
         );
-        const specularPixel = await readPhysicalTestPixel(environment.specularTexture, 0, 0);
-        const roughSpecularPixel = await readPhysicalTestPixel(
-          environment.specularTexture,
-          0,
-          0,
-          2
-        );
-        const diffusePixel = await readPhysicalTestPixel(environment.diffuseTexture, 0, 0);
-        const brdfPixel = await readPhysicalTestPixel(environment.brdfLUTTexture, 2, 2);
-        testCase.ok(specularPixel[0] > specularPixel[1], `${device.type} filters source radiance`);
-        testCase.ok(
-          Math.abs(specularPixel[1] - roughSpecularPixel[1]) > 5,
-          `${device.type} integrates different radiance at rough specular mip levels`
-        );
-        testCase.ok(
-          diffusePixel[0] > diffusePixel[1],
-          `${device.type} integrates diffuse irradiance`
-        );
-        testCase.ok(brdfPixel[0] > 0, `${device.type} integrates the split-sum BRDF lookup`);
+        if (supportsPhysicalPixelReadback(device)) {
+          const specularPixel = await readPhysicalTestPixel(environment.specularTexture, 0, 0);
+          const roughSpecularPixel = await readPhysicalTestPixel(
+            environment.specularTexture,
+            0,
+            0,
+            2
+          );
+          const diffusePixel = await readPhysicalTestPixel(environment.diffuseTexture, 0, 0);
+          const brdfPixel = await readPhysicalTestPixel(environment.brdfLUTTexture, 2, 2);
+          testCase.ok(
+            specularPixel[0] > specularPixel[1],
+            `${device.type} filters source radiance`
+          );
+          testCase.ok(
+            Math.abs(specularPixel[1] - roughSpecularPixel[1]) > 5,
+            `${device.type} integrates different radiance at rough specular mip levels`
+          );
+          testCase.ok(
+            diffusePixel[0] > diffusePixel[1],
+            `${device.type} integrates diffuse irradiance`
+          );
+          testCase.ok(brdfPixel[0] > 0, `${device.type} integrates the split-sum BRDF lookup`);
+        }
 
         const surface: SceneSurface = {
           id: `${device.type}-environment-surface`,
@@ -262,16 +271,19 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
           sourceEncoding: 'srgb'
         });
         try {
-          const linearSourcePixel = await readPhysicalTestPixel(environment.diffuseTexture, 0, 0);
-          const convertedSourcePixel = await readPhysicalTestPixel(
-            srgbEnvironment.diffuseTexture,
-            0,
-            0
-          );
-          testCase.ok(
-            convertedSourcePixel[0] < linearSourcePixel[0],
-            `${device.type} converts sRGB source radiance exactly once`
-          );
+          let convertedSourcePixel: Uint8Array | undefined;
+          if (supportsPhysicalPixelReadback(device)) {
+            const linearSourcePixel = await readPhysicalTestPixel(environment.diffuseTexture, 0, 0);
+            convertedSourcePixel = await readPhysicalTestPixel(
+              srgbEnvironment.diffuseTexture,
+              0,
+              0
+            );
+            testCase.ok(
+              convertedSourcePixel[0] < linearSourcePixel[0],
+              `${device.type} converts sRGB source radiance exactly once`
+            );
+          }
 
           const hardwareSRGBSource = device.createTexture({
             id: `${device.type}-hardware-srgb-environment`,
@@ -291,15 +303,17 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
               sourceEncoding: 'srgb'
             });
             try {
-              const hardwareConvertedPixel = await readPhysicalTestPixel(
-                hardwareSRGBEnvironment.diffuseTexture,
-                0,
-                0
-              );
-              testCase.ok(
-                Math.abs(hardwareConvertedPixel[0] - convertedSourcePixel[0]) <= 2,
-                `${device.type} avoids double-decoding hardware sRGB environment textures`
-              );
+              if (convertedSourcePixel) {
+                const hardwareConvertedPixel = await readPhysicalTestPixel(
+                  hardwareSRGBEnvironment.diffuseTexture,
+                  0,
+                  0
+                );
+                testCase.ok(
+                  Math.abs(hardwareConvertedPixel[0] - convertedSourcePixel[0]) <= 2,
+                  `${device.type} avoids double-decoding hardware sRGB environment textures`
+                );
+              }
             } finally {
               hardwareSRGBEnvironment.destroy();
             }
@@ -370,6 +384,15 @@ async function getLiveRenderingDevices(): Promise<Device[]> {
 function isSoftwareBackedWebGLDevice(device: Device): boolean {
   return (
     device.type === 'webgl' &&
+    (device.info.gpu === 'software' ||
+      device.info.gpuType === 'cpu' ||
+      Boolean(device.info.fallback))
+  );
+}
+
+function supportsPhysicalPixelReadback(device: Device): boolean {
+  return !(
+    device.type === 'webgpu' &&
     (device.info.gpu === 'software' ||
       device.info.gpuType === 'cpu' ||
       Boolean(device.info.fallback))
