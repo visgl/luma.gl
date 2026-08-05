@@ -248,9 +248,9 @@ export class GPUCommandGraph<Parameters = void> {
   /**
    * Declares a caller-owned buffer that can be supplied now or for each encoding.
    *
-   * Represent one physical buffer with one logical handle. Reuse that handle for multiple views;
-   * distinct imported handles and their per-encoding overrides must resolve to distinct physical
-   * buffers because graph hazards are tracked by handle identity.
+   * Represent one physical buffer with one logical handle whenever a graph access may write to
+   * it. Distinct active imported handles may share a physical buffer only when every graph access
+   * is read-only because write hazards are tracked by handle identity.
    *
    * @param descriptor Required capacity and usage.
    * @param defaultBuffer Optional default binding used when an encoding supplies no override.
@@ -731,6 +731,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private readonly textures: Map<string, GraphTextureHandle>;
   private readonly externalTextures: Map<string, GraphExternalTextureHandle>;
   private readonly compiledNodes: CompiledNode<Parameters>[];
+  private readonly activeImportedBufferHandles = new Set<GraphBufferHandle>();
+  private readonly writableImportedBufferHandles = new Set<GraphBufferHandle>();
   private readonly transientBuffers: Map<GraphBufferHandle, Buffer>;
   private readonly transientTextures: Map<GraphTextureHandle, Texture>;
   private readonly bufferTransientAllocations: BufferTransientAllocation[];
@@ -750,6 +752,23 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     this.textures = props.textures;
     this.externalTextures = props.externalTextures;
     this.compiledNodes = props.compiledNodes;
+    for (const {node} of this.compiledNodes) {
+      for (const resource of node.resources ?? []) {
+        if (isGraphBufferUse(resource)) {
+          const handle = getBufferHandle(resource.buffer);
+          if (!handle.transient) {
+            this.activeImportedBufferHandles.add(handle);
+            if (
+              resource.usage === 'storage-write' ||
+              resource.usage === 'storage-read-write' ||
+              resource.usage === 'copy-destination'
+            ) {
+              this.writableImportedBufferHandles.add(handle);
+            }
+          }
+        }
+      }
+    }
     this.transientBuffers = props.transientBuffers;
     this.transientTextures = props.transientTextures;
     this.bufferTransientAllocations = props.bufferTransientAllocations;
@@ -763,7 +782,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
    *
    * Imported resources are resolved from per-encoding overrides first, then from defaults supplied
    * at graph construction. Buffer overrides for distinct handles must not alias the same physical
-   * buffer. This method records only; it does not finish or submit the encoder.
+   * buffer when either handle is written. This method records only; it does not finish or submit
+   * the encoder.
    *
    * @param commandEncoder Encoder that receives all graph commands.
    * @param options Per-encoding parameters and optional imported-resource replacements.
@@ -987,6 +1007,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     overrides: Record<string, GraphImportedBuffer>
   ): Map<GraphBufferHandle, Buffer> {
     const resolved = new Map<GraphBufferHandle, Buffer>();
+    const activePhysicalBuffers = new Map<object, GraphBufferHandle>();
     for (const [id, handle] of this.buffers) {
       if (handle.transient) {
         continue;
@@ -996,7 +1017,29 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         throw new Error(`GPUCommandGraph imported buffer "${id}" is required`);
       }
       validateImportedBuffer(importedBuffer, handle, this.device);
-      resolved.set(handle, getCoreBuffer(importedBuffer));
+      const coreBuffer = getCoreBuffer(importedBuffer);
+      if (this.activeImportedBufferHandles.has(handle)) {
+        const physicalHandle = coreBuffer.handle;
+        const physicalBuffer =
+          (typeof physicalHandle === 'object' && physicalHandle !== null) ||
+          typeof physicalHandle === 'function'
+            ? physicalHandle
+            : coreBuffer;
+        const previousHandle = activePhysicalBuffers.get(physicalBuffer);
+        if (
+          previousHandle &&
+          (this.writableImportedBufferHandles.has(previousHandle) ||
+            this.writableImportedBufferHandles.has(handle))
+        ) {
+          throw new Error(
+            `GPUCommandGraph imported buffers "${previousHandle.id}" and "${id}" resolve to the same physical buffer`
+          );
+        }
+        if (!previousHandle) {
+          activePhysicalBuffers.set(physicalBuffer, handle);
+        }
+      }
+      resolved.set(handle, coreBuffer);
     }
     for (const id of Object.keys(overrides)) {
       const handle = this.buffers.get(id);

@@ -360,6 +360,144 @@ test('GPUSort validates layouts, lengths, graph ownership, and output buffers', 
   t.end();
 });
 
+test('GPUSort rejects borrowed physical-buffer aliases before encoding either algorithm', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  for (const algorithm of ['bitonic', 'radix'] as const) {
+    const keysBuffer = makeReadableSortBuffer(device, `${algorithm}-keys`, [4, 1, 3, 2]);
+    const borrowedKeysBuffer = device.createBuffer({
+      id: `${algorithm}-borrowed-keys`,
+      handle: keysBuffer.handle,
+      byteLength: keysBuffer.byteLength,
+      usage: keysBuffer.usage,
+      _isHandleBorrowed: true
+    });
+    const valuesBuffer = makeReadableSortBuffer(device, `${algorithm}-values`, [40, 10, 30, 20]);
+    const outputKeysBuffer = makeReadableSortBuffer(device, `${algorithm}-output-keys`, 4);
+    const outputValuesBuffer = makeReadableSortBuffer(device, `${algorithm}-output-values`, 4);
+    const graph = new GPUCommandGraph(device, {id: `${algorithm}-physical-alias`});
+    const sort = new GPUSort({
+      id: `${algorithm}-physical-alias-sort`,
+      keys: importView(graph, 'keys', keysBuffer, 4),
+      values: importView(graph, 'values', valuesBuffer, 4),
+      outputKeys: importView(graph, 'output-keys', borrowedKeysBuffer, 4),
+      outputValues: importView(graph, 'output-values', outputValuesBuffer, 4),
+      algorithm
+    });
+    sort.addToGraph(graph);
+    const compiled = graph.compile();
+    const rejectedEncoder = device.createCommandEncoder({id: `${algorithm}-rejected-alias`});
+
+    t.throws(
+      () => compiled.encode(rejectedEncoder, {parameters: undefined}),
+      /keys.*output-keys.*same physical buffer/i,
+      `${algorithm} rejects distinct borrowed wrappers resolving to one physical GPUBuffer`
+    );
+    rejectedEncoder.destroy();
+    t.deepEqual(
+      await readUint32SortBuffer(keysBuffer, 4),
+      [4, 1, 3, 2],
+      `${algorithm} leaves caller-owned input unchanged`
+    );
+
+    const validEncoder = device.createCommandEncoder({id: `${algorithm}-valid-sort`});
+    compiled.encode(validEncoder, {
+      parameters: undefined,
+      buffers: {'output-keys': outputKeysBuffer}
+    });
+    device.submit(validEncoder.finish());
+    const [sortedKeys, sortedValues] = await Promise.all([
+      readUint32SortBuffer(outputKeysBuffer, 4),
+      readUint32SortBuffer(outputValuesBuffer, 4)
+    ]);
+    t.deepEqual(sortedKeys, [1, 2, 3, 4], `${algorithm} accepts a later distinct output override`);
+    t.deepEqual(sortedValues, [10, 20, 30, 40], `${algorithm} preserves paired payload values`);
+
+    compiled.destroy();
+    const importedBuffers = [
+      keysBuffer,
+      borrowedKeysBuffer,
+      valuesBuffer,
+      outputKeysBuffer,
+      outputValuesBuffer
+    ];
+    tAssertImportedBuffersAlive(importedBuffers);
+    borrowedKeysBuffer.destroy();
+    t.deepEqual(
+      await readUint32SortBuffer(keysBuffer, 4),
+      [4, 1, 3, 2],
+      `${algorithm} borrowed-wrapper destruction leaves the physical GPUBuffer intact`
+    );
+    for (const buffer of [keysBuffer, valuesBuffer, outputKeysBuffer, outputValuesBuffer]) {
+      buffer.destroy();
+    }
+  }
+
+  t.end();
+});
+
+test('GPUBatchSort rejects physically aliased output overrides before encoding', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keysBuffer = makeReadableSortBuffer(device, 'batch-alias-keys', [3, 1, 2]);
+  const valuesBuffer = makeReadableSortBuffer(device, 'batch-alias-values', [30, 10, 20]);
+  const outputKeysBuffer = makeReadableSortBuffer(device, 'batch-alias-output-keys', 3);
+  const outputValuesBuffer = makeReadableSortBuffer(device, 'batch-alias-output-values', 3);
+  const graph = new GPUCommandGraph(device, {id: 'batch-sort-physical-alias'});
+  const sort = new GPUBatchSort({
+    id: 'batch-sort-physical-alias-sort',
+    keys: makeImportedGraphVector(graph, 'batch-keys', keysBuffer, 3),
+    values: makeImportedGraphVector(graph, 'batch-values', valuesBuffer, 3),
+    outputKeys: makeImportedGraphVector(graph, 'batch-output-keys', outputKeysBuffer, 3),
+    outputValues: makeImportedGraphVector(graph, 'batch-output-values', outputValuesBuffer, 3)
+  });
+  sort.addToGraph(graph);
+  const compiled = graph.compile();
+  const rejectedEncoder = device.createCommandEncoder({id: 'batch-sort-rejected-alias'});
+
+  t.throws(
+    () =>
+      compiled.encode(rejectedEncoder, {
+        parameters: undefined,
+        buffers: {'batch-output-keys': keysBuffer}
+      }),
+    /batch-keys.*batch-output-keys.*same physical buffer/i,
+    'rejects an encoding-time output override that aliases an active input chunk'
+  );
+  rejectedEncoder.destroy();
+  t.deepEqual(
+    await readUint32SortBuffer(keysBuffer, 3),
+    [3, 1, 2],
+    'rejected batch encoding leaves its caller-owned input chunk unchanged'
+  );
+
+  const validEncoder = device.createCommandEncoder({id: 'batch-sort-valid-encoding'});
+  compiled.encode(validEncoder, {parameters: undefined});
+  device.submit(validEncoder.finish());
+  const [sortedKeys, sortedValues] = await Promise.all([
+    readUint32SortBuffer(outputKeysBuffer, 3),
+    readUint32SortBuffer(outputValuesBuffer, 3)
+  ]);
+  t.deepEqual(sortedKeys, [1, 2, 3], 'batch graph accepts its original distinct output buffer');
+  t.deepEqual(sortedValues, [10, 20, 30], 'batch retry preserves paired chunk payload values');
+
+  compiled.destroy();
+  const importedBuffers = [keysBuffer, valuesBuffer, outputKeysBuffer, outputValuesBuffer];
+  tAssertImportedBuffersAlive(importedBuffers);
+  for (const buffer of importedBuffers) buffer.destroy();
+  t.end();
+});
+
 type SortResult = {
   keys: number[];
   values: number[];
@@ -556,12 +694,50 @@ function makeGraphVector(
   });
 }
 
+function makeImportedGraphVector(
+  graph: GPUCommandGraph,
+  id: string,
+  buffer: Buffer,
+  length: number
+): GraphVectorView<'uint32'> {
+  return new GraphVectorView({
+    id,
+    name: id,
+    format: 'uint32',
+    length,
+    valueLength: length,
+    stride: 1,
+    byteStride: Uint32Array.BYTES_PER_ELEMENT,
+    rowByteLength: Uint32Array.BYTES_PER_ELEMENT,
+    data: [importView(graph, id, buffer, length)]
+  });
+}
+
 function importView(graph: GPUCommandGraph, id: string, buffer: Buffer, length: number) {
   const handle = graph.importBuffer(
     {id, byteLength: buffer.byteLength, usage: buffer.usage},
     buffer
   );
   return graph.createDataView(handle, {format: 'uint32', length});
+}
+
+function makeReadableSortBuffer(
+  device: Device,
+  id: string,
+  valuesOrLength: number[] | number
+): Buffer {
+  return device.createBuffer({
+    id,
+    ...(typeof valuesOrLength === 'number'
+      ? {byteLength: valuesOrLength * Uint32Array.BYTES_PER_ELEMENT}
+      : {data: Uint32Array.from(valuesOrLength)}),
+    usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+  });
+}
+
+async function readUint32SortBuffer(buffer: Buffer, length: number): Promise<number[]> {
+  const bytes = await buffer.readAsync();
+  return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, length));
 }
 
 function makeUncompiledSort(
