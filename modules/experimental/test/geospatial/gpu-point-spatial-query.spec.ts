@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
+  type CompiledGPUCommandGraph,
   GPUCommandGraph,
   GPUGridIndex,
-  type CompiledGPUCommandGraph,
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
   type GraphDataView
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
 import {GPUPointSpatialQuery, type GPUPointSpatialQueryKind} from '../../src/geospatial';
 
 test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', async tapeTest => {
@@ -54,10 +54,11 @@ test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', asy
     {
       id: 'unindexed-2d-radius',
       positions: Float32Array.from([0, 0, 3, 4, 4, 4, -3, -4, Number.NaN, 0, 3.0001, 4]),
+      sourceIds: Uint32Array.from([10, 11, 12, 13, 14, 15]),
       dimension: 2,
       kind: 'radius',
       query: Float32Array.from([0, 0, 5]),
-      expectedIds: [0, 1, 3]
+      expectedIds: [10, 11, 13]
     },
     {
       id: 'unindexed-3d-bounds',
@@ -279,7 +280,7 @@ test('GPUPointSpatialQuery keeps indexed row addressing separate from returned s
       4,
       4
     ]),
-    sourceIds: Uint32Array.from([1010, 2020, 3030, 4040, 5050, 6060, 7070]),
+    sourceIds: Uint32Array.from([1010, 1010, 3030, 4040, 5050, 6060, 7070]),
     dimension: 2 as const,
     kind: 'bounds' as const,
     query: Float32Array.from([0, 0, 1, 1]),
@@ -290,25 +291,25 @@ test('GPUPointSpatialQuery keeps indexed row addressing separate from returned s
     id: 'indexed-source-ids',
     ...sharedProps,
     indexed: true,
-    expectedIds: [1010, 2020]
+    expectedIds: [1010, 1010]
   });
   const scanned = createQueryFixture(device, {
     id: 'scanned-source-ids',
     ...sharedProps,
-    expectedIds: [1010, 2020]
+    expectedIds: [1010, 1010]
   });
 
   encode(device, indexed.compiled);
   encode(device, scanned.compiled);
   tapeTest.deepEqual(
     (await readResult(indexed)).ids.sort(sortNumbers),
-    [1010, 2020],
-    'the indexed path dereferences row indices before emitting application IDs'
+    [1010, 1010],
+    'the indexed path dereferences row indices without deduplicating application IDs'
   );
   tapeTest.deepEqual(
     (await readResult(scanned)).ids.sort(sortNumbers),
-    [1010, 2020],
-    'the scan path emits the same application IDs'
+    [1010, 1010],
+    'the scan path emits the same duplicate application IDs'
   );
 
   indexed.query.write(Float32Array.from([2, 2, 4, 4]));
@@ -393,7 +394,6 @@ test('GPUPointSpatialQuery applies even-odd polygon holes and includes ring boun
     tapeTest.end();
     return;
   }
-
   const fixture = createQueryFixture(device, {
     id: 'polygon-holes-and-boundaries',
     positions: Float32Array.from([
@@ -441,13 +441,18 @@ test('GPUPointSpatialQuery applies even-odd polygon holes and includes ring boun
   tapeTest.end();
 });
 
-test('GPUPointSpatialQuery remaps source IDs after indexed polygon refinement', async tapeTest => {
-  const device = await getWebGPUTestDevice();
+test('GPUPointSpatialQuery writes source IDs during indexed polygon refinement', async tapeTest => {
+  const device = await getWebGPUTestDevice('core');
   if (!device) {
     tapeTest.comment('WebGPU is not available');
     tapeTest.end();
     return;
   }
+  tapeTest.equal(
+    device.limits.maxStorageBuffersPerShaderStage,
+    8,
+    'the core device exercises the portable storage-binding limit'
+  );
 
   const fixture = createQueryFixture(device, {
     id: 'indexed-polygon-source-ids',
@@ -468,7 +473,7 @@ test('GPUPointSpatialQuery remaps source IDs after indexed polygon refinement', 
   tapeTest.deepEqual(
     (await readResult(fixture)).ids.sort(sortNumbers),
     [101, 202],
-    'the eight-binding refinement writes row indices before a separate source-ID remap'
+    'the refinement emits application source IDs directly'
   );
 
   destroyFixture(fixture);

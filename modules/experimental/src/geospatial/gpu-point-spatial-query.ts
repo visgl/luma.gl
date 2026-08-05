@@ -21,9 +21,7 @@ import {
 } from '../gpu-primitives/graph-data-view-utils';
 import {
   GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
-  type GeospatialDispatchLayout,
-  getGeospatialDispatchLayout,
-  getGeospatialInvocationIndexSource
+  type GeospatialDispatchLayout
 } from './geospatial-utils';
 import type {GPUSpatialQueryOutput} from './gpu-spatial-query-types';
 
@@ -202,7 +200,7 @@ export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
     const queryStateBuffer = graph.createTransientBuffer({
       id: `${this.id}-state`,
       byteLength: QUERY_STATE_LENGTH * Uint32Array.BYTES_PER_ELEMENT,
-      usage: Buffer.STORAGE | Buffer.INDIRECT
+      usage: Buffer.STORAGE | Buffer.UNIFORM | Buffer.INDIRECT
     });
     const queryState = graph.createDataView(queryStateBuffer, {
       format: 'uint32',
@@ -216,7 +214,6 @@ export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
     );
     addPreparePass(graph, this, queryState, resultState);
     addRefinementPass(graph, this, queryState, resultState);
-    addSourceIdRemapPass(graph, this, resultState);
     addFinalizePass(graph, this, queryState, resultState);
   }
 }
@@ -374,6 +371,9 @@ function addRefinementPass<Parameters>(
   const rowIndicesBinding = index ? nextBinding++ : undefined;
   const resultStateBinding = nextBinding++;
   const outputIdsBinding = nextBinding++;
+  const sourceIdsBinding = query.sourceIds ? nextBinding++ : undefined;
+  const polygonPositionsBinding = query.polygon ? nextBinding++ : undefined;
+  const ringOffsetsBinding = query.polygon ? nextBinding++ : undefined;
   const indexedBindings = index
     ? `@group(0) @binding(${cellOffsetsBinding}) var<storage, read> cellOffsets: array<u32>;
 @group(0) @binding(${rowIndicesBinding}) var<storage, read> rowIndices: array<u32>;`
@@ -387,8 +387,8 @@ const WIDTH: u32 = ${index.gridSize[0]}u;
 const HEIGHT: u32 = ${index.gridSize[1]}u;`
     : '';
   const polygonBindings = query.polygon
-    ? `@group(0) @binding(${outputIdsBinding + 1}) var<storage, read> polygonPositions: array<f32>;
-@group(0) @binding(${outputIdsBinding + 2}) var<storage, read> ringOffsets: array<u32>;`
+    ? `@group(0) @binding(${polygonPositionsBinding}) var<storage, read> polygonPositions: array<f32>;
+@group(0) @binding(${ringOffsetsBinding}) var<storage, read> ringOffsets: array<u32>;`
     : '';
   const polygonConstants = query.polygon
     ? `const POLYGON_POSITIONS_OFFSET: u32 = ${getViewElementOffset(query.polygon.positions)}u;
@@ -400,23 +400,23 @@ const RING_COUNT: u32 = ${query.polygon.ringOffsets.length - 1}u;`
     ? 'if (localId.x == 0u) { atomicAdd(&resultState[RESULT_OFFSET + 2u], cellEnd - cellStart); }'
     : '';
   const rowSelection = index
-    ? `let dispatchWidth = queryState[STATE_OFFSET + 10u];
-  let workgroupCount = queryState[STATE_OFFSET + 9u];
-  let dispatchRow = workgroupId.z * queryState[STATE_OFFSET + 11u] + workgroupId.y;
+    ? `let dispatchWidth = queryState.words2.z;
+  let workgroupCount = queryState.words2.y;
+  let dispatchRow = workgroupId.z * queryState.words2.w + workgroupId.y;
   let fullDispatchRows = workgroupCount / dispatchWidth;
   let finalDispatchRowWidth = workgroupCount % dispatchWidth;
   if (dispatchRow > fullDispatchRows ||
       (dispatchRow == fullDispatchRows &&
        (finalDispatchRowWidth == 0u || workgroupId.x >= finalDispatchRowWidth))) { return; }
   let cellOrdinal = dispatchRow * dispatchWidth + workgroupId.x;
-  let extentX = queryState[STATE_OFFSET + 6u];
-  let extentY = queryState[STATE_OFFSET + 7u];
+  let extentX = queryState.words1.z;
+  let extentY = queryState.words1.w;
   let localX = cellOrdinal % extentX;
   let localY = (cellOrdinal / extentX) % extentY;
   let localZ = cellOrdinal / (extentX * extentY);
-  let column = queryState[STATE_OFFSET + 3u] + localX;
-  let row = queryState[STATE_OFFSET + 4u] + localY;
-  let layer = queryState[STATE_OFFSET + 5u] + localZ;
+  let column = queryState.words0.w + localX;
+  let row = queryState.words1.x + localY;
+  let layer = queryState.words1.y + localZ;
   let cellIndex = (layer * HEIGHT + row) * WIDTH + column;
   let storedCount = min(cellOffsets[CELL_OFFSETS_OFFSET + CELL_COUNT], INDEX_CAPACITY);
   let cellStart = min(cellOffsets[CELL_OFFSETS_OFFSET + cellIndex], storedCount);
@@ -429,9 +429,9 @@ const RING_COUNT: u32 = ${query.polygon.ringOffsets.length - 1}u;`
     testRow(rowIndex);
     candidateIndex += ${POINT_QUERY_WORKGROUP_SIZE}u;
   }`
-    : `let dispatchWidth = queryState[STATE_OFFSET + 10u];
-  let workgroupCount = queryState[STATE_OFFSET + 9u];
-  let dispatchRow = workgroupId.z * queryState[STATE_OFFSET + 11u] + workgroupId.y;
+    : `let dispatchWidth = queryState.words2.z;
+  let workgroupCount = queryState.words2.y;
+  let dispatchRow = workgroupId.z * queryState.words2.w + workgroupId.y;
   let fullDispatchRows = workgroupCount / dispatchWidth;
   let finalDispatchRowWidth = workgroupCount % dispatchWidth;
   if (dispatchRow > fullDispatchRows ||
@@ -441,11 +441,15 @@ const RING_COUNT: u32 = ${query.polygon.ringOffsets.length - 1}u;`
   let rowIndex = workgroupOrdinal * ${POINT_QUERY_WORKGROUP_SIZE}u + localId.x;
   if (rowIndex < POSITION_COUNT) { testRow(rowIndex); }`;
   const predicate = makeExactPredicate(query);
+  const sourceIdDeclaration = query.sourceIds
+    ? `const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(query.sourceIds)}u;
+@group(0) @binding(${sourceIdsBinding}) var<storage, read> sourceIds: array<u32>;`
+    : '';
+  const outputId = query.sourceIds ? 'sourceIds[SOURCE_IDS_OFFSET + rowIndex]' : 'rowIndex';
   const source = /* wgsl */ `
 const POSITION_COUNT: u32 = ${query.positions.length}u;
 const POSITIONS_OFFSET: u32 = ${getViewElementOffset(query.positions)}u;
 const QUERY_OFFSET: u32 = ${getViewElementOffset(query.query)}u;
-const STATE_OFFSET: u32 = ${getViewElementOffset(queryState)}u;
 const RESULT_OFFSET: u32 = ${getViewElementOffset(resultState)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(query.output.ids)}u;
 const OUTPUT_CAPACITY: u32 = ${query.output.ids.length}u;
@@ -453,10 +457,16 @@ ${indexedConstants}
 ${polygonConstants}
 @group(0) @binding(0) var<storage, read> positions: array<f32>;
 ${queryValuesBinding === undefined ? '' : `@group(0) @binding(${queryValuesBinding}) var<storage, read> queryValues: array<f32>;`}
-@group(0) @binding(${queryStateBinding}) var<storage, read> queryState: array<u32>;
+struct QueryState {
+  words0: vec4<u32>,
+  words1: vec4<u32>,
+  words2: vec4<u32>
+};
+@group(0) @binding(${queryStateBinding}) var<uniform> queryState: QueryState;
 ${indexedBindings}
 @group(0) @binding(${resultStateBinding}) var<storage, read_write> resultState: array<atomic<u32>>;
 @group(0) @binding(${outputIdsBinding}) var<storage, read_write> outputIds: array<u32>;
+${sourceIdDeclaration}
 ${polygonBindings}
 
 fn finite(value: f32) -> bool {
@@ -468,7 +478,7 @@ ${makePolygonHelpers(query)}
 fn appendRow(rowIndex: u32) {
   let outputIndex = atomicAdd(&resultState[RESULT_OFFSET], 1u);
   if (outputIndex < OUTPUT_CAPACITY) {
-    outputIds[OUTPUT_OFFSET + outputIndex] = rowIndex;
+    outputIds[OUTPUT_OFFSET + outputIndex] = ${outputId};
   } else {
     atomicStore(&resultState[RESULT_OFFSET + 1u], 1u);
   }
@@ -498,6 +508,7 @@ fn testRow(rowIndex: u32) {
       : {}),
     resultState,
     outputIds: query.output.ids,
+    ...(query.sourceIds ? {sourceIds: query.sourceIds} : {}),
     ...(query.polygon
       ? {
           polygonPositions: query.polygon.positions,
@@ -512,7 +523,7 @@ fn testRow(rowIndex: u32) {
       ...(queryValuesBinding === undefined
         ? []
         : ([{buffer: query.query, usage: 'storage-read'}] as GraphBufferUse[])),
-      {buffer: queryState, usage: 'storage-read'},
+      {buffer: queryState, usage: 'uniform'},
       {buffer: queryState, usage: 'indirect'},
       ...(index
         ? ([
@@ -522,6 +533,9 @@ fn testRow(rowIndex: u32) {
         : []),
       {buffer: resultState, usage: 'storage-read-write'},
       {buffer: query.output.ids, usage: 'storage-write'},
+      ...(query.sourceIds
+        ? ([{buffer: query.sourceIds, usage: 'storage-read'}] as GraphBufferUse[])
+        : []),
       ...(query.polygon
         ? ([
             {buffer: query.polygon.positions, usage: 'storage-read'},
@@ -536,12 +550,11 @@ fn testRow(rowIndex: u32) {
         modules: query.kind === 'radius' ? [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE] : [],
         defines: query.kind === 'radius' ? {LUMA_FP64_INTEGER_ARITHMETIC: true} : {},
         shaderLayout: {
-          bindings: Object.keys(bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
+          bindings: Object.keys(bindings).map((name, location) =>
+            name === 'queryState'
+              ? {name, type: 'uniform' as const, group: 0, location}
+              : {name, type: 'storage' as const, group: 0, location}
+          )
         }
       });
       return {
@@ -556,56 +569,6 @@ fn testRow(rowIndex: u32) {
         destroy: () => computation.destroy()
       };
     }
-  });
-}
-
-function addSourceIdRemapPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  query: GPUPointSpatialQuery,
-  resultState: GraphDataView<'uint32'>
-): void {
-  if (!query.sourceIds) return;
-
-  const dispatchLayout = getGeospatialDispatchLayout(
-    query.output.ids.length,
-    graph.device.limits.maxComputeWorkgroupsPerDimension
-  );
-  const source = /* wgsl */ `
-const POSITION_COUNT: u32 = ${query.positions.length}u;
-const OUTPUT_CAPACITY: u32 = ${query.output.ids.length}u;
-const RESULT_OFFSET: u32 = ${getViewElementOffset(resultState)}u;
-const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(query.sourceIds)}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(query.output.ids)}u;
-@group(0) @binding(0) var<storage, read> resultState: array<u32>;
-@group(0) @binding(1) var<storage, read> sourceIds: array<u32>;
-@group(0) @binding(2) var<storage, read_write> outputIds: array<u32>;
-
-@compute @workgroup_size(${POINT_QUERY_WORKGROUP_SIZE}) fn main(
-  @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>
-) {
-  ${getGeospatialInvocationIndexSource(dispatchLayout)}
-  let storedCount = min(resultState[RESULT_OFFSET], OUTPUT_CAPACITY);
-  if (index >= storedCount) { return; }
-  let rowIndex = outputIds[OUTPUT_OFFSET + index];
-  if (rowIndex < POSITION_COUNT) {
-    outputIds[OUTPUT_OFFSET + index] = sourceIds[SOURCE_IDS_OFFSET + rowIndex];
-  }
-}`;
-  addComputationPass(graph, {
-    id: `${query.id}-remap-source-ids`,
-    source,
-    resources: [
-      {buffer: resultState, usage: 'storage-read'},
-      {buffer: query.sourceIds, usage: 'storage-read'},
-      {buffer: query.output.ids, usage: 'storage-read-write'}
-    ],
-    bindings: {
-      resultState,
-      sourceIds: query.sourceIds,
-      outputIds: query.output.ids
-    },
-    dispatchCount: dispatchLayout
   });
 }
 
