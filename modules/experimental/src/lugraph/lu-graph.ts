@@ -187,13 +187,15 @@ function validateEdgeAttributes(
     ...(edgeIds ? {edgeIds} : {})
   };
   for (const [name, vector] of Object.entries(graphColumns)) {
-    const attributeVector = edgeAttributes.gpuVectors[name];
-    if (
-      attributeVector &&
-      (attributeVector.data.length !== vector.data.length ||
-        attributeVector.data.some((chunk, chunkIndex) => chunk !== vector.data[chunkIndex]))
-    ) {
-      throw new Error(`LuGraph edgeAttributes ${name} must preserve source edge data`);
+    for (const columnName of new Set([name, vector.name])) {
+      const attributeVector = edgeAttributes.gpuVectors[columnName];
+      if (
+        attributeVector &&
+        (attributeVector.data.length !== vector.data.length ||
+          attributeVector.data.some((chunk, chunkIndex) => chunk !== vector.data[chunkIndex]))
+      ) {
+        throw new Error(`LuGraph edgeAttributes ${columnName} must preserve source edge data`);
+      }
     }
   }
 }
