@@ -18,7 +18,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/arrow`][arrow]             | Optional    | Apache Arrow adapters for deriving GPU layouts and building GPU table objects from Arrow data.  |
 | [`@luma.gl/text`][text]               | Optional    | Experimental `TextRenderer` facade and caller-owned GPU text data.                              |
 | [`@luma.gl/splats`][splats]           | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data.                    |
-| [`@luma.gl/experimental`][experimental] | Optional | Experimental v10 work-in-progress APIs, including WebGL-only WebXR helpers.                    |
+| [`@luma.gl/experimental`][experimental] | Optional | Experimental v10 APIs, including WebGPU/WebGL WebXR and WebGL raw camera helpers.              |
 | [`@luma.gl/gltf`][gltf]               | Optional    | glTF scenegraph loading and instantiation etc.                                                  |
 | [`@luma.gl/test-utils`][test-utils]   | Optional    | Test setups, in particular support for rendering and comparing images.                          |
 
