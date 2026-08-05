@@ -69,9 +69,14 @@ test('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draw
         sortedIndexBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
       t.deepEqual(
-        Array.from(sortedIndices),
+        Array.from(sortedIndices.slice(0, 4)),
         [1, 2, 0, 3],
         'globally sorts visible rows far-to-near and moves the culled sentinel to the end'
+      );
+      t.deepEqual(
+        Array.from(sortedIndices.slice(4)),
+        [4, 5, 6, 7],
+        'retains inactive reserved row identifiers behind every populated source row'
       );
     }
 
@@ -102,6 +107,141 @@ test('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draw
 
   t.end();
 });
+
+test('GPUSplatGraphRenderer progressively binds borrowed batches without rebuilding its reserved graph', async t => {
+  const devices = await getTestDevices(['webgpu']);
+
+  for (const device of devices) {
+    const firstBatch = makeGPUSplatData(device, makeBrowserGraphSplatSource([0.2, 0.9], 0));
+    const renderer = new GPUSplatGraphRenderer(device, {
+      data: firstBatch,
+      expectedSplatCount: 6,
+      expectedBatchCount: 3,
+      viewportSize: [32, 32],
+      alphaCutoff: 0.01
+    });
+    t.ok(renderer.encode(device.commandEncoder), 'renders the first streamed source batch');
+    device.submit();
+    const originalGraph = renderer.compiledGraph;
+    t.deepEqual(renderer.capacity, {splatCount: 6, batchCount: 3}, 'reserves exact stream totals');
+    await assertVisibleGraphInstanceCount(t, device, renderer, 2);
+
+    const secondSource = makeBrowserGraphSplatSource([0.6, 0.4], 2);
+    secondSource.colors = new Float32Array([2, 0.5, 0.25, 1, 3, 1, 0.5, 1]);
+    secondSource.opacities[1] = 0;
+    const secondBatch = makeGPUSplatData(device, secondSource);
+    renderer.appendData(secondBatch);
+    t.ok(renderer.encode(device.commandEncoder), 'renders the newly appended Float32 HDR batch');
+    device.submit();
+    t.equal(
+      renderer.compiledGraph,
+      originalGraph,
+      'reuses the original graph for the second batch'
+    );
+    t.equal(renderer.props.toneMapping, 'reinhard', 'adapts mixed HDR source colors on SDR');
+    await assertVisibleGraphInstanceCount(t, device, renderer, 3);
+
+    const thirdBatch = makeGPUSplatData(device, makeBrowserGraphSplatSource([0.75, 0.3], 4));
+    renderer.appendData(thirdBatch);
+    t.ok(renderer.encode(device.commandEncoder), 'renders the final appended Uint8 source batch');
+    device.submit();
+    t.equal(renderer.compiledGraph, originalGraph, 'still uses the graph compiled for batch one');
+    await assertVisibleGraphInstanceCount(t, device, renderer, 5);
+    if (!isSoftwareBackedGraphDevice(device)) {
+      const sortedBytes = await renderer.sortedIndexBuffer!.readAsync();
+      const sortedIndices = new Uint32Array(
+        sortedBytes.buffer,
+        sortedBytes.byteOffset,
+        sortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      );
+      t.deepEqual(
+        Array.from(sortedIndices),
+        [1, 4, 2, 5, 0, 3],
+        'globally sorts three original mixed-format batches and retains the culled sentinel last'
+      );
+    }
+
+    const firstSourceBuffer = firstBatch.positions.data[0].buffer;
+    const secondSourceBuffer = secondBatch.colors.data[0].buffer;
+    renderer.destroy();
+    t.notOk(firstSourceBuffer.destroyed, 'preserves the original borrowed first source allocation');
+    t.notOk(secondSourceBuffer.destroyed, 'preserves the original borrowed HDR color allocation');
+    firstBatch.destroy();
+    secondBatch.destroy();
+    thirdBatch.destroy();
+  }
+
+  t.end();
+});
+
+test('GPUSplatGraphRenderer grows unknown stream capacity geometrically', async t => {
+  const devices = await getTestDevices(['webgpu']);
+
+  for (const device of devices) {
+    const batches = [makeGPUSplatData(device, makeBrowserGraphSplatSource([0.1], 0))];
+    const renderer = new GPUSplatGraphRenderer(device, {
+      data: batches[0],
+      viewportSize: [32, 32]
+    });
+    renderer.encode(device.commandEncoder);
+    device.submit();
+    const initialGraph = renderer.compiledGraph;
+    t.deepEqual(renderer.capacity, {splatCount: 4, batchCount: 4}, 'reserves four unknown slots');
+
+    for (let batchIndex = 1; batchIndex < 4; batchIndex++) {
+      const batch = makeGPUSplatData(
+        device,
+        makeBrowserGraphSplatSource([0.1 + batchIndex * 0.1], batchIndex)
+      );
+      batches.push(batch);
+      renderer.appendData(batch);
+      renderer.encode(device.commandEncoder);
+      device.submit();
+      t.equal(renderer.compiledGraph, initialGraph, 'keeps the graph until its capacity fills');
+    }
+
+    const overflowBatch = makeGPUSplatData(device, makeBrowserGraphSplatSource([0.8], 4));
+    batches.push(overflowBatch);
+    renderer.appendData(overflowBatch);
+    renderer.encode(device.commandEncoder);
+    device.submit();
+    t.notEqual(renderer.compiledGraph, initialGraph, 'rebuilds once when both capacities overflow');
+    t.deepEqual(
+      renderer.capacity,
+      {splatCount: 8, batchCount: 8},
+      'doubles reserved row and slot capacity'
+    );
+
+    renderer.destroy();
+    for (const batch of batches) {
+      batch.destroy();
+    }
+  }
+
+  t.end();
+});
+
+async function assertVisibleGraphInstanceCount(
+  assertion: {equal: (actual: number, expected: number, message: string) => void},
+  device: Device,
+  renderer: GPUSplatGraphRenderer,
+  expectedCount: number
+): Promise<void> {
+  if (isSoftwareBackedGraphDevice(device)) {
+    return;
+  }
+  const commandBytes = await renderer.drawCommands.buffer.readAsync();
+  const commandWords = new Uint32Array(
+    commandBytes.buffer,
+    commandBytes.byteOffset,
+    commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+  );
+  assertion.equal(
+    commandWords[1],
+    expectedCount,
+    `GPU culling publishes ${expectedCount} progressive indirect-draw instances`
+  );
+}
 
 function isSoftwareBackedGraphDevice(device: Device): boolean {
   return (

@@ -6,7 +6,11 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {afterEach, describe, expect, test, vi} from 'vitest';
+import type {AnimationProps} from '@luma.gl/engine';
+import {GPUSplatGraphRenderer, SplatRenderer} from '@luma.gl/splats';
+import {NullDevice} from '@luma.gl/test-utils';
 import {
+  default as GaussianSplatsAnimationLoopTemplate,
   getGaussianSplatExecutionMode,
   makeGaussianSplatInfoHtml
 } from '../../examples/showcase/gaussian-splats/app';
@@ -36,6 +40,42 @@ describe('published Gaussian splat viewer', () => {
     expect(getGaussianSplatExecutionMode('webgl', '?renderer=graph')).toBe('cpu');
   });
 
+  test('starts captured WebGPU scenes on the graph before the first streamed batch', () => {
+    installViewerWindow();
+    const device = makeViewerWebGPUDevice();
+    const animation = new GaussianSplatsAnimationLoopTemplate({
+      device,
+      width: 640,
+      height: 480
+    } as AnimationProps);
+
+    expect(animation.renderer).toBeInstanceOf(GPUSplatGraphRenderer);
+    expect(animation.renderer).not.toBeInstanceOf(SplatRenderer);
+    expect(animation.renderer.batches).toHaveLength(0);
+    if (animation.renderer instanceof GPUSplatGraphRenderer) {
+      expect(animation.renderer.compiledGraph).toBeUndefined();
+    }
+
+    animation.renderer.destroy();
+    device.destroy();
+  });
+
+  test('retains the explicit CPU comparison for captured WebGPU scenes', () => {
+    installViewerWindow('?renderer=cpu');
+    const device = makeViewerWebGPUDevice();
+    const animation = new GaussianSplatsAnimationLoopTemplate({
+      device,
+      width: 640,
+      height: 480
+    } as AnimationProps);
+
+    expect(animation.renderer).toBeInstanceOf(SplatRenderer);
+    expect(animation.renderer).not.toBeInstanceOf(GPUSplatGraphRenderer);
+
+    animation.renderer.destroy();
+    device.destroy();
+  });
+
   test('exposes the execution selector and graph diagnostics in the shared viewer panel', () => {
     const viewerPanel = makeGaussianSplatInfoHtml();
     const viewerSource = readFileSync(
@@ -51,8 +91,13 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerPanel).toContain('data-gaussian-splats-execution');
     expect(viewerPanel).toContain('data-gaussian-splats-graph-inspector');
     expect(viewerSource).toContain('activeRenderer.encode(device.commandEncoder)');
-    expect(viewerSource).toContain('this.activateGraphRenderer()');
+    expect(viewerSource).toContain(
+      'expectedSplatCount: this.localLoadersConfiguration?.expectedSplatCount'
+    );
+    expect(viewerSource).not.toContain('this.activateGraphRenderer()');
+    expect(viewerSource).not.toContain('CPU preview → GPU graph');
     expect(viewerDocumentation).toContain('GPU command');
+    expect(viewerDocumentation).toContain('first');
     expect(viewerDocumentation).toContain('?renderer=cpu');
     expect(viewerDocumentation).toContain('WebGL2');
   });
@@ -249,6 +294,15 @@ describe('published Gaussian splat viewer', () => {
     expect(getLocalGaussianSplatLoadersConfiguration()).toBeUndefined();
   });
 });
+
+function makeViewerWebGPUDevice(): NullDevice {
+  const device = new NullDevice({});
+  Object.defineProperties(device, {
+    type: {value: 'webgpu'},
+    info: {value: {...device.info, type: 'webgpu', shadingLanguage: 'wgsl'}}
+  });
+  return device;
+}
 
 function installViewerWindow(
   search = '',

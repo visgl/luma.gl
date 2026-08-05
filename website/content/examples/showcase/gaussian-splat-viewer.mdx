@@ -26,9 +26,9 @@ installation. [`@luma.gl/arrow`](/docs/api-reference/arrow) adapts each Apache A
 directly to [`@luma.gl/splats`](/docs/api-reference/splats), preserving batch ownership,
 floating-point HDR radiance, camera-aware transparency, and the WebGL2 fallback.
 
-On WebGPU, completed captures switch from their progressive preview to a compiled **GPU command
-graph**. Projection, visibility, depth ordering, and rendering remain GPU work rather than
-reprojecting hundreds of thousands of source rows on the main thread for every camera movement.
+On WebGPU, every streamed batch renders through a compiled **GPU command graph** as soon as it
+arrives. Projection, visibility, depth ordering, and rendering remain GPU work from the first
+visible splats rather than reprojecting source rows on the main thread while the scene loads.
 Expand **GPU graph inspector** to see the real graph nodes, encoding timings, and transient-memory
 reuse. Choose **CPU depth ordering** in the execution selector, or append `?renderer=cpu`, to
 compare against the original renderer. WebGL2 always retains its compatible CPU-ordered fallback.
