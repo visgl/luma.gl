@@ -609,7 +609,7 @@ vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor) {
   return pbrInfo.NdotL * lightColor * (diffuseContrib + specContrib);
 }
 
-vec4 pbr_filterColor(vec4 colorUnused)
+vec4 pbr_filterColor(vec4 vertexColor)
 {
   vec2 baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   vec2 metallicRoughnessUV = getMaterialUV(
@@ -665,9 +665,10 @@ vec4 pbr_filterColor(vec4 colorUnused)
   // The albedo may be defined from a base texture or a flat color
 #ifdef HAS_BASECOLORMAP
   vec4 baseColor =
-    SRGBtoLINEAR(texture(pbr_baseColorSampler, baseColorUV)) * pbrMaterial.baseColorFactor;
+    SRGBtoLINEAR(texture(pbr_baseColorSampler, baseColorUV)) *
+    pbrMaterial.baseColorFactor * vertexColor;
 #else
-  vec4 baseColor = pbrMaterial.baseColorFactor;
+  vec4 baseColor = pbrMaterial.baseColorFactor * vertexColor;
 #endif
 
 #ifdef ALPHA_CUTOFF
