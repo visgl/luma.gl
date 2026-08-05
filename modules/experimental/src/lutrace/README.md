@@ -48,5 +48,22 @@ lowest matching source-row identity.
 This helper is trace-specific; general-purpose picking targets, readback ownership, graph
 encoding, and command submission remain outside the `lutrace` module.
 
+The generated shader uses five group-zero storage bindings: packed canonical spans, scanned
+thread offsets, the final visibility mask, a `{time, lane, active, padding}` request, and an atomic
+result initialized to `0xffffffff`. Matching visible spans atomically publish their lowest
+canonical source-row index, which can feed dependency selection without translating through a
+compacted display position.
+
+### Use cases and composition boundaries
+
+- Service latency investigations: focus a slow request's upstream and downstream dependencies.
+- Browser or GPU captures: collapse noisy processes while preserving stable operation identity.
+- Build-system schedules: filter short tasks and inspect cross-worker critical-path relationships.
+- Scientific workflows: retain explicit batch boundaries and cross-stage dependency topology.
+
+Applications own command graphs, queue submission, rendering policy, interaction controls, and
+readback. `GPUTraceScene` owns only its uploaded trace and projected scene allocations;
+`GPUTraceInteraction` borrows caller-owned graph views and registers reusable passes.
+
 See the [lutrace API reference](https://luma.gl/docs/api-reference/experimental/lutrace) for
 complete usage examples and the live trace explorer.

@@ -88,4 +88,16 @@ describe('@luma.gl/experimental/lutrace package boundary', () => {
     expect(() => getGPUTracePickingShader(384, 0)).toThrow();
     expect(() => getGPUTracePickingShader(384, 1.5)).toThrow();
   });
+
+  test('preserves the documented trace picking storage-binding and dispatch contracts', () => {
+    const shader = getGPUTracePickingShader(256, 4);
+
+    expect(shader).toContain('@binding(0) var<storage, read> spans');
+    expect(shader).toContain('@binding(1) var<storage, read> threadOffsets');
+    expect(shader).toContain('@binding(2) var<storage, read> visibleMask');
+    expect(shader).toContain('@binding(3) var<storage, read> request');
+    expect(shader).toContain('@binding(4) var<storage, read_write> result');
+    expect(shader).toContain('@workgroup_size(256)');
+    expect(shader).toContain('threadOffsets[ownership.y] + timing.z % 4u');
+  });
 });

@@ -156,6 +156,10 @@ the same graph. [`GPUTraceInteraction`](/docs/api-reference/experimental/gpu-pri
 composes those views into a reusable hierarchy, dependency-focus, visibility, and indirect-draw
 workflow.
 
+When a timeline coordinate needs to recover the original source row, compose the interaction
+outputs with [`getGPUTracePickingShader`](./gpu-trace-picking). Its visibility-aware shader uses
+these same canonical records and scanned thread offsets without adding picking state to the scene.
+
 ## Current scope
 
 This tranche establishes canonical ingestion, stable trace-to-scene identity, preserved source

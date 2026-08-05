@@ -1,5 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
-import {GPUTraceSceneExample} from '@site/src/examples';
+import {GPUTraceSceneExample, GPUTraceViewerExample} from '@site/src/examples';
 
 # GPU Trace Exploration
 
@@ -17,6 +17,11 @@ performance recording, understand a GPU capture, explore a build-system schedule
 scientific workflow with both hierarchical ownership and explicit cross-task dependencies. Source
 data remains GPU-resident while time windows, expansion state, selected spans, and visibility
 change interactively.
+
+The scene-backed explorer below combines canonical trace ingestion, process/thread collapse,
+linked-span selection, stable indirect drawing, and trace-aware GPU picking. Expand or collapse a
+process, change the classification filters, and click a span to see the same compiled GPU graph
+respond to small control-buffer updates.
 
 <GPUTraceSceneExample embedded />
 
@@ -60,6 +65,12 @@ Each trace span also projects into a normal
 renderer-owned resource groups, and indirect draw commands can therefore render a trace without
 adding trace-specific fields to the scene database.
 
+For example, a distributed request can retain canonical row `417`, application object ID `9021`,
+and compacted visible position `12` simultaneously. Dependencies and picking resolve row `417`;
+application inspection resolves object `9021`; a compacted label pass consumes position `12`.
+Treating these identities as interchangeable would attach selections or dependency endpoints to
+the wrong operation whenever filtering changes.
+
 ### Interactive policies change control state, not graph topology
 
 [`GPUTraceInteraction`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction)
@@ -77,12 +88,19 @@ small caller-owned GPU control buffers. The application re-encodes its existing 
 it does not rebuild a JavaScript span list, perform CPU draw selection, or hand submission
 ownership to `lutrace`.
 
+The hierarchy-first trace viewer below demonstrates the same underlying generic layout, dependency
+traversal, filtering, and stable row identity from a different application composition. Collapse a
+process or isolate linked spans to compare its direct primitive orchestration with the scene-backed
+workflow above.
+
+<GPUTraceViewerExample embedded />
+
 ### Trace picking is separate from generic picking infrastructure
 
-`getGPUTracePickingShader(spanCount, lanesPerThread)` produces a compute shader for a timeline
-coordinate. It considers only spans marked visible by the current interaction policy, reconstructs
-effective display lanes from GPU-scanned thread offsets, and atomically publishes the lowest
-matching canonical source-row identity.
+[`getGPUTracePickingShader`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking)
+produces a compute shader for a timeline coordinate. It considers only spans marked visible by the
+current interaction policy, reconstructs effective display lanes from GPU-scanned thread offsets,
+and atomically publishes the lowest matching canonical source-row identity.
 
 ```ts
 const pickingSource = getGPUTracePickingShader(trace.stats.spanCount, lanesPerThread);
@@ -92,6 +110,20 @@ Applications still own the pick request, result buffer, command graph, readback,
 General-purpose picking targets remain available separately; this helper adds only the
 trace-specific time/lane interpretation.
 
+### Choose the right level of composition
+
+| Requirement | Recommended API | Reason |
+| --- | --- | --- |
+| Schedule arbitrary compute and render passes | `GPUCommandGraph` | No trace assumptions or domain-specific schemas |
+| Upload canonical spans, ownership, hierarchy, and dependencies | `GPUTraceScene` | Preserves source identity and projects into a generic `GPUScene` |
+| Apply reusable timeline controls without rebuilding graph topology | `GPUTraceInteraction` | Composes hierarchy, focus, visibility, ancestors, and indirect drawing |
+| Resolve a timeline coordinate to its visible canonical span | `getGPUTracePickingShader` | Understands trace timing, scanned lanes, and interaction visibility |
+| Control queue submission, asynchronous readback, or UI state | Application-owned code | Keeps scheduling, resource lifetime, and presentation policies explicit |
+
+The first embedded explorer uses all four GPU layers together. The hierarchy-first explorer shows
+that applications can also compose the generic primitives directly when they need a different
+rendering model or interaction policy.
+
 ## Public API
 
 | Export | Responsibility |
@@ -100,7 +132,7 @@ trace-specific time/lane interpretation.
 | `GPUTraceInteraction` | Reusable GPU hierarchy, time filtering, classification, dependency focus, ancestor retention, visibility, and indirect draws |
 | `GPU_TRACE_SPAN_RECORD_WORD_LENGTH` | Number of 32-bit words in one canonical trace span |
 | `GPU_TRACE_LINK_RECORD_WORD_LENGTH` | Number of 32-bit words in one dependency record |
-| `getGPUTracePickingShader` | Capacity-bounded, visible-span-aware timeline picking shader |
+| [`getGPUTracePickingShader`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking) | Capacity-bounded, visible-span-aware timeline picking shader |
 
 Trace-specific classes, constants, helpers, and types are exported only from
 `@luma.gl/experimental/lutrace`; they are intentionally absent from the root

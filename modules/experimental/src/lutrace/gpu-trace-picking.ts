@@ -4,7 +4,34 @@
 
 import {assert} from '@luma.gl/core';
 
-/** Returns a bounded compute shader that picks visible canonical trace rows by time and lane. */
+/**
+ * Generates a bounded WebGPU compute shader that picks visible canonical spans by time and lane.
+ *
+ * The generated entry point expects five storage bindings in bind group zero:
+ *
+ * - Binding 0: packed eight-word canonical trace span records.
+ * - Binding 1: exclusive-scanned effective thread offsets from `GPUTraceInteraction`.
+ * - Binding 2: source-aligned final visibility mask from the same interaction state.
+ * - Binding 3: `{time: f32, lane: f32, active: u32, padding: u32}` pick request.
+ * - Binding 4: one `atomic<u32>` result initialized by the caller to `0xffffffff`.
+ *
+ * A matching visible span atomically minimizes the result to its canonical source-row index. The
+ * result is neither a compacted display position nor the application's stable object identity.
+ * Inactive requests, hidden rows, and coordinates outside a visible span leave the sentinel intact.
+ * The caller owns dispatch, synchronization, queue submission, and optional asynchronous readback.
+ *
+ * @param spanCount - Nonnegative number of canonical source rows compiled into the WGSL bound.
+ * @param lanesPerThread - Positive original lane count used to reconstruct effective display rows.
+ * @returns WGSL source with a `main` compute entry point and a fixed 256-invocation workgroup.
+ *
+ * @example
+ * ```ts
+ * import {getGPUTracePickingShader} from '@luma.gl/experimental/lutrace';
+ *
+ * const source = getGPUTracePickingShader(trace.stats.spanCount, 4);
+ * const shader = device.createShader({stage: 'compute', source});
+ * ```
+ */
 export function getGPUTracePickingShader(spanCount: number, lanesPerThread: number): string {
   // A generated WGSL literal must describe a valid nonnegative canonical span capacity.
   assert(Number.isSafeInteger(spanCount) && spanCount >= 0);

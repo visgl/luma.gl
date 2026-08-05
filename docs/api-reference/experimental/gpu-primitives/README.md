@@ -1657,6 +1657,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUSceneResourceGroups`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups)
 - [`GPUTraceScene`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene)
 - [`GPUTraceInteraction`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction)
+- [GPU trace picking](/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-index)
 - [`GPUHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-join)
