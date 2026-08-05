@@ -482,6 +482,44 @@ describe('LuGraph bounded graph validation', () => {
       /edgeAttributes sourceVertices.*source edge data/
     );
   });
+
+  test('accepts custom-named endpoint columns when they preserve original GPU data chunks', () => {
+    const fixture = createGraphFixture();
+    const original = createGraphColumns(fixture);
+    const sourceVertices = renameGraphVector(fixture, original.sourceVertices, 'fromVertex');
+    const targetVertices = renameGraphVector(fixture, original.targetVertices, 'toVertex');
+    const edgeAttributes = createNamedEndpointTable(fixture, sourceVertices, targetVertices);
+    const graph = new LuGraph({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes});
+
+    expect(graph.sourceVertices.name).toBe('fromVertex');
+    expect(graph.targetVertices.name).toBe('toVertex');
+    expect(graph.edgeAttributes?.gpuVectors.fromVertex.data).toEqual(sourceVertices.data);
+    expect(graph.edgeAttributes?.gpuVectors.toVertex.data).toEqual(targetVertices.data);
+  });
+
+  test.each([
+    ['sourceVertices', 'fromVertex'],
+    ['targetVertices', 'toVertex']
+  ] as const)('rejects foreign GPU chunks under the actual custom %s vector name', (column, customName) => {
+    const fixture = createGraphFixture();
+    const original = createGraphColumns(fixture);
+    const replacements = createGraphColumns(fixture);
+    const sourceVertices = renameGraphVector(fixture, original.sourceVertices, 'fromVertex');
+    const targetVertices = renameGraphVector(fixture, original.targetVertices, 'toVertex');
+    const tableSources =
+      column === 'sourceVertices'
+        ? renameGraphVector(fixture, replacements.sourceVertices, sourceVertices.name)
+        : sourceVertices;
+    const tableTargets =
+      column === 'targetVertices'
+        ? renameGraphVector(fixture, replacements.targetVertices, targetVertices.name)
+        : targetVertices;
+    const edgeAttributes = createNamedEndpointTable(fixture, tableSources, tableTargets);
+
+    expect(
+      () => new LuGraph({vertexCount: 8, sourceVertices, targetVertices, edgeAttributes})
+    ).toThrow(new RegExp(`edgeAttributes ${customName}.*source edge data`));
+  });
 });
 
 function createGraphFixture(): GraphFixture {
@@ -583,6 +621,41 @@ function createEdgeAttributeTable(fixture: GraphFixture, columns: GraphColumns):
     sourceRowIndexOffset += sourceVertices.length;
     return batch;
   });
+  const table = new GPUTable({batches});
+  fixture.tables.push(table);
+  return table;
+}
+
+function renameGraphVector(
+  fixture: GraphFixture,
+  vector: GPUVector<'uint32'>,
+  name: string
+): GPUVector<'uint32'> {
+  const renamed = new GPUVector<'uint32'>({
+    type: 'data',
+    name,
+    format: 'uint32',
+    data: vector.data,
+    ownsData: false
+  });
+  fixture.vectors.push(renamed);
+  return renamed;
+}
+
+function createNamedEndpointTable(
+  fixture: GraphFixture,
+  sourceVertices: GPUVector<'uint32'>,
+  targetVertices: GPUVector<'uint32'>
+): GPUTable {
+  const batches = sourceVertices.data.map(
+    (sourceChunk, chunkIndex) =>
+      new GPURecordBatch({
+        gpuData: {
+          [sourceVertices.name]: sourceChunk,
+          [targetVertices.name]: targetVertices.data[chunkIndex]
+        }
+      })
+  );
   const table = new GPUTable({batches});
   fixture.tables.push(table);
   return table;
