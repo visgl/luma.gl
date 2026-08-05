@@ -35,11 +35,11 @@ const animationLoop = new AnimationLoop({
       // Encode view.projectionMatrix/view.viewMatrix uniform uploads before the pass.
       const renderPass = device.beginRenderPass({
         framebuffer,
-        parameters: {viewport: view.viewport},
         clearColor: clearFramebuffer ? [0, 0, 0, 0] : false,
         clearDepth: clearFramebuffer ? 1 : false,
         clearStencil: false
       });
+      renderPass.setParameters({viewport: view.viewport});
       // Draw the prepared model.
       renderPass.end();
     }
