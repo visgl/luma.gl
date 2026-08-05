@@ -4,7 +4,12 @@
 
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
-import {GPUScan} from './gpu-scan';
+import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource,
+  type GPUBoundedDispatchLayout
+} from './gpu-dispatch-utils';
+import {addGPUScanToGraphWithDispatchLimit, GPUScan} from './gpu-scan';
 import {
   createTransientVectorView,
   createTransientView,
@@ -98,29 +103,56 @@ export class GPUCompaction {
    * commands.
    */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    for (const view of [
-      ...getCompactionChunks(this.input),
-      ...getCompactionChunks(this.flags),
-      ...getCompactionChunks(this.output),
-      this.count
-    ]) {
-      if (view.buffer.graph !== graph) {
-        throw new Error(`${this.id} views must belong to the target graph`);
-      }
-    }
-
-    if (this.input.length === 0) {
-      addClearCountPass(graph, this.id, this.count);
-      return;
-    }
-
-    const offsets =
-      this.flags instanceof GraphVectorView
-        ? createTransientVectorView(graph, `${this.id}-offsets`, this.flags)
-        : createTransientView(graph, `${this.id}-offsets`, 'uint32', this.flags.length);
-    new GPUScan({id: `${this.id}-scan`, input: this.flags, output: offsets}).addToGraph(graph);
-    addScatterPasses(graph, this.id, this.input, this.flags, offsets, this.output, this.count);
+    addGPUCompactionToGraphWithDispatchLimit(
+      this,
+      graph,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
   }
+}
+
+/** Adds stable scan and scatter passes with an explicit dispatch limit. @internal */
+export function addGPUCompactionToGraphWithDispatchLimit<Parameters>(
+  compaction: GPUCompaction,
+  graph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number
+): void {
+  for (const view of [
+    ...getCompactionChunks(compaction.input),
+    ...getCompactionChunks(compaction.flags),
+    ...getCompactionChunks(compaction.output),
+    compaction.count
+  ]) {
+    if (view.buffer.graph !== graph) {
+      throw new Error(`${compaction.id} views must belong to the target graph`);
+    }
+  }
+
+  if (compaction.input.length === 0) {
+    addClearCountPass(graph, compaction.id, compaction.count);
+    return;
+  }
+
+  const offsets =
+    compaction.flags instanceof GraphVectorView
+      ? createTransientVectorView(graph, `${compaction.id}-offsets`, compaction.flags)
+      : createTransientView(graph, `${compaction.id}-offsets`, 'uint32', compaction.flags.length);
+  const scan = new GPUScan({
+    id: `${compaction.id}-scan`,
+    input: compaction.flags,
+    output: offsets
+  });
+  addGPUScanToGraphWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension);
+  addScatterPasses(
+    graph,
+    compaction.id,
+    compaction.input,
+    compaction.flags,
+    offsets,
+    compaction.output,
+    compaction.count,
+    maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Writes the required zero count for an empty input. */
@@ -162,7 +194,8 @@ function addScatterPasses<Parameters>(
   flags: GPUCompactionInput,
   offsets: GPUCompactionInput,
   output: GPUCompactionInput,
-  count: GraphDataView<'uint32'>
+  count: GraphDataView<'uint32'>,
+  maxComputeWorkgroupsPerDimension: number
 ): void {
   const inputChunks = getCompactionChunks(input);
   const flagChunks = getCompactionChunks(flags);
@@ -196,7 +229,13 @@ function addScatterPasses<Parameters>(
           output: outputChunk,
           outputStart,
           outputEnd,
-          count: writesCount ? count : undefined
+          count: writesCount ? count : undefined,
+          dispatchLayout: getBoundedDispatchLayout(
+            'GPUCompaction',
+            inputChunks[inputChunkIndex].length,
+            COMPACTION_WORKGROUP_SIZE,
+            maxComputeWorkgroupsPerDimension
+          )
         });
       }
     }
@@ -216,6 +255,7 @@ function addScatterPass<Parameters>(
     outputStart: number;
     outputEnd: number;
     count?: GraphDataView<'uint32'>;
+    dispatchLayout: GPUBoundedDispatchLayout;
   }
 ): void {
   const countBinding = props.count
@@ -242,9 +282,10 @@ ${props.count ? `const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u
 ${countBinding}
 
 @compute @workgroup_size(${COMPACTION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
+  ${getBoundedInvocationIndexSource(props.dispatchLayout, COMPACTION_WORKGROUP_SIZE)}
   if (index >= ELEMENT_COUNT) { return; }
   let flag = min(flags[FLAGS_OFFSET + index], 1u);
   let outputIndex = offsets[OFFSETS_OFFSET + index];
@@ -270,7 +311,7 @@ ${countBinding}
       outputValues: props.output,
       ...(props.count ? {outputCount: props.count} : {})
     },
-    dispatchCount: Math.ceil(props.input.length / COMPACTION_WORKGROUP_SIZE)
+    dispatchLayout: props.dispatchLayout
   });
 }
 
@@ -285,7 +326,7 @@ function addCompactionPass<Parameters>(
       usage: 'storage-read' | 'storage-write' | 'storage-read-write';
     }>;
     bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
+    dispatchLayout: GPUBoundedDispatchLayout;
   }
 ): void {
   graph.addComputePass({
@@ -311,7 +352,12 @@ function addCompactionPass<Parameters>(
             bindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
+          computation.dispatch(
+            computePass,
+            props.dispatchLayout.x,
+            props.dispatchLayout.y,
+            props.dispatchLayout.z
+          );
         },
         destroy: () => computation.destroy()
       };

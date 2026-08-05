@@ -11,6 +11,11 @@ import {
   type GraphDataView
 } from './gpu-command-graph';
 import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource,
+  type GPUBoundedDispatchLayout
+} from './gpu-dispatch-utils';
+import {
   getViewBinding,
   getViewElementOffset,
   validateMatchingVectorTopology,
@@ -97,26 +102,45 @@ export class GPUMask {
    * The caller remains responsible for graph compilation, command submission, and readback.
    */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    const outputChunks = getMaskChunks(this.output);
-    const inputChunks = this.inputs.map(getMaskChunks);
-    for (const chunk of [...outputChunks, ...inputChunks.flat()]) {
-      if (chunk.buffer.graph !== graph) {
-        throw new Error(`${this.id} masks must belong to the target graph`);
-      }
-    }
+    addGPUMaskToGraphWithDispatchLimit(
+      this,
+      graph,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
+  }
+}
 
-    for (const [chunkIndex, output] of outputChunks.entries()) {
-      if (output.length === 0) {
-        continue;
-      }
-      const inputs = inputChunks.map(chunks => chunks[chunkIndex]);
-      addMaskPass(graph, {
-        id: this.output instanceof GraphVectorView ? `${this.id}-chunk-${chunkIndex}` : this.id,
-        inputs,
-        output,
-        operation: this.operation
-      });
+/** Adds source-aligned mask composition with an explicit dispatch limit. @internal */
+export function addGPUMaskToGraphWithDispatchLimit<Parameters>(
+  mask: GPUMask,
+  graph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number
+): void {
+  const outputChunks = getMaskChunks(mask.output);
+  const inputChunks = mask.inputs.map(getMaskChunks);
+  for (const chunk of [...outputChunks, ...inputChunks.flat()]) {
+    if (chunk.buffer.graph !== graph) {
+      throw new Error(`${mask.id} masks must belong to the target graph`);
     }
+  }
+
+  for (const [chunkIndex, output] of outputChunks.entries()) {
+    if (output.length === 0) {
+      continue;
+    }
+    const inputs = inputChunks.map(chunks => chunks[chunkIndex]);
+    addMaskPass(graph, {
+      id: mask.output instanceof GraphVectorView ? `${mask.id}-chunk-${chunkIndex}` : mask.id,
+      inputs,
+      output,
+      operation: mask.operation,
+      dispatchLayout: getBoundedDispatchLayout(
+        'GPUMask',
+        output.length,
+        MASK_WORKGROUP_SIZE,
+        maxComputeWorkgroupsPerDimension
+      )
+    });
   }
 }
 
@@ -133,6 +157,7 @@ function addMaskPass<Parameters>(
     inputs: readonly GraphDataView<'uint32'>[];
     output: GraphDataView<'uint32'>;
     operation: GPUMaskOperation;
+    dispatchLayout: GPUBoundedDispatchLayout;
   }
 ): void {
   const inputDeclarations = props.inputs
@@ -154,8 +179,11 @@ ${inputDeclarations}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputMask: array<u32>;
 
 @compute @workgroup_size(${MASK_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getBoundedInvocationIndexSource(props.dispatchLayout, MASK_WORKGROUP_SIZE)}
   if (index >= ELEMENT_COUNT) {
     return;
   }
@@ -193,7 +221,12 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, Math.ceil(props.output.length / MASK_WORKGROUP_SIZE));
+          computation.dispatch(
+            computePass,
+            props.dispatchLayout.x,
+            props.dispatchLayout.y,
+            props.dispatchLayout.z
+          );
         },
         destroy: () => computation.destroy()
       };

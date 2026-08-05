@@ -4,6 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
 import {
   DrawCommandBuffer,
   GPUCommandGraph,
@@ -12,6 +13,8 @@ import {
 } from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {vi} from 'vitest';
+import {addGPUVisibilityWorkflowToGraphWithDispatchLimit} from '../../src/gpu-primitives/gpu-visibility-workflow';
 
 test('GPUVisibilityWorkflow composes predicates and publishes indirect-ready results', async t => {
   const device = await getWebGPUTestDevice();
@@ -135,6 +138,120 @@ test('GPUVisibilityWorkflow composes predicates and publishes indirect-ready res
   outputBuffer.destroy();
   outputMaskBuffer.destroy();
   drawCommands.destroy();
+  t.end();
+});
+
+test('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bounded 3D dispatches', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const rowCount = 4 * 256 + 1;
+  const firstSourceIndex = 40;
+  const firstPredicate = Uint32Array.from({length: rowCount}, (_, index) =>
+    index % 3 === 0 ? 2 : 0
+  );
+  const secondPredicate = Uint32Array.from({length: rowCount}, (_, index) =>
+    index % 5 === 0 ? 0 : 4
+  );
+  const expectedMask = Array.from(firstPredicate, (value, index) =>
+    value !== 0 && secondPredicate[index] !== 0 ? 1 : 0
+  );
+  const expectedSourceIds = expectedMask.flatMap((selected, index) =>
+    selected ? [firstSourceIndex + index] : []
+  );
+  const firstPredicateBuffer = device.createBuffer({
+    id: 'bounded-visibility-first-predicate',
+    data: firstPredicate,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const secondPredicateBuffer = device.createBuffer({
+    id: 'bounded-visibility-second-predicate',
+    data: secondPredicate,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const outputMaskBuffer = device.createBuffer({
+    id: 'bounded-visibility-output-mask',
+    byteLength: rowCount * Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const outputBuffer = device.createBuffer({
+    id: 'bounded-visibility-output',
+    byteLength: rowCount * Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const countBuffer = device.createBuffer({
+    id: 'bounded-visibility-count',
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'bounded-visibility-graph'});
+  const importView = (id: string, buffer: Buffer, length: number) =>
+    graph.importGPUData(id, new GPUData({buffer, format: 'uint32', length, ownsBuffer: false}));
+  const workflow = new GPUVisibilityWorkflow({
+    id: 'bounded-visibility',
+    predicates: [
+      {kind: 'bounds', mask: importView('first-predicate', firstPredicateBuffer, rowCount)},
+      {kind: 'selection', mask: importView('second-predicate', secondPredicateBuffer, rowCount)}
+    ],
+    outputMask: importView('output-mask', outputMaskBuffer, rowCount),
+    output: importView('output', outputBuffer, rowCount),
+    count: importView('count', countBuffer, 1),
+    firstSourceIndex
+  });
+  addGPUVisibilityWorkflowToGraphWithDispatchLimit(workflow, graph, 2);
+  const compiled = graph.compile();
+  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+
+  try {
+    await encodeAndSubmit(device, compiled, 'bounded-visibility-encoding');
+
+    t.deepEqual(
+      await readUint32(outputMaskBuffer, rowCount),
+      expectedMask,
+      'multidimensional mask composition visits each source row exactly once'
+    );
+    t.deepEqual(
+      await readUint32(outputBuffer, expectedSourceIds.length),
+      expectedSourceIds,
+      'bounded identity generation and scatter preserve stable source-row order'
+    );
+    t.deepEqual(
+      await readUint32(countBuffer, 1),
+      [expectedSourceIds.length],
+      'padded multidimensional workgroups never inflate the selected count'
+    );
+
+    const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
+      id: (computation as Computation).id,
+      dimensions: dispatchSpy.mock.calls[index].slice(1)
+    }));
+    for (const passId of [
+      'bounded-visibility-compose',
+      'bounded-visibility-identity',
+      'bounded-visibility-compact-scan-level-0-scan',
+      'bounded-visibility-compact-scan-level-0-add-offsets',
+      'bounded-visibility-compact-scatter'
+    ]) {
+      t.deepEqual(
+        dispatches.find(dispatch => dispatch.id === passId)?.dimensions,
+        [2, 2, 2],
+        `${passId} inherits the same bounded three-dimensional dispatch limit`
+      );
+    }
+  } finally {
+    dispatchSpy.mockRestore();
+    compiled.destroy();
+    firstPredicateBuffer.destroy();
+    secondPredicateBuffer.destroy();
+    outputMaskBuffer.destroy();
+    outputBuffer.destroy();
+    countBuffer.destroy();
+  }
+
   t.end();
 });
 
