@@ -95,7 +95,6 @@ Target Release Date: Q3, 2026
 - **[Blinking Stars Example](/examples/arrow/arrow-temporal-starfield)** - New showcase prepares aligned scalar `TimestampMillisecond` and `DurationMillisecond` rows into relative Float32 GPU vectors, then uses them as per-instance visibility windows and pulse periods through instanced attributes or WebGPU storage bindings.
 - **[Lines Example](/examples/arrow/arrow-lines)** - New showcase expands nested Arrow XYZM line rows and DenseUnion LineString rows into styled GPU segment instances with attribute-backed and storage-backed models, then adds an `ArrowPathTripsStorageModel` mode that prepares aligned `List<Timestamp>` rows into relative Float32 milliseconds for storage-backed trail filtering.
 - **[GeoArrow Example](/examples/arrow/arrow-geoarrow)** - New mixed-geometry showcase routes one GeoArrow-style DenseUnion column through Arrow point, line, and polygon renderers.
-- **[Instancing Example](/examples/arrow/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
 
 **@luma.gl/text**
 

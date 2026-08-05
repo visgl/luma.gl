@@ -82,10 +82,10 @@
 .projectName {
   margin: 0;
   color: #f8fafc;
-  font-size: clamp(5.1rem, 12.8vw, 10.5rem);
+  font-size: clamp(4.8rem, 11.8vw, 9.6rem);
   font-weight: 790;
-  letter-spacing: -0.085em;
-  line-height: 0.84;
+  letter-spacing: -0.045em;
+  line-height: 0.96;
 }
 
 .heroTagline {
@@ -181,7 +181,8 @@
 .primaryAction:focus-visible,
 .secondaryAction:focus-visible,
 .galleryAction:focus-visible,
-.closingAction:focus-visible {
+.closingAction:focus-visible,
+.discoveryCue:focus-visible {
   outline: 2px solid #7dd3fc;
   outline-offset: 4px;
 }
@@ -231,6 +232,54 @@
   box-shadow: 0 0 12px rgba(110, 231, 183, 0.72);
 }
 
+.discoveryCue {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: max(20px, calc(100% - 100svh + var(--ifm-navbar-height, 60px) + 18px));
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 999px;
+  background: rgba(8, 15, 27, 0.62);
+  backdrop-filter: blur(12px);
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 620;
+  letter-spacing: 0.015em;
+  padding: 0 12px 0 15px;
+  text-decoration: none;
+  transform: translateX(-50%);
+  transition:
+    background-color 170ms ease,
+    border-color 170ms ease,
+    color 170ms ease;
+}
+
+.discoveryCue:hover,
+.discoveryCue:focus-visible {
+  border-color: rgba(125, 211, 252, 0.72);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  text-decoration: none;
+}
+
+.discoveryCueArrow {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  animation: discoveryNudge 2.4s ease-in-out infinite;
+  background: rgba(56, 189, 248, 0.13);
+  color: #a5f3fc;
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
 .flagshipSection {
   --luma-example-surface: rgba(11, 19, 32, 0.92);
   --luma-example-surface-raised: rgba(22, 34, 52, 0.88);
@@ -242,6 +291,7 @@
   --luma-example-shadow: 0 18px 44px rgba(2, 6, 23, 0.26);
   position: relative;
   overflow: hidden;
+  scroll-margin-top: calc(var(--ifm-navbar-height, 60px) + 12px);
   background:
     radial-gradient(ellipse at 76% 4%, rgba(56, 189, 248, 0.105), transparent 43%),
     radial-gradient(ellipse at 3% 73%, rgba(129, 140, 248, 0.095), transparent 42%), #070e19;
@@ -436,6 +486,18 @@
   }
 }
 
+@keyframes discoveryNudge {
+  0%,
+  68%,
+  100% {
+    transform: translateY(0);
+  }
+
+  82% {
+    transform: translateY(3px);
+  }
+}
+
 @media screen and (max-width: 1180px) {
   .flagshipGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -505,7 +567,7 @@
   }
 
   .projectName {
-    font-size: clamp(4.3rem, 18vw, 6.2rem);
+    font-size: clamp(4rem, 16.5vw, 5.8rem);
   }
 
   .heroActions {
@@ -530,6 +592,19 @@
     right: 23px;
     bottom: 28px;
     font-size: 0.68rem;
+  }
+
+  .discoveryCue {
+    left: 23px;
+    gap: 7px;
+    font-size: 0.66rem;
+    padding: 0 9px 0 11px;
+    transform: none;
+  }
+
+  .discoveryCueArrow {
+    width: 19px;
+    height: 19px;
   }
 
   .sectionContainer {
@@ -560,14 +635,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .liveSceneIndicator {
+  .liveSceneIndicator,
+  .discoveryCueArrow {
     animation: none;
   }
 
   .primaryAction,
   .secondaryAction,
   .galleryAction,
-  .closingAction {
+  .closingAction,
+  .discoveryCue {
     transition: none;
   }
 

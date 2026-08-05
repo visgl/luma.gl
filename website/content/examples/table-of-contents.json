@@ -79,32 +79,34 @@
     "label": "GPGPU",
     "items": [
       {
-        "type": "doc",
-        "id": "showcase/million-row-crossfilter",
-        "label": "LuxFilter: Million-Row Crossfilter Explorer"
-      },
-      "showcase/billion-point-spatial-atlas",
-      {
-        "type": "doc",
-        "id": "deck/luspatial-taxi",
-        "label": "luProj + luSpatial: Taxi Explorer"
-      },
-      "experimental/gpt-2",
-      {
         "type": "category",
-        "label": "GPU Data - luma v10",
-        "items": ["v10/gpgpu"]
-      },
-      {
-        "type": "category",
-        "label": "GPU Command Graph - luma v10",
+        "label": "GPGPU Graph",
         "items": [
+          "v10/gpgpu",
           "experimental/gpu-frustum-culling",
           "experimental/gpu-trace-viewer",
           "experimental/gpu-trace-scene",
           "experimental/gpu-scene-graph",
           "experimental/gpu-sort",
           "experimental/gpu-data-analysis"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "GPGPU Graph Modules",
+        "items": [
+          {
+            "type": "doc",
+            "id": "showcase/million-row-crossfilter",
+            "label": "LuxFilter: Million-Row Crossfilter Explorer"
+          },
+          "showcase/billion-point-spatial-atlas",
+          {
+            "type": "doc",
+            "id": "deck/luspatial-taxi",
+            "label": "luProj + luSpatial: Taxi Explorer"
+          },
+          "experimental/gpt-2"
         ]
       }
     ]
@@ -209,7 +211,6 @@
       "arrow/arrow-time-columns",
       "arrow/arrow-mesh-geometry",
       "arrow/arrow-particles",
-      "arrow/arrow-instancing",
       "arrow/arrow-dggs-polygons",
       "arrow/arrow-columns"
     ]

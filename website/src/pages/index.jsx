@@ -187,7 +187,7 @@ export default function IndexPage() {
             </h1>
             <p className={styles.heroTagline}>{siteConfig.tagline}</p>
             <p className={styles.heroDescription}>
-              Build living worlds, responsive simulations, and rich data visualizations—at the
+              Build living worlds, responsive simulations, and massive data visualizations—at the
               speed of the GPU.
             </p>
 
@@ -215,15 +215,29 @@ export default function IndexPage() {
             <span className={styles.liveSceneIndicator} aria-hidden="true" />
             Live GPU-rendered scene
           </p>
+          <a
+            className={styles.discoveryCue}
+            href="#flagship-examples"
+            aria-label="Explore the live examples and GPU capabilities below"
+          >
+            <span>Explore what’s below</span>
+            <span className={styles.discoveryCueArrow} aria-hidden="true">
+              ↓
+            </span>
+          </a>
         </section>
 
-        <section className={styles.flagshipSection} aria-labelledby="flagship-examples-heading">
+        <section
+          className={styles.flagshipSection}
+          id="flagship-examples"
+          aria-labelledby="flagship-examples-heading"
+        >
           <div className={styles.sectionContainer}>
             <div className={styles.sectionHeading}>
               <div>
-                <p className={styles.sectionEyebrow}>Built with luma.gl</p>
+                <p className={styles.sectionEyebrow}>Build with luma.gl</p>
                 <h2 className={styles.sectionTitle} id="flagship-examples-heading">
-                  See what the GPU can do.
+                  See what your GPU can do.
                 </h2>
               </div>
               <p className={styles.sectionDescription}>

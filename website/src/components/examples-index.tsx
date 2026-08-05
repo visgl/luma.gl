@@ -58,8 +58,6 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const sidebar = useDocsSidebar() as SidebarRoot;
   const {docs} = useDocsVersion();
   const baseUrl = useBaseUrl('/');
-  const gettingStartedUrl = useBaseUrl('/docs/getting-started');
-  const firstTriangleUrl = useBaseUrl('/docs/tutorials/hello-triangle');
   const catalog = useMemo(() => buildCatalog(sidebar, docs), [docs, sidebar]);
   const topics = useMemo(
     () => [...new Set(catalog.flatMap(item => item.topics))].sort(),
@@ -142,24 +140,15 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
 
   return (
     <div className={styles.mainExamples}>
-      <div className={styles.catalogControls} aria-label="Filter examples">
+      <div className={styles.catalogControls} aria-label="Find examples">
         <div className={styles.controlsHeading}>
           <div>
-            <p className={styles.controlsEyebrow}>Live GPU experiences</p>
+            <p className={styles.controlsEyebrow}>Find examples</p>
             <p className={styles.controlsIntroduction}>
-              Open a live scene, explore the technique, and see what you can build.
+              Search by name, topic, graphics API, or difficulty.
             </p>
           </div>
-          <span className={styles.catalogCount}>{catalog.length} demos</span>
-        </div>
-
-        <div className={styles.discoveryPaths} aria-label="Suggested starting points">
-          <a className={styles.discoveryPath} href={gettingStartedUrl}>
-            New here? Take the guided tour <span aria-hidden="true">→</span>
-          </a>
-          <a className={styles.discoveryPath} href={firstTriangleUrl}>
-            Draw your first triangle <span aria-hidden="true">→</span>
-          </a>
+          <span className={styles.catalogCount}>{catalog.length} examples</span>
         </div>
 
         <div className={styles.searchField}>
@@ -326,12 +315,13 @@ function normalizeItem(
 }
 
 function getDefaultBackends(category: string): ExampleBackend[] {
-  return category === 'WebGPU' ||
-    category === 'GPGPU' ||
-    category.includes('GPU Data') ||
-    category.includes('GPU Command Graph')
+  return category === 'WebGPU' || isGeneralPurposeGPUCategory(category)
     ? ['webgpu']
     : ['webgpu', 'webgl2'];
+}
+
+function isGeneralPurposeGPUCategory(category: string): boolean {
+  return category === 'GPGPU' || category.startsWith('GPGPU Graph');
 }
 
 function getDefaultDifficulty(category: string): ExampleDifficulty {
@@ -339,9 +329,8 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
   if (
     category === 'Experimental' ||
     category === 'WebGPU' ||
-    category === 'GPGPU' ||
-    category.includes('Arrow') ||
-    category.includes('GPU Command Graph')
+    isGeneralPurposeGPUCategory(category) ||
+    category.includes('Arrow')
   ) {
     return 'advanced';
   }
@@ -351,8 +340,7 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
 function getDefaultMaturity(category: string): ExampleMaturity {
   return category === 'Experimental' ||
     category === 'WebGPU' ||
-    category === 'GPGPU' ||
-    category.includes('GPU Command Graph')
+    isGeneralPurposeGPUCategory(category)
     ? 'experimental'
     : 'stable';
 }
@@ -360,8 +348,7 @@ function getDefaultMaturity(category: string): ExampleMaturity {
 function getDefaultTopic(category: string): string {
   if (category === 'Tutorials') return 'fundamentals';
   if (category === 'Integrations') return 'integration';
-  if (category === 'GPGPU') return 'compute';
-  if (category.includes('GPU Command Graph')) return 'compute';
+  if (isGeneralPurposeGPUCategory(category)) return 'compute';
   if (category.includes('GPU Data') || category.includes('Arrow')) return 'data';
   if (category === 'API') return 'api';
   return 'rendering';
@@ -379,8 +366,11 @@ function groupByCategory(items: CatalogItem[]): Array<[string, CatalogItem[]]> {
 
 function getCategoryEyebrow(category: string): string {
   if (category === 'WebGPU') return 'Next-generation graphics';
-  if (category === 'GPGPU') return 'Compute, projections, and GPU-native data';
-  if (category === 'Showcase') return 'Featured experiences';
+  if (category === 'GPGPU Graph') return 'GPU data and compute pipelines';
+  if (category === 'GPGPU' || category === 'GPGPU Graph Modules') {
+    return 'Compute, projections, and GPU-native data';
+  }
+  if (category === 'Showcase') return 'Featured examples';
   if (category === 'Tutorials') return 'Learn by building';
   if (category === 'Experimental') return 'Emerging techniques';
   if (category === 'Integrations') return 'Works with your stack';

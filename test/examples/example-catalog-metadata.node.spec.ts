@@ -84,6 +84,27 @@ describe('live example catalog metadata', () => {
     expect(legacySidebar.examplesSidebar).toEqual(tableOfContents);
   });
 
+  test('keeps the instancing showcase without a duplicate Arrow instancing example', () => {
+    const exampleIdentifiers = new Set(LIVE_EXAMPLES.map(({id}) => id));
+    const websiteExamples = readFileSync(
+      path.join(process.cwd(), 'website/src/examples.tsx'),
+      'utf8'
+    );
+    const websiteConfiguration = readFileSync(
+      path.join(process.cwd(), 'website/docusaurus.config.js'),
+      'utf8'
+    );
+
+    expect(exampleIdentifiers.has('showcase/instancing')).toBe(true);
+    expect(exampleIdentifiers.has('arrow/arrow-instancing')).toBe(false);
+    expect(existsSync(path.join(EXAMPLES_DIRECTORY, 'arrow/arrow-instancing.mdx'))).toBe(false);
+    expect(websiteExamples).not.toContain('ArrowInstancingExample');
+    expect(websiteExamples).not.toContain("from '../../examples/arrow/arrow-instancing/app'");
+    expect(websiteConfiguration).toMatch(
+      /from:\s*\[['"]\/examples\/arrow\/arrow-instancing['"]\],\s*to:\s*['"]\/examples\/showcase\/instancing['"]/
+    );
+  });
+
   test('provides complete, curated filters for every sidebar example', () => {
     expect(LIVE_EXAMPLES.length).toBeGreaterThan(0);
 
@@ -132,7 +153,9 @@ describe('live example catalog metadata', () => {
         expect(metadata?.difficulty, `${id} must use the tutorial difficulty`).toBe('tutorial');
       }
 
-      if (categories.some(category => category.includes('v10'))) {
+      if (
+        categories.some(category => category.includes('v10') || category.startsWith('GPGPU Graph'))
+      ) {
         expect(metadata?.difficulty, `${id} is an advanced GPU-data example`).toBe('advanced');
         expect(metadata?.maturity, `${id} demonstrates prerelease v10 APIs`).toBe('experimental');
       }

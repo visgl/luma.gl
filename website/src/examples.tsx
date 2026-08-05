@@ -76,7 +76,6 @@ import ABufferApp from '../../examples/experimental/a-buffer/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
 import GaussianSplatsApp from '../../examples/showcase/gaussian-splats/app';
-import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
@@ -879,17 +878,6 @@ export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
     template={TempestOceanApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
-    {...props}
-  />
-);
-
-export const ArrowInstancingExample: React.FC = props => (
-  <LumaExample
-    id="arrow-instancing"
-    title="Instancing"
-    directory="arrow"
-    template={ArrowInstancingApp}
-    config={exampleConfig}
     {...props}
   />
 );

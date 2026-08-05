@@ -52,9 +52,15 @@ describe('GPGPU example catalog navigation', () => {
 
   test('keeps LuxFilter, luProj, and luSpatial discoverable through their real integrations', () => {
     const category = getCategory('GPGPU');
-    const crossfilterExample = category.items[0];
-    const spatialAtlasExample = category.items[1];
-    const taxiExample = category.items[2];
+    const graphModulesCategory = category.items.find(
+      (entry): entry is ExampleCategory =>
+        typeof entry !== 'string' &&
+        entry.type === 'category' &&
+        entry.label === 'GPGPU Graph Modules'
+    );
+    const crossfilterExample = graphModulesCategory?.items[0];
+    const spatialAtlasExample = graphModulesCategory?.items[1];
+    const taxiExample = graphModulesCategory?.items[2];
     const crossfilterExampleSource = readFileSync(
       path.join(EXAMPLES_DIRECTORY, 'showcase/million-row-crossfilter.mdx'),
       'utf8'
@@ -169,27 +175,31 @@ describe('GPGPU example catalog navigation', () => {
     }
   });
 
-  test('keeps the GPU data and command-graph learning tracks beneath GPGPU', () => {
+  test('orders the GPGPU graph before its modules and folds GPU data into the graph', () => {
     const category = getCategory('GPGPU');
     const nestedCategories = category.items.filter(
       (entry): entry is ExampleCategory => typeof entry !== 'string' && entry.type === 'category'
     );
 
     expect(nestedCategories.map(({label}) => label)).toEqual([
-      'GPU Data - luma v10',
-      'GPU Command Graph - luma v10'
+      'GPGPU Graph',
+      'GPGPU Graph Modules'
     ]);
-    expect(readCategoryIdentifiers(nestedCategories[0])).toEqual(['v10/gpgpu']);
-    expect(readCategoryIdentifiers(nestedCategories[1])).toEqual(
-      expect.arrayContaining([
-        'experimental/gpu-frustum-culling',
-        'experimental/gpu-trace-viewer',
-        'experimental/gpu-trace-scene',
-        'experimental/gpu-scene-graph',
-        'experimental/gpu-sort',
-        'experimental/gpu-data-analysis'
-      ])
-    );
+    expect(readCategoryIdentifiers(nestedCategories[0])).toEqual([
+      'v10/gpgpu',
+      'experimental/gpu-frustum-culling',
+      'experimental/gpu-trace-viewer',
+      'experimental/gpu-trace-scene',
+      'experimental/gpu-scene-graph',
+      'experimental/gpu-sort',
+      'experimental/gpu-data-analysis'
+    ]);
+    expect(readCategoryIdentifiers(nestedCategories[1])).toEqual([
+      'showcase/million-row-crossfilter',
+      'showcase/billion-point-spatial-atlas',
+      'deck/luspatial-taxi',
+      'experimental/gpt-2'
+    ]);
   });
 
   test('groups floating-point precision with GPGPU guides while preserving its canonical URL', () => {

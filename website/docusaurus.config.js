@@ -17,7 +17,7 @@ function prefixWebsiteRoute(route) {
 
 const config = getDocusaurusConfig({
   projectName: 'luma.gl',
-  tagline: 'WebGPU and WebGL2 API for visualization and compute',
+  tagline: 'WebGPU and WebGL2 for visualization and compute',
   siteUrl: 'https://luma.gl',
   baseUrl: websiteBaseUrl,
   repoUrl: 'https://github.com/visgl/luma.gl',
@@ -55,6 +55,10 @@ const config = getDocusaurusConfig({
           {
             from: ['/examples/arrow/arrow-path-model'],
             to: '/examples/arrow/arrow-lines'
+          },
+          {
+            from: ['/examples/arrow/arrow-instancing'],
+            to: '/examples/showcase/instancing'
           },
           {
             from: ['/examples/experimental/video-texture'],
