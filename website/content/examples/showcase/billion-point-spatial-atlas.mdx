@@ -47,6 +47,12 @@ cd examples/showcase/billion-point-spatial-atlas
 yarn preprocess:taxi --input ./168898952_points.arrow.gz --output ./public/taxi-atlas
 ```
 
+The preprocessor preserves source X/Y values; it does not transform coordinate systems. When a
+different input is already known to contain longitude/latitude in X/Y order, `--crs OGC:CRS84`
+records that fact in the manifest. Do not apply that flag to projected or unknown coordinates. The
+deck.gl luSpatial example only activates manifests that explicitly pass this geographic CRS gate;
+otherwise it keeps its deterministic browser fixture active.
+
 **NYC LiDAR** reads and retains nearby pages of the public USGS New York City EPT hierarchy. It
 selects LAZ nodes around the current query, renders each decoded tile progressively, and keeps the
 result in a point-capacity-bounded GPU LRU cache. Moving the query triggers periodic spatial

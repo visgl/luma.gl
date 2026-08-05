@@ -60,6 +60,9 @@ describe('live example catalog thumbnails', () => {
     expect(resolveExampleThumbnailPath('experimental/gpu-scene-graph')).toBe(
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/gpu-frustum-culling.jpg')
     );
+    expect(resolveExampleThumbnailPath('showcase/gaussian-splat-viewer')).toBe(
+      path.join(EXAMPLE_IMAGES_DIRECTORY, 'showcase/gaussian-splats.jpg')
+    );
   });
 
   test('keeps recovered flagship posters as genuine widescreen JPEG images', () => {

@@ -1,10 +1,11 @@
-import test from 'test/utils/vitest-tape';
 import {
   ANARI_SCENE_JSON_SCHEMA,
   ANARIGeometrySchema,
+  ANARIMaterialSchema,
   ANARISceneSchema,
   ANARITextureSchema
 } from '@luma.gl/anari/schemas';
+import test from 'test/utils/vitest-tape';
 import {PLAYGROUND_PRESETS} from '../../../examples/showcase/anari/playground-presets';
 
 test('ANARI scene schemas validate all complete showcase presets', testContext => {
@@ -100,6 +101,13 @@ test('ANARI scene schemas validate retained texture references and UVs', testCon
   const texture = ANARITextureSchema.safeParse({
     source: '/textures/brass.png',
     colorSpace: 'srgb',
+    sampler: {
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'mirror-repeat',
+      minFilter: 'nearest',
+      magFilter: 'linear',
+      mipmapFilter: 'linear'
+    },
     transform: [3, 0, 0, 0, 3, 0, 0, 0, 1]
   });
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
@@ -111,7 +119,10 @@ test('ANARI scene schemas validate retained texture references and UVs', testCon
     scene.geometries[geometryIdentifier]['vertex.attribute1'] = [0, 0, 1, 0, 0, 1];
   }
 
-  testContext.ok(texture.success, 'texture declarations accept color space and UV transforms');
+  testContext.ok(
+    texture.success,
+    'texture declarations accept authored color space, sampler filtering, and UV transforms'
+  );
   testContext.ok(ANARISceneSchema.safeParse(scene).success, 'retained texture references validate');
 
   scene.materials[materialIdentifier].baseColorTexture = 'missing-texture';
@@ -123,6 +134,91 @@ test('ANARI scene schemas validate retained texture references and UVs', testCon
         issue => issue.path.join('.') === `materials.${materialIdentifier}.baseColorTexture`
       ),
       'missing texture errors identify the exact material property'
+    );
+  }
+  testContext.end();
+});
+
+test('ANARI texture schemas reject unsupported authored sampler settings', testContext => {
+  for (const sampler of [
+    {addressModeU: 'clamp-to-border'},
+    {minFilter: 'cubic'},
+    {mipmapFilter: 'bicubic'},
+    {addressModeW: 'repeat'}
+  ]) {
+    testContext.notOk(
+      ANARITextureSchema.safeParse({source: '/textures/invalid.png', sampler}).success,
+      'only supported portable glTF sampler settings survive strict JSON validation'
+    );
+  }
+  testContext.end();
+});
+
+test('ANARI material schemas expose canonical PBR extension factors and alpha modes', testContext => {
+  const material = ANARIMaterialSchema.safeParse({
+    '@@type': 'physicallyBased',
+    alphaMode: 'mask',
+    alphaCutoff: 0.3,
+    doubleSided: true,
+    unlit: false,
+    specularColor: [0.7, 0.8, 0.9],
+    specularIntensity: 0.6,
+    transmission: 0.5,
+    thickness: 1.2,
+    attenuationDistance: 4,
+    attenuationColor: [0.8, 0.7, 0.6],
+    iridescence: 0.4,
+    iridescenceIndexOfRefraction: 1.45,
+    iridescenceThicknessMinimum: 100,
+    iridescenceThicknessMaximum: 450,
+    anisotropyStrength: 0.75,
+    anisotropyRotation: 1.2,
+    anisotropyDirection: [0.6, 0.8],
+    specularColorTexture: 'specular-color',
+    specularIntensityTexture: 'specular-intensity',
+    thicknessTexture: 'thickness',
+    clearcoatRoughnessTexture: 'clearcoat-roughness',
+    clearcoatNormalTexture: 'clearcoat-normal',
+    sheenRoughnessTexture: 'sheen-roughness',
+    iridescenceTexture: 'iridescence',
+    iridescenceThicknessTexture: 'iridescence-thickness',
+    anisotropyTexture: 'anisotropy'
+  });
+
+  testContext.ok(material.success, 'advanced PBR factors, image maps, and masked alpha validate');
+  testContext.notOk(
+    ANARIMaterialSchema.safeParse({
+      '@@type': 'physicallyBased',
+      alphaMode: 'mask',
+      alphaCutoff: 1.5
+    }).success,
+    'masked alpha cutoffs remain constrained to the normalized range'
+  );
+  testContext.ok(
+    ANARITextureSchema.safeParse({source: '/texture.png', textureCoordinateSet: 1}).success,
+    'texture schemas preserve the selected canonical UV coordinate set'
+  );
+  testContext.end();
+});
+
+test('ANARI scene schemas validate advanced retained texture references', testContext => {
+  const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
+  const materialIdentifier = Object.keys(scene.materials)[0];
+  scene.textures = {advanced: {source: '/textures/advanced.png'}};
+  scene.materials[materialIdentifier].iridescenceThicknessTexture = 'advanced';
+  scene.materials[materialIdentifier].anisotropyTexture = 'advanced';
+
+  testContext.ok(ANARISceneSchema.safeParse(scene).success, 'advanced texture references resolve');
+  scene.materials[materialIdentifier].iridescenceThicknessTexture = 'missing-advanced';
+  const invalidScene = ANARISceneSchema.safeParse(scene);
+  testContext.notOk(invalidScene.success, 'missing advanced extension textures are rejected');
+  if (!invalidScene.success) {
+    testContext.ok(
+      invalidScene.error.issues.some(
+        issue =>
+          issue.path.join('.') === `materials.${materialIdentifier}.iridescenceThicknessTexture`
+      ),
+      'advanced texture errors identify the exact missing material map'
     );
   }
   testContext.end();

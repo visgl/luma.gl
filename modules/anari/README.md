@@ -12,9 +12,10 @@
 A private, experimental, ANARI-inspired declarative rendering interface implemented on top of luma.gl.
 
 Applications describe cameras, worlds, groups, instances, surfaces, geometry, materials, lights,
-renderers, and frames. The luma.gl-backed device compiles that retained scene into GPU-instanced
-models, physically based shaders, portable WebGL/WebGPU render passes, optional bloom, and HDR
-presentation when the WebGPU canvas is configured for extended dynamic range.
+renderers, and frames. The luma.gl-backed device orchestrates existing shared scene renderers,
+physically based shader modules, engine animation/morph helpers, portable WebGL/WebGPU render
+passes, optional bloom, and HDR presentation when the WebGPU canvas is configured for extended
+dynamic range. The ANARI facade does not define a second BRDF, renderer, or asset loader.
 
 ## Private workspace
 
@@ -126,6 +127,8 @@ The ANARI renderer automatically preserves over-white highlights when the device
 
 - [ANARI developer guide](https://luma.gl/docs/api-guide/engine/anari-rendering)
 - [Complete ANARI API reference](https://luma.gl/docs/api-reference/anari)
+- [ANARI materials, image maps, and lighting](https://luma.gl/docs/api-reference/anari/anari-materials-and-lights)
+- [ANARI animation and optional glTF integration](https://luma.gl/docs/api-reference/anari/anari-animation)
 - [ANARI C API and THREE.js mapping](https://luma.gl/docs/api-reference/anari/anari-api-mapping)
 
 The reference covers device and object lifecycles, arrays, geometry, materials, lights, scene
@@ -174,18 +177,43 @@ format is experimental and is not an official ANARI serialization format.
 
 ### Experimental OpenUSD and glTF import
 
-Both showcase pages include a 3D asset selector with production-quality CC0 glTF Antique Camera,
-Lantern, and Toy Car assets; a detailed public-domain OpenUSD Utah/Fancy teapot atelier; an
-attributed Open Chess Set knight triptych; bundled CC0 USD vehicle assets; a composed vehicle
-gallery; and a procedural material laboratory. Choosing an asset imports its meshes, material
+Both showcase pages include a 3D asset selector with production-quality CC0 glTF Animated Colors,
+Antique Camera, Lantern, and Toy Car assets; a detailed public-domain OpenUSD Utah/Fancy teapot
+atelier; an attributed Open Chess Set knight triptych; bundled CC0 USD vehicle assets; a composed
+vehicle gallery; and a procedural material laboratory. Choosing an asset imports its meshes, material
 bindings, transforms, retained instances, and supported lights into editable ANARI JSON. Imported
 models receive a normalized studio presentation with animated cyan and amber point lights, glossy
 materials, HDR emissive accents, and bloom.
 
-The glTF adapter uses `@loaders.gl/gltf`, preserves indexed meshes and physically based material
-parameters, and retains base-color, normal, metallic-roughness, emissive, occlusion, clearcoat,
-transmission, and sheen maps as real GPU image samplers. It reuses `@luma.gl/gltf` texture-transform
-math for `KHR_texture_transform`. Skinning and glTF animations remain unsupported.
+The showcase glTF importer uses `@loaders.gl/gltf` and the canonical `@luma.gl/gltf` helpers,
+preserving indexed meshes, RGB/RGBA vertex colors, `TEXCOORD_0`/`TEXCOORD_1`, authored tangent and
+skin attributes, punctual lights, all 17 supported core/PBR-extension image maps, and source
+material factors. Per-slot sampler addressing/filtering/mipmap settings, sRGB versus linear color
+space, UV selection, and `KHR_texture_transform` matrices remain intact. `opaque`, `mask`, and
+`blend` materials retain authored cutoff and double-sided settings.
+
+The optional `@luma.gl/anari/gltf` entry point adapts glTF-owned node hierarchies and decoded clips
+into editable ANARI JSON without importing a format loader into the core ANARI package:
+
+```ts
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+
+const animations = makeANARIAnimationScene(scene, {instances, geometries, materials, samplers});
+animations.selectClip('Walk');
+animations.update(performance.now() / 1000);
+```
+
+Scenes can optionally declare `nodes`, `clips`, and `playback`. Transform, material, UV, and morph
+weight tracks reuse the shared engine animation mixer, preserve meshless parents and shared
+surfaces, and commit each changed retained object once per frame. Position, normal, and tangent
+morph deltas update existing vertex data without rebuilding the model. `update()` expects an
+absolute timestamp in seconds. The playground provides clip selection, play/pause, scrubbing, and
+playback speed controls.
+
+Imported joint indices/weights are preserved, and programmatic surfaces support an explicit
+`skin: {jointMatrices}` descriptor, but the showcase importer does not automatically build or
+animate that joint palette. Imported skeletal playback therefore requires application integration.
+Animated glTF export remains unsupported; interchange export is currently static.
 
 The format loader lives under `examples/showcase/anari/usd-loader` and follows the loaders.gl
 loader contract so it can eventually move into a dedicated `@loaders.gl/usd` module. It currently

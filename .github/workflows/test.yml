@@ -15,53 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  bundle-size:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Setup Node (with Corepack)
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version-file: '.nvmrc'
-
-      - name: Enable Corepack / Yarn 4
-        run: |
-          corepack enable
-          corepack prepare yarn@4.13.0 --activate
-          yarn -v
-
-      - name: Cache Yarn Berry artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~/.yarn/berry/cache
-            .yarn/install-state.gz
-          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn4-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Check bundle-size budgets
-        run: |
-          bundleSizeStatus=0
-          yarn bundle-size --output .bundle-size || bundleSizeStatus=$?
-          cat .bundle-size/report.md >> "$GITHUB_STEP_SUMMARY"
-          exit "$bundleSizeStatus"
-
-      - name: Upload bundle-size report
-        if: always()
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: bundle-size-report
-          path: .bundle-size
-          if-no-files-found: error
-          include-hidden-files: true
-
   browser_coverage:
     name: Browser coverage (${{ matrix.shard }}/3)
     runs-on: ubuntu-22.04
@@ -124,6 +77,27 @@ jobs:
           df -h .
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
+      # Run the standalone WebGPU smoke before the coverage suite so its SwiftShader device starts
+      # from a clean runner state instead of inheriting resource pressure from prior browser tests.
+      - name: Install Spatial Atlas Playwright Chromium
+        if: ${{ matrix.shard == 3 }}
+        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas exec playwright install chromium
+
+      - name: Run Billion-Point Spatial Atlas visual smoke
+        if: ${{ matrix.shard == 3 }}
+        env:
+          SPATIAL_ATLAS_SCREENSHOT: ${{ runner.temp }}/billion-point-spatial-atlas.png
+        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas test:visual
+
+      - name: Upload Billion-Point Spatial Atlas visual smoke screenshot
+        if: ${{ always() && matrix.shard == 3 }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: billion-point-spatial-atlas-visual-smoke
+          path: ${{ runner.temp }}/billion-point-spatial-atlas*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Run headless tests and generate coverage
         run: |
           yarn test-coverage --shard=${{ matrix.shard }}/3
@@ -135,28 +109,9 @@ jobs:
           du -sh . coverage "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
       - name: Run node tests
-        if: ${{ matrix.shard == 1 }}
+        if: ${{ matrix.shard == 3 }}
         run: |
           yarn test-node
-
-      - name: Install Spatial Atlas Playwright Chromium
-        if: ${{ matrix.shard == 1 }}
-        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas exec playwright install chromium
-
-      - name: Run Billion-Point Spatial Atlas visual smoke
-        if: ${{ matrix.shard == 1 }}
-        env:
-          SPATIAL_ATLAS_SCREENSHOT: ${{ runner.temp }}/billion-point-spatial-atlas.png
-        run: yarn workspace luma.gl-examples-showcase-billion-point-spatial-atlas test:visual
-
-      - name: Upload Billion-Point Spatial Atlas visual smoke screenshot
-        if: ${{ always() && matrix.shard == 1 }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: billion-point-spatial-atlas-visual-smoke
-          path: ${{ runner.temp }}/billion-point-spatial-atlas*.png
-          if-no-files-found: warn
-          retention-days: 7
 
       - name: Sanitize lcov for Coveralls
         run: |
@@ -197,6 +152,53 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: error
           retention-days: 1
+
+  bundle-size:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
+
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Check bundle-size budgets
+        run: |
+          bundleSizeStatus=0
+          yarn bundle-size --output .bundle-size || bundleSizeStatus=$?
+          cat .bundle-size/report.md >> "$GITHUB_STEP_SUMMARY"
+          exit "$bundleSizeStatus"
+
+      - name: Upload bundle-size report
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: bundle-size-report
+          path: .bundle-size
+          if-no-files-found: error
+          include-hidden-files: true
 
   test:
     needs: browser_coverage

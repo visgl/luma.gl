@@ -13,6 +13,7 @@ The luma.gl engine is intentionally separated from the core GPU API library:
 Some of the major classes that are provided by the engine module:
 
 - `AnimationLoop`
+- `AnimationMixer`, `AnimationClip`, and `AnimationTrack`
 - `Model`
 - `DynamicBuffer`
 - `DynamicTexture`
@@ -22,6 +23,7 @@ Some of the major classes that are provided by the engine module:
 
 Cross-module areas where the engine helps the user.
 
+- [Keyframe animation, clip playback, blending, and morph-target deformation](/docs/api-guide/engine/animation)
 - Redraw tracking
 - Interactivity
 - Compute (Transforms)

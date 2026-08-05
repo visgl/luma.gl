@@ -50,9 +50,23 @@ export const ANARIGeometrySchema = z
       '@@type': z.literal('triangle'),
       'vertex.position': z.array(numberSchema).optional(),
       'vertex.normal': z.array(numberSchema).optional(),
+      'vertex.tangent': z.array(numberSchema).optional(),
+      'vertex.joint': z.array(z.number().int().nonnegative()).optional(),
+      'vertex.weight': z.array(numberSchema).optional(),
       'vertex.attribute0': z.array(numberSchema).optional(),
       'vertex.attribute1': z.array(numberSchema).optional(),
+      'vertex.attribute2': z.array(numberSchema).optional(),
       'primitive.index': z.array(z.number().int().nonnegative()).optional(),
+      morphTargets: z
+        .array(
+          z.strictObject({
+            POSITION: z.array(numberSchema).optional(),
+            NORMAL: z.array(numberSchema).optional(),
+            TANGENT: z.array(numberSchema).optional()
+          })
+        )
+        .optional(),
+      morphWeights: z.array(numberSchema).optional(),
       generator: ANARIGeometryGeneratorSchema.optional()
     }),
     z.strictObject({
@@ -88,14 +102,28 @@ const materialProperties = {
   metallic: unitNumberSchema.optional(),
   roughness: unitNumberSchema.optional(),
   opacity: unitNumberSchema.optional(),
-  alphaMode: z.enum(['opaque', 'blend']).optional(),
+  alphaMode: z.enum(['opaque', 'mask', 'blend']).optional(),
+  alphaCutoff: unitNumberSchema.optional(),
+  doubleSided: z.boolean().optional(),
+  unlit: z.boolean().optional(),
+  specularColor: ANARIVector3Schema.optional(),
+  specularIntensity: nonnegativeNumberSchema.optional(),
   clearcoat: unitNumberSchema.optional(),
   clearcoatRoughness: unitNumberSchema.optional(),
   iridescence: unitNumberSchema.optional(),
   transmission: unitNumberSchema.optional(),
+  thickness: nonnegativeNumberSchema.optional(),
+  attenuationDistance: positiveNumberSchema.optional(),
+  attenuationColor: ANARIVector3Schema.optional(),
   indexOfRefraction: positiveNumberSchema.optional(),
   sheenColor: ANARIVector3Schema.optional(),
   sheenRoughness: unitNumberSchema.optional(),
+  iridescenceIndexOfRefraction: positiveNumberSchema.optional(),
+  iridescenceThicknessMinimum: nonnegativeNumberSchema.optional(),
+  iridescenceThicknessMaximum: nonnegativeNumberSchema.optional(),
+  anisotropyStrength: unitNumberSchema.optional(),
+  anisotropyRotation: numberSchema.optional(),
+  anisotropyDirection: z.tuple([numberSchema, numberSchema]).optional(),
   normalScale: nonnegativeNumberSchema.optional(),
   occlusionStrength: unitNumberSchema.optional(),
   baseColorTexture: identifierSchema.optional(),
@@ -103,15 +131,34 @@ const materialProperties = {
   metallicRoughnessTexture: identifierSchema.optional(),
   emissiveTexture: identifierSchema.optional(),
   occlusionTexture: identifierSchema.optional(),
+  specularColorTexture: identifierSchema.optional(),
+  specularIntensityTexture: identifierSchema.optional(),
   clearcoatTexture: identifierSchema.optional(),
+  clearcoatRoughnessTexture: identifierSchema.optional(),
+  clearcoatNormalTexture: identifierSchema.optional(),
   transmissionTexture: identifierSchema.optional(),
-  sheenColorTexture: identifierSchema.optional()
+  thicknessTexture: identifierSchema.optional(),
+  sheenColorTexture: identifierSchema.optional(),
+  sheenRoughnessTexture: identifierSchema.optional(),
+  iridescenceTexture: identifierSchema.optional(),
+  iridescenceThicknessTexture: identifierSchema.optional(),
+  anisotropyTexture: identifierSchema.optional()
 };
 
 export const ANARITextureSchema = z
   .strictObject({
     source: identifierSchema,
     colorSpace: z.enum(['srgb', 'linear']).optional(),
+    textureCoordinateSet: z.union([z.literal(0), z.literal(1)]).optional(),
+    sampler: z
+      .strictObject({
+        addressModeU: z.enum(['clamp-to-edge', 'repeat', 'mirror-repeat']).optional(),
+        addressModeV: z.enum(['clamp-to-edge', 'repeat', 'mirror-repeat']).optional(),
+        minFilter: z.enum(['nearest', 'linear']).optional(),
+        magFilter: z.enum(['nearest', 'linear']).optional(),
+        mipmapFilter: z.enum(['none', 'nearest', 'linear']).optional()
+      })
+      .optional(),
     transform: z
       .tuple([
         numberSchema,
@@ -267,6 +314,81 @@ export const ANARIInstanceSchema = z
   })
   .describe('One retained transform instance referencing a surface or reusable group.');
 
+export const ANARIAnimationNodeSchema = z
+  .strictObject({
+    parent: identifierSchema.optional(),
+    translation: ANARIVector3Schema.optional(),
+    rotation: ANARIVector4Schema.optional(),
+    scale: ANARIVector3Schema.optional(),
+    matrix: ANARIMatrix4Schema.optional(),
+    instances: z.array(identifierSchema).optional(),
+    weights: z.array(numberSchema).optional(),
+    geometries: z.array(identifierSchema).optional()
+  })
+  .describe('A retained source node with a local transform and optional mesh instances.');
+
+export const ANARIAnimationTargetSchema = z
+  .strictObject({
+    type: z.enum(['node', 'instance', 'material', 'sampler', 'light', 'camera']),
+    identifier: identifierSchema,
+    path: identifierSchema,
+    component: z.number().int().nonnegative().optional()
+  })
+  .describe('A stable retained object and property addressed by an animation track.');
+
+export const ANARIAnimationTrackSchema = z
+  .strictObject({
+    target: ANARIAnimationTargetSchema,
+    times: z.array(nonnegativeNumberSchema).min(1),
+    values: z.array(z.array(numberSchema).min(1)).min(1),
+    interpolation: z.enum(['STEP', 'LINEAR', 'CUBICSPLINE']).optional(),
+    baseTransform: z
+      .strictObject({
+        offset: z.tuple([numberSchema, numberSchema]),
+        rotation: numberSchema,
+        scale: z.tuple([numberSchema, numberSchema])
+      })
+      .optional()
+  })
+  .superRefine((track, context) => {
+    const expectedValueCount =
+      track.interpolation === 'CUBICSPLINE' ? track.times.length * 3 : track.times.length;
+    if (track.values.length !== expectedValueCount) {
+      context.addIssue({
+        code: 'custom',
+        path: ['values'],
+        message: `Expected ${expectedValueCount} animation values.`
+      });
+    }
+    for (let timeIndex = 1; timeIndex < track.times.length; timeIndex++) {
+      if (track.times[timeIndex] <= track.times[timeIndex - 1]) {
+        context.addIssue({
+          code: 'custom',
+          path: ['times', timeIndex],
+          message: 'Animation keyframe times must increase.'
+        });
+      }
+    }
+  })
+  .describe('A scalar, vector, or quaternion keyframe sequence.');
+
+export const ANARIAnimationClipSchema = z
+  .strictObject({
+    name: identifierSchema,
+    tracks: z.array(ANARIAnimationTrackSchema).min(1),
+    duration: nonnegativeNumberSchema.optional()
+  })
+  .describe('A named clip evaluated by the shared luma.gl animation mixer.');
+
+export const ANARIAnimationPlaybackSchema = z
+  .strictObject({
+    clip: identifierSchema.optional(),
+    playing: z.boolean().optional(),
+    speed: numberSchema.optional(),
+    loop: z.enum(['once', 'repeat', 'ping-pong']).optional()
+  })
+  .describe('Initial named-clip playback settings.');
+
 export const ANARIStarfieldSchema = z
   .strictObject({
     '@@id': identifierSchema,
@@ -299,7 +421,10 @@ export const ANARISceneSchema = z
     instances: z.array(ANARIInstanceSchema).optional(),
     distributions: z.array(ANARIStarfieldSchema).optional(),
     lights: z.array(ANARILightSchema).optional(),
-    world: ANARIWorldSchema.optional()
+    world: ANARIWorldSchema.optional(),
+    nodes: z.record(identifierSchema, ANARIAnimationNodeSchema).optional(),
+    clips: z.array(ANARIAnimationClipSchema).optional(),
+    playback: ANARIAnimationPlaybackSchema.optional()
   })
   .superRefine((scene, context) => {
     const textureNames = [
@@ -308,9 +433,18 @@ export const ANARISceneSchema = z
       'metallicRoughnessTexture',
       'emissiveTexture',
       'occlusionTexture',
+      'specularColorTexture',
+      'specularIntensityTexture',
       'clearcoatTexture',
+      'clearcoatRoughnessTexture',
+      'clearcoatNormalTexture',
       'transmissionTexture',
-      'sheenColorTexture'
+      'thicknessTexture',
+      'sheenColorTexture',
+      'sheenRoughnessTexture',
+      'iridescenceTexture',
+      'iridescenceThicknessTexture',
+      'anisotropyTexture'
     ] as const;
     for (const [identifier, material] of Object.entries(scene.materials)) {
       for (const textureName of textureNames) {
@@ -419,6 +553,90 @@ export const ANARISceneSchema = z
           message: `Unknown follow target "${light.animation.target}".`
         });
       }
+    }
+
+    for (const [identifier, node] of Object.entries(scene.nodes || {})) {
+      if (node.parent && !(node.parent in (scene.nodes || {}))) {
+        context.addIssue({
+          code: 'custom',
+          path: ['nodes', identifier, 'parent'],
+          message: `Unknown parent node "${node.parent}".`
+        });
+      }
+      if (node.parent === identifier) {
+        context.addIssue({
+          code: 'custom',
+          path: ['nodes', identifier, 'parent'],
+          message: 'Animation nodes cannot parent themselves.'
+        });
+      } else if (node.parent) {
+        const visitedParents = new Set([identifier]);
+        let parentIdentifier: string | undefined = node.parent;
+        while (parentIdentifier && parentIdentifier in (scene.nodes || {})) {
+          if (visitedParents.has(parentIdentifier)) {
+            context.addIssue({
+              code: 'custom',
+              path: ['nodes', identifier, 'parent'],
+              message: 'Animation node hierarchies cannot contain parent cycles.'
+            });
+            break;
+          }
+          visitedParents.add(parentIdentifier);
+          parentIdentifier = scene.nodes?.[parentIdentifier]?.parent;
+        }
+      }
+      for (const [instanceIndex, instanceIdentifier] of (node.instances || []).entries()) {
+        if (!instanceIdentifiers.has(instanceIdentifier)) {
+          context.addIssue({
+            code: 'custom',
+            path: ['nodes', identifier, 'instances', instanceIndex],
+            message: `Unknown node instance "${instanceIdentifier}".`
+          });
+        }
+      }
+    }
+
+    const clipNames = new Set<string>();
+    for (const [clipIndex, clip] of (scene.clips || []).entries()) {
+      if (clipNames.has(clip.name)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['clips', clipIndex, 'name'],
+          message: `Duplicate animation clip "${clip.name}".`
+        });
+      }
+      clipNames.add(clip.name);
+
+      for (const [trackIndex, track] of clip.tracks.entries()) {
+        const target = track.target;
+        const targetExists =
+          target.type === 'node'
+            ? target.identifier in (scene.nodes || {})
+            : target.type === 'instance'
+              ? instanceIdentifiers.has(target.identifier)
+              : target.type === 'material'
+                ? target.identifier in scene.materials
+                : target.type === 'sampler'
+                  ? target.identifier in (scene.textures || {})
+                  : target.type === 'light'
+                    ? lightIdentifiers.has(target.identifier)
+                    : target.identifier === 'camera';
+        if (!targetExists) {
+          context.addIssue({
+            code: 'custom',
+            path: ['clips', clipIndex, 'tracks', trackIndex, 'target', 'identifier'],
+            message: `Unknown animation ${target.type} "${target.identifier}".`
+          });
+        }
+      }
+    }
+
+    if (scene.playback?.clip && !clipNames.has(scene.playback.clip)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['playback', 'clip'],
+        message: `Unknown playback clip "${scene.playback.clip}".`
+      });
     }
   })
   .describe('A complete retained ANARI scene expressed as editable JSON.');

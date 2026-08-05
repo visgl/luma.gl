@@ -1,6 +1,7 @@
 import {defineConfig} from 'vite';
 
 const alias = {
+  '@deck.gl-community/luspatial': `${__dirname}/../../../modules/deck-luspatial/src`,
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
@@ -13,6 +14,7 @@ export default defineConfig({
   resolve: {
     alias,
     dedupe: [
+      '@deck.gl-community/luspatial',
       '@luma.gl/core',
       '@luma.gl/engine',
       '@luma.gl/experimental',

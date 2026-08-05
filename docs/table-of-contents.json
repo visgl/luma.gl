@@ -1,6 +1,7 @@
 [
   "README",
   "getting-started",
+  "capabilities",
   {
     "type": "category",
     "label": "Fundamentals",
@@ -43,6 +44,7 @@
           "api-guide/engine/engine",
           "api-guide/engine/interactivity",
           "api-guide/engine/scenegraph",
+          "api-guide/engine/animation",
           "api-guide/engine/materials",
           "api-guide/engine/transforms",
           "api-guide/engine/redraw",
@@ -167,6 +169,8 @@
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",
           "api-reference/engine/geometry/gpu-geometry",
+          "api-reference/engine/animation/animation-mixer",
+          "api-reference/engine/animation/morph-targets",
           "api-reference/engine/animation/key-frames",
           "api-reference/engine/animation/timeline",
           "api-reference/engine/scenegraph/group-node",
@@ -188,6 +192,7 @@
           "api-reference/anari/anari-device",
           "api-reference/anari/anari-geometry",
           "api-reference/anari/anari-materials-and-lights",
+          "api-reference/anari/anari-animation",
           "api-reference/anari/anari-scene",
           "api-reference/anari/anari-rendering",
           "api-reference/anari/anari-schemas",
@@ -199,9 +204,13 @@
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          "api-reference/experimental/scene-renderer",
+          "api-reference/experimental/deferred-scene-renderer",
+          "api-reference/experimental/pbr-environment",
           "api-reference/experimental/geospatial",
           "api-reference/experimental/luproj",
           "api-reference/experimental/luxfilter",
+          "api-reference/experimental/lutrace",
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
@@ -244,6 +253,7 @@
               "api-reference/experimental/gpu-primitives/gpu-scene-resource-groups",
               "api-reference/experimental/gpu-primitives/gpu-trace-scene",
               "api-reference/experimental/gpu-primitives/gpu-trace-interaction",
+              "api-reference/experimental/gpu-primitives/gpu-trace-picking",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/gpu-hash-index",
               "api-reference/experimental/gpu-primitives/gpu-hash-join",
@@ -311,16 +321,25 @@
       {
         "type": "category",
         "label": "@luma.gl/gltf",
-        "items": ["api-reference/gltf/README", "api-reference/gltf/gltf-extensions"]
+        "items": [
+          "api-reference/gltf/README",
+          "api-reference/gltf/gltf-materials",
+          "api-reference/gltf/gltf-animation",
+          "api-reference/gltf/gltf-extensions"
+        ]
       },
       {
         "type": "category",
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          "api-reference/experimental/scene-renderer",
+          "api-reference/experimental/deferred-scene-renderer",
+          "api-reference/experimental/pbr-environment",
           "api-reference/experimental/geospatial",
           "api-reference/experimental/luproj",
           "api-reference/experimental/luxfilter",
+          "api-reference/experimental/lutrace",
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
@@ -361,6 +380,7 @@
               "api-reference/experimental/gpu-primitives/gpu-scene-resource-groups",
               "api-reference/experimental/gpu-primitives/gpu-trace-scene",
               "api-reference/experimental/gpu-primitives/gpu-trace-interaction",
+              "api-reference/experimental/gpu-primitives/gpu-trace-picking",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/gpu-hash-index",
               "api-reference/experimental/gpu-primitives/gpu-hash-join",

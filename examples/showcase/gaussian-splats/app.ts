@@ -6,15 +6,22 @@ import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
 import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
-import {OrbitControls} from '@luma.gl/experimental';
 import {
+  GPUCommandGraphInspector,
+  OrbitControls,
+  type GPUCommandGraphInspectorGraph
+} from '@luma.gl/experimental';
+import {
+  GPUSplatGraphRenderer,
   makeGPUSplatData,
   SplatRenderer,
   type GPUSplatData,
+  type SplatRendererProps,
   type SplatSortMode
 } from '@luma.gl/splats';
 import {Matrix4} from '@math.gl/core';
 import {h, render} from 'preact';
+import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
 import {
   GAUSSIAN_SPLAT_BATCH_COUNT,
   GAUSSIAN_SPLATS_PER_BATCH,
@@ -30,7 +37,7 @@ import {
 
 export const title = 'Gaussian Splats';
 export const description =
-  'Progressively streamed, anisotropic 3D Gaussian splats with camera-dependent sorting on WebGPU and WebGL2.';
+  'Progressively streamed Gaussian splats with a WebGPU command graph and a WebGL2 fallback.';
 
 const BATCH_INTERVAL_MILLISECONDS = 750;
 const CLEAR_COLOR: [number, number, number, number] = [0.012, 0.016, 0.042, 1];
@@ -45,6 +52,13 @@ const SPLAT_SORT_OPTIONS: readonly PanelSelectOption[] = [
   {value: 'tile', label: 'Per-tile depth sort'},
   {value: 'none', label: 'Source order'}
 ];
+const SPLAT_EXECUTION_OPTIONS: readonly PanelSelectOption[] = [
+  {value: 'graph', label: 'WebGPU command graph'},
+  {value: 'cpu', label: 'CPU depth ordering'}
+];
+
+/** Execution path resolved from the current backend and optional comparison override. */
+export type GaussianSplatExecutionMode = 'graph' | 'cpu';
 
 type GaussianSplatCameraState = {
   yaw: number;
@@ -79,8 +93,16 @@ export function makeGaussianSplatInfoHtml(): string {
     <span>Backend</span><strong data-gaussian-splats-backend>Detecting…</strong>
   </div>
   <div style="display:flex;justify-content:space-between;font-size:12px">
+    <span>Pipeline</span><strong data-gaussian-splats-pipeline>Preparing…</strong>
+  </div>
+  <div data-gaussian-splats-pipeline-error hidden role="status" style="font-size:11px;line-height:1.45;color:#ffd08a"></div>
+  <div style="display:flex;justify-content:space-between;font-size:12px">
     <span>Source</span><strong data-gaussian-splats-source>Synthetic</strong>
   </div>
+  <label data-gaussian-splats-execution-control hidden style="gap:5px;font-size:12px">
+    <span>Execution pipeline</span>
+    <div data-gaussian-splats-execution></div>
+  </label>
   <label data-gaussian-splats-scene-control hidden style="gap:5px;font-size:12px">
     <span>Gaussian splat scene</span>
     <div data-gaussian-splats-scene></div>
@@ -109,7 +131,21 @@ export function makeGaussianSplatInfoHtml(): string {
   <label style="display:flex;align-items:center;gap:8px;font-size:12px">
     <input data-gaussian-splats-orbit type="checkbox" checked /> Cinematic orbit
   </label>
+  <details data-gaussian-splats-graph-details hidden style="font-size:12px">
+    <summary style="cursor:pointer">GPU graph inspector</summary>
+    <div data-gaussian-splats-graph-inspector style="margin-top:9px"></div>
+  </details>
 </section>`;
+}
+
+/** Uses GPU graph execution only on WebGPU unless the explicit CPU comparison is requested. */
+export function getGaussianSplatExecutionMode(
+  deviceType: Device['type'],
+  locationSearch = ''
+): GaussianSplatExecutionMode {
+  return deviceType === 'webgpu' && new URLSearchParams(locationSearch).get('renderer') !== 'cpu'
+    ? 'graph'
+    : 'cpu';
 }
 
 export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -117,9 +153,14 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   static props = {useDevicePixels: true};
 
   readonly device: Device;
-  readonly renderer: SplatRenderer;
+  renderer: SplatRenderer | GPUSplatGraphRenderer;
   readonly batches: GPUSplatData[];
 
+  private readonly executionMode: GaussianSplatExecutionMode;
+  private readonly graphInspector: GPUCommandGraphInspector | undefined;
+  private inspectedGraph: GPUCommandGraphInspectorGraph | undefined;
+  private readonly graphInspectorPanels: GPUCommandGraphInspectorPanel[] = [];
+  private graphFallbackReason: string | undefined;
   private readonly localLoadersConfiguration: LocalGaussianSplatLoadersConfiguration | undefined;
   private canvas: HTMLCanvasElement | null = null;
   private controlDisposers: Array<() => void> = [];
@@ -149,6 +190,21 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   constructor({device, width, height}: AnimationProps) {
     super();
     this.device = device;
+    this.executionMode = getGaussianSplatExecutionMode(
+      device.type,
+      typeof window === 'undefined' ? '' : window.location.search
+    );
+    this.graphInspector =
+      this.executionMode === 'graph'
+        ? new GPUCommandGraphInspector({
+            maxSamples: 60,
+            getNodeGroup: node => {
+              if (node.id.includes('project')) return 'project';
+              if (node.id.includes('sort') || node.id.includes('radix')) return 'sort';
+              return node.type;
+            }
+          })
+        : undefined;
     this.localLoadersConfiguration = getLocalGaussianSplatLoadersConfiguration();
     this.cameraFrame = makeGaussianSplatCameraFrame(
       this.localLoadersConfiguration?.up ?? [0, 1, 0]
@@ -188,7 +244,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.autoOrbit = false;
       this.isLoading = true;
     }
-    this.renderer = new SplatRenderer(device, {
+    const rendererProps: SplatRendererProps = {
       data: firstBatch,
       viewportSize: [Math.max(width, 1), Math.max(height, 1)],
       sortMode: 'global',
@@ -197,7 +253,16 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       alphaCutoff: 1 / 255,
       gaussianSupportRadius: 3,
       kernel2DSize: 0.35
-    });
+    };
+    this.renderer =
+      this.executionMode === 'graph'
+        ? new GPUSplatGraphRenderer(device, {
+            ...rendererProps,
+            clearColor: CLEAR_COLOR,
+            expectedSplatCount: this.localLoadersConfiguration?.expectedSplatCount,
+            expectedBatchCount: this.localLoadersConfiguration?.expectedBatchCount
+          })
+        : new SplatRenderer(device, rendererProps);
   }
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
@@ -286,15 +351,38 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
 
-    this.renderer.predraw(device.commandEncoder);
-
-    const renderPass = device.beginRenderPass({clearColor: CLEAR_COLOR, clearDepth: 1});
-    this.renderer.draw(renderPass);
-    renderPass.end();
+    let graphChanged = false;
+    const activeRenderer = this.renderer;
+    if (activeRenderer instanceof GPUSplatGraphRenderer) {
+      try {
+        const encoding = activeRenderer.encode(device.commandEncoder);
+        if (!encoding) {
+          this.needsRedraw = false;
+          return;
+        }
+        const compiledGraph = activeRenderer.compiledGraph;
+        if (compiledGraph && this.graphInspector) {
+          if (this.inspectedGraph !== compiledGraph) {
+            this.graphInspector.registerGraph(compiledGraph);
+            this.inspectedGraph = compiledGraph;
+            graphChanged = true;
+          }
+          this.graphInspector.recordEncoding(compiledGraph.id, encoding);
+        }
+      } catch (error) {
+        this.activateCpuRendererFallback(error);
+      }
+    }
+    if (this.renderer instanceof SplatRenderer) {
+      this.renderer.predraw(device.commandEncoder);
+      const renderPass = device.beginRenderPass({clearColor: CLEAR_COLOR, clearDepth: 1});
+      this.renderer.draw(renderPass);
+      renderPass.end();
+    }
     this.needsRedraw = false;
 
     this.frameIndex++;
-    if (this.frameIndex % 20 === 0) {
+    if (graphChanged || this.frameIndex % 20 === 0) {
       this.updatePanel();
     }
   }
@@ -353,7 +441,13 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         this.fitCameraToBatches();
       }
       this.updatePanel();
-      await waitForNextAnimationFrame();
+      if (
+        this.executionMode !== 'graph' ||
+        !this.expectedSplatCount ||
+        this.loadedSplatCount < this.expectedSplatCount
+      ) {
+        await waitForNextAnimationFrame();
+      }
     }
 
     if (this.isFinalized || this.loadAbortController.signal.aborted) {
@@ -369,6 +463,24 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     this.isLoading = false;
     this.expectedBatchCount = this.batches.length;
     this.expectedSplatCount = this.loadedSplatCount;
+    this.updatePanel();
+  }
+
+  /** Keeps a captured scene usable when the selected WebGPU adapter cannot compile its graph. */
+  private activateCpuRendererFallback(error: unknown): void {
+    if (!(this.renderer instanceof GPUSplatGraphRenderer)) {
+      return;
+    }
+    const previousRenderer = this.renderer;
+    this.renderer = new SplatRenderer(this.device, {
+      ...previousRenderer.props,
+      data: this.batches
+    });
+    previousRenderer.destroy();
+    this.inspectedGraph = undefined;
+    this.graphInspector?.clear();
+    this.graphFallbackReason =
+      error instanceof Error ? error.message : 'The selected adapter cannot run the GPU graph.';
     this.updatePanel();
   }
 
@@ -501,24 +613,87 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     );
     const sceneControl = panel.querySelector<HTMLElement>('[data-gaussian-splats-scene-control]');
     const sceneElement = panel.querySelector<HTMLElement>('[data-gaussian-splats-scene]');
+    const executionControl = panel.querySelector<HTMLElement>(
+      '[data-gaussian-splats-execution-control]'
+    );
+    const executionElement = panel.querySelector<HTMLElement>('[data-gaussian-splats-execution]');
     const sortElement = panel.querySelector<HTMLElement>('[data-gaussian-splats-sort]');
     const radiusElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-radius]');
     const opacityElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-opacity]');
     const orbitElement = panel.querySelector<HTMLInputElement>('[data-gaussian-splats-orbit]');
+    const graphDetails = panel.querySelector<HTMLDetailsElement>(
+      '[data-gaussian-splats-graph-details]'
+    );
+    const graphInspectorElement = panel.querySelector<HTMLElement>(
+      '[data-gaussian-splats-graph-inspector]'
+    );
 
     if (this.localLoadersConfiguration && descriptionElement) {
       descriptionElement.textContent =
-        'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; scroll to zoom.';
+        this.localLoadersConfiguration.loaderMode === 'local'
+          ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; scroll to zoom.'
+          : 'Complete Gaussian splat scenes streamed through loaders.gl 5 alpha. Drag to orbit; scroll to zoom.';
     }
 
-    if (this.localLoadersConfiguration && sceneControl && sceneElement) {
+    if (this.device.type === 'webgpu' && executionControl && executionElement) {
+      executionControl.hidden = false;
+      executionControl.style.display = 'grid';
+      render(
+        h(PanelSelect, {
+          ariaLabel: 'Execution pipeline',
+          value: this.executionMode,
+          options: SPLAT_EXECUTION_OPTIONS,
+          onChange: value => {
+            const nextUrl = new URL(window.location.href);
+            if (value === 'cpu') {
+              nextUrl.searchParams.set('renderer', 'cpu');
+            } else {
+              nextUrl.searchParams.delete('renderer');
+            }
+            window.location.assign(nextUrl.toString());
+          }
+        }),
+        executionElement
+      );
+      this.controlDisposers.push(() => render(null, executionElement));
+    }
+
+    if (this.graphInspector && graphDetails && graphInspectorElement) {
+      graphDetails.hidden = false;
+      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement);
+      this.graphInspectorPanels.push(inspectorPanel);
+      this.controlDisposers.push(() => {
+        inspectorPanel.destroy();
+        const panelIndex = this.graphInspectorPanels.indexOf(inspectorPanel);
+        if (panelIndex >= 0) {
+          this.graphInspectorPanels.splice(panelIndex, 1);
+        }
+      });
+    }
+
+    const hasBundledLoaders = Boolean(window.__lumaGaussianSplatsLoaderBundleUrl);
+    const hasLocalLoaders = Boolean(window.__lumaGaussianSplatsLocalLoadersRoot);
+    if (
+      (this.localLoadersConfiguration || hasBundledLoaders || hasLocalLoaders) &&
+      sceneControl &&
+      sceneElement
+    ) {
       sceneControl.hidden = false;
       sceneControl.style.display = 'grid';
-      const sceneOptions: PanelSelectOption[] = GAUSSIAN_SPLAT_SOURCE_CATALOG.map(source => ({
-        value: source.id,
-        label: source.label
-      }));
+      const shouldUseLocalLoaders =
+        this.localLoadersConfiguration?.loaderMode === 'local' ||
+        (!hasBundledLoaders && hasLocalLoaders);
+      const sceneOptions: PanelSelectOption[] = [
+        {value: 'synthetic', label: 'Synthetic chromatic showcase'},
+        ...GAUSSIAN_SPLAT_SOURCE_CATALOG.filter(
+          source => shouldUseLocalLoaders || source.id !== 'fixture'
+        ).map(source => ({
+          value: source.id,
+          label: source.label
+        }))
+      ];
       if (
+        this.localLoadersConfiguration &&
         !GAUSSIAN_SPLAT_SOURCE_CATALOG.some(
           source => source.id === this.localLoadersConfiguration?.sceneId
         )
@@ -531,12 +706,22 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       render(
         h(PanelSelect, {
           ariaLabel: 'Gaussian splat scene',
-          value: this.localLoadersConfiguration.sceneId,
+          value: this.localLoadersConfiguration?.sceneId || 'synthetic',
           options: sceneOptions,
           onChange: value => {
             const nextUrl = new URL(window.location.href);
-            nextUrl.searchParams.set('loaders', 'local');
-            nextUrl.searchParams.set('scene', String(value));
+            nextUrl.searchParams.delete('mode');
+            if (value === 'synthetic') {
+              nextUrl.searchParams.set('loaders', 'synthetic');
+              nextUrl.searchParams.delete('scene');
+            } else {
+              if (shouldUseLocalLoaders) {
+                nextUrl.searchParams.set('loaders', 'local');
+              } else {
+                nextUrl.searchParams.delete('loaders');
+              }
+              nextUrl.searchParams.set('scene', String(value));
+            }
             nextUrl.searchParams.delete('source');
             window.location.assign(nextUrl.toString());
           }
@@ -552,7 +737,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
           h(PanelSelect, {
             ariaLabel: 'Transparency ordering',
             value: sortMode,
-            options: SPLAT_SORT_OPTIONS,
+            options:
+              this.executionMode === 'graph'
+                ? SPLAT_SORT_OPTIONS.filter(option => option.value === 'global')
+                : SPLAT_SORT_OPTIONS,
             onChange: value => {
               const nextSortMode = getSplatSortMode(String(value));
               this.renderer.setProps({sortMode: nextSortMode});
@@ -638,6 +826,32 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     )) {
       backendElement.textContent = this.device.type === 'webgpu' ? 'WebGPU' : 'WebGL2';
     }
+    for (const pipelineElement of document.querySelectorAll<HTMLElement>(
+      '[data-gaussian-splats-pipeline]'
+    )) {
+      pipelineElement.textContent = this.graphFallbackReason
+        ? 'CPU fallback · graph unavailable'
+        : this.renderer instanceof GPUSplatGraphRenderer
+          ? this.renderer.compiledGraph
+            ? 'GPU command graph'
+            : 'Compiling GPU graph…'
+          : this.device.type === 'webgpu'
+            ? 'CPU depth ordering'
+            : 'WebGL2 fallback';
+    }
+    for (const pipelineErrorElement of document.querySelectorAll<HTMLElement>(
+      '[data-gaussian-splats-pipeline-error]'
+    )) {
+      pipelineErrorElement.hidden = !this.graphFallbackReason;
+      pipelineErrorElement.textContent = this.graphFallbackReason
+        ? `GPU graph unavailable: ${this.graphFallbackReason}`
+        : '';
+    }
+    for (const graphDetails of document.querySelectorAll<HTMLDetailsElement>(
+      '[data-gaussian-splats-graph-details]'
+    )) {
+      graphDetails.hidden = !this.graphInspector || Boolean(this.graphFallbackReason);
+    }
     for (const sourceElement of document.querySelectorAll<HTMLElement>(
       '[data-gaussian-splats-source]'
     )) {
@@ -719,6 +933,13 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     )) {
       errorElement.hidden = !this.loadingError;
       errorElement.textContent = this.loadingError ?? '';
+    }
+
+    if (this.graphInspector) {
+      const snapshot = this.graphInspector.getSnapshot();
+      for (const inspectorPanel of this.graphInspectorPanels) {
+        inspectorPanel.update(snapshot, this.inspectedGraph?.id);
+      }
     }
   }
 

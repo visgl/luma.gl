@@ -24,6 +24,9 @@ export type EngineDocsTabId =
   | 'buffer-transform'
   | 'texture-transform'
   | 'swap'
+  | 'animation-guide'
+  | 'animation-mixer'
+  | 'morph-targets'
   | 'animation-loop'
   | 'animation-loop-template'
   | 'key-frames'
@@ -102,6 +105,21 @@ const ENGINE_DOCS_TABS: Record<EngineDocsTabGroupId, EngineDocsTab[]> = {
     {id: 'swap', label: 'Swap', href: '/docs/api-reference/engine/compute/swap'}
   ],
   animation: [
+    {
+      id: 'animation-guide',
+      label: 'Guide',
+      href: '/docs/api-guide/engine/animation'
+    },
+    {
+      id: 'animation-mixer',
+      label: 'Mixer',
+      href: '/docs/api-reference/engine/animation/animation-mixer'
+    },
+    {
+      id: 'morph-targets',
+      label: 'Morph Targets',
+      href: '/docs/api-reference/engine/animation/morph-targets'
+    },
     {
       id: 'animation-loop',
       label: 'AnimationLoop',

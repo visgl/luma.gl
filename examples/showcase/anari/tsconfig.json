@@ -15,6 +15,7 @@
     "moduleResolution": "Bundler",
     "paths": {
       "@luma.gl/anari": ["../../../modules/anari/src/index.ts"],
+      "@luma.gl/anari/gltf": ["../../../modules/anari/src/gltf.ts"],
       "@luma.gl/anari/schemas": ["../../../modules/anari/src/schemas.ts"]
     },
     "resolveJsonModule": true,

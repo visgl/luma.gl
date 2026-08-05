@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUTraceViewerExample} from '@site/src/examples';
 
 # GPUHierarchyLayout
 
@@ -9,6 +10,13 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 `GPUHierarchyLayout` converts parent and child expansion flags into effective row heights and
 exclusive GPU-scanned positions. It supports interactive process/thread collapse without
 rebuilding source data or render commands.
+
+The live trace viewer demonstrates the motivating interaction directly: collapsing a process
+retains one representative row, collapsing a thread retains its first lane, and later rows move
+into place through GPU-scanned offsets. The underlying source spans and their stable identities
+never move.
+
+<GPUTraceViewerExample embedded />
 
 ## Concepts
 

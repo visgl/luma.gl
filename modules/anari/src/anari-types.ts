@@ -1,5 +1,5 @@
-import type {NumberArray9, TypedArray} from '@math.gl/core';
 import type {Texture} from '@luma.gl/core';
+import type {NumberArray9, TypedArray} from '@math.gl/core';
 import type {
   ANARIArray,
   ANARICamera,
@@ -8,8 +8,8 @@ import type {
   ANARIInstance,
   ANARILight,
   ANARIMaterial,
-  ANARISampler,
   ANARIRenderer,
+  ANARISampler,
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
@@ -51,6 +51,7 @@ export type ANARIObjectReference =
 export type ANARISamplerParameters = {
   image: Texture;
   transform?: Readonly<NumberArray9>;
+  textureCoordinateSet?: 0 | 1;
 };
 
 export type ANARIArrayParameters = {
@@ -59,12 +60,25 @@ export type ANARIArrayParameters = {
   dimensions?: readonly number[];
 };
 
+/** CPU-side displacement attributes belonging to one retained morph target. */
+export type ANARIMorphTargetParameters = {
+  POSITION?: Float32Array;
+  NORMAL?: Float32Array;
+  TANGENT?: Float32Array;
+};
+
 export type ANARIGeometryParameters = {
   'vertex.position'?: Float32Array | ANARIArray;
   'vertex.normal'?: Float32Array | ANARIArray;
+  'vertex.tangent'?: Float32Array | ANARIArray;
+  'vertex.joint'?: Uint8Array | Uint16Array | Uint32Array | ANARIArray;
+  'vertex.weight'?: Float32Array | ANARIArray;
   'vertex.attribute0'?: Float32Array | ANARIArray;
   'vertex.attribute1'?: Float32Array | ANARIArray;
+  'vertex.attribute2'?: Float32Array | ANARIArray;
   'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
+  morphTargets?: readonly ANARIMorphTargetParameters[];
+  morphWeights?: readonly number[];
   radius?: number;
   height?: number;
   width?: number;
@@ -79,14 +93,28 @@ export type ANARIMaterialParameters = {
   metallic?: number;
   roughness?: number;
   opacity?: number;
-  alphaMode?: 'opaque' | 'blend';
+  alphaMode?: 'opaque' | 'mask' | 'blend';
+  alphaCutoff?: number;
+  doubleSided?: boolean;
+  unlit?: boolean;
+  specularColor?: ANARIVector3;
+  specularIntensity?: number;
   clearcoat?: number;
   iridescence?: number;
   clearcoatRoughness?: number;
   transmission?: number;
+  thickness?: number;
+  attenuationDistance?: number;
+  attenuationColor?: ANARIVector3;
   indexOfRefraction?: number;
   sheenColor?: ANARIVector3;
   sheenRoughness?: number;
+  iridescenceIndexOfRefraction?: number;
+  iridescenceThicknessMinimum?: number;
+  iridescenceThicknessMaximum?: number;
+  anisotropyStrength?: number;
+  anisotropyRotation?: number;
+  anisotropyDirection?: readonly [number, number];
   normalScale?: number;
   occlusionStrength?: number;
   baseColorTexture?: ANARISampler;
@@ -94,14 +122,29 @@ export type ANARIMaterialParameters = {
   metallicRoughnessTexture?: ANARISampler;
   emissiveTexture?: ANARISampler;
   occlusionTexture?: ANARISampler;
+  specularColorTexture?: ANARISampler;
+  specularIntensityTexture?: ANARISampler;
   clearcoatTexture?: ANARISampler;
+  clearcoatRoughnessTexture?: ANARISampler;
+  clearcoatNormalTexture?: ANARISampler;
   transmissionTexture?: ANARISampler;
+  thicknessTexture?: ANARISampler;
   sheenColorTexture?: ANARISampler;
+  sheenRoughnessTexture?: ANARISampler;
+  iridescenceTexture?: ANARISampler;
+  iridescenceThicknessTexture?: ANARISampler;
+  anisotropyTexture?: ANARISampler;
+};
+
+/** Format-independent joint palette retained by one deformable surface. */
+export type ANARISkinParameters = {
+  jointMatrices: Float32Array | readonly number[];
 };
 
 export type ANARISurfaceParameters = {
   geometry: ANARIGeometry;
   material: ANARIMaterial;
+  skin?: ANARISkinParameters;
 };
 
 export type ANARIGroupParameters = {
@@ -150,6 +193,13 @@ export type ANARICameraParameters = {
 export type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
+  environment?: {
+    diffuseTexture?: Texture;
+    specularTexture?: Texture;
+    brdfLUTTexture?: Texture;
+    intensity?: number;
+    rotation?: number;
+  };
   exposure?: number;
   bloomIntensity?: number;
   bloomThreshold?: number;

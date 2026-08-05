@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {TempestOceanExample} from '@site/src/examples';
 
 # GPUFFT2D
 
@@ -15,6 +16,26 @@ The initial implementation targets reusable simulation and signal-processing fou
 spectral oceans, frequency-domain filters, convolution, and procedural fields. It deliberately
 does not own textures, convert real-valued inputs, select padding dimensions, or hide command
 submission.
+
+The live ocean below makes the transform's value tangible: GPU spectral coefficients evolve over
+time, inverse FFT passes reconstruct spatial displacement fields, and the renderer turns those
+fields into waves, normals, and whitecaps without reading intermediate results back to the CPU.
+
+<TempestOceanExample embedded />
+
+## Concepts
+
+### Frequency-domain structure becomes spatial detail
+
+A two-dimensional FFT changes how a complex field is represented without changing its logical
+grid resolution. Frequency-space coefficients describe how much each wavelength and direction
+contributes; the inverse transform reconstructs the corresponding spatial values. This makes
+spectral water, image filtering, convolution, diffraction, and other field simulations practical
+when a physical model is simpler to evolve in frequency space than at every spatial sample.
+
+`GPUFFT2D` performs that representation change only. Applications still define coefficient
+generation, physical units, normalization expectations, boundary policy, and how reconstructed
+fields are consumed by later compute or rendering passes.
 
 ### FFT in a complete system
 

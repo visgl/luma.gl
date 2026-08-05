@@ -490,8 +490,24 @@ fn getClearcoatNormal(tbn: mat3x3f, baseNormal: vec3f, uv: vec2f) -> vec3f
 #ifdef USE_IBL
 fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
 {
-  let mipCount: f32 = 9.0; // resolution of 512x512
-  let lod: f32 = pbrInfo.perceptualRoughness * mipCount;
+#ifdef USE_SCENE_ENVIRONMENT
+  let maximumMipLevel = max(pbrScene.environmentMipCount - 1.0, 0.0);
+  let rotationSine = sin(pbrScene.environmentRotation);
+  let rotationCosine = cos(pbrScene.environmentRotation);
+  let environmentRotation = mat2x2f(
+    vec2f(rotationCosine, rotationSine),
+    vec2f(-rotationSine, rotationCosine)
+  );
+  let rotatedNormal = environmentRotation * n.xz;
+  let rotatedReflection = environmentRotation * reflection.xz;
+  let environmentNormal = vec3f(rotatedNormal.x, n.y, rotatedNormal.y);
+  let environmentReflection = vec3f(rotatedReflection.x, reflection.y, rotatedReflection.y);
+#else
+  let maximumMipLevel = 9.0;
+  let environmentNormal = n;
+  let environmentReflection = reflection;
+#endif
+  let lod = pbrInfo.perceptualRoughness * maximumMipLevel;
   // retrieve a scale and bias to F0. See [1], Figure 3
   let brdf = SRGBtoLINEAR(
     textureSampleLevel(
@@ -503,13 +519,18 @@ fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
   ).rgb;
   let diffuseLight =
     SRGBtoLINEAR(
-      textureSampleLevel(pbr_diffuseEnvSampler, pbr_diffuseEnvSamplerSampler, n, 0.0)
+      textureSampleLevel(
+        pbr_diffuseEnvSampler,
+        pbr_diffuseEnvSamplerSampler,
+        environmentNormal,
+        0.0
+      )
     ).rgb;
   var specularLight = SRGBtoLINEAR(
     textureSampleLevel(
       pbr_specularEnvSampler,
       pbr_specularEnvSamplerSampler,
-      reflection,
+      environmentReflection,
       0.0
     )
   ).rgb;
@@ -518,7 +539,7 @@ fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
     textureSampleLevel(
       pbr_specularEnvSampler,
       pbr_specularEnvSamplerSampler,
-      reflection,
+      environmentReflection,
       lod
     )
   ).rgb;
@@ -528,7 +549,11 @@ fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
   let specular =
     specularLight * (pbrInfo.specularColor * brdf.x + brdf.y) * pbrMaterial.scaleIBLAmbient.y;
 
+#ifdef USE_SCENE_ENVIRONMENT
+  return (diffuse + specular) * max(pbrScene.environmentIntensity, 0.0);
+#else
   return diffuse + specular;
+#endif
 }
 #endif
 
@@ -621,6 +646,62 @@ fn getVolumeAttenuation(thickness: f32) -> vec3f {
     max(pbrMaterial.attenuationDistance, 0.0001);
   return exp(-attenuationCoefficient * thickness);
 }
+
+#ifdef USE_TRANSMISSION_FRAMEBUFFER
+fn getTransmittedSceneColor(
+  position: vec3f,
+  normal: vec3f,
+  viewDirection: vec3f,
+  thickness: f32,
+  perceptualRoughness: f32
+) -> vec3f {
+  let refractionDirection = refract(
+    -viewDirection,
+    normal,
+    1.0 / max(pbrMaterial.ior, 1.0)
+  );
+  let refractedPosition = position + refractionDirection * thickness;
+  let clipPosition = pbrScene.projectionMatrix *
+    pbrScene.viewMatrix * vec4f(refractedPosition, 1.0);
+  var textureCoordinate = clipPosition.xy / max(clipPosition.w, 0.0001) * 0.5 + 0.5;
+  textureCoordinate.y = 1.0 - textureCoordinate.y;
+  textureCoordinate = clamp(textureCoordinate, vec2f(0.001), vec2f(0.999));
+
+  let blurRadius = perceptualRoughness * perceptualRoughness * 8.0 /
+    max(pbrScene.framebufferSize, vec2f(1.0));
+  var sceneColor = textureSampleLevel(
+    pbr_transmissionFramebufferSampler,
+    pbr_transmissionFramebufferSamplerSampler,
+    textureCoordinate,
+    0.0
+  ).rgb * 0.4;
+  sceneColor += textureSampleLevel(
+    pbr_transmissionFramebufferSampler,
+    pbr_transmissionFramebufferSamplerSampler,
+    textureCoordinate + vec2f(blurRadius.x, 0.0),
+    0.0
+  ).rgb * 0.15;
+  sceneColor += textureSampleLevel(
+    pbr_transmissionFramebufferSampler,
+    pbr_transmissionFramebufferSamplerSampler,
+    textureCoordinate - vec2f(blurRadius.x, 0.0),
+    0.0
+  ).rgb * 0.15;
+  sceneColor += textureSampleLevel(
+    pbr_transmissionFramebufferSampler,
+    pbr_transmissionFramebufferSamplerSampler,
+    textureCoordinate + vec2f(0.0, blurRadius.y),
+    0.0
+  ).rgb * 0.15;
+  sceneColor += textureSampleLevel(
+    pbr_transmissionFramebufferSampler,
+    pbr_transmissionFramebufferSamplerSampler,
+    textureCoordinate - vec2f(0.0, blurRadius.y),
+    0.0
+  ).rgb * 0.15;
+  return pow(max(sceneColor, vec3f(0.0)), vec3f(2.2));
+}
+#endif
 
 fn createClearcoatPBRInfo(
   basePBRInfo: PBRInfo,
@@ -781,7 +862,7 @@ fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
   return pbrInfo.NdotL * lightColor * (diffuseContrib + specContrib);
 }
 
-fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
+fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   let baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   let metallicRoughnessUV = getMaterialUV(
     pbrMaterial.metallicRoughnessUVSet,
@@ -834,11 +915,11 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
   );
 
   // The albedo may be defined from a base texture or a flat color
-  var baseColor: vec4<f32> = pbrMaterial.baseColorFactor;
+  var baseColor: vec4<f32> = pbrMaterial.baseColorFactor * vertexColor;
   #ifdef HAS_BASECOLORMAP
   baseColor = SRGBtoLINEAR(
     textureSample(pbr_baseColorSampler, pbr_baseColorSamplerSampler, baseColorUV)
-  ) * pbrMaterial.baseColorFactor;
+  ) * pbrMaterial.baseColorFactor * vertexColor;
   #endif
 
   #ifdef ALPHA_CUTOFF
@@ -1311,7 +1392,22 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     color += emissive * pbrMaterial.emissiveStrength;
 
     if (transmission > 0.0) {
+      #ifdef USE_TRANSMISSION_FRAMEBUFFER
+      let dielectricFresnel = getDielectricF0(pbrMaterial.ior);
+      let transmissionFresnel = dielectricFresnel +
+        (1.0 - dielectricFresnel) * pow(1.0 - NdotV, 5.0);
+      let transmittedColor = getTransmittedSceneColor(
+        fragmentInputs.pbr_vPosition,
+        n,
+        v,
+        thickness,
+        perceptualRoughness
+      );
+      color += transmittedColor * getVolumeAttenuation(thickness) *
+        transmission * (1.0 - transmissionFresnel);
+      #else
       color = mix(color, color * getVolumeAttenuation(thickness), transmission);
+      #endif
     }
 
     // This section uses mix to override final color for reference app visualization
@@ -1331,7 +1427,11 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     #endif
   }
 
+  #ifdef USE_TRANSMISSION_FRAMEBUFFER
+  let alpha = clamp(baseColor.a, 0.0, 1.0);
+  #else
   let alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
+  #endif
   return vec4<f32>(pow(color, vec3<f32>(1.0 / 2.2)), alpha);
 }
 `;

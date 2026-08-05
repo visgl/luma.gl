@@ -36,6 +36,7 @@ export type PBRTextureTransformSlotDefinition = {
   binding: string;
   displayName: string;
   pathSegments: string[];
+  colorSpace: 'srgb' | 'linear';
   uvSetUniform: string;
   uvTransformUniform: string;
 };
@@ -155,6 +156,13 @@ function createTextureTransformSlotDefinition(
     binding,
     displayName,
     pathSegments,
+    colorSpace:
+      slot === 'baseColor' ||
+      slot === 'emissive' ||
+      slot === 'specularColor' ||
+      slot === 'sheenColor'
+        ? 'srgb'
+        : 'linear',
     uvSetUniform: `${slot}UVSet`,
     uvTransformUniform: `${slot}UVTransform`
   };

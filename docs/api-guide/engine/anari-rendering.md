@@ -252,7 +252,8 @@ const cone = anariDevice.newGeometry('cone', {radius: 0.7, height: 1.4});
 const ground = anariDevice.newGeometry('quad', {width: 20, height: 20});
 ```
 
-For an explicit triangle mesh, provide packed positions and optionally normals and indices:
+For an explicit triangle mesh, provide packed positions and optionally normals, two texture
+coordinate sets, tangents, RGBA vertex colors, joint attributes, morph targets, and indices:
 
 ```ts
 const triangleMesh = anariDevice.newGeometry('triangle', {
@@ -266,9 +267,17 @@ const triangleMesh = anariDevice.newGeometry('triangle', {
     0, 0, 1,
     0, 0, 1
   ]),
+  'vertex.attribute1': new Float32Array([0, 0, 1, 0, 0.5, 1]),
+  'vertex.attribute2': new Float32Array([0.25, 0, 0.75, 0, 0.5, 1]),
   'primitive.index': new Uint16Array([0, 1, 2])
 });
 ```
+
+`vertex.attribute1` and `vertex.attribute2` map to glTF `TEXCOORD_0` and `TEXCOORD_1`.
+`vertex.attribute0` retains RGB or RGBA vertex colors; `vertex.tangent` preserves tangent
+handedness. Joint indices and normalized floating-point weights use `vertex.joint` and
+`vertex.weight`. Morph targets contain optional `POSITION`, `NORMAL`, and `TANGENT` deltas;
+changing `morphWeights` updates the existing packed GPU vertex buffer without rebuilding the model.
 
 `ANARIArray` can wrap typed arrays without copying:
 
@@ -333,7 +342,8 @@ const transform = new Matrix4()
 
 ## Use physically based materials
 
-`physicallyBased` exposes metallic/roughness shading plus emission, clearcoat, and an iridescence approximation:
+`physicallyBased` exposes metallic/roughness shading, emission, clearcoat, sheen, specular,
+transmission/volume parameters, iridescence, anisotropy, and explicit alpha controls:
 
 ```ts
 const polishedMetal = anariDevice.newMaterial('physicallyBased', {
@@ -353,7 +363,40 @@ const emissivePanel = anariDevice.newMaterial('physicallyBased', {
 const matteWall = anariDevice.newMaterial('matte', {
   color: [0.28, 0.3, 0.35]
 });
+
+const maskedLeaves = anariDevice.newMaterial('physicallyBased', {
+  alphaMode: 'mask',
+  alphaCutoff: 0.4,
+  doubleSided: true
+});
 ```
+
+All 17 supported glTF PBR texture slots map to retained image samplers. Base-color, emissive,
+specular-color, and sheen-color maps use sRGB inputs; normal, metallic/roughness, occlusion, and
+other data maps remain linear. Samplers preserve authored wrapping, filtering, mipmap selection,
+UV set, and texture transforms.
+
+Transmissive physical materials retain their authored `opaque` alpha mode. When a surface has a
+nonzero transmission factor, the shared forward renderer automatically captures the opaque
+background and refracts that scene color using its index of refraction, thickness, roughness,
+Fresnel response, and volume attenuation:
+
+```ts
+const glass = anariDevice.newMaterial('physicallyBased', {
+  alphaMode: 'opaque',
+  transmission: 1,
+  roughness: 0.08,
+  thickness: 0.4,
+  attenuationDistance: 2,
+  attenuationColor: [0.85, 0.96, 1],
+  indexOfRefraction: 1.5
+});
+```
+
+The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively
+resolved. Renderer parameters can also receive the caller-owned
+[prepared PBR lighting environment](/docs/api-reference/experimental/pbr-environment) for
+roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.
 
@@ -379,6 +422,7 @@ const spot = anariDevice.newLight('spot', {
   position: [0, 6, 2],
   direction: [0, -1, -0.25],
   openingAngle: Math.PI / 6,
+  falloffAngle: Math.PI / 9,
   intensity: 30
 });
 
@@ -612,17 +656,26 @@ Each `frame.render()` performs the following work:
 11. Optionally run renderer-owned composition such as bloom or deferred lighting.
 12. Return surface, instance, draw-call, and triangle statistics.
 
-The forward runtime uses WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The deferred runtime is WebGPU-only and resolves the same retained object graph through `GBuffer` plus `deferredLighting`.
+The ANARI adapter does not own a second shader or material pipeline. It translates retained
+objects into the format-independent
+[`SceneRenderer`](/docs/api-reference/experimental/scene-renderer) or
+[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) descriptors
+from `@luma.gl/experimental`. The shared forward runtime uses WGSL shaders on WebGPU and equivalent
+GLSL shaders on WebGL 2. The WebGPU deferred path resolves compatible opaque scenes through the same
+retained object graph and falls back to forward rendering for unsupported scene features.
 
 ### Cache invalidation
 
 The runtime rebuilds a compiled model when:
 
-- The committed geometry version changes.
+- A structural geometry attribute or its committed layout changes.
 - The number of placements for a retained surface changes.
+- Alpha mode, sidedness, texture bindings, or another structural material feature changes.
 - A previously removed surface becomes visible again.
 
-Transforms and material uniform values are updated without reconstructing geometry. Removing a surface from the world destroys its cached model and associated instance buffers.
+Transforms, nonstructural material uniforms, joint palettes, and animated morph weights update
+without reconstructing geometry. Removing a surface from the world destroys its cached model and
+associated instance buffers.
 
 ### Practical performance rules
 
@@ -786,6 +839,8 @@ for each orb.
 | `surfaces` | Named surface declarations referencing geometry and material identifiers. |
 | `groups` | Optional named groups referencing `surfaces` and optional `lights`. |
 | `instances` | Array of objects with `@@id`, a `group` or `surface` reference, transforms, and optional animation. |
+| `nodes` | Optional imported animation hierarchy with transforms, retained instance references, and owned morph geometries. |
+| `clips`, `playback` | Optional keyframe animation clips plus selected clip, playback speed, playing state, and loop behavior. |
 | `distributions` | Optional compact procedural instance distributions, including seeded `starfield` populations. |
 | `lights` | Array of lights with `@@id`, ANARI subtype/parameters, and optional animation. |
 | `world` | Optional selected `surfaces`, `instances`, and `lights`; all instances and lights are included by default. |
@@ -867,8 +922,9 @@ with hundreds of nearly identical instance objects.
 
 ### Animate retained scene objects
 
-Animations update existing objects through `setParameter(...).commitParameters()`; they do not
-rebuild the world each frame.
+Procedural animations update existing objects through `setParameter(...).commitParameters()`;
+authored glTF clips use the shared engine animation mixer. Neither path rebuilds the world each
+frame, and authored channels take precedence when both paths target the same retained object.
 
 | Animation `@@type` | Applies to | Properties |
 | --- | --- | --- |
@@ -934,11 +990,33 @@ attributed to the Academy Software Foundation's Open Chess Set under CC BY 4.0; 
 accompany the bundled assets.
 
 The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes,
-reuses retained surfaces for repeated nodes, translates physically based materials, and retains
-base-color, normal, metallic-roughness, emissive, occlusion, clearcoat, transmission, and sheen
-maps as real fragment-sampled ANARI image samplers. It shares `@luma.gl/gltf`'s canonical
-`KHR_texture_transform` math. Local file selection supports standalone `.gltf` and `.glb` assets
-as well as supported OpenUSD files.
+reuses retained surfaces for repeated nodes, translates physically based materials, and retains all
+17 canonical PBR texture slots as fragment-sampled ANARI image samplers. Source wrapping, filter and
+mipmap settings, color spaces, both UV sets, `KHR_texture_transform`, alpha masking, sidedness, and
+authored punctual lights are preserved. Joint attributes are imported, while animated joint
+deformation additionally requires an application-provided retained `surface.skin.jointMatrices`
+palette. POSITION, NORMAL, and TANGENT morph targets and animated morph weights play through the
+retained scene automatically.
+
+The optional `@luma.gl/anari/gltf` entry point translates parsed glTF clips and binds their node,
+material, sampler, and morph channels to existing retained objects:
+
+```ts
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+
+const animation = makeANARIAnimationScene(description, retainedObjects);
+
+animation.play();
+animation.update(timeSeconds);
+animation.seek(1.5);
+```
+
+`update()` receives an absolute monotonic time in seconds. The handle shares the engine animation
+mixer and commits each changed retained object at most once per frame. See
+[ANARI glTF and keyframe animation](/docs/api-reference/anari/anari-animation) and
+[glTF animation and deformation](/docs/api-reference/gltf/gltf-animation) for complete bindings,
+interpolation modes, ownership, and playback examples. Local file selection supports standalone
+`.gltf` and `.glb` assets as well as supported OpenUSD files.
 
 The example-local `USDLoader` follows the loaders.gl loader contract and is structured for future
 extraction into an `@loaders.gl/usd` module:
@@ -997,14 +1075,15 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - No ANARI C API binding, binary protocol, conformance claim, or general renderer plug-in mechanism.
 - Geometry subtypes are limited to triangle meshes, spheres, cylinders, cones, and quads.
 - Only one-dimensional data/reference arrays are implemented; array metadata is not interpreted or validated.
-- Material `alphaMode` and light `falloffAngle` are accepted but not consumed by the renderer.
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
-- Changing an opaque compiled material to transparent does not rebuild its blending pipeline.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
 - Visibility, picking, volumes, clipping planes, shadows, and asynchronous frame mapping are not implemented.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
-- Experimental glTF import supports common PBR textures and selected material extensions, but not skinning or animations.
+- Imported glTF skin attributes require an application-supplied retained joint palette; automatic
+  skin-palette binding in the showcase importer and animated glTF export are not yet implemented.
+- Scene-color transmission samples an opaque-background capture and does not recursively refract
+  multiple overlapping transmissive surfaces.
 - WebGL 2 preserves the same scene API but does not support the WebGPU HDR presentation path.
 - The ANARI device releases its renderer resources but does not destroy the underlying shared luma.gl graphics device.
 

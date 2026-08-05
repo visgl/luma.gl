@@ -1,9 +1,9 @@
 import {load, parse} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {makeANARIJSONSceneFromGLTF} from './gltf-to-anari';
+import {type ANARIJSONScene, preloadANARIJSONTextures} from './playground-scene';
 import {USDLoader, type USDLoaderOptions} from './usd-loader/usd-loader';
 import {makeANARIJSONSceneFromUSD} from './usd-to-anari';
-import {preloadANARIJSONTextures, type ANARIJSONScene} from './playground-scene';
 
 export type SceneSample = {
   identifier: string;
@@ -22,6 +22,12 @@ function resolveSceneAssetUrl(relativePath: string): string {
 }
 
 export const SCENE_SAMPLES: readonly SceneSample[] = [
+  {
+    identifier: 'gltf-animated-colors',
+    label: 'glTF · Animated Colors',
+    url: resolveSceneAssetUrl('./gltf/AnimatedColorsCube.glb'),
+    format: 'gltf'
+  },
   {
     identifier: 'gltf-antique-camera',
     label: 'glTF · Antique Camera',

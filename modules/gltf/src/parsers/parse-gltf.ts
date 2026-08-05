@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {
+  type GLTFMaterialPostprocessed,
+  type GLTFMeshPostprocessed,
+  type GLTFNodePostprocessed,
+  type GLTFPostprocessed
+} from '@loaders.gl/gltf';
 import {Device, type PrimitiveTopology} from '@luma.gl/core';
 import {
   Geometry,
@@ -10,19 +16,14 @@ import {
   Material,
   MaterialFactory,
   ModelNode,
-  type ModelProps
+  type ModelProps,
+  type MorphTargetAttributes
 } from '@luma.gl/engine';
-import {
-  type GLTFMaterialPostprocessed,
-  type GLTFMeshPostprocessed,
-  type GLTFNodePostprocessed,
-  type GLTFPostprocessed
-} from '@loaders.gl/gltf';
 import {pbrMaterial} from '@luma.gl/shadertools';
-
+import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
+import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
-import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
 
 import {parsePBRMaterial} from './parse-pbr-material';
 
@@ -109,6 +110,7 @@ export function parseGLTF(
   const gltfNodeIndexToNodeMap = new Map<number, GroupNode>();
   const gltfNodeIdToNodeMap = new Map<string, GroupNode>();
   // Step 1/2: Generate a GroupNode for each gltf node. (1:1 mapping).
+  const assignedMorphMeshes = new Set<string>();
   gltf.nodes.forEach((gltfNode, idx) => {
     const newNode = createNodeForGLTFNode(device, gltfNode, combinedOptions);
     gltfNodeIndexToNodeMap.set(idx, newNode);
@@ -128,11 +130,34 @@ export function parseGLTF(
 
     // Nodes can have children nodes and one optional child mesh at the same time.
     if (gltfNode.mesh) {
-      const mesh = gltfMeshIdToNodeMap.get(gltfNode.mesh.id);
+      const sourceMesh = gltfNode.mesh;
+      const hasMorphTargets = sourceMesh.primitives.some(primitive =>
+        Boolean(primitive.targets?.length)
+      );
+      const mesh =
+        hasMorphTargets && assignedMorphMeshes.has(sourceMesh.id)
+          ? createNodeForGLTFMesh(
+              device,
+              sourceMesh,
+              gltf,
+              gltfMaterialIdToMaterialMap,
+              combinedOptions
+            )
+          : gltfMeshIdToNodeMap.get(sourceMesh.id);
       if (!mesh) {
         throw new Error(`Cannot find mesh child ${gltfNode.mesh.id} of node ${idx}`);
       }
-      gltfNodeIndexToNodeMap.get(idx)!.add(mesh);
+      const node = gltfNodeIndexToNodeMap.get(idx)!;
+      node.add(mesh);
+      if (hasMorphTargets) {
+        assignedMorphMeshes.add(sourceMesh.id);
+        const targetCount =
+          sourceMesh.primitives.find(primitive => primitive.targets?.length)?.targets?.length || 0;
+        const weights =
+          gltfNode.weights || sourceMesh.weights || new Array<number>(targetCount).fill(0);
+        node.userData['morphMeshes'] = [mesh];
+        setGLTFMorphWeights(node, weights);
+      }
     }
   });
 
@@ -240,6 +265,39 @@ function createNodeForGLTFPrimitive({
     modelOptions: options.modelOptions,
     vertexCount
   });
+
+  if (gltfPrimitive.targets?.length) {
+    const baseAttributes: MorphTargetAttributes = {};
+    for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
+      const values = geometry.attributes[attributeName]?.value;
+      if (values instanceof Float32Array) {
+        baseAttributes[attributeName] = new Float32Array(values);
+      }
+    }
+
+    const targets = gltfPrimitive.targets.map(
+      (target: Record<string, number | {value?: Float32Array}>) => {
+        const attributes: MorphTargetAttributes = {};
+        for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
+          const accessorReference = target[attributeName];
+          const accessor =
+            typeof accessorReference === 'number'
+              ? gltf.accessors[accessorReference]
+              : accessorReference;
+          const values = accessor?.value;
+          if (values instanceof Float32Array) {
+            attributes[attributeName] = values;
+          }
+        }
+        return attributes;
+      }
+    );
+    modelNode.userData['morphTargets'] = {
+      geometry,
+      baseAttributes,
+      targets
+    } satisfies GLTFMorphTargetState;
+  }
 
   modelNode.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
   // TODO this holds on to all the CPU side texture and attribute data
