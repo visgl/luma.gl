@@ -4,6 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
 import {
   GPUAncestorProjection,
   GPUCommandGraph,
@@ -15,6 +16,8 @@ import {
 } from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {vi} from 'vitest';
+import {addGPUGraphTraversalToGraphWithDispatchLimit} from '../../src/gpu-primitives/gpu-graph-traversal';
 
 test('GPUMask composes canonical GPU selection masks', async t => {
   const device = await getWebGPUTestDevice();
@@ -193,6 +196,75 @@ test('GPUGraphTraversal expands outgoing, incoming, and bidirectional frontiers'
   t.end();
 });
 
+test('GPUGraphTraversal executes packed initialization, seeds, and expansion in three dimensions', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const seedCount = 4 * 256 + 1;
+  const nodeCount = seedCount + 1;
+  const sourceNodes = [0, 256, 512, 768, 1024];
+  const seeds = new Uint32Array(seedCount).fill(0xffffffff);
+  for (const sourceNode of sourceNodes) {
+    seeds[sourceNode] = sourceNode;
+  }
+  const offsets = createTraversalOffsets(nodeCount, sourceNodes);
+  const neighbors = Uint32Array.from(sourceNodes, sourceNode => sourceNode + 1);
+  const graph = new GPUCommandGraph(device, {id: 'packed-bounded-traversal-test'});
+  const buffers = {
+    offsets: createUint32Buffer(device, offsets, false),
+    neighbors: createUint32Buffer(device, neighbors, false),
+    seeds: createUint32Buffer(device, seeds, false),
+    output: createUint32Buffer(device, new Uint32Array(nodeCount).fill(7), true)
+  };
+  const traversal = new GPUGraphTraversal({
+    id: 'packed-bounded-traversal',
+    offsets: importUint32View(graph, 'offsets', buffers.offsets, offsets.length),
+    neighbors: importUint32View(graph, 'neighbors', buffers.neighbors, neighbors.length),
+    seeds: importUint32View(graph, 'seeds', buffers.seeds, seeds.length),
+    output: importUint32View(graph, 'output', buffers.output, nodeCount),
+    maxDepth: 1
+  });
+  addGPUGraphTraversalToGraphWithDispatchLimit(traversal, graph, 2);
+  const compiled = graph.compile();
+  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+
+  try {
+    submitGraph(device, compiled, 'packed-bounded-traversal-test');
+    const expectedOutput = new Uint32Array(nodeCount);
+    for (const sourceNode of sourceNodes) {
+      expectedOutput[sourceNode] = 1;
+      expectedOutput[sourceNode + 1] = 1;
+    }
+    t.deepEqual(
+      await readUint32(buffers.output, nodeCount),
+      Array.from(expectedOutput),
+      'initialization, seed publication, and outgoing expansion cover x, y, and z workgroups'
+    );
+
+    for (const passName of ['initialize', 'seed', 'depth-0-clear', 'depth-0-outgoing']) {
+      const dispatchIndex = dispatchSpy.mock.instances.findIndex(
+        computation => (computation as Computation).id === `packed-bounded-traversal-${passName}`
+      );
+      t.deepEqual(
+        dispatchSpy.mock.calls[dispatchIndex]?.slice(1),
+        [2, 2, 2],
+        `${passName} respects the synthetic two-workgroup limit in every dimension`
+      );
+    }
+  } finally {
+    dispatchSpy.mockRestore();
+    compiled.destroy();
+    for (const buffer of Object.values(buffers)) {
+      buffer.destroy();
+    }
+  }
+  t.end();
+});
+
 test('GPUGraphTraversal reads dynamic seed counts and traversal depth', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -243,6 +315,107 @@ test('GPUGraphTraversal follows global IDs across local CSR partitions', async t
       result.nodeOrder.includes('partitioned-traversal-depth-1-outgoing-source-2-target-3'),
     'source-to-target partition pairs make cross-partition routing explicit'
   );
+  t.end();
+});
+
+test('GPUGraphTraversal routes large seed and output partitions through three-dimensional dispatches', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const partitionLength = 4 * 256 + 1;
+  const sourceNodes = [0, 256, 512, 768, 1024];
+  const seedChunk = new Uint32Array(partitionLength).fill(0xffffffff);
+  for (const sourceNode of sourceNodes) {
+    seedChunk[sourceNode] = sourceNode;
+  }
+  const outputChunks = [
+    new Uint32Array(partitionLength),
+    new Uint32Array(0),
+    new Uint32Array(partitionLength)
+  ];
+  const offsetChunks = [
+    createTraversalOffsets(partitionLength, sourceNodes),
+    Uint32Array.from([0]),
+    createTraversalOffsets(partitionLength, sourceNodes)
+  ];
+  const neighborChunks = [
+    Uint32Array.from(sourceNodes, sourceNode => partitionLength + sourceNode),
+    new Uint32Array(0),
+    Uint32Array.from(sourceNodes, sourceNode =>
+      sourceNode === partitionLength - 1 ? sourceNode - 1 : sourceNode + 1
+    )
+  ];
+  const offsets = createVectorFixture(device, 'bounded-offsets', offsetChunks, false);
+  const neighbors = createVectorFixture(device, 'bounded-neighbors', neighborChunks, false);
+  const seeds = createVectorFixture(
+    device,
+    'bounded-seeds',
+    [seedChunk, new Uint32Array(0)],
+    false
+  );
+  const output = createVectorFixture(device, 'bounded-output', outputChunks, true);
+  output.buffers[0].write(new Uint32Array(partitionLength).fill(7));
+  output.buffers[2].write(new Uint32Array(partitionLength).fill(7));
+  const graph = new GPUCommandGraph(device, {id: 'partitioned-bounded-traversal-test'});
+  const traversal = new GPUGraphTraversal({
+    id: 'partitioned-bounded-traversal',
+    offsets: graph.importGPUVector('offsets', offsets.vector),
+    neighbors: graph.importGPUVector('neighbors', neighbors.vector),
+    seeds: graph.importGPUVector('seeds', seeds.vector),
+    output: graph.importGPUVector('output', output.vector),
+    maxDepth: 2
+  });
+  addGPUGraphTraversalToGraphWithDispatchLimit(traversal, graph, 2);
+  const compiled = graph.compile();
+  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+
+  try {
+    submitGraph(device, compiled, 'partitioned-bounded-traversal-test');
+    const expectedFirstPartition = new Uint32Array(partitionLength);
+    const expectedLastPartition = new Uint32Array(partitionLength);
+    for (const sourceNode of sourceNodes) {
+      expectedFirstPartition[sourceNode] = 1;
+      expectedFirstPartition[sourceNode === partitionLength - 1 ? sourceNode - 1 : sourceNode + 1] =
+        1;
+      expectedLastPartition[sourceNode] = 1;
+    }
+    t.deepEqual(
+      await readVectorFixture(output),
+      [Array.from(expectedFirstPartition), [], Array.from(expectedLastPartition)],
+      'large chunks preserve their empty partition while following global IDs in both directions'
+    );
+
+    for (const passName of [
+      'partition-0-initialize',
+      'partition-2-initialize',
+      'seed-0-target-0',
+      'seed-0-target-2',
+      'depth-0-clear-0',
+      'depth-0-clear-2',
+      'depth-0-outgoing-source-0-target-2',
+      'depth-1-outgoing-source-2-target-0'
+    ]) {
+      const dispatchIndex = dispatchSpy.mock.instances.findIndex(
+        computation =>
+          (computation as Computation).id === `partitioned-bounded-traversal-${passName}`
+      );
+      t.deepEqual(
+        dispatchSpy.mock.calls[dispatchIndex]?.slice(1),
+        [2, 2, 2],
+        `${passName} preserves the bounded three-dimensional dispatch`
+      );
+    }
+  } finally {
+    dispatchSpy.mockRestore();
+    compiled.destroy();
+    for (const fixture of [offsets, neighbors, seeds, output]) {
+      destroyVectorFixture(fixture);
+    }
+  }
   t.end();
 });
 
@@ -638,6 +811,17 @@ async function runTraversal(
     buffer.destroy();
   }
   return result;
+}
+
+function createTraversalOffsets(nodeCount: number, sourceNodes: readonly number[]): Uint32Array {
+  const offsets = new Uint32Array(nodeCount + 1);
+  for (const sourceNode of sourceNodes) {
+    offsets[sourceNode + 1]++;
+  }
+  for (let nodeIndex = 1; nodeIndex < offsets.length; nodeIndex++) {
+    offsets[nodeIndex] += offsets[nodeIndex - 1];
+  }
+  return offsets;
 }
 
 async function runPartitionedTraversal(device: Device): Promise<{
