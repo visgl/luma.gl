@@ -164,4 +164,16 @@ describe('curated glTF Animation Studio', () => {
     expect(license).toContain('CC0');
     expect(playground).toContain('id="export-glb"');
   });
+
+  test('provides the settings host when Animation Studio runs outside the website shell', async () => {
+    const standaloneStudio = await readFile(
+      new URL('../../examples/showcase/gltf/index.html', import.meta.url),
+      'utf8'
+    );
+
+    expect(standaloneStudio).toContain('<title>glTF Animation Studio</title>');
+    expect(standaloneStudio).toContain('aria-label="glTF Animation Studio controls"');
+    expect(standaloneStudio).toContain('data-info-box-appearance="cinematic"');
+    expect(standaloneStudio).toContain('id="example-panel-host" data-example-panel-host');
+  });
 });
