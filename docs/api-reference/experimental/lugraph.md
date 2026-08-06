@@ -24,6 +24,17 @@ This is an experimental, headless graph analytics API, not a graph database, vis
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
 GPU, which results they render, when commands are submitted, and whether anything is read back.
 
+## Attribution and licensing
+
+luGraph is inspired by [NVIDIA RAPIDS cuGraph](https://github.com/rapidsai/cugraph) and the NVIDIA
+and RAPIDS contributors advancing GPU graph analytics. cuGraph is distributed under the
+[Apache License 2.0](https://github.com/rapidsai/cugraph/blob/main/LICENSE).
+
+luGraph is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
+vis.gl implementation for browser-native WebGPU. It does not copy or translate cuGraph source code
+or CUDA implementations. It does not claim CUDA or cuGraph API compatibility, feature parity,
+NVIDIA affiliation, or NVIDIA endorsement.
+
 ## Explore a live GPU graph
 
 **What do graph relationships, vertex influence, connected groups, and neighborhood searches look
