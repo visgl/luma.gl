@@ -20,6 +20,12 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
     return;
   }
 
+  const supportsRawValidationErrorScopes =
+    device.info.gpu !== 'software' && device.info.gpuType !== 'cpu' && !device.info.fallback;
+  if (!supportsRawValidationErrorScopes) {
+    testCase.comment('software WebGPU can cancel raw validation error-scope callbacks');
+  }
+
   testCase.equal(
     device.limits.maxStorageBuffersPerShaderStage,
     8,
@@ -89,16 +95,19 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
   const renderer = new RayTracingSceneRenderer(device);
 
   try {
-    device.handle.pushErrorScope('validation');
+    if (supportsRawValidationErrorScopes) {
+      device.handle.pushErrorScope('validation');
+    }
     const initialStatistics = renderer.render(options);
     device.submit();
-    const initialValidationError = await device.handle.popErrorScope();
-
-    testCase.equal(
-      initialValidationError,
-      null,
-      'GPU bounds, complete-binary refit, nearest-hit traversal, and any-hit shadows validate'
-    );
+    if (supportsRawValidationErrorScopes) {
+      const initialValidationError = await device.handle.popErrorScope();
+      testCase.equal(
+        initialValidationError,
+        null,
+        'GPU bounds, complete-binary refit, nearest-hit traversal, and any-hit shadows validate'
+      );
+    }
     testCase.equal(
       initialStatistics.surfaceCount,
       2,
@@ -112,7 +121,9 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
     testCase.equal(initialStatistics.triangleCount, 1, 'analytic spheres avoid triangle expansion');
     testCase.equal(initialStatistics.drawCount, 1, 'the graph uses one fullscreen presentation');
 
-    device.handle.pushErrorScope('validation');
+    if (supportsRawValidationErrorScopes) {
+      device.handle.pushErrorScope('validation');
+    }
     const accumulatedStatistics = renderer.render(options);
     device.submit();
     testCase.equal(
@@ -171,12 +182,14 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
       'resizing recompiles the complete GPU graph'
     );
 
-    const updatedValidationError = await device.handle.popErrorScope();
-    testCase.equal(
-      updatedValidationError,
-      null,
-      'progressive tracing, refits, inactive leaves, empty scenes, and resizing remain core-valid'
-    );
+    if (supportsRawValidationErrorScopes) {
+      const updatedValidationError = await device.handle.popErrorScope();
+      testCase.equal(
+        updatedValidationError,
+        null,
+        'progressive tracing, refits, inactive leaves, empty scenes, and resizing remain core-valid'
+      );
+    }
 
     renderer.destroyFrame(options.id);
     renderer.destroyFrame(options.id);

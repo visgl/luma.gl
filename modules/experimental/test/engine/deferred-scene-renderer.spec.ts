@@ -21,6 +21,12 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGP
     return;
   }
 
+  const supportsRawValidationErrorScopes =
+    device.info.gpu !== 'software' && device.info.gpuType !== 'cpu' && !device.info.fallback;
+  if (!supportsRawValidationErrorScopes) {
+    testCase.comment('software WebGPU can cancel raw validation error-scope callbacks');
+  }
+
   testCase.equal(
     device.limits.maxColorAttachmentBytesPerSample,
     32,
@@ -81,15 +87,19 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGP
   });
 
   try {
-    device.handle.pushErrorScope('validation');
+    if (supportsRawValidationErrorScopes) {
+      device.handle.pushErrorScope('validation');
+    }
     const deferredStatistics = renderer.render(options);
     device.submit();
-    const deferredValidationError = await device.handle.popErrorScope();
-    testCase.equal(
-      deferredValidationError,
-      null,
-      'compact HDR deferred capture and submission avoid WebGPU validation errors'
-    );
+    if (supportsRawValidationErrorScopes) {
+      const deferredValidationError = await device.handle.popErrorScope();
+      testCase.equal(
+        deferredValidationError,
+        null,
+        'compact HDR deferred capture and submission avoid WebGPU validation errors'
+      );
+    }
     testCase.equal(
       deferredStatistics.drawCount,
       1,
