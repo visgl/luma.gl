@@ -61,6 +61,16 @@ export type ANARIAnimationNodeDescription = {
   geometries?: readonly string[];
 };
 
+/** Format-independent hierarchy references required by one retained skinned surface. */
+export type ANARIAnimationSkinDescription = {
+  /** Animated transform node owning the skinned surface. */
+  node: string;
+  /** Animated joint nodes in their authored palette order. */
+  joints: readonly string[];
+  /** Optional column-major inverse bind matrix for each joint. */
+  inverseBindMatrices?: readonly number[];
+};
+
 /** Initial action settings for a serialized animated scene. */
 export type ANARIAnimationPlaybackDescription = {
   clip?: string;

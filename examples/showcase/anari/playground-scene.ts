@@ -2,6 +2,7 @@ import {
   type ANARIAnimationClipDescription,
   type ANARIAnimationNodeDescription,
   type ANARIAnimationPlaybackDescription,
+  type ANARIAnimationSkinDescription,
   type ANARICameraParameters,
   type ANARICameraSubtype,
   type ANARIDevice,
@@ -110,6 +111,7 @@ export type JSONTextureDeclaration = {
 export type JSONSurfaceDeclaration = {
   geometry: string;
   material: string;
+  skin?: ANARIAnimationSkinDescription;
 };
 
 export type JSONGroupDeclaration = {
@@ -299,6 +301,7 @@ export function createANARIJSONScene(
   const textures: Texture[] = [];
   const materials = new Map<string, ANARIMaterial>();
   const surfaces = new Map<string, ANARISurface>();
+  const skins = new Map<ANARISurface, ANARIAnimationSkinDescription>();
   const lights = new Map<string, ANARILight>();
   const groups = new Map<string, ANARIGroup>();
   const instances = new Map<string, ANARIInstance>();
@@ -426,7 +429,17 @@ export function createANARIJSONScene(
   for (const [identifier, declaration] of Object.entries(scene.surfaces)) {
     const geometry = resolveReference(geometries, declaration.geometry, 'geometry');
     const material = resolveReference(materials, declaration.material, 'material');
-    surfaces.set(identifier, device.newSurface({geometry, material}));
+    const surface = device.newSurface({
+      geometry,
+      material,
+      ...(declaration.skin
+        ? {skin: {jointMatrices: new Float32Array(declaration.skin.joints.length * 16)}}
+        : {})
+    });
+    surfaces.set(identifier, surface);
+    if (declaration.skin) {
+      skins.set(surface, declaration.skin);
+    }
   }
 
   for (const declaration of scene.lights || []) {
@@ -525,9 +538,18 @@ export function createANARIJSONScene(
   assertSubtype('renderer', rendererSubtype, RENDERER_SUBTYPES);
   const renderer = device.newRenderer(rendererSubtype, rendererParameters);
   const frame = device.newFrame({world, camera, renderer});
-  const animations = scene.clips?.length
-    ? makeANARIAnimationScene(scene, {instances, geometries, materials, samplers, lights, camera})
-    : undefined;
+  const animations =
+    scene.clips?.length || skins.size > 0
+      ? makeANARIAnimationScene(scene, {
+          instances,
+          geometries,
+          materials,
+          samplers,
+          lights,
+          camera,
+          skins
+        })
+      : undefined;
 
   return {
     frame,
