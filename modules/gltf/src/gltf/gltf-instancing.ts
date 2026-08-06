@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFNodePostprocessed, GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
