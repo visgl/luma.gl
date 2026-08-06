@@ -37,7 +37,8 @@ Target Release Date: Q3, 2026
 - **Authored samplers and mipmaps** - glTF and postprocessed loaders.gl sampler representations retain their wrapping, filtering, and mipmap settings; shared texture creation generates requested mip chains on both WebGL and WebGPU.
 - **[Skeletal and morph animation](/docs/api-reference/gltf/gltf-animation)** - Existing joint skinning now supports multiple skins, larger joint palettes, optional bind data, and normalized joint weights. Morph samplers correctly group multi-target weight channels, including cubic-spline data, and animate position, normal, and tangent deformation.
 - **Animated glTF properties** - `KHR_animation_pointer` channels drive supported node transforms, physical-material factors, and texture transforms through the shared engine animation mixer.
-- **Punctual lights and static interchange** - Source directional, point, and spot lights retain authored colors, intensity, and cones; static glTF export round-trips supported materials, all map slots, UV sets, texture transforms, and sampler settings.
+- **[Lossless animated asset interchange](/docs/api-reference/gltf/gltf-interchange)** - Format-owned `.gltf` and `.glb` export preserves hierarchy, animation clips, material pointers, skins, inverse bind matrices, morph targets, RGBA colors, joint attributes, material variants, GPU instancing, cameras, and punctual lights.
+- **Punctual lights and source-faithful materials** - Source directional, point, and spot lights retain authored colors, intensity, and cones; generic export round-trips supported materials, all map slots, UV sets, texture transforms, and sampler settings.
 
 **@luma.gl/anari (Experimental)**
 

@@ -23,7 +23,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/text`][text]               | Experimental / Private | `TextRenderer` facade and caller-owned GPU text data.                                 |
 | [`@luma.gl/splats`][splats]           | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data.                    |
 | [`@luma.gl/experimental`][experimental] | Experimental / Private | Experimental v10 APIs, including WebGPU/WebGL WebXR and WebGL raw camera helpers. |
-| [`@luma.gl/gltf`][gltf]               | Optional    | glTF scenegraph loading and instantiation etc.                                                  |
+| [`@luma.gl/gltf`][gltf]               | Optional    | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
 | [`@luma.gl/test-utils`][test-utils]   | Optional    | Test setups, in particular support for rendering and comparing images.                          |
 
 \* At least one backend, either WebGL or WebGPU, must be installed to enable GPU resource creation.
@@ -40,7 +40,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [`@luma.gl/experimental`][experimental] for v10 work-in-progress APIs, including experimental WebXR frame, view, and raw camera helpers.
-- [`@luma.gl/gltf`][gltf] for glTF scenegraph loading and extensions.
+- [`@luma.gl/gltf`][gltf] for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.
 - [`@luma.gl/webgl`][webgl] and [`@luma.gl/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
 - [`@luma.gl/webgl/constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.
 
