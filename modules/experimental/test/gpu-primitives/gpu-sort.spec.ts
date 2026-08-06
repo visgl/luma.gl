@@ -360,6 +360,93 @@ test('GPUSort validates layouts, lengths, graph ownership, and output buffers', 
   t.end();
 });
 
+test('GPUSort rejects physical input and output aliases supplied while encoding', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keysBuffer = device.createBuffer({
+    data: Uint32Array.from([2, 1]),
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const valuesBuffer = device.createBuffer({
+    data: Uint32Array.from([20, 10]),
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const outputKeysBuffer = device.createBuffer({
+    byteLength: 8,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const outputValuesBuffer = device.createBuffer({
+    byteLength: 8,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'physical-sort-alias'});
+  const outputKeysHandle = graph.importBuffer({
+    id: 'output-keys',
+    byteLength: outputKeysBuffer.byteLength,
+    usage: Buffer.STORAGE
+  });
+  const sort = new GPUSort({
+    id: 'physical-sort',
+    keys: importView(graph, 'keys', keysBuffer, 2),
+    values: importView(graph, 'values', valuesBuffer, 2),
+    outputKeys: graph.createDataView(outputKeysHandle, {format: 'uint32', length: 2}),
+    outputValues: importView(graph, 'output-values', outputValuesBuffer, 2)
+  });
+  sort.addToGraph(graph);
+  const compiled = graph.compile();
+
+  for (const [id, alias, message] of [
+    ['keys-alias', keysBuffer, 'output keys cannot alias the input keys'],
+    ['values-alias', valuesBuffer, 'output keys cannot alias the input values'],
+    ['output-alias', outputValuesBuffer, 'sorted key and value destinations cannot alias']
+  ] as const) {
+    const commandEncoder = device.createCommandEncoder({id});
+    t.throws(
+      () =>
+        compiled.encode(commandEncoder, {
+          parameters: undefined,
+          buffers: {'output-keys': alias}
+        }),
+      /alias the same physical buffer/,
+      message
+    );
+    commandEncoder.destroy();
+  }
+
+  const commandEncoder = device.createCommandEncoder({id: 'physical-sort-distinct'});
+  compiled.encode(commandEncoder, {
+    parameters: undefined,
+    buffers: {'output-keys': outputKeysBuffer}
+  });
+  device.submit(commandEncoder.finish());
+  const [sortedKeyBytes, sortedValueBytes] = await Promise.all([
+    outputKeysBuffer.readAsync(),
+    outputValuesBuffer.readAsync()
+  ]);
+  t.deepEqual(
+    Array.from(new Uint32Array(sortedKeyBytes.buffer, sortedKeyBytes.byteOffset, 2)),
+    [1, 2],
+    'distinct output overrides preserve sorted keys'
+  );
+  t.deepEqual(
+    Array.from(new Uint32Array(sortedValueBytes.buffer, sortedValueBytes.byteOffset, 2)),
+    [10, 20],
+    'distinct output overrides preserve stable payload ordering'
+  );
+
+  compiled.destroy();
+  for (const buffer of [keysBuffer, valuesBuffer, outputKeysBuffer, outputValuesBuffer]) {
+    t.notOk(buffer.destroyed, 'the compiled graph never destroys imported sort buffers');
+    buffer.destroy();
+  }
+  t.end();
+});
+
 type SortResult = {
   keys: number[];
   values: number[];
