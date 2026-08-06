@@ -239,6 +239,45 @@ html[data-theme="dark"] .markdown .docs-markdown-table__table th code {
   font-size: 1.12rem;
 }
 
+.markdown .docs-api-card__logos {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 0 0 0.15rem;
+  min-height: 2.25rem;
+}
+
+.markdown .docs-api-card__logo {
+  flex: 0 0 auto;
+  height: 2.35rem;
+  max-width: 7.5rem;
+  object-fit: contain;
+  width: auto;
+}
+
+.markdown .docs-api-card__logo--primary {
+  height: 3.5rem;
+  max-width: 11rem;
+}
+
+.markdown .docs-api-card__logo--secondary {
+  height: 1.65rem;
+  max-width: 5.5rem;
+}
+
+.markdown .docs-api-card__logo--on-light {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 0.3rem;
+  padding: 0.2rem 0.35rem;
+}
+
+.markdown .docs-api-card__logo--on-dark {
+  background: var(--ifm-color-gray-900);
+  border-radius: 0.3rem;
+  padding: 0.2rem 0.35rem;
+}
+
 .markdown .docs-api-card__kind {
   color: var(--ifm-color-gray-700);
   font-size: 0.78rem;
@@ -250,6 +289,19 @@ html[data-theme="dark"] .markdown .docs-markdown-table__table th code {
   color: var(--ifm-color-gray-700);
   font-size: 0.9rem;
   line-height: 1.4;
+}
+
+.markdown .docs-api-card__disclaimer {
+  color: var(--ifm-color-gray-700);
+  font-size: 0.77rem;
+  line-height: 1.4;
+}
+
+.markdown .docs-api-card__attribution {
+  color: var(--ifm-color-gray-700);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  margin: -1rem 0 2rem;
 }
 
 .markdown .docs-example-source {
@@ -303,7 +355,9 @@ html[data-theme="dark"] .markdown .docs-markdown-table__table th code {
 }
 
 html[data-theme="dark"] .markdown .docs-api-card__kind,
-html[data-theme="dark"] .markdown .docs-api-card__meta {
+html[data-theme="dark"] .markdown .docs-api-card__meta,
+html[data-theme="dark"] .markdown .docs-api-card__disclaimer,
+html[data-theme="dark"] .markdown .docs-api-card__attribution {
   color: rgba(226, 232, 240, 0.72);
 }
 
