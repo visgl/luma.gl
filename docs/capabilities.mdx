@@ -25,6 +25,24 @@ rendering primitives, composable visual effects, or retained three-dimensional s
     <span className="docs-api-card__meta">@luma.gl/arrow · experimental / private</span>
   </a>
   <a className="docs-api-card" href="/docs/api-reference/core">
+    <span className="docs-api-card__logos" role="group" aria-label="Supported graphics backends">
+      <img
+        className="docs-api-card__logo"
+        src="/img/standards/webgpu.svg"
+        alt="WebGPU"
+        width="112"
+        height="38"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--on-light"
+        src="/img/standards/webgl.svg"
+        alt="WebGL"
+        width="96"
+        height="40"
+        loading="lazy"
+      />
+    </span>
     <span className="docs-api-card__kind">Portable GPU foundation</span>
     <strong>Core, WebGPU, and WebGL</strong>
     <span>One application-facing device API for buffers, textures, pipelines, commands, and explicit GPU resource ownership.</span>
@@ -49,12 +67,69 @@ rendering primitives, composable visual effects, or retained three-dimensional s
     <span className="docs-api-card__meta">@luma.gl/effects</span>
   </a>
   <a className="docs-api-card" href="/docs/api-reference/anari">
+    <span
+      className="docs-api-card__logos"
+      role="group"
+      aria-label="ANARI-inspired scenes with glTF and experimental OpenUSD import"
+    >
+      <img
+        className="docs-api-card__logo docs-api-card__logo--primary"
+        src="/img/standards/anari.svg"
+        alt="ANARI"
+        width="168"
+        height="56"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary"
+        src="/img/standards/gltf.svg"
+        alt="glTF"
+        width="64"
+        height="32"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary docs-api-card__logo--on-dark"
+        src="/img/standards/openusd.png"
+        alt="OpenUSD"
+        width="70"
+        height="33"
+        loading="lazy"
+      />
+    </span>
     <span className="docs-api-card__kind">Experimental retained scenes</span>
-    <strong>Declarative 3D and scene import</strong>
+    <strong>ANARI / Scene API</strong>
     <span>Describe cameras, geometry, lights, and renderers; explore glTF and experimental OpenUSD import in the ANARI Playground.</span>
     <span className="docs-api-card__meta">@luma.gl/anari · experimental / private</span>
+    <span className="docs-api-card__disclaimer">ANARI-inspired; not an ANARI-conformant implementation.</span>
   </a>
   <a className="docs-api-card" href="/docs/api-reference/gltf">
+    <span className="docs-api-card__logos" role="group" aria-label="glTF on WebGPU and WebGL">
+      <img
+        className="docs-api-card__logo docs-api-card__logo--primary"
+        src="/img/standards/gltf.svg"
+        alt="glTF"
+        width="128"
+        height="64"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary"
+        src="/img/standards/webgpu.svg"
+        alt="WebGPU"
+        width="77"
+        height="26"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary docs-api-card__logo--on-light"
+        src="/img/standards/webgl.svg"
+        alt="WebGL"
+        width="62"
+        height="26"
+        loading="lazy"
+      />
+    </span>
     <span className="docs-api-card__kind">Assets and materials</span>
     <strong>glTF and physically based shading</strong>
     <span>Load portable 3D assets, PBR material extensions, compressed geometry and textures, and supported animation clips.</span>
@@ -66,6 +141,12 @@ rendering primitives, composable visual effects, or retained three-dimensional s
     <span>Render captured scenes with anisotropic splats, GPU depth ordering, progressive batches, and HDR color.</span>
     <span className="docs-api-card__meta">@luma.gl/splats · experimental / private</span>
   </a>
+</div>
+
+<div className="docs-api-card__attribution">
+  WebGPU logo by <a href="https://www.w3.org/">W3C</a>, used under the{' '}
+  <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International license</a>.
+  Standards marks identify related technologies and do not imply endorsement, certification, or conformance.
 </div>
 
 ## How to read the feature matrices

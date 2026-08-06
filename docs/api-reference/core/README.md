@@ -4,6 +4,21 @@ The `@luma.gl/core` module provides an abstract API that enables application cod
 to portably work with both WebGPU and WebGL. The main export is the `Device` class
 which provides methods for creating GPU resources such as `Buffer`, `Texture`, `Shader` etc.
 
+<div className="docs-api-card__logos">
+  <a href="https://www.w3.org/TR/webgpu/" aria-label="Read the W3C WebGPU specification">
+    <img src="/img/standards/webgpu.svg" alt="WebGPU" width="120" />
+  </a>
+  <a href="https://www.khronos.org/webgl/" aria-label="Learn about the Khronos WebGL standard">
+    <img src="/img/standards/webgl.svg" alt="WebGL" width="108" />
+  </a>
+</div>
+
+<div className="docs-api-card__attribution">
+  WebGPU logo by{' '}
+  <a href="https://www.w3.org/">W3C</a>{' '}
+  (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>).
+</div>
+
 The pages in this section provide curated explanations and portability guidance. For
 the exact public TypeScript declarations, overloads, inheritance, and source locations,
 use the [generated `@luma.gl/core` API index](/docs/api-reference/generated/core).

@@ -1,6 +1,13 @@
 import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 import {GLTFExample} from '@site/src/examples';
 
+<a
+  href="https://www.khronos.org/gltf/"
+  aria-label="Learn about the Khronos glTF 3D asset format"
+>
+  <img src="/img/standards/gltf.svg" alt="glTF" width="180" />
+</a>
+
 # Overview
 
 <GltfDocsTabs active="overview" />
