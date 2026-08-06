@@ -77,6 +77,10 @@ export function getPBRMaterialMapUniforms(
     sheenColorMapEnabled: Boolean(bindings.pbr_sheenColorSampler),
     sheenRoughnessMapEnabled: Boolean(bindings.pbr_sheenRoughnessSampler),
     iridescenceMapEnabled: Boolean(bindings.pbr_iridescenceSampler),
-    anisotropyMapEnabled: Boolean(bindings.pbr_anisotropySampler)
+    anisotropyMapEnabled: Boolean(bindings.pbr_anisotropySampler),
+    bumpMapEnabled: Boolean(bindings.pbr_bumpSampler),
+    diffuseTransmissionMapEnabled: Boolean(bindings.pbr_diffuseTransmissionSampler),
+    diffuseTransmissionColorMapEnabled: Boolean(bindings.pbr_diffuseTransmissionColorSampler),
+    multiscatterColorMapEnabled: Boolean(bindings.pbr_multiscatterColorSampler)
   };
 }

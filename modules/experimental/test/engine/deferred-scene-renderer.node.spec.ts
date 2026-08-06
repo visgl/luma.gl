@@ -70,6 +70,15 @@ describe('DeferredSceneRenderer', () => {
   test.each([
     {id: 'blended', alphaMode: 'BLEND'} satisfies SceneMaterial,
     {id: 'transmissive', uniforms: {transmissionFactor: 0.4}} satisfies SceneMaterial,
+    {
+      id: 'diffuse-transmissive',
+      uniforms: {diffuseTransmissionFactor: 0.4}
+    } satisfies SceneMaterial,
+    {
+      id: 'volume-scattering',
+      uniforms: {multiscatterColorFactor: [0.4, 0, 0]}
+    } satisfies SceneMaterial,
+    {id: 'bump-map', uniforms: {bumpMapEnabled: true}} satisfies SceneMaterial,
     {id: 'volume', uniforms: {thicknessFactor: 0.4}} satisfies SceneMaterial,
     {id: 'clearcoat', uniforms: {clearcoatFactor: 0.4}} satisfies SceneMaterial,
     {id: 'sheen', uniforms: {sheenColorFactor: [0.1, 0, 0]}} satisfies SceneMaterial,

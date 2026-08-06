@@ -164,10 +164,15 @@ test('ANARI material schemas expose canonical PBR extension factors and alpha mo
     specularColor: [0.7, 0.8, 0.9],
     specularIntensity: 0.6,
     transmission: 0.5,
+    diffuseTransmission: 0.7,
+    diffuseTransmissionColor: [0.9, 0.4, 0.2],
     dispersion: 1.75,
     thickness: 1.2,
     attenuationDistance: 4,
     attenuationColor: [0.8, 0.7, 0.6],
+    multiscatterColor: [0.7, 0.35, 0.2],
+    scatterAnisotropy: -0.4,
+    bumpFactor: 0.8,
     iridescence: 0.4,
     iridescenceIndexOfRefraction: 1.45,
     iridescenceThicknessMinimum: 100,
@@ -177,6 +182,10 @@ test('ANARI material schemas expose canonical PBR extension factors and alpha mo
     anisotropyDirection: [0.6, 0.8],
     specularColorTexture: 'specular-color',
     specularIntensityTexture: 'specular-intensity',
+    bumpTexture: 'bump',
+    diffuseTransmissionTexture: 'diffuse-transmission',
+    diffuseTransmissionColorTexture: 'diffuse-transmission-color',
+    multiscatterColorTexture: 'multiscatter-color',
     thicknessTexture: 'thickness',
     clearcoatRoughnessTexture: 'clearcoat-roughness',
     clearcoatNormalTexture: 'clearcoat-normal',
@@ -202,6 +211,13 @@ test('ANARI material schemas expose canonical PBR extension factors and alpha mo
     }).success,
     'chromatic dispersion remains nonnegative without limiting artistic values above one'
   );
+  testContext.notOk(
+    ANARIMaterialSchema.safeParse({
+      '@@type': 'physicallyBased',
+      scatterAnisotropy: 1.1
+    }).success,
+    'draft scattering anisotropy remains within the physical normalized range'
+  );
   testContext.ok(
     ANARITextureSchema.safeParse({source: '/texture.png', textureCoordinateSet: 1}).success,
     'texture schemas preserve the selected canonical UV coordinate set'
@@ -215,8 +231,27 @@ test('ANARI scene schemas validate advanced retained texture references', testCo
   scene.textures = {advanced: {source: '/textures/advanced.png'}};
   scene.materials[materialIdentifier].iridescenceThicknessTexture = 'advanced';
   scene.materials[materialIdentifier].anisotropyTexture = 'advanced';
+  scene.materials[materialIdentifier].bumpTexture = 'advanced';
+  scene.materials[materialIdentifier].diffuseTransmissionTexture = 'advanced';
+  scene.materials[materialIdentifier].diffuseTransmissionColorTexture = 'advanced';
+  scene.materials[materialIdentifier].multiscatterColorTexture = 'advanced';
 
   testContext.ok(ANARISceneSchema.safeParse(scene).success, 'advanced texture references resolve');
+  scene.materials[materialIdentifier].multiscatterColorTexture = 'missing-scatter';
+  const invalidScatteringScene = ANARISceneSchema.safeParse(scene);
+  testContext.notOk(
+    invalidScatteringScene.success,
+    'missing draft-scattering textures are rejected'
+  );
+  if (!invalidScatteringScene.success) {
+    testContext.ok(
+      invalidScatteringScene.error.issues.some(
+        issue => issue.path.join('.') === `materials.${materialIdentifier}.multiscatterColorTexture`
+      ),
+      'draft material texture errors identify the exact missing retained sampler'
+    );
+  }
+  scene.materials[materialIdentifier].multiscatterColorTexture = 'advanced';
   scene.materials[materialIdentifier].iridescenceThicknessTexture = 'missing-advanced';
   const invalidScene = ANARISceneSchema.safeParse(scene);
   testContext.notOk(invalidScene.success, 'missing advanced extension textures are rejected');

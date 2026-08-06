@@ -41,8 +41,11 @@ double-sided materials, and unlit materials are preserved.
 
 Core metallic-roughness factors and supported extension factors include emissive strength,
 specular intensity/color, index of refraction, transmission, thickness/attenuation, ratified
-chromatic dispersion, clearcoat, sheen, iridescence, and anisotropy. Authored sRGB color textures
-use the exact piecewise transfer function rather than an approximate gamma curve.
+chromatic dispersion, clearcoat, sheen, iridescence, and anisotropy. Additional experimental
+material paths support `EXT_materials_bump`, release-candidate
+`KHR_materials_diffuse_transmission`, and an explicitly approximate implementation of the
+unratified `KHR_materials_volume_scatter` draft. Authored sRGB color textures use the exact
+piecewise transfer function rather than an approximate gamma curve.
 
 ## Supported texture slots
 
@@ -54,7 +57,7 @@ for (const definition of getTextureTransformSlotDefinitions()) {
 }
 ```
 
-The shared registry describes all 17 supported slots:
+The shared registry describes all 21 supported slots:
 
 | Slot | glTF material source | Color space |
 | --- | --- | --- |
@@ -75,6 +78,10 @@ The shared registry describes all 17 supported slots:
 | `iridescence` | `KHR_materials_iridescence.iridescenceTexture` | Linear |
 | `iridescenceThickness` | `KHR_materials_iridescence.iridescenceThicknessTexture` | Linear |
 | `anisotropy` | `KHR_materials_anisotropy.anisotropyTexture` | Linear |
+| `bump` | `EXT_materials_bump.bumpTexture` | Linear, red channel |
+| `diffuseTransmission` | `KHR_materials_diffuse_transmission.diffuseTransmissionTexture` | Linear, alpha channel |
+| `diffuseTransmissionColor` | `KHR_materials_diffuse_transmission.diffuseTransmissionColorTexture` | sRGB |
+| `multiscatterColor` | `KHR_materials_volume_scatter.multiscatterColorTexture` | sRGB |
 
 Color textures must be decoded from sRGB exactly once. Data textures must remain linear. The
 existing canonical glTF shader path performs its established color conversion; importers that
@@ -155,6 +162,87 @@ const textureMatrix = getTextureTransformMatrix(transform);
 attribute, or `TEXCOORD_2` and higher, is skipped with a warning. `KHR_animation_pointer` can
 animate offset, rotation, and scale for each supported slot; changing the selected coordinate set
 at runtime is not supported.
+
+## Experimental bump mapping
+
+[`EXT_materials_bump`](https://github.com/KhronosGroup/glTF/pull/2339) is an experimental material
+proposal, not a ratified Khronos extension. The canonical PBR shaders derive a tangent-space
+surface-normal perturbation from the linear red channel of `bumpTexture` and scale it with
+`bumpFactor`:
+
+```json
+{
+  "extensions": {
+    "EXT_materials_bump": {
+      "bumpFactor": 0.8,
+      "bumpTexture": {"index": 2, "texCoord": 1}
+    }
+  }
+}
+```
+
+Bump mapping composes with an existing normal map without moving mesh vertices. Its sampler,
+texture-coordinate set, texture transform, and animated `bumpFactor` remain feature-specialized;
+materials without a bump map allocate no additional GPU binding.
+
+## Release-candidate diffuse transmission
+
+[`KHR_materials_diffuse_transmission`](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_diffuse_transmission/README.md)
+is a Khronos **release candidate**, not a ratified extension. It describes light transmitted
+through the opposite hemisphere of a thin or translucent surface:
+
+```json
+{
+  "extensions": {
+    "KHR_materials_diffuse_transmission": {
+      "diffuseTransmissionFactor": 0.75,
+      "diffuseTransmissionTexture": {"index": 0},
+      "diffuseTransmissionColorFactor": [1, 0.4, 0.2],
+      "diffuseTransmissionColorTexture": {"index": 1}
+    }
+  }
+}
+```
+
+Directional, point, spot, and image-based lights contribute from the opposite surface normal.
+The alpha channel of the linear factor map controls transmitted energy; the optional color map
+is decoded from sRGB. Front-facing diffuse reflection is reduced by the same transmission factor,
+preserving the existing specular response. Metallic and specular-transmission terms reduce the
+remaining diffuse-transmission energy, and authored volume thickness and attenuation tint the
+result. Scalar and color factors and all texture-transform properties support
+`KHR_animation_pointer`.
+
+## Active-draft volume scattering
+
+[`KHR_materials_volume_scatter`](https://github.com/KhronosGroup/glTF/pull/2453) is an active,
+unratified draft and requires an accompanying `KHR_materials_volume` extension:
+
+```json
+{
+  "extensions": {
+    "KHR_materials_volume": {
+      "thicknessFactor": 0.6,
+      "attenuationDistance": 0.8,
+      "attenuationColor": [1, 0.8, 0.65]
+    },
+    "KHR_materials_diffuse_transmission": {
+      "diffuseTransmissionFactor": 0.7
+    },
+    "KHR_materials_volume_scatter": {
+      "multiscatterColorFactor": [0.9, 0.35, 0.18],
+      "multiscatterColorTexture": {"index": 3},
+      "scatterAnisotropy": 0.25
+    }
+  }
+}
+```
+
+The canonical shaders apply a local, thickness-aware single-scattering approximation with
+Beer–Lambert volume attenuation and a bounded Henyey–Greenstein phase response. Both the newer
+`multiscatterColorFactor` spelling and the older draft `multiscatterColor` spelling are accepted.
+This is **not** spatial screen-space diffusion, a subsurface random walk, multi-surface
+scattering, or a conformance claim for an unfinished specification. Draft field names and
+behavior can change before standardization.
 
 ## Punctual lights
 

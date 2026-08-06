@@ -348,6 +348,10 @@ export function getPBRTextureDefines(bindings: Record<string, unknown>): Record<
     HAS_SHEENROUGHNESSMAP: Boolean(bindings['pbr_sheenRoughnessSampler']),
     HAS_IRIDESCENCEMAP: Boolean(bindings['pbr_iridescenceSampler']),
     HAS_IRIDESCENCETHICKNESSMAP: Boolean(bindings['pbr_iridescenceThicknessSampler']),
-    HAS_ANISOTROPYMAP: Boolean(bindings['pbr_anisotropySampler'])
+    HAS_ANISOTROPYMAP: Boolean(bindings['pbr_anisotropySampler']),
+    HAS_BUMPMAP: Boolean(bindings['pbr_bumpSampler']),
+    HAS_DIFFUSETRANSMISSIONMAP: Boolean(bindings['pbr_diffuseTransmissionSampler']),
+    HAS_DIFFUSETRANSMISSIONCOLORMAP: Boolean(bindings['pbr_diffuseTransmissionColorSampler']),
+    HAS_MULTISCATTERCOLORMAP: Boolean(bindings['pbr_multiscatterColorSampler'])
   };
 }

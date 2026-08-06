@@ -21,6 +21,11 @@ test('ANARI material parameters translate into canonical shared PBR uniforms', t
     clearcoatRoughness: 0.15,
     transmission: 0.45,
     dispersion: 0.65,
+    diffuseTransmission: 0.55,
+    diffuseTransmissionColor: [0.9, 0.35, 0.2],
+    multiscatterColor: [0.7, 0.4, 0.25],
+    scatterAnisotropy: 0.3,
+    bumpFactor: 0.75,
     thickness: 1.2,
     attenuationDistance: 3,
     attenuationColor: [0.8, 0.6, 0.4],
@@ -55,6 +60,19 @@ test('ANARI material parameters translate into canonical shared PBR uniforms', t
   testContext.equal(uniforms.clearcoatRoughnessFactor, 0.15, 'maps clearcoat roughness');
   testContext.equal(uniforms.transmissionFactor, 0.45, 'maps transmission amount');
   testContext.equal(uniforms.dispersion, 0.65, 'maps chromatic transmission dispersion');
+  testContext.equal(uniforms.diffuseTransmissionFactor, 0.55, 'maps diffuse transmission');
+  testContext.deepEqual(
+    uniforms.diffuseTransmissionColorFactor,
+    [0.9, 0.35, 0.2],
+    'maps the diffuse transmission color'
+  );
+  testContext.deepEqual(
+    uniforms.multiscatterColorFactor,
+    [0.7, 0.4, 0.25],
+    'maps the experimental volume-scatter color'
+  );
+  testContext.equal(uniforms.scatterAnisotropy, 0.3, 'maps the scattering phase anisotropy');
+  testContext.equal(uniforms.bumpFactor, 0.75, 'maps the experimental bump-map strength');
   testContext.equal(uniforms.thicknessFactor, 1.2, 'maps volume thickness');
   testContext.equal(uniforms.attenuationDistance, 3, 'maps volume attenuation distance');
   testContext.deepEqual(uniforms.attenuationColor, [0.8, 0.6, 0.4], 'maps attenuation color');
@@ -110,7 +128,11 @@ test('ANARI maps every advanced texture slot to canonical PBR sampler bindings',
     sheenRoughnessTexture: sampler,
     iridescenceTexture: sampler,
     iridescenceThicknessTexture: sampler,
-    anisotropyTexture: sampler
+    anisotropyTexture: sampler,
+    bumpTexture: sampler,
+    diffuseTransmissionTexture: sampler,
+    diffuseTransmissionColorTexture: sampler,
+    multiscatterColorTexture: sampler
   });
   const sceneMaterial = makeSceneMaterial(material);
   const expectedBindingNames = [
@@ -130,7 +152,11 @@ test('ANARI maps every advanced texture slot to canonical PBR sampler bindings',
     'pbr_sheenRoughnessSampler',
     'pbr_iridescenceSampler',
     'pbr_iridescenceThicknessSampler',
-    'pbr_anisotropySampler'
+    'pbr_anisotropySampler',
+    'pbr_bumpSampler',
+    'pbr_diffuseTransmissionSampler',
+    'pbr_diffuseTransmissionColorSampler',
+    'pbr_multiscatterColorSampler'
   ];
 
   testContext.deepEqual(
@@ -143,11 +169,32 @@ test('ANARI maps every advanced texture slot to canonical PBR sampler bindings',
   }
   testContext.equal(sceneMaterial.uniforms?.baseColorMapEnabled, true, 'enables base color map');
   testContext.equal(sceneMaterial.uniforms?.anisotropyMapEnabled, true, 'enables anisotropy map');
+  testContext.equal(sceneMaterial.uniforms?.bumpMapEnabled, true, 'enables the bump height map');
+  testContext.equal(
+    sceneMaterial.uniforms?.diffuseTransmissionMapEnabled,
+    true,
+    'enables the diffuse-transmission factor map'
+  );
+  testContext.equal(
+    sceneMaterial.uniforms?.diffuseTransmissionColorMapEnabled,
+    true,
+    'enables the diffuse-transmission color map'
+  );
+  testContext.equal(
+    sceneMaterial.uniforms?.multiscatterColorMapEnabled,
+    true,
+    'enables the experimental volume-scatter color map'
+  );
   testContext.equal(sceneMaterial.uniforms?.clearcoatRoughnessUVSet, 1, 'preserves UV set choice');
   testContext.deepEqual(
     sceneMaterial.uniforms?.iridescenceThicknessUVTransform,
     transform,
     'preserves per-sampler UV transforms for every extension map'
+  );
+  testContext.deepEqual(
+    sceneMaterial.uniforms?.multiscatterColorUVTransform,
+    transform,
+    'preserves UV transforms for draft extension textures'
   );
 
   device.destroy();

@@ -72,11 +72,31 @@ type GLTFMaterialTransmissionExtension = {
   transmissionTexture?: GLTFTexture;
 };
 
+type GLTFMaterialBumpExtension = {
+  bumpFactor?: number;
+  bumpTexture?: GLTFTexture;
+};
+
+type GLTFMaterialDiffuseTransmissionExtension = {
+  diffuseTransmissionFactor?: number;
+  diffuseTransmissionTexture?: GLTFTexture;
+  diffuseTransmissionColorFactor?: [number, number, number];
+  diffuseTransmissionColorTexture?: GLTFTexture;
+};
+
 type GLTFMaterialVolumeExtension = {
   thicknessFactor?: number;
   thicknessTexture?: GLTFTexture;
   attenuationDistance?: number;
   attenuationColor?: [number, number, number];
+};
+
+type GLTFMaterialVolumeScatterExtension = {
+  multiscatterColorFactor?: [number, number, number];
+  /** The active draft schema and older reference renderer use this legacy spelling. */
+  multiscatterColor?: [number, number, number];
+  multiscatterColorTexture?: GLTFTexture;
+  scatterAnisotropy?: number;
 };
 
 type GLTFMaterialDispersionExtension = {
@@ -121,8 +141,11 @@ type GLTFMaterialExtensions = {
   KHR_materials_unlit?: Record<string, never>;
   KHR_materials_specular?: GLTFMaterialSpecularExtension;
   KHR_materials_ior?: GLTFMaterialIorExtension;
+  EXT_materials_bump?: GLTFMaterialBumpExtension;
   KHR_materials_transmission?: GLTFMaterialTransmissionExtension;
+  KHR_materials_diffuse_transmission?: GLTFMaterialDiffuseTransmissionExtension;
   KHR_materials_volume?: GLTFMaterialVolumeExtension;
+  KHR_materials_volume_scatter?: GLTFMaterialVolumeScatterExtension;
   KHR_materials_dispersion?: GLTFMaterialDispersionExtension;
   KHR_materials_clearcoat?: GLTFMaterialClearcoatExtension;
   KHR_materials_sheen?: GLTFMaterialSheenExtension;
@@ -145,7 +168,11 @@ type TextureEnabledUniformName =
   | 'sheenColorMapEnabled'
   | 'sheenRoughnessMapEnabled'
   | 'iridescenceMapEnabled'
-  | 'anisotropyMapEnabled';
+  | 'anisotropyMapEnabled'
+  | 'bumpMapEnabled'
+  | 'diffuseTransmissionMapEnabled'
+  | 'diffuseTransmissionColorMapEnabled'
+  | 'multiscatterColorMapEnabled';
 
 type TextureFeatureOptions = {
   define?: string;
@@ -529,6 +556,7 @@ function parseMaterialExtensions(
     attributes
   );
   parseIorExtension(extensions.KHR_materials_ior, parsedMaterial);
+  parseBumpExtension(device, extensions.EXT_materials_bump, parsedMaterial, gltf, attributes);
   parseTransmissionExtension(
     device,
     extensions.KHR_materials_transmission,
@@ -536,7 +564,22 @@ function parseMaterialExtensions(
     gltf,
     attributes
   );
+  parseDiffuseTransmissionExtension(
+    device,
+    extensions.KHR_materials_diffuse_transmission,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
   parseVolumeExtension(device, extensions.KHR_materials_volume, parsedMaterial, gltf, attributes);
+  parseVolumeScatterExtension(
+    device,
+    extensions.KHR_materials_volume_scatter,
+    extensions.KHR_materials_volume,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
   parseDispersionExtension(extensions.KHR_materials_dispersion, parsedMaterial);
   parseClearcoatExtension(
     device,
@@ -567,8 +610,11 @@ function hasMaterialExtensionShading(extensions: GLTFMaterialExtensions): boolea
   return Boolean(
     extensions.KHR_materials_specular ||
       extensions.KHR_materials_ior ||
+      extensions.EXT_materials_bump ||
       extensions.KHR_materials_transmission ||
+      extensions.KHR_materials_diffuse_transmission ||
       extensions.KHR_materials_volume ||
+      extensions.KHR_materials_volume_scatter ||
       extensions.KHR_materials_dispersion ||
       extensions.KHR_materials_clearcoat ||
       extensions.KHR_materials_sheen ||
@@ -661,6 +707,81 @@ function parseTransmissionExtension(
   }
 }
 
+function parseBumpExtension(
+  device: Device,
+  extension: GLTFMaterialBumpExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial,
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
+): void {
+  if (!extension) {
+    return;
+  }
+
+  parsedMaterial.uniforms.bumpFactor = Math.max(extension.bumpFactor ?? 1, 0);
+  if (extension.bumpTexture) {
+    addTexture(device, extension.bumpTexture, 'pbr_bumpSampler', parsedMaterial, {
+      featureOptions: {define: 'HAS_BUMPMAP', enabledUniformName: 'bumpMapEnabled'},
+      gltf,
+      attributes,
+      textureTransformSlot: 'bump'
+    });
+  }
+}
+
+function parseDiffuseTransmissionExtension(
+  device: Device,
+  extension: GLTFMaterialDiffuseTransmissionExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial,
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
+): void {
+  if (!extension) {
+    return;
+  }
+
+  parsedMaterial.uniforms.diffuseTransmissionFactor = Math.min(
+    Math.max(extension.diffuseTransmissionFactor ?? 0, 0),
+    1
+  );
+  parsedMaterial.uniforms.diffuseTransmissionColorFactor =
+    extension.diffuseTransmissionColorFactor || [1, 1, 1];
+  if (extension.diffuseTransmissionTexture) {
+    addTexture(
+      device,
+      extension.diffuseTransmissionTexture,
+      'pbr_diffuseTransmissionSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_DIFFUSETRANSMISSIONMAP',
+          enabledUniformName: 'diffuseTransmissionMapEnabled'
+        },
+        gltf,
+        attributes,
+        textureTransformSlot: 'diffuseTransmission'
+      }
+    );
+  }
+  if (extension.diffuseTransmissionColorTexture) {
+    addTexture(
+      device,
+      extension.diffuseTransmissionColorTexture,
+      'pbr_diffuseTransmissionColorSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_DIFFUSETRANSMISSIONCOLORMAP',
+          enabledUniformName: 'diffuseTransmissionColorMapEnabled'
+        },
+        gltf,
+        attributes,
+        textureTransformSlot: 'diffuseTransmissionColor'
+      }
+    );
+  }
+}
+
 function parseVolumeExtension(
   device: Device,
   extension: GLTFMaterialVolumeExtension | undefined,
@@ -690,6 +811,43 @@ function parseVolumeExtension(
   }
   if (extension.attenuationColor) {
     parsedMaterial.uniforms.attenuationColor = extension.attenuationColor;
+  }
+}
+
+function parseVolumeScatterExtension(
+  device: Device,
+  extension: GLTFMaterialVolumeScatterExtension | undefined,
+  volumeExtension: GLTFMaterialVolumeExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial,
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
+): void {
+  if (!extension || !volumeExtension) {
+    return;
+  }
+
+  parsedMaterial.uniforms.multiscatterColorFactor = extension.multiscatterColorFactor ||
+    extension.multiscatterColor || [0, 0, 0];
+  parsedMaterial.uniforms.scatterAnisotropy = Math.min(
+    Math.max(extension.scatterAnisotropy ?? 0, -0.999),
+    0.999
+  );
+  if (extension.multiscatterColorTexture) {
+    addTexture(
+      device,
+      extension.multiscatterColorTexture,
+      'pbr_multiscatterColorSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_MULTISCATTERCOLORMAP',
+          enabledUniformName: 'multiscatterColorMapEnabled'
+        },
+        gltf,
+        attributes,
+        textureTransformSlot: 'multiscatterColor'
+      }
+    );
   }
 }
 

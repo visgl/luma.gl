@@ -175,7 +175,11 @@ describe('shared PBR material factories', () => {
         pbr_thicknessSampler: {},
         pbr_clearcoatNormalSampler: {},
         pbr_iridescenceThicknessSampler: {},
-        pbr_anisotropySampler: {}
+        pbr_anisotropySampler: {},
+        pbr_bumpSampler: {},
+        pbr_diffuseTransmissionSampler: {},
+        pbr_diffuseTransmissionColorSampler: {},
+        pbr_multiscatterColorSampler: {}
       })
     ).toMatchObject({
       HAS_BASECOLORMAP: true,
@@ -183,6 +187,10 @@ describe('shared PBR material factories', () => {
       HAS_CLEARCOATNORMALMAP: true,
       HAS_IRIDESCENCETHICKNESSMAP: true,
       HAS_ANISOTROPYMAP: true,
+      HAS_BUMPMAP: true,
+      HAS_DIFFUSETRANSMISSIONMAP: true,
+      HAS_DIFFUSETRANSMISSIONCOLORMAP: true,
+      HAS_MULTISCATTERCOLORMAP: true,
       HAS_NORMALMAP: false
     });
   });
@@ -309,6 +317,30 @@ describe('shared PBR material factories', () => {
 });
 
 describe('SceneRenderer', () => {
+  test('rebuilds punctual-light shader specialization only when lighting becomes enabled or disabled', async () => {
+    const device = await getNullTestDevice();
+    const renderer = new InspectableSceneRenderer(device);
+    const surface: SceneSurface = {
+      id: 'punctual-light-specialization',
+      geometry: makeGeometry(),
+      material: {id: 'punctual-light-material'},
+      transforms: [new Matrix4()]
+    };
+    const options: SceneRenderOptions = {...makeOptions([surface]), lights: []};
+    const unlitModel = renderer.inspect(options).surfaces[0].model;
+
+    options.lights = [{type: 'directional', direction: [0, 0, -1], intensity: 1}];
+    const litModel = renderer.inspect(options).surfaces[0].model;
+    expect(litModel).not.toBe(unlitModel);
+
+    options.lights = [{type: 'directional', direction: [1, 0, -1], intensity: 2}];
+    expect(renderer.inspect(options).surfaces[0].model).toBe(litModel);
+
+    options.lights = [];
+    expect(renderer.inspect(options).surfaces[0].model).not.toBe(litModel);
+    renderer.destroy();
+  });
+
   test('defaults every floating-point attachment to linear, untonemapped HDR output', async () => {
     const device = await getNullTestDevice();
     const renderer = new InspectableSceneRenderer(device);

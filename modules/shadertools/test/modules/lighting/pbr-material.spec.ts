@@ -92,9 +92,30 @@ const TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT = Object.fromEntries(
   })
 );
 
+const NEXT_GENERATION_MATERIAL_UNIFORM_BUFFER_LAYOUT = {
+  bumpFactor: {offset: 348, size: 1},
+  bumpMapEnabled: {offset: 349, size: 1},
+  diffuseTransmissionFactor: {offset: 350, size: 1},
+  diffuseTransmissionMapEnabled: {offset: 351, size: 1},
+  diffuseTransmissionColorFactor: {offset: 352, size: 3},
+  diffuseTransmissionColorMapEnabled: {offset: 355, size: 1},
+  multiscatterColorFactor: {offset: 356, size: 3},
+  multiscatterColorMapEnabled: {offset: 359, size: 1},
+  scatterAnisotropy: {offset: 360, size: 1},
+  bumpUVSet: {offset: 361, size: 1},
+  bumpUVTransform: {offset: 364, size: 12},
+  diffuseTransmissionUVSet: {offset: 376, size: 1},
+  diffuseTransmissionUVTransform: {offset: 380, size: 12},
+  diffuseTransmissionColorUVSet: {offset: 392, size: 1},
+  diffuseTransmissionColorUVTransform: {offset: 396, size: 12},
+  multiscatterColorUVSet: {offset: 408, size: 1},
+  multiscatterColorUVTransform: {offset: 412, size: 12}
+} as const;
+
 const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
   ...CORE_UNIFORM_BUFFER_LAYOUT,
-  ...TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT
+  ...TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT,
+  ...NEXT_GENERATION_MATERIAL_UNIFORM_BUFFER_LAYOUT
 };
 
 const EXPECTED_UNIFORM_NAMES = Object.keys(EXPECTED_UNIFORM_BUFFER_LAYOUT);
@@ -196,7 +217,7 @@ test('shadertools#pbrMaterial uniform buffer layout matches expected std140 pack
 
   testCase.equal(
     shaderBlockLayout.byteLength,
-    1392,
+    1696,
     'uniform buffer layout reports the exact packed size'
   );
   testCase.deepEqual(
@@ -225,12 +246,12 @@ test('shadertools#pbrMaterial uniform store reports minimum allocation size sepa
 
   testCase.equal(
     uniformStore.getUniformBufferByteLength('material'),
-    1392,
+    1696,
     'uniform store keeps the minimum allocation size'
   );
   testCase.equal(
     uniformStore.getUniformBufferData('material').byteLength,
-    1392,
+    1696,
     'uniform store serializes only the packed block data'
   );
 
