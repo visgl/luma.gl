@@ -40,6 +40,18 @@ const compiled = graph.compile();
 The geospatial entry point is intentionally separate from the experimental root and standalone
 bundle. Importing the subpath is the explicit opt-in.
 
+## Attribution and licensing
+
+These geospatial operations are inspired by [NVIDIA RAPIDS cuSpatial](https://github.com/rapidsai/cuspatial)
+and the NVIDIA and RAPIDS contributors who pioneered GPU-accelerated spatial analytics. cuSpatial is
+distributed under the [Apache License 2.0](https://github.com/rapidsai/cuspatial/blob/branch-25.04/LICENSE).
+
+The luma.gl implementation is independently written TypeScript and WGSL for browser-native WebGPU;
+it does not copy or translate cuSpatial source code and remains
+[MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE). Compatibility with selected
+documented mathematical conventions does not imply CUDA support, cuSpatial API compatibility,
+feature parity, NVIDIA affiliation, or NVIDIA endorsement.
+
 ## Coordinate and result formats
 
 Two packed position formats are accepted:

@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuXfilter.
 
 import {
   GPUCommandGraph,

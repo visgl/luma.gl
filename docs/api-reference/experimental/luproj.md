@@ -13,6 +13,19 @@ strategy.
 That separation supports the wide range of coordinate systems handled by `@math.gl/proj4` without
 reimplementing every projection, datum, or coordinate-reference-system definition in WGSL.
 
+## Attribution and licensing
+
+luProj is inspired by
+[NVIDIA RAPIDS cuProj](https://github.com/rapidsai/cuspatial/tree/branch-25.04/cpp/cuproj), the
+coordinate-projection component of the archived cuSpatial project. cuProj and cuSpatial are
+distributed under the [Apache License 2.0](https://github.com/rapidsai/cuspatial/blob/branch-25.04/LICENSE).
+
+luProj is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
+vis.gl implementation. Its provider-driven adaptive polynomial patches and TypeScript/WGSL WebGPU
+execution do not copy or translate cuProj source code. It is not an API-compatible CUDA port, does
+not claim native GPU Float64 arithmetic or cuProj precision and feature parity, and is neither
+affiliated with nor endorsed by NVIDIA.
+
 ## Live CPU versus WebGPU benchmark
 
 This benchmark runs locally in your browser when you click the button. Every implementation receives
