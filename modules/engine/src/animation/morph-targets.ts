@@ -13,6 +13,29 @@ export type MorphTargetAttributes = {
   TANGENT?: Float32Array;
 };
 
+/** Decodes one immutable vertex attribute into its shader-facing floating-point values. */
+export function decodeMorphTargetAttribute(attribute: GeometryAttribute): Float32Array {
+  const values = attribute.value;
+  if (values instanceof Float32Array) {
+    return values;
+  }
+
+  const decoded = new Float32Array(values.length);
+  const maximum = getNormalizedAttributeMaximum(values);
+  const signed =
+    values instanceof Int8Array || values instanceof Int16Array || values instanceof Int32Array;
+  for (let componentIndex = 0; componentIndex < values.length; componentIndex++) {
+    const value = Number(values[componentIndex]);
+    decoded[componentIndex] =
+      attribute['normalized'] && maximum
+        ? signed
+          ? Math.max(value / maximum, -1)
+          : value / maximum
+        : value;
+  }
+  return decoded;
+}
+
 /** Applies weighted morph deltas without modifying the immutable source vertex attributes. */
 export function applyMorphTargets(
   baseAttributes: Readonly<MorphTargetAttributes>,
@@ -72,9 +95,9 @@ export function updateMorphTargetBuffers(
 ): void {
   const baseAttributes: MorphTargetAttributes = {};
   for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
-    const values = geometry.attributes[attributeName]?.value;
-    if (values instanceof Float32Array) {
-      baseAttributes[attributeName] = values;
+    const attribute = geometry.attributes[attributeName];
+    if (attribute) {
+      baseAttributes[attributeName] = decodeMorphTargetAttribute(attribute);
     }
   }
 
@@ -89,7 +112,7 @@ export function updateMorphTargetBuffers(
     const values = morphedAttributes[attributeName];
     const source = attributes[attributeName];
     if (values && source) {
-      attributes[attributeName] = {...source, value: values};
+      attributes[attributeName] = {...source, value: encodeMorphTargetAttribute(source, values)};
     }
   }
 
@@ -122,6 +145,38 @@ export function updateMorphTargetBuffers(
       model.bufferAttributes[shaderAttributeName]?.write(values);
     }
   }
+}
+
+function encodeMorphTargetAttribute(
+  attribute: GeometryAttribute,
+  values: Float32Array
+): GeometryAttribute['value'] {
+  if (attribute.value instanceof Float32Array) {
+    return values;
+  }
+
+  const encoded = attribute.value.slice();
+  const maximum = getNormalizedAttributeMaximum(encoded);
+  const signed =
+    encoded instanceof Int8Array || encoded instanceof Int16Array || encoded instanceof Int32Array;
+  for (let componentIndex = 0; componentIndex < values.length; componentIndex++) {
+    const value = values[componentIndex];
+    encoded[componentIndex] =
+      attribute['normalized'] && maximum
+        ? Math.round(Math.max(signed ? -1 : 0, Math.min(1, value)) * maximum)
+        : value;
+  }
+  return encoded;
+}
+
+function getNormalizedAttributeMaximum(values: GeometryAttribute['value']): number {
+  if (values instanceof Int8Array) return 127;
+  if (values instanceof Uint8Array || values instanceof Uint8ClampedArray) return 255;
+  if (values instanceof Int16Array) return 32767;
+  if (values instanceof Uint16Array) return 65535;
+  if (values instanceof Int32Array) return 2147483647;
+  if (values instanceof Uint32Array) return 4294967295;
+  return 0;
 }
 
 function normalizeMorphDirections(values: Float32Array, componentCount: number): void {

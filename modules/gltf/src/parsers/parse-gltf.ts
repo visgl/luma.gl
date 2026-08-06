@@ -17,7 +17,8 @@ import {
   MaterialFactory,
   ModelNode,
   type ModelProps,
-  type MorphTargetAttributes
+  type MorphTargetAttributes,
+  decodeMorphTargetAttribute
 } from '@luma.gl/engine';
 import {pbrMaterial} from '@luma.gl/shadertools';
 import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
@@ -111,6 +112,8 @@ export function parseGLTF(
   const gltfNodeIdToNodeMap = new Map<string, GroupNode>();
   // Step 1/2: Generate a GroupNode for each gltf node. (1:1 mapping).
   const assignedMorphMeshes = new Set<string>();
+  const assignedMeshes = new Set<string>();
+  const independentlySkinnedMeshes = new Set<string>();
   gltf.nodes.forEach((gltfNode, idx) => {
     const newNode = createNodeForGLTFNode(device, gltfNode, combinedOptions);
     gltfNodeIndexToNodeMap.set(idx, newNode);
@@ -148,14 +151,33 @@ export function parseGLTF(
         throw new Error(`Cannot find mesh child ${gltfNode.mesh.id} of node ${idx}`);
       }
       const node = gltfNodeIndexToNodeMap.get(idx)!;
-      node.add(mesh);
+      const sharedMesh = gltfMeshIdToNodeMap.get(sourceMesh.id);
+      const needsIndependentSkin =
+        assignedMeshes.has(sourceMesh.id) &&
+        (gltfNode.skin !== undefined || independentlySkinnedMeshes.has(sourceMesh.id));
+      const ownedMesh =
+        needsIndependentSkin && mesh === sharedMesh
+          ? createNodeForGLTFMesh(
+              device,
+              sourceMesh,
+              gltf,
+              gltfMaterialIdToMaterialMap,
+              combinedOptions
+            )
+          : mesh;
+      node.add(ownedMesh);
+      node.userData['gltfMesh'] = ownedMesh;
+      assignedMeshes.add(sourceMesh.id);
+      if (gltfNode.skin !== undefined) {
+        independentlySkinnedMeshes.add(sourceMesh.id);
+      }
       if (hasMorphTargets) {
         assignedMorphMeshes.add(sourceMesh.id);
         const targetCount =
           sourceMesh.primitives.find(primitive => primitive.targets?.length)?.targets?.length || 0;
         const weights =
           gltfNode.weights || sourceMesh.weights || new Array<number>(targetCount).fill(0);
-        node.userData['morphMeshes'] = [mesh];
+        node.userData['morphMeshes'] = [ownedMesh];
         setGLTFMorphWeights(node, weights);
       }
     }
@@ -284,9 +306,8 @@ function createNodeForGLTFPrimitive({
             typeof accessorReference === 'number'
               ? gltf.accessors[accessorReference]
               : accessorReference;
-          const values = accessor?.value;
-          if (values instanceof Float32Array) {
-            attributes[attributeName] = values;
+          if (accessor?.value && ArrayBuffer.isView(accessor.value)) {
+            attributes[attributeName] = decodeMorphTargetAttribute(accessor as GeometryAttribute);
           }
         }
         return attributes;
@@ -330,7 +351,16 @@ function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopol
   for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
     const {components, size, value, normalized} = attribute as GeometryAttribute;
 
-    attributes[attributeName] = {size: size ?? components, value, normalized};
+    const isMorphAttribute =
+      attributeName === 'POSITION' || attributeName === 'NORMAL' || attributeName === 'TANGENT';
+    const shouldDecode = Boolean(gltfPrimitive.targets?.length && isMorphAttribute);
+    attributes[attributeName] = {
+      size: size ?? components,
+      value: shouldDecode
+        ? decodeMorphTargetAttribute({value, normalized} as GeometryAttribute)
+        : value,
+      normalized: shouldDecode ? false : normalized
+    };
   }
 
   return new Geometry({

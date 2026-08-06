@@ -156,7 +156,11 @@ function makeImportedLights(
   gltf: GLTFPostprocessed,
   state: GLTFTranslationState
 ): JSONLightDeclaration[] {
-  return parseGLTFLights(gltf, {useByteColors: false}).flatMap(light => {
+  const activeNodeIdentifiers = new Set(Object.keys(state.nodeIdentifiers));
+  return parseGLTFLights(gltf, {
+    nodeIdentifiers: activeNodeIdentifiers,
+    useByteColors: false
+  }).flatMap(light => {
     if (light.type === 'ambient') {
       return [];
     }

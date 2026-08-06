@@ -65,6 +65,7 @@ const options: SceneRenderOptions = {
 
 const renderer = new SceneRenderer(device);
 const statistics = renderer.render(options);
+device.submit();
 
 // {surfaceCount: 1, instanceCount: 2, drawCount: 1, triangleCount: 2}
 console.log(statistics);
@@ -75,6 +76,10 @@ renderer.destroy();
 Every matrix in `transforms` places the same geometry/material pair in world space. The renderer
 uploads the matrices to instanced vertex attributes and keeps all placements for one surface in
 one draw. A surface with no transforms is not drawn.
+
+`render()` records its render pass but does not submit the device's command queue. Call
+`device.submit()` after encoding the frame, and always before destroying the renderer or any
+borrowed resources. Applications combining multiple passes may submit once after the final pass.
 
 ## Scene descriptors
 
@@ -111,11 +116,13 @@ const deformingSurface: SceneSurface = {
 };
 
 renderer.render({...options, surfaces: [deformingSurface]});
+device.submit();
 
 deformingSurface.skin = {jointMatrices: nextJointMatrices};
 deformingSurface.morphWeights = [0.7];
 
 renderer.render({...options, surfaces: [deformingSurface]});
+device.submit();
 ```
 
 The existing shadertools `skin` module uploads the supplied joint palette, and the existing
@@ -214,6 +221,7 @@ renderer.render({
   toneMapMode: PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL,
   outputColorSpace: 'srgb'
 });
+device.submit();
 ```
 
 An `rgba16float` framebuffer defaults to linear, untonemapped output, preserving radiance above
@@ -238,6 +246,7 @@ const environment: SceneEnvironment = {
 };
 
 renderer.render({...options, environment});
+device.submit();
 ```
 
 All three textures must be present before IBL is enabled. An incomplete environment leaves IBL
@@ -260,6 +269,7 @@ const generatedEnvironment = generator.prepare({
 });
 
 renderer.render({...options, environment: generatedEnvironment});
+device.submit();
 ```
 
 [`PBREnvironmentGenerator`](/docs/api-reference/experimental/pbr-environment) integrates all six
@@ -324,6 +334,7 @@ renderer.render({
   surfaces: [opaqueBackgroundSurface, glassSurface],
   transmission: true
 });
+device.submit();
 ```
 
 Physical transmission is distinct from alpha blending. Keep a genuinely opaque glTF transmission

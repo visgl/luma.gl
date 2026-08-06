@@ -40,6 +40,7 @@ renderer.render({
   camera,
   environment
 });
+device.submit();
 
 renderer.destroy();
 environment.destroy();
@@ -69,6 +70,7 @@ const environment = preparePBREnvironment(device, {
 });
 
 renderer.render({...options, environment});
+device.submit();
 
 environment.destroy();
 ```
@@ -123,6 +125,7 @@ environment.intensity = 0.8;
 environment.rotation = Math.PI / 2;
 
 renderer.render({...options, environment});
+device.submit();
 ```
 
 ## Color encoding and HDR
@@ -200,6 +203,7 @@ renderer.render({
     brdfLUTTexture: loadedEnvironment.brdfLutTexture.texture
   }
 });
+device.submit();
 ```
 
 Choose `loadPBREnvironment()` for existing prefiltered assets. Choose `PBREnvironmentGenerator`

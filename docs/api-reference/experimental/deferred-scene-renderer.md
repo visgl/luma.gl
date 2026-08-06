@@ -51,13 +51,15 @@ const options: SceneRenderOptions = {
 console.log('Deferred-compatible scene:', supportsDeferredScene(options));
 
 const statistics = renderer.render(options);
+device.submit();
 
 renderer.destroy();
 ```
 
 `supportsDeferredScene(options)` reports the current scene's compatibility before rendering.
 Calling it is optional: `DeferredSceneRenderer.render(options)` performs the same check and
-selects forward rendering automatically when required.
+selects forward rendering automatically when required. Rendering records the frame; submit the
+device's command queue before presenting or destroying renderer-owned resources.
 
 ## Supported deferred scenes
 
@@ -72,7 +74,9 @@ present:
 - A `BLEND` material or base-color alpha that infers blending.
 - Any supplied environment-lighting texture.
 - Transmission, nonzero thickness, clearcoat, sheen, iridescence, or anisotropy.
-- A nondefault index of refraction, specular intensity, or specular color.
+- A nondefault index of refraction, specular intensity, specular color, or authored specular map.
+- Spot lights, whose direction and cone angles require forward shading.
+- More than one directional light, which exceeds the deferred lighting pass's single-light layout.
 - An unlit material.
 - `debugNormals` or `debugDepth` output.
 

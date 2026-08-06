@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {Buffer, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {
   DeferredSceneRenderer,
@@ -60,6 +61,19 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces on WebGPU', 
     width: 32,
     height: 32
   };
+  const offscreenTexture = device.createTexture({
+    id: 'deferred-offscreen-color',
+    width: 32,
+    height: 32,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const offscreenFramebuffer = device.createFramebuffer({
+    id: 'deferred-offscreen-framebuffer',
+    width: 32,
+    height: 32,
+    colorAttachments: [offscreenTexture]
+  });
 
   try {
     const deferredStatistics = renderer.render(options);
@@ -70,6 +84,36 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces on WebGPU', 
       'deferred capture preserves one instanced draw'
     );
     testCase.equal(deferredStatistics.instanceCount, 2, 'deferred capture preserves placements');
+
+    const offscreenStatistics = renderer.render({
+      ...options,
+      id: 'deferred-offscreen-frame',
+      framebuffer: offscreenFramebuffer
+    });
+    device.submit();
+    testCase.equal(offscreenStatistics.drawCount, 1, 'deferred resolve honors caller framebuffer');
+
+    if (device.info.gpu !== 'software' && device.info.gpuType !== 'cpu' && !device.info.fallback) {
+      const layout = offscreenTexture.computeMemoryLayout({width: 1, height: 1});
+      const readback = device.createBuffer({
+        byteLength: layout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      try {
+        offscreenTexture.readBuffer({x: 16, y: 16, width: 1, height: 1}, readback);
+        const pixel = await readback.readAsync(0, layout.byteLength);
+        testCase.ok(
+          pixel[0] > 0 || pixel[1] > 0 || pixel[2] > 0,
+          'deferred lighting writes visible color into the supplied offscreen target'
+        );
+      } finally {
+        readback.destroy();
+      }
+    } else {
+      testCase.comment(
+        'software WebGPU resolves the offscreen target without unsupported MAP_READ'
+      );
+    }
 
     surface.material.uniforms = {...surface.material.uniforms, transmissionFactor: 0.4};
     const forwardStatistics = renderer.render(options);
@@ -82,6 +126,8 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces on WebGPU', 
     testCase.equal(forwardStatistics.instanceCount, 2, 'forward fallback preserves placements');
   } finally {
     renderer.destroy();
+    offscreenFramebuffer.destroy();
+    offscreenTexture.destroy();
   }
   testCase.end();
 });

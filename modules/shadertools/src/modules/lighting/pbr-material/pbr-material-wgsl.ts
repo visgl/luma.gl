@@ -513,40 +513,41 @@ fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
 #endif
   let lod = pbrInfo.perceptualRoughness * maximumMipLevel;
   // retrieve a scale and bias to F0. See [1], Figure 3
-  let brdf = SRGBtoLINEAR(
-    textureSampleLevel(
-      pbr_brdfLUT,
-      pbr_brdfLUTSampler,
-      vec2f(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness),
-      0.0
-    )
-  ).rgb;
-  let diffuseLight =
-    SRGBtoLINEAR(
-      textureSampleLevel(
-        pbr_diffuseEnvSampler,
-        pbr_diffuseEnvSamplerSampler,
-        environmentNormal,
-        0.0
-      )
-    ).rgb;
-  var specularLight = SRGBtoLINEAR(
-    textureSampleLevel(
-      pbr_specularEnvSampler,
-      pbr_specularEnvSamplerSampler,
-      environmentReflection,
-      0.0
-    )
-  ).rgb;
+  let brdfSample = textureSampleLevel(
+    pbr_brdfLUT,
+    pbr_brdfLUTSampler,
+    vec2f(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness),
+    0.0
+  );
+  let diffuseSample = textureSampleLevel(
+    pbr_diffuseEnvSampler,
+    pbr_diffuseEnvSamplerSampler,
+    environmentNormal,
+    0.0
+  );
+  var specularSample = textureSampleLevel(
+    pbr_specularEnvSampler,
+    pbr_specularEnvSamplerSampler,
+    environmentReflection,
+    0.0
+  );
 #ifdef USE_TEX_LOD
-  specularLight = SRGBtoLINEAR(
-    textureSampleLevel(
-      pbr_specularEnvSampler,
-      pbr_specularEnvSamplerSampler,
-      environmentReflection,
-      lod
-    )
-  ).rgb;
+  specularSample = textureSampleLevel(
+    pbr_specularEnvSampler,
+    pbr_specularEnvSamplerSampler,
+    environmentReflection,
+    lod
+  );
+#endif
+
+#ifdef USE_SCENE_ENVIRONMENT
+  let brdf = brdfSample.rgb;
+  let diffuseLight = diffuseSample.rgb;
+  let specularLight = specularSample.rgb;
+#else
+  let brdf = SRGBtoLINEAR(brdfSample).rgb;
+  let diffuseLight = SRGBtoLINEAR(diffuseSample).rgb;
+  let specularLight = SRGBtoLINEAR(specularSample).rgb;
 #endif
 
   let diffuse = diffuseLight * pbrInfo.diffuseColor * pbrMaterial.scaleIBLAmbient.x;

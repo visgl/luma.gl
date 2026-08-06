@@ -119,6 +119,79 @@ test('SceneRenderer applies exposure, exact sRGB encoding, and selectable refere
   testCase.end();
 });
 
+test('SceneRenderer presents clear backgrounds identically to physical fragments', async testCase => {
+  let testedDeviceCount = 0;
+
+  for (const device of await getReferenceTestDevices()) {
+    if (isSoftwareBackedWebGL(device)) {
+      testCase.comment('software WebGL cannot reliably compile full-suite reference PBR variants');
+      continue;
+    }
+
+    testedDeviceCount++;
+    const renderer = new SceneRenderer(device);
+    const target = makeRenderTarget(device, 'rgba8unorm');
+    const background: [number, number, number, number] = [0.2, 0.35, 0.6, 1];
+    const matchingSurface: SceneSurface = {
+      id: `${device.type}-matching-background-surface`,
+      geometry: makeFullscreenGeometry(),
+      material: {
+        id: `${device.type}-matching-background-material`,
+        uniforms: {unlit: true, baseColorFactor: background}
+      },
+      transforms: [new Matrix4()]
+    };
+    const options = makeRenderOptions(device, [], target.framebuffer);
+    options.background = background;
+
+    try {
+      for (const [exposure, toneMapMode, outputColorSpace] of [
+        [1, 0, 'srgb'],
+        [2, 1, 'srgb'],
+        [1.5, 2, 'srgb'],
+        [2, 3, 'srgb'],
+        [2, 0, 'linear']
+      ] as [number, number, 'linear' | 'srgb'][]) {
+        options.exposure = exposure;
+        options.toneMapMode = toneMapMode;
+        options.outputColorSpace = outputColorSpace;
+        options.surfaces = [];
+        testCase.equal(renderer.render(options).drawCount, 0, 'clears the uncovered target');
+        device.submit();
+
+        if (supportsPixelReadback(device)) {
+          const clearPixel = await readUnsignedPixel(target.color, 16, 16);
+          options.surfaces = [matchingSurface];
+          testCase.equal(renderer.render(options).drawCount, 1, 'draws the matching unlit surface');
+          device.submit();
+          const shadedPixel = await readUnsignedPixel(target.color, 16, 16);
+
+          for (let channelIndex = 0; channelIndex < 4; channelIndex++) {
+            testCase.ok(
+              Math.abs(clearPixel[channelIndex] - shadedPixel[channelIndex]) <= 2,
+              `${device.type} matches background channel ${channelIndex} for exposure ${exposure}, tone map ${toneMapMode}, and ${outputColorSpace} output`
+            );
+          }
+        } else {
+          options.surfaces = [matchingSurface];
+          testCase.equal(
+            renderer.render(options).drawCount,
+            1,
+            'software WebGPU renders matching color'
+          );
+          device.submit();
+        }
+      }
+    } finally {
+      renderer.destroy();
+      target.destroy();
+    }
+  }
+
+  testCase.ok(testedDeviceCount > 0, 'at least one portable background backend runs');
+  testCase.end();
+});
+
 test('SceneRenderer preserves linear HDR radiance and captures chromatic physical dispersion', async testCase => {
   let testedDeviceCount = 0;
 

@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {
   DeferredSceneRenderer,
+  MAX_DEFERRED_POINT_LIGHTS,
   type SceneMaterial,
   type SceneRenderOptions,
   supportsDeferredScene
@@ -89,6 +91,69 @@ describe('DeferredSceneRenderer', () => {
         environment: {
           diffuseTexture: {} as NonNullable<SceneRenderOptions['environment']>['diffuseTexture']
         }
+      })
+    ).toBe(false);
+  });
+
+  test('uses forward rendering for specular extension maps even with default factors', () => {
+    const texture = {} as Texture;
+
+    for (const material of [
+      {id: 'specular-color-binding', bindings: {pbr_specularColorSampler: texture}},
+      {id: 'specular-intensity-binding', bindings: {pbr_specularIntensitySampler: texture}},
+      {id: 'specular-color-flag', uniforms: {specularColorMapEnabled: true}},
+      {id: 'specular-intensity-flag', uniforms: {specularIntensityMapEnabled: true}}
+    ] satisfies SceneMaterial[]) {
+      expect(supportsDeferredScene(makeOptions(material)), material.id).toBe(false);
+    }
+  });
+
+  test('preserves directional and spot light semantics through forward fallback', () => {
+    const options = makeOptions({id: 'opaque'});
+
+    expect(
+      supportsDeferredScene({
+        ...options,
+        lights: [
+          {type: 'ambient', intensity: 0.25},
+          {type: 'directional', direction: [0, 0, -1]},
+          {type: 'point', position: [0, 1, 0]}
+        ]
+      })
+    ).toBe(true);
+
+    expect(
+      supportsDeferredScene({
+        ...options,
+        lights: [
+          {type: 'directional', direction: [0, 0, -1]},
+          {type: 'directional', direction: [1, 0, -1]}
+        ]
+      })
+    ).toBe(false);
+
+    expect(
+      supportsDeferredScene({
+        ...options,
+        lights: [
+          {
+            type: 'spot',
+            position: [0, 1, 0],
+            direction: [0, -1, 0],
+            innerConeAngle: 0.2,
+            outerConeAngle: 0.4
+          }
+        ]
+      })
+    ).toBe(false);
+
+    expect(
+      supportsDeferredScene({
+        ...options,
+        lights: Array.from({length: MAX_DEFERRED_POINT_LIGHTS + 1}, (_, index) => ({
+          type: 'point',
+          position: [index, 0, 0]
+        }))
       })
     ).toBe(false);
   });
