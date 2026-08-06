@@ -11,6 +11,10 @@ import {
 export type ParseGLTFLightsOptions = {
   /** When true, parsed light colors are converted into luma.gl's legacy byte-style range. */
   useByteColors?: boolean;
+  /** Optional live scenegraph visibility used for animated `KHR_node_visibility` updates. */
+  nodeVisibility?: ReadonlyMap<string, {display: boolean}>;
+  /** Optional mutable light definitions used by typed punctual-light animation pointers. */
+  lightDefinitions?: readonly Record<string, any>[];
 };
 
 /** Parse KHR_lights_punctual extension into luma.gl light definitions */
@@ -19,6 +23,7 @@ export function parseGLTFLights(
   options: ParseGLTFLightsOptions = {}
 ): Light[] {
   const lightDefs =
+    options.lightDefinitions ||
     // `postProcessGLTF()` moves KHR_lights_punctual into `gltf.lights`.
     (gltf as GLTFPostprocessed & {lights?: any[]}).lights ||
     gltf.extensions?.['KHR_lights_punctual']?.['lights'];
@@ -31,6 +36,10 @@ export function parseGLTFLights(
   const worldMatrixByNodeId = new Map<string, Matrix4>();
 
   for (const node of gltf.nodes || []) {
+    if (!isNodeVisible(node, parentNodeById, options.nodeVisibility)) {
+      continue;
+    }
+
     const lightIndex =
       (node as GLTFNodePostprocessed & {light?: number}).light ??
       node.extensions?.KHR_lights_punctual?.light;
@@ -69,6 +78,27 @@ export function parseGLTFLights(
   }
 
   return lights;
+}
+
+/** Applies source-authored or live visibility recursively through a punctual light's parent chain. */
+function isNodeVisible(
+  node: GLTFNodePostprocessed,
+  parentNodeById: ReadonlyMap<string, GLTFNodePostprocessed>,
+  liveNodeVisibility?: ReadonlyMap<string, {display: boolean}>
+): boolean {
+  let currentNode: GLTFNodePostprocessed | undefined = node;
+  while (currentNode) {
+    const liveNode = liveNodeVisibility?.get(currentNode.id);
+    if (
+      liveNode
+        ? !liveNode.display
+        : currentNode.extensions?.['KHR_node_visibility']?.visible === false
+    ) {
+      return false;
+    }
+    currentNode = parentNodeById.get(currentNode.id);
+  }
+  return true;
 }
 
 /**

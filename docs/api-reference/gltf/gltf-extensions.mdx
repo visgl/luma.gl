@@ -132,8 +132,10 @@ Status meanings:
     <SupportRow name="KHR_mesh_quantization" support="✅ *️⃣">
       Quantized accessors are unpacked during load before geometry creation.
     </SupportRow>
-    <SupportRow name="EXT_mesh_gpu_instancing" support="❌">
-      GPU instancing data is not yet converted into luma.gl instanced draw setup.
+    <SupportRow name="EXT_mesh_gpu_instancing" support="✅">
+      Accessor-backed translation, rotation, and scale become one real instanced draw
+      per source primitive on WebGL and WebGPU. Aggregate bounds include every
+      instance, and application-defined <code>_NAME</code> attributes remain available.
     </SupportRow>
     <SupportRow name="KHR_lights_punctual" support="✅">
       Directional, point, and spot lights preserve authored intensity, range,
@@ -193,9 +195,10 @@ Status meanings:
       loaders.gl can preserve the extension data, but <code>@luma.gl/gltf</code> does
       not translate it into the default metallic-roughness shader path.
     </SupportRow>
-    <SupportRow name="KHR_materials_variants" support="App">
-      Variant metadata can be loaded, but applications must choose and apply variants
-      themselves.
+    <SupportRow name="KHR_materials_variants" support="✅">
+      <code>scenegraphs.variants.selectVariant(name)</code> switches authored primitive
+      materials without replacing scenegraph nodes; <code>resetVariant()</code>
+      restores source defaults and pipeline state.
     </SupportRow>
     <SupportRow name="KHR_texture_basisu" support="✅ *️⃣">
       BasisU / KTX2 textures are passed through as compressed textures when supported
@@ -214,9 +217,13 @@ Status meanings:
       and authored <code>TEXCOORD_0</code> / <code>TEXCOORD_1</code> selection.
     </SupportRow>
     <SupportRow name="KHR_animation_pointer" support="✅ 🚧" fromVersion="9.3">
-      Node TRS and morph-weight pointers, selected material factor pointers, and
-      animated <code>KHR_texture_transform</code> offset/rotation/scale pointers across
-      all 17 supported slots are wired to runtime updates. Still unsupported: cameras, extras,
+      Node TRS, morph-weight, and recursive boolean visibility pointers; selected
+      material factor pointers; and animated <code>KHR_texture_transform</code>
+      offset/rotation/scale pointers across all 17 supported slots are wired to
+      runtime updates. Perspective/orthographic camera properties and typed punctual-light
+      color, intensity, range, and spotlight angles are also supported. Boolean
+      visibility uses authored <code>STEP</code> interpolation and refreshes punctual
+      lights. Still unsupported: extras,
       structural material switches such as <code>alphaMode</code> /
       <code>doubleSided</code> / <code>unlit</code>, animated
       <code>KHR_texture_transform.texCoord</code>, and texture slots that resolve to
@@ -225,9 +232,10 @@ Status meanings:
       the shared experimental renderer and ANARI can refract captured scene color,
       while the standalone glTF scenegraph path still uses its alpha approximation.
     </SupportRow>
-    <SupportRow name="KHR_node_visibility" support="❌">
-      Node-visibility animations and toggles are not mapped onto runtime scenegraph
-      state.
+    <SupportRow name="KHR_node_visibility" support="✅">
+      Source-authored visibility recursively hides mesh descendants and punctual
+      lights. Visibility-pointer animation updates existing scenegraph nodes and
+      preserves the identity of the exported light array.
     </SupportRow>
     <SupportRow name="KHR_xmp" support="❌">
       Metadata payloads remain in the loaded glTF, but luma.gl does not interpret
@@ -253,6 +261,14 @@ Status meanings:
 
 ## Notes
 
+- `getGLTFExtensionSupport(gltf)` distinguishes optional and required extensions.
+  Use `getUnsupportedRequiredGLTFExtensions(gltf)`,
+  `assertSupportedGLTFExtensions(gltf)`, or
+  `createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})` to reject
+  unsupported required features instead of silently degrading them.
+- `getGLTFNodeInstancing(gltf, node)` exposes resolved source matrices and all
+  authored instance-accessor semantics, including application-defined `_NAME`
+  attributes.
 - The built-in material extension rows reuse the shared `pbrMaterial` shader.
   The experimental `SceneRenderer` and ANARI capture opaque scene color for
   screen-space transmission/refraction; the standalone `createScenegraphsFromGLTF()`

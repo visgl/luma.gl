@@ -550,7 +550,7 @@ function makeAnimationTracks(
       path,
       ...(channel.component !== undefined && !isPackedScalar ? {component: channel.component} : {})
     };
-  } else {
+  } else if (channel.type === 'textureTransform') {
     const identifier =
       mappings.samplerIdentifiers?.[`${channel.targetMaterialIndex}:${channel.textureSlot}`];
     if (!identifier) {
@@ -567,6 +567,9 @@ function makeAnimationTracks(
       rotation: channel.baseTransform.rotation,
       scale: [...channel.baseTransform.scale]
     };
+  } else {
+    // Camera and punctual-light pointers remain format-owned until explicitly adapted.
+    return [];
   }
 
   const interpolation = channel.sampler.interpolation as ANARIAnimationInterpolation;

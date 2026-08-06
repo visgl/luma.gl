@@ -21,6 +21,8 @@ import {
 } from '@luma.gl/engine';
 import {pbrMaterial} from '@luma.gl/shadertools';
 import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
+import {getGLTFNodeInstancing, type GLTFGPUInstancing} from '../gltf/gltf-instancing';
+import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
@@ -41,6 +43,8 @@ export type ParseGLTFOptions = {
   useTangents?: boolean;
   /** When true, parsed semantic light colors are converted into luma.gl's legacy byte-style range. */
   useByteColors?: boolean;
+  /** Reject documents whose required extensions have no complete runtime implementation. */
+  strictExtensions?: boolean;
 };
 
 const defaultOptions: Required<ParseGLTFOptions> = {
@@ -49,7 +53,8 @@ const defaultOptions: Required<ParseGLTFOptions> = {
   imageBasedLightingEnvironment: undefined!,
   lights: true,
   useTangents: false,
-  useByteColors: true
+  useByteColors: true,
+  strictExtensions: false
 };
 
 /**
@@ -131,17 +136,19 @@ export function parseGLTF(
     // Nodes can have children nodes and one optional child mesh at the same time.
     if (gltfNode.mesh) {
       const sourceMesh = gltfNode.mesh;
+      const instancing = getGLTFNodeInstancing(gltf, gltfNode);
       const hasMorphTargets = sourceMesh.primitives.some(primitive =>
         Boolean(primitive.targets?.length)
       );
       const mesh =
-        hasMorphTargets && assignedMorphMeshes.has(sourceMesh.id)
+        instancing || (hasMorphTargets && assignedMorphMeshes.has(sourceMesh.id))
           ? createNodeForGLTFMesh(
               device,
               sourceMesh,
               gltf,
               gltfMaterialIdToMaterialMap,
-              combinedOptions
+              combinedOptions,
+              instancing || undefined
             )
           : gltfMeshIdToNodeMap.get(sourceMesh.id);
       if (!mesh) {
@@ -187,6 +194,7 @@ function createNodeForGLTFNode(
     id: gltfNode.name || gltfNode.id,
     children: [],
     matrix: gltfNode.matrix,
+    display: gltfNode.extensions?.['KHR_node_visibility']?.visible !== false,
     position: gltfNode.translation,
     rotation: gltfNode.rotation,
     scale: gltfNode.scale
@@ -199,7 +207,8 @@ function createNodeForGLTFMesh(
   gltfMesh: GLTFMeshPostprocessed,
   gltf: GLTFPostprocessed,
   gltfMaterialIdToMaterialMap: Map<string, Material>,
-  options: Required<ParseGLTFOptions>
+  options: Required<ParseGLTFOptions>,
+  instancing?: GLTFGPUInstancing
 ): GroupNode {
   const gltfPrimitives = gltfMesh.primitives || [];
   const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
@@ -210,7 +219,8 @@ function createNodeForGLTFMesh(
       gltfMesh,
       gltf,
       gltfMaterialIdToMaterialMap,
-      options
+      options,
+      instancing
     })
   );
   const mesh = new GroupNode({
@@ -230,6 +240,7 @@ type CreateNodeForGLTFPrimitiveOptions = {
   gltf: GLTFPostprocessed;
   gltfMaterialIdToMaterialMap: Map<string, Material>;
   options: Required<ParseGLTFOptions>;
+  instancing?: GLTFGPUInstancing;
 };
 
 /** Creates a renderable model node for one glTF primitive. */
@@ -240,7 +251,8 @@ function createNodeForGLTFPrimitive({
   gltfMesh,
   gltf,
   gltfMaterialIdToMaterialMap,
-  options
+  options,
+  instancing
 }: CreateNodeForGLTFPrimitiveOptions): ModelNode {
   const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${primitiveIndex}`;
   const topology = convertGLDrawModeToTopology(gltfPrimitive.mode ?? 4);
@@ -263,8 +275,51 @@ function createNodeForGLTFPrimitive({
       : null,
     parsedPPBRMaterial,
     modelOptions: options.modelOptions,
-    vertexCount
+    vertexCount,
+    bounds: [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max],
+    instanceMatrices: instancing?.matrices
   });
+
+  if (instancing) {
+    modelNode.userData['gltfInstancing'] = instancing;
+  }
+
+  const sourceVariantMappings =
+    gltfPrimitive.extensions?.['KHR_materials_variants']?.mappings || [];
+  if (sourceVariantMappings.length) {
+    const mappings = new Map<
+      number,
+      {material: Material; parameters: GLTFPrimitiveMaterialVariants['defaultParameters']}
+    >();
+    for (const mapping of sourceVariantMappings) {
+      const sourceMaterial =
+        typeof mapping.material === 'number' ? gltf.materials[mapping.material] : mapping.material;
+      const material = sourceMaterial && gltfMaterialIdToMaterialMap.get(sourceMaterial.id);
+      if (!material) {
+        continue;
+      }
+      const variantMaterial = parsePBRMaterial(device, sourceMaterial as any, geometry.attributes, {
+        ...options,
+        gltf
+      });
+      for (const variantIndex of mapping.variants || []) {
+        mappings.set(variantIndex, {
+          material,
+          parameters: {
+            ...modelNode.model.parameters,
+            ...variantMaterial.parameters,
+            depthWriteEnabled: sourceMaterial.alphaMode !== 'BLEND',
+            cullMode: sourceMaterial.doubleSided ? 'none' : 'back'
+          }
+        });
+      }
+    }
+    modelNode.userData['gltfMaterialVariants'] = {
+      defaultMaterial: modelNode.model.material,
+      defaultParameters: {...modelNode.model.parameters},
+      mappings
+    } satisfies GLTFPrimitiveMaterialVariants;
+  }
 
   if (gltfPrimitive.targets?.length) {
     const baseAttributes: MorphTargetAttributes = {};
@@ -299,7 +354,6 @@ function createNodeForGLTFPrimitive({
     } satisfies GLTFMorphTargetState;
   }
 
-  modelNode.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
   // TODO this holds on to all the CPU side texture and attribute data
   // modelNode.material =  gltfPrimitive.material;
 

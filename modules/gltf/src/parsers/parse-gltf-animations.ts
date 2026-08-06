@@ -9,6 +9,10 @@ import {
   type GLTFAnimationChannel,
   GLTFAnimationPath,
   type GLTFAnimationSampler,
+  type GLTFCameraAnimationChannel,
+  type GLTFCameraAnimationProperty,
+  type GLTFLightAnimationChannel,
+  type GLTFLightAnimationProperty,
   type GLTFMaterialAnimationChannel,
   type GLTFMaterialAnimationProperty,
   type GLTFNodeAnimationChannel,
@@ -118,13 +122,113 @@ function parseAnimationPointerChannel(
     case 'materials':
       return parseMaterialPointerAnimationChannel(gltf, pointerSegments, sampler, pointer);
 
+    case 'cameras':
+      return parseCameraPointerAnimationChannel(gltf, pointerSegments, sampler, pointer);
+
+    case 'extensions':
+      if (pointerSegments[1] === 'KHR_lights_punctual') {
+        return parseLightPointerAnimationChannel(gltf, pointerSegments, sampler, pointer);
+      }
+      break;
+
     default:
-      warnUnsupportedAnimationPointer(
-        pointer,
-        `top-level target "${pointerSegments[0]}" has no runtime animation mapping`
-      );
-      return null;
+      break;
   }
+
+  warnUnsupportedAnimationPointer(
+    pointer,
+    `top-level target "${pointerSegments[0]}" has no runtime animation mapping`
+  );
+  return null;
+}
+
+function parseCameraPointerAnimationChannel(
+  gltf: GLTFPostprocessed,
+  pointerSegments: string[],
+  sampler: GLTFAnimationSampler,
+  pointer: string
+): GLTFCameraAnimationChannel | null {
+  const cameraIndex = Number(pointerSegments[1]);
+  const camera = gltf.cameras?.[cameraIndex];
+  const projection = pointerSegments[2];
+  const property = pointerSegments[3];
+  const perspectiveProperties = ['aspectRatio', 'yfov', 'znear', 'zfar'];
+  const orthographicProperties = ['xmag', 'ymag', 'znear', 'zfar'];
+
+  if (
+    pointerSegments.length !== 4 ||
+    !Number.isInteger(cameraIndex) ||
+    !camera ||
+    (projection !== 'perspective' && projection !== 'orthographic') ||
+    camera.type !== projection ||
+    !(projection === 'perspective' ? perspectiveProperties : orthographicProperties).includes(
+      property
+    )
+  ) {
+    warnUnsupportedAnimationPointer(
+      pointer,
+      'camera pointers must target a supported projection property'
+    );
+    return null;
+  }
+
+  return {
+    type: 'camera',
+    sampler,
+    pointer,
+    targetCameraIndex: cameraIndex,
+    projection,
+    property: property as GLTFCameraAnimationProperty
+  };
+}
+
+function parseLightPointerAnimationChannel(
+  gltf: GLTFPostprocessed,
+  pointerSegments: string[],
+  sampler: GLTFAnimationSampler,
+  pointer: string
+): GLTFLightAnimationChannel | null {
+  const lightIndex = Number(pointerSegments[3]);
+  const lightDefinitions =
+    (gltf as GLTFPostprocessed & {lights?: unknown[]}).lights ||
+    gltf.extensions?.['KHR_lights_punctual']?.['lights'];
+  const isSpotProperty = pointerSegments[4] === 'spot';
+  const property = isSpotProperty ? pointerSegments[5] : pointerSegments[4];
+  const component = !isSpotProperty && property === 'color' ? pointerSegments[5] : undefined;
+  const allowedProperties: readonly GLTFLightAnimationProperty[] = [
+    'color',
+    'intensity',
+    'range',
+    'innerConeAngle',
+    'outerConeAngle'
+  ];
+  const expectedLength = isSpotProperty || component !== undefined ? 6 : 5;
+
+  if (
+    pointerSegments[2] !== 'lights' ||
+    pointerSegments.length !== expectedLength ||
+    !Number.isInteger(lightIndex) ||
+    !Array.isArray(lightDefinitions) ||
+    !lightDefinitions[lightIndex] ||
+    !allowedProperties.includes(property as GLTFLightAnimationProperty) ||
+    (isSpotProperty && property !== 'innerConeAngle' && property !== 'outerConeAngle') ||
+    (component !== undefined && (!/^[0-2]$/.test(component) || property !== 'color'))
+  ) {
+    warnUnsupportedAnimationPointer(
+      pointer,
+      'punctual-light pointers must target supported typed light properties'
+    );
+    return null;
+  }
+
+  return {
+    type: 'light',
+    sampler,
+    pointer,
+    targetLightIndex: lightIndex,
+    property: property as GLTFLightAnimationProperty,
+    ...(component === undefined ? {} : {component: Number(component)})
+  };
 }
 
 function parseNodePointerAnimationChannel(
@@ -133,10 +237,15 @@ function parseNodePointerAnimationChannel(
   sampler: GLTFAnimationSampler,
   pointer: string
 ): GLTFNodeAnimationChannel | null {
-  if (pointerSegments.length !== 3) {
+  const isVisibilityPointer =
+    pointerSegments.length === 5 &&
+    pointerSegments[2] === 'extensions' &&
+    pointerSegments[3] === 'KHR_node_visibility' &&
+    pointerSegments[4] === 'visible';
+  if (pointerSegments.length !== 3 && !isVisibilityPointer) {
     warnUnsupportedAnimationPointer(
       pointer,
-      'node pointers must use /nodes/{index}/{translation|rotation|scale|weights}'
+      'node pointers must target transforms, morph weights, or KHR_node_visibility.visible'
     );
     return null;
   }
@@ -150,7 +259,15 @@ function parseNodePointerAnimationChannel(
     return null;
   }
 
-  const path = getNodeAnimationPath(pointerSegments[2]);
+  if (isVisibilityPointer && sampler.interpolation !== 'STEP') {
+    warnUnsupportedAnimationPointer(
+      pointer,
+      'boolean visibility animation requires STEP interpolation'
+    );
+    return null;
+  }
+
+  const path = isVisibilityPointer ? 'visibility' : getNodeAnimationPath(pointerSegments[2]);
   if (!path) {
     warnUnsupportedAnimationPointer(
       pointer,
