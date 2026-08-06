@@ -140,12 +140,17 @@ frame.render();
 ```
 
 The ANARI adapter translates committed objects for the shared `RayTracingSceneRenderer` in
-`@luma.gl/experimental`. A WebGPU command graph traces transformed analytic spheres and mesh
-triangles, evaluates direct lights and shadow rays, progressively accumulates primary-ray samples,
-and presents HDR when configured. Hardware ray tracing, acceleration structures, indirect
-multi-bounce transport, denoising, and volume rendering are not implemented.
-Skeletal/morph deformation, material textures, alpha/transmission, and advanced PBR shading remain
-on the forward/deferred renderer paths.
+`@luma.gl/experimental`. A WebGPU compute graph builds and refits a `GPUBVH` over transformed
+analytic spheres and mesh instances, traverses it for nearest-hit rays and early-exit shadows,
+evaluates direct lights, progressively accumulates primary-ray samples, and presents HDR when
+configured. The graph uses default WebGPU CORE storage-buffer limits and leaves submission under
+application control.
+
+The hierarchy accelerates objects and instances; triangles within each surviving mesh are still
+tested linearly. Hardware ray tracing, Morton-sorted construction, per-mesh triangle BVHs, indirect
+multi-bounce transport, denoising, and volume rendering are not implemented. Skeletal/morph
+deformation, material textures, alpha/transmission, and advanced PBR shading remain on the
+forward/deferred renderer paths.
 
 Applications can register additional lazy renderer runtimes with
 `anari.registerRenderer(subtype, runtimeFactory)`.

@@ -6,8 +6,11 @@ import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {Computation, type Geometry, Model} from '@luma.gl/engine';
 import type {Light} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
+import {GPUBVH} from '../gpu-primitives/gpu-bvh';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '../gpu-primitives/gpu-command-graph';
+import {createTransientView, getViewBinding} from '../gpu-primitives/graph-data-view-utils';
 import {
+  RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_SCENE_SHADER,
   getRayTracingScenePresentationShader
 } from './ray-tracing-scene-shaders';
@@ -16,7 +19,7 @@ import type {SceneRenderOptions, SceneRenderStatistics, SceneSurface} from './sc
 const PRIMITIVE_FLOAT_COUNT = 48;
 const TRIANGLE_FLOAT_COUNT = 24;
 const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 36;
+const UNIFORM_FLOAT_COUNT = 40;
 
 /** Optional analytic primitive supplied by a format-specific scene adapter. */
 export type RayTracingScenePrimitive = {
@@ -62,6 +65,8 @@ type RayTracingFrameResources = {
   renderRevision: string;
   accumulatedFrameCount: number;
   primitiveCount: number;
+  primitiveCapacity: number;
+  leafCapacity: number;
   lightCount: number;
   triangleCount: number;
 };
@@ -142,6 +147,8 @@ export class RayTracingSceneRenderer {
         width,
         height,
         primitiveCount: resources.primitiveCount,
+        primitiveCapacity: resources.primitiveCapacity,
+        leafCapacity: resources.leafCapacity,
         lightCount: resources.lightCount,
         accumulatedFrameCount
       })
@@ -214,12 +221,21 @@ export class RayTracingSceneRenderer {
       format: 'rgba16float',
       usage: Texture.SAMPLE | Texture.COPY_DST
     });
+    const primitiveCapacity = Math.max(
+      1,
+      Math.floor(
+        primitiveBuffer.byteLength / (PRIMITIVE_FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT)
+      )
+    );
+    const leafCapacity = 2 ** Math.ceil(Math.log2(primitiveCapacity));
     const graph = this.createCommandGraph({
       frameIdentifier,
       width,
       height,
       uniformBuffer,
       primitiveBuffer,
+      primitiveCapacity,
+      leafCapacity,
       triangleBuffer,
       lightBuffer,
       historyTexture
@@ -238,6 +254,8 @@ export class RayTracingSceneRenderer {
       renderRevision: '',
       accumulatedFrameCount: 0,
       primitiveCount: scene.primitiveCount,
+      primitiveCapacity,
+      leafCapacity,
       lightCount: scene.lightCount,
       triangleCount: scene.triangleCount
     };
@@ -249,6 +267,8 @@ export class RayTracingSceneRenderer {
     height: number;
     uniformBuffer: Buffer;
     primitiveBuffer: Buffer;
+    primitiveCapacity: number;
+    leafCapacity: number;
     triangleBuffer: Buffer;
     lightBuffer: Buffer;
     historyTexture: Texture;
@@ -303,6 +323,72 @@ export class RayTracingSceneRenderer {
     });
     const historyView = graph.createTextureView(history);
     const outputView = graph.createTextureView(output);
+    const primitiveMinima = createTransientView(
+      graph,
+      'primitive-minima',
+      'float32x3',
+      props.primitiveCapacity
+    );
+    const primitiveMaxima = createTransientView(
+      graph,
+      'primitive-maxima',
+      'float32x3',
+      props.primitiveCapacity
+    );
+    const nodeCount = props.leafCapacity * 2 - 1;
+    const nodeMinima = createTransientView(graph, 'node-minima', 'float32x3', nodeCount);
+    const nodeMaxima = createTransientView(graph, 'node-maxima', 'float32x3', nodeCount);
+    const nodeChildren = createTransientView(graph, 'node-children', 'uint32x2', nodeCount);
+    const leafIds = createTransientView(graph, 'leaf-ids', 'uint32', props.leafCapacity);
+    const acceleration = new GPUBVH({
+      id: `${props.frameIdentifier}-ray-tracing-bvh`,
+      minima: primitiveMinima,
+      maxima: primitiveMaxima,
+      leafCapacity: props.leafCapacity,
+      nodeMinima,
+      nodeMaxima,
+      nodeChildren,
+      leafIds,
+      count: createTransientView(graph, 'bvh-count', 'uint32', 1),
+      overflow: createTransientView(graph, 'bvh-overflow', 'uint32', 1)
+    });
+
+    graph.addComputePass({
+      id: `${props.frameIdentifier}-build-primitive-bounds`,
+      resources: [
+        {buffer: uniforms, usage: 'uniform'},
+        {buffer: primitives, usage: 'storage-read'},
+        {buffer: primitiveMinima, usage: 'storage-write'},
+        {buffer: primitiveMaxima, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: `${props.frameIdentifier}-primitive-bounds-computation`,
+          source: RAY_TRACING_BOUNDS_SHADER,
+          shaderLayout: {
+            bindings: [
+              {name: 'uniforms', type: 'uniform', group: 0, location: 0},
+              {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'primitiveMinima', type: 'storage', group: 0, location: 2},
+              {name: 'primitiveMaxima', type: 'storage', group: 0, location: 3}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings({
+              uniforms: getBuffer(uniforms),
+              primitives: getBuffer(primitives),
+              primitiveMinima: getViewBinding(primitiveMinima, getBuffer),
+              primitiveMaxima: getViewBinding(primitiveMaxima, getBuffer)
+            });
+            computation.dispatch(computePass, Math.ceil(props.primitiveCapacity / 128));
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    });
+    acceleration.addToGraph(graph);
 
     graph.addComputePass({
       id: `${props.frameIdentifier}-trace-rays`,
@@ -311,6 +397,8 @@ export class RayTracingSceneRenderer {
         {buffer: primitives, usage: 'storage-read'},
         {buffer: triangles, usage: 'storage-read'},
         {buffer: lights, usage: 'storage-read'},
+        {buffer: nodeMinima, usage: 'storage-read'},
+        {buffer: nodeMaxima, usage: 'storage-read'},
         {texture: historyView, usage: 'sampled'},
         {texture: outputView, usage: 'storage-write'}
       ],
@@ -324,18 +412,20 @@ export class RayTracingSceneRenderer {
               {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
               {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
               {name: 'lights', type: 'read-only-storage', group: 0, location: 3},
+              {name: 'nodeMinima', type: 'read-only-storage', group: 0, location: 4},
+              {name: 'nodeMaxima', type: 'read-only-storage', group: 0, location: 5},
               {
                 name: 'historyImage',
                 type: 'texture',
                 group: 0,
-                location: 4,
+                location: 6,
                 sampleType: 'unfilterable-float'
               },
               {
                 name: 'outputImage',
                 type: 'storage',
                 group: 0,
-                location: 5,
+                location: 7,
                 access: 'write-only',
                 format: 'rgba16float'
               }
@@ -349,6 +439,8 @@ export class RayTracingSceneRenderer {
               primitives: getBuffer(primitives),
               triangles: getBuffer(triangles),
               lights: getBuffer(lights),
+              nodeMinima: getViewBinding(nodeMinima, getBuffer),
+              nodeMaxima: getViewBinding(nodeMaxima, getBuffer),
               historyImage: getTextureView(historyView),
               outputImage: getTextureView(outputView)
             });
@@ -654,6 +746,8 @@ function makeUniformData(props: {
   width: number;
   height: number;
   primitiveCount: number;
+  primitiveCapacity: number;
+  leafCapacity: number;
   lightCount: number;
   accumulatedFrameCount: number;
 }): Float32Array {
@@ -676,5 +770,9 @@ function makeUniformData(props: {
   data[31] = (props.options.shadows ?? true) ? 1 : 0;
   data.set(fogColor, 32);
   data[35] = props.options.fogDensity ?? 0;
+  unsignedData[36] = props.leafCapacity - 1;
+  unsignedData[37] = props.leafCapacity;
+  unsignedData[38] = props.primitiveCapacity;
+  unsignedData[39] = 0;
   return data;
 }

@@ -364,12 +364,18 @@ test('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', 
   testContext.end();
 });
 
-test('ANARI ray tracing renderer traces analytic spheres and indexed meshes on WebGPU', async testContext => {
-  for (const graphicsDevice of await getLiveTestDevices()) {
-    if (graphicsDevice.type !== 'webgpu') {
+test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes within WebGPU core limits', async testContext => {
+  for (const graphicsDevice of [await getWebGPUTestDevice('core')]) {
+    if (!graphicsDevice) {
+      testContext.comment('WebGPU is not available');
       continue;
     }
 
+    testContext.equal(
+      graphicsDevice.limits.maxStorageBuffersPerShaderStage,
+      8,
+      'GPU BVH construction fits the default WebGPU core storage-buffer limit'
+    );
     const device = new ANARIDevice(graphicsDevice);
     const sphereGeometry = device.newGeometry('sphere', {radius: 0.65});
     const sphereMaterial = device.newMaterial('physicallyBased', {
@@ -389,15 +395,20 @@ test('ANARI ray tracing renderer traces analytic spheres and indexed meshes on W
       geometry: triangleGeometry,
       material: device.newMaterial('matte', {color: [0.18, 0.52, 0.86]})
     });
+    const firstInstance = device.newInstance({
+      group,
+      transform: new Matrix4()
+        .translate([-0.65, 0, 0])
+        .rotateY(Math.PI / 5)
+        .scale([1.25, 0.8, 0.7])
+    });
+    const secondInstance = device.newInstance({
+      group,
+      transform: new Matrix4().translate([0.65, 0, 0])
+    });
     const world = device.newWorld({
       surface: [triangleSurface],
-      instance: [
-        device.newInstance({
-          group,
-          transform: new Matrix4().translate([-0.65, 0, 0]).scale([1.25, 0.8, 0.7])
-        }),
-        device.newInstance({group, transform: new Matrix4().translate([0.65, 0, 0])})
-      ],
+      instance: [firstInstance, secondInstance],
       light: [
         device.newLight('directional', {direction: [-0.5, -1, -1], irradiance: 1.8}),
         device.newLight('point', {position: [0, 1, 2], intensity: 8})
@@ -411,8 +422,15 @@ test('ANARI ray tracing renderer traces analytic spheres and indexed meshes on W
     });
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
 
+    graphicsDevice.handle.pushErrorScope('validation');
     const statistics = frame.render();
     graphicsDevice.submit();
+    const initialValidationError = await graphicsDevice.handle.popErrorScope();
+    testContext.equal(
+      initialValidationError,
+      null,
+      'GPU object bounds, BVH construction, and shadow traversal produce no core validation errors'
+    );
     testContext.equal(statistics.surfaceCount, 2, 'ray tracing retains both unique surfaces');
     testContext.equal(statistics.instanceCount, 3, 'ray tracing preserves transformed placements');
     testContext.equal(statistics.drawCount, 1, 'ray tracing presents through one fullscreen draw');
@@ -422,6 +440,7 @@ test('ANARI ray tracing renderer traces analytic spheres and indexed meshes on W
       'analytic spheres do not generate mesh triangles'
     );
 
+    graphicsDevice.handle.pushErrorScope('validation');
     camera.setParameters({position: [0, 0, 4], direction: [0, 0, -1]}).commitParameters();
     const accumulatedStatistics = frame.render();
     graphicsDevice.submit();
@@ -429,6 +448,33 @@ test('ANARI ray tracing renderer traces analytic spheres and indexed meshes on W
       accumulatedStatistics.instanceCount,
       3,
       'stable recommitted camera parameters preserve progressive rendering'
+    );
+
+    world.setParameter('instance', [firstInstance]).commitParameters();
+    const reducedStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(
+      reducedStatistics.instanceCount,
+      2,
+      'the BVH excludes inactive leaves when a retained world removes an instance'
+    );
+
+    firstInstance
+      .setParameter(
+        'transform',
+        new Matrix4()
+          .translate([-0.45, 0.2, 0])
+          .rotateY(Math.PI / 3)
+          .scale([0.8, 1.3, 0.6])
+      )
+      .commitParameters();
+    world.setParameter('instance', [firstInstance, secondInstance]).commitParameters();
+    const restoredStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(
+      restoredStatistics.instanceCount,
+      3,
+      'the BVH refits rotated, nonuniformly scaled instances when retained placements return'
     );
 
     sphereMaterial.setParameter('roughness', 0.8).commitParameters();
@@ -475,6 +521,22 @@ test('ANARI ray tracing renderer traces analytic spheres and indexed meshes on W
     graphicsDevice.submit();
     testContext.equal(emptyStatistics.instanceCount, 0, 'empty worlds present their background');
     testContext.equal(emptyStatistics.drawCount, 1, 'empty worlds still use one presentation draw');
+
+    renderer.setParameters({progressive: true, shadows: true}).commitParameters();
+    frame.setParameters({world, camera}).commitParameters();
+    const repopulatedStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(
+      repopulatedStatistics.instanceCount,
+      3,
+      'BVH traversal and direct-light shadows recover after an empty retained world'
+    );
+    const updatedValidationError = await graphicsDevice.handle.popErrorScope();
+    testContext.equal(
+      updatedValidationError,
+      null,
+      'BVH refits, resize, empty scenes, repopulation, and shadow updates remain core-valid'
+    );
 
     frame.destroy();
     device.destroy();
