@@ -266,14 +266,23 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
   material.doubleSided = true;
   material.emissiveFactor = [0.2, 0.3, 0.4];
   material.extensions = {
+    EXT_materials_bump: {bumpFactor: 0.68},
     KHR_materials_specular: {specularFactor: 0.42, specularColorFactor: [0.3, 0.4, 0.5]},
     KHR_materials_ior: {ior: 1.7},
     KHR_materials_transmission: {transmissionFactor: 0.56},
+    KHR_materials_diffuse_transmission: {
+      diffuseTransmissionFactor: 0.77,
+      diffuseTransmissionColorFactor: [0.9, 0.45, 0.2]
+    },
     KHR_materials_dispersion: {dispersion: 2.4},
     KHR_materials_volume: {
       thicknessFactor: 0.6,
       attenuationDistance: 2.5,
       attenuationColor: [0.7, 0.8, 0.9]
+    },
+    KHR_materials_volume_scatter: {
+      multiscatterColorFactor: [0.8, 0.35, 0.15],
+      scatterAnisotropy: 0.42
     },
     KHR_materials_clearcoat: {clearcoatFactor: 0.7, clearcoatRoughnessFactor: 0.23},
     KHR_materials_sheen: {sheenColorFactor: [0.11, 0.22, 0.33], sheenRoughnessFactor: 0.44},
@@ -418,6 +427,16 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
   testContext.equal(importedMaterial.specularIntensity, 0.42, 'specular intensity survives');
   testContext.equal(importedMaterial.indexOfRefraction, 1.7, 'index of refraction survives');
   testContext.equal(importedMaterial.transmission, 0.56, 'transmission factor survives');
+  testContext.equal(
+    importedMaterial.diffuseTransmission,
+    0.77,
+    'release-candidate diffuse-transmission factor survives'
+  );
+  testContext.deepEqual(
+    importedMaterial.diffuseTransmissionColor,
+    [0.9, 0.45, 0.2],
+    'authored diffuse-transmission color survives'
+  );
   testContext.equal(importedMaterial.dispersion, 2.4, 'ratified chromatic dispersion survives');
   testContext.equal(importedMaterial.thickness, 0.6, 'volume thickness survives');
   testContext.equal(
@@ -429,6 +448,16 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
     importedMaterial.attenuationColor,
     [0.7, 0.8, 0.9],
     'volume color survives'
+  );
+  testContext.deepEqual(
+    importedMaterial.multiscatterColor,
+    [0.8, 0.35, 0.15],
+    'active-draft scattering color survives alongside its required volume'
+  );
+  testContext.equal(
+    importedMaterial.scatterAnisotropy,
+    0.42,
+    'authored volume-scattering phase anisotropy survives'
   );
   testContext.equal(importedMaterial.clearcoat, 0.7, 'clearcoat factor survives');
   testContext.equal(importedMaterial.clearcoatRoughness, 0.23, 'clearcoat roughness survives');
@@ -448,6 +477,7 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
   );
   testContext.equal(importedMaterial.anisotropyRotation, 0.72, 'anisotropy direction survives');
   testContext.equal(importedMaterial.emissiveStrength, 3.5, 'emissive strength survives');
+  testContext.equal(importedMaterial.bumpFactor, 0.68, 'experimental bump strength survives');
   testContext.equal(importedMaterial.normalScale, 0.35, 'normal-map scale survives');
   testContext.equal(importedMaterial.occlusionStrength, 0.65, 'occlusion strength survives');
   testContext.equal(importedMaterial.unlit, true, 'unlit material semantics survive');

@@ -432,12 +432,15 @@ function getMaterialIdentifier(
         ? 'mask'
         : 'opaque';
   const clearcoat = sourceMaterial.extensions?.['KHR_materials_clearcoat'];
+  const bump = sourceMaterial.extensions?.['EXT_materials_bump'];
+  const diffuseTransmission = sourceMaterial.extensions?.['KHR_materials_diffuse_transmission'];
   const dispersion = sourceMaterial.extensions?.['KHR_materials_dispersion'];
   const iridescence = sourceMaterial.extensions?.['KHR_materials_iridescence'];
   const transmission = sourceMaterial.extensions?.['KHR_materials_transmission'];
   const sheen = sourceMaterial.extensions?.['KHR_materials_sheen'];
   const specular = sourceMaterial.extensions?.['KHR_materials_specular'];
   const volume = sourceMaterial.extensions?.['KHR_materials_volume'];
+  const volumeScatter = sourceMaterial.extensions?.['KHR_materials_volume_scatter'];
   const anisotropy = sourceMaterial.extensions?.['KHR_materials_anisotropy'];
   const indexOfRefraction = sourceMaterial.extensions?.['KHR_materials_ior'];
   const material: JSONMaterialDeclaration = {
@@ -457,9 +460,21 @@ function getMaterialIdentifier(
     clearcoatRoughness: clamp(clearcoat?.clearcoatRoughnessFactor ?? 0, 0, 1),
     iridescence: clamp(iridescence?.iridescenceFactor ?? 0, 0, 1),
     transmission: clamp(transmission?.transmissionFactor ?? 0, 0, 1),
+    diffuseTransmission: clamp(diffuseTransmission?.diffuseTransmissionFactor ?? 0, 0, 1),
+    diffuseTransmissionColor: toVector3(
+      diffuseTransmission?.diffuseTransmissionColorFactor,
+      [1, 1, 1]
+    ),
     dispersion: Math.max(dispersion?.dispersion ?? 0, 0),
     thickness: Math.max(volume?.thicknessFactor ?? 0, 0),
     attenuationColor: toVector3(volume?.attenuationColor, [1, 1, 1]),
+    multiscatterColor: volume
+      ? toVector3(
+          volumeScatter?.multiscatterColorFactor || volumeScatter?.multiscatterColor,
+          [0, 0, 0]
+        )
+      : [0, 0, 0],
+    scatterAnisotropy: volume ? clamp(volumeScatter?.scatterAnisotropy ?? 0, -0.999, 0.999) : 0,
     indexOfRefraction: clamp(indexOfRefraction?.ior ?? 1.5, 1, 2.5),
     sheenColor: toVector3(sheen?.sheenColorFactor, [0, 0, 0]),
     sheenRoughness: clamp(sheen?.sheenRoughnessFactor ?? 0, 0, 1),
@@ -468,6 +483,7 @@ function getMaterialIdentifier(
     iridescenceThicknessMaximum: Math.max(iridescence?.iridescenceThicknessMaximum ?? 400, 0),
     anisotropyStrength: clamp(anisotropy?.anisotropyStrength ?? 0, 0, 1),
     anisotropyRotation: anisotropy?.anisotropyRotation ?? 0,
+    bumpFactor: Math.max(bump?.bumpFactor ?? 1, 0),
     normalScale: clamp(sourceMaterial.normalTexture?.scale ?? 1, 0, 4),
     occlusionStrength: clamp(sourceMaterial.occlusionTexture?.strength ?? 1, 0, 1)
   };

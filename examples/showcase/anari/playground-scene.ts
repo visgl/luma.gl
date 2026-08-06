@@ -77,6 +77,7 @@ export type JSONGeometryDeclaration = JSONTypedObject<ANARIGeometrySubtype> &
 type JSONMaterialTextureName =
   | 'baseColorTexture'
   | 'normalTexture'
+  | 'bumpTexture'
   | 'metallicRoughnessTexture'
   | 'emissiveTexture'
   | 'occlusionTexture'
@@ -86,7 +87,10 @@ type JSONMaterialTextureName =
   | 'clearcoatRoughnessTexture'
   | 'clearcoatNormalTexture'
   | 'transmissionTexture'
+  | 'diffuseTransmissionTexture'
+  | 'diffuseTransmissionColorTexture'
   | 'thicknessTexture'
+  | 'multiscatterColorTexture'
   | 'sheenColorTexture'
   | 'sheenRoughnessTexture'
   | 'iridescenceTexture'
@@ -238,6 +242,7 @@ const DEFAULT_RENDERER_DECLARATION: JSONRendererDeclaration = {
 const MATERIAL_TEXTURE_NAMES: readonly JSONMaterialTextureName[] = [
   'baseColorTexture',
   'normalTexture',
+  'bumpTexture',
   'metallicRoughnessTexture',
   'emissiveTexture',
   'occlusionTexture',
@@ -247,7 +252,10 @@ const MATERIAL_TEXTURE_NAMES: readonly JSONMaterialTextureName[] = [
   'clearcoatRoughnessTexture',
   'clearcoatNormalTexture',
   'transmissionTexture',
+  'diffuseTransmissionTexture',
+  'diffuseTransmissionColorTexture',
   'thicknessTexture',
+  'multiscatterColorTexture',
   'sheenColorTexture',
   'sheenRoughnessTexture',
   'iridescenceTexture',
