@@ -164,6 +164,7 @@ test('ANARI material schemas expose canonical PBR extension factors and alpha mo
     specularColor: [0.7, 0.8, 0.9],
     specularIntensity: 0.6,
     transmission: 0.5,
+    dispersion: 1.75,
     thickness: 1.2,
     attenuationDistance: 4,
     attenuationColor: [0.8, 0.7, 0.6],
@@ -193,6 +194,13 @@ test('ANARI material schemas expose canonical PBR extension factors and alpha mo
       alphaCutoff: 1.5
     }).success,
     'masked alpha cutoffs remain constrained to the normalized range'
+  );
+  testContext.notOk(
+    ANARIMaterialSchema.safeParse({
+      '@@type': 'physicallyBased',
+      dispersion: -0.1
+    }).success,
+    'chromatic dispersion remains nonnegative without limiting artistic values above one'
   );
   testContext.ok(
     ANARITextureSchema.safeParse({source: '/texture.png', textureCoordinateSet: 1}).success,

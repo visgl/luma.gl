@@ -8,7 +8,8 @@ import {
   type Device,
   type Framebuffer,
   type RenderPass,
-  Texture
+  Texture,
+  type TextureFormatColor
 } from '@luma.gl/core';
 import {
   type Geometry,
@@ -20,6 +21,7 @@ import {
 } from '@luma.gl/engine';
 import {
   type Light,
+  PBR_TONE_MAP_MODE,
   type PBRMaterialBindings,
   type PBRMaterialUniforms,
   pbrMaterial,
@@ -125,8 +127,10 @@ export type SceneRenderOptions = {
   transmission?: boolean;
   /** Scene exposure multiplier. */
   exposure?: number;
-  /** Shared scene tone-mapping mode. */
+  /** Zero disables tone mapping; one selects Reinhard, two Khronos PBR Neutral, three ACES. */
   toneMapMode?: number;
+  /** Output transfer function; floating-point and hardware-sRGB targets default to linear. */
+  outputColorSpace?: 'linear' | 'srgb';
   /** Optional world-space fog color used by deferred lighting. */
   fogColor?: readonly number[];
   /** Optional exponential fog density used by deferred lighting. */
@@ -206,28 +210,36 @@ export class SceneRenderer {
   /** Compiles, updates, orders, and draws one retained frame. */
   render(options: SceneRenderOptions): SceneRenderStatistics {
     const transmission = this.getTransmissionResources(options);
-    const scene = this.prepareScene(options, transmission?.colorTexture);
     const background = options.background || [0, 0, 0, 1];
 
     if (transmission) {
+      const captureOptions: SceneRenderOptions = {
+        ...options,
+        id: getTransmissionCaptureIdentifier(options.id),
+        surfaces: options.surfaces.filter(
+          surface =>
+            !isTransmissiveSurface(surface) && getSceneAlphaMode(surface.material) !== 'BLEND'
+        ),
+        framebuffer: transmission.framebuffer,
+        exposure: 1,
+        toneMapMode: PBR_TONE_MAP_MODE.NONE,
+        outputColorSpace: 'linear',
+        transmission: false
+      };
+      const capturedScene = this.prepareScene(captureOptions);
       const capturePass = this.device.beginRenderPass({
         id: `scene-${options.id}-transmission`,
         framebuffer: transmission.framebuffer,
         clearColor: [background[0], background[1], background[2], background[3] ?? 1],
         clearDepth: 1
       });
-      this.drawPreparedScene(
-        {
-          ...scene,
-          surfaces: scene.surfaces.filter(
-            surface => !surface.transmissive && surface.alphaMode !== 'BLEND'
-          )
-        },
-        capturePass
-      );
+      this.drawPreparedScene(capturedScene, capturePass);
       capturePass.end();
+    } else {
+      this.destroyFrame(getTransmissionCaptureIdentifier(options.id));
     }
 
+    const scene = this.prepareScene(options, transmission?.colorTexture);
     const renderPass = this.device.beginRenderPass({
       id: `scene-${options.id}`,
       framebuffer: options.framebuffer,
@@ -251,6 +263,9 @@ export class SceneRenderer {
     }
     destroyTransmissionResources(resources.transmission);
     this.frames.delete(frameIdentifier);
+    if (resources.transmission) {
+      this.destroyFrame(getTransmissionCaptureIdentifier(frameIdentifier));
+    }
   }
 
   /** Releases all engine-owned scene models, materials, and instance buffers. */
@@ -422,6 +437,9 @@ export class SceneRenderer {
         bufferLayout,
         instanceCount: surface.transforms.length,
         shaderInputs: new ShaderInputs({pbrMaterial, pbrScene, ...(hasSkin ? {skin} : {})}),
+        colorAttachmentFormats: options.framebuffer?.colorAttachments.map(
+          attachment => attachment.texture.format as TextureFormatColor
+        ),
         parameters: {
           cullMode: surface.material.doubleSided ? 'none' : 'back',
           depthWriteEnabled: alphaMode !== 'BLEND',
@@ -442,6 +460,7 @@ export class SceneRenderer {
           USE_SCENE_ENVIRONMENT: hasCompleteEnvironment(options.environment),
           USE_TEX_LOD: hasMipmappedEnvironment(options.environment),
           USE_TRANSMISSION_FRAMEBUFFER: Boolean(transmissionTexture),
+          USE_SCENE_COLOR_MANAGEMENT: true,
           DEBUG_NORMALS: options.renderMode === 'debugNormals',
           DEBUG_DEPTH: options.renderMode === 'debugDepth',
           ...surface.material.defines,
@@ -509,7 +528,7 @@ export class SceneRenderer {
         id: `scene-${options.id}-transmission-color`,
         width,
         height,
-        format: this.device.preferredColorFormat,
+        format: getTransmissionTextureFormat(this.device),
         usage: Texture.SAMPLE | Texture.RENDER,
         sampler: {
           minFilter: 'linear',
@@ -584,6 +603,7 @@ function getSceneSurfaceSignature(
     transmission: Boolean(transmissionTexture),
     transmissionWidth: transmissionTexture?.width,
     transmissionHeight: transmissionTexture?.height,
+    colorFormat: options.framebuffer?.colorAttachments[0]?.texture.format,
     renderMode: options.renderMode || 'default'
   });
 }
@@ -642,10 +662,15 @@ function setSceneShaderInputs(
     },
     pbrScene: {
       exposure: options.exposure ?? 1,
-      toneMapMode: options.toneMapMode ?? 2,
+      toneMapMode:
+        options.toneMapMode ??
+        (getSceneColorFormat(model.device, options) === 'rgba16float'
+          ? PBR_TONE_MAP_MODE.NONE
+          : PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL),
       environmentIntensity: options.environment?.intensity ?? 1,
       environmentRotation: options.environment?.rotation ?? 0,
       environmentMipCount: options.environment?.specularTexture?.mipLevels ?? 1,
+      outputEncoding: getSceneOutputEncoding(model.device, options),
       framebufferSize: [framebufferWidth, framebufferHeight],
       viewMatrix,
       projectionMatrix,
@@ -676,6 +701,27 @@ function hasMipmappedEnvironment(environment?: SceneEnvironment): boolean {
 
 function isTransmissiveSurface(surface: SceneSurface): boolean {
   return (surface.material.uniforms?.transmissionFactor ?? 0) > 0;
+}
+
+function getTransmissionCaptureIdentifier(frameIdentifier: string): string {
+  return `${frameIdentifier}::linear-transmission-capture`;
+}
+
+function getTransmissionTextureFormat(device: Device): 'rgba16float' | 'rgba8unorm' {
+  const capabilities = device.getTextureFormatCapabilities('rgba16float');
+  return capabilities.render && capabilities.filter ? 'rgba16float' : 'rgba8unorm';
+}
+
+function getSceneColorFormat(device: Device, options: SceneRenderOptions): string {
+  return options.framebuffer?.colorAttachments[0]?.texture.format || device.preferredColorFormat;
+}
+
+function getSceneOutputEncoding(device: Device, options: SceneRenderOptions): number {
+  if (options.outputColorSpace) {
+    return options.outputColorSpace === 'srgb' ? 1 : 0;
+  }
+  const format = getSceneColorFormat(device, options);
+  return format === 'rgba16float' || format.endsWith('-srgb') ? 0 : 1;
 }
 
 function getSceneRenderSize(device: Device, options: SceneRenderOptions): [number, number] {

@@ -103,6 +103,7 @@ export type ANARIMaterialParameters = {
   iridescence?: number;
   clearcoatRoughness?: number;
   transmission?: number;
+  dispersion?: number;
   thickness?: number;
   attenuationDistance?: number;
   attenuationColor?: ANARIVector3;

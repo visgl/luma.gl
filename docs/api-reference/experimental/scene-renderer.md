@@ -138,10 +138,10 @@ automatically calculate or bind joint matrices.
 
 Supported uniform families include base color, metallic/roughness, normal and occlusion maps,
 emission and emissive strength, specular color/intensity, index of refraction, transmission and
-volume factors, clearcoat, sheen, iridescence, anisotropy, alpha cutoff, per-map UV selection, and
-per-map UV transforms. Transmissive surfaces can sample an automatically captured opaque scene;
-the shared shader combines scene-color refraction with IOR, thickness, attenuation, Fresnel
-response, and roughness-aware filtering.
+volume factors, chromatic dispersion, clearcoat, sheen, iridescence, anisotropy, alpha cutoff,
+per-map UV selection, and per-map UV transforms. Transmissive surfaces sample automatically
+captured linear opaque-scene radiance; the shared shader combines refraction with IOR, thickness,
+attenuation, wavelength-dependent dispersion, Fresnel response, and roughness-aware filtering.
 
 Bind only maps that actually exist:
 
@@ -194,9 +194,33 @@ ordered back-to-front at the surface level.
 | `environment` | Optional complete `SceneEnvironment` image-based-lighting resource set. |
 | `transmission` | Enables automatic opaque-scene capture for transmissive materials; set `false` to disable it. |
 | `exposure` | Exposure multiplier; defaults to `1`. |
-| `toneMapMode` | Existing shared scene tone-mapping selector; defaults to `2`. |
+| `toneMapMode` | `0` disables tone mapping, `1` selects Reinhard, `2` selects Khronos PBR Neutral, and `3` selects ACES. SDR targets default to `2`; floating-point targets default to `0`. |
+| `outputColorSpace` | Optional `linear` or `srgb` output encoding. Floating-point and hardware-sRGB attachments default to linear output; ordinary SDR attachments default to exact sRGB encoding. |
 | `fogColor`, `fogDensity` | Optional exponential-fog inputs consumed by deferred lighting. |
 | `renderMode` | `default`, `debugNormals`, or `debugDepth`. |
+
+### Color management and HDR output
+
+The canonical shaders accumulate lighting, environment radiance, emission, and transmission in
+linear color space. Exposure is applied before tone mapping. Import the named selectors when
+configuring an output transform:
+
+```ts
+import {PBR_TONE_MAP_MODE} from '@luma.gl/shadertools';
+
+renderer.render({
+  ...options,
+  exposure: 1.5,
+  toneMapMode: PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL,
+  outputColorSpace: 'srgb'
+});
+```
+
+An `rgba16float` framebuffer defaults to linear, untonemapped output, preserving radiance above
+one for subsequent HDR processing. A framebuffer with a hardware-sRGB attachment also receives
+linear shader output so the hardware performs the transfer exactly once. Explicit
+`outputColorSpace` overrides the automatic selection when the caller intentionally manages the
+target differently.
 
 ## Image-based lighting
 
@@ -288,7 +312,8 @@ const glassSurface: SceneSurface = {
       thicknessFactor: 0.35,
       attenuationDistance: 2,
       attenuationColor: [0.85, 0.95, 1],
-      ior: 1.5
+      ior: 1.5,
+      dispersion: 0.35
     }
   },
   transforms: [new Matrix4()]
@@ -306,9 +331,11 @@ material in `alphaMode: 'OPAQUE'`; it can refract background geometry while reta
 output alpha and participating in depth writes. Set `alphaMode: 'BLEND'` only when the material's
 authored alpha actually requires blending.
 
-The capture pass renders opaque or masked **nontransmissive** surfaces into a separate retained
-color/depth target. Transmissive and blended surfaces are excluded, so a target is never sampled
-while also being rendered. The final pass draws ordinary opaque surfaces before transmissive
+The capture pass renders opaque or masked **nontransmissive** surfaces into a separate retained,
+linear color/depth target. It uses `rgba16float` when that format can be rendered and filtered,
+falling back to `rgba8unorm` otherwise. Capture is not exposed, tone-mapped, or sRGB-encoded before
+the transmission shader samples it. Transmissive and blended surfaces are excluded, so a target is
+never sampled while also being rendered. The final pass draws ordinary opaque surfaces before transmissive
 opaque surfaces, then draws blended surfaces back-to-front. `drawCount` reports only final-pass
 draws; the internal capture draw is intentionally excluded.
 
@@ -319,7 +346,9 @@ behavior. Debug-normal/depth modes also disable capture.
 
 This is screen-space, single-opaque-capture transmission rather than ray tracing or layered
 multi-bounce refraction. Overlapping transmissive objects do not refract one another, and blended
-background surfaces do not appear in the opaque capture.
+background surfaces do not appear in the opaque capture. A positive `dispersion` applies the
+ratified `KHR_materials_dispersion` wavelength-dependent IOR model; zero keeps the ordinary
+single-refraction path.
 
 ## Retention and structural updates
 
@@ -328,8 +357,9 @@ Camera state, lights, material factors, instance matrix values, joint palettes, 
 update without rebuilding the retained model. Texture binding identity, geometry identity or
 `geometryVersion`, instance count, alpha mode, sidedness, shader defines, IBL availability,
 whether the specular environment has multiple mip levels, transmission-capture
-availability/dimensions, and debug mode are structural changes and recreate the affected
-pipeline/resources. Changing the exact mip count within an already mipmapped environment updates
+availability/dimensions, render-target color format, and debug mode are structural changes and
+recreate the affected pipeline/resources. Changing the exact mip count within an already mipmapped
+environment updates
 the scene uniform without recompiling that shader variant.
 
 Changing only `material.version` does not force a structural rebuild. Increment `geometryVersion`

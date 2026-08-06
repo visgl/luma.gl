@@ -112,6 +112,7 @@ const materialProperties = {
   clearcoatRoughness: unitNumberSchema.optional(),
   iridescence: unitNumberSchema.optional(),
   transmission: unitNumberSchema.optional(),
+  dispersion: nonnegativeNumberSchema.optional(),
   thickness: nonnegativeNumberSchema.optional(),
   attenuationDistance: positiveNumberSchema.optional(),
   attenuationColor: ANARIVector3Schema.optional(),

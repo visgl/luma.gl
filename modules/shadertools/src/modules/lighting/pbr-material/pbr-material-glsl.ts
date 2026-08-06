@@ -115,6 +115,7 @@ layout(std140) uniform pbrMaterialUniforms {
   bool anisotropyMapEnabled;
 
   float emissiveStrength;
+  float dispersion;
   
   // IBL
   bool IBLenabled;
@@ -246,6 +247,8 @@ struct PBRInfo {
   vec3 specularColor;           // color contribution from specular lighting
   vec3 n;                       // normal at surface point
   vec3 v;                       // vector from surface point to camera
+  vec3 l;                       // direction from the surface toward the current light
+  vec3 h;                       // half vector between the current light and camera
 };
 
 const float M_PI = 3.141592653589793;
@@ -445,16 +448,125 @@ vec2 rotateDirection(vec2 direction, float rotation)
   return vec2(direction.x * c - direction.y * s, direction.x * s + direction.y * c);
 }
 
-vec3 getIridescenceTint(float iridescence, float thickness, float NdotV)
+vec3 encodeLinearSRGB(vec3 linearColor)
 {
-  if (iridescence <= 0.0) {
-    return vec3(1.0);
+  vec3 positiveColor = max(linearColor, vec3(0.0));
+  return mix(
+    positiveColor * 12.92,
+    1.055 * pow(positiveColor, vec3(1.0 / 2.4)) - 0.055,
+    greaterThan(positiveColor, vec3(0.0031308))
+  );
+}
+
+vec3 toneMapKhronosPBRNeutral(vec3 color)
+{
+  const float startCompression = 0.76;
+  float darkestChannel = min(color.r, min(color.g, color.b));
+  float offset = darkestChannel < 0.08
+    ? darkestChannel - 6.25 * darkestChannel * darkestChannel
+    : 0.04;
+  color -= vec3(offset);
+
+  float peak = maxComponent(color);
+  if (peak < startCompression) {
+    return color;
   }
 
-  float phase = 0.015 * thickness * pbrMaterial.iridescenceIor + (1.0 - NdotV) * 6.0;
-  vec3 thinFilmTint =
-    0.5 + 0.5 * cos(vec3(phase, phase + 2.0943951, phase + 4.1887902));
-  return mix(vec3(1.0), thinFilmTint, iridescence);
+  float compressionRange = 1.0 - startCompression;
+  float compressedPeak = 1.0 - compressionRange * compressionRange /
+    (peak + compressionRange - startCompression);
+  color *= compressedPeak / max(peak, 0.0001);
+  float desaturation = 1.0 - 1.0 / (0.15 * (peak - compressedPeak) + 1.0);
+  return mix(color, vec3(compressedPeak), desaturation);
+}
+
+vec3 applySceneColorManagement(vec3 sceneColor)
+{
+#ifdef USE_SCENE_COLOR_MANAGEMENT
+  vec3 color = max(sceneColor, vec3(0.0)) * max(pbrScene.exposure, 0.0);
+  if (pbrScene.toneMapMode == 1) {
+    color /= vec3(1.0) + color;
+  } else if (pbrScene.toneMapMode == 2) {
+    color = toneMapKhronosPBRNeutral(color);
+  } else if (pbrScene.toneMapMode == 3) {
+    color = clamp(
+      (color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14),
+      vec3(0.0),
+      vec3(1.0)
+    );
+  }
+  return pbrScene.outputEncoding == 0 ? color : encodeLinearSRGB(color);
+#else
+  return pow(max(sceneColor, vec3(0.0)), vec3(1.0 / 2.2));
+#endif
+}
+
+float dielectricSchlick(float reflectance, float cosine)
+{
+  return reflectance + (1.0 - reflectance) * pow(clamp(1.0 - cosine, 0.0, 1.0), 5.0);
+}
+
+vec3 evaluateIridescenceSensitivity(float opticalPathDifference, vec3 phaseShift)
+{
+  float phase = 2.0 * M_PI * opticalPathDifference * 1.0e-9;
+  vec3 sensitivity = vec3(5.4856e-13, 4.4201e-13, 5.2481e-13);
+  vec3 position = vec3(1.6810e6, 1.7953e6, 2.2084e6);
+  vec3 variance = vec3(4.3278e9, 9.3046e9, 6.6121e9);
+  vec3 xyz = sensitivity * sqrt(2.0 * M_PI * variance) *
+    cos(position * phase + phaseShift) * exp(-phase * phase * variance);
+  xyz.x += 9.7470e-14 * sqrt(2.0 * M_PI * 4.5282e9) *
+    cos(2.2399e6 * phase + phaseShift.x) * exp(-4.5282e9 * phase * phase);
+  xyz /= 1.0685e-7;
+  return mat3(
+    3.2404542, -0.9692660, 0.0556434,
+    -1.5371385, 1.8760108, -0.2040259,
+    -0.4985314, 0.0415560, 1.0572252
+  ) * xyz;
+}
+
+vec3 getIridescenceTint(float iridescence, float thickness, float NdotV, vec3 baseReflectance)
+{
+  if (iridescence <= 0.0 || thickness <= 0.0) {
+    return baseReflectance;
+  }
+
+  float filmIor = max(pbrMaterial.iridescenceIor, 1.0);
+  float sineSquared = (1.0 - NdotV * NdotV) / (filmIor * filmIor);
+  float cosineSquared = 1.0 - sineSquared;
+  if (cosineSquared <= 0.0) {
+    return mix(baseReflectance, vec3(1.0), iridescence);
+  }
+  float filmCosine = sqrt(cosineSquared);
+  float firstInterfaceReflectance = dielectricSchlick(getDielectricF0(filmIor), NdotV);
+  float transmittedEnergy = 1.0 - firstInterfaceReflectance;
+
+  vec3 baseIor = (vec3(1.0) + sqrt(clamp(baseReflectance, vec3(0.0), vec3(0.9999)))) /
+    (vec3(1.0) - sqrt(clamp(baseReflectance, vec3(0.0), vec3(0.9999))));
+  vec3 secondInterfaceF0 = (baseIor - vec3(filmIor)) / (baseIor + vec3(filmIor));
+  secondInterfaceF0 *= secondInterfaceF0;
+  vec3 secondInterfaceReflectance = secondInterfaceF0 +
+    (vec3(1.0) - secondInterfaceF0) * pow(1.0 - filmCosine, 5.0);
+  vec3 phaseShift = vec3(M_PI);
+  phaseShift += mix(vec3(0.0), vec3(M_PI), lessThan(baseIor, vec3(filmIor)));
+  float opticalPathDifference = 2.0 * filmIor * thickness * filmCosine;
+  vec3 combinedReflectance = clamp(
+    firstInterfaceReflectance * secondInterfaceReflectance,
+    vec3(0.00001),
+    vec3(0.9999)
+  );
+  vec3 recurringAmplitude = sqrt(combinedReflectance);
+  vec3 interfaceResponse = transmittedEnergy * transmittedEnergy * secondInterfaceReflectance /
+    (vec3(1.0) - combinedReflectance);
+  vec3 reflectedSpectrum = vec3(firstInterfaceReflectance) + interfaceResponse;
+  vec3 harmonicAmplitude = interfaceResponse - vec3(transmittedEnergy);
+  for (int harmonic = 1; harmonic <= 2; harmonic++) {
+    harmonicAmplitude *= recurringAmplitude;
+    reflectedSpectrum += harmonicAmplitude * 2.0 * evaluateIridescenceSensitivity(
+      float(harmonic) * opticalPathDifference,
+      float(harmonic) * phaseShift
+    );
+  }
+  return mix(baseReflectance, clamp(reflectedSpectrum, vec3(0.0), vec3(1.0)), iridescence);
 }
 
 vec3 getVolumeAttenuation(float thickness)
@@ -470,18 +582,19 @@ vec3 getVolumeAttenuation(float thickness)
 }
 
 #ifdef USE_TRANSMISSION_FRAMEBUFFER
-vec3 getTransmittedSceneColor(
+vec3 sampleTransmittedSceneColor(
   vec3 position,
   vec3 normal,
   vec3 viewDirection,
   float thickness,
-  float perceptualRoughness
+  float perceptualRoughness,
+  float indexOfRefraction
 )
 {
   vec3 refractionDirection = refract(
     -viewDirection,
     normal,
-    1.0 / max(pbrMaterial.ior, 1.0)
+    1.0 / max(indexOfRefraction, 1.0)
   );
   vec3 refractedPosition = position + refractionDirection * thickness;
   vec4 clipPosition = pbrScene.projectionMatrix *
@@ -508,7 +621,44 @@ vec3 getTransmittedSceneColor(
     pbr_transmissionFramebufferSampler,
     textureCoordinate - vec2(0.0, blurRadius.y)
   ).rgb * 0.15;
-  return pow(max(sceneColor, vec3(0.0)), vec3(2.2));
+  return max(sceneColor, vec3(0.0));
+}
+
+vec3 getTransmittedSceneColor(
+  vec3 position,
+  vec3 normal,
+  vec3 viewDirection,
+  float thickness,
+  float perceptualRoughness
+)
+{
+  if (pbrMaterial.dispersion <= 0.0) {
+    return sampleTransmittedSceneColor(
+      position,
+      normal,
+      viewDirection,
+      thickness,
+      perceptualRoughness,
+      pbrMaterial.ior
+    );
+  }
+
+  float halfSpread = (max(pbrMaterial.ior, 1.0) - 1.0) * 0.025 * pbrMaterial.dispersion;
+  vec3 indicesOfRefraction = max(
+    vec3(pbrMaterial.ior - halfSpread, pbrMaterial.ior, pbrMaterial.ior + halfSpread),
+    vec3(1.0)
+  );
+  return vec3(
+    sampleTransmittedSceneColor(
+      position, normal, viewDirection, thickness, perceptualRoughness, indicesOfRefraction.r
+    ).r,
+    sampleTransmittedSceneColor(
+      position, normal, viewDirection, thickness, perceptualRoughness, indicesOfRefraction.g
+    ).g,
+    sampleTransmittedSceneColor(
+      position, normal, viewDirection, thickness, perceptualRoughness, indicesOfRefraction.b
+    ).b
+  );
 }
 #endif
 
@@ -532,7 +682,9 @@ PBRInfo createClearcoatPBRInfo(PBRInfo basePBRInfo, vec3 clearcoatNormal, float 
     vec3(0.0),
     vec3(0.04),
     clearcoatNormal,
-    basePBRInfo.v
+    basePBRInfo.v,
+    basePBRInfo.l,
+    basePBRInfo.h
   );
 }
 
@@ -578,28 +730,72 @@ vec3 calculateSheenContribution(
     return vec3(0.0);
   }
 
-  float sheenFresnel = pow(clamp(1.0 - pbrInfo.VdotH, 0.0, 1.0), 5.0);
-  float sheenVisibility = mix(1.0, pbrInfo.NdotL * pbrInfo.NdotV, sheenRoughness);
-  return pbrInfo.NdotL *
-    lightColor *
-    sheenColor *
-    (0.25 + 0.75 * sheenFresnel) *
-    sheenVisibility *
+  float alpha = max(sheenRoughness * sheenRoughness, 0.0001);
+  float inverseAlpha = 1.0 / alpha;
+  float sineSquared = max(1.0 - pbrInfo.NdotH * pbrInfo.NdotH, 0.0);
+  float distribution = (2.0 + inverseAlpha) * pow(sineSquared, inverseAlpha * 0.5) /
+    (2.0 * M_PI);
+  float visibility = 1.0 / max(
+    4.0 * (pbrInfo.NdotL + pbrInfo.NdotV - pbrInfo.NdotL * pbrInfo.NdotV),
+    0.0001
+  );
+  return pbrInfo.NdotL * lightColor * sheenColor * distribution * visibility *
     (1.0 - pbrInfo.metalness);
 }
 
-float calculateAnisotropyBoost(
+vec3 calculateAnisotropicLightColor(
   PBRInfo pbrInfo,
+  vec3 lightColor,
   vec3 anisotropyTangent,
   float anisotropyStrength
 ) {
   if (anisotropyStrength <= 0.0) {
-    return 1.0;
+    return calculateFinalColor(pbrInfo, lightColor);
   }
 
   vec3 anisotropyBitangent = normalize(cross(pbrInfo.n, anisotropyTangent));
-  float bitangentViewAlignment = abs(dot(pbrInfo.v, anisotropyBitangent));
-  return mix(1.0, 0.65 + 0.7 * bitangentViewAlignment, anisotropyStrength);
+  float tangentRoughness = mix(
+    pbrInfo.alphaRoughness,
+    1.0,
+    anisotropyStrength * anisotropyStrength
+  );
+  float bitangentRoughness = clamp(pbrInfo.alphaRoughness, 0.001, 1.0);
+  float roughnessProduct = tangentRoughness * bitangentRoughness;
+  vec3 distributionVector = vec3(
+    bitangentRoughness * dot(anisotropyTangent, pbrInfo.h),
+    tangentRoughness * dot(anisotropyBitangent, pbrInfo.h),
+    roughnessProduct * pbrInfo.NdotH
+  );
+  float distributionFactor = roughnessProduct /
+    max(dot(distributionVector, distributionVector), 0.000001);
+  float distribution = roughnessProduct * distributionFactor * distributionFactor / M_PI;
+  float viewMask = pbrInfo.NdotL * length(vec3(
+    tangentRoughness * dot(anisotropyTangent, pbrInfo.v),
+    bitangentRoughness * dot(anisotropyBitangent, pbrInfo.v),
+    pbrInfo.NdotV
+  ));
+  float lightMask = pbrInfo.NdotV * length(vec3(
+    tangentRoughness * dot(anisotropyTangent, pbrInfo.l),
+    bitangentRoughness * dot(anisotropyBitangent, pbrInfo.l),
+    pbrInfo.NdotL
+  ));
+  float visibility = clamp(0.5 / max(viewMask + lightMask, 0.000001), 0.0, 1.0);
+  vec3 fresnel = specularReflection(pbrInfo);
+  vec3 diffuseContribution = (vec3(1.0) - fresnel) * diffuse(pbrInfo);
+  return pbrInfo.NdotL * lightColor *
+    (diffuseContribution + fresnel * distribution * visibility);
+}
+
+vec3 getAnisotropicReflection(PBRInfo pbrInfo, vec3 anisotropyTangent, float anisotropyStrength)
+{
+  if (anisotropyStrength <= 0.0) {
+    return -normalize(reflect(pbrInfo.v, pbrInfo.n));
+  }
+  vec3 anisotropyBitangent = normalize(cross(pbrInfo.n, anisotropyTangent));
+  vec3 anisotropicNormal = normalize(cross(anisotropyBitangent, pbrInfo.v));
+  anisotropicNormal = normalize(cross(anisotropicNormal, anisotropyBitangent));
+  float bend = anisotropyStrength * (1.0 - pbrInfo.perceptualRoughness);
+  return -normalize(reflect(pbrInfo.v, normalize(mix(pbrInfo.n, anisotropicNormal, bend))));
 }
 
 vec3 calculateMaterialLightColor(
@@ -613,8 +809,12 @@ vec3 calculateMaterialLightColor(
   vec3 anisotropyTangent,
   float anisotropyStrength
 ) {
-  float anisotropyBoost = calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
-  vec3 color = calculateFinalColor(pbrInfo, lightColor) * anisotropyBoost;
+  vec3 color = calculateAnisotropicLightColor(
+    pbrInfo,
+    lightColor,
+    anisotropyTangent,
+    anisotropyStrength
+  );
   color += calculateClearcoatContribution(
     pbrInfo,
     lightColor,
@@ -631,6 +831,8 @@ void PBRInfo_setAmbientLight(inout PBRInfo pbrInfo) {
   pbrInfo.NdotH = 0.0;
   pbrInfo.LdotH = 0.0;
   pbrInfo.VdotH = 1.0;
+  pbrInfo.l = pbrInfo.n;
+  pbrInfo.h = pbrInfo.n;
 }
 
 void PBRInfo_setDirectionalLight(inout PBRInfo pbrInfo, vec3 lightDirection) {
@@ -643,6 +845,8 @@ void PBRInfo_setDirectionalLight(inout PBRInfo pbrInfo, vec3 lightDirection) {
   pbrInfo.NdotH = clamp(dot(n, h), 0.0, 1.0);
   pbrInfo.LdotH = clamp(dot(l, h), 0.0, 1.0);
   pbrInfo.VdotH = clamp(dot(v, h), 0.0, 1.0);
+  pbrInfo.l = l;
+  pbrInfo.h = h;
 }
 
 void PBRInfo_setPointLight(inout PBRInfo pbrInfo, PointLight pointLight) {
@@ -769,6 +973,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
       abs(pbrMaterial.specularIntensityFactor - 1.0) > 0.0001 ||
       maxComponent(abs(pbrMaterial.specularColorFactor - vec3(1.0))) > 0.0001 ||
       abs(pbrMaterial.ior - 1.5) > 0.0001 ||
+      pbrMaterial.dispersion > 0.0001 ||
       pbrMaterial.transmissionMapEnabled ||
       pbrMaterial.transmissionFactor > 0.0001 ||
       pbrMaterial.clearcoatMapEnabled ||
@@ -821,7 +1026,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
         diffuseColor,
         specularColor,
         n,
-        v
+        v,
+        n,
+        n
       );
 
 #ifdef USE_LIGHTS
@@ -879,7 +1086,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
       color = mix(color, vec3(perceptualRoughness), pbrMaterial.scaleDiffBaseMR.w);
 #endif
 
-      return vec4(pow(color, vec3(1.0 / 2.2)), baseColor.a);
+      return vec4(applySceneColorManagement(color), baseColor.a);
     }
 
     float specularIntensity = pbrMaterial.specularIntensityFactor;
@@ -975,13 +1182,6 @@ vec4 pbr_filterColor(vec4 vertexColor)
     if (length(anisotropyTangent) < 0.0001) {
       anisotropyTangent = normalize(tbn[0]);
     }
-    float anisotropyViewAlignment = abs(dot(v, anisotropyTangent));
-    perceptualRoughness = mix(
-      perceptualRoughness,
-      clamp(perceptualRoughness * (1.0 - 0.6 * anisotropyViewAlignment), c_MinRoughness, 1.0),
-      anisotropyStrength
-    );
-
     // Roughness is authored as perceptual roughness; as is convention,
     // convert to material roughness by squaring the perceptual roughness [2].
     float alphaRoughness = perceptualRoughness * perceptualRoughness;
@@ -991,17 +1191,24 @@ vec4 pbr_filterColor(vec4 vertexColor)
       vec3(dielectricF0) * specularFactor * specularIntensity,
       vec3(1.0)
     );
-    vec3 iridescenceTint = getIridescenceTint(iridescence, iridescenceThickness, NdotV);
-    dielectricSpecularF0 = mix(
-      dielectricSpecularF0,
-      dielectricSpecularF0 * iridescenceTint,
-      iridescence
+    dielectricSpecularF0 = getIridescenceTint(
+      iridescence,
+      iridescenceThickness,
+      NdotV,
+      dielectricSpecularF0
     );
     vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - dielectricSpecularF0);
     diffuseColor *= (1.0 - metallic) * (1.0 - transmission);
     vec3 specularColor = mix(dielectricSpecularF0, baseColor.rgb, metallic);
 
-    float baseLayerEnergy = 1.0 - clearcoatFactor * 0.25;
+    float clearcoatViewFresnel = dielectricSchlick(
+      0.04,
+      clamp(abs(dot(clearcoatNormal, v)), 0.0, 1.0)
+    );
+    float sheenDirectionalAlbedo = maxComponent(sheenColor) *
+      (0.157 + 0.343 * (1.0 - NdotV)) * (1.0 - sheenRoughness * 0.5);
+    float baseLayerEnergy = (1.0 - clearcoatFactor * clearcoatViewFresnel) *
+      (1.0 - clamp(sheenDirectionalAlbedo, 0.0, 1.0));
     diffuseColor *= baseLayerEnergy;
     specularColor *= baseLayerEnergy;
 
@@ -1031,7 +1238,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
       diffuseColor,
       specularColor,
       n,
-      v
+      v,
+      n,
+      n
     );
 
 
@@ -1109,8 +1318,11 @@ vec4 pbr_filterColor(vec4 vertexColor)
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
     if (pbrMaterial.IBLenabled) {
-      color += getIBLContribution(pbrInfo, n, reflection) *
-        calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
+      color += getIBLContribution(
+        pbrInfo,
+        n,
+        getAnisotropicReflection(pbrInfo, anisotropyTangent, anisotropyStrength)
+      );
       color += calculateClearcoatIBLContribution(
         pbrInfo,
         clearcoatNormal,
@@ -1180,6 +1392,6 @@ vec4 pbr_filterColor(vec4 vertexColor)
 #else
   float alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
 #endif
-  return vec4(pow(color,vec3(1.0/2.2)), alpha);
+  return vec4(applySceneColorManagement(color), alpha);
 }
 `;

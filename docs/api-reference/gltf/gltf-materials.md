@@ -40,8 +40,9 @@ defines, and generated textures. Source `OPAQUE`, `MASK`, and `BLEND` modes, cut
 double-sided materials, and unlit materials are preserved.
 
 Core metallic-roughness factors and supported extension factors include emissive strength,
-specular intensity/color, index of refraction, transmission, thickness/attenuation, clearcoat,
-sheen, iridescence, and anisotropy.
+specular intensity/color, index of refraction, transmission, thickness/attenuation, ratified
+chromatic dispersion, clearcoat, sheen, iridescence, and anisotropy. Authored sRGB color textures
+use the exact piecewise transfer function rather than an approximate gamma curve.
 
 ## Supported texture slots
 
@@ -201,11 +202,14 @@ refraction depends on the renderer:
 
 - The shared [experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) and
   retained ANARI path capture the opaque scene and sample it for screen-space refraction with
-  thickness, attenuation, index of refraction, and roughness-aware response.
+  thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and
+  roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment
+  when the device supports rendering and filtering `rgba16float`.
 - Standalone models produced by `createScenegraphsFromGLTF()` do not capture scene color and
   retain the established alpha/attenuation transmission approximation.
 
 Captured transmission is a single screen-space opaque pass, not ray tracing or arbitrary layered
-refraction. Advanced sheen, iridescence, and anisotropy also use the shared shader's existing
-approximations. See [glTF extension support](/docs/api-reference/gltf/gltf-extensions) for
+refraction. Advanced materials use Charlie-distributed sheen, anisotropic GGX
+distribution/visibility, spectral thin-film iridescence, and Fresnel-aware clearcoat/base-layer
+energy compensation. See [glTF extension support](/docs/api-reference/gltf/gltf-extensions) for
 format-level coverage.

@@ -7,20 +7,20 @@
 import type {Texture} from '@luma.gl/core';
 import type {
   Matrix3,
-  Vector2,
-  Vector3,
-  Vector4,
   NumberArray2,
   NumberArray3,
   NumberArray4,
-  NumberArray9
+  NumberArray9,
+  Vector2,
+  Vector3,
+  Vector4
 } from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lighting} from '../lights/lighting';
 import {ibl} from '../ibl/ibl';
+import {lighting} from '../lights/lighting';
 
-import {vs, fs} from './pbr-material-glsl';
+import {fs, vs} from './pbr-material-glsl';
 import {source} from './pbr-material-wgsl';
 import {pbrProjection} from './pbr-projection';
 
@@ -86,6 +86,9 @@ export type PBRMaterialUniforms = {
   specularIntensityMapEnabled?: boolean;
 
   ior?: number;
+
+  /** Chromatic transmission spread, expressed as 20 divided by the material Abbe number. */
+  dispersion?: number;
 
   transmissionFactor?: number;
   transmissionMapEnabled?: boolean;
@@ -223,6 +226,7 @@ export const pbrMaterial = {
     anisotropyMapEnabled: false,
 
     emissiveStrength: 1,
+    dispersion: 0,
 
     baseColorUVSet: 0,
     baseColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -370,6 +374,7 @@ export const pbrMaterial = {
     anisotropyMapEnabled: 'i32',
 
     emissiveStrength: 'f32',
+    dispersion: 'f32',
 
     // IBL
     IBLenabled: 'i32',

@@ -73,6 +73,7 @@ uniform pbrMaterialUniforms {
   bool anisotropyMapEnabled;
 
   float emissiveStrength;
+  float dispersion;
   
   // IBL
   bool IBLenabled;
@@ -248,6 +249,7 @@ struct pbrMaterialUniforms {
   anisotropyMapEnabled: i32,
 
   emissiveStrength: f32,
+  dispersion: f32,
   
   // IBL
   IBLenabled: i32,
@@ -384,6 +386,8 @@ struct PBRInfo {
   specularColor: vec3f,           // color contribution from specular lighting
   n: vec3f,                       // normal at surface point
   v: vec3f,                       // vector from surface point to camera
+  l: vec3f,                       // direction from the surface toward the current light
+  h: vec3f                        // half vector between the current light and camera
 };
 
 const M_PI = 3.141592653589793;
@@ -623,17 +627,131 @@ fn rotateDirection(direction: vec2f, rotation: f32) -> vec2f {
   return vec2f(direction.x * c - direction.y * s, direction.x * s + direction.y * c);
 }
 
-fn getIridescenceTint(iridescence: f32, thickness: f32, NdotV: f32) -> vec3f {
-  if (iridescence <= 0.0) {
-    return vec3f(1.0);
+fn encodeLinearSRGB(linearColor: vec3f) -> vec3f {
+  let positiveColor = max(linearColor, vec3f(0.0));
+  return select(
+    positiveColor * 12.92,
+    1.055 * pow(positiveColor, vec3f(1.0 / 2.4)) - 0.055,
+    positiveColor > vec3f(0.0031308)
+  );
+}
+
+fn toneMapKhronosPBRNeutral(inputColor: vec3f) -> vec3f {
+  let startCompression = 0.76;
+  let darkestChannel = min(inputColor.r, min(inputColor.g, inputColor.b));
+  let offset = select(
+    0.04,
+    darkestChannel - 6.25 * darkestChannel * darkestChannel,
+    darkestChannel < 0.08
+  );
+  var color = inputColor - vec3f(offset);
+  let peak = maxComponent(color);
+  if (peak < startCompression) {
+    return color;
   }
 
-  let phase = 0.015 * thickness * pbrMaterial.iridescenceIor + (1.0 - NdotV) * 6.0;
-  let thinFilmTint =
-    0.5 +
-    0.5 *
-    cos(vec3f(phase, phase + 2.0943951, phase + 4.1887902));
-  return mix(vec3f(1.0), thinFilmTint, iridescence);
+  let compressionRange = 1.0 - startCompression;
+  let compressedPeak = 1.0 - compressionRange * compressionRange /
+    (peak + compressionRange - startCompression);
+  color *= compressedPeak / max(peak, 0.0001);
+  let desaturation = 1.0 - 1.0 / (0.15 * (peak - compressedPeak) + 1.0);
+  return mix(color, vec3f(compressedPeak), desaturation);
+}
+
+fn applySceneColorManagement(sceneColor: vec3f) -> vec3f {
+#ifdef USE_SCENE_COLOR_MANAGEMENT
+  var color = max(sceneColor, vec3f(0.0)) * max(pbrScene.exposure, 0.0);
+  if (pbrScene.toneMapMode == 1) {
+    color /= vec3f(1.0) + color;
+  } else if (pbrScene.toneMapMode == 2) {
+    color = toneMapKhronosPBRNeutral(color);
+  } else if (pbrScene.toneMapMode == 3) {
+    color = clamp(
+      (color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14),
+      vec3f(0.0),
+      vec3f(1.0)
+    );
+  }
+  if (pbrScene.outputEncoding == 0) {
+    return color;
+  }
+  return encodeLinearSRGB(color);
+#else
+  return pow(max(sceneColor, vec3f(0.0)), vec3f(1.0 / 2.2));
+#endif
+}
+
+fn dielectricSchlick(reflectance: f32, cosine: f32) -> f32 {
+  return reflectance + (1.0 - reflectance) * pow(clamp(1.0 - cosine, 0.0, 1.0), 5.0);
+}
+
+fn evaluateIridescenceSensitivity(opticalPathDifference: f32, phaseShift: vec3f) -> vec3f {
+  let phase = 2.0 * M_PI * opticalPathDifference * 1.0e-9;
+  let sensitivity = vec3f(5.4856e-13, 4.4201e-13, 5.2481e-13);
+  let position = vec3f(1.6810e6, 1.7953e6, 2.2084e6);
+  let variance = vec3f(4.3278e9, 9.3046e9, 6.6121e9);
+  var xyz = sensitivity * sqrt(2.0 * M_PI * variance) *
+    cos(position * phase + phaseShift) * exp(-phase * phase * variance);
+  xyz.x += 9.7470e-14 * sqrt(2.0 * M_PI * 4.5282e9) *
+    cos(2.2399e6 * phase + phaseShift.x) * exp(-4.5282e9 * phase * phase);
+  xyz /= 1.0685e-7;
+  return mat3x3f(
+    vec3f(3.2404542, -0.9692660, 0.0556434),
+    vec3f(-1.5371385, 1.8760108, -0.2040259),
+    vec3f(-0.4985314, 0.0415560, 1.0572252)
+  ) * xyz;
+}
+
+fn getIridescenceTint(
+  iridescence: f32,
+  thickness: f32,
+  NdotV: f32,
+  baseReflectance: vec3f
+) -> vec3f {
+  if (iridescence <= 0.0 || thickness <= 0.0) {
+    return baseReflectance;
+  }
+
+  let filmIor = max(pbrMaterial.iridescenceIor, 1.0);
+  let sineSquared = (1.0 - NdotV * NdotV) / (filmIor * filmIor);
+  let cosineSquared = 1.0 - sineSquared;
+  if (cosineSquared <= 0.0) {
+    return mix(baseReflectance, vec3f(1.0), iridescence);
+  }
+  let filmCosine = sqrt(cosineSquared);
+  let firstInterfaceReflectance = dielectricSchlick(getDielectricF0(filmIor), NdotV);
+  let transmittedEnergy = 1.0 - firstInterfaceReflectance;
+  let squareRootReflectance = sqrt(clamp(baseReflectance, vec3f(0.0), vec3f(0.9999)));
+  let baseIor = (vec3f(1.0) + squareRootReflectance) /
+    (vec3f(1.0) - squareRootReflectance);
+  var secondInterfaceF0 = (baseIor - vec3f(filmIor)) / (baseIor + vec3f(filmIor));
+  secondInterfaceF0 *= secondInterfaceF0;
+  let secondInterfaceReflectance = secondInterfaceF0 +
+    (vec3f(1.0) - secondInterfaceF0) * pow(1.0 - filmCosine, 5.0);
+  let phaseShift = vec3f(M_PI) + select(
+    vec3f(0.0),
+    vec3f(M_PI),
+    baseIor < vec3f(filmIor)
+  );
+  let opticalPathDifference = 2.0 * filmIor * thickness * filmCosine;
+  let combinedReflectance = clamp(
+    firstInterfaceReflectance * secondInterfaceReflectance,
+    vec3f(0.00001),
+    vec3f(0.9999)
+  );
+  let recurringAmplitude = sqrt(combinedReflectance);
+  let interfaceResponse = transmittedEnergy * transmittedEnergy * secondInterfaceReflectance /
+    (vec3f(1.0) - combinedReflectance);
+  var reflectedSpectrum = vec3f(firstInterfaceReflectance) + interfaceResponse;
+  var harmonicAmplitude = interfaceResponse - vec3f(transmittedEnergy);
+  for (var harmonic = 1; harmonic <= 2; harmonic++) {
+    harmonicAmplitude *= recurringAmplitude;
+    reflectedSpectrum += harmonicAmplitude * 2.0 * evaluateIridescenceSensitivity(
+      f32(harmonic) * opticalPathDifference,
+      f32(harmonic) * phaseShift
+    );
+  }
+  return mix(baseReflectance, clamp(reflectedSpectrum, vec3f(0.0), vec3f(1.0)), iridescence);
 }
 
 fn getVolumeAttenuation(thickness: f32) -> vec3f {
@@ -648,17 +766,18 @@ fn getVolumeAttenuation(thickness: f32) -> vec3f {
 }
 
 #ifdef USE_TRANSMISSION_FRAMEBUFFER
-fn getTransmittedSceneColor(
+fn sampleTransmittedSceneColor(
   position: vec3f,
   normal: vec3f,
   viewDirection: vec3f,
   thickness: f32,
-  perceptualRoughness: f32
+  perceptualRoughness: f32,
+  indexOfRefraction: f32
 ) -> vec3f {
   let refractionDirection = refract(
     -viewDirection,
     normal,
-    1.0 / max(pbrMaterial.ior, 1.0)
+    1.0 / max(indexOfRefraction, 1.0)
   );
   let refractedPosition = position + refractionDirection * thickness;
   let clipPosition = pbrScene.projectionMatrix *
@@ -699,7 +818,43 @@ fn getTransmittedSceneColor(
     textureCoordinate - vec2f(0.0, blurRadius.y),
     0.0
   ).rgb * 0.15;
-  return pow(max(sceneColor, vec3f(0.0)), vec3f(2.2));
+  return max(sceneColor, vec3f(0.0));
+}
+
+fn getTransmittedSceneColor(
+  position: vec3f,
+  normal: vec3f,
+  viewDirection: vec3f,
+  thickness: f32,
+  perceptualRoughness: f32
+) -> vec3f {
+  if (pbrMaterial.dispersion <= 0.0) {
+    return sampleTransmittedSceneColor(
+      position,
+      normal,
+      viewDirection,
+      thickness,
+      perceptualRoughness,
+      pbrMaterial.ior
+    );
+  }
+
+  let halfSpread = (max(pbrMaterial.ior, 1.0) - 1.0) * 0.025 * pbrMaterial.dispersion;
+  let indicesOfRefraction = max(
+    vec3f(pbrMaterial.ior - halfSpread, pbrMaterial.ior, pbrMaterial.ior + halfSpread),
+    vec3f(1.0)
+  );
+  return vec3f(
+    sampleTransmittedSceneColor(
+      position, normal, viewDirection, thickness, perceptualRoughness, indicesOfRefraction.r
+    ).r,
+    sampleTransmittedSceneColor(
+      position, normal, viewDirection, thickness, perceptualRoughness, indicesOfRefraction.g
+    ).g,
+    sampleTransmittedSceneColor(
+      position, normal, viewDirection, thickness, perceptualRoughness, indicesOfRefraction.b
+    ).b
+  );
 }
 #endif
 
@@ -726,7 +881,9 @@ fn createClearcoatPBRInfo(
     vec3f(0.0),
     vec3f(0.04),
     clearcoatNormal,
-    basePBRInfo.v
+    basePBRInfo.v,
+    basePBRInfo.l,
+    basePBRInfo.h
   );
 }
 
@@ -772,28 +929,75 @@ fn calculateSheenContribution(
     return vec3f(0.0);
   }
 
-  let sheenFresnel = pow(clamp(1.0 - pbrInfo.VdotH, 0.0, 1.0), 5.0);
-  let sheenVisibility = mix(1.0, pbrInfo.NdotL * pbrInfo.NdotV, sheenRoughness);
-  return pbrInfo.NdotL *
-    lightColor *
-    sheenColor *
-    (0.25 + 0.75 * sheenFresnel) *
-    sheenVisibility *
+  let alpha = max(sheenRoughness * sheenRoughness, 0.0001);
+  let inverseAlpha = 1.0 / alpha;
+  let sineSquared = max(1.0 - pbrInfo.NdotH * pbrInfo.NdotH, 0.0);
+  let distribution = (2.0 + inverseAlpha) * pow(sineSquared, inverseAlpha * 0.5) /
+    (2.0 * M_PI);
+  let visibility = 1.0 / max(
+    4.0 * (pbrInfo.NdotL + pbrInfo.NdotV - pbrInfo.NdotL * pbrInfo.NdotV),
+    0.0001
+  );
+  return pbrInfo.NdotL * lightColor * sheenColor * distribution * visibility *
     (1.0 - pbrInfo.metalness);
 }
 
-fn calculateAnisotropyBoost(
+fn calculateAnisotropicLightColor(
   pbrInfo: PBRInfo,
+  lightColor: vec3f,
   anisotropyTangent: vec3f,
   anisotropyStrength: f32
-) -> f32 {
+) -> vec3f {
   if (anisotropyStrength <= 0.0) {
-    return 1.0;
+    return calculateFinalColor(pbrInfo, lightColor);
   }
 
   let anisotropyBitangent = normalize(cross(pbrInfo.n, anisotropyTangent));
-  let bitangentViewAlignment = abs(dot(pbrInfo.v, anisotropyBitangent));
-  return mix(1.0, 0.65 + 0.7 * bitangentViewAlignment, anisotropyStrength);
+  let tangentRoughness = mix(
+    pbrInfo.alphaRoughness,
+    1.0,
+    anisotropyStrength * anisotropyStrength
+  );
+  let bitangentRoughness = clamp(pbrInfo.alphaRoughness, 0.001, 1.0);
+  let roughnessProduct = tangentRoughness * bitangentRoughness;
+  let distributionVector = vec3f(
+    bitangentRoughness * dot(anisotropyTangent, pbrInfo.h),
+    tangentRoughness * dot(anisotropyBitangent, pbrInfo.h),
+    roughnessProduct * pbrInfo.NdotH
+  );
+  let distributionFactor = roughnessProduct /
+    max(dot(distributionVector, distributionVector), 0.000001);
+  let distribution = roughnessProduct * distributionFactor * distributionFactor / M_PI;
+  let viewMask = pbrInfo.NdotL * length(vec3f(
+    tangentRoughness * dot(anisotropyTangent, pbrInfo.v),
+    bitangentRoughness * dot(anisotropyBitangent, pbrInfo.v),
+    pbrInfo.NdotV
+  ));
+  let lightMask = pbrInfo.NdotV * length(vec3f(
+    tangentRoughness * dot(anisotropyTangent, pbrInfo.l),
+    bitangentRoughness * dot(anisotropyBitangent, pbrInfo.l),
+    pbrInfo.NdotL
+  ));
+  let visibility = clamp(0.5 / max(viewMask + lightMask, 0.000001), 0.0, 1.0);
+  let fresnel = specularReflection(pbrInfo);
+  let diffuseContribution = (vec3f(1.0) - fresnel) * diffuse(pbrInfo);
+  return pbrInfo.NdotL * lightColor *
+    (diffuseContribution + fresnel * distribution * visibility);
+}
+
+fn getAnisotropicReflection(
+  pbrInfo: PBRInfo,
+  anisotropyTangent: vec3f,
+  anisotropyStrength: f32
+) -> vec3f {
+  if (anisotropyStrength <= 0.0) {
+    return -normalize(reflect(pbrInfo.v, pbrInfo.n));
+  }
+  let anisotropyBitangent = normalize(cross(pbrInfo.n, anisotropyTangent));
+  var anisotropicNormal = normalize(cross(anisotropyBitangent, pbrInfo.v));
+  anisotropicNormal = normalize(cross(anisotropicNormal, anisotropyBitangent));
+  let bend = anisotropyStrength * (1.0 - pbrInfo.perceptualRoughness);
+  return -normalize(reflect(pbrInfo.v, normalize(mix(pbrInfo.n, anisotropicNormal, bend))));
 }
 
 fn calculateMaterialLightColor(
@@ -807,8 +1011,12 @@ fn calculateMaterialLightColor(
   anisotropyTangent: vec3f,
   anisotropyStrength: f32
 ) -> vec3f {
-  let anisotropyBoost = calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
-  var color = calculateFinalColor(pbrInfo, lightColor) * anisotropyBoost;
+  var color = calculateAnisotropicLightColor(
+    pbrInfo,
+    lightColor,
+    anisotropyTangent,
+    anisotropyStrength
+  );
   color += calculateClearcoatContribution(
     pbrInfo,
     lightColor,
@@ -825,6 +1033,8 @@ fn PBRInfo_setAmbientLight(pbrInfo: ptr<function, PBRInfo>) {
   (*pbrInfo).NdotH = 0.0;
   (*pbrInfo).LdotH = 0.0;
   (*pbrInfo).VdotH = 1.0;
+  (*pbrInfo).l = (*pbrInfo).n;
+  (*pbrInfo).h = (*pbrInfo).n;
 }
 
 fn PBRInfo_setDirectionalLight(pbrInfo: ptr<function, PBRInfo>, lightDirection: vec3<f32>) {
@@ -837,6 +1047,8 @@ fn PBRInfo_setDirectionalLight(pbrInfo: ptr<function, PBRInfo>, lightDirection: 
   (*pbrInfo).NdotH = clamp(dot(n, h), 0.0, 1.0);
   (*pbrInfo).LdotH = clamp(dot(l, h), 0.0, 1.0);
   (*pbrInfo).VdotH = clamp(dot(v, h), 0.0, 1.0);
+  (*pbrInfo).l = l;
+  (*pbrInfo).h = h;
 }
 
 fn PBRInfo_setPointLight(pbrInfo: ptr<function, PBRInfo>, pointLight: PointLight) {
@@ -964,6 +1176,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
       abs(pbrMaterial.specularIntensityFactor - 1.0) > 0.0001 ||
       maxComponent(abs(pbrMaterial.specularColorFactor - vec3f(1.0))) > 0.0001 ||
       abs(pbrMaterial.ior - 1.5) > 0.0001 ||
+      pbrMaterial.dispersion > 0.0001 ||
       pbrMaterial.transmissionMapEnabled != 0 ||
       pbrMaterial.transmissionFactor > 0.0001 ||
       pbrMaterial.clearcoatMapEnabled != 0 ||
@@ -1013,7 +1226,9 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
         diffuseColor,
         specularColor,
         n,
-        v
+        v,
+        n,
+        n
       );
 
       #ifdef USE_LIGHTS
@@ -1079,7 +1294,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
       color = mix(color, vec3<f32>(perceptualRoughness), pbrMaterial.scaleDiffBaseMR.w);
       #endif
 
-      return vec4<f32>(pow(color, vec3<f32>(1.0 / 2.2)), baseColor.a);
+      return vec4<f32>(applySceneColorManagement(color), baseColor.a);
     }
 
     var specularIntensity = pbrMaterial.specularIntensityFactor;
@@ -1224,13 +1439,6 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
     if (length(anisotropyTangent) < 0.0001) {
       anisotropyTangent = normalize(tbn[0]);
     }
-    let anisotropyViewAlignment = abs(dot(v, anisotropyTangent));
-    perceptualRoughness = mix(
-      perceptualRoughness,
-      clamp(perceptualRoughness * (1.0 - 0.6 * anisotropyViewAlignment), c_MinRoughness, 1.0),
-      anisotropyStrength
-    );
-
     // Roughness is authored as perceptual roughness; as is convention,
     // convert to material roughness by squaring the perceptual roughness [2].
     let alphaRoughness = perceptualRoughness * perceptualRoughness;
@@ -1240,17 +1448,24 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
       vec3f(dielectricF0) * specularFactor * specularIntensity,
       vec3f(1.0)
     );
-    let iridescenceTint = getIridescenceTint(iridescence, iridescenceThickness, NdotV);
-    dielectricSpecularF0 = mix(
-      dielectricSpecularF0,
-      dielectricSpecularF0 * iridescenceTint,
-      iridescence
+    dielectricSpecularF0 = getIridescenceTint(
+      iridescence,
+      iridescenceThickness,
+      NdotV,
+      dielectricSpecularF0
     );
     var diffuseColor = baseColor.rgb * (vec3f(1.0) - dielectricSpecularF0);
     diffuseColor *= (1.0 - metallic) * (1.0 - transmission);
     var specularColor = mix(dielectricSpecularF0, baseColor.rgb, metallic);
 
-    let baseLayerEnergy = 1.0 - clearcoatFactor * 0.25;
+    let clearcoatViewFresnel = dielectricSchlick(
+      0.04,
+      clamp(abs(dot(clearcoatNormal, v)), 0.0, 1.0)
+    );
+    let sheenDirectionalAlbedo = maxComponent(sheenColor) *
+      (0.157 + 0.343 * (1.0 - NdotV)) * (1.0 - sheenRoughness * 0.5);
+    let baseLayerEnergy = (1.0 - clearcoatFactor * clearcoatViewFresnel) *
+      (1.0 - clamp(sheenDirectionalAlbedo, 0.0, 1.0));
     diffuseColor *= baseLayerEnergy;
     specularColor *= baseLayerEnergy;
 
@@ -1280,7 +1495,9 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
       diffuseColor,
       specularColor,
       n,
-      v
+      v,
+      n,
+      n
     );
 
     #ifdef USE_LIGHTS
@@ -1360,8 +1577,11 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
     // Calculate lighting contribution from image based lighting source (IBL)
     #ifdef USE_IBL
     if (pbrMaterial.IBLenabled != 0) {
-      color += getIBLContribution(pbrInfo, n, reflection) *
-        calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
+      color += getIBLContribution(
+        pbrInfo,
+        n,
+        getAnisotropicReflection(pbrInfo, anisotropyTangent, anisotropyStrength)
+      );
       color += calculateClearcoatIBLContribution(
         pbrInfo,
         clearcoatNormal,
@@ -1432,6 +1652,6 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
   #else
   let alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
   #endif
-  return vec4<f32>(pow(color, vec3<f32>(1.0 / 2.2)), alpha);
+  return vec4<f32>(applySceneColorManagement(color), alpha);
 }
 `;

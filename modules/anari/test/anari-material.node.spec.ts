@@ -20,6 +20,7 @@ test('ANARI material parameters translate into canonical shared PBR uniforms', t
     clearcoat: 0.8,
     clearcoatRoughness: 0.15,
     transmission: 0.45,
+    dispersion: 0.65,
     thickness: 1.2,
     attenuationDistance: 3,
     attenuationColor: [0.8, 0.6, 0.4],
@@ -53,6 +54,7 @@ test('ANARI material parameters translate into canonical shared PBR uniforms', t
   testContext.equal(uniforms.clearcoatFactor, 0.8, 'maps clearcoat amount');
   testContext.equal(uniforms.clearcoatRoughnessFactor, 0.15, 'maps clearcoat roughness');
   testContext.equal(uniforms.transmissionFactor, 0.45, 'maps transmission amount');
+  testContext.equal(uniforms.dispersion, 0.65, 'maps chromatic transmission dispersion');
   testContext.equal(uniforms.thicknessFactor, 1.2, 'maps volume thickness');
   testContext.equal(uniforms.attenuationDistance, 3, 'maps volume attenuation distance');
   testContext.deepEqual(uniforms.attenuationColor, [0.8, 0.6, 0.4], 'maps attenuation color');
