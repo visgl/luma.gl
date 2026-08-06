@@ -25,7 +25,6 @@ import {
 const COLOR_ATTACHMENT_FORMATS = [
   'rgba16float',
   'rgba8unorm',
-  'rg16float',
   'rgba8unorm',
   'rgba16float'
 ] satisfies (TextureFormatColor | null)[];
@@ -130,7 +129,6 @@ export class DeferredSceneRenderer extends SceneRenderer {
         new Float32Array([background[0], background[1], background[2], background[3] ?? 1]),
         new Float32Array([0.5, 0.5, 1, 1]),
         new Float32Array([0, 0, 0, 0]),
-        new Float32Array([0, 0, 0, 0]),
         new Float32Array([0, 0, 0, 0])
       ],
       clearDepth: 1
@@ -231,7 +229,7 @@ export class DeferredSceneRenderer extends SceneRenderer {
         height,
         colorFormat: 'rgba16float',
         normalRoughnessFormat: 'rgba8unorm',
-        velocityFormat: 'rg16float',
+        velocity: false,
         depthStencilFormat: 'depth24plus',
         extraColorAttachments: [
           {name: 'baseColorMetallic', format: 'rgba8unorm'},

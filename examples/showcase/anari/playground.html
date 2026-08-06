@@ -490,7 +490,6 @@
       const device = await luma.createDevice({
         id: 'anari-json-playground',
         adapters: forceWebGL ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter],
-        featureLevel: 'max',
         createCanvasContext: canvasProperties
       });
       makeAnimationLoop(ANARIPlayground, {device}).start();

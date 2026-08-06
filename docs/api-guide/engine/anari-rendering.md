@@ -189,17 +189,6 @@ The floor is attached directly to the world, so it uses the identity transform. 
 
 ## Try the deferred renderer
 
-The deferred G-buffer requires 36 color-attachment bytes per sample, exceeding the default WebGPU
-limit of 32. Request the adapter's supported limits when creating the graphics device:
-
-```ts
-const graphicsDevice = await luma.createDevice({
-  adapters: [webgpuAdapter, webgl2Adapter],
-  featureLevel: 'max',
-  createCanvasContext: {canvas}
-});
-```
-
 Use `newRenderer('deferred')` when you want the ANARI scene rendered through the experimental WebGPU G-buffer and deferred lighting path:
 
 ```ts
@@ -210,6 +199,14 @@ const renderer = anariDevice.newRenderer('deferred', {
 ```
 
 The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
+
+The compact G-buffer runs within the default WebGPU CORE limit of 32 color-attachment bytes per
+sample. Its four targets retain HDR scene color (`rgba16float`), normal and roughness (`rgba8unorm`),
+base color and metallic (`rgba8unorm`), and HDR emissive color with occlusion (`rgba16float`). Each
+format costs eight render-target bytes under WebGPU accounting, for exactly 32 bytes total. ANARI's
+previous velocity target contained only zeroes and was never consumed, so omitting it preserves
+physically based direct lighting, HDR, and emissive response without requesting elevated device
+limits. Temporal motion-vector effects remain future work.
 
 ## Try the graph-based ray tracer
 
@@ -227,16 +224,21 @@ frame.setParameter('renderer', renderer).commitParameters();
 ```
 
 The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from
-`@luma.gl/experimental`. Its WebGPU command graph intersects transformed analytic spheres and
-triangle meshes, evaluates direct lights and shadow rays, progressively accumulates unchanged
-primary-ray samples, and presents HDR when the canvas is configured for it. Generated quads,
-cylinders, and cones use their existing triangle geometry.
+`@luma.gl/experimental`. Its WebGPU compute graph derives world-space bounds for transformed
+analytic spheres and mesh instances, builds and refits an existing `GPUBVH`, and traverses that
+hierarchy for nearest-hit primary rays and early-exit shadow rays. The same `GPUCommandGraph`
+evaluates direct lights, progressively accumulates unchanged primary-ray samples, and presents HDR
+when the canvas is configured for it. Generated quads, cylinders, and cones use their existing
+triangle geometry.
 
-This is software ray tracing, not hardware ray tracing or full path tracing. The current renderer
-does not build a BVH, match every raster-material texture feature, trace indirect bounces, denoise,
-or support volume objects. Skeletal skinning, morph-target deformation, material textures,
-alpha/transmission, and advanced PBR shading remain on the forward/deferred paths. `maxBounces` is
-reserved for future multi-bounce transport.
+The BVH indexes objects and instances: triangles within a surviving mesh are still tested linearly.
+Its deterministic source-order topology is not Morton-sorted, and no separate per-mesh triangle BVH
+is built. The ray-tracing pass uses five storage buffers; the BVH builder uses eight, fitting the
+default WebGPU CORE storage-buffer limit without elevated device features. This is software ray
+tracing, not hardware ray tracing or full path tracing. Skeletal skinning, morph-target deformation,
+material textures, alpha/transmission, advanced PBR shading, indirect bounces, denoising, and volume
+objects remain unsupported by this renderer. `maxBounces` is reserved for future multi-bounce
+transport.
 
 ## Understand staging and commits
 
@@ -728,8 +730,10 @@ for the runtime contract and ownership details.
 | Tranche | Scope | Status |
 | --- | --- | --- |
 | T0: renderer and graph foundation | Lazy subtype registration, retained-scene adapters, the shared experimental `RayTracingSceneRenderer`, explicit WebGPU command-graph resources, and application-owned submission. | Implemented. |
-| T1: direct rays and shadows | Transformed analytic spheres, mesh triangles, tessellated analytic shapes, perspective/orthographic cameras, direct lights, hard shadow rays, progressive primary-ray sampling, and HDR presentation. | Implemented without hardware ray tracing or acceleration structures. |
-| T2: acceleration and large scenes | Flat BVH construction/refitting, shared instance traversal, skeletal/morph geometry extraction, explicit scene-buffer ownership, and bounded large-scene performance. | Planned. |
+| T1: direct rays and shadows | Transformed analytic spheres, mesh triangles, tessellated analytic shapes, perspective/orthographic cameras, direct lights, hard shadow rays, progressive primary-ray sampling, and HDR presentation. | Implemented with WebGPU compute rather than hardware ray tracing. |
+| T2a: GPU object acceleration | World-space instance bounds, graph-owned complete-binary `GPUBVH` construction and refitting, nearest-hit object traversal, early-exit shadow rays, and default-CORE storage limits. | Implemented; surviving mesh triangles remain linear. |
+| T2b: large-scene acceleration | Measured Morton/radix spatial ordering, shared per-mesh triangle BVHs, dirty-only hierarchy updates, and explicit traversal/build diagnostics. | Planned. |
+| T2c: dynamic scene extraction | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration. | Planned. |
 | T3: indirect transport and denoising | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1. | Planned. |
 | T4: ray marching and volumes | Signed-distance-field ray marching, retained spatial fields, 3D textures, transfer functions, and ANARI volume objects. | Planned. |
 | T5: hybrid composition and diagnostics | Raster/ray composition, reusable graph timings, renderer capability reporting, and debug visualization channels. | Planned. |
@@ -1152,7 +1156,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- The WebGPU-only `raytrace` renderer brute-forces software intersections without a BVH, hardware ray tracing, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR parity, indirect bounces, or denoising.
+- The WebGPU-only `raytrace` renderer builds an object/instance BVH on the GPU but still tests triangles linearly inside surviving meshes; hardware ray tracing, spatially sorted or per-mesh BVHs, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR parity, indirect bounces, and denoising are unsupported.
 - Visibility, picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic

@@ -31,17 +31,25 @@ irradiance cubemap, and a split-sum BRDF lookup texture with explicit linear/sRG
 
 [`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) consumes the
 same scene descriptors on WebGPU and resolves compatible opaque/masked metallic-roughness surfaces
-through the shared G-buffer and deferred-lighting pass. Advanced materials, blended surfaces,
-environment lighting, and debug views automatically fall back to the forward renderer.
+through the shared G-buffer and deferred-lighting pass. Its four HDR-preserving color attachments
+fit the default 32-byte WebGPU CORE limit without requesting elevated adapter limits. Advanced
+materials, blended surfaces, environment lighting, and debug views automatically fall back to the
+forward renderer.
 
 `RayTracingSceneRenderer` consumes the same scene descriptors on WebGPU through a
-[`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph). Optional
-`RayTracingSceneRenderOptions` add analytic sphere metadata, perspective/orthographic camera
-selection, direct-light shadow rays, progressive primary-ray accumulation, and HDR presentation.
-Applications retain command-submission ownership. This initial software ray tracer does not use
-hardware ray-tracing acceleration, a BVH, indirect path tracing, denoising, or volume rendering.
-Skeletal/morph deformation, material textures, alpha/transmission, and advanced PBR shading remain
-on the forward/deferred renderer paths.
+[`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph). Compute
+passes derive world-space instance bounds, build and refit the existing
+[`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh), and traverse its complete
+binary hierarchy for nearest-hit rays and early-exit shadows. `RayTracingSceneRenderOptions` add
+analytic sphere metadata, perspective/orthographic camera selection, progressive primary-ray
+accumulation, and HDR presentation. The ray pass uses five storage buffers and the existing BVH
+builder uses eight, fitting default WebGPU CORE limits. Applications retain command-submission
+ownership.
+
+The source-order BVH accelerates objects and instances, not individual mesh triangles. Hardware ray
+tracing, spatial sorting, per-mesh BVHs, indirect path tracing, denoising, and volume rendering are
+not implemented. Skeletal/morph deformation, material textures, alpha/transmission, and advanced
+PBR shading remain on the forward/deferred renderer paths.
 
 `createPBRMaterialFactory`, `createPBRMaterial`, and `createPBRModel` are also available when an
 application needs lower-level composition with the same canonical material and shader contracts.
@@ -65,8 +73,9 @@ stable, generic rendering and animation primitives.
 
 [`GBuffer`](/docs/api-reference/experimental/g-buffer) owns the standard scene color,
 normal-roughness, velocity, and depth attachments used by depth-aware and temporal shader-pass
-pipelines. It also exposes named extra MRT channels for application-specific lighting, material,
-picking, or debug data.
+pipelines. Velocity remains enabled by default; applications that do not use motion vectors can
+pass `velocity: false` to omit that target and reserve the attachment budget for named extra MRT
+channels carrying application-specific lighting, material, picking, or debug data.
 
 [`deferredLighting`](/docs/api-reference/experimental/deferred-lighting) is a composable fullscreen
 consumer of those targets. It reconstructs view position from depth and resolves a directional

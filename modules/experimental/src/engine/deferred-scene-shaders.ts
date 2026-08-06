@@ -46,9 +46,8 @@ struct DeferredSceneVertexOutputs {
 struct DeferredSceneFragmentOutputs {
   @location(0) color: vec4f,
   @location(1) normalRoughness: vec4f,
-  @location(2) velocity: vec2f,
-  @location(3) baseColorMetallic: vec4f,
-  @location(4) emissiveOcclusion: vec4f,
+  @location(2) baseColorMetallic: vec4f,
+  @location(3) emissiveOcclusion: vec4f,
 };
 
 fn getDeferredSceneNormalMatrix(matrix: mat3x3f) -> mat3x3f {
@@ -189,7 +188,6 @@ fn fragmentMain(inputs: DeferredSceneVertexOutputs) -> DeferredSceneFragmentOutp
   var outputs: DeferredSceneFragmentOutputs;
   outputs.color = vec4f(baseColor.rgb * 0.015 + emissive, baseColor.a);
   outputs.normalRoughness = vec4f(viewNormal * 0.5 + 0.5, clamp(roughness, 0.045, 1.0));
-  outputs.velocity = vec2f(0.0);
   outputs.baseColorMetallic = vec4f(baseColor.rgb, clamp(metallic, 0.0, 1.0));
   outputs.emissiveOcclusion = vec4f(max(emissive, vec3f(0.0)), clamp(occlusion, 0.0, 1.0));
   return outputs;

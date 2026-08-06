@@ -154,9 +154,12 @@ const renderer = anariDevice.newRenderer('deferred', {
 
 `deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Spot lights are mapped onto deferred point lights in this first implementation.
 
-Its five G-buffer color attachments require 36 bytes per sample, exceeding the default WebGPU
-device limit of 32. Pass `featureLevel: 'max'` to `luma.createDevice()` so supported adapters expose
-their higher `maxColorAttachmentBytesPerSample` limit.
+Its compact G-buffer uses four color attachments: HDR scene color (`rgba16float`), normal and
+roughness (`rgba8unorm`), base color and metallic (`rgba8unorm`), and HDR emissive color with
+occlusion (`rgba16float`). WebGPU charges eight render-target bytes for each format, totaling the
+default CORE limit of 32 bytes per sample. No elevated device limits or `featureLevel: 'max'` are
+required. The omitted velocity target previously contained only zeroes; HDR, physically based
+material channels, direct lighting, and emissive output remain intact.
 
 The deferred path is intended as an architecture baseline for richer ANARI renderers. It does not yet include the full Deferred Illumination Lab chain such as clustered light bins, GTAO, SSGI, SSR, velocity history, or bloom.
 
@@ -175,16 +178,20 @@ frame.setParameter('renderer', renderer).commitParameters();
 ```
 
 `raytrace` requires WebGPU. The ANARI adapter translates committed scene objects into descriptors
-for the shared `RayTracingSceneRenderer` in `@luma.gl/experimental`. Its command graph traces
-transformed analytic spheres and triangle meshes, including tessellated quads, cylinders, and cones;
-evaluates ambient, directional, point, and spot lights; optionally traces hard shadow rays; and
-presents the result through a fullscreen pass. An `rgba16float` canvas preserves HDR radiance.
+for the shared `RayTracingSceneRenderer` in `@luma.gl/experimental`. Its GPU compute graph derives
+world-space object bounds, builds and refits a graph-owned `GPUBVH`, and traverses that hierarchy
+for nearest-hit rays and early-exit hard shadows. It traces transformed analytic spheres and
+triangle meshes, including tessellated quads, cylinders, and cones; evaluates ambient, directional,
+point, and spot lights; and presents the result through a fullscreen pass. An `rgba16float` canvas
+preserves HDR radiance. The trace pass uses five storage buffers and the BVH builder uses eight,
+remaining within default WebGPU CORE limits.
 
 When `progressive` is enabled, unchanged frames accumulate additional primary-ray samples. Camera,
-scene, light, material, renderer, and frame-size changes reset the accumulation history. This
-initial implementation uses software intersections without hardware ray tracing or a BVH. It does
-not apply skeletal skinning, morph-target displacement, material textures, alpha/transmission, or
-advanced PBR shading; those features remain on the forward/deferred renderer paths. Indirect
+scene, light, material, renderer, and frame-size changes reset the accumulation history. The
+source-order BVH accelerates object and instance selection; triangles within an intersected mesh
+are still tested linearly. Hardware ray tracing, Morton-sorted hierarchy construction, and per-mesh
+triangle BVHs are not implemented. Skeletal skinning, morph-target displacement, material textures,
+alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer paths. Indirect
 multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is accepted for
 forward compatibility but does not enable indirect bounces.
 
