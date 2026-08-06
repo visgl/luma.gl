@@ -283,6 +283,9 @@ export type {
   GPUHashIndexView
 } from './gpu-hash-index';
 
+export {GPUBatchHashIndex} from './gpu-batch-hash-index';
+export type {GPUBatchHashIndexProps, GPUBatchHashIndexStats} from './gpu-batch-hash-index';
+
 export {GPUHashJoin} from './gpu-hash-join';
 export type {GPUHashJoinProps, GPUHashJoinStats} from './gpu-hash-join';
 export {GPUBatchHashJoin} from './gpu-batch-hash-join';
