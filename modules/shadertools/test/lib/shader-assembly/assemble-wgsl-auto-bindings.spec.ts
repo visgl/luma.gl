@@ -1231,6 +1231,61 @@ test('assembleWGSLShader#keeps disjoint texture permutations compatible when com
   t.end();
 });
 
+test('assembleWGSLShader#reclaims bindings from inactive runtime-generated modules', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const maximumBindingsPerGroup = 16;
+  let highestBindingLocation = 0;
+
+  for (let moduleIndex = 0; moduleIndex < maximumBindingsPerGroup * 4; moduleIndex++) {
+    const moduleName = `runtimeGeneratedMaterial${moduleIndex}`;
+    const textureName = `runtimeGeneratedTexture${moduleIndex}`;
+    const runtimeGeneratedModule: ShaderModule = {
+      name: moduleName,
+      bindingLayout: [
+        {name: textureName, group: 3},
+        {name: `${textureName}Sampler`, group: 3}
+      ],
+      source: /* wgsl */ `\
+@group(3) @binding(auto) var ${textureName}: texture_2d<f32>;
+@group(3) @binding(auto) var ${textureName}Sampler: sampler;
+`
+    };
+    const assembledShader = shaderAssembler.assembleWGSLShader({
+      platformInfo: {
+        ...PLATFORM_INFO,
+        limits: {maxBindingsPerBindGroup: maximumBindingsPerGroup}
+      },
+      source: APP_WGSL,
+      modules: [PERMUTED_GROUP_3_TEXTURE_MODULE, runtimeGeneratedModule],
+      defines: {HAS_TRANSMISSIONMAP: true}
+    });
+    const textureBindingLocation = assembledShader.bindingTable.find(
+      binding => binding.name === textureName
+    )?.binding;
+    const samplerBindingLocation = assembledShader.bindingTable.find(
+      binding => binding.name === `${textureName}Sampler`
+    )?.binding;
+
+    highestBindingLocation = Math.max(
+      highestBindingLocation,
+      textureBindingLocation ?? 0,
+      samplerBindingLocation ?? 0
+    );
+  }
+
+  t.ok(
+    highestBindingLocation < maximumBindingsPerGroup,
+    'historical runtime-generated modules never consume the available bind-group slots'
+  );
+  t.equal(
+    highestBindingLocation,
+    4,
+    'active material bindings stay stable while generated texture/sampler pairs reuse their slots'
+  );
+
+  t.end();
+});
+
 test('assembleWGSLShader#scopes inactive reservations to automatic bindings in their group', t => {
   const shaderAssembler = new WGSLShaderAssembler();
 

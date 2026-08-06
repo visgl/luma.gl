@@ -935,6 +935,7 @@ function relocateWGSLModuleBindingMatch(
         : allocateAutoBindingLocation(
             group,
             context.usedBindingsByGroup,
+            module.name,
             relocationState.nextHintedBindingLocation ?? undefined,
             context.bindingRegistry
           );
@@ -1121,14 +1122,16 @@ function registerUsedBindingLocation(
 function allocateAutoBindingLocation(
   group: number,
   usedBindingsByGroup: Map<number, Set<number>>,
+  moduleName: string,
   preferredBindingLocation?: number,
   bindingRegistry?: Map<string, number>
 ): number {
   const usedBindings = usedBindingsByGroup.get(group) || new Set<number>();
   const registeredBindingLocations = new Set<number>();
   const registryGroupPrefix = `${group}:`;
+  const registryModulePrefix = `${registryGroupPrefix}${moduleName}:`;
   for (const [registryKey, location] of bindingRegistry || []) {
-    if (registryKey.startsWith(registryGroupPrefix)) {
+    if (registryKey.startsWith(registryModulePrefix)) {
       registeredBindingLocations.add(location);
     }
   }
@@ -1142,6 +1145,13 @@ function allocateAutoBindingLocation(
 
   while (usedBindings.has(nextBinding) || registeredBindingLocations.has(nextBinding)) {
     nextBinding++;
+  }
+
+  // Active modules were reserved above; only stale, inactive modules can own this free slot.
+  for (const [registryKey, location] of bindingRegistry || []) {
+    if (location === nextBinding && registryKey.startsWith(registryGroupPrefix)) {
+      bindingRegistry?.delete(registryKey);
+    }
   }
 
   return nextBinding;
