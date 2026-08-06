@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type ComputePassProps, type Device} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
@@ -513,10 +513,12 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
   }
 
   const gridWidth = 4;
+  const outputCapacity = 1_000_000;
   const positionsBuffer = createInputBuffer(
     device,
     Float32Array.from([1.5, 1.5, 0.5, 0.5, 2.5, 2.5, 1.5, 1.5])
   );
+  const sourceIdsBuffer = createInputBuffer(device, Uint32Array.from([700, 701, 702, 703]));
   const queryBuffer = createInputBuffer(device, Float32Array.from([1.49, 1.49, 1.51, 1.51]));
   const cellOffsetsBuffer = createInputBuffer(
     device,
@@ -527,7 +529,7 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
   const rowIndicesBuffer = createInputBuffer(device, Uint32Array.from([1, 1, 999, 0, 2, 3]));
   const indexCountBuffer = createInputBuffer(device, Uint32Array.from([6]));
   const indexOverflowBuffer = createInputBuffer(device, Uint32Array.from([0]));
-  const idsBuffer = createOutputBuffer(device, 4);
+  const idsBuffer = createOutputBuffer(device, outputCapacity);
   const countBuffer = createOutputBuffer(device, 1);
   const overflowBuffer = createOutputBuffer(device, 1);
   const totalCountBuffer = createOutputBuffer(device, 1);
@@ -542,6 +544,7 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
   new GPUPointSpatialQuery({
     id: 'dispatch-query',
     positions,
+    sourceIds: importView(graph, 'source-ids', sourceIdsBuffer, 'uint32', 4),
     index: {
       gridSize: [gridWidth, gridWidth],
       bounds: [0, 0, gridWidth, gridWidth],
@@ -553,7 +556,7 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
     kind: 'bounds',
     query: importView(graph, 'query', queryBuffer, 'float32', 4),
     output: {
-      ids: importView(graph, 'ids', idsBuffer, 'uint32', 4),
+      ids: importView(graph, 'ids', idsBuffer, 'uint32', outputCapacity),
       count: importView(graph, 'count', countBuffer, 'uint32', 1),
       overflow: importView(graph, 'overflow', overflowBuffer, 'uint32', 1),
       totalCount: importView(graph, 'total-count', totalCountBuffer, 'uint32', 1)
@@ -575,7 +578,7 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
   tapeTest.deepEqual(
     compiled.stats.nodeOrder,
     ['dispatch-query-prepare', 'dispatch-query-refine', 'dispatch-query-finalize'],
-    'diagnostics preserve prepare, refine, and finalize pass topology'
+    'source IDs are written during refinement without a capacity-sized remap pass'
   );
   tapeTest.equal(
     compiled.stats.logicalTransientBytes,
@@ -635,7 +638,11 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
     'indexed refinement does not record a fixed full-N dispatch'
   );
   tapeTest.equal(count, 1, 'indexed refinement returns one exact match');
-  tapeTest.deepEqual(await readUint32(idsBuffer, count), [0], 'the far-cell poison is not visited');
+  tapeTest.deepEqual(
+    await readUint32(idsBuffer, count),
+    [700],
+    'the exact match is dereferenced to its source ID during refinement'
+  );
   tapeTest.equal(
     (await readUint32(intersectedCellCountBuffer, 1))[0],
     9,
@@ -672,6 +679,7 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
   compiled.destroy();
   for (const buffer of [
     positionsBuffer,
+    sourceIdsBuffer,
     queryBuffer,
     cellOffsetsBuffer,
     rowIndicesBuffer,

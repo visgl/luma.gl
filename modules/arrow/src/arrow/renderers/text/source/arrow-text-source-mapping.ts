@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {RecordBatch, Table, Vector} from 'apache-arrow';
 import type {ArrowUtf8TextVector} from '../conversion';

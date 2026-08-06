@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Arrow source shapes demonstrated by both luma.gl and deck.gl examples. */
 export type ArrowExampleInputMode = 'stream' | 'table' | 'vectors';

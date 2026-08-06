@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {existsSync, readFileSync, statSync} from 'node:fs';
 import path from 'node:path';
@@ -59,6 +59,9 @@ describe('live example catalog thumbnails', () => {
     );
     expect(resolveExampleThumbnailPath('experimental/gpu-scene-graph')).toBe(
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/gpu-frustum-culling.jpg')
+    );
+    expect(resolveExampleThumbnailPath('showcase/gaussian-splat-viewer')).toBe(
+      path.join(EXAMPLE_IMAGES_DIRECTORY, 'showcase/gaussian-splats.jpg')
     );
   });
 

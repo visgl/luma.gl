@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
@@ -112,7 +112,7 @@ describe('responsive GPU data examples', () => {
     expect(effectSource).toMatch(/from ['"]@luma\.gl\/experimental\/luproj['"]/);
     expect(effectSource).toMatch(/new GPUProjection\s*\(/);
     expect(effectSource).toMatch(/compileProjectionPlan\s*\(/);
-    expect(effectSource).toMatch(/this\.projection\?\.destroy\(\)/);
+    expect(effectSource).toMatch(/this\.ownResource\(\s*new GPUProjection\s*\(/);
     expect(effectSource).toMatch(/if\s*\(!viewportBoundsChanged && !this\.queryInputsChanged\)/);
     expect(appSource).toMatch(/makeLuSpatialTaxiDataAsync\s*\(/);
     expect(appSource).toMatch(/generationController\.abort\(\)/);
@@ -133,7 +133,7 @@ describe('responsive GPU data examples', () => {
     expect(zoneChangeSource?.[1]).toContain('latestSelectionCenter = zone.center;');
     expect(clickSource?.[1]).toContain('latestSelectionCenter = center;');
     expect(appSource).toContain(
-      'queryEffect.setSelection(latestSelectionCenter, queryRadiusKilometres);'
+      'nextQueryEffect.setSelection(latestSelectionCenter, queryRadiusKilometres);'
     );
   });
 

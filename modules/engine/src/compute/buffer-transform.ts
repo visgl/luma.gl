@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device, Buffer, BufferRange, TransformFeedback, RenderPassProps} from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
@@ -8,12 +8,17 @@ export type GLTFExtensionSupportLevel = 'built-in' | 'parsed-and-wired' | 'loade
 
 export type GLTFExtensionSupport = {
   extensionName: string;
+  /** Whether the source document declares this extension in `extensionsRequired`. */
+  required: boolean;
   supported: boolean;
   supportLevel: GLTFExtensionSupportLevel;
   comment: string;
 };
 
-type GLTFExtensionSupportDefinition = Omit<GLTFExtensionSupport, 'extensionName' | 'supported'>;
+type GLTFExtensionSupportDefinition = Omit<
+  GLTFExtensionSupport,
+  'extensionName' | 'required' | 'supported'
+>;
 
 type GLTFPostprocessedWithRemovedExtensions = GLTFPostprocessed & {
   extensionsRemoved?: string[];
@@ -109,33 +114,41 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
       'Extension data can be loaded, but it is not translated into the default metallic-roughness material path.'
   },
   KHR_materials_variants: {
-    supportLevel: 'loader-only',
-    comment: 'Variant metadata can be loaded, but applications must choose and apply variants.'
+    supportLevel: 'parsed-and-wired',
+    comment: 'Primitive material variants can be selected and restored on the generated scenegraph.'
   },
   EXT_mesh_gpu_instancing: {
-    supportLevel: 'none',
-    comment: 'GPU instancing data is not yet converted into luma.gl instanced draw setup.'
+    supportLevel: 'built-in',
+    comment: 'Accessor-backed instance transforms use one instanced draw per source primitive.'
   },
   KHR_node_visibility: {
-    supportLevel: 'none',
-    comment: 'Node-visibility animations and toggles are not mapped onto runtime scenegraph state.'
+    supportLevel: 'parsed-and-wired',
+    comment: 'Recursive node visibility controls rendered geometry, punctual lights, and animation.'
   },
   KHR_animation_pointer: {
     supportLevel: 'parsed-and-wired',
     comment:
-      'Selected node TRS, material factor, and KHR_texture_transform offset/rotation/scale pointers are wired to runtime updates; unsupported targets are skipped.'
+      'Node transforms, morph weights and visibility, material factors, texture transforms, camera projections, and punctual lights are wired to runtime updates.'
+  },
+  EXT_materials_bump: {
+    supportLevel: 'built-in',
+    comment:
+      'The experimental bump-map draft perturbs the canonical surface normal from a linear height texture.'
   },
   KHR_materials_diffuse_transmission: {
-    supportLevel: 'none',
-    comment: 'Diffuse-transmission shading is not implemented in the stock PBR shader.'
+    supportLevel: 'built-in',
+    comment:
+      'The Khronos release candidate adds energy-conserving back-lit diffuse transmission and independent color/factor textures.'
   },
   KHR_materials_dispersion: {
-    supportLevel: 'none',
-    comment: 'Chromatic dispersion is not implemented in the stock PBR shader.'
+    supportLevel: 'parsed-and-wired',
+    comment:
+      'The canonical PBR shader separates red, green, and blue transmission using wavelength-dependent refraction.'
   },
   KHR_materials_volume_scatter: {
-    supportLevel: 'none',
-    comment: 'Volume scattering is not implemented in the stock PBR shader.'
+    supportLevel: 'parsed-and-wired',
+    comment:
+      'The unratified volume-scattering draft is approximated per surface; random-walk and screen-space diffusion are not implemented.'
   },
   KHR_xmp: {
     supportLevel: 'none',
@@ -163,6 +176,7 @@ export function getGLTFExtensionSupport(
   gltf: GLTFPostprocessed
 ): Map<string, GLTFExtensionSupport> {
   const extensionNames = Array.from(collectGLTFExtensionNames(gltf)).sort();
+  const requiredExtensionNames = new Set(gltf.extensionsRequired || []);
   const extensionSupportEntries: [string, GLTFExtensionSupport][] = extensionNames.map(
     extensionName => {
       const extensionSupportDefinition =
@@ -172,6 +186,7 @@ export function getGLTFExtensionSupport(
         extensionName,
         {
           extensionName,
+          required: requiredExtensionNames.has(extensionName),
           supported:
             extensionSupportDefinition.supportLevel === 'built-in' ||
             extensionSupportDefinition.supportLevel === 'parsed-and-wired',
@@ -183,6 +198,27 @@ export function getGLTFExtensionSupport(
   );
 
   return new Map(extensionSupportEntries);
+}
+
+/** Returns required extensions that have no complete runtime implementation. */
+export function getUnsupportedRequiredGLTFExtensions(
+  gltf: GLTFPostprocessed
+): GLTFExtensionSupport[] {
+  return Array.from(getGLTFExtensionSupport(gltf).values()).filter(
+    extension => extension.required && !extension.supported
+  );
+}
+
+/** Rejects documents whose required extensions cannot be honored by the runtime. */
+export function assertSupportedGLTFExtensions(gltf: GLTFPostprocessed): void {
+  const unsupportedExtensions = getUnsupportedRequiredGLTFExtensions(gltf);
+  if (unsupportedExtensions.length) {
+    throw new Error(
+      `Unsupported required glTF extensions: ${unsupportedExtensions
+        .map(extension => extension.extensionName)
+        .join(', ')}`
+    );
+  }
 }
 
 export function getRegisteredGLTFExtensionSupport(

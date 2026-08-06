@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import './textures/packed-pixels.spec';
 import './textures/html-texture.spec';
@@ -8,6 +8,10 @@ import './oit/a-buffer-renderer.spec';
 import './oit/wboit-renderer.spec';
 import './shadows/shadow-map-renderer.spec';
 import './shadows/shadow-wgsl.spec';
+import './engine/scene-renderer.spec';
+import './engine/scene-next-pbr-materials.spec';
+import './engine/scene-deformation.spec';
+import './engine/deferred-scene-renderer.spec';
 import './rendering/deferred-lighting.spec';
 import './rendering/g-buffer.spec';
 import './rendering/volumetric-fire-simulation.spec';
@@ -29,8 +33,8 @@ import './gpu-primitives/gpu-batch-hash-join.spec';
 import './gpu-primitives/gpu-scene-adapters.spec';
 import './gpu-primitives/gpu-scene-draw-generation.spec';
 import './gpu-primitives/gpu-scene-resource-groups.spec';
-import './gpu-primitives/gpu-trace-scene.spec';
-import './gpu-primitives/gpu-trace-interaction.spec';
+import './lutrace/gpu-trace-scene.spec';
+import './lutrace/gpu-trace-interaction.spec';
 import './simulation/spectral-ocean-simulation.spec';
 import './geospatial/geospatial-projection-distance.spec';
 import './ludf/lu-data-frame.spec';

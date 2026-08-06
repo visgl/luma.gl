@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
 import {GBuffer} from '@luma.gl/experimental';
@@ -80,6 +80,71 @@ test('GBuffer owns semantic MRT attachments and shader-pass bindings', async t =
   t.ok(previousColorTexture.destroyed, 'resize destroys superseded attachments');
   gBuffer.destroy();
   t.ok(gBuffer.colorTexture.destroyed, 'destroy releases current attachments');
+  t.end();
+});
+
+test('GBuffer omits unused velocity attachments on portable WebGPU devices', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  t.equal(
+    device.limits.maxColorAttachmentBytesPerSample,
+    32,
+    'core WebGPU exposes its portable color-attachment limit'
+  );
+
+  const gBuffer = new GBuffer(device, {
+    id: 'test-compact-g-buffer',
+    width: 4,
+    height: 2,
+    colorFormat: 'rgba16float',
+    normalRoughnessFormat: 'rgba8unorm',
+    velocity: false,
+    extraColorAttachments: [
+      {name: 'baseColorMetallic', format: 'rgba8unorm'},
+      {name: 'emissiveOcclusion', format: 'rgba16float'}
+    ]
+  });
+
+  t.equal(gBuffer.framebuffer.colorAttachments.length, 4, 'unused velocity does not allocate MRT');
+  t.equal(
+    gBuffer.getExtraColorTexture('baseColorMetallic'),
+    gBuffer.framebuffer.colorAttachments[2].texture,
+    'the first extra attachment moves to location 2'
+  );
+  t.equal(
+    gBuffer.getExtraColorTexture('emissiveOcclusion'),
+    gBuffer.framebuffer.colorAttachments[3].texture,
+    'the second extra attachment moves to location 3'
+  );
+  t.throws(
+    () => gBuffer.velocityTexture,
+    /velocity attachment is disabled/,
+    'the velocity getter rejects disabled attachments'
+  );
+  t.throws(
+    () => gBuffer.getShaderPassBindings(),
+    /velocity attachment is disabled/,
+    'velocity-aware shader-pass bindings reject disabled attachments'
+  );
+
+  const previousColorTexture = gBuffer.colorTexture;
+  const previousExtraTexture = gBuffer.getExtraColorTexture('baseColorMetallic');
+  t.equal(gBuffer.resize({width: 4, height: 2}), false, 'same size preserves compact targets');
+  t.equal(gBuffer.resize({width: 8, height: 6}), true, 'new size recreates compact targets');
+  t.ok(previousColorTexture.destroyed, 'resize destroys the previous color attachment');
+  t.ok(previousExtraTexture.destroyed, 'resize destroys the previous extra attachment');
+  t.equal(gBuffer.framebuffer.colorAttachments.length, 4, 'resized targets remain compact');
+
+  const currentColorTexture = gBuffer.colorTexture;
+  const currentExtraTexture = gBuffer.getExtraColorTexture('emissiveOcclusion');
+  gBuffer.destroy();
+  t.ok(currentColorTexture.destroyed, 'destroy releases the current color attachment');
+  t.ok(currentExtraTexture.destroyed, 'destroy releases the current extra attachment');
   t.end();
 });
 

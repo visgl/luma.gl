@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {dggsWGSL} from './dggs-wgsl';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Resident row count used when the showcase does not request a larger population. */
 export const DEFAULT_CROSSFILTER_ROW_COUNT = 262_144;

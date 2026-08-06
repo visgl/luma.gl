@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test, vi} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';

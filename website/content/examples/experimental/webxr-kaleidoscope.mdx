@@ -1,16 +1,17 @@
 ---
-title: 'Texture WebXR'
-description: Enter an immersive WebXR kaleidoscope that reflects and repeats a live texture around the viewer.
+title: 'WebXR: Immersive Prism Portal'
+description: Explore a stereoscopic prism tunnel rendered through native WebGPU projection layers, with a portable WebGL2 and AR camera fallback.
 sidebar_custom_props:
-  backends: [webgl2]
+  backends: [webgpu, webgl2]
   difficulty: advanced
   maturity: experimental
-  topics: [rendering, textures, webxr]
+  topics: [rendering, textures, webxr, spatial, shaders]
 ---
 
 <p className="badges">
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+  <img src="https://img.shields.io/badge/WebGPU-native%20XR-0e7490?style=flat-square" alt="WebGPU: native XR when supported" />
+  <img src="https://img.shields.io/badge/WebGL2-portable%20fallback-7c3aed?style=flat-square" alt="WebGL2: portable fallback" />
 </p>
 
 import {WebXRKaleidoscopeExample} from '@site/src/examples';

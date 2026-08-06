@@ -67,6 +67,11 @@ buffer-native algorithms.
 The implementation is intentionally experimental: it is concrete enough to measure and use, but
 small enough that its API can still respond to experience.
 
+Trace-domain scene schemas, process/thread interaction policies, dependency focus, and timeline
+picking live in the optional
+[`@luma.gl/experimental/lutrace`](/docs/api-reference/experimental/lutrace) submodule. Generic
+command graphs and scene primitives remain available without importing trace-specific APIs.
+
 ![GPU-native trace manipulation pipeline showing canonical trace data, GPU mask filtering, hierarchy and graph operations, and indirect GPU rendering](./gpu-trace-manipulation-infographic.png)
 
 <GPUTraceViewerExample embedded />
@@ -1652,6 +1657,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUSceneResourceGroups`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups)
 - [`GPUTraceScene`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene)
 - [`GPUTraceInteraction`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction)
+- [GPU trace picking](/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-index)
 - [`GPUHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-join)

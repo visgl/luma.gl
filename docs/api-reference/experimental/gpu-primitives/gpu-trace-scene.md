@@ -13,6 +13,11 @@ Timing, lanes, processes, threads, parent relationships, dependency links, and b
 adjacency remain GPU-resident beside the scene rather than becoming trace-specific fields inside
 the shared scene abstraction.
 
+This domain-specific model is exported from
+[`@luma.gl/experimental/lutrace`](/docs/api-reference/experimental/lutrace), not from the generic
+`@luma.gl/experimental` root. Command scheduling and flat scene storage remain reusable without
+importing trace schemas.
+
 The motivation is interactive trace exploration at a scale where rebuilding JavaScript span lists
 for every pan, filter, expansion, or dependency selection becomes the bottleneck. One stable
 source-row identity can feed time-range filtering, process/thread layout, ancestor projection,
@@ -115,6 +120,9 @@ allocations while keeping logical graph-view lengths at zero.
 ## Usage
 
 ```ts
+import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/experimental';
+import {GPUTraceScene} from '@luma.gl/experimental/lutrace';
+
 const trace = new GPUTraceScene(device, {
   spans: canonicalSpanWords,
   parents: parentSpanRows,
@@ -147,6 +155,10 @@ Source views such as `source.startTimes`, `source.processIds`, `source.parents`,
 the same graph. [`GPUTraceInteraction`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction)
 composes those views into a reusable hierarchy, dependency-focus, visibility, and indirect-draw
 workflow.
+
+When a timeline coordinate needs to recover the original source row, compose the interaction
+outputs with [`getGPUTracePickingShader`](./gpu-trace-picking). Its visibility-aware shader uses
+these same canonical records and scanned thread offsets without adding picking state to the scene.
 
 ## Current scope
 

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Selective read options shared by packed-shard and future columnar taxi sources. */
 export type TaxiPointSourceReadOptions = {

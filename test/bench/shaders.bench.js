@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // eslint-disable-next-line
 import {Program, VertexShader, FragmentShader} from '@luma.gl/webgl-legacy';

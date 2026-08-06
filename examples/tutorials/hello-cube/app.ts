@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';

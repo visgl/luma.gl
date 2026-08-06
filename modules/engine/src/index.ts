@@ -1,12 +1,32 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // luma.gl Engine API
 
 // Animation
 export type {AnimationClipControllerProps} from './animation/animator';
 export {AnimationClipController, Animator} from './animation/animator';
+export type {
+  AnimationInterpolation,
+  AnimationSampler,
+  AnimationValueType
+} from './animation/animation-interpolation';
+export {evaluateAnimationSampler} from './animation/animation-interpolation';
+export type {AnimationBinding, AnimationTrackProps} from './animation/animation-track';
+export {AnimationTrack} from './animation/animation-track';
+export type {AnimationClipProps} from './animation/animation-clip';
+export {AnimationClip} from './animation/animation-clip';
+export type {AnimationActionProps, AnimationLoopMode} from './animation/animation-mixer';
+export {AnimationAction, AnimationMixer} from './animation/animation-mixer';
+export type {MorphTargetAttributes} from './animation/morph-targets';
+export {
+  applyMorphTargets,
+  decodeMorphTargetAttribute,
+  updateMorphTargetBuffers
+} from './animation/morph-targets';
+export type {SkinJointMatricesProps} from './animation/skin';
+export {updateSkinJointMatrices} from './animation/skin';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';

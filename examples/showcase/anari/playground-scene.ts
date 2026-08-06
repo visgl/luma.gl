@@ -1,4 +1,8 @@
 import {
+  type ANARIAnimationClipDescription,
+  type ANARIAnimationNodeDescription,
+  type ANARIAnimationPlaybackDescription,
+  type ANARIAnimationSkinDescription,
   type ANARICameraParameters,
   type ANARICameraSubtype,
   type ANARIDevice,
@@ -21,7 +25,9 @@ import {
   type ANARISurface,
   type ANARIVector3
 } from '@luma.gl/anari';
-import type {Texture} from '@luma.gl/core';
+import {type ANARIAnimationSceneHandle, makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+import type {SamplerProps, Texture} from '@luma.gl/core';
+import {createGLTFTexture} from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 
 type JSONTypedObject<Subtype extends string> = {'@@type': Subtype};
@@ -30,15 +36,29 @@ type JSONGeometryParameters = Omit<
   ANARIGeometryParameters,
   | 'vertex.position'
   | 'vertex.normal'
+  | 'vertex.tangent'
+  | 'vertex.joint'
+  | 'vertex.weight'
   | 'vertex.attribute0'
   | 'vertex.attribute1'
+  | 'vertex.attribute2'
   | 'primitive.index'
+  | 'morphTargets'
 > & {
   'vertex.position'?: readonly number[];
   'vertex.normal'?: readonly number[];
+  'vertex.tangent'?: readonly number[];
+  'vertex.joint'?: readonly number[];
+  'vertex.weight'?: readonly number[];
   'vertex.attribute0'?: readonly number[];
   'vertex.attribute1'?: readonly number[];
+  'vertex.attribute2'?: readonly number[];
   'primitive.index'?: readonly number[];
+  morphTargets?: readonly {
+    POSITION?: readonly number[];
+    NORMAL?: readonly number[];
+    TANGENT?: readonly number[];
+  }[];
 };
 
 export type JSONGeometryGenerator =
@@ -57,12 +77,25 @@ export type JSONGeometryDeclaration = JSONTypedObject<ANARIGeometrySubtype> &
 type JSONMaterialTextureName =
   | 'baseColorTexture'
   | 'normalTexture'
+  | 'bumpTexture'
   | 'metallicRoughnessTexture'
   | 'emissiveTexture'
   | 'occlusionTexture'
+  | 'specularColorTexture'
+  | 'specularIntensityTexture'
   | 'clearcoatTexture'
+  | 'clearcoatRoughnessTexture'
+  | 'clearcoatNormalTexture'
   | 'transmissionTexture'
-  | 'sheenColorTexture';
+  | 'diffuseTransmissionTexture'
+  | 'diffuseTransmissionColorTexture'
+  | 'thicknessTexture'
+  | 'multiscatterColorTexture'
+  | 'sheenColorTexture'
+  | 'sheenRoughnessTexture'
+  | 'iridescenceTexture'
+  | 'iridescenceThicknessTexture'
+  | 'anisotropyTexture';
 
 export type JSONMaterialDeclaration = JSONTypedObject<ANARIMaterialSubtype> &
   Omit<ANARIMaterialParameters, JSONMaterialTextureName> &
@@ -71,12 +104,18 @@ export type JSONMaterialDeclaration = JSONTypedObject<ANARIMaterialSubtype> &
 export type JSONTextureDeclaration = {
   source: string;
   colorSpace?: 'srgb' | 'linear';
+  textureCoordinateSet?: 0 | 1;
   transform?: readonly [number, number, number, number, number, number, number, number, number];
+  sampler?: Pick<
+    SamplerProps,
+    'addressModeU' | 'addressModeV' | 'minFilter' | 'magFilter' | 'mipmapFilter'
+  >;
 };
 
 export type JSONSurfaceDeclaration = {
   geometry: string;
   material: string;
+  skin?: ANARIAnimationSkinDescription;
 };
 
 export type JSONGroupDeclaration = {
@@ -152,6 +191,9 @@ export type ANARIJSONScene = {
   distributions?: readonly JSONStarfieldDeclaration[];
   lights?: readonly JSONLightDeclaration[];
   world?: {surfaces?: readonly string[]; instances?: readonly string[]; lights?: readonly string[]};
+  nodes?: Record<string, ANARIAnimationNodeDescription>;
+  clips?: readonly ANARIAnimationClipDescription[];
+  playback?: ANARIAnimationPlaybackDescription;
 };
 
 export type ANARIJSONSceneHandle = {
@@ -161,6 +203,7 @@ export type ANARIJSONSceneHandle = {
   cameraTarget: ANARIVector3;
   cameraPosition: ANARIVector3;
   cameraOrbitSpeed: number;
+  animations?: ANARIAnimationSceneHandle;
   update: (time: number) => void;
   destroy: () => void;
 };
@@ -180,6 +223,7 @@ const CAMERA_SUBTYPES: readonly ANARICameraSubtype[] = ['perspective', 'orthogra
 const RENDERER_SUBTYPES: readonly ANARIRendererSubtype[] = [
   'default',
   'deferred',
+  'raytrace',
   'debugNormals',
   'debugDepth'
 ];
@@ -199,12 +243,25 @@ const DEFAULT_RENDERER_DECLARATION: JSONRendererDeclaration = {
 const MATERIAL_TEXTURE_NAMES: readonly JSONMaterialTextureName[] = [
   'baseColorTexture',
   'normalTexture',
+  'bumpTexture',
   'metallicRoughnessTexture',
   'emissiveTexture',
   'occlusionTexture',
+  'specularColorTexture',
+  'specularIntensityTexture',
   'clearcoatTexture',
+  'clearcoatRoughnessTexture',
+  'clearcoatNormalTexture',
   'transmissionTexture',
-  'sheenColorTexture'
+  'diffuseTransmissionTexture',
+  'diffuseTransmissionColorTexture',
+  'thicknessTexture',
+  'multiscatterColorTexture',
+  'sheenColorTexture',
+  'sheenRoughnessTexture',
+  'iridescenceTexture',
+  'iridescenceThicknessTexture',
+  'anisotropyTexture'
 ];
 
 const loadedTextureImages = new Map<string, ImageBitmap>();
@@ -253,13 +310,16 @@ export function createANARIJSONScene(
   const textures: Texture[] = [];
   const materials = new Map<string, ANARIMaterial>();
   const surfaces = new Map<string, ANARISurface>();
+  const skins = new Map<ANARISurface, ANARIAnimationSkinDescription>();
   const lights = new Map<string, ANARILight>();
   const groups = new Map<string, ANARIGroup>();
   const instances = new Map<string, ANARIInstance>();
   const surfaceGroups = new Map<string, ANARIGroup>();
   const instanceAnimations: SceneAnimation[] = [];
   const lightAnimations: SceneAnimation[] = [];
+  const authoredAnimationTargets = getAuthoredAnimationTargets(scene);
   const pendingLightAnimations: {
+    identifier: string;
     light: ANARILight;
     parameters: ANARILightParameters;
     animation: JSONAnimationDeclaration;
@@ -270,9 +330,14 @@ export function createANARIJSONScene(
       '@@type': subtype,
       'vertex.position': positions,
       'vertex.normal': normals,
+      'vertex.tangent': tangents,
+      'vertex.joint': joints,
+      'vertex.weight': jointWeights,
       'vertex.attribute0': attributes,
       'vertex.attribute1': textureCoordinates,
+      'vertex.attribute2': additionalTextureCoordinates,
       'primitive.index': indices,
+      morphTargets,
       generator,
       ...parameters
     } = declaration;
@@ -284,14 +349,35 @@ export function createANARIJSONScene(
     if (normals) {
       geometryParameters['vertex.normal'] = new Float32Array(normals);
     }
+    if (tangents) {
+      geometryParameters['vertex.tangent'] = new Float32Array(tangents);
+    }
+    if (joints) {
+      geometryParameters['vertex.joint'] = new Uint16Array(joints);
+    }
+    if (jointWeights) {
+      geometryParameters['vertex.weight'] = new Float32Array(jointWeights);
+    }
     if (attributes) {
       geometryParameters['vertex.attribute0'] = new Float32Array(attributes);
     }
     if (textureCoordinates) {
       geometryParameters['vertex.attribute1'] = new Float32Array(textureCoordinates);
     }
+    if (additionalTextureCoordinates) {
+      Object.assign(geometryParameters, {
+        'vertex.attribute2': new Float32Array(additionalTextureCoordinates)
+      });
+    }
     if (indices) {
       geometryParameters['primitive.index'] = new Uint32Array(indices);
+    }
+    if (morphTargets) {
+      geometryParameters.morphTargets = morphTargets.map(target => ({
+        ...(target.POSITION ? {POSITION: new Float32Array(target.POSITION)} : {}),
+        ...(target.NORMAL ? {NORMAL: new Float32Array(target.NORMAL)} : {}),
+        ...(target.TANGENT ? {TANGENT: new Float32Array(target.TANGENT)} : {})
+      }));
     }
     if (generator) {
       if (subtype !== 'triangle') {
@@ -307,23 +393,27 @@ export function createANARIJSONScene(
     if (!image) {
       throw new Error(`Texture "${identifier}" must be loaded before creating its ANARI scene.`);
     }
-    const texture = device.device.createTexture({
+    const texture = createGLTFTexture(device.device, image, {
       id: `anari-${identifier}`,
       width: image.width,
       height: image.height,
-      format: declaration.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : 'rgba8unorm',
-      data: image,
+      colorSpace: declaration.colorSpace || 'linear',
       sampler: {
         addressModeU: 'repeat',
         addressModeV: 'repeat',
         minFilter: 'linear',
-        magFilter: 'linear'
+        magFilter: 'linear',
+        ...declaration.sampler
       }
     });
     textures.push(texture);
     samplers.set(
       identifier,
-      device.newSampler('image2D', {image: texture, transform: declaration.transform})
+      device.newSampler('image2D', {
+        image: texture,
+        transform: declaration.transform,
+        textureCoordinateSet: declaration.textureCoordinateSet
+      })
     );
   }
 
@@ -348,7 +438,17 @@ export function createANARIJSONScene(
   for (const [identifier, declaration] of Object.entries(scene.surfaces)) {
     const geometry = resolveReference(geometries, declaration.geometry, 'geometry');
     const material = resolveReference(materials, declaration.material, 'material');
-    surfaces.set(identifier, device.newSurface({geometry, material}));
+    const surface = device.newSurface({
+      geometry,
+      material,
+      ...(declaration.skin
+        ? {skin: {jointMatrices: new Float32Array(declaration.skin.joints.length * 16)}}
+        : {})
+    });
+    surfaces.set(identifier, surface);
+    if (declaration.skin) {
+      skins.set(surface, declaration.skin);
+    }
   }
 
   for (const declaration of scene.lights || []) {
@@ -358,7 +458,7 @@ export function createANARIJSONScene(
     const light = device.newLight(subtype, parameters);
     lights.set(identifier, light);
     if (animation) {
-      pendingLightAnimations.push({light, parameters, animation});
+      pendingLightAnimations.push({identifier, light, parameters, animation});
     }
   }
 
@@ -396,7 +496,7 @@ export function createANARIJSONScene(
     instances.set(identifier, instance);
     const animations =
       declaration.animations || (declaration.animation ? [declaration.animation] : []);
-    if (animations.length > 0) {
+    if (animations.length > 0 && !authoredAnimationTargets.instances.has(identifier)) {
       instanceAnimations.push(createInstanceAnimation(instance, declaration, animations));
     }
   };
@@ -414,8 +514,10 @@ export function createANARIJSONScene(
     }
   }
 
-  for (const {light, parameters, animation} of pendingLightAnimations) {
-    lightAnimations.push(createLightAnimation(light, parameters, animation, instances));
+  for (const {identifier, light, parameters, animation} of pendingLightAnimations) {
+    if (!authoredAnimationTargets.lights.has(identifier)) {
+      lightAnimations.push(createLightAnimation(light, parameters, animation, instances));
+    }
   }
 
   const world = device.newWorld({
@@ -445,6 +547,18 @@ export function createANARIJSONScene(
   assertSubtype('renderer', rendererSubtype, RENDERER_SUBTYPES);
   const renderer = device.newRenderer(rendererSubtype, rendererParameters);
   const frame = device.newFrame({world, camera, renderer});
+  const animations =
+    scene.clips?.length || skins.size > 0
+      ? makeANARIAnimationScene(scene, {
+          instances,
+          geometries,
+          materials,
+          samplers,
+          lights,
+          camera,
+          skins
+        })
+      : undefined;
 
   return {
     frame,
@@ -453,7 +567,9 @@ export function createANARIJSONScene(
     cameraTarget: target,
     cameraPosition: position,
     cameraOrbitSpeed: orbit?.speed || 0,
+    animations,
     update(time: number): void {
+      animations?.update(time);
       for (const animation of instanceAnimations) {
         animation(time);
       }
@@ -468,6 +584,44 @@ export function createANARIJSONScene(
       }
     }
   };
+}
+
+function getAuthoredAnimationTargets(scene: ANARIJSONScene): {
+  instances: Set<string>;
+  lights: Set<string>;
+} {
+  const instances = new Set<string>();
+  const lights = new Set<string>();
+  const animatedNodes = new Set<string>();
+
+  for (const clip of scene.clips || []) {
+    for (const {target} of clip.tracks) {
+      if (target.type === 'instance') {
+        instances.add(target.identifier);
+      } else if (target.type === 'light') {
+        lights.add(target.identifier);
+      } else if (target.type === 'node') {
+        animatedNodes.add(target.identifier);
+      }
+    }
+  }
+
+  for (const [identifier, node] of Object.entries(scene.nodes || {})) {
+    const visitedNodes = new Set<string>();
+    let ancestorIdentifier: string | undefined = identifier;
+    while (ancestorIdentifier && !visitedNodes.has(ancestorIdentifier)) {
+      if (animatedNodes.has(ancestorIdentifier)) {
+        for (const instanceIdentifier of node.instances || []) {
+          instances.add(instanceIdentifier);
+        }
+        break;
+      }
+      visitedNodes.add(ancestorIdentifier);
+      ancestorIdentifier = scene.nodes?.[ancestorIdentifier]?.parent;
+    }
+  }
+
+  return {instances, lights};
 }
 
 function createInstanceAnimation(

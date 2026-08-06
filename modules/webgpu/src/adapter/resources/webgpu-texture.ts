@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import {
   type TextureProps,
   type TextureViewProps,
@@ -69,7 +72,9 @@ export class WebGPUTexture extends Texture {
     });
 
     if (this.props.handle) {
-      this.handle.label ||= this.id;
+      if (!this.isHandleBorrowed) {
+        this.handle.label ||= this.id;
+      }
       // @ts-expect-error readonly
       this.width = this.handle.width;
       // @ts-expect-error readonly
@@ -425,7 +430,9 @@ export class WebGPUTexture extends Texture {
       nextHeight !== this.height ||
       nextDepth !== this.depth ||
       nextFormat !== this.format;
-    handle.label ||= this.id;
+    if (!this.isHandleBorrowed) {
+      handle.label ||= this.id;
+    }
 
     // @ts-expect-error readonly
     this.handle = handle;

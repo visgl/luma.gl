@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Camera-dependent Gaussian splat depth-ordering strategies. */
 export type SplatSortMode = 'none' | 'global' | 'tile';

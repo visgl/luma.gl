@@ -1,18 +1,28 @@
 import React, {type ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 
-type GltfDocsTab = {id: GltfDocsTabId; label: string; href: string};
+type GltfDocsTab = {id: NativeGltfDocsTabId; label: string; href: string};
 
 /** glTF documentation tab identifiers. */
-export type GltfDocsTabId = 'overview' | 'extensions';
+export type GltfDocsTabId = 'overview' | 'materials' | 'animation' | 'interchange' | 'extensions';
+
+type NativeGltfDocsTabId = GltfDocsTabId | 'native-extensions';
 
 const GLTF_DOCS_TABS: GltfDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/gltf'},
+  {id: 'materials', label: 'Materials', href: '/docs/api-reference/gltf/gltf-materials'},
+  {
+    id: 'native-extensions',
+    label: 'Native Extensions',
+    href: '/docs/api-reference/gltf/gltf-native-extensions'
+  },
+  {id: 'animation', label: 'Animation', href: '/docs/api-reference/gltf/gltf-animation'},
+  {id: 'interchange', label: 'Interchange', href: '/docs/api-reference/gltf/gltf-interchange'},
   {id: 'extensions', label: 'Extensions', href: '/docs/api-reference/gltf/gltf-extensions'}
 ];
 
 /** Renders page links with the same visual treatment as tabs for glTF documentation pages. */
-export function GltfDocsTabs({active}: {active: GltfDocsTabId}): ReactNode {
+export function GltfDocsTabs({active}: {active: NativeGltfDocsTabId}): ReactNode {
   return (
     <nav className="docs-page-tabs" aria-label="glTF documentation sections">
       {GLTF_DOCS_TABS.map(tab => (

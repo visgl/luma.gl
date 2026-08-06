@@ -1,16 +1,23 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {getTraceRow, makeDeckTraceData} from '../../examples/deck/gpu-culled-trace/trace-data';
 import {
+  getTraceAllocationStats,
+  getTraceCapacityContract,
+  getTraceWorkloadCounters,
+  TRACE_BENCHMARK_CAPACITIES,
+  TRACE_BENCHMARK_SCENARIOS
+} from '../../examples/experimental/gpu-trace-viewer/trace-benchmark';
+import {
   getTraceCapacityOptions,
   getTraceDependencyCapacityOptions,
   isTraceDensityMode,
-  makeTraceDependencyBatches,
   makeTraceDataset,
+  makeTraceDependencyBatches,
   makeTraceGroups,
   makeTraceSpanBatches,
   TRACE_CROSS_PROCESS_DEPENDENCY,
@@ -22,18 +29,18 @@ import {
   TRACE_PARENT_DEPENDENCY_FLAG,
   TRACE_PROCESS_COUNT,
   TRACE_SAME_PROCESS_DEPENDENCY,
-  TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_SPAN_BATCH_RECORD_WORD_LENGTH,
+  TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
+  getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
-  getCandidateDependencyVisibilityShader,
   getDensityClearShader,
   getDependencyBatchVisibilityShader,
   getFocusFrontierClearShader,
@@ -100,6 +107,95 @@ test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t =>
     [250_000, 1_000_000, 4_000_000, 10_000_000],
     'maximum adapters expose the ten-million-span demonstration'
   );
+  t.end();
+});
+
+test('GPU trace supremacy contract exposes standard scales and interaction scenarios', t => {
+  t.deepEqual(
+    TRACE_BENCHMARK_CAPACITIES,
+    [250_000, 1_000_000, 4_000_000, 10_000_000],
+    'capacity scales remain stable for comparable benchmark runs'
+  );
+  t.deepEqual(
+    TRACE_BENCHMARK_SCENARIOS.map(scenario => scenario.id),
+    [
+      'exact-expanded',
+      'exact-collapsed',
+      'exact-filtered',
+      'exact-focused',
+      'exact-picking',
+      'density'
+    ],
+    'interaction scenarios cover hierarchy, filtering, focus, picking, and adaptive LOD'
+  );
+  t.equal(
+    new Set(TRACE_BENCHMARK_SCENARIOS.map(scenario => scenario.id)).size,
+    TRACE_BENCHMARK_SCENARIOS.length,
+    'scenario identifiers are unique'
+  );
+  t.end();
+});
+
+test('GPU trace capacity contract makes the monolithic 10M limit explicit', t => {
+  const portable = getTraceCapacityContract(10_000_000, 10_000_000, {
+    maxStorageBufferBindingSize: 128 * 1024 * 1024,
+    maxBufferSize: 256 * 1024 * 1024
+  });
+  t.equal(portable.spanBufferByteLength, 320_000_000, '10M spans require a 320 MB source buffer');
+  t.equal(
+    portable.dependencyBufferByteLength,
+    160_000_000,
+    '10M dependencies require a 160 MB source buffer'
+  );
+  t.equal(portable.fitsDeviceLimits, false, 'portable limits reject the monolithic 10M source');
+
+  const maximum = getTraceCapacityContract(10_000_000, 10_000_000, {
+    maxStorageBufferBindingSize: 1024 * 1024 * 1024,
+    maxBufferSize: 1024 * 1024 * 1024
+  });
+  t.equal(maximum.fitsDeviceLimits, true, 'maximum-context limits admit the same source layout');
+  t.end();
+});
+
+test('GPU trace workload counters report persistent memory and proportional work', t => {
+  const firstBuffer = {byteLength: 320};
+  const allocation = getTraceAllocationStats([
+    firstBuffer,
+    firstBuffer,
+    {byteLength: 160},
+    {byteLength: 40}
+  ]);
+  t.deepEqual(
+    allocation,
+    {bufferCount: 3, persistentByteLength: 520, largestBufferByteLength: 320},
+    'allocation accounting deduplicates shared buffer identities'
+  );
+  const counters = getTraceWorkloadCounters({
+    spanCount: 1000,
+    dependencyCount: 400,
+    spanBatchCount: 10,
+    candidateSpanBatchCount: 2,
+    dependencyBatchCount: 8,
+    candidateDependencyBatchCount: 2,
+    visibleSpanCount: 50,
+    visibleDependencyCount: 12,
+    collapsedProcessCount: 1,
+    densityMode: false,
+    filterActive: true,
+    focusActive: true,
+    pickActive: false,
+    allocation
+  });
+  t.equal(counters['candidate-span-percent'], 20, 'span work is reported as a candidate ratio');
+  t.equal(
+    counters['candidate-dependency-percent'],
+    25,
+    'dependency work is reported as a candidate ratio'
+  );
+  t.equal(counters['visible-span-percent'], 5, 'visible output is normalized by source size');
+  t.equal(counters['persistent-bytes'], 520, 'persistent memory uses exact buffer accounting');
+  t.equal(counters['filter-active'], 1, 'interaction modes are exposed as numeric counters');
+  t.equal(counters['pick-active'], 0, 'inactive interaction modes remain explicit');
   t.end();
 });
 

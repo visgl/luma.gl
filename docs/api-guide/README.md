@@ -9,8 +9,18 @@ luma.gl is divided into different sub-APIs: the core GPU API, the shader API and
 
 ## Engine API
 
-The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`.
-Scenegraphs are included and glTF support is available through the `@luma.gl/gltf` add-on module.
+The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`,
+`TextureTransform`, and `Computation`. Its
+[shared animation system](/docs/api-guide/engine/animation) adds keyframe tracks, clips, weighted
+mixing, crossfades, and portable morph-target deformation. Scenegraphs are included, while
+[glTF loading, physical materials, skeletal animation, and morph animation](/docs/api-reference/gltf)
+live in the format-specific `@luma.gl/gltf` module.
+
+The experimental [`SceneRenderer`](/docs/api-reference/experimental/scene-renderer) and
+[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) consume
+format-independent scene descriptions instead of introducing a second glTF renderer. Their
+[physical lighting environments](/docs/api-reference/experimental/pbr-environment) can be prepared
+from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
 [Declarative Rendering with ANARI](/docs/api-guide/engine/anari-rendering). It introduces

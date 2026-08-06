@@ -1,6 +1,42 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+export type {
+  CreatePBRMaterialOptions,
+  PBRMaterial,
+  PBRMaterialResources
+} from './engine/pbr-material';
+export {
+  createPBRMaterial,
+  createPBRMaterialFactory,
+  getPBRMaterialMapUniforms
+} from './engine/pbr-material';
+export type {CreatePBRModelOptions} from './engine/pbr-model';
+export {createPBRModel, getPBRGeometryDefines, getPBRTextureDefines} from './engine/pbr-model';
+export type {
+  PreparedScene,
+  SceneAlphaMode,
+  SceneCamera,
+  SceneEnvironment,
+  SceneMaterial,
+  SceneRenderOptions,
+  SceneRenderStatistics,
+  SceneSurface
+} from './engine/scene-renderer';
+export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
+export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
+export type {
+  RayTracingScenePrimitive,
+  RayTracingSceneRenderOptions
+} from './engine/ray-tracing-scene-renderer';
+export {RayTracingSceneRenderer} from './engine/ray-tracing-scene-renderer';
+export type {PreparePBREnvironmentOptions} from './engine/pbr-environment';
+export {
+  PBREnvironmentGenerator,
+  PreparedPBREnvironment,
+  preparePBREnvironment
+} from './engine/pbr-environment';
 
 export {type TextureFormatPacked, RGBADecoder} from './textures/rgba-decoder';
 

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Scoped presentation for the GPU-resident crossfilter intelligence surface. */
 export const CROSSFILTER_STYLES = `

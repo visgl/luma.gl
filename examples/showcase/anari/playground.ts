@@ -3,9 +3,9 @@ import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
 import {
-  createANARIJSONScene,
   type ANARIJSONScene,
-  type ANARIJSONSceneHandle
+  type ANARIJSONSceneHandle,
+  createANARIJSONScene
 } from './playground-scene';
 import {ANARISceneEditor} from './scene-editor';
 import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
@@ -30,6 +30,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly editor: ANARISceneEditor;
   private readonly canvas: HTMLCanvasElement;
   private importRequest = 0;
+  private animationScrubbing = false;
 
   constructor({device}: AnimationProps) {
     super();
@@ -57,6 +58,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
     const elapsedSeconds = time * 0.001;
     scene.update(elapsedSeconds);
+    this.updateAnimationTime(scene);
 
     const currentSize = scene.frame.getParameter('size');
     if (!currentSize || currentSize[0] !== width || currentSize[1] !== height) {
@@ -181,11 +183,56 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       deferredOption.disabled = true;
       deferredOption.title = 'Deferred rendering requires WebGPU.';
     }
+    const raytraceOption = rendererSelector.querySelector<HTMLOptionElement>(
+      'option[value="raytrace"]'
+    );
+    if (raytraceOption && !this.deferredRendererAvailable) {
+      raytraceOption.disabled = true;
+      raytraceOption.title = 'Graph-based ray tracing requires WebGPU.';
+    }
     rendererSelector.addEventListener('change', event => {
       const selector = event.currentTarget;
       if (selector instanceof HTMLSelectElement) {
         this.rendererSubtype = selector.value as ANARIRendererSubtype;
         this.applyEditorScene();
+      }
+    });
+
+    getRequiredElement('animation-clip', HTMLSelectElement).addEventListener('change', event => {
+      const selector = event.currentTarget;
+      if (selector instanceof HTMLSelectElement) {
+        this.scene?.animations?.selectClip(selector.value);
+        this.updateAnimationControls(this.scene);
+      }
+    });
+    getRequiredElement('animation-toggle', HTMLButtonElement).addEventListener('click', () => {
+      const animations = this.scene?.animations;
+      if (!animations?.activeClip) {
+        return;
+      }
+      const action = animations.mixer.getAction(animations.activeClip);
+      if (action?.playing && !action.paused) {
+        animations.pause();
+      } else {
+        animations.play();
+      }
+      this.updateAnimationControls(this.scene);
+    });
+    const scrubber = getRequiredElement('animation-scrub', HTMLInputElement);
+    scrubber.addEventListener('pointerdown', () => {
+      this.animationScrubbing = true;
+    });
+    scrubber.addEventListener('pointerup', () => {
+      this.animationScrubbing = false;
+    });
+    scrubber.addEventListener('input', () => {
+      this.scene?.animations?.seek(Number(scrubber.value));
+      this.updateAnimationTime(this.scene);
+    });
+    getRequiredElement('animation-speed', HTMLSelectElement).addEventListener('change', event => {
+      const selector = event.currentTarget;
+      if (selector instanceof HTMLSelectElement) {
+        this.scene?.animations?.setSpeed(Number(selector.value));
       }
     });
   }
@@ -245,6 +292,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       this.scene = nextScene;
       previousScene?.destroy();
       this.resetCamera(nextScene);
+      this.updateAnimationControls(nextScene);
       setElementText('scene-title', nextScene.name);
       setElementText('scene-description', nextScene.description);
       setElementText('editor-feedback', 'Scene committed');
@@ -303,6 +351,47 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
   private updateEditorMetadata(): void {
     setElementText('editor-line-count', `${this.editor.lineCount.toLocaleString()} LINES`);
+  }
+
+  private updateAnimationControls(scene: ANARIJSONSceneHandle | null): void {
+    const container = getRequiredElement('animation-controls', HTMLDivElement);
+    const animations = scene?.animations;
+    container.hidden = !animations?.clipNames.length;
+    if (!animations?.activeClip) {
+      return;
+    }
+
+    const selector = getRequiredElement('animation-clip', HTMLSelectElement);
+    selector.replaceChildren();
+    for (const clip of animations.clipNames) {
+      const option = document.createElement('option');
+      option.value = clip;
+      option.textContent = clip;
+      selector.appendChild(option);
+    }
+    selector.value = animations.activeClip;
+    const action = animations.mixer.getAction(animations.activeClip);
+    const button = getRequiredElement('animation-toggle', HTMLButtonElement);
+    button.textContent = action?.playing && !action.paused ? 'PAUSE' : 'PLAY';
+    getRequiredElement('animation-scrub', HTMLInputElement).max = String(
+      action?.clip.duration || 1
+    );
+    this.updateAnimationTime(scene);
+  }
+
+  private updateAnimationTime(scene: ANARIJSONSceneHandle | null): void {
+    const animations = scene?.animations;
+    if (!animations?.activeClip) {
+      return;
+    }
+    const action = animations.mixer.getAction(animations.activeClip);
+    if (!action) {
+      return;
+    }
+    if (!this.animationScrubbing) {
+      getRequiredElement('animation-scrub', HTMLInputElement).value = String(action.time);
+    }
+    setElementText('animation-time', action.time.toFixed(2));
   }
 
   private resetCamera(scene: ANARIJSONSceneHandle): void {

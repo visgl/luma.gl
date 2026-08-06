@@ -37,10 +37,20 @@
       "require": "./dist/ludf/index.cjs",
       "types": "./dist/ludf/index.d.ts"
     },
+    "./lugraph": {
+      "import": "./dist/lugraph/index.js",
+      "require": "./dist/lugraph/index.cjs",
+      "types": "./dist/lugraph/index.d.ts"
+    },
     "./luxfilter": {
       "import": "./dist/luxfilter/index.js",
       "require": "./dist/luxfilter/index.cjs",
       "types": "./dist/luxfilter/index.d.ts"
+    },
+    "./lutrace": {
+      "import": "./dist/lutrace/index.js",
+      "require": "./dist/lutrace/index.cjs",
+      "types": "./dist/lutrace/index.d.ts"
     },
     "./luproj": {
       "import": "./dist/luproj/index.js",

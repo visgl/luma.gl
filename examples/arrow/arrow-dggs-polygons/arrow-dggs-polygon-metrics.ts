@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ArrowDggsPolygonRendererMetrics} from './arrow-dggs-polygon-renderer';
 import type {ArrowDggsPolygonsControlPanelMetrics} from './control-panel';

@@ -1,5 +1,6 @@
-// luma.gl, MIT license
-// Copyright (c) vis.gl contributors
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {
   TextureProps,

@@ -1,11 +1,21 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray2, NumberArray16} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
+
+/** Portable scene tone-mapping modes shared by the GLSL and WGSL PBR implementations. */
+export const PBR_TONE_MAP_MODE = {
+  NONE: 0,
+  REINHARD: 1,
+  KHRONOS_PBR_NEUTRAL: 2,
+  ACES: 3
+} as const;
+
+export type PBRToneMapMode = (typeof PBR_TONE_MAP_MODE)[keyof typeof PBR_TONE_MAP_MODE];
 
 export type PBRSceneBindings = {
   pbr_transmissionFramebufferSampler?: Texture | null;
@@ -16,6 +26,9 @@ export type PBRSceneUniforms = {
   toneMapMode?: number;
   environmentIntensity?: number;
   environmentRotation?: number;
+  environmentMipCount?: number;
+  /** Zero keeps scene radiance linear; one applies the exact sRGB output transfer function. */
+  outputEncoding?: number;
   framebufferSize?: NumberArray2;
   viewMatrix?: NumberArray16;
   projectionMatrix?: NumberArray16;
@@ -31,6 +44,8 @@ layout(std140) uniform pbrSceneUniforms {
   int toneMapMode;
   float environmentIntensity;
   float environmentRotation;
+  float environmentMipCount;
+  int outputEncoding;
   vec2 framebufferSize;
   mat4 viewMatrix;
   mat4 projectionMatrix;
@@ -47,6 +62,8 @@ struct pbrSceneUniforms {
   toneMapMode: i32,
   environmentIntensity: f32,
   environmentRotation: f32,
+  environmentMipCount: f32,
+  outputEncoding: i32,
   framebufferSize: vec2<f32>,
   viewMatrix: mat4x4<f32>,
   projectionMatrix: mat4x4<f32>
@@ -75,15 +92,19 @@ export const pbrScene = {
     toneMapMode: 'i32',
     environmentIntensity: 'f32',
     environmentRotation: 'f32',
+    environmentMipCount: 'f32',
+    outputEncoding: 'i32',
     framebufferSize: 'vec2<f32>',
     viewMatrix: 'mat4x4<f32>',
     projectionMatrix: 'mat4x4<f32>'
   },
   defaultUniforms: {
     exposure: 1,
-    toneMapMode: 2,
+    toneMapMode: PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL,
     environmentIntensity: 1,
     environmentRotation: Math.PI * 0.5,
+    environmentMipCount: 1,
+    outputEncoding: 1,
     framebufferSize: [1, 1],
     viewMatrix: IDENTITY_MATRIX,
     projectionMatrix: IDENTITY_MATRIX

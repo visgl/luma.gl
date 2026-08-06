@@ -15,17 +15,50 @@
 
 <h1 align="center">luma.gl | <a href="https://luma.gl">Docs</a></h1>
 
-<h5 align="center">luma.gl: High-performance Toolkit for WebGL-based Data Visualization</h5>
+<h5 align="center">Portable WebGPU and WebGL rendering, GPU compute, and open 3D assets.</h5>
+
+<p align="center">
+  <a href="https://www.w3.org/TR/webgpu/">
+    <img src="website/static/img/standards/webgpu.svg" alt="WebGPU" height="52" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.khronos.org/webgl/">
+    <img src="website/static/img/standards/webgl.svg" alt="WebGL" height="52" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.khronos.org/gltf/">
+    <img src="website/static/img/standards/gltf.svg" alt="glTF" height="52" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.khronos.org/anari/">
+    <img src="website/static/img/standards/anari.svg" alt="ANARI" height="52" />
+  </a>
+</p>
+
+<p align="center"><small>WebGPU logo by <a href="https://www.w3.org/">W3C</a>, licensed under CC BY 4.0. Khronos marks belong to The Khronos Group.</small></p>
 
 ## Overview
 
-luma.gl is a GPU toolkit for the Web focused primarily on data visualization use cases. luma.gl aims to provide support for GPU programmers that need to work directly with shaders and want a low abstraction API that remains conceptually close to the WebGPU and WebGL APIs. Some features of luma.gl include:
+luma.gl is a modular GPU toolkit for the web. Its portable device API stays close to WebGPU while
+supporting both WebGPU and WebGL 2, from low-level shaders and resources to physically based scenes,
+open 3D assets, animation, and data visualization.
 
-- A robust GLSL shader module system.
-- A convenient object-oriented API wrapping most WebGL objects
-- Higher-level engine constructs to manage the animation loop, drawing and resource management
+- Portable graphics resources, render pipelines, and compute capabilities where WebGPU supports
+  them.
+- Composable GLSL/WGSL shader modules, physically based materials, lighting, and image-based
+  environments.
+- Shared scenegraph, animation, morph-target, model, and resource-management primitives.
+- First-class glTF 2.0 assets, physical materials, skeletal/morph animation, and supported glTF
+  extensions.
+- An experimental, private retained scene interface built in the spirit of the ANARI object model.
 
-Unlike other common WebGL APIs, the developer can choose to use the parts of luma.gl that support their use case and leave the others behind.
+Applications can adopt the modules they need without taking on an independent renderer, a
+parallel material implementation, or a monolithic scene runtime.
+
+> **Standards identity:** The private `@luma.gl/anari` workspace is independently developed and
+> inspired by ANARI concepts. It is not an official ANARI implementation, is not certified or
+> conformant, and is not affiliated with or endorsed by The Khronos Group. glTF, WebGL, and ANARI
+> trademarks belong to their respective owners.
 
 While generic enough to be used for general 3D rendering, luma.gl's mandate is primarily to support GPU needs of data visualization frameworks in the vis.gl suite, such as:
 

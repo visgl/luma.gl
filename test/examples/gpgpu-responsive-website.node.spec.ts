@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
@@ -132,9 +132,19 @@ describe('responsive GPGPU website examples', () => {
     const catalogSource = readFileSync(EXAMPLE_CATALOG_PATH, 'utf8');
     const cardSource = readFileSync(EXAMPLE_CARD_PATH, 'utf8');
 
-    expect(catalogSource.match(/category === 'GPGPU'/g)?.length).toBeGreaterThanOrEqual(5);
-    expect(catalogSource).toContain("if (category === 'GPGPU') return 'compute'");
+    expect(catalogSource).toContain(
+      "return category === 'GPGPU' || category.startsWith('GPGPU Graph');"
+    );
+    expect(
+      catalogSource.match(/isGeneralPurposeGPUCategory\(category\)/g)?.length
+    ).toBeGreaterThanOrEqual(4);
+    expect(catalogSource).toContain("if (isGeneralPurposeGPUCategory(category)) return 'compute'");
+    expect(catalogSource).toContain(
+      "if (category === 'GPGPU Graph') return 'GPU data and compute pipelines'"
+    );
     expect(catalogSource).toContain('Compute, projections, and GPU-native data');
-    expect(cardSource).toContain("if (category === 'GPGPU') return '#a78bfa'");
+    expect(cardSource).toContain(
+      "if (category === 'GPGPU' || category.startsWith('GPGPU Graph')) return '#a78bfa';"
+    );
   });
 });

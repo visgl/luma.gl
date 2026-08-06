@@ -10,6 +10,19 @@ const HERO_CAPABILITIES = ['WebGPU', 'WebGL2', 'GPU compute', 'HDR rendering'];
 
 const FEATURED_EXAMPLES = [
   {
+    title: 'glTF Asset Studio',
+    route: 'showcase/gltf',
+    image: 'showcase/gltf.jpg',
+    description:
+      'Explore standards-first glTF assets with physical materials, animated characters, morph targets, native extensions, and portable WebGPU/WebGL rendering.',
+    category: 'glTF',
+    backends: ['webgpu', 'webgl2'],
+    highDynamicRange: true,
+    difficulty: 'intermediate',
+    maturity: 'stable',
+    topics: ['gltf', 'materials', 'animation']
+  },
+  {
     title: 'Lightstorm Megacity',
     route: 'showcase/lightstorm-megacity',
     image: 'showcase/lightstorm-megacity.jpg',
@@ -130,10 +143,10 @@ const CAPABILITY_STORIES = [
   },
   {
     index: '03',
-    title: 'Open by design',
+    title: 'Open assets, without compromise',
     description:
-      'Build with a TypeScript-first API across WebGPU and WebGL2, with natural paths into deck.gl, Arrow, and glTF.',
-    technologies: ['WebGPU + WebGL2', 'Apache Arrow', 'deck.gl + glTF']
+      'Load, animate, render, and round-trip standards-first glTF assets with shared physical materials, skeletons, morph targets, and native animation pointers.',
+    technologies: ['glTF 2.0 + GLB', 'PBR + animation', 'WebGPU + WebGL2']
   }
 ];
 
@@ -187,7 +200,7 @@ export default function IndexPage() {
             </h1>
             <p className={styles.heroTagline}>{siteConfig.tagline}</p>
             <p className={styles.heroDescription}>
-              Build living worlds, responsive simulations, and rich data visualizations—at the
+              Build living worlds, responsive simulations, and massive data visualizations—at the
               speed of the GPU.
             </p>
 
@@ -215,15 +228,29 @@ export default function IndexPage() {
             <span className={styles.liveSceneIndicator} aria-hidden="true" />
             Live GPU-rendered scene
           </p>
+          <a
+            className={styles.discoveryCue}
+            href="#flagship-examples"
+            aria-label="Explore the live examples and GPU capabilities below"
+          >
+            <span>Explore what’s below</span>
+            <span className={styles.discoveryCueArrow} aria-hidden="true">
+              ↓
+            </span>
+          </a>
         </section>
 
-        <section className={styles.flagshipSection} aria-labelledby="flagship-examples-heading">
+        <section
+          className={styles.flagshipSection}
+          id="flagship-examples"
+          aria-labelledby="flagship-examples-heading"
+        >
           <div className={styles.sectionContainer}>
             <div className={styles.sectionHeading}>
               <div>
-                <p className={styles.sectionEyebrow}>Built with luma.gl</p>
+                <p className={styles.sectionEyebrow}>Build with luma.gl</p>
                 <h2 className={styles.sectionTitle} id="flagship-examples-heading">
-                  See what the GPU can do.
+                  See what your GPU can do.
                 </h2>
               </div>
               <p className={styles.sectionDescription}>

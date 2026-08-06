@@ -1,6 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import type {AnimationSampler} from '@luma.gl/engine';
 
 /** Parsed glTF animation definition. */
 export type GLTFAnimation = {
@@ -11,7 +13,7 @@ export type GLTFAnimation = {
 };
 
 /** Supported glTF animation target paths. */
-export type GLTFAnimationPath = 'translation' | 'rotation' | 'scale' | 'weights';
+export type GLTFAnimationPath = 'translation' | 'rotation' | 'scale' | 'weights' | 'visibility';
 
 /** Parsed glTF animation channel that targets a scenegraph node. */
 export type GLTFNodeAnimationChannel = {
@@ -33,8 +35,12 @@ export type GLTFMaterialAnimationProperty =
   | 'attenuationColor'
   | 'attenuationDistance'
   | 'baseColorFactor'
+  | 'bumpFactor'
   | 'clearcoatFactor'
   | 'clearcoatRoughnessFactor'
+  | 'diffuseTransmissionFactor'
+  | 'diffuseTransmissionColorFactor'
+  | 'dispersion'
   | 'emissiveFactor'
   | 'emissiveStrength'
   | 'ior'
@@ -42,10 +48,12 @@ export type GLTFMaterialAnimationProperty =
   | 'iridescenceIor'
   | 'iridescenceThicknessRange'
   | 'metallicRoughnessValues'
+  | 'multiscatterColorFactor'
   | 'normalScale'
   | 'occlusionStrength'
   | 'sheenColorFactor'
   | 'sheenRoughnessFactor'
+  | 'scatterAnisotropy'
   | 'specularColorFactor'
   | 'specularIntensityFactor'
   | 'thicknessFactor'
@@ -87,14 +95,54 @@ export type GLTFTextureTransformAnimationChannel = {
   baseTransform: import('../../pbr/texture-transform').PBRTextureTransform;
 };
 
+/** Camera projection property targeted by `KHR_animation_pointer`. */
+export type GLTFCameraAnimationProperty =
+  | 'aspectRatio'
+  | 'yfov'
+  | 'znear'
+  | 'zfar'
+  | 'xmag'
+  | 'ymag';
+
+/** Parsed glTF animation channel that updates an authored camera projection. */
+export type GLTFCameraAnimationChannel = {
+  type: 'camera';
+  sampler: GLTFAnimationSampler;
+  pointer: string;
+  targetCameraIndex: number;
+  projection: 'perspective' | 'orthographic';
+  property: GLTFCameraAnimationProperty;
+};
+
+/** Punctual-light property targeted by `KHR_animation_pointer`. */
+export type GLTFLightAnimationProperty =
+  | 'color'
+  | 'intensity'
+  | 'range'
+  | 'innerConeAngle'
+  | 'outerConeAngle';
+
+/** Parsed glTF animation channel that updates an authored punctual-light definition. */
+export type GLTFLightAnimationChannel = {
+  type: 'light';
+  sampler: GLTFAnimationSampler;
+  pointer: string;
+  targetLightIndex: number;
+  property: GLTFLightAnimationProperty;
+  /** Individual RGB component index, when the pointer addresses one color element. */
+  component?: number;
+};
+
 /** Parsed glTF animation channel. */
 export type GLTFAnimationChannel =
   | GLTFNodeAnimationChannel
   | GLTFMaterialAnimationChannel
-  | GLTFTextureTransformAnimationChannel;
+  | GLTFTextureTransformAnimationChannel
+  | GLTFCameraAnimationChannel
+  | GLTFLightAnimationChannel;
 
 /** Parsed glTF animation sampler. */
-export type GLTFAnimationSampler = {
+export type GLTFAnimationSampler = AnimationSampler & {
   /** Keyframe times in seconds. */
   input: number[];
   /** glTF interpolation mode. */

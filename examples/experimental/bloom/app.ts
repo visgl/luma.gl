@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, Framebuffer, TextureFormatColor} from '@luma.gl/core';
 import {bloom, createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';

@@ -1,24 +1,59 @@
 # @luma.gl/anari
 
+<p>
+  <a href="https://www.khronos.org/anari/">
+    <img src="/img/standards/anari.svg" alt="ANARI" height="72" />
+  </a>
+</p>
+
+<p><small>Experimental asset import</small></p>
+
+<div className="docs-api-card__logos" role="group" aria-label="Experimental asset import">
+  <a href="https://www.khronos.org/gltf/">
+    <img
+      src="/img/standards/gltf.svg"
+      alt="glTF"
+      height="50"
+      className="docs-api-card__logo docs-api-card__logo--secondary"
+    />
+  </a>
+  <a href="https://openusd.org/">
+    <img
+      src="/img/standards/openusd.png"
+      alt="OpenUSD"
+      height="40"
+      className="docs-api-card__logo docs-api-card__logo--secondary docs-api-card__logo--on-dark"
+    />
+  </a>
+</div>
+
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
-`@luma.gl/anari` provides a private, experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
+`@luma.gl/anari` provides a private, experimental, independently developed retained rendering API
+built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras,
+worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that
+description into portable WebGPU or WebGL rendering.
 
-:::caution[Experimental proof of concept]
-This package follows concepts from the ANARI object model, but it is not an ANARI C binding, does not implement the full ANARI specification, and does not claim Khronos conformance. Its TypeScript API and supported feature set can change.
+:::caution[Independent, non-conformant proof of concept]
+This package is inspired by the ANARI object model, but it is not an official ANARI implementation,
+is not an ANARI C binding, does not implement the full ANARI specification, and is not certified or
+conformant. It is not affiliated with or endorsed by The Khronos Group. ANARI and its logo are
+trademarks of The Khronos Group and identify the standard that inspires this project. The TypeScript
+API and supported feature set can change.
 :::
 
 ## Reference pages
 
-- [Device and object lifecycle](/docs/api-reference/anari/anari-device): `ANARIDevice`, object creation, discovery, staged parameters, commits, and destruction.
-- [Arrays and geometry](/docs/api-reference/anari/anari-geometry): `ANARIArray`, typed data, triangle meshes, spheres, cylinders, cones, and quads.
-- [Materials and lighting](/docs/api-reference/anari/anari-materials-and-lights): matte and physically based materials; ambient, directional, point, and spot lights.
+- [Device and object lifecycle](/docs/api-reference/anari/anari-device): `ANARIDevice`, object creation, renderer registration, discovery, staged parameters, commits, and destruction.
+- [Arrays and geometry](/docs/api-reference/anari/anari-geometry): triangle meshes, RGB/RGBA colors, secondary UVs, joint palettes, morph targets, and analytic primitives.
+- [Materials and lighting](/docs/api-reference/anari/anari-materials-and-lights): all 17 canonical PBR maps, alpha masking/blending, UV samplers, punctual lights, and existing image-based lighting.
+- [Animation and glTF integration](/docs/api-reference/anari/anari-animation): retained node hierarchies, optional glTF adaptation, automatic skeletal and morph playback, mixer controls, and batched object commits.
 - [Scene hierarchy](/docs/api-reference/anari/anari-scene): surfaces, groups, transform instances, worlds, and instancing behavior.
-- [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, renderer controls, bloom, fog, frame rendering, and statistics.
+- [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, forward/deferred/ray-tracing renderer controls, bloom, fog, frame rendering, and statistics.
 - [Scene schemas and JSON validation](/docs/api-reference/anari/anari-schemas): optional Zod object schemas, retained-reference validation, generated JSON Schema, and editor integration.
 - [ANARI C API and THREE.js mapping](/docs/api-reference/anari/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
@@ -77,6 +112,18 @@ import {
 
 The package also exports parameter interfaces, subtype unions, object metadata, frame statistics, and shared vector/matrix aliases. Each reference page documents its related exported types.
 
+Optional functionality is isolated in separate entry points:
+
+```ts
+import {ANARIDevice} from '@luma.gl/anari';
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
+```
+
+The core entry point contains neither a glTF file loader nor Zod. The optional `/gltf` adapter
+consumes glTF-owned decoded data and reuses the existing engine animation mixer; `/schemas`
+separately loads the retained JSON validation helpers.
+
 ## Supported object subtypes
 
 | Object type | Supported subtypes |
@@ -91,7 +138,7 @@ The package also exports parameter interfaces, subtype unions, object metadata, 
 | World | `default` |
 | Light | `ambient`, `directional`, `point`, `spot` |
 | Camera | `perspective`, `orthographic` |
-| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth` |
+| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth`, `raytrace`, and registered custom subtypes |
 | Frame | `default` |
 
 Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead of assuming future implementations expose the same set.
@@ -102,11 +149,21 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | --- | --- | --- |
 | Retained scene objects and instanced surfaces | Supported | Supported |
 | Matte and physically based materials | Supported | Supported |
-| PBR image samplers and UV transforms | Supported | Supported |
+| All 17 canonical PBR image maps and slot-specific UV transforms | Supported | Supported |
+| Secondary UVs and RGB/RGBA vertex colors | Supported | Supported |
+| Alpha masking, blending, and double-sided materials | Supported | Supported |
+| Retained node/material/UV animation and morph targets | Supported | Supported |
+| Automatic imported glTF skeletal animation | Supported | Supported |
+| Explicit surface joint palettes | Supported | Supported |
+| Existing caller-owned image-based lighting textures | Supported | Supported |
+| Captured opaque-scene transmission and refraction | Supported | Supported |
 | Ambient, directional, point, and spot lighting | Supported | Supported |
-| Deferred renderer | Supported | WebGPU-only G-buffer plus direct deferred lighting. |
+| Deferred renderer | WebGPU-only G-buffer and direct deferred lighting | Not supported |
+| Software ray-tracing renderer | Shared `RayTracingSceneRenderer` and WebGPU command graph | Not supported |
+| Ray-traced skeletal/morph deformation or advanced PBR | Not supported; use forward/deferred rendering | Not supported |
 | Debug normals and depth renderers | Supported | Supported |
-| Bloom and fog | Supported | Supported |
+| Bloom | Supported | Supported |
+| Deferred fog | Supported | Not supported |
 | Extended-range, Display P3 presentation | Supported on compatible displays and browsers | Not supported; SDR fallback |
 
 See [HDR and backend selection](/docs/api-guide/engine/anari-rendering#hdr-and-backend-selection) for capability detection and canvas setup.
@@ -124,8 +181,13 @@ renderer subtype is selected as frame state outside the renderer-independent sce
 Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable
 JSON presets.
 
-The optional `@luma.gl/anari/schemas` entry point exports experimental Zod schemas and generated JSON
-Schema for editor integration. The scene format is not an official ANARI serialization format.
+The optional `@luma.gl/anari/gltf` entry point binds source node hierarchies, material and texture
+tracks, animated morph targets, and imported glTF skeletons to existing retained objects. The
+showcase preserves joint attributes, authored joint nodes, and inverse bind matrices; it creates
+reusable mesh-local palettes automatically and commits each animated retained surface at most once
+per frame. Applications can also provide explicit `skin: {jointMatrices}` surface descriptors.
+The separate `@luma.gl/anari/schemas` entry point exports experimental Zod schemas and generated
+JSON Schema for editor integration. The scene format is not an official ANARI serialization format.
 See the [schema API reference](/docs/api-reference/anari/anari-schemas) and the
 [JSON scene playground developer guide](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground)
 for the full schema, animation vocabulary, and editing controls.

@@ -1,4 +1,6 @@
-// luma.gl MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Bindings, BindingsByGroup, RenderPass, VertexArray} from '@luma.gl/core';
 import {

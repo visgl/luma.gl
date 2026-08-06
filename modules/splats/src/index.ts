@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export {
   GPUSplatData,
@@ -33,6 +33,10 @@ export {
   type SplatRendererProps,
   type SplatRendererStats
 } from './splat-renderer';
+export {
+  GPUSplatGraphRenderer,
+  type GPUSplatGraphRendererProps
+} from './gpu-splat-graph-renderer';
 export {
   SPLAT_ATTRIBUTE_SHADER_LAYOUT,
   SPLAT_ATTRIBUTE_WGSL_SHADER,

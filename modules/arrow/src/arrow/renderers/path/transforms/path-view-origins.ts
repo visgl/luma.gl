@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUVector} from '@luma.gl/tables';
 import {Data, FixedSizeList, Float32, Vector} from 'apache-arrow';

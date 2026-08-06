@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
@@ -373,6 +373,8 @@ export type DeviceProps = {
   failIfMajorPerformanceCaveat?: boolean;
   /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to opt into compatibility mode, or `'best-available'` to upgrade a compatibility adapter to core when possible. */
   featureLevel?: WebGPUFeatureLevel;
+  /** WebGPU only: requests an adapter that can present frames to a WebXR session. */
+  xrCompatible?: boolean;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;

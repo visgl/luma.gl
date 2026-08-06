@@ -1,6 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {
+  GPU_TRACE_LINK_RECORD_WORD_LENGTH,
+  GPU_TRACE_SPAN_RECORD_WORD_LENGTH
+} from '@luma.gl/experimental/lutrace';
 
 export const TRACE_DURATION = 1000;
 export const TRACE_GROUPS = ['compute', 'network', 'storage'] as const;
@@ -9,8 +14,8 @@ export const TRACE_THREADS_PER_PROCESS = 4;
 export const TRACE_LANES_PER_THREAD = 4;
 export const TRACE_THREAD_COUNT = TRACE_PROCESS_COUNT * TRACE_THREADS_PER_PROCESS;
 export const TRACE_LANE_COUNT = TRACE_THREAD_COUNT * TRACE_LANES_PER_THREAD;
-export const TRACE_SPAN_RECORD_WORD_LENGTH = 8;
-export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = 4;
+export const TRACE_SPAN_RECORD_WORD_LENGTH = GPU_TRACE_SPAN_RECORD_WORD_LENGTH;
+export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = GPU_TRACE_LINK_RECORD_WORD_LENGTH;
 export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 8;
 export const TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH = 6;
 // One span batch maps to one portable WebGPU workgroup for candidate-driven local compaction.

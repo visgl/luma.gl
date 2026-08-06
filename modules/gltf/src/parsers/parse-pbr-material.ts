@@ -1,24 +1,23 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
-import {Texture, log, textureFormatDecoder} from '@luma.gl/core';
-import type {GLTFPostprocessed, GLTFSampler} from '@loaders.gl/gltf';
-
-import {type ParsedPBRMaterial} from '../pbr/pbr-material';
-import {type PBREnvironment} from '../pbr/pbr-environment';
+import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {Device, ExternalImage, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
+import {log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
-import {GLEnum} from '../webgl-to-webgpu/gltf-webgl-constants';
-import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
+import {type PBREnvironment} from '../pbr/pbr-environment';
+import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {
+  getTextureTransformMatrix,
   getTextureTransformSlotDefinition,
   getTextureTransformSlotDefinitions,
-  getTextureTransformMatrix,
+  type PBRTextureTransformSlot,
   resolveTextureCoordinateSet,
-  resolveTextureTransform,
-  type PBRTextureTransformSlot
+  resolveTextureTransform
 } from '../pbr/texture-transform';
+import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
+import {GLEnum} from '../webgl-to-webgpu/gltf-webgl-constants';
 
 // TODO - synchronize the GLTF... types with loaders.gl
 // TODO - remove the glParameters, use only parameters
@@ -73,11 +72,35 @@ type GLTFMaterialTransmissionExtension = {
   transmissionTexture?: GLTFTexture;
 };
 
+type GLTFMaterialBumpExtension = {
+  bumpFactor?: number;
+  bumpTexture?: GLTFTexture;
+};
+
+type GLTFMaterialDiffuseTransmissionExtension = {
+  diffuseTransmissionFactor?: number;
+  diffuseTransmissionTexture?: GLTFTexture;
+  diffuseTransmissionColorFactor?: [number, number, number];
+  diffuseTransmissionColorTexture?: GLTFTexture;
+};
+
 type GLTFMaterialVolumeExtension = {
   thicknessFactor?: number;
   thicknessTexture?: GLTFTexture;
   attenuationDistance?: number;
   attenuationColor?: [number, number, number];
+};
+
+type GLTFMaterialVolumeScatterExtension = {
+  multiscatterColorFactor?: [number, number, number];
+  /** The active draft schema and older reference renderer use this legacy spelling. */
+  multiscatterColor?: [number, number, number];
+  multiscatterColorTexture?: GLTFTexture;
+  scatterAnisotropy?: number;
+};
+
+type GLTFMaterialDispersionExtension = {
+  dispersion?: number;
 };
 
 type GLTFMaterialClearcoatExtension = {
@@ -118,8 +141,12 @@ type GLTFMaterialExtensions = {
   KHR_materials_unlit?: Record<string, never>;
   KHR_materials_specular?: GLTFMaterialSpecularExtension;
   KHR_materials_ior?: GLTFMaterialIorExtension;
+  EXT_materials_bump?: GLTFMaterialBumpExtension;
   KHR_materials_transmission?: GLTFMaterialTransmissionExtension;
+  KHR_materials_diffuse_transmission?: GLTFMaterialDiffuseTransmissionExtension;
   KHR_materials_volume?: GLTFMaterialVolumeExtension;
+  KHR_materials_volume_scatter?: GLTFMaterialVolumeScatterExtension;
+  KHR_materials_dispersion?: GLTFMaterialDispersionExtension;
   KHR_materials_clearcoat?: GLTFMaterialClearcoatExtension;
   KHR_materials_sheen?: GLTFMaterialSheenExtension;
   KHR_materials_iridescence?: GLTFMaterialIridescenceExtension;
@@ -141,7 +168,11 @@ type TextureEnabledUniformName =
   | 'sheenColorMapEnabled'
   | 'sheenRoughnessMapEnabled'
   | 'iridescenceMapEnabled'
-  | 'anisotropyMapEnabled';
+  | 'anisotropyMapEnabled'
+  | 'bumpMapEnabled'
+  | 'diffuseTransmissionMapEnabled'
+  | 'diffuseTransmissionColorMapEnabled'
+  | 'multiscatterColorMapEnabled';
 
 type TextureFeatureOptions = {
   define?: string;
@@ -201,8 +232,7 @@ export function parsePBRMaterial(
   const parsedMaterial: ParsedPBRMaterial = {
     defines: {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
-      MANUAL_SRGB: true,
-      SRGB_FAST_APPROXIMATION: true
+      MANUAL_SRGB: true
     },
     bindings: {},
     uniforms: {
@@ -526,6 +556,7 @@ function parseMaterialExtensions(
     attributes
   );
   parseIorExtension(extensions.KHR_materials_ior, parsedMaterial);
+  parseBumpExtension(device, extensions.EXT_materials_bump, parsedMaterial, gltf, attributes);
   parseTransmissionExtension(
     device,
     extensions.KHR_materials_transmission,
@@ -533,7 +564,23 @@ function parseMaterialExtensions(
     gltf,
     attributes
   );
+  parseDiffuseTransmissionExtension(
+    device,
+    extensions.KHR_materials_diffuse_transmission,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
   parseVolumeExtension(device, extensions.KHR_materials_volume, parsedMaterial, gltf, attributes);
+  parseVolumeScatterExtension(
+    device,
+    extensions.KHR_materials_volume_scatter,
+    extensions.KHR_materials_volume,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
+  parseDispersionExtension(extensions.KHR_materials_dispersion, parsedMaterial);
   parseClearcoatExtension(
     device,
     extensions.KHR_materials_clearcoat,
@@ -563,8 +610,12 @@ function hasMaterialExtensionShading(extensions: GLTFMaterialExtensions): boolea
   return Boolean(
     extensions.KHR_materials_specular ||
       extensions.KHR_materials_ior ||
+      extensions.EXT_materials_bump ||
       extensions.KHR_materials_transmission ||
+      extensions.KHR_materials_diffuse_transmission ||
       extensions.KHR_materials_volume ||
+      extensions.KHR_materials_volume_scatter ||
+      extensions.KHR_materials_dispersion ||
       extensions.KHR_materials_clearcoat ||
       extensions.KHR_materials_sheen ||
       extensions.KHR_materials_iridescence ||
@@ -656,6 +707,81 @@ function parseTransmissionExtension(
   }
 }
 
+function parseBumpExtension(
+  device: Device,
+  extension: GLTFMaterialBumpExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial,
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
+): void {
+  if (!extension) {
+    return;
+  }
+
+  parsedMaterial.uniforms.bumpFactor = Math.max(extension.bumpFactor ?? 1, 0);
+  if (extension.bumpTexture) {
+    addTexture(device, extension.bumpTexture, 'pbr_bumpSampler', parsedMaterial, {
+      featureOptions: {define: 'HAS_BUMPMAP', enabledUniformName: 'bumpMapEnabled'},
+      gltf,
+      attributes,
+      textureTransformSlot: 'bump'
+    });
+  }
+}
+
+function parseDiffuseTransmissionExtension(
+  device: Device,
+  extension: GLTFMaterialDiffuseTransmissionExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial,
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
+): void {
+  if (!extension) {
+    return;
+  }
+
+  parsedMaterial.uniforms.diffuseTransmissionFactor = Math.min(
+    Math.max(extension.diffuseTransmissionFactor ?? 0, 0),
+    1
+  );
+  parsedMaterial.uniforms.diffuseTransmissionColorFactor =
+    extension.diffuseTransmissionColorFactor || [1, 1, 1];
+  if (extension.diffuseTransmissionTexture) {
+    addTexture(
+      device,
+      extension.diffuseTransmissionTexture,
+      'pbr_diffuseTransmissionSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_DIFFUSETRANSMISSIONMAP',
+          enabledUniformName: 'diffuseTransmissionMapEnabled'
+        },
+        gltf,
+        attributes,
+        textureTransformSlot: 'diffuseTransmission'
+      }
+    );
+  }
+  if (extension.diffuseTransmissionColorTexture) {
+    addTexture(
+      device,
+      extension.diffuseTransmissionColorTexture,
+      'pbr_diffuseTransmissionColorSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_DIFFUSETRANSMISSIONCOLORMAP',
+          enabledUniformName: 'diffuseTransmissionColorMapEnabled'
+        },
+        gltf,
+        attributes,
+        textureTransformSlot: 'diffuseTransmissionColor'
+      }
+    );
+  }
+}
+
 function parseVolumeExtension(
   device: Device,
   extension: GLTFMaterialVolumeExtension | undefined,
@@ -685,6 +811,52 @@ function parseVolumeExtension(
   }
   if (extension.attenuationColor) {
     parsedMaterial.uniforms.attenuationColor = extension.attenuationColor;
+  }
+}
+
+function parseVolumeScatterExtension(
+  device: Device,
+  extension: GLTFMaterialVolumeScatterExtension | undefined,
+  volumeExtension: GLTFMaterialVolumeExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial,
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
+): void {
+  if (!extension || !volumeExtension) {
+    return;
+  }
+
+  parsedMaterial.uniforms.multiscatterColorFactor = extension.multiscatterColorFactor ||
+    extension.multiscatterColor || [0, 0, 0];
+  parsedMaterial.uniforms.scatterAnisotropy = Math.min(
+    Math.max(extension.scatterAnisotropy ?? 0, -0.999),
+    0.999
+  );
+  if (extension.multiscatterColorTexture) {
+    addTexture(
+      device,
+      extension.multiscatterColorTexture,
+      'pbr_multiscatterColorSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_MULTISCATTERCOLORMAP',
+          enabledUniformName: 'multiscatterColorMapEnabled'
+        },
+        gltf,
+        attributes,
+        textureTransformSlot: 'multiscatterColor'
+      }
+    );
+  }
+}
+
+function parseDispersionExtension(
+  extension: GLTFMaterialDispersionExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial
+): void {
+  if (extension?.dispersion !== undefined) {
+    parsedMaterial.uniforms.dispersion = Math.max(extension.dispersion, 0);
   }
 }
 
@@ -923,32 +1095,18 @@ function addTexture(
     return;
   }
 
-  const gltfSampler = {
-    wrapS: 10497, // default REPEAT S (U) wrapping mode.
-    wrapT: 10497, // default REPEAT T (V) wrapping mode.
-    minFilter: 9729, // default LINEAR filtering
-    magFilter: 9729, // default LINEAR filtering
-    ...resolvedTextureInfo?.texture?.sampler
-  } as GLTFSampler;
-
   const baseOptions = {
     id: resolvedTextureInfo.uniformName || resolvedTextureInfo.id,
-    sampler: convertSampler(gltfSampler)
+    sampler: {
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+      minFilter: 'linear',
+      magFilter: 'linear',
+      ...convertSampler(resolvedTextureInfo.texture.sampler)
+    } satisfies SamplerProps
   };
 
-  let texture: Texture;
-
-  if (image.compressed) {
-    texture = createCompressedTexture(device, image, baseOptions);
-  } else {
-    const {width, height} = device.getExternalImageSize(image);
-    texture = device.createTexture({
-      ...baseOptions,
-      width,
-      height,
-      data: image
-    });
-  }
+  const texture = createGLTFTexture(device, image, baseOptions);
 
   parsedMaterial.bindings[uniformName] = texture;
   if (define) parsedMaterial.defines[define] = true;
@@ -964,6 +1122,61 @@ function addTexture(
     ] = getTextureTransformMatrix(resolveTextureTransform(gltfTexture as Record<string, any>));
   }
   parsedMaterial.generatedTextures.push(texture);
+}
+
+/** Portable glTF image/sampler settings shared by format parsing and retained-scene importers. */
+export type CreateGLTFTextureOptions = {
+  id: string;
+  sampler: SamplerProps;
+  colorSpace?: 'srgb' | 'linear';
+  width?: number;
+  height?: number;
+};
+
+/** Uploads a source image and materializes any authored mipmap chain without duplicating loaders. */
+export function createGLTFTexture(
+  device: Device,
+  image: ExternalImage | CompressedImage,
+  options: CreateGLTFTextureOptions
+): Texture {
+  if ('compressed' in image) {
+    return createCompressedTexture(device, image, {
+      id: options.id,
+      sampler: options.sampler
+    });
+  }
+
+  const dimensions =
+    options.width !== undefined && options.height !== undefined
+      ? {width: options.width, height: options.height}
+      : device.getExternalImageSize(image);
+  const usesMipmaps =
+    options.sampler.mipmapFilter === 'nearest' || options.sampler.mipmapFilter === 'linear';
+  const mipLevels = usesMipmaps ? device.getMipLevelCount(dimensions.width, dimensions.height) : 1;
+  const texture = device.createTexture({
+    id: options.id,
+    sampler: options.sampler,
+    width: dimensions.width,
+    height: dimensions.height,
+    mipLevels,
+    ...(usesMipmaps
+      ? {usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC}
+      : {}),
+    ...(options.colorSpace
+      ? {format: options.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : 'rgba8unorm'}
+      : {}),
+    data: image
+  });
+
+  if (mipLevels > 1) {
+    if (device.type === 'webgl') {
+      texture.generateMipmapsWebGL();
+    } else if (device.type === 'webgpu') {
+      device.generateMipmapsWebGPU(texture);
+    }
+  }
+
+  return texture;
 }
 
 function resolveTextureInfo(gltfTexture: GLTFTexture, gltf?: GLTFPostprocessed): GLTFTexture {

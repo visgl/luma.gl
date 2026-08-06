@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/gltf",
   "version": "9.4.0-alpha.4",
-  "description": "glTF support for luma.gl",
+  "description": "Standards-first glTF rendering, physical materials, animation, and lossless asset interchange",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -12,9 +12,12 @@
     "access": "public"
   },
   "keywords": [
+    "gltf",
+    "glb",
+    "webgpu",
     "webgl",
-    "glsl",
-    "debug",
+    "pbr",
+    "animation",
     "3d"
   ],
   "types": "dist/index.d.ts",

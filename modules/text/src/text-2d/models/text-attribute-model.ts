@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import type {DynamicTexture, ModelProps} from '@luma.gl/engine';

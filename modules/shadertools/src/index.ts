@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // shadertools exports
 
@@ -137,7 +137,8 @@ export type {FilterShaderPluginProps} from './modules/engine/filter/filter';
 export {filterShaderPlugin} from './modules/engine/filter/filter';
 export type {ClipShaderPluginProps} from './modules/engine/clip/clip';
 export {clipShaderPlugin} from './modules/engine/clip/clip';
-export {skin} from './modules/engine/skin/skin';
+export type {SkinProps, SkinUniforms} from './modules/engine/skin/skin';
+export {skin, SKIN_MAX_JOINTS} from './modules/engine/skin/skin';
 
 // lighting
 export {
@@ -173,9 +174,10 @@ export type {
 export type {
   PBRSceneBindings,
   PBRSceneProps,
-  PBRSceneUniforms
+  PBRSceneUniforms,
+  PBRToneMapMode
 } from './modules/lighting/pbr-material/pbr-scene';
 export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
-export {pbrScene} from './modules/lighting/pbr-material/pbr-scene';
+export {pbrScene, PBR_TONE_MAP_MODE} from './modules/lighting/pbr-material/pbr-scene';

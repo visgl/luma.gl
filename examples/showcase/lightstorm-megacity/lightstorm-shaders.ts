@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture, TextureFormatColor} from '@luma.gl/core';
 import {clusteredDeferredLighting} from '@luma.gl/experimental';

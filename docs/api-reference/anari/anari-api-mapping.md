@@ -70,12 +70,12 @@ The native concept “select an ANARI device implementation” therefore maps to
 | `anariNewWorld(device)` | `anariDevice.newWorld({surface, instance, light})` | `new Scene()` | Supported for direct surfaces, instances, and lights. |
 | `anariNewLight(device, subtype)` | `anariDevice.newLight(subtype, parameters)` | THREE.js light subclasses | Supported for `directional`, `point`, and `spot`; JavaScript additionally provides an `ambient` convenience subtype. |
 | `anariNewCamera(device, subtype)` | `anariDevice.newCamera(subtype, parameters)` | `PerspectiveCamera` / `OrthographicCamera` | Supported for `perspective` and `orthographic`. |
-| `anariNewRenderer(device, subtype)` | `anariDevice.newRenderer(subtype, parameters)` | Renderer configuration / debug material | Supported for `default`, WebGPU-only `deferred`, `debugNormals`, and `debugDepth`. |
+| `anariNewRenderer(device, subtype)` | `anariDevice.newRenderer(subtype, parameters)` | Renderer configuration / debug material | Supported for `default`, WebGPU-only `deferred` and `raytrace`, `debugNormals`, `debugDepth`, and locally registered renderer runtimes. |
 | `anariNewFrame(device)` | `anariDevice.newFrame({world, camera, renderer, size})` | `renderer.render(scene, camera)` / render target | Supported for canvas presentation; arbitrary mapped output channels are not implemented. |
 | `anariNewSampler()` | `anariDevice.newSampler('image2D', {image, transform})` | `Texture`, sampler state, texture-backed material properties | Partial: retained 2D image samplers; no procedural or volume samplers. |
 | `anariNewSpatialField()` | No equivalent | 3D texture / volume field | Not implemented. |
 | `anariNewVolume()` | No equivalent | Volume renderer / 3D texture | Not implemented. |
-| `anariNewObject()` | `new ANARIObject(...)` exists, but is not renderer-extensible | Custom `Object3D` subclass | No generic extension-object registration or custom renderer support. |
+| `anariNewObject()` | `new ANARIObject(...)` exists; renderer runtimes register separately | Custom `Object3D` subclass | No generic extension-object registration; custom renderer runtimes use `anariDevice.registerRenderer()`. |
 
 ### Important primitive differences
 
@@ -211,7 +211,7 @@ Only destroy the graphics device when the application no longer shares it with o
 
 | Official ANARI subtype | `@luma.gl/anari` | Comparable THREE.js class | Important difference |
 | --- | --- | --- | --- |
-| `triangle` | `newGeometry('triangle', {...})` | `BufferGeometry` + position/normal/index attributes | Supports packed positions, optional normals, and 16/32-bit indices; not the complete official attribute system. |
+| `triangle` | `newGeometry('triangle', {...})` | `BufferGeometry` + position/normal/tangent/UV/color/skin/index attributes | Supports positions, normals, XYZW tangents, RGB/RGBA colors, two UV sets, joint indices/weights, position/normal/tangent morph targets, and 16/32-bit indices; not the complete official attribute system. |
 | `sphere` | `newGeometry('sphere', {radius, segments})` | `SphereGeometry` | One procedural sphere; official ANARI supports arrays of sphere primitives. |
 | `cylinder` | `newGeometry('cylinder', {radius, height, segments})` | `CylinderGeometry` | One capped procedural cylinder; official ANARI supports collections of indexed cylinder primitives. |
 | `cone` | `newGeometry('cone', {radius, height, segments})` | `ConeGeometry` | One capped procedural cone; official ANARI supports arrays of cone primitives. |
@@ -223,18 +223,19 @@ Only destroy the graphics device when the application no longer shares it with o
 
 | Official ANARI concept | `@luma.gl/anari` | Comparable THREE.js property | Notes |
 | --- | --- | --- | --- |
-| `matte.color` | `material.color` / `baseColor` | `material.color` | Constant RGB/RGBA values only. |
+| `matte.color` | `material.color` / `baseColor` / `baseColorTexture` | `material.color` / `map` | Constant RGB/RGBA values optionally multiplied by a retained image map. |
 | `physicallyBased.baseColor` | `baseColor` / `baseColorTexture` | `MeshStandardMaterial.color` / `map` | Constant color multiplied by an optional image sampler. |
-| `metallic` | `metallic` | `MeshStandardMaterial.metalness` | Same broad metallic-roughness concept; property names differ. |
-| `roughness` | `roughness` | `MeshStandardMaterial.roughness` | Constant scalar only. |
-| `opacity` | `opacity` | `material.opacity` + `material.transparent` | Blend state is selected when this implementation first compiles the surface. |
-| `alphaMode` | Accepted, not interpreted | `transparent`, `alphaTest` | Official `opaque`, `blend`, and `mask` semantics are not fully implemented. |
-| `emissive` | `emissive` | `MeshStandardMaterial.emissive` | Constant emissive RGB. |
+| `metallic` | `metallic`, `metallicRoughnessTexture` | `MeshStandardMaterial.metalness` / `metalnessMap` | Scalar metallic factor and the source map's blue channel. |
+| `roughness` | `roughness`, `metallicRoughnessTexture` | `MeshStandardMaterial.roughness` / `roughnessMap` | Scalar roughness factor and the source map's green channel. |
+| `opacity` | `opacity`, `alphaMode`, `alphaCutoff` | `material.opacity` + `material.transparent` / `alphaTest` | Committed structural changes rebuild the shared blend/mask rendering pipeline. |
+| `alphaMode` | `opaque`, `mask`, and `blend`; `alphaCutoff` supported | `transparent`, `alphaTest` | Committed changes select the appropriate shared rendering pipeline. |
+| `emissive` | `emissive`, `emissiveTexture` | `MeshStandardMaterial.emissive` / `emissiveMap` | Constant emissive RGB optionally multiplied by an image map. |
 | Emissive scaling | `emissiveStrength` | `MeshStandardMaterial.emissiveIntensity` | JavaScript convenience scalar. |
-| `clearcoat` | `clearcoat`, `clearcoatRoughness`, `clearcoatTexture` | `MeshPhysicalMaterial.clearcoat` | Simplified clearcoat term with factor and map; no clearcoat normal map. |
-| `iridescence` | `iridescence` | `MeshPhysicalMaterial.iridescence` | Simplified angle-dependent spectral effect. |
-| Normal, roughness, metallic, and base-color samplers | `normalTexture`, `metallicRoughnessTexture`, `baseColorTexture` | Material textures/maps | Supported through retained `image2D` samplers and `vertex.attribute1` UVs. |
-| Transmission, index of refraction, sheen, attenuation, anisotropy | `transmission`, `transmissionTexture`, `indexOfRefraction`, `sheenColor`, `sheenRoughness`, `sheenColorTexture` | `MeshPhysicalMaterial` advanced properties | Partial: transmission and sheen are approximated; attenuation and anisotropy remain unsupported. |
+| `clearcoat` | `clearcoat`, `clearcoatRoughness`, `clearcoatTexture`, `clearcoatRoughnessTexture`, `clearcoatNormalTexture` | `MeshPhysicalMaterial.clearcoat` / clearcoat maps | Shared clearcoat term supports authored factor, roughness, and tangent-space normal maps. |
+| `iridescence` | `iridescence`, `iridescenceTexture`, `iridescenceThicknessTexture` | `MeshPhysicalMaterial.iridescence` / iridescence maps | Shared angle-dependent thin-film approximation with authored factor and thickness maps. |
+| Normal, roughness, metallic, and base-color samplers | `normalTexture`, `metallicRoughnessTexture`, `baseColorTexture` | Material textures/maps | Retained `image2D` samplers support independent transforms and either primary or secondary UVs. |
+| Transmission, index of refraction, and volume attenuation | `transmission`, `transmissionTexture`, `thickness`, `thicknessTexture`, `attenuationColor`, `attenuationDistance`, `indexOfRefraction` | `MeshPhysicalMaterial.transmission` / thickness / attenuation | Shared renderer captures opaque scene color for screen-space refraction; it is not layered ray tracing. |
+| Sheen and anisotropy | `sheenColor`, `sheenRoughness`, `sheenColorTexture`, `sheenRoughnessTexture`, `anisotropyStrength`, `anisotropyRotation`, `anisotropyTexture` | `MeshPhysicalMaterial.sheen` / `anisotropy` and associated maps | Authored factors and maps are supported through the existing shared shader approximations. |
 
 ## Light and camera comparison
 
@@ -242,7 +243,7 @@ Only destroy the graphics device when the application no longer shares it with o
 | --- | --- | --- | --- |
 | Directional light | `newLight('directional', {direction, irradiance})` | `DirectionalLight` | Direction and intensity map conceptually; shadow behavior is absent. |
 | Point light | `newLight('point', {position, intensity})` | `PointLight` | Fixed attenuation; no official radius/power behavior. |
-| Spot light | `newLight('spot', {position, direction, openingAngle})` | `SpotLight.angle` / `SpotLight.penumbra` | `falloffAngle` is accepted but ignored; inner cone is derived automatically. |
+| Spot light | `newLight('spot', {position, direction, openingAngle, falloffAngle})` | `SpotLight.angle` / `SpotLight.penumbra` | `openingAngle` sets the outer cone; `falloffAngle` sets the inner cone. |
 | Renderer ambient lighting | `renderer.ambientRadiance` | `AmbientLight` or environment lighting | This aligns more closely with the official renderer ambient-light extension. |
 | Ambient light object | `newLight('ambient', ...)` | `AmbientLight` | JavaScript convenience; not an official ANARI 1.1 light subtype. |
 | HDRI / quad / ring area lights | Not supported | Environment maps / area lights | Not implemented. |

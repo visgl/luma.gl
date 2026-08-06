@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, CommandEncoder, TextureFormatColor} from '@luma.gl/core';
 import {Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';

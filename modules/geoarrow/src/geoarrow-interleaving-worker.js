@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {dehydrateArrowTable, hydrateArrowTable} from './arrow-table-transport.ts';
 import {convertGeoArrowTableToInterleaved} from './geoarrow-interleaving.ts';

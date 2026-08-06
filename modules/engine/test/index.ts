@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // utils
 import './utils/deep-equal.spec';
@@ -26,6 +26,8 @@ import './geometry/gpu-geometry.spec';
 import './animation/timeline.spec';
 import './animation/key-frames.spec';
 import './animation/animator.spec';
+import './animation/animation-mixer.spec';
+import './animation/morph-targets.spec';
 
 // Scenegraph
 import './scenegraph/group-node.spec';

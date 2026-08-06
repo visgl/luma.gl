@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Deck, type DeckProps, type View} from '@deck.gl/core';
 import type {Device} from '@luma.gl/core';

@@ -363,6 +363,41 @@
         line-height: 1.7;
       }
 
+      .animation-controls {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 13px;
+        pointer-events: auto;
+      }
+
+      .animation-controls[hidden] {
+        display: none;
+      }
+
+      .animation-selector,
+      .animation-speed {
+        max-width: 126px;
+        padding: 5px;
+        border: 1px solid rgba(191, 203, 247, 0.18);
+        border-radius: 4px;
+        background: rgba(9, 11, 19, 0.86);
+        color: #e5e9ff;
+        font-size: 10px;
+      }
+
+      .animation-scrub {
+        width: 108px;
+        accent-color: var(--accent);
+      }
+
+      .animation-time {
+        min-width: 35px;
+        color: var(--muted);
+        font-size: 9px;
+        font-variant-numeric: tabular-nums;
+      }
+
       .preview-footer {
         right: 25px;
         bottom: 24px;
@@ -502,6 +537,7 @@
                 <select id="renderer-selector" class="renderer-selector" aria-label="Renderer">
                   <option value="default">Default</option>
                   <option value="deferred">Deferred</option>
+                  <option value="raytrace">Ray tracing</option>
                   <option value="debugNormals">Normals</option>
                   <option value="debugDepth">Depth</option>
                 </select>
@@ -528,6 +564,27 @@
             <div class="section-label">LIVE PREVIEW</div>
             <h1 id="scene-title" class="scene-title"></h1>
             <div id="scene-description" class="scene-description"></div>
+            <div id="animation-controls" class="animation-controls" hidden>
+              <select id="animation-clip" class="animation-selector" aria-label="Animation clip"></select>
+              <button id="animation-toggle" class="tool-button" aria-label="Pause animation">PAUSE</button>
+              <input
+                id="animation-scrub"
+                class="animation-scrub"
+                type="range"
+                min="0"
+                max="1"
+                step="0.001"
+                value="0"
+                aria-label="Animation time"
+              />
+              <span id="animation-time" class="animation-time">0.00</span>
+              <select id="animation-speed" class="animation-speed" aria-label="Animation speed">
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
           </div>
           <div class="preview-footer">
             <div class="preview-statistics">

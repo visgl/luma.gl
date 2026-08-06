@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 const MAXIMUM_UINT32 = 0xffffffff;
 const UINT32_VALUE_COUNT = 0x100000000;

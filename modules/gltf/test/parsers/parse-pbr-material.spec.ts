@@ -1,12 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
-import {NullDevice} from '@luma.gl/test-utils';
 import {log} from '@luma.gl/core';
-
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
+import {NullDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
 
 const device = new NullDevice({});
 
@@ -182,6 +181,9 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
           attenuationDistance: 12,
           attenuationColor: [0.7, 0.8, 0.9]
         },
+        KHR_materials_dispersion: {
+          dispersion: 0.65
+        },
         KHR_materials_clearcoat: {
           clearcoatFactor: 0.8,
           clearcoatTexture: makeCompressedTextureInfo('clearcoat'),
@@ -231,6 +233,7 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   );
   t.equal(parsedMaterial.uniforms.ior, 1.7, 'ior parsed');
   t.equal(parsedMaterial.uniforms.transmissionFactor, 0.6, 'transmission factor parsed');
+  t.equal(parsedMaterial.uniforms.dispersion, 0.65, 'ratified chromatic dispersion parsed');
   t.equal(parsedMaterial.uniforms.transmissionMapEnabled, true, 'transmission map enabled');
   t.equal(parsedMaterial.uniforms.thicknessFactor, 0.4, 'volume thickness parsed');
   t.ok(parsedMaterial.bindings.pbr_thicknessSampler, 'thickness binding created');

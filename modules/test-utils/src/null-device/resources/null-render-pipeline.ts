@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {RenderPipelineProps, Binding, RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline} from '@luma.gl/core';

@@ -1,12 +1,17 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   PAUL_TAYLOR_POINT_COUNT,
   makeSyntheticTaxiPositions,
   makeTaxiZones
 } from '../../showcase/billion-point-spatial-atlas/spatial-atlas-data';
+import type {TaxiPointResidentWindow} from '../../showcase/billion-point-spatial-atlas/taxi-resident-window';
+import type {
+  TaxiPointSourceMetadata,
+  TaxiPointSourceTelemetry
+} from '../../showcase/billion-point-spatial-atlas/taxi-source';
 
 export const TAXI_POINT_COUNT = 1_000_000;
 export const TAXI_CORPUS_POINT_COUNT = PAUL_TAYLOR_POINT_COUNT;
@@ -22,9 +27,14 @@ const DEGREES_TO_RADIANS = Math.PI / 180;
 
 export type LuSpatialTaxiData = {
   pointCount: number;
+  corpusPointCount: number;
   longitudeLatitudes: Float32Array;
   sourceBounds: readonly [number, number, number, number];
   projectedBounds: readonly [number, number, number, number];
+  sourceRowIndices?: Float64Array;
+  sourceKind: 'synthetic' | 'packed';
+  sourceLabel: string;
+  sourceTelemetry?: TaxiPointSourceTelemetry;
 };
 
 export type LuSpatialTaxiDataGenerationOptions = {
@@ -111,22 +121,7 @@ function makeTaxiDataFromBounds(
   longitudeLatitudes: Float32Array,
   sourceBounds: number[]
 ): LuSpatialTaxiData {
-  const longitudeExtent =
-    Math.max(
-      TAXI_PROJECTION_ORIGIN[0] - sourceBounds[0],
-      sourceBounds[2] - TAXI_PROJECTION_ORIGIN[0]
-    ) + TAXI_SOURCE_BOUNDS_PADDING;
-  const latitudeExtent =
-    Math.max(
-      TAXI_PROJECTION_ORIGIN[1] - sourceBounds[1],
-      sourceBounds[3] - TAXI_PROJECTION_ORIGIN[1]
-    ) + TAXI_SOURCE_BOUNDS_PADDING;
-  const projectionSourceBounds = [
-    TAXI_PROJECTION_ORIGIN[0] - longitudeExtent,
-    TAXI_PROJECTION_ORIGIN[1] - latitudeExtent,
-    TAXI_PROJECTION_ORIGIN[0] + longitudeExtent,
-    TAXI_PROJECTION_ORIGIN[1] + latitudeExtent
-  ] as const;
+  const projectionSourceBounds = makeProjectionSourceBounds(sourceBounds);
   const projectedCorners = [
     projectTaxiLongitudeLatitude([sourceBounds[0], sourceBounds[1]]),
     projectTaxiLongitudeLatitude([sourceBounds[0], sourceBounds[3]]),
@@ -145,6 +140,7 @@ function makeTaxiDataFromBounds(
   const padding = 0.25;
   return {
     pointCount,
+    corpusPointCount: TAXI_CORPUS_POINT_COUNT,
     longitudeLatitudes,
     sourceBounds: projectionSourceBounds,
     projectedBounds: [
@@ -152,8 +148,32 @@ function makeTaxiDataFromBounds(
       projectedBounds[1] - padding,
       projectedBounds[2] + padding,
       projectedBounds[3] + padding
-    ]
+    ],
+    sourceKind: 'synthetic',
+    sourceLabel: 'Synthetic public-sample expansion'
   };
+}
+
+function makeProjectionSourceBounds(
+  sourceBounds: readonly number[]
+): readonly [number, number, number, number] {
+  const longitudeExtent =
+    Math.max(
+      TAXI_PROJECTION_ORIGIN[0] - sourceBounds[0],
+      sourceBounds[2] - TAXI_PROJECTION_ORIGIN[0]
+    ) + TAXI_SOURCE_BOUNDS_PADDING;
+  const latitudeExtent =
+    Math.max(
+      TAXI_PROJECTION_ORIGIN[1] - sourceBounds[1],
+      sourceBounds[3] - TAXI_PROJECTION_ORIGIN[1]
+    ) + TAXI_SOURCE_BOUNDS_PADDING;
+  const projectionSourceBounds = [
+    TAXI_PROJECTION_ORIGIN[0] - longitudeExtent,
+    TAXI_PROJECTION_ORIGIN[1] - latitudeExtent,
+    TAXI_PROJECTION_ORIGIN[0] + longitudeExtent,
+    TAXI_PROJECTION_ORIGIN[1] + latitudeExtent
+  ] as const;
+  return projectionSourceBounds;
 }
 
 function yieldTaxiGeneration(signal?: AbortSignal): Promise<void> {
@@ -169,6 +189,84 @@ function yieldTaxiGeneration(signal?: AbortSignal): Promise<void> {
 
     signal?.addEventListener('abort', abortGeneration, {once: true});
   });
+}
+
+/**
+ * Converts an explicitly WGS84 longitude/latitude resident window into deck.gl taxi data.
+ *
+ * Packed sources remain coordinate-neutral until this adapter. CRS84 and the browser convention
+ * for WGS84/EPSG:4326 are interpreted as X=longitude and Y=latitude.
+ */
+export function makeLuSpatialTaxiDataFromResidentWindow(
+  window: TaxiPointResidentWindow
+): LuSpatialTaxiData {
+  assertLongitudeLatitudeTaxiMetadata(window.metadata);
+  if (window.positions.length !== window.rowCount * 2) {
+    throw new Error('Taxi resident window positions must contain two values per row');
+  }
+  if (window.sourceRowIndices.length !== window.rowCount) {
+    throw new Error('Taxi resident window sourceRowIndices must align with positions');
+  }
+
+  const sourceBounds = [Infinity, Infinity, -Infinity, -Infinity];
+  const projectedBounds = [Infinity, Infinity, -Infinity, -Infinity];
+  let finiteRowCount = 0;
+  for (let rowIndex = 0; rowIndex < window.rowCount; rowIndex++) {
+    const longitude = window.positions[rowIndex * 2];
+    const latitude = window.positions[rowIndex * 2 + 1];
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) continue;
+    if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
+      throw new Error(
+        `Taxi source row ${window.sourceRowIndices[rowIndex]} is outside longitude/latitude bounds`
+      );
+    }
+    sourceBounds[0] = Math.min(sourceBounds[0], longitude);
+    sourceBounds[1] = Math.min(sourceBounds[1], latitude);
+    sourceBounds[2] = Math.max(sourceBounds[2], longitude);
+    sourceBounds[3] = Math.max(sourceBounds[3], latitude);
+    const [projectedX, projectedY] = projectTaxiLongitudeLatitude([longitude, latitude]);
+    projectedBounds[0] = Math.min(projectedBounds[0], projectedX);
+    projectedBounds[1] = Math.min(projectedBounds[1], projectedY);
+    projectedBounds[2] = Math.max(projectedBounds[2], projectedX);
+    projectedBounds[3] = Math.max(projectedBounds[3], projectedY);
+    finiteRowCount++;
+  }
+  if (finiteRowCount === 0) {
+    throw new Error('Taxi resident window does not contain a finite longitude/latitude row');
+  }
+
+  const padding = 0.25;
+  return {
+    pointCount: window.rowCount,
+    corpusPointCount: window.sourceRowCount,
+    longitudeLatitudes: window.positions,
+    sourceBounds: makeProjectionSourceBounds(sourceBounds),
+    projectedBounds: [
+      projectedBounds[0] - padding,
+      projectedBounds[1] - padding,
+      projectedBounds[2] + padding,
+      projectedBounds[3] + padding
+    ],
+    sourceRowIndices: window.sourceRowIndices,
+    sourceKind: 'packed',
+    sourceLabel: 'Packed row-group source',
+    sourceTelemetry: window.telemetry
+  };
+}
+
+/** Rejects source-XY data until its manifest explicitly declares WGS84 longitude/latitude. */
+export function assertLongitudeLatitudeTaxiMetadata(metadata: TaxiPointSourceMetadata): void {
+  const coordinateReferenceSystem = metadata.coordinateSpace.crs?.trim().toUpperCase();
+  if (
+    coordinateReferenceSystem !== 'OGC:CRS84' &&
+    coordinateReferenceSystem !== 'CRS84' &&
+    coordinateReferenceSystem !== 'EPSG:4326' &&
+    coordinateReferenceSystem !== 'WGS84'
+  ) {
+    throw new Error(
+      'luSpatial taxi sources must explicitly declare OGC:CRS84 or WGS84/EPSG:4326 longitude/latitude coordinates'
+    );
+  }
 }
 
 /** CPU projection provider and tiny query-input companion for the adaptive luProj GPU plan. */
@@ -211,12 +309,19 @@ export function makeTaxiZonePresets(): readonly TaxiZonePreset[] {
 export function getTaxiPoint(
   data: LuSpatialTaxiData,
   pointIndex: number
-): {longitude: number; latitude: number} | null {
+): {
+  longitude: number;
+  latitude: number;
+  sourceRowIndex: number;
+  sourceKind: LuSpatialTaxiData['sourceKind'];
+} | null {
   if (!Number.isSafeInteger(pointIndex) || pointIndex < 0 || pointIndex >= data.pointCount) {
     return null;
   }
   return {
     longitude: data.longitudeLatitudes[pointIndex * 2],
-    latitude: data.longitudeLatitudes[pointIndex * 2 + 1]
+    latitude: data.longitudeLatitudes[pointIndex * 2 + 1],
+    sourceRowIndex: data.sourceRowIndices?.[pointIndex] ?? pointIndex,
+    sourceKind: data.sourceKind
   };
 }

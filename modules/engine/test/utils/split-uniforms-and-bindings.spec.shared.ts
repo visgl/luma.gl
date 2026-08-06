@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {splitUniformsAndBindings} from '@luma.gl/engine/model/split-uniforms-and-bindings';
 import type {TapeTestFunction} from 'test/utils/vitest-tape';

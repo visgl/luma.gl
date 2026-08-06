@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding, type ComputePass, Device} from '@luma.gl/core';
 import {Computation, type ComputationProps} from '@luma.gl/engine';

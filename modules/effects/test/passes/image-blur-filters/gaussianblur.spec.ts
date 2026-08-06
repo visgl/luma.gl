@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {gaussianBlur} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';

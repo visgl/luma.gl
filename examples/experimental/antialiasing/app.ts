@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Framebuffer, Sampler, SamplerProps, Texture, TextureView} from '@luma.gl/core';
 import {Texture as TextureResource, UniformStore} from '@luma.gl/core';

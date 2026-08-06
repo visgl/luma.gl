@@ -1,10 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {existsSync, readFileSync, statSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
+import {getExampleThumbnailPath} from '../../website/src/example-thumbnails';
 
 const ONBOARDING_SOURCE_PATH = path.join(process.cwd(), 'docs/getting-started.mdx');
 const INSTALLATION_SOURCE_PATH = path.join(process.cwd(), 'docs/developer-guide/installing.md');
@@ -60,8 +61,9 @@ describe('getting-started onboarding', () => {
 
     for (const poster of onboardingPosters) {
       const posterPath = path.join(EXAMPLE_IMAGES_DIRECTORY, poster.image);
-      const exampleIdentifier = poster.image.replace(/\.(?:jpe?g|png|webp)$/i, '');
-      const exampleRoute = `/examples/${exampleIdentifier}`;
+      const exampleRoute = Array.from(linkedExampleRoutes).find(
+        route => getExampleThumbnailPath(route.slice('/examples/'.length)) === poster.image
+      );
 
       expect(poster.offset, `${poster.image} must appear before local setup`).toBeLessThan(
         installationLinkOffset
@@ -70,10 +72,8 @@ describe('getting-started onboarding', () => {
         true
       );
       expect(statSync(posterPath).size, `${poster.image} must not be empty`).toBeGreaterThan(0);
-      expect(
-        linkedExampleRoutes.has(exampleRoute),
-        `${poster.image} must link to its interactive example`
-      ).toBe(true);
+      expect(exampleRoute, `${poster.image} must link to its interactive example`).toBeDefined();
+      const exampleIdentifier = exampleRoute!.slice('/examples/'.length);
       expect(
         existsSync(path.join(EXAMPLE_CONTENT_DIRECTORY, `${exampleIdentifier}.mdx`)),
         `${exampleRoute} must resolve to a live example page`
@@ -140,7 +140,7 @@ describe('getting-started onboarding', () => {
         packageName: '@luma.gl/splats',
         title: 'Gaussian Splats',
         image: 'showcase/gaussian-splats.jpg',
-        route: '/examples/showcase/gaussian-splats'
+        route: '/examples/showcase/gaussian-splat-viewer'
       },
       {
         modifier: 'anari',
@@ -223,6 +223,23 @@ describe('getting-started onboarding', () => {
       'developer-guide/installing',
       'developer-guide/working-with-ai'
     ]);
+  });
+
+  test('makes the complete capability overview discoverable from introductory pages', () => {
+    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
+    const documentationOverview = readFileSync(path.join(process.cwd(), 'docs/README.mdx'), 'utf8');
+    const tableOfContents = JSON.parse(
+      readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
+    ) as Array<string | {label?: string}>;
+
+    expect(tableOfContents.slice(0, 3)).toEqual(['README', 'getting-started', 'capabilities']);
+    expect(documentationOverview).toMatch(
+      /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/capabilities")[^>]*>/
+    );
+    expect(onboardingSource).toMatch(
+      /<Link\b(?=[^>]*\bclassName="luma-onboarding__action luma-onboarding__action--secondary")(?=[^>]*\bto="\/docs\/capabilities")[^>]*>/
+    );
+    expect(documentationOverview).not.toMatch(/\b(?:Three\.js|Babylon\.js)\b/i);
   });
 
   test('validates runnable LLM setup against Installing while keeping onboarding readable', () => {

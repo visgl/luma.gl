@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix3} from '@math.gl/core';
 
@@ -21,7 +21,11 @@ export type PBRTextureTransformSlot =
   | 'sheenRoughness'
   | 'iridescence'
   | 'iridescenceThickness'
-  | 'anisotropy';
+  | 'anisotropy'
+  | 'bump'
+  | 'diffuseTransmission'
+  | 'diffuseTransmissionColor'
+  | 'multiscatterColor';
 
 export type PBRTextureTransformPath = 'offset' | 'rotation' | 'scale';
 
@@ -36,6 +40,7 @@ export type PBRTextureTransformSlotDefinition = {
   binding: string;
   displayName: string;
   pathSegments: string[];
+  colorSpace: 'srgb' | 'linear';
   uvSetUniform: string;
   uvTransformUniform: string;
 };
@@ -137,6 +142,30 @@ const TEXTURE_TRANSFORM_SLOT_DEFINITIONS: PBRTextureTransformSlotDefinition[] = 
     'pbr_anisotropySampler',
     'KHR_materials_anisotropy.anisotropyTexture',
     ['extensions', 'KHR_materials_anisotropy', 'anisotropyTexture']
+  ),
+  createTextureTransformSlotDefinition(
+    'bump',
+    'pbr_bumpSampler',
+    'EXT_materials_bump.bumpTexture',
+    ['extensions', 'EXT_materials_bump', 'bumpTexture']
+  ),
+  createTextureTransformSlotDefinition(
+    'diffuseTransmission',
+    'pbr_diffuseTransmissionSampler',
+    'KHR_materials_diffuse_transmission.diffuseTransmissionTexture',
+    ['extensions', 'KHR_materials_diffuse_transmission', 'diffuseTransmissionTexture']
+  ),
+  createTextureTransformSlotDefinition(
+    'diffuseTransmissionColor',
+    'pbr_diffuseTransmissionColorSampler',
+    'KHR_materials_diffuse_transmission.diffuseTransmissionColorTexture',
+    ['extensions', 'KHR_materials_diffuse_transmission', 'diffuseTransmissionColorTexture']
+  ),
+  createTextureTransformSlotDefinition(
+    'multiscatterColor',
+    'pbr_multiscatterColorSampler',
+    'KHR_materials_volume_scatter.multiscatterColorTexture',
+    ['extensions', 'KHR_materials_volume_scatter', 'multiscatterColorTexture']
   )
 ];
 
@@ -155,6 +184,15 @@ function createTextureTransformSlotDefinition(
     binding,
     displayName,
     pathSegments,
+    colorSpace:
+      slot === 'baseColor' ||
+      slot === 'emissive' ||
+      slot === 'specularColor' ||
+      slot === 'sheenColor' ||
+      slot === 'diffuseTransmissionColor' ||
+      slot === 'multiscatterColor'
+        ? 'srgb'
+        : 'linear',
     uvSetUniform: `${slot}UVSet`,
     uvTransformUniform: `${slot}UVTransform`
   };

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // NOTE: `@luma.gl/gltf` intentionally keeps this as a local enum subset so it
 // does not need to depend on `@luma.gl/webgl` for a handful of stable WebGL values.
@@ -25,6 +25,7 @@ export enum GLEnum {
   LINEAR_MIPMAP_NEAREST = 0x2701,
   NEAREST_MIPMAP_LINEAR = 0x2702,
   LINEAR_MIPMAP_LINEAR = 0x2703,
+  TEXTURE_MAG_FILTER = 0x2800,
   TEXTURE_MIN_FILTER = 0x2801,
   TEXTURE_WRAP_S = 0x2802,
   TEXTURE_WRAP_T = 0x2803,

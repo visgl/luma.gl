@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {log} from '../utils/log';
 import type {DeviceProps} from './device';
@@ -11,6 +11,7 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   powerPreference: 'high-performance',
   failIfMajorPerformanceCaveat: false,
   featureLevel: undefined!,
+  xrCompatible: false,
   createCanvasContext: undefined!,
   // WebGL specific
   webgl: {},

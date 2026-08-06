@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUTraceSceneExample} from '@site/src/examples';
 
 # GPUGraphTraversal
 
@@ -9,6 +10,13 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 `GPUGraphTraversal` performs bounded, GPU-resident breadth-first selection over compressed sparse
 graph adjacency. It supports direct dependencies, incoming and outgoing neighborhoods, and
 multi-hop focused subgraphs without synchronizing the CPU.
+
+The scene-backed trace explorer demonstrates why bounded traversal matters: select one operation,
+enable linked-span focus, and expand the hop radius to reveal the upstream and downstream work
+responsible for it. Selection stays on canonical GPU span rows while the same graph is encoded for
+each new focus state.
+
+<GPUTraceSceneExample embedded />
 
 ## Concepts
 

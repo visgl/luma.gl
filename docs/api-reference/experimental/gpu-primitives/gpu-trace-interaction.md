@@ -14,6 +14,11 @@ process/thread expansion, scanned row layout, temporal filtering, classification
 bidirectional dependency focus, ancestor projection, stable visibility compaction, and indirect
 scene draw generation.
 
+Import this trace-specific workflow from
+[`@luma.gl/experimental/lutrace`](/docs/api-reference/experimental/lutrace). Its generic hierarchy,
+traversal, visibility, command-graph, and indirect-rendering building blocks remain independent
+of the trace domain.
+
 The motivating problem is that interactive trace controls change much more frequently than the
 trace itself. Panning through a distributed execution timeline, collapsing a noisy process,
 isolating a selected span's upstream dependencies, or hiding low-duration runtime events should
@@ -131,9 +136,18 @@ its existing required-count, published-count, overflow, and `indirect-first-inst
 This distinction lets one application use compacted rows for labels or picking while another
 replays stable resource-grouped indirect draws from the same interaction state.
 
+### Picking follows the same visible hierarchy
+
+[`getGPUTracePickingShader`](./gpu-trace-picking) consumes `threadOffsets` and `visibleMask`
+directly. A click therefore resolves against the effective post-collapse row and current filtering
+policy instead of an outdated original lane. The returned value remains the canonical source row,
+so it can feed `selectedSpans` directly when linked-span focus should follow the current selection.
+
 ## Usage
 
 ```ts
+import {GPUTraceInteraction} from '@luma.gl/experimental/lutrace';
+
 const source = trace.importToGraph(graph);
 
 new GPUTraceInteraction({

@@ -1,13 +1,14 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /**
  * Keep luma.gl's v10 work-in-progress WebXR declarations local to experimental.
  *
  * @types/webxr does not yet cover raw camera access and also adds ambient draft
  * WebGL extension overloads to every TypeScript program that installs luma.gl.
- * This package only needs the session, layer, view, and raw-camera subset below.
+ * This package only needs the session, layer, view, raw-camera, and draft
+ * WebGPU binding subset below.
  */
 export {};
 
@@ -41,9 +42,12 @@ declare global {
 
   interface XRRenderStateInit {
     baseLayer?: XRWebGLLayer;
+    layers?: XRProjectionLayer[];
   }
 
   interface XRSession extends EventTarget {
+    readonly enabledFeatures?: readonly string[];
+
     cancelAnimationFrame(animationFrameId: number): void;
     end(): Promise<void>;
     requestAnimationFrame(callback: XRFrameRequestCallback): number;
@@ -97,6 +101,25 @@ declare global {
     framebufferScaleFactor?: number;
   }
 
+  interface XRProjectionLayerInit {
+    colorFormat?: GPUTextureFormat;
+    depthStencilFormat?: GPUTextureFormat;
+    scaleFactor?: number;
+    textureUsage?: GPUTextureUsageFlags;
+  }
+
+  interface XRProjectionLayer {}
+
+  interface XRGPUSubImage {
+    readonly colorTexture: GPUTexture;
+    readonly depthStencilTexture: GPUTexture | null;
+    readonly viewport: XRViewport;
+    /** Legacy browser prototypes expose the selected texture-array layer here. */
+    readonly imageIndex?: number;
+
+    getViewDescriptor?(): GPUTextureViewDescriptor;
+  }
+
   class XRWebGLLayer {
     constructor(
       session: XRSession,
@@ -115,6 +138,14 @@ declare global {
     constructor(session: XRSession, context: WebGLRenderingContext | WebGL2RenderingContext);
 
     getCameraImage(camera: XRCamera): WebGLTexture | null;
+  }
+
+  class XRGPUBinding {
+    constructor(session: XRSession, device: GPUDevice);
+
+    getPreferredColorFormat(): GPUTextureFormat;
+    createProjectionLayer(layerInit?: XRProjectionLayerInit): XRProjectionLayer;
+    getViewSubImage(layer: XRProjectionLayer, view: XRView): XRGPUSubImage;
   }
 }
 

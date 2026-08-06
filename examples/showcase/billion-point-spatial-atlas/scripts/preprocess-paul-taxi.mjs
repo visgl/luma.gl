@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {createReadStream, createWriteStream} from 'node:fs';
 import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
@@ -21,15 +21,21 @@ const shardPointCount = parsePositiveInteger(
   argumentsByName['shard-points'] ?? String(DEFAULT_SHARD_POINT_COUNT),
   '--shard-points'
 );
+const coordinateReferenceSystem = parseCoordinateReferenceSystem(argumentsByName.crs);
 
 if (!inputPath) {
   printUsage();
   process.exitCode = 1;
 } else {
-  await preprocess(resolve(inputPath), outputDirectory, shardPointCount);
+  await preprocess(
+    resolve(inputPath),
+    outputDirectory,
+    shardPointCount,
+    coordinateReferenceSystem
+  );
 }
 
-async function preprocess(sourcePath, targetDirectory, pointsPerShard) {
+async function preprocess(sourcePath, targetDirectory, pointsPerShard, crs) {
   await mkdir(targetDirectory, {recursive: true});
   const temporaryDirectory = extname(sourcePath) === '.gz'
     ? await mkdtemp(join(tmpdir(), 'luma-spatial-atlas-'))
@@ -78,7 +84,7 @@ async function preprocess(sourcePath, targetDirectory, pointsPerShard) {
       source: DEFAULT_SOURCE_URL,
       sourceFile: basename(sourcePath),
       coordinateColumns: [xField.name, yField.name],
-      coordinateSpace: {kind: 'source-xy', crs: null},
+      coordinateSpace: {kind: 'source-xy', crs},
       format: 'float32x2-little-endian',
       pointCount: table.numRows,
       shardPointCount: pointsPerShard,
@@ -154,6 +160,15 @@ function parsePositiveInteger(value, name) {
   return parsed;
 }
 
+function parseCoordinateReferenceSystem(value) {
+  if (value === undefined) return null;
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    throw new Error('--crs must be a non-empty coordinate reference system identifier');
+  }
+  return normalized;
+}
+
 function parseArguments(values) {
   const parsed = {};
   for (let index = 0; index < values.length; index++) {
@@ -174,12 +189,13 @@ function parseArguments(values) {
 
 function printUsage() {
   process.stdout.write(`Usage:
-  yarn preprocess:taxi --input /path/to/168898952_points.arrow.gz [--output ./public/taxi-atlas] [--shard-points 1000000]
+  yarn preprocess:taxi --input /path/to/168898952_points.arrow.gz [--output ./public/taxi-atlas] [--shard-points 1000000] [--crs OGC:CRS84]
 
 The original 859 MB object does not expose browser CORS. Download it once, then run this command
 to emit streamable packed float32 shards and manifest.json. The conversion needs enough memory to
 open the decompressed Arrow IPC file; it never runs in the browser. Coordinates remain in the
-source X/Y space, and the manifest leaves the coordinate reference system unspecified.
+source X/Y space. The optional --crs value records an explicit coordinate reference system without
+transforming those values; omit it when the source coordinate system is unknown.
 
 Source:
   ${DEFAULT_SOURCE_URL}

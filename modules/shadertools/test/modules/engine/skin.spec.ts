@@ -1,11 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
-import {Matrix4} from '@math.gl/core';
 import {GroupNode} from '@luma.gl/engine';
-import {skin} from '@luma.gl/shadertools';
+import {SKIN_MAX_JOINTS, skin} from '@luma.gl/shadertools';
+import {Matrix4} from '@math.gl/core';
+import test from 'test/utils/vitest-tape';
 
 test('shadertools#skin returns empty uniforms without a glTF skin', t => {
   t.deepEqual(
@@ -59,5 +59,65 @@ test('shadertools#skin packs joint matrices from the scenegraph', t => {
     'Leaves unused joint matrix slots zeroed'
   );
 
+  t.end();
+});
+
+test('shadertools#skin supports Fox-sized skeletons beyond the previous 20-joint limit', t => {
+  const skeletonRoot = new GroupNode({id: 'skeleton-root'});
+  const nodes = new Map<number, GroupNode>([[0, skeletonRoot]]);
+  const joints: number[] = [];
+  for (let jointIndex = 0; jointIndex < 24; jointIndex++) {
+    const nodeIndex = jointIndex + 1;
+    const joint = new GroupNode({id: `joint-${jointIndex}`, position: [nodeIndex, 0, 0]});
+    skeletonRoot.add(joint);
+    nodes.set(nodeIndex, joint);
+    joints.push(nodeIndex);
+  }
+
+  const uniforms = skin.getUniforms({
+    scenegraphsFromGLTF: {
+      gltf: {skins: [{joints, skeleton: 0}]},
+      gltfNodeIndexToNodeMap: nodes
+    }
+  });
+
+  t.equal(uniforms.jointMatrix?.length, SKIN_MAX_JOINTS * 16, 'allocates a portable joint palette');
+  t.equal(uniforms.jointMatrix?.[23 * 16 + 12], 24, 'retains the final Fox-sized skeleton joint');
+  t.end();
+});
+
+test('shadertools#skin selects independent skins and defaults missing bind matrices', t => {
+  const firstRoot = new GroupNode({id: 'first-root', position: [3, 0, 0]});
+  const firstJoint = new GroupNode({id: 'first-joint', position: [1, 0, 0]});
+  firstRoot.add(firstJoint);
+  const secondRoot = new GroupNode({id: 'second-root', position: [10, 0, 0]});
+  const secondJoint = new GroupNode({id: 'second-joint', position: [2, 0, 0]});
+  secondRoot.add(secondJoint);
+
+  const uniforms = skin.getUniforms({
+    skinIndex: 1,
+    meshWorldMatrix: new Matrix4().translate([10, 0, 0]),
+    scenegraphsFromGLTF: {
+      gltf: {skins: [{joints: [1], skeleton: 0}, {joints: [3]}]},
+      scenes: [firstRoot, secondRoot],
+      gltfNodeIndexToNodeMap: new Map([
+        [0, firstRoot],
+        [1, firstJoint],
+        [2, secondRoot],
+        [3, secondJoint]
+      ])
+    }
+  });
+
+  t.equal(uniforms.jointMatrix?.[12], 2, 'selects the requested skin in mesh-local space');
+  t.end();
+});
+
+test('shadertools#skin accepts a format-independent precomputed joint palette', t => {
+  const jointMatrices = new Float32Array(new Matrix4().translate([7, 0, 0]));
+  const uniforms = skin.getUniforms({jointMatrices});
+
+  t.equal(uniforms.jointMatrix?.[12], 7, 'preserves precomputed joint transforms');
+  t.equal(uniforms.jointMatrix?.length, SKIN_MAX_JOINTS * 16, 'pads the uniform palette');
   t.end();
 });

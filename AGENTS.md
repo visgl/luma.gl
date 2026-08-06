@@ -25,6 +25,9 @@
 - Format code: `yarn lint fix`
 - Always `yarn lint fix` after making changes to ensure that Biome formatting is maintained.
 
+## Pull requests
+- When opening a PR, wait 15 minutes for review comments, address them and respond, then make sure CI is green.
+
 ## Merge preparation
 - When asked to "get ready for merge", create a copyable Markdown description of the changes versus `master`.
 - Start that Markdown description with `Goals` and `Changes` sections, then include verification, risks, follow-up notes, or other merge-relevant sections when useful.
@@ -37,6 +40,8 @@
 - TypeScript strict mode
 - We end lines with semicolons
 - Single quotes
+- First-party source files with `SPDX-License-Identifier` must also declare each actual copyright holder using `SPDX-FileCopyrightText`.
+- Preserve existing license expressions and upstream attribution; do not infer MIT licensing or ownership for generated, vendored, or third-party files.
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
 - Keep shipped runtime validation minimal to protect bundle size. Prefer static typing and simple assertions over heavy validation or verbose runtime error paths.

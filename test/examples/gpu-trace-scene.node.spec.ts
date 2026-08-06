@@ -1,12 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {
-  getTraceScenePickingShader,
-  TRACE_SCENE_RENDER_SHADER
-} from '../../examples/experimental/gpu-trace-scene/trace-scene-shaders';
+import {getGPUTracePickingShader} from '@luma.gl/experimental/lutrace';
+import {TRACE_SCENE_RENDER_SHADER} from '../../examples/experimental/gpu-trace-scene/trace-scene-shaders';
 import {
   TRACE_ERROR_SPAN_FLAG,
   TRACE_LANES_PER_THREAD
@@ -21,7 +19,7 @@ describe('GPU scene-backed trace shaders', () => {
   });
 
   test('bounds GPU picking to visible canonical rows and scanned effective lanes', () => {
-    const source = getTraceScenePickingShader(384);
+    const source = getGPUTracePickingShader(384, TRACE_LANES_PER_THREAD);
 
     expect(source).toContain('sourceIndex >= 384u');
     expect(source).toContain('visibleMask[sourceIndex] == 0u');

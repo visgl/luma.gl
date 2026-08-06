@@ -6,8 +6,8 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 `GBuffer` is an experimental WebGPU-only owner for the multiple render targets (MRTs) used by
 scene-aware fullscreen effects. It gives geometry shaders one stable attachment contract and gives
-`ShaderPassRenderer` the depth, normal, and velocity bindings expected by SSAO, SSR, outlines,
-TAA, motion blur, depth-aware blur, and related pipelines.
+`ShaderPassRenderer` the depth, normal, and optional velocity bindings expected by SSAO, SSR,
+outlines, TAA, motion blur, depth-aware blur, and related pipelines.
 
 `GBuffer` owns render targets and semantic bindings. It is not a scene renderer: applications
 still draw geometry, choose clear values, and decide whether additional attachments carry
@@ -18,7 +18,8 @@ traversal.
 
 ## Attachment contract
 
-The first three color attachments are always present and keep this fragment-output order:
+Scene color and normal-roughness are always present. Velocity is enabled by default, giving the
+standard fragment-output order:
 
 | Fragment output | Texture | Meaning |
 | --- | --- | --- |
@@ -27,8 +28,11 @@ The first three color attachments are always present and keep this fragment-outp
 | `@location(2)` | `velocityTexture` | Current-minus-previous screen UV velocity in RG. |
 | depth attachment | `depthTexture` | Sampleable scene depth for reconstruction and depth-aware effects. |
 
-Named `extraColorAttachments` are appended after location 2 in declaration order. Their names are
-caller-defined, while `color`, `normalRoughness`, `velocity`, and `depth` are reserved.
+Named `extraColorAttachments` are appended in declaration order after the enabled standard color
+channels: they begin at location 3 by default or location 2 when `velocity: false`. Their names are
+caller-defined, while `color`, `normalRoughness`, `velocity`, and `depth` are reserved. Disabling
+velocity also makes the `velocityTexture` and `getShaderPassBindings()` accessors throw; pipelines
+requiring motion vectors, such as TAA or motion blur, must retain the default configuration.
 
 ## Usage
 
@@ -103,6 +107,32 @@ That five-target layout uses exactly 32 color-attachment bytes per sample: HDR s
 `rgba16float`, while normalized emissive/AO is explicitly packed into the four-byte
 `rgba8uint` target for WebGPU CORE devices.
 
+### Compact HDR deferred layout
+
+Renderers that do not generate or consume motion vectors can omit the velocity attachment and keep
+both scene color and emissive response in HDR:
+
+```ts
+const gBuffer = new GBuffer(device, {
+  width,
+  height,
+  velocity: false,
+  colorFormat: 'rgba16float',
+  extraColorAttachments: [
+    {name: 'baseColorMetallic', format: 'rgba8unorm'},
+    {name: 'emissiveOcclusion', format: 'rgba16float'}
+  ]
+});
+```
+
+The corresponding geometry shader writes scene color at location 0, normal-roughness at location
+1, base color-metallic at location 2, and emissive-occlusion at location 3. WebGPU render-target
+accounting charges eight bytes per sample for each `rgba16float` and normalized `rgba8unorm`
+attachment, even though `rgba8unorm` has a four-byte texture footprint. The four targets therefore
+fit the default 32-byte WebGPU CORE limit exactly without sacrificing physically based material
+channels, direct lighting, HDR scene color, or HDR emissive output. ANARI uses this compact layout
+because its previous velocity attachment was always zero and no temporal effect consumed it.
+
 ## Props
 
 | Prop | Default | Meaning |
@@ -111,9 +141,10 @@ That five-target layout uses exactly 32 color-attachment bytes per sample: HDR s
 | `width`, `height` | required | Positive integer target size. |
 | `colorFormat` | `rgba8unorm` | Scene-color attachment format. |
 | `normalRoughnessFormat` | `rgba8unorm` | Normal and roughness attachment format. |
-| `velocityFormat` | `rg16float` | Motion-vector attachment format. |
+| `velocity` | `true` | Allocate the motion-vector attachment; disable it for compact non-temporal layouts. |
+| `velocityFormat` | `rg16float` | Motion-vector attachment format when velocity is enabled. |
 | `depthStencilFormat` | `depth24plus` | Sampleable depth attachment format. |
-| `extraColorAttachments` | `[]` | Named renderable color channels appended after the standard channels. |
+| `extraColorAttachments` | `[]` | Named renderable color channels appended after the enabled standard channels. |
 
 Construction rejects non-WebGPU devices, unsupported formats, dimensions outside the supported
 domain, duplicate or reserved extra names, and color-attachment counts above
@@ -134,6 +165,13 @@ Returns:
 ```
 
 Spread this object into `ShaderPassRenderer.renderToTexture()` or `renderToScreen()` bindings.
+This velocity-dependent accessor throws when the G-buffer was created with `velocity: false`;
+compact renderers bind the depth, normal, and named extra textures explicitly.
+
+### `velocityTexture: Texture`
+
+Returns the motion-vector attachment when velocity is enabled. Throws when the G-buffer was created
+with `velocity: false`.
 
 ### `getExtraColorTexture(name: string): Texture`
 

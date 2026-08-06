@@ -82,6 +82,8 @@ const SHARED_COMPILER_OPTIONS = {
     '@luma.gl/arrow/*': [join(repoRoot, 'modules/arrow/src/*')],
     '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/arrow-layers/src/index.ts')],
     '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/arrow-layers/src/*')],
+    '@deck.gl-community/luspatial': [join(repoRoot, 'modules/deck-luspatial/src/index.ts')],
+    '@deck.gl-community/luspatial/*': [join(repoRoot, 'modules/deck-luspatial/src/*')],
     '@math.gl/geoarrow': [join(repoRoot, 'modules/geoarrow/src/index.ts')],
     '@math.gl/geoarrow/*': [join(repoRoot, 'modules/geoarrow/src/*')],
     '@luma.gl/experimental': [join(repoRoot, 'modules/experimental/src/index.ts')],

@@ -1,13 +1,23 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUCommandGraphInspectorSnapshot} from '@luma.gl/experimental';
 import {CompactDropdown} from './compact-dropdown';
 
+const STANDARD_COUNTER_FORMATTER = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 1
+});
+const COMPACT_COUNTER_FORMATTER = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  maximumFractionDigits: 1
+});
+
 export type GPUCommandGraphInspectorPanelProps = {
   /** Optional human-readable graph names keyed by compiled graph ID. */
   graphLabels?: Readonly<Record<string, string>>;
+  /** Optional human-readable counter names keyed by application-defined counter ID. */
+  counterLabels?: Readonly<Record<string, string>>;
 };
 
 /**
@@ -19,6 +29,7 @@ export type GPUCommandGraphInspectorPanelProps = {
 export class GPUCommandGraphInspectorPanel {
   private readonly element: HTMLElement;
   private readonly graphLabels: Readonly<Record<string, string>>;
+  private readonly counterLabels: Readonly<Record<string, string>>;
   private snapshot: GPUCommandGraphInspectorSnapshot = {graphs: []};
   private selectedGraphId: string | null = null;
   private selectionIsManual = false;
@@ -28,6 +39,7 @@ export class GPUCommandGraphInspectorPanel {
   constructor(element: HTMLElement, props: GPUCommandGraphInspectorPanelProps = {}) {
     this.element = element;
     this.graphLabels = props.graphLabels ?? {};
+    this.counterLabels = props.counterLabels ?? {};
     this.element.innerHTML = `<div data-gpu-command-graph-inspector>
       <style>${GPU_COMMAND_GRAPH_INSPECTOR_CSS}</style>
       <span class="graph-inspector-empty" data-graph-inspector-empty>No graph activity recorded.</span>
@@ -40,6 +52,10 @@ export class GPUCommandGraphInspectorPanel {
           ${makeMetric('GPU samples', '', 'gpu-samples')}
         </div>
         <div class="graph-inspector-memory" data-graph-inspector-memory></div>
+        <div class="graph-inspector-counters" data-graph-inspector-counters hidden>
+          <div class="graph-inspector-counter graph-inspector-counter-header"><span>Sampled counter</span><strong>Latest</strong><strong>50/95</strong></div>
+          <div class="graph-inspector-counter-rows" data-graph-inspector-counter-rows></div>
+        </div>
         <div class="graph-inspector-node graph-inspector-node-header"><span>Node</span><strong>CPU 50/95</strong><strong>GPU 50/95</strong></div>
         <div class="graph-inspector-nodes" data-graph-inspector-nodes></div>
       </div>
@@ -125,6 +141,15 @@ export class GPUCommandGraphInspectorPanel {
         </div>`
       )
       .join('');
+    const counterRows = graph.counters
+      .map(
+        counter => `<div class="graph-inspector-counter" title="${escapeHtml(counter.id)} · ${counter.sampleCount} samples">
+          <span>${escapeHtml(this.getCounterLabel(counter.id))}</span>
+          <strong>${formatCounterValue(counter.latestValue)}</strong>
+          <strong>${formatCounterValue(counter.p50Value)} / ${formatCounterValue(counter.p95Value)}</strong>
+        </div>`
+      )
+      .join('');
     this.setText('encoding-count', String(graph.encodingCount));
     this.setText('cpu-totals', formatDurationPair(graph.totals.cpu));
     this.setText('gpu-totals', formatDurationPair(graph.totals.gpu));
@@ -138,6 +163,12 @@ export class GPUCommandGraphInspectorPanel {
       <span>${formatBytes(graph.stats.physicalTransientResourceBytes)} scratch</span>
       <span>${reusePercentage ? `${reusePercentage.toFixed(0)}% reuse` : 'no reuse'}</span>
       <span>${gpuSampleCount ? 'GPU timings sampled' : 'CPU timings only'}</span>`;
+    const countersElement = this.element.querySelector<HTMLElement>(
+      '[data-graph-inspector-counters]'
+    )!;
+    countersElement.hidden = graph.counters.length === 0;
+    this.element.querySelector<HTMLElement>('[data-graph-inspector-counter-rows]')!.innerHTML =
+      counterRows;
     this.element.querySelector<HTMLElement>('[data-graph-inspector-nodes]')!.innerHTML = rows;
   }
 
@@ -147,7 +178,11 @@ export class GPUCommandGraphInspectorPanel {
   }
 
   private getGraphLabel(graphId: string): string {
-    return this.graphLabels[graphId] ?? graphId;
+    return getOwnLabel(this.graphLabels, graphId);
+  }
+
+  private getCounterLabel(counterId: string): string {
+    return getOwnLabel(this.counterLabels, counterId);
   }
 }
 
@@ -198,6 +233,45 @@ const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `
     gap: 3px 8px;
     color: #7286a2;
     font: 8px/1.35 ui-monospace, monospace;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-counters[hidden] { display: none; }
+  [data-gpu-command-graph-inspector] .graph-inspector-counter-rows {
+    max-height: 110px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-counter {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 52px 66px;
+    align-items: center;
+    gap: 7px;
+    min-height: 22px;
+    border-bottom: 1px solid rgb(137 166 211 / 9%);
+    color: #b9c8dc;
+    font: 8px/1.25 ui-monospace, monospace;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-counter > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-counter strong {
+    color: #dce8f7;
+    font-weight: 600;
+    text-align: right;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-counter-header {
+    min-height: 17px;
+    border-bottom-color: rgb(137 166 211 / 18%);
+    color: #7186a3;
+    font: 7px/1.2 system-ui, sans-serif;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-counter-header strong {
+    color: #7186a3;
+    font-weight: 600;
   }
   [data-gpu-command-graph-inspector] .graph-inspector-node {
     display: grid;
@@ -266,11 +340,19 @@ function formatCompactMilliseconds(value: number): string {
   return value.toFixed(value < 1 ? 3 : 2);
 }
 
+function formatCounterValue(value: number): string {
+  return (value >= 10_000 ? COMPACT_COUNTER_FORMATTER : STANDARD_COUNTER_FORMATTER).format(value);
+}
+
 function formatBytes(value: number): string {
   if (value < 1024) return `${value} B`;
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KiB`;
   if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MiB`;
   return `${(value / 1024 ** 3).toFixed(1)} GiB`;
+}
+
+function getOwnLabel(labels: Readonly<Record<string, string>>, id: string): string {
+  return Object.prototype.hasOwnProperty.call(labels, id) ? labels[id] : id;
 }
 
 function escapeHtml(value: string): string {

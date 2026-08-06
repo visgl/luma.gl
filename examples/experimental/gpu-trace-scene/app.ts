@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type RenderBundle} from '@luma.gl/core';
 import {AnimationLoopTemplate, Computation, Model, type AnimationProps} from '@luma.gl/engine';
@@ -10,12 +10,15 @@ import {
   GPUCommandGraphInspector,
   GPUReadbackRing,
   GPUSceneResourceGroups,
-  GPUTraceInteraction,
-  GPUTraceScene,
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GraphDataView
 } from '@luma.gl/experimental';
+import {
+  GPUTraceInteraction,
+  GPUTraceScene,
+  getGPUTracePickingShader
+} from '@luma.gl/experimental/lutrace';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -36,7 +39,7 @@ import {
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS
 } from '../gpu-trace-viewer/trace-data';
-import {getTraceScenePickingShader, TRACE_SCENE_RENDER_SHADER} from './trace-scene-shaders';
+import {TRACE_SCENE_RENDER_SHADER} from './trace-scene-shaders';
 
 export const title = 'GPU Scene Trace Explorer';
 export const description =
@@ -320,7 +323,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
       compile: ({device}) => {
         const computation = new Computation(device, {
           id: 'scene-trace-picking',
-          source: getTraceScenePickingShader(capacity),
+          source: getGPUTracePickingShader(capacity, TRACE_LANES_PER_THREAD),
           shaderLayout: {
             bindings: [
               {name: 'spans', type: 'storage', group: 0, location: 0},

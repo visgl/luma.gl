@@ -1,6 +1,6 @@
 //
 
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   DeviceTabs,
@@ -76,7 +76,6 @@ import ABufferApp from '../../examples/experimental/a-buffer/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
 import GaussianSplatsApp from '../../examples/showcase/gaussian-splats/app';
-import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
@@ -733,7 +732,8 @@ export const ANARIPlaygroundExample: React.FC = () => {
 export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="gltf"
-    title="glTF"
+    title="glTF Asset Studio"
+    subtitle="Physical materials · animated characters · standards-native glTF"
     directory="showcase"
     template={GLTFApp}
     config={exampleConfig}
@@ -742,20 +742,50 @@ export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
-export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="gaussian-splats"
-    title="Gaussian Splats"
-    subtitle="Progressive HDR Gaussian splat rendering"
-    directory="showcase"
-    devices={['webgpu', 'webgl2']}
-    template={GaussianSplatsApp}
-    config={exampleConfig}
-    canvasContextProfile="high-dynamic-range"
-    showStats
-    {...props}
-  />
-);
+export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
+  if (typeof window !== 'undefined') {
+    delete window.__lumaGaussianSplatsLoaderBundleUrl;
+  }
+
+  return (
+    <LumaExample
+      id="gaussian-splats"
+      title="Gaussian Splats"
+      subtitle="Progressive HDR Gaussian splat rendering"
+      directory="showcase"
+      devices={['webgpu', 'webgl2']}
+      template={GaussianSplatsApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      showStats
+      {...props}
+    />
+  );
+};
+
+export const GaussianSplatViewerExample: React.FC<WebsiteExampleProps> = props => {
+  const loaderBundleUrl = useBaseUrl('/standalone-examples/gaussian-splats/loaders-gl.mjs');
+
+  if (typeof window !== 'undefined') {
+    window.__lumaGaussianSplatsLoaderBundleUrl = loaderBundleUrl;
+  }
+
+  return (
+    <LumaExample
+      id="gaussian-splat-viewer"
+      title="Gaussian Splat Viewer"
+      subtitle="Complete captured scenes streamed from Hugging Face"
+      directory="showcase"
+      sourcePath="examples/showcase/gaussian-splats/app.ts"
+      devices={['webgpu', 'webgl2']}
+      template={GaussianSplatsApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      showStats
+      {...props}
+    />
+  );
+};
 
 export const InstancingExample: React.FC = props => (
   <LumaExample
@@ -849,17 +879,6 @@ export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
     template={TempestOceanApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
-    {...props}
-  />
-);
-
-export const ArrowInstancingExample: React.FC = props => (
-  <LumaExample
-    id="arrow-instancing"
-    title="Instancing"
-    directory="arrow"
-    template={ArrowInstancingApp}
-    config={exampleConfig}
     {...props}
   />
 );
@@ -1447,9 +1466,30 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
   type XRStatus = 'idle' | 'pending' | 'live' | 'error';
   type XRMode = 'immersive-ar' | 'immersive-vr';
 
+  const selectedDevice = useStore(store => store.device);
+  const activeApplication = useSyncExternalStore(
+    WebXRKaleidoscopeApp.subscribeToCurrent,
+    () => WebXRKaleidoscopeApp.current,
+    () => null
+  );
   const [xrStatus, setXRStatus] = useState<XRStatus>('idle');
   const [xrMode, setXRMode] = useState<XRMode | null>(null);
   const [xrError, setXRError] = useState<string | null>(null);
+  const effectiveDevice = activeApplication?.device;
+  const usesWebGPU =
+    selectedDevice?.type === 'webgpu' || (!selectedDevice && effectiveDevice?.type === 'webgpu');
+  const hasWebGPUBinding = typeof window !== 'undefined' && 'XRGPUBinding' in window;
+  const hasNativeWebGPUXR =
+    usesWebGPU &&
+    selectedDevice?.type === effectiveDevice?.type &&
+    effectiveDevice?.props.xrCompatible === true &&
+    hasWebGPUBinding;
+  const backendDescription = usesWebGPU
+    ? hasNativeWebGPUXR
+      ? 'WebGPU · native stereo projection layers when supported'
+      : 'WebGPU desktop preview · choose WebGL2 for immersive fallback'
+    : 'WebGL2 · immersive stereo and optional AR camera access';
+
   const handleXRSession = async (sessionMode: XRMode) => {
     const app = WebXRKaleidoscopeApp.current;
     if (!app) {
@@ -1494,45 +1534,90 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
     return `Enter ${label}`;
   };
   const getXRButtonStyle = (sessionMode: XRMode): React.CSSProperties => ({
-    border: '1px solid #0f766e',
+    border: '1px solid rgba(103, 232, 249, 0.4)',
     borderRadius: 999,
-    background: xrStatus === 'live' && xrMode === sessionMode ? '#ccfbf1' : '#fff',
-    color: '#0f172a',
+    background:
+      xrStatus === 'live' && xrMode === sessionMode
+        ? 'rgba(34, 211, 238, 0.24)'
+        : 'rgba(15, 23, 42, 0.84)',
+    color: '#ecfeff',
     cursor: xrStatus === 'pending' ? 'default' : 'pointer',
-    font: '600 14px system-ui, sans-serif',
-    padding: '8px 12px'
+    font: '600 13px system-ui, sans-serif',
+    letterSpacing: '0.01em',
+    padding: '9px 15px'
   });
 
   return (
     <LumaExample
       id="webxr-kaleidoscope"
-      title="WebXR Kaleidoscope"
+      title="WebXR: Immersive Prism Portal"
+      subtitle="Native GPU stereo with a portable WebGL2 fallback"
       directory="experimental"
-      devices={['webgl2']}
+      devices={['webgpu', 'webgl2']}
+      xrCompatible
       template={WebXRKaleidoscopeApp}
       config={exampleConfig}
       headerControls={
-        <div style={{display: 'flex', alignItems: 'center', gap: 10, marginTop: 12}}>
-          <button
-            type="button"
-            onClick={() => void handleXRSession('immersive-vr')}
-            disabled={xrStatus === 'pending'}
-            style={getXRButtonStyle('immersive-vr')}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(8, 15, 32, 0.96), rgba(15, 23, 42, 0.9))',
+            border: '1px solid rgba(103, 232, 249, 0.18)',
+            borderRadius: 16,
+            color: '#cbd5e1',
+            display: 'grid',
+            gap: 11,
+            marginTop: 14,
+            maxWidth: 560,
+            padding: '13px 15px'
+          }}
+        >
+          <div
+            style={{
+              color: '#a5f3fc',
+              font: '600 11px system-ui, sans-serif',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase'
+            }}
           >
-            {getXRButtonText('immersive-vr')}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleXRSession('immersive-ar')}
-            disabled={xrStatus === 'pending'}
-            style={getXRButtonStyle('immersive-ar')}
+            {backendDescription}
+          </div>
+          <div
+            style={{
+              alignItems: 'center',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 9
+            }}
           >
-            {getXRButtonText('immersive-ar')}
-          </button>
-          {xrStatus === 'pending' ? (
-            <span>Requesting {xrMode === 'immersive-ar' ? 'AR' : 'VR'} session</span>
+            <button
+              type="button"
+              onClick={() => void handleXRSession('immersive-vr')}
+              disabled={xrStatus === 'pending'}
+              style={getXRButtonStyle('immersive-vr')}
+            >
+              {getXRButtonText('immersive-vr')}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleXRSession('immersive-ar')}
+              disabled={xrStatus === 'pending'}
+              style={getXRButtonStyle('immersive-ar')}
+            >
+              {getXRButtonText('immersive-ar')}
+            </button>
+            <span aria-live="polite" style={{fontSize: 12, lineHeight: 1.5}}>
+              {xrStatus === 'pending'
+                ? `Requesting ${xrMode === 'immersive-ar' ? 'AR' : 'VR'} session`
+                : xrStatus === 'live'
+                  ? `${xrMode === 'immersive-ar' ? 'AR' : 'VR'} session active`
+                  : 'Drag to explore · headset optional'}
+            </span>
+          </div>
+          {xrError ? (
+            <span role="alert" style={{color: '#fda4af', fontSize: 12, lineHeight: 1.5}}>
+              {xrError}
+            </span>
           ) : null}
-          {xrError ? <span>{xrError}</span> : null}
         </div>
       }
       {...props}

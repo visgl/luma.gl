@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {UniformValue} from '../utils/uniform-types';
 import type {ShaderPass, ShaderPassInputSource, ShaderPassRenderTarget} from './shader-pass';

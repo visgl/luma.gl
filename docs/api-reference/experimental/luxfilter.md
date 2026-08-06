@@ -100,9 +100,13 @@ selections can make large-scale exploratory analysis feel immediate. cuXfilter i
 the original [JavaScript Crossfilter](https://github.com/crossfilter/crossfilter); LuxFilter brings
 that family of ideas back into the browser with modern WebGPU execution.
 
-We gratefully acknowledge NVIDIA and the RAPIDS contributors for that pioneering work. LuxFilter is
-an independent luma.gl implementation, not a port of cuXfilter's Python code, a compatible API, or
-an NVIDIA/RAPIDS successor project.
+We gratefully acknowledge NVIDIA and the RAPIDS contributors for that pioneering work. cuXfilter
+is distributed under the
+[Apache License 2.0](https://github.com/rapidsai/cuxfilter/blob/main/LICENSE). LuxFilter is an
+independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE) vis.gl
+implementation; it does not copy or translate cuXfilter source code. It is not a CUDA port,
+compatible Python API, feature-parity claim, or NVIDIA/RAPIDS successor project, and is neither
+affiliated with nor endorsed by NVIDIA.
 
 The comparison below reflects the official cuXfilter
 [26.06 documentation](https://docs.rapids.ai/api/cuxfilter/stable/),

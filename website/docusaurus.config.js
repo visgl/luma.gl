@@ -17,7 +17,7 @@ function prefixWebsiteRoute(route) {
 
 const config = getDocusaurusConfig({
   projectName: 'luma.gl',
-  tagline: 'WebGPU and WebGL2 API for visualization and compute',
+  tagline: 'WebGPU and WebGL2 for visualization and compute',
   siteUrl: 'https://luma.gl',
   baseUrl: websiteBaseUrl,
   repoUrl: 'https://github.com/visgl/luma.gl',
@@ -55,6 +55,10 @@ const config = getDocusaurusConfig({
           {
             from: ['/examples/arrow/arrow-path-model'],
             to: '/examples/arrow/arrow-lines'
+          },
+          {
+            from: ['/examples/arrow/arrow-instancing'],
+            to: '/examples/showcase/instancing'
           },
           {
             from: ['/examples/experimental/video-texture'],
@@ -153,6 +157,7 @@ module.exports = {
         enableDescriptions: true,
         includeOrder: [
           '/docs/getting-started',
+          '/docs/capabilities',
           '/docs/tutorials/**',
           '/docs/api-guide/**',
           '/docs/api-reference/**',
@@ -193,9 +198,9 @@ module.exports = {
         }
       }
     ],
-    function arrowLayersSourceAlias() {
+    function deckCommunitySourceAliases() {
       return {
-        name: 'arrow-layers-source-alias',
+        name: 'deck-community-source-aliases',
         configureWebpack(_configuration, isServer) {
           return {
             resolve: {
@@ -203,6 +208,10 @@ module.exports = {
                 '@deck.gl-community/arrow-layers$': path.resolve(
                   __dirname,
                   '../modules/arrow-layers/src/index.ts'
+                ),
+                '@deck.gl-community/luspatial$': path.resolve(
+                  __dirname,
+                  '../modules/deck-luspatial/src/index.ts'
                 )
               }
             },

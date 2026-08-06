@@ -1,0 +1,512 @@
+---
+title: Framework Capabilities
+description: Detailed feature matrices for GPU-native data, large-scale visualization, WebGPU and WebGL2 compute, rendering, shaders, assets, and experimental luma.gl modules.
+---
+
+# Visualization and compute, at GPU scale.
+
+Move massive datasets through GPU-resident pipelines. Filter, aggregate, project, and render
+without unnecessary CPU round trips. luma.gl is a modular, TypeScript-first framework for
+data-intensive visualization, portable GPU programming, and high-quality interactive rendering.
+
+Choose the level you need: typed columnar data, reusable compute operations, GPU command graphs,
+rendering primitives, composable visual effects, or retained three-dimensional scenes.
+
+**Massive data. GPU-native compute. Interactive visualization. WebGPU and WebGL2.**
+
+## The framework, module by module
+
+<div className="docs-api-card-grid">
+  <a className="docs-api-card" href="/docs/api-guide/gpu/gpu-data-processing">
+    <span className="docs-api-card__kind">GPU-native computation</span>
+    <strong>Compute, tables, and Arrow</strong>
+    <span>Connect GPU-resident columns, reusable operations, command graphs, filtering, aggregation, and large-scale visualization.</span>
+    <span className="docs-api-card__meta">@luma.gl/gpgpu · @luma.gl/tables</span>
+    <span className="docs-api-card__meta">@luma.gl/arrow · experimental / private</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/core">
+    <span className="docs-api-card__logos" role="group" aria-label="Supported graphics backends">
+      <img
+        className="docs-api-card__logo"
+        src="/img/standards/webgpu.svg"
+        alt="WebGPU"
+        width="112"
+        height="38"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--on-light"
+        src="/img/standards/webgl.svg"
+        alt="WebGL"
+        width="96"
+        height="40"
+        loading="lazy"
+      />
+    </span>
+    <span className="docs-api-card__kind">Portable GPU foundation</span>
+    <strong>Core, WebGPU, and WebGL</strong>
+    <span>One application-facing device API for buffers, textures, pipelines, commands, and explicit GPU resource ownership.</span>
+    <span className="docs-api-card__meta">@luma.gl/core · @luma.gl/webgpu · @luma.gl/webgl</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/engine">
+    <span className="docs-api-card__kind">Rendering engine</span>
+    <strong>Models, geometry, and animation</strong>
+    <span>Build with models, GPU geometry, picking, instancing, render loops, and reusable animation mixing.</span>
+    <span className="docs-api-card__meta">@luma.gl/engine</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/shadertools">
+    <span className="docs-api-card__kind">Shader programming</span>
+    <strong>Reusable shaders and modules</strong>
+    <span>Compose WGSL and GLSL with typed shader modules, injection hooks, lighting, and high-precision visualization tools.</span>
+    <span className="docs-api-card__meta">@luma.gl/shadertools</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-guide/shaders/shader-passes">
+    <span className="docs-api-card__kind">Visual effects</span>
+    <strong>Composable image processing</strong>
+    <span>Combine bloom, ambient occlusion, reflections, indirect light, volumetrics, motion blur, and temporal antialiasing.</span>
+    <span className="docs-api-card__meta">@luma.gl/effects</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/anari">
+    <span
+      className="docs-api-card__logos"
+      role="group"
+      aria-label="ANARI-inspired scenes with glTF and experimental OpenUSD import"
+    >
+      <img
+        className="docs-api-card__logo docs-api-card__logo--primary"
+        src="/img/standards/anari.svg"
+        alt="ANARI"
+        width="168"
+        height="56"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary"
+        src="/img/standards/gltf.svg"
+        alt="glTF"
+        width="64"
+        height="32"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary docs-api-card__logo--on-dark"
+        src="/img/standards/openusd.png"
+        alt="OpenUSD"
+        width="70"
+        height="33"
+        loading="lazy"
+      />
+    </span>
+    <span className="docs-api-card__kind">Experimental retained scenes</span>
+    <strong>ANARI / Scene API</strong>
+    <span>Describe cameras, geometry, lights, and renderers; explore glTF and experimental OpenUSD import in the ANARI Playground.</span>
+    <span className="docs-api-card__meta">@luma.gl/anari · experimental / private</span>
+    <span className="docs-api-card__disclaimer">ANARI-inspired; not an ANARI-conformant implementation.</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/gltf">
+    <span className="docs-api-card__logos" role="group" aria-label="glTF on WebGPU and WebGL">
+      <img
+        className="docs-api-card__logo docs-api-card__logo--primary"
+        src="/img/standards/gltf.svg"
+        alt="glTF"
+        width="128"
+        height="64"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary"
+        src="/img/standards/webgpu.svg"
+        alt="WebGPU"
+        width="77"
+        height="26"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary docs-api-card__logo--on-light"
+        src="/img/standards/webgl.svg"
+        alt="WebGL"
+        width="62"
+        height="26"
+        loading="lazy"
+      />
+    </span>
+    <span className="docs-api-card__kind">Assets and materials</span>
+    <strong>glTF and physically based shading</strong>
+    <span>Load portable 3D assets, PBR material extensions, compressed geometry and textures, and supported animation clips.</span>
+    <span className="docs-api-card__meta">@luma.gl/gltf</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/splats">
+    <span className="docs-api-card__kind">Experimental neural rendering</span>
+    <strong>Streaming Gaussian splats</strong>
+    <span>Render captured scenes with anisotropic splats, GPU depth ordering, progressive batches, and HDR color.</span>
+    <span className="docs-api-card__meta">@luma.gl/splats · experimental / private</span>
+  </a>
+</div>
+
+<div className="docs-api-card__attribution">
+  WebGPU logo by <a href="https://www.w3.org/">W3C</a>, used under the{' '}
+  <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International license</a>.
+  Standards marks identify related technologies and do not imply endorsement, certification, or conformance.
+</div>
+
+## How to read the feature matrices
+
+| Status | Meaning |
+| --- | --- |
+| **Available** | Implemented in a published framework module, subject to documented device and browser requirements. |
+| **Evolving** | Implemented in a published module, but integration, feature coverage, or the v10 API remains incomplete. |
+| **Experimental** | Implemented in a private package or work-in-progress source module that is not yet published independently. |
+| **Opportunity** | A useful extension or known limitation; do not interpret it as existing functionality. |
+
+`WebGPU + WebGL2` means an application-facing path exists for both backends; exact shader,
+texture, or device-feature requirements can still differ. `WebGPU` identifies capabilities that
+require compute shaders, storage resources, or another WebGPU-specific implementation.
+
+## GPU-native data, compute, and visualization
+
+### GPU-resident tables and columnar memory
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Owned or borrowed GPU chunks | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | Each `GPUData` object owns or borrows exactly one GPU buffer. |
+| Typed GPU vectors | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUVector` preserves an ordered list of independent data chunks. |
+| Strided and child views | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUDataView` describes views and struct children without duplicating GPU storage. |
+| GPU record batches | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPURecordBatch` groups aligned named columns without erasing batch identity. |
+| Chunk-preserving tables | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUTable` keeps streamed record batches instead of implicitly repacking them. |
+| Constant values | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUConstant` represents scalar or row-level constant inputs. |
+| Explicit vector formats | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUVectorFormat` describes stored bytes independently of shader value types. |
+| GPU schemas | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUSchema` and input schemas describe column names, formats, and bindings. |
+| Shader binding synthesis | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | Table-aware helpers connect compatible columns to vertex attributes or storage. |
+| Buffer budget planning | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUTableBufferPlanner` bounds bindings and respects available device limits. |
+| Explicit packing | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | Packing is an explicit operation, never a hidden side effect of streaming. |
+| Ownership-aware destruction | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | Aggregate destruction does not release buffers borrowed from their original owners. |
+| Table-backed rendering | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | `GPUTableModel` and table geometry connect columnar data directly to drawing. |
+| Table transform feedback | Evolving | WebGL2 | `@luma.gl/tables` | Apply supported table transforms through WebGL transform feedback. |
+| Table compute dispatch | Evolving | WebGPU | `@luma.gl/tables` | Compose typed GPU table inputs and outputs through WebGPU compute. |
+
+See [GPU table structure and lifecycle](/docs/api-reference/tables).
+
+### Apache Arrow, geometry, and text
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Apache Arrow uploads | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Convert supported Arrow tables, batches, vectors, and numeric columns into GPU data. |
+| Original batch boundaries | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Preserve source chunks and batch ownership instead of flattening streamed input. |
+| Fixed-size vector columns | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Adapt supported fixed-size lists into typed GPU vectors and shader bindings. |
+| Variable-length geometry | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Preserve offsets for paths, polygons, and other row-oriented variable-length data. |
+| Normalized and HDR colors | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Adapt normalized colors and supported floating-point color inputs without promising universal zero-copy uploads. |
+| Temporal and matrix metadata | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Carry supported timestamps, time origins, and matrix-oriented source metadata. |
+| Arrow path rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Draw Arrow-backed paths with portable attributes or WebGPU storage strategies. |
+| Arrow polygon rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Render supported polygon rows and preserve source-row identity for interaction. |
+| Arrow text rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Render supported string and dictionary-encoded label columns. |
+| Source-row picking | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Map visible geometry and labels back to their original Arrow rows. |
+| GeoArrow tessellation | Experimental | WebGPU + WebGL2 | `@math.gl/geoarrow` | Handle supported mixed geometry, polygon holes, coordinate layouts, and worker-assisted tessellation. |
+| deck.gl Arrow layers | Experimental | WebGPU + WebGL2 | `@deck.gl-community/arrow-layers` | Connect Arrow-backed paths, polygons, and text to compatible visualization layers. |
+| Text and glyph atlases | Experimental | WebGPU + WebGL2 | `@luma.gl/text` | Render bitmap, SDF, or MSDF glyphs with supported Unicode layout, kerning, and clipping. |
+| Dictionary-compressed labels | Experimental | WebGPU | `@luma.gl/text` | Reuse repeated label values through WebGPU storage-based text strategies. |
+| Animated path visualization | Evolving | WebGPU | `@luma.gl/tables` | Render GPU-resident trips and variable-length paths through storage-backed models. |
+
+See [supported Arrow types and representations](/docs/api-reference/arrow).
+
+### Portable data operations
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Portable data evaluation | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Evaluate supported expressions against the most appropriate available execution backend. |
+| Lazy vector evaluation | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Build deferred vector expressions and resolve them when values are needed. |
+| Arithmetic operations | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Apply addition, subtraction, multiplication, division, powers, and other supported operations. |
+| Elementary math | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Evaluate supported sine, cosine, tangent, exponential, logarithm, and square-root functions. |
+| Extent and vector reductions | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Calculate supported extents, dot products, lengths, and equality checks. |
+| Gather and selection | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Gather indexed values, select elements, and generate index sequences. |
+| Segmented operations | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Apply supported segmented mappings without losing source-vector structure. |
+| Swizzle and interleave | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Reorder vector components and combine compatible streams. |
+| Result caching | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Reuse evaluated values and clean up evaluator-owned temporary resources. |
+| Dynamic backend loading | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Select compatible implementations without requiring every execution adapter up front. |
+| Custom operation handlers | Available | CPU + WebGPU + WebGL2 | `@luma.gl/gpgpu` | Extend evaluator behavior through explicit backend-specific operation handlers. |
+
+See [GPU operations and custom evaluation](/docs/api-reference/gpgpu).
+
+### GPU command graphs and execution
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| GPU command-graph compilation | Experimental | WebGPU | `@luma.gl/experimental` | Compile explicit compute, rendering, and copy workflows into reusable encodings. |
+| Resource dependency tracking | Experimental | WebGPU | `@luma.gl/experimental` | Order graph nodes around their declared resources and access relationships. |
+| Caller-owned resources | Experimental | WebGPU | `@luma.gl/experimental` | Import external buffers, textures, and data views without transferring ownership. |
+| Transient buffer reuse | Experimental | WebGPU | `@luma.gl/experimental` | Alias compatible graph-owned scratch allocations across nonoverlapping lifetimes. |
+| Transient texture reuse | Experimental | WebGPU | `@luma.gl/experimental` | Reuse compatible intermediate textures inside the compiled graph. |
+| Typed table integration | Experimental | WebGPU | `@luma.gl/experimental` | Import GPU vectors and chunk-aware data views into command-graph workflows. |
+| Compute-to-render composition | Experimental | WebGPU | `@luma.gl/experimental` | Connect compute passes to rendering without materializing a CPU-side dataset. |
+| Indirect draw commands | Experimental | WebGPU | `@luma.gl/experimental` | Generate caller-visible draw and indexed-draw arguments on the GPU. |
+| Indirect compute dispatch | Experimental | WebGPU | `@luma.gl/experimental` | Produce bounded dispatch arguments for supported graph-driven workloads. |
+| Explicit submission | Experimental | WebGPU | `@luma.gl/experimental` | Return encoded GPU work without hidden eager submissions. |
+| Render targets and resolve | Experimental | WebGPU | `@luma.gl/experimental` | Describe render attachments and supported multisample resolve targets. |
+| Execution inspection | Experimental | WebGPU | `@luma.gl/experimental` | Inspect graph nodes, resource lifetimes, CPU counters, and available GPU timestamps. |
+| Small-result readback | Experimental | WebGPU | `@luma.gl/experimental` | Return bounded interaction results or aggregates rather than copying every source row. |
+
+See [GPU command graphs](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph).
+
+### Parallel algorithms and GPU-native queries
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Prefix scan | Experimental | WebGPU | `@luma.gl/experimental` | Perform inclusive, exclusive, and supported segmented prefix operations. |
+| Stable compaction | Experimental | WebGPU | `@luma.gl/experimental` | Preserve original row order while removing records outside the current selection. |
+| Indexed range generation | Experimental | WebGPU | `@luma.gl/experimental` | Build bounded index ranges for compatible visibility and selection workflows. |
+| Boolean masks | Experimental | WebGPU | `@luma.gl/experimental` | Combine selection masks using supported boolean and difference operations. |
+| GPU depth and key sorting | Experimental | WebGPU | `@luma.gl/experimental` | Sort supported unsigned keys and values through bitonic or radix implementations. |
+| Chunk-preserving batch sort | Experimental | WebGPU | `@luma.gl/experimental` | Sort source batches without silently merging independently owned buffers. |
+| Minimum and maximum reduction | Experimental | WebGPU | `@luma.gl/experimental` | Compute supported sums, extents, minima, and maxima on the GPU. |
+| Uniform histograms | Experimental | WebGPU | `@luma.gl/experimental` | Bin supported numeric inputs into configurable uniform histogram buckets. |
+| Irregular-edge histograms | Experimental | WebGPU | `@luma.gl/experimental` | Evaluate custom bin edges with supported GPU or literal edge buffers. |
+| Grouped aggregates | Experimental | WebGPU | `@luma.gl/experimental` | Calculate supported group count, sum, minimum, maximum, and mean values. |
+| Spatial grid binning | Experimental | WebGPU | `@luma.gl/experimental` | Assign compatible rows to bounded two-dimensional grid cells. |
+| Spatial grid indexes | Experimental | WebGPU | `@luma.gl/experimental` | Index supported two-dimensional or three-dimensional points for spatial queries. |
+| Grid aggregates | Experimental | WebGPU | `@luma.gl/experimental` | Produce supported spatial cell sums, minima, maxima, and means. |
+| Hash indexes | Experimental | WebGPU | `@luma.gl/experimental` | Build and query supported bounded unsigned-key hash indexes. |
+| Hash joins | Experimental | WebGPU | `@luma.gl/experimental` | Execute capacity-bounded sparse inner joins for supported unsigned keys. |
+| Batch-preserving joins | Experimental | WebGPU | `@luma.gl/experimental` | Preserve independent left-side batch capacities and expose bounded overflow. |
+| Spatial bounds queries | Experimental | WebGPU | `@luma.gl/experimental` | Query compatible point, radius, and bounds relationships in GPU spatial indexes. |
+| Bounding-volume hierarchies | Experimental | WebGPU | `@luma.gl/experimental` | Build or refit fixed-topology hierarchies for supported point and bounds queries. |
+| Graph traversal | Experimental | WebGPU | `@luma.gl/experimental` | Traverse supported incoming, outgoing, or bidirectional hierarchical relationships. |
+| Hierarchy layout | Experimental | WebGPU | `@luma.gl/experimental` | Derive stable hierarchical layout and ancestor-projection data. |
+| Frustum visibility | Experimental | WebGPU | `@luma.gl/experimental` | Cull compatible GPU-resident scene records against the current viewing volume. |
+| GPU scene draw generation | Experimental | WebGPU | `@luma.gl/experimental` | Group visible scene resources and generate bounded indirect rendering commands. |
+| Async picking readback | Experimental | WebGPU | `@luma.gl/experimental` | Resolve supported selection and picking results through an asynchronous readback ring. |
+| Two-dimensional FFT | Experimental | WebGPU | `@luma.gl/experimental` | Transform bounded complex fields for spectral simulation and related data workflows. |
+
+See [GPU primitive documentation](/docs/api-reference/experimental/gpu-primitives).
+
+### Applied visualization, geospatial, and interaction
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Linked crossfiltering | Experimental | WebGPU | `@luma.gl/experimental/luxfilter` | Maintain linked scalar ranges and two-dimensional brushes over GPU-resident data. |
+| Self-excluding histograms | Experimental | WebGPU | `@luma.gl/experimental/luxfilter` | Recalculate brush histograms without counting the active dimension against itself. |
+| Stable selected row IDs | Experimental | WebGPU | `@luma.gl/experimental/luxfilter` | Preserve row identity for linked charts and renderable selection masks. |
+| High-precision projection | Experimental | WebGPU | `@luma.gl/experimental/luproj` | Build local error-bounded projection patches from compatible CPU projection providers. |
+| Binary64 coordinate transport | Experimental | WebGPU | `@luma.gl/experimental/luproj` | Transport 64-bit source coordinates as integer words and subtract a local origin. |
+| Web Mercator support | Experimental | WebGPU | `@luma.gl/experimental/luproj` | Project supported geospatial coordinates while retaining local precision. |
+| Geographic distance | Experimental | WebGPU | `@luma.gl/experimental/geospatial` | Evaluate supported Haversine, point, segment, and linestring distances. |
+| Polygon containment | Experimental | WebGPU | `@luma.gl/experimental/geospatial` | Test supported polygon boundary and containment relationships. |
+| Hierarchical trace views | Experimental | WebGPU | `@luma.gl/experimental/lutrace` | Filter, project, and render supported process, thread, and dependency hierarchies. |
+| GPU-driven timeline picking | Experimental | WebGPU | `@luma.gl/experimental/lutrace` | Link trace visibility, indirect timeline draws, and GPU-aware picking. |
+| Bounded dataset residency | Experimental | WebGPU | Application-owned example | Stream large source corpora with an application-managed bounded GPU-resident working set. |
+| Portable path and polygon models | Evolving | WebGPU + WebGL2 | `@luma.gl/tables` | Render table-backed paths and polygons using compatible attribute-driven strategies. |
+| Storage-backed path models | Evolving | WebGPU | `@luma.gl/tables` | Process compatible path, polygon, and trip columns directly through storage buffers. |
+
+Try [Million-Row Crossfilter](/examples/showcase/million-row-crossfilter),
+[Billion-Point Spatial Atlas](/examples/showcase/billion-point-spatial-atlas),
+[GPU data analysis](/examples/experimental/gpu-data-analysis), and
+[GPU sorting](/examples/experimental/gpu-sort). Billion-scale figures describe source
+corpora; the GPU-resident working set remains bounded.
+
+## Portable GPU foundation and rendering
+
+### Devices, resources, and presentation
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Unified GPU device API | Available | WebGPU + WebGL2 | `@luma.gl/core` | Access adapters, devices, resources, commands, features, and limits through one model. |
+| Backend adapters | Available | WebGPU + WebGL2 | `@luma.gl/webgpu` and `@luma.gl/webgl` | Select the native WebGPU adapter or the WebGL2 compatibility adapter. |
+| Feature and limit discovery | Available | WebGPU + WebGL2 | `@luma.gl/core` | Inspect device capabilities before enabling optional functionality. |
+| GPU buffers | Available | WebGPU + WebGL2 | `@luma.gl/core` | Create vertex, index, uniform, and compatible readback buffers. |
+| GPU storage buffers | Available | WebGPU | `@luma.gl/webgpu` | Bind supported read-only or writable storage buffers to WebGPU shaders. |
+| Typed texture resources | Available | WebGPU + WebGL2 | `@luma.gl/core` | Allocate compatible 2D, array, cubemap, and three-dimensional texture resources. |
+| Texture views and samplers | Available | WebGPU + WebGL2 | `@luma.gl/core` | Describe texture views, filtering, wrapping, and supported anisotropic sampling. |
+| Compressed textures | Evolving | WebGPU + WebGL2 | `@luma.gl/core` | Use BC, ETC2, or ASTC formats when supported by the selected device. |
+| Native external textures | Available | WebGPU | `@luma.gl/webgpu` | Bind compatible browser-owned external image resources without a WebGL fallback. |
+| Video texture uploads | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Update compatible GPU textures from supported browser video sources. |
+| Framebuffers and attachments | Available | WebGPU + WebGL2 | `@luma.gl/core` | Manage color, depth, stencil, and supported multiple-render-target attachments. |
+| Render pipelines | Available | WebGPU + WebGL2 | `@luma.gl/core` | Configure shader bindings, vertex layouts, depth, stencil, and blend state. |
+| Compute shaders and passes | Available | WebGPU | `@luma.gl/webgpu` | Encode compute pipelines, dispatches, and WebGPU storage-resource workflows. |
+| Indexed and indirect draws | Evolving | WebGPU + WebGL2 | `@luma.gl/core` | Indexed drawing is portable; GPU-generated indirect drawing requires WebGPU. |
+| Render bundles | Evolving | WebGPU | `@luma.gl/webgpu` | Reuse compatible recorded render commands. |
+| Transform feedback | Available | WebGL2 | `@luma.gl/webgl` | Support established WebGL transform-feedback workflows. |
+| Occlusion and timing queries | Evolving | WebGPU + WebGL2 | `@luma.gl/core` | Use supported query types only when the selected backend advertises them. |
+| Multisample resolve | Available | WebGPU | `@luma.gl/webgpu` | Resolve supported multisampled render attachments. |
+| Canvas sizing and pixel ratio | Available | WebGPU + WebGL2 | `@luma.gl/core` | Manage browser canvas configuration, resize, and high-DPI presentation. |
+| Extended color and HDR | Evolving | WebGPU | `@luma.gl/webgpu` | Present compatible floating-point or display-P3 output when browser and display support it. |
+
+### Engine, geometry, and interaction
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Model and material lifecycle | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Compose shader inputs, geometry, materials, pipelines, and draw calls. |
+| CPU and GPU geometry | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Connect source geometry to explicit GPU buffers and shader-facing layouts. |
+| Built-in geometry primitives | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Generate supported cubes, planes, spheres, cylinders, cones, and related meshes. |
+| Indexed and instanced rendering | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Reuse geometry across indexed meshes and compatible instance batches. |
+| Scenegraph transforms | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Organize supported scene nodes, groups, transforms, and bounding information. |
+| Dynamic buffers and textures | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Resize and update managed application resources as data changes. |
+| Integer-index picking | Evolving | WebGPU + WebGL2 | `@luma.gl/engine` | Use exact integer picking when the selected backend supports integer render targets. |
+| Color picking fallback | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Encode supported object and batch identifiers into compatible color targets. |
+| Animation loop and timeline | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Coordinate rendering, frame state, keyframes, and application updates. |
+| Animation interpolation | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Evaluate step, linear, cubic-spline, and supported quaternion interpolation. |
+| Animation clip mixing | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Play, pause, scrub, loop, weight, and crossfade compatible animation actions. |
+| Fullscreen drawing | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Build visualization overlays and fullscreen passes from reusable clip-space geometry. |
+
+### Shader assembly and numerical precision
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| WGSL shader assembly | Available | WebGPU | `@luma.gl/shadertools` | Compose supported WebGPU shader source and typed application bindings. |
+| GLSL shader assembly | Available | WebGL2 | `@luma.gl/shadertools` | Compose supported WebGL vertex and fragment shaders. |
+| Typed shader modules | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse shader modules with explicit source, dependencies, and uniform types. |
+| Shader hooks and injections | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Extend supported applications through composable shader hooks and source injections. |
+| Shader plugins | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Order reusable shader plugins and validate supported varying relationships. |
+| Uniform and binding reflection | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Coordinate application uniforms, supported bindings, and shader layouts. |
+| Color and picking modules | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse compatible color transforms, clipping, filtering, and picking logic. |
+| Lighting and PBR shaders | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Compose supported Lambert, Phong, physically based shading, and image-based lighting. |
+| Joint-driven skinning | Evolving | WebGPU + WebGL2 | `@luma.gl/shadertools` | Existing skinning supports established paths; current joint counts and retained integration are limited. |
+| Split-float high precision | Evolving | WebGPU + WebGL2 | `@luma.gl/shadertools` | Emulate selected higher-precision arithmetic without claiming native WGSL 64-bit floats. |
+| GLSL fp64 transcendentals | Available | WebGL2 | `@luma.gl/shadertools` | Use the supported GLSL high-precision transcendental library. |
+| 64-bit cell identifiers | Evolving | WebGPU | `@luma.gl/shadertools` | Represent supported geospatial cell identifiers as paired unsigned words. |
+
+### Lighting, visual effects, and transparency
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Ordered image-effect pipelines | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Chain compatible shader passes and explicitly named intermediate targets. |
+| HDR bloom | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Apply supported floating-point highlight extraction and multiresolution blur. |
+| Color and image filters | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Adjust brightness, contrast, hue, saturation, noise, sepia, and vignette. |
+| Depth-of-field passes | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Apply supported depth-aware focus and image-space blur. |
+| Temporal antialiasing | Available | WebGPU | `@luma.gl/effects` | Reproject compatible frame history to stabilize visible geometry. |
+| Motion blur | Available | WebGPU | `@luma.gl/effects` | Use compatible velocity and frame data for image-space motion blur. |
+| Screen-space ambient occlusion | Available | WebGPU | `@luma.gl/effects` | Compute supported SSAO and GTAO visibility from scene attachments. |
+| Screen-space reflections | Available | WebGPU | `@luma.gl/effects` | Trace and stabilize supported SSR reflections using depth and frame history. |
+| Screen-space indirect lighting | Available | WebGPU | `@luma.gl/effects` | Approximate supported diffuse bounce lighting with temporally filtered SSGI. |
+| Adaptive exposure | Available | WebGPU | `@luma.gl/effects` | Reduce scene luminance on the GPU and update compatible HDR exposure. |
+| Volumetric lighting and fog | Available | WebGPU | `@luma.gl/effects` | Render supported fog, participating media, and clustered light scattering. |
+| Depth-aware outlines | Available | WebGPU | `@luma.gl/effects` | Highlight compatible object boundaries using auxiliary scene attachments. |
+| Deferred G-buffer rendering | Experimental | WebGPU | `@luma.gl/experimental` | Compose supported surface attachments and deferred lighting passes. |
+| Compute-clustered lights | Experimental | WebGPU | `@luma.gl/experimental` | Partition dense point-light workloads into compatible screen-space clusters. |
+| Cascaded directional shadows | Experimental | WebGPU | `@luma.gl/experimental` | Render supported cascaded shadow maps for directional lights. |
+| Spot and point shadows | Experimental | WebGPU | `@luma.gl/experimental` | Render supported spot shadows and six-face omnidirectional point shadows. |
+| Soft and contact shadows | Experimental | WebGPU | `@luma.gl/experimental` | Apply supported blocker search, filtering, and screen-space contact shadows. |
+| Exact order-independent transparency | Experimental | WebGPU | `@luma.gl/experimental` | Use a bounded A-buffer on devices with sufficient fragment storage resources. |
+| Weighted-blended transparency | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental` | Approximate order-independent transparency when required float attachments are blendable. |
+| Spectral optical caustics | Experimental | WebGPU | `@luma.gl/experimental` | Compute supported wavelength-separated lighting through a bounded refractor. |
+
+Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
+[Illumination Lab](/examples/experimental/deferred-rendering),
+[Prism Cathedral](/examples/experimental/spectral-caustics), and
+[Effects: Image Processing](/examples/showcase/postprocessing).
+
+### glTF, PBR, and standards-driven animation
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| glTF and GLB scene loading | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Load supported scene hierarchies, indexed meshes, cameras, materials, and animation data. |
+| Draco mesh compression | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported Draco-compressed meshes through the shared asset loader. |
+| Meshopt compression | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported Meshopt-compressed primitives during asset loading. |
+| Quantized geometry | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Expand supported quantized accessors before GPU geometry creation. |
+| Basis Universal and KTX2 | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported compressed textures when the runtime and selected device permit it. |
+| Metallic-roughness materials | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply supported PBR textures, material factors, normals, and emissive surfaces. |
+| Specular and index of refraction | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Support documented glTF specular and index-of-refraction material extensions. |
+| Clearcoat and sheen | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply documented clearcoat and sheen material lobes in compatible renderers. |
+| Iridescence and anisotropy | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Render thin-film interference and directional anisotropic highlights through the shared PBR shader. |
+| Transmission and volume | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Shared scene renderers refract captured scene color; the standalone glTF rendering fallback remains approximate. |
+| Chromatic dispersion | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Separate visible wavelengths when physical transmission uses authored `KHR_materials_dispersion`. |
+| Authored UV transforms | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported texture offset, rotation, and scale semantics. |
+| Authored normals and tangents | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported vertex attributes; complete renderer-to-renderer fidelity varies. |
+| Punctual-light parsing | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Parse supported authored directional, point, and spot light definitions. |
+| Shared animation clips | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Play, blend, crossfade, loop, and interpolate compatible imported tracks. |
+| Selected animation pointers | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Update supported `KHR_animation_pointer` transforms, material factors, and UV properties. |
+| Existing joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse established skin shaders and automatically bind mesh-local glTF joint palettes. |
+| Morph-target animation | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Animate POSITION, NORMAL, and TANGENT morph targets through shared glTF, engine, and retained-scene paths. |
+| Imported GPU instancing | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | `EXT_mesh_gpu_instancing` is not yet translated into retained instance batches. |
+| Imported node visibility | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | `KHR_node_visibility` does not yet have a supported runtime integration. |
+
+The ownership boundaries are intentional: `@luma.gl/gltf` interprets assets,
+`@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,
+`@luma.gl/experimental` explores higher-level rendering, and `@luma.gl/anari` orchestrates
+retained scene objects. Reuse each capability at its existing layer rather than creating
+parallel implementations.
+
+See the [glTF extension support matrix](/docs/api-reference/gltf/gltf-extensions).
+
+### Declarative scenes and asset integration
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| ANARI-inspired retained objects | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Manage retained cameras, geometry, materials, lights, surfaces, instances, and worlds. |
+| Perspective and orthographic cameras | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Configure supported camera models through the retained scene API. |
+| Shared geometry instances | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Reuse compatible surfaces, groups, and geometry across retained instances. |
+| Physically based scene materials | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Describe supported matte and physically based material parameters. |
+| Scene light types | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Configure supported ambient, directional, point, and spot lights. |
+| Switchable scene renderers | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Select supported forward, normal, or depth views; deferred rendering requires WebGPU. |
+| Retained animation playback | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Play supported transform, material, and texture-coordinate animations. |
+| Editable JSON scenes | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Inspect and edit supported retained scene descriptions interactively. |
+| Experimental OpenUSD import | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | The ANARI Playground imports supported ASCII USD and ASCII-root USDZ examples. |
+| Scene-level skeletal animation | Opportunity | WebGPU + WebGL2 | `@luma.gl/anari` | Existing joint skinning has not yet been integrated into the retained ANARI renderer. |
+
+This is an ANARI-inspired proof of concept, not a claim of complete standards conformance.
+Explore the [ANARI Playground](/examples/experimental/anari-playground).
+
+### Gaussian splats and captured-scene rendering
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Typed Gaussian splat columns | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Represent position, scale, orientation, opacity, supported colors, and row identity. |
+| Anisotropic covariance | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Project compatible anisotropic splats rather than reducing them to fixed point sprites. |
+| Portable splat rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Select WebGPU storage or WebGL2 attribute-backed rendering paths. |
+| Progressive batch streaming | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Preserve independently owned streamed source batches. |
+| GPU projection and culling | Experimental | WebGPU | `@luma.gl/splats` | Project visible splats and apply supported frustum, opacity, and size thresholds. |
+| GPU depth sorting | Experimental | WebGPU | `@luma.gl/splats` | Execute supported command-graph-native global depth ordering. |
+| Indirect splat drawing | Experimental | WebGPU | `@luma.gl/splats` | Generate one bounded indirect draw from the visible GPU-resident set. |
+| HDR spherical-harmonic DC | Experimental | WebGPU | `@luma.gl/splats` | Preserve supported floating-point source radiance on compatible presentation targets. |
+| Standard-dynamic-range fallback | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Apply supported display mapping when extended HDR output is unavailable. |
+| View-dependent harmonics | Opportunity | WebGPU | `@luma.gl/splats` | Higher-order spherical harmonics are not part of the current rendering API. |
+| Dedicated splat picking | Opportunity | WebGPU | `@luma.gl/splats` | GPU-native interaction and semantic selection remain future work. |
+
+View captured scenes in the [Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer).
+
+### Simulation and immersive presentation
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Three-dimensional fire and smoke | Experimental | WebGPU | `@luma.gl/experimental` | Evolve three-dimensional fire velocity, pressure, fuel, heat, smoke, and solid obstacles. |
+| Spectral ocean simulation | Experimental | WebGPU | `@luma.gl/experimental` | Generate GPU Fourier-displaced waves, normals, and compression-derived whitecaps. |
+| Two-dimensional MLS-MPM liquids | Experimental | WebGPU | `@luma.gl/experimental` | Simulate supported two-dimensional MLS-MPM particle and grid transfers. |
+| Full three-dimensional particle liquids | Opportunity | WebGPU | `@luma.gl/experimental` | The existing liquid solver is two-dimensional rather than a general three-dimensional fluid system. |
+| Cloth and soft-body simulation | Opportunity | WebGPU | `@luma.gl/experimental` | Deformable-body simulation is not part of the current framework. |
+| WebXR frame integration | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental` | Drive compatible immersive frames from WebXR session scheduling. |
+| Immersive AR and VR | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental` | Render supported per-eye immersive AR and VR views with explicit viewports. |
+| Native WebGPU XR layers | Experimental | WebGPU | `@luma.gl/experimental` | Use projection layers only when the browser, XR session, and adapter support them. |
+| Raw AR camera textures | Experimental | WebGL2 | `@luma.gl/experimental` | Bind compatible raw-camera access through the WebGL immersive path. |
+| Advanced XR spatial features | Opportunity | WebGPU + WebGL2 | `@luma.gl/experimental` | Hit testing, anchors, hand tracking, depth sensing, and WebGPU camera textures remain absent. |
+| Progressive path tracing | Opportunity | WebGPU | `@luma.gl/experimental` | General ray traversal and progressive path tracing are not implemented. |
+
+Try [Volumetric Fire Forge](/examples/experimental/volumetric-fire-forge),
+[Tempest Ocean](/examples/showcase/tempest-ocean), and
+[Fluid Foundry](/examples/experimental/fluid-foundry).
+
+## Opportunities for data-intensive visualization and compute
+
+These opportunities follow luma.gl's core focus: massive data, GPU-native computation, practical
+rendering infrastructure, and interactive visualization. They describe useful directions, not
+commitments to release dates.
+
+| Feature | Status | Backend | Package | Details |
+| --- | --- | --- | --- | --- |
+| Out-of-core dataset streaming | Opportunity | WebGPU + WebGL2 | `@luma.gl/tables` and `@luma.gl/arrow` | Formalize bounded residency, prioritization, eviction, and backpressure for massive datasets. |
+| Unified compute scheduling | Opportunity | WebGPU | `@luma.gl/gpgpu` and `@luma.gl/experimental` | Lower compatible lazy expressions into reusable command graphs while preserving portable fallbacks. |
+| Kernel fusion | Opportunity | WebGPU | `@luma.gl/gpgpu` | Reduce intermediate allocations by fusing compatible columnar compute operations. |
+| Richer columnar analytics | Opportunity | WebGPU | `@luma.gl/tables` and `@luma.gl/gpgpu` | Expand grouped queries, temporal windows, incremental updates, and join coverage. |
+| Hierarchical spatial indexes | Opportunity | WebGPU | `@luma.gl/experimental/geospatial` | Extend supported spatial queries toward tiled indexing, nearest neighbors, and spatial joins. |
+| High-precision geospatial pipelines | Opportunity | WebGPU | `@luma.gl/experimental/luproj` | Broaden projection, local-origin precision, coordinate systems, and streamed map-scale workflows. |
+| Linked GPU-native interaction | Opportunity | WebGPU | `@luma.gl/experimental/luxfilter` | Share selection, filtering, provenance, and picking across charts, maps, and scene views. |
+| Scalable GPU-native annotations | Opportunity | WebGPU + WebGL2 | `@luma.gl/text` and `@luma.gl/arrow` | Advance streamed labels, dictionary reuse, collision-aware placement, and exact row selection. |
+| Scientific volume rendering | Opportunity | WebGPU | `@luma.gl/anari` and `@luma.gl/experimental` | Visualize streamed three-dimensional fields with transfer functions, clipping, and isosurfaces. |
+| Massive geometry visualization | Opportunity | WebGPU | `@luma.gl/experimental` | Extend procedural virtual geometry toward imported mesh clusters and occlusion-aware residency. |
+| Interactive captured-scene analytics | Opportunity | WebGPU | `@luma.gl/splats` | Add splat picking, semantic filtering, view-dependent appearance, and bounded scene streaming. |
+| Production-ready module boundaries | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine`, `@luma.gl/tables`, and `@luma.gl/gpgpu` | Graduate reusable scheduling, data adapters, and algorithms into their natural published packages. |
+
+`@luma.gl/experimental`, `@luma.gl/anari`, `@luma.gl/splats`, `@luma.gl/arrow`,
+`@luma.gl/text`, `@math.gl/geoarrow`, and `@deck.gl-community/arrow-layers` are private packages
+in active development and are not yet published independently. Hardware capabilities, browser
+support, and API stability vary by feature.
+
+Explore the [live visualization examples](/examples), read the
+[GPU programming guides](/docs/api-guide/gpu), or inspect the
+[GPU data and compute architecture](/docs/api-guide/gpu/gpu-data-processing).

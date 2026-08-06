@@ -1,6 +1,6 @@
 // deck.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {SignedDataType, type TextureFormat, type VertexFormat} from '@luma.gl/core';
 

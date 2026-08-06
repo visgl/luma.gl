@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   Buffer,
@@ -9,6 +9,7 @@ import {
   Texture,
   TextureView,
   type Binding,
+  type BufferLayout,
   type RenderPipelineParameters,
   log
 } from '@luma.gl/core';
@@ -20,8 +21,10 @@ import {
   MaterialFactory,
   Model,
   ModelNode,
-  type ModelProps
+  type ModelProps,
+  type ScenegraphBounds
 } from '@luma.gl/engine';
+import type {NumericArray} from '@math.gl/core';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 
 const SHADER = /* WGSL */ `
@@ -43,6 +46,12 @@ struct VertexInputs {
   @location(5) JOINTS_0: vec4u,
   @location(6) WEIGHTS_0: vec4f,
 #endif
+#ifdef HAS_GLTF_INSTANCING
+  @location(8) instanceModelMatrixCol0: vec4f,
+  @location(9) instanceModelMatrixCol1: vec4f,
+  @location(10) instanceModelMatrixCol2: vec4f,
+  @location(11) instanceModelMatrixCol3: vec4f,
+#endif
 };
 
 struct FragmentInputs {
@@ -55,6 +64,18 @@ struct FragmentInputs {
   @location(4) pbrTangent: vec4f,
 #endif
 };
+
+#ifdef HAS_GLTF_INSTANCING
+fn getGLTFInstanceNormalMatrix(matrix: mat3x3f) -> mat3x3f {
+  let firstCofactor = cross(matrix[1], matrix[2]);
+  let inverseDeterminant = 1.0 / dot(matrix[0], firstCofactor);
+  return mat3x3f(
+    firstCofactor,
+    cross(matrix[2], matrix[0]),
+    cross(matrix[0], matrix[1])
+  ) * inverseDeterminant;
+}
+#endif
 
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
@@ -83,6 +104,24 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   normal = normalize((skinMatrix * vec4f(normal, 0.0)).xyz);
 #ifdef HAS_TANGENTS
   tangent = vec4f(normalize((skinMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w);
+#endif
+#endif
+
+#ifdef HAS_GLTF_INSTANCING
+  let instanceMatrix = mat4x4f(
+    inputs.instanceModelMatrixCol0,
+    inputs.instanceModelMatrixCol1,
+    inputs.instanceModelMatrixCol2,
+    inputs.instanceModelMatrixCol3
+  );
+  position = instanceMatrix * position;
+  normal = normalize(getGLTFInstanceNormalMatrix(mat3x3f(
+    instanceMatrix[0].xyz,
+    instanceMatrix[1].xyz,
+    instanceMatrix[2].xyz
+  )) * normal);
+#ifdef HAS_TANGENTS
+  tangent = vec4f(normalize((instanceMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w);
 #endif
 #endif
 
@@ -150,6 +189,13 @@ const vs = /* glsl */ `\
     in vec4 WEIGHTS_0;
   #endif
 
+  #ifdef HAS_GLTF_INSTANCING
+    in vec4 instanceModelMatrixCol0;
+    in vec4 instanceModelMatrixCol1;
+    in vec4 instanceModelMatrixCol2;
+    in vec4 instanceModelMatrixCol3;
+  #endif
+
   void main(void) {
     vec4 _NORMAL = vec4(0.);
     vec4 _TANGENT = vec4(0.);
@@ -181,6 +227,18 @@ const vs = /* glsl */ `\
       _TANGENT = vec4((skinMat * vec4(_TANGENT.xyz, 0.)).xyz, _TANGENT.w);
     #endif
 
+    #ifdef HAS_GLTF_INSTANCING
+      mat4 instanceMatrix = mat4(
+        instanceModelMatrixCol0,
+        instanceModelMatrixCol1,
+        instanceModelMatrixCol2,
+        instanceModelMatrixCol3
+      );
+      pos = instanceMatrix * pos;
+      _NORMAL = vec4(normalize(transpose(inverse(mat3(instanceMatrix))) * _NORMAL.xyz), 0.0);
+      _TANGENT = vec4(normalize(mat3(instanceMatrix) * _TANGENT.xyz), _TANGENT.w);
+    #endif
+
     pbr_setPositionNormalTangentUV(pos, _NORMAL, _TANGENT, _TEXCOORD_0, _TEXCOORD_1);
     gl_Position = pbrProjection.modelViewProjectionMatrix * pos;
   }
@@ -210,6 +268,10 @@ export type CreateGLTFModelOptions = {
   material?: Material | null;
   /** Additional model props merged into the generated model. */
   modelOptions?: Partial<ModelProps>;
+  /** Source primitive bounds before node and optional instance transforms. */
+  bounds?: ScenegraphBounds;
+  /** Source-authored local transforms for `EXT_mesh_gpu_instancing`. */
+  instanceMatrices?: readonly NumericArray[];
 };
 
 export type CreateGLTFMaterialOptions = {
@@ -244,7 +306,14 @@ export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOp
 
 /** Creates a luma.gl Model from GLTF data*/
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
-  const {id, geometry, parsedPPBRMaterial, vertexCount, modelOptions = {}} = options;
+  const {
+    id,
+    geometry,
+    parsedPPBRMaterial,
+    vertexCount,
+    modelOptions = {},
+    instanceMatrices
+  } = options;
 
   log.info(4, 'createGLTFModel defines: ', parsedPPBRMaterial.defines)();
 
@@ -262,6 +331,28 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     cullMode: 'back'
   };
 
+  const instanceAttributes: Record<string, Buffer> = {};
+  const instanceBufferLayout: BufferLayout[] = [];
+  if (instanceMatrices) {
+    for (let columnIndex = 0; columnIndex < 4; columnIndex++) {
+      const values = new Float32Array(instanceMatrices.length * 4);
+      instanceMatrices.forEach((matrix, instanceIndex) => {
+        for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
+          values[instanceIndex * 4 + rowIndex] = matrix[columnIndex * 4 + rowIndex];
+        }
+      });
+      const attributeName = `instanceModelMatrixCol${columnIndex}`;
+      const buffer = device.createBuffer({
+        id: `${id || 'gltf'}-${attributeName}`,
+        data: values,
+        usage: Buffer.VERTEX | Buffer.COPY_DST
+      });
+      instanceAttributes[attributeName] = buffer;
+      instanceBufferLayout.push({name: attributeName, format: 'float32x4', stepMode: 'instance'});
+      managedResources.push(buffer);
+    }
+  }
+
   const modelProps: ModelProps = {
     id,
     source: SHADER,
@@ -273,7 +364,19 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     modules: [pbrMaterial, skin],
     ...modelOptions,
 
-    defines: {...parsedPPBRMaterial.defines, ...modelOptions.defines},
+    ...(instanceMatrices
+      ? {
+          attributes: {...modelOptions.attributes, ...instanceAttributes},
+          bufferLayout: [...(modelOptions.bufferLayout || []), ...instanceBufferLayout],
+          instanceCount: instanceMatrices.length,
+          isInstanced: true
+        }
+      : {}),
+    defines: {
+      ...parsedPPBRMaterial.defines,
+      ...(instanceMatrices ? {HAS_GLTF_INSTANCING: true} : {}),
+      ...modelOptions.defines
+    },
     parameters: {...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters}
   };
 
@@ -299,7 +402,12 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     sceneShaderInputValues
   );
   model.shaderInputs.setProps(sceneShaderInputProps);
-  return new ModelNode({managedResources, model});
+  return new ModelNode({
+    managedResources,
+    model,
+    bounds: options.bounds,
+    instanceMatrices
+  });
 }
 
 function isMaterialBindingResource(value: unknown): boolean {

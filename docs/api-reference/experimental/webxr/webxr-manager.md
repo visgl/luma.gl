@@ -5,11 +5,12 @@
   <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
 </p>
 
-`WebXRManager` is the experimental WebGL-only session and per-view render-state helper for luma.gl. It prepares an `XRWebGLLayer`, requests a reference space, and resolves the framebuffer, viewports, projection matrices, and view matrices for one active `XRFrame`.
+`WebXRManager` is the experimental WebGPU and WebGL session and per-view render-state helper for luma.gl. It prepares a native WebGPU projection layer or an `XRWebGLLayer`, requests a reference space, and resolves framebuffers, viewports, projection matrices, and view matrices for one active `XRFrame`.
 
 ## Usage
 
 ```typescript
+import type {Framebuffer} from '@luma.gl/core';
 import {AnimationLoop} from '@luma.gl/engine';
 import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/experimental';
 
@@ -26,15 +27,20 @@ const animationLoop = new AnimationLoop({
       return;
     }
 
-    for (const [viewIndex, view] of frameState.views.entries()) {
+    const renderedFramebuffers = new Set<Framebuffer>();
+    for (const view of frameState.views) {
+      const framebuffer = view.framebuffer;
+      const clearFramebuffer = !renderedFramebuffers.has(framebuffer);
+      renderedFramebuffers.add(framebuffer);
+      // Encode view.projectionMatrix/view.viewMatrix uniform uploads before the pass.
       const renderPass = device.beginRenderPass({
-        framebuffer: frameState.framebuffer,
-        parameters: {viewport: view.viewport},
-        clearColor: viewIndex === 0 ? [0, 0, 0, 0] : false,
-        clearDepth: viewIndex === 0 ? 1 : false,
+        framebuffer,
+        clearColor: clearFramebuffer ? [0, 0, 0, 0] : false,
+        clearDepth: clearFramebuffer ? 1 : false,
         clearStencil: false
       });
-      // Set view.projectionMatrix and view.viewMatrix uniforms, then draw.
+      renderPass.setParameters({viewport: view.viewport});
+      // Draw the prepared model.
       renderPass.end();
     }
   }
@@ -43,12 +49,30 @@ const animationLoop = new AnimationLoop({
 
 ## Behavior
 
-- WebGL-only in v10 work in progress.
-- Calls `gl.makeXRCompatible()` before creating the base `XRWebGLLayer`.
+- Supports immersive WebGPU and WebGL sessions through the same manager and frame-state API.
+- Calls `gl.makeXRCompatible()` before creating a shared WebGL `XRWebGLLayer` framebuffer.
+- Creates a WebGPU `XRGPUBinding` projection layer and installs it with `session.updateRenderState({layers: [layer]})`.
+- Wraps WebGPU compositor color and optional depth textures as borrowed per-view attachments, preserving browser-provided texture-array slices and viewports.
+- Shares a framebuffer when multiple eyes target the same texture slice; otherwise each eye receives an independently clearable framebuffer.
 - Uses `XRSession.requestReferenceSpace()` with `local` by default.
 - Treats `XRViewerPose.views` as an arbitrary per-frame view list, not a fixed stereo pair.
 - Exposes `projectionMatrix` from `XRView.projectionMatrix` and `viewMatrix` from `XRView.transform.inverse.matrix`.
-- Wraps `XRWebGLLayer.framebuffer` as a borrowed luma [`Framebuffer`](/docs/api-reference/core/resources/framebuffer) and never deletes the browser-owned framebuffer handle.
+- Never destroys browser-owned WebGL framebuffers or WebGPU compositor textures.
+- Raw AR camera textures remain WebGL-only; WebGPU AR can use an application-provided procedural or video fallback.
+
+### WebGPU session requirements
+
+Request an XR-compatible WebGPU adapter while creating the luma device, then negotiate the WebXR `webgpu` feature when starting an immersive session:
+
+```typescript
+const device = await luma.createDevice({type: 'webgpu', xrCompatible: true});
+const session = await navigator.xr.requestSession('immersive-vr', {
+  requiredFeatures: ['webgpu'],
+  optionalFeatures: ['local-floor']
+});
+```
+
+Browser support for native WebGPU WebXR is still emerging. Keep a WebGL2 fallback for browsers and headsets that do not expose `XRGPUBinding`.
 
 ## Types
 
@@ -58,6 +82,7 @@ const animationLoop = new AnimationLoop({
 export type WebXRManagerProps = {
   referenceSpaceType?: XRReferenceSpaceType;
   layerInit?: XRWebGLLayerInit;
+  projectionLayerInit?: XRProjectionLayerInit;
 };
 ```
 
@@ -68,6 +93,7 @@ export type WebXRViewState = {
   xrView: XRView;
   eye: XREye;
   index: number;
+  framebuffer: Framebuffer;
   viewport: [number, number, number, number];
   projectionMatrix: Float32Array;
   viewMatrix: Float32Array;
@@ -80,6 +106,7 @@ export type WebXRViewState = {
 ```ts
 export type WebXRFrameState = {
   xrFrame: XRFrame;
+  // Shared WebGL framebuffer or first WebGPU eye framebuffer.
   framebuffer: Framebuffer;
   views: readonly WebXRViewState[];
 };
@@ -89,7 +116,7 @@ export type WebXRFrameState = {
 
 ### `constructor(device: Device, props?: WebXRManagerProps)`
 
-Creates an experimental WebGL-only WebXR manager.
+Creates an experimental WebGPU or WebGL WebXR manager.
 
 ### `setSession(session: XRSession | null, props?: WebXRManagerProps): Promise<this>`
 

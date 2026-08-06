@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
@@ -63,6 +63,16 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
     t.equal(session.updatedBaseLayer, webXRManager.baseLayer, 'updates session render state');
     t.ok(frameState, 'active XR frame resolves state');
     t.equal(frameState?.framebuffer.props.handle, xrFramebufferHandle, 'wraps XR framebuffer');
+    t.equal(
+      frameState?.views[0]?.framebuffer,
+      frameState?.framebuffer,
+      'left WebGL eye uses the shared XR framebuffer'
+    );
+    t.equal(
+      frameState?.views[1]?.framebuffer,
+      frameState?.framebuffer,
+      'right WebGL eye uses the shared XR framebuffer'
+    );
     t.deepEqual(frameState?.views[0]?.viewport, [0, 0, 32, 32], 'left viewport resolves');
     t.deepEqual(frameState?.views[1]?.viewport, [32, 0, 32, 32], 'right viewport resolves');
     t.equal(frameState?.views[1]?.index, 1, 'view state keeps pose view order');
@@ -117,6 +127,11 @@ test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t
 
     t.ok(frameState, 'active XR frame resolves state');
     t.equal(frameState?.framebuffer.props.handle, null, 'wraps null as the default framebuffer');
+    t.equal(
+      frameState?.views[0]?.framebuffer,
+      frameState?.framebuffer,
+      'view exposes the backwards-compatible shared framebuffer'
+    );
     t.deepEqual(frameState?.views[0]?.viewport, [0, 0, 64, 32], 'viewport still resolves');
 
     webXRManager.destroy();

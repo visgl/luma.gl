@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
@@ -103,6 +103,10 @@ export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAd
 
   if (props.powerPreference && props.powerPreference !== 'default') {
     options.powerPreference = props.powerPreference;
+  }
+
+  if (props.xrCompatible) {
+    options.xrCompatible = true;
   }
 
   return options;
@@ -258,7 +262,8 @@ export class WebGPUAdapter extends Adapter {
     return [
       featureLevel,
       requestAdapterOptions.featureLevel || 'core',
-      requestAdapterOptions.powerPreference || 'default'
+      requestAdapterOptions.powerPreference || 'default',
+      ...(requestAdapterOptions.xrCompatible ? ['xr-compatible'] : [])
     ].join(':');
   }
 }

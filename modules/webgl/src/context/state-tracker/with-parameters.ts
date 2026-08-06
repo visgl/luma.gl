@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GLParameters, setGLParameters} from '../parameters/unified-parameter-api';
 import {WebGLStateTracker} from './webgl-state-tracker';

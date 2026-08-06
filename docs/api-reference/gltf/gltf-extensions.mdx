@@ -100,6 +100,11 @@ default loader-to-scenegraph path.
 Each extension name links to its official Khronos-managed specification page in
 the glTF extension registry repository.
 
+For a complete application walkthrough, including source JSON, public TypeScript APIs, real
+instanced draws, material selection, recursive mesh/light visibility, typed camera and light
+animation, capability diagnostics, and official sample coverage, see
+[native glTF extensions](/docs/api-reference/gltf/gltf-native-extensions).
+
 Status meanings:
 
 - `✅`: works end-to-end in the default luma.gl glTF pipeline.
@@ -132,12 +137,16 @@ Status meanings:
     <SupportRow name="KHR_mesh_quantization" support="✅ *️⃣">
       Quantized accessors are unpacked during load before geometry creation.
     </SupportRow>
-    <SupportRow name="EXT_mesh_gpu_instancing" support="❌">
-      GPU instancing data is not yet converted into luma.gl instanced draw setup.
+    <SupportRow name="EXT_mesh_gpu_instancing" support="✅">
+      Accessor-backed translation, rotation, and scale become one real instanced draw
+      per source primitive on WebGL and WebGPU. Aggregate bounds include every
+      instance, and application-defined <code>_NAME</code> attributes remain available.
     </SupportRow>
     <SupportRow name="KHR_lights_punctual" support="✅">
-      Punctual lights are parsed and exposed as an array of luma.gl <code>lighting</code>
-      {' '}module lights.
+      Directional, point, and spot lights preserve authored intensity, range,
+      source-node world transforms, and spotlight inner/outer cones. Use
+      <code>parseGLTFLights(gltf, {'{'}useByteColors: false{'}'})</code> for source-linear
+      RGB colors.
     </SupportRow>
     <SupportRow name="KHR_materials_unlit" support="✅">
       Unlit materials bypass the default lighting calculations.
@@ -154,21 +163,34 @@ Status meanings:
       The stock shader now drives dielectric reflectance from the glTF IOR value.
     </SupportRow>
     <SupportRow name="KHR_materials_transmission" support="✅ 🚧" fromVersion="9.3">
-      The stock shader now applies transmission to the base layer and exposes
-      transparency through alpha, without a scene-color refraction buffer.
+      Material factors and textures are preserved. The shared experimental
+      <code>SceneRenderer</code> and ANARI retained path refract captured opaque-scene
+      color; the standalone glTF scenegraph path retains its alpha-based approximation.
     </SupportRow>
-    <SupportRow name="KHR_materials_diffuse_transmission" support="❌">
-      Diffuse-transmission shading is not implemented in the stock PBR shader.
+    <SupportRow name="EXT_materials_bump" support="✅ 🚧" fromVersion="9.3">
+      Experimental, unratified proposal. Linear red-channel height textures perturb the
+      existing tangent-space normal, preserve per-slot UV transforms, and compose with
+      conventional normal maps.
+    </SupportRow>
+    <SupportRow name="KHR_materials_diffuse_transmission" support="✅ 🚧" fromVersion="9.3">
+      Khronos release candidate, not ratified. Canonical WebGL and WebGPU PBR shading
+      implements opposite-hemisphere punctual lighting and IBL, energy-conserving
+      front-diffuse reduction, linear alpha factor maps, and sRGB transmission colors.
     </SupportRow>
     <SupportRow name="KHR_materials_volume" support="✅ 🚧" fromVersion="9.3">
       Thickness factor plus attenuation color and distance now tint transmitted light
       in the stock shader.
     </SupportRow>
-    <SupportRow name="KHR_materials_dispersion" support="❌">
-      Chromatic dispersion is not implemented in the stock PBR shader.
+    <SupportRow name="KHR_materials_dispersion" support="✅ 🚧" fromVersion="9.3">
+      Authored dispersion is parsed into the canonical PBR material. Shared experimental and ANARI
+      rendering separate transmitted RGB wavelengths using the ratified wavelength-dependent IOR.
+      A supported material animation pointer can update the same physical dispersion uniform.
     </SupportRow>
-    <SupportRow name="KHR_materials_volume_scatter" support="❌">
-      Volume scattering is not implemented in the stock PBR shader.
+    <SupportRow name="KHR_materials_volume_scatter" support="🚧" fromVersion="9.3">
+      Active, unratified draft. A local thickness-aware, anisotropic single-scattering
+      approximation is wired into diffuse transmission. Requires
+      <code>KHR_materials_volume</code>; screen-space diffusion and random-walk
+      multiple scattering are not implemented.
     </SupportRow>
     <SupportRow name="KHR_materials_clearcoat" support="✅ 🚧" fromVersion="9.3">
       The stock shader now adds a secondary clearcoat lobe from the clearcoat and
@@ -190,9 +212,10 @@ Status meanings:
       loaders.gl can preserve the extension data, but <code>@luma.gl/gltf</code> does
       not translate it into the default metallic-roughness shader path.
     </SupportRow>
-    <SupportRow name="KHR_materials_variants" support="App">
-      Variant metadata can be loaded, but applications must choose and apply variants
-      themselves.
+    <SupportRow name="KHR_materials_variants" support="✅">
+      <code>scenegraphs.variants.selectVariant(name)</code> switches authored primitive
+      materials without replacing scenegraph nodes; <code>resetVariant()</code>
+      restores source defaults and pipeline state.
     </SupportRow>
     <SupportRow name="KHR_texture_basisu" support="✅ *️⃣">
       BasisU / KTX2 textures are passed through as compressed textures when supported
@@ -207,24 +230,30 @@ Status meanings:
       decode support.
     </SupportRow>
     <SupportRow name="KHR_texture_transform" support="✅">
-      loaders.gl rewrites the core material UV sets during load before luma.gl creates
-      geometry.
+      All 17 supported material slots retain independent offset, rotation, scale,
+      and authored <code>TEXCOORD_0</code> / <code>TEXCOORD_1</code> selection.
     </SupportRow>
     <SupportRow name="KHR_animation_pointer" support="✅ 🚧" fromVersion="9.3">
-      Node TRS pointers, selected material factor pointers, and animated
-      <code>KHR_texture_transform</code> offset/rotation/scale pointers are wired to
-      runtime updates. Still unsupported: morph weights, cameras, extras,
+      Node TRS, morph-weight, and recursive boolean visibility pointers; selected
+      material factor pointers; and animated <code>KHR_texture_transform</code>
+      offset/rotation/scale pointers across all 17 supported slots are wired to
+      runtime updates. Perspective/orthographic camera properties and typed punctual-light
+      color, intensity, range, spotlight angles, and physical chromatic-dispersion factors are also
+      supported. Boolean
+      visibility uses authored <code>STEP</code> interpolation and refreshes punctual
+      lights. Still unsupported: extras,
       structural material switches such as <code>alphaMode</code> /
       <code>doubleSided</code> / <code>unlit</code>, animated
       <code>KHR_texture_transform.texCoord</code>, and texture slots that resolve to
       <code>TEXCOORD_2+</code>. When used with
       <code>KHR_materials_transmission</code> / <code>KHR_materials_volume</code>,
-      luma.gl still uses its stock transmission approximation, so effects such as
-      heat-haze-style scene refraction will not yet match the Khronos Sample Viewer.
+      the shared experimental renderer and ANARI can refract captured scene color,
+      while the standalone glTF scenegraph path still uses its alpha approximation.
     </SupportRow>
-    <SupportRow name="KHR_node_visibility" support="❌">
-      Node-visibility animations and toggles are not mapped onto runtime scenegraph
-      state.
+    <SupportRow name="KHR_node_visibility" support="✅">
+      Source-authored visibility recursively hides mesh descendants and punctual
+      lights. Visibility-pointer animation updates existing scenegraph nodes and
+      preserves the identity of the exported light array.
     </SupportRow>
     <SupportRow name="KHR_xmp" support="❌">
       Metadata payloads remain in the loaded glTF, but luma.gl does not interpret
@@ -248,15 +277,96 @@ Status meanings:
   </tbody>
 </table>
 
+## Inspect runtime capabilities
+
+Source extension declarations can be inspected before scenegraph creation:
+
+```ts
+import {
+  assertSupportedGLTFExtensions,
+  createScenegraphsFromGLTF,
+  getGLTFExtensionSupport,
+  getUnsupportedRequiredGLTFExtensions
+} from '@luma.gl/gltf';
+
+for (const capability of getGLTFExtensionSupport(gltf).values()) {
+  console.log(capability.extensionName, {
+    required: capability.required,
+    supported: capability.supported,
+    level: capability.supportLevel,
+    explanation: capability.comment
+  });
+}
+
+const unsupportedRequired = getUnsupportedRequiredGLTFExtensions(gltf);
+
+if (unsupportedRequired.length > 0) {
+  assertSupportedGLTFExtensions(gltf);
+}
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
+  strictExtensions: true
+});
+```
+
+`built-in` and `parsed-and-wired` capabilities satisfy required-extension checks. `loader-only`
+capabilities, including browser-dependent WebP and AVIF image decoding, do not promise complete
+portable runtime support. Unknown or `none` capabilities also fail when required. Optional
+unsupported extensions remain visible in the report without preventing scene creation.
+
+The returned `scenegraphs.extensionSupport` preserves the document-specific capability report.
+Strict checks run before model creation, so an unsupported required feature does not leave a
+partially constructed GPU scene behind.
+
+## Use authored runtime extensions
+
+```ts
+import {getGLTFNodeInstancing} from '@luma.gl/gltf';
+
+scenegraphs.variants.selectVariant('Midnight');
+scenegraphs.variants.resetVariant();
+
+const instancing = getGLTFNodeInstancing(gltf, gltf.nodes[0]);
+console.log(instancing?.matrices.length);
+
+scenegraphs.animator.selectClip('Night lighting', {
+  crossFadeDuration: 0.3
+});
+scenegraphs.animator.setTime(1000);
+
+console.log(scenegraphs.cameras[0]);
+console.log(scenegraphs.lights);
+```
+
+Variant selection preserves existing scenegraph node/model identities and restores unmapped
+primitives to their authored default materials. Instancing submits one GPU draw per source
+primitive on both WebGL and WebGPU. Visibility and punctual-light pointers update stable retained
+scene objects through the existing shared animation mixer. Automatic source skin palettes and morph
+targets are evaluated in the same frame.
+
 ## Notes
 
-- The built-in material extension rows are implemented in the stock `pbrMaterial`
-  shader. Some of the more advanced effects, such as transmission, iridescence,
-  and anisotropy, use pragmatic approximations because the default pipeline does
-  not maintain a scene-color refraction buffer or a more specialized anisotropic
-  BRDF.
-- Some extensions have partial field coverage. For example, luma.gl currently
-  wires the main textures and factors for several `KHR_materials_*` extensions,
-  but does not yet implement every auxiliary texture path in the stock shader.
+- `getGLTFExtensionSupport(gltf)` distinguishes optional and required extensions.
+  Use `getUnsupportedRequiredGLTFExtensions(gltf)`,
+  `assertSupportedGLTFExtensions(gltf)`, or
+  `createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})` to reject
+  unsupported required features instead of silently degrading them.
+- `getGLTFNodeInstancing(gltf, node)` exposes resolved source matrices and all
+  authored instance-accessor semantics, including application-defined `_NAME`
+  attributes.
+- The built-in material extension rows reuse the shared `pbrMaterial` shader.
+  The experimental `SceneRenderer` and ANARI capture opaque scene color for
+  screen-space transmission/refraction; the standalone `createScenegraphsFromGLTF()`
+  rendering path does not perform that capture and retains its alpha fallback.
+  Iridescence and anisotropy still use pragmatic shared-shader approximations.
+- The supported material extensions wire all 17 canonical core/extension texture
+  slots, including auxiliary specular, clearcoat, sheen, iridescence, anisotropy,
+  transmission, and volume maps. The physical response of some advanced effects
+  remains an approximation.
 - `@luma.gl/gltf` relies on `@loaders.gl/gltf` for low-level extension decoding,
   decompression, and glTF post-processing.
+- Core glTF skin attributes and animated morph targets are supported independently
+  of these extension rows; source skin palettes are updated automatically once per animation
+  frame. See [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation),
+  [native glTF extensions](/docs/api-reference/gltf/gltf-native-extensions), and
+  [glTF materials and textures](/docs/api-reference/gltf/gltf-materials).
