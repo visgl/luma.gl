@@ -8,6 +8,7 @@ import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {isGPUTableIndexColumnName} from './gpu-schema';
 import {
   getGPUVectorElementFormat,
+  isFixedSizeListGPUVectorFormat,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
 } from './gpu-vector-format';
@@ -143,6 +144,9 @@ function synthesizeGPUDataBufferLayout(name: string, data: GPUData): BufferLayou
     throw new Error(
       `GPURecordBatch cannot synthesize a buffer layout for GPUData "${name}" without a format`
     );
+  }
+  if (isFixedSizeListGPUVectorFormat(data.format)) {
+    return [];
   }
   if (isVertexListGPUVectorFormat(data.format)) {
     throw new Error(

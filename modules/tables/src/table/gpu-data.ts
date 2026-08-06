@@ -42,7 +42,7 @@ type GPUDataFromBufferBaseProps = {
   buffer: Buffer | DynamicBuffer;
   /** Number of logical rows in the data range. */
   length: number;
-  /** Number of fixed rows or flattened vertex-list values in the data range. */
+  /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
   valueLength?: number;
   /** Number of scalar values represented by one fixed row or flattened element. */
   stride?: number;
@@ -153,7 +153,7 @@ class GPUDataImpl extends GPUDataBufferOwner {
   readonly format?: GPUDataFormat;
   /** Number of logical rows in this chunk. */
   readonly length: number;
-  /** Number of fixed rows or flattened vertex-list values in this chunk. */
+  /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
   readonly valueLength: number;
   /** Number of scalar values represented by one fixed row or flattened element. */
   readonly stride: number;
@@ -210,10 +210,10 @@ class GPUDataImpl extends GPUDataBufferOwner {
     this.dataType = dataType;
     this.format = canonicalFormat;
     this.length = length;
-    this.valueLength = valueLength ?? length;
+    this.valueLength = valueLength ?? length * (formatInfo?.listSize ?? 1);
     this.stride =
       stride ??
-      formatInfo?.components ??
+      (formatInfo ? formatInfo.components * (formatInfo.listSize ?? 1) : undefined) ??
       structFormat?.components ??
       byteStride ??
       rowByteLength ??
@@ -226,6 +226,44 @@ class GPUDataImpl extends GPUDataBufferOwner {
       byteStride ??
       this.stride;
     this.byteStride = byteStride ?? structFormat?.byteStride ?? this.rowByteLength;
+
+    if (formatInfo?.fixedSizeList) {
+      const expectedValueLength = length * formatInfo.listSize!;
+      if (
+        !Number.isSafeInteger(length) ||
+        length < 0 ||
+        !Number.isSafeInteger(expectedValueLength) ||
+        !Number.isSafeInteger(this.byteOffset) ||
+        this.byteOffset < 0 ||
+        !Number.isSafeInteger(this.byteStride) ||
+        !Number.isSafeInteger(this.rowByteLength) ||
+        !Number.isSafeInteger(this.stride)
+      ) {
+        throw new Error('GPUData fixed-size-list row layout must use safe non-negative integers');
+      }
+      if (this.valueLength !== expectedValueLength) {
+        throw new Error(
+          'GPUData fixed-size-list valueLength must equal its flattened row elements'
+        );
+      }
+      if (this.stride < formatInfo.components * formatInfo.listSize!) {
+        throw new Error('GPUData fixed-size-list stride cannot truncate its row components');
+      }
+      if (this.rowByteLength < formatInfo.byteLength) {
+        throw new Error('GPUData fixed-size-list rowByteLength cannot truncate its row payload');
+      }
+      if (this.byteStride < this.rowByteLength) {
+        throw new Error('GPUData fixed-size-list byteStride cannot overlap its row payload');
+      }
+      const dataByteLength = length === 0 ? 0 : (length - 1) * this.byteStride + this.rowByteLength;
+      const endByteOffset = this.byteOffset + dataByteLength;
+      if (!Number.isSafeInteger(dataByteLength) || !Number.isSafeInteger(endByteOffset)) {
+        throw new Error('GPUData fixed-size-list byte range must use safe integers');
+      }
+      if (endByteOffset > buffer.byteLength) {
+        throw new Error('GPUData fixed-size-list exceeds its backing buffer byte length');
+      }
+    }
 
     // Explicit row overrides may add padding but cannot truncate the computed struct layout.
     if (structFormat) {
@@ -298,7 +336,7 @@ interface GPUDataBase<Format extends GPUDataFormat = GPUDataFormat> {
   readonly format?: Format;
   /** Number of logical rows in this chunk. */
   readonly length: number;
-  /** Number of fixed rows or flattened vertex-list values in this chunk. */
+  /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
   readonly valueLength: number;
   /** Number of scalar values represented by one fixed row or flattened element. */
   readonly stride: number;
