@@ -37,6 +37,7 @@ import './lutrace/gpu-trace-scene.spec';
 import './lutrace/gpu-trace-interaction.spec';
 import './simulation/spectral-ocean-simulation.spec';
 import './geospatial/geospatial-projection-distance.spec';
+import './ludf/lu-data-frame.spec';
 import './luxfilter';
 import './luproj/luproj.spec';
 import './luproj/projection-benchmark.spec';
