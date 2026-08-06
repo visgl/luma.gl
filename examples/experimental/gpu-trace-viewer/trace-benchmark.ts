@@ -101,10 +101,10 @@ export function getTraceCapacityContract(
   dependencyCapacity: number,
   limits: {maxStorageBufferBindingSize: number; maxBufferSize: number}
 ): TraceCapacityContract {
-  validateCount(spanCapacity, 'span capacity');
-  validateCount(dependencyCapacity, 'dependency capacity');
-  validateCount(limits.maxStorageBufferBindingSize, 'maximum storage-buffer binding size');
-  validateCount(limits.maxBufferSize, 'maximum buffer size');
+  validateCount(spanCapacity);
+  validateCount(dependencyCapacity);
+  validateCount(limits.maxStorageBufferBindingSize);
+  validateCount(limits.maxBufferSize);
   const spanBufferByteLength = spanCapacity * TRACE_SPAN_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
   const dependencyBufferByteLength =
     dependencyCapacity * TRACE_DEPENDENCY_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
@@ -134,7 +134,7 @@ export function getTraceAllocationStats(
   let persistentByteLength = 0;
   let largestBufferByteLength = 0;
   for (const buffer of uniqueBuffers) {
-    validateCount(buffer.byteLength, 'buffer byte length');
+    validateCount(buffer.byteLength);
     persistentByteLength += buffer.byteLength;
     largestBufferByteLength = Math.max(largestBufferByteLength, buffer.byteLength);
   }
@@ -176,8 +176,9 @@ function getPercentage(count: number, total: number): number {
   return total > 0 ? (count / total) * 100 : 0;
 }
 
-function validateCount(value: number, name: string): void {
+function validateCount(value: number): void {
+  // Trace capacities, device limits, and buffer lengths must be nonnegative safe integers.
   if (!Number.isSafeInteger(value) || value < 0) {
-    throw new RangeError(`Trace ${name} must be a nonnegative safe integer`);
+    throw new RangeError();
   }
 }

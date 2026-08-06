@@ -70,6 +70,7 @@ describe('GPU hierarchical trace viewer', () => {
         dependencyCapacity: number;
         compileCount: number;
         frameIndex: number;
+        pendingPick: {x: number; y: number; requestIdentifier: number} | null;
         graphInspector: {
           getSnapshot: () => {
             graphs: Array<{
@@ -113,6 +114,14 @@ describe('GPU hierarchical trace viewer', () => {
         graphInspection.counters.find(counter => counter.id === 'candidate-span-percent')
           ?.latestValue
       ).toBe(0);
+      state.pendingPick = {x: 0, y: 0, requestIdentifier: 1};
+      viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
+      device.submit();
+      expect(
+        state.graphInspector
+          .getSnapshot()
+          .graphs[0].counters.find(counter => counter.id === 'pick-active')?.latestValue
+      ).toBe(1);
       const firstFrame = await state.resources.drawCommands.buffer.readAsync();
       const firstCounts = new Uint32Array(
         firstFrame.buffer,

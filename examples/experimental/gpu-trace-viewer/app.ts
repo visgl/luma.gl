@@ -11,6 +11,7 @@ import {
   DispatchCommandBuffer,
   DrawCommandBuffer,
   GPUCommandGraph,
+  type GPUCommandGraphEncoding,
   GPUCommandGraphInspector,
   type GPUCommandGraphInspectorObservation,
   GPUHierarchyLayout,
@@ -239,6 +240,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
 
   private resources: TraceGraphResources | null = null;
   private graphObservation: GPUCommandGraphInspectorObservation<TraceViewParameters> | null = null;
+  private readonly gpuTimingReadbackTimers = new Set<ReturnType<typeof setTimeout>>();
   private allocationStats: TraceAllocationStats = {
     bufferCount: 0,
     persistentByteLength: 0,
@@ -347,7 +349,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
+    if (
+      (this.frameIndex === 1 || this.frameIndex % 60 === 0) &&
+      encoding.canReadGPUTimings &&
+      this.graphObservation
+    ) {
+      this.scheduleGPUTimingReadback(this.graphObservation, encoding);
+    }
     if (pick) {
+      this.recordWorkloadCounters(true);
       const readbackTicket = resources.readbackRing.tryAcquire();
       if (readbackTicket) {
         this.pendingPick = null;
@@ -1379,6 +1389,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private destroyResources(): void {
+    for (const timer of this.gpuTimingReadbackTimers) {
+      clearTimeout(timer);
+    }
+    this.gpuTimingReadbackTimers.clear();
     const resources = this.resources;
     if (!resources) {
       return;
@@ -1771,6 +1785,24 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         allocation: this.allocationStats
       })
     );
+  }
+
+  private scheduleGPUTimingReadback(
+    observation: GPUCommandGraphInspectorObservation<TraceViewParameters>,
+    encoding: GPUCommandGraphEncoding
+  ): void {
+    const timer = setTimeout(() => {
+      this.gpuTimingReadbackTimers.delete(timer);
+      if (this.graphObservation !== observation) {
+        return;
+      }
+      void observation.recordGPUTimings(encoding).then(() => {
+        if (this.graphObservation === observation) {
+          this.updateInspector();
+        }
+      });
+    }, 0);
+    this.gpuTimingReadbackTimers.add(timer);
   }
 
   private getVisibleLaneCount(): number {
