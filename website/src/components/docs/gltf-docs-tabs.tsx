@@ -4,12 +4,13 @@ import Link from '@docusaurus/Link';
 type GltfDocsTab = {id: GltfDocsTabId; label: string; href: string};
 
 /** glTF documentation tab identifiers. */
-export type GltfDocsTabId = 'overview' | 'materials' | 'animation' | 'extensions';
+export type GltfDocsTabId = 'overview' | 'materials' | 'animation' | 'interchange' | 'extensions';
 
 const GLTF_DOCS_TABS: GltfDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/gltf'},
   {id: 'materials', label: 'Materials', href: '/docs/api-reference/gltf/gltf-materials'},
   {id: 'animation', label: 'Animation', href: '/docs/api-reference/gltf/gltf-animation'},
+  {id: 'interchange', label: 'Interchange', href: '/docs/api-reference/gltf/gltf-interchange'},
   {id: 'extensions', label: 'Extensions', href: '/docs/api-reference/gltf/gltf-extensions'}
 ];
 

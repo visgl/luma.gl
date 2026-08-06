@@ -732,7 +732,8 @@ export const ANARIPlaygroundExample: React.FC = () => {
 export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="gltf"
-    title="glTF"
+    title="glTF Asset Studio"
+    subtitle="Physical materials · animated characters · standards-native glTF"
     directory="showcase"
     template={GLTFApp}
     config={exampleConfig}

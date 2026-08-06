@@ -1,4 +1,17 @@
-import {convertSamplerToGLTF, getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
+import {
+  convertSamplerToGLTF,
+  exportGLTF,
+  type GLTFExportAccessor,
+  type GLTFExportAnimation,
+  type GLTFExportAnimationChannel,
+  type GLTFExportAnimationSampler,
+  type GLTFExportMesh,
+  type GLTFExportNode,
+  type GLTFExportPrimitive,
+  type GLTFExportScene,
+  type GLTFExportSkin,
+  getTextureTransformSlotDefinitions
+} from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 import {
   type ANARIJSONScene,
@@ -25,20 +38,18 @@ type SurfacePlacement = {
   matrix: readonly number[];
 };
 
-type GLTFBufferView = {buffer: number; byteOffset: number; byteLength: number; target?: number};
-type GLTFAccessor = {
-  bufferView: number;
-  componentType: number;
-  count: number;
-  type: 'SCALAR' | 'VEC2' | 'VEC3';
-  min?: number[];
-  max?: number[];
-};
-
-export async function exportANARIJSONSceneToGLTF(scene: ANARIJSONScene): Promise<string> {
-  const bufferBuilder = new BinaryBufferBuilder();
-  const bufferViews: GLTFBufferView[] = [];
-  const accessors: GLTFAccessor[] = [];
+export function exportANARIJSONSceneToGLTF(
+  scene: ANARIJSONScene,
+  options?: {binary?: false}
+): Promise<string>;
+export function exportANARIJSONSceneToGLTF(
+  scene: ANARIJSONScene,
+  options: {binary: true}
+): Promise<ArrayBuffer>;
+export async function exportANARIJSONSceneToGLTF(
+  scene: ANARIJSONScene,
+  options: {binary?: boolean} = {}
+): Promise<string | ArrayBuffer> {
   const materials = Object.entries(scene.materials).map(([identifier, material]) =>
     makeGLTFMaterial(identifier, material, scene)
   );
@@ -56,7 +67,7 @@ export async function exportANARIJSONSceneToGLTF(scene: ANARIJSONScene): Promise
     resolveGLTFMaterialTextures(materials[materialIndex], sourceMaterial, textureIndices, scene);
   }
 
-  const meshes: object[] = [];
+  const meshes: GLTFExportMesh[] = [];
   const meshIndices = new Map<string, number>();
   for (const [surfaceIdentifier, surface] of Object.entries(scene.surfaces)) {
     const geometry = scene.geometries[surface.geometry];
@@ -64,81 +75,38 @@ export async function exportANARIJSONSceneToGLTF(scene: ANARIJSONScene): Promise
       continue;
     }
     const meshData = bakeGeometry(geometry);
-    const primitive: Record<string, unknown> = {
-      attributes: {
-        POSITION: addFloatAccessor(meshData.positions, 3, bufferBuilder, bufferViews, accessors)
-      },
-      indices: addIndexAccessor(meshData.indices, bufferBuilder, bufferViews, accessors),
-      material: materialIndices.get(surface.material) || 0
-    };
-    const attributes = primitive.attributes as Record<string, number>;
-    if (meshData.normals.length > 0) {
-      attributes['NORMAL'] = addFloatAccessor(
-        meshData.normals,
-        3,
-        bufferBuilder,
-        bufferViews,
-        accessors
-      );
-    }
-    if (meshData.textureCoordinates) {
-      attributes['TEXCOORD_0'] = addFloatAccessor(
-        meshData.textureCoordinates,
-        2,
-        bufferBuilder,
-        bufferViews,
-        accessors
-      );
-    }
-    if (meshData.additionalTextureCoordinates) {
-      attributes['TEXCOORD_1'] = addFloatAccessor(
-        meshData.additionalTextureCoordinates,
-        2,
-        bufferBuilder,
-        bufferViews,
-        accessors
-      );
-    }
-    if (meshData.colors) {
-      attributes['COLOR_0'] = addFloatAccessor(
-        meshData.colors,
-        3,
-        bufferBuilder,
-        bufferViews,
-        accessors
-      );
-    }
+    const primitive = makeExportPrimitive(
+      meshData,
+      geometry,
+      materialIndices.get(surface.material) || 0
+    );
     meshIndices.set(surfaceIdentifier, meshes.length);
-    meshes.push({name: surfaceIdentifier, primitives: [primitive]});
+    meshes.push({
+      name: surfaceIdentifier,
+      primitives: [primitive],
+      ...(geometry.morphWeights ? {weights: [...geometry.morphWeights]} : {})
+    });
   }
 
-  const nodes: object[] = [];
-  for (const placement of collectSurfacePlacements(scene)) {
-    const mesh = meshIndices.get(placement.surface);
-    if (mesh === undefined) {
-      continue;
-    }
-    nodes.push({name: placement.identifier, mesh, matrix: Array.from(placement.matrix)});
-  }
+  const {nodes, nodeIndices} = makeExportNodes(scene, meshIndices);
+  const skins = makeExportSkins(scene, nodes, nodeIndices);
   const cameraNode = addGLTFCamera(scene, nodes);
   const lightExtension = addGLTFLights(scene, nodes);
-  const sceneNodeIndices = nodes.map((_node, index) => index);
-  const gltf: Record<string, unknown> = {
-    asset: {version: '2.0', generator: '@luma.gl/anari experimental exporter'},
-    scene: 0,
-    scenes: [{name: scene.name, nodes: sceneNodeIndices}],
+  const gltf: GLTFExportScene = {
+    name: scene.name,
+    generator: '@luma.gl/anari via @luma.gl/gltf',
     nodes,
     meshes,
     materials,
-    buffers: [{byteLength: bufferBuilder.length, uri: bufferBuilder.toDataURI()}],
-    bufferViews,
-    accessors
+    ...(skins.length > 0 ? {skins} : {}),
+    ...(cameraNode ? {cameras: [cameraNode.camera]} : {}),
+    ...(lightExtension ? {extensions: {KHR_lights_punctual: {lights: lightExtension}}} : {})
   };
   if (textureEntries.length > 0) {
-    gltf['images'] = textureEntries.map(entry => ({name: entry.identifier, uri: entry.uri}));
+    gltf.images = textureEntries.map(entry => ({name: entry.identifier, uri: entry.uri}));
     const samplerIndices = new Map<string, number>();
     const samplers: ReturnType<typeof convertSamplerToGLTF>[] = [];
-    gltf['textures'] = textureEntries.map((entry, index) => {
+    gltf.textures = textureEntries.map((entry, index) => {
       const sampler = convertSamplerToGLTF({
         addressModeU: 'repeat',
         addressModeV: 'repeat',
@@ -155,25 +123,13 @@ export async function exportANARIJSONSceneToGLTF(scene: ANARIJSONScene): Promise
       }
       return {name: entry.identifier, source: index, sampler: samplerIndex};
     });
-    gltf['samplers'] = samplers;
+    gltf.samplers = samplers;
   }
-  if (cameraNode) {
-    gltf['cameras'] = [cameraNode.camera];
+  const animations = makeExportAnimations(scene, nodeIndices, materialIndices);
+  if (animations.length > 0) {
+    gltf.animations = animations;
   }
-  const extensionsUsed = [
-    ...collectMaterialExtensions(materials),
-    ...(Object.values(scene.textures || {}).some(texture => texture.transform)
-      ? ['KHR_texture_transform']
-      : []),
-    ...(lightExtension ? ['KHR_lights_punctual'] : [])
-  ];
-  if (extensionsUsed.length > 0) {
-    gltf['extensionsUsed'] = extensionsUsed;
-  }
-  if (lightExtension) {
-    gltf['extensions'] = {KHR_lights_punctual: {lights: lightExtension}};
-  }
-  return JSON.stringify(gltf, null, 2);
+  return options.binary ? exportGLTF(gltf, {binary: true}) : exportGLTF(gltf);
 }
 
 export function exportANARIJSONSceneToUSD(scene: ANARIJSONScene): string {
@@ -224,6 +180,336 @@ export function exportANARIJSONSceneToUSD(scene: ANARIJSONScene): string {
   appendUSDLights(lines, scene);
   lines.push('}');
   return lines.join('\n') + '\n';
+}
+
+function makeExportPrimitive(
+  mesh: MeshData,
+  geometry: JSONGeometryDeclaration,
+  material: number
+): GLTFExportPrimitive {
+  const vertexCount = mesh.positions.length / 3;
+  const attributes: Record<string, GLTFExportAccessor> = {
+    POSITION: {data: new Float32Array(mesh.positions), size: 3}
+  };
+  if (mesh.normals.length > 0) {
+    attributes['NORMAL'] = {data: new Float32Array(mesh.normals), size: 3};
+  }
+  if (mesh.textureCoordinates) {
+    attributes['TEXCOORD_0'] = {data: new Float32Array(mesh.textureCoordinates), size: 2};
+  }
+  if (mesh.additionalTextureCoordinates) {
+    attributes['TEXCOORD_1'] = {
+      data: new Float32Array(mesh.additionalTextureCoordinates),
+      size: 2
+    };
+  }
+  if (mesh.colors) {
+    const componentCount = mesh.colors.length === vertexCount * 4 ? 4 : 3;
+    attributes['COLOR_0'] = {data: new Float32Array(mesh.colors), size: componentCount};
+  }
+  if (geometry['vertex.tangent']) {
+    attributes['TANGENT'] = {data: new Float32Array(geometry['vertex.tangent']), size: 4};
+  }
+  if (geometry['vertex.joint']) {
+    const jointValues = geometry['vertex.joint'];
+    const joints = jointValues.some(value => value > 255)
+      ? new Uint16Array(jointValues)
+      : new Uint8Array(jointValues);
+    attributes['JOINTS_0'] = {data: joints, size: 4};
+  }
+  if (geometry['vertex.weight']) {
+    attributes['WEIGHTS_0'] = {data: new Float32Array(geometry['vertex.weight']), size: 4};
+  }
+
+  const indices = mesh.indices.some(index => index > 65535)
+    ? new Uint32Array(mesh.indices)
+    : new Uint16Array(mesh.indices);
+  const targets = geometry.morphTargets?.map(target => {
+    const attributes: Record<string, GLTFExportAccessor> = {};
+    for (const name of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
+      if (target[name]) {
+        attributes[name] = {data: new Float32Array(target[name]), size: 3};
+      }
+    }
+    return attributes;
+  });
+
+  return {
+    attributes,
+    indices: {data: indices, size: 1},
+    material,
+    ...(targets?.length ? {targets} : {})
+  };
+}
+
+function makeExportNodes(
+  scene: ANARIJSONScene,
+  meshIndices: ReadonlyMap<string, number>
+): {nodes: GLTFExportNode[]; nodeIndices: Map<string, number>} {
+  const nodes: GLTFExportNode[] = [];
+  const nodeIndices = new Map<string, number>();
+  const nodeDeclarations = scene.nodes || {};
+
+  for (const [identifier, declaration] of Object.entries(nodeDeclarations)) {
+    const node: GLTFExportNode = {
+      name: identifier,
+      ...(declaration.translation ? {translation: [...declaration.translation]} : {}),
+      ...(declaration.rotation ? {rotation: [...declaration.rotation]} : {}),
+      ...(declaration.scale ? {scale: [...declaration.scale]} : {}),
+      ...(declaration.matrix ? {matrix: [...declaration.matrix]} : {}),
+      ...(declaration.weights ? {weights: [...declaration.weights]} : {})
+    };
+    nodeIndices.set(identifier, nodes.length);
+    nodes.push(node);
+  }
+
+  const boundInstances = new Set<string>();
+  for (const [identifier, declaration] of Object.entries(nodeDeclarations)) {
+    const nodeIndex = nodeIndices.get(identifier)!;
+    const node = nodes[nodeIndex];
+    if (declaration.parent) {
+      const parent = nodeIndices.get(declaration.parent);
+      if (parent !== undefined) {
+        nodes[parent].children = [...(nodes[parent].children || []), nodeIndex];
+      }
+    }
+
+    for (const instanceIdentifier of declaration.instances || []) {
+      boundInstances.add(instanceIdentifier);
+      const instance = scene.instances?.find(candidate => candidate['@@id'] === instanceIdentifier);
+      const surfaces = instance?.surface
+        ? [instance.surface]
+        : instance?.group
+          ? scene.groups?.[instance.group]?.surfaces || []
+          : [];
+      for (const surface of surfaces) {
+        const mesh = meshIndices.get(surface);
+        if (mesh === undefined) {
+          continue;
+        }
+        if (node.mesh === undefined) {
+          node.mesh = mesh;
+        } else {
+          nodes.push({name: `${instanceIdentifier}-${surface}`, mesh});
+          node.children = [...(node.children || []), nodes.length - 1];
+        }
+      }
+    }
+  }
+
+  for (const placement of collectSurfacePlacements(scene)) {
+    const instanceIdentifier = scene.instances?.find(instance =>
+      placement.identifier.startsWith(`${instance['@@id']}-`)
+    )?.['@@id'];
+    if (instanceIdentifier && boundInstances.has(instanceIdentifier)) {
+      continue;
+    }
+    const mesh = meshIndices.get(placement.surface);
+    if (mesh === undefined) {
+      continue;
+    }
+    const node = {name: placement.identifier, mesh, matrix: Array.from(placement.matrix)};
+    nodeIndices.set(placement.identifier, nodes.length);
+    nodes.push(node);
+  }
+
+  return {nodes, nodeIndices};
+}
+
+function makeExportAnimations(
+  scene: ANARIJSONScene,
+  nodeIndices: ReadonlyMap<string, number>,
+  materialIndices: ReadonlyMap<string, number>
+): GLTFExportAnimation[] {
+  return (scene.clips || []).flatMap(clip => {
+    const samplers: GLTFExportAnimationSampler[] = [];
+    const channels: GLTFExportAnimationChannel[] = [];
+    for (const track of clip.tracks) {
+      const target = makeExportAnimationTarget(track.target, scene, nodeIndices, materialIndices);
+      if (!target || track.times.length === 0 || track.values.length === 0) {
+        continue;
+      }
+
+      const componentCount = target.path === 'weights' ? 1 : track.values[0]?.length || 1;
+      if (componentCount < 1 || componentCount > 4) {
+        continue;
+      }
+      samplers.push({
+        input: {data: new Float32Array(track.times), size: 1},
+        output: {
+          data: new Float32Array(track.values.flat()),
+          size: componentCount as 1 | 2 | 3 | 4
+        },
+        ...(track.interpolation ? {interpolation: track.interpolation} : {})
+      });
+      channels.push({sampler: samplers.length - 1, target});
+    }
+    return channels.length > 0 ? [{name: clip.name, samplers, channels}] : [];
+  });
+}
+
+function makeExportSkins(
+  scene: ANARIJSONScene,
+  nodes: GLTFExportNode[],
+  nodeIndices: ReadonlyMap<string, number>
+): GLTFExportSkin[] {
+  const skins: GLTFExportSkin[] = [];
+  const skinIndices = new Map<string, number>();
+
+  for (const [identifier, surface] of Object.entries(scene.surfaces)) {
+    const skin = (
+      surface as typeof surface & {
+        skin?: {
+          node: string;
+          joints: readonly string[];
+          inverseBindMatrices?: readonly number[];
+        };
+      }
+    ).skin;
+    if (!skin) {
+      continue;
+    }
+    const node = nodeIndices.get(skin.node);
+    if (node === undefined) {
+      continue;
+    }
+    const joints = skin.joints.map(joint => nodeIndices.get(joint));
+    if (joints.some(joint => joint === undefined)) {
+      continue;
+    }
+    const key = JSON.stringify({
+      joints,
+      inverseBindMatrices: skin.inverseBindMatrices
+    });
+    let index = skinIndices.get(key);
+    if (index === undefined) {
+      index = skins.length;
+      skins.push({
+        name: `${identifier}-skin`,
+        joints: joints as number[],
+        ...(skin.inverseBindMatrices
+          ? {
+              inverseBindMatrices: {
+                data: new Float32Array(skin.inverseBindMatrices),
+                size: 16
+              }
+            }
+          : {})
+      });
+      skinIndices.set(key, index);
+    }
+    nodes[node].skin = index;
+  }
+
+  return skins;
+}
+
+function makeExportAnimationTarget(
+  target: NonNullable<ANARIJSONScene['clips']>[number]['tracks'][number]['target'],
+  scene: ANARIJSONScene,
+  nodeIndices: ReadonlyMap<string, number>,
+  materialIndices: ReadonlyMap<string, number>
+): GLTFExportAnimationChannel['target'] | undefined {
+  if (target.type === 'node') {
+    const node = nodeIndices.get(target.identifier);
+    const path = target.path;
+    if (
+      node !== undefined &&
+      (path === 'translation' || path === 'rotation' || path === 'scale' || path === 'weights')
+    ) {
+      return {node, path};
+    }
+  }
+
+  if (target.type === 'material') {
+    const material = materialIndices.get(target.identifier);
+    const property = getMaterialAnimationPointer(target.path);
+    if (material !== undefined && property) {
+      const component =
+        target.path === 'opacity'
+          ? '/3'
+          : target.component !== undefined
+            ? `/${target.component}`
+            : '';
+      return {path: 'pointer', pointer: `/materials/${material}/${property}${component}`};
+    }
+  }
+
+  if (target.type === 'sampler') {
+    for (const [identifier, material] of Object.entries(scene.materials)) {
+      const materialIndex = materialIndices.get(identifier);
+      if (materialIndex === undefined) {
+        continue;
+      }
+      for (const {slot, pathSegments} of getTextureTransformSlotDefinitions()) {
+        if (material[`${slot}Texture`] === target.identifier) {
+          const component = target.component !== undefined ? `/${target.component}` : '';
+          return {
+            path: 'pointer',
+            pointer:
+              `/materials/${materialIndex}/${pathSegments.join('/')}` +
+              `/extensions/KHR_texture_transform/${target.path}${component}`
+          };
+        }
+      }
+    }
+  }
+
+  if (target.type === 'light') {
+    const index = (scene.lights || [])
+      .filter(light => light['@@type'] !== 'ambient')
+      .findIndex(light => light['@@id'] === target.identifier);
+    if (index >= 0) {
+      return {
+        path: 'pointer',
+        pointer: `/extensions/KHR_lights_punctual/lights/${index}/${target.path}`
+      };
+    }
+  }
+
+  if (target.type === 'camera' && scene.camera) {
+    const cameraPath =
+      target.path === 'fovy'
+        ? 'perspective/yfov'
+        : target.path === 'near'
+          ? `${scene.camera['@@type']}/znear`
+          : target.path === 'far'
+            ? `${scene.camera['@@type']}/zfar`
+            : undefined;
+    return cameraPath ? {path: 'pointer', pointer: `/cameras/0/${cameraPath}`} : undefined;
+  }
+
+  return undefined;
+}
+
+function getMaterialAnimationPointer(path: string): string | undefined {
+  const properties: Record<string, string> = {
+    baseColor: 'pbrMetallicRoughness/baseColorFactor',
+    opacity: 'pbrMetallicRoughness/baseColorFactor',
+    metallic: 'pbrMetallicRoughness/metallicFactor',
+    roughness: 'pbrMetallicRoughness/roughnessFactor',
+    emissive: 'emissiveFactor',
+    alphaCutoff: 'alphaCutoff',
+    specularColor: 'extensions/KHR_materials_specular/specularColorFactor',
+    specularIntensity: 'extensions/KHR_materials_specular/specularFactor',
+    indexOfRefraction: 'extensions/KHR_materials_ior/ior',
+    transmission: 'extensions/KHR_materials_transmission/transmissionFactor',
+    thickness: 'extensions/KHR_materials_volume/thicknessFactor',
+    attenuationDistance: 'extensions/KHR_materials_volume/attenuationDistance',
+    attenuationColor: 'extensions/KHR_materials_volume/attenuationColor',
+    clearcoat: 'extensions/KHR_materials_clearcoat/clearcoatFactor',
+    clearcoatRoughness: 'extensions/KHR_materials_clearcoat/clearcoatRoughnessFactor',
+    sheenColor: 'extensions/KHR_materials_sheen/sheenColorFactor',
+    sheenRoughness: 'extensions/KHR_materials_sheen/sheenRoughnessFactor',
+    iridescence: 'extensions/KHR_materials_iridescence/iridescenceFactor',
+    iridescenceIndexOfRefraction: 'extensions/KHR_materials_iridescence/iridescenceIor',
+    iridescenceThicknessMinimum: 'extensions/KHR_materials_iridescence/iridescenceThicknessMinimum',
+    iridescenceThicknessMaximum: 'extensions/KHR_materials_iridescence/iridescenceThicknessMaximum',
+    anisotropyStrength: 'extensions/KHR_materials_anisotropy/anisotropyStrength',
+    anisotropyRotation: 'extensions/KHR_materials_anisotropy/anisotropyRotation',
+    emissiveStrength: 'extensions/KHR_materials_emissive_strength/emissiveStrength'
+  };
+  return properties[path];
 }
 
 function collectSurfacePlacements(scene: ANARIJSONScene): SurfacePlacement[] {
@@ -384,7 +670,7 @@ function makeGLTFMaterial(
   scene: ANARIJSONScene
 ): Record<string, unknown> {
   const baseColor = material.baseColor || material.color || [0.8, 0.8, 0.8];
-  const alpha = baseColor.length > 3 ? (baseColor[3] ?? 1) : (material.opacity ?? 1);
+  const alpha = material.opacity ?? (baseColor.length > 3 ? (baseColor[3] ?? 1) : 1);
   const result: Record<string, unknown> = {
     name: identifier,
     pbrMetallicRoughness: {
@@ -426,6 +712,10 @@ function makeGLTFMaterial(
     addGLTFMaterialExtension(result, 'KHR_materials_transmission', {
       transmissionFactor: material.transmission ?? 0
     });
+  }
+  const dispersion = (material as typeof material & {dispersion?: number}).dispersion;
+  if ((dispersion ?? 0) > 0) {
+    addGLTFMaterialExtension(result, 'KHR_materials_dispersion', {dispersion});
   }
   if (material.indexOfRefraction !== undefined && material.indexOfRefraction !== 1.5) {
     addGLTFMaterialExtension(result, 'KHR_materials_ior', {
@@ -575,20 +865,10 @@ function addGLTFMaterialExtension(
   );
 }
 
-function collectMaterialExtensions(materials: object[]): string[] {
-  const extensions = new Set<string>();
-  for (const material of materials) {
-    const materialExtensions = (material as Record<string, unknown>)['extensions'];
-    if (materialExtensions && typeof materialExtensions === 'object') {
-      for (const name of Object.keys(materialExtensions)) {
-        extensions.add(name);
-      }
-    }
-  }
-  return Array.from(extensions);
-}
-
-function addGLTFCamera(scene: ANARIJSONScene, nodes: object[]): {camera: object} | undefined {
+function addGLTFCamera(
+  scene: ANARIJSONScene,
+  nodes: GLTFExportNode[]
+): {camera: Record<string, unknown>} | undefined {
   if (!scene.camera) {
     return undefined;
   }
@@ -617,7 +897,7 @@ function addGLTFCamera(scene: ANARIJSONScene, nodes: object[]): {camera: object}
   return {camera};
 }
 
-function addGLTFLights(scene: ANARIJSONScene, nodes: object[]): object[] | undefined {
+function addGLTFLights(scene: ANARIJSONScene, nodes: GLTFExportNode[]): object[] | undefined {
   const lights = (scene.lights || []).filter(light => light['@@type'] !== 'ambient');
   if (lights.length === 0) {
     return undefined;
@@ -777,81 +1057,6 @@ function appendUSDLights(lines: string[], scene: ANARIJSONScene): void {
   }
 }
 
-function addFloatAccessor(
-  values: number[],
-  components: 2 | 3,
-  builder: BinaryBufferBuilder,
-  bufferViews: GLTFBufferView[],
-  accessors: GLTFAccessor[]
-): number {
-  const bytes = new Uint8Array(new Float32Array(values).buffer);
-  const bufferView = addBufferView(bytes, 34962, builder, bufferViews);
-  const accessor: GLTFAccessor = {
-    bufferView,
-    componentType: 5126,
-    count: values.length / components,
-    type: components === 2 ? 'VEC2' : 'VEC3'
-  };
-  if (components === 3) {
-    accessor.min = getComponentExtrema(values, components, Math.min);
-    accessor.max = getComponentExtrema(values, components, Math.max);
-  }
-  accessors.push(accessor);
-  return accessors.length - 1;
-}
-
-function addIndexAccessor(
-  values: number[],
-  builder: BinaryBufferBuilder,
-  bufferViews: GLTFBufferView[],
-  accessors: GLTFAccessor[]
-): number {
-  const useUint32 = values.some(value => value > 65535);
-  const bytes = useUint32
-    ? new Uint8Array(new Uint32Array(values).buffer)
-    : new Uint8Array(new Uint16Array(values).buffer);
-  const bufferView = addBufferView(bytes, 34963, builder, bufferViews);
-  accessors.push({
-    bufferView,
-    componentType: useUint32 ? 5125 : 5123,
-    count: values.length,
-    type: 'SCALAR'
-  });
-  return accessors.length - 1;
-}
-
-function addBufferView(
-  bytes: Uint8Array,
-  target: number,
-  builder: BinaryBufferBuilder,
-  bufferViews: GLTFBufferView[]
-): number {
-  const byteOffset = builder.append(bytes);
-  bufferViews.push({buffer: 0, byteOffset, byteLength: bytes.byteLength, target});
-  return bufferViews.length - 1;
-}
-
-class BinaryBufferBuilder {
-  private bytes: number[] = [];
-
-  get length(): number {
-    return this.bytes.length;
-  }
-
-  append(values: Uint8Array): number {
-    while (this.bytes.length % 4 !== 0) {
-      this.bytes.push(0);
-    }
-    const offset = this.bytes.length;
-    this.bytes.push(...values);
-    return offset;
-  }
-
-  toDataURI(): string {
-    return 'data:application/octet-stream;base64,' + encodeBase64(new Uint8Array(this.bytes));
-  }
-}
-
 async function makeDataURI(source: string): Promise<string> {
   if (source.startsWith('data:')) {
     return source;
@@ -890,20 +1095,6 @@ function toNumberArray(values: unknown): number[] {
 
 function makeSequentialIndices(count: number): number[] {
   return Array.from({length: count}, (_value, index) => index);
-}
-
-function getComponentExtrema(
-  values: number[],
-  components: number,
-  operation: (first: number, second: number) => number
-): number[] {
-  const extrema = values.slice(0, components);
-  for (let offset = components; offset < values.length; offset += components) {
-    for (let component = 0; component < components; component++) {
-      extrema[component] = operation(extrema[component], values[offset + component]);
-    }
-  }
-  return extrema;
 }
 
 function formatUSDVector(values: ArrayLike<number>): string {

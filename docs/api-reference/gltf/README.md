@@ -12,10 +12,13 @@ import {GLTFExample} from '@site/src/examples';
 
 <GltfDocsTabs active="overview" />
 
-`@luma.gl/gltf` turns postprocessed glTF assets into ordinary luma.gl scenegraphs, physically
-based materials, punctual lights, and animated mesh data. File loading, decompression, and glTF
-postprocessing belong to `@loaders.gl/gltf`; animation primitives, geometry, and shader modules
-remain in their existing luma.gl packages.
+`@luma.gl/gltf` is a standards-first asset runtime for physically based materials, animated
+characters, morph deformation, native animation pointers, and source-faithful `.gltf` / `.glb`
+interchange across WebGPU and WebGL. It turns postprocessed glTF assets into ordinary luma.gl
+scenegraphs and exports generic scene descriptors without depending on a particular renderer.
+
+File loading, decompression, and glTF postprocessing belong to `@loaders.gl/gltf`; animation
+primitives, geometry, and shader modules remain in their existing luma.gl packages.
 
 <GLTFExample embedded showStats={false} />
 
@@ -136,6 +139,24 @@ and morph-target helpers preserve authored joint attributes, target deltas, and 
 See [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation), the
 [engine animation guide](/docs/api-guide/engine/animation), and
 [glTF extension support](/docs/api-reference/gltf/gltf-extensions) for details and limitations.
+
+## Source-faithful asset interchange
+
+`exportGLTF()` serializes renderer-independent glTF scene descriptors as embedded JSON or binary
+GLB. Existing hierarchy, skins, inverse bind matrices, morph targets, animation clips, material
+pointers, variants, GPU instancing, cameras, punctual lights, sampler settings, and authored
+physical materials remain available to the output asset.
+
+```ts
+import {exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
+
+const scene: GLTFExportScene = {name: 'Exported scene', nodes: [{name: 'Root'}]};
+const document: string = exportGLTF(scene);
+const binary: ArrayBuffer = exportGLTF(scene, {binary: true});
+```
+
+See [glTF asset interchange](/docs/api-reference/gltf/gltf-interchange) for typed descriptors,
+RGBA vertex colors, normalized joint weights, animation pointers, and resource ownership.
 
 ## Package ownership
 

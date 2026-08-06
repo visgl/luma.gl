@@ -10,6 +10,19 @@ const HERO_CAPABILITIES = ['WebGPU', 'WebGL2', 'GPU compute', 'HDR rendering'];
 
 const FEATURED_EXAMPLES = [
   {
+    title: 'glTF Asset Studio',
+    route: 'showcase/gltf',
+    image: 'showcase/gltf.jpg',
+    description:
+      'Explore standards-first glTF assets with physical materials, animated characters, morph targets, native extensions, and portable WebGPU/WebGL rendering.',
+    category: 'glTF',
+    backends: ['webgpu', 'webgl2'],
+    highDynamicRange: true,
+    difficulty: 'intermediate',
+    maturity: 'stable',
+    topics: ['gltf', 'materials', 'animation']
+  },
+  {
     title: 'Lightstorm Megacity',
     route: 'showcase/lightstorm-megacity',
     image: 'showcase/lightstorm-megacity.jpg',
@@ -130,10 +143,10 @@ const CAPABILITY_STORIES = [
   },
   {
     index: '03',
-    title: 'Open by design',
+    title: 'Open assets, without compromise',
     description:
-      'Build with a TypeScript-first API across WebGPU and WebGL2, with natural paths into deck.gl, Arrow, and glTF.',
-    technologies: ['WebGPU + WebGL2', 'Apache Arrow', 'deck.gl + glTF']
+      'Load, animate, render, and round-trip standards-first glTF assets with shared physical materials, skeletons, morph targets, and native animation pointers.',
+    technologies: ['glTF 2.0 + GLB', 'PBR + animation', 'WebGPU + WebGL2']
   }
 ];
 
