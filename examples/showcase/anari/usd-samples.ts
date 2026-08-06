@@ -23,6 +23,24 @@ function resolveSceneAssetUrl(relativePath: string): string {
 
 export const SCENE_SAMPLES: readonly SceneSample[] = [
   {
+    identifier: 'gltf-expressive-robot',
+    label: 'glTF · Expressive Robot · 14 Animated Clips',
+    url: resolveSceneAssetUrl('./gltf/RobotExpressive.glb'),
+    format: 'gltf'
+  },
+  {
+    identifier: 'gltf-animated-morphs',
+    label: 'glTF · Animated Morph Targets',
+    url: resolveSceneAssetUrl('./gltf/AnimatedMorphCube.glb'),
+    format: 'gltf'
+  },
+  {
+    identifier: 'gltf-animated-skin',
+    label: 'glTF · Animated Skeleton',
+    url: resolveSceneAssetUrl('./gltf/SimpleSkin.gltf'),
+    format: 'gltf'
+  },
+  {
     identifier: 'gltf-animated-colors',
     label: 'glTF · Animated Colors',
     url: resolveSceneAssetUrl('./gltf/AnimatedColorsCube.glb'),

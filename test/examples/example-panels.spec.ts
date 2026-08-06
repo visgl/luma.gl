@@ -1,6 +1,10 @@
-import {describe, expect, test, vi} from 'vitest';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
+import {describe, expect, test, vi} from 'vitest';
+import {
+  ArrowExamplePanelManager,
+  makeArrowExamplePanelHostHtml
+} from '../../examples/arrow/arrow-example-panels';
 import {
   configurePanelHostElement,
   ExamplePanelManager,
@@ -12,24 +16,20 @@ import {
   makeInlineSettingsSchema
 } from '../../examples/example-panels';
 import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../examples/example-theme';
-import {
-  ArrowExamplePanelManager,
-  makeArrowExamplePanelHostHtml
-} from '../../examples/arrow/arrow-example-panels';
-import {
-  getTextSpaceCrawlColorKind,
-  setTextSpaceCrawlColorKind
-} from '../../examples/text-space-crawl-color';
 import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
 import {
+  type EffectState,
   flattenEffectSettings,
   getEffectResolutionScale,
   makePostprocessingUniforms,
   reorderEffectPassNames,
   unflattenEffectSettings,
-  updateEffectPassNames,
-  type EffectState
+  updateEffectPassNames
 } from '../../examples/showcase/postprocessing/app';
+import {
+  getTextSpaceCrawlColorKind,
+  setTextSpaceCrawlColorKind
+} from '../../examples/text-space-crawl-color';
 
 const TEST_SETTINGS_SCHEMA: SettingsSchema = {
   title: 'Settings',
@@ -765,6 +765,57 @@ describe('glTF controls', () => {
         options: [{label: 'Loading models...', value: 'loading-models'}]
       })
     );
+  });
+
+  test('exposes named clips, crossfades, expressions, material variants, and independent actors', () => {
+    const definitions = getSettingDefinitions(
+      makeGltfSettingsSchema(
+        [],
+        [],
+        'featured',
+        {
+          clipNames: ['Idle', 'Walking'],
+          selectedClip: 'Idle',
+          duration: 2,
+          time: 0,
+          playing: true,
+          speed: 1,
+          crossFadeDuration: 0.35,
+          loop: 'repeat',
+          variants: ['Midnight'],
+          selectedVariant: '__default__',
+          morphTargets: [
+            {identifier: '13:0', nodeIndex: 13, targetIndex: 0, label: 'Angry', value: 0}
+          ],
+          skinCount: 2,
+          jointCount: 86,
+          cameraCount: 1
+        },
+        [{name: 'Studio Camera'}]
+      )
+    );
+
+    expect(definitions.get('animationClip')?.options).toEqual([
+      {label: 'Idle', value: 'Idle'},
+      {label: 'Walking', value: 'Walking'}
+    ]);
+    expect(definitions.get('animationCrossFade')).toEqual(
+      expect.objectContaining({label: 'Crossfade Seconds', max: 2})
+    );
+    expect(definitions.get('characterInstances')).toEqual(
+      expect.objectContaining({label: 'Independent Characters', max: 6})
+    );
+    expect(definitions.get('morph__13__0')).toEqual(
+      expect.objectContaining({label: 'Angry', max: 1})
+    );
+    expect(definitions.get('materialVariant')?.options).toContainEqual({
+      label: 'Midnight',
+      value: 'Midnight'
+    });
+    expect(definitions.get('cameraSelection')?.options).toContainEqual({
+      label: 'Studio Camera',
+      value: '0'
+    });
   });
 });
 

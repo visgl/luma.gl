@@ -160,6 +160,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     getRequiredElement('export-gltf', HTMLButtonElement).addEventListener('click', () => {
       void this.exportScene('gltf');
     });
+    getRequiredElement('export-glb', HTMLButtonElement).addEventListener('click', () => {
+      void this.exportScene('glb');
+    });
     getRequiredElement('export-usd', HTMLButtonElement).addEventListener('click', () => {
       void this.exportScene('usd');
     });
@@ -313,7 +316,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     }
   }
 
-  private async exportScene(format: 'gltf' | 'usd'): Promise<void> {
+  private async exportScene(format: 'gltf' | 'glb' | 'usd'): Promise<void> {
     try {
       const parsedScene: unknown = JSON.parse(this.editor.value);
       const validatedScene = ANARISceneSchema.safeParse(parsedScene);
@@ -324,15 +327,24 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       setElementText('editor-feedback', 'Exporting ' + format.toUpperCase() + ' scene…');
       const scene = validatedScene.data as ANARIJSONScene;
-      const contents =
-        format === 'gltf'
-          ? await exportANARIJSONSceneToGLTF(scene)
-          : exportANARIJSONSceneToUSD(scene);
-      downloadTextFile(
-        contents,
-        makeExportFilename(scene.name, format === 'gltf' ? 'gltf' : 'usda'),
-        format === 'gltf' ? 'model/gltf+json' : 'model/vnd.usda'
-      );
+      if (format === 'glb') {
+        const binaryContents = await exportANARIJSONSceneToGLTF(scene, {binary: true});
+        downloadSceneFile(
+          binaryContents,
+          makeExportFilename(scene.name, 'glb'),
+          'model/gltf-binary'
+        );
+      } else {
+        const contents =
+          format === 'gltf'
+            ? await exportANARIJSONSceneToGLTF(scene)
+            : exportANARIJSONSceneToUSD(scene);
+        downloadSceneFile(
+          contents,
+          makeExportFilename(scene.name, format === 'gltf' ? 'gltf' : 'usda'),
+          format === 'gltf' ? 'model/gltf+json' : 'model/vnd.usda'
+        );
+      }
       setElementText('editor-feedback', format.toUpperCase() + ' scene downloaded');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -488,7 +500,11 @@ function makeExportFilename(name: string, extension: string): string {
   return (normalized || 'anari-scene') + '.' + extension;
 }
 
-function downloadTextFile(contents: string, filename: string, mimeType: string): void {
+function downloadSceneFile(
+  contents: string | ArrayBuffer,
+  filename: string,
+  mimeType: string
+): void {
   const url = URL.createObjectURL(new Blob([contents], {type: mimeType}));
   const link = document.createElement('a');
   link.href = url;

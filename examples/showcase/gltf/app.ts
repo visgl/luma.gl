@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {RenderPass, log} from '@luma.gl/core';
-import {AnimationProps, ClipSpace} from '@luma.gl/engine';
-import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/gltf';
-import {type LightingProps} from '@luma.gl/shadertools';
 import {
   ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
 } from '@deck.gl-community/panels';
+import {log, RenderPass} from '@luma.gl/core';
+import {type AnimationLoopMode, AnimationProps, ClipSpace} from '@luma.gl/engine';
+import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/gltf';
+import {type LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
 import {
   ExamplePanelManager,
   ExampleSettingsPanelManager,
@@ -19,19 +19,25 @@ import {
   makeExamplePanelHostHtml,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {GLTF_STUDIO_DEFAULT_VARIANT, type GLTFAnimationStudioState} from './gltf-animation-studio';
 import GLTFCatalogApp, {
+  GLTF_ANIMATION_INFO_ID,
   GLTF_MODEL_INFO_ID,
-  saveOptions,
   type GLTFCatalogModel,
-  type GLTFModelReference
+  type GLTFModelReference,
+  saveOptions
 } from './gltf-catalog-app';
 import {GLTF_EXTENSION_DEMOS, type GLTFExtensionDemo} from './gltf-extension-demos';
+import {getFeaturedGLTFAsset} from './gltf-featured-assets';
 
 const PBR_ENVIRONMENT_BASE_URL =
   'https://raw.githubusercontent.com/uber-common/deck.gl-data/master/luma.gl/examples/gltf';
 const SHOWCASE_EXTENSION_STORAGE_KEY = 'showcase-gltf-extension-filter';
 const ALL_EXTENSIONS_FILTER = 'all';
+const FEATURED_ASSETS_FILTER = 'featured';
 const LOADING_MODEL_VALUE = 'loading-models';
+const NO_ANIMATION_CLIP = '__no-animation__';
+const ORBIT_CAMERA = '__orbit-camera__';
 const CUBE_FACE_TO_DIRECTION = ['right', 'left', 'top', 'bottom', 'front', 'back'] as const;
 const SHOWCASE_FALLBACK_LIGHTING = {
   ambientLight: {
@@ -89,31 +95,34 @@ void main(void) {
 `;
 
 const GLTF_DESCRIPTION_HTML = `\
-<p>Browse production-quality glTF sample assets with interactive camera and animation controls.</p>
+<p>Explore curated glTF assets with independent clip playback, skeletal animation, facial morphs,
+material variants, and standards-native extension diagnostics.</p>
 <div id="loading-state" class="gltf-loading-indicator" hidden>
   <span class="gltf-loading-spinner" aria-hidden="true"></span>
 </div>
 <p style="margin-top: 8px;">Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
 <div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
+<div id="${GLTF_ANIMATION_INFO_ID}" style="margin-top: 10px;"></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="extension-support" style="margin-top: 12px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
 
 export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
-  static info = makeExamplePanelHostHtml();
+  static override info = makeExamplePanelHostHtml();
   backgroundModel: ClipSpace;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
   extensionDemos: GLTFExtensionDemo[] = [];
   modelOptions: ShowcaseModelMenuOption[] = [];
-  extensionName = ALL_EXTENSIONS_FILTER;
+  extensionName = FEATURED_ASSETS_FILTER;
   selectedModelValue = '';
   imageBasedLightingEnvironment?: PBREnvironment;
   imageBasedLightingEnvironmentPromise?: Promise<PBREnvironment | undefined>;
 
-  constructor({device}: AnimationProps) {
-    super({device});
+  constructor(animationProps: AnimationProps) {
+    super(animationProps);
+    const {device} = animationProps;
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'gltf-settings',
       schema: makeGltfSettingsSchema([], [], this.extensionName),
@@ -137,15 +146,15 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     canvas.style.background = 'linear-gradient(180deg, #9b9b97 0%, #6f6d64 100%)';
   }
 
-  getDefaultModelName(): string {
-    return 'DamagedHelmet';
+  override getDefaultModelName(): string {
+    return 'RobotExpressive';
   }
 
-  getModelStorageKey(): string {
+  override getModelStorageKey(): string {
     return 'showcase-last-gltf-model-v2';
   }
 
-  getClearColor(): [number, number, number, number] {
+  override getClearColor(): [number, number, number, number] {
     return [0.53, 0.52, 0.49, 1];
   }
 
@@ -155,9 +164,10 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       this.extensionDemos.map(extensionDemo => extensionDemo.extensionName)
     );
     const storedExtension = window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY];
-    this.extensionName = activeExtensionNames.has(storedExtension)
-      ? storedExtension
-      : ALL_EXTENSIONS_FILTER;
+    this.extensionName =
+      storedExtension === FEATURED_ASSETS_FILTER || activeExtensionNames.has(storedExtension)
+        ? storedExtension
+        : FEATURED_ASSETS_FILTER;
     this.modelOptions = getModelOptionsForExtension(
       this.extensionName,
       getAllModelOptions(models),
@@ -166,17 +176,20 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     const selectedModelOption = getInitialModelOption(this.modelOptions, currentModelName);
     this.selectedModelValue = encodeModelOption(selectedModelOption);
     this.syncSettingsPanel();
-    if (this.extensionName !== ALL_EXTENSIONS_FILTER) {
+    if (
+      this.extensionName !== ALL_EXTENSIONS_FILTER &&
+      this.extensionName !== FEATURED_ASSETS_FILTER
+    ) {
       this.loadModelOption(selectedModelOption);
     }
     return () => {};
   }
 
-  drawBackground(renderPass: RenderPass): void {
+  override drawBackground(renderPass: RenderPass): void {
     this.backgroundModel.draw(renderPass);
   }
 
-  async getImageBasedLightingEnvironment(): Promise<PBREnvironment | undefined> {
+  override async getImageBasedLightingEnvironment(): Promise<PBREnvironment | undefined> {
     if (this.imageBasedLightingEnvironment) {
       return this.imageBasedLightingEnvironment;
     }
@@ -196,7 +209,7 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     return SHOWCASE_FALLBACK_LIGHTING;
   }
 
-  override getPBRMaterialProps() {
+  override getPBRMaterialProps(): Partial<PBRMaterialUniforms> {
     if (!this.imageBasedLightingEnvironment) {
       return {};
     }
@@ -214,6 +227,10 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     destroyImageBasedLightingEnvironment(this.imageBasedLightingEnvironment);
     this.imageBasedLightingEnvironment = undefined;
     this.imageBasedLightingEnvironmentPromise = undefined;
+  }
+
+  override onScenegraphsChanged(): void {
+    this.syncSettingsPanel();
   }
 
   private async loadImageBasedLightingEnvironment(): Promise<PBREnvironment | undefined> {
@@ -263,18 +280,42 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   private getSettingsState(): GltfSettingsState {
+    const animationState = this.animationStudio.getState();
+    const morphValues = Object.fromEntries(
+      animationState.morphTargets.map(target => [
+        makeMorphSettingName(target.identifier),
+        target.value
+      ])
+    );
+
     return {
       extensionName: this.extensionName,
       modelValue: this.selectedModelValue || LOADING_MODEL_VALUE,
+      animationClip: animationState.selectedClip || NO_ANIMATION_CLIP,
+      animationSpeed: animationState.speed,
+      animationCrossFade: animationState.crossFadeDuration,
+      animationTime: animationState.time,
+      animationLoop: animationState.loop,
+      characterInstances: this.getAnimationInstanceCount(),
+      materialVariant: animationState.selectedVariant,
+      cameraSelection:
+        this.selectedCameraIndex === null ? ORBIT_CAMERA : String(this.selectedCameraIndex),
       useModelLights: this.options['useModelLights'],
       cameraAnimation: this.options['cameraAnimation'],
-      gltfAnimation: this.options['gltfAnimation']
+      gltfAnimation: this.options['gltfAnimation'],
+      ...morphValues
     };
   }
 
   private syncSettingsPanel(): void {
     this.settingsPanel.setSchemaAndSettings(
-      makeGltfSettingsSchema(this.extensionDemos, this.modelOptions, this.extensionName),
+      makeGltfSettingsSchema(
+        this.extensionDemos,
+        this.modelOptions,
+        this.extensionName,
+        this.animationStudio.getState(),
+        this.scenegraphsFromGLTF?.cameras || []
+      ),
       this.getSettingsState()
     );
     this.panels.setPanel(this.makePanel());
@@ -294,6 +335,57 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       this.selectModel(modelValue);
       return;
     }
+    const animationClip = getChangedSetting(changedSettings, 'animationClip')?.nextValue;
+    if (typeof animationClip === 'string' && animationClip !== NO_ANIMATION_CLIP) {
+      this.animationStudio.selectClip(animationClip);
+      this.syncSettingsPanel();
+      return;
+    }
+    const materialVariant = getChangedSetting(changedSettings, 'materialVariant')?.nextValue;
+    if (typeof materialVariant === 'string') {
+      this.animationStudio.selectVariant(materialVariant);
+      return;
+    }
+    const cameraSelection = getChangedSetting(changedSettings, 'cameraSelection')?.nextValue;
+    if (typeof cameraSelection === 'string') {
+      this.selectedCameraIndex = cameraSelection === ORBIT_CAMERA ? null : Number(cameraSelection);
+      return;
+    }
+    const animationSpeed = getChangedSetting(changedSettings, 'animationSpeed')?.nextValue;
+    if (typeof animationSpeed === 'number') {
+      this.animationStudio.setSpeed(animationSpeed);
+      return;
+    }
+    const animationCrossFade = getChangedSetting(changedSettings, 'animationCrossFade')?.nextValue;
+    if (typeof animationCrossFade === 'number') {
+      this.animationStudio.setCrossFadeDuration(animationCrossFade);
+      return;
+    }
+    const animationTime = getChangedSetting(changedSettings, 'animationTime')?.nextValue;
+    if (typeof animationTime === 'number') {
+      this.animationStudio.seek(animationTime);
+      return;
+    }
+    const animationLoop = getChangedSetting(changedSettings, 'animationLoop')?.nextValue;
+    if (animationLoop === 'repeat' || animationLoop === 'once' || animationLoop === 'ping-pong') {
+      this.animationStudio.setLoop(animationLoop);
+      return;
+    }
+    const characterInstances = getChangedSetting(changedSettings, 'characterInstances')?.nextValue;
+    if (typeof characterInstances === 'number') {
+      this.setAnimationInstanceCount(characterInstances);
+      return;
+    }
+    for (const target of this.animationStudio.getState().morphTargets) {
+      const value = getChangedSetting(
+        changedSettings,
+        makeMorphSettingName(target.identifier)
+      )?.nextValue;
+      if (typeof value === 'number') {
+        this.animationStudio.setMorphWeight(target.identifier, value);
+        return;
+      }
+    }
     for (const optionName of ['useModelLights', 'cameraAnimation', 'gltfAnimation'] as const) {
       const nextValue = getChangedSetting(changedSettings, optionName)?.nextValue;
       if (typeof nextValue === 'boolean') {
@@ -306,7 +398,7 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   private selectExtension(extensionName: string): void {
     this.extensionName = isGltfExtensionName(extensionName, this.extensionDemos)
       ? extensionName
-      : ALL_EXTENSIONS_FILTER;
+      : FEATURED_ASSETS_FILTER;
     window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY] = this.extensionName;
     this.modelOptions = getModelOptionsForExtension(
       this.extensionName,
@@ -400,6 +492,9 @@ function getModelOptionsForExtension(
   allModels: ShowcaseModelMenuOption[],
   extensionDemos: GLTFExtensionDemo[]
 ): ShowcaseModelMenuOption[] {
+  if (extensionName === FEATURED_ASSETS_FILTER) {
+    return allModels.filter(model => Boolean(getFeaturedGLTFAsset(model.name)));
+  }
   if (extensionName === ALL_EXTENSIONS_FILTER) {
     return allModels;
   }
@@ -417,16 +512,31 @@ function encodeModelOption(modelOption: GLTFModelReference): string {
 type GltfSettingsState = {
   extensionName: string;
   modelValue: string;
+  animationClip: string;
+  animationSpeed: number;
+  animationCrossFade: number;
+  animationTime: number;
+  animationLoop: AnimationLoopMode;
+  characterInstances: number;
+  materialVariant: string;
+  cameraSelection: string;
   useModelLights: boolean;
   cameraAnimation: boolean;
   gltfAnimation: boolean;
+  [settingName: string]: boolean | number | string;
 };
 
 export function makeGltfSettingsSchema(
   extensionDemos: GLTFExtensionDemo[] = [],
   modelOptions: ShowcaseModelMenuOption[] = [],
-  extensionName = ALL_EXTENSIONS_FILTER
+  extensionName = FEATURED_ASSETS_FILTER,
+  animationState?: GLTFAnimationStudioState,
+  cameras: readonly {name?: string}[] = []
 ): SettingsSchema {
+  const clipOptions = animationState?.clipNames.length
+    ? animationState.clipNames.map(name => ({label: name, value: name}))
+    : [{label: 'No animation clips', value: NO_ANIMATION_CLIP}];
+
   return {
     title: 'Settings',
     sections: [
@@ -441,6 +551,7 @@ export function makeGltfSettingsSchema(
             type: 'select',
             persist: 'none',
             options: [
+              {label: 'Curated Highlights', value: FEATURED_ASSETS_FILTER},
               {label: 'All Extensions', value: ALL_EXTENSIONS_FILTER},
               ...extensionDemos.map(extensionDemo => ({
                 label: extensionDemo.extensionName,
@@ -466,9 +577,113 @@ export function makeGltfSettingsSchema(
       },
       {
         id: 'animation',
-        name: 'Animation',
+        name: 'Animation Studio',
         initiallyCollapsed: false,
         settings: [
+          {
+            name: 'gltfAnimation',
+            label: 'Play Animation',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'animationClip',
+            label: 'Animation Clip',
+            type: 'select',
+            options: clipOptions,
+            persist: 'none'
+          },
+          {
+            name: 'animationSpeed',
+            label: 'Playback Speed',
+            type: 'number',
+            min: 0,
+            max: 3,
+            step: 0.05,
+            persist: 'none'
+          },
+          {
+            name: 'animationCrossFade',
+            label: 'Crossfade Seconds',
+            type: 'number',
+            min: 0,
+            max: 2,
+            step: 0.05,
+            persist: 'none'
+          },
+          {
+            name: 'animationTime',
+            label: 'Animation Time',
+            type: 'number',
+            min: 0,
+            max: Math.max(animationState?.duration || 0, 0.01),
+            step: 0.01,
+            persist: 'none'
+          },
+          {
+            name: 'animationLoop',
+            label: 'Loop Mode',
+            type: 'select',
+            options: [
+              {label: 'Repeat', value: 'repeat'},
+              {label: 'Ping-pong', value: 'ping-pong'},
+              {label: 'Play once', value: 'once'}
+            ],
+            persist: 'none'
+          },
+          {
+            name: 'characterInstances',
+            label: 'Independent Characters',
+            type: 'number',
+            min: 1,
+            max: 6,
+            step: 1,
+            persist: 'none'
+          }
+        ]
+      },
+      {
+        id: 'morph-targets',
+        name: 'Facial Expressions',
+        initiallyCollapsed: false,
+        settings: (animationState?.morphTargets || []).map(target => ({
+          name: makeMorphSettingName(target.identifier),
+          label: target.label,
+          type: 'number',
+          min: 0,
+          max: 1,
+          step: 0.01,
+          persist: 'none'
+        }))
+      },
+      {
+        id: 'materials',
+        name: 'Materials and Cameras',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'materialVariant',
+            label: 'Material Variant',
+            type: 'select',
+            options: [
+              {label: 'Original materials', value: GLTF_STUDIO_DEFAULT_VARIANT},
+              ...(animationState?.variants || []).map(name => ({label: name, value: name}))
+            ],
+            persist: 'none'
+          },
+          {
+            name: 'cameraSelection',
+            label: 'Camera Lens',
+            type: 'select',
+            options: [
+              {label: 'Studio orbit camera', value: ORBIT_CAMERA},
+              ...cameras.map((camera, index) => ({
+                label: camera.name || `Source camera ${index + 1}`,
+                value: String(index)
+              }))
+            ],
+            persist: 'none'
+          },
           {
             name: 'useModelLights',
             label: 'Use Model Lights',
@@ -477,13 +692,7 @@ export function makeGltfSettingsSchema(
           },
           {
             name: 'cameraAnimation',
-            label: 'Camera Animation',
-            type: 'boolean',
-            persist: 'none'
-          },
-          {
-            name: 'gltfAnimation',
-            label: 'glTF Animation',
+            label: 'Orbit Animation',
             type: 'boolean',
             persist: 'none'
           }
@@ -495,7 +704,12 @@ export function makeGltfSettingsSchema(
 
 function isGltfExtensionName(extensionName: string, extensionDemos: GLTFExtensionDemo[]): boolean {
   return (
+    extensionName === FEATURED_ASSETS_FILTER ||
     extensionName === ALL_EXTENSIONS_FILTER ||
     extensionDemos.some(extensionDemo => extensionDemo.extensionName === extensionName)
   );
+}
+
+function makeMorphSettingName(identifier: string): string {
+  return `morph__${identifier.replace(':', '__')}`;
 }
