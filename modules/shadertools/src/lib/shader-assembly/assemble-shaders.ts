@@ -932,13 +932,12 @@ function relocateWGSLModuleBindingMatch(
     const location =
       registryLocation !== undefined
         ? registryLocation
-        : relocationState.nextHintedBindingLocation === null
-          ? allocateAutoBindingLocation(group, context.usedBindingsByGroup)
-          : allocateAutoBindingLocation(
-              group,
-              context.usedBindingsByGroup,
-              relocationState.nextHintedBindingLocation
-            );
+        : allocateAutoBindingLocation(
+            group,
+            context.usedBindingsByGroup,
+            relocationState.nextHintedBindingLocation ?? undefined,
+            context.bindingRegistry
+          );
     validateModuleWGSLBinding(module.name, group, location, name);
     if (
       registryLocation !== undefined &&
@@ -1122,9 +1121,17 @@ function registerUsedBindingLocation(
 function allocateAutoBindingLocation(
   group: number,
   usedBindingsByGroup: Map<number, Set<number>>,
-  preferredBindingLocation?: number
+  preferredBindingLocation?: number,
+  bindingRegistry?: Map<string, number>
 ): number {
   const usedBindings = usedBindingsByGroup.get(group) || new Set<number>();
+  const registeredBindingLocations = new Set<number>();
+  const registryGroupPrefix = `${group}:`;
+  for (const [registryKey, location] of bindingRegistry || []) {
+    if (registryKey.startsWith(registryGroupPrefix)) {
+      registeredBindingLocations.add(location);
+    }
+  }
   let nextBinding =
     preferredBindingLocation ??
     (group === 0
@@ -1133,7 +1140,7 @@ function allocateAutoBindingLocation(
         ? Math.max(...usedBindings) + 1
         : 0);
 
-  while (usedBindings.has(nextBinding)) {
+  while (usedBindings.has(nextBinding) || registeredBindingLocations.has(nextBinding)) {
     nextBinding++;
   }
 

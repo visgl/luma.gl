@@ -900,14 +900,15 @@ fn calculateDiffuseTransmissionIBL(
   );
   let rotatedNormal = environmentRotation * -pbrInfo.n.xz;
   let oppositeNormal = vec3f(rotatedNormal.x, -pbrInfo.n.y, rotatedNormal.y);
-  let environmentColor = textureSample(
+  let environmentColor = textureSampleLevel(
     pbr_diffuseEnvSampler,
     pbr_diffuseEnvSamplerSampler,
-    oppositeNormal
+    oppositeNormal,
+    0.0
   ).rgb * max(pbrScene.environmentIntensity, 0.0);
 #else
   let environmentColor = SRGBtoLINEAR(
-    textureSample(pbr_diffuseEnvSampler, pbr_diffuseEnvSamplerSampler, -pbrInfo.n)
+    textureSampleLevel(pbr_diffuseEnvSampler, pbr_diffuseEnvSamplerSampler, -pbrInfo.n, 0.0)
   ).rgb;
 #endif
   let nonReflectedEnergy = vec3f(1.0) - clamp(pbrInfo.reflectance0, vec3f(0.0), vec3f(1.0));

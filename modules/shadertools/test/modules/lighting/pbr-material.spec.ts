@@ -8,11 +8,39 @@ import {
   getShaderModuleUniformLayoutValidationResult,
   getShaderModuleUniforms,
   type PBRMaterialUniforms,
-  pbrMaterial
+  type PlatformInfo,
+  pbrMaterial,
+  pbrScene,
+  WGSLShaderAssembler
 } from '@luma.gl/shadertools';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 
 const FLOAT32_EPSILON = 1e-6;
+
+const WEBGPU_PLATFORM: PlatformInfo = {
+  type: 'webgpu',
+  shaderLanguage: 'wgsl',
+  shaderLanguageVersion: 300,
+  gpu: 'test',
+  features: new Set()
+};
+
+const DIFFUSE_TRANSMISSION_UNIFORMITY_SHADER = /* wgsl */ `
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
+  return vec4f(f32(vertexIndex), 0.0, 0.0, 1.0);
+}
+
+@fragment
+fn fragmentMain(@builtin(position) position: vec4f) -> @location(0) vec4f {
+  fragmentInputs.pbr_vPosition = position.xyz;
+  fragmentInputs.pbr_vNormal = vec3f(0.0, 0.0, 1.0);
+  fragmentInputs.pbr_vUV0 = position.xy * 0.01;
+  fragmentInputs.pbr_vUV1 = fragmentInputs.pbr_vUV0;
+  return pbr_filterColor(vec4f(1.0));
+}
+`;
 
 const CORE_UNIFORM_BUFFER_LAYOUT = {
   unlit: {offset: 0, size: 1},
@@ -172,6 +200,68 @@ const fullPBRUniforms: Required<PBRMaterialUniforms> = {
 function almostEqual(actualValue: number, expectedValue: number): boolean {
   return Math.abs(actualValue - expectedValue) <= FLOAT32_EPSILON;
 }
+
+test('shadertools#pbrMaterial compiles texture-dependent diffuse-transmission IBL on WebGPU', async testCase => {
+  const diffuseTransmissionSource =
+    pbrMaterial.source?.match(/fn calculateDiffuseTransmissionIBL\([\s\S]*?\n}\n#endif/)?.[0] || '';
+
+  testCase.ok(diffuseTransmissionSource, 'diffuse-transmission IBL helper is present');
+  testCase.equal(
+    (diffuseTransmissionSource.match(/\btextureSampleLevel\(/g) || []).length,
+    2,
+    'scene and legacy environment paths use derivative-free cubemap sampling'
+  );
+  testCase.notOk(
+    /\btextureSample\(/.test(diffuseTransmissionSource),
+    'data-dependent transmission branches do not require uniform implicit derivatives'
+  );
+
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU unavailable; diffuse-transmission source assertions still run');
+    testCase.end();
+    return;
+  }
+
+  for (const useSceneEnvironment of [false, true]) {
+    const shaderSource = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source: DIFFUSE_TRANSMISSION_UNIFORMITY_SHADER,
+      modules: useSceneEnvironment ? [pbrScene, pbrMaterial] : [pbrMaterial],
+      defines: {
+        HAS_NORMALS: true,
+        HAS_UV: true,
+        HAS_TRANSMISSIONMAP: true,
+        USE_IBL: true,
+        USE_MATERIAL_EXTENSIONS: true,
+        USE_SCENE_ENVIRONMENT: useSceneEnvironment
+      }
+    }).source;
+    const environmentName = useSceneEnvironment ? 'scene' : 'legacy';
+    const shader = device.createShader({
+      id: `pbr-diffuse-transmission-${environmentName}-uniformity`,
+      source: shaderSource
+    });
+
+    try {
+      const compilationErrors = (await shader.getCompilationInfo())
+        .filter(message => message.type === 'error')
+        .map(message => message.message);
+
+      testCase.equal(
+        compilationErrors.length,
+        0,
+        `${environmentName} IBL compiles with a texture-dependent transmission factor${
+          compilationErrors.length ? `: ${compilationErrors.join('; ')}` : ''
+        }`
+      );
+    } finally {
+      shader.destroy();
+    }
+  }
+
+  testCase.end();
+});
 
 test('shadertools#pbrMaterial exposes typed defaults and uniform names', testCase => {
   const pbrMaterialUniformTypecheck: Required<PBRMaterialUniforms> = pbrMaterial.defaultUniforms;

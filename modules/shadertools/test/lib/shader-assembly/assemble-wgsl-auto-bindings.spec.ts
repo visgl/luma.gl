@@ -428,6 +428,46 @@ struct Group2RegistryBUniforms {
 `
 };
 
+const PERMUTED_GROUP_3_TEXTURE_MODULE: ShaderModule = {
+  name: 'permutedGroup3TextureModule',
+  bindingLayout: [
+    {name: 'permutedMaterial', group: 3},
+    {name: 'pbr_baseColorSampler', group: 3},
+    {name: 'pbr_baseColorSamplerSampler', group: 3},
+    {name: 'pbr_transmissionSampler', group: 3},
+    {name: 'pbr_transmissionSamplerSampler', group: 3}
+  ],
+  source: /* wgsl */ `\
+struct PermutedMaterialUniforms {
+  value: f32
+};
+
+@group(3) @binding(0) var<uniform> permutedMaterial: PermutedMaterialUniforms;
+
+#if HAS_BASECOLORMAP
+@group(3) @binding(auto) var pbr_baseColorSampler: texture_2d<f32>;
+@group(3) @binding(auto) var pbr_baseColorSamplerSampler: sampler;
+#endif
+
+#if HAS_TRANSMISSIONMAP
+@group(3) @binding(auto) var pbr_transmissionSampler: texture_2d<f32>;
+@group(3) @binding(auto) var pbr_transmissionSamplerSampler: sampler;
+#endif
+`
+};
+
+const GROUP_3_EXPLICIT_REGISTRY_MODULE: ShaderModule = {
+  name: 'group3ExplicitRegistryModule',
+  bindingLayout: [{name: 'group3ExplicitRegistryBinding', group: 3}],
+  source: /* wgsl */ `\
+struct Group3ExplicitRegistryUniforms {
+  value: f32
+};
+
+@group(3) @binding(1) var<uniform> group3ExplicitRegistryBinding: Group3ExplicitRegistryUniforms;
+`
+};
+
 const MULTILINE_EXPLICIT_MODULE: ShaderModule = {
   name: 'multilineExplicitModule',
   bindingLayout: [{name: 'multilineExplicit', group: 2}],
@@ -1154,6 +1194,74 @@ test('assembleWGSLShader#keeps module auto allocations stable within one assembl
     secondShader.bindingTable.find(row => row.name === 'group2RegistryB')?.binding,
     1,
     'new module binding is allocated around the existing registry assignment'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#keeps disjoint texture permutations compatible when combined', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const assemblePermutation = (defines: Record<string, boolean>) =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules: [PERMUTED_GROUP_3_TEXTURE_MODULE],
+      defines
+    });
+
+  const transmissionOnly = assemblePermutation({HAS_TRANSMISSIONMAP: true});
+  const baseColorOnly = assemblePermutation({HAS_BASECOLORMAP: true});
+  const combined = assemblePermutation({HAS_BASECOLORMAP: true, HAS_TRANSMISSIONMAP: true});
+
+  const getBindingLocation = (
+    assembledShader: ReturnType<typeof assemblePermutation>,
+    name: string
+  ): number | undefined =>
+    assembledShader.bindingTable.find(binding => binding.name === name)?.binding;
+
+  t.equal(getBindingLocation(transmissionOnly, 'pbr_transmissionSampler'), 1);
+  t.equal(getBindingLocation(transmissionOnly, 'pbr_transmissionSamplerSampler'), 2);
+  t.equal(getBindingLocation(baseColorOnly, 'pbr_baseColorSampler'), 3);
+  t.equal(getBindingLocation(baseColorOnly, 'pbr_baseColorSamplerSampler'), 4);
+  t.equal(getBindingLocation(combined, 'pbr_transmissionSampler'), 1);
+  t.equal(getBindingLocation(combined, 'pbr_transmissionSamplerSampler'), 2);
+  t.equal(getBindingLocation(combined, 'pbr_baseColorSampler'), 3);
+  t.equal(getBindingLocation(combined, 'pbr_baseColorSamplerSampler'), 4);
+
+  t.end();
+});
+
+test('assembleWGSLShader#scopes inactive reservations to automatic bindings in their group', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+
+  shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [PERMUTED_GROUP_3_TEXTURE_MODULE],
+    defines: {HAS_TRANSMISSIONMAP: true}
+  });
+
+  const explicitShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [GROUP_3_EXPLICIT_REGISTRY_MODULE]
+  });
+  const isolatedGroupShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [GROUP_2_REGISTRY_A]
+  });
+
+  t.equal(
+    explicitShader.bindingTable.find(binding => binding.name === 'group3ExplicitRegistryBinding')
+      ?.binding,
+    1,
+    'inactive automatic reservations do not invalidate explicit bindings in a different shader'
+  );
+  t.equal(
+    isolatedGroupShader.bindingTable.find(binding => binding.name === 'group2RegistryA')?.binding,
+    0,
+    'inactive locations in another binding group do not change automatic allocation'
   );
 
   t.end();
