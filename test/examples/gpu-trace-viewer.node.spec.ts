@@ -20,6 +20,7 @@ import {
   makeTraceDependencyBatches,
   makeTraceGroups,
   makeTraceSpanBatches,
+  makeTraceSpanChunks,
   TRACE_CROSS_PROCESS_DEPENDENCY,
   TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
@@ -30,6 +31,7 @@ import {
   TRACE_PROCESS_COUNT,
   TRACE_SAME_PROCESS_DEPENDENCY,
   TRACE_SPAN_BATCH_RECORD_WORD_LENGTH,
+  TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
   TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS
@@ -89,24 +91,57 @@ test('deck GPU trace copies complete canonical span records', t => {
 test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t => {
   t.deepEqual(
     getTraceCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000],
-    'portable limits retain the four-million-span ceiling'
+    [250_000, 1_000_000, 4_000_000, 10_000_000],
+    'portable limits expose ten million spans through chunked source storage'
   );
   t.deepEqual(
     getTraceDependencyCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000],
+    [0, 250_000, 1_000_000, 4_000_000],
     'dependency options use their smaller fixed-width record size'
   );
   t.deepEqual(
     getTraceCapacityOptions(256 * 1024 * 1024, 1024 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000],
-    'a 256 MiB storage binding remains below the ten-million-span requirement'
+    [250_000, 1_000_000, 4_000_000, 10_000_000],
+    'chunking removes the single-binding ceiling'
   );
   t.deepEqual(
     getTraceCapacityOptions(1024 * 1024 * 1024, 1024 * 1024 * 1024),
     [250_000, 1_000_000, 4_000_000, 10_000_000],
     'maximum adapters expose the ten-million-span demonstration'
   );
+  t.end();
+});
+
+test('GPU trace span chunks preserve complete candidate batches and borrowed source rows', t => {
+  const dataset = makeTraceDataset(2048, 0);
+  const chunks = makeTraceSpanChunks(
+    dataset.spans,
+    dataset.spanBatches,
+    300 * TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT
+  );
+  t.ok(chunks.length > 1, 'small synthetic chunk limit creates multiple source buffers');
+  t.equal(
+    chunks.reduce((count, chunk) => count + chunk.spanCount, 0),
+    dataset.spanCount,
+    'chunks cover every source span exactly once'
+  );
+  t.ok(
+    chunks.every(chunk => chunk.data.buffer === dataset.spans.buffer),
+    'chunk rows remain borrowed views of canonical source storage'
+  );
+  t.ok(
+    chunks.every(chunk =>
+      dataset.spanBatches
+        .slice(chunk.firstBatchIndex, chunk.firstBatchIndex + chunk.batchCount)
+        .every(
+          batch =>
+            batch.firstSpanIndex >= chunk.firstSpanIndex &&
+            batch.firstSpanIndex + batch.count <= chunk.firstSpanIndex + chunk.spanCount
+        )
+    ),
+    'no candidate batch crosses a chunk boundary'
+  );
+  t.equal(TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH, 64 * 1024 * 1024, 'target stays portable');
   t.end();
 });
 
@@ -148,6 +183,15 @@ test('GPU trace capacity contract makes the monolithic 10M limit explicit', t =>
     '10M dependencies require a 160 MB source buffer'
   );
   t.equal(portable.fitsDeviceLimits, false, 'portable limits reject the monolithic 10M source');
+  t.equal(portable.spanChunkCount, 5, 'portable chunk target splits the 320 MB source five ways');
+  t.equal(
+    getTraceCapacityContract(10_000_000, 0, {
+      maxStorageBufferBindingSize: 128 * 1024 * 1024,
+      maxBufferSize: 256 * 1024 * 1024
+    }).fitsChunkedDeviceLimits,
+    true,
+    'portable limits admit ten million spans when dependency endpoint lookup is disabled'
+  );
 
   const maximum = getTraceCapacityContract(10_000_000, 10_000_000, {
     maxStorageBufferBindingSize: 1024 * 1024 * 1024,
@@ -207,17 +251,23 @@ test('GPU trace LOD switches at a stable trace-time-per-pixel threshold', t => {
 });
 
 test('GPU trace adaptive LOD shaders parse as WGSL', t => {
+  const spanChunk = {
+    firstSpanIndex: 0,
+    spanCount: 11,
+    firstBatchIndex: 0,
+    batchCount: 3
+  };
   const shaders = [
     TRACE_RENDER_SHADER,
     TRACE_DEPENDENCY_RENDER_SHADER,
     TRACE_DENSITY_RENDER_SHADER,
     getBatchVisibilityShader(3),
     getPickClearShader(),
-    getCandidateVisibilityShader(),
+    getCandidateVisibilityShader(spanChunk),
     getCandidatePassDispatchShader(),
     getDensityClearShader(),
-    getCandidateDensityShader(),
-    getCandidatePickShader(),
+    getCandidateDensityShader(spanChunk),
+    getCandidatePickShader(spanChunk),
     getTraceDrawCommandsShader([
       {firstBatchIndex: 0, batchCount: 2},
       {firstBatchIndex: 2, batchCount: 1}

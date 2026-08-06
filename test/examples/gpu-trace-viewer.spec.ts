@@ -12,6 +12,8 @@ import {
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_PROCESS_COUNT,
+  TRACE_SPAN_BATCH_CAPACITY,
+  TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_THREAD_COUNT
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
 
@@ -368,6 +370,76 @@ describe('GPU hierarchical trace viewer', () => {
 
       host.querySelector<HTMLButtonElement>('[data-clear-selection]')!.click();
       expect(state.selectedSpanIndex).toBe(0xffffffff);
+    } finally {
+      viewer?.onFinalize();
+      host.remove();
+    }
+  }, 30_000);
+
+  test('renders exact spans from multiple bounded source chunks', async () => {
+    const device = await getWebGPUTestDevice('core');
+    if (!device) {
+      return;
+    }
+    if (
+      device.info.gpu === 'software' ||
+      device.info.gpuType === 'cpu' ||
+      Boolean(device.info.fallback)
+    ) {
+      return;
+    }
+
+    const host = document.createElement('div');
+    host.id = 'example-panel-host';
+    document.body.append(host);
+    const spanChunkByteLength =
+      TRACE_SPAN_BATCH_CAPACITY * TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
+    let viewer: GPUTraceViewerAnimationLoopTemplate | null = null;
+    try {
+      viewer = new GPUTraceViewerAnimationLoopTemplate({
+        device,
+        traceCapacity: 4096,
+        dependencyCapacity: 0,
+        spanChunkByteLength
+      } as AnimationProps & {
+        traceCapacity: number;
+        dependencyCapacity: number;
+        spanChunkByteLength: number;
+      });
+      const state = viewer as unknown as {
+        resources: {
+          drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          spanChunks: Array<{buffer: {byteLength: number}}>;
+          spanDraws: Array<{commandIndex: number; chunkIndex: number}>;
+          dependencyCount: number;
+        };
+      };
+
+      expect(state.resources.dependencyCount).toBe(0);
+      expect(state.resources.spanChunks.length).toBeGreaterThan(1);
+      expect(state.resources.spanDraws.length).toBeGreaterThan(3);
+      expect(
+        state.resources.spanChunks.every(chunk => chunk.buffer.byteLength <= spanChunkByteLength)
+      ).toBe(true);
+
+      viewer.onRender({
+        device,
+        time: 6000,
+        width: 2048,
+        height: 1
+      } as AnimationProps);
+      device.submit();
+      const drawCommandBytes = await state.resources.drawCommands.buffer.readAsync();
+      const drawCommands = new Uint32Array(
+        drawCommandBytes.buffer,
+        drawCommandBytes.byteOffset,
+        drawCommandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      );
+      const visibleSpanCount = state.resources.spanDraws.reduce(
+        (count, draw) => count + drawCommands[draw.commandIndex * 4 + 1],
+        0
+      );
+      expect(visibleSpanCount).toBeGreaterThan(0);
     } finally {
       viewer?.onFinalize();
       host.remove();
