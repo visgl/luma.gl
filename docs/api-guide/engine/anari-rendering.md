@@ -189,17 +189,6 @@ The floor is attached directly to the world, so it uses the identity transform. 
 
 ## Try the deferred renderer
 
-The deferred G-buffer requires 36 color-attachment bytes per sample, exceeding the default WebGPU
-limit of 32. Request the adapter's supported limits when creating the graphics device:
-
-```ts
-const graphicsDevice = await luma.createDevice({
-  adapters: [webgpuAdapter, webgl2Adapter],
-  featureLevel: 'max',
-  createCanvasContext: {canvas}
-});
-```
-
 Use `newRenderer('deferred')` when you want the ANARI scene rendered through the experimental WebGPU G-buffer and deferred lighting path:
 
 ```ts
@@ -210,6 +199,14 @@ const renderer = anariDevice.newRenderer('deferred', {
 ```
 
 The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
+
+The compact G-buffer runs within the default WebGPU CORE limit of 32 color-attachment bytes per
+sample. Its four targets retain HDR scene color (`rgba16float`), normal and roughness (`rgba8unorm`),
+base color and metallic (`rgba8unorm`), and HDR emissive color with occlusion (`rgba16float`). Each
+format costs eight render-target bytes under WebGPU accounting, for exactly 32 bytes total. ANARI's
+previous velocity target contained only zeroes and was never consumed, so omitting it preserves
+physically based direct lighting, HDR, and emissive response without requesting elevated device
+limits. Temporal motion-vector effects remain future work.
 
 ## Try the graph-based ray tracer
 

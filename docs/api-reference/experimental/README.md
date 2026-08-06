@@ -31,8 +31,10 @@ irradiance cubemap, and a split-sum BRDF lookup texture with explicit linear/sRG
 
 [`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) consumes the
 same scene descriptors on WebGPU and resolves compatible opaque/masked metallic-roughness surfaces
-through the shared G-buffer and deferred-lighting pass. Advanced materials, blended surfaces,
-environment lighting, and debug views automatically fall back to the forward renderer.
+through the shared G-buffer and deferred-lighting pass. Its four HDR-preserving color attachments
+fit the default 32-byte WebGPU CORE limit without requesting elevated adapter limits. Advanced
+materials, blended surfaces, environment lighting, and debug views automatically fall back to the
+forward renderer.
 
 `RayTracingSceneRenderer` consumes the same scene descriptors on WebGPU through a
 [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph). Optional
@@ -65,8 +67,9 @@ stable, generic rendering and animation primitives.
 
 [`GBuffer`](/docs/api-reference/experimental/g-buffer) owns the standard scene color,
 normal-roughness, velocity, and depth attachments used by depth-aware and temporal shader-pass
-pipelines. It also exposes named extra MRT channels for application-specific lighting, material,
-picking, or debug data.
+pipelines. Velocity remains enabled by default; applications that do not use motion vectors can
+pass `velocity: false` to omit that target and reserve the attachment budget for named extra MRT
+channels carrying application-specific lighting, material, picking, or debug data.
 
 [`deferredLighting`](/docs/api-reference/experimental/deferred-lighting) is a composable fullscreen
 consumer of those targets. It reconstructs view position from depth and resolves a directional

@@ -1,6 +1,6 @@
 import {ANARIDevice} from '@luma.gl/anari';
 import type {Device} from '@luma.gl/core';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import test from 'test/utils/vitest-tape';
 
@@ -279,12 +279,18 @@ test('ANARI renderer delegates masked extension materials to canonical PBR shade
   testContext.end();
 });
 
-test('ANARI deferred renderer resolves PBR surfaces on WebGPU', async testContext => {
-  for (const graphicsDevice of await getLiveTestDevices()) {
-    if (graphicsDevice.type !== 'webgpu') {
+test('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', async testContext => {
+  for (const graphicsDevice of [await getWebGPUTestDevice('core')]) {
+    if (!graphicsDevice) {
+      testContext.comment('WebGPU is not available');
       continue;
     }
 
+    testContext.equal(
+      graphicsDevice.limits.maxColorAttachmentBytesPerSample,
+      32,
+      'deferred rendering preserves the default 32-byte WebGPU core attachment limit'
+    );
     const device = new ANARIDevice(graphicsDevice);
     const geometry = device.newGeometry('sphere', {radius: 0.7, segments: 8});
     const material = device.newMaterial('physicallyBased', {
@@ -324,9 +330,16 @@ test('ANARI deferred renderer resolves PBR surfaces on WebGPU', async testContex
     const renderer = device.newRenderer('deferred', {ambientRadiance: 0.08});
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
 
+    graphicsDevice.handle.pushErrorScope('validation');
     const statistics = frame.render();
     graphicsDevice.submit();
+    const deferredValidationError = await graphicsDevice.handle.popErrorScope();
 
+    testContext.equal(
+      deferredValidationError,
+      null,
+      'deferred frame encoding and submission produce no WebGPU validation errors'
+    );
     testContext.equal(statistics.drawCount, 1, 'WebGPU deferred renderer draws one surface batch');
     testContext.equal(statistics.instanceCount, 2, 'WebGPU deferred renderer keeps instances');
     testContext.ok(statistics.triangleCount > 0, 'WebGPU deferred renderer counts geometry');

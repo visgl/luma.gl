@@ -178,6 +178,18 @@ describe('DeferredSceneRenderer', () => {
 
     expect(reflection.entry.vertex.map(entry => entry.name)).toEqual(['vertexMain']);
     expect(reflection.entry.fragment.map(entry => entry.name)).toEqual(['fragmentMain']);
+    expect(
+      reflection.entry.fragment[0].outputs.map(output => ({
+        name: output.name,
+        location: output.location
+      }))
+    ).toEqual([
+      {name: 'color', location: 0},
+      {name: 'normalRoughness', location: 1},
+      {name: 'baseColorMetallic', location: 2},
+      {name: 'emissiveOcclusion', location: 3}
+    ]);
+    expect(shader.source).not.toContain('outputs.velocity');
     expect(shader.source).toContain('outputs.baseColorMetallic');
     expect(shader.source).toContain('pbrMaterial.baseColorFactor * inputs.color');
     expect(shader.shaderLayout?.attributes).toEqual(

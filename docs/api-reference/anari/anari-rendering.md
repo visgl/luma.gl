@@ -154,9 +154,12 @@ const renderer = anariDevice.newRenderer('deferred', {
 
 `deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Spot lights are mapped onto deferred point lights in this first implementation.
 
-Its five G-buffer color attachments require 36 bytes per sample, exceeding the default WebGPU
-device limit of 32. Pass `featureLevel: 'max'` to `luma.createDevice()` so supported adapters expose
-their higher `maxColorAttachmentBytesPerSample` limit.
+Its compact G-buffer uses four color attachments: HDR scene color (`rgba16float`), normal and
+roughness (`rgba8unorm`), base color and metallic (`rgba8unorm`), and HDR emissive color with
+occlusion (`rgba16float`). WebGPU charges eight render-target bytes for each format, totaling the
+default CORE limit of 32 bytes per sample. No elevated device limits or `featureLevel: 'max'` are
+required. The omitted velocity target previously contained only zeroes; HDR, physically based
+material channels, direct lighting, and emissive output remain intact.
 
 The deferred path is intended as an architecture baseline for richer ANARI renderers. It does not yet include the full Deferred Illumination Lab chain such as clustered light bins, GTAO, SSGI, SSR, velocity history, or bloom.
 

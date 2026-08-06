@@ -335,7 +335,6 @@
       const device = await luma.createDevice({
         id: 'anari-showcase',
         adapters: forceWebGL ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter],
-        featureLevel: 'max',
         createCanvasContext: supportsHighDynamicRange
           ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
           : true

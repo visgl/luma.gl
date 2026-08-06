@@ -13,14 +13,19 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import test from 'test/utils/vitest-tape';
 
-test('DeferredSceneRenderer resolves generic instanced PBR surfaces on WebGPU', async testCase => {
-  const device = await getWebGPUTestDevice();
+test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGPU core limits', async testCase => {
+  const device = await getWebGPUTestDevice('core');
   if (!device) {
     testCase.comment('WebGPU is not available');
     testCase.end();
     return;
   }
 
+  testCase.equal(
+    device.limits.maxColorAttachmentBytesPerSample,
+    32,
+    'the deferred renderer uses the default 32-byte WebGPU core attachment limit'
+  );
   const renderer = new DeferredSceneRenderer(device);
   const surface: SceneSurface = {
     id: 'deferred-surface',
@@ -76,8 +81,15 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces on WebGPU', 
   });
 
   try {
+    device.handle.pushErrorScope('validation');
     const deferredStatistics = renderer.render(options);
     device.submit();
+    const deferredValidationError = await device.handle.popErrorScope();
+    testCase.equal(
+      deferredValidationError,
+      null,
+      'compact HDR deferred capture and submission avoid WebGPU validation errors'
+    );
     testCase.equal(
       deferredStatistics.drawCount,
       1,

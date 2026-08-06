@@ -60,6 +60,8 @@ export type GBufferProps = {
   colorFormat?: TextureFormatColor;
   /** Encoded view-normal plus roughness format. Defaults to rgba8unorm. */
   normalRoughnessFormat?: TextureFormatColor;
+  /** Whether to allocate the motion-vector attachment. Defaults to true. */
+  velocity?: boolean;
   /** Current-minus-previous UV velocity format. Defaults to rg16float. */
   velocityFormat?: TextureFormatColor;
   /** Depth format used for reconstruction and depth-aware effects. Defaults to depth24plus. */
@@ -84,7 +86,7 @@ type GBufferRenderTargets = {
   framebuffer: Framebuffer;
   colorTexture: Texture;
   normalRoughnessTexture: Texture;
-  velocityTexture: Texture;
+  velocityTexture?: Texture;
   depthTexture: Texture;
   extraColorTextures: Map<string, Texture>;
 };
@@ -95,7 +97,7 @@ type GBufferRenderTargets = {
  * The first three color attachments have a fixed shader contract:
  * - location 0: shaded scene color
  * - location 1: encoded view normal in RGB plus roughness in A
- * - location 2: current-minus-previous UV velocity in RG
+ * - location 2: current-minus-previous UV velocity in RG when enabled
  *
  * Additional color attachments follow in declaration order. The class only owns targets and
  * semantic bindings; callers remain responsible for drawing geometry and selecting clear values.
@@ -135,7 +137,11 @@ export class GBuffer {
 
   /** Current-minus-previous UV velocity written at fragment output location 2. */
   get velocityTexture(): Texture {
-    return this.renderTargets.velocityTexture;
+    const texture = this.renderTargets.velocityTexture;
+    if (!texture) {
+      throw new Error('GBuffer velocity attachment is disabled.');
+    }
+    return texture;
   }
 
   /** Sampleable scene depth attachment. */
@@ -204,6 +210,7 @@ function resolveGBufferProps(id: string, props: GBufferProps): ResolvedGBufferPr
     height: props.height,
     colorFormat: props.colorFormat || 'rgba8unorm',
     normalRoughnessFormat: props.normalRoughnessFormat || 'rgba8unorm',
+    velocity: props.velocity ?? true,
     velocityFormat: props.velocityFormat || 'rg16float',
     depthStencilFormat: props.depthStencilFormat || 'depth24plus',
     extraColorAttachments: props.extraColorAttachments || []
@@ -215,7 +222,7 @@ function validateGBufferProps(device: Device, props: ResolvedGBufferProps): void
   const colorAttachmentFormats = [
     props.colorFormat,
     props.normalRoughnessFormat,
-    props.velocityFormat,
+    ...(props.velocity ? [props.velocityFormat] : []),
     ...props.extraColorAttachments.map(attachment => attachment.format)
   ];
   const colorAttachmentCount = colorAttachmentFormats.length;
@@ -231,7 +238,9 @@ function validateGBufferProps(device: Device, props: ResolvedGBufferProps): void
 
   validateRenderableFormat(device, props.colorFormat, 'color');
   validateRenderableFormat(device, props.normalRoughnessFormat, 'normalRoughness');
-  validateRenderableFormat(device, props.velocityFormat, 'velocity');
+  if (props.velocity) {
+    validateRenderableFormat(device, props.velocityFormat, 'velocity');
+  }
   validateCreatableFormat(device, props.depthStencilFormat, 'depth');
 
   const names = new Set<string>();
@@ -339,12 +348,9 @@ function createGBufferRenderTargets(
     'normal-roughness',
     props.normalRoughnessFormat
   );
-  const velocityTexture = createGBufferColorTexture(
-    device,
-    props,
-    'velocity',
-    props.velocityFormat
-  );
+  const velocityTexture = props.velocity
+    ? createGBufferColorTexture(device, props, 'velocity', props.velocityFormat)
+    : undefined;
   const extraColorTextures = new Map(
     props.extraColorAttachments.map(attachment => [
       attachment.name,
@@ -372,7 +378,7 @@ function createGBufferRenderTargets(
     colorAttachments: [
       colorTexture,
       normalRoughnessTexture,
-      velocityTexture,
+      ...(velocityTexture ? [velocityTexture] : []),
       ...extraColorTextures.values()
     ],
     depthStencilAttachment: depthTexture
@@ -409,7 +415,7 @@ function destroyGBufferRenderTargets(renderTargets: GBufferRenderTargets): void 
   renderTargets.framebuffer.destroy();
   renderTargets.colorTexture.destroy();
   renderTargets.normalRoughnessTexture.destroy();
-  renderTargets.velocityTexture.destroy();
+  renderTargets.velocityTexture?.destroy();
   renderTargets.depthTexture.destroy();
   for (const texture of renderTargets.extraColorTextures.values()) {
     texture.destroy();
