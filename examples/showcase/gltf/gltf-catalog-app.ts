@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
 import {Color, Device, RenderPass, log} from '@luma.gl/core';

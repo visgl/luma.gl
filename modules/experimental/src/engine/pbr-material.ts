@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
 import {type Material, MaterialFactory, type TextureBindingSource} from '@luma.gl/engine';

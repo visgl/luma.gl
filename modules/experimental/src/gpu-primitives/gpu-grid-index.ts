@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {addGPUGridIndexToGraphWithDispatchLimit} from './gpu-grid-index-internals';

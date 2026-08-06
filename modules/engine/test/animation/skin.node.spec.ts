@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GroupNode, updateSkinJointMatrices} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';

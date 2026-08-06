@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {TRACE_ERROR_SPAN_FLAG, TRACE_LANES_PER_THREAD} from '../gpu-trace-viewer/trace-data';
 

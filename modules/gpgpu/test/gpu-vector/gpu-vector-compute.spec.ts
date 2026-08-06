@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
 import {add, fround, GPUDataEvaluator, GPUVectorEvaluator, interleave} from '@luma.gl/gpgpu';

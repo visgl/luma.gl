@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {PrimitiveTopology, ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
 import {TransformFeedback, Buffer, BufferRange} from '@luma.gl/core';

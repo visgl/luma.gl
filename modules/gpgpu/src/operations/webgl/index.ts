@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import {arithmetic} from './arithmetic';
 import {extent} from './extent';
 import {interleave} from './interleave';

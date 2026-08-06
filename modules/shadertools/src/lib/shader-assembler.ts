@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from './shader-module/shader-module';
 import {initializeShaderModules} from './shader-module/shader-module';

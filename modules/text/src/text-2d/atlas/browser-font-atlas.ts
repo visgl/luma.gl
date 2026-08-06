@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // Adapted from deck.gl text atlas utilities under the MIT License.
 
 /* global document, ImageData, OffscreenCanvas */

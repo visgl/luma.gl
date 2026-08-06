@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GraphVectorView, type GPUCommandGraph} from './gpu-command-graph';
 import {validateMatchingVectorTopology} from './graph-data-view-utils';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Geometry, type GeometryAttribute} from '../geometry/geometry';
 import {makeInterleavedGeometry} from '../geometry/geometry-utils';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Canonical-PBR material capture used by the reusable WebGPU deferred scene renderer. */
 export const DEFERRED_SCENE_WGSL_SHADER = /* wgsl */ `

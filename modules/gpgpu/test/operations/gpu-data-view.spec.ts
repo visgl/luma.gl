@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {beforeEach, describe, expect, test} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';

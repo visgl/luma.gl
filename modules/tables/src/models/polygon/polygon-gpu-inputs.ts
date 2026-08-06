@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPURecordBatchSourceInfo} from '../../table/gpu-record-batch';
 import type {GPUConstant} from '../../table/gpu-constant';

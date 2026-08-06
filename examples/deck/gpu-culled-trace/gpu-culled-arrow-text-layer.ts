@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {ArrowTextLayer, type ArrowTextLayerProps} from '@deck.gl-community/arrow-layers';
 import type {ArrowTextRenderer} from '@luma.gl/arrow';

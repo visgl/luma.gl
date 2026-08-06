@@ -22,9 +22,19 @@ details on how grouped bindings are declared and supplied.
 
 - [Real Shading in Unreal Engine 4](http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf)
 - [Physically Based Shading at Disney](http://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_notes_v3.pdf)
-- [README.md - Environment Maps](https://github.com/KhronosGroup/glTF-WebGL-PBR/#environment-maps)
+- [README.md - Environment Maps](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/88eda8c5358efe03128b72b6c5f5f6e5b6d023e1/README.md#environment-maps)
 - ["An Inexpensive BRDF Model for Physically based Rendering" by Christophe Schlick](https://www.cs.virginia.edu/~jdl/bib/appearance/analytic%20models/schlick94b.pdf)
 
 ## Attribution
 
-This implementation of PBR (Physically-Based Rendering) is a fork of the [Khronos Reference Implementation](https://github.com/KhronosGroup/glTF-WebGL-PBR) under the Apache 2.0 license.
+The GLSL and WGSL material shaders derive from the historical
+[Khronos glTF-WebGL-PBR reference shader](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/88eda8c5358efe03128b72b6c5f5f6e5b6d023e1/shaders/pbr-frag.glsl).
+The version incorporated into luma.gl was distributed under the
+[MIT License](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/88eda8c5358efe03128b72b6c5f5f6e5b6d023e1/LICENSE.md)
+with `Copyright (c) 2016-2017 Mohamad Moneimne and Contributors`. Both shaders preserve that
+upstream copyright alongside the vis.gl contributors' additions and remain MIT-licensed.
+
+The upstream project has since been renamed
+[glTF Sample Viewer](https://github.com/KhronosGroup/glTF-Sample-Viewer), and its current releases
+use the [Apache License 2.0](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/LICENSE.md).
+That later license does not replace the MIT terms attached to the historical version used here.

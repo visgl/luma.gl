@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expectTypeOf, test} from 'vitest';
 import type {GraphDataView} from '../../src/gpu-primitives/gpu-command-graph';

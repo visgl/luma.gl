@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
 import {pbrMaterial} from '@luma.gl/shadertools';

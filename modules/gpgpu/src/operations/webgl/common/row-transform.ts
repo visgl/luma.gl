@@ -1,6 +1,6 @@
 // deck.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
 import {makeArrowFixedSizeListVector, resolveArrowPolygonSourceVectors} from '@luma.gl/arrow';

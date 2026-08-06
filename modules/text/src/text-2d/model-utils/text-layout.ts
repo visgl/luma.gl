@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {FontAtlas} from '../atlas/font-atlas';
 import {getCharacterAtlasPage, getCharacterLayoutOffset, type Character} from '../atlas/text-utils';

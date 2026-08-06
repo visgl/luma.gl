@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {log} from '@luma.gl/core';
 // Rename constant to prevent inlining. We need the full set of constants for generating debug strings.

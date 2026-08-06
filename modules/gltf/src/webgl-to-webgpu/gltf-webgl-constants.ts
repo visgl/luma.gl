@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // NOTE: `@luma.gl/gltf` intentionally keeps this as a local enum subset so it
 // does not need to depend on `@luma.gl/webgl` for a handful of stable WebGL values.

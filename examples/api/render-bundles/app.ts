@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Bindings, BindingsByGroup, RenderBundle, RenderPass} from '@luma.gl/core';
 import {Buffer, Device, normalizeBindingsByGroup} from '@luma.gl/core';

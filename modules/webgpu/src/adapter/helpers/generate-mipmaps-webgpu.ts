@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) 2022 Gregg Tavares
 
 // Forked from https://github.com/greggman/webgpu-utils under MIT license
 // Copyright (c) 2022 Gregg Tavares

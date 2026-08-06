@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUDataEvaluator} from '../operation/gpu-data-evaluator';
 import type {Expression, ExpressionOperations} from '../utils/expression';

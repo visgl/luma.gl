@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js ShapeUtils (https://github.com/mrdoob/three.js/) under the MIT License.
 
 import {earcut} from '@math.gl/polygon';

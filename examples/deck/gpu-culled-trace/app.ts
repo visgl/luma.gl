@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {OrthographicView, type PickingInfo, type ViewStateChangeParameters} from '@deck.gl/core';
 import {buildSdfFontAtlas} from '@luma.gl/text';

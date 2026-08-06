@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {PrimitiveTopology} from '@luma.gl/core';
 import {GLEnum} from './gltf-webgl-constants';

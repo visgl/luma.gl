@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 process.on('unhandledRejection', reason => {
   // biome-ignore lint/suspicious/noConsole: test bootstrap reports fatal process-level failures.

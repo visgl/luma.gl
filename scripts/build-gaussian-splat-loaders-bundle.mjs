@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /**
  * Regenerates the browser-only loaders.gl 5 Gaussian splat artifact without changing dependencies.

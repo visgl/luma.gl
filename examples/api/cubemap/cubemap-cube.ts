@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright...
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Model, type ModelProps, DynamicTexture, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
 import type {Device, Texture} from '@luma.gl/core';

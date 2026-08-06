@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import type {ModelProps, PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';

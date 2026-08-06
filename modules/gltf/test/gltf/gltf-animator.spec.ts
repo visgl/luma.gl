@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
 import {GLTFAnimator, parseGLTFAnimations} from '@luma.gl/gltf';

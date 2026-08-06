@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Vector3, Matrix4, NumericArray} from '@math.gl/core';
 import {uid} from '../utils/uid';

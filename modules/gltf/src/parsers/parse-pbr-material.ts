@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import type {Device, ExternalImage, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';

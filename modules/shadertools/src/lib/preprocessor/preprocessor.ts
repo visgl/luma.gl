@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 const DEFINE_NAME_PATTERN = '([a-zA-Z_][a-zA-Z0-9_]*)';
 const IF_REGEXP = /^\s*\#\s*if\s+(.+?)\s*(?:\/\/.*)?$/;

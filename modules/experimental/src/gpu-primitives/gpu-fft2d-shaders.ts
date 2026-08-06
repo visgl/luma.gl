@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Number of invocations along each dimension of one GPUFFT2D workgroup. */
 export const GPU_FFT2D_WORKGROUP_DIMENSION = 8;

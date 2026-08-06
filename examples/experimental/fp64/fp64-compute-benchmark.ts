@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type ComputeShaderLayout, type Device, type QuerySet} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type BufferLayout, Device, type RenderPassProps} from '@luma.gl/core';
 import {BufferTransform, DynamicBuffer, type BufferTransformProps} from '@luma.gl/engine';
