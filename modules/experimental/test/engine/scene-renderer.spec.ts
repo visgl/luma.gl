@@ -252,14 +252,68 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
           },
           transforms: [new Matrix4()]
         };
-        const options = makePhysicalRenderOptions(device, [surface]);
-        options.environment = environment;
-        testCase.equal(
-          renderer.render(options).drawCount,
-          1,
-          `${device.type} shades generated IBL`
-        );
-        device.submit();
+        const environmentOutput = device.createTexture({
+          id: `${device.type}-environment-output`,
+          width: 32,
+          height: 32,
+          format: 'rgba8unorm',
+          usage: Texture.RENDER | Texture.COPY_SRC
+        });
+        const environmentDepth = device.createTexture({
+          width: 32,
+          height: 32,
+          format: 'depth24plus',
+          usage: Texture.RENDER
+        });
+        const environmentFramebuffer = device.createFramebuffer({
+          width: 32,
+          height: 32,
+          colorAttachments: [environmentOutput],
+          depthStencilAttachment: environmentDepth
+        });
+        try {
+          const options = makePhysicalRenderOptions(device, [surface], environmentFramebuffer);
+          options.environment = environment;
+          testCase.equal(
+            renderer.render(options).drawCount,
+            1,
+            `${device.type} shades generated IBL`
+          );
+          device.submit();
+
+          if (supportsPhysicalPixelReadback(device)) {
+            const ordinaryEnvironmentColor = await readPhysicalTestPixel(environmentOutput, 16, 16);
+            surface.material.defines = {MANUAL_SRGB: true};
+            renderer.render(options);
+            device.submit();
+            const manualSRGBEnvironmentColor = await readPhysicalTestPixel(
+              environmentOutput,
+              16,
+              16
+            );
+
+            for (let channelIndex = 0; channelIndex < 3; channelIndex++) {
+              testCase.ok(
+                Math.abs(
+                  ordinaryEnvironmentColor[channelIndex] - manualSRGBEnvironmentColor[channelIndex]
+                ) <= 2,
+                `${device.type} never decodes generated linear IBL channel ${channelIndex} twice`
+              );
+            }
+          } else {
+            surface.material.defines = {MANUAL_SRGB: true};
+            testCase.equal(
+              renderer.render(options).drawCount,
+              1,
+              'software WebGPU keeps IBL linear'
+            );
+            device.submit();
+          }
+        } finally {
+          environmentFramebuffer.destroy();
+          environmentOutput.destroy();
+          environmentDepth.destroy();
+        }
 
         const srgbEnvironment = generator.prepare({
           source,

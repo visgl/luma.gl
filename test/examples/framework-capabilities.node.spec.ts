@@ -330,13 +330,18 @@ describe('framework capabilities documentation', () => {
       /sheen/i,
       /iridescen(?:ce|t)/i,
       /anisotrop(?:y|ic)/i,
-      /transmission[\s\S]{0,100}approximat(?:ion|ions|e)/i,
+      /transmission[^\n]*captured\s+scene\s+color/i,
+      /standalone\s+glTF\s+rendering\s+fallback[^\n]*approximate/i,
       /@luma\.gl\/arrow[\s\S]{0,80}private/i
     ]) {
       expect(capabilitiesSource, `The shared asset overview must explain ${capability}`).toMatch(
         capability
       );
     }
+
+    expect(capabilitiesSource).toMatch(/Morph-target animation\s*\|\s*Available/i);
+    expect(capabilitiesSource).toMatch(/Existing joint-driven skinning\s*\|\s*Available/i);
+    expect(capabilitiesSource).toMatch(/Chromatic dispersion\s*\|\s*Available/i);
 
     expect(anariGuide).not.toMatch(/\bnot\s+skinning\s+or\s+animations\b/i);
     expect(anariGuide).toMatch(/both\s+UV\s+sets[\s\S]{0,80}KHR_texture_transform/i);

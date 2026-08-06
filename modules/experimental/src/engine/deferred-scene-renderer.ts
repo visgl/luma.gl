@@ -35,6 +35,19 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
   if (options.renderMode && options.renderMode !== 'default') {
     return false;
   }
+  let directionalLightCount = 0;
+  let pointLightCount = 0;
+  for (const light of options.lights || []) {
+    if (light.type === 'spot') {
+      return false;
+    }
+    if (light.type === 'directional' && ++directionalLightCount > 1) {
+      return false;
+    }
+    if (light.type === 'point' && ++pointLightCount > MAX_DEFERRED_POINT_LIGHTS) {
+      return false;
+    }
+  }
   if (
     options.environment?.diffuseTexture ||
     options.environment?.specularTexture ||
@@ -45,6 +58,7 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
 
   return options.surfaces.every(surface => {
     const uniforms = surface.material.uniforms || {};
+    const bindings = surface.material.bindings || {};
     return (
       getSceneAlphaMode(surface.material) !== 'BLEND' &&
       !uniforms.unlit &&
@@ -56,7 +70,11 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
       !(uniforms.sheenColorFactor || []).some(component => component > 0) &&
       (uniforms.ior === undefined || uniforms.ior === 1.5) &&
       (uniforms.specularIntensityFactor === undefined || uniforms.specularIntensityFactor === 1) &&
-      (uniforms.specularColorFactor || [1, 1, 1]).every(component => component === 1)
+      (uniforms.specularColorFactor || [1, 1, 1]).every(component => component === 1) &&
+      !uniforms.specularColorMapEnabled &&
+      !uniforms.specularIntensityMapEnabled &&
+      !bindings.pbr_specularColorSampler &&
+      !bindings.pbr_specularIntensitySampler
     );
   });
 }
@@ -124,7 +142,7 @@ export class DeferredSceneRenderer extends SceneRenderer {
       makeDeferredPointLightBufferData(lights.pointLights, MAX_DEFERRED_POINT_LIGHTS)
     );
     this.lightingRenderer.resize([width, height]);
-    this.lightingRenderer.renderToScreen({
+    const lightingOptions = {
       sourceTexture: gBuffer.colorTexture,
       bindings: {
         depthTexture: gBuffer.depthTexture,
@@ -146,7 +164,25 @@ export class DeferredSceneRenderer extends SceneRenderer {
           pointLightCount: lights.pointLights.length
         }
       }
-    });
+    };
+
+    if (options.framebuffer) {
+      const lightingTexture = this.lightingRenderer.renderToTexture(lightingOptions);
+      if (lightingTexture) {
+        const presentationModel = this.lightingRenderer.textureModel;
+        presentationModel.setProps({backgroundTexture: lightingTexture});
+        presentationModel.predraw(this.device.commandEncoder);
+        const presentationPass = this.device.beginRenderPass({
+          id: `scene-${options.id}-deferred-resolve`,
+          framebuffer: options.framebuffer,
+          clearDepth: false
+        });
+        presentationModel.draw(presentationPass);
+        presentationPass.end();
+      }
+    } else {
+      this.lightingRenderer.renderToScreen(lightingOptions);
+    }
     return scene.statistics;
   }
 
@@ -254,7 +290,6 @@ function getDeferredSceneLights(
         break;
       }
       case 'point':
-      case 'spot':
         if (pointLights.length < MAX_DEFERRED_POINT_LIGHTS) {
           const position = viewMatrix.transformAsPoint(light.position);
           pointLights.push({

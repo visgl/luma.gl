@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
-import type {RenderPass, Texture} from '@luma.gl/core';
+import type {RenderPass, Texture, TextureFormatColor} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {
   createPBRMaterial,
@@ -20,7 +20,7 @@ import {
   type SceneRenderOptions,
   type SceneSurface
 } from '@luma.gl/experimental';
-import {pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {PBR_TONE_MAP_MODE, pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {getNullTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
@@ -75,14 +75,19 @@ describe('scene rendering package architecture', () => {
 });
 
 class InspectableSceneRenderer extends SceneRenderer {
-  readonly draws: {id: string; scene: PreparedScene}[] = [];
+  readonly draws: {id: string; scene: PreparedScene; clearColor?: number[]}[] = [];
 
   inspect(options: SceneRenderOptions) {
     return this.prepareScene(options);
   }
 
   protected override drawPreparedScene(scene: PreparedScene, renderPass: RenderPass): number {
-    this.draws.push({id: renderPass.id, scene});
+    const clearColor = renderPass.props.clearColor;
+    this.draws.push({
+      id: renderPass.id,
+      scene,
+      clearColor: clearColor ? Array.from(clearColor) : undefined
+    });
     return super.drawPreparedScene(scene, renderPass);
   }
 }
@@ -267,9 +272,135 @@ describe('shared PBR material factories', () => {
     expect(shader.source).not.toContain('pbrScene.environmentMipCount');
     expect(shader.source).not.toContain('pbr_transmissionFramebufferSampler');
   });
+
+  test('samples generated linear IBL directly while retaining legacy sRGB decoding', () => {
+    const sceneShader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source: PBR_MODEL_WGSL_SHADER,
+      modules: [pbrMaterial, pbrScene],
+      defines: {
+        HAS_NORMALS: true,
+        USE_IBL: true,
+        USE_SCENE_ENVIRONMENT: true,
+        MANUAL_SRGB: true
+      }
+    });
+    const legacyShader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source: PBR_MODEL_WGSL_SHADER,
+      modules: [pbrMaterial],
+      defines: {HAS_NORMALS: true, USE_IBL: true, MANUAL_SRGB: true}
+    });
+
+    expect(sceneShader.source).toContain('let brdf = brdfSample.rgb;');
+    expect(sceneShader.source).toContain('let diffuseLight = diffuseSample.rgb;');
+    expect(sceneShader.source).toContain('let specularLight = specularSample.rgb;');
+    expect(sceneShader.source).not.toContain('let brdf = SRGBtoLINEAR(brdfSample).rgb;');
+
+    expect(legacyShader.source).toContain('let brdf = SRGBtoLINEAR(brdfSample).rgb;');
+    expect(legacyShader.source).toContain('let diffuseLight = SRGBtoLINEAR(diffuseSample).rgb;');
+    expect(legacyShader.source).toContain('let specularLight = SRGBtoLINEAR(specularSample).rgb;');
+
+    expect(pbrMaterial.fs).toContain('vec3 brdf = brdfSample.rgb;');
+    expect(pbrMaterial.fs).toContain('vec3 diffuseLight = diffuseSample.rgb;');
+    expect(pbrMaterial.fs).toContain('vec3 specularLight = specularSample.rgb;');
+    expect(pbrMaterial.fs).toContain('vec3 brdf = SRGBtoLINEAR(brdfSample).rgb;');
+  });
 });
 
 describe('SceneRenderer', () => {
+  test('defaults every floating-point attachment to linear, untonemapped HDR output', async () => {
+    const device = await getNullTestDevice();
+    const renderer = new InspectableSceneRenderer(device);
+    const surface: SceneSurface = {
+      id: 'hdr-format-surface',
+      geometry: makeGeometry(),
+      material: {id: 'hdr-format-material'},
+      transforms: [new Matrix4()]
+    };
+
+    for (const [format, toneMapMode, outputEncoding] of [
+      ['rgba16float', PBR_TONE_MAP_MODE.NONE, 0],
+      ['rgba32float', PBR_TONE_MAP_MODE.NONE, 0],
+      ['rg11b10ufloat', PBR_TONE_MAP_MODE.NONE, 0],
+      ['rgb9e5ufloat', PBR_TONE_MAP_MODE.NONE, 0],
+      ['rgba8unorm', PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL, 1],
+      ['rgba8unorm-srgb', PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL, 0]
+    ] as [TextureFormatColor, number, number][]) {
+      const texture = device.createTexture({width: 4, height: 4, format});
+      const framebuffer = device.createFramebuffer({
+        width: 4,
+        height: 4,
+        colorAttachments: [texture]
+      });
+      framebuffer.colorAttachments.push(texture.view);
+
+      try {
+        const options = {...makeOptions([surface]), id: `format-${format}`, framebuffer};
+        const model = renderer.inspect(options).surfaces[0].model;
+
+        expect(model.shaderInputs.getUniformValues().pbrScene, format).toMatchObject({
+          toneMapMode,
+          outputEncoding
+        });
+      } finally {
+        renderer.destroyFrame(`format-${format}`);
+        framebuffer.destroy();
+        texture.destroy();
+      }
+    }
+
+    renderer.destroy();
+  });
+
+  test('presents clear backgrounds exactly like fragments while keeping transmission linear', async () => {
+    const device = await getNullTestDevice();
+    const renderer = new InspectableSceneRenderer(device);
+    const surface: SceneSurface = {
+      id: 'background-transmission-surface',
+      geometry: makeGeometry(),
+      material: {
+        id: 'background-transmission-material',
+        uniforms: {transmissionFactor: 0.5}
+      },
+      transforms: [new Matrix4()]
+    };
+    const options = makeOptions([surface]);
+    options.background = [0.125, 0.25, 0.5, 0.75];
+    options.exposure = 2;
+    options.toneMapMode = PBR_TONE_MAP_MODE.NONE;
+    options.outputColorSpace = 'srgb';
+
+    try {
+      renderer.render(options);
+
+      expect(renderer.draws).toHaveLength(2);
+      expect(renderer.draws[0].clearColor).toEqual([0.125, 0.25, 0.5, 0.75]);
+      expect(renderer.draws[1].clearColor?.[0]).toBeCloseTo(0.5370987, 5);
+      expect(renderer.draws[1].clearColor?.[1]).toBeCloseTo(0.735357, 5);
+      expect(renderer.draws[1].clearColor?.[2]).toBeCloseTo(1, 5);
+      expect(renderer.draws[1].clearColor?.[3]).toBe(0.75);
+
+      options.transmission = false;
+      options.outputColorSpace = 'linear';
+      for (const [toneMapMode, expectedRed] of [
+        [PBR_TONE_MAP_MODE.NONE, 0.25],
+        [PBR_TONE_MAP_MODE.REINHARD, 0.2],
+        [PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL, 0.19924786],
+        [PBR_TONE_MAP_MODE.ACES, 0.37411095]
+      ]) {
+        options.toneMapMode = toneMapMode;
+        renderer.render(options);
+        expect(renderer.draws.at(-1)?.clearColor?.[0], `tone mapper ${toneMapMode}`).toBeCloseTo(
+          expectedRed,
+          5
+        );
+      }
+    } finally {
+      renderer.destroy();
+    }
+  });
+
   test('retains one instanced draw across uniform-only material changes', async () => {
     const device = await getNullTestDevice();
     const renderer = new InspectableSceneRenderer(device);

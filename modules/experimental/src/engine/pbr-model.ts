@@ -294,7 +294,8 @@ export function createPBRModel(device: Device, options: CreatePBRModelOptions): 
       shaderModules.findIndex(candidate => candidate.name === module.name) === moduleIndex
   );
   const geometryDefines = getPBRGeometryDefines(options.geometry);
-  if (geometryDefines['HAS_SKIN'] && !modules.some(module => module.name === skin.name)) {
+  const hasSkin = Boolean(options.defines?.['HAS_SKIN'] ?? geometryDefines['HAS_SKIN']);
+  if (hasSkin && !modules.some(module => module.name === skin.name)) {
     modules.push(skin);
   }
 

@@ -404,15 +404,16 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Metallic-roughness materials | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply supported PBR textures, material factors, normals, and emissive surfaces. |
 | Specular and index of refraction | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Support documented glTF specular and index-of-refraction material extensions. |
 | Clearcoat and sheen | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply documented clearcoat and sheen material lobes in compatible renderers. |
-| Iridescence and anisotropy | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Use supported material approximations for thin-film color and directional highlights. |
-| Transmission and volume | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Transmission remains approximate; full scene-color refraction is not implemented. |
+| Iridescence and anisotropy | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Render thin-film interference and directional anisotropic highlights through the shared PBR shader. |
+| Transmission and volume | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Shared scene renderers refract captured scene color; the standalone glTF rendering fallback remains approximate. |
+| Chromatic dispersion | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Separate visible wavelengths when physical transmission uses authored `KHR_materials_dispersion`. |
 | Authored UV transforms | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported texture offset, rotation, and scale semantics. |
 | Authored normals and tangents | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported vertex attributes; complete renderer-to-renderer fidelity varies. |
 | Punctual-light parsing | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Parse supported authored directional, point, and spot light definitions. |
 | Shared animation clips | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Play, blend, crossfade, loop, and interpolate compatible imported tracks. |
 | Selected animation pointers | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Update supported `KHR_animation_pointer` transforms, material factors, and UV properties. |
-| Existing joint-driven skinning | Evolving | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse established skin shaders; higher joint counts and multiple skins remain incomplete. |
-| Morph-target animation | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Morph-weight playback is not wired through the shared rendering and animation paths. |
+| Existing joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse established skin shaders and automatically bind mesh-local glTF joint palettes. |
+| Morph-target animation | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Animate POSITION, NORMAL, and TANGENT morph targets through shared glTF, engine, and retained-scene paths. |
 | Imported GPU instancing | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | `EXT_mesh_gpu_instancing` is not yet translated into retained instance batches. |
 | Imported node visibility | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | `KHR_node_visibility` does not yet have a supported runtime integration. |
 

@@ -107,9 +107,13 @@ function makeSkinBindings(props: GLTFSkinControllerProps): GLTFSkinBinding[] {
     }
 
     const sourceMesh = sourceNode.mesh;
-    const meshNode = node.children.find(
-      child => child instanceof GroupNode && child.id === (sourceMesh.name || sourceMesh.id)
-    );
+    const ownedMesh = node.userData['gltfMesh'];
+    const meshNode =
+      ownedMesh instanceof GroupNode
+        ? ownedMesh
+        : node.children.find(
+            child => child instanceof GroupNode && child.id === (sourceMesh.name || sourceMesh.id)
+          );
     if (!(meshNode instanceof GroupNode)) {
       continue;
     }

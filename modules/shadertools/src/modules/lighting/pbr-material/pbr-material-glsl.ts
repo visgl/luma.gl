@@ -353,15 +353,24 @@ vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
 #endif
   float lod = pbrInfo.perceptualRoughness * maximumMipLevel;
   // retrieve a scale and bias to F0. See [1], Figure 3
-  vec3 brdf = SRGBtoLINEAR(texture(pbr_brdfLUT,
-    vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
-  vec3 diffuseLight = SRGBtoLINEAR(texture(pbr_diffuseEnvSampler, environmentNormal)).rgb;
+  vec4 brdfSample = texture(pbr_brdfLUT,
+    vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness));
+  vec4 diffuseSample = texture(pbr_diffuseEnvSampler, environmentNormal);
 
 #ifdef USE_TEX_LOD
-  vec3 specularLight =
-    SRGBtoLINEAR(textureLod(pbr_specularEnvSampler, environmentReflection, lod)).rgb;
+  vec4 specularSample = textureLod(pbr_specularEnvSampler, environmentReflection, lod);
 #else
-  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, environmentReflection)).rgb;
+  vec4 specularSample = texture(pbr_specularEnvSampler, environmentReflection);
+#endif
+
+#ifdef USE_SCENE_ENVIRONMENT
+  vec3 brdf = brdfSample.rgb;
+  vec3 diffuseLight = diffuseSample.rgb;
+  vec3 specularLight = specularSample.rgb;
+#else
+  vec3 brdf = SRGBtoLINEAR(brdfSample).rgb;
+  vec3 diffuseLight = SRGBtoLINEAR(diffuseSample).rgb;
+  vec3 specularLight = SRGBtoLINEAR(specularSample).rgb;
 #endif
 
   vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;

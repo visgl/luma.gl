@@ -9,7 +9,8 @@ import {
   type Framebuffer,
   type RenderPass,
   Texture,
-  type TextureFormatColor
+  type TextureFormatColor,
+  textureFormatDecoder
 } from '@luma.gl/core';
 import {
   type Geometry,
@@ -243,7 +244,7 @@ export class SceneRenderer {
     const renderPass = this.device.beginRenderPass({
       id: `scene-${options.id}`,
       framebuffer: options.framebuffer,
-      clearColor: [background[0], background[1], background[2], background[3] ?? 1],
+      clearColor: getPresentedSceneBackground(this.device, options, background),
       clearDepth: 1
     });
     scene.statistics.drawCount = this.drawPreparedScene(scene, renderPass);
@@ -306,7 +307,7 @@ export class SceneRenderer {
         surfaceTransmissionTexture
       );
       updateInstanceTransforms(compiledSurface, surface.transforms);
-      if (surface.skin && getPBRGeometryDefines(surface.geometry)['HAS_SKIN']) {
+      if (hasUsableSkin(surface)) {
         compiledSurface.model.shaderInputs.setProps({skin: surface.skin});
       }
       updateMorphAttributes(compiledSurface, surface);
@@ -427,7 +428,7 @@ export class SceneRenderer {
       }
 
       const overrides = this.getSurfaceModelOptions(surface, options);
-      const hasSkin = getPBRGeometryDefines(surface.geometry)['HAS_SKIN'];
+      const hasSkin = hasUsableSkin(surface);
       const model = createPBRModel(this.device, {
         id: `${surface.id}-model`,
         geometry: surface.geometry,
@@ -464,7 +465,8 @@ export class SceneRenderer {
           DEBUG_NORMALS: options.renderMode === 'debugNormals',
           DEBUG_DEPTH: options.renderMode === 'debugDepth',
           ...surface.material.defines,
-          ...overrides.defines
+          ...overrides.defines,
+          HAS_SKIN: hasSkin
         }
       });
 
@@ -595,6 +597,7 @@ function getSceneSurfaceSignature(
     instanceCount: surface.transforms.length,
     alphaMode,
     doubleSided: Boolean(surface.material.doubleSided),
+    skin: hasUsableSkin(surface),
     defines: Object.entries(surface.material.defines || {}).sort(([first], [second]) =>
       first.localeCompare(second)
     ),
@@ -662,11 +665,7 @@ function setSceneShaderInputs(
     },
     pbrScene: {
       exposure: options.exposure ?? 1,
-      toneMapMode:
-        options.toneMapMode ??
-        (getSceneColorFormat(model.device, options) === 'rgba16float'
-          ? PBR_TONE_MAP_MODE.NONE
-          : PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL),
+      toneMapMode: getSceneToneMapMode(model.device, options),
       environmentIntensity: options.environment?.intensity ?? 1,
       environmentRotation: options.environment?.rotation ?? 0,
       environmentMipCount: options.environment?.specularTexture?.mipLevels ?? 1,
@@ -703,6 +702,12 @@ function isTransmissiveSurface(surface: SceneSurface): boolean {
   return (surface.material.uniforms?.transmissionFactor ?? 0) > 0;
 }
 
+function hasUsableSkin(surface: SceneSurface): boolean {
+  return Boolean(
+    surface.skin?.jointMatrices?.length && getPBRGeometryDefines(surface.geometry)['HAS_SKIN']
+  );
+}
+
 function getTransmissionCaptureIdentifier(frameIdentifier: string): string {
   return `${frameIdentifier}::linear-transmission-capture`;
 }
@@ -712,8 +717,25 @@ function getTransmissionTextureFormat(device: Device): 'rgba16float' | 'rgba8uno
   return capabilities.render && capabilities.filter ? 'rgba16float' : 'rgba8unorm';
 }
 
-function getSceneColorFormat(device: Device, options: SceneRenderOptions): string {
-  return options.framebuffer?.colorAttachments[0]?.texture.format || device.preferredColorFormat;
+function getSceneColorFormat(device: Device, options: SceneRenderOptions): TextureFormatColor {
+  return (
+    (options.framebuffer?.colorAttachments[0]?.texture.format as TextureFormatColor | undefined) ||
+    device.preferredColorFormat
+  );
+}
+
+function isFloatingPointColorFormat(format: TextureFormatColor): boolean {
+  const formatInformation = textureFormatDecoder.getInfo(format);
+  return Boolean(formatInformation.dataType?.startsWith('float') || format.endsWith('ufloat'));
+}
+
+function getSceneToneMapMode(device: Device, options: SceneRenderOptions): number {
+  return (
+    options.toneMapMode ??
+    (isFloatingPointColorFormat(getSceneColorFormat(device, options))
+      ? PBR_TONE_MAP_MODE.NONE
+      : PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL)
+  );
 }
 
 function getSceneOutputEncoding(device: Device, options: SceneRenderOptions): number {
@@ -721,7 +743,73 @@ function getSceneOutputEncoding(device: Device, options: SceneRenderOptions): nu
     return options.outputColorSpace === 'srgb' ? 1 : 0;
   }
   const format = getSceneColorFormat(device, options);
-  return format === 'rgba16float' || format.endsWith('-srgb') ? 0 : 1;
+  return isFloatingPointColorFormat(format) || format.endsWith('-srgb') ? 0 : 1;
+}
+
+function getPresentedSceneBackground(
+  device: Device,
+  options: SceneRenderOptions,
+  background: readonly number[]
+): [number, number, number, number] {
+  const exposure = Math.max(options.exposure ?? 1, 0);
+  let color: [number, number, number] = [
+    Math.max(background[0], 0) * exposure,
+    Math.max(background[1], 0) * exposure,
+    Math.max(background[2], 0) * exposure
+  ];
+
+  switch (getSceneToneMapMode(device, options)) {
+    case PBR_TONE_MAP_MODE.REINHARD:
+      color = color.map(channel => channel / (1 + channel)) as [number, number, number];
+      break;
+
+    case PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL:
+      color = toneMapSceneBackgroundNeutral(color);
+      break;
+
+    case PBR_TONE_MAP_MODE.ACES:
+      color = color.map(channel =>
+        Math.min(
+          Math.max(
+            (channel * (2.51 * channel + 0.03)) / (channel * (2.43 * channel + 0.59) + 0.14),
+            0
+          ),
+          1
+        )
+      ) as [number, number, number];
+      break;
+  }
+
+  if (getSceneOutputEncoding(device, options) !== 0) {
+    color = color.map(channel =>
+      channel <= 0.0031308 ? channel * 12.92 : 1.055 * channel ** (1 / 2.4) - 0.055
+    ) as [number, number, number];
+  }
+
+  return [...color, background[3] ?? 1];
+}
+
+function toneMapSceneBackgroundNeutral(color: [number, number, number]): [number, number, number] {
+  const darkestChannel = Math.min(...color);
+  const offset =
+    darkestChannel < 0.08 ? darkestChannel - 6.25 * darkestChannel * darkestChannel : 0.04;
+  const offsetColor = color.map(channel => channel - offset) as [number, number, number];
+  const peak = Math.max(...offsetColor);
+  const compressionStart = 0.76;
+
+  if (peak < compressionStart) {
+    return offsetColor;
+  }
+
+  const compressionRange = 1 - compressionStart;
+  const compressedPeak =
+    1 - (compressionRange * compressionRange) / (peak + compressionRange - compressionStart);
+  const peakScale = compressedPeak / Math.max(peak, 0.0001);
+  const desaturation = 1 - 1 / (0.15 * (peak - compressedPeak) + 1);
+
+  return offsetColor.map(
+    channel => channel * peakScale * (1 - desaturation) + compressedPeak * desaturation
+  ) as [number, number, number];
 }
 
 function getSceneRenderSize(device: Device, options: SceneRenderOptions): [number, number] {

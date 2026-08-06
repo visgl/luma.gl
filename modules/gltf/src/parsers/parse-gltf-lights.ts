@@ -13,6 +13,8 @@ import {
 } from '@luma.gl/shadertools';
 
 export type ParseGLTFLightsOptions = {
+  /** Restricts authored lights to nodes belonging to the selected scene hierarchy. */
+  nodeIdentifiers?: ReadonlySet<string>;
   /** When true, parsed light colors are converted into luma.gl's legacy byte-style range. */
   useByteColors?: boolean;
   /** Optional live scenegraph visibility used for animated `KHR_node_visibility` updates. */
@@ -47,7 +49,10 @@ export function parseGLTFLights(
     const lightIndex =
       (node as GLTFNodePostprocessed & {light?: number}).light ??
       node.extensions?.KHR_lights_punctual?.light;
-    if (typeof lightIndex !== 'number') {
+    if (
+      typeof lightIndex !== 'number' ||
+      (options.nodeIdentifiers && !options.nodeIdentifiers.has(node.id))
+    ) {
       // eslint-disable-next-line no-continue
       continue;
     }

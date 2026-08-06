@@ -20,7 +20,11 @@ export {AnimationClip} from './animation/animation-clip';
 export type {AnimationActionProps, AnimationLoopMode} from './animation/animation-mixer';
 export {AnimationAction, AnimationMixer} from './animation/animation-mixer';
 export type {MorphTargetAttributes} from './animation/morph-targets';
-export {applyMorphTargets, updateMorphTargetBuffers} from './animation/morph-targets';
+export {
+  applyMorphTargets,
+  decodeMorphTargetAttribute,
+  updateMorphTargetBuffers
+} from './animation/morph-targets';
 export type {SkinJointMatricesProps} from './animation/skin';
 export {updateSkinJointMatrices} from './animation/skin';
 export {Timeline} from './animation/timeline';
