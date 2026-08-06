@@ -1,3 +1,11 @@
+<a href="https://www.khronos.org/gltf/">
+  <img
+    src="https://raw.githubusercontent.com/visgl/luma.gl/master/website/static/img/standards/gltf.svg"
+    alt="glTF"
+    width="180"
+  />
+</a>
+
 # @luma.gl/gltf
 
 Converts postprocessed glTF assets into luma.gl scenegraphs, canonical physically based materials,

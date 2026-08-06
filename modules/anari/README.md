@@ -1,5 +1,22 @@
 # @luma.gl/anari
 
+<p align="center">
+  <a href="https://www.khronos.org/anari/">
+    <img src="../../website/static/img/standards/anari.svg" alt="ANARI" height="72" />
+  </a>
+</p>
+
+<p align="center">
+  <small>Experimental asset import</small><br />
+  <a href="https://www.khronos.org/gltf/">
+    <img src="../../website/static/img/standards/gltf.svg" alt="glTF" height="50" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://openusd.org/">
+    <img src="../../website/static/img/standards/openusd.png" alt="OpenUSD" height="40" />
+  </a>
+</p>
+
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
@@ -9,7 +26,13 @@
 ![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)
 ![Private workspace](https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square)
 
-A private, experimental, ANARI-inspired declarative rendering interface implemented on top of luma.gl.
+A private, experimental, independently developed retained rendering interface implemented in the
+spirit of ANARI on top of luma.gl.
+
+> **Independent ANARI-inspired project:** This is not an official ANARI implementation. It is not
+> certified or conformant with the ANARI specification and is not affiliated with or endorsed by
+> The Khronos Group. ANARI and its logo are trademarks of The Khronos Group and are shown only to
+> identify the standard that inspires this project.
 
 Applications describe cameras, worlds, groups, instances, surfaces, geometry, materials, lights,
 renderers, and frames. The luma.gl-backed device orchestrates existing shared scene renderers,
@@ -210,9 +233,11 @@ morph deltas update existing vertex data without rebuilding the model. `update()
 absolute timestamp in seconds. The playground provides clip selection, play/pause, scrubbing, and
 playback speed controls.
 
-Imported joint indices/weights are preserved, and programmatic surfaces support an explicit
-`skin: {jointMatrices}` descriptor, but the showcase importer does not automatically build or
-animate that joint palette. Imported skeletal playback therefore requires application integration.
+Imported `JOINTS_0`/`WEIGHTS_0`, source joint nodes, and optional inverse bind matrices are
+preserved. The showcase automatically creates mesh-local surface joint palettes and updates them as
+imported skeletal clips play; each changed retained surface is committed at most once per frame.
+Programmatic surfaces can also supply an explicit `skin: {jointMatrices}` descriptor when the
+application owns the palette.
 Animated glTF export remains unsupported; interchange export is currently static.
 
 The format loader lives under `examples/showcase/anari/usd-loader` and follows the loaders.gl
