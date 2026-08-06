@@ -50,9 +50,11 @@ export {
 export {
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
+  isFixedSizeListGPUVectorFormat,
   isGPUVectorFormatCompatibleWithShaderType,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
+  type FixedSizeList,
   type GPUVectorFormat,
   type GPUVectorFormatInfo,
   type ValueList,
