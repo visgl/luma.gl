@@ -14,6 +14,17 @@ luDF is inspired by the GPU-resident dataframe ideas pioneered by
 [NVIDIA RAPIDS cuDF](https://github.com/rapidsai/cudf). It is an independent browser-native WebGPU
 implementation, not a CUDA port, a compatible cuDF API, a SQL engine, or a claim of feature parity.
 
+## Attribution and licensing
+
+We gratefully acknowledge NVIDIA and the RAPIDS contributors for pioneering GPU-resident dataframe
+analytics. [NVIDIA RAPIDS cuDF](https://github.com/rapidsai/cudf) is distributed under the
+[Apache License 2.0](https://github.com/rapidsai/cudf/blob/main/LICENSE).
+
+luDF is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
+vis.gl implementation for browser-native WebGPU; it does not copy or translate cuDF source code,
+including CUDA or Python implementations. It does not claim cuDF API compatibility or feature
+parity, and is neither affiliated with nor endorsed by NVIDIA.
+
 ## Try the interactive example
 
 The [GPU Data Analysis example](/examples/experimental/gpu-data-analysis) uploads real Apache Arrow
