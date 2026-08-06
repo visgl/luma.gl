@@ -1,0 +1,183 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {TRACE_DEPENDENCY_RECORD_WORD_LENGTH, TRACE_SPAN_RECORD_WORD_LENGTH} from './trace-data';
+
+const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
+
+/** Standard scale points used to compare trace interaction costs across devices and changes. */
+export const TRACE_BENCHMARK_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000] as const;
+
+/** Stable interaction scenarios whose dispatch and allocation behavior form the 10M contract. */
+export const TRACE_BENCHMARK_SCENARIOS = [
+  {
+    id: 'exact-expanded',
+    density: false,
+    collapsed: false,
+    filtered: false,
+    focused: false,
+    picking: false
+  },
+  {
+    id: 'exact-collapsed',
+    density: false,
+    collapsed: true,
+    filtered: false,
+    focused: false,
+    picking: false
+  },
+  {
+    id: 'exact-filtered',
+    density: false,
+    collapsed: false,
+    filtered: true,
+    focused: false,
+    picking: false
+  },
+  {
+    id: 'exact-focused',
+    density: false,
+    collapsed: false,
+    filtered: false,
+    focused: true,
+    picking: false
+  },
+  {
+    id: 'exact-picking',
+    density: false,
+    collapsed: false,
+    filtered: false,
+    focused: false,
+    picking: true
+  },
+  {id: 'density', density: true, collapsed: false, filtered: false, focused: false, picking: false}
+] as const;
+
+export type TraceBenchmarkScenario = (typeof TRACE_BENCHMARK_SCENARIOS)[number];
+export type TraceBenchmarkScenarioId = TraceBenchmarkScenario['id'];
+
+/** Device-limit report for the example's current monolithic source allocations. */
+export type TraceCapacityContract = {
+  spanCapacity: number;
+  dependencyCapacity: number;
+  spanBufferByteLength: number;
+  dependencyBufferByteLength: number;
+  largestSourceBufferByteLength: number;
+  maxStorageBufferBindingSize: number;
+  maxBufferSize: number;
+  fitsStorageBufferBindingSize: boolean;
+  fitsMaxBufferSize: boolean;
+  fitsDeviceLimits: boolean;
+};
+
+/** Persistent GPU-buffer accounting independent of command-graph transient allocations. */
+export type TraceAllocationStats = {
+  bufferCount: number;
+  persistentByteLength: number;
+  largestBufferByteLength: number;
+};
+
+export type TraceWorkloadCounterProps = {
+  spanCount: number;
+  dependencyCount: number;
+  spanBatchCount: number;
+  candidateSpanBatchCount: number;
+  dependencyBatchCount: number;
+  candidateDependencyBatchCount: number;
+  visibleSpanCount: number;
+  visibleDependencyCount: number;
+  collapsedProcessCount: number;
+  densityMode: boolean;
+  filterActive: boolean;
+  focusActive: boolean;
+  pickActive: boolean;
+  allocation: TraceAllocationStats;
+};
+
+/** Calculates the exact source-buffer limit required by one demonstration configuration. */
+export function getTraceCapacityContract(
+  spanCapacity: number,
+  dependencyCapacity: number,
+  limits: {maxStorageBufferBindingSize: number; maxBufferSize: number}
+): TraceCapacityContract {
+  validateCount(spanCapacity, 'span capacity');
+  validateCount(dependencyCapacity, 'dependency capacity');
+  validateCount(limits.maxStorageBufferBindingSize, 'maximum storage-buffer binding size');
+  validateCount(limits.maxBufferSize, 'maximum buffer size');
+  const spanBufferByteLength = spanCapacity * TRACE_SPAN_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
+  const dependencyBufferByteLength =
+    dependencyCapacity * TRACE_DEPENDENCY_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
+  const largestSourceBufferByteLength = Math.max(spanBufferByteLength, dependencyBufferByteLength);
+  const fitsStorageBufferBindingSize =
+    largestSourceBufferByteLength <= limits.maxStorageBufferBindingSize;
+  const fitsMaxBufferSize = largestSourceBufferByteLength <= limits.maxBufferSize;
+  return Object.freeze({
+    spanCapacity,
+    dependencyCapacity,
+    spanBufferByteLength,
+    dependencyBufferByteLength,
+    largestSourceBufferByteLength,
+    maxStorageBufferBindingSize: limits.maxStorageBufferBindingSize,
+    maxBufferSize: limits.maxBufferSize,
+    fitsStorageBufferBindingSize,
+    fitsMaxBufferSize,
+    fitsDeviceLimits: fitsStorageBufferBindingSize && fitsMaxBufferSize
+  });
+}
+
+/** Counts unique persistent buffers without conflating them with graph-owned transient storage. */
+export function getTraceAllocationStats(
+  buffers: readonly {byteLength: number}[]
+): TraceAllocationStats {
+  const uniqueBuffers = Array.from(new Set(buffers));
+  let persistentByteLength = 0;
+  let largestBufferByteLength = 0;
+  for (const buffer of uniqueBuffers) {
+    validateCount(buffer.byteLength, 'buffer byte length');
+    persistentByteLength += buffer.byteLength;
+    largestBufferByteLength = Math.max(largestBufferByteLength, buffer.byteLength);
+  }
+  return Object.freeze({
+    bufferCount: uniqueBuffers.length,
+    persistentByteLength,
+    largestBufferByteLength
+  });
+}
+
+/** Publishes a stable scalar vocabulary for inspector histories and benchmark assertions. */
+export function getTraceWorkloadCounters(
+  props: TraceWorkloadCounterProps
+): Readonly<Record<string, number>> {
+  return Object.freeze({
+    spans: props.spanCount,
+    dependencies: props.dependencyCount,
+    'candidate-span-batches': props.candidateSpanBatchCount,
+    'candidate-span-percent': getPercentage(props.candidateSpanBatchCount, props.spanBatchCount),
+    'candidate-dependency-batches': props.candidateDependencyBatchCount,
+    'candidate-dependency-percent': getPercentage(
+      props.candidateDependencyBatchCount,
+      props.dependencyBatchCount
+    ),
+    'visible-spans': props.visibleSpanCount,
+    'visible-span-percent': getPercentage(props.visibleSpanCount, props.spanCount),
+    'visible-dependencies': props.visibleDependencyCount,
+    'persistent-bytes': props.allocation.persistentByteLength,
+    'largest-buffer-bytes': props.allocation.largestBufferByteLength,
+    'collapsed-processes': props.collapsedProcessCount,
+    'density-mode': Number(props.densityMode),
+    'filter-active': Number(props.filterActive),
+    'focus-active': Number(props.focusActive),
+    'pick-active': Number(props.pickActive)
+  });
+}
+
+function getPercentage(count: number, total: number): number {
+  return total > 0 ? (count / total) * 100 : 0;
+}
+
+function validateCount(value: number, name: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`Trace ${name} must be a nonnegative safe integer`);
+  }
+}

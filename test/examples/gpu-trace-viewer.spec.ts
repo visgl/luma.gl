@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {describe, expect, test} from 'vitest';
 import type {AnimationProps} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {describe, expect, test} from 'vitest';
 import GPUTraceViewerAnimationLoopTemplate from '../../examples/experimental/gpu-trace-viewer/app';
 import {
   TRACE_COLLAPSED_STATE,
@@ -70,6 +70,14 @@ describe('GPU hierarchical trace viewer', () => {
         dependencyCapacity: number;
         compileCount: number;
         frameIndex: number;
+        graphInspector: {
+          getSnapshot: () => {
+            graphs: Array<{
+              encodingCount: number;
+              counters: Array<{id: string; latestValue: number}>;
+            }>;
+          };
+        };
       };
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
@@ -93,6 +101,18 @@ describe('GPU hierarchical trace viewer', () => {
 
       viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
       device.submit();
+      const graphInspection = state.graphInspector.getSnapshot().graphs[0];
+      expect(graphInspection.encodingCount).toBe(1);
+      expect(
+        graphInspection.counters.find(counter => counter.id === 'persistent-bytes')?.latestValue
+      ).toBeGreaterThan(0);
+      expect(
+        graphInspection.counters.find(counter => counter.id === 'largest-buffer-bytes')?.latestValue
+      ).toBeGreaterThan(0);
+      expect(
+        graphInspection.counters.find(counter => counter.id === 'candidate-span-percent')
+          ?.latestValue
+      ).toBe(0);
       const firstFrame = await state.resources.drawCommands.buffer.readAsync();
       const firstCounts = new Uint32Array(
         firstFrame.buffer,
