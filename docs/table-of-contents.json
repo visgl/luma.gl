@@ -324,6 +324,7 @@
         "items": [
           "api-reference/gltf/README",
           "api-reference/gltf/gltf-materials",
+          "api-reference/gltf/gltf-native-extensions",
           "api-reference/gltf/gltf-animation",
           "api-reference/gltf/gltf-extensions"
         ]

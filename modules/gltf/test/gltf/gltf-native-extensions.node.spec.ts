@@ -281,6 +281,23 @@ describe('standards-native glTF extension runtime', () => {
     }
   });
 
+  test('accepts required physically implemented dispersion in strict extension mode', async () => {
+    const source = await loadNativeExtensionFixture('CubeVisibility');
+    source.extensionsRequired = [...(source.extensionsRequired || []), 'KHR_materials_dispersion'];
+
+    expect(getGLTFExtensionSupport(source).get('KHR_materials_dispersion')).toMatchObject({
+      required: true,
+      supported: true,
+      supportLevel: 'parsed-and-wired'
+    });
+    expect(getUnsupportedRequiredGLTFExtensions(source)).toEqual([]);
+    expect(() => assertSupportedGLTFExtensions(source)).not.toThrow();
+
+    const device = new NullDevice({});
+    const scenegraphs = createScenegraphsFromGLTF(device, source, {strictExtensions: true});
+    destroyScenegraphs(device, scenegraphs);
+  });
+
   test('preserves authored KHR_materials_dispersion animation pointers as canonical material channels', async () => {
     const source = await loadNativeExtensionFixture('CubeVisibility');
     source.materials[0].extensions = {

@@ -128,7 +128,7 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
   KHR_animation_pointer: {
     supportLevel: 'parsed-and-wired',
     comment:
-      'Selected node TRS, material factor, and KHR_texture_transform offset/rotation/scale pointers are wired to runtime updates; unsupported targets are skipped.'
+      'Node transforms, morph weights and visibility, material factors, texture transforms, camera projections, and punctual lights are wired to runtime updates.'
   },
   KHR_materials_diffuse_transmission: {
     supportLevel: 'none',
