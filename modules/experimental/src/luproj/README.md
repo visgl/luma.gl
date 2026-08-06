@@ -12,6 +12,18 @@ Float32 operations and origin-relative precision.
 This supports projection families understood by the provider without separately
 implementing every projection, datum, or coordinate reference system in WGSL.
 
+## Attribution and licensing
+
+luProj is inspired by
+[NVIDIA RAPIDS cuProj](https://github.com/rapidsai/cuspatial/tree/branch-25.04/cpp/cuproj), the
+projection component maintained in the archived cuSpatial repository. That upstream project is
+distributed under the [Apache License 2.0](https://github.com/rapidsai/cuspatial/blob/branch-25.04/LICENSE).
+
+This module is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
+vis.gl implementation; its TypeScript/WGSL adaptive-polynomial execution does not copy or translate
+cuProj source code. It does not claim CUDA API compatibility, native GPU Float64 arithmetic, cuProj
+feature or precision parity, NVIDIA affiliation, or NVIDIA endorsement.
+
 ## Compile and execute a projection
 
 ```ts
