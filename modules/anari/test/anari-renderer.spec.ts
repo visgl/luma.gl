@@ -286,6 +286,14 @@ test('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', 
       continue;
     }
 
+    const supportsRawValidationErrorScopes =
+      graphicsDevice.info.gpu !== 'software' &&
+      graphicsDevice.info.gpuType !== 'cpu' &&
+      !graphicsDevice.info.fallback;
+    if (!supportsRawValidationErrorScopes) {
+      testContext.comment('software WebGPU can cancel raw validation error-scope callbacks');
+    }
+
     testContext.equal(
       graphicsDevice.limits.maxColorAttachmentBytesPerSample,
       32,
@@ -330,16 +338,19 @@ test('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', 
     const renderer = device.newRenderer('deferred', {ambientRadiance: 0.08});
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
 
-    graphicsDevice.handle.pushErrorScope('validation');
+    if (supportsRawValidationErrorScopes) {
+      graphicsDevice.handle.pushErrorScope('validation');
+    }
     const statistics = frame.render();
     graphicsDevice.submit();
-    const deferredValidationError = await graphicsDevice.handle.popErrorScope();
-
-    testContext.equal(
-      deferredValidationError,
-      null,
-      'deferred frame encoding and submission produce no WebGPU validation errors'
-    );
+    if (supportsRawValidationErrorScopes) {
+      const deferredValidationError = await graphicsDevice.handle.popErrorScope();
+      testContext.equal(
+        deferredValidationError,
+        null,
+        'deferred frame encoding and submission produce no WebGPU validation errors'
+      );
+    }
     testContext.equal(statistics.drawCount, 1, 'WebGPU deferred renderer draws one surface batch');
     testContext.equal(statistics.instanceCount, 2, 'WebGPU deferred renderer keeps instances');
     testContext.ok(statistics.triangleCount > 0, 'WebGPU deferred renderer counts geometry');
@@ -369,6 +380,14 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
     if (!graphicsDevice) {
       testContext.comment('WebGPU is not available');
       continue;
+    }
+
+    const supportsRawValidationErrorScopes =
+      graphicsDevice.info.gpu !== 'software' &&
+      graphicsDevice.info.gpuType !== 'cpu' &&
+      !graphicsDevice.info.fallback;
+    if (!supportsRawValidationErrorScopes) {
+      testContext.comment('software WebGPU can cancel raw validation error-scope callbacks');
     }
 
     testContext.equal(
@@ -422,15 +441,19 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
     });
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
 
-    graphicsDevice.handle.pushErrorScope('validation');
+    if (supportsRawValidationErrorScopes) {
+      graphicsDevice.handle.pushErrorScope('validation');
+    }
     const statistics = frame.render();
     graphicsDevice.submit();
-    const initialValidationError = await graphicsDevice.handle.popErrorScope();
-    testContext.equal(
-      initialValidationError,
-      null,
-      'GPU object bounds, BVH construction, and shadow traversal produce no core validation errors'
-    );
+    if (supportsRawValidationErrorScopes) {
+      const initialValidationError = await graphicsDevice.handle.popErrorScope();
+      testContext.equal(
+        initialValidationError,
+        null,
+        'GPU object bounds, BVH construction, and shadow traversal produce no core validation errors'
+      );
+    }
     testContext.equal(statistics.surfaceCount, 2, 'ray tracing retains both unique surfaces');
     testContext.equal(statistics.instanceCount, 3, 'ray tracing preserves transformed placements');
     testContext.equal(statistics.drawCount, 1, 'ray tracing presents through one fullscreen draw');
@@ -440,7 +463,9 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
       'analytic spheres do not generate mesh triangles'
     );
 
-    graphicsDevice.handle.pushErrorScope('validation');
+    if (supportsRawValidationErrorScopes) {
+      graphicsDevice.handle.pushErrorScope('validation');
+    }
     camera.setParameters({position: [0, 0, 4], direction: [0, 0, -1]}).commitParameters();
     const accumulatedStatistics = frame.render();
     graphicsDevice.submit();
@@ -531,12 +556,14 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
       3,
       'BVH traversal and direct-light shadows recover after an empty retained world'
     );
-    const updatedValidationError = await graphicsDevice.handle.popErrorScope();
-    testContext.equal(
-      updatedValidationError,
-      null,
-      'BVH refits, resize, empty scenes, repopulation, and shadow updates remain core-valid'
-    );
+    if (supportsRawValidationErrorScopes) {
+      const updatedValidationError = await graphicsDevice.handle.popErrorScope();
+      testContext.equal(
+        updatedValidationError,
+        null,
+        'BVH refits, resize, empty scenes, repopulation, and shadow updates remain core-valid'
+      );
+    }
 
     frame.destroy();
     device.destroy();
