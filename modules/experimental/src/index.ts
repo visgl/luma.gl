@@ -26,6 +26,11 @@ export type {
 } from './engine/scene-renderer';
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
 export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
+export type {
+  RayTracingScenePrimitive,
+  RayTracingSceneRenderOptions
+} from './engine/ray-tracing-scene-renderer';
+export {RayTracingSceneRenderer} from './engine/ray-tracing-scene-renderer';
 export type {PreparePBREnvironmentOptions} from './engine/pbr-environment';
 export {
   PBREnvironmentGenerator,

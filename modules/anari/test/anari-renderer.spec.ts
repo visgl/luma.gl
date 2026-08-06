@@ -351,6 +351,124 @@ test('ANARI deferred renderer resolves PBR surfaces on WebGPU', async testContex
   testContext.end();
 });
 
+test('ANARI ray tracing renderer traces analytic spheres and indexed meshes on WebGPU', async testContext => {
+  for (const graphicsDevice of await getLiveTestDevices()) {
+    if (graphicsDevice.type !== 'webgpu') {
+      continue;
+    }
+
+    const device = new ANARIDevice(graphicsDevice);
+    const sphereGeometry = device.newGeometry('sphere', {radius: 0.65});
+    const sphereMaterial = device.newMaterial('physicallyBased', {
+      baseColor: [0.94, 0.42, 0.18],
+      metallic: 0.65,
+      roughness: 0.24,
+      emissive: [0.08, 0.02, 0]
+    });
+    const sphereSurface = device.newSurface({geometry: sphereGeometry, material: sphereMaterial});
+    const group = device.newGroup({surface: [sphereSurface]});
+    const triangleGeometry = device.newGeometry('triangle', {
+      'vertex.position': new Float32Array([-1, -0.75, -0.5, 1, -0.75, -0.5, 0, 0.8, -0.5]),
+      'vertex.normal': new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+      'primitive.index': new Uint16Array([0, 1, 2])
+    });
+    const triangleSurface = device.newSurface({
+      geometry: triangleGeometry,
+      material: device.newMaterial('matte', {color: [0.18, 0.52, 0.86]})
+    });
+    const world = device.newWorld({
+      surface: [triangleSurface],
+      instance: [
+        device.newInstance({
+          group,
+          transform: new Matrix4().translate([-0.65, 0, 0]).scale([1.25, 0.8, 0.7])
+        }),
+        device.newInstance({group, transform: new Matrix4().translate([0.65, 0, 0])})
+      ],
+      light: [
+        device.newLight('directional', {direction: [-0.5, -1, -1], irradiance: 1.8}),
+        device.newLight('point', {position: [0, 1, 2], intensity: 8})
+      ]
+    });
+    const camera = device.newCamera('perspective', {position: [0, 0, 4]});
+    const renderer = device.newRenderer('raytrace', {
+      samplesPerPixel: 2,
+      progressive: true,
+      shadows: true
+    });
+    const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
+
+    const statistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(statistics.surfaceCount, 2, 'ray tracing retains both unique surfaces');
+    testContext.equal(statistics.instanceCount, 3, 'ray tracing preserves transformed placements');
+    testContext.equal(statistics.drawCount, 1, 'ray tracing presents through one fullscreen draw');
+    testContext.equal(
+      statistics.triangleCount,
+      1,
+      'analytic spheres do not generate mesh triangles'
+    );
+
+    camera.setParameters({position: [0, 0, 4], direction: [0, 0, -1]}).commitParameters();
+    const accumulatedStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(
+      accumulatedStatistics.instanceCount,
+      3,
+      'stable recommitted camera parameters preserve progressive rendering'
+    );
+
+    sphereMaterial.setParameter('roughness', 0.8).commitParameters();
+    renderer.setParameters({progressive: false, shadows: false}).commitParameters();
+    const updatedStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(
+      updatedStatistics.drawCount,
+      1,
+      'material and renderer updates rebuild history'
+    );
+
+    frame.setParameter('size', [16, 16]).commitParameters();
+    const resizedStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(
+      resizedStatistics.triangleCount,
+      1,
+      'resizing rebuilds frame-owned resources'
+    );
+
+    const primitiveSurfaces = (['quad', 'cylinder', 'cone'] as const).map(subtype =>
+      device.newSurface({
+        geometry: device.newGeometry(subtype, {radius: 0.35, height: 0.65, segments: 4}),
+        material: device.newMaterial('matte', {color: [0.4, 0.65, 0.85]})
+      })
+    );
+    frame
+      .setParameters({
+        world: device.newWorld({surface: primitiveSurfaces}),
+        camera: device.newCamera('orthographic', {position: [0, 0, 4], height: 3})
+      })
+      .commitParameters();
+    const primitiveStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(primitiveStatistics.surfaceCount, 3, 'generated primitives remain distinct');
+    testContext.ok(
+      primitiveStatistics.triangleCount > 1,
+      'orthographic rays trace generated quad, cylinder, and cone meshes'
+    );
+
+    frame.setParameter('world', device.newWorld()).commitParameters();
+    const emptyStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(emptyStatistics.instanceCount, 0, 'empty worlds present their background');
+    testContext.equal(emptyStatistics.drawCount, 1, 'empty worlds still use one presentation draw');
+
+    frame.destroy();
+    device.destroy();
+  }
+  testContext.end();
+});
+
 async function getLiveTestDevices(): Promise<Device[]> {
   const [webglDevice, webgpuDevices] = await Promise.all([
     getWebGLTestDevice(),

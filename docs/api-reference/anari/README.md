@@ -48,12 +48,12 @@ API and supported feature set can change.
 
 ## Reference pages
 
-- [Device and object lifecycle](/docs/api-reference/anari/anari-device): `ANARIDevice`, object creation, discovery, staged parameters, commits, and destruction.
+- [Device and object lifecycle](/docs/api-reference/anari/anari-device): `ANARIDevice`, object creation, renderer registration, discovery, staged parameters, commits, and destruction.
 - [Arrays and geometry](/docs/api-reference/anari/anari-geometry): triangle meshes, RGB/RGBA colors, secondary UVs, joint palettes, morph targets, and analytic primitives.
 - [Materials and lighting](/docs/api-reference/anari/anari-materials-and-lights): all 17 canonical PBR maps, alpha masking/blending, UV samplers, punctual lights, and existing image-based lighting.
 - [Animation and glTF integration](/docs/api-reference/anari/anari-animation): retained node hierarchies, optional glTF adaptation, automatic skeletal and morph playback, mixer controls, and batched object commits.
 - [Scene hierarchy](/docs/api-reference/anari/anari-scene): surfaces, groups, transform instances, worlds, and instancing behavior.
-- [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, renderer controls, bloom, fog, frame rendering, and statistics.
+- [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, forward/deferred/ray-tracing renderer controls, bloom, fog, frame rendering, and statistics.
 - [Scene schemas and JSON validation](/docs/api-reference/anari/anari-schemas): optional Zod object schemas, retained-reference validation, generated JSON Schema, and editor integration.
 - [ANARI C API and THREE.js mapping](/docs/api-reference/anari/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
@@ -138,7 +138,7 @@ separately loads the retained JSON validation helpers.
 | World | `default` |
 | Light | `ambient`, `directional`, `point`, `spot` |
 | Camera | `perspective`, `orthographic` |
-| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth` |
+| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth`, `raytrace`, and registered custom subtypes |
 | Frame | `default` |
 
 Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead of assuming future implementations expose the same set.
@@ -159,6 +159,8 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | Captured opaque-scene transmission and refraction | Supported | Supported |
 | Ambient, directional, point, and spot lighting | Supported | Supported |
 | Deferred renderer | WebGPU-only G-buffer and direct deferred lighting | Not supported |
+| Software ray-tracing renderer | Shared `RayTracingSceneRenderer` and WebGPU command graph | Not supported |
+| Ray-traced skeletal/morph deformation or advanced PBR | Not supported; use forward/deferred rendering | Not supported |
 | Debug normals and depth renderers | Supported | Supported |
 | Bloom | Supported | Supported |
 | Deferred fog | Supported | Not supported |

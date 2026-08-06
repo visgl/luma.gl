@@ -11,6 +11,9 @@ const EXPERIMENTAL_RENDERING_SYMBOLS = new Set([
   'SceneRenderer',
   'SceneSurface',
   'DeferredSceneRenderer',
+  'RayTracingScenePrimitive',
+  'RayTracingSceneRenderOptions',
+  'RayTracingSceneRenderer',
   'createPBRMaterial',
   'createPBRMaterialFactory',
   'createPBRModel',
@@ -55,6 +58,10 @@ test('ANARI remains a declarative facade over shared rendering implementations',
     new URL('anari-rendering-runtime.ts', sourceDirectory),
     'utf8'
   );
+  const rayTracingRuntimeSource = readFileSync(
+    new URL('anari-ray-tracing-runtime.ts', sourceDirectory),
+    'utf8'
+  );
   const publicSource = readFileSync(new URL('index.ts', sourceDirectory), 'utf8');
   testContext.ok(
     adapterSource.includes('pbrMaterial') && adapterSource.includes("'@luma.gl/shadertools'"),
@@ -68,6 +75,18 @@ test('ANARI remains a declarative facade over shared rendering implementations',
     getNamedImports(runtimeSource, '@luma.gl/experimental').includes('DeferredSceneRenderer'),
     'deferred rendering belongs to the shared experimental renderer'
   );
+  testContext.ok(
+    getNamedImports(rayTracingRuntimeSource, '@luma.gl/experimental').includes(
+      'RayTracingSceneRenderer'
+    ),
+    'ray tracing belongs to the shared experimental renderer'
+  );
+  testContext.ok(
+    getNamedImports(rayTracingRuntimeSource, '@luma.gl/experimental').includes(
+      'RayTracingScenePrimitive'
+    ),
+    'analytic ray tracing primitives belong to the shared experimental scene contract'
+  );
   testContext.deepEqual(
     getNamedImports(adapterSource, '@luma.gl/experimental').sort(),
     ['SceneCamera', 'SceneMaterial', 'SceneRenderOptions', 'SceneSurface'],
@@ -79,7 +98,7 @@ test('ANARI remains a declarative facade over shared rendering implementations',
     'utf8'
   );
   testContext.notOk(
-    /\b(?:SceneRenderer|DeferredSceneRenderer|createPBRModel|createPBRMaterial|createPBRMaterialFactory)\b/.test(
+    /\b(?:SceneRenderer|DeferredSceneRenderer|RayTracingSceneRenderer|createPBRModel|createPBRMaterial|createPBRMaterialFactory)\b/.test(
       enginePublicSource
     ),
     'the stable engine does not publicly own experimental scene or PBR rendering APIs'

@@ -7,7 +7,6 @@ import {
   type ANARIMaterial,
   type ANARIRenderer,
   type ANARIRendererParameters,
-  type ANARIRendererSubtype,
   type ANARISurface,
   type ANARIVector3,
   type ANARIWorld
@@ -64,7 +63,10 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   readonly anari: ANARIDevice;
   readonly frame: ANARIFrame;
   readonly scenes: ShowcaseScene[];
-  readonly renderers: Record<ANARIRendererSubtype, ANARIRenderer>;
+  readonly renderers: Record<
+    'default' | 'deferred' | 'raytrace' | 'debugNormals' | 'debugDepth',
+    ANARIRenderer
+  >;
 
   private activeSceneIndex = 0;
   private orbitAzimuth = 0;
@@ -88,6 +90,11 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
       deferred: this.anari.newRenderer('deferred', {
         ...DEFAULT_RENDERER_PARAMETERS,
         bloomIntensity: 0
+      }),
+      raytrace: this.anari.newRenderer('raytrace', {
+        ...DEFAULT_RENDERER_PARAMETERS,
+        bloomIntensity: 0,
+        shadows: true
       }),
       debugNormals: this.anari.newRenderer('debugNormals', {
         background: [0.027, 0.033, 0.06, 1]
@@ -213,19 +220,30 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     });
 
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-renderer]')) {
-      if (button.dataset['renderer'] === 'deferred' && !this.deferredRendererAvailable) {
+      const rendererName = button.dataset['renderer'];
+      if (
+        (rendererName === 'deferred' || rendererName === 'raytrace') &&
+        !this.deferredRendererAvailable
+      ) {
         button.disabled = true;
-        button.title = 'Deferred rendering requires WebGPU.';
+        button.title =
+          rendererName === 'raytrace'
+            ? 'Graph-based ray tracing requires WebGPU.'
+            : 'Deferred rendering requires WebGPU.';
       }
       button.addEventListener('click', () => {
         const rendererName = button.dataset['renderer'];
         if (
           rendererName === 'default' ||
           rendererName === 'deferred' ||
+          rendererName === 'raytrace' ||
           rendererName === 'debugNormals' ||
           rendererName === 'debugDepth'
         ) {
-          if (rendererName === 'deferred' && !this.deferredRendererAvailable) {
+          if (
+            (rendererName === 'deferred' || rendererName === 'raytrace') &&
+            !this.deferredRendererAvailable
+          ) {
             return;
           }
           this.frame.setParameter('renderer', this.renderers[rendererName]).commitParameters();
@@ -266,6 +284,14 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         ...DEFAULT_RENDERER_PARAMETERS,
         ...rendererParameters,
         bloomIntensity: 0
+      })
+      .commitParameters();
+    this.renderers.raytrace
+      .setParameters({
+        ...DEFAULT_RENDERER_PARAMETERS,
+        ...rendererParameters,
+        bloomIntensity: 0,
+        shadows: true
       })
       .commitParameters();
     this.frame.setParameter('world', scene.world).commitParameters();

@@ -219,6 +219,7 @@ const CAMERA_SUBTYPES: readonly ANARICameraSubtype[] = ['perspective', 'orthogra
 const RENDERER_SUBTYPES: readonly ANARIRendererSubtype[] = [
   'default',
   'deferred',
+  'raytrace',
   'debugNormals',
   'debugDepth'
 ];

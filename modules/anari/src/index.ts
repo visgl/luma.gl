@@ -18,7 +18,7 @@ export {
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
-export type {ANARIRendererRuntime} from './anari-renderer-runtime';
+export type {ANARIRendererRuntime, ANARIRendererRuntimeFactory} from './anari-renderer-runtime';
 export type {
   ANARIArrayData,
   ANARIArrayParameters,

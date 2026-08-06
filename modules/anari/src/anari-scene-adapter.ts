@@ -241,9 +241,11 @@ export class ANARISceneAdapter {
       fogColor: renderer.getParameter('fogColor') || [0.025, 0.035, 0.075],
       fogDensity: renderer.getParameter('fogDensity') ?? 0,
       renderMode:
-        renderer.subtype === 'debugNormals' || renderer.subtype === 'debugDepth'
-          ? renderer.subtype
-          : 'default'
+        renderer.subtype === 'debugNormals'
+          ? 'debugNormals'
+          : renderer.subtype === 'debugDepth'
+            ? 'debugDepth'
+            : 'default'
     };
   }
 

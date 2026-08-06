@@ -1,7 +1,7 @@
 import test from 'test/utils/vitest-tape';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import {ANARIDevice} from '@luma.gl/anari';
+import {ANARIDevice, type ANARIRendererRuntimeFactory} from '@luma.gl/anari';
 
 test('ANARI objects expose committed rather than staged parameters', testContext => {
   const device = new ANARIDevice(new NullDevice({}));
@@ -29,8 +29,13 @@ test('ANARI device reports object subtypes and implemented extensions', testCont
 
   testContext.deepEqual(
     device.getObjectSubtypes('renderer'),
-    ['default', 'deferred', 'debugNormals', 'debugDepth'],
+    ['default', 'deferred', 'debugNormals', 'debugDepth', 'raytrace'],
     'renderer implementations are discoverable'
+  );
+  testContext.deepEqual(
+    device.getObjectInfo('renderer').subtypes,
+    device.getObjectSubtypes('renderer'),
+    'renderer object information reports the live registry'
   );
   testContext.ok(
     device.getObjectInfo('material').extensions.includes('KHR_MATERIAL_PHYSICALLY_BASED'),
@@ -42,6 +47,187 @@ test('ANARI device reports object subtypes and implemented extensions', testCont
     'image samplers are discoverable'
   );
 
+  device.destroy();
+  testContext.end();
+});
+
+test('ANARI device lazily registers and shares custom renderer runtimes', testContext => {
+  const graphicsDevice = new NullDevice({});
+  const device = new ANARIDevice(graphicsDevice);
+  const anotherDevice = new ANARIDevice(new NullDevice({}));
+  const renderedFrameIdentifiers: string[] = [];
+  const destroyedFrameIdentifiers: string[] = [];
+  let createdRuntimeCount = 0;
+  let destroyedRuntimeCount = 0;
+
+  const runtimeFactory: ANARIRendererRuntimeFactory = runtimeDevice => {
+    testContext.equal(runtimeDevice, graphicsDevice, 'factories receive their owning GPU device');
+    createdRuntimeCount++;
+    return {
+      render(frame) {
+        renderedFrameIdentifiers.push(frame.id);
+        return {surfaceCount: 2, instanceCount: 3, drawCount: 4, triangleCount: 5};
+      },
+      destroyFrame(frame) {
+        destroyedFrameIdentifiers.push(frame.id);
+      },
+      destroy() {
+        destroyedRuntimeCount++;
+      }
+    };
+  };
+
+  testContext.equal(
+    device.registerRenderer('customPathtrace', runtimeFactory),
+    device,
+    'renderer registration is chainable'
+  );
+  device.registerRenderer('customPathtraceAlias', runtimeFactory);
+  testContext.ok(
+    device.getObjectSubtypes('renderer').includes('customPathtrace'),
+    'registered renderer subtypes are discoverable'
+  );
+  testContext.ok(
+    device.getObjectInfo('renderer').subtypes.includes('customPathtraceAlias'),
+    'renderer object information includes dynamically registered aliases'
+  );
+  testContext.notOk(
+    anotherDevice.getObjectSubtypes('renderer').includes('customPathtrace'),
+    'renderer registrations belong to a single ANARI device'
+  );
+
+  const world = device.newWorld();
+  const camera = device.newCamera('perspective');
+  const renderer = device.newRenderer('customPathtrace', {
+    samplesPerPixel: 4,
+    maxBounces: 2,
+    progressive: true,
+    shadows: false
+  });
+  const alias = device.newRenderer('customPathtraceAlias');
+  const frame = device.newFrame({world, camera, renderer});
+  const aliasFrame = device.newFrame({world, camera, renderer: alias});
+
+  testContext.equal(createdRuntimeCount, 0, 'renderer runtimes are created on the first render');
+  testContext.deepEqual(
+    frame.render(),
+    {surfaceCount: 2, instanceCount: 3, drawCount: 4, triangleCount: 5},
+    'registered runtimes supply frame statistics'
+  );
+  frame.render();
+  aliasFrame.render();
+  testContext.equal(createdRuntimeCount, 1, 'matching runtime factories share one backend');
+  testContext.deepEqual(
+    renderedFrameIdentifiers,
+    [frame.id, frame.id, aliasFrame.id],
+    'all frames are dispatched to their registered backend'
+  );
+  testContext.equal(renderer.getParameter('samplesPerPixel'), 4, 'sampling parameters are typed');
+  testContext.equal(renderer.getParameter('maxBounces'), 2, 'bounce parameters are retained');
+  testContext.equal(
+    renderer.getParameter('progressive'),
+    true,
+    'progressive rendering is retained'
+  );
+  testContext.equal(renderer.getParameter('shadows'), false, 'shadow controls are retained');
+
+  frame.destroy();
+  aliasFrame.destroy();
+  testContext.deepEqual(
+    destroyedFrameIdentifiers,
+    [frame.id, aliasFrame.id],
+    'shared runtimes release each frame exactly once'
+  );
+  device.destroy();
+  testContext.equal(destroyedRuntimeCount, 1, 'shared runtimes are destroyed exactly once');
+  anotherDevice.destroy();
+  testContext.end();
+});
+
+test('ANARI renderer replacement preserves aliases and destroys orphaned runtimes', testContext => {
+  const device = new ANARIDevice(new NullDevice({}));
+  let originalRuntimeDestroyCount = 0;
+  let replacementRuntimeDestroyCount = 0;
+
+  const originalRuntimeFactory: ANARIRendererRuntimeFactory = () => ({
+    render: () => ({surfaceCount: 1, instanceCount: 1, drawCount: 1, triangleCount: 1}),
+    destroyFrame: () => {},
+    destroy: () => {
+      originalRuntimeDestroyCount++;
+    }
+  });
+  const replacementRuntimeFactory: ANARIRendererRuntimeFactory = () => ({
+    render: () => ({surfaceCount: 2, instanceCount: 2, drawCount: 2, triangleCount: 2}),
+    destroyFrame: () => {},
+    destroy: () => {
+      replacementRuntimeDestroyCount++;
+    }
+  });
+
+  device.registerRenderer('replaceable', originalRuntimeFactory);
+  device.registerRenderer('replaceableAlias', originalRuntimeFactory);
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer: device.newRenderer('replaceable')
+  });
+  testContext.equal(frame.render().drawCount, 1, 'the initial runtime handles the frame');
+
+  device.registerRenderer('replaceable', replacementRuntimeFactory);
+  testContext.equal(
+    originalRuntimeDestroyCount,
+    0,
+    'a runtime remains alive while another subtype references its factory'
+  );
+  testContext.equal(frame.render().drawCount, 2, 'replacement factories handle subsequent renders');
+
+  device.registerRenderer('replaceableAlias', replacementRuntimeFactory);
+  testContext.equal(
+    originalRuntimeDestroyCount,
+    1,
+    'replacing the last alias immediately destroys its orphaned runtime'
+  );
+
+  frame.destroy();
+  device.destroy();
+  testContext.equal(replacementRuntimeDestroyCount, 1, 'the replacement runtime is destroyed once');
+  testContext.end();
+});
+
+test('ANARI device rejects renderer subtypes without registered runtimes', testContext => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer: device.newRenderer('unregisteredRenderer')
+  });
+
+  testContext.throws(
+    () => frame.render(),
+    /unregisteredRenderer.*not registered/,
+    'unknown subtypes do not silently use the forward renderer'
+  );
+
+  frame.destroy();
+  device.destroy();
+  testContext.end();
+});
+
+test('ANARI ray tracing renderer requires a WebGPU device only when rendered', testContext => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const frame = device.newFrame({
+    world: device.newWorld(),
+    camera: device.newCamera('perspective'),
+    renderer: device.newRenderer('raytrace')
+  });
+
+  testContext.throws(
+    () => frame.render(),
+    /WebGPU/,
+    'the lazily created ray tracing runtime rejects non-WebGPU devices'
+  );
+
+  frame.destroy();
   device.destroy();
   testContext.end();
 });

@@ -85,7 +85,7 @@ new ANARIRenderer(
 );
 
 newRenderer(
-  subtype?: 'default' | 'deferred' | 'debugNormals' | 'debugDepth',
+  subtype?: ANARIRendererSubtype,
   parameters?: ANARIRendererParameters
 ): ANARIRenderer;
 ```
@@ -99,6 +99,10 @@ type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
   exposure?: number;
+  samplesPerPixel?: number;
+  maxBounces?: number;
+  progressive?: boolean;
+  shadows?: boolean;
   bloomIntensity?: number;
   bloomThreshold?: number;
   bloomRadius?: number;
@@ -112,6 +116,10 @@ type ANARIRendererParameters = {
 | `background` | `[0.015, 0.018, 0.038, 1]` | RGBA clear color. |
 | `ambientRadiance` | `0.12` | Base white ambient light added before explicit world/group lights. |
 | `exposure` | `1.35` | Final lighting exposure. |
+| `samplesPerPixel` | `1` | Primary-ray samples per frame in the `raytrace` renderer. |
+| `maxBounces` | Not applied | Reserved ray-tracing bounce limit; the current implementation evaluates direct lighting only. |
+| `progressive` | `true` | Accumulate ray-traced samples across unchanged frames. |
+| `shadows` | `true` | Trace hard shadow rays toward direct lights in the `raytrace` renderer. |
 | `bloomIntensity` | `0` | Bloom amount; positive values allocate and run the bloom postprocessing path. |
 | `bloomThreshold` | `0.62` | Brightness threshold for bloom extraction. |
 | `bloomRadius` | `7` | Bloom blur radius. |
@@ -146,7 +154,42 @@ const renderer = anariDevice.newRenderer('deferred', {
 
 `deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Spot lights are mapped onto deferred point lights in this first implementation.
 
+Its five G-buffer color attachments require 36 bytes per sample, exceeding the default WebGPU
+device limit of 32. Pass `featureLevel: 'max'` to `luma.createDevice()` so supported adapters expose
+their higher `maxColorAttachmentBytesPerSample` limit.
+
 The deferred path is intended as an architecture baseline for richer ANARI renderers. It does not yet include the full Deferred Illumination Lab chain such as clustered light bins, GTAO, SSGI, SSR, velocity history, or bloom.
+
+### Ray-tracing renderer
+
+```ts
+const renderer = anariDevice.newRenderer('raytrace', {
+  background: [0.012, 0.016, 0.04, 1],
+  samplesPerPixel: 1,
+  maxBounces: 1,
+  progressive: true,
+  shadows: true
+});
+
+frame.setParameter('renderer', renderer).commitParameters();
+```
+
+`raytrace` requires WebGPU. The ANARI adapter translates committed scene objects into descriptors
+for the shared `RayTracingSceneRenderer` in `@luma.gl/experimental`. Its command graph traces
+transformed analytic spheres and triangle meshes, including tessellated quads, cylinders, and cones;
+evaluates ambient, directional, point, and spot lights; optionally traces hard shadow rays; and
+presents the result through a fullscreen pass. An `rgba16float` canvas preserves HDR radiance.
+
+When `progressive` is enabled, unchanged frames accumulate additional primary-ray samples. Camera,
+scene, light, material, renderer, and frame-size changes reset the accumulation history. This
+initial implementation uses software intersections without hardware ray tracing or a BVH. It does
+not apply skeletal skinning, morph-target displacement, material textures, alpha/transmission, or
+advanced PBR shading; those features remain on the forward/deferred renderer paths. Indirect
+multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is accepted for
+forward compatibility but does not enable indirect bounces.
+
+Applications can also
+[register custom renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes).
 
 ### Debug normals
 
@@ -238,8 +281,8 @@ type ANARIFrameStatistics = {
 | --- | --- |
 | `surfaceCount` | Number of distinct retained surface identities visible in the world. |
 | `instanceCount` | Number of direct and instanced surface placements. |
-| `drawCount` | Number of successful model draws, normally one per distinct surface. |
-| `triangleCount` | Sum of geometry triangles across all placements. |
+| `drawCount` | Number of successful model draws, normally one per distinct raster surface or one ray-tracing presentation draw. |
+| `triangleCount` | Sum of mesh triangles across all placements; analytic ray-traced spheres contribute zero. |
 
 `frame.statistics` is initialized with zeroes and updated by each `frame.render()` call.
 
@@ -282,7 +325,13 @@ type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad'
 type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
 type ANARICameraSubtype = 'perspective' | 'orthographic';
-type ANARIRendererSubtype = 'default' | 'deferred' | 'debugNormals' | 'debugDepth';
+type ANARIRendererSubtype =
+  | 'default'
+  | 'deferred'
+  | 'debugNormals'
+  | 'debugDepth'
+  | 'raytrace'
+  | (string & Record<never, never>);
 ```
 
 All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/anari`.
