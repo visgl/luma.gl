@@ -29,6 +29,7 @@ const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
 const RESOLUTION_SCALES = [0.25, 0.375, 0.5, 0.75, 1] as const;
 const FRAME_BUDGET_COOLDOWN_MILLISECONDS = 250;
+const MAXIMUM_HISTORY_SAMPLES = 64;
 
 /** Optional analytic primitive supplied by a format-specific scene adapter. */
 export type RayTracingScenePrimitive = {
@@ -325,6 +326,9 @@ export class RayTracingSceneRenderer {
           resources.triangleCount = primitiveData.triangleCount;
           if (transformChanged) {
             resources.accelerationNeedsUpdate = true;
+            if (!(options.temporalReprojection ?? true)) {
+              resources.historyNeedsReset = true;
+            }
           } else if (primitiveChanged) {
             resources.historyNeedsReset = true;
           }
@@ -411,7 +415,8 @@ export class RayTracingSceneRenderer {
         primitiveCapacity: resources.primitiveCapacity,
         leafCapacity: resources.leafCapacity,
         lightCount: resources.lightCount,
-        accumulatedFrameCount
+        accumulatedFrameCount,
+        frameIndex: resources.frameIndex
       })
     );
 
@@ -428,6 +433,7 @@ export class RayTracingSceneRenderer {
     resources.phaseIndex = (activePhaseIndex + 1) % resources.phaseCount;
     resources.frameIndex++;
     resources.accumulatedFrameCount = progressive ? accumulatedFrameCount + 1 : 0;
+    const samplesPerPixel = getSamplesPerPixel(options);
 
     const statistics = {
       surfaceCount: options.surfaces.length,
@@ -444,7 +450,9 @@ export class RayTracingSceneRenderer {
         sampledPixelCoverage: 1 / activePhaseCount,
         frameTimeMilliseconds:
           resources.averageFrameTimeMilliseconds ?? resources.targetFrameTimeMilliseconds,
-        accumulatedSamples: resources.accumulatedFrameCount
+        accumulatedSamples: progressive
+          ? Math.min(resources.accumulatedFrameCount * samplesPerPixel, MAXIMUM_HISTORY_SAMPLES)
+          : samplesPerPixel
       } satisfies RayTracingStatistics
     };
     return statistics as SceneRenderStatistics;
@@ -1434,6 +1442,7 @@ function makeUniformData(props: {
   leafCapacity: number;
   lightCount: number;
   accumulatedFrameCount: number;
+  frameIndex: number;
 }): Float32Array {
   const data = new Float32Array(UNIFORM_FLOAT_COUNT);
   const unsignedData = new Uint32Array(data.buffer);
@@ -1457,7 +1466,7 @@ function makeUniformData(props: {
   unsignedData[36] = props.leafCapacity - 1;
   unsignedData[37] = props.leafCapacity;
   unsignedData[38] = props.primitiveCapacity;
-  unsignedData[39] = 0;
+  unsignedData[39] = props.frameIndex;
   unsignedData[40] = props.displayWidth;
   unsignedData[41] = props.displayHeight;
   unsignedData[42] = props.phaseIndex;
@@ -1654,6 +1663,10 @@ function getAvailableResolutionScales(minimumResolutionScale: number): number[] 
 
 function clampResolutionScale(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, Number.isFinite(value) ? value : minimum));
+}
+
+function getSamplesPerPixel(options: RayTracingSceneRenderOptions): number {
+  return Math.max(1, Math.min(16, Math.floor(options.samplesPerPixel ?? 1)));
 }
 
 function isCameraCut(

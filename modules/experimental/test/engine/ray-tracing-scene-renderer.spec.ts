@@ -135,6 +135,11 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
       1,
       'new history is fully initialized before sparse scheduling can begin'
     );
+    testCase.equal(
+      initialStatistics.rayTracing?.accumulatedSamples,
+      2,
+      'ray-tracing telemetry reports samples per pixel rather than encoded frames'
+    );
 
     if (supportsRawValidationErrorScopes) {
       device.handle.pushErrorScope('validation');
@@ -146,6 +151,29 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
       3,
       'unchanged instances reuse the compiled graph and progressive history'
     );
+    testCase.equal(
+      accumulatedStatistics.rayTracing?.accumulatedSamples,
+      4,
+      'progressive telemetry accumulates the requested samples per pixel'
+    );
+
+    const nonReprojectedStatistics = renderer.render({...options, temporalReprojection: false});
+    device.submit();
+    testCase.equal(
+      nonReprojectedStatistics.rayTracing?.accumulatedSamples,
+      2,
+      'disabling temporal reprojection starts a fresh progressive history'
+    );
+    const accumulatedNonReprojectedStatistics = renderer.render({
+      ...options,
+      temporalReprojection: false
+    });
+    device.submit();
+    testCase.equal(
+      accumulatedNonReprojectedStatistics.rayTracing?.accumulatedSamples,
+      4,
+      'unchanged transforms can still accumulate without temporal reprojection'
+    );
 
     sphereSurface.transforms = [
       new Matrix4()
@@ -153,12 +181,17 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
         .rotateY(Math.PI / 3)
         .scale([0.75, 1.3, 0.5])
     ];
-    const reducedStatistics = renderer.render(options);
+    const reducedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
     testCase.equal(
       reducedStatistics.instanceCount,
       2,
       'refit invalidates inactive leaves when the instance count shrinks'
+    );
+    testCase.equal(
+      reducedStatistics.rayTracing?.accumulatedSamples,
+      2,
+      'moving transforms reset history when reprojection is disabled'
     );
 
     sphereSurface.transforms = [

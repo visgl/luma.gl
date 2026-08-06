@@ -147,7 +147,7 @@ fn makeRandom(seed: u32) -> f32 {
 }
 
 fn makeCameraRay(pixel: vec2<u32>, sampleIndex: u32) -> Ray {
-  let frameIndex = u32(uniforms.settings.y);
+  let frameIndex = uniforms.acceleration.w;
   let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
   let seed = pixelIndex * 1973u + frameIndex * 9277u + sampleIndex * 26699u +
     uniforms.displayPhase.z * 3181u + 17u;
@@ -439,7 +439,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
     directLightCount,
     requestedShadowSamples == 0u || uniforms.settings.w <= 0.5
   );
-  let rotatingLightOffset = u32(uniforms.settings.y) % max(directLightCount, 1u);
+  let rotatingLightOffset = uniforms.acceleration.w % max(directLightCount, 1u);
   var directLightIndex = 0u;
 
   for (var lightIndex = 0u; lightIndex < uniforms.dimensions.w; lightIndex++) {

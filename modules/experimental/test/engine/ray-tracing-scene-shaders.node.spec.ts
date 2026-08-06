@@ -108,7 +108,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('invocation.x * phaseCount + phaseOffset');
     expect(RAY_TRACING_SCENE_SHADER).toContain('let requestedShadowSamples');
     expect(RAY_TRACING_SCENE_SHADER).toContain('requestedShadowSamples == 0u');
-    expect(RAY_TRACING_SCENE_SHADER).toContain('let rotatingLightOffset');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let rotatingLightOffset = uniforms.acceleration.w');
     expect(RAY_TRACING_SCENE_SHADER).toContain('rotatingLightIndex >= shadowSampleCount');
     expect(RAY_TRACING_SCENE_SHADER).toContain('let lightSampleWeight');
   });
