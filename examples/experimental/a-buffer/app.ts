@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device, type Framebuffer, type RenderPipelineParameters, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';

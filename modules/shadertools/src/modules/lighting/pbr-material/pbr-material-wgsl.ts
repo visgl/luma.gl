@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
 
 // Attribution:
 // MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors

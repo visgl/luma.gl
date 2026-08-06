@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // WEBGPU ADAPTER
 export type {WebGPUAdapter} from './adapter/webgpu-adapter';

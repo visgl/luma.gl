@@ -1,6 +1,7 @@
 // luma.gl
-// SPDX-License-Identifier: MIT and ISC
-// Copyright (c) vis.gl contributors
+// SPDX-License-Identifier: MIT AND ISC
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) 2016, Mapbox
 
 /*
   Adapted from loaders.gl's WKB triangulator and mapbox/earcut.

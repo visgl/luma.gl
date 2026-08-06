@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** WGSL source implementing 64-bit DGGS cell key and boundary helpers. */
 export const dggsWGSL = /* wgsl */ `\

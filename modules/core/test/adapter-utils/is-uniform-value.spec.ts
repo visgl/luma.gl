@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {isUniformValue} from '@luma.gl/core/adapter-utils/is-uniform-value';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';

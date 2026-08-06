@@ -37,6 +37,8 @@
 - TypeScript strict mode
 - We end lines with semicolons
 - Single quotes
+- First-party source files with `SPDX-License-Identifier` must also declare each actual copyright holder using `SPDX-FileCopyrightText`.
+- Preserve existing license expressions and upstream attribution; do not infer MIT licensing or ownership for generated, vendored, or third-party files.
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
 - Keep shipped runtime validation minimal to protect bundle size. Prefer static typing and simple assertions over heavy validation or verbose runtime error paths.

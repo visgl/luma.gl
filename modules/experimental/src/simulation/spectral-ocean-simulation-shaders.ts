@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Number of invocations along each dimension of a spectral-ocean workgroup. */
 export const SPECTRAL_OCEAN_WORKGROUP_DIMENSION = 8;

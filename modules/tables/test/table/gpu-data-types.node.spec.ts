@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUData, type GPUDataView} from '@luma.gl/tables';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GroupNode} from '@luma.gl/engine';
 import {SKIN_MAX_JOINTS, skin} from '@luma.gl/shadertools';

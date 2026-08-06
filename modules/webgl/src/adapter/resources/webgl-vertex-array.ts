@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TypedArray, NumericArray} from '@math.gl/types';
 import type {AttributeInfo, Device, Buffer, VertexArrayProps} from '@luma.gl/core';

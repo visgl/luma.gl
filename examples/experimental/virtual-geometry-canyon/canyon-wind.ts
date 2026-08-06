@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 const MINIMUM_GAIN = 0.0001;
 const WIND_NOISE_DURATION_SECONDS = 10;

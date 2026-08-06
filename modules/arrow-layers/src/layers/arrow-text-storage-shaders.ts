@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ShaderLayout} from '@luma.gl/core';
 import {DECK_ARROW_WGSL_COLOR_UTILS} from './arrow-layer-types';

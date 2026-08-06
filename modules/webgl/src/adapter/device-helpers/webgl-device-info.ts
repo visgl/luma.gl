@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {DeviceInfo} from '@luma.gl/core';
 import {GL, GLExtensions} from '@luma.gl/webgl/constants';

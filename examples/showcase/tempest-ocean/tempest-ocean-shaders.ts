@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 const TEMPEST_OCEAN_SCENE_PARAMETERS = /* wgsl */ `\
 struct TempestOceanSceneParameters {

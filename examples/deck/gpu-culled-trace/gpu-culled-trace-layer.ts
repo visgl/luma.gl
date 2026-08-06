@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Layer, type LayerContext, type LayerProps, type PickingInfo} from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';

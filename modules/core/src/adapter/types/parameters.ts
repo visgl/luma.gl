@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {NumberArray4, NumberArray6} from '@math.gl/types';
 import {TextureFormatDepthStencil} from '../../shadertypes/texture-types/texture-formats';

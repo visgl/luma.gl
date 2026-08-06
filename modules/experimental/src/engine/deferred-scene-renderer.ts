@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type TextureFormatColor} from '@luma.gl/core';
 import {type ModelProps, ShaderPassRenderer} from '@luma.gl/engine';

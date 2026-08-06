@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIFrameStatistics} from './anari-types';
 

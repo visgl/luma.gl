@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** One-sigma screen-space axes of an anisotropic projected Gaussian. */
 export type ProjectedSplatCovariance = {

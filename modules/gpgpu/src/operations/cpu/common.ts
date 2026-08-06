@@ -1,6 +1,6 @@
 // deck.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer, TypedArray} from '@luma.gl/core';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {hydrateArrowTable} from './arrow-table-transport.ts';
 import {tessellateArrowPolygons} from './arrow-polygon-tessellation.ts';

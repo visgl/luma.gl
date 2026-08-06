@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Draws generic scene bounds and stable application IDs without domain-specific scene fields. */
 export const SCENE_GRAPH_RENDER_SHADER = /* wgsl */ `

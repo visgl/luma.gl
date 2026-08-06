@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Interpolation modes shared by animation formats and engine tracks. */
 export type AnimationInterpolation = 'STEP' | 'LINEAR' | 'CUBICSPLINE';

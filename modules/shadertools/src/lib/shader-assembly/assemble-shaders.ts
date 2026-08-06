@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {getShaderModuleDependencies} from '../shader-module/shader-module-dependencies';
 import {PlatformInfo} from './platform-info';

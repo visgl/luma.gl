@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';

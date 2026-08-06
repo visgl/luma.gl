@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray9, TypedArray} from '@math.gl/core';
 import type {

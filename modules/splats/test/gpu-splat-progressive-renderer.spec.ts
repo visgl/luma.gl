@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test, {type Test} from 'test/utils/vitest-tape';
 import type {Device} from '@luma.gl/core';

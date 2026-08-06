@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUCommandGraphInspectorSnapshot} from '@luma.gl/experimental';
 import {CompactDropdown} from './compact-dropdown';

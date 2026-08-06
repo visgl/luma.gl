@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // Goal is to make WebGL2 contexts look like WebGL1
 // @note Partly inspired by with some older code from the `regl` library

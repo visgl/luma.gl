@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export const CANYON_ROOT_GRID_SIZE = 4;
 export const CANYON_REFINEMENT_DEPTH = 6;
