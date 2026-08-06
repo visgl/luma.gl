@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GroupNode, ScenegraphNode} from '@luma.gl/engine';
 import {describe, expect, test} from 'vitest';
