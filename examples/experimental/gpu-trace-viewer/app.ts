@@ -1696,6 +1696,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         }
       } else if (target.matches('[data-dependency-capacity]')) {
         this.rebuild(this.spanCapacity, Number(target.value));
+        target.value = String(this.dependencyCapacity);
       } else if (target instanceof HTMLInputElement && target.dataset.group !== undefined) {
         const group = Number(target.dataset.group);
         this.enabledMask = setBit(this.enabledMask, group, target.checked);

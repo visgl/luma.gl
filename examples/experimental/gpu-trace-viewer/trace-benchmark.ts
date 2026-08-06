@@ -133,7 +133,8 @@ export function getTraceCapacityContract(
   const fitsChunkedDeviceLimits =
     maximumSpanChunkByteLength >= TRACE_SPAN_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH &&
     dependencyBufferByteLength <= limits.maxStorageBufferBindingSize &&
-    dependencyBufferByteLength <= limits.maxBufferSize;
+    dependencyBufferByteLength <= limits.maxBufferSize &&
+    (dependencyCapacity === 0 || (fitsStorageBufferBindingSize && fitsMaxBufferSize));
   return Object.freeze({
     spanCapacity,
     dependencyCapacity,

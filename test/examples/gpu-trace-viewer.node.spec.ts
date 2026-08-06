@@ -192,6 +192,14 @@ test('GPU trace capacity contract makes the monolithic 10M limit explicit', t =>
     true,
     'portable limits admit ten million spans when dependency endpoint lookup is disabled'
   );
+  t.equal(
+    getTraceCapacityContract(10_000_000, 250_000, {
+      maxStorageBufferBindingSize: 128 * 1024 * 1024,
+      maxBufferSize: 256 * 1024 * 1024
+    }).fitsChunkedDeviceLimits,
+    false,
+    'dependency endpoint lookup keeps its monolithic span requirement explicit'
+  );
 
   const maximum = getTraceCapacityContract(10_000_000, 10_000_000, {
     maxStorageBufferBindingSize: 1024 * 1024 * 1024,
