@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {RenderPipelineParameters} from '@luma.gl/core';
 import {GroupNode, Material, ModelNode} from '@luma.gl/engine';
