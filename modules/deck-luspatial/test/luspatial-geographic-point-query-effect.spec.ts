@@ -33,6 +33,92 @@ test('LuSpatialGeographicPointQueryEffect validates props before browser GPU all
   expect(() => new LuSpatialGeographicPointQueryEffect(device, props)).toThrow(allocationSentinel);
 });
 
+test('LuSpatialGeographicPointQueryEffect supports a browser-safe software WebGPU lifecycle', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const publishedStats: unknown[] = [];
+  const effect = new LuSpatialGeographicPointQueryEffect(device, {
+    id: 'luspatial-geographic-query-software-lifecycle-test',
+    longitudeLatitudes: new Float32Array([-73.97, 40.75, -73.99, 40.74]),
+    sourceBounds: [-74, 40.72, -73.94, 40.78],
+    projectionOrigin: [-73.97, 40.75],
+    projectedBounds: [-3, -3, 3, 3],
+    gridSize: [2, 2],
+    initialSelection: {center: [-73.97, 40.75], radiusKilometres: 2},
+    selectionRadiusRangeKilometres: [0.1, 1],
+    viewportId: 'map',
+    viewportProjectionPaddingKilometres: 0,
+    enableDiagnostics: false,
+    maxInspectorSamples: 4,
+    onStats: stats => publishedStats.push(stats)
+  });
+  const redrawReasons: string[] = [];
+  const effectContext = {
+    device,
+    deck: {redraw: (reason: string) => redrawReasons.push(reason)}
+  } as unknown as EffectContext;
+
+  try {
+    expect(publishedStats).toHaveLength(1);
+    expect(effect.getSelection()).toEqual({
+      center: [-73.97, 40.75],
+      radiusKilometres: 1
+    });
+    expect(() =>
+      effect.setup({...effectContext, device: {...device}} as unknown as EffectContext)
+    ).toThrow(/must be adopted by the device used during construction/);
+    effect.setup(effectContext);
+
+    expect(() => effect.setSelection([181, 0])).toThrow(/must be valid longitude\/latitude/);
+    expect(() => effect.setSelection([-73.98, 40.75], Number.POSITIVE_INFINITY)).toThrow(
+      /selection radius must be finite/
+    );
+    effect.setSelection([-73.98, 40.75], 0.5);
+    expect(effect.getSelection()).toEqual({center: [-73.98, 40.75], radiusKilometres: 0.5});
+    expect(() => effect.setSelectionRadius(Number.NaN)).toThrow(/selection radius must be finite/);
+    effect.setSelectionRadius(0.01);
+    expect(effect.getSelection().radiusKilometres).toBe(0.1);
+    expect(redrawReasons).toEqual([
+      'luspatial-geographic-query-software-lifecycle-test selection changed',
+      'luspatial-geographic-query-software-lifecycle-test selection radius changed'
+    ]);
+
+    const defaultCommandEncoder = device.commandEncoder;
+    const lifecycleCommandEncoder = device.createCommandEncoder({
+      id: 'luspatial-geographic-query-software-lifecycle-test'
+    });
+    device.commandEncoder = lifecycleCommandEncoder;
+    try {
+      const preRenderOptions = {
+        viewports: [
+          {
+            id: 'map',
+            width: 100,
+            height: 100,
+            unproject: ([x, y]: number[]) => [-74 + (x / 100) * 0.06, 40.77 - (y / 100) * 0.04]
+          }
+        ]
+      } as unknown as Parameters<NonNullable<Effect['preRender']>>[0];
+      effect.preRender(preRenderOptions);
+      effect.preRender(preRenderOptions);
+      effect.preRender({
+        viewports: [{id: 'other', width: 100, height: 100}]
+      } as unknown as Parameters<NonNullable<Effect['preRender']>>[0]);
+    } finally {
+      device.commandEncoder = defaultCommandEncoder;
+      const discardedCommandBuffer = lifecycleCommandEncoder.finish();
+      discardedCommandBuffer.destroy();
+    }
+    expect(publishedStats).toHaveLength(2);
+  } finally {
+    effect.cleanup(effectContext);
+    effect.destroy();
+  }
+
+  effect.preRender({viewports: []} as unknown as Parameters<NonNullable<Effect['preRender']>>[0]);
+});
+
 test('LuSpatialGeographicPointQueryEffect builds and updates real hardware WebGPU queries', async () => {
   const device = await getWebGPUTestDevice();
   // The precise radius kernel uses integer fp64 emulation and is intentionally not exercised on
