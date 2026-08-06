@@ -65,7 +65,7 @@ import {
 | `ANARIAnimationPlaybackSchema` | Selected clip, initial playback state, speed, and once/repeat/ping-pong loop mode. |
 | `ANARILightSchema` | `ambient`, `directional`, `point`, and `spot` lights. |
 | `ANARICameraSchema` | `perspective` and `orthographic` cameras. |
-| `ANARIRendererSchema` | Optional renderer preset configuration for `default`, `deferred`, `debugNormals`, and `debugDepth`. |
+| `ANARIRendererSchema` | Optional renderer preset configuration for `default`, `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. |
 | `ANARISurfaceSchema` | Named geometry/material pairings. |
 | `ANARIGroupSchema` | Reusable retained surfaces and optional lights. |
 | `ANARIInstanceSchema` | Named transform placements and composable animations. |
@@ -77,6 +77,11 @@ import {
 Each object schema uses a strict property set and discriminates supported subtypes through its
 `@@type` property. Numeric constraints reject invalid radii, segment counts, roughness, metallic
 values, light intensities, camera distances, and similar unsupported values.
+
+Ray-tracing presets additionally accept a positive integer `samplesPerPixel`, a nonnegative integer
+`maxBounces`, and boolean `progressive` and `shadows` settings. These subtype-specific properties
+remain invalid on forward, deferred, and debug renderer presets. Application-defined runtimes
+registered with `ANARIDevice.registerRenderer()` are not automatically added to the strict schema.
 
 ## Texture and sampler declarations
 

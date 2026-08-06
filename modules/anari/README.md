@@ -37,8 +37,9 @@ spirit of ANARI on top of luma.gl.
 Applications describe cameras, worlds, groups, instances, surfaces, geometry, materials, lights,
 renderers, and frames. The luma.gl-backed device orchestrates existing shared scene renderers,
 physically based shader modules, engine animation/morph helpers, portable WebGL/WebGPU render
-passes, optional bloom, and HDR presentation when the WebGPU canvas is configured for extended
-dynamic range. The ANARI facade does not define a second BRDF, renderer, or asset loader.
+passes, optional bloom, WebGPU software ray tracing, and HDR presentation when the WebGPU canvas is
+configured for extended dynamic range. The ANARI facade adapts retained objects into shared renderer
+descriptors; it does not define a second BRDF, renderer, or asset loader.
 
 ## Private workspace
 
@@ -118,10 +119,36 @@ changed object is committed.
 | Material | `matte`, `physicallyBased` |
 | Light | `ambient`, `directional`, `point`, `spot` |
 | Camera | `perspective`, `orthographic` |
-| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth` |
+| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth`, `raytrace`, and registered subtypes |
 
 The scene hierarchy also supports arrays, surfaces, groups, transform instances, worlds, and
 frames. Reusing one surface across many instances normally produces one instanced draw.
+
+## Graph-based ray tracing
+
+Select software ray tracing for an existing retained scene on a WebGPU device:
+
+```ts
+const renderer = anari.newRenderer('raytrace', {
+  samplesPerPixel: 1,
+  progressive: true,
+  shadows: true
+});
+
+frame.setParameter('renderer', renderer).commitParameters();
+frame.render();
+```
+
+The ANARI adapter translates committed objects for the shared `RayTracingSceneRenderer` in
+`@luma.gl/experimental`. A WebGPU command graph traces transformed analytic spheres and mesh
+triangles, evaluates direct lights and shadow rays, progressively accumulates primary-ray samples,
+and presents HDR when configured. Hardware ray tracing, acceleration structures, indirect
+multi-bounce transport, denoising, and volume rendering are not implemented.
+Skeletal/morph deformation, material textures, alpha/transmission, and advanced PBR shading remain
+on the forward/deferred renderer paths.
+
+Applications can register additional lazy renderer runtimes with
+`anari.registerRenderer(subtype, runtimeFactory)`.
 
 ## HDR presentation
 

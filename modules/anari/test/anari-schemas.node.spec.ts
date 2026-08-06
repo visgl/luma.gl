@@ -2,6 +2,7 @@ import {
   ANARI_SCENE_JSON_SCHEMA,
   ANARIGeometrySchema,
   ANARIMaterialSchema,
+  ANARIRendererSchema,
   ANARISceneSchema,
   ANARITextureSchema
 } from '@luma.gl/anari/schemas';
@@ -22,6 +23,47 @@ test('ANARI scene schemas validate all complete showcase presets', testContext =
   testContext.ok(
     'properties' in ANARI_SCENE_JSON_SCHEMA,
     'the generated JSON Schema describes the retained scene object'
+  );
+  testContext.end();
+});
+
+test('ANARI renderer schemas validate graph-based ray tracing settings', testContext => {
+  const renderer = {
+    '@@type': 'raytrace',
+    samplesPerPixel: 4,
+    maxBounces: 2,
+    progressive: true,
+    shadows: true,
+    exposure: 1.4
+  };
+
+  testContext.ok(
+    ANARIRendererSchema.safeParse(renderer).success,
+    'raytrace renderers accept bounded sampling and lighting controls'
+  );
+  testContext.ok(
+    ANARISceneSchema.safeParse({...PLAYGROUND_PRESETS[0].scene, renderer}).success,
+    'complete retained scenes can declare the raytrace renderer'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, samplesPerPixel: 0}).success,
+    'sample counts must be positive integers'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, maxBounces: -1}).success,
+    'bounce limits cannot be negative'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, progressive: 1}).success,
+    'progressive accumulation must be enabled with a boolean'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({'@@type': 'default', samplesPerPixel: 4}).success,
+    'ray tracing controls are not silently accepted by forward renderers'
+  );
+  testContext.ok(
+    JSON.stringify(ANARI_SCENE_JSON_SCHEMA).includes('raytrace'),
+    'the generated JSON Schema advertises the raytrace renderer subtype'
   );
   testContext.end();
 });

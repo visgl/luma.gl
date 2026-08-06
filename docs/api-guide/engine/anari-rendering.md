@@ -189,6 +189,17 @@ The floor is attached directly to the world, so it uses the identity transform. 
 
 ## Try the deferred renderer
 
+The deferred G-buffer requires 36 color-attachment bytes per sample, exceeding the default WebGPU
+limit of 32. Request the adapter's supported limits when creating the graphics device:
+
+```ts
+const graphicsDevice = await luma.createDevice({
+  adapters: [webgpuAdapter, webgl2Adapter],
+  featureLevel: 'max',
+  createCanvasContext: {canvas}
+});
+```
+
 Use `newRenderer('deferred')` when you want the ANARI scene rendered through the experimental WebGPU G-buffer and deferred lighting path:
 
 ```ts
@@ -199,6 +210,33 @@ const renderer = anariDevice.newRenderer('deferred', {
 ```
 
 The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
+
+## Try the graph-based ray tracer
+
+On WebGPU, switch the same retained scene to the software ray-tracing renderer:
+
+```ts
+const renderer = anariDevice.newRenderer('raytrace', {
+  samplesPerPixel: 1,
+  maxBounces: 1,
+  progressive: true,
+  shadows: true
+});
+
+frame.setParameter('renderer', renderer).commitParameters();
+```
+
+The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from
+`@luma.gl/experimental`. Its WebGPU command graph intersects transformed analytic spheres and
+triangle meshes, evaluates direct lights and shadow rays, progressively accumulates unchanged
+primary-ray samples, and presents HDR when the canvas is configured for it. Generated quads,
+cylinders, and cones use their existing triangle geometry.
+
+This is software ray tracing, not hardware ray tracing or full path tracing. The current renderer
+does not build a BVH, match every raster-material texture feature, trace indirect bounces, denoise,
+or support volume objects. Skeletal skinning, morph-target deformation, material textures,
+alpha/transmission, and advanced PBR shading remain on the forward/deferred paths. `maxBounces` is
+reserved for future multi-bounce transport.
 
 ## Understand staging and commits
 
@@ -477,6 +515,7 @@ const beauty = anariDevice.newRenderer('default', {
 const normals = anariDevice.newRenderer('debugNormals');
 const depth = anariDevice.newRenderer('debugDepth');
 const deferred = anariDevice.newRenderer('deferred');
+const raytrace = anariDevice.newRenderer('raytrace', {shadows: true});
 ```
 
 Switch renderers by committing the frame:
@@ -485,7 +524,9 @@ Switch renderers by committing the frame:
 frame.setParameter('renderer', normals).commitParameters();
 ```
 
-Debug renderers automatically skip bloom. Switch to `deferred` to use the WebGPU G-buffer path, or switch back to `default` to restore the portable forward renderer with bloom.
+Debug renderers automatically skip bloom. Switch to `deferred` for the WebGPU G-buffer path,
+`raytrace` for WebGPU software ray tracing, or `default` for the portable forward renderer with
+bloom.
 
 ## Handle resizing
 
@@ -641,12 +682,12 @@ anariDevice.extensions;
 
 ## Understand the renderer architecture
 
-Each `frame.render()` performs the following work:
+Each raster `frame.render()` performs the following work:
 
 1. Resolve the frame's committed world, camera, and renderer.
 2. Collect directly attached world surfaces and surfaces reached through world instances.
 3. Group placements by retained surface object identity.
-4. Select the forward or deferred renderer runtime from the committed renderer subtype.
+4. Select the registered forward or deferred renderer runtime from the committed renderer subtype.
 5. Reuse or rebuild one luma.gl `Model` per distinct surface.
 6. Upload four per-instance matrix-column vertex buffers.
 7. Translate ANARI materials into luma.gl material uniforms and texture bindings.
@@ -658,11 +699,40 @@ Each `frame.render()` performs the following work:
 
 The ANARI adapter does not own a second shader or material pipeline. It translates retained
 objects into the format-independent
-[`SceneRenderer`](/docs/api-reference/experimental/scene-renderer) or
-[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) descriptors
-from `@luma.gl/experimental`. The shared forward runtime uses WGSL shaders on WebGPU and equivalent
-GLSL shaders on WebGL 2. The WebGPU deferred path resolves compatible opaque scenes through the same
-retained object graph and falls back to forward rendering for unsupported scene features.
+[`SceneRenderer`](/docs/api-reference/experimental/scene-renderer),
+[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer), or
+`RayTracingSceneRenderer` descriptors from `@luma.gl/experimental`. The shared forward runtime uses
+WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves
+compatible opaque scenes through the same retained object graph and falls back to forward rendering
+for unsupported scene features. The WebGPU ray-tracing path instead uses command-graph compute,
+progressive HDR history, and a fullscreen presentation pass.
+
+Applications can add another renderer without changing retained scene objects:
+
+```ts
+anariDevice.registerRenderer(
+  'customRaymarch',
+  graphicsDevice => new CustomRaymarchRuntime(graphicsDevice)
+);
+
+const raymarch = anariDevice.newRenderer('customRaymarch');
+frame.setParameter('renderer', raymarch).commitParameters();
+```
+
+Runtime factories are lazy and device-owned. See
+[registering renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes)
+for the runtime contract and ownership details.
+
+### Ray-tracing implementation roadmap
+
+| Tranche | Scope | Status |
+| --- | --- | --- |
+| T0: renderer and graph foundation | Lazy subtype registration, retained-scene adapters, the shared experimental `RayTracingSceneRenderer`, explicit WebGPU command-graph resources, and application-owned submission. | Implemented. |
+| T1: direct rays and shadows | Transformed analytic spheres, mesh triangles, tessellated analytic shapes, perspective/orthographic cameras, direct lights, hard shadow rays, progressive primary-ray sampling, and HDR presentation. | Implemented without hardware ray tracing or acceleration structures. |
+| T2: acceleration and large scenes | Flat BVH construction/refitting, shared instance traversal, skeletal/morph geometry extraction, explicit scene-buffer ownership, and bounded large-scene performance. | Planned. |
+| T3: indirect transport and denoising | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1. | Planned. |
+| T4: ray marching and volumes | Signed-distance-field ray marching, retained spatial fields, 3D textures, transfer functions, and ANARI volume objects. | Planned. |
+| T5: hybrid composition and diagnostics | Raster/ray composition, reusable graph timings, renderer capability reporting, and debug visualization channels. | Planned. |
 
 ### Cache invalidation
 
@@ -853,7 +923,8 @@ explicit named `group` when multiple surfaces or group-attached lights are requi
 Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad`
 geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot`
 lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`,
-`deferred`, `debugNormals`, and `debugDepth`.
+`deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept
+`samplesPerPixel`, `maxBounces`, `progressive`, and `shadows`.
 
 ### Generate compact triangle meshes and starfields
 
@@ -1061,7 +1132,10 @@ The showcase provides three scenes:
 - **Crystal Cathedral**: architectural geometry, emissive accents, and atmospheric lighting.
 - **Celestial Engine**: heavily instanced structures and animated orbiting emitters.
 
-Interactive controls switch scenes, select beauty/normals/depth renderers, toggle bloom, orbit the camera, and show retained instance and draw-call counts. Select **JSON LAB** to open the live JSON scene playground. Add `?backend=webgl` to either page to force the WebGL 2 path.
+Interactive controls switch scenes, select forward/deferred/ray-tracing/debug renderers, toggle
+bloom, orbit the camera, and show retained instance and draw-call counts. Select **JSON LAB** to
+open the live JSON scene playground. Add `?backend=webgl` to either page to force the WebGL 2 path;
+the deferred and ray-tracing controls are disabled when WebGPU is unavailable.
 
 The showcase implementation lives in `examples/showcase/anari/app.ts`; the playground lives in
 `examples/showcase/anari/playground.ts`, `playground-scene.ts`, and `playground-presets.ts`.
@@ -1072,13 +1146,14 @@ zero-copy arrays, and rendering on available graphics backends.
 
 The current package is a focused proof of concept, not a complete ANARI implementation:
 
-- No ANARI C API binding, binary protocol, conformance claim, or general renderer plug-in mechanism.
+- No ANARI C API binding, binary protocol, conformance claim, or dynamic native renderer-library loading; custom runtimes use the local renderer registry.
 - Geometry subtypes are limited to triangle meshes, spheres, cylinders, cones, and quads.
 - Only one-dimensional data/reference arrays are implemented; array metadata is not interpreted or validated.
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- Visibility, picking, volumes, clipping planes, shadows, and asynchronous frame mapping are not implemented.
+- The WebGPU-only `raytrace` renderer brute-forces software intersections without a BVH, hardware ray tracing, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR parity, indirect bounces, or denoising.
+- Visibility, picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic
   skin-palette binding in the showcase importer and animated glTF export are not yet implemented.

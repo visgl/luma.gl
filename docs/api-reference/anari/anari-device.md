@@ -103,6 +103,40 @@ newFrame(parameters: ANARIFrameParameters): ANARIFrame;
 
 See [arrays and geometry](/docs/api-reference/anari/anari-geometry), [materials and lighting](/docs/api-reference/anari/anari-materials-and-lights), [scene hierarchy](/docs/api-reference/anari/anari-scene), and [cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering) for complete parameter details.
 
+## Registering renderer runtimes
+
+```ts
+interface ANARIRendererRuntime {
+  render(frame: ANARIFrame): ANARIFrameStatistics;
+  destroyFrame(frame: ANARIFrame): void;
+  destroy(): void;
+}
+
+type ANARIRendererRuntimeFactory = (device: Device) => ANARIRendererRuntime;
+
+registerRenderer(
+  subtype: ANARIRendererSubtype,
+  runtimeFactory: ANARIRendererRuntimeFactory
+): this;
+```
+
+Register an application-defined subtype before rendering a frame that selects it:
+
+```ts
+anariDevice.registerRenderer(
+  'customRaymarch',
+  graphicsDevice => new CustomRaymarchRuntime(graphicsDevice)
+);
+
+const renderer = anariDevice.newRenderer('customRaymarch');
+frame.setParameter('renderer', renderer).commitParameters();
+```
+
+Runtime factories are invoked lazily when their first selected frame renders. Subtypes sharing the
+same factory share its runtime; the ANARI device owns runtime and frame-resource destruction.
+Registered names appear in `getObjectSubtypes('renderer')`. Built-in `raytrace` is advertised on
+both backend types, but rendering it requires a WebGPU device.
+
 ## Capability discovery
 
 ### `getObjectSubtypes(type)`
@@ -118,7 +152,7 @@ anariDevice.getObjectSubtypes('geometry');
 // ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
 
 anariDevice.getObjectSubtypes('renderer');
-// ['default', 'deferred', 'debugNormals', 'debugDepth']
+// ['default', 'deferred', 'debugNormals', 'debugDepth', 'raytrace']
 ```
 
 The `ANARIObjectType` union is:

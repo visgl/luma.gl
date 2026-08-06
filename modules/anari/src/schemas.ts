@@ -294,14 +294,23 @@ const rendererProperties = {
   fogDensity: nonnegativeNumberSchema.optional()
 };
 
+const raytraceRendererProperties = {
+  ...rendererProperties,
+  samplesPerPixel: z.number().int().positive().optional(),
+  maxBounces: z.number().int().nonnegative().optional(),
+  progressive: z.boolean().optional(),
+  shadows: z.boolean().optional()
+};
+
 export const ANARIRendererSchema = z
   .discriminatedUnion('@@type', [
     z.strictObject({'@@type': z.literal('default'), ...rendererProperties}),
     z.strictObject({'@@type': z.literal('deferred'), ...rendererProperties}),
+    z.strictObject({'@@type': z.literal('raytrace'), ...raytraceRendererProperties}),
     z.strictObject({'@@type': z.literal('debugNormals'), ...rendererProperties}),
     z.strictObject({'@@type': z.literal('debugDepth'), ...rendererProperties})
   ])
-  .describe('Beauty or diagnostic renderer settings, including HDR and bloom controls.');
+  .describe('Forward, deferred, ray tracing, or diagnostic renderer settings.');
 
 export const ANARISurfaceSchema = z
   .strictObject({

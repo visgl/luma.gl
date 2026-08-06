@@ -17,7 +17,8 @@ import {
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
-import type {ANARIRendererRuntime} from './anari-renderer-runtime';
+import {ANARIRayTracingRuntime} from './anari-ray-tracing-runtime';
+import type {ANARIRendererRuntime, ANARIRendererRuntimeFactory} from './anari-renderer-runtime';
 import {ANARIRenderingRuntime} from './anari-rendering-runtime';
 import type {
   ANARIArrayParameters,
@@ -43,7 +44,7 @@ import type {
   ANARIWorldParameters
 } from './anari-types';
 
-const OBJECT_SUBTYPES: Record<ANARIObjectType, readonly string[]> = {
+const OBJECT_SUBTYPES: Record<Exclude<ANARIObjectType, 'renderer'>, readonly string[]> = {
   array: ['array1D'],
   camera: ['perspective', 'orthographic'],
   frame: ['default'],
@@ -52,7 +53,6 @@ const OBJECT_SUBTYPES: Record<ANARIObjectType, readonly string[]> = {
   instance: ['transform'],
   light: ['ambient', 'directional', 'point', 'spot'],
   material: ['matte', 'physicallyBased'],
-  renderer: ['default', 'deferred', 'debugNormals', 'debugDepth'],
   sampler: ['image2D'],
   surface: ['default'],
   world: ['default']
@@ -79,10 +79,25 @@ export class ANARIDevice {
   readonly device: Device;
   readonly extensions = SUPPORTED_EXTENSIONS;
 
-  private readonly renderingRuntimes = new Map<'forward' | 'deferred', ANARIRendererRuntime>();
+  private readonly rendererRuntimeFactories = new Map<
+    ANARIRendererSubtype,
+    ANARIRendererRuntimeFactory
+  >();
+  private readonly renderingRuntimes = new Map<ANARIRendererRuntimeFactory, ANARIRendererRuntime>();
 
   constructor(device: Device) {
     this.device = device;
+
+    const forwardRuntimeFactory: ANARIRendererRuntimeFactory = graphicsDevice =>
+      new ANARIRenderingRuntime(graphicsDevice);
+    this.registerRenderer('default', forwardRuntimeFactory);
+    this.registerRenderer(
+      'deferred',
+      graphicsDevice => new ANARIRenderingRuntime(graphicsDevice, {deferred: true})
+    );
+    this.registerRenderer('debugNormals', forwardRuntimeFactory);
+    this.registerRenderer('debugDepth', forwardRuntimeFactory);
+    this.registerRenderer('raytrace', graphicsDevice => new ANARIRayTracingRuntime(graphicsDevice));
   }
 
   newArray(parameters: ANARIArrayParameters): ANARIArray {
@@ -138,27 +153,52 @@ export class ANARIDevice {
     return new ANARIRenderer(this, subtype, parameters);
   }
 
+  /** Registers a lazily created rendering backend for a built-in or application-defined subtype. */
+  registerRenderer(
+    subtype: ANARIRendererSubtype,
+    runtimeFactory: ANARIRendererRuntimeFactory
+  ): this {
+    const previousRuntimeFactory = this.rendererRuntimeFactories.get(subtype);
+    this.rendererRuntimeFactories.set(subtype, runtimeFactory);
+
+    if (
+      previousRuntimeFactory &&
+      previousRuntimeFactory !== runtimeFactory &&
+      !Array.from(this.rendererRuntimeFactories.values()).includes(previousRuntimeFactory)
+    ) {
+      this.renderingRuntimes.get(previousRuntimeFactory)?.destroy();
+      this.renderingRuntimes.delete(previousRuntimeFactory);
+    }
+
+    return this;
+  }
+
   newFrame(parameters: ANARIFrameParameters): ANARIFrame {
     return new ANARIFrame(this, parameters);
   }
 
   getObjectSubtypes(type: ANARIObjectType): readonly string[] {
+    if (type === 'renderer') {
+      return Array.from(this.rendererRuntimeFactories.keys());
+    }
     return OBJECT_SUBTYPES[type];
   }
 
   getObjectInfo(type: ANARIObjectType): ANARIObjectInfo {
-    return {type, subtypes: OBJECT_SUBTYPES[type], extensions: this.extensions};
+    return {type, subtypes: this.getObjectSubtypes(type), extensions: this.extensions};
   }
 
   renderFrame(frame: ANARIFrame): ANARIFrameStatistics {
-    const rendererSubtype = frame.getParameter('renderer')?.subtype;
-    const runtimeType = rendererSubtype === 'deferred' ? 'deferred' : 'forward';
-    let renderingRuntime = this.renderingRuntimes.get(runtimeType);
+    const rendererSubtype = frame.getParameter('renderer')?.subtype ?? 'default';
+    const runtimeFactory = this.rendererRuntimeFactories.get(rendererSubtype);
+    if (!runtimeFactory) {
+      throw new Error(`ANARI renderer "${rendererSubtype}" is not registered.`);
+    }
+
+    let renderingRuntime = this.renderingRuntimes.get(runtimeFactory);
     if (!renderingRuntime) {
-      renderingRuntime = new ANARIRenderingRuntime(this.device, {
-        deferred: runtimeType === 'deferred'
-      });
-      this.renderingRuntimes.set(runtimeType, renderingRuntime);
+      renderingRuntime = runtimeFactory(this.device);
+      this.renderingRuntimes.set(runtimeFactory, renderingRuntime);
     }
     return renderingRuntime.render(frame);
   }

@@ -34,6 +34,15 @@ same scene descriptors on WebGPU and resolves compatible opaque/masked metallic-
 through the shared G-buffer and deferred-lighting pass. Advanced materials, blended surfaces,
 environment lighting, and debug views automatically fall back to the forward renderer.
 
+`RayTracingSceneRenderer` consumes the same scene descriptors on WebGPU through a
+[`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph). Optional
+`RayTracingSceneRenderOptions` add analytic sphere metadata, perspective/orthographic camera
+selection, direct-light shadow rays, progressive primary-ray accumulation, and HDR presentation.
+Applications retain command-submission ownership. This initial software ray tracer does not use
+hardware ray-tracing acceleration, a BVH, indirect path tracing, denoising, or volume rendering.
+Skeletal/morph deformation, material textures, alpha/transmission, and advanced PBR shading remain
+on the forward/deferred renderer paths.
+
 `createPBRMaterialFactory`, `createPBRMaterial`, and `createPBRModel` are also available when an
 application needs lower-level composition with the same canonical material and shader contracts.
 These opinionated orchestration helpers remain experimental; `@luma.gl/engine` continues to own

@@ -70,12 +70,12 @@ The native concept “select an ANARI device implementation” therefore maps to
 | `anariNewWorld(device)` | `anariDevice.newWorld({surface, instance, light})` | `new Scene()` | Supported for direct surfaces, instances, and lights. |
 | `anariNewLight(device, subtype)` | `anariDevice.newLight(subtype, parameters)` | THREE.js light subclasses | Supported for `directional`, `point`, and `spot`; JavaScript additionally provides an `ambient` convenience subtype. |
 | `anariNewCamera(device, subtype)` | `anariDevice.newCamera(subtype, parameters)` | `PerspectiveCamera` / `OrthographicCamera` | Supported for `perspective` and `orthographic`. |
-| `anariNewRenderer(device, subtype)` | `anariDevice.newRenderer(subtype, parameters)` | Renderer configuration / debug material | Supported for `default`, WebGPU-only `deferred`, `debugNormals`, and `debugDepth`. |
+| `anariNewRenderer(device, subtype)` | `anariDevice.newRenderer(subtype, parameters)` | Renderer configuration / debug material | Supported for `default`, WebGPU-only `deferred` and `raytrace`, `debugNormals`, `debugDepth`, and locally registered renderer runtimes. |
 | `anariNewFrame(device)` | `anariDevice.newFrame({world, camera, renderer, size})` | `renderer.render(scene, camera)` / render target | Supported for canvas presentation; arbitrary mapped output channels are not implemented. |
 | `anariNewSampler()` | `anariDevice.newSampler('image2D', {image, transform})` | `Texture`, sampler state, texture-backed material properties | Partial: retained 2D image samplers; no procedural or volume samplers. |
 | `anariNewSpatialField()` | No equivalent | 3D texture / volume field | Not implemented. |
 | `anariNewVolume()` | No equivalent | Volume renderer / 3D texture | Not implemented. |
-| `anariNewObject()` | `new ANARIObject(...)` exists, but is not renderer-extensible | Custom `Object3D` subclass | No generic extension-object registration or custom renderer support. |
+| `anariNewObject()` | `new ANARIObject(...)` exists; renderer runtimes register separately | Custom `Object3D` subclass | No generic extension-object registration; custom renderer runtimes use `anariDevice.registerRenderer()`. |
 
 ### Important primitive differences
 

@@ -183,6 +183,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       deferredOption.disabled = true;
       deferredOption.title = 'Deferred rendering requires WebGPU.';
     }
+    const raytraceOption = rendererSelector.querySelector<HTMLOptionElement>(
+      'option[value="raytrace"]'
+    );
+    if (raytraceOption && !this.deferredRendererAvailable) {
+      raytraceOption.disabled = true;
+      raytraceOption.title = 'Graph-based ray tracing requires WebGPU.';
+    }
     rendererSelector.addEventListener('change', event => {
       const selector = event.currentTarget;
       if (selector instanceof HTMLSelectElement) {
