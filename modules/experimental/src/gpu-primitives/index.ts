@@ -122,7 +122,12 @@ export {GPUBatchSort} from './gpu-batch-sort';
 export type {GPUBatchSortProps} from './gpu-batch-sort';
 
 export {GPUReduction} from './gpu-reduction';
-export type {GPUReductionInput, GPUReductionOperation, GPUReductionProps} from './gpu-reduction';
+export type {
+  GPUReductionInput,
+  GPUReductionMask,
+  GPUReductionOperation,
+  GPUReductionProps
+} from './gpu-reduction';
 
 export {
   getGPUFFT2DSupport,

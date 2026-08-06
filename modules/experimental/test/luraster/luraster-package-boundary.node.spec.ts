@@ -36,4 +36,12 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
       expect(exportName in experimentalModule).toBe(false);
     }
   });
+
+  test('exposes raster metadata, graph contributors, and device-limit planning', () => {
+    expect(lurasterModule.GPURaster).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterBufferToTexture).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTextureToBuffer).toBeTypeOf('function');
+    expect(lurasterModule.getRasterDeviceLimits).toBeTypeOf('function');
+    expect(lurasterModule.planRasterDispatchStripes).toBeTypeOf('function');
+  });
 });
