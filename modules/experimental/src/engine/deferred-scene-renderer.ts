@@ -63,6 +63,10 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
       getSceneAlphaMode(surface.material) !== 'BLEND' &&
       !uniforms.unlit &&
       !(uniforms.transmissionFactor && uniforms.transmissionFactor > 0) &&
+      !(uniforms.diffuseTransmissionFactor && uniforms.diffuseTransmissionFactor > 0) &&
+      !(uniforms.multiscatterColorFactor || []).some(component => component > 0) &&
+      !uniforms.bumpMapEnabled &&
+      !bindings.pbr_bumpSampler &&
       !(uniforms.thicknessFactor && uniforms.thicknessFactor > 0) &&
       !(uniforms.clearcoatFactor && uniforms.clearcoatFactor > 0) &&
       !(uniforms.iridescenceFactor && uniforms.iridescenceFactor > 0) &&

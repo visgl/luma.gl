@@ -162,6 +162,25 @@ layout(std140) uniform pbrMaterialUniforms {
   mat3 iridescenceThicknessUVTransform;
   int anisotropyUVSet;
   mat3 anisotropyUVTransform;
+
+  float bumpFactor;
+  bool bumpMapEnabled;
+  float diffuseTransmissionFactor;
+  bool diffuseTransmissionMapEnabled;
+  vec3 diffuseTransmissionColorFactor;
+  bool diffuseTransmissionColorMapEnabled;
+  vec3 multiscatterColorFactor;
+  bool multiscatterColorMapEnabled;
+  float scatterAnisotropy;
+
+  int bumpUVSet;
+  mat3 bumpUVTransform;
+  int diffuseTransmissionUVSet;
+  mat3 diffuseTransmissionUVTransform;
+  int diffuseTransmissionColorUVSet;
+  mat3 diffuseTransmissionColorUVTransform;
+  int multiscatterColorUVSet;
+  mat3 multiscatterColorUVTransform;
 } pbrMaterial;
 
 // Samplers
@@ -215,6 +234,18 @@ uniform sampler2D pbr_iridescenceThicknessSampler;
 #endif
 #ifdef HAS_ANISOTROPYMAP
 uniform sampler2D pbr_anisotropySampler;
+#endif
+#ifdef HAS_BUMPMAP
+uniform sampler2D pbr_bumpSampler;
+#endif
+#ifdef HAS_DIFFUSETRANSMISSIONMAP
+uniform sampler2D pbr_diffuseTransmissionSampler;
+#endif
+#ifdef HAS_DIFFUSETRANSMISSIONCOLORMAP
+uniform sampler2D pbr_diffuseTransmissionColorSampler;
+#endif
+#ifdef HAS_MULTISCATTERCOLORMAP
+uniform sampler2D pbr_multiscatterColorSampler;
 #endif
 // Inputs from vertex shader
 
@@ -319,6 +350,18 @@ vec3 getNormal(mat3 tbn, vec2 uv)
 #else
   // The tbn matrix is linearly interpolated, so we need to re-normalize
   vec3 n = normalize(tbn[2].xyz);
+#endif
+
+#ifdef HAS_BUMPMAP
+  vec2 bumpUV = getMaterialUV(pbrMaterial.bumpUVSet, pbrMaterial.bumpUVTransform);
+  vec2 bumpTexelSize = 1.0 / vec2(textureSize(pbr_bumpSampler, 0));
+  float bumpHeight = texture(pbr_bumpSampler, bumpUV).r;
+  vec2 bumpGradient = vec2(
+    texture(pbr_bumpSampler, bumpUV + vec2(bumpTexelSize.x, 0.0)).r - bumpHeight,
+    texture(pbr_bumpSampler, bumpUV + vec2(0.0, bumpTexelSize.y)).r - bumpHeight
+  );
+  n = normalize(n - pbrMaterial.bumpFactor *
+    (tbn[0] * bumpGradient.x + tbn[1] * bumpGradient.y));
 #endif
 
   return n;
@@ -590,6 +633,95 @@ vec3 getVolumeAttenuation(float thickness)
     max(pbrMaterial.attenuationDistance, 0.0001);
   return exp(-attenuationCoefficient * thickness);
 }
+
+// KHR_materials_volume_scatter is an active draft. This evaluates a local,
+// thickness-aware single-scattering approximation rather than random walk.
+vec3 getDiffuseTransmissionAttenuation(
+  PBRInfo pbrInfo,
+  vec3 multiscatterColor,
+  float thickness
+)
+{
+  vec3 volumeAttenuation = getVolumeAttenuation(thickness);
+  float scatteringStrength = maxComponent(multiscatterColor);
+  if (thickness <= 0.0 || scatteringStrength <= 0.0001) {
+    return volumeAttenuation;
+  }
+
+  float anisotropy = clamp(pbrMaterial.scatterAnisotropy, -0.95, 0.95);
+  float scatteringCosine = clamp(dot(-pbrInfo.v, pbrInfo.l), -1.0, 1.0);
+  float phaseDenominator = max(
+    1.0 + anisotropy * anisotropy - 2.0 * anisotropy * scatteringCosine,
+    0.0001
+  );
+  float phaseWeight = clamp(
+    (1.0 - anisotropy * anisotropy) / pow(phaseDenominator, 1.5),
+    0.0,
+    4.0
+  );
+  float scatteringDepth = thickness / max(pbrMaterial.attenuationDistance, 0.0001);
+  float scatteringProbability = 1.0 - exp(-scatteringDepth);
+  vec3 scatteringColor = clamp(multiscatterColor, vec3(0.0), vec3(1.0));
+  return mix(
+    volumeAttenuation,
+    volumeAttenuation * mix(vec3(1.0), scatteringColor * phaseWeight, scatteringColor),
+    scatteringProbability
+  );
+}
+
+vec3 calculateDiffuseTransmissionLight(
+  PBRInfo pbrInfo,
+  vec3 lightColor,
+  vec3 diffuseTransmissionColor,
+  float diffuseTransmission,
+  vec3 multiscatterColor,
+  float thickness
+)
+{
+  float oppositeHemisphere = max(dot(-pbrInfo.n, pbrInfo.l), 0.0);
+  if (oppositeHemisphere <= 0.0 || diffuseTransmission <= 0.0) {
+    return vec3(0.0);
+  }
+
+  vec3 nonReflectedEnergy = vec3(1.0) - clamp(pbrInfo.reflectance0, vec3(0.0), vec3(1.0));
+  vec3 attenuatedColor = getDiffuseTransmissionAttenuation(
+    pbrInfo,
+    multiscatterColor,
+    thickness
+  );
+  return lightColor * diffuseTransmissionColor * nonReflectedEnergy *
+    attenuatedColor * (diffuseTransmission * oppositeHemisphere / M_PI);
+}
+
+#ifdef USE_IBL
+vec3 calculateDiffuseTransmissionIBL(
+  PBRInfo pbrInfo,
+  vec3 diffuseTransmissionColor,
+  float diffuseTransmission,
+  vec3 multiscatterColor,
+  float thickness
+)
+{
+  if (diffuseTransmission <= 0.0) {
+    return vec3(0.0);
+  }
+
+#ifdef USE_SCENE_ENVIRONMENT
+  float rotationSine = sin(pbrScene.environmentRotation);
+  float rotationCosine = cos(pbrScene.environmentRotation);
+  mat2 environmentRotation = mat2(rotationCosine, rotationSine, -rotationSine, rotationCosine);
+  vec3 oppositeNormal = vec3(environmentRotation * -pbrInfo.n.xz, -pbrInfo.n.y).xzy;
+  vec3 environmentColor = texture(pbr_diffuseEnvSampler, oppositeNormal).rgb *
+    max(pbrScene.environmentIntensity, 0.0);
+#else
+  vec3 environmentColor = SRGBtoLINEAR(texture(pbr_diffuseEnvSampler, -pbrInfo.n)).rgb;
+#endif
+  vec3 nonReflectedEnergy = vec3(1.0) - clamp(pbrInfo.reflectance0, vec3(0.0), vec3(1.0));
+  return environmentColor * diffuseTransmissionColor * nonReflectedEnergy *
+    getDiffuseTransmissionAttenuation(pbrInfo, multiscatterColor, thickness) *
+    diffuseTransmission * pbrMaterial.scaleIBLAmbient.x;
+}
+#endif
 
 #ifdef USE_TRANSMISSION_FRAMEBUFFER
 vec3 sampleTransmittedSceneColor(
@@ -934,6 +1066,18 @@ vec4 pbr_filterColor(vec4 vertexColor)
     pbrMaterial.anisotropyUVSet,
     pbrMaterial.anisotropyUVTransform
   );
+  vec2 diffuseTransmissionUV = getMaterialUV(
+    pbrMaterial.diffuseTransmissionUVSet,
+    pbrMaterial.diffuseTransmissionUVTransform
+  );
+  vec2 diffuseTransmissionColorUV = getMaterialUV(
+    pbrMaterial.diffuseTransmissionColorUVSet,
+    pbrMaterial.diffuseTransmissionColorUVTransform
+  );
+  vec2 multiscatterColorUV = getMaterialUV(
+    pbrMaterial.multiscatterColorUVSet,
+    pbrMaterial.multiscatterColorUVTransform
+  );
 
   // The albedo may be defined from a base texture or a flat color
 #ifdef HAS_BASECOLORMAP
@@ -986,6 +1130,11 @@ vec4 pbr_filterColor(vec4 vertexColor)
       pbrMaterial.dispersion > 0.0001 ||
       pbrMaterial.transmissionMapEnabled ||
       pbrMaterial.transmissionFactor > 0.0001 ||
+      pbrMaterial.diffuseTransmissionMapEnabled ||
+      pbrMaterial.diffuseTransmissionColorMapEnabled ||
+      pbrMaterial.diffuseTransmissionFactor > 0.0001 ||
+      pbrMaterial.multiscatterColorMapEnabled ||
+      maxComponent(pbrMaterial.multiscatterColorFactor) > 0.0001 ||
       pbrMaterial.clearcoatMapEnabled ||
       pbrMaterial.clearcoatRoughnessMapEnabled ||
       pbrMaterial.clearcoatFactor > 0.0001 ||
@@ -1125,6 +1274,30 @@ vec4 pbr_filterColor(vec4 vertexColor)
     thickness *= texture(pbr_thicknessSampler, thicknessUV).g;
 #endif
 
+    float diffuseTransmission = clamp(pbrMaterial.diffuseTransmissionFactor, 0.0, 1.0);
+#ifdef HAS_DIFFUSETRANSMISSIONMAP
+    if (pbrMaterial.diffuseTransmissionMapEnabled) {
+      diffuseTransmission *= texture(pbr_diffuseTransmissionSampler, diffuseTransmissionUV).a;
+    }
+#endif
+    diffuseTransmission *= (1.0 - metallic) * (1.0 - transmission);
+    vec3 diffuseTransmissionColor = pbrMaterial.diffuseTransmissionColorFactor;
+#ifdef HAS_DIFFUSETRANSMISSIONCOLORMAP
+    if (pbrMaterial.diffuseTransmissionColorMapEnabled) {
+      diffuseTransmissionColor *= SRGBtoLINEAR(
+        texture(pbr_diffuseTransmissionColorSampler, diffuseTransmissionColorUV)
+      ).rgb;
+    }
+#endif
+    vec3 multiscatterColor = pbrMaterial.multiscatterColorFactor;
+#ifdef HAS_MULTISCATTERCOLORMAP
+    if (pbrMaterial.multiscatterColorMapEnabled) {
+      multiscatterColor *= SRGBtoLINEAR(
+        texture(pbr_multiscatterColorSampler, multiscatterColorUV)
+      ).rgb;
+    }
+#endif
+
     float clearcoatFactor = pbrMaterial.clearcoatFactor;
     float clearcoatRoughness = pbrMaterial.clearcoatRoughnessFactor;
 #ifdef HAS_CLEARCOATMAP
@@ -1208,7 +1381,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
       dielectricSpecularF0
     );
     vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - dielectricSpecularF0);
-    diffuseColor *= (1.0 - metallic) * (1.0 - transmission);
+    diffuseColor *= (1.0 - metallic) * (1.0 - transmission) * (1.0 - diffuseTransmission);
     vec3 specularColor = mix(dielectricSpecularF0, baseColor.rgb, metallic);
 
     float clearcoatViewFresnel = dielectricSchlick(
@@ -1284,6 +1457,14 @@ vec4 pbr_filterColor(vec4 vertexColor)
           anisotropyTangent,
           anisotropyStrength
         );
+        color += calculateDiffuseTransmissionLight(
+          pbrInfo,
+          lighting_getDirectionalLight(i).color,
+          diffuseTransmissionColor,
+          diffuseTransmission,
+          multiscatterColor,
+          thickness
+        );
       }
     }
 
@@ -1303,6 +1484,14 @@ vec4 pbr_filterColor(vec4 vertexColor)
           anisotropyTangent,
           anisotropyStrength
         );
+        color += calculateDiffuseTransmissionLight(
+          pbrInfo,
+          lighting_getPointLight(i).color / attenuation,
+          diffuseTransmissionColor,
+          diffuseTransmission,
+          multiscatterColor,
+          thickness
+        );
       }
     }
 
@@ -1320,6 +1509,14 @@ vec4 pbr_filterColor(vec4 vertexColor)
           sheenRoughness,
           anisotropyTangent,
           anisotropyStrength
+        );
+        color += calculateDiffuseTransmissionLight(
+          pbrInfo,
+          lighting_getSpotLight(i).color / attenuation,
+          diffuseTransmissionColor,
+          diffuseTransmission,
+          multiscatterColor,
+          thickness
         );
       }
     }
@@ -1339,6 +1536,13 @@ vec4 pbr_filterColor(vec4 vertexColor)
         -normalize(reflect(v, clearcoatNormal)),
         clearcoatFactor,
         clearcoatRoughness
+      );
+      color += calculateDiffuseTransmissionIBL(
+        pbrInfo,
+        diffuseTransmissionColor,
+        diffuseTransmission,
+        multiscatterColor,
+        thickness
       );
       color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }

@@ -167,8 +167,15 @@ Status meanings:
       <code>SceneRenderer</code> and ANARI retained path refract captured opaque-scene
       color; the standalone glTF scenegraph path retains its alpha-based approximation.
     </SupportRow>
-    <SupportRow name="KHR_materials_diffuse_transmission" support="❌">
-      Diffuse-transmission shading is not implemented in the stock PBR shader.
+    <SupportRow name="EXT_materials_bump" support="✅ 🚧" fromVersion="9.3">
+      Experimental, unratified proposal. Linear red-channel height textures perturb the
+      existing tangent-space normal, preserve per-slot UV transforms, and compose with
+      conventional normal maps.
+    </SupportRow>
+    <SupportRow name="KHR_materials_diffuse_transmission" support="✅ 🚧" fromVersion="9.3">
+      Khronos release candidate, not ratified. Canonical WebGL and WebGPU PBR shading
+      implements opposite-hemisphere punctual lighting and IBL, energy-conserving
+      front-diffuse reduction, linear alpha factor maps, and sRGB transmission colors.
     </SupportRow>
     <SupportRow name="KHR_materials_volume" support="✅ 🚧" fromVersion="9.3">
       Thickness factor plus attenuation color and distance now tint transmitted light
@@ -179,8 +186,11 @@ Status meanings:
       rendering separate transmitted RGB wavelengths using the ratified wavelength-dependent IOR.
       A supported material animation pointer can update the same physical dispersion uniform.
     </SupportRow>
-    <SupportRow name="KHR_materials_volume_scatter" support="❌">
-      Volume scattering is not implemented in the stock PBR shader.
+    <SupportRow name="KHR_materials_volume_scatter" support="🚧" fromVersion="9.3">
+      Active, unratified draft. A local thickness-aware, anisotropic single-scattering
+      approximation is wired into diffuse transmission. Requires
+      <code>KHR_materials_volume</code>; screen-space diffusion and random-walk
+      multiple scattering are not implemented.
     </SupportRow>
     <SupportRow name="KHR_materials_clearcoat" support="✅ 🚧" fromVersion="9.3">
       The stock shader now adds a secondary clearcoat lobe from the clearcoat and

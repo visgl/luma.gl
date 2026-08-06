@@ -107,10 +107,15 @@ export type ANARIMaterialParameters = {
   iridescence?: number;
   clearcoatRoughness?: number;
   transmission?: number;
+  diffuseTransmission?: number;
+  diffuseTransmissionColor?: ANARIVector3;
   dispersion?: number;
   thickness?: number;
   attenuationDistance?: number;
   attenuationColor?: ANARIVector3;
+  /** Experimental multi-scatter albedo from the unratified glTF volume-scatter draft. */
+  multiscatterColor?: ANARIVector3;
+  scatterAnisotropy?: number;
   indexOfRefraction?: number;
   sheenColor?: ANARIVector3;
   sheenRoughness?: number;
@@ -121,9 +126,11 @@ export type ANARIMaterialParameters = {
   anisotropyRotation?: number;
   anisotropyDirection?: readonly [number, number];
   normalScale?: number;
+  bumpFactor?: number;
   occlusionStrength?: number;
   baseColorTexture?: ANARISampler;
   normalTexture?: ANARISampler;
+  bumpTexture?: ANARISampler;
   metallicRoughnessTexture?: ANARISampler;
   emissiveTexture?: ANARISampler;
   occlusionTexture?: ANARISampler;
@@ -133,7 +140,10 @@ export type ANARIMaterialParameters = {
   clearcoatRoughnessTexture?: ANARISampler;
   clearcoatNormalTexture?: ANARISampler;
   transmissionTexture?: ANARISampler;
+  diffuseTransmissionTexture?: ANARISampler;
+  diffuseTransmissionColorTexture?: ANARISampler;
   thicknessTexture?: ANARISampler;
+  multiscatterColorTexture?: ANARISampler;
   sheenColorTexture?: ANARISampler;
   sheenRoughnessTexture?: ANARISampler;
   iridescenceTexture?: ANARISampler;

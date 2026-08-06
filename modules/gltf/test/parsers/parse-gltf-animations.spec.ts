@@ -178,7 +178,7 @@ test('gltf#parseGLTFAnimations skips unsupported KHR_animation_pointer texCoord 
   t.end();
 });
 
-test('gltf#parseGLTFAnimations warns specifically for unsupported KHR_materials_diffuse_transmission pointers', t => {
+test('gltf#parseGLTFAnimations animates KHR_materials_diffuse_transmission texture transforms', t => {
   const warnings = captureWarnings(() => {
     const gltf = makeBaseGLTF({
       accessors: [makeAccessor([0, 1], 'SCALAR'), makeAccessor([1, 2], 'SCALAR')] as any,
@@ -219,21 +219,17 @@ test('gltf#parseGLTFAnimations warns specifically for unsupported KHR_materials_
       ] as any
     });
 
-    t.deepEqual(
-      parseGLTFAnimations(gltf),
-      [],
-      'unsupported diffuse transmission pointer is skipped'
+    const animations = parseGLTFAnimations(gltf);
+    t.equal(animations.length, 1, 'diffuse transmission texture animation is preserved');
+    t.equal(animations[0]?.channels[0]?.type, 'textureTransform', 'resolves a texture transform');
+    t.equal(
+      (animations[0]?.channels[0] as {textureSlot?: string})?.textureSlot,
+      'diffuseTransmission',
+      'selects the release-candidate diffuse-transmission texture slot'
     );
   });
 
-  t.ok(
-    warnings.some(warning =>
-      warning.includes(
-        'KHR_materials_diffuse_transmission is referenced by this pointer, but diffuse-transmission shading is not implemented in the stock PBR shader.'
-      )
-    ),
-    'warning names the unsupported extension and reason'
-  );
+  t.equal(warnings.length, 0, 'supported material pointers do not emit unsupported warnings');
 
   t.end();
 });

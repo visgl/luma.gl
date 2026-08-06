@@ -455,6 +455,7 @@ export class SceneRenderer {
         ...overrides,
         defines: {
           HAS_INSTANCING: true,
+          USE_LIGHTS: Boolean(options.lights?.length),
           USE_MATERIAL_EXTENSIONS: true,
           ALPHA_CUTOFF: alphaMode === 'MASK',
           USE_IBL: hasCompleteEnvironment(options.environment),
@@ -602,6 +603,7 @@ function getSceneSurfaceSignature(
       first.localeCompare(second)
     ),
     environment: hasCompleteEnvironment(options.environment),
+    lights: Boolean(options.lights?.length),
     environmentMipmapped: hasMipmappedEnvironment(options.environment),
     transmission: Boolean(transmissionTexture),
     transmissionWidth: transmissionTexture?.width,

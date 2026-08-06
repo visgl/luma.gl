@@ -9,6 +9,7 @@ import './oit/wboit-renderer.spec';
 import './shadows/shadow-map-renderer.spec';
 import './shadows/shadow-wgsl.spec';
 import './engine/scene-renderer.spec';
+import './engine/scene-next-pbr-materials.spec';
 import './engine/scene-deformation.spec';
 import './engine/deferred-scene-renderer.spec';
 import './rendering/deferred-lighting.spec';

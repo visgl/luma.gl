@@ -130,9 +130,15 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment:
       'Node transforms, morph weights and visibility, material factors, texture transforms, camera projections, and punctual lights are wired to runtime updates.'
   },
+  EXT_materials_bump: {
+    supportLevel: 'built-in',
+    comment:
+      'The experimental bump-map draft perturbs the canonical surface normal from a linear height texture.'
+  },
   KHR_materials_diffuse_transmission: {
-    supportLevel: 'none',
-    comment: 'Diffuse-transmission shading is not implemented in the stock PBR shader.'
+    supportLevel: 'built-in',
+    comment:
+      'The Khronos release candidate adds energy-conserving back-lit diffuse transmission and independent color/factor textures.'
   },
   KHR_materials_dispersion: {
     supportLevel: 'parsed-and-wired',
@@ -140,8 +146,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
       'The canonical PBR shader separates red, green, and blue transmission using wavelength-dependent refraction.'
   },
   KHR_materials_volume_scatter: {
-    supportLevel: 'none',
-    comment: 'Volume scattering is not implemented in the stock PBR shader.'
+    supportLevel: 'parsed-and-wired',
+    comment:
+      'The unratified volume-scattering draft is approximated per surface; random-walk and screen-space diffusion are not implemented.'
   },
   KHR_xmp: {
     supportLevel: 'none',

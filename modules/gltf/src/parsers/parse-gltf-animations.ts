@@ -460,6 +460,32 @@ function resolveMaterialAnimationTarget(
         ? {type: 'material', property: 'ior'}
         : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
 
+    case 'extensions/EXT_materials_bump/bumpFactor':
+      return material['extensions']?.['EXT_materials_bump']
+        ? {type: 'material', property: 'bumpFactor'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+
+    case 'extensions/KHR_materials_diffuse_transmission/diffuseTransmissionFactor':
+      return material['extensions']?.['KHR_materials_diffuse_transmission']
+        ? {type: 'material', property: 'diffuseTransmissionFactor'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+
+    case 'extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorFactor':
+      return material['extensions']?.['KHR_materials_diffuse_transmission']
+        ? {type: 'material', property: 'diffuseTransmissionColorFactor'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+
+    case 'extensions/KHR_materials_volume_scatter/multiscatterColorFactor':
+    case 'extensions/KHR_materials_volume_scatter/multiscatterColor':
+      return material['extensions']?.['KHR_materials_volume_scatter']
+        ? {type: 'material', property: 'multiscatterColorFactor'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+
+    case 'extensions/KHR_materials_volume_scatter/scatterAnisotropy':
+      return material['extensions']?.['KHR_materials_volume_scatter']
+        ? {type: 'material', property: 'scatterAnisotropy'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+
     case 'extensions/KHR_materials_dispersion/dispersion':
       return material['extensions']?.['KHR_materials_dispersion']
         ? {type: 'material', property: 'dispersion'}

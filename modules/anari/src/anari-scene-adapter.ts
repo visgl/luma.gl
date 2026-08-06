@@ -63,19 +63,27 @@ type MaterialMapEnabledUniform =
   | 'sheenColorMapEnabled'
   | 'sheenRoughnessMapEnabled'
   | 'iridescenceMapEnabled'
-  | 'anisotropyMapEnabled';
+  | 'anisotropyMapEnabled'
+  | 'bumpMapEnabled'
+  | 'diffuseTransmissionMapEnabled'
+  | 'diffuseTransmissionColorMapEnabled'
+  | 'multiscatterColorMapEnabled';
 
 type MaterialTextureSlot = {
   parameter:
     | 'baseColorTexture'
     | 'normalTexture'
+    | 'bumpTexture'
     | 'metallicRoughnessTexture'
     | 'emissiveTexture'
     | 'occlusionTexture'
     | 'specularColorTexture'
     | 'specularIntensityTexture'
     | 'transmissionTexture'
+    | 'diffuseTransmissionTexture'
+    | 'diffuseTransmissionColorTexture'
     | 'thicknessTexture'
+    | 'multiscatterColorTexture'
     | 'clearcoatTexture'
     | 'clearcoatRoughnessTexture'
     | 'clearcoatNormalTexture'
@@ -212,6 +220,34 @@ const MATERIAL_TEXTURE_SLOTS = [
     enabled: 'anisotropyMapEnabled',
     textureCoordinateSet: 'anisotropyUVSet',
     transform: 'anisotropyUVTransform'
+  },
+  {
+    parameter: 'bumpTexture',
+    binding: 'pbr_bumpSampler',
+    enabled: 'bumpMapEnabled',
+    textureCoordinateSet: 'bumpUVSet',
+    transform: 'bumpUVTransform'
+  },
+  {
+    parameter: 'diffuseTransmissionTexture',
+    binding: 'pbr_diffuseTransmissionSampler',
+    enabled: 'diffuseTransmissionMapEnabled',
+    textureCoordinateSet: 'diffuseTransmissionUVSet',
+    transform: 'diffuseTransmissionUVTransform'
+  },
+  {
+    parameter: 'diffuseTransmissionColorTexture',
+    binding: 'pbr_diffuseTransmissionColorSampler',
+    enabled: 'diffuseTransmissionColorMapEnabled',
+    textureCoordinateSet: 'diffuseTransmissionColorUVSet',
+    transform: 'diffuseTransmissionColorUVTransform'
+  },
+  {
+    parameter: 'multiscatterColorTexture',
+    binding: 'pbr_multiscatterColorSampler',
+    enabled: 'multiscatterColorMapEnabled',
+    textureCoordinateSet: 'multiscatterColorUVSet',
+    transform: 'multiscatterColorUVTransform'
   }
 ] as const satisfies readonly MaterialTextureSlot[];
 
@@ -351,10 +387,14 @@ export function makeSceneMaterial(material: ANARIMaterial): SceneMaterial {
     specularIntensityFactor: parameters.specularIntensity ?? 1,
     ior: parameters.indexOfRefraction ?? 1.5,
     transmissionFactor: parameters.transmission ?? 0,
+    diffuseTransmissionFactor: parameters.diffuseTransmission ?? 0,
+    diffuseTransmissionColorFactor: parameters.diffuseTransmissionColor || [1, 1, 1],
     dispersion: parameters.dispersion ?? 0,
     thicknessFactor: parameters.thickness ?? 0,
     attenuationDistance: parameters.attenuationDistance ?? 1e9,
     attenuationColor: parameters.attenuationColor || [1, 1, 1],
+    multiscatterColorFactor: parameters.multiscatterColor || [0, 0, 0],
+    scatterAnisotropy: parameters.scatterAnisotropy ?? 0,
     clearcoatFactor: parameters.clearcoat ?? 0,
     clearcoatRoughnessFactor: parameters.clearcoatRoughness ?? 0.18,
     sheenColorFactor: parameters.sheenColor || [0, 0, 0],
@@ -367,7 +407,8 @@ export function makeSceneMaterial(material: ANARIMaterial): SceneMaterial {
     ],
     anisotropyStrength: parameters.anisotropyStrength ?? 0,
     anisotropyRotation: parameters.anisotropyRotation ?? 0,
-    anisotropyDirection: parameters.anisotropyDirection || [1, 0]
+    anisotropyDirection: parameters.anisotropyDirection || [1, 0],
+    bumpFactor: parameters.bumpFactor ?? 1
   };
   const bindings: Partial<PBRMaterialBindings> = {};
 
