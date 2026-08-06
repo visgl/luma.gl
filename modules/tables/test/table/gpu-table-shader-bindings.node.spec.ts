@@ -91,6 +91,55 @@ test('GPUTableShaderBindings resolves draw-ready buffers per preserved batch', t
   t.end();
 });
 
+test('GPUTableShaderBindings binds complete fixed-size-list rows without trailing padding', t => {
+  const device = new NullDevice({});
+  const embeddings = new GPUVector({
+    type: 'buffer',
+    name: 'embeddings',
+    buffer: device.createBuffer({byteLength: 32}),
+    format: 'fixed-size-list<float32,3>',
+    length: 2,
+    byteOffset: 4,
+    byteStride: 16,
+    ownsBuffer: true
+  });
+  const table = new GPUTable({vectors: {embeddings}});
+  const gpuInputSchema = [
+    {
+      columnName: 'embeddings',
+      storageBindingName: 'embeddings',
+      kind: 'scalars',
+      required: true,
+      formats: ['fixed-size-list<float32,3>']
+    }
+  ] as const satisfies GPUInputSchema;
+  const shaderBindings = new GPUTableShaderBindings(device, {
+    table,
+    gpuInputSchema,
+    shaderLayout: {
+      attributes: [],
+      bindings: [{name: 'embeddings', type: 'read-only-storage', group: 0, location: 0}]
+    }
+  });
+
+  t.equal(embeddings.valueLength, 6, 'logical rows expose flattened scalar element counts');
+  t.equal(embeddings.rowByteLength, 12, 'row payload excludes physical padding');
+  t.deepEqual(shaderBindings.bufferLayout, [], 'storage-only inputs have no vertex attributes');
+  t.deepEqual(
+    shaderBindings.batches[0].bindings.embeddings,
+    {
+      buffer: embeddings.data[0].buffer,
+      offset: 4,
+      size: 28
+    },
+    'storage binding includes row padding but does not require nonexistent final-row padding'
+  );
+
+  shaderBindings.destroy();
+  table.destroy();
+  t.end();
+});
+
 test('GPUTableShaderBindings validates schema formats', t => {
   const device = new NullDevice({});
   const table = new GPUTable({
