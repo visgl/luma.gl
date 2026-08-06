@@ -19,6 +19,7 @@ export {
 export {
   GLTFAnimationClip,
   type GLTFAnimationClipProps,
+  type GLTFAnimationSelectionOptions,
   GLTFAnimator,
   type GLTFAnimatorProps
 } from './gltf/gltf-animator';
@@ -27,6 +28,12 @@ export {
   type GLTFExtensionSupportLevel,
   getGLTFExtensionSupport
 } from './gltf/gltf-extension-support';
+export {
+  type GLTFSkinBinding,
+  GLTFSkinController,
+  type GLTFSkinControllerProps,
+  resolveGLTFSkinIndex
+} from './gltf/gltf-skin';
 export {parseGLTFAnimations} from './parsers/parse-gltf-animations';
 export {type ParseGLTFLightsOptions, parseGLTFLights} from './parsers/parse-gltf-lights';
 export {

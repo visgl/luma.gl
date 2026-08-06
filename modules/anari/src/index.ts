@@ -51,6 +51,7 @@ export type {
   ANARIAnimationNodeDescription,
   ANARIAnimationPlaybackDescription,
   ANARIAnimationSceneDescription,
+  ANARIAnimationSkinDescription,
   ANARIAnimationTarget,
   ANARIAnimationTargetType,
   ANARIAnimationTextureTransform,
