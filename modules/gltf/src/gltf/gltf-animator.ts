@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {log} from '@luma.gl/core';
+import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {
   type AnimationAction,
   AnimationClip,
@@ -24,6 +25,8 @@ import {
   GLTFAnimation,
   GLTFAnimationChannel,
   GLTFAnimationPath,
+  GLTFCameraAnimationChannel,
+  GLTFLightAnimationChannel,
   GLTFMaterialAnimationChannel,
   GLTFMaterialAnimationProperty,
   GLTFTextureTransformAnimationChannel
@@ -36,6 +39,14 @@ export type GLTFAnimationClipProps = {
   animation: GLTFAnimation;
   /** Mapping from glTF node ids to scenegraph nodes. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
+  /** Refreshes runtime punctual lights after a node-visibility channel changes. */
+  onVisibilityChange?: () => void;
+  /** Runtime camera projection definitions aligned with the source camera array. */
+  cameras?: GLTFPostprocessed['cameras'];
+  /** Mutable runtime punctual-light definitions aligned with the source extension array. */
+  lightDefinitions?: Record<string, any>[];
+  /** Refreshes derived punctual lights after one source light property changes. */
+  onLightChange?: () => void;
   /** Materials aligned with the source glTF materials array. */
   materials?: Material[];
   /** Optional shared playback mixer for clips belonging to the same scene. */
@@ -48,6 +59,10 @@ export class GLTFAnimationClip extends AnimationClipController {
   animation: GLTFAnimation;
   /** Target scenegraph lookup table. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
+  private readonly onVisibilityChange?: () => void;
+  private readonly cameras: GLTFPostprocessed['cameras'];
+  private readonly lightDefinitions: Record<string, any>[];
+  private readonly onLightChange?: () => void;
   /** Materials aligned with the source glTF materials array. */
   materials: Material[];
   /** Format-independent engine clip generated from the parsed glTF channels. */
@@ -67,11 +82,17 @@ export class GLTFAnimationClip extends AnimationClipController {
     super({name: props.animation.name || 'unnamed'});
     this.animation = props.animation;
     this.gltfNodeIdToNodeMap = props.gltfNodeIdToNodeMap;
+    this.onVisibilityChange = props.onVisibilityChange;
+    this.cameras = props.cameras || [];
+    this.lightDefinitions = props.lightDefinitions || [];
+    this.onLightChange = props.onLightChange;
     this.materials = props.materials || [];
     this.animation.name ||= 'unnamed';
     this.name = this.animation.name;
     if (
-      this.animation.channels.some(channel => channel.type !== 'node') &&
+      this.animation.channels.some(
+        channel => channel.type === 'material' || channel.type === 'textureTransform'
+      ) &&
       !this.materials.length
     ) {
       throw new Error(
@@ -106,6 +127,20 @@ export class GLTFAnimationClip extends AnimationClipController {
           id: `node:${channel.targetNodeId}:${channel.path}`,
           getValue: () => this.getNodeAnimationValue(channel.targetNodeId, channel.path),
           setValue: value => this.applyNodeAnimationValue(channel.targetNodeId, channel.path, value)
+        }
+      });
+    }
+
+    if (channel.type === 'camera' || channel.type === 'light') {
+      return new AnimationTrack({
+        name: channel.pointer,
+        times: channel.sampler.input,
+        values: channel.sampler.output,
+        interpolation,
+        binding: {
+          id: channel.pointer,
+          getValue: () => this.getSceneAnimationValue(channel),
+          setValue: value => this.applySceneAnimationValue(channel, value)
         }
       });
     }
@@ -157,6 +192,8 @@ export class GLTFAnimationClip extends AnimationClipController {
         return Array.from(
           (targetNode.userData['morphWeights'] as readonly number[] | undefined) || []
         );
+      case 'visibility':
+        return [targetNode.display ? 1 : 0];
       default:
         return [];
     }
@@ -181,6 +218,10 @@ export class GLTFAnimationClip extends AnimationClipController {
       case 'weights':
         setGLTFMorphWeights(targetNode, value);
         break;
+      case 'visibility':
+        targetNode.setProps({display: value[0] !== 0});
+        this.onVisibilityChange?.();
+        break;
       default:
         log.warn(`Bad animation path ${path}`)();
     }
@@ -193,10 +234,67 @@ export class GLTFAnimationClip extends AnimationClipController {
     }
     return targetNode;
   }
+
+  private getSceneAnimationValue(
+    channel: GLTFCameraAnimationChannel | GLTFLightAnimationChannel
+  ): number[] {
+    if (channel.type === 'camera') {
+      const camera = this.cameras[channel.targetCameraIndex] as Record<string, any> | undefined;
+      const value = camera?.[channel.projection]?.[channel.property];
+      return typeof value === 'number' ? [value] : [];
+    }
+
+    const light = this.lightDefinitions[channel.targetLightIndex];
+    const value =
+      channel.property === 'innerConeAngle' || channel.property === 'outerConeAngle'
+        ? light?.['spot']?.[channel.property]
+        : light?.[channel.property];
+    if (Array.isArray(value)) {
+      return channel.component === undefined ? [...value] : [value[channel.component]];
+    }
+    return typeof value === 'number' ? [value] : [];
+  }
+
+  private applySceneAnimationValue(
+    channel: GLTFCameraAnimationChannel | GLTFLightAnimationChannel,
+    value: number[]
+  ): void {
+    if (channel.type === 'camera') {
+      const camera = this.cameras[channel.targetCameraIndex] as Record<string, any> | undefined;
+      if (camera?.[channel.projection]) {
+        camera[channel.projection][channel.property] = value[0];
+      }
+      return;
+    }
+
+    const light = this.lightDefinitions[channel.targetLightIndex];
+    if (!light) {
+      return;
+    }
+    if (channel.property === 'innerConeAngle' || channel.property === 'outerConeAngle') {
+      light['spot'] ||= {};
+      light['spot'][channel.property] = value[0];
+    } else if (channel.component !== undefined) {
+      const color = [...(light[channel.property] || [1, 1, 1])];
+      color[channel.component] = value[0];
+      light[channel.property] = color;
+    } else {
+      light[channel.property] = value.length === 1 ? value[0] : [...value];
+    }
+    this.onLightChange?.();
+  }
 }
 
 /** Construction props for {@link GLTFAnimator}. */
 export type GLTFAnimatorProps = {
+  /** Refreshes runtime punctual lights after a node-visibility channel changes. */
+  onVisibilityChange?: () => void;
+  /** Runtime camera projection definitions aligned with the source camera array. */
+  cameras?: GLTFPostprocessed['cameras'];
+  /** Mutable runtime punctual-light definitions aligned with the source extension array. */
+  lightDefinitions?: Record<string, any>[];
+  /** Refreshes derived punctual lights after one source light property changes. */
+  onLightChange?: () => void;
   /** Parsed animations from the source glTF. */
   animations: GLTFAnimation[];
   /** Mapping from glTF node ids to scenegraph nodes. */
@@ -234,6 +332,10 @@ export class GLTFAnimator extends Animator<GLTFAnimationClip> {
         const name = animation.name || `Animation-${index}`;
         return new GLTFAnimationClip({
           gltfNodeIdToNodeMap: props.gltfNodeIdToNodeMap,
+          onVisibilityChange: props.onVisibilityChange,
+          cameras: props.cameras,
+          lightDefinitions: props.lightDefinitions,
+          onLightChange: props.onLightChange,
           materials: props.materials,
           mixer,
           animation: {name, channels: animation.channels}

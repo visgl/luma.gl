@@ -98,9 +98,16 @@ export class GroupNode extends ScenegraphNode {
     visitor: (node: ScenegraphNode, context: {worldMatrix: Matrix4}) => void,
     {worldMatrix = new Matrix4()} = {}
   ) {
+    if (!this.display) {
+      return;
+    }
+
     const modelMatrix = new Matrix4(worldMatrix).multiplyRight(this.matrix);
 
     for (const child of this.children) {
+      if (!child.display) {
+        continue;
+      }
       if (child instanceof GroupNode) {
         child.traverse(visitor, {worldMatrix: modelMatrix});
       } else {

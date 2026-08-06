@@ -12,7 +12,12 @@ import {GLTFAnimator} from './gltf-animator';
 import {GLTFSkinController} from './gltf-skin';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
 import type {GLTFAnimation} from './animations/animations';
-import {getGLTFExtensionSupport, type GLTFExtensionSupport} from './gltf-extension-support';
+import {
+  assertSupportedGLTFExtensions,
+  getGLTFExtensionSupport,
+  type GLTFExtensionSupport
+} from './gltf-extension-support';
+import {GLTFMaterialVariants} from './gltf-material-variants';
 
 export type GLTFScenegraphBounds = {
   /** World-space axis-aligned bounds for the scene or model. */
@@ -33,6 +38,10 @@ export type GLTFScenegraphs = {
   scenes: GroupNode[];
   /** Materials aligned with the source glTF `materials` array. */
   materials: Material[];
+  /** Runtime controller for source-authored `KHR_materials_variants` mappings. */
+  variants: GLTFMaterialVariants;
+  /** Independent runtime camera projections updated by typed glTF animation pointers. */
+  cameras: GLTFPostprocessed['cameras'];
   /** Animation controller for glTF animations. */
   animator: GLTFAnimator;
   /** Parsed source animations, including supported material and texture-transform pointers. */
@@ -66,12 +75,52 @@ export function createScenegraphsFromGLTF(
   gltf: GLTFPostprocessed,
   options?: ParseGLTFOptions
 ): GLTFScenegraphs {
+  if (options?.strictExtensions) {
+    assertSupportedGLTFExtensions(gltf);
+  }
+
   const {scenes, materials, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap} =
     parseGLTF(device, gltf, options);
 
   const animations = parseGLTFAnimations(gltf);
-  const animator = new GLTFAnimator({animations, gltfNodeIdToNodeMap, materials});
-  const lights = parseGLTFLights(gltf, {useByteColors: options?.useByteColors ?? true});
+  const sourceLights =
+    (gltf as GLTFPostprocessed & {lights?: Record<string, any>[]}).lights ||
+    (gltf.extensions?.['KHR_lights_punctual']?.['lights'] as Record<string, any>[] | undefined) ||
+    [];
+  const lightDefinitions = sourceLights.map(light => ({
+    ...light,
+    ...(Array.isArray(light['color']) ? {color: [...light['color']]} : {}),
+    ...(light['spot'] ? {spot: {...light['spot']}} : {})
+  }));
+  const cameras: GLTFPostprocessed['cameras'] = (gltf.cameras || []).map(camera => {
+    const runtimeCamera = {...camera};
+    if (camera.perspective) {
+      runtimeCamera.perspective = {...camera.perspective};
+    }
+    if (camera.orthographic) {
+      runtimeCamera.orthographic = {...camera.orthographic};
+    }
+    return runtimeCamera;
+  });
+  const lightOptions = {
+    useByteColors: options?.useByteColors ?? true,
+    nodeVisibility: gltfNodeIdToNodeMap,
+    lightDefinitions
+  };
+  const lights = parseGLTFLights(gltf, lightOptions);
+  const refreshLights = () => {
+    lights.splice(0, lights.length, ...parseGLTFLights(gltf, lightOptions));
+  };
+  const animator = new GLTFAnimator({
+    onVisibilityChange: refreshLights,
+    cameras,
+    lightDefinitions,
+    onLightChange: refreshLights,
+    animations,
+    gltfNodeIdToNodeMap,
+    materials
+  });
+  const variants = new GLTFMaterialVariants(gltf, scenes);
   const extensionSupport = getGLTFExtensionSupport(gltf);
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);
@@ -81,6 +130,8 @@ export function createScenegraphsFromGLTF(
   return {
     scenes,
     materials,
+    variants,
+    cameras,
     animator,
     animations,
     lights,

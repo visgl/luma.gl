@@ -331,7 +331,7 @@ test('gltf#parseGLTFAnimations warns specifically for unsupported top-level poin
                 path: 'pointer',
                 extensions: {
                   KHR_animation_pointer: {
-                    pointer: '/cameras/0/perspective/yfov'
+                    pointer: '/asset/version'
                   }
                 }
               }
@@ -347,7 +347,7 @@ test('gltf#parseGLTFAnimations warns specifically for unsupported top-level poin
 
   t.ok(
     warnings.some(warning =>
-      warning.includes('top-level target "cameras" has no runtime animation mapping')
+      warning.includes('top-level target "asset" has no runtime animation mapping')
     ),
     'warning explains the unsupported top-level target'
   );

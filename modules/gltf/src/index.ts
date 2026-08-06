@@ -73,3 +73,25 @@ export {
   convertSamplerToGLTF,
   type GLTFSampler
 } from './webgl-to-webgpu/convert-webgl-sampler';
+
+// Standards-native glTF extension runtime helpers.
+export {
+  assertSupportedGLTFExtensions,
+  getUnsupportedRequiredGLTFExtensions
+} from './gltf/gltf-extension-support';
+export {
+  getGLTFNodeInstancing,
+  type GLTFGPUInstancing,
+  type GLTFInstanceAttribute
+} from './gltf/gltf-instancing';
+export {
+  GLTFMaterialVariants,
+  type GLTFMaterialVariant,
+  type GLTFPrimitiveMaterialVariants
+} from './gltf/gltf-material-variants';
+export type {
+  GLTFCameraAnimationChannel,
+  GLTFCameraAnimationProperty,
+  GLTFLightAnimationChannel,
+  GLTFLightAnimationProperty
+} from './gltf/animations/animations';
