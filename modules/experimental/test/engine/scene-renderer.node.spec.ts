@@ -230,7 +230,8 @@ describe('shared PBR material factories', () => {
         USE_IBL: true,
         USE_SCENE_ENVIRONMENT: true,
         USE_TEX_LOD: true,
-        USE_TRANSMISSION_FRAMEBUFFER: true
+        USE_TRANSMISSION_FRAMEBUFFER: true,
+        USE_SCENE_COLOR_MANAGEMENT: true
       }
     });
     const reflection = new WgslReflect(shader.source);
@@ -241,6 +242,15 @@ describe('shared PBR material factories', () => {
     expect(shader.source).toContain('sin(pbrScene.environmentRotation)');
     expect(shader.source).toContain('max(pbrScene.environmentIntensity, 0.0)');
     expect(shader.source).toContain('getTransmittedSceneColor(');
+    expect(shader.source).toContain('sampleTransmittedSceneColor(');
+    expect(shader.source).toContain(
+      '(max(pbrMaterial.ior, 1.0) - 1.0) * 0.025 * pbrMaterial.dispersion'
+    );
+    expect(shader.source).toContain('evaluateIridescenceSensitivity(');
+    expect(shader.source).toContain('calculateAnisotropicLightColor(');
+    expect(shader.source).toContain('toneMapKhronosPBRNeutral(');
+    expect(shader.source).toContain('pbrScene.exposure');
+    expect(shader.source).toContain('pbrScene.outputEncoding');
     expect(shader.source).toContain('pbr_transmissionFramebufferSampler');
     expect(shader.source).toContain('let alpha = clamp(baseColor.a, 0.0, 1.0)');
   });
@@ -422,7 +432,19 @@ describe('SceneRenderer', () => {
       const glassModel = renderer.draws[1].scene.surfaces[1].model;
       const captureTexture = glassModel.shaderInputs.getBindingValues()
         .pbr_transmissionFramebufferSampler as Texture;
-      expect(captureTexture).toMatchObject({width: 8, height: 8, format: 'rgba8unorm'});
+      expect(captureTexture).toMatchObject({width: 8, height: 8, format: 'rgba16float'});
+      const captureModel = renderer.draws[0].scene.surfaces[0].model;
+      expect(captureModel).not.toBe(opaqueModel);
+      expect(captureModel.shaderInputs.getUniformValues().pbrScene).toMatchObject({
+        exposure: 1,
+        toneMapMode: 0,
+        outputEncoding: 0
+      });
+      expect(opaqueModel.shaderInputs.getUniformValues().pbrScene).toMatchObject({
+        exposure: 1,
+        toneMapMode: 2,
+        outputEncoding: 1
+      });
       expect(opaqueModel.shaderInputs.getBindingValues()).not.toHaveProperty(
         'pbr_transmissionFramebufferSampler'
       );

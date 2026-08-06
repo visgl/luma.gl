@@ -79,6 +79,10 @@ type GLTFMaterialVolumeExtension = {
   attenuationColor?: [number, number, number];
 };
 
+type GLTFMaterialDispersionExtension = {
+  dispersion?: number;
+};
+
 type GLTFMaterialClearcoatExtension = {
   clearcoatFactor?: number;
   clearcoatTexture?: GLTFTexture;
@@ -119,6 +123,7 @@ type GLTFMaterialExtensions = {
   KHR_materials_ior?: GLTFMaterialIorExtension;
   KHR_materials_transmission?: GLTFMaterialTransmissionExtension;
   KHR_materials_volume?: GLTFMaterialVolumeExtension;
+  KHR_materials_dispersion?: GLTFMaterialDispersionExtension;
   KHR_materials_clearcoat?: GLTFMaterialClearcoatExtension;
   KHR_materials_sheen?: GLTFMaterialSheenExtension;
   KHR_materials_iridescence?: GLTFMaterialIridescenceExtension;
@@ -200,8 +205,7 @@ export function parsePBRMaterial(
   const parsedMaterial: ParsedPBRMaterial = {
     defines: {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
-      MANUAL_SRGB: true,
-      SRGB_FAST_APPROXIMATION: true
+      MANUAL_SRGB: true
     },
     bindings: {},
     uniforms: {
@@ -533,6 +537,7 @@ function parseMaterialExtensions(
     attributes
   );
   parseVolumeExtension(device, extensions.KHR_materials_volume, parsedMaterial, gltf, attributes);
+  parseDispersionExtension(extensions.KHR_materials_dispersion, parsedMaterial);
   parseClearcoatExtension(
     device,
     extensions.KHR_materials_clearcoat,
@@ -564,6 +569,7 @@ function hasMaterialExtensionShading(extensions: GLTFMaterialExtensions): boolea
       extensions.KHR_materials_ior ||
       extensions.KHR_materials_transmission ||
       extensions.KHR_materials_volume ||
+      extensions.KHR_materials_dispersion ||
       extensions.KHR_materials_clearcoat ||
       extensions.KHR_materials_sheen ||
       extensions.KHR_materials_iridescence ||
@@ -684,6 +690,15 @@ function parseVolumeExtension(
   }
   if (extension.attenuationColor) {
     parsedMaterial.uniforms.attenuationColor = extension.attenuationColor;
+  }
+}
+
+function parseDispersionExtension(
+  extension: GLTFMaterialDispersionExtension | undefined,
+  parsedMaterial: ParsedPBRMaterial
+): void {
+  if (extension?.dispersion !== undefined) {
+    parsedMaterial.uniforms.dispersion = Math.max(extension.dispersion, 0);
   }
 }
 

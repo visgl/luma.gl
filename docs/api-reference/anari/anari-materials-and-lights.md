@@ -42,6 +42,7 @@ type ANARIMaterialParameters = {
   clearcoat?: number;
   clearcoatRoughness?: number;
   transmission?: number;
+  dispersion?: number;
   thickness?: number;
   attenuationDistance?: number;
   attenuationColor?: ANARIVector3;
@@ -99,6 +100,7 @@ type ANARIMaterialParameters = {
 | `specularColor`, `specularIntensity` | Dielectric specular color and strength. |
 | `clearcoat`, `clearcoatRoughness` | Secondary surface coating and coating roughness. |
 | `transmission`, `thickness` | Screen-space transmission strength and medium thickness. |
+| `dispersion` | Nonnegative chromatic transmission spread using the ratified glTF 20/Abbe-number parameterization; defaults to zero. |
 | `attenuationColor`, `attenuationDistance`, `indexOfRefraction` | Transmitted-light tint, attenuation distance, and IOR. |
 | `sheenColor`, `sheenRoughness` | Cloth-like sheen response. |
 | `iridescence`, `iridescenceIndexOfRefraction` | Thin-film iridescence strength and film IOR. |
@@ -108,9 +110,11 @@ type ANARIMaterialParameters = {
 When a retained material has nonzero `transmission`, ANARI's shared
 [experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) automatically
 captures opaque scene color and samples it for screen-space refraction. Thickness, attenuation,
-index of refraction, and roughness shape the transmitted result. This is a single opaque-scene
-capture, not ray tracing or arbitrary layered refraction. ANARI inherits this behavior from the
-shared renderer and does not implement a separate transmission pass.
+index of refraction, chromatic dispersion, and roughness shape the transmitted result. Opaque
+radiance is captured in linear HDR when supported, then exposed and tone-mapped only after the
+physical material response. This is a single opaque-scene capture, not ray tracing or arbitrary
+layered refraction. ANARI inherits this behavior from the shared renderer and does not implement a
+separate transmission pass.
 
 ### Supported image maps
 

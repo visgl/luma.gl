@@ -97,6 +97,7 @@ const MATERIAL_PROPERTY_NAMES: Record<string, string> = {
   baseColorFactor: 'baseColor',
   clearcoatFactor: 'clearcoat',
   clearcoatRoughnessFactor: 'clearcoatRoughness',
+  dispersion: 'dispersion',
   emissiveFactor: 'emissive',
   emissiveStrength: 'emissiveStrength',
   ior: 'indexOfRefraction',

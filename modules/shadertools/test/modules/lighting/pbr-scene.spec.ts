@@ -6,6 +6,7 @@ import {makeShaderBlockLayout} from '@luma.gl/core';
 import {
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformLayoutValidationResult,
+  PBR_TONE_MAP_MODE,
   pbrScene
 } from '@luma.gl/shadertools';
 import test from 'test/utils/vitest-tape';
@@ -16,12 +17,18 @@ const EXPECTED_UNIFORM_NAMES = [
   'environmentIntensity',
   'environmentRotation',
   'environmentMipCount',
+  'outputEncoding',
   'framebufferSize',
   'viewMatrix',
   'projectionMatrix'
 ];
 
 test('shadertools#pbrScene exposes stable uniform layout metadata', testCase => {
+  testCase.deepEqual(
+    PBR_TONE_MAP_MODE,
+    {NONE: 0, REINHARD: 1, KHRONOS_PBR_NEUTRAL: 2, ACES: 3},
+    'portable public tone-mapping mode selectors remain stable'
+  );
   testCase.deepEqual(
     Object.keys(pbrScene.uniformTypes),
     EXPECTED_UNIFORM_NAMES,
@@ -57,6 +64,11 @@ test('shadertools#pbrScene exposes stable uniform layout metadata', testCase => 
     shaderBlockLayout.fields.environmentMipCount.offset,
     4,
     'environment mip count occupies the previously unused scalar position'
+  );
+  testCase.equal(
+    shaderBlockLayout.fields.outputEncoding.offset,
+    5,
+    'output encoding occupies the remaining scene-uniform padding slot'
   );
   testCase.equal(
     shaderBlockLayout.fields.framebufferSize.offset,

@@ -174,9 +174,10 @@ export type {
 export type {
   PBRSceneBindings,
   PBRSceneProps,
-  PBRSceneUniforms
+  PBRSceneUniforms,
+  PBRToneMapMode
 } from './modules/lighting/pbr-material/pbr-scene';
 export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
-export {pbrScene} from './modules/lighting/pbr-material/pbr-scene';
+export {pbrScene, PBR_TONE_MAP_MODE} from './modules/lighting/pbr-material/pbr-scene';

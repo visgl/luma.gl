@@ -428,6 +428,7 @@ function getMaterialIdentifier(
         ? 'mask'
         : 'opaque';
   const clearcoat = sourceMaterial.extensions?.['KHR_materials_clearcoat'];
+  const dispersion = sourceMaterial.extensions?.['KHR_materials_dispersion'];
   const iridescence = sourceMaterial.extensions?.['KHR_materials_iridescence'];
   const transmission = sourceMaterial.extensions?.['KHR_materials_transmission'];
   const sheen = sourceMaterial.extensions?.['KHR_materials_sheen'];
@@ -452,6 +453,7 @@ function getMaterialIdentifier(
     clearcoatRoughness: clamp(clearcoat?.clearcoatRoughnessFactor ?? 0, 0, 1),
     iridescence: clamp(iridescence?.iridescenceFactor ?? 0, 0, 1),
     transmission: clamp(transmission?.transmissionFactor ?? 0, 0, 1),
+    dispersion: Math.max(dispersion?.dispersion ?? 0, 0),
     thickness: Math.max(volume?.thicknessFactor ?? 0, 0),
     attenuationColor: toVector3(volume?.attenuationColor, [1, 1, 1]),
     indexOfRefraction: clamp(indexOfRefraction?.ior ?? 1.5, 1, 2.5),
