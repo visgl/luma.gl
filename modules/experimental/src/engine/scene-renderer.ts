@@ -72,6 +72,8 @@ export type SceneSurface = {
   material: SceneMaterial;
   /** Column-major world matrices; all placements remain in a single instanced draw. */
   transforms: readonly Readonly<NumericArray>[];
+  /** Optional stable placement identities aligned one-to-one with transforms. */
+  instanceIds?: readonly string[];
   /** Optional adapter-owned joint palette for geometry with JOINTS_0 and WEIGHTS_0. */
   skin?: SkinProps;
   /** Immutable glTF-style displacement attributes for each morph target. */
@@ -146,6 +148,15 @@ export type SceneRenderStatistics = {
   instanceCount: number;
   drawCount: number;
   triangleCount: number;
+  /** Optional interactive quality and history diagnostics for ray-traced frames. */
+  rayTracing?: {
+    internalWidth: number;
+    internalHeight: number;
+    resolutionScale: number;
+    sampledPixelCoverage: number;
+    frameTimeMilliseconds: number;
+    accumulatedSamples: number;
+  };
 };
 
 type CompiledSceneSurface = {

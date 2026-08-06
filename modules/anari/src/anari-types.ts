@@ -226,6 +226,12 @@ export type ANARIRendererParameters = {
   maxBounces?: number;
   progressive?: boolean;
   shadows?: boolean;
+  resolutionScale?: number;
+  minimumResolutionScale?: number;
+  adaptiveResolution?: boolean;
+  targetFrameTimeMilliseconds?: number;
+  temporalReprojection?: boolean;
+  shadowSamplesPerFrame?: number;
   bloomIntensity?: number;
   bloomThreshold?: number;
   bloomRadius?: number;
@@ -245,6 +251,14 @@ export type ANARIFrameStatistics = {
   instanceCount: number;
   drawCount: number;
   triangleCount: number;
+  rayTracing?: {
+    internalWidth: number;
+    internalHeight: number;
+    resolutionScale: number;
+    sampledPixelCoverage: number;
+    frameTimeMilliseconds: number;
+    accumulatedSamples: number;
+  };
 };
 
 export type ANARIObjectInfo = {

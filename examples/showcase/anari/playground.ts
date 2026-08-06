@@ -85,6 +85,25 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       setElementText('scene-instance-count', statistics.instanceCount.toLocaleString());
       setElementText('scene-draw-count', statistics.drawCount.toLocaleString());
       setElementText('scene-triangle-count', statistics.triangleCount.toLocaleString());
+      const rayTracing = statistics.rayTracing;
+      const resolutionTelemetry = document.getElementById('scene-ray-tracing-resolution-statistic');
+      const frameTelemetry = document.getElementById('scene-ray-tracing-frame-statistic');
+      if (resolutionTelemetry) {
+        resolutionTelemetry.hidden = !rayTracing;
+      }
+      if (frameTelemetry) {
+        frameTelemetry.hidden = !rayTracing;
+      }
+      if (rayTracing) {
+        setElementText(
+          'scene-ray-tracing-resolution',
+          `${rayTracing.internalWidth} × ${rayTracing.internalHeight} · ${Math.round(rayTracing.resolutionScale * 100)}%`
+        );
+        setElementText(
+          'scene-ray-tracing-frame',
+          `${rayTracing.frameTimeMilliseconds.toFixed(1)} ms · ${Math.round(rayTracing.sampledPixelCoverage * 100)}% · ${rayTracing.accumulatedSamples} spp`
+        );
+      }
       this.lastStatisticsUpdate = elapsedSeconds;
     }
   }

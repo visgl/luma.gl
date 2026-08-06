@@ -2,6 +2,7 @@ import test from 'test/utils/vitest-tape';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {ANARIDevice, type ANARIRendererRuntimeFactory} from '@luma.gl/anari';
+import {ANARISceneAdapter} from '../src/anari-scene-adapter';
 
 test('ANARI objects expose committed rather than staged parameters', testContext => {
   const device = new ANARIDevice(new NullDevice({}));
@@ -298,6 +299,29 @@ test('ANARI renderer batches repeated group instances by surface', testContext =
   testContext.equal(statistics.instanceCount, 2, 'both group placements are retained');
   testContext.equal(statistics.drawCount, 1, 'repeated groups use one instanced draw');
   testContext.ok(statistics.triangleCount > 0, 'generated sphere triangles are counted');
+
+  const adapter = new ANARISceneAdapter();
+  const surfaces = adapter.makeRenderOptions(frame)?.surfaces;
+  testContext.deepEqual(
+    surfaces?.[0]?.instanceIds,
+    instances.map(instance => `${instance.id}:${group.id}:${surface.id}`),
+    'shared scene placements retain stable instance, group, and surface identities'
+  );
+
+  world
+    .setParameters({surface: [surface, surface], instance: [instances[1], instances[0]]})
+    .commitParameters();
+  testContext.deepEqual(
+    adapter.makeRenderOptions(frame)?.surfaces[0]?.instanceIds,
+    [
+      surface.id,
+      `${surface.id}:1`,
+      `${instances[1].id}:${group.id}:${surface.id}`,
+      `${instances[0].id}:${group.id}:${surface.id}`
+    ],
+    'direct duplicates remain distinct and reordered instances preserve their retained identities'
+  );
+  adapter.destroy();
 
   frame.destroy();
   device.destroy();

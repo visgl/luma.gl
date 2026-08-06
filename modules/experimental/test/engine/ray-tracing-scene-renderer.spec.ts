@@ -120,6 +120,21 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
     );
     testCase.equal(initialStatistics.triangleCount, 1, 'analytic spheres avoid triangle expansion');
     testCase.equal(initialStatistics.drawCount, 1, 'the graph uses one fullscreen presentation');
+    testCase.equal(
+      initialStatistics.rayTracing?.internalWidth,
+      16,
+      'the default ray workload traces half the display width'
+    );
+    testCase.equal(
+      initialStatistics.rayTracing?.internalHeight,
+      16,
+      'the default ray workload traces half the display height'
+    );
+    testCase.equal(
+      initialStatistics.rayTracing?.sampledPixelCoverage,
+      1,
+      'new history is fully initialized before sparse scheduling can begin'
+    );
 
     if (supportsRawValidationErrorScopes) {
       device.handle.pushErrorScope('validation');
@@ -179,7 +194,26 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
     testCase.equal(
       resizedStatistics.instanceCount,
       3,
-      'resizing recompiles the complete GPU graph'
+      'resizing recreates the trace graph without dropping scene instances'
+    );
+    testCase.equal(
+      resizedStatistics.rayTracing?.internalWidth,
+      8,
+      'resizing preserves the default half-resolution ray workload'
+    );
+
+    const fullResolutionStatistics = renderer.render({
+      ...options,
+      width: 16,
+      height: 16,
+      resolutionScale: 1,
+      adaptiveResolution: false
+    });
+    device.submit();
+    testCase.equal(
+      fullResolutionStatistics.rayTracing?.internalWidth,
+      16,
+      'callers can opt back into full-resolution ray dispatch'
     );
 
     if (supportsRawValidationErrorScopes) {

@@ -103,6 +103,12 @@ type ANARIRendererParameters = {
   maxBounces?: number;
   progressive?: boolean;
   shadows?: boolean;
+  resolutionScale?: number;
+  minimumResolutionScale?: number;
+  adaptiveResolution?: boolean;
+  targetFrameTimeMilliseconds?: number;
+  temporalReprojection?: boolean;
+  shadowSamplesPerFrame?: number;
   bloomIntensity?: number;
   bloomThreshold?: number;
   bloomRadius?: number;
@@ -120,6 +126,12 @@ type ANARIRendererParameters = {
 | `maxBounces` | Not applied | Reserved ray-tracing bounce limit; the current implementation evaluates direct lighting only. |
 | `progressive` | `true` | Accumulate ray-traced samples across unchanged frames. |
 | `shadows` | `true` | Trace hard shadow rays toward direct lights in the `raytrace` renderer. |
+| `resolutionScale` | `0.5` | Initial ray-tracing width and height as a fraction of the display resolution. |
+| `minimumResolutionScale` | `0.25` | Lowest internal resolution scale available to adaptive ray tracing. |
+| `adaptiveResolution` | `true` | Adjust internal resolution and sampled-pixel coverage toward the target frame budget. |
+| `targetFrameTimeMilliseconds` | `33.3` | Target animation-frame interval used by adaptive ray-tracing quality. |
+| `temporalReprojection` | `true` | Reuse compatible retained history while the camera or stable scene instances move. |
+| `shadowSamplesPerFrame` | `1` | Maximum rotating direct-light shadow samples evaluated per pixel in one frame; `0` evaluates all direct lights. |
 | `bloomIntensity` | `0` | Bloom amount; positive values allocate and run the bloom postprocessing path. |
 | `bloomThreshold` | `0.62` | Brightness threshold for bloom extraction. |
 | `bloomRadius` | `7` | Bloom blur radius. |
@@ -171,7 +183,13 @@ const renderer = anariDevice.newRenderer('raytrace', {
   samplesPerPixel: 1,
   maxBounces: 1,
   progressive: true,
-  shadows: true
+  shadows: true,
+  resolutionScale: 0.5,
+  minimumResolutionScale: 0.25,
+  adaptiveResolution: true,
+  targetFrameTimeMilliseconds: 33.3,
+  temporalReprojection: true,
+  shadowSamplesPerFrame: 1
 });
 
 frame.setParameter('renderer', renderer).commitParameters();
@@ -186,14 +204,24 @@ point, and spot lights; and presents the result through a fullscreen pass. An `r
 preserves HDR radiance. The trace pass uses five storage buffers and the BVH builder uses eight,
 remaining within default WebGPU CORE limits.
 
-When `progressive` is enabled, unchanged frames accumulate additional primary-ray samples. Camera,
-scene, light, material, renderer, and frame-size changes reset the accumulation history. The
-source-order BVH accelerates object and instance selection; triangles within an intersected mesh
-are still tested linearly. Hardware ray tracing, Morton-sorted hierarchy construction, and per-mesh
-triangle BVHs are not implemented. Skeletal skinning, morph-target displacement, material textures,
-alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer paths. Indirect
-multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is accepted for
-forward compatibility but does not enable indirect bounces.
+The default half-resolution internal target traces one quarter as many pixels as the output canvas.
+When adaptive quality is enabled, the renderer can reduce scale to `0.25`, spread interleaved pixel
+coverage across frames, and rotate one shadowed direct light per frame. It approaches the configured
+frame budget using smoothed animation-frame intervals; no GPU timestamp feature is required. The
+fullscreen presentation pass upsamples the internal HDR result.
+
+Progressive history is reprojected through previous camera matrices and stable ANARI instance/group/
+surface identities. Depth and normal validation plus bounded neighborhood color clamping reject
+incompatible history; camera cuts, changed topology/materials, changed light counts, and target
+resizing invalidate it. GPU acceleration updates are encoded only for changed geometry or transforms,
+while camera-only and lighting-only frames reuse the retained BVH.
+
+The source-order BVH accelerates object and instance selection; triangles within an intersected
+mesh are still tested linearly. Hardware ray tracing, Morton-sorted hierarchy construction, and
+per-mesh triangle BVHs are not implemented. Skeletal skinning, morph-target displacement, material
+textures, alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer
+paths. Indirect multi-bounce path tracing, denoising, and volumes are also unsupported.
+`maxBounces` is accepted for forward compatibility but does not enable indirect bounces.
 
 Applications can also
 [register custom renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes).
@@ -281,6 +309,14 @@ type ANARIFrameStatistics = {
   instanceCount: number;
   drawCount: number;
   triangleCount: number;
+  rayTracing?: {
+    internalWidth: number;
+    internalHeight: number;
+    resolutionScale: number;
+    sampledPixelCoverage: number;
+    frameTimeMilliseconds: number;
+    accumulatedSamples: number;
+  };
 };
 ```
 
@@ -290,6 +326,7 @@ type ANARIFrameStatistics = {
 | `instanceCount` | Number of direct and instanced surface placements. |
 | `drawCount` | Number of successful model draws, normally one per distinct raster surface or one ray-tracing presentation draw. |
 | `triangleCount` | Sum of mesh triangles across all placements; analytic ray-traced spheres contribute zero. |
+| `rayTracing` | Optional internal resolution, effective scale, sampled-pixel coverage, smoothed frame time, and accumulated samples; present only for the `raytrace` renderer. |
 
 `frame.statistics` is initialized with zeroes and updated by each `frame.render()` call.
 
