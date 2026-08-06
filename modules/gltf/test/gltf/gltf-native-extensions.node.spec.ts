@@ -12,6 +12,7 @@ import {
   getGLTFExtensionSupport,
   getGLTFNodeInstancing,
   getUnsupportedRequiredGLTFExtensions,
+  parseGLTFAnimations,
   parseGLTFLights
 } from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -278,6 +279,29 @@ describe('standards-native glTF extension runtime', () => {
     } finally {
       device.destroy();
     }
+  });
+
+  test('preserves authored KHR_materials_dispersion animation pointers as canonical material channels', async () => {
+    const source = await loadNativeExtensionFixture('CubeVisibility');
+    source.materials[0].extensions = {
+      ...source.materials[0].extensions,
+      KHR_materials_dispersion: {dispersion: 0.25}
+    };
+    source.animations[0].channels[0].target.extensions = {
+      KHR_animation_pointer: {
+        pointer: '/materials/0/extensions/KHR_materials_dispersion/dispersion'
+      }
+    };
+
+    const parsedAnimations = parseGLTFAnimations(source);
+
+    expect(parsedAnimations[0].channels[0]).toMatchObject({
+      type: 'material',
+      targetMaterialIndex: 0,
+      property: 'dispersion',
+      pointer: '/materials/0/extensions/KHR_materials_dispersion/dispersion'
+    });
+    expect(parsedAnimations[0].channels[0].sampler.output.length).toBeGreaterThan(1);
   });
 
   test('switches and restores authored material variants without replacing model nodes', async () => {

@@ -460,6 +460,11 @@ function resolveMaterialAnimationTarget(
         ? {type: 'material', property: 'ior'}
         : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
 
+    case 'extensions/KHR_materials_dispersion/dispersion':
+      return material['extensions']?.['KHR_materials_dispersion']
+        ? {type: 'material', property: 'dispersion'}
+        : {reason: getUnsupportedMaterialPointerReason(pointerSegments)};
+
     case 'extensions/KHR_materials_transmission/transmissionFactor':
       return material['extensions']?.['KHR_materials_transmission']
         ? {type: 'material', property: 'transmissionFactor'}

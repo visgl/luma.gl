@@ -37,6 +37,7 @@ export type GLTFMaterialAnimationProperty =
   | 'baseColorFactor'
   | 'clearcoatFactor'
   | 'clearcoatRoughnessFactor'
+  | 'dispersion'
   | 'emissiveFactor'
   | 'emissiveStrength'
   | 'ior'
