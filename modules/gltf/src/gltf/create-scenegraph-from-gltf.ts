@@ -9,6 +9,7 @@ import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {parseGLTFLights} from '../parsers/parse-gltf-lights';
 import {GLTFAnimator} from './gltf-animator';
+import {GLTFSkinController} from './gltf-skin';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
 import type {GLTFAnimation} from './animations/animations';
 import {
@@ -60,6 +61,9 @@ export type GLTFScenegraphs = {
   gltfNodeIndexToNodeMap: Map<number, GroupNode>;
   /** Map from glTF node ids to generated scenegraph nodes. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
+
+  /** Automatically updated source skin bindings and reusable mesh-local joint palettes. */
+  skins: GLTFSkinController;
 
   /** Original post-processed glTF document. */
   gltf: GLTFPostprocessed;
@@ -120,6 +124,8 @@ export function createScenegraphsFromGLTF(
   const extensionSupport = getGLTFExtensionSupport(gltf);
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);
+  const skins = new GLTFSkinController({gltf, scenes, gltfNodeIndexToNodeMap});
+  animator.setUpdateHandler(() => skins.update());
 
   return {
     scenes,
@@ -135,6 +141,7 @@ export function createScenegraphsFromGLTF(
     gltfMeshIdToNodeMap,
     gltfNodeIdToNodeMap,
     gltfNodeIndexToNodeMap,
+    skins,
     gltf
   };
 }

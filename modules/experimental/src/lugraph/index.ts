@@ -1,6 +1,9 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 export {LuGraph} from './lu-graph';
 export type {LuGraphProps} from './lu-graph';
+export {LuGraphTopology} from './lu-graph-topology';
+export type {LuGraphAdjacency, LuGraphTopologyProps} from './lu-graph-topology';

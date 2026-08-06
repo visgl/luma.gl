@@ -21,6 +21,8 @@ export type {AnimationActionProps, AnimationLoopMode} from './animation/animatio
 export {AnimationAction, AnimationMixer} from './animation/animation-mixer';
 export type {MorphTargetAttributes} from './animation/morph-targets';
 export {applyMorphTargets, updateMorphTargetBuffers} from './animation/morph-targets';
+export type {SkinJointMatricesProps} from './animation/skin';
+export {updateSkinJointMatrices} from './animation/skin';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';

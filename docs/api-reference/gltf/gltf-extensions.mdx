@@ -169,8 +169,9 @@ Status meanings:
       Thickness factor plus attenuation color and distance now tint transmitted light
       in the stock shader.
     </SupportRow>
-    <SupportRow name="KHR_materials_dispersion" support="❌">
-      Chromatic dispersion is not implemented in the stock PBR shader.
+    <SupportRow name="KHR_materials_dispersion" support="✅ 🚧" fromVersion="9.3">
+      Authored dispersion is parsed into the canonical PBR material. Shared experimental and ANARI
+      rendering separate transmitted RGB wavelengths using the ratified wavelength-dependent IOR.
     </SupportRow>
     <SupportRow name="KHR_materials_volume_scatter" support="❌">
       Volume scattering is not implemented in the stock PBR shader.

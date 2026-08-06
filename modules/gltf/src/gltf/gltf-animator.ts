@@ -301,12 +301,28 @@ export type GLTFAnimatorProps = {
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
   /** Materials aligned with the source glTF materials array. */
   materials?: Material[];
+  /** Called once after all animation channels have been evaluated. */
+  onUpdate?: () => void;
+  /** Optional initial clip policy; omitted preserves legacy simultaneous playback. */
+  autoplay?: 'all' | 'first' | false;
+};
+
+/** Optional transition settings when choosing an imported animation clip. */
+export type GLTFAnimationSelectionOptions = {
+  /** Crossfade duration in seconds; omitted selects the new clip immediately. */
+  crossFadeDuration?: number;
 };
 
 /** Coordinates playback of every animation found in a glTF scene. */
 export class GLTFAnimator extends Animator<GLTFAnimationClip> {
   /** Shared engine mixer containing every parsed glTF clip and target binding. */
   readonly mixer: AnimationMixer;
+
+  /** Name of the currently selected clip, when explicit selection has been requested. */
+  activeClip: string | undefined;
+
+  private onUpdate?: () => void;
+  private previousTimeSeconds: number | undefined;
 
   /** Creates an animator for the supplied glTF scenegraph. */
   constructor(props: GLTFAnimatorProps) {
@@ -327,20 +343,80 @@ export class GLTFAnimator extends Animator<GLTFAnimationClip> {
       })
     );
     this.mixer = mixer;
+    this.onUpdate = props.onUpdate;
+    this.activeClip = this.clips[0]?.name;
+
+    if (props.autoplay === false) {
+      this.clips.forEach(clip => {
+        clip.playing = false;
+        clip.action.stop();
+      });
+    } else if (props.autoplay === 'first' && this.activeClip) {
+      this.selectClip(this.activeClip);
+    }
+  }
+
+  /** Registers the dependent scenegraph update performed once after each animation frame. */
+  setUpdateHandler(callback: (() => void) | undefined): this {
+    this.onUpdate = callback;
+    return this;
   }
 
   /** Resolves legacy wall-clock milliseconds while evaluating all clips in one mixer pass. */
   override setTime(timeMs: number): void {
     const absoluteTimeSeconds = timeMs / 1000;
+    const elapsedSeconds =
+      this.previousTimeSeconds === undefined ? 0 : absoluteTimeSeconds - this.previousTimeSeconds;
+    this.previousTimeSeconds = absoluteTimeSeconds;
+    const scaledElapsedSeconds = elapsedSeconds * this.mixer.timeScale;
+
     this.clips.forEach(clip => {
       if (!clip.playing) {
         clip.action.stop();
         return;
       }
+      if (clip.action.paused) {
+        return;
+      }
       clip.action.resume();
-      clip.action.setTime(Math.max(0, absoluteTimeSeconds - clip.startTime) * clip.speed);
+      const localTime = Math.max(0, absoluteTimeSeconds - clip.startTime) * clip.speed;
+      clip.action.setTime(localTime - scaledElapsedSeconds * clip.action.timeScale);
     });
-    this.mixer.update(0);
+    this.mixer.update(elapsedSeconds);
+    this.onUpdate?.();
+  }
+
+  /** Advances clips using delta seconds without converting the legacy millisecond clock. */
+  update(deltaSeconds: number): void {
+    this.mixer.update(deltaSeconds);
+    this.onUpdate?.();
+  }
+
+  /** Selects one imported clip and optionally crossfades from the previous selection. */
+  selectClip(name: string, options: GLTFAnimationSelectionOptions = {}): GLTFAnimationClip {
+    const nextClip = this.clips.find(clip => clip.name === name);
+    if (!nextClip) {
+      throw new Error(`Unknown animation clip: ${name}`);
+    }
+
+    const previousClip = this.clips.find(clip => clip.name === this.activeClip);
+    const crossFadeDuration = options.crossFadeDuration || 0;
+    for (const clip of this.clips) {
+      if (clip !== nextClip && !(crossFadeDuration > 0 && clip === previousClip)) {
+        clip.playing = false;
+        clip.action.stop();
+      }
+    }
+
+    nextClip.playing = true;
+    if (crossFadeDuration > 0 && previousClip && previousClip !== nextClip) {
+      previousClip.playing = true;
+      previousClip.action.crossFadeTo(nextClip.action, crossFadeDuration);
+    } else {
+      nextClip.action.reset().setEffectiveWeight(1).play();
+    }
+    this.activeClip = name;
+    return nextClip;
   }
 }
 

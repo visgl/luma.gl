@@ -8,7 +8,8 @@ import {
   type AnimationLoopMode,
   AnimationMixer,
   AnimationTrack,
-  GroupNode
+  GroupNode,
+  updateSkinJointMatrices
 } from '@luma.gl/engine';
 import {
   type GLTFAnimation,
@@ -24,19 +25,22 @@ import type {
   ANARIInstance,
   ANARILight,
   ANARIMaterial,
-  ANARISampler
+  ANARISampler,
+  ANARISurface
 } from './anari-objects';
 import type {
   ANARICameraParameters,
   ANARIGeometryParameters,
   ANARILightParameters,
-  ANARIMaterialParameters
+  ANARIMaterialParameters,
+  ANARISurfaceParameters
 } from './anari-types';
 import type {
   ANARIAnimationClipDescription,
   ANARIAnimationInterpolation,
   ANARIAnimationNodeDescription,
   ANARIAnimationSceneDescription,
+  ANARIAnimationSkinDescription,
   ANARIAnimationTarget,
   ANARIAnimationTrackDescription
 } from './animation-types';
@@ -59,6 +63,7 @@ export type ANARIAnimationBindings = {
   samplers?: ReadonlyMap<string, ANARISampler>;
   lights?: ReadonlyMap<string, ANARILight>;
   camera?: ANARICamera;
+  skins?: ReadonlyMap<ANARISurface, ANARIAnimationSkinDescription>;
 };
 
 /** Shared mixer and orchestration helpers for one retained animated ANARI scene. */
@@ -80,7 +85,8 @@ type RetainedAnimationObject =
   | ANARIMaterial
   | ANARISampler
   | ANARILight
-  | ANARICamera;
+  | ANARICamera
+  | ANARISurface;
 
 const MATERIAL_PROPERTY_NAMES: Record<string, string> = {
   alphaCutoff: 'alphaCutoff',
@@ -91,6 +97,7 @@ const MATERIAL_PROPERTY_NAMES: Record<string, string> = {
   baseColorFactor: 'baseColor',
   clearcoatFactor: 'clearcoat',
   clearcoatRoughnessFactor: 'clearcoatRoughness',
+  dispersion: 'dispersion',
   emissiveFactor: 'emissive',
   emissiveStrength: 'emissiveStrength',
   ior: 'indexOfRefraction',
@@ -399,6 +406,52 @@ export function makeANARIAnimationScene(
     }
   };
 
+  const queueSkinSurfaces = (): void => {
+    if (!bindings.skins?.size) {
+      return;
+    }
+
+    const worldMatrices = new Map<GroupNode, Matrix4>();
+    for (const [identifier, declaration] of Object.entries(nodeDeclarations)) {
+      if (!declaration.parent) {
+        nodes.get(identifier)?.preorderTraversal((node, {worldMatrix}) => {
+          if (node instanceof GroupNode) {
+            worldMatrices.set(node, new Matrix4(worldMatrix));
+          }
+        });
+      }
+    }
+
+    for (const [surface, description] of bindings.skins) {
+      const meshNode = nodes.get(description.node);
+      const joints = description.joints.flatMap(identifier => {
+        const joint = nodes.get(identifier);
+        return joint ? [joint] : [];
+      });
+      if (!meshNode || joints.length !== description.joints.length) {
+        continue;
+      }
+
+      const jointMatrices = updateSkinJointMatrices({
+        joints,
+        meshNode,
+        worldMatrices,
+        inverseBindMatrices: description.inverseBindMatrices
+      });
+      const existingMatrices = surface.getParameter('skin')?.jointMatrices;
+      if (
+        existingMatrices?.length === jointMatrices.length &&
+        jointMatrices.every((value, index) => value === existingMatrices[index])
+      ) {
+        continue;
+      }
+
+      const pendingValues = pendingObjects.get(surface) || {};
+      pendingValues['skin'] = {jointMatrices};
+      pendingObjects.set(surface, pendingValues);
+    }
+  };
+
   const flush = (): void => {
     if (hierarchyChanged) {
       for (const [identifier, declaration] of Object.entries(nodeDeclarations)) {
@@ -406,6 +459,7 @@ export function makeANARIAnimationScene(
           queueNodeInstances(identifier, new Matrix4());
         }
       }
+      queueSkinSurfaces();
       hierarchyChanged = false;
     }
 
@@ -428,6 +482,8 @@ export function makeANARIAnimationScene(
         (object as ANARILight).setParameters(changedValues as Partial<ANARILightParameters>);
       } else if (object.type === 'camera') {
         (object as ANARICamera).setParameters(changedValues as Partial<ANARICameraParameters>);
+      } else if (object.type === 'surface') {
+        (object as ANARISurface).setParameters(changedValues as Partial<ANARISurfaceParameters>);
       } else if (object.type === 'sampler') {
         (object as ANARISampler).setParameter(
           'transform',
@@ -440,6 +496,11 @@ export function makeANARIAnimationScene(
     }
     pendingObjects.clear();
   };
+
+  if (bindings.skins?.size) {
+    queueSkinSurfaces();
+    flush();
+  }
 
   return {
     mixer,

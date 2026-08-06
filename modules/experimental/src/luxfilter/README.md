@@ -133,8 +133,13 @@ redraw only after a selection or layout changes.
 
 LuxFilter is inspired by [NVIDIA RAPIDS cuXfilter](https://github.com/rapidsai/cuxfilter) and the
 RAPIDS contributors who pioneered GPU-accelerated crossfiltering across coordinated views of large
-datasets. It independently adapts those interaction patterns to luma.gl and browser-native WebGPU;
-it is not a code port, compatible Python API, or NVIDIA/RAPIDS successor.
+datasets. cuXfilter is distributed under the
+[Apache License 2.0](https://github.com/rapidsai/cuxfilter/blob/main/LICENSE).
+
+LuxFilter is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
+vis.gl implementation for browser-native WebGPU; it does not copy or translate cuXfilter source
+code. It is not a CUDA port, compatible Python API, feature-parity claim, or NVIDIA/RAPIDS
+successor, and is neither affiliated with nor endorsed by NVIDIA.
 
 The [LuxFilter API reference](/docs/api-reference/experimental/luxfilter) includes the live
 Million-Row Crossfilter Explorer and a detailed feature comparison with cuXfilter's final

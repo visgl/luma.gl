@@ -112,6 +112,7 @@ const materialProperties = {
   clearcoatRoughness: unitNumberSchema.optional(),
   iridescence: unitNumberSchema.optional(),
   transmission: unitNumberSchema.optional(),
+  dispersion: nonnegativeNumberSchema.optional(),
   thickness: nonnegativeNumberSchema.optional(),
   attenuationDistance: positiveNumberSchema.optional(),
   attenuationColor: ANARIVector3Schema.optional(),
@@ -290,8 +291,30 @@ export const ANARIRendererSchema = z
   .describe('Beauty or diagnostic renderer settings, including HDR and bloom controls.');
 
 export const ANARISurfaceSchema = z
-  .strictObject({geometry: identifierSchema, material: identifierSchema})
-  .describe('A named geometry/material pairing.');
+  .strictObject({
+    geometry: identifierSchema,
+    material: identifierSchema,
+    skin: z
+      .strictObject({
+        node: identifierSchema,
+        joints: z.array(identifierSchema).min(1),
+        inverseBindMatrices: z.array(numberSchema).optional()
+      })
+      .superRefine((skin, context) => {
+        if (
+          skin.inverseBindMatrices &&
+          skin.inverseBindMatrices.length !== skin.joints.length * 16
+        ) {
+          context.addIssue({
+            code: 'custom',
+            path: ['inverseBindMatrices'],
+            message: 'Each joint needs one inverse bind matrix.'
+          });
+        }
+      })
+      .optional()
+  })
+  .describe('A named geometry/material pairing with optional retained joint bindings.');
 
 export const ANARIGroupSchema = z
   .strictObject({
@@ -473,6 +496,24 @@ export const ANARISceneSchema = z
           path: ['surfaces', identifier, 'material'],
           message: `Unknown material "${surface.material}".`
         });
+      }
+      if (surface.skin) {
+        if (!(surface.skin.node in (scene.nodes || {}))) {
+          context.addIssue({
+            code: 'custom',
+            path: ['surfaces', identifier, 'skin', 'node'],
+            message: `Unknown skin node "${surface.skin.node}".`
+          });
+        }
+        for (const [jointIndex, joint] of surface.skin.joints.entries()) {
+          if (!(joint in (scene.nodes || {}))) {
+            context.addIssue({
+              code: 'custom',
+              path: ['surfaces', identifier, 'skin', 'joints', jointIndex],
+              message: `Unknown skin joint "${joint}".`
+            });
+          }
+        }
       }
     }
 

@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '@luma.gl/core';
 import {
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformLayoutValidationResult,
   getShaderModuleUniforms,
-  pbrMaterial,
-  type PBRMaterialUniforms
+  type PBRMaterialUniforms,
+  pbrMaterial
 } from '@luma.gl/shadertools';
+import test from 'test/utils/vitest-tape';
 
 const FLOAT32_EPSILON = 1e-6;
 
@@ -55,7 +55,8 @@ const CORE_UNIFORM_BUFFER_LAYOUT = {
   anisotropyDirection: {offset: 58, size: 2},
   anisotropyMapEnabled: {offset: 60, size: 1},
   emissiveStrength: {offset: 61, size: 1},
-  IBLenabled: {offset: 62, size: 1},
+  dispersion: {offset: 62, size: 1},
+  IBLenabled: {offset: 63, size: 1},
   scaleIBLAmbient: {offset: 64, size: 2},
   scaleDiffBaseMR: {offset: 68, size: 4},
   scaleFGDSpec: {offset: 72, size: 4}
@@ -140,6 +141,7 @@ const fullPBRUniforms: Required<PBRMaterialUniforms> = {
   anisotropyDirection: [0.6, -0.8],
   anisotropyMapEnabled: true,
   emissiveStrength: 4.2,
+  dispersion: 0.65,
   IBLenabled: true,
   scaleIBLAmbient: [1.25, 0.75],
   scaleDiffBaseMR: [1, 0.5, 0.25, 0.125],
@@ -283,7 +285,8 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
     iridescenceIor: 1.18,
     anisotropyStrength: 0.5,
     anisotropyRotation: 1.25,
-    emissiveStrength: 4.2
+    emissiveStrength: 4.2,
+    dispersion: 0.65
   } as const;
 
   for (const [uniformName, expectedValue] of Object.entries(expectedScalarValues)) {
@@ -326,7 +329,7 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
     attenuationColor: [],
     sheenColorFactor: [],
     anisotropyRotation: [57],
-    IBLenabled: [63]
+    IBLenabled: []
   } as const;
 
   for (const [uniformName, paddingSlots] of Object.entries(expectedPaddingSlots)) {

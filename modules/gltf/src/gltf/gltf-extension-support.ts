@@ -135,8 +135,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment: 'Diffuse-transmission shading is not implemented in the stock PBR shader.'
   },
   KHR_materials_dispersion: {
-    supportLevel: 'none',
-    comment: 'Chromatic dispersion is not implemented in the stock PBR shader.'
+    supportLevel: 'parsed-and-wired',
+    comment:
+      'The canonical PBR shader separates red, green, and blue transmission using wavelength-dependent refraction.'
   },
   KHR_materials_volume_scatter: {
     supportLevel: 'none',

@@ -269,6 +269,7 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
     KHR_materials_specular: {specularFactor: 0.42, specularColorFactor: [0.3, 0.4, 0.5]},
     KHR_materials_ior: {ior: 1.7},
     KHR_materials_transmission: {transmissionFactor: 0.56},
+    KHR_materials_dispersion: {dispersion: 2.4},
     KHR_materials_volume: {
       thicknessFactor: 0.6,
       attenuationDistance: 2.5,
@@ -417,6 +418,7 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
   testContext.equal(importedMaterial.specularIntensity, 0.42, 'specular intensity survives');
   testContext.equal(importedMaterial.indexOfRefraction, 1.7, 'index of refraction survives');
   testContext.equal(importedMaterial.transmission, 0.56, 'transmission factor survives');
+  testContext.equal(importedMaterial.dispersion, 2.4, 'ratified chromatic dispersion survives');
   testContext.equal(importedMaterial.thickness, 0.6, 'volume thickness survives');
   testContext.equal(
     importedMaterial.attenuationDistance,

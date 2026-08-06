@@ -15,6 +15,7 @@ import {
   getTextureTransformSlotDefinitions,
   parseGLTFAnimations,
   parseGLTFLights,
+  resolveGLTFSkinIndex,
   resolveTextureCoordinateSet,
   resolveTextureTransform
 } from '@luma.gl/gltf';
@@ -104,7 +105,7 @@ export async function makeANARIJSONSceneFromGLTF(
   }
   state.scene.lights = makeImportedLights(gltf, state);
 
-  const materialIdentifiers = gltf.materials.map(material =>
+  const materialIdentifiers = (gltf.materials || []).map(material =>
     state.materialIdentifiers.get(material)
   );
   const samplerIdentifiers: Record<string, string> = {};
@@ -123,7 +124,7 @@ export async function makeANARIJSONSceneFromGLTF(
   const clips = makeANARIAnimationClipsFromGLTF(parseGLTFAnimations(gltf), {
     nodeIdentifiers: state.nodeIdentifiers,
     materialIdentifiers,
-    materialAlphaModes: gltf.materials.map(material =>
+    materialAlphaModes: (gltf.materials || []).map(material =>
       material.alphaMode === 'BLEND' ? 'BLEND' : material.alphaMode === 'MASK' ? 'MASK' : 'OPAQUE'
     ),
     samplerIdentifiers
@@ -299,7 +300,7 @@ function getSurfaceIdentifier(
     return undefined;
   }
 
-  const cacheKey = `${meshIdentifier}:${primitiveIndex}${primitive.targets?.length ? `:${node.id}` : ''}`;
+  const cacheKey = `${meshIdentifier}:${primitiveIndex}${primitive.targets?.length || node.skin !== undefined ? `:${node.id}` : ''}`;
   let surfaceIdentifier = state.surfaceIdentifiers.get(cacheKey);
   if (surfaceIdentifier) {
     return surfaceIdentifier;
@@ -373,8 +374,25 @@ function getSurfaceIdentifier(
   }
 
   const material = getMaterialIdentifier(primitive.material, state);
+  const sourceSkin =
+    node.skin === undefined
+      ? undefined
+      : state.gltf.skins?.[resolveGLTFSkinIndex(state.gltf, node.skin)];
+  const skin = sourceSkin
+    ? {
+        node: node.id,
+        joints: sourceSkin.joints.map(jointIndex => state.gltf.nodes[jointIndex].id),
+        ...(sourceSkin.inverseBindMatrices?.value
+          ? {inverseBindMatrices: Array.from(sourceSkin.inverseBindMatrices.value)}
+          : {})
+      }
+    : undefined;
   state.scene.geometries[surfaceIdentifier] = geometry;
-  state.scene.surfaces[surfaceIdentifier] = {geometry: surfaceIdentifier, material};
+  state.scene.surfaces[surfaceIdentifier] = {
+    geometry: surfaceIdentifier,
+    material,
+    ...(skin ? {skin} : {})
+  };
   state.surfaceIdentifiers.set(cacheKey, surfaceIdentifier);
   return surfaceIdentifier;
 }
@@ -410,6 +428,7 @@ function getMaterialIdentifier(
         ? 'mask'
         : 'opaque';
   const clearcoat = sourceMaterial.extensions?.['KHR_materials_clearcoat'];
+  const dispersion = sourceMaterial.extensions?.['KHR_materials_dispersion'];
   const iridescence = sourceMaterial.extensions?.['KHR_materials_iridescence'];
   const transmission = sourceMaterial.extensions?.['KHR_materials_transmission'];
   const sheen = sourceMaterial.extensions?.['KHR_materials_sheen'];
@@ -434,6 +453,7 @@ function getMaterialIdentifier(
     clearcoatRoughness: clamp(clearcoat?.clearcoatRoughnessFactor ?? 0, 0, 1),
     iridescence: clamp(iridescence?.iridescenceFactor ?? 0, 0, 1),
     transmission: clamp(transmission?.transmissionFactor ?? 0, 0, 1),
+    dispersion: Math.max(dispersion?.dispersion ?? 0, 0),
     thickness: Math.max(volume?.thicknessFactor ?? 0, 0),
     attenuationColor: toVector3(volume?.attenuationColor, [1, 1, 1]),
     indexOfRefraction: clamp(indexOfRefraction?.ior ?? 1.5, 1, 2.5),

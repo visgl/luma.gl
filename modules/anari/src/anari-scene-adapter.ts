@@ -347,6 +347,7 @@ export function makeSceneMaterial(material: ANARIMaterial): SceneMaterial {
     specularIntensityFactor: parameters.specularIntensity ?? 1,
     ior: parameters.indexOfRefraction ?? 1.5,
     transmissionFactor: parameters.transmission ?? 0,
+    dispersion: parameters.dispersion ?? 0,
     thicknessFactor: parameters.thickness ?? 0,
     attenuationDistance: parameters.attenuationDistance ?? 1e9,
     attenuationColor: parameters.attenuationColor || [1, 1, 1],
