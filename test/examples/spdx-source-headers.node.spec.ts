@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {execFileSync} from 'node:child_process';
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {describe, expect, test} from 'vitest';
@@ -65,7 +65,10 @@ function listRepositorySourceFiles(): string[] {
   ).split('\0');
 
   return repositoryFiles.filter(sourceFile => {
-    if (!SOURCE_FILE_EXTENSIONS.has(path.extname(sourceFile))) {
+    if (
+      !SOURCE_FILE_EXTENSIONS.has(path.extname(sourceFile)) ||
+      !existsSync(path.join(REPOSITORY_ROOT, sourceFile))
+    ) {
       return false;
     }
 
