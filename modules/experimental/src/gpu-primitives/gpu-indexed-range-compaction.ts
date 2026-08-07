@@ -12,7 +12,6 @@ import {
 } from './gpu-command-graph';
 import {GPUScan} from './gpu-scan';
 import {
-  createTransientVectorView,
   createTransientView,
   getViewBinding,
   getViewElementOffset,
@@ -99,8 +98,6 @@ export type GPUPartitionedIndexedRangeCompactionProps = {
 
 /** GPU-generated partition metadata exposed to range-aware downstream consumers. */
 export type GPUPartitionedIndexedRangeCompactionResult = {
-  /** Source-aligned local offsets preserving the flags chunk topology. */
-  localOffsets: GraphVectorView<'uint32'>;
   /** Selected row count for every canonical range. */
   rangeCounts: GraphDataView<'uint32'>;
   /** Partition-local exclusive selected-row offset for every canonical range. */
@@ -220,10 +217,11 @@ export class GPUIndexedRangeCompaction {
 /**
  * Stably compacts active ranges into matching bounded output partitions.
  *
- * Range records remain one logical canonical index, while source flags, local scratch, and output
- * IDs preserve caller-provided chunk boundaries. Every range must be wholly contained by the flags
- * chunk selected by `partitionRangeEnds`. Each partition receives an independent compacted list;
- * emitted values remain global source indices.
+ * Range records remain one logical canonical index, while source flags and output IDs preserve
+ * caller-provided chunk boundaries. Every range must be wholly contained by the flags chunk
+ * selected by `partitionRangeEnds`. Each partition receives an independent compacted list; emitted
+ * values remain global source indices. Local offsets are recomputed during scatter instead of
+ * consuming source-sized scratch storage.
  */
 export class GPUPartitionedIndexedRangeCompaction {
   readonly id: string;
@@ -276,7 +274,7 @@ export class GPUPartitionedIndexedRangeCompaction {
     );
   }
 
-  /** Adds partitioned local scans, bounded range scans, scatter, and count publication. */
+  /** Adds partitioned range counts, bounded range scans, scratchless scatter, and count publication. */
   addToGraph<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): GPUPartitionedIndexedRangeCompactionResult {
@@ -295,7 +293,6 @@ export class GPUPartitionedIndexedRangeCompaction {
       throw new Error(`${this.id} activeRangeDispatch must belong to the target graph`);
     }
 
-    const localOffsets = createTransientVectorView(graph, `${this.id}-local-offsets`, this.output);
     const rangeCounts: GraphDataView<'uint32'> = createTransientView(
       graph,
       `${this.id}-range-counts`,
@@ -321,17 +318,15 @@ export class GPUPartitionedIndexedRangeCompaction {
     for (let partitionIndex = 0; partitionIndex < this.flags.data.length; partitionIndex++) {
       const flags = this.flags.data[partitionIndex];
       const output = this.output.data[partitionIndex];
-      const offsets = localOffsets.data[partitionIndex];
       const sourceEnd = sourceStart + output.length;
       const rangeEnd = this.partitionRangeEnds[partitionIndex];
-      addPartitionLocalScanPass(graph, this, {
+      addPartitionRangeCountPass(graph, this, {
         partitionIndex,
         sourceStart,
         sourceEnd,
         rangeStart,
         rangeEnd,
         flags,
-        localOffsets: offsets,
         rangeCounts
       });
       const partitionRangeCount = rangeEnd - rangeStart;
@@ -357,7 +352,6 @@ export class GPUPartitionedIndexedRangeCompaction {
         rangeStart,
         rangeEnd,
         flags,
-        localOffsets: offsets,
         rangeOffsets,
         output
       });
@@ -365,7 +359,7 @@ export class GPUPartitionedIndexedRangeCompaction {
       rangeStart = rangeEnd;
     }
     addPartitionCountPass(graph, this, rangeCounts, rangeOffsets, partitionCounts);
-    return {localOffsets, rangeCounts, rangeOffsets, partitionCounts};
+    return {rangeCounts, rangeOffsets, partitionCounts};
   }
 }
 
@@ -464,7 +458,7 @@ function validatePartitionRangeEnds(
   }
 }
 
-function addPartitionLocalScanPass<Parameters>(
+function addPartitionRangeCountPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   compaction: GPUPartitionedIndexedRangeCompaction,
   props: {
@@ -474,12 +468,10 @@ function addPartitionLocalScanPass<Parameters>(
     rangeStart: number;
     rangeEnd: number;
     flags: GraphDataView<'uint32'>;
-    localOffsets: GraphDataView<'uint32'>;
     rangeCounts: GraphDataView<'uint32'>;
   }
 ): void {
   const {rangeLayout} = compaction;
-  const selectedExpression = getFlagSelectionExpression(compaction.flagEncoding, 'chunkIndex');
   const source = /* wgsl */ `
 const RANGE_START: u32 = ${props.rangeStart}u;
 const RANGE_END: u32 = ${props.rangeEnd}u;
@@ -491,13 +483,11 @@ const RANGE_COUNT_WORD: u32 = ${rangeLayout.countWordOffset}u;
 const FLAGS_OFFSET: u32 = ${getViewElementOffset(props.flags)}u;
 const RANGES_OFFSET: u32 = ${getViewElementOffset(compaction.ranges)}u;
 const ACTIVE_RANGE_IDS_OFFSET: u32 = ${getViewElementOffset(compaction.activeRangeIds)}u;
-const LOCAL_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.localOffsets)}u;
 const RANGE_COUNTS_OFFSET: u32 = ${getViewElementOffset(props.rangeCounts)}u;
 @group(0) @binding(0) var<storage, read> flags: array<u32>;
 @group(0) @binding(1) var<storage, read> ranges: array<u32>;
 @group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
-@group(0) @binding(3) var<storage, read_write> localOffsets: array<u32>;
-@group(0) @binding(4) var<storage, read_write> rangeCounts: array<u32>;
+@group(0) @binding(3) var<storage, read_write> rangeCounts: array<u32>;
 var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;
 
 @compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
@@ -515,6 +505,117 @@ fn main(
   if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END) {
     return;
   }
+${getPartitionSelectionScanShader(compaction.flagEncoding)}
+
+  if (localIndex == 0u) {
+    var selectedCount = 0u;
+    if (elementCount != 0u) {
+      selectedCount = prefixes[elementCount - 1u];
+    }
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = selectedCount;
+  }
+}`;
+  addIndirectPass(graph, {
+    id: `${compaction.id}-partition-${props.partitionIndex}-range-count`,
+    source,
+    views: {
+      flags: props.flags,
+      ranges: compaction.ranges,
+      activeRangeIds: compaction.activeRangeIds,
+      rangeCounts: props.rangeCounts
+    },
+    resources: [
+      {buffer: props.flags, usage: 'storage-read'},
+      {buffer: compaction.ranges, usage: 'storage-read'},
+      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+      {buffer: props.rangeCounts, usage: 'storage-write'}
+    ],
+    dispatchBuffer: compaction.activeRangeDispatch
+  });
+}
+
+function addPartitionScatterPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  compaction: GPUPartitionedIndexedRangeCompaction,
+  props: {
+    partitionIndex: number;
+    sourceStart: number;
+    sourceEnd: number;
+    rangeStart: number;
+    rangeEnd: number;
+    flags: GraphDataView<'uint32'>;
+    rangeOffsets: GraphDataView<'uint32'>;
+    output: GraphDataView<'uint32'>;
+  }
+): void {
+  const {rangeLayout} = compaction;
+  const source = /* wgsl */ `
+const RANGE_START: u32 = ${props.rangeStart}u;
+const RANGE_END: u32 = ${props.rangeEnd}u;
+const SOURCE_START: u32 = ${props.sourceStart}u;
+const SOURCE_END: u32 = ${props.sourceEnd}u;
+const RANGE_WORD_STRIDE: u32 = ${rangeLayout.wordStride}u;
+const RANGE_FIRST_WORD: u32 = ${rangeLayout.firstIndexWordOffset}u;
+const RANGE_COUNT_WORD: u32 = ${rangeLayout.countWordOffset}u;
+const FLAGS_OFFSET: u32 = ${getViewElementOffset(props.flags)}u;
+const RANGES_OFFSET: u32 = ${getViewElementOffset(compaction.ranges)}u;
+const ACTIVE_RANGE_IDS_OFFSET: u32 = ${getViewElementOffset(compaction.activeRangeIds)}u;
+const RANGE_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.rangeOffsets)}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
+@group(0) @binding(0) var<storage, read> flags: array<u32>;
+@group(0) @binding(1) var<storage, read> ranges: array<u32>;
+@group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
+@group(0) @binding(3) var<storage, read> rangeOffsets: array<u32>;
+@group(0) @binding(4) var<storage, read_write> outputIds: array<u32>;
+var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;
+
+@compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
+  if (rangeId < RANGE_START || rangeId >= RANGE_END) {
+    return;
+  }
+  let recordOffset = RANGES_OFFSET + rangeId * RANGE_WORD_STRIDE;
+  let firstIndex = ranges[recordOffset + RANGE_FIRST_WORD];
+  let elementCount = ranges[recordOffset + RANGE_COUNT_WORD];
+  if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END) {
+    return;
+  }
+${getPartitionSelectionScanShader(compaction.flagEncoding)}
+
+  if (selected != 0u) {
+    let outputIndex = rangeOffsets[RANGE_OFFSETS_OFFSET + rangeId] +
+      prefixes[localIndex] - selected;
+    outputIds[OUTPUT_OFFSET + outputIndex] = firstIndex + localIndex;
+  }
+}`;
+  addIndirectPass(graph, {
+    id: `${compaction.id}-partition-${props.partitionIndex}-scatter`,
+    source,
+    views: {
+      flags: props.flags,
+      ranges: compaction.ranges,
+      activeRangeIds: compaction.activeRangeIds,
+      rangeOffsets: props.rangeOffsets,
+      outputIds: props.output
+    },
+    resources: [
+      {buffer: props.flags, usage: 'storage-read'},
+      {buffer: compaction.ranges, usage: 'storage-read'},
+      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+      {buffer: props.rangeOffsets, usage: 'storage-read'},
+      {buffer: props.output, usage: 'storage-write'}
+    ],
+    dispatchBuffer: compaction.activeRangeDispatch
+  });
+}
+
+function getPartitionSelectionScanShader(encoding: GPUIndexedRangeFlagEncoding): string {
+  const selectedExpression = getFlagSelectionExpression(encoding, 'chunkIndex');
+  return /* wgsl */ `
   let localIndex = localId.x;
   let chunkIndex = firstIndex - SOURCE_START + localIndex;
   var selected = 0u;
@@ -537,122 +638,7 @@ fn main(
     prefixes[localIndex] += addend;
     workgroupBarrier();
     step *= 2u;
-  }
-
-  if (localIndex < elementCount) {
-    localOffsets[LOCAL_OFFSETS_OFFSET + chunkIndex] = prefixes[localIndex] - selected;
-  }
-  if (localIndex == 0u) {
-    var selectedCount = 0u;
-    if (elementCount != 0u) {
-      selectedCount = prefixes[elementCount - 1u];
-    }
-    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = selectedCount;
-  }
-}`;
-  addIndirectPass(graph, {
-    id: `${compaction.id}-partition-${props.partitionIndex}-local-scan`,
-    source,
-    views: {
-      flags: props.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets: props.localOffsets,
-      rangeCounts: props.rangeCounts
-    },
-    resources: [
-      {buffer: props.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: props.localOffsets, usage: 'storage-write'},
-      {buffer: props.rangeCounts, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
-}
-
-function addPartitionScatterPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  compaction: GPUPartitionedIndexedRangeCompaction,
-  props: {
-    partitionIndex: number;
-    sourceStart: number;
-    sourceEnd: number;
-    rangeStart: number;
-    rangeEnd: number;
-    flags: GraphDataView<'uint32'>;
-    localOffsets: GraphDataView<'uint32'>;
-    rangeOffsets: GraphDataView<'uint32'>;
-    output: GraphDataView<'uint32'>;
-  }
-): void {
-  const {rangeLayout} = compaction;
-  const selectedExpression = getFlagSelectionExpression(compaction.flagEncoding, 'chunkIndex');
-  const source = /* wgsl */ `
-const RANGE_START: u32 = ${props.rangeStart}u;
-const RANGE_END: u32 = ${props.rangeEnd}u;
-const SOURCE_START: u32 = ${props.sourceStart}u;
-const SOURCE_END: u32 = ${props.sourceEnd}u;
-const RANGE_WORD_STRIDE: u32 = ${rangeLayout.wordStride}u;
-const RANGE_FIRST_WORD: u32 = ${rangeLayout.firstIndexWordOffset}u;
-const RANGE_COUNT_WORD: u32 = ${rangeLayout.countWordOffset}u;
-const FLAGS_OFFSET: u32 = ${getViewElementOffset(props.flags)}u;
-const RANGES_OFFSET: u32 = ${getViewElementOffset(compaction.ranges)}u;
-const ACTIVE_RANGE_IDS_OFFSET: u32 = ${getViewElementOffset(compaction.activeRangeIds)}u;
-const LOCAL_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.localOffsets)}u;
-const RANGE_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.rangeOffsets)}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
-@group(0) @binding(0) var<storage, read> flags: array<u32>;
-@group(0) @binding(1) var<storage, read> ranges: array<u32>;
-@group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
-@group(0) @binding(3) var<storage, read> localOffsets: array<u32>;
-@group(0) @binding(4) var<storage, read> rangeOffsets: array<u32>;
-@group(0) @binding(5) var<storage, read_write> outputIds: array<u32>;
-
-@compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
-fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
-) {
-  let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
-  if (rangeId < RANGE_START || rangeId >= RANGE_END) {
-    return;
-  }
-  let recordOffset = RANGES_OFFSET + rangeId * RANGE_WORD_STRIDE;
-  let firstIndex = ranges[recordOffset + RANGE_FIRST_WORD];
-  let elementCount = ranges[recordOffset + RANGE_COUNT_WORD];
-  if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END ||
-      localId.x >= elementCount) {
-    return;
-  }
-  let chunkIndex = firstIndex - SOURCE_START + localId.x;
-  if (${selectedExpression}) {
-    let outputIndex = rangeOffsets[RANGE_OFFSETS_OFFSET + rangeId] +
-      localOffsets[LOCAL_OFFSETS_OFFSET + chunkIndex];
-    outputIds[OUTPUT_OFFSET + outputIndex] = firstIndex + localId.x;
-  }
-}`;
-  addIndirectPass(graph, {
-    id: `${compaction.id}-partition-${props.partitionIndex}-scatter`,
-    source,
-    views: {
-      flags: props.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets: props.localOffsets,
-      rangeOffsets: props.rangeOffsets,
-      outputIds: props.output
-    },
-    resources: [
-      {buffer: props.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: props.localOffsets, usage: 'storage-read'},
-      {buffer: props.rangeOffsets, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  }`;
 }
 
 function getFlagSelectionExpression(

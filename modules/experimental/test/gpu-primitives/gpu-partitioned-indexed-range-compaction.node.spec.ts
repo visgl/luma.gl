@@ -15,25 +15,31 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
   test('preserves source partitions through local range compaction', () => {
     const fixture = createCompactionFixture();
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
+    const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
       const result = fixture.compaction.addToGraph(fixture.graph);
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'visible-clear-range-counts',
-        'visible-partition-0-local-scan',
+        'visible-partition-0-range-count',
         'visible-partition-0-range-scan-level-0-scan',
         'visible-partition-0-scatter',
-        'visible-partition-1-local-scan',
+        'visible-partition-1-range-count',
         'visible-partition-1-range-scan-level-0-scan',
         'visible-partition-1-scatter',
         'visible-publish-counts'
       ]);
-      expect(result.localOffsets.data.map(chunk => chunk.length)).toEqual([6, 5]);
       expect(result.rangeCounts.length).toBe(4);
       expect(result.rangeOffsets.length).toBe(4);
       expect(result.partitionCounts.length).toBe(2);
+      expect(
+        createTransientBuffer.mock.calls.some(([descriptor]) =>
+          descriptor.id?.includes('local-offsets')
+        )
+      ).toBe(false);
     } finally {
       addComputePass.mockRestore();
+      createTransientBuffer.mockRestore();
       fixture.device.destroy();
     }
   });
@@ -43,7 +49,7 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
     try {
       const result = fixture.compaction.addToGraph(fixture.graph);
       expect(fixture.compaction.flags.data.map(chunk => chunk.length)).toEqual([1, 1]);
-      expect(result.localOffsets.data.map(chunk => chunk.length)).toEqual([6, 5]);
+      expect(result.partitionCounts.length).toBe(2);
     } finally {
       fixture.device.destroy();
     }
