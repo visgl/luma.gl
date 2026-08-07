@@ -424,9 +424,10 @@ test('luGraph native showcase renders every real GPU point while sampling only f
   let color: Texture | undefined;
   let depth: Texture | undefined;
   let pickingReadback: Buffer | undefined;
+  // Odd dimensions place the pinned origin on a pixel center across software GPU backends.
   const devicePixelSizeSpy = vi
     .spyOn(device.getDefaultCanvasContext(), 'getDevicePixelSize')
-    .mockReturnValue([64, 48]);
+    .mockReturnValue([65, 49]);
   try {
     explorer = createExplorer(device, 32, 'sampled', {pointMode: true, maxVisibleEdges: 4});
     tapeTest.equal(
