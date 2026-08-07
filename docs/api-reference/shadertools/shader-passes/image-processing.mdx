@@ -198,6 +198,11 @@ Adds a glow to bright areas of the image by extracting pixels above a luminance 
 - `threshold` Luminance threshold above which a pixel contributes to bloom. Default value is `0.8`.
 - `intensity` Strength of the bloom contribution. Default value is `1`.
 
+`bloom` is the compact shader-pass implementation. For configurable multiscale HDR bloom,
+Gaussian or Dual-Kawase filtering, WebGPU compute downsampling, temporal stabilization,
+photographic lens artifacts, and the optional WebGPU FFT convolution path, see
+[Adaptive HDR exposure and cinematic bloom](/docs/api-guide/shaders/shader-passes#adaptive-hdr-exposure-and-cinematic-bloom).
+
 ### triangleBlur
 
 This is the most basic blur filter, which convolves the image with a pyramid filter. The pyramid filter is separable and is applied as two perpendicular triangle filters.

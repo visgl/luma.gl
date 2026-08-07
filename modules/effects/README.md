@@ -62,6 +62,9 @@ reuses expired extraction textures during reconstruction.
 | `high` | 4 | 16 render | 12 render + 1 compute | 8 render | 4 render + 1 compute |
 | `ultra` | 5 | 20 render | 15 render + 1 compute | 10 render | 5 render + 1 compute |
 
+These counts describe bloom-pipeline work only; optional lens/history passes and renderer
+source-seeding or presentation passes are additional.
+
 Optional `lens` controls add aperture diffraction, spectral lens-element ghosts, a radial halo,
 and sampled lens dirt. Set `temporalStability` to accumulate neighborhood-clamped glow history.
 Add `temporalReprojection: true` when the application supplies `velocityTexture` and `depthTexture`
@@ -86,7 +89,16 @@ The lens pass exists only when at least one of `starburstIntensity`, `ghostInten
 `quality`, `resolutionScale`, `starburstSpikes`, or `ghostCount` to trade optical detail for
 throughput. For physically based full-kernel diffraction, the separately owned
 `GPUConvolutionBloom` renderer in `@luma.gl/experimental` applies true RGB FFT convolution instead
-of the lower-cost screen-space starburst approximation.
+of the lower-cost screen-space starburst approximation. It supports independent generated or
+measured red, green, and blue point-spread functions, zero-padded guard bands, exposure-aware
+extraction, and optional lens/temporal composition. At 1920 x 1080 with quarter-resolution
+sampling and the default 12.5% guard band, its 1024 x 512 transform uses 48 MiB of complex
+buffers and 45 steady-state compute dispatches. Setting `guardBand: 0` uses a 512 x 512 transform,
+24 MiB, and 43 dispatches without explicit edge-wrap protection.
+
+Keep the scene and bloom chain in `rgba16float` when unclamped highlight radiance is required.
+The existing deck.gl `PostProcessEffect` accepts shader-pass modules rather than named-target
+`ShaderPassPipeline` graphs; its default postprocessing buffers currently use `rgba8unorm`.
 
 `toneMapping` applies an ACES filmic curve after exposure and preserves the source alpha channel.
 Place it after bloom or other HDR effects so bright highlights roll off before presentation:
@@ -136,6 +148,17 @@ renderer.renderToScreen({
 `lensDirtTexture` is an application-owned, sampled color texture. Omit the binding when
 `lens.dirtIntensity` is zero. Like other persistent effects, temporal bloom history is reset by
 `renderer.resetHistory()`, `resetHistory: true`, or resizing the renderer.
+
+Related technique and integration references:
+
+- [Unreal Engine bloom documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/bloom-in-unreal-engine):
+  image-kernel FFT convolution, energy conservation, lens dirt, and edge-padding controls.
+- [AMD FidelityFX Single Pass Downsampler](https://gpuopen.com/manuals/fidelityfx_sdk/techniques/single-pass-downsampler/):
+  workgroup-local image reduction in one compute dispatch.
+- [Google Filament imaging pipeline](https://google.github.io/filament/main/filament.html):
+  camera exposure, bloom, and scene-linear postprocessing before tone mapping.
+- [deck.gl PostProcessEffect](https://deck.gl/docs/api-reference/core/post-process-effect):
+  deck.gl's existing shader-module postprocessing interface.
 
 See [Rendering Techniques and Tradeoffs](https://luma.gl/docs/api-guide/shaders/rendering-techniques)
 for comparisons between related effects, their GPU inputs, backend support, and composition order.
