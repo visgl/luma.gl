@@ -269,6 +269,8 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       extensionName: this.extensionName,
       modelValue: this.selectedModelValue || LOADING_MODEL_VALUE,
       instanceCount: this.getAnimationInstanceCount(),
+      autoLOD: this.options['autoLOD'],
+      detailBias: this.levelOfDetailBias,
       useModelLights: this.options['useModelLights'],
       cameraAnimation: this.options['cameraAnimation'],
       gltfAnimation: this.options['gltfAnimation']
@@ -300,6 +302,17 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     const instanceCount = getChangedSetting(changedSettings, 'instanceCount')?.nextValue;
     if (typeof instanceCount === 'number') {
       this.setAnimationInstanceCount(instanceCount);
+      return;
+    }
+    const automaticLevelOfDetail = getChangedSetting(changedSettings, 'autoLOD')?.nextValue;
+    if (typeof automaticLevelOfDetail === 'boolean') {
+      this.setAutomaticLevelOfDetail(automaticLevelOfDetail);
+      saveOptions(this.options);
+      return;
+    }
+    const detailBias = getChangedSetting(changedSettings, 'detailBias')?.nextValue;
+    if (typeof detailBias === 'number') {
+      this.setLevelOfDetailBias(detailBias);
       return;
     }
     for (const optionName of ['useModelLights', 'cameraAnimation', 'gltfAnimation'] as const) {
@@ -426,6 +439,8 @@ type GltfSettingsState = {
   extensionName: string;
   modelValue: string;
   instanceCount: number;
+  autoLOD: boolean;
+  detailBias: number;
   useModelLights: boolean;
   cameraAnimation: boolean;
   gltfAnimation: boolean;
@@ -505,6 +520,29 @@ export function makeGltfSettingsSchema(
             label: 'glTF Animation',
             type: 'boolean',
             persist: 'none'
+          }
+        ]
+      },
+      {
+        id: 'level-of-detail',
+        name: 'Level of Detail',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'autoLOD',
+            label: 'Auto LOD',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'detailBias',
+            label: 'Detail Bias',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 4,
+            step: 0.25,
+            sliderDebounceMs: 120
           }
         ]
       }

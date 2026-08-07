@@ -17,12 +17,56 @@ import type {ParseGLTFOptions} from '../parsers/parse-gltf';
 import {createScenegraphsFromGLTF, type GLTFScenegraphs} from './create-scenegraph-from-gltf';
 import type {GLTFCrowdModelConfiguration, GLTFCrowdModelResources} from './create-gltf-model';
 import {type GLTFAnimationSelectionOptions, GLTFAnimator} from './gltf-animator';
+import {generateGLTFLODLevels, getGLTFNodeLODs} from './gltf-lod';
 import {GLTFSkinController} from './gltf-skin';
+
+/** Authored or generated screen-space detail selection for independently animated crowd actors. */
+export type GLTFCrowdLODOptions = {
+  /** Select detail independently per actor. Defaults to false until explicitly enabled. */
+  enabled?: boolean;
+  /** Descending projected-height fractions for each detail level and the final culling boundary. */
+  screenCoverage?: readonly number[];
+  /** Relative transition dead band that prevents nearby actors flickering between levels. */
+  hysteresis?: number;
+  /** Generate detached lower-detail index buffers when the source has no authored levels. */
+  autoGenerate?: boolean;
+  /** Desired generated index-count ratios, ordered from higher to lower detail. */
+  ratios?: readonly number[];
+  /** Keeps open mesh boundaries fixed when generating levels. Defaults to false for glTF assets. */
+  preserveBoundary?: boolean;
+};
+
+/** Camera and viewport state used to classify crowd actors without a backend-specific pass. */
+export type GLTFCrowdLODView = {
+  viewMatrix: Readonly<NumericArray>;
+  projectionMatrix: Readonly<NumericArray>;
+  viewportWidth?: number;
+  viewportHeight?: number;
+};
+
+/** Visible actors and submitted triangles at one independently selected detail level. */
+export type GLTFCrowdLODLevelStats = {
+  level: number;
+  actors: number;
+  triangles: number;
+};
+
+/** Current actor visibility, detail buckets, and actual instanced primitive work. */
+export type GLTFCrowdLODStats = {
+  source: 'authored' | 'generated' | 'none';
+  visibleActors: number;
+  culledActors: number;
+  drawCount: number;
+  triangles: number;
+  levels: GLTFCrowdLODLevelStats[];
+};
 
 /** Fixed shared-model and GPU-buffer configuration for an independently animated glTF crowd. */
 export type GLTFAnimatedCrowdOptions = ParseGLTFOptions & {
   /** Maximum simultaneous actors; fixes GPU buffer and palette-atlas allocations. Defaults to 16. */
   capacity?: number;
+  /** Optional portable per-actor authored or generated screen-space level-of-detail selection. */
+  lod?: GLTFCrowdLODOptions;
 };
 
 /** Initial placement and independent playback controls for one lightweight crowd actor. */
@@ -51,6 +95,12 @@ export type GLTFCrowdClipSelectionOptions = GLTFAnimationSelectionOptions & {
 export type GLTFCrowdPrimitiveGroup = {
   /** Source node whose animated world transform places this primitive. */
   nodeIndex: number;
+  /** Source node that owns this level's immutable primitive geometry and material. */
+  sourceNodeIndex: number;
+  /** Zero for the original primitive, increasing for authored or generated lower detail. */
+  lodLevel: number;
+  /** Number of triangles submitted for one actor at this detail level. */
+  triangleCount: number;
   /** One shared immutable-geometry/material model used for every actor. */
   model: Model;
   /** Four shared per-instance matrix-column vertex buffers. */
@@ -299,29 +349,70 @@ export class GLTFAnimatedCrowd {
   readonly models: readonly Model[];
 
   private readonly actorsById = new Map<string, GLTFCrowdActor>();
+  private readonly actorLODLevels = new Map<string, number>();
+  private readonly lodOptions?: GLTFCrowdLODOptions;
+  private readonly lodSource: GLTFCrowdLODStats['source'];
+  private readonly lodScreenCoverage: readonly number[];
+  private readonly maximumLODLevel: number;
+  private currentLODView: GLTFCrowdLODView | null = null;
+  private isLODEnabled: boolean;
+  private lodBias = 1;
+  private currentLODStats: GLTFCrowdLODStats;
   private nextActorIndex = 0;
   private isDestroyed = false;
   private suspendedRefreshCount = 0;
 
   constructor(device: Device, gltf: GLTFPostprocessed, options: GLTFAnimatedCrowdOptions = {}) {
-    const {capacity = 16, ...parseOptions} = options;
+    const {capacity = 16, lod, ...parseOptions} = options;
     // Fixed capacity keeps GPU instance and joint-palette buffers stable for the crowd lifetime.
     assert(Number.isSafeInteger(capacity) && capacity > 0);
     this.device = device;
-    this.gltf = gltf;
     this.capacity = capacity;
+    this.lodOptions = lod;
+    this.isLODEnabled = lod?.enabled ?? false;
 
-    const jointsPerInstance = Math.max(0, ...(gltf.skins || []).map(skin => skin.joints.length));
+    const authoredLOD = Boolean(
+      lod &&
+        gltf.nodes.some(node => {
+          const levels = getGLTFNodeLODs(gltf, node);
+          return Boolean(levels && levels.length > 1);
+        })
+    );
+    this.gltf =
+      lod?.autoGenerate && !authoredLOD
+        ? generateGLTFLODLevels(gltf, {
+            ratios: lod.ratios,
+            screenCoverage: lod.screenCoverage,
+            preserveBoundary: lod.preserveBoundary
+          })
+        : gltf;
+    this.lodSource = authoredLOD ? 'authored' : this.gltf !== gltf ? 'generated' : 'none';
+
+    const jointsPerInstance = Math.max(
+      0,
+      ...(this.gltf.skins || []).map(skin => skin.joints.length)
+    );
     const configuration: GLTFCrowdModelConfiguration = {capacity, jointsPerInstance};
-    this.scenegraphs = createScenegraphsFromGLTF(device, gltf, {
+    this.scenegraphs = createScenegraphsFromGLTF(device, this.gltf, {
       ...parseOptions,
       modelOptions: {
         ...parseOptions.modelOptions,
         userData: {...parseOptions.modelOptions?.userData, gltfAnimatedCrowd: configuration}
       }
     });
-    this.primitiveGroups = createPrimitiveGroups(this.scenegraphs);
+    this.primitiveGroups = createPrimitiveGroups(this.scenegraphs, Boolean(lod));
     this.models = this.primitiveGroups.map(group => group.model);
+    this.maximumLODLevel = Math.max(0, ...this.primitiveGroups.map(group => group.lodLevel));
+    const authoredScreenCoverage = lod ? this.getAuthoredScreenCoverage() : [0];
+    this.lodScreenCoverage = lod?.screenCoverage || authoredScreenCoverage;
+    this.currentLODStats = {
+      source: this.lodSource,
+      visibleActors: 0,
+      culledActors: 0,
+      drawCount: 0,
+      triangles: 0,
+      levels: []
+    };
   }
 
   get actors(): readonly GLTFCrowdActor[] {
@@ -334,6 +425,42 @@ export class GLTFAnimatedCrowd {
 
   get destroyed(): boolean {
     return this.isDestroyed;
+  }
+
+  /** Whether existing authored or generated crowd levels are currently selected per actor. */
+  get lodEnabled(): boolean {
+    return this.isLODEnabled;
+  }
+
+  /** Current visible actor buckets and actual per-level instanced draw work. */
+  get lodStats(): GLTFCrowdLODStats {
+    return this.currentLODStats;
+  }
+
+  /** Enables or disables per-actor LOD without recreating actors, models, or GPU resources. */
+  setLODEnabled(enabled: boolean): this {
+    this.isLODEnabled = enabled;
+    this.actorLODLevels.clear();
+    this.refresh();
+    return this;
+  }
+
+  /** Applies a relative projected-size bias; larger values retain higher-detail actors longer. */
+  setLODBias(bias: number): this {
+    // A finite positive bias keeps projected-size ordering stable across both graphics backends.
+    assert(Number.isFinite(bias) && bias > 0);
+    this.lodBias = bias;
+    this.refresh();
+    return this;
+  }
+
+  /** Updates screen-space actor selection from camera matrices without allocating GPU resources. */
+  setLODView(view: GLTFCrowdLODView | null): this {
+    this.currentLODView = view;
+    if (this.isLODEnabled) {
+      this.refresh();
+    }
+    return this;
   }
 
   /** Adds independent CPU clip/node state without parsing the source or allocating GPU models. */
@@ -384,6 +511,7 @@ export class GLTFAnimatedCrowd {
       return false;
     }
     this.actorsById.delete(id);
+    this.actorLODLevels.delete(id);
     if (!actor.destroyed) {
       actor.destroy();
     }
@@ -408,8 +536,11 @@ export class GLTFAnimatedCrowd {
     return removedActorCount;
   }
 
-  /** Evaluates independent clips in seconds and uploads all actor transforms/palettes once. */
-  update(deltaSeconds: number): this {
+  /** Evaluates clips and optional camera detail selection with exactly one shared GPU upload. */
+  update(deltaSeconds: number, view?: GLTFCrowdLODView): this {
+    if (view) {
+      this.currentLODView = view;
+    }
     for (const actor of this.actorsById.values()) {
       actor.advance(deltaSeconds);
     }
@@ -424,7 +555,7 @@ export class GLTFAnimatedCrowd {
     }
     let drawCount = 0;
     for (const group of this.primitiveGroups) {
-      if (group.model.draw(renderPass)) {
+      if (group.model.instanceCount > 0 && group.model.draw(renderPass)) {
         drawCount++;
       }
     }
@@ -443,58 +574,219 @@ export class GLTFAnimatedCrowd {
       actor.updateSkinMatrices(worldMatrices);
       return worldMatrices;
     });
+    const selectedLevels = actors.map(actor => this.selectActorLOD(actor));
+    const visibleActors = selectedLevels.filter(level => level !== null).length;
+    const levelStats = new Map<number, GLTFCrowdLODLevelStats>();
+    for (const level of selectedLevels) {
+      if (level === null) {
+        continue;
+      }
+      const statistics = levelStats.get(level) || {level, actors: 0, triangles: 0};
+      statistics.actors++;
+      levelStats.set(level, statistics);
+    }
+    let drawCount = 0;
+    let triangles = 0;
 
     for (const group of this.primitiveGroups) {
-      const modelNode = findCrowdModelNode(this.scenegraphs, group.nodeIndex, group.model);
+      const modelNode = findCrowdModelNode(this.scenegraphs, group.sourceNodeIndex, group.model);
       if (!modelNode) {
         continue;
       }
       const resources = modelNode.userData['gltfAnimatedCrowd'] as GLTFCrowdModelResources;
+      const maximumGroupLevel = this.getMaximumGroupLevel(group.nodeIndex);
+      let instanceCount = 0;
 
       for (let actorIndex = 0; actorIndex < actors.length; actorIndex++) {
+        const selectedLevel = selectedLevels[actorIndex];
+        if (
+          selectedLevel === null ||
+          Math.min(selectedLevel, maximumGroupLevel) !== group.lodLevel
+        ) {
+          continue;
+        }
         const actor = actors[actorIndex];
         const actorNode = actor.getNode(group.nodeIndex);
         const matrix = actorNode && actorWorldMatrices[actorIndex].get(actorNode);
         for (let columnIndex = 0; columnIndex < 4; columnIndex++) {
           for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
-            resources.transformColumns[columnIndex][actorIndex * 4 + rowIndex] =
+            resources.transformColumns[columnIndex][instanceCount * 4 + rowIndex] =
               matrix?.[columnIndex * 4 + rowIndex] || 0;
           }
         }
 
         if (resources.jointMatrices) {
           const jointPalette = actor.skins.getBinding(group.nodeIndex)?.jointMatrices;
-          const offset = actorIndex * resources.jointsPerInstance * 16;
+          const offset = instanceCount * resources.jointsPerInstance * 16;
           resources.jointMatrices.fill(0, offset, offset + resources.jointsPerInstance * 16);
           if (jointPalette) {
             resources.jointMatrices.set(jointPalette, offset);
           }
         }
+        instanceCount++;
       }
 
-      if (actors.length > 0) {
+      if (instanceCount > 0) {
         for (let columnIndex = 0; columnIndex < resources.transformBuffers.length; columnIndex++) {
           resources.transformBuffers[columnIndex].write(
-            resources.transformColumns[columnIndex].subarray(0, actors.length * 4)
+            resources.transformColumns[columnIndex].subarray(0, instanceCount * 4)
           );
         }
         if (resources.jointMatrices && resources.skinJointMatrices) {
           const jointMatrices = resources.jointMatrices.subarray(
             0,
-            actors.length * resources.jointsPerInstance * 16
+            instanceCount * resources.jointsPerInstance * 16
           );
           if (resources.skinJointMatrices instanceof Buffer) {
             resources.skinJointMatrices.write(jointMatrices);
           } else {
             resources.skinJointMatrices.writeData(jointMatrices, {
               width: resources.jointsPerInstance * 4,
-              height: actors.length
+              height: instanceCount
             });
           }
         }
+        const groupTriangles = instanceCount * group.triangleCount;
+        const statistics = levelStats.get(group.lodLevel) || {
+          level: group.lodLevel,
+          actors: 0,
+          triangles: 0
+        };
+        statistics.triangles += groupTriangles;
+        levelStats.set(group.lodLevel, statistics);
+        triangles += groupTriangles;
+        drawCount++;
       }
-      group.model.setInstanceCount(actors.length);
+      group.model.setInstanceCount(instanceCount);
     }
+
+    this.currentLODStats = {
+      source: this.lodSource,
+      visibleActors,
+      culledActors: actors.length - visibleActors,
+      drawCount,
+      triangles,
+      levels: [...levelStats.values()].sort((first, second) => first.level - second.level)
+    };
+  }
+
+  private getAuthoredScreenCoverage(): readonly number[] {
+    for (let nodeIndex = 0; nodeIndex < this.gltf.nodes.length; nodeIndex++) {
+      const levels = getGLTFNodeLODs(this.gltf, nodeIndex);
+      if (levels && levels.length > 1) {
+        return levels.map(level => level.screenCoverage);
+      }
+    }
+    return [0];
+  }
+
+  private getMaximumGroupLevel(nodeIndex: number): number {
+    let maximumLevel = 0;
+    for (const group of this.primitiveGroups) {
+      if (group.nodeIndex === nodeIndex) {
+        maximumLevel = Math.max(maximumLevel, group.lodLevel);
+      }
+    }
+    return maximumLevel;
+  }
+
+  private selectActorLOD(actor: GLTFCrowdActor): number | null {
+    if (!this.isLODEnabled || !this.currentLODView || this.maximumLODLevel === 0) {
+      this.actorLODLevels.set(actor.id, 0);
+      return 0;
+    }
+
+    const {viewMatrix, projectionMatrix, viewportWidth, viewportHeight} = this.currentLODView;
+    const {center, radius} = this.scenegraphs.modelBounds;
+    const actorMatrix = actor.root.matrix;
+    const worldX =
+      actorMatrix[0] * center[0] +
+      actorMatrix[4] * center[1] +
+      actorMatrix[8] * center[2] +
+      actorMatrix[12];
+    const worldY =
+      actorMatrix[1] * center[0] +
+      actorMatrix[5] * center[1] +
+      actorMatrix[9] * center[2] +
+      actorMatrix[13];
+    const worldZ =
+      actorMatrix[2] * center[0] +
+      actorMatrix[6] * center[1] +
+      actorMatrix[10] * center[2] +
+      actorMatrix[14];
+
+    const cameraX =
+      viewMatrix[0] * worldX + viewMatrix[4] * worldY + viewMatrix[8] * worldZ + viewMatrix[12];
+    const cameraY =
+      viewMatrix[1] * worldX + viewMatrix[5] * worldY + viewMatrix[9] * worldZ + viewMatrix[13];
+    const cameraZ =
+      viewMatrix[2] * worldX + viewMatrix[6] * worldY + viewMatrix[10] * worldZ + viewMatrix[14];
+    const actorScale = Math.max(
+      Math.hypot(actorMatrix[0], actorMatrix[1], actorMatrix[2]),
+      Math.hypot(actorMatrix[4], actorMatrix[5], actorMatrix[6]),
+      Math.hypot(actorMatrix[8], actorMatrix[9], actorMatrix[10])
+    );
+    const worldRadius = radius * actorScale;
+    const clipX =
+      projectionMatrix[0] * cameraX +
+      projectionMatrix[4] * cameraY +
+      projectionMatrix[8] * cameraZ +
+      projectionMatrix[12];
+    const clipY =
+      projectionMatrix[1] * cameraX +
+      projectionMatrix[5] * cameraY +
+      projectionMatrix[9] * cameraZ +
+      projectionMatrix[13];
+    const clipW =
+      projectionMatrix[3] * cameraX +
+      projectionMatrix[7] * cameraY +
+      projectionMatrix[11] * cameraZ +
+      projectionMatrix[15];
+
+    if (clipW <= 0) {
+      this.actorLODLevels.delete(actor.id);
+      return null;
+    }
+
+    const normalizedRadiusX = (worldRadius * Math.abs(projectionMatrix[0])) / clipW;
+    const normalizedRadiusY = (worldRadius * Math.abs(projectionMatrix[5])) / clipW;
+    if (
+      Math.abs(clipX / clipW) > 1 + normalizedRadiusX ||
+      Math.abs(clipY / clipW) > 1 + normalizedRadiusY
+    ) {
+      this.actorLODLevels.delete(actor.id);
+      return null;
+    }
+
+    const viewportScale =
+      viewportWidth && viewportHeight
+        ? viewportHeight / Math.min(viewportWidth, viewportHeight)
+        : 1;
+    const coverage = normalizedRadiusY * viewportScale * this.lodBias;
+    const candidateLevel = this.lodScreenCoverage.findIndex(threshold => coverage >= threshold);
+    const nextLevel = candidateLevel === -1 ? null : Math.min(candidateLevel, this.maximumLODLevel);
+    const previousLevel = this.actorLODLevels.get(actor.id);
+    const hysteresis = Math.max(0, Math.min(this.lodOptions?.hysteresis ?? 0.1, 0.99));
+    if (previousLevel !== undefined && nextLevel !== previousLevel) {
+      const threshold =
+        this.lodScreenCoverage[
+          nextLevel === null || nextLevel > previousLevel ? previousLevel : nextLevel
+        ];
+      const movesToLowerDetail = nextLevel === null || nextLevel > previousLevel;
+      const crossedBoundary = movesToLowerDetail
+        ? coverage < threshold * (1 - hysteresis)
+        : coverage >= threshold * (1 + hysteresis);
+      if (!crossedBoundary) {
+        return previousLevel;
+      }
+    }
+
+    if (nextLevel === null) {
+      this.actorLODLevels.delete(actor.id);
+    } else {
+      this.actorLODLevels.set(actor.id, nextLevel);
+    }
+    return nextLevel;
   }
 
   /** Destroys actor CPU state and the one canonical source scenegraph exactly once. */
@@ -585,7 +877,10 @@ function createActorNodes(scenegraphs: GLTFScenegraphs, id: string): GLTFCrowdAc
   };
 }
 
-function createPrimitiveGroups(scenegraphs: GLTFScenegraphs): GLTFCrowdPrimitiveGroup[] {
+function createPrimitiveGroups(
+  scenegraphs: GLTFScenegraphs,
+  includeLODLevels: boolean
+): GLTFCrowdPrimitiveGroup[] {
   const groups: GLTFCrowdPrimitiveGroup[] = [];
   const reachableNodes = new Set<GroupNode>();
   for (const scene of scenegraphs.scenes) {
@@ -604,27 +899,40 @@ function createPrimitiveGroups(scenegraphs: GLTFScenegraphs): GLTFCrowdPrimitive
     if (!node || !reachableNodes.has(node)) {
       continue;
     }
-    const mesh = node.userData['gltfMesh'];
-    if (!(mesh instanceof GroupNode)) {
-      continue;
-    }
     const skinBinding = scenegraphs.skins.getBinding(nodeIndex);
-    for (const child of mesh.children) {
-      if (!(child instanceof ModelNode)) {
+    const levels = includeLODLevels ? getGLTFNodeLODs(scenegraphs.gltf, nodeIndex) : null;
+    const lodNodes = levels || [{level: 0, nodeIndex, node: sourceNode, screenCoverage: 0}];
+    for (const level of lodNodes) {
+      const lodNode = scenegraphs.gltfNodeIndexToNodeMap.get(level.nodeIndex);
+      const mesh = lodNode?.userData['gltfMesh'];
+      if (!(mesh instanceof GroupNode)) {
         continue;
       }
-      const resources = child.userData['gltfAnimatedCrowd'] as GLTFCrowdModelResources | undefined;
-      if (!resources) {
-        continue;
+      for (const [primitiveIndex, child] of mesh.children.entries()) {
+        if (!(child instanceof ModelNode)) {
+          continue;
+        }
+        const resources = child.userData['gltfAnimatedCrowd'] as
+          | GLTFCrowdModelResources
+          | undefined;
+        if (!resources) {
+          continue;
+        }
+        const primitive = level.node.mesh?.primitives[primitiveIndex];
+        const indexCount =
+          primitive?.indices?.count || primitive?.indices?.value?.length || child.model.vertexCount;
+        groups.push({
+          nodeIndex,
+          sourceNodeIndex: level.nodeIndex,
+          lodLevel: level.level,
+          triangleCount: Math.floor(indexCount / 3),
+          model: child.model,
+          transformBuffers: resources.transformBuffers,
+          jointCount: skinBinding?.joints.length || 0,
+          ...(resources.jointMatrices ? {jointMatrices: resources.jointMatrices} : {}),
+          ...(resources.skinJointMatrices ? {skinJointMatrices: resources.skinJointMatrices} : {})
+        });
       }
-      groups.push({
-        nodeIndex,
-        model: child.model,
-        transformBuffers: resources.transformBuffers,
-        jointCount: skinBinding?.joints.length || 0,
-        ...(resources.jointMatrices ? {jointMatrices: resources.jointMatrices} : {}),
-        ...(resources.skinJointMatrices ? {skinJointMatrices: resources.skinJointMatrices} : {})
-      });
     }
   }
   return groups;

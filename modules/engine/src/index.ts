@@ -93,6 +93,12 @@ export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './g
 export {Geometry} from './geometry/geometry';
 export type {MakeInterleavedGeometryOptions} from './geometry/geometry-utils';
 export {makeInterleavedGeometry} from './geometry/geometry-utils';
+export type {
+  MeshSimplificationAttribute,
+  MeshSimplificationOptions,
+  MeshSimplificationResult
+} from './geometry/mesh-simplification';
+export {simplifyMesh} from './geometry/mesh-simplification';
 export type {GPUGeometryProps} from './geometry/gpu-geometry';
 export {GPUGeometry} from './geometry/gpu-geometry';
 

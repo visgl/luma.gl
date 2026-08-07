@@ -167,8 +167,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment: 'Video textures are not created automatically by the stock pipeline.'
   },
   MSFT_lod: {
-    supportLevel: 'none',
-    comment: 'Level-of-detail switching is not implemented in the stock scenegraph loader.'
+    supportLevel: 'parsed-and-wired',
+    comment:
+      'Node levels are parsed and selected by opt-in animated crowds; material LOD and GPU-driven selection are not implemented.'
   }
 };
 
