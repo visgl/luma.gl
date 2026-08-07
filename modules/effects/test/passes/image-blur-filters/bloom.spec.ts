@@ -156,6 +156,160 @@ test('bloomShaderPassPipeline#routing', t => {
   t.end();
 });
 
+test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase => {
+  const qualityLevels = [
+    {quality: 'low', levelCount: 2, coarsestLevel: 'Quarter'},
+    {quality: 'medium', levelCount: 3, coarsestLevel: 'Eighth'},
+    {quality: 'high', levelCount: 4, coarsestLevel: 'Sixteenth'},
+    {quality: 'ultra', levelCount: 5, coarsestLevel: 'ThirtySecond'}
+  ] as const;
+
+  for (const {quality, levelCount, coarsestLevel} of qualityLevels) {
+    const pipeline = createBloomShaderPassPipeline({quality});
+    const extractionSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomExtract');
+    const downsampleSteps = pipeline.steps.filter(
+      step => step.shaderPass.name === 'bloomDownsample'
+    );
+    const blurSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomBlur');
+    const upsampleSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomUpsample');
+    const compositeStep = pipeline.steps.find(step => step.shaderPass.name === 'bloomComposite');
+
+    testCase.equal(extractionSteps.length, 1, `${quality} quality thresholds highlights once`);
+    testCase.equal(
+      downsampleSteps.length,
+      levelCount - 1,
+      `${quality} quality builds ${levelCount} successive pyramid levels`
+    );
+    testCase.equal(
+      blurSteps.length,
+      levelCount * 2,
+      `${quality} quality uses separable blur at every pyramid level`
+    );
+    testCase.equal(
+      upsampleSteps.length,
+      levelCount - 1,
+      `${quality} quality progressively reconstructs the complete pyramid`
+    );
+    testCase.equal(
+      Object.keys(pipeline.renderTargets || {}).length,
+      levelCount * 4 - 1,
+      `${quality} quality allocates only its required pyramid and reconstruction targets`
+    );
+    testCase.equal(
+      upsampleSteps[0]?.inputs?.sourceTexture,
+      `blur${coarsestLevel}`,
+      `${quality} reconstruction starts at its coarsest blurred level`
+    );
+    testCase.equal(
+      upsampleSteps[upsampleSteps.length - 1]?.output,
+      'upsampleHalf',
+      `${quality} reconstruction finishes at half resolution`
+    );
+    testCase.equal(
+      compositeStep?.inputs?.glowTexture,
+      'upsampleHalf',
+      `${quality} composition consumes one normalized reconstructed glow texture`
+    );
+  }
+
+  const pipeline = createBloomShaderPassPipeline({
+    quality: 'ultra',
+    radius: 10,
+    scatter: 0.7,
+    softKnee: 0.35,
+    fireflyReduction: 0.4,
+    anamorphicRatio: 0.5,
+    tint: [0.8, 1, 0.65]
+  });
+  const extractionStep = pipeline.steps.find(step => step.shaderPass.name === 'bloomExtract');
+  const blurSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomBlur');
+  const upsampleSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomUpsample');
+  const compositeStep = pipeline.steps.find(step => step.shaderPass.name === 'bloomComposite');
+
+  testCase.equal(extractionStep?.uniforms?.softKnee, 0.35, 'configures the soft highlight knee');
+  testCase.equal(
+    extractionStep?.uniforms?.fireflyReduction,
+    0.4,
+    'configures luminance-weighted firefly suppression'
+  );
+  testCase.equal(blurSteps[0]?.uniforms?.radius, 15, 'positive anamorphism widens horizontal blur');
+  testCase.equal(
+    blurSteps[1]?.uniforms?.radius,
+    10,
+    'positive anamorphism preserves vertical blur'
+  );
+  testCase.ok(
+    upsampleSteps.every(step => step.uniforms?.scatter === 0.7),
+    'applies the same normalized scatter to every reconstruction level'
+  );
+  testCase.deepEqual(compositeStep?.uniforms?.tint, [0.8, 1, 0.65], 'applies the requested tint');
+  testCase.deepEqual(
+    pipeline.renderTargets?.extractThirtySecond.scale,
+    [0.03125, 0.03125],
+    'ultra quality reaches the thirty-second-resolution pyramid level'
+  );
+
+  const upsamplePass = upsampleSteps[0]?.shaderPass;
+  testCase.match(
+    upsamplePass?.source || '',
+    /\(center \+ edges \+ corners\) \/ 16\.0/,
+    'WGSL reconstruction normalizes its nine-tap tent filter'
+  );
+  testCase.match(
+    upsamplePass?.fs || '',
+    /\(center \+ edges \+ corners\) \/ 16\.0/,
+    'GLSL reconstruction uses the matching normalized tent filter'
+  );
+  testCase.match(
+    upsamplePass?.source || '',
+    /mix\(higherGlow, lowerGlow, clamp\(bloomUpsample\.scatter, 0\.0, 1\.0\)\)/,
+    'WGSL mixes pyramid levels without duplicating highlight energy'
+  );
+  testCase.match(
+    upsamplePass?.fs || '',
+    /mix\(higherGlow, lowerGlow, clamp\(bloomUpsample\.scatter, 0\.0, 1\.0\)\)/,
+    'GLSL mixes pyramid levels without duplicating highlight energy'
+  );
+
+  const verticalPipeline = createBloomShaderPassPipeline({radius: 10, anamorphicRatio: -0.5});
+  const verticalBlurSteps = verticalPipeline.steps.filter(
+    step => step.shaderPass.name === 'bloomBlur'
+  );
+  testCase.equal(
+    verticalBlurSteps[0]?.uniforms?.radius,
+    10,
+    'negative anamorphism preserves width'
+  );
+  testCase.equal(verticalBlurSteps[1]?.uniforms?.radius, 15, 'negative anamorphism widens height');
+  testCase.end();
+});
+
+test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kernel', testCase => {
+  const anamorphicCases = [
+    {radius: 12, anamorphicRatio: 1, horizontalRadius: 24, verticalRadius: 12},
+    {radius: 18, anamorphicRatio: 0.5, horizontalRadius: 24, verticalRadius: 16},
+    {radius: 18, anamorphicRatio: -0.5, horizontalRadius: 16, verticalRadius: 24},
+    {radius: 24, anamorphicRatio: 1, horizontalRadius: 24, verticalRadius: 12},
+    {radius: 24, anamorphicRatio: -1, horizontalRadius: 12, verticalRadius: 24},
+    {radius: 24, anamorphicRatio: 0, horizontalRadius: 24, verticalRadius: 24}
+  ];
+
+  for (const {radius, anamorphicRatio, horizontalRadius, verticalRadius} of anamorphicCases) {
+    const pipeline = createBloomShaderPassPipeline({radius, anamorphicRatio});
+    const blurSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomBlur');
+
+    testCase.deepEqual(
+      blurSteps.map(step => step.uniforms?.radius),
+      Array.from({length: blurSteps.length}, (_, stepIndex) =>
+        stepIndex % 2 === 0 ? horizontalRadius : verticalRadius
+      ),
+      `radius ${radius} preserves anamorphic ratio ${anamorphicRatio} within every shader kernel`
+    );
+  }
+
+  testCase.end();
+});
+
 test('HDR bloom covers source texels at quarter pyramid resolution', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -402,6 +556,121 @@ test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', asyn
         readbackBuffer.destroy();
       }
     }
+  } finally {
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+
+  testCase.end();
+});
+
+test('HDR bloom suppresses fireflies and applies its cinematic tint', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU unavailable, skipping cinematic bloom image regression');
+    testCase.end();
+    return;
+  }
+
+  const capabilities = device.getTextureFormatCapabilities('rgba16float');
+  if (!capabilities.render || !capabilities.filter) {
+    testCase.comment('Renderable, filterable rgba16float textures are unavailable');
+    testCase.end();
+    return;
+  }
+
+  const width = 32;
+  const height = 32;
+  const highlightX = 16;
+  const highlightY = 16;
+  const sourcePixels = new Uint16Array(width * height * 4);
+  for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
+    sourcePixels[pixelIndex * 4 + 3] = toHalfFloat(1);
+  }
+  sourcePixels.set(
+    [toHalfFloat(32), toHalfFloat(32), toHalfFloat(32), toHalfFloat(1)],
+    (highlightY * width + highlightX) * 4
+  );
+
+  const sourceTexture = device.createTexture({
+    id: 'cinematic-bloom-firefly-source',
+    data: sourcePixels,
+    format: 'rgba16float',
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.COPY_DST
+  });
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [
+      createBloomShaderPassPipeline({
+        quality: 'medium',
+        radius: 5,
+        scatter: 0.4,
+        tint: [1, 0.5, 0.25]
+      })
+    ],
+    colorFormat: 'rgba16float',
+    flipY: false
+  });
+  renderer.resize([width, height]);
+
+  const readGlow = async (fireflyReduction: number): Promise<[number, number, number]> => {
+    const outputTexture = renderer.renderToTexture({
+      sourceTexture,
+      uniforms: {
+        bloomExtract: {threshold: 0.5, fireflyReduction},
+        bloomComposite: {intensity: 1}
+      }
+    });
+    device.submit();
+
+    testCase.ok(
+      outputTexture,
+      `cinematic bloom renders with firefly reduction ${fireflyReduction}`
+    );
+    if (!outputTexture) {
+      return [0, 0, 0];
+    }
+
+    const memoryLayout = outputTexture.computeMemoryLayout({width, height});
+    const readbackBuffer = device.createBuffer({
+      id: `cinematic-bloom-firefly-readback-${fireflyReduction}`,
+      byteLength: memoryLayout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+
+    try {
+      outputTexture.readBuffer({width, height}, readbackBuffer);
+      const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
+      const pixelView = new DataView(pixels.buffer, pixels.byteOffset, pixels.byteLength);
+      const pixelOffset = highlightY * memoryLayout.bytesPerRow + (highlightX + 3) * 8;
+      return [
+        fromHalfFloat(pixelView.getUint16(pixelOffset, true)),
+        fromHalfFloat(pixelView.getUint16(pixelOffset + 2, true)),
+        fromHalfFloat(pixelView.getUint16(pixelOffset + 4, true))
+      ];
+    } finally {
+      readbackBuffer.destroy();
+    }
+  };
+
+  try {
+    const unfilteredGlow = await readGlow(0);
+    const filteredGlow = await readGlow(1);
+
+    testCase.ok(unfilteredGlow[0] > 0, 'an isolated HDR highlight contributes visible bloom');
+    testCase.ok(
+      Math.abs(unfilteredGlow[1] / unfilteredGlow[0] - 0.5) < 0.02,
+      'the green bloom channel respects the configured tint'
+    );
+    testCase.ok(
+      Math.abs(unfilteredGlow[2] / unfilteredGlow[0] - 0.25) < 0.02,
+      'the blue bloom channel respects the configured tint'
+    );
+    testCase.ok(
+      filteredGlow[0] < unfilteredGlow[0] * 0.2,
+      'luminance-weighted extraction suppresses an isolated HDR firefly'
+    );
   } finally {
     renderer.destroy();
     sourceTexture.destroy();

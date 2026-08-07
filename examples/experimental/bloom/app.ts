@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, Framebuffer, TextureFormatColor} from '@luma.gl/core';
+import {Texture, type Device, type Framebuffer, type TextureFormatColor} from '@luma.gl/core';
 import {bloom, createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import {
   AnimationLoopTemplate,
@@ -25,13 +25,20 @@ export const title = 'Bloom';
 export const description = 'Compare compact and HDR multiscale bloom on an animated HDR scene.';
 
 const BLOOM_TECHNIQUES = ['Multiscale HDR', 'Compact', 'Off'] as const;
+const BLOOM_QUALITIES = ['low', 'medium', 'high', 'ultra'] as const;
 
 type BloomTechnique = (typeof BLOOM_TECHNIQUES)[number];
+type BloomQuality = (typeof BLOOM_QUALITIES)[number];
 type BloomSettings = {
   technique: BloomTechnique;
+  quality: BloomQuality;
   threshold: number;
   intensity: number;
   radius: number;
+  scatter: number;
+  softKnee: number;
+  fireflyReduction: number;
+  anamorphicRatio: number;
   animate: boolean;
 };
 type SceneUniforms = {
@@ -42,14 +49,20 @@ type ShaderPassLike = ShaderPass | ShaderPassPipeline;
 
 const DEFAULT_SETTINGS: BloomSettings = {
   technique: 'Multiscale HDR',
+  quality: 'high',
   threshold: 0.8,
   intensity: 1.35,
   radius: 12,
+  scatter: 0.55,
+  softKnee: 0.5,
+  fireflyReduction: 0.15,
+  anamorphicRatio: 0,
   animate: true
 };
 
 const BLOOM_BACKGROUND_HTML = `
-<p><b>Multiscale HDR bloom:</b> bright scene radiance is extracted once, blurred across half, quarter, and eighth-resolution targets, then composited before presentation. This is the reusable pipeline intended for richer effects integrations.</p>
+<p><b>Multiscale HDR bloom:</b> bright scene radiance is extracted once, filtered across an adaptive two-to-five-level pyramid, then progressively reconstructed before presentation. Normalized upsampling keeps the glow stable as wider levels are combined.</p>
+<p><b>Cinematic controls:</b> scatter balances tight highlights against broad glow, a soft knee smooths threshold transitions, firefly reduction stabilizes isolated HDR samples, and anamorphic ratio stretches the bloom horizontally or vertically.</p>
 <p><b>Compact bloom:</b> the legacy single-pass glow samples one small neighborhood directly from the source image. It is cheaper, but it cannot spread highlights as naturally as the multiscale pyramid.</p>
 <p><b>Scene setup:</b> this page renders animated HDR emitters into an offscreen texture before bloom. The previous static image hid the useful part of the effect by baking most of the lighting into SDR pixels.</p>
 `;
@@ -287,6 +300,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     scene: sceneShaderModule
   });
   readonly sceneModel: ClipSpace;
+  readonly sceneColorTexture: Texture;
   readonly sceneFramebuffer: Framebuffer;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
@@ -305,11 +319,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       colorAttachmentFormats: [this.colorFormat],
       shaderInputs: this.sceneShaderInputs
     });
+    this.sceneColorTexture = device.createTexture({
+      id: 'bloom-hdr-scene-color',
+      width,
+      height,
+      format: this.colorFormat,
+      usage: Texture.RENDER | Texture.SAMPLE
+    });
     this.sceneFramebuffer = device.createFramebuffer({
       id: 'bloom-hdr-scene-framebuffer',
       width,
       height,
-      colorAttachments: [this.colorFormat]
+      colorAttachments: [this.sceneColorTexture]
     });
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'bloom-settings',
@@ -326,6 +347,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.sceneFramebuffer.destroy();
+    this.sceneColorTexture.destroy();
     this.sceneModel.destroy();
     this.sceneShaderInputs.destroy();
     this.shaderPassRenderer?.destroy();
@@ -372,7 +394,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           colorFormat: this.colorFormat,
           threshold: this.settings.threshold,
           intensity: this.settings.intensity,
-          radius: this.settings.radius
+          radius: this.settings.radius,
+          quality: this.settings.quality,
+          scatter: this.settings.scatter,
+          softKnee: this.settings.softKnee,
+          fireflyReduction: this.settings.fireflyReduction,
+          anamorphicRatio: this.settings.anamorphicRatio
         })
       );
     } else if (this.settings.technique === 'Compact') {
@@ -423,6 +450,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       technique: isBloomTechnique(settings['technique'])
         ? settings['technique']
         : this.settings.technique,
+      quality: isBloomQuality(settings['quality']) ? settings['quality'] : this.settings.quality,
       threshold:
         typeof settings['threshold'] === 'number'
           ? clampNumber(settings['threshold'], 0, 4)
@@ -435,6 +463,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         typeof settings['radius'] === 'number'
           ? clampNumber(settings['radius'], 0, 24)
           : this.settings.radius,
+      scatter:
+        typeof settings['scatter'] === 'number'
+          ? clampNumber(settings['scatter'], 0, 1)
+          : this.settings.scatter,
+      softKnee:
+        typeof settings['softKnee'] === 'number'
+          ? clampNumber(settings['softKnee'], 0, 1)
+          : this.settings.softKnee,
+      fireflyReduction:
+        typeof settings['fireflyReduction'] === 'number'
+          ? clampNumber(settings['fireflyReduction'], 0, 1)
+          : this.settings.fireflyReduction,
+      anamorphicRatio:
+        typeof settings['anamorphicRatio'] === 'number'
+          ? clampNumber(settings['anamorphicRatio'], -1, 1)
+          : this.settings.anamorphicRatio,
       animate:
         typeof settings['animate'] === 'boolean' ? settings['animate'] : this.settings.animate
     };
@@ -510,6 +554,18 @@ export function makeBloomSettingsSchema(): SettingsSchema {
             step: 0.05
           },
           {
+            name: 'quality',
+            label: 'Pyramid Quality',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Low (2 levels)', value: 'low'},
+              {label: 'Medium (3 levels)', value: 'medium'},
+              {label: 'High (4 levels)', value: 'high'},
+              {label: 'Ultra (5 levels)', value: 'ultra'}
+            ]
+          },
+          {
             name: 'intensity',
             label: 'Glow Intensity',
             type: 'number',
@@ -526,6 +582,42 @@ export function makeBloomSettingsSchema(): SettingsSchema {
             min: 0,
             max: 24,
             step: 1
+          },
+          {
+            name: 'scatter',
+            label: 'Wide Glow Scatter',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'softKnee',
+            label: 'Threshold Soft Knee',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'fireflyReduction',
+            label: 'Firefly Reduction',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'anamorphicRatio',
+            label: 'Anamorphic Stretch',
+            type: 'number',
+            persist: 'none',
+            min: -1,
+            max: 1,
+            step: 0.05
           },
           {
             name: 'animate',
@@ -545,6 +637,10 @@ function makeBloomSettingsState(settings: BloomSettings): SettingsState {
 
 function isBloomTechnique(value: unknown): value is BloomTechnique {
   return BLOOM_TECHNIQUES.includes(value as BloomTechnique);
+}
+
+function isBloomQuality(value: unknown): value is BloomQuality {
+  return BLOOM_QUALITIES.includes(value as BloomQuality);
 }
 
 function clampNumber(value: number, minimum: number, maximum: number): number {

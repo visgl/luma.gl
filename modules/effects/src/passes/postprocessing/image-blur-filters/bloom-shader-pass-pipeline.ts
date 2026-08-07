@@ -13,6 +13,14 @@ import type {BloomProps, BloomUniforms} from './bloom';
 
 const MAX_BLOOM_BLUR_RADIUS = 24;
 const BLOOM_TARGET_SAMPLER = {minFilter: 'linear', magFilter: 'linear'} as const;
+const BLOOM_QUALITY_LEVELS = {low: 2, medium: 3, high: 4, ultra: 5} as const;
+const BLOOM_PYRAMID_LEVELS = [
+  {name: 'Half', scale: 0.5},
+  {name: 'Quarter', scale: 0.25},
+  {name: 'Eighth', scale: 0.125},
+  {name: 'Sixteenth', scale: 0.0625},
+  {name: 'ThirtySecond', scale: 0.03125}
+] as const;
 
 type BloomTargetName =
   | 'extractHalf'
@@ -27,9 +35,21 @@ type BloomTargetName =
 
 /** Construction options for HDR-capable multiscale bloom. */
 export type BloomShaderPassPipelineOptions = BloomProps & {
+  /** Controls the number of bloom pyramid levels: low=2, medium=3, high=4, ultra=5. */
+  quality?: keyof typeof BLOOM_QUALITY_LEVELS;
+  /** Normalized contribution from progressively wider bloom levels. Defaults to 0.55. */
+  scatter?: number;
+  /** Width of the soft highlight threshold relative to the threshold. Defaults to 0.5. */
+  softKnee?: number;
+  /** Luminance-weighted suppression of isolated bright samples. Defaults to 0. */
+  fireflyReduction?: number;
+  /** Negative values stretch vertically; positive values stretch horizontally. */
+  anamorphicRatio?: number;
+  /** RGB multiplier applied to the reconstructed bloom before composition. */
+  tint?: [number, number, number];
   /**
-   * Positive fractional size multiplier applied to the half, quarter, and eighth-resolution
-   * pyramid. The extraction filter adapts its source footprint to the resulting target size.
+   * Positive fractional size multiplier applied to every pyramid level. The extraction filter
+   * adapts its source footprint to the resulting target size.
    */
   resolutionScale?: number;
   /** Filterable color intermediate format. Defaults to rgba16float for HDR highlight energy. */
@@ -41,13 +61,15 @@ const bloomExtractPass = {
   source: /* wgsl */ `
 struct bloomExtractUniforms {
   threshold: f32,
+  softKnee: f32,
+  fireflyReduction: f32,
 };
 
 @group(0) @binding(auto) var<uniform> bloomExtract: bloomExtractUniforms;
 
 fn bloomExtract_applyThreshold(sourceColor: vec4f) -> vec4f {
   let luminance = dot(sourceColor.rgb, vec3f(0.2126, 0.7152, 0.0722));
-  let knee = max(bloomExtract.threshold * 0.5, 0.00001);
+  let knee = max(bloomExtract.threshold * bloomExtract.softKnee, 0.00001);
   let soft = clamp((luminance - bloomExtract.threshold + knee) / (2.0 * knee), 0.0, 1.0);
   let softContribution = soft * soft * knee;
   let hardContribution = max(luminance - bloomExtract.threshold, 0.0);
@@ -84,11 +106,17 @@ fn bloomExtract_sampleColor(
     let weightY = max(1.0 - abs(f32(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
     for (var sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX += 1) {
       let weightX = max(1.0 - abs(f32(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
-      let weight = weightX * weightY;
       let sourceColor = bloomExtract_loadColor(
         sourceTexture,
         vec2i(sourceX, sourceY)
       );
+      let luminance = dot(sourceColor.rgb, vec3f(0.2126, 0.7152, 0.0722));
+      let fireflyWeight = mix(
+        1.0,
+        1.0 / (1.0 + max(luminance, 0.0)),
+        clamp(bloomExtract.fireflyReduction, 0.0, 1.0)
+      );
+      let weight = weightX * weightY * fireflyWeight;
       color += bloomExtract_applyThreshold(sourceColor) * weight;
       totalWeight += weight;
     }
@@ -100,11 +128,13 @@ fn bloomExtract_sampleColor(
   fs: /* glsl */ `
 layout(std140) uniform bloomExtractUniforms {
   float threshold;
+  float softKnee;
+  float fireflyReduction;
 } bloomExtract;
 
 vec4 bloomExtract_applyThreshold(vec4 sourceColor) {
   float luminance = dot(sourceColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-  float knee = max(bloomExtract.threshold * 0.5, 0.00001);
+  float knee = max(bloomExtract.threshold * bloomExtract.softKnee, 0.00001);
   float soft = clamp((luminance - bloomExtract.threshold + knee) / (2.0 * knee), 0.0, 1.0);
   float softContribution = soft * soft * knee;
   float hardContribution = max(luminance - bloomExtract.threshold, 0.0);
@@ -135,11 +165,17 @@ vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
     float weightY = max(1.0 - abs(float(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
     for (int sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX++) {
       float weightX = max(1.0 - abs(float(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
-      float weight = weightX * weightY;
       vec4 sourceColor = bloomExtract_loadColor(
         sourceTexture,
         ivec2(sourceX, sourceY)
       );
+      float luminance = dot(sourceColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+      float fireflyWeight = mix(
+        1.0,
+        1.0 / (1.0 + max(luminance, 0.0)),
+        clamp(bloomExtract.fireflyReduction, 0.0, 1.0)
+      );
+      float weight = weightX * weightY * fireflyWeight;
       color += bloomExtract_applyThreshold(sourceColor) * weight;
       totalWeight += weight;
     }
@@ -149,13 +185,25 @@ vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
 }
 `,
   uniformTypes: {
-    threshold: 'f32'
+    threshold: 'f32',
+    softKnee: 'f32',
+    fireflyReduction: 'f32'
+  },
+  defaultUniforms: {
+    threshold: 0.8,
+    softKnee: 0.5,
+    fireflyReduction: 0
   },
   propTypes: {
-    threshold: {value: 0.8, min: 0, max: 1}
+    threshold: {value: 0.8, min: 0, max: 1},
+    softKnee: {value: 0.5, min: 0, max: 1},
+    fireflyReduction: {value: 0, min: 0, max: 1}
   },
   passes: [{sampler: true}]
-} as const satisfies ShaderPass<Pick<BloomProps, 'threshold'>, Pick<BloomUniforms, 'threshold'>>;
+} as const satisfies ShaderPass<
+  Pick<BloomShaderPassPipelineOptions, 'threshold' | 'softKnee' | 'fireflyReduction'>,
+  Pick<BloomUniforms, 'threshold'> & {softKnee?: number; fireflyReduction?: number}
+>;
 
 const bloomDownsamplePass = {
   name: 'bloomDownsample',
@@ -397,6 +445,99 @@ vec4 bloomBlur_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord)
   Pick<BloomUniforms, 'radius'> & {delta?: [number, number]}
 >;
 
+type BloomUpsampleBindings = {
+  higherResolutionGlow?: Texture;
+};
+
+const bloomUpsamplePass = {
+  name: 'bloomUpsample',
+  source: /* wgsl */ `
+struct bloomUpsampleUniforms {
+  scatter: f32,
+};
+
+@group(0) @binding(auto) var<uniform> bloomUpsample: bloomUpsampleUniforms;
+@group(0) @binding(auto) var higherResolutionGlow: texture_2d<f32>;
+@group(0) @binding(auto) var higherResolutionGlowSampler: sampler;
+
+fn bloomUpsample_sampleLowerGlow(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texCoord: vec2f
+) -> vec4f {
+  let texel = 1.0 / vec2f(textureDimensions(sourceTexture));
+  let horizontalOffset = vec2f(texel.x, 0.0);
+  let verticalOffset = vec2f(0.0, texel.y);
+  let center = textureSample(sourceTexture, sourceTextureSampler, texCoord) * 4.0;
+  let edges = (
+    textureSample(sourceTexture, sourceTextureSampler, texCoord - horizontalOffset) +
+    textureSample(sourceTexture, sourceTextureSampler, texCoord + horizontalOffset) +
+    textureSample(sourceTexture, sourceTextureSampler, texCoord - verticalOffset) +
+    textureSample(sourceTexture, sourceTextureSampler, texCoord + verticalOffset)
+  ) * 2.0;
+  let corners =
+    textureSample(sourceTexture, sourceTextureSampler, texCoord - horizontalOffset - verticalOffset) +
+    textureSample(sourceTexture, sourceTextureSampler, texCoord + horizontalOffset - verticalOffset) +
+    textureSample(sourceTexture, sourceTextureSampler, texCoord - horizontalOffset + verticalOffset) +
+    textureSample(sourceTexture, sourceTextureSampler, texCoord + horizontalOffset + verticalOffset);
+  return (center + edges + corners) / 16.0;
+}
+
+fn bloomUpsample_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let lowerGlow = bloomUpsample_sampleLowerGlow(sourceTexture, sourceTextureSampler, texCoord);
+  let higherGlow = textureSample(higherResolutionGlow, higherResolutionGlowSampler, texCoord);
+  return mix(higherGlow, lowerGlow, clamp(bloomUpsample.scatter, 0.0, 1.0));
+}
+`,
+  fs: /* glsl */ `
+layout(std140) uniform bloomUpsampleUniforms {
+  float scatter;
+} bloomUpsample;
+
+uniform sampler2D higherResolutionGlow;
+
+vec4 bloomUpsample_sampleLowerGlow(sampler2D sourceTexture, vec2 texCoord) {
+  vec2 texel = 1.0 / vec2(textureSize(sourceTexture, 0));
+  vec2 horizontalOffset = vec2(texel.x, 0.0);
+  vec2 verticalOffset = vec2(0.0, texel.y);
+  vec4 center = texture(sourceTexture, texCoord) * 4.0;
+  vec4 edges = (
+    texture(sourceTexture, texCoord - horizontalOffset) +
+    texture(sourceTexture, texCoord + horizontalOffset) +
+    texture(sourceTexture, texCoord - verticalOffset) +
+    texture(sourceTexture, texCoord + verticalOffset)
+  ) * 2.0;
+  vec4 corners =
+    texture(sourceTexture, texCoord - horizontalOffset - verticalOffset) +
+    texture(sourceTexture, texCoord + horizontalOffset - verticalOffset) +
+    texture(sourceTexture, texCoord - horizontalOffset + verticalOffset) +
+    texture(sourceTexture, texCoord + horizontalOffset + verticalOffset);
+  return (center + edges + corners) / 16.0;
+}
+
+vec4 bloomUpsample_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
+  vec4 lowerGlow = bloomUpsample_sampleLowerGlow(sourceTexture, texCoord);
+  vec4 higherGlow = texture(higherResolutionGlow, texCoord);
+  return mix(higherGlow, lowerGlow, clamp(bloomUpsample.scatter, 0.0, 1.0));
+}
+`,
+  bindingLayout: [{name: 'higherResolutionGlow', group: 0}],
+  uniforms: {} as {scatter?: number},
+  bindings: {} as BloomUpsampleBindings,
+  uniformTypes: {scatter: 'f32'},
+  propTypes: {scatter: {value: 0.55, min: 0, max: 1}},
+  passes: [{sampler: true}]
+} as const satisfies ShaderPass<
+  {scatter?: number} & BloomUpsampleBindings,
+  {scatter?: number},
+  BloomUpsampleBindings
+>;
+
 type BloomCompositeBindings = {
   glowHalf?: Texture;
   glowQuarter?: Texture;
@@ -468,6 +609,76 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
   Pick<BloomProps, 'intensity'> & BloomCompositeBindings,
   Pick<BloomUniforms, 'intensity'>,
   BloomCompositeBindings
+>;
+
+type BloomAdaptiveCompositeBindings = {
+  glowTexture?: Texture;
+};
+
+type BloomAdaptiveCompositeUniforms = {
+  tint?: [number, number, number];
+  intensity?: number;
+};
+
+const bloomAdaptiveCompositePass = {
+  name: 'bloomComposite',
+  source: /* wgsl */ `
+struct bloomCompositeUniforms {
+  tint: vec3f,
+  intensity: f32,
+};
+
+@group(0) @binding(auto) var<uniform> bloomComposite: bloomCompositeUniforms;
+@group(0) @binding(auto) var glowTexture: texture_2d<f32>;
+@group(0) @binding(auto) var glowTextureSampler: sampler;
+
+fn bloomComposite_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let sourceColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  let glowColor = textureSample(glowTexture, glowTextureSampler, texCoord).rgb;
+  let tintedGlow = glowColor * bloomComposite.tint * bloomComposite.intensity;
+  return vec4f(sourceColor.rgb + tintedGlow, sourceColor.a);
+}
+`,
+  fs: /* glsl */ `
+layout(std140) uniform bloomCompositeUniforms {
+  vec3 tint;
+  float intensity;
+} bloomComposite;
+
+uniform sampler2D glowTexture;
+
+vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
+  vec4 sourceColor = texture(sourceTexture, texCoord);
+  vec3 glowColor = texture(glowTexture, texCoord).rgb;
+  vec3 tintedGlow = glowColor * bloomComposite.tint * bloomComposite.intensity;
+  return vec4(sourceColor.rgb + tintedGlow, sourceColor.a);
+}
+`,
+  bindingLayout: [{name: 'glowTexture', group: 0}],
+  uniforms: {} as BloomAdaptiveCompositeUniforms,
+  bindings: {} as BloomAdaptiveCompositeBindings,
+  uniformTypes: {
+    tint: 'vec3<f32>',
+    intensity: 'f32'
+  },
+  defaultUniforms: {
+    tint: [1, 1, 1] as [number, number, number],
+    intensity: 1
+  },
+  propTypes: {
+    tint: {value: [1, 1, 1] as [number, number, number]},
+    intensity: {value: 1, min: 0, softMax: 3}
+  },
+  passes: [{sampler: true}]
+} as const satisfies ShaderPass<
+  BloomAdaptiveCompositeUniforms & BloomAdaptiveCompositeBindings,
+  BloomAdaptiveCompositeUniforms,
+  BloomAdaptiveCompositeBindings
 >;
 
 /**
@@ -558,43 +769,100 @@ export const bloomShaderPassPipeline = {
 /** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
 export function createBloomShaderPassPipeline(
   options: BloomShaderPassPipelineOptions = {}
-): ShaderPassPipeline<BloomTargetName> {
+): ShaderPassPipeline {
   const resolutionScale = options.resolutionScale ?? 1;
   const colorFormat = options.colorFormat ?? 'rgba16float';
   const threshold = options.threshold ?? 0.8;
   const radius = options.radius ?? 8;
   const intensity = options.intensity ?? 1;
+  const quality = options.quality ?? 'high';
+  const scatter = options.scatter ?? 0.55;
+  const softKnee = options.softKnee ?? 0.5;
+  const fireflyReduction = options.fireflyReduction ?? 0;
+  const anamorphicRatio = Math.min(Math.max(options.anamorphicRatio ?? 0, -1), 1);
+  const tint = options.tint ?? [1, 1, 1];
+  const anamorphicRadius = Math.min(
+    radius,
+    MAX_BLOOM_BLUR_RADIUS / (1 + Math.abs(anamorphicRatio))
+  );
+  const horizontalRadius = anamorphicRadius * (1 + Math.max(anamorphicRatio, 0));
+  const verticalRadius = anamorphicRadius * (1 + Math.max(-anamorphicRatio, 0));
+  const levels = BLOOM_PYRAMID_LEVELS.slice(0, BLOOM_QUALITY_LEVELS[quality]);
+  const renderTargets: Record<string, ShaderPassRenderTarget> = {};
+  const steps: ShaderPassPipelineStep[] = [];
   const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
     scale: [scale * resolutionScale, scale * resolutionScale],
     format: colorFormat,
     sampler: BLOOM_TARGET_SAMPLER
   });
-  const makeStep = (step: ShaderPassPipelineStep<BloomTargetName>) => {
-    switch (step.shaderPass.name) {
-      case 'bloomExtract':
-        return {...step, uniforms: {...step.uniforms, threshold}};
-      case 'bloomBlur':
-        return {...step, uniforms: {...step.uniforms, radius}};
-      case 'bloomComposite':
-        return {...step, uniforms: {...step.uniforms, intensity}};
-      default:
-        return step;
+
+  for (const [levelIndex, level] of levels.entries()) {
+    const extractionTarget = `extract${level.name}`;
+    const blurScratchTarget = `blur${level.name}Scratch`;
+    const blurTarget = `blur${level.name}`;
+    renderTargets[extractionTarget] = makeRenderTarget(level.scale);
+    renderTargets[blurScratchTarget] = makeRenderTarget(level.scale);
+    renderTargets[blurTarget] = makeRenderTarget(level.scale);
+
+    if (levelIndex === 0) {
+      steps.push({
+        shaderPass: bloomExtractPass,
+        inputs: {sourceTexture: 'previous'},
+        output: extractionTarget,
+        uniforms: {threshold, softKnee, fireflyReduction}
+      });
+    } else {
+      const previousLevel = levels[levelIndex - 1];
+      steps.push({
+        shaderPass: bloomDownsamplePass,
+        inputs: {sourceTexture: `extract${previousLevel.name}`},
+        output: extractionTarget
+      });
     }
-  };
+
+    steps.push(
+      {
+        shaderPass: bloomBlurPass,
+        inputs: {sourceTexture: extractionTarget},
+        output: blurScratchTarget,
+        uniforms: {radius: horizontalRadius, delta: [1, 0]}
+      },
+      {
+        shaderPass: bloomBlurPass,
+        inputs: {sourceTexture: blurScratchTarget},
+        output: blurTarget,
+        uniforms: {radius: verticalRadius, delta: [0, 1]}
+      }
+    );
+  }
+
+  let reconstructedGlow = `blur${levels[levels.length - 1].name}`;
+  for (let levelIndex = levels.length - 2; levelIndex >= 0; levelIndex--) {
+    const level = levels[levelIndex];
+    const upsampleTarget = `upsample${level.name}`;
+    renderTargets[upsampleTarget] = makeRenderTarget(level.scale);
+    steps.push({
+      shaderPass: bloomUpsamplePass,
+      inputs: {
+        sourceTexture: reconstructedGlow,
+        higherResolutionGlow: `blur${level.name}`
+      },
+      output: upsampleTarget,
+      uniforms: {scatter}
+    });
+    reconstructedGlow = upsampleTarget;
+  }
+
+  steps.push({
+    shaderPass: bloomAdaptiveCompositePass,
+    inputs: {sourceTexture: 'previous', glowTexture: reconstructedGlow},
+    output: 'previous',
+    uniforms: {tint, intensity}
+  });
 
   return {
-    ...bloomShaderPassPipeline,
-    renderTargets: {
-      extractHalf: makeRenderTarget(0.5),
-      blurHalfScratch: makeRenderTarget(0.5),
-      blurHalf: makeRenderTarget(0.5),
-      extractQuarter: makeRenderTarget(0.25),
-      blurQuarterScratch: makeRenderTarget(0.25),
-      blurQuarter: makeRenderTarget(0.25),
-      extractEighth: makeRenderTarget(0.125),
-      blurEighthScratch: makeRenderTarget(0.125),
-      blurEighth: makeRenderTarget(0.125)
-    },
-    steps: bloomShaderPassPipeline.steps.map(makeStep)
+    name: bloomShaderPassPipeline.name,
+    renderTargets,
+    steps
   };
 }

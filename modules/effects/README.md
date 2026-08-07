@@ -37,15 +37,31 @@ deferred lighting, higher-quality ambient visibility, diffuse bounce, specular r
 participating-media scattering. Shared effects such as SSR use the same exported implementation
 in both scenes.
 
+`createBloomShaderPassPipeline` builds an HDR bloom pyramid with quality presets from two to five
+levels. The pyramid progressively reconstructs its levels with normalized tent filtering; `scatter`,
+`softKnee`, `fireflyReduction`, `anamorphicRatio`, and `tint` control the resulting glow without
+requiring application-owned intermediate textures. The source texture must allow both sampling and,
+when it is produced by an offscreen scene pass, rendering.
+
 `toneMapping` applies an ACES filmic curve after exposure and preserves the source alpha channel.
 Place it after bloom or other HDR effects so bright highlights roll off before presentation:
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {bloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [bloomShaderPassPipeline, toneMapping]
+  shaderPasses: [
+    createBloomShaderPassPipeline({
+      quality: 'high',
+      threshold: 0.8,
+      intensity: 1.25,
+      scatter: 0.55,
+      softKnee: 0.5,
+      fireflyReduction: 0.15
+    }),
+    toneMapping
+  ]
 });
 
 renderer.renderToScreen({
