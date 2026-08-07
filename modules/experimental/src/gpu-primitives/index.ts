@@ -83,6 +83,7 @@ export {
 export type {
   GPUIndexedRangeCompactionProps,
   GPUIndexedRangeCompactionResult,
+  GPUIndexedRangeFlagEncoding,
   GPUIndexedRangeLayout,
   GPUPartitionedIndexedRangeCompactionProps,
   GPUPartitionedIndexedRangeCompactionResult

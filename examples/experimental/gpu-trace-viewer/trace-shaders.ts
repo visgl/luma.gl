@@ -657,7 +657,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Publishes focused, generation-tagged exact visibility for candidate spans. */
+/** Publishes focused exact visibility as one atomic bit per candidate span. */
 export function getCandidateVisibilityShader(props: TraceSpanChunkShaderProps): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
@@ -681,7 +681,7 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
-@group(0) @binding(8) var<storage, read_write> visibilityFlags: array<u32>;
+@group(0) @binding(8) var<storage, read_write> visibilityFlags: array<atomic<u32>>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
@@ -713,10 +713,64 @@ fn main(
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
     (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
-  visibilityFlags[sourceIndex - CHUNK_FIRST_SPAN_INDEX] = select(
+  let chunkIndex = sourceIndex - CHUNK_FIRST_SPAN_INDEX;
+  let visibilityMask = 1u << (chunkIndex & 31u);
+  if (exactVisible && focusVisible) {
+    atomicOr(&visibilityFlags[chunkIndex >> 5u], visibilityMask);
+  } else {
+    atomicAnd(&visibilityFlags[chunkIndex >> 5u], ~visibilityMask);
+  }
+}`;
+}
+
+/** Expands candidate visibility bits for generation-tagged dependency endpoint resolution. */
+export function getCandidateDependencySpanVisibilityShader(
+  props: TraceSpanChunkShaderProps
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+@group(0) @binding(0) var<storage, read> visibilityFlags: array<u32>;
+@group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read_write> dependencySpanVisibility: array<u32>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let batchIndex = candidateBatchIds[workgroupId.y];
+  if (
+    batchIndex < CHUNK_FIRST_BATCH_INDEX ||
+    batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT
+  ) {
+    return;
+  }
+  let batch = spanBatches[batchIndex];
+  let batchRowIndex = globalId.x;
+  if (batchRowIndex >= batch.spanCount) {
+    return;
+  }
+  let sourceIndex = batch.firstSpanIndex + batchRowIndex;
+  let chunkIndex = sourceIndex - CHUNK_FIRST_SPAN_INDEX;
+  let isVisible =
+    (visibilityFlags[chunkIndex >> 5u] & (1u << (chunkIndex & 31u))) != 0u;
+  dependencySpanVisibility[sourceIndex] = select(
     0u,
     viewUniforms.visibilityGeneration,
-    exactVisible && focusVisible
+    isVisible
   );
 }`;
 }
