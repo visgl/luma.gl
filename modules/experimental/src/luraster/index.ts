@@ -94,6 +94,9 @@ export type {
   GPURasterConnectivity
 } from './gpu-raster-connected-components';
 
+export {GPURasterDenseComponents} from './gpu-raster-dense-components';
+export type {GPURasterDenseComponentsProps} from './gpu-raster-dense-components';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

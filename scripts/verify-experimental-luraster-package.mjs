@@ -55,6 +55,10 @@ const connectedComponentsImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-connected-components.ts'),
   'utf8'
 );
+const denseComponentsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-dense-components.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -147,6 +151,21 @@ assert.doesNotMatch(
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'connected raster components never submit commands, poll convergence, or read back labels'
 );
+assert.doesNotMatch(
+  denseComponentsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'dense raster relabeling does not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  denseComponentsImplementation,
+  /\bfetch\s*\(/,
+  'dense raster relabeling does not select a source transport'
+);
+assert.doesNotMatch(
+  denseComponentsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'dense raster relabeling never submits commands, polls convergence, or reads back counts'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -168,6 +187,7 @@ const requiredRuntimeExportNames = [
   'GPURasterContourClassifier',
   'GPURasterContours',
   'GPURasterConvolution',
+  'GPURasterDenseComponents',
   'GPURasterDilation',
   'GPURasterErosion',
   'GPURasterGaussianBlur',
@@ -225,6 +245,7 @@ assert.equal(
 for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
   for (const exportName of [
     'GPURasterConnectedComponents',
+    'GPURasterDenseComponents',
     'GPURasterGlobalHistogramMerge',
     'GPURasterGlobalInitialize',
     'GPURasterGlobalPercentile',
@@ -305,6 +326,7 @@ try {
   GPURasterContourClassifier,
   GPURasterContours,
   GPURasterConvolution,
+  GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
@@ -358,6 +380,7 @@ try {
   type GPURasterConvolutionProps,
   type GPURasterDecodedBand,
   type GPURasterDecodedTile,
+  type GPURasterDenseComponentsProps,
   type GPURasterDilationProps,
   type GPURasterEdgeProps,
   type GPURasterErosionProps,
@@ -455,6 +478,7 @@ declare const decodedFloatBand: GPURasterDecodedBand<'float32'>;
 declare const decodedSignedBand: GPURasterDecodedBand<'sint32'>;
 declare const decodedTile: GPURasterDecodedTile;
 declare const decodedUnsignedBand: GPURasterDecodedBand<'uint32'>;
+declare const denseComponentsOptions: GPURasterDenseComponentsProps;
 declare const dilationOptions: GPURasterDilationProps;
 declare const edgeOptions: GPURasterEdgeProps;
 declare const erosionOptions: GPURasterErosionProps;
@@ -531,6 +555,7 @@ declare const contrast: GPURasterContrast;
 declare const contourClassifier: GPURasterContourClassifier;
 declare const contours: GPURasterContours;
 declare const convolution: GPURasterConvolution;
+declare const denseComponents: GPURasterDenseComponents;
 declare const dilation: GPURasterDilation;
 declare const erosion: GPURasterErosion;
 declare const gaussianBlur: GPURasterGaussianBlur;
@@ -570,6 +595,7 @@ const contrastContributor: GPUCommandGraphContributor = contrast;
 const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
 const contoursContributor: GPUCommandGraphContributor = contours;
 const convolutionContributor: GPUCommandGraphContributor = convolution;
+const denseComponentsContributor: GPUCommandGraphContributor = denseComponents;
 const dilationContributor: GPUCommandGraphContributor = dilation;
 const erosionContributor: GPUCommandGraphContributor = erosion;
 const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
@@ -612,6 +638,8 @@ const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openi
 const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
 const configuredConnectedComponents: GPUCommandGraphContributor =
   new GPURasterConnectedComponents(connectedComponentsOptions);
+const configuredDenseComponents: GPUCommandGraphContributor =
+  new GPURasterDenseComponents(denseComponentsOptions);
 const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
 const configuredGlobalInitialize: GPUCommandGraphContributor = new GPURasterGlobalInitialize(
   globalInitializeOptions
@@ -755,6 +783,27 @@ const declaredComponentIterationCount: GraphDataView<'uint32'> | undefined =
   connectedComponents.iterationCount;
 const declaredComponentConnectivity: GPURasterConnectivity = connectedComponents.connectivity;
 const declaredMaximumComponentIterations: number = connectedComponents.maximumIterations;
+const denseComponentSparseInput: GraphDataView<'uint32'> = denseComponentsOptions.input;
+const denseComponentInputValidity: GraphDataView<'uint32'> = denseComponentsOptions.inputValidity;
+const denseComponentInputConvergence: GraphDataView<'uint32'> = denseComponentsOptions.converged;
+const denseComponentLabels: GraphDataView<'uint32'> = denseComponentsOptions.output;
+const denseComponentObservationValidity: GraphDataView<'uint32'> =
+  denseComponentsOptions.outputValidity;
+const boundedDenseComponentCount: GraphDataView<'uint32'> = denseComponentsOptions.componentCount;
+const denseComponentOverflow: GraphDataView<'uint32'> = denseComponentsOptions.overflow;
+const optionalRequiredDenseComponentCount: GraphDataView<'uint32'> | undefined =
+  denseComponentsOptions.requiredComponentCount;
+const optionalDenseComponentCapacity: number | undefined = denseComponentsOptions.capacity;
+const declaredDenseComponentInput: GraphDataView<'uint32'> = denseComponents.input;
+const declaredDenseComponentInputValidity: GraphDataView<'uint32'> = denseComponents.inputValidity;
+const declaredDenseComponentConvergence: GraphDataView<'uint32'> = denseComponents.converged;
+const declaredDenseComponentOutput: GraphDataView<'uint32'> = denseComponents.output;
+const declaredDenseComponentValidity: GraphDataView<'uint32'> = denseComponents.outputValidity;
+const declaredDenseComponentCount: GraphDataView<'uint32'> = denseComponents.componentCount;
+const declaredDenseComponentOverflow: GraphDataView<'uint32'> = denseComponents.overflow;
+const declaredRequiredDenseComponentCount: GraphDataView<'uint32'> | undefined =
+  denseComponents.requiredComponentCount;
+const declaredDenseComponentCapacity: number = denseComponents.capacity;
 const persistentGlobalExtent: GraphDataView<'float32'> = globalAccumulator.extent;
 const persistentGlobalCount: GraphDataView<'uint32'> = globalAccumulator.count;
 const persistentGlobalSum: GraphDataView<'float32'> = globalAccumulator.sum;
@@ -896,6 +945,14 @@ const invalidComponentValidityFormat: GraphDataView<'float32'> =
 // @ts-expect-error Convergence is a required, caller-owned uint32 scalar.
 const invalidComponentConvergenceFormat: GraphDataView<'float32'> =
   connectedComponentsOptions.converged;
+// @ts-expect-error Dense relabeling consumes exact unsigned sparse representative IDs.
+const invalidDenseComponentInput: GraphDataView<'float32'> = denseComponentsOptions.input;
+// @ts-expect-error Dense component labels remain exact unsigned integers.
+const invalidDenseComponentOutput: GraphDataView<'float32'> = denseComponentsOptions.output;
+// @ts-expect-error Bounded component populations are explicit unsigned GPU counters.
+const invalidDenseComponentCount: GraphDataView<'float32'> = denseComponentsOptions.componentCount;
+// @ts-expect-error Dense truncation status is a required unsigned GPU scalar.
+const invalidDenseComponentOverflow: GraphDataView<'float32'> = denseComponentsOptions.overflow;
 // @ts-expect-error Morphology exposes binary and grayscale scalar contracts only.
 const unsupportedMorphologyMode: GPURasterMorphologyMode = 'rgb';
 // @ts-expect-error Opening and closing are explicit composed contributors.
@@ -969,6 +1026,7 @@ void GPURasterContrast;
 void GPURasterContourClassifier;
 void GPURasterContours;
 void GPURasterConvolution;
+void GPURasterDenseComponents;
 void GPURasterDilation;
 void GPURasterErosion;
 void GPURasterGaussianBlur;
@@ -1025,6 +1083,7 @@ void decodedFloatBand;
 void decodedSignedBand;
 void decodedTile;
 void decodedUnsignedBand;
+void denseComponentsOptions;
 void dilationOptions;
 void edgeOptions;
 void erosionOptions;
@@ -1101,6 +1160,7 @@ void contrastContributor;
 void contourClassifierContributor;
 void contoursContributor;
 void convolutionContributor;
+void denseComponentsContributor;
 void dilationContributor;
 void erosionContributor;
 void gaussianBlurContributor;
@@ -1136,6 +1196,7 @@ void configuredErosion;
 void configuredOpening;
 void configuredClosing;
 void configuredConnectedComponents;
+void configuredDenseComponents;
 void configuredOverview;
 void configuredGlobalInitialize;
 void configuredGlobalStatisticsMerge;
@@ -1210,6 +1271,24 @@ void declaredComponentConvergence;
 void declaredComponentIterationCount;
 void declaredComponentConnectivity;
 void declaredMaximumComponentIterations;
+void denseComponentSparseInput;
+void denseComponentInputValidity;
+void denseComponentInputConvergence;
+void denseComponentLabels;
+void denseComponentObservationValidity;
+void boundedDenseComponentCount;
+void denseComponentOverflow;
+void optionalRequiredDenseComponentCount;
+void optionalDenseComponentCapacity;
+void declaredDenseComponentInput;
+void declaredDenseComponentInputValidity;
+void declaredDenseComponentConvergence;
+void declaredDenseComponentOutput;
+void declaredDenseComponentValidity;
+void declaredDenseComponentCount;
+void declaredDenseComponentOverflow;
+void declaredRequiredDenseComponentCount;
+void declaredDenseComponentCapacity;
 void isotropicOverviewScale;
 void anisotropicOverviewScale;
 void supportedCategoricalOverviewFormats;
@@ -1295,6 +1374,10 @@ void invalidComponentForeground;
 void invalidComponentLabelFormat;
 void invalidComponentValidityFormat;
 void invalidComponentConvergenceFormat;
+void invalidDenseComponentInput;
+void invalidDenseComponentOutput;
+void invalidDenseComponentCount;
+void invalidDenseComponentOverflow;
 void unsupportedMorphologyMode;
 void unsupportedMorphologyOperation;
 void unsupportedStructuringElement;
@@ -1348,6 +1431,7 @@ void declaredGlobalPercentileOutput;
 void declaredGlobalPercentileValidity;
 void categoricalOverview;
 void connectedComponents;
+void denseComponents;
 void globalHistogramMerge;
 void globalInitialize;
 void globalPercentile;
@@ -1389,6 +1473,9 @@ void RootGPURasterClosing;
 // @ts-expect-error Raster connected-component labeling stays isolated from the experimental root.
 import {GPURasterConnectedComponents as RootGPURasterConnectedComponents} from '@luma.gl/experimental';
 void RootGPURasterConnectedComponents;
+// @ts-expect-error Dense raster component relabeling stays isolated from the experimental root.
+import {GPURasterDenseComponents as RootGPURasterDenseComponents} from '@luma.gl/experimental';
+void RootGPURasterDenseComponents;
 // @ts-expect-error External raster tile sources remain isolated from the experimental root.
 import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/experimental';
 void RootGPURasterTileReader;

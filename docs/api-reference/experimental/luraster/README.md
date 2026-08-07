@@ -28,8 +28,9 @@ pointwise band math, normalized difference vegetation index (NDVI), validity-awa
 scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, mask-aware
 neighborhood stencils, direct convolution, separable Gaussian/box smoothing, signed
 Sobel/Scharr/Laplacian derivatives, gradient magnitude, binary/grayscale dilation, erosion,
-opening, closing, deterministic connected foreground components, GPU-resident marching-squares
-contours, indirect vector overlays, and adapter-limit planning. They implement
+opening, closing, deterministic connected foreground components, bounded dense region labels and
+counts, GPU-resident marching-squares contours, indirect vector overlays, and adapter-limit
+planning. They implement
 `GPUCommandGraphContributor` structurally: calling `addToGraph(graph)` only declares work. No
 contributor submits commands or reads results back.
 
@@ -49,6 +50,7 @@ computation instead of flattening them into display colors.
 | Create a meaningful lower-resolution analytical grid | `GPURasterOverview` or `GPURasterCategoricalOverview` | Continuous means preserve valid-sample weights; categorical results preserve exact labels. |
 | Calculate one histogram or threshold across many tiles | `GPURasterGlobalInitialize`, `GPURasterGlobalStatisticsMerge`, and `GPURasterGlobalHistogramMerge` | Every tile contributes against the same final dataset-wide numerical domain. |
 | Identify connected classified foreground regions | `GPURasterConnectedComponents` | Four- or eight-neighbor grouping preserves missing-data barriers and publishes an explicit GPU convergence signal. |
+| Obtain contiguous region IDs and a bounded exact component count | `GPURasterDenseComponents` | Converged representative roots become compact deterministic IDs with explicit capacity and overflow. |
 
 For a guided explanation of missing observations, grid ownership, replay, resource lifetimes,
 and common mistakes, read
@@ -170,6 +172,7 @@ import {
   GPURasterContours,
   GPURasterContrast,
   GPURasterConvolution,
+  GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
@@ -203,6 +206,7 @@ import {
   type GPURasterConnectedComponentsProps,
   type GPURasterConnectivity,
   type GPURasterDecodedBand,
+  type GPURasterDenseComponentsProps,
   type GPURasterGlobalAccumulator,
   type GPURasterGlobalHistogramMergeProps,
   type GPURasterGlobalInitializeProps,
@@ -338,17 +342,23 @@ smoothing, edge operators, morphology, generated overviews, and seamless halos; 
 those unsupported combinations returns to **TILE** mode. A generated global median reuses the
 existing four-byte threshold summary slot only when automatic Otsu is inactive.
 
-Choose **COMPONENTS** to color the current thresholded foreground by its actual GPU-resident
-sparse representative labels. **4-CONNECTED** and **8-CONNECTED** determine whether diagonal
-touching joins regions; the bounded iteration control exposes the difference between proven
-convergence and an exhausted graph budget. Missing observations remain visually distinct from
-valid background, and an unconverged result never produces plausible-looking colored regions.
-Region mode operates on the selected local tile, explicitly exits **FULL GLOBAL**, and temporarily
-reuses existing contour overflow/required-count summary slots for convergence and actual GPU
-rounds while contour overlays are disabled; leaving component mode restores the contour policy.
-The foreground readout uses the existing selected-observation count and is not a component count.
-Existing source/analytical overviews, seam-safe local processing, smoothing, derivatives,
-morphology, manual thresholds, and local Otsu remain available; the GPU-to-CPU summary stays
+Choose **COMPONENTS** to classify the current foreground into actual GPU-resident regions.
+**SPARSE ROOTS** preserves their minimum-pixel representative IDs; **DENSE 1..N** shows their
+contiguous row-major ranks. **4-CONNECTED** and **8-CONNECTED** determine whether diagonal
+touching joins regions, while an explicit component capacity distinguishes the exact required
+population from its bounded published count. Both presentation modes run the real GPU dense
+relabeling and count contributor. Sparse coloring remains usable if dense capacity overflows;
+the dense overlay is suppressed entirely when capacity is insufficient or propagation did not
+converge. Missing observations remain distinct from valid background.
+
+Region mode operates on the selected local tile, explicitly exits **FULL GLOBAL**, and disables
+contours temporarily. Three existing contour diagnostic words carry exact required component
+count, GPU convergence, and actual rounds; the displayed bounded count and overflow derive from
+that required count and visible capacity. This does not replace the contributor's genuine
+caller-owned GPU bounded-count and overflow outputs. The separate foreground readout still counts
+selected pixels rather than regions. Existing source/analytical overviews, seam-safe local
+processing, smoothing, derivatives, morphology, manual thresholds, and local Otsu remain
+available; leaving component mode restores the previous contour policy and the summary remains
 exactly 228 bytes.
 
 ## Raster bands and validity
@@ -2085,9 +2095,9 @@ separately valid but never joins a component.
 Every converged foreground label is the smallest row-major pixel index in its component plus
 one. The `+1` reserves label `0` for background while preserving a deterministic representative
 independent of workgroup execution order. Component identifiers are deliberately **sparse**:
-labels `1`, `3`, `5`, `7`, and `9` do not mean nine components. Dense numbering, component
-counts, bounded compact region tables, per-region statistics, and cross-tile component merging
-are separate future contracts.
+labels `1`, `3`, `5`, `7`, and `9` do not mean nine components. Compose the separate
+`GPURasterDenseComponents` contributor when contiguous IDs or an actual component count are
+required. Per-region measurements and cross-tile component merging remain separate contracts.
 
 ### Convergence is required, not assumed
 
@@ -2122,8 +2132,95 @@ flag, and one twelve-byte indirect dispatch record before allocation alignment; 
 values, output validity, convergence, and optional iteration counters are additional. Pointer
 compression and GPU-controlled zero-workgroup dispatch reduce active execution after convergence
 but do not remove already declared graph stages. Source masks, labels, output validity, and
-published status remain caller-owned. No full-image partitioning, dense relabeling, cross-tile
-equivalence resolution, or implicit CPU synchronization is introduced by this contributor.
+published status remain caller-owned. This sparse contributor does not itself partition a full
+image, remap dense labels, resolve cross-tile equivalences, or synchronize with the CPU.
+
+## Dense component labels and bounded counts
+
+Use `GPURasterDenseComponents` after a converged `GPURasterConnectedComponents` result when
+component IDs must index a compact output or the application needs the actual number of regions.
+Sparse representative `9` means “the region rooted at pixel index 8,” not “nine regions.” Dense
+relabeling instead orders genuine roots by their row-major source pixel and assigns contiguous
+IDs starting at `1`; zero remains reserved for valid background.
+
+```ts
+new GPURasterDenseComponents({
+  id: 'bounded-vegetation-regions',
+  width,
+  height,
+  input: representativeLabels,
+  inputValidity: componentValidity,
+  converged: componentConvergence,
+  output: denseRegionLabels,
+  outputValidity: denseRegionValidity,
+  componentCount: publishedRegionCount,
+  overflow: regionCapacityOverflow,
+  requiredComponentCount: exactRequiredRegionCount,
+  capacity: 3
+}).addToGraph(graph);
+```
+
+Every input and output is a caller-owned `GraphDataView<'uint32'>` from the same command graph.
+`input`, `inputValidity`, `output`, and `outputValidity` each contain `width * height` elements;
+`converged`, `componentCount`, `overflow`, and optional `requiredComponentCount` each contain one.
+Capacity is an integer from `0` through `width * height`; omitting it admits the entire raster.
+The contributor marks canonical representative roots, composes the shared unsigned exclusive
+`GPUScan`, and scatters dense IDs entirely on the GPU. Root markers, prefix ranks, and scan
+scratch remain graph-owned; no label or count is polled or downloaded by the contributor.
+
+### Sparse roots, dense ranks, and capacity
+
+For five disconnected foreground roots:
+
+```text
+Sparse representative labels:   Root flags:       Dense labels:
+
+1 0 3                          1 0 1             1 0 2
+0 5 0                          0 1 0             0 3 0
+7 0 9                          1 0 1             4 0 5
+```
+
+The exact required count is `5`, not the largest sparse representative `9`. With `capacity: 3`,
+only dense labels `1`, `2`, and `3` are published. The result becomes:
+
+```text
+Bounded dense labels:     Output validity:     Meaning:
+
+1 0 2                     1 1 1                two retained regions and real background
+0 3 0                     1 1 1                one retained region and real background
+0 0 0                     0 1 0                two dropped regions and real background
+
+requiredComponentCount = 5
+componentCount         = 3
+overflow               = 1
+```
+
+A dropped foreground pixel is `label = 0, validity = 0`; a genuine background pixel is
+`label = 0, validity = 1`. Missing input remains invalid. The zero labels in the last row
+therefore have two different meanings: the outer pixels exceeded capacity, while the center
+is a real valid background observation. Consumers must inspect validity and overflow instead of
+treating all zero labels as interchangeable.
+
+`componentCount` is always the capacity-clamped published population:
+`min(requiredComponentCount, capacity)`. `overflow` is `1` exactly when the converged required
+population exceeds capacity; it is reset on each graph encoding rather than remaining sticky.
+`requiredComponentCount` is optional, but when supplied it receives the exact unclamped count.
+With zero capacity, every foreground output is invalid; an empty/background-only input still
+has count `0`, overflow `0`, and valid background masks.
+
+### Convergence gates every dense output
+
+Dense relabeling consumes the exact GPU `converged` scalar published by its sparse upstream
+contributor. If that scalar is zero, every dense label, output-validity flag, bounded count,
+optional required count, and overflow value is cleared. Thus `overflow = 0` alone does not
+prove a usable result: consumers must also require `converged = 1`. Out-of-range or malformed
+sparse representatives are rejected at the affected pixels without out-of-bounds root access.
+
+Capacity is a bound on published component IDs, not a count of foreground pixels and not a
+global multi-tile region limit. Ordering is deterministic within the current raster/core;
+per-region measurements, centroid/area tables, and cross-tile region identity reconciliation
+remain future contributors. Source decoding, graph submission, fences, and any optional compact
+readback remain application-owned.
 
 ## Raster compute versus image effects
 
@@ -2259,10 +2356,9 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-driven contrast application, built-in GeoTIFF/COG decoding, dense component
-relabeling/counts, per-region measurements, cross-tile region identity, tiled contour stitching,
-automatic whole-image result placement, and FFT-backed raster convolution are not part of the
-current implementation.
+Percentile-driven contrast application, built-in GeoTIFF/COG decoding, per-region measurements,
+cross-tile region identity, tiled contour stitching, automatic whole-image result placement, and
+FFT-backed raster convolution are not part of the current implementation.
 Application-owned tile ingress, source-provided overviews/windows, independently budgeted
 multi-tile CPU/GPU residency, fence-safe eviction, compatible compiled-graph reuse, explicit
 cumulative neighborhood halo planning and native-format GPU assembly, half-open core
@@ -2270,7 +2366,8 @@ extraction, nodata-aware calibrated floating-point overview means and weighted p
 integer categorical nearest/mode overviews, generated affine/CRS metadata, Sobel, Scharr,
 Laplacian, gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion,
 opening, closing, deterministic four/eight-connected sparse representative labels with
-fail-closed GPU convergence, replayable global tiled extent/population/sum/histogram merges,
+fail-closed GPU convergence, deterministic dense root ranks, exact/bounded component counts and
+per-execution capacity overflow, replayable global tiled extent/population/sum/histogram merges,
 explicit sticky/saturating overflow diagnostics, bounded histogram-based percentiles, global
 Otsu input, and single-raster contour extraction are implemented.
 

@@ -8,6 +8,8 @@ import './gpu-raster-connected-components.spec';
 import './gpu-raster-contrast.spec';
 import './gpu-raster-contours.spec';
 import './gpu-raster-convolution.spec';
+import './gpu-raster-dense-components-pipeline.spec';
+import './gpu-raster-dense-components.spec';
 import './gpu-raster-edges.spec';
 import './gpu-raster-global-pipeline.spec';
 import './gpu-raster-global-statistics.spec';

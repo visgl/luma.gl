@@ -211,8 +211,9 @@ GPU workgroup execution order, but identifiers are not densely renumbered: label
 `9` identify three regions, not nine.
 
 Do not use the largest representative as a component count or directly index a compact
-per-region array. Dense relabeling, explicit component counts, region measurements, and
-cross-tile identity reconciliation are separate future contracts.
+per-region array. Compose `GPURasterDenseComponents` when contiguous IDs, an actual region count,
+or an explicit capacity bound are required. Region measurements and cross-tile identity
+reconciliation remain separate future contracts.
 
 ### Convergence must be proven
 
@@ -229,12 +230,67 @@ An optional GPU iteration scalar records how many rounds actually ran, including
 unchanged round that proves convergence. Remaining predeclared work can be suppressed on the GPU
 without polling status or downloading source pixels to JavaScript.
 
+### Dense labels count regions, not pixels
+
+A **dense component label** is a contiguous region ID beginning at `1`; background remains `0`.
+`GPURasterDenseComponents` marks the canonical sparse roots, applies an unsigned exclusive GPU
+prefix scan, and assigns each representative its row-major rank:
+
+```text
+Sparse roots:          Dense IDs:
+
+1 0 3                  1 0 2
+0 5 0                  0 3 0
+7 0 9                  4 0 5
+
+largest sparse representative: 9
+actual component count:        5
+```
+
+The five labels identify five regions, not five foreground pixels; one region can cover many
+pixels. The count describes the selected raster or owned tile core only. Regions touching a
+different tile are not reconciled automatically.
+
+### Required count, bounded count, and overflow
+
+An application can limit how many dense regions it is prepared to consume. For the five regions
+above, `capacity: 3` produces exact required count `5`, bounded published count `3`, and
+overflow `1`:
+
+```text
+Bounded labels:       Output validity:
+
+1 0 2                 1 1 1
+0 3 0                 1 1 1
+0 0 0                 0 1 0
+```
+
+The outer zeros in the last row are dropped foreground and therefore **invalid**; its middle
+zero is real background and remains **valid**. Missing observations are invalid as usual.
+Consumers must check both validity and overflow; zero alone cannot distinguish these states.
+Zero capacity invalidates every foreground region without turning real background into missing
+data. Empty/background-only input has required count `0`, bounded count `0`, and no overflow.
+
+The required and published populations are different, honest measurements:
+
+- **Required count:** all converged regions present before a capacity limit.
+- **Published count:** `min(required count, capacity)`.
+- **Overflow:** whether the current converged execution required more than capacity.
+
+Overflow is recomputed on each graph execution; it is not a sticky historical flag. If upstream
+labeling does not converge, dense labels, their validity, both counts, and overflow are cleared.
+An overflow value of zero is therefore meaningful only together with a proven convergence flag.
+Malformed sparse roots fail closed without indexing outside their valid raster.
+
 The Satellite Raster Lab lets you switch between **OFF** and **COMPONENTS**, select
-**4-CONNECTED** or **8-CONNECTED**, and adjust a bounded iteration budget. Its foreground
-readout counts selected observations, not distinct components. Convergence and actual rounds
-reuse existing contour diagnostic fields while component coloring temporarily replaces the
-contour overlay, so the existing 228-byte analytical summary does not grow. Segmentation is
-local to the selected tile; cross-tile region identity remains separate future work.
+**4-CONNECTED** or **8-CONNECTED**, compare **SPARSE ROOTS** with **DENSE 1..N**, and adjust
+separate propagation and region-capacity budgets. Its foreground readout counts selected pixels;
+the component readout reports actual regions. Exact required count, convergence, and actual
+rounds reuse three existing contour diagnostic words; the displayed bounded count and overflow
+derive from that exact GPU count and visible capacity. Dense coloring is hidden entirely when
+capacity is exceeded or convergence fails, while correctly converged sparse roots remain visible
+even if the separate dense capacity is too small. The existing 228-byte analytical readback does
+not grow, and cross-tile region identity remains separate future work.
 
 ## Tiles and owned pixel cores
 
@@ -568,6 +624,7 @@ transport, format parsing, and worker policy on the loading side of the boundary
 | Downsample exact class identifiers                                              | `GPURasterCategoricalOverview` with nearest or mode policy.                                                            |
 | Build one histogram or threshold across many tiles                              | Explicit global initialization, statistics merges, and stable-domain histogram replay.                                 |
 | Identify connected thresholded foreground without inventing missing samples     | `GPURasterConnectedComponents` with four/eight connectivity and explicit convergence.                                  |
+| Count regions or obtain bounded contiguous region identifiers                   | `GPURasterDenseComponents` after converged sparse labeling, with explicit capacity and overflow.                       |
 | Look up complete constructors, format constraints, ownership, and code examples | The [LuRaster API reference](/docs/api-reference/experimental/luraster).                                               |
 
 ## A short glossary
@@ -580,6 +637,7 @@ transport, format parsing, and worker policy on the loading side of the boundary
 - **Connectivity:** the pixel-neighbor policy; four excludes diagonals and eight includes them.
 - **Convergence:** GPU proof that bounded component-label propagation reached a stable fixed point.
 - **Core:** the half-open region of a tile that owns analytical outputs.
+- **Dense component ID:** a contiguous row-major region rank starting at `1`; `0` remains background.
 - **Domain:** the minimum and maximum values used to interpret histogram bins.
 - **Fence:** proof that previously submitted GPU work has completed.
 - **Halo:** borrowed neighboring samples surrounding an owned tile core.
@@ -589,11 +647,13 @@ transport, format parsing, and worker policy on the loading side of the boundary
 - **Nodata-aware:** excludes missing observations while preserving genuine zero values.
 - **Otsu threshold:** a histogram-derived cutoff that separates two measurement groups.
 - **Overview:** a lower-resolution representation of the same spatial raster.
+- **Overflow:** an explicit signal that the current converged population exceeded caller capacity.
 - **Pixel interpretation:** whether a source pixel represents a sampled point or a covered area.
 - **Raster:** a rectangular grid of observations.
 - **Receptive field:** the source neighborhood needed to produce one analytical output.
 - **Representative label:** one plus the smallest row-major foreground pixel index in a
   connected component; these labels can be sparse.
+- **Required component count:** the exact converged region population before capacity clamping.
 - **Replayable:** able to process tiles again after discovering global dataset information.
 - **Sentinel:** a source-defined raw numeric value that means missing.
 - **Tile:** a bounded rectangular subset of a raster.
