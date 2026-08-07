@@ -13,6 +13,7 @@ import './splat-interaction.node.spec';
 import './splat-interaction.spec';
 import './splat-mixed-renderer.node.spec';
 import './splat-rad-hierarchy.node.spec';
+import './splat-rad-hierarchy.spec';
 import './splat-residency.node.spec';
 import './splat-renderer.node.spec';
 import './splat-renderer.spec';
