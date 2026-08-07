@@ -149,16 +149,18 @@ brushes to linked histograms, grouped aggregates, stable visible-row identifiers
 masks through one reusable WebGPU command graph. Source rows stay on the GPU; applications control
 chart rendering, command submission, and any compact summary readback.
 
-## GPU Vector Similarity Search
+## GPU Vector Similarity and Clustering
 
 <p class="badges">
   <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
 </p>
 
 [`@luma.gl/experimental/luvs`](/docs/api-reference/experimental/luvs) adds exact nearest-neighbor
-search to existing WebGPU command graphs. Embeddings remain ordinary fixed-size-list GPU table
-columns; the module borrows preserved source batches, stable row identifiers, optional validity,
-and linked-selection masks instead of introducing another storage owner or renderer.
+search, deterministic k-means clustering, and explicitly approximate IVF-flat indexing to existing
+WebGPU command graphs. Embeddings remain ordinary fixed-size-list GPU table columns; the module
+borrows preserved source batches, stable row identifiers, optional validity, and linked-selection
+masks instead of introducing another storage owner or renderer. Applications choose exact scans
+or reusable indexed probes according to their accuracy, latency, and memory requirements.
 
 ## WebGPU Geospatial Kernels
 

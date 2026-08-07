@@ -9,6 +9,10 @@ export {
   type ImportGPUEmbeddingTableOptions,
   type ImportGPUEmbeddingVectorOptions
 } from './embedding-matrix';
+export {GPUIVFFlatIndex} from './gpu-ivf-flat-index';
+export type {GPUIVFFlatIndexProps, GPUIVFFlatSearchProps} from './gpu-ivf-flat-index';
+export {GPUKMeans} from './gpu-k-means';
+export type {GPUKMeansLabels, GPUKMeansProps} from './gpu-k-means';
 export {GPUSimilaritySearch} from './gpu-similarity-search';
 export type {
   GPUEmbeddingFilterMask,
