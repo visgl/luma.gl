@@ -78,9 +78,39 @@ test('paged Gaussian GPU shaders preserve sparse source rows within baseline sto
     'counts only sparse rows surviving projection, semantic filtering, and SH evaluation'
   );
   t.match(
+    GPU_PAGED_SPLAT_FEATURE_SHADER,
+    /pow\(max\(projectedColor\.rgb, vec3<f32>\(0\.0\)\), vec3<f32>\(2\.2\)\)/,
+    'converts each selected sRGB source after SH without assuming uniform cross-page color formats'
+  );
+  t.match(
     GPU_PAGED_SPLAT_RENDER_SHADER,
     /projectedRecords\[instanceIndex\]/,
     'consumes already globally ordered projected output segments directly'
+  );
+  t.match(
+    GPU_PAGED_SPLAT_PROJECTION_SHADER,
+    /fn getProjectedScreenAxis\(clipCenter: vec4<f32>, worldAxis: vec3<f32>\)/,
+    'projects world covariance through the analytic homogeneous perspective Jacobian'
+  );
+  t.match(
+    GPU_PAGED_SPLAT_PROJECTION_SHADER,
+    /alpha \*= sqrt\(originalDeterminant \/ filteredDeterminant\)/,
+    'preserves integrated Gaussian opacity when adding a screen-space antialias kernel'
+  );
+  t.match(
+    GPU_PAGED_SPLAT_PROJECTION_SHADER,
+    /min\(sourceAlpha \* 4\.0 - 3\.0, 5\.0\)/,
+    'maps already-decoded Spark hierarchy opacity from 1–2 into its authored 1–5 domain'
+  );
+  t.match(
+    GPU_PAGED_SPLAT_PROJECTION_SHADER,
+    /min\(firstSupportAxisLength, maximumSupportAxisLength\)/,
+    'caps opted-in RAD support axes individually after parent opacity expansion'
+  );
+  t.match(
+    GPU_PAGED_SPLAT_RENDER_SHADER,
+    /1\.0 - pow\(max\(1\.0 - gaussianWeight, 0\.0\), opaqueExponent\)/,
+    "retains Spark's nonlinear opaque-parent falloff without expanding projected records"
   );
   t.end();
 });
@@ -249,13 +279,19 @@ test('GPUPagedSplatRenderer retains directional SH, semantic controls, and HDR s
   t.deepEqual(renderer.props.cameraPosition, [1, 2, 3], 'keeps source SH camera direction');
   t.equal(renderer.props.sphericalHarmonicsDegree, 2, 'preserves requested higher-order SH bands');
   t.equal(renderer.props.semanticFilter, filter, 'preserves source semantic selection controls');
+  t.equal(
+    renderer.props.lodOpacity,
+    false,
+    'leaves Spark parent-opacity behavior explicitly opt-in'
+  );
   renderer.setProps({
     cameraPosition: [3, 2, 1],
     sphericalHarmonicsDegree: 3,
     semanticFilter: undefined,
     toneMapping: 'none',
     opacityThreshold: 0.2,
-    pointSize: 1.5
+    pointSize: 1.5,
+    lodOpacity: true
   });
   t.deepEqual(renderer.props.cameraPosition, [3, 2, 1], 'updates source SH lighting direction');
   t.equal(renderer.props.sphericalHarmonicsDegree, 3, 'supports all three Khronos SH bands');
@@ -263,6 +299,9 @@ test('GPUPagedSplatRenderer retains directional SH, semantic controls, and HDR s
   t.equal(renderer.props.toneMapping, 'none', 'respects explicit display tone-map controls');
   t.equal(renderer.props.alphaCutoff, 0.2, 'preserves opacity-threshold compatibility');
   t.equal(renderer.props.radiusScale, 1.5, 'preserves point-size compatibility');
+  t.equal(renderer.props.lodOpacity, true, 'enables Spark opacity only for explicit RAD callers');
+  renderer.setProps({lodOpacity: false});
+  t.equal(renderer.props.lodOpacity, false, 'restores ordinary non-hierarchy opacity explicitly');
   t.throws(
     () => renderer.setProps({semanticFilter: {predicate: () => true}}),
     /JavaScript predicates/,
@@ -273,6 +312,24 @@ test('GPUPagedSplatRenderer retains directional SH, semantic controls, and HDR s
     /unsigned 32-bit/,
     'rejects classes unrepresentable in caller-owned source semantic buffers'
   );
+
+  const sparkRenderer = new GPUPagedSplatRenderer(device, {
+    pages: [{id: 'spark-rad-float-source', data: sourcePage}],
+    lodOpacity: true,
+    toneMapping: 'none'
+  });
+  t.equal(
+    sparkRenderer.props.toneMapping,
+    'none',
+    'keeps explicit Spark Float32 sRGB colors uncompressed on ordinary SDR canvases'
+  );
+  sparkRenderer.setFrontier([{id: 'spark-rad-float-source', data: sourcePage}]);
+  t.equal(
+    sparkRenderer.props.toneMapping,
+    'none',
+    'does not reintroduce automatic Reinhard tone mapping when a RAD frontier changes'
+  );
+  sparkRenderer.destroy();
 
   const sphericalHarmonics = sourcePage.sphericalHarmonics!.data[0].buffer;
   const semanticIdentifiers = sourcePage.semanticIds!.data[0].buffer;

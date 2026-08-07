@@ -162,15 +162,34 @@ describe('homepage navigation', () => {
     expect(exampleCardSource).toMatch(/<(?:a|Link)\b(?=[^>]*\b(?:href|to)=\{href\})[^>]*>/);
 
     for (const featuredExampleRoute of featuredExampleRoutes) {
+      const featuredExamplePath = featuredExampleRoute.split('?')[0];
       expect(
-        exampleIdentifiers.has(featuredExampleRoute),
-        `${featuredExampleRoute} must remain in the authoritative example catalog`
+        exampleIdentifiers.has(featuredExamplePath),
+        `${featuredExamplePath} must remain in the authoritative example catalog`
       ).toBe(true);
       expect(
-        existsSync(path.join(EXAMPLE_CONTENT_DIRECTORY, `${featuredExampleRoute}.mdx`)),
-        `${featuredExampleRoute} must resolve to an existing example documentation page`
+        existsSync(path.join(EXAMPLE_CONTENT_DIRECTORY, `${featuredExamplePath}.mdx`)),
+        `${featuredExamplePath} must resolve to an existing example documentation page`
       ).toBe(true);
     }
+  });
+
+  test('features the bounded Coit Tower capture as a direct WebGPU showcase option', () => {
+    const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
+    const coitShowcase = homepageSource.match(
+      /\{\s*title:\s*['"]Coit Tower[^'"]*['"]([\s\S]*?)\n\s*\}/
+    );
+
+    expect(coitShowcase).not.toBeNull();
+    expect(coitShowcase![1]).toContain("route: 'showcase/gaussian-splat-viewer?scene=coit'");
+    expect(coitShowcase![1]).toContain("image: 'showcase/coit-tower.png'");
+    expect(coitShowcase![1]).toContain("imagePosition: 'left center'");
+    expect(coitShowcase![1]).toContain("backends: ['webgpu']");
+    expect(coitShowcase![1]).toMatch(/50\.9-million-splat/);
+    expect(coitShowcase![1]).toMatch(/background RAD decoding/);
+    expect(
+      existsSync(path.join(process.cwd(), 'website/static/images/examples/showcase/coit-tower.png'))
+    ).toBe(true);
   });
 
   test('features cinematic bloom in the showcase catalog and homepage gallery', () => {

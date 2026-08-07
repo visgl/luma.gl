@@ -27,6 +27,18 @@ export type GaussianSplatRADSceneControllerProps = {
   maxResidentSplatCount: number;
   /** Maximum accepted projected error before requesting finer source rows. */
   maximumScreenSpaceError?: number;
+  /** Whether decoded parent opacity uses Spark's expanded RAD hierarchy representation. */
+  lodOpacity?: boolean;
+  /** Spark-compatible multiplier for authored Gaussian hierarchy size. */
+  lodSplatScale?: number;
+  /** Spark-compatible visible Gaussian size threshold for best-first row refinement. */
+  lodRenderScale?: number;
+  /** Full-width view cone, in degrees, retaining complete source-row detail. */
+  coneFov0?: number;
+  /** Relative deadband avoiding parent/child churn near the refinement boundary. */
+  refinementHysteresis?: number;
+  /** Bounds synchronous hierarchy work during one camera update. */
+  maxTraversalRows?: number;
   /** Receives original source pages and batch-local active-row selections. */
   onFrontierChange?: (
     frontier: readonly SplatRADHierarchyFrontierEntry[],
@@ -60,6 +72,11 @@ export class GaussianSplatRADSceneController {
   private demandRefreshScheduled = false;
   private isDestroyed = false;
 
+  /** Number of independently requested source pages still fetching, decoding, or uploading. */
+  get pendingPageCount(): number {
+    return this.pendingPageLoads.size;
+  }
+
   constructor(props: GaussianSplatRADSceneControllerProps) {
     this.device = props.device;
     this.source = props.source;
@@ -70,6 +87,12 @@ export class GaussianSplatRADSceneController {
       residencyBudget: {maxResidentSplats: props.maxResidentSplatCount},
       maximumActiveRows: props.maxResidentSplatCount,
       maximumScreenSpaceError: props.maximumScreenSpaceError,
+      lodOpacity: props.lodOpacity,
+      lodSplatScale: props.lodSplatScale,
+      lodRenderScale: props.lodRenderScale,
+      coneFov0: props.coneFov0,
+      refinementHysteresis: props.refinementHysteresis,
+      maxTraversalRows: props.maxTraversalRows,
       onFrontierChange: props.onFrontierChange,
       onPageRequest: () => this.scheduleDemandRefresh(),
       onPageCancel: request => {
@@ -106,6 +129,15 @@ export class GaussianSplatRADSceneController {
     const frontier = this.hierarchy.update(view);
     this.scheduleDemandRefresh();
     return frontier;
+  }
+
+  /** Updates synchronous traversal bounds without replacing independently resident source pages. */
+  setTraversalBudget(maxTraversalRows?: number): void {
+    if (this.isDestroyed) {
+      return;
+    }
+    this.hierarchy.setTraversalBudget(maxTraversalRows);
+    this.scheduleDemandRefresh();
   }
 
   /** Waits for the currently requested page queue; useful for deterministic integration tests. */

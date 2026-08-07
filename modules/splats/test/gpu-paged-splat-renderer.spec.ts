@@ -33,6 +33,7 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
     firstSource.sphericalHarmonics = new Float32Array(4 * 45);
     firstSource.sphericalHarmonicsDegree = 3;
     firstSource.sphericalHarmonics[2 * 3] = 0.25;
+    firstSource.opacities[0] = 1.5;
     const secondSource = makeBrowserPagedSplatSource([0.8, 0.2, 0.4], 200, 18);
     secondSource.semanticIds = new Uint32Array([4, 9, 7]);
     const firstPage = makeGPUSplatData(device, firstSource);
@@ -48,12 +49,14 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
       sphericalHarmonicsDegree: 2,
       semanticFilter: {include: [4, 9], exclude: [7], includeUnlabeled: true},
       maxProjectedSplatsPerSegment: 2,
-      clearColor: [0, 0, 0, 0]
+      clearColor: [0, 0, 0, 0],
+      lodOpacity: true
     });
 
     t.equal(renderer.batches[0], firstPage, 'retains the first independent original source page');
     t.equal(renderer.batches[1], secondPage, 'retains the second independent source allocation');
     t.equal(renderer.props.toneMapping, 'reinhard', 'automatically maps Float32 source radiance');
+    t.ok(renderer.props.lodOpacity, 'enables nonlinear Spark parents with Float32 source colors');
     t.equal(renderer.stats.activeRowCount, 5, 'retains only requested original sparse source rows');
     t.equal(renderer.stats.sourceSegmentCount, 3, 'splits independent bounded source projections');
     t.ok(renderer.encode(device.commandEncoder), 'encodes the real device command graph');
@@ -92,7 +95,8 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
       maxScreenSpaceSplatSize: 256,
       alphaScale: 0.8,
       exposure: 1.1,
-      toneMapping: 'none'
+      toneMapping: 'none',
+      lodOpacity: false
     });
     t.ok(renderer.encode(device.commandEncoder), 'updates camera, semantics, SH, and presentation');
     t.equal(
@@ -100,7 +104,21 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
       originalGraph,
       'reuses its existing GPU graph for style changes'
     );
+    t.notOk(renderer.props.lodOpacity, 'restores ordinary splat opacity without rebuilding');
     device.submit();
+
+    renderer.setProps({lodOpacity: true});
+    t.ok(
+      encodePagedHighDynamicRangeFrame(device, renderer),
+      'converts mixed Uint8 and RAD Float32 source colors for linear HDR presentation'
+    );
+    t.equal(
+      renderer.compiledGraph,
+      originalGraph,
+      'preserves source graph identity on HDR targets'
+    );
+    device.submit();
+    renderer.setProps({lodOpacity: false});
 
     renderer.setFrontier([
       {id: 'browser-directional-page', data: firstPage, activeRows: new Uint32Array([1, 2, 3])},
@@ -384,6 +402,288 @@ test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across 
     t.notOk(originalSecondSource.destroyed, 'preserves the second original borrowed GPU source');
     firstPage.destroy();
     secondPage.destroy();
+  }
+
+  t.end();
+});
+
+test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD parent opacity', async t => {
+  const devices = await getTestDevices(['webgpu']);
+
+  for (const device of devices) {
+    if (isSoftwareBackedPagedDevice(device)) {
+      t.comment('Skipping calibrated paged splat pixel readback on a software-backed adapter');
+      continue;
+    }
+
+    const source = makeBrowserPagedSplatSource([0.2], 1900, 31);
+    source.positions.set([0.4, 0, 0.2]);
+    source.scales.set([0.12, 0.08, 0.6]);
+    source.colors = new Float32Array([1, 1, 1, 1]);
+    source.opacities[0] = 0.8;
+    const page = makeGPUSplatData(device, source);
+    const viewportSize = 96;
+    const gaussianSupportRadius = Math.sqrt(8);
+    const perspectiveMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1];
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [{id: 'calibrated-rad-parent', data: page}],
+      modelViewProjectionMatrix: perspectiveMatrix,
+      viewportSize: [viewportSize, viewportSize],
+      gaussianSupportRadius,
+      kernel2DSize: Math.sqrt(0.3),
+      alphaCutoff: 0,
+      toneMapping: 'none'
+    });
+
+    t.ok(renderer.encode(device.commandEncoder), 'encodes analytic perspective covariance');
+    const originalGraph = renderer.compiledGraph;
+    device.submit();
+    const perspectiveRecord = await readPagedProjectedRecord(renderer);
+    const clipW = 1.2;
+    const halfViewport = viewportSize * 0.5;
+    const horizontalDeviation = Math.hypot(
+      (halfViewport * 0.12) / clipW,
+      (halfViewport * 0.4 * 0.6) / (clipW * clipW)
+    );
+    const verticalDeviation = (halfViewport * 0.08) / clipW;
+    const expectedHorizontalRadius =
+      Math.sqrt(horizontalDeviation * horizontalDeviation + 0.3) * gaussianSupportRadius;
+    const actualHorizontalRadius = Math.hypot(perspectiveRecord[4], perspectiveRecord[5]);
+    t.ok(
+      Math.abs(actualHorizontalRadius - expectedHorizontalRadius) < 0.03,
+      `projects the exact perspective Jacobian radius ${actualHorizontalRadius.toFixed(3)} ≈ ${expectedHorizontalRadius.toFixed(3)}`
+    );
+    const originalDeterminant =
+      horizontalDeviation * horizontalDeviation * verticalDeviation * verticalDeviation;
+    const filteredDeterminant =
+      (horizontalDeviation * horizontalDeviation + 0.3) *
+      (verticalDeviation * verticalDeviation + 0.3);
+    const expectedFilteredOpacity = 0.8 * Math.sqrt(originalDeterminant / filteredDeterminant);
+    t.ok(
+      Math.abs(perspectiveRecord[11] - expectedFilteredOpacity) < 0.001,
+      'preserves integrated projected opacity under Spark-compatible screen-space filtering'
+    );
+
+    page.updateRows(0, {scales: new Float32Array([0.002, 0.002, 0.002])});
+    t.ok(renderer.encode(device.commandEncoder), 'updates borrowed subpixel source covariance');
+    device.submit();
+    const subpixelRecord = await readPagedProjectedRecord(renderer);
+    t.ok(
+      subpixelRecord[11] < 0.03,
+      `attenuates a subpixel Gaussian by its true filtered-area ratio (${subpixelRecord[11].toFixed(4)})`
+    );
+
+    page.updateRows(0, {
+      positions: new Float32Array([0, 0, 0]),
+      scales: new Float32Array([0.15, 0.15, 0.15]),
+      opacities: new Float32Array([1.5])
+    });
+    const parentTextureSize = 64;
+    renderer.setProps({
+      modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      viewportSize: [parentTextureSize, parentTextureSize],
+      kernel2DSize: 0,
+      lodOpacity: false
+    });
+    t.ok(renderer.encode(device.commandEncoder), 'preserves ordinary opacity when RAD mode is off');
+    device.submit();
+    const conventionalRecord = await readPagedProjectedRecord(renderer);
+    t.ok(
+      Math.abs(conventionalRecord[11] - 1.5) < 0.001,
+      'does not reinterpret non-RAD source opacity above one'
+    );
+    const conventionalPixel = await readPagedSplatPixel(
+      device,
+      renderer,
+      parentTextureSize,
+      parentTextureSize / 2 + 9,
+      parentTextureSize / 2
+    );
+
+    renderer.setProps({lodOpacity: true});
+    t.ok(renderer.encode(device.commandEncoder), 'enables decoded Spark parent opacity in place');
+    t.equal(renderer.compiledGraph, originalGraph, 'keeps the same bounded sparse GPU graph');
+    device.submit();
+    const parentRecord = await readPagedProjectedRecord(renderer);
+    t.ok(
+      Math.abs(parentRecord[11] - 3) < 0.001,
+      'maps decoded RAD opacity 1.5 to Spark parent opacity 3 without decoding twice'
+    );
+    const conventionalRadius = Math.hypot(conventionalRecord[4], conventionalRecord[5]);
+    const parentRadius = Math.hypot(parentRecord[4], parentRecord[5]);
+    const expectedParentRadius =
+      (conventionalRadius * (gaussianSupportRadius + 0.7 * (3 - 1))) / gaussianSupportRadius;
+    t.ok(
+      Math.abs(parentRadius - expectedParentRadius) < 0.03,
+      "expands the opaque parent support by Spark's authored 0.7-per-opacity-unit rule"
+    );
+    const parentPixel = await readPagedSplatPixel(
+      device,
+      renderer,
+      parentTextureSize,
+      parentTextureSize / 2 + 9,
+      parentTextureSize / 2
+    );
+    t.ok(
+      parentPixel[3] > 220 && conventionalPixel[3] < 100,
+      `real parent-opacity pixel ${parentPixel[3]} uses Spark\'s nonlinear falloff instead of ordinary alpha ${conventionalPixel[3]}`
+    );
+
+    page.updateRows(0, {scales: new Float32Array([0.3, 0.05, 0.15])});
+    renderer.setProps({maxScreenSpaceSplatSize: 8});
+    t.ok(renderer.encode(device.commandEncoder), 'caps expanded parent support independently');
+    device.submit();
+    const cappedParentRecord = await readPagedProjectedRecord(renderer);
+    const cappedMajorAxis = Math.hypot(cappedParentRecord[4], cappedParentRecord[5]);
+    const cappedMinorAxis = Math.hypot(cappedParentRecord[6], cappedParentRecord[7]);
+    const expectedMinorAxis =
+      parentTextureSize * 0.5 * 0.05 * (gaussianSupportRadius + 0.7 * (3 - 1));
+    t.ok(
+      Math.abs(cappedMajorAxis - 8) < 0.01,
+      "caps the final expanded major support radius at Spark's maximum pixel size"
+    );
+    t.ok(
+      Math.abs(cappedMinorAxis - expectedMinorAxis) < 0.03,
+      'does not shrink the independent minor axis when only the major support is capped'
+    );
+
+    page.updateRows(0, {
+      positions: new Float32Array([1.2, 0, 0]),
+      scales: new Float32Array([0.15, 0.15, 0.15])
+    });
+    renderer.setProps({lodOpacity: false, maxScreenSpaceSplatSize: 1024});
+    t.ok(renderer.encode(device.commandEncoder), 'retains a Gaussian crossing the viewport edge');
+    device.submit();
+    let commandBytes = await renderer.drawCommands.buffer.readAsync();
+    let commands = new Uint32Array(
+      commandBytes.buffer,
+      commandBytes.byteOffset,
+      commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+    );
+    t.equal(commands[1], 1, 'keeps off-frustum centers whose calibrated support remains visible');
+    page.updateRows(0, {positions: new Float32Array([1.6, 0, 0])});
+    t.ok(renderer.encode(device.commandEncoder), 'rejects fully disjoint projected support');
+    device.submit();
+    commandBytes = await renderer.drawCommands.buffer.readAsync();
+    commands = new Uint32Array(
+      commandBytes.buffer,
+      commandBytes.byteOffset,
+      commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+    );
+    t.equal(commands[1], 0, 'culls only splats whose complete conservative extent is offscreen');
+
+    renderer.destroy();
+    t.notOk(page.colors.data[0].buffer.destroyed, 'retains the borrowed HDR source color storage');
+    page.destroy();
+  }
+
+  t.end();
+});
+
+test('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32 HDR radiance', async t => {
+  const devices = await getTestDevices(['webgpu']);
+
+  for (const device of devices) {
+    if (isSoftwareBackedPagedDevice(device)) {
+      t.comment('Skipping mixed-source linear HDR pixel readback on a software-backed adapter');
+      continue;
+    }
+
+    const floatSource = makeBrowserPagedSplatSource([0.2], 2100, 41);
+    floatSource.colors = new Float32Array([0.5, 0.25, 0.75, 1]);
+    const packedSource = makeBrowserPagedSplatSource([0.8], 2300, 42);
+    packedSource.colors.set([128, 64, 192, 255]);
+    const floatPage = makeGPUSplatData(device, floatSource);
+    const packedPage = makeGPUSplatData(device, packedSource);
+    const textureSize = 32;
+    const renderer = new GPUPagedSplatRenderer(device, {
+      pages: [
+        {id: 'linear-float-source', data: floatPage},
+        {id: 'srgb-packed-source', data: packedPage}
+      ],
+      viewportSize: [textureSize, textureSize],
+      kernel2DSize: 0,
+      alphaCutoff: 0,
+      toneMapping: 'none'
+    });
+
+    t.ok(renderer.encode(device.commandEncoder), 'compiles mixed source columns on an SDR canvas');
+    t.equal(
+      renderer.props.toneMapping,
+      'none',
+      'preserves explicit Spark-like Float32 source brightness without SDR Reinhard mapping'
+    );
+    const originalGraph = renderer.compiledGraph;
+    device.submit();
+    renderer.setProps({exposure: 1.001});
+    t.ok(
+      encodePagedHighDynamicRangeFrame(device, renderer),
+      'encodes per-source color flags into existing 128-byte uniforms'
+    );
+    t.equal(renderer.compiledGraph, originalGraph, 'reuses one exact globally sorted source graph');
+    device.submit();
+    const mixedBytes = await renderer.projectedRecordBuffers[0].readAsync();
+    const mixedRecords = new Float32Array(
+      mixedBytes.buffer,
+      mixedBytes.byteOffset,
+      mixedBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+    );
+    t.ok(
+      Math.abs(mixedRecords[8] - (128 / 255) ** 2.2) < 0.002,
+      'converts the far Uint8 sRGB page to linear light before global gathering'
+    );
+    t.ok(
+      Math.abs(mixedRecords[20] - 0.5) < 0.001,
+      'preserves already-linear near Float32 HDR radiance in the same ordered output'
+    );
+    const linearFloatPixel = await readPagedSplatPixel(
+      device,
+      renderer,
+      textureSize,
+      textureSize / 2,
+      textureSize / 2
+    );
+
+    renderer.setProps({lodOpacity: true});
+    t.ok(
+      encodePagedHighDynamicRangeFrame(device, renderer),
+      'interprets opt-in RAD Float32 source coefficients as Spark sRGB-domain colors'
+    );
+    t.equal(renderer.compiledGraph, originalGraph, 'retains the same mixed-page compute graph');
+    device.submit();
+    const radBytes = await renderer.projectedRecordBuffers[0].readAsync();
+    const radRecords = new Float32Array(
+      radBytes.buffer,
+      radBytes.byteOffset,
+      radBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+    );
+    t.ok(
+      Math.abs(radRecords[20] - 0.5 ** 2.2) < 0.002,
+      'converts actual Float32 RAD DC plus SH radiance after source feature evaluation'
+    );
+    const linearRadPixel = await readPagedSplatPixel(
+      device,
+      renderer,
+      textureSize,
+      textureSize / 2,
+      textureSize / 2
+    );
+    t.ok(
+      linearFloatPixel[0] > 110 && linearRadPixel[0] < 70,
+      `real HDR-target pixels preserve generic Float32 ${linearFloatPixel[0]} but linearize RAD sRGB ${linearRadPixel[0]}`
+    );
+
+    renderer.destroy();
+    t.notOk(
+      floatPage.colors.data[0].buffer.destroyed,
+      'retains original Float32 HDR source storage'
+    );
+    t.notOk(
+      packedPage.colors.data[0].buffer.destroyed,
+      'retains original packed sRGB page storage'
+    );
+    floatPage.destroy();
+    packedPage.destroy();
   }
 
   t.end();
@@ -684,6 +984,107 @@ function makeBrowserPagedSplatSource(
     opacities[rowIndex] = 1;
   }
   return {positions, scales, rotations, colors, opacities, rowIndexBase, sourceBatchIndex};
+}
+
+async function readPagedProjectedRecord(renderer: GPUPagedSplatRenderer): Promise<Float32Array> {
+  const bytes = await renderer.projectedRecordBuffers[0].readAsync();
+  return new Float32Array(bytes.buffer, bytes.byteOffset, 12);
+}
+
+function encodePagedHighDynamicRangeFrame(
+  device: Device,
+  renderer: GPUPagedSplatRenderer
+): boolean {
+  const canvasContext = device.canvasContext;
+  if (!canvasContext) {
+    return false;
+  }
+  const originalColorFormat = device.preferredColorFormat;
+  const originalToneMapping = canvasContext.props.toneMapping;
+  Object.defineProperty(device, 'preferredColorFormat', {configurable: true, value: 'rgba16float'});
+  canvasContext.props.toneMapping = 'extended';
+  try {
+    return Boolean(renderer.encode(device.commandEncoder));
+  } finally {
+    Object.defineProperty(device, 'preferredColorFormat', {
+      configurable: true,
+      value: originalColorFormat
+    });
+    canvasContext.props.toneMapping = originalToneMapping;
+  }
+}
+
+async function readPagedSplatPixel(
+  device: Device,
+  renderer: GPUPagedSplatRenderer,
+  textureSize: number,
+  pixelX: number,
+  pixelY: number
+): Promise<Uint8Array> {
+  const colorTexture = device.createTexture({
+    format: 'rgba8unorm',
+    width: textureSize,
+    height: textureSize,
+    usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: textureSize,
+    height: textureSize,
+    colorAttachments: [colorTexture],
+    depthStencilAttachment: 'depth24plus'
+  });
+  const model = new Model(device, {
+    id: 'paged-gaussian-calibrated-parent-readback',
+    source: GPU_PAGED_SPLAT_RENDER_SHADER,
+    shaderLayout: GPU_PAGED_SPLAT_RENDER_SHADER_LAYOUT,
+    colorAttachmentFormats: ['rgba8unorm'],
+    depthStencilAttachmentFormat: 'depth24plus',
+    isInstanced: true,
+    instanceCount: 1,
+    vertexCount: 4,
+    topology: 'triangle-strip',
+    bindings: {
+      graphUniforms: renderer.uniformBuffer!,
+      projectedRecords: renderer.projectedRecordBuffers[0]
+    },
+    parameters: {
+      depthWriteEnabled: false,
+      depthCompare: 'less-equal',
+      blend: true,
+      blendColorOperation: 'add',
+      blendAlphaOperation: 'add',
+      blendColorSrcFactor: 'src-alpha',
+      blendColorDstFactor: 'one-minus-src-alpha',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one-minus-src-alpha'
+    }
+  });
+  model.predraw(device.commandEncoder);
+  const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+  renderPass.setPipeline(model.pipeline);
+  renderPass.setVertexArray(model.vertexArray);
+  renderPass.setBindings({
+    graphUniforms: renderer.uniformBuffer!,
+    projectedRecords: renderer.projectedRecordBuffers[0]
+  });
+  renderer.drawCommands.draw(renderPass, 1);
+  renderPass.end();
+  device.submit();
+
+  const pixelLayout = colorTexture.computeMemoryLayout({width: textureSize, height: textureSize});
+  const pixelReadback = device.createBuffer({
+    byteLength: pixelLayout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  colorTexture.readBuffer({width: textureSize, height: textureSize}, pixelReadback);
+  const pixels = await pixelReadback.readAsync(0, pixelLayout.byteLength);
+  const pixelOffset = pixelY * pixelLayout.bytesPerRow + pixelX * 4;
+  const pixel = pixels.slice(pixelOffset, pixelOffset + 4);
+  pixelReadback.destroy();
+  model.destroy();
+  framebuffer.destroy();
+  colorTexture.destroy();
+  return pixel;
 }
 
 function isSoftwareBackedPagedDevice(device: Device): boolean {

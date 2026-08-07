@@ -69,6 +69,8 @@ export type GPUPagedSplatRendererProps = Omit<
   pages?: readonly GPUPagedSplatPage[];
   /** Optional tighter projected-segment row bound; useful for bounded memory and regression tests. */
   maxProjectedSplatsPerSegment?: number;
+  /** Interpret opacity above one using Spark's nonlinear RAD hierarchy-parent falloff. */
+  lodOpacity?: boolean;
 };
 
 /** Active-frontier, segmented working-set, and original borrowed-source memory diagnostics. */
@@ -120,6 +122,7 @@ type ResolvedPagedSplatProps = {
   alphaScale: number;
   exposure: number;
   toneMapping: 'none' | 'reinhard';
+  lodOpacity: boolean;
 };
 
 type PlannedSourceSegment = {
@@ -264,7 +267,8 @@ export class GPUPagedSplatRenderer {
       radiusScale: props.radiusScale ?? props.pointSize ?? 1,
       alphaScale: props.alphaScale ?? 1,
       exposure: props.exposure ?? 1,
-      toneMapping: props.toneMapping ?? 'none'
+      toneMapping: props.toneMapping ?? 'none',
+      lodOpacity: props.lodOpacity ?? false
     };
     this.hasExplicitToneMapping = props.toneMapping !== undefined;
     this.updateSemanticSelections(props.semanticFilter);
@@ -451,7 +455,8 @@ export class GPUPagedSplatRenderer {
         : {}),
       ...(props.alphaScale !== undefined ? {alphaScale: props.alphaScale} : {}),
       ...(props.exposure !== undefined ? {exposure: props.exposure} : {}),
-      ...(props.toneMapping !== undefined ? {toneMapping: props.toneMapping} : {})
+      ...(props.toneMapping !== undefined ? {toneMapping: props.toneMapping} : {}),
+      ...(props.lodOpacity !== undefined ? {lodOpacity: props.lodOpacity} : {})
     };
     if (props.toneMapping !== undefined) {
       this.hasExplicitToneMapping = true;
@@ -1222,7 +1227,12 @@ fn main() {
       integerValues[26] = this.props.toneMapping === 'reinhard' ? 1 : 0;
       integerValues[27] = segment.globalRowOffset;
       integerValues[28] = segment.activeRowCount;
-      integerValues[29] = segment.page.data.colors.format === 'float32x4' ? 1 : 0;
+      const hasFloatColor = segment.page.data.colors.format === 'float32x4';
+      const encodeLinearColor =
+        hasPagedHighDynamicRangePresentation(this.device) &&
+        (!hasFloatColor || this.props.lodOpacity);
+      integerValues[29] =
+        (hasFloatColor ? 1 : 0) | (this.props.lodOpacity ? 2 : 0) | (encodeLinearColor ? 4 : 0);
       integerValues[30] = segment.activeRows ? 1 : 0;
       integerValues[31] = segment.sourceRowOffset - segment.sourceBindingRowOffset;
       segment.uniformBuffer.write(new Uint8Array(uniformData));

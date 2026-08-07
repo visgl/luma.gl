@@ -243,6 +243,13 @@ degree-three directional harmonics, and applies GPU semantic include/exclude sel
 bindings, including large harmonic columns, are split into legal device-sized ranges while every
 compute shader stays within the standard eight-storage-binding WebGPU guarantee.
 
+Set `lodOpacity: true` for Spark RAD sources whose encoding declares coarse-level opacity. The
+paged renderer then reconstructs authored parent support and nonlinear opacity, preserves
+Gaussian energy when adding screen-space antialiasing, and converts display-domain RAD colors
+correctly when presenting to a linear high-dynamic-range target. Ordinary Gaussian batches retain
+their existing opacity and floating-point color behavior. Use explicit `toneMapping: 'none'` for
+already display-referred RAD scenes on standard-dynamic-range canvases.
+
 A global GPU radix sort orders compact four-byte source-row references across every page. The
 sorted permutation is scattered into separate 48-byte projected output segments, and one shared
 render pass draws those segments in global depth order using GPU-written indirect commands. This
@@ -510,7 +517,10 @@ const hierarchy = new SplatRADHierarchyManager({
   pageSize: 65_536,
   maximumActiveRows: 1_000_000,
   residencyBudget: {maxResidentSplats: 1_000_000},
-  maximumScreenSpaceError: 8,
+  lodSplatScale: 1.5,
+  lodRenderScale: 1.5,
+  lodOpacity: true,
+  coneFov0: 70,
   onFrontierChange: frontier => renderer.setFrontier(frontier),
   onPageRequest: request => scheduleSourcePage(request.rowIndex, request.priority),
   onPageCancel: request => cancelSourcePage(request.rowIndex)
@@ -532,12 +542,19 @@ hierarchy.update({
 });
 ```
 
-Traversal starts at Spark's single authored root row, retains every unrefined or childless leaf,
-and replaces an individual parent only after all of its selected child rows become resident.
-Mixed parent-and-leaf source pages therefore remain correct. Each frontier entry exposes the
-intact original `data`, batch-local `activeRows`, `activeMask`, bounds, priority, and fallback
-state. Camera frustum changes cancel obsolete page requests, and protected parents remain visible
-when the residency budget cannot admit every required child.
+Traversal starts at Spark's single authored root row and refines the highest-priority visible
+nodes first. Authored Gaussian footprint, coarse-node opacity, camera-space angular foveation,
+and configurable refinement hysteresis contribute to each node's priority. Every unrefined or
+childless leaf is retained, and an individual parent is replaced only after all of its selected
+child rows become resident. Mixed parent-and-leaf source pages therefore remain correct. Each
+frontier entry exposes the intact original `data`, batch-local `activeRows`, `activeMask`, bounds,
+priority, and fallback state. Camera frustum changes cancel obsolete page requests, and protected
+parents remain visible when the residency budget cannot admit every required child.
+
+Call `hierarchy.setTraversalBudget(maximumRows)` to switch between a small interactive traversal
+window and a more detailed settled view without reallocating resident source pages. Browser
+traversal remains synchronous JavaScript; the showcase debounces its detailed pass so active
+camera movement does not repeatedly walk the entire authored scene.
 
 Top-level RAD metadata contains source page ranges, but not spatial page bounds. Bounds are
 derived conservatively after a page is decoded; missing-page requests use authored global child
@@ -629,10 +646,13 @@ GPU segments. The default residency window retains at most one million original 
 `&residentSplats=250000` to choose another whole-page source budget. The overlay reports the
 complete authored source count, current selected rows, and resident pages.
 
-Page requests are bounded and prioritized, but the published loaders.gl RAD decoder currently
-runs on the main thread. Applications can inject an actual asynchronous or worker-backed decoder
-through the demand-driven source adapter; the showcase does not imply that such a worker ships by
-default. Explicit CPU and non-hierarchical RAD sources retain their bounded whole-page path.
+The website showcase ships a bounded module-worker pool for actual RAD chunk decoding. Abortable
+source byte ranges are transferred to a background worker, parsed with the isolated loaders.gl 5
+bundle, serialized as transferable Arrow IPC, and reconstructed without losing original child-row
+links or global source identities. Unsupported worker environments retain an explicit main-thread
+fallback. Coit uses a Spark-calibrated 75-degree field of view, best-first angular refinement,
+nonlinear coarse-level opacity, analytic covariance projection, and area-preserving Gaussian
+antialiasing. Explicit CPU and non-hierarchical RAD sources retain their bounded whole-page path.
 
 Use `?loaders=local&scene=fixture` for the lightweight 1,000-splat parser fixture, or provide
 `source` to select a custom `.ply`, `.splat`, `.ksplat`, `.spz`, or `.rad` file. Full PLY scenes
