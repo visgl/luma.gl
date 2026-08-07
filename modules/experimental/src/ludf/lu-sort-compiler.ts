@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUTypeMap} from '@luma.gl/tables';
 import {GPUBatchSort} from '../gpu-primitives/gpu-batch-sort';
