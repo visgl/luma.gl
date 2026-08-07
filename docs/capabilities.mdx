@@ -328,7 +328,8 @@ primitives](/docs/api-reference/experimental/gpu-primitives).
 | Weighted single-source shortest paths | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Find least-cost routes over nonnegative single-precision edge weights with bounded relaxation and deterministic predecessors. |
 | Weakly connected components | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Label supported connected groups within an explicit iteration budget and expose convergence information. |
 | Deterministic graph communities | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | `LuGraphLabelPropagation` assigns communities through bounded unweighted majority votes and deterministic label tie-breaking. |
-| Weighted community modularity | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Score existing directed or undirected community partitions, preserving original edge weights and multiplicity without claiming Louvain optimization. |
+| Weighted community modularity | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Score existing directed or undirected community partitions while preserving original edge weights and multiplicity. |
+| Single-level modularity optimization | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Improve weighted community partitions through bounded deterministic best-gain vertex moves and publish their actual final modularity without claiming multilevel Louvain or Leiden. |
 | Local clustering coefficients | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Measure exact weak-neighborhood closure with distinct directed links or optional undirected triangle counts. |
 | GPU PageRank | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Rank vertices using iterative GPU execution with supported dangling-node redistribution. |
 | Six Graphalytics workload families | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Implement the [Graph Data Council's six LDBC Graphalytics algorithms](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/) without claiming official validation, certification, or published benchmark results. |
@@ -345,8 +346,8 @@ the [interactive luGraph explorer](/examples/experimental/lugraph-explorer), or 
 The [Graph Data Council (GDC)](https://ldbcouncil.org/), formerly the Linked Data Benchmark
 Council, maintains the [LDBC Graphalytics benchmark](https://ldbcouncil.org/benchmarks/graphalytics/).
 Its formal reference datasets, correctness outputs, driver, and competition rules are separate
-from luGraph's local demonstrations. Structural core numbers and modularity scoring go beyond its
-six standardized workload families.
+from luGraph's local demonstrations. Structural core numbers, modularity scoring, and single-level
+community optimization go beyond its six standardized workload families.
 
 ### GPU raster and satellite analysis
 
@@ -661,7 +662,7 @@ commitments to release dates.
 | Advanced dataframe analytics | Opportunity | WebGPU | `@luma.gl/experimental/ludf` | Extend existing grouped analytics, joins, lookups, sorting, and top-K toward non-unique/outer joins, temporal windows, and incremental updates. |
 | GPU vector similarity search | Opportunity | WebGPU | `@luma.gl/experimental` | Add embedding similarity, nearest-neighbor indexes, top-K distance queries, and compatible metadata filtering. |
 | Seam-safe multi-tile raster analysis | Opportunity | WebGPU | `@luma.gl/experimental/luraster` | Build on existing tile residency and graph reuse with assembled cross-tile halos, stitched contours, global aggregates, and generated analytical overviews. |
-| Advanced GPU graph analytics | Opportunity | WebGPU | `@luma.gl/experimental/lugraph` | Build on existing core numbers, weighted shortest paths, local clustering, community modularity scoring, all six Graphalytics families, and layouts with Louvain/Leiden partition optimization and dynamic graph updates. |
+| Advanced GPU graph analytics | Opportunity | WebGPU | `@luma.gl/experimental/lugraph` | Extend existing bounded modularity optimization, core numbers, all six Graphalytics families, and layouts toward full multilevel Louvain coarsening, Leiden refinement, and dynamic graph updates. |
 | Hierarchical spatial indexes | Opportunity | WebGPU | `@luma.gl/experimental/geospatial` | Extend supported spatial queries toward tiled indexing, nearest neighbors, and spatial joins. |
 | High-precision geospatial pipelines | Opportunity | WebGPU | `@luma.gl/experimental/luproj` | Broaden projection, local-origin precision, coordinate systems, and streamed map-scale workflows. |
 | Cross-view GPU-native provenance | Opportunity | WebGPU | `@luma.gl/experimental/luxfilter` | Extend existing linked filters and histograms with shared picking, provenance, and selection across more charts, maps, and scene views. |
