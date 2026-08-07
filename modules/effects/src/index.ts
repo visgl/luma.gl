@@ -133,6 +133,12 @@ export {
   clusteredVolumetricTrace,
   createClusteredVolumetricLightingShaderPassPipeline
 } from './passes/screen-space/clustered-volumetric-lighting';
+export type {CameraReprojectionTAAUniforms} from './passes/screen-space/camera-reprojection-temporal-antialiasing';
+export {
+  cameraReprojectionTaaDepthHistoryCopy,
+  cameraReprojectionTaaResolve,
+  createCameraReprojectionTAAShaderPassPipeline
+} from './passes/screen-space/camera-reprojection-temporal-antialiasing';
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
   depthAwareBlur,

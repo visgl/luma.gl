@@ -91,6 +91,18 @@ test('ANARI renderer schemas validate graph-based ray tracing settings', testCon
     ANARIRendererSchema.safeParse({...renderer, temporalReprojection: 1}).success,
     'temporal reprojection must be enabled with a boolean'
   );
+  testContext.ok(
+    ANARIRendererSchema.safeParse({'@@type': 'default', temporalAntialiasing: true}).success,
+    'forward renderers accept the raster temporal antialiasing control'
+  );
+  testContext.ok(
+    ANARIRendererSchema.safeParse({'@@type': 'deferred', temporalAntialiasing: false}).success,
+    'deferred renderers accept the raster temporal antialiasing control'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({'@@type': 'default', temporalAntialiasing: 1}).success,
+    'raster temporal antialiasing must be enabled with a boolean'
+  );
   testContext.notOk(
     ANARIRendererSchema.safeParse({'@@type': 'default', samplesPerPixel: 4}).success,
     'ray tracing controls are not silently accepted by forward renderers'

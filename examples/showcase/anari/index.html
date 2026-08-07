@@ -249,6 +249,15 @@
         color: rgba(238, 242, 255, 0.87);
         font-size: 13px;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      #ray-tracing-resolution-telemetry {
+        flex: 0 0 22ch;
+      }
+
+      #ray-tracing-frame-telemetry {
+        flex: 0 0 28ch;
       }
 
       .hint {
@@ -374,6 +383,15 @@
       <button class="mode-button" data-renderer="debugDepth">DEPTH</button>
       <span class="separator" aria-hidden="true"></span>
       <button id="bloom-toggle" class="mode-button active">BLOOM</button>
+      <span id="temporal-aa-separator" class="separator" aria-hidden="true"></span>
+      <button
+        id="temporal-aa-toggle"
+        class="mode-button active"
+        aria-pressed="true"
+        title="Stabilize edges and reuse valid samples across frames"
+      >
+        TEMPORAL AA
+      </button>
       <span class="separator" aria-hidden="true"></span>
       <a class="playground-link" href="./playground.html">JSON LAB ↗</a>
     </aside>

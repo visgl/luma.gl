@@ -11,6 +11,99 @@ import {
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import test from 'test/utils/vitest-tape';
+import {updateRayTracingAdaptiveBudget} from '../../src/engine/ray-tracing-scene-renderer';
+
+type AdaptiveBudgetState = Parameters<typeof updateRayTracingAdaptiveBudget>[0];
+
+function makeAdaptiveBudgetState(
+  overrides: Partial<AdaptiveBudgetState> = {}
+): AdaptiveBudgetState {
+  return {
+    resolutionScale: 0.5,
+    requestedResolutionScale: 0.5,
+    minimumResolutionScale: 0.25,
+    adaptiveResolution: true,
+    targetFrameTimeMilliseconds: 33.3,
+    phaseCount: 1,
+    phaseIndex: 0,
+    averageFrameTimeMilliseconds: 10,
+    overBudgetFrameCount: 0,
+    underBudgetFrameCount: 0,
+    lastBudgetAdjustmentTimeMilliseconds: 0,
+    historyNeedsReset: false,
+    accumulatedFrameCount: 32,
+    ...overrides
+  };
+}
+
+test('RayTracingSceneRenderer adaptive budget stays at or below requested resolution', testCase => {
+  const budget = makeAdaptiveBudgetState();
+  for (let frameIndex = 1; frameIndex <= 100; frameIndex++) {
+    updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
+  }
+  testCase.equal(
+    budget.resolutionScale,
+    0.5,
+    'sustained spare time never promotes the default half-resolution request to 75% or 100%'
+  );
+
+  budget.resolutionScale = 0.25;
+  budget.historyNeedsReset = false;
+  for (let frameIndex = 101; frameIndex <= 300; frameIndex++) {
+    updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
+    budget.historyNeedsReset = false;
+  }
+  testCase.equal(
+    budget.resolutionScale,
+    0.5,
+    'recovery can return to the requested scale but cannot overshoot it'
+  );
+  testCase.end();
+});
+
+test('RayTracingSceneRenderer adaptive budget uses stable history before sparse phases', testCase => {
+  const budget = makeAdaptiveBudgetState({
+    resolutionScale: 0.25,
+    averageFrameTimeMilliseconds: 50,
+    accumulatedFrameCount: 7
+  });
+  for (let frameIndex = 1; frameIndex <= 20; frameIndex++) {
+    updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
+  }
+  testCase.equal(
+    budget.phaseCount,
+    1,
+    'minimum-resolution frames remain fully covered until progressive history is stable'
+  );
+
+  budget.accumulatedFrameCount = 8;
+  updateRayTracingAdaptiveBudget(budget, 21_000);
+  testCase.equal(budget.phaseCount, 2, 'stable history permits sparse scheduling under pressure');
+
+  budget.phaseIndex = 1;
+  budget.historyNeedsReset = true;
+  updateRayTracingAdaptiveBudget(budget, 22_000);
+  testCase.equal(budget.phaseCount, 1, 'history invalidation returns to full pixel coverage');
+  testCase.equal(budget.phaseIndex, 0, 'history invalidation restarts sparse phase rotation');
+  testCase.end();
+});
+
+test('RayTracingSceneRenderer adaptive budget requires sustained pressure', testCase => {
+  const budget = makeAdaptiveBudgetState({averageFrameTimeMilliseconds: 50});
+  for (let frameIndex = 1; frameIndex <= 5; frameIndex++) {
+    updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
+  }
+  testCase.equal(
+    budget.resolutionScale,
+    0.5,
+    'short frame-time spikes do not immediately rebuild lower-resolution history'
+  );
+
+  updateRayTracingAdaptiveBudget(budget, 6000);
+  testCase.equal(budget.resolutionScale, 0.375, 'sustained pressure steps down one scale');
+  testCase.equal(budget.historyNeedsReset, true, 'resolution changes explicitly invalidate history');
+  testCase.end();
+});
 
 test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU core limits', async testCase => {
   const device = await getWebGPUTestDevice('core');

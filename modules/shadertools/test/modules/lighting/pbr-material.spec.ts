@@ -189,6 +189,52 @@ test('shadertools#pbrMaterial exposes typed defaults and uniform names', testCas
   testCase.end();
 });
 
+test('shadertools#pbrMaterial widens base and clearcoat specular lobes', testCase => {
+  const shaderSources = [
+    {
+      language: 'GLSL',
+      source: pbrMaterial.fs,
+      derivativeFunctionX: 'dFdx',
+      derivativeFunctionY: 'dFdy'
+    },
+    {
+      language: 'WGSL',
+      source: pbrMaterial.source,
+      derivativeFunctionX: 'dpdx',
+      derivativeFunctionY: 'dpdy'
+    }
+  ] as const;
+
+  for (const {language, source, derivativeFunctionX, derivativeFunctionY} of shaderSources) {
+    testCase.ok(
+      source.includes('normalDerivativeX = ' + derivativeFunctionX + '(normal)'),
+      language + ' derives the specular footprint from the shaded normal'
+    );
+    testCase.ok(
+      source.includes('normalDerivativeY = ' + derivativeFunctionY + '(normal)'),
+      language + ' derives the second axis of the specular footprint'
+    );
+    testCase.ok(
+      source.includes('kernelRoughnessSquared = min(2.0 * normalVariance, 1.0)'),
+      language + ' bounds the normal-variance roughness contribution'
+    );
+    testCase.ok(
+      source.includes(
+        'perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n)'
+      ),
+      language + ' widens the base specular lobe'
+    );
+    testCase.ok(
+      source.includes(
+        'clearcoatRoughness = widenSpecularRoughness(clearcoatRoughness, clearcoatNormal)'
+      ),
+      language + ' widens the clearcoat specular lobe'
+    );
+  }
+
+  testCase.end();
+});
+
 test('shadertools#pbrMaterial shader uniform blocks match uniformTypes order', testCase => {
   const fragmentValidationResult = getShaderModuleUniformLayoutValidationResult(
     pbrMaterial,

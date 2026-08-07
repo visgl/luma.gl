@@ -413,6 +413,15 @@
         color: rgba(242, 245, 255, 0.92);
         font-size: 12px;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      #scene-ray-tracing-resolution-statistic {
+        flex: 0 0 22ch;
+      }
+
+      #scene-ray-tracing-frame-statistic {
+        flex: 0 0 28ch;
       }
 
       .preview-hint {
@@ -542,6 +551,14 @@
                   <option value="debugDepth">Depth</option>
                 </select>
               </label>
+              <button
+                id="temporal-aa-toggle"
+                class="tool-button active"
+                aria-pressed="true"
+                title="Stabilize edges and reuse valid samples across frames"
+              >
+                TEMPORAL AA
+              </button>
               <button id="apply-scene" class="apply-button">APPLY ↵</button>
             </div>
           </div>

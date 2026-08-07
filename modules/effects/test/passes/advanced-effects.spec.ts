@@ -13,6 +13,7 @@ import {
   clusteredVolumetricTemporal,
   clusteredVolumetricTrace,
   createBloomShaderPassPipeline,
+  createCameraReprojectionTAAShaderPassPipeline,
   createClusteredVolumetricLightingShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
@@ -33,6 +34,7 @@ import {
   hdrLuminanceExtract,
   hdrLuminanceReduce,
   ssgiTemporal,
+  cameraReprojectionTaaResolve,
   ssrComposite,
   ssrSpatial,
   ssrTrace,
@@ -363,6 +365,37 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     taa.steps[0].inputs?.historyTexture,
     taa.steps[0].output,
     'TAA intentionally reads and writes one logical history target'
+  );
+
+  const cameraReprojectionTaa = createCameraReprojectionTAAShaderPassPipeline();
+  testCase.equal(
+    cameraReprojectionTaa.renderTargets?.cameraReprojectionTaaHistoryColor.format,
+    'rgba16float',
+    'camera-reprojection TAA preserves HDR history'
+  );
+  testCase.equal(
+    cameraReprojectionTaa.renderTargets?.cameraReprojectionTaaHistoryDepth.lifetime,
+    'history',
+    'camera-reprojection TAA retains depth history'
+  );
+  testCase.equal(
+    cameraReprojectionTaa.steps[0].inputs?.historyTexture,
+    cameraReprojectionTaa.steps[0].output,
+    'camera-reprojection TAA reads and writes one logical history target'
+  );
+  testCase.equal(
+    cameraReprojectionTaaResolve.uniformTypes.inverseViewProjectionMatrix,
+    'mat4x4<f32>',
+    'camera-reprojection TAA receives the current inverse view-projection matrix'
+  );
+  testCase.equal(
+    cameraReprojectionTaaResolve.uniformTypes.previousViewProjectionMatrix,
+    'mat4x4<f32>',
+    'camera-reprojection TAA receives the previous view-projection matrix'
+  );
+  testCase.ok(
+    cameraReprojectionTaaResolve.source.includes('textureLoad(previousDepthTexture'),
+    'camera-reprojection TAA validates each bilinear history tap against depth'
   );
 
   const fog = createVolumetricFogShaderPassPipeline();
