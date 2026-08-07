@@ -29,6 +29,16 @@ export type {
   LuDataFrameGroupByOptions,
   LuDataFrameGroupedAggregationResult
 } from './lu-group-by-query';
+export {LuDataFrameAggregationQuery} from './lu-global-aggregation-query';
+export type {
+  LuDataFrameAnalyticScalarFormat,
+  LuDataFrameGlobalAggregationDefinitions,
+  LuDataFrameGlobalAggregationResult,
+  LuDataFrameGlobalAggregationValue,
+  LuDataFrameScalarColumnNames
+} from './lu-global-aggregation-query';
+export {LuDataFrameHistogramQuery} from './lu-histogram-query';
+export type {LuDataFrameHistogramOptions} from './lu-histogram-query';
 export {and, column, literal, LuExpression, not, or, parameter} from './lu-expression';
 export type {
   LuExpressionBinaryOperator,
@@ -39,3 +49,5 @@ export type {
 export {CompiledLuDataFrameQuery} from './lu-query-compiler';
 export type {LuDataFrameQueryParameters} from './lu-query-compiler';
 export {CompiledLuDataFrameGroupedAggregation} from './lu-group-aggregation-compiler';
+export {CompiledLuDataFrameAggregation} from './lu-global-aggregation-compiler';
+export {CompiledLuDataFrameHistogram} from './lu-histogram-compiler';
