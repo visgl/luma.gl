@@ -58,7 +58,6 @@ import {
   TRACE_PROCESS_COUNT,
   TRACE_SPAN_BATCH_CAPACITY,
   TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
-  TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_STATUS_COUNT,
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS,
@@ -68,6 +67,7 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
+  getCandidateDependencyEndpointsShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
@@ -192,6 +192,7 @@ type TraceGraphResources = {
   focusTraversalState: Buffer;
   reachedSpans: Buffer;
   dependencyResults: Buffer;
+  dependencyEndpointPositions: Buffer;
   spanVisibility: Buffer;
   visibleDependencyIds: Buffer;
   densityBins: Buffer;
@@ -231,6 +232,7 @@ function getTraceResourceBuffers(resources: TraceGraphResources): Array<{byteLen
     resources.focusTraversalState,
     resources.reachedSpans,
     resources.dependencyResults,
+    resources.dependencyEndpointPositions,
     resources.spanVisibility,
     resources.visibleDependencyIds,
     resources.densityBins,
@@ -504,12 +506,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         bindings: [
           {name: 'dependencies', type: 'read-only-storage', group: 0, location: 0},
           {name: 'visibleDependencyIds', type: 'read-only-storage', group: 0, location: 1},
-          {name: 'spans', type: 'read-only-storage', group: 0, location: 2},
-          {name: 'processStates', type: 'read-only-storage', group: 0, location: 3},
-          {name: 'threadStates', type: 'read-only-storage', group: 0, location: 4},
-          {name: 'threadOffsets', type: 'read-only-storage', group: 0, location: 5},
-          {name: 'dependencyResults', type: 'read-only-storage', group: 0, location: 6},
-          {name: 'viewUniforms', type: 'uniform', group: 0, location: 7}
+          {
+            name: 'dependencyEndpointPositions',
+            type: 'read-only-storage',
+            group: 0,
+            location: 2
+          },
+          {name: 'viewUniforms', type: 'uniform', group: 0, location: 3}
         ]
       },
       parameters: makeTraceBlendParameters()
@@ -539,7 +542,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const started = performance.now();
     this.destroyResources();
     this.spanCapacity = spanCapacity;
-    this.dependencyCapacity = this.getSupportedDependencyCapacity(spanCapacity, dependencyCapacity);
+    this.dependencyCapacity = dependencyCapacity;
     this.selectedSpanIndex = INVALID_SPAN_INDEX;
     const dataset = makeTraceDataset(spanCapacity, this.dependencyCapacity);
     const resources = this.createResources(dataset);
@@ -561,16 +564,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.updateInspector();
   }
 
-  private getSupportedDependencyCapacity(spanCapacity: number, dependencyCapacity: number): number {
-    const spanByteLength =
-      spanCapacity * TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
-    const maximumMonolithicSpanByteLength = Math.min(
-      this.device.limits.maxStorageBufferBindingSize,
-      this.device.limits.maxBufferSize
-    );
-    return spanByteLength <= maximumMonolithicSpanByteLength ? dependencyCapacity : 0;
-  }
-
   /** Uploads each canonical source or mutable interaction allocation exactly once. */
   private createResources(dataset: TraceDatasetData): TraceGraphResources {
     const groups = dataset.groups.map(group => ({
@@ -588,19 +581,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       this.device.limits.maxStorageBufferBindingSize,
       this.device.limits.maxBufferSize
     );
-    const maximumSpanChunkByteLength =
-      dataset.dependencyCount > 0
-        ? maximumDirectSpanByteLength
-        : Math.min(maximumDirectSpanByteLength, this.spanChunkByteLength);
+    const maximumSpanChunkByteLength = Math.min(
+      maximumDirectSpanByteLength,
+      this.spanChunkByteLength
+    );
     const spanChunkData = makeTraceSpanChunks(
       dataset.spans,
       dataset.spanBatches,
       maximumSpanChunkByteLength
     );
-    // Dependency endpoint rendering currently requires one directly addressable span allocation.
-    if (spanChunkData.length > 1 && dataset.dependencyCount > 0) {
-      throw new Error();
-    }
     const spanDraws: TraceSpanDrawResources[] = spanChunkData.flatMap(chunk =>
       groups.flatMap((_, groupIndex) => {
         const chunkBatches = dataset.spanBatches
@@ -752,6 +741,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         Math.max(dataset.dependencyCount * 3, 1) * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
       ),
+      dependencyEndpointPositions: this.createStorageBuffer(
+        'gpu-trace-dependency-endpoint-positions',
+        Math.max(dataset.dependencyCount * 4, 1) * UINT32_BYTE_LENGTH
+      ),
       spanVisibility: this.createStorageBuffer('gpu-trace-span-visibility', spanMaskByteLength),
       visibleDependencyIds: this.createStorageBuffer(
         'gpu-trace-visible-dependencies',
@@ -886,6 +879,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         graph,
         'dependency-results',
         resources.dependencyResults
+      ),
+      dependencyEndpointPositions: importTraceBuffer(
+        graph,
+        'dependency-endpoint-positions',
+        resources.dependencyEndpointPositions
       ),
       spanVisibility: importTraceBuffer(graph, 'span-visibility', resources.spanVisibility),
       visibleDependencyIds: importTraceBuffer(
@@ -1222,11 +1220,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ]),
       {buffer: handles.visibleSpanIds, usage: 'storage-read'},
       {buffer: handles.dependencies, usage: 'storage-read'},
-      {buffer: handles.processStates, usage: 'storage-read'},
-      {buffer: handles.threadStates, usage: 'storage-read'},
-      {buffer: handles.threadOffsets, usage: 'storage-read'},
       {buffer: handles.reachedSpans, usage: 'storage-read'},
-      {buffer: handles.dependencyResults, usage: 'storage-read'},
+      {buffer: handles.dependencyEndpointPositions, usage: 'storage-read'},
       {buffer: handles.densityBins, usage: 'storage-read'},
       {buffer: handles.uniforms, usage: 'uniform'},
       {buffer: handles.drawCommands, usage: 'indirect'}
@@ -1284,6 +1279,24 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         ],
         dispatchBuffer: handles.candidateDependencyDispatchCommands
       });
+      for (const chunk of handles.spanChunks) {
+        addTraceIndirectComputePass(graph, {
+          id: `trace-candidate-dependency-endpoints-${chunk.chunkIndex}`,
+          source: getCandidateDependencyEndpointsShader(chunk),
+          bindings: [
+            storageRead('spans', chunk.spans),
+            storageRead('dependencyBatches', handles.dependencyBatchIndex),
+            storageRead('candidateBatchIds', handles.candidateDependencyBatchIds),
+            storageRead('dependencyResults', handles.dependencyResults),
+            storageRead('processStates', handles.processStates),
+            storageRead('threadStates', handles.threadStates),
+            storageRead('threadOffsets', handles.threadOffsets),
+            uniformBinding('viewUniforms', handles.uniforms),
+            storageWrite('dependencyEndpointPositions', handles.dependencyEndpointPositions)
+          ],
+          dispatchBuffer: handles.candidateDependencyDispatchCommands
+        });
+      }
       new GPUIndexedRangeCompaction({
         id: 'trace-visible-dependencies',
         flags: graph.createDataView(handles.dependencyResults, {
@@ -1362,11 +1375,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       encoder.setBindings({
         dependencies: resources.dependencies,
         visibleDependencyIds: resources.visibleDependencyIds,
-        spans: resources.spanChunks[0].buffer,
-        processStates: resources.processStates,
-        threadStates: resources.threadStates,
-        threadOffsets: resources.threadOffsets,
-        dependencyResults: resources.dependencyResults,
+        dependencyEndpointPositions: resources.dependencyEndpointPositions,
         viewUniforms: this.viewUniformBuffer
       });
       resources.drawCommands.draw(encoder, resources.dependencyDrawCommandIndex);
@@ -1553,6 +1562,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.focusTraversalState,
       resources.reachedSpans,
       resources.dependencyResults,
+      resources.dependencyEndpointPositions,
       resources.spanVisibility,
       resources.visibleDependencyIds,
       resources.densityBins,
@@ -1636,7 +1646,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             `<option value="${value}"${value === this.dependencyCapacity ? ' selected' : ''}>${formatCount(value)}</option>`
         )
         .join('')}</select></label>
-      <small>Dependencies automatically switch off when the selected span source requires multiple GPU chunks.</small>
+      <small>Span and dependency capacity are independent; endpoint positions resolve across bounded GPU chunks.</small>
       <fieldset style="display:grid;gap:4px"><legend>Span groups</legend>${groupControls}</fieldset>
       <fieldset style="display:grid;gap:4px"><legend>Status</legend>${statusControls}</fieldset>
       <label>Minimum duration <input type="range" min="0" max="20" step="0.25" value="0" data-duration> <span data-duration-value>0.00 ms</span></label>

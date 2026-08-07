@@ -376,7 +376,7 @@ describe('GPU hierarchical trace viewer', () => {
     }
   }, 30_000);
 
-  test('renders exact spans from multiple bounded source chunks', async () => {
+  test('renders exact spans and dependencies from multiple bounded source chunks', async () => {
     const device = await getWebGPUTestDevice('core');
     if (!device) {
       return;
@@ -399,7 +399,7 @@ describe('GPU hierarchical trace viewer', () => {
       viewer = new GPUTraceViewerAnimationLoopTemplate({
         device,
         traceCapacity: 4096,
-        dependencyCapacity: 0,
+        dependencyCapacity: 250_000,
         spanChunkByteLength
       } as AnimationProps & {
         traceCapacity: number;
@@ -411,11 +411,12 @@ describe('GPU hierarchical trace viewer', () => {
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           spanChunks: Array<{buffer: {byteLength: number}}>;
           spanDraws: Array<{commandIndex: number; chunkIndex: number}>;
+          dependencyDrawCommandIndex: number;
           dependencyCount: number;
         };
       };
 
-      expect(state.resources.dependencyCount).toBe(0);
+      expect(state.resources.dependencyCount).toBeGreaterThan(0);
       expect(state.resources.spanChunks.length).toBeGreaterThan(1);
       expect(state.resources.spanDraws.length).toBeGreaterThan(3);
       expect(
@@ -440,6 +441,7 @@ describe('GPU hierarchical trace viewer', () => {
         0
       );
       expect(visibleSpanCount).toBeGreaterThan(0);
+      expect(drawCommands[state.resources.dependencyDrawCommandIndex * 4 + 1]).toBeGreaterThan(0);
     } finally {
       viewer?.onFinalize();
       host.remove();
