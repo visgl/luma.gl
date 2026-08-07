@@ -15,10 +15,20 @@ import {
   type LuGraphAdjacency
 } from '@luma.gl/experimental/lugraph';
 import {GPUData, GPUVector} from '@luma.gl/tables';
-import {
-  makeGraphExplorerDataset,
-  type GraphExplorerDataset
-} from '../../experimental/lugraph-explorer/graph-data';
+
+/** Caller-owned graph input preserving original edge partitions and vertex allocations. */
+export type LuGraphDeckDataset = {
+  /** Number of stable zero-based graph vertices. */
+  vertexCount: number;
+  /** Original directed source-edge batches, including any empty partitions. */
+  sourceChunks: Uint32Array[];
+  /** Original target-edge batches aligned with the source partitions. */
+  targetChunks: Uint32Array[];
+  /** Initial directly renderable two-component positions in source-vertex order. */
+  positions: Float32Array;
+  /** Initial progressive two-component velocities in source-vertex order. */
+  velocities: Float32Array;
+};
 
 const SCALAR_BYTE_LENGTH = 4;
 const MAXIMUM_NEIGHBORHOOD_DEPTH = 8;
@@ -39,7 +49,7 @@ export class LuGraphDeckEffect implements Effect {
   readonly props = {};
   readonly useInPicking = false;
   readonly device: Device;
-  readonly dataset: GraphExplorerDataset;
+  readonly dataset: LuGraphDeckDataset;
   readonly graph: LuGraph;
   readonly topology: LuGraphTopology;
   readonly pageRank: LuGraphPageRank;
@@ -62,7 +72,7 @@ export class LuGraphDeckEffect implements Effect {
   private analyticsPending = true;
   private destroyed = false;
 
-  constructor(device: Device, dataset: GraphExplorerDataset = makeGraphExplorerDataset()) {
+  constructor(device: Device, dataset: LuGraphDeckDataset) {
     if (device.type !== 'webgpu') throw new Error('LuGraphDeckEffect requires WebGPU');
     this.device = device;
     this.dataset = dataset;

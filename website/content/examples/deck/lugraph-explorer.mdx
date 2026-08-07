@@ -28,10 +28,12 @@ luGraph computes relationship data; deck.gl already understands application view
 lifecycle, camera controls, picking, and GPU drawing. This integration lets each system keep its
 existing responsibility while sharing the same actual GPU allocations.
 
-A real deck.gl `Effect` schedules luGraph work inside the existing deck.gl frame. Custom node and
-edge `Layer` implementations consume its results directly, and an `OrthographicView` provides
-familiar pan and zoom. Graph analytics remain in `@luma.gl/experimental/lugraph`; the optional
-deck.gl integration stays entirely inside this unpackaged example.
+A reusable `LuGraphDeckEffect` schedules luGraph work inside the existing deck.gl frame.
+`LuGraphNodeLayer` and `LuGraphEdgeLayer` consume its results directly, and an `OrthographicView`
+provides familiar pan and zoom. Those reusable adapters and all graph integration-specific
+deck.gl imports live in the existing private `@deck.gl-community/luspatial` module. Graph
+analytics remain in `@luma.gl/experimental/lugraph`, while this unpackaged example imports the
+adapter's public symbols without importing `@deck.gl/core` directly.
 
 ## When should I use this integration?
 

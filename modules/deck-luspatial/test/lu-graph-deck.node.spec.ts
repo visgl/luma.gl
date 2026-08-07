@@ -4,22 +4,20 @@
 
 import {existsSync, readFileSync} from 'node:fs';
 
+import {
+  LUGRAPH_DECK_EDGE_SHADER,
+  LUGRAPH_DECK_NODE_SHADER,
+  LuGraphDeckEffect,
+  LuGraphEdgeLayer,
+  LuGraphNodeLayer
+} from '@deck.gl-community/luspatial';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as luGraphModule from '@luma.gl/experimental/lugraph';
 import {describe, expect, test} from 'vitest';
 
-import {createLuGraphExplorerDeck} from '../../../../examples/deck/lugraph-explorer/app';
-import {
-  LUGRAPH_DECK_EDGE_SHADER,
-  LuGraphEdgeLayer
-} from '../../../../examples/deck/lugraph-explorer/lugraph-edge-layer';
-import {LuGraphDeckEffect} from '../../../../examples/deck/lugraph-explorer/lugraph-effect';
-import {
-  LUGRAPH_DECK_NODE_SHADER,
-  LuGraphNodeLayer
-} from '../../../../examples/deck/lugraph-explorer/lugraph-node-layer';
-import {makeGraphExplorerDataset} from '../../../../examples/experimental/lugraph-explorer/graph-data';
-import {getExampleThumbnailPath} from '../../../../website/src/example-thumbnails';
+import {createLuGraphExplorerDeck} from '../../../examples/deck/lugraph-explorer/app';
+import {makeGraphExplorerDataset} from '../../../examples/experimental/lugraph-explorer/graph-data';
+import {getExampleThumbnailPath} from '../../../website/src/example-thumbnails';
 
 type ExampleContentsEntry = {
   type: string;
@@ -31,7 +29,7 @@ type ExampleContentsEntry = {
 describe('optional luGraph deck.gl integration package isolation', () => {
   test('keeps deck.gl entirely outside graph production imports and dependencies', () => {
     const packageJson = JSON.parse(
-      readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../../experimental/package.json', import.meta.url), 'utf8')
     ) as {
       dependencies?: Record<string, string>;
       peerDependencies?: Record<string, string>;
@@ -53,11 +51,29 @@ describe('optional luGraph deck.gl integration package isolation', () => {
     expect('LuGraphEdgeLayer' in luGraphModule).toBe(false);
   });
 
+  test('keeps deck.gl and GPU table dependencies inside the private integration package', () => {
+    const packageJson = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+    ) as {private?: boolean; dependencies?: Record<string, string>};
+
+    expect(packageJson.private).toBe(true);
+    expect(packageJson.dependencies?.['@deck.gl/core']).toBe('9.3.4');
+    expect(packageJson.dependencies?.['@luma.gl/tables']).toBe('9.4.0-alpha.4');
+  });
+
+  test('loads deck.gl graph adapters through the private package boundary', () => {
+    const exampleSource = readFileSync(
+      new URL('../../../examples/deck/lugraph-explorer/app.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(exampleSource).toContain("from '@deck.gl-community/luspatial'");
+    expect(exampleSource).not.toContain('@deck.gl/core');
+  });
+
   test('does not create an example workspace, package manifest, or integration dependency', () => {
     expect(
-      existsSync(
-        new URL('../../../../examples/deck/lugraph-explorer/package.json', import.meta.url)
-      )
+      existsSync(new URL('../../../examples/deck/lugraph-explorer/package.json', import.meta.url))
     ).toBe(false);
     expect(typeof createLuGraphExplorerDeck).toBe('function');
     expect(typeof LuGraphDeckEffect).toBe('function');
@@ -95,7 +111,7 @@ describe('luGraph native deck.gl resident layers', () => {
     expect(LUGRAPH_DECK_EDGE_SHADER).toContain('positions: array<vec2<f32>>');
 
     const effectSource = readFileSync(
-      new URL('../../../../examples/deck/lugraph-explorer/lugraph-effect.ts', import.meta.url),
+      new URL('../src/lugraph/lugraph-effect.ts', import.meta.url),
       'utf8'
     );
     expect(effectSource).toContain('this.device.commandEncoder');
@@ -107,12 +123,12 @@ describe('luGraph native deck.gl resident layers', () => {
 describe('optional luGraph deck.gl gallery and API guide', () => {
   test('registers lazy loading and a WebGPU-only GPGPU gallery destination', () => {
     const examples = readFileSync(
-      new URL('../../../../website/src/examples.tsx', import.meta.url),
+      new URL('../../../website/src/examples.tsx', import.meta.url),
       'utf8'
     );
     const contents = JSON.parse(
       readFileSync(
-        new URL('../../../../website/content/examples/table-of-contents.json', import.meta.url),
+        new URL('../../../website/content/examples/table-of-contents.json', import.meta.url),
         'utf8'
       )
     ) as ExampleContentsEntry[];
@@ -137,11 +153,11 @@ describe('optional luGraph deck.gl gallery and API guide', () => {
 
   test('provides curated WebGPU metadata, an existing network thumbnail, and optional API guidance', () => {
     const examplePage = readFileSync(
-      new URL('../../../../website/content/examples/deck/lugraph-explorer.mdx', import.meta.url),
+      new URL('../../../website/content/examples/deck/lugraph-explorer.mdx', import.meta.url),
       'utf8'
     );
     const apiGuide = readFileSync(
-      new URL('../../../../docs/api-reference/experimental/lugraph.md', import.meta.url),
+      new URL('../../../docs/api-reference/experimental/lugraph.md', import.meta.url),
       'utf8'
     );
     const topics = examplePage
@@ -162,7 +178,7 @@ describe('optional luGraph deck.gl gallery and API guide', () => {
 
   test('explains when deck.gl graph integration is useful and how to explore it', () => {
     const examplePage = readFileSync(
-      new URL('../../../../website/content/examples/deck/lugraph-explorer.mdx', import.meta.url),
+      new URL('../../../website/content/examples/deck/lugraph-explorer.mdx', import.meta.url),
       'utf8'
     );
 
@@ -209,11 +225,11 @@ describe('optional luGraph deck.gl gallery and API guide', () => {
 
   test('documents direct GPU frame ownership and honest asynchronous deck.gl picking', () => {
     const examplePage = readFileSync(
-      new URL('../../../../website/content/examples/deck/lugraph-explorer.mdx', import.meta.url),
+      new URL('../../../website/content/examples/deck/lugraph-explorer.mdx', import.meta.url),
       'utf8'
     );
     const apiGuide = readFileSync(
-      new URL('../../../../docs/api-reference/experimental/lugraph.md', import.meta.url),
+      new URL('../../../docs/api-reference/experimental/lugraph.md', import.meta.url),
       'utf8'
     );
 

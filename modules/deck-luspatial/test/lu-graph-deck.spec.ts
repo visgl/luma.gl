@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {EffectContext} from '@deck.gl/core';
+import {LuGraphDeckEffect, LuGraphEdgeLayer, LuGraphNodeLayer} from '@deck.gl-community/luspatial';
 import {Buffer} from '@luma.gl/core';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import type {GPUVector} from '@luma.gl/tables';
@@ -10,11 +11,8 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 import {vi} from 'vitest';
 
-import {createLuGraphExplorerDeck} from '../../../../examples/deck/lugraph-explorer/app';
-import {LuGraphDeckEffect} from '../../../../examples/deck/lugraph-explorer/lugraph-effect';
-import {LuGraphEdgeLayer} from '../../../../examples/deck/lugraph-explorer/lugraph-edge-layer';
-import {LuGraphNodeLayer} from '../../../../examples/deck/lugraph-explorer/lugraph-node-layer';
-import {makeGraphExplorerDataset} from '../../../../examples/experimental/lugraph-explorer/graph-data';
+import {createLuGraphExplorerDeck} from '../../../examples/deck/lugraph-explorer/app';
+import {makeGraphExplorerDataset} from '../../../examples/experimental/lugraph-explorer/graph-data';
 
 test('luGraph deck.gl effect composes actual GPU analytics, zero-copy selection, and pinned layout', async tapeTest => {
   const device = await getWebGPUTestDevice();
@@ -27,7 +25,8 @@ test('luGraph deck.gl effect composes actual GPU analytics, zero-copy selection,
   let effect: LuGraphDeckEffect | undefined;
   const submitSpy = vi.spyOn(device, 'submit');
   try {
-    effect = new LuGraphDeckEffect(device);
+    const dataset = makeGraphExplorerDataset();
+    effect = new LuGraphDeckEffect(device, dataset);
     tapeTest.equal(
       submitSpy.mock.calls.length,
       0,
@@ -35,7 +34,6 @@ test('luGraph deck.gl effect composes actual GPU analytics, zero-copy selection,
     );
     submitSpy.mockRestore();
 
-    const dataset = makeGraphExplorerDataset();
     tapeTest.deepEqual(
       effect.graph.sourceVertices.data.map(chunk => chunk.length),
       dataset.sourceChunks.map(chunk => chunk.length),

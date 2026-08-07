@@ -185,7 +185,8 @@ describe('@deck.gl-community/luspatial package boundary', () => {
       '@luma.gl/core',
       '@luma.gl/engine',
       '@luma.gl/experimental',
-      '@luma.gl/shadertools'
+      '@luma.gl/shadertools',
+      '@luma.gl/tables'
     ]);
   });
 });

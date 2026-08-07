@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {OrthographicView, type PickingInfo} from '@deck.gl/core';
+import {
+  LuGraphDeckEffect,
+  LuGraphEdgeLayer,
+  LuGraphNodeLayer,
+  OrthographicView,
+  type PickingInfo
+} from '@deck.gl-community/luspatial';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   ShaderAssembler,
@@ -11,10 +17,10 @@ import {
 } from '@luma.gl/shadertools';
 import {ArrowDeck} from '../arrow-deck';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import type {GraphExplorerDataset} from '../../experimental/lugraph-explorer/graph-data';
-import {LuGraphDeckEffect} from './lugraph-effect';
-import {LuGraphEdgeLayer} from './lugraph-edge-layer';
-import {LuGraphNodeLayer} from './lugraph-node-layer';
+import {
+  makeGraphExplorerDataset,
+  type GraphExplorerDataset
+} from '../../experimental/lugraph-explorer/graph-data';
 
 const DEFAULT_NEIGHBORHOOD_DEPTH = 2;
 
@@ -107,7 +113,7 @@ export function createLuGraphExplorerDeck(
     },
     onLoad: ({deck: loadedDeck, device}) => {
       if (device.type !== 'webgpu') throw new Error('luGraph deck explorer requires WebGPU');
-      effect = new LuGraphDeckEffect(device, dataset);
+      effect = new LuGraphDeckEffect(device, dataset ?? makeGraphExplorerDataset());
       const edgeLayers = effect.graph.sourceVertices.data.flatMap((source, chunkIndex) => {
         if (source.length === 0) return [];
         const target = effect!.graph.targetVertices.data[chunkIndex];
