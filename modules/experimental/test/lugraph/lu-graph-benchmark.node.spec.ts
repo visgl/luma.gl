@@ -458,6 +458,10 @@ describe('luGraph live documentation benchmark isolation', () => {
     expect(component).toContain('Weighted shortest paths');
     expect(component).toContain('Label-propagation communities');
     expect(component).toContain('Local clustering coefficient');
+    expect(component).toContain('https://ldbcouncil.org/');
+    expect(component).toContain('https://ldbcouncil.org/benchmarks/graphalytics/');
+    expect(component).toContain('Graph Data Council');
+    expect(component).toContain('not an official benchmark submission');
     expect(component.match(/await runLuGraphBenchmark\(/g)).toHaveLength(1);
     expect(documentation).toContain('<LuGraphBenchmark />');
     expect(documentation).toContain('explicit completion fence');
