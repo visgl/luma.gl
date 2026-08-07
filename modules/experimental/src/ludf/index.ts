@@ -39,6 +39,8 @@ export type {
 } from './lu-global-aggregation-query';
 export {LuDataFrameHistogramQuery} from './lu-histogram-query';
 export type {LuDataFrameHistogramOptions} from './lu-histogram-query';
+export {LuDataFrameSortQuery} from './lu-sort-query';
+export type {LuDataFrameSortOptions} from './lu-sort-query';
 export {and, column, literal, LuExpression, not, or, parameter} from './lu-expression';
 export type {
   LuExpressionBinaryOperator,
@@ -51,3 +53,4 @@ export type {LuDataFrameQueryParameters} from './lu-query-compiler';
 export {CompiledLuDataFrameGroupedAggregation} from './lu-group-aggregation-compiler';
 export {CompiledLuDataFrameAggregation} from './lu-global-aggregation-compiler';
 export {CompiledLuDataFrameHistogram} from './lu-histogram-compiler';
+export {CompiledLuDataFrameSort} from './lu-sort-compiler';

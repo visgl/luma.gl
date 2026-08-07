@@ -94,6 +94,8 @@ export type LuDataFrameQueryExtensionContext<T extends GPUTypeMap> = {
   validity: Readonly<LuDataFrameValidity<T>>;
   dictionaries: Readonly<LuDataFrameDictionaries<T>>;
   selectionMask: GraphVectorView<'uint32'>;
+  rowIndices: GraphVectorView<'uint32'>;
+  selectedCounts: GraphVectorView<'uint32'>;
 };
 
 /** Result resources contributed by one graph-native extension. @internal */
@@ -342,7 +344,9 @@ export function compileLuDataFrameQuery<
         table: rowTable,
         validity,
         dictionaries,
-        selectionMask: maskView
+        selectionMask: maskView,
+        rowIndices: rowIndexView,
+        selectedCounts: countView
       });
     }
 

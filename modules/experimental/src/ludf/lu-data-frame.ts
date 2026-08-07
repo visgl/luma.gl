@@ -33,6 +33,7 @@ import type {
   LuDataFrameGroupByQuery
 } from './lu-group-by-query';
 import type {LuDataFrameHistogramOptions, LuDataFrameHistogramQuery} from './lu-histogram-query';
+import type {LuDataFrameSortOptions, LuDataFrameSortQuery} from './lu-sort-query';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
 export type LuDataFrameOwnership = 'borrowed' | 'owned';
@@ -232,6 +233,32 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     this.assertAvailable();
     return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).histogram(
       column,
+      options
+    );
+  }
+
+  /** Plans stable scalar ordering independently within every existing source record batch. */
+  sortBy<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).sortBy(
+      column,
+      options
+    );
+  }
+
+  /** Plans descending stable top-K selection without concatenating source record batches. */
+  topK<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    limit: number,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).topK(
+      column,
+      limit,
       options
     );
   }

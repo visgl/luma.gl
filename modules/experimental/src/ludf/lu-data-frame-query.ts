@@ -22,6 +22,7 @@ import {
   type CompiledLuDataFrameQuery,
   type LuDataFrameQueryParameters
 } from './lu-query-compiler';
+import {LuDataFrameSortQuery, type LuDataFrameSortOptions} from './lu-sort-query';
 
 /** Portable scalar storage formats supported by computed dataframe columns. */
 export type LuDataFrameDerivedColumnFormat = 'float32' | 'sint32' | 'uint32';
@@ -176,6 +177,23 @@ export class LuDataFrameQuery<
     options: LuDataFrameHistogramOptions
   ): LuDataFrameHistogramQuery<Logical, SelectedColumns, Column, Source> {
     return new LuDataFrameHistogramQuery(this, column, options);
+  }
+
+  /** Plans stable source-batch scalar sorting without allocating GPU resources or reading rows. */
+  sortBy<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameSortQuery(this, column, options);
+  }
+
+  /** Plans descending stable top-K selection independently within every source record batch. */
+  topK<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    limit: number,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameSortQuery(this, column, options, limit, 'descending');
   }
 
   /** Materializes reusable GPU graph passes and compiler-owned selection/index/count outputs. */
