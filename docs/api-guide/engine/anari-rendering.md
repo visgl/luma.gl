@@ -231,11 +231,15 @@ frame.setParameter('renderer', renderer).commitParameters();
 
 The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from
 `@luma.gl/experimental`. Its WebGPU compute graph derives world-space bounds for transformed
-analytic spheres and mesh instances, builds and refits an existing `GPUBVH`, and traverses that
-hierarchy for nearest-hit primary rays and early-exit shadow rays. The same `GPUCommandGraph`
-evaluates direct lights, progressively accumulates unchanged primary-ray samples, and presents HDR
-when the canvas is configured for it. Generated quads, cylinders, and cones use their existing
-triangle geometry.
+analytic spheres and mesh instances, Morton-sorts active object/instance leaves into an explicit
+retained permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that
+hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-only animation gathers
+updated bounds through the retained permutation and refits the TLAS without sorting; topology
+changes and periodic spatial refreshes rebuild the Morton order. A topology-only graph also
+Morton-sorts each mesh's triangles into GPU-built BLASes, which transform-only animation reuses.
+The same `GPUCommandGraph` evaluates direct lights, progressively accumulates unchanged primary-ray
+samples, and presents HDR when the canvas is configured for it. Generated quads, cylinders, and
+cones use their existing triangle geometry.
 
 Ray tracing starts at half the display width and height, reducing its initial pixel workload to one
 quarter of full resolution. Adaptive quality can lower that scale to `0.25`, interleave sampled
@@ -245,17 +249,18 @@ Temporal reprojection follows camera and stable instance motion while rejecting 
 normal, and color history; camera cuts, topology changes, light-count changes, and resolution
 changes reset invalid history. Set `shadowSamplesPerFrame: 0` to evaluate every direct light in
 one frame. Adaptive timing uses smoothed animation-frame intervals and does not require GPU timestamp
-queries. The acceleration graph runs only when retained transforms or geometry change, so camera-only
-and lighting-only frames do not rebuild the BVH.
+queries. Acceleration updates run only when retained transforms or geometry change, so camera-only
+and lighting-only frames do not rebuild the TLAS. Transform-only frames use the retained-permutation
+gather/refit path; topology changes and periodic refreshes run the Morton sort path.
 
-The BVH indexes objects and instances: triangles within a surviving mesh are still tested linearly.
-Its deterministic source-order topology is not Morton-sorted, and no separate per-mesh triangle BVH
-is built. The ray-tracing pass uses five storage buffers; the BVH builder uses eight, fitting the
-default WebGPU CORE storage-buffer limit without elevated device features. This is software ray
-tracing, not hardware ray tracing or full path tracing. Skeletal skinning, morph-target deformation,
-material textures, alpha/transmission, advanced PBR shading, indirect bounces, denoising, and volume
-objects remain unsupported by this renderer. `maxBounces` is reserved for future multi-bounce
-transport.
+The Morton-sorted TLAS indexes objects and instances; surviving meshes traverse GPU-built,
+Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight storage buffers,
+while every TLAS or BLAS construction pass stays within the default WebGPU CORE limit of eight
+storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a
+Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing.
+Skeletal skinning, morph-target deformation, material textures, alpha/transmission, advanced PBR
+shading, indirect bounces, denoising, and volume objects remain unsupported by this renderer.
+`maxBounces` is reserved for future multi-bounce transport.
 
 ## Understand staging and commits
 
@@ -753,13 +758,132 @@ for the runtime contract and ownership details.
 | --- | --- | --- |
 | T0: renderer and graph foundation | Lazy subtype registration, retained-scene adapters, the shared experimental `RayTracingSceneRenderer`, explicit WebGPU command-graph resources, and application-owned submission. | Implemented. |
 | T1: direct rays and shadows | Transformed analytic spheres, mesh triangles, tessellated analytic shapes, perspective/orthographic cameras, direct lights, hard shadow rays, progressive primary-ray sampling, and HDR presentation. | Implemented with WebGPU compute rather than hardware ray tracing. |
-| T2a: GPU object acceleration | World-space instance bounds, graph-owned complete-binary `GPUBVH` construction and refitting, nearest-hit object traversal, early-exit shadow rays, and default-CORE storage limits. | Implemented; surviving mesh triangles remain linear. |
+| T2a: GPU object acceleration | World-space instance bounds, graph-owned complete-binary TLAS construction and refitting, nearest-hit object traversal, early-exit shadow rays, and default-CORE storage limits. | Implemented. |
 | T2b: interactive frame budgeting | Half-resolution defaults, bounded adaptive quality, interleaved pixel coverage, retained-identity temporal reprojection, rotating shadow samples, and dirty-only object acceleration. | Implemented; frame pacing uses CPU animation intervals. |
-| T2c: large-scene acceleration | Measured Morton/radix spatial ordering, shared per-mesh triangle BVHs, and explicit traversal/build diagnostics. | Planned. |
+| T2c: large-scene acceleration | GPU Morton-sorted object/instance TLAS leaves with retained-permutation transform refits, per-mesh triangle BLASes, and explicit traversal/build diagnostics. | Morton TLAS, transform refits, and Morton mesh BLASes implemented; SAH/Karras topology and diagnostics remain planned. |
 | T2d: dynamic scene extraction | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration. | Planned. |
 | T3: indirect transport and denoising | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1. | Planned. |
 | T4: ray marching and volumes | Signed-distance-field ray marching, retained spatial fields, 3D textures, transfer functions, and ANARI volume objects. | Planned. |
 | T5: hybrid composition and diagnostics | Raster/ray composition, reusable graph timings, renderer capability reporting, and debug visualization channels. | Planned. |
+
+### Ray-tracing technique background and tradeoffs
+
+#### Software WebGPU, not hardware ray tracing
+
+The `raytrace` subtype is deliberately a software ray tracer. It uses ordinary WebGPU compute
+passes, storage buffers, textures, and a fullscreen presentation draw; it does not request a
+hardware ray-tracing pipeline or browser-specific adapter feature. That keeps the implementation
+portable to default CORE WebGPU, but it also means the renderer owns acceleration-structure
+construction, traversal stacks, ray scheduling, and reconstruction itself.
+
+The default WebGPU profile exposes only eight storage-buffer bindings per shader stage; see the
+[WebGPU supported-limits table](https://gpuweb.github.io/gpuweb/#limits). The trace shader uses
+exactly those eight slots for scene records, TLAS data, and BLAS data. Construction is therefore
+split into command-graph passes that each stay at or below the same limit, and data that would be
+separate descriptors in a hardware RT API is packed into shared buffers. This constraint is not
+just bookkeeping: adding another traversal feature may require packing data, reusing a binding, or
+moving work into another graph pass rather than adding one more storage buffer.
+
+#### TLAS and BLAS
+
+**Implemented.** The renderer separates the hierarchy by update frequency. The top-level
+acceleration structure (TLAS) stores world-space bounds for analytic objects and mesh instances.
+Each mesh has a bottom-level acceleration structure (BLAS) over its local-space triangles. A ray
+first traverses the TLAS; after selecting a mesh instance, it transforms into local space and
+traverses that mesh's BLAS. Analytic spheres keep their direct intersection path and do not need
+triangle BLAS leaves.
+
+That split avoids duplicating triangle hierarchy data for every instance and makes transform
+animation cheaper: a moving instance changes TLAS bounds but not the mesh's local triangle BLAS.
+The cost is two nested traversals, extra packed hierarchy memory, and a topology-build phase when
+mesh geometry changes. It is still a useful separation even without hardware RT because it gives
+the software tracer the same coarse/fine reuse boundary that hardware APIs expose.
+
+#### Morton ordering, LBVH, and SAH
+
+**Implemented, with an important limit.** The GPU build path computes bounds, quantizes centroids,
+encodes Morton keys, sorts keys and explicit leaf identifiers, gathers sorted bounds, and refits a
+complete-binary hierarchy. Morton order is cheap and parallel because nearby centroids tend to
+become nearby leaves. It is an LBVH-style spatial ordering strategy, used for both object/instance
+TLAS leaves and per-mesh triangle BLAS leaves.
+
+Morton sorting is not the same as a full high-quality BVH builder. In particular, the current code
+does not implement the binary-radix-tree topology from
+[Karras, “Maximizing Parallelism in the Construction of BVHs, Octrees, and k-d Trees”](https://research.nvidia.com/publication/2012-06_maximizing-parallelism-construction-bvhs-octrees-and-k-d-trees),
+and it does not choose splits with the surface-area heuristic (SAH), as described by
+[Wald, “On fast Construction of SAH-based Bounding Volume Hierarchies”](https://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf).
+The implemented sorted complete-binary tree is cheaper to build and easy to express in the existing
+`GPUBVH` graph, but its traversal quality can be worse for clustered, elongated, or highly
+overlapping geometry. Karras-style topology, SAH refinement, wider nodes, and measured traversal
+diagnostics remain planned rather than implied by the word “Morton.”
+
+#### Refit versus rebuild
+
+**Implemented.** A topology change builds mesh BLASes and rebuilds the Morton TLAS permutation.
+Transform-only animation retains that permutation, gathers updated world-space bounds in the same
+leaf order, and refits TLAS parents without rerunning the scene-bounds reduction or sort. Camera,
+light, and material-only frames do not encode acceleration work. After a bounded run of refits, the
+renderer periodically rebuilds Morton order so large object motion cannot degrade the hierarchy
+forever.
+
+Refit is much cheaper than rebuild, but it preserves old leaf neighborhoods even when objects have
+moved apart. Rebuild restores spatial quality but pays for bounds reduction, key generation, sort,
+gather, and hierarchy propagation. The current policy is intentionally simple and deterministic; a
+future policy could use measured overlap, visited-node counts, or build/traversal timing instead of
+only a bounded periodic refresh.
+
+#### Megakernel versus wavefront execution
+
+**Implemented now:** one trace megakernel handles primary intersection, direct-light evaluation,
+hard shadow rays, temporal history validation, and output writes. For the current direct-light
+renderer this avoids queue storage, compaction passes, and extra synchronization, and it keeps
+command-graph submission straightforward.
+
+**Planned:** wavefront ray queues and compaction. A megakernel becomes less attractive as materials,
+multiple bounces, alpha/transmission, and heterogeneous ray types increase divergence and register
+pressure. The wavefront formulation described by
+[Laine, Karras, and Aila, “Megakernels Considered Harmful: Wavefront Path Tracing on GPUs”](https://research.nvidia.com/index.php/publication/2013-07_megakernels-considered-harmful-wavefront-path-tracing-gpus)
+separates ray generation, intersection, shading, and continuation into queues so each pass does more
+coherent work. In WebGPU that also means more graph nodes, queue buffers, scans/compaction, and
+indirect dispatch bookkeeping, so it should follow measured pressure from multi-bounce or complex
+materials rather than replace the direct-light megakernel preemptively.
+
+#### Frame budget, sparse sampling, and temporal reconstruction
+
+**Implemented.** The default internal target is half the display width and height, which traces
+roughly one quarter of the primary pixels before temporal reuse. Adaptive resolution moves among
+bounded scales using smoothed animation-frame intervals and hysteresis. At minimum scale, rotating
+interleaved pixel phases spread work across frames; a manual HDR reconstruction pass upscales the
+retained result. Direct-light shadow sampling is also bounded and rotated across frames.
+
+Those controls trade instantaneous detail for latency and stability. Lower resolution softens small
+features; interleaving leaves some pixels dependent on history; rotating light samples add variance
+until accumulation converges. They reduce work without claiming that every frame is a complete,
+independent full-resolution render.
+
+**Implemented baseline.** Temporal reprojection uses previous camera matrices and stable retained
+instance transforms to find compatible history. Depth, normal, primitive identity, and neighborhood
+color checks reject disocclusions and incompatible samples, then valid history increases the
+effective sample count. This is temporal sample reuse, not a general frame-interpolation system and
+not a full denoiser.
+
+**Planned.** Stronger reconstruction should add variance-guided spatial filtering, adaptive
+per-pixel sampling, reactive/disocclusion handling, and a better edge-aware upscaler. The relevant
+reference point for low-sample denoising is
+[SVGF](https://research.nvidia.com/labs/rtr/publication/schied2017spatiotemporal/), which combines
+temporal accumulation, variance estimates, and hierarchical image-space filtering. For many-light
+direct illumination, [ReSTIR](https://research.nvidia.com/publication/2020-07_spatiotemporal-reservoir-resampling-real-time-ray-tracing-dynamic-direct)
+is a separate future direction: it reuses light-sampling reservoirs spatially and temporally rather
+than merely rotating a fixed subset of lights. Neither SVGF nor ReSTIR is implemented by the
+current renderer.
+
+| Area | Implemented now | Planned or absent |
+| --- | --- | --- |
+| Acceleration | Morton-sorted TLAS, retained transform refits, topology-only Morton per-mesh BLASes | Karras/SAH topology, wide/compressed nodes, traversal-driven rebuild policy |
+| Execution | Direct-light megakernel with hard shadow rays | Wavefront queues, compaction, multi-bounce transport |
+| Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples | Variance-driven adaptive sampling and reservoir-based many-light reuse |
+| Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, manual HDR upscale | SVGF-class denoising, stronger edge-aware upscaling, reactive masks |
+| Shading | Analytic spheres, mesh triangles, direct lights | Full PBR texture parity, alpha/transmission, deformation, indirect bounces |
 
 ### Cache invalidation
 
@@ -1181,7 +1305,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- The WebGPU-only `raytrace` renderer builds an object/instance BVH on the GPU but still tests triangles linearly inside surviving meshes; hardware ray tracing, spatially sorted or per-mesh BVHs, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR parity, indirect bounces, and denoising are unsupported.
+- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR parity, indirect bounces, and denoising are unsupported.
 - Visibility, picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic
