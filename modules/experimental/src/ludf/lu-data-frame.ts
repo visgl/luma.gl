@@ -15,6 +15,8 @@ import {
   type GPUTypeMap,
   type GPUVectorFormat
 } from '@luma.gl/tables';
+import {LuDataFrameQuery} from './lu-data-frame-query';
+import type {LuExpression} from './lu-expression';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
 export type LuDataFrameOwnership = 'borrowed' | 'owned';
@@ -156,6 +158,14 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
       throw new Error(`LuDataFrame column "${columnName}" does not exist`);
     }
     return column as LuDataFrameColumn<T[Name]>;
+  }
+
+  /** Plans one immutable boolean filter without allocating buffers or submitting GPU work. */
+  filter<ReferencedColumns extends keyof T & string>(
+    predicate: LuExpression<boolean, ReferencedColumns>
+  ): LuDataFrameQuery<T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery(this, [predicate], this.columnNames);
   }
 
   /**
