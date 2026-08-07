@@ -5,8 +5,17 @@
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
-import {GPUCompaction, type GPUCompactionInput} from './gpu-compaction';
-import {GPUMask} from './gpu-mask';
+import {
+  addGPUCompactionToGraphWithDispatchLimit,
+  GPUCompaction,
+  type GPUCompactionInput
+} from './gpu-compaction';
+import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource,
+  type GPUBoundedDispatchLayout
+} from './gpu-dispatch-utils';
+import {addGPUMaskToGraphWithDispatchLimit, GPUMask} from './gpu-mask';
 import {
   createTransientVectorView,
   createTransientView,
@@ -125,43 +134,65 @@ export class GPUVisibilityWorkflow {
    * Adds mask composition, identity generation, scan, scatter, and count publication to a graph.
    */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    const template = this.predicates[0].mask;
-    for (const view of [
-      ...this.predicates.flatMap(predicate => getVisibilityChunks(predicate.mask)),
-      ...getVisibilityChunks(this.output),
-      ...(this.outputMask ? getVisibilityChunks(this.outputMask) : []),
-      ...(this.sourceIds ? getVisibilityChunks(this.sourceIds) : []),
-      this.count
-    ]) {
-      if (view.buffer.graph !== graph) {
-        throw new Error(`${this.id} views must belong to the target graph`);
-      }
-    }
-
-    const finalMask =
-      this.outputMask ?? createTransientVisibilityInput(graph, `${this.id}-mask`, template);
-    if (finalMask !== template || this.predicates.length > 1) {
-      new GPUMask({
-        id: `${this.id}-compose`,
-        inputs: this.predicates.map(predicate => predicate.mask),
-        output: finalMask
-      }).addToGraph(graph);
-    }
-
-    const sourceIds =
-      this.sourceIds ?? createTransientVisibilityInput(graph, `${this.id}-source-ids`, template);
-    if (!this.sourceIds) {
-      addIdentityPasses(graph, `${this.id}-identity`, sourceIds, this.firstSourceIndex);
-    }
-
-    new GPUCompaction({
-      id: `${this.id}-compact`,
-      input: sourceIds,
-      flags: finalMask,
-      output: this.output,
-      count: this.count
-    }).addToGraph(graph);
+    addGPUVisibilityWorkflowToGraphWithDispatchLimit(
+      this,
+      graph,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
   }
+}
+
+/** Adds the complete visibility workflow using one explicit dispatch limit. @internal */
+export function addGPUVisibilityWorkflowToGraphWithDispatchLimit<Parameters>(
+  workflow: GPUVisibilityWorkflow,
+  graph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number
+): void {
+  const template = workflow.predicates[0].mask;
+  for (const view of [
+    ...workflow.predicates.flatMap(predicate => getVisibilityChunks(predicate.mask)),
+    ...getVisibilityChunks(workflow.output),
+    ...(workflow.outputMask ? getVisibilityChunks(workflow.outputMask) : []),
+    ...(workflow.sourceIds ? getVisibilityChunks(workflow.sourceIds) : []),
+    workflow.count
+  ]) {
+    if (view.buffer.graph !== graph) {
+      throw new Error(`${workflow.id} views must belong to the target graph`);
+    }
+  }
+
+  const finalMask =
+    workflow.outputMask ?? createTransientVisibilityInput(graph, `${workflow.id}-mask`, template);
+  if (finalMask !== template || workflow.predicates.length > 1) {
+    const mask = new GPUMask({
+      id: `${workflow.id}-compose`,
+      inputs: workflow.predicates.map(predicate => predicate.mask),
+      output: finalMask
+    });
+    addGPUMaskToGraphWithDispatchLimit(mask, graph, maxComputeWorkgroupsPerDimension);
+  }
+
+  const sourceIds =
+    workflow.sourceIds ??
+    createTransientVisibilityInput(graph, `${workflow.id}-source-ids`, template);
+  if (!workflow.sourceIds) {
+    addIdentityPasses(
+      graph,
+      `${workflow.id}-identity`,
+      sourceIds,
+      workflow.firstSourceIndex,
+      maxComputeWorkgroupsPerDimension
+    );
+  }
+
+  const compaction = new GPUCompaction({
+    id: `${workflow.id}-compact`,
+    input: sourceIds,
+    flags: finalMask,
+    output: workflow.output,
+    count: workflow.count
+  });
+  addGPUCompactionToGraphWithDispatchLimit(compaction, graph, maxComputeWorkgroupsPerDimension);
 }
 
 /** Creates graph-owned storage with the same atomic or vector topology as a visibility input. */
@@ -180,7 +211,8 @@ function addIdentityPasses<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   output: GPUCompactionInput,
-  firstSourceIndex: number
+  firstSourceIndex: number,
+  maxComputeWorkgroupsPerDimension: number
 ): void {
   let chunkSourceOffset = firstSourceIndex;
   for (const [chunkIndex, chunk] of getVisibilityChunks(output).entries()) {
@@ -188,7 +220,13 @@ function addIdentityPasses<Parameters>(
       addIdentityPass(graph, {
         id: output instanceof GraphVectorView ? `${id}-chunk-${chunkIndex}` : id,
         output: chunk,
-        firstSourceIndex: chunkSourceOffset
+        firstSourceIndex: chunkSourceOffset,
+        dispatchLayout: getBoundedDispatchLayout(
+          'GPUVisibilityWorkflow',
+          chunk.length,
+          VISIBILITY_WORKGROUP_SIZE,
+          maxComputeWorkgroupsPerDimension
+        )
       });
     }
     chunkSourceOffset += chunk.length;
@@ -198,7 +236,12 @@ function addIdentityPasses<Parameters>(
 /** Writes consecutive uint32 source IDs into one packed view. */
 function addIdentityPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  props: {id: string; output: GraphDataView<'uint32'>; firstSourceIndex: number}
+  props: {
+    id: string;
+    output: GraphDataView<'uint32'>;
+    firstSourceIndex: number;
+    dispatchLayout: GPUBoundedDispatchLayout;
+  }
 ): void {
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.output.length}u;
@@ -207,8 +250,11 @@ const FIRST_SOURCE_INDEX: u32 = ${props.firstSourceIndex}u;
 @group(0) @binding(0) var<storage, read_write> outputIds: array<u32>;
 
 @compute @workgroup_size(${VISIBILITY_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getBoundedInvocationIndexSource(props.dispatchLayout, VISIBILITY_WORKGROUP_SIZE)}
   if (index < ELEMENT_COUNT) {
     outputIds[OUTPUT_OFFSET + index] = FIRST_SOURCE_INDEX + index;
   }
@@ -232,7 +278,9 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
           computation.setBindings(bindings);
           computation.dispatch(
             computePass,
-            Math.ceil(props.output.length / VISIBILITY_WORKGROUP_SIZE)
+            props.dispatchLayout.x,
+            props.dispatchLayout.y,
+            props.dispatchLayout.z
           );
         },
         destroy: () => computation.destroy()
