@@ -34,6 +34,8 @@ export const GLTF_CONTROL_ROW_STYLE =
 export const GLTF_SELECT_STYLE = 'width: 100%; min-width: 0;';
 const MAX_CAMERA_TILT = 0.7;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
+const AUTOMATIC_CAMERA_ORBIT_SPEED = 0.00012;
+const MANUAL_CAMERA_ORBIT_SPEED = 0.001;
 const MAXIMUM_GLTF_CROWD_ACTORS = 100;
 const ADDITIONAL_ANIMATED_GLTF_MODELS = new Set([
   'Fox',
@@ -401,8 +403,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const far = Math.max(orbitDistance + crowdRadius * 2, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
-    const orbitAngle = 0.001 * cameraTime;
+    const orbitAngle = this.options['cameraAnimation']
+      ? time * AUTOMATIC_CAMERA_ORBIT_SPEED
+      : this.mouseCameraTime * MANUAL_CAMERA_ORBIT_SPEED;
     const horizontalOrbitScale = Math.cos(this.mouseCameraTilt);
     const verticalOrbitOffset =
       orbitDistance * CAMERA_TILT_HEIGHT_FACTOR * Math.sin(this.mouseCameraTilt);
