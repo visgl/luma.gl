@@ -54,6 +54,11 @@ Target Release Date: Q3, 2026
 - **Shared interactive GPU-accelerated ray tracing** - `RayTracingSceneRenderer` composes world-space instance bounds, dirty-only Morton-sorted object/instance TLAS construction, retained-permutation transform refits, topology-only Morton-sorted per-mesh triangle BLAS construction, nearest-hit traversal, bounded direct-light shadows, adaptive internal resolution, interleaved frame-budget coverage, stable-identity temporal reprojection, progressive accumulation, and upsampled HDR presentation through WebGPU compute/command graphs. Frame pacing uses ordinary animation intervals, the tracing pass uses exactly eight storage buffers, every TLAS or BLAS construction pass stays within the eight-storage-buffer WebGPU CORE limit, and command submission stays application-owned.
 - **[Generated physical lighting environments](/docs/api-reference/experimental/pbr-environment)** - `PBREnvironmentGenerator` and `preparePBREnvironment()` integrate equirectangular source textures into GGX-prefiltered specular cubemap mip chains, diffuse irradiance cubemaps, and split-sum BRDF lookup textures on both WebGL and WebGPU.
 - **Scene-color transmission and volume attenuation** - The shared forward renderer captures opaque scene color automatically for transmissive surfaces, then applies screen-space refraction, roughness, Fresnel response, index of refraction, thickness, and Beer-Lambert attenuation while preserving physically opaque output.
+- **[`luDF` GPU-resident dataframes](/docs/api-reference/experimental/ludf)** - The optional
+  `@luma.gl/experimental/ludf` entry point adds immutable nullable expressions, derived columns,
+  dense categorical and global aggregations, explicit-domain histograms, stable per-batch sorting
+  and top-K, and bounded unique-right joins over existing `GPUTable` batches. Applications retain
+  ownership of GPU command submission, source lifetimes, and optional result readback.
 - **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
 - **OIT resolve pipelines** - A-buffer and weighted-blended order-independent transparency now
   resolve captured fragments through exported `ShaderPassPipeline` factories, allowing WBOIT to
@@ -109,6 +114,9 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/arrow** NEW MODULE
 
+- **Renderer-independent Arrow analytics upload** - `makeGPUAnalyticsTableFromArrowTable()`
+  preserves Arrow record batches, sliced validity bitmaps, nullable column masks, and explicit
+  dictionary labels while uploading portable scalar columns without requiring a `ShaderLayout`.
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
 - **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/tables` objects and preserve chunked UTF-8 GPU vector input for text workflows.
 - **Variable-length Arrow attribute lists** - `GPUVector` can retain chunked nested list columns whose elements contain one to four numeric components, covering scalar streams plus tuple-style data such as XY, XYZ, and XYZM coordinates for future path-rendering workflows.

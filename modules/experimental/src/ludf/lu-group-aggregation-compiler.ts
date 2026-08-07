@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';

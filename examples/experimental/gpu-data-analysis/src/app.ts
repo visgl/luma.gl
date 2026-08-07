@@ -25,6 +25,7 @@ import {GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 import {GPU_DATA_ANALYSIS_STYLES, GPU_DATA_ANALYSIS_TEMPLATE} from './app-shell';
+import {runLuDataFrameBenchmark, type LuDataFrameBenchmarkResult} from './ludf-benchmark';
 
 const APP_ID = 'gpu-data-analysis-app';
 const STYLE_ID = 'gpu-data-analysis-style';
@@ -61,6 +62,9 @@ type ExampleElements = {
   luDataFrameRun: HTMLButtonElement;
   luDataFrameSelected: HTMLElement;
   luDataFrameThreshold: HTMLInputElement;
+  ludfBenchmark: HTMLButtonElement;
+  ludfBenchmarkResults: HTMLElement;
+  ludfBenchmarkStatus: HTMLElement;
   nodes: HTMLElement;
   reuse: HTMLElement;
   run: HTMLButtonElement;
@@ -86,6 +90,7 @@ class GPUDataAnalysisExample {
   private readonly elements: ExampleElements;
   private device: Device | null = null;
   private resources: ExampleResources | null = null;
+  private benchmarkController: AbortController | null = null;
   private destroyed = false;
   private hasRunLuDataFrameDemo = false;
   private runVersion = 0;
@@ -96,6 +101,7 @@ class GPUDataAnalysisExample {
   private readonly handleLuDataFrameChange = (): void => {
     if (this.hasRunLuDataFrameDemo) void this.runLuDataFrameDemo();
   };
+  private readonly handleLuDataFrameBenchmark = (): void => void this.runBenchmark();
 
   constructor(root: HTMLElement) {
     this.elements = getElements(root);
@@ -115,6 +121,7 @@ class GPUDataAnalysisExample {
       control.addEventListener('change', this.handleLuDataFrameChange);
     }
     this.updateLuDataFrameExpression();
+    this.elements.ludfBenchmark.addEventListener('click', this.handleLuDataFrameBenchmark);
   }
 
   async initialize(): Promise<void> {
@@ -130,20 +137,26 @@ class GPUDataAnalysisExample {
       }
       this.device = device;
       await this.run();
+      if (!this.destroyed) {
+        this.elements.ludfBenchmark.disabled = false;
+      }
     } catch (error) {
       this.setStatus(getErrorMessage(error), true);
+      this.elements.ludfBenchmarkStatus.textContent = 'WebGPU is unavailable on this device.';
     }
   }
 
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.benchmarkController?.abort();
     this.elements.run.removeEventListener('click', this.handleRun);
     this.elements.luDataFrameRun.removeEventListener('click', this.handleLuDataFrameRun);
     for (const control of this.getLuDataFrameControls()) {
       control.removeEventListener('input', this.handleLuDataFrameInput);
       control.removeEventListener('change', this.handleLuDataFrameChange);
     }
+    this.elements.ludfBenchmark.removeEventListener('click', this.handleLuDataFrameBenchmark);
     for (const element of [
       this.elements.dataset,
       this.elements.bins,
@@ -718,6 +731,38 @@ class GPUDataAnalysisExample {
     this.elements.status.textContent = message;
     this.elements.status.dataset.state = error ? 'error' : 'ok';
   }
+
+  /** Executes optional, bounded CPU/GPU comparisons only after an explicit user request. */
+  private async runBenchmark(): Promise<void> {
+    if (!this.device || this.destroyed || this.benchmarkController) return;
+    const controller = new AbortController();
+    this.benchmarkController = controller;
+    this.elements.ludfBenchmark.disabled = true;
+    this.elements.ludfBenchmarkResults.dataset.state = 'running';
+    this.elements.ludfBenchmarkResults.dataset.validated = 'false';
+    this.elements.ludfBenchmarkStatus.textContent =
+      'Uploading a nullable Arrow dictionary dataset and validating GPU dataframe queries...';
+
+    try {
+      const result = await runLuDataFrameBenchmark(this.device, {
+        rowCount: 384,
+        signal: controller.signal
+      });
+      if (this.destroyed || controller.signal.aborted) return;
+      renderLuDataFrameBenchmark(this.elements, result);
+    } catch (error) {
+      if (this.destroyed || controller.signal.aborted) return;
+      this.elements.ludfBenchmarkResults.dataset.state = 'error';
+      this.elements.ludfBenchmarkStatus.textContent = getErrorMessage(error);
+    } finally {
+      if (this.benchmarkController === controller) {
+        this.benchmarkController = null;
+      }
+      if (!this.destroyed) {
+        this.elements.ludfBenchmark.disabled = false;
+      }
+    }
+  }
 }
 
 function makeDataset(length: number): {
@@ -1001,6 +1046,9 @@ function getElements(root: HTMLElement): ExampleElements {
     luDataFrameRun: get('[data-ludf-run]'),
     luDataFrameSelected: get('[data-ludf-selected]'),
     luDataFrameThreshold: get('[data-ludf-threshold]'),
+    ludfBenchmark: get('[data-ludf-benchmark]'),
+    ludfBenchmarkResults: get('[data-ludf-benchmark-phases]'),
+    ludfBenchmarkStatus: get('[data-ludf-benchmark-status]'),
     nodes: get('[data-nodes]'),
     reuse: get('[data-reuse]'),
     run: get('[data-run]'),
@@ -1015,6 +1063,33 @@ function ensureStyles(): void {
   style.id = STYLE_ID;
   style.textContent = GPU_DATA_ANALYSIS_STYLES;
   document.head.appendChild(style);
+}
+
+/** Renders only bounded, independently fenced phase timings and explicit CPU-oracle validation. */
+function renderLuDataFrameBenchmark(
+  elements: ExampleElements,
+  result: LuDataFrameBenchmarkResult
+): void {
+  const timingRows = [
+    ['upload', 'Arrow upload', result.timings.uploadMilliseconds],
+    ['compile', 'Graph compilation', result.timings.compileMilliseconds],
+    ['index', 'Standalone hash-index build', result.timings.indexMilliseconds],
+    ['execution', 'Fenced WebGPU execution', result.timings.executionMilliseconds],
+    ['readback', 'Bounded result readback', result.timings.readbackMilliseconds],
+    ['cpu', 'Equivalent CPU reference', result.timings.cpuMilliseconds]
+  ] as const;
+  elements.ludfBenchmarkResults.innerHTML = `<table><thead><tr><th scope="col">Phase</th><th scope="col">Milliseconds</th></tr></thead><tbody>${timingRows
+    .map(
+      ([phase, label, milliseconds]) =>
+        `<tr data-ludf-phase="${phase}"><th scope="row">${label}</th><td>${milliseconds.toFixed(2)}</td></tr>`
+    )
+    .join('')}</tbody></table>`;
+  const validated = Object.values(result.validation).every(Boolean);
+  elements.ludfBenchmarkResults.dataset.state = validated ? 'ok' : 'error';
+  elements.ludfBenchmarkResults.dataset.validated = String(validated);
+  elements.ludfBenchmarkStatus.textContent = validated
+    ? `${result.rowCount.toLocaleString()} Arrow rows · batches ${result.batchRowCounts.join(' / ')} · filter, grouping, sorting, and joins match the CPU reference · ${result.readbackBytes.toLocaleString()} summary bytes read`
+    : 'GPU dataframe results did not match their equivalent CPU reference.';
 }
 
 function getErrorMessage(error: unknown): string {

@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {GPUVector, type GPUField, type GPUTypeMap} from '@luma.gl/tables';
 import {type GPUCommandGraph, type GraphDataView} from '../gpu-primitives/gpu-command-graph';

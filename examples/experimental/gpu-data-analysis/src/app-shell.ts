@@ -124,6 +124,33 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
       </p>
     </section>
 
+    <section class="benchmark-lab" aria-label="Arrow-native CPU and WebGPU benchmark">
+      <div class="benchmark-heading">
+        <div>
+          <p class="eyebrow">ARROW / CPU + GPU BENCHMARK</p>
+          <h2>Measure the complete dataframe pipeline.</h2>
+          <p>
+            Compare filtering, grouped aggregation, stable top-K, and hash joins over genuine
+            nullable, dictionary-encoded Arrow batches. Nothing runs until you ask.
+          </p>
+        </div>
+        <button id="analysis-ludf-benchmark-run" class="benchmark-button" data-ludf-benchmark disabled>
+          Run verified benchmark <span>→</span>
+        </button>
+      </div>
+      <p id="analysis-ludf-benchmark-status" class="benchmark-status" data-ludf-benchmark-status>
+        Filter, group, stable top-K, and unique-key joins remain GPU-resident.
+      </p>
+      <div
+        id="analysis-ludf-benchmark-results"
+        class="benchmark-results"
+        data-ludf-benchmark-phases
+        data-state="idle"
+        data-validated="false"
+        aria-live="polite"
+      ></div>
+    </section>
+
     <section class="visualizations" aria-label="GPU-computed analytics">
       <article class="visualization-card histogram-card">
         <p class="eyebrow">DISTRIBUTION / HISTOGRAM + CDF</p>
@@ -413,6 +440,33 @@ export const GPU_DATA_ANALYSIS_STYLES = `
 
   .query-status[data-state="verified"] { color: var(--green); }
 
+  .benchmark-lab {
+    margin-top: 23px;
+    padding: 23px;
+    border: 1px solid rgba(115, 170, 250, 0.26);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(16, 24, 40, 0.95), rgba(10, 18, 29, 0.98));
+  }
+
+  .benchmark-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .benchmark-heading .eyebrow { color: var(--blue); }
+  .benchmark-heading h2 { margin: 0 0 7px; font-size: 21px; letter-spacing: -0.4px; }
+  .benchmark-heading > div > p:last-child { max-width: 680px; margin: 0; color: var(--muted); }
+  .analysis-example .benchmark-button { width: 230px; border-color: rgba(115, 170, 250, 0.5); color: var(--blue); }
+  .benchmark-status { margin: 16px 0 0; color: var(--muted); font-size: 11px; }
+  .benchmark-results table { width: 100%; margin-top: 13px; border-collapse: collapse; }
+  .benchmark-results th, .benchmark-results td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  .benchmark-results thead th { color: var(--muted); font-size: 10px; letter-spacing: 0.5px; }
+  .benchmark-results tbody th { color: var(--text); font-size: 12px; font-weight: 500; }
+  .benchmark-results td { color: var(--green); text-align: right; font-variant-numeric: tabular-nums; }
+  .benchmark-results[data-state="error"] { color: #ff8585; }
+
   .visualizations {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -485,6 +539,9 @@ export const GPU_DATA_ANALYSIS_STYLES = `
     .pipeline > span:last-child { border-bottom: 0; }
     .pipeline strong { display: inline; margin-left: 7px; }
     .dataframe-lab { padding: 15px; }
+    .benchmark-lab { padding: 15px; }
+    .benchmark-heading { align-items: flex-start; flex-direction: column; }
+    .analysis-example .benchmark-button { width: 100%; }
     .visualizations { grid-template-columns: 1fr; }
     .heatmap-card { grid-column: auto; }
     .expression-code p { font-size: 10px; }
