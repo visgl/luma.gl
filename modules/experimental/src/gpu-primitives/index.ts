@@ -78,6 +78,12 @@ export type {
   GPUIndexedRangeCompactionResult,
   GPUIndexedRangeLayout
 } from './gpu-indexed-range-compaction';
+export {GPUChunkedIndexedScatter} from './gpu-chunked-indexed-scatter';
+export type {
+  GPUChunkedIndexedScatterProps,
+  GPUChunkedIndexedScatterResult,
+  GPUChunkedIndexedScatterRouteLayout
+} from './gpu-chunked-indexed-scatter';
 export {GPUTextSelection} from './gpu-text-selection';
 export type {GPUTextSelectionProps} from './gpu-text-selection';
 
