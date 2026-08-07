@@ -237,6 +237,8 @@ export {
   VolumetricFireSimulation
 } from './rendering/volumetric-fire-simulation';
 
+export type {ComparisonSplitterProps} from './controls/comparison-splitter';
+export {ComparisonSplitter} from './controls/comparison-splitter';
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
 

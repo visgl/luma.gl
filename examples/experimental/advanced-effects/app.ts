@@ -21,6 +21,7 @@ import {
   depthAwareBlurShaderPassPipeline
 } from '@luma.gl/effects';
 import {
+  ComparisonSplitter,
   createContactShadowShaderPassPipeline,
   GBuffer,
   shadow,
@@ -42,7 +43,6 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
-import {ComparisonSplitter} from './comparison-splitter';
 import {
   CityShadowCasterModels,
   getCityShadowLights,
@@ -548,11 +548,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas instanceof HTMLCanvasElement
         ? new ComparisonSplitter({
             canvas,
+            id: 'advanced-effects-comparison-splitter',
             value: this.settings.split,
             onChange: split => {
               this.settings = {...this.settings, split};
-            },
-            onCommit: split => this.settingsPanel.setSettingValue('split', split)
+            }
           })
         : null;
   }
@@ -790,12 +790,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
     const preset = getChangedSetting(changedSettings, 'preset')?.nextValue;
-    this.settings = {...this.settings, ...(nextSettings as AdvancedEffectsSettings)};
+    const split = this.settings.split;
+    this.settings = {...this.settings, ...(nextSettings as AdvancedEffectsSettings), split};
     if (typeof preset === 'string' && preset in PRESETS) {
       this.settings = {
         ...this.settings,
         ...PRESETS[preset as PresetName],
-        preset: preset as PresetName
+        preset: preset as PresetName,
+        split
       };
       this.settingsPanel.setSchemaAndSettings(makeSettingsSchema(), this.settings);
     }
@@ -972,15 +974,6 @@ function makeSettingsSchema(): SettingsSchema {
               'Contact',
               'Combined'
             ]
-          },
-          {
-            name: 'split',
-            label: 'Before / After',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 1,
-            step: 0.01
           },
           toggle('animate', 'Animate City')
         ]

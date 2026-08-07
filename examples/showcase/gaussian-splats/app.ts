@@ -5,12 +5,8 @@
 import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
 import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
-import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
-import {
-  GPUCommandGraphInspector,
-  OrbitControls,
-  type GPUCommandGraphInspectorGraph
-} from '@luma.gl/experimental';
+import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
+import {GPUCommandGraphInspector, type GPUCommandGraphInspectorGraph} from '@luma.gl/experimental';
 import {
   GPUSplatGraphRenderer,
   makeGPUSplatData,

@@ -44,6 +44,10 @@ export type {MakeAnimationLoopProps} from './animation-loop/make-animation-loop'
 export type {TemplateAnimationLoop} from './animation-loop/make-animation-loop';
 export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 
+// Camera controls
+export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
+export {OrbitControls} from './controls/orbit-controls';
+
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
 export type {MaterialProps} from './material/material';

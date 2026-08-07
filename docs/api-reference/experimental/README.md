@@ -56,6 +56,13 @@ application needs lower-level composition with the same canonical material and s
 These opinionated orchestration helpers remain experimental; `@luma.gl/engine` continues to own
 stable, generic rendering and animation primitives.
 
+## Interactive View Comparisons
+
+[`ComparisonSplitter`](/docs/api-reference/experimental/comparison-splitter) adds an accessible,
+draggable divider to a canvas without depending on a renderer or graphics backend. Its
+self-contained DOM overlay supports pointer, touch, and keyboard interactions, per-instance
+styling, embedded documentation, and before/after shader or viewport comparisons.
+
 ## WebXR
 
 <p class="badges">

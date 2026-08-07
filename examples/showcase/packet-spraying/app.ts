@@ -20,6 +20,7 @@ import {
   GroupNode,
   Model,
   ModelNode,
+  OrbitControls,
   PickingManager,
   ShaderPassRenderer,
   ShaderInputs,
@@ -28,7 +29,6 @@ import {
 } from '@luma.gl/engine';
 import {
   ABufferRenderer,
-  OrbitControls,
   WBOITRenderer,
   aBuffer,
   aBufferPlugin,

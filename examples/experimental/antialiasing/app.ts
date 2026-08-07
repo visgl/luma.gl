@@ -14,6 +14,7 @@ import {
   Model,
   ShaderPassRenderer
 } from '@luma.gl/engine';
+import {ComparisonSplitter} from '@luma.gl/experimental';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';
 import {
@@ -23,7 +24,6 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
-import {ComparisonSplitter} from '../../experimental/advanced-effects/comparison-splitter';
 
 export const title = 'Antialiasing Techniques';
 export const description =
@@ -73,48 +73,6 @@ const LINEAR_SAMPLER_PROPS: SamplerProps = {
   addressModeU: 'clamp-to-edge',
   addressModeV: 'clamp-to-edge'
 };
-
-const COMPARISON_SPLITTER_STYLE = `
-#antialiasing-comparison-splitter {
-  position: fixed;
-  width: 24px;
-  transform: translateX(-50%);
-  cursor: col-resize;
-  touch-action: none;
-  z-index: 10;
-  outline: none;
-}
-
-#antialiasing-comparison-splitter::before {
-  position: absolute;
-  inset: 0 auto 0 11px;
-  width: 2px;
-  content: '';
-  background: rgb(255 217 51 / 85%);
-  box-shadow: 0 0 8px rgb(255 217 51 / 75%);
-}
-
-#antialiasing-comparison-splitter::after {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 14px;
-  height: 48px;
-  content: '';
-  transform: translate(-50%, -50%);
-  border: 2px solid rgb(255 245 190 / 95%);
-  border-radius: 7px;
-  background: rgb(59 47 8 / 92%);
-  box-shadow: 0 2px 12px rgb(0 0 0 / 45%);
-}
-
-#antialiasing-comparison-splitter:hover::before,
-#antialiasing-comparison-splitter:focus-visible::before,
-#antialiasing-comparison-splitter[data-dragging='true']::before {
-  width: 3px;
-  background: #fff;
-}
-`;
 
 const DEFAULT_SETTINGS: AntialiasingSettings = {
   technique: '4x supersampling',
@@ -362,7 +320,6 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
   private readonly settingsPanel: ExampleSettingsPanelManager;
   private readonly panels: ExamplePanelManager;
   private readonly comparisonSplitter: ComparisonSplitter | null;
-  private readonly comparisonSplitterStyle: HTMLStyleElement;
 
   private settings: AntialiasingSettings = {...DEFAULT_SETTINGS};
   private baselineTarget: RenderTarget | null = null;
@@ -415,9 +372,6 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.panels.mount();
-    this.comparisonSplitterStyle = document.createElement('style');
-    this.comparisonSplitterStyle.textContent = COMPARISON_SPLITTER_STYLE;
-    document.head.append(this.comparisonSplitterStyle);
     const canvas = device.getDefaultCanvasContext().canvas;
     this.comparisonSplitter =
       canvas instanceof HTMLCanvasElement
@@ -425,12 +379,9 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
             canvas,
             id: 'antialiasing-comparison-splitter',
             value: this.settings.split,
+            accentColor: '#ffdb33',
             onChange: split => {
               this.settings = {...this.settings, split};
-            },
-            onCommit: split => {
-              this.settings = {...this.settings, split};
-              this.settingsPanel.setSettingValue('split', split);
             }
           })
         : null;
@@ -450,7 +401,6 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.comparisonSplitter?.destroy();
-    this.comparisonSplitterStyle.remove();
   }
 
   onRender({device, width, height, tick}: AnimationProps): void {
@@ -610,10 +560,7 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
       animate: typeof settings.animate === 'boolean' ? settings.animate : this.settings.animate,
       output: isOutputMode(settings.output) ? settings.output : this.settings.output,
       zoom: typeof settings.zoom === 'number' ? clampZoom(settings.zoom) : this.settings.zoom,
-      split:
-        typeof settings.split === 'number'
-          ? clampComparisonSplit(settings.split)
-          : this.settings.split
+      split: this.settings.split
     };
     this.comparisonSplitter?.setValue(this.settings.split);
     this.panels.setPanel(this.makePanel());
@@ -1037,15 +984,6 @@ function makeSettingsSchema(): SettingsSchema {
             max: 4,
             step: 0.05
           },
-          {
-            name: 'split',
-            label: 'Before / After',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 1,
-            step: 0.01
-          },
           {name: 'animate', label: 'Animate scene', type: 'boolean', persist: 'none'}
         ]
       }
@@ -1085,10 +1023,6 @@ function isTextureSamplingMode(value: unknown): value is TextureSamplingMode {
 
 function isOutputMode(value: unknown): value is OutputMode {
   return typeof value === 'string' && OUTPUT_MODES.includes(value as OutputMode);
-}
-
-function clampComparisonSplit(value: number): number {
-  return Math.min(1, Math.max(0, value));
 }
 
 function clampZoom(value: number): number {
