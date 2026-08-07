@@ -220,6 +220,22 @@ describe('luGraph native deck.gl resident layers', () => {
     expect(source).not.toMatch(/GPU\s+(?:frame|execution|duration)\s*[:=]\s*\$\{/i);
   });
 
+  test('disables exact and spatial layout controls at their actual execution boundaries', () => {
+    const source = readFileSync(
+      new URL('../../../examples/deck/lugraph-explorer/app.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(source).toContain('option[value="exact"]');
+    expect(source).toMatch(
+      /exactOption\.disabled\s*=\s*vertexCount\s*>\s*GRAPH_EXPLORER_MAXIMUM_EXACT_VERTEX_COUNT/u
+    );
+    expect(source).toContain('option[value="spatial"]');
+    expect(source).toMatch(
+      /spatialOption\.disabled\s*=\s*vertexCount\s*>=\s*GRAPH_EXPLORER_LINEAR_LAYOUT_VERTEX_COUNT/u
+    );
+  });
+
   test('reads source and target edge chunks directly without concatenation or CPU staging', () => {
     expect(LUGRAPH_DECK_EDGE_SHADER).toContain('sourceVertices: array<u32>');
     expect(LUGRAPH_DECK_EDGE_SHADER).toContain('targetVertices: array<u32>');

@@ -610,6 +610,10 @@ function createExplorerControls(
     if (exactOption) {
       exactOption.disabled = vertexCount > GRAPH_EXPLORER_MAXIMUM_EXACT_VERTEX_COUNT;
     }
+    const spatialOption = layout?.querySelector<HTMLOptionElement>('option[value="spatial"]');
+    if (spatialOption) {
+      spatialOption.disabled = vertexCount >= GRAPH_EXPLORER_LINEAR_LAYOUT_VERTEX_COUNT;
+    }
     if (edges) edges.checked = props.getEdgesVisible();
     const visibleEdges = props.getEdgesVisible() ? effect.renderedEdgeCount : 0;
     if (edgeCount) {
