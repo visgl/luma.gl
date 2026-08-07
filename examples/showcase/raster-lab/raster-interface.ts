@@ -7,18 +7,32 @@ import type {
   RasterLabDisplayMode,
   RasterLabEdgeDirection,
   RasterLabEdgeMode,
+  RasterLabMorphologyBorderMode,
+  RasterLabMorphologyMode,
+  RasterLabMorphologyNoDataPolicy,
+  RasterLabMorphologyOperation,
+  RasterLabMorphologyShape,
   RasterLabSmoothingMode,
   RasterLabViewport
 } from './raster-renderer';
 import {RASTER_LAB_STYLES} from './raster-styles';
 
 export type RasterLabInterfaceCallbacks = {
+  onSourceTile?: (tile: RasterLabSourceTile) => void;
+  onSourceOverview?: (level: RasterLabOverviewLevel) => void;
   onMode?: (mode: RasterLabDisplayMode) => void;
   onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
   onSmoothingRadius?: (radius: number) => void;
   onSmoothingSigma?: (sigma: number) => void;
   onEdgeMode?: (mode: RasterLabEdgeMode) => void;
   onEdgeDirection?: (direction: RasterLabEdgeDirection) => void;
+  onMorphologyOperation?: (operation: RasterLabMorphologyOperation) => void;
+  onMorphologyMode?: (mode: RasterLabMorphologyMode) => void;
+  onMorphologyShape?: (shape: RasterLabMorphologyShape) => void;
+  onMorphologyRadius?: (radius: number) => void;
+  onMorphologyNoDataPolicy?: (policy: RasterLabMorphologyNoDataPolicy) => void;
+  onMorphologyBorderMode?: (mode: RasterLabMorphologyBorderMode) => void;
+  onMorphologyBorderValue?: (value: number) => void;
   onContrast?: (contrast: number) => void;
   onGamma?: (gamma: number) => void;
   onThreshold?: (threshold: number, enabled: boolean) => void;
@@ -29,12 +43,19 @@ export type RasterLabInterfaceCallbacks = {
   onResize?: () => void;
 };
 
+export type RasterLabSourceTile = 'full' | 'west' | 'east';
+export type RasterLabOverviewLevel = 0 | 1;
+
 export type RasterLabSourceSummary = {
   width: number;
   height: number;
   pixelCount: number;
   cloudPixelCount: number;
   noDataPixelCount: number;
+  tile?: RasterLabSourceTile;
+  overviewLevel?: RasterLabOverviewLevel;
+  levelZeroOrigin?: readonly [number, number];
+  coordinateReferenceSystem?: string;
 };
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
@@ -54,6 +75,9 @@ export class RasterLabInterface {
   private mode: RasterLabDisplayMode = 'ndvi';
   private edgeMode: RasterLabEdgeMode = 'none';
   private edgeDirection: RasterLabEdgeDirection = 'magnitude';
+  private morphologyOperation: RasterLabMorphologyOperation = 'none';
+  private morphologyMode: RasterLabMorphologyMode = 'grayscale';
+  private morphologyBorderMode: RasterLabMorphologyBorderMode = 'clamp';
   private threshold = 0.35;
   private automaticThreshold = false;
   private contoursEnabled = true;
@@ -94,6 +118,35 @@ export class RasterLabInterface {
     this.getElement('[data-raster-cloud]').textContent = `${cloudPercentage.toFixed(1)}%`;
     this.getElement('[data-raster-cloud-count]').textContent =
       `${NUMBER_FORMATTER.format(source.cloudPixelCount)} masked`;
+    const level = source.overviewLevel ?? 0;
+    const tile = source.tile ?? 'full';
+    const [originColumn, originRow] = source.levelZeroOrigin ?? [0, 0];
+    const coordinateReferenceSystem = source.coordinateReferenceSystem ?? 'EPSG:32610';
+    this.getElement('[data-raster-source-description]').textContent =
+      `L${level} · ${tile.toUpperCase()} · ${source.width} × ${source.height}`;
+    this.getElement('[data-raster-source-origin]').textContent =
+      `Origin ${NUMBER_FORMATTER.format(originColumn)}, ${NUMBER_FORMATTER.format(originRow)} · ${coordinateReferenceSystem}`;
+    this.getElement('[data-raster-coordinate]').textContent =
+      `L${level} / ${tile.toUpperCase()} · ORIGIN ${originColumn},${originRow} · ${coordinateReferenceSystem}`;
+  }
+
+  setSourceTile(tile: RasterLabSourceTile): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-source-tile]'
+    )) {
+      button.setAttribute('aria-pressed', String(button.dataset['rasterSourceTile'] === tile));
+    }
+  }
+
+  setSourceOverview(level: RasterLabOverviewLevel): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-source-overview]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(Number(button.dataset['rasterSourceOverview']) === level)
+      );
+    }
   }
 
   setSummary(summary: RasterLabSummary): void {
@@ -131,6 +184,18 @@ export class RasterLabInterface {
       summary.edgeMode === 'none'
         ? 'off'
         : `${summary.edgeMode.toUpperCase()} ${summary.edgeMode === 'laplacian' ? 'Δ' : summary.edgeDirection.toUpperCase()}`;
+    this.getElement('[data-raster-morphology-state]').textContent =
+      summary.morphologyOperation === 'none'
+        ? 'off'
+        : `${summary.morphologyMode === 'binary' ? 'B' : 'G'} ${summary.morphologyOperation.toUpperCase()} r${summary.morphologyRadius}`;
+    this.getElement('[data-raster-grayscale-morphology-state]').textContent =
+      summary.morphologyOperation !== 'none' && summary.morphologyMode === 'grayscale'
+        ? `${summary.morphologyOperation.toUpperCase()} r${summary.morphologyRadius}`
+        : 'off';
+    this.getElement('[data-raster-binary-morphology-state]').textContent =
+      summary.morphologyOperation !== 'none' && summary.morphologyMode === 'binary'
+        ? `${summary.morphologyOperation.toUpperCase()} r${summary.morphologyRadius}`
+        : 'off';
     this.getElement('[data-raster-threshold-state]').textContent = summary.thresholdEnabled
       ? `${summary.automaticThreshold ? 'AUTO ' : ''}≥ ${summary.threshold.toFixed(2)}`
       : 'off';
@@ -199,6 +264,73 @@ export class RasterLabInterface {
     this.updateMapPresentation();
   }
 
+  setMorphologyOperation(operation: RasterLabMorphologyOperation): void {
+    this.morphologyOperation = operation;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-morphology]'
+    )) {
+      button.setAttribute('aria-pressed', String(button.dataset['rasterMorphology'] === operation));
+    }
+    this.updateMorphologyControls();
+    this.updateMapPresentation();
+  }
+
+  setMorphologyMode(mode: RasterLabMorphologyMode): void {
+    this.morphologyMode = mode;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-morphology-mode]'
+    )) {
+      button.setAttribute('aria-pressed', String(button.dataset['rasterMorphologyMode'] === mode));
+    }
+    this.updateMorphologyControls();
+    this.updateMapPresentation();
+  }
+
+  setMorphologyShape(shape: RasterLabMorphologyShape): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-morphology-shape]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterMorphologyShape'] === shape)
+      );
+    }
+  }
+
+  setMorphologyRadius(radius: number): void {
+    this.getElement('[data-raster-morphology-radius-value]').textContent = `${radius} px`;
+    this.getInput('morphology-radius').value = String(radius);
+  }
+
+  setMorphologyNoDataPolicy(policy: RasterLabMorphologyNoDataPolicy): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-morphology-nodata]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterMorphologyNodata'] === policy)
+      );
+    }
+  }
+
+  setMorphologyBorderMode(mode: RasterLabMorphologyBorderMode): void {
+    this.morphologyBorderMode = mode;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-morphology-border]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterMorphologyBorder'] === mode)
+      );
+    }
+    this.updateMorphologyControls();
+  }
+
+  setMorphologyBorderValue(value: number): void {
+    this.getElement('[data-raster-morphology-border-value]').textContent = value.toFixed(2);
+    this.getInput('morphology-border-value').value = String(value);
+  }
+
   setContrast(contrast: number): void {
     this.getElement('[data-raster-contrast-value]').textContent = `${contrast.toFixed(2)}×`;
     this.getInput('contrast').value = String(contrast);
@@ -214,6 +346,7 @@ export class RasterLabInterface {
     this.getElement('[data-raster-threshold-value]').textContent = threshold.toFixed(2);
     this.getInput('threshold').value = String(threshold);
     this.getInput('threshold-enabled').checked = enabled;
+    this.updateMorphologyControls();
   }
 
   setAutomaticThreshold(enabled: boolean): void {
@@ -228,6 +361,7 @@ export class RasterLabInterface {
     this.getInput('contours-enabled').checked = enabled;
     this.getInput('contour-level').value = String(level);
     this.getElement('[data-raster-contour-level]').textContent = level.toFixed(2);
+    this.updateMorphologyControls();
   }
 
   setEpsilon(epsilon: number): void {
@@ -292,6 +426,21 @@ export class RasterLabInterface {
     const onClick = (event: Event): void => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+      const sourceTileButton = target.closest<HTMLButtonElement>('[data-raster-source-tile]');
+      const sourceTile = sourceTileButton?.dataset['rasterSourceTile'];
+      if (sourceTile === 'full' || sourceTile === 'west' || sourceTile === 'east') {
+        this.setSourceTile(sourceTile);
+        this.callbacks.onSourceTile?.(sourceTile);
+        return;
+      }
+      const overviewButton = target.closest<HTMLButtonElement>('[data-raster-source-overview]');
+      const overview = overviewButton?.dataset['rasterSourceOverview'];
+      if (overview === '0' || overview === '1') {
+        const level = overview === '0' ? 0 : 1;
+        this.setSourceOverview(level);
+        this.callbacks.onSourceOverview?.(level);
+        return;
+      }
       const otsuButton = target.closest<HTMLButtonElement>('[data-raster-control="otsu"]');
       if (otsuButton) {
         const enabled = !this.automaticThreshold;
@@ -325,6 +474,60 @@ export class RasterLabInterface {
         this.callbacks.onEdgeDirection?.(direction);
         return;
       }
+      const morphologyButton = target.closest<HTMLButtonElement>('[data-raster-morphology]');
+      const morphologyOperation = morphologyButton?.dataset['rasterMorphology'];
+      if (
+        morphologyOperation === 'none' ||
+        morphologyOperation === 'dilate' ||
+        morphologyOperation === 'erode' ||
+        morphologyOperation === 'open' ||
+        morphologyOperation === 'close'
+      ) {
+        this.setMorphologyOperation(morphologyOperation);
+        this.callbacks.onMorphologyOperation?.(morphologyOperation);
+        return;
+      }
+      const morphologyModeButton = target.closest<HTMLButtonElement>(
+        '[data-raster-morphology-mode]'
+      );
+      const morphologyMode = morphologyModeButton?.dataset['rasterMorphologyMode'];
+      if (morphologyMode === 'grayscale' || morphologyMode === 'binary') {
+        this.setMorphologyMode(morphologyMode);
+        this.callbacks.onMorphologyMode?.(morphologyMode);
+        return;
+      }
+      const morphologyShapeButton = target.closest<HTMLButtonElement>(
+        '[data-raster-morphology-shape]'
+      );
+      const morphologyShape = morphologyShapeButton?.dataset['rasterMorphologyShape'];
+      if (morphologyShape === 'square' || morphologyShape === 'cross') {
+        this.setMorphologyShape(morphologyShape);
+        this.callbacks.onMorphologyShape?.(morphologyShape);
+        return;
+      }
+      const morphologyNoDataButton = target.closest<HTMLButtonElement>(
+        '[data-raster-morphology-nodata]'
+      );
+      const morphologyNoDataPolicy = morphologyNoDataButton?.dataset['rasterMorphologyNodata'];
+      if (morphologyNoDataPolicy === 'ignore' || morphologyNoDataPolicy === 'propagate') {
+        this.setMorphologyNoDataPolicy(morphologyNoDataPolicy);
+        this.callbacks.onMorphologyNoDataPolicy?.(morphologyNoDataPolicy);
+        return;
+      }
+      const morphologyBorderButton = target.closest<HTMLButtonElement>(
+        '[data-raster-morphology-border]'
+      );
+      const morphologyBorderMode = morphologyBorderButton?.dataset['rasterMorphologyBorder'];
+      if (
+        morphologyBorderMode === 'clamp' ||
+        morphologyBorderMode === 'reflect' ||
+        morphologyBorderMode === 'constant' ||
+        morphologyBorderMode === 'nodata'
+      ) {
+        this.setMorphologyBorderMode(morphologyBorderMode);
+        this.callbacks.onMorphologyBorderMode?.(morphologyBorderMode);
+        return;
+      }
       const button = target.closest<HTMLButtonElement>('[data-raster-mode]');
       const mode = button?.dataset['rasterMode'];
       if (mode === 'ndvi' || mode === 'red' || mode === 'near-infrared') {
@@ -344,6 +547,14 @@ export class RasterLabInterface {
         case 'smoothing-sigma':
           this.setSmoothingSigma(value);
           this.callbacks.onSmoothingSigma?.(value);
+          break;
+        case 'morphology-radius':
+          this.setMorphologyRadius(value);
+          this.callbacks.onMorphologyRadius?.(value);
+          break;
+        case 'morphology-border-value':
+          this.setMorphologyBorderValue(value);
+          this.callbacks.onMorphologyBorderValue?.(value);
           break;
         case 'contrast':
           this.setContrast(value);
@@ -434,6 +645,21 @@ export class RasterLabInterface {
     this.getElement('[data-raster-histogram]').innerHTML = bars.join('');
   }
 
+  private updateMorphologyControls(): void {
+    const morphologyEnabled = this.morphologyOperation !== 'none';
+    const binaryMorphologyEnabled = morphologyEnabled && this.morphologyMode === 'binary';
+    this.getInput('morphology-radius').disabled = !morphologyEnabled;
+    this.getInput('morphology-border-value').disabled =
+      !morphologyEnabled || this.morphologyBorderMode !== 'constant';
+    this.getInput('threshold-enabled').disabled = binaryMorphologyEnabled;
+    this.getInput('contour-level').disabled = binaryMorphologyEnabled;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-morphology-shape], [data-raster-morphology-nodata], [data-raster-morphology-border]'
+    )) {
+      button.disabled = !morphologyEnabled;
+    }
+  }
+
   private updateMapPresentation(): void {
     const edgeIsSigned = this.edgeDirection !== 'magnitude' || this.edgeMode === 'laplacian';
     const title =
@@ -450,7 +676,11 @@ export class RasterLabInterface {
                 ? 'gradient magnitude'
                 : `${this.edgeDirection.toUpperCase()} directional gradient`
             } · boundary response`;
-    this.getElement('[data-raster-map-title]').textContent = title;
+    const morphologyLabel =
+      this.morphologyOperation === 'none'
+        ? ''
+        : ` · ${this.morphologyMode === 'binary' ? 'binary' : 'gray'} ${this.morphologyOperation}`;
+    this.getElement('[data-raster-map-title]').textContent = `${title}${morphologyLabel}`;
     const legend = this.getElement('[data-raster-legend]');
     legend.dataset['mode'] =
       this.edgeMode === 'none' ? this.mode : edgeIsSigned ? 'edge-signed' : 'edge-magnitude';
@@ -535,8 +765,8 @@ function makeRasterLabMarkup(): string {
             <span class="raster-chip" data-raster-contour-count>SYNTHETIC SCENE</span>
           </div>
           <div class="raster-map-surface" data-raster-surface>
-            <span class="raster-coordinate">SCENE / 041 · ANALYTIC TERRAIN</span>
-            <span class="raster-scale">relative scale</span>
+            <span class="raster-coordinate" data-raster-coordinate>L0 / FULL · ORIGIN 0,0 · EPSG:32610</span>
+            <span class="raster-scale">single tile · no halo</span>
           </div>
           <div class="raster-map-footer">
             <div class="raster-legend" data-raster-legend data-mode="ndvi">
@@ -555,6 +785,20 @@ function makeRasterLabMarkup(): string {
             <div class="raster-panel-heading">
               <span class="raster-panel-title">Spectral layers</span>
               <span class="raster-kicker">GPU resident</span>
+            </div>
+            <div class="raster-source-control" aria-label="External raster tile source">
+              <span class="raster-control-label">External tile source <span class="raster-kicker">decoded input</span></span>
+              <div class="raster-source-buttons" aria-label="Selected source tile">
+                <button class="raster-mode-button" data-raster-source-tile="full" aria-pressed="true">FULL</button>
+                <button class="raster-mode-button" data-raster-source-tile="west" aria-pressed="false">WEST</button>
+                <button class="raster-mode-button" data-raster-source-tile="east" aria-pressed="false">EAST</button>
+              </div>
+              <div class="raster-source-overview-buttons" aria-label="Source-provided overview level">
+                <button class="raster-mode-button" data-raster-source-overview="0" aria-pressed="true">1× NATIVE</button>
+                <button class="raster-mode-button" data-raster-source-overview="1" aria-pressed="false">2× OVERVIEW</button>
+              </div>
+              <div class="raster-source-description" data-raster-source-description>L0 · FULL</div>
+              <div class="raster-source-origin" data-raster-source-origin>Origin 0, 0 · EPSG:32610</div>
             </div>
             <div class="raster-mode-buttons" aria-label="Display layer">
               <button class="raster-mode-button" data-raster-mode="ndvi" aria-pressed="true">NDVI</button>
@@ -590,6 +834,44 @@ function makeRasterLabMarkup(): string {
                 <button class="raster-mode-button" data-raster-edge-direction="x" aria-pressed="false" disabled>∂X</button>
                 <button class="raster-mode-button" data-raster-edge-direction="y" aria-pressed="false" disabled>∂Y</button>
               </div>
+            </div>
+            <div class="raster-control raster-morphology-control">
+              <span class="raster-control-label">Analytical morphology <span class="raster-kicker" data-raster-morphology-state>off</span></span>
+              <div class="raster-morphology-buttons" aria-label="Morphology operation">
+                <button class="raster-mode-button" data-raster-morphology="none" aria-pressed="true">OFF</button>
+                <button class="raster-mode-button" data-raster-morphology="dilate" aria-pressed="false">DILATE</button>
+                <button class="raster-mode-button" data-raster-morphology="erode" aria-pressed="false">ERODE</button>
+                <button class="raster-mode-button" data-raster-morphology="open" aria-pressed="false">OPEN</button>
+                <button class="raster-mode-button" data-raster-morphology="close" aria-pressed="false">CLOSE</button>
+              </div>
+              <div class="raster-morphology-paired-settings">
+                <div class="raster-morphology-toggle" aria-label="Morphology sample mode">
+                  <button class="raster-mode-button" data-raster-morphology-mode="grayscale" aria-pressed="true">GRAY</button>
+                  <button class="raster-mode-button" data-raster-morphology-mode="binary" aria-pressed="false">BINARY</button>
+                </div>
+                <div class="raster-morphology-toggle" aria-label="Structuring-element connectivity">
+                  <button class="raster-mode-button" data-raster-morphology-shape="cross" aria-pressed="false" disabled>4-CROSS</button>
+                  <button class="raster-mode-button" data-raster-morphology-shape="square" aria-pressed="true" disabled>8-SQUARE</button>
+                </div>
+              </div>
+              <label class="raster-morphology-setting">
+                <span class="raster-control-label">Structure radius <span class="raster-control-value" data-raster-morphology-radius-value>2 px</span></span>
+                <input class="raster-slider" data-raster-control="morphology-radius" aria-label="Morphology radius" type="range" min="0" max="8" step="1" value="2" disabled />
+              </label>
+              <div class="raster-morphology-toggle" aria-label="Neighborhood nodata policy">
+                <button class="raster-mode-button" data-raster-morphology-nodata="ignore" aria-pressed="true" disabled>IGNORE NODATA</button>
+                <button class="raster-mode-button" data-raster-morphology-nodata="propagate" aria-pressed="false" disabled>STRICT NODATA</button>
+              </div>
+              <div class="raster-morphology-border-buttons" aria-label="Morphology border mode">
+                <button class="raster-mode-button" data-raster-morphology-border="clamp" aria-pressed="true" disabled>CLAMP</button>
+                <button class="raster-mode-button" data-raster-morphology-border="reflect" aria-pressed="false" disabled>REFLECT</button>
+                <button class="raster-mode-button" data-raster-morphology-border="constant" aria-pressed="false" disabled>CONST</button>
+                <button class="raster-mode-button" data-raster-morphology-border="nodata" aria-pressed="false" disabled>NODATA</button>
+              </div>
+              <label class="raster-morphology-setting">
+                <span class="raster-control-label">Constant border <span class="raster-control-value" data-raster-morphology-border-value>0.00</span></span>
+                <input class="raster-slider" data-raster-control="morphology-border-value" aria-label="Morphology constant border value" type="range" min="-1" max="1" step="0.05" value="0" disabled />
+              </label>
             </div>
             <label class="raster-control">
               <span class="raster-control-label">Analysis contrast <span class="raster-control-value" data-raster-contrast-value>1.15×</span></span>
@@ -638,7 +920,7 @@ function makeRasterLabMarkup(): string {
               <span data-raster-histogram-maximum>—</span>
             </div>
             <div class="raster-histogram-caption">
-              Smoothing, gradients, and contours share one GPU graph; only 228 summary bytes are read.
+              Filters, morphology, and contours share one GPU graph; only 228 summary bytes are read.
             </div>
           </section>
 
@@ -652,10 +934,12 @@ function makeRasterLabMarkup(): string {
             <div class="raster-pipeline-step"><span class="raster-step-number">03</span><span class="raster-step-name">Normalized difference</span><span class="raster-step-state">NDVI</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">04</span><span class="raster-step-name">Separable smoothing</span><span class="raster-step-state" data-raster-smoothing-state>off</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">05</span><span class="raster-step-name">Analytical gradient</span><span class="raster-step-state" data-raster-edge-state>off</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">06</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">07</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">08</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">09</span><span class="raster-step-name">Indirect contour lines</span><span class="raster-step-state" data-raster-contour-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">06</span><span class="raster-step-name">Grayscale morphology</span><span class="raster-step-state" data-raster-grayscale-morphology-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">07</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">08</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">09</span><span class="raster-step-name">Binary morphology</span><span class="raster-step-state" data-raster-binary-morphology-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">10</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">11</span><span class="raster-step-name">Indirect contour lines</span><span class="raster-step-state" data-raster-contour-state>off</span></div>
             <div class="raster-histogram-caption" data-raster-footprint>Allocating GPU buffers</div>
           </section>
         </aside>
@@ -664,7 +948,7 @@ function makeRasterLabMarkup(): string {
       <footer class="raster-footer">
         <div class="raster-roadmap" aria-label="Planned raster capabilities">
           <span class="raster-kicker">Coming next</span>
-          <span class="raster-roadmap-chip">Morphology</span>
+          <span class="raster-roadmap-chip">Connected components</span>
           <span class="raster-roadmap-chip">Segmentation</span>
           <span class="raster-roadmap-chip">Tiled contour seams</span>
         </div>

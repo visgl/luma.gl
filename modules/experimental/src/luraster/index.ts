@@ -16,6 +16,19 @@ export type {
 export {GPURaster} from './gpu-raster';
 export type {GPURasterProps} from './gpu-raster';
 
+export {GPURasterTileReader} from './gpu-raster-tile-source';
+export type {
+  GPURasterDecodedBand,
+  GPURasterDecodedTile,
+  GPURasterPixelBounds,
+  GPURasterTileBandMetadata,
+  GPURasterTileCoordinateSpace,
+  GPURasterTileLevel,
+  GPURasterTileRequest,
+  GPURasterTileSource,
+  GPURasterTileSourceMetadata
+} from './gpu-raster-tile-source';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 
@@ -62,6 +75,28 @@ export type {
   GPURasterScharrProps,
   GPURasterSobelProps
 } from './gpu-raster-edges';
+
+export {
+  GPURasterClosing,
+  GPURasterDilation,
+  GPURasterErosion,
+  GPURasterMorphology,
+  GPURasterOpening
+} from './gpu-raster-morphology';
+export type {
+  GPURasterBinaryMorphologyProps,
+  GPURasterClosingProps,
+  GPURasterDilationProps,
+  GPURasterErosionProps,
+  GPURasterGrayscaleMorphologyProps,
+  GPURasterMorphologyBaseProps,
+  GPURasterMorphologyMode,
+  GPURasterMorphologyNoDataPolicy,
+  GPURasterMorphologyOperation,
+  GPURasterMorphologyProps,
+  GPURasterOpeningProps,
+  GPURasterStructuringElement
+} from './gpu-raster-morphology';
 
 export {GPURasterContrast} from './gpu-raster-contrast';
 export type {
