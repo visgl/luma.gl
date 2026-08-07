@@ -215,18 +215,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       raytraceOption.disabled = true;
       raytraceOption.title = 'Graph-based ray tracing requires WebGPU.';
     }
-    const temporalAntialiasingToggle = getRequiredElement(
-      'temporal-aa-toggle',
-      HTMLButtonElement
-    );
-    temporalAntialiasingToggle.hidden =
-      !isTemporalAntialiasingRenderer(this.rendererSubtype);
+    const temporalAntialiasingToggle = getRequiredElement('temporal-aa-toggle', HTMLButtonElement);
+    temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(this.rendererSubtype);
     rendererSelector.addEventListener('change', event => {
       const selector = event.currentTarget;
       if (selector instanceof HTMLSelectElement) {
         this.rendererSubtype = selector.value as ANARIRendererSubtype;
-        temporalAntialiasingToggle.hidden =
-          !isTemporalAntialiasingRenderer(this.rendererSubtype);
+        temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(this.rendererSubtype);
         this.applyEditorScene();
       }
     });
@@ -544,9 +539,7 @@ function clamp(value: number, minimum: number, maximum: number): number {
 }
 
 function isTemporalAntialiasingRenderer(rendererName: string): boolean {
-  return (
-    rendererName === 'default' || rendererName === 'deferred' || rendererName === 'raytrace'
-  );
+  return rendererName === 'default' || rendererName === 'deferred' || rendererName === 'raytrace';
 }
 
 function formatSceneJSON(scene: unknown): string {

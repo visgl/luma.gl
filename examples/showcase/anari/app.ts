@@ -281,15 +281,11 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
           }
           const temporalAntialiasingToggle = document.getElementById('temporal-aa-toggle');
           if (temporalAntialiasingToggle instanceof HTMLButtonElement) {
-            temporalAntialiasingToggle.hidden =
-              !isTemporalAntialiasingRenderer(rendererName);
+            temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(rendererName);
           }
-          const temporalAntialiasingSeparator = document.getElementById(
-            'temporal-aa-separator'
-          );
+          const temporalAntialiasingSeparator = document.getElementById('temporal-aa-separator');
           if (temporalAntialiasingSeparator instanceof HTMLElement) {
-            temporalAntialiasingSeparator.hidden =
-              !isTemporalAntialiasingRenderer(rendererName);
+            temporalAntialiasingSeparator.hidden = !isTemporalAntialiasingRenderer(rendererName);
           }
         }
       });
@@ -1205,9 +1201,7 @@ function clamp(value: number, minimum: number, maximum: number): number {
 }
 
 function isTemporalAntialiasingRenderer(rendererName: string | undefined): boolean {
-  return (
-    rendererName === 'default' || rendererName === 'deferred' || rendererName === 'raytrace'
-  );
+  return rendererName === 'default' || rendererName === 'deferred' || rendererName === 'raytrace';
 }
 
 function setElementText(identifier: string, value: string): void {
