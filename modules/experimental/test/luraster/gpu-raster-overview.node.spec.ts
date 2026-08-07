@@ -64,6 +64,7 @@ describe('makeRasterOverviewMetadata explicit spatial contracts', () => {
     expect(point.level).toBe(5);
     expect(point.width).toBe(3);
     expect(point.height).toBe(4);
+    expect(point.affine).toEqual([4, 6, 102.5, -2, -8, 197.5]);
 
     const graph = makeRecordingGraph('overview-world');
     const source = new GPURaster({
@@ -77,6 +78,21 @@ describe('makeRasterOverviewMetadata explicit spatial contracts', () => {
     expect(parent.getPixelWorldPosition(0, 0)).toEqual([106.5, 193]);
     expect(source.getPixelWorldPosition(0.5, 1)).toEqual([106.5, 193]);
     expect(parent.getPixelArea()).toBe(source.getPixelArea() * 6);
+  });
+
+  test('transforms anisotropic point footprint centers through rotated and sheared affines', () => {
+    const point = makeRasterOverviewMetadata(
+      {...SOURCE_METADATA, pixelInterpretation: 'point'},
+      [2, 3],
+      {sourcePixelOrigin: [0, 0]}
+    );
+    const area = makeRasterOverviewMetadata(SOURCE_METADATA, [2, 3], {
+      sourcePixelOrigin: [0, 0]
+    });
+
+    expect(point.affine).toEqual([4, 9, 104, -2, -12, 195.5]);
+    expect(area.affine).toEqual([4, 9, 100, -2, -12, 200]);
+    expect(SOURCE_METADATA.affine).toEqual([2, 3, 100, -1, -4, 200]);
   });
 
   test('rejects unsupported scales, invalid levels, and globally misaligned source tiles', () => {

@@ -567,16 +567,18 @@ function normalizeOverviewShape(
   const width = Math.ceil(metadata.width / scales[0]);
   const height = Math.ceil(metadata.height / scales[1]);
   const [first, second, third, fourth, fifth, sixth] = metadata.affine;
+  const horizontalCenter = metadata.pixelInterpretation === 'point' ? (scales[0] - 1) / 2 : 0;
+  const verticalCenter = metadata.pixelInterpretation === 'point' ? (scales[1] - 1) / 2 : 0;
   const outputMetadata: GPURasterMetadata = Object.freeze({
     width,
     height,
     affine: Object.freeze([
       first * scales[0],
       second * scales[1],
-      third,
+      third + first * horizontalCenter + second * verticalCenter,
       fourth * scales[0],
       fifth * scales[1],
-      sixth
+      sixth + fourth * horizontalCenter + fifth * verticalCenter
     ]) as GPURasterMetadata['affine'],
     pixelInterpretation: metadata.pixelInterpretation,
     ...(metadata.coordinateReferenceSystem
