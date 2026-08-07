@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Layer, project32, type LayerContext, type LayerProps} from '@deck.gl/core';
+import {
+  Layer,
+  project32,
+  type LayerContext,
+  type LayerProps,
+  type UpdateParameters
+} from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
@@ -124,6 +130,27 @@ export class LuGraphEdgeLayer extends Layer<LuGraphEdgeLayerProps> {
       parameters: EDGE_BLEND_PARAMETERS
     });
     this.setState({model, styleUniforms} satisfies LuGraphEdgeLayerState);
+  }
+
+  /** Keeps same-ID chunk models pointed at the new graph's original physical allocations. */
+  override updateState({props, oldProps}: UpdateParameters<this>): void {
+    const {model, styleUniforms} = this.state as LuGraphEdgeLayerState;
+    if (!model || !styleUniforms) return;
+    if (
+      props.positions !== oldProps.positions ||
+      props.sourceVertices !== oldProps.sourceVertices ||
+      props.targetVertices !== oldProps.targetVertices ||
+      props.distances !== oldProps.distances
+    ) {
+      model.setBindings({
+        positions: props.positions,
+        sourceVertices: props.sourceVertices,
+        targetVertices: props.targetVertices,
+        distances: props.distances,
+        edgeStyle: styleUniforms
+      });
+    }
+    model.setInstanceCount(props.edgeCount);
   }
 
   override getModels(): Model[] {
