@@ -19,6 +19,10 @@ import {
   type GraphBufferUse,
   type GraphDataView
 } from '../gpu-primitives/gpu-command-graph';
+import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource
+} from '../gpu-primitives/gpu-dispatch-utils';
 import {GPUMask} from '../gpu-primitives/gpu-mask';
 import {
   createTransientVectorView,
@@ -63,7 +67,7 @@ export function validateLuAnalyticsSource<Source extends GPUTypeMap>(
   }
 }
 
-/** Validates dense output storage and existing one-dimensional histogram dispatch constraints. */
+/** Validates dense output storage and bounded multidimensional dispatch capacity. */
 export function validateLuAnalyticsOutputLength(
   graph: GPUCommandGraph<LuDataFrameQueryParameters>,
   length: number
@@ -71,9 +75,7 @@ export function validateLuAnalyticsOutputLength(
   if (!Number.isSafeInteger(length) || length <= 0 || length > MAXIMUM_UINT32) {
     throw new Error('LuDataFrame analytics output requires a positive uint32 length');
   }
-  if (length > graph.device.limits.maxComputeWorkgroupsPerDimension * LU_ANALYTICS_WORKGROUP_SIZE) {
-    throw new Error('LuDataFrame analytics output exceeds the supported dispatch capacity');
-  }
+  getLuAnalyticsDispatchLayout(graph, length);
   const byteLength = length * UINT32_BYTE_LENGTH;
   if (
     byteLength > graph.device.limits.maxBufferSize ||
@@ -252,6 +254,7 @@ export function addLuAnalyticsComputePass(
     length: number;
   }
 ): void {
+  const dispatchLayout = getLuAnalyticsDispatchLayout(graph, props.length);
   graph.addComputePass({
     id: props.id,
     resources: [...props.resources],
@@ -275,15 +278,36 @@ export function addLuAnalyticsComputePass(
             bindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            Math.max(1, Math.ceil(props.length / LU_ANALYTICS_WORKGROUP_SIZE))
-          );
+          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
         },
         destroy: () => computation.destroy()
       };
     }
   });
+}
+
+/** Maps bounded three-dimensional analytics workgroups to overflow-safe source-row indices. */
+export function getLuAnalyticsInvocationIndexSource(
+  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
+  length: number
+): string {
+  return getBoundedInvocationIndexSource(
+    getLuAnalyticsDispatchLayout(graph, length),
+    LU_ANALYTICS_WORKGROUP_SIZE
+  );
+}
+
+/** Keeps analytics shaders and their actual command dispatch on the identical 3D layout. */
+function getLuAnalyticsDispatchLayout(
+  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
+  length: number
+) {
+  return getBoundedDispatchLayout(
+    'LuDataFrame analytics',
+    length,
+    LU_ANALYTICS_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Maps only closed scalar storage formats to native WGSL scalar names. */

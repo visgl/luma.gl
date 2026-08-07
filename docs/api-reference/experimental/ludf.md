@@ -296,6 +296,25 @@ Sorting and top-K are performed independently within every original source batch
 implicit global cross-batch materialization or global top-K. Compiled results expose the original
 table, sorted `rowIndices`, updated `selectionMask`, and one selected count per preserved batch.
 
+### Scaling beyond one-dimensional workgroup limits
+
+WebGPU limits the number of workgroups in each individual dispatch dimension, but that does not
+limit a dataframe batch to one dimension. luDF maps linear source rows and dense result rows across
+bounded three-dimensional workgroup layouts while preserving their original row order and batch
+boundaries. Filtering, derived expressions, visibility compaction, grouped statistics, scalar
+reductions, histograms, stable sorting, and join preparation all use the same overflow-safe linear
+indexing scheme.
+
+For example, an adapter limited to two workgroups per dimension can still process 1,025 rows with
+256-thread workgroups by dispatching a `2 × 2 × 2` grid. The shader converts each workgroup's
+three-dimensional coordinate back into its original linear row index and ignores padded lanes.
+Dense histogram bins and categorical group outputs are initialized and finalized the same way.
+
+Actual dataset capacity remains constrained by unsigned 32-bit row indices, the full
+three-dimensional workgroup capacity, and adapter storage-buffer size limits. Dispatch scaling
+does not concatenate batches, make per-batch sorting global, or transfer GPU-resident rows back to
+the CPU.
+
 ## Join or look up unique right-side keys
 
 luDF supports bounded, unique-right-key `uint32` inner joins and source-aligned left lookups. Left
