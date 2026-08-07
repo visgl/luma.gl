@@ -39,6 +39,8 @@ export type {
   ANARIObjectInfo,
   ANARIObjectReference,
   ANARIObjectType,
+  ANARIRayTracingGraphStageStatistics,
+  ANARIRayTracingGraphStatistics,
   ANARIRendererParameters,
   ANARIRendererSubtype,
   ANARISamplerParameters,

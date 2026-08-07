@@ -29,12 +29,7 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
     const renderer = new SceneRenderer(device);
     const target = makeExperimentalMaterialTarget(device);
     const surface = makeExperimentalMaterialSurface(device);
-    const options = makeExperimentalMaterialOptions(
-      device,
-      surface,
-      target.framebuffer,
-      [0, 0, -1]
-    );
+    const options = makeExperimentalMaterialOptions(device, surface, target.framebuffer, [0, 0, 1]);
 
     try {
       testCase.equal(renderer.render(options).drawCount, 1, `${device.type} renders backlit PBR`);
@@ -63,7 +58,7 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
         testCase.equal(transmittedBacklight[3], 255, `${device.type} preserves opaque alpha`);
 
         options.lights = [
-          {type: 'directional', color: [1, 1, 1], direction: [0, 0, 1], intensity: 3}
+          {type: 'directional', color: [1, 1, 1], direction: [0, 0, -1], intensity: 3}
         ];
         surface.material.uniforms = {
           ...surface.material.uniforms,
@@ -87,7 +82,7 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
         );
 
         options.lights = [
-          {type: 'directional', color: [1, 1, 1], direction: [0, 0, -1], intensity: 3}
+          {type: 'directional', color: [1, 1, 1], direction: [0, 0, 1], intensity: 3}
         ];
         surface.material.uniforms = {
           ...surface.material.uniforms,
@@ -154,7 +149,7 @@ test('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter tex
       device,
       surface,
       target.framebuffer,
-      [0.8, 0, 0.6]
+      [-0.8, 0, -0.6]
     );
     surface.material.bindings = {
       pbr_normalSampler: normalTexture,
@@ -202,7 +197,7 @@ test('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter tex
         scatterAnisotropy: 0.15
       };
       options.lights = [
-        {type: 'directional', color: [1, 1, 1], direction: [0, 0, -1], intensity: 3}
+        {type: 'directional', color: [1, 1, 1], direction: [0, 0, 1], intensity: 3}
       ];
 
       testCase.equal(

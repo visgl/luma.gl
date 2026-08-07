@@ -194,9 +194,9 @@ ordered back-to-front at the surface level.
 | `id` | Stable frame identifier used to retain compiled models between renders. |
 | `surfaces` | Retained surface batches. |
 | `camera` | `viewMatrix`, `projectionMatrix`, and world-space `position`. |
-| `lights` | Existing shadertools light descriptors using normalized color values. |
+| `lights` | Existing shadertools light descriptors using normalized color values; directional vectors describe incoming light propagation. |
 | `background` | Linear RGBA clear color; defaults to `[0, 0, 0, 1]`. |
-| `framebuffer` | Optional caller-owned forward-rendering target. |
+| `framebuffer` | Optional caller-owned forward-rendering or ray-tracing target; its attachment dimensions and formats determine presentation. |
 | `width`, `height` | Explicit target dimensions when a framebuffer is not supplied. |
 | `environment` | Optional complete `SceneEnvironment` image-based-lighting resource set. |
 | `transmission` | Enables automatic opaque-scene capture for transmissive materials; set `false` to disable it. |
@@ -228,7 +228,8 @@ An `rgba16float` framebuffer defaults to linear, untonemapped output, preserving
 one for subsequent HDR processing. A framebuffer with a hardware-sRGB attachment also receives
 linear shader output so the hardware performs the transfer exactly once. Explicit
 `outputColorSpace` overrides the automatic selection when the caller intentionally manages the
-target differently.
+target differently. `RayTracingSceneRenderer` follows the same framebuffer, tone-mapping, and
+output-encoding contract while keeping its retained radiance history in linear HDR storage.
 
 ## Image-based lighting
 
@@ -426,6 +427,12 @@ Creates a renderer for an existing WebGL or WebGPU device.
 
 Updates retained scene resources, draws opaque surfaces before back-to-front blended surfaces,
 and returns `surfaceCount`, `instanceCount`, `drawCount`, and `triangleCount`.
+
+The WebGPU `RayTracingSceneRenderer` consumes the same scene contract and additionally returns
+`rayTracing.graph`: logical node counts, physical compute-pass counts, coalesced compute nodes,
+and synchronous CPU encoding time for the stages recorded during that frame. Its `trace` stage is
+always present; `topology`, `acceleration`, and `refit` appear only when the corresponding work
+runs. Collecting these diagnostics never submits commands or waits for GPU results.
 
 ### `destroyFrame(frameIdentifier: string): void`
 

@@ -432,6 +432,30 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       2,
       'ray-tracing telemetry reports samples per pixel rather than encoded frames'
     );
+    const initialGraphStatistics = initialStatistics.rayTracing?.graph;
+    testCase.ok(
+      initialGraphStatistics?.topology && initialGraphStatistics.acceleration,
+      'the initial frame reports its independently encoded topology and Morton acceleration stages'
+    );
+    testCase.notOk(
+      initialGraphStatistics?.refit,
+      'a full Morton acceleration build does not also report an unused refit stage'
+    );
+    testCase.equal(
+      initialGraphStatistics?.nodeCount,
+      (initialGraphStatistics?.topology?.nodeCount ?? 0) +
+        (initialGraphStatistics?.acceleration?.nodeCount ?? 0) +
+        (initialGraphStatistics?.trace.nodeCount ?? 0),
+      'aggregate graph telemetry counts only stages encoded during the current frame'
+    );
+    testCase.ok(
+      (initialGraphStatistics?.coalescedComputeNodeCount ?? 0) > 0,
+      'graph telemetry exposes logical compute nodes coalesced into physical passes'
+    );
+    testCase.ok(
+      (initialGraphStatistics?.cpuEncodeTimeMilliseconds ?? -1) >= 0,
+      'graph telemetry reports synchronous CPU encoding cost without GPU readback'
+    );
     const initialColorHistory = frameResources.colorHistory.previousTexture;
     const initialColorOutput = frameResources.colorHistory.currentTexture;
     const initialMetadataHistory = frameResources.metadataHistory.previousTexture;
@@ -451,6 +475,17 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       accumulatedStatistics.rayTracing?.accumulatedSamples,
       4,
       'progressive telemetry accumulates the requested samples per pixel'
+    );
+    testCase.notOk(
+      accumulatedStatistics.rayTracing?.graph?.topology ||
+        accumulatedStatistics.rayTracing?.graph?.acceleration ||
+        accumulatedStatistics.rayTracing?.graph?.refit,
+      'an unchanged frame reports only its trace/presentation graph stage'
+    );
+    testCase.equal(
+      accumulatedStatistics.rayTracing?.graph?.nodeCount,
+      accumulatedStatistics.rayTracing?.graph?.trace.nodeCount,
+      'unchanged-frame aggregate counts exactly match the trace graph'
     );
     testCase.equal(
       frameResources.colorHistory.previousTexture,
@@ -530,6 +565,11 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       getRayTracingFrameResources(renderer, options.id).refitsSinceMortonRebuild > 0,
       'same-count transform animation uses the retained-permutation refit path'
     );
+    testCase.ok(
+      refittedStatistics.rayTracing?.graph?.refit &&
+        !refittedStatistics.rayTracing.graph.acceleration,
+      'transform-only telemetry reports the retained TLAS refit without a full rebuild'
+    );
     testCase.notOk(
       getRayTracingFrameResources(renderer, options.id).topologyNeedsUpdate,
       'same-count transform animation reuses the topology-only BLAS graph'
@@ -557,6 +597,11 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       getRayTracingFrameResources(renderer, options.id).refitsSinceMortonRebuild,
       0,
       'topology-changing shrink rebuilds the Morton order before removing inactive leaves'
+    );
+    testCase.ok(
+      reducedStatistics.rayTracing?.graph?.acceleration &&
+        !reducedStatistics.rayTracing.graph.refit,
+      'topology-changing telemetry reports the rebuilt Morton acceleration stage'
     );
     testCase.ok(
       getRayTracingFrameResources(renderer, options.id).previousTransformsNeedCommit,

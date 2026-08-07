@@ -695,9 +695,15 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
   let baseColor = primitive.baseColor.rgb;
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
-  let reflectance = mix(vec3<f32>(0.04), baseColor, metallic);
-  let diffuse = baseColor * (1.0 - metallic) / PI;
-  let specularPower = mix(128.0, 4.0, roughness);
+  let dielectricReflectance = vec3<f32>(0.04);
+  let reflectance = mix(dielectricReflectance, baseColor, metallic);
+  let maximumReflectance = max(reflectance.r, max(reflectance.g, reflectance.b));
+  let grazingReflectance = vec3<f32>(clamp(maximumReflectance * 25.0, 0.0, 1.0));
+  let alphaRoughness = roughness * roughness;
+  let alphaRoughnessSquared = alphaRoughness * alphaRoughness;
+  let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance) *
+    (1.0 - metallic) / PI;
+  let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0);
   var result = primitive.emissive.rgb;
   let directLightCount = u32(max(uniforms.temporal.y, 0.0));
   let boundedDirectLightCount = max(directLightCount, 1u);
@@ -762,9 +768,24 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
     let halfDirection = normalize(lightDirection + viewDirection);
     let normalHalf = max(dot(normal, halfDirection), 0.0);
     let viewHalf = max(dot(viewDirection, halfDirection), 0.0);
-    let fresnel = reflectance + (vec3<f32>(1.0) - reflectance) * pow(1.0 - viewHalf, 5.0);
-    let specular = fresnel * pow(normalHalf, specularPower) * (specularPower + 2.0) / (2.0 * PI);
-    result += (diffuse + specular) * lightColor * normalLight * attenuation * lightSampleWeight;
+    let fresnel = reflectance + (grazingReflectance - reflectance) *
+      pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0);
+    let distributionDenominator =
+      (normalHalf * alphaRoughnessSquared - normalHalf) * normalHalf + 1.0;
+    let distribution = alphaRoughnessSquared /
+      (PI * distributionDenominator * distributionDenominator);
+    let lightVisibility = 2.0 * normalLight /
+      (normalLight + sqrt(alphaRoughnessSquared +
+        (1.0 - alphaRoughnessSquared) * normalLight * normalLight));
+    let viewVisibility = 2.0 * normalView /
+      (normalView + sqrt(alphaRoughnessSquared +
+        (1.0 - alphaRoughnessSquared) * normalView * normalView));
+    let geometricOcclusion = lightVisibility * viewVisibility;
+    let diffuseContribution = (vec3<f32>(1.0) - fresnel) * diffuse;
+    let specular = fresnel * geometricOcclusion * distribution /
+      (4.0 * normalLight * normalView);
+    result += (diffuseContribution + specular) * lightColor * normalLight *
+      attenuation * lightSampleWeight;
   }
 
   if (uniforms.fog.w > 0.0) {
@@ -1016,10 +1037,16 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let sampleCount = clamp(u32(uniforms.settings.z), 1u, 16u);
   let guideRay = makeGuideCameraRay(pixel);
   let guideHit = intersectScene(guideRay, RAY_INFINITY);
+  let useStableGuideSample = sampleCount == 1u &&
+    uniforms.previousCameraPosition.w < 0.5 && uniforms.temporal.w < 0.5;
   var accumulatedColor = vec3<f32>(0.0);
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
-    let ray = makeCameraRay(pixel, sampleIndex);
-    let hit = intersectScene(ray, RAY_INFINITY);
+    var ray = guideRay;
+    var hit = guideHit;
+    if (!useStableGuideSample) {
+      ray = makeCameraRay(pixel, sampleIndex);
+      hit = intersectScene(ray, RAY_INFINITY);
+    }
     var color = uniforms.background.rgb;
     if (hit.distance < RAY_INFINITY) {
       color = evaluateDirectLighting(ray, hit);
@@ -1054,8 +1081,21 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
 }
 `;
 
-/** Resolves accumulated ray colors while preserving linear HDR presentation. */
-export function getRayTracingScenePresentationShader(highDynamicRange: boolean): string {
+/** Compile-time presentation controls shared with the canonical forward PBR renderer. */
+export type RayTracingPresentationOptions = {
+  /** Zero disables tone mapping; one selects Reinhard, two Khronos Neutral, three ACES. */
+  toneMapMode: number;
+  /** Zero preserves linear color; one applies the exact sRGB transfer function. */
+  outputEncoding: number;
+};
+
+/** Resolves retained ray radiance with attachment-aware, canonical PBR color management. */
+export function getRayTracingScenePresentationShader(
+  options: RayTracingPresentationOptions | boolean
+): string {
+  const toneMapMode = typeof options === 'boolean' ? (options ? 0 : 2) : options.toneMapMode;
+  const outputEncoding = typeof options === 'boolean' ? (options ? 0 : 1) : options.outputEncoding;
+
   return /* wgsl */ `
 @group(0) @binding(0) var image: texture_2d<f32>;
 
@@ -1096,14 +1136,56 @@ fn sampleRayTracingImage(textureCoordinates: vec2<f32>) -> vec3<f32> {
   return mix(mix(topLeft, topRight, fraction.x), mix(bottomLeft, bottomRight, fraction.x), fraction.y);
 }
 
+fn encodeRayTracingLinearSRGB(linearColor: vec3<f32>) -> vec3<f32> {
+  let positiveColor = max(linearColor, vec3<f32>(0.0));
+  return select(
+    positiveColor * 12.92,
+    1.055 * pow(positiveColor, vec3<f32>(1.0 / 2.4)) - 0.055,
+    positiveColor > vec3<f32>(0.0031308)
+  );
+}
+
+fn toneMapRayTracingKhronosPBRNeutral(inputColor: vec3<f32>) -> vec3<f32> {
+  let startCompression = 0.76;
+  let darkestChannel = min(inputColor.r, min(inputColor.g, inputColor.b));
+  let offset = select(
+    0.04,
+    darkestChannel - 6.25 * darkestChannel * darkestChannel,
+    darkestChannel < 0.08
+  );
+  var color = inputColor - vec3<f32>(offset);
+  let peak = max(color.r, max(color.g, color.b));
+  if (peak < startCompression) {
+    return color;
+  }
+
+  let compressionRange = 1.0 - startCompression;
+  let compressedPeak = 1.0 - compressionRange * compressionRange /
+    (peak + compressionRange - startCompression);
+  color *= compressedPeak / max(peak, 0.0001);
+  let desaturation = 1.0 - 1.0 / (0.15 * (peak - compressedPeak) + 1.0);
+  return mix(color, vec3<f32>(compressedPeak), desaturation);
+}
+
 @fragment
 fn fragmentMain(@location(0) textureCoordinates: vec2<f32>) -> @location(0) vec4<f32> {
   let radiance = sampleRayTracingImage(textureCoordinates);
-  if (${highDynamicRange}) {
-    return vec4<f32>(radiance, 1.0);
+  var color = max(radiance, vec3<f32>(0.0));
+  if (${toneMapMode} == 1) {
+    color /= vec3<f32>(1.0) + color;
+  } else if (${toneMapMode} == 2) {
+    color = toneMapRayTracingKhronosPBRNeutral(color);
+  } else if (${toneMapMode} == 3) {
+    color = clamp(
+      (color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14),
+      vec3<f32>(0.0),
+      vec3<f32>(1.0)
+    );
   }
-  let mappedColor = vec3<f32>(1.0) - exp(-radiance);
-  return vec4<f32>(pow(max(mappedColor, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2)), 1.0);
+  if (${outputEncoding} == 0) {
+    return vec4<f32>(color, 1.0);
+  }
+  return vec4<f32>(encodeRayTracingLinearSRGB(color), 1.0);
 }
 `;
 }

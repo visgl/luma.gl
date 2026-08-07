@@ -99,6 +99,8 @@ type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
   exposure?: number;
+  toneMapMode?: 0 | 1 | 2 | 3;
+  outputColorSpace?: 'linear' | 'srgb';
   samplesPerPixel?: number;
   maxBounces?: number;
   progressive?: boolean;
@@ -122,6 +124,8 @@ type ANARIRendererParameters = {
 | `background` | `[0.015, 0.018, 0.038, 1]` | RGBA clear color. |
 | `ambientRadiance` | `0.12` | Base white ambient light added before explicit world/group lights. |
 | `exposure` | `1.35` | Final lighting exposure. |
+| `toneMapMode` | Target-dependent | `0` disables tone mapping, `1` selects Reinhard, `2` selects Khronos PBR Neutral, and `3` selects ACES. Floating-point targets default to `0`; normalized targets default to `2`. |
+| `outputColorSpace` | Target-dependent | Explicitly selects `'linear'` or `'srgb'` output. Floating-point and hardware-sRGB targets default to linear output; other normalized targets default to software sRGB encoding. |
 | `samplesPerPixel` | `1` | Primary-ray samples per frame in the `raytrace` renderer. |
 | `maxBounces` | Not applied | Reserved ray-tracing bounce limit; the current implementation evaluates direct lighting only. |
 | `progressive` | `true` | Accumulate ray-traced samples across unchanged frames. |
@@ -205,8 +209,11 @@ refreshes rebuild the Morton order. A topology-only graph Morton-sorts each mesh
 GPU-built BLASes, which transform-only updates reuse. It traces transformed analytic spheres and
 triangle meshes, including tessellated quads, cylinders, and cones; evaluates ambient, directional,
 point, and spot lights; and presents the result through a fullscreen pass. An `rgba16float` canvas
-preserves HDR radiance. The trace pass uses exactly eight storage buffers, and every TLAS or BLAS
-construction pass remains within the default WebGPU CORE limit of eight storage buffers.
+or caller-owned framebuffer preserves HDR radiance; ordinary targets use the same configurable
+tone-mapping and exact sRGB transfer as forward rendering. Scalar metallic-roughness materials use
+GGX distribution, Smith visibility, Schlick Fresnel, and energy-balanced diffuse lighting. The
+trace pass uses exactly eight storage buffers, and every TLAS or BLAS construction pass remains
+within the default WebGPU CORE limit of eight storage buffers.
 
 The default half-resolution internal target traces one quarter as many pixels as the output canvas.
 When adaptive quality is enabled, the renderer can reduce scale to `0.25`, spread interleaved pixel
@@ -225,9 +232,9 @@ build graph.
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Skeletal skinning, morph-target displacement, material textures, alpha/
-transmission, and advanced PBR shading remain on the forward/deferred renderer paths. Indirect
-multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is accepted
-for forward compatibility but does not enable indirect bounces.
+transmission, and advanced PBR material extensions remain on the forward/deferred renderer paths.
+Indirect multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is
+accepted for forward compatibility but does not enable indirect bounces.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction roadmap, see
@@ -326,6 +333,16 @@ type ANARIFrameStatistics = {
     sampledPixelCoverage: number;
     frameTimeMilliseconds: number;
     accumulatedSamples: number;
+    graph?: {
+      nodeCount: number;
+      computePassCount: number;
+      coalescedComputeNodeCount: number;
+      cpuEncodeTimeMilliseconds: number;
+      topology?: ANARIRayTracingGraphStageStatistics;
+      acceleration?: ANARIRayTracingGraphStageStatistics;
+      refit?: ANARIRayTracingGraphStageStatistics;
+      trace: ANARIRayTracingGraphStageStatistics;
+    };
   };
 };
 ```
@@ -336,9 +353,15 @@ type ANARIFrameStatistics = {
 | `instanceCount` | Number of direct and instanced surface placements. |
 | `drawCount` | Number of successful model draws, normally one per distinct raster surface or one ray-tracing presentation draw. |
 | `triangleCount` | Sum of mesh triangles across all placements; analytic ray-traced spheres contribute zero. |
-| `rayTracing` | Optional internal resolution, effective scale, sampled-pixel coverage, smoothed frame time, and accumulated samples; present only for the `raytrace` renderer. |
+| `rayTracing` | Optional internal resolution, effective scale, sampled-pixel coverage, smoothed frame time, accumulated samples, and synchronous graph-stage diagnostics; present only for the `raytrace` renderer. |
+| `rayTracing.graph` | Logical node counts, physical compute-pass counts, coalesced compute-node counts, and CPU encoding time for the stages actually recorded during this frame. |
 
 `frame.statistics` is initialized with zeroes and updated by each `frame.render()` call.
+
+The `trace` graph stage is always present. `topology` appears only when mesh hierarchies are
+rebuilt, and `acceleration` and `refit` are mutually exclusive full-build and transform-only TLAS
+stages. These counters describe synchronous encoding only: collecting them does not submit the
+application's encoder, wait for the GPU, or read a buffer back to the CPU.
 
 ### Resizing
 

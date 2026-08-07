@@ -16,6 +16,8 @@ export type {CreatePBRModelOptions} from './engine/pbr-model';
 export {createPBRModel, getPBRGeometryDefines, getPBRTextureDefines} from './engine/pbr-model';
 export type {
   PreparedScene,
+  RayTracingGraphStageStatistics,
+  RayTracingGraphStatistics,
   SceneAlphaMode,
   SceneCamera,
   SceneEnvironment,

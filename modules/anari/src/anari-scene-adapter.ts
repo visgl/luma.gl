@@ -308,6 +308,8 @@ export class ANARISceneAdapter {
 
     const [width, height] = getFrameSize(frame, frame.device.device);
     const ambientRadiance = renderer.getParameter('ambientRadiance') ?? 0.12;
+    const toneMapMode = renderer.getParameter('toneMapMode');
+    const outputColorSpace = renderer.getParameter('outputColorSpace');
     let cachedWorld = this.worlds.get(world);
     if (!cachedWorld) {
       cachedWorld = this.createCachedWorld(world, ambientRadiance);
@@ -326,6 +328,8 @@ export class ANARISceneAdapter {
       height,
       environment: renderer.getParameter('environment'),
       exposure: renderer.getParameter('exposure') ?? 1.35,
+      ...(toneMapMode !== undefined ? {toneMapMode} : {}),
+      ...(outputColorSpace !== undefined ? {outputColorSpace} : {}),
       fogColor: renderer.getParameter('fogColor') || [0.025, 0.035, 0.075],
       fogDensity: renderer.getParameter('fogDensity') ?? 0,
       renderMode:

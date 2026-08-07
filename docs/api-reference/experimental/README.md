@@ -61,16 +61,19 @@ default `0.5` resolution scale can decrease to
 required. Acceleration passes run only when geometry or instance transforms change. Shared scene
 adapters can provide categorized committed-scene revisions so camera-only frames avoid repeatedly
 serializing every instance transform, material, and light.
-Shared scene statistics optionally expose internal dimensions, effective scale, sampled-pixel coverage, frame
-timing, and accumulated samples. The ray pass uses exactly eight storage buffers, and every TLAS or
-BLAS construction pass fits the default WebGPU CORE limit of eight storage buffers. Applications
-retain command-submission ownership.
+The canvas or a caller-owned offscreen framebuffer determines the actual attachment formats and
+target dimensions; scalar metallic-roughness lighting follows GGX/Smith/Fresnel, and presentation
+uses the shared tone-mapping and exact linear/sRGB output conventions. Shared scene statistics expose
+internal dimensions, effective scale, sampled-pixel coverage, frame timing, accumulated samples,
+and per-stage command-graph node, physical-pass, coalescing, and CPU encoding costs. The ray pass
+uses exactly eight storage buffers, and every TLAS or BLAS construction pass fits the default WebGPU
+CORE limit of eight storage buffers. Applications retain command-submission ownership.
 
 The Morton-sorted TLAS accelerates objects and instances, while GPU-built Morton-sorted BLASes
 accelerate each mesh's triangles. Hardware ray tracing, SAH/Karras hierarchy topology, indirect path
 tracing, denoising, and volume rendering are not implemented. Skeletal/morph deformation, material
-textures, alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer
-paths.
+textures, alpha/transmission, and advanced PBR material extensions remain on the forward/deferred
+renderer paths.
 
 `createPBRMaterialFactory`, `createPBRMaterial`, and `createPBRModel` are also available when an
 application needs lower-level composition with the same canonical material and shader contracts.

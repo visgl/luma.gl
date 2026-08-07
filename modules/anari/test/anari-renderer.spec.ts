@@ -462,6 +462,12 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
       1,
       'analytic spheres do not generate mesh triangles'
     );
+    testContext.ok(
+      statistics.rayTracing?.graph?.topology &&
+        statistics.rayTracing.graph.acceleration &&
+        statistics.rayTracing.graph.trace,
+      'retained ANARI frames expose topology, acceleration, and tracing graph-stage diagnostics'
+    );
 
     if (supportsRawValidationErrorScopes) {
       graphicsDevice.handle.pushErrorScope('validation');
@@ -473,6 +479,29 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
       accumulatedStatistics.instanceCount,
       3,
       'stable recommitted camera parameters preserve progressive rendering'
+    );
+    testContext.ok(
+      accumulatedStatistics.rayTracing?.graph?.trace &&
+        !accumulatedStatistics.rayTracing.graph.topology &&
+        !accumulatedStatistics.rayTracing.graph.acceleration &&
+        !accumulatedStatistics.rayTracing.graph.refit,
+      'stable ANARI frames expose only the tracing graph without rebuilding acceleration'
+    );
+
+    renderer.setParameters({toneMapMode: 1, outputColorSpace: 'linear'}).commitParameters();
+    const colorManagedStatistics = frame.render();
+    graphicsDevice.submit();
+    testContext.equal(
+      colorManagedStatistics.instanceCount,
+      3,
+      'committed ANARI tone-mapping and output-color settings preserve retained placements'
+    );
+    testContext.ok(
+      colorManagedStatistics.rayTracing?.graph?.trace &&
+        !colorManagedStatistics.rayTracing.graph.topology &&
+        !colorManagedStatistics.rayTracing.graph.acceleration &&
+        !colorManagedStatistics.rayTracing.graph.refit,
+      'presentation-policy updates recreate only the tracing graph, without rebuilding acceleration'
     );
 
     world.setParameter('instance', [firstInstance]).commitParameters();

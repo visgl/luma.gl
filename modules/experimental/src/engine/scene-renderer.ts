@@ -157,6 +157,30 @@ export type SceneRenderOptions = {
   renderMode?: 'default' | 'debugNormals' | 'debugDepth';
 };
 
+/** Synchronous encoding costs for one graph-owned ray-tracing stage. */
+export type RayTracingGraphStageStatistics = {
+  /** Number of logical graph nodes encoded for this stage. */
+  nodeCount: number;
+  /** Number of physical compute passes opened by this stage. */
+  computePassCount: number;
+  /** Number of logical compute nodes merged into an existing physical pass. */
+  coalescedComputeNodeCount: number;
+  /** Synchronous CPU time spent recording this stage into the caller-owned encoder. */
+  cpuEncodeTimeMilliseconds: number;
+};
+
+/** Per-frame graph totals and the individual stages actually encoded for a ray-traced frame. */
+export type RayTracingGraphStatistics = RayTracingGraphStageStatistics & {
+  /** Mesh topology construction; present only when geometry changes. */
+  topology?: RayTracingGraphStageStatistics;
+  /** Morton TLAS construction; mutually exclusive with `refit`. */
+  acceleration?: RayTracingGraphStageStatistics;
+  /** Retained-order TLAS refit; mutually exclusive with `acceleration`. */
+  refit?: RayTracingGraphStageStatistics;
+  /** Ray tracing, optional sparse carry, and presentation for the current frame. */
+  trace: RayTracingGraphStageStatistics;
+};
+
 /** Draw statistics returned by the shared scene rendering contract. */
 export type SceneRenderStatistics = {
   surfaceCount: number;
@@ -171,6 +195,8 @@ export type SceneRenderStatistics = {
     sampledPixelCoverage: number;
     frameTimeMilliseconds: number;
     accumulatedSamples: number;
+    /** Optional synchronous graph-stage diagnostics; never submits, waits, or reads back. */
+    graph?: RayTracingGraphStatistics;
   };
 };
 
@@ -703,7 +729,7 @@ function setSceneShaderInputs(
       projectionMatrix,
       ...(transmissionTexture ? {pbr_transmissionFramebufferSampler: transmissionTexture} : {})
     },
-    lighting: {lights: Array.from(options.lights || []), useByteColors: false},
+    lighting: {lights: getScenePBRLights(options.lights), useByteColors: false},
     ...(hasCompleteEnvironment(options.environment)
       ? {
           ibl: {
@@ -714,6 +740,36 @@ function setSceneShaderInputs(
         }
       : {})
   });
+}
+
+/** Adapts incoming directional vectors and additive ambient radiance to forward PBR conventions. */
+function getScenePBRLights(lights: readonly Light[] = []): Light[] {
+  const adaptedLights = lights.map<Light>(light =>
+    light.type === 'directional'
+      ? {
+          ...light,
+          direction: [-light.direction[0], -light.direction[1], -light.direction[2]]
+        }
+      : light
+  );
+  const ambientLights = adaptedLights.filter(light => light.type === 'ambient');
+  if (ambientLights.length <= 1) {
+    return adaptedLights;
+  }
+
+  const ambientColor: [number, number, number] = [0, 0, 0];
+  for (const ambientLight of ambientLights) {
+    const color = ambientLight.color ?? [1, 1, 1];
+    const intensity = ambientLight.intensity ?? 1;
+    ambientColor[0] += color[0] * intensity;
+    ambientColor[1] += color[1] * intensity;
+    ambientColor[2] += color[2] * intensity;
+  }
+
+  return [
+    {type: 'ambient', color: ambientColor, intensity: 1},
+    ...adaptedLights.filter(light => light.type !== 'ambient')
+  ];
 }
 
 function hasCompleteEnvironment(environment?: SceneEnvironment): boolean {
