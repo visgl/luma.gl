@@ -141,6 +141,10 @@ Target Release Date: Q3, 2026
 
 - **Gaussian splat rendering** - `SplatRenderer` draws caller-owned prepared GPU splat batches through reusable luma.gl rendering models on WebGPU and WebGL2.
 - **HDR Gaussian colors** - Float32 color columns preserve spherical-harmonic DC radiance above the display range without premature clamping or quantization.
+- **Higher-order spherical harmonics** - Degree-one through degree-three coefficients provide camera-dependent Gaussian radiance on WebGPU and WebGL2.
+- **Semantic filtering and GPU picking** - Filter prepared semantic classes and pick stable source batch, global row, and semantic identities through dedicated GPU passes.
+- **Dynamic splats and mixed scenes** - Update existing GPU source rows in place and composite depth-tested Gaussian splats between opaque and transparent mesh draws.
+- **Bounded splat residency** - Prioritized, pinned, least-recently-used source batches remain within configurable GPU byte, row, and chunk budgets.
 - **Incremental splat streaming** - New prepared batches append without concatenating source data, rebuilding previous batches, or transferring ownership to the renderer.
 - **Layered adapters** - File parsing stays in loaders.gl, Apache Arrow conversion stays in `@luma.gl/arrow`, and deck.gl integration stays in downstream applications.
 

@@ -4,6 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
 import {getTestDevices} from '@luma.gl/test-utils';
 
@@ -154,6 +155,179 @@ test('SplatRenderer preserves and tone-maps Float32 Gaussian radiance on WebGPU 
     readback.destroy();
     renderer.destroy();
     prepared.destroy();
+    framebuffer.destroy();
+    colorTexture.destroy();
+  }
+
+  t.end();
+});
+
+test('SplatRenderer evaluates higher-order directional radiance on WebGPU and WebGL2', async t => {
+  const devices = await getTestDevices(['webgpu', 'webgl']);
+  t.ok(devices.length > 0, 'at least one browser graphics backend is available');
+
+  for (const device of devices) {
+    if (isSoftwareBackedDevice(device)) {
+      t.comment(
+        `Skipping Gaussian splat ${device.type} directional readback on a software adapter`
+      );
+      continue;
+    }
+
+    const textureSize = 16;
+    const colorTexture = device.createTexture({
+      width: textureSize,
+      height: textureSize,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: textureSize,
+      height: textureSize,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: 'depth24plus'
+    });
+    const source = makeBrowserSplatSource(0.5, 0);
+    source.colors = new Float32Array([0.5, 0.5, 0.25, 1]);
+    source.scales.set([0.8, 0.8, 0.05]);
+    source.sphericalHarmonics = new Float32Array(9);
+    source.sphericalHarmonics[2 * 3] = 0.75;
+    source.sphericalHarmonicsDegree = 1;
+    const prepared = makeGPUSplatData(device, source);
+    const renderer = new SplatRenderer(device, {
+      data: prepared,
+      viewportSize: [textureSize, textureSize],
+      alphaCutoff: 0,
+      toneMapping: 'none'
+    });
+    const layout = colorTexture.computeMemoryLayout({width: textureSize, height: textureSize});
+    const readback = device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    const centerColors: Uint8Array[] = [];
+
+    for (const cameraPosition of [
+      [-1, 0, 0.5],
+      [1, 0, 0.5]
+    ] as const) {
+      renderer.setProps({cameraPosition});
+      renderer.predraw(device.commandEncoder);
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: 1
+      });
+      t.ok(renderer.draw(renderPass), `${device.type}: renders higher-order directional radiance`);
+      renderPass.end();
+      device.submit();
+      colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
+      const pixels = await readback.readAsync(0, layout.byteLength);
+      const centerPixelOffset = 8 * layout.bytesPerRow + 8 * 4;
+      centerColors.push(pixels.slice(centerPixelOffset, centerPixelOffset + 4));
+    }
+
+    t.ok(
+      centerColors[1][0] > centerColors[0][0] + 120,
+      `${device.type}: reverses the first-order red basis when the camera crosses the Gaussian`
+    );
+    t.ok(
+      Math.abs(centerColors[1][1] - centerColors[0][1]) < 5,
+      `${device.type}: leaves unrelated DC color channels unchanged`
+    );
+    t.deepEqual(
+      Array.from(source.colors),
+      [0.5, 0.5, 0.25, 1],
+      `${device.type}: preserves caller-owned DC color coefficients`
+    );
+
+    readback.destroy();
+    renderer.destroy();
+    prepared.destroy();
+    framebuffer.destroy();
+    colorTexture.destroy();
+  }
+
+  t.end();
+});
+
+test('SplatRenderer composites mixed mesh scenes against a shared WebGPU or WebGL depth buffer', async t => {
+  const devices = await getTestDevices(['webgpu', 'webgl']);
+  t.ok(devices.length > 0, 'at least one browser graphics backend is available');
+
+  for (const device of devices) {
+    if (isSoftwareBackedDevice(device)) {
+      t.comment(
+        `Skipping Gaussian splat ${device.type} mixed-depth readback on a software adapter`
+      );
+      continue;
+    }
+
+    const textureSize = 16;
+    const colorTexture = device.createTexture({
+      width: textureSize,
+      height: textureSize,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: textureSize,
+      height: textureSize,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: 'depth24plus'
+    });
+    const source = makeBrowserSplatSource(0.5, 0);
+    source.colors = new Uint8Array([255, 0, 0, 255]);
+    source.scales.set([0.8, 0.8, 0.05]);
+    const prepared = makeGPUSplatData(device, source);
+    const renderer = new SplatRenderer(device, {
+      data: prepared,
+      viewportSize: [textureSize, textureSize],
+      alphaCutoff: 0
+    });
+    const nearerMesh = makeOpaqueBrowserMesh(device, 0.25);
+    const fartherMesh = makeOpaqueBrowserMesh(device, 0.75);
+    const layout = colorTexture.computeMemoryLayout({width: textureSize, height: textureSize});
+    const readback = device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    const centerColors: Uint8Array[] = [];
+
+    for (const mesh of [nearerMesh, fartherMesh]) {
+      mesh.predraw(device.commandEncoder);
+      renderer.predraw(device.commandEncoder);
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: 1
+      });
+      t.ok(
+        renderer.drawMixed(renderPass, {opaqueMeshes: [mesh]}),
+        `${device.type}: composites opaque mesh and Gaussian draws into the shared pass`
+      );
+      renderPass.end();
+      device.submit();
+      colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
+      const pixels = await readback.readAsync(0, layout.byteLength);
+      const centerPixelOffset = 8 * layout.bytesPerRow + 8 * 4;
+      centerColors.push(pixels.slice(centerPixelOffset, centerPixelOffset + 4));
+    }
+
+    t.ok(
+      centerColors[0][2] > 220 && centerColors[0][0] < 15,
+      `${device.type}: nearer opaque mesh depth fully occludes the red Gaussian`
+    );
+    t.ok(
+      centerColors[1][0] > 180 && centerColors[1][2] < 80,
+      `${device.type}: nearer Gaussian remains visible over the farther opaque mesh`
+    );
+
+    readback.destroy();
+    renderer.destroy();
+    prepared.destroy();
+    nearerMesh.destroy();
+    fartherMesh.destroy();
     framebuffer.destroy();
     colorTexture.destroy();
   }
@@ -326,6 +500,52 @@ function makeBrowserSplatSource(depth: number, rowIndex: number): SplatSource {
     sourceBatchIndex: rowIndex,
     rowIndexBase: rowIndex
   };
+}
+
+function makeOpaqueBrowserMesh(device: Device, depth: number): Model {
+  const source = /* wgsl */ `\
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
+  let positions = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -1.0),
+    vec2<f32>(3.0, -1.0),
+    vec2<f32>(-1.0, 3.0)
+  );
+  return vec4<f32>(positions[vertexIndex], ${depth}, 1.0);
+}
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(0.0, 0.0, 1.0, 1.0);
+}
+`;
+  const vertexShader = /* glsl */ `\
+#version 300 es
+void main() {
+  vec2 position = gl_VertexID == 0
+    ? vec2(-1.0, -1.0)
+    : gl_VertexID == 1 ? vec2(3.0, -1.0) : vec2(-1.0, 3.0);
+  gl_Position = vec4(position, ${depth}, 1.0);
+}
+`;
+  const fragmentShader = /* glsl */ `\
+#version 300 es
+precision highp float;
+out vec4 fragmentColor;
+void main() {
+  fragmentColor = vec4(0.0, 0.0, 1.0, 1.0);
+}
+`;
+  return new Model(device, {
+    id: `splat-opaque-mesh-${depth}`,
+    source,
+    vs: vertexShader,
+    fs: fragmentShader,
+    shaderLayout: {attributes: [], bindings: []},
+    vertexCount: 3,
+    topology: 'triangle-list',
+    parameters: {depthCompare: 'less-equal', depthWriteEnabled: true}
+  });
 }
 
 function makeOverlappingBrowserSplatSource(batchIndex: number): SplatSource {

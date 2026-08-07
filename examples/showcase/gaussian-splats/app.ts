@@ -3,7 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
-import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
+import {
+  makeGPUSplatDataFromArrowStream,
+  type MakeGPUSplatDataFromArrowOptions
+} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {GPUCommandGraphInspector, type GPUCommandGraphInspectorGraph} from '@luma.gl/experimental';
@@ -172,6 +175,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private hasManualCameraInteraction = false;
   private needsRedraw = true;
   private previousCameraState: GaussianSplatCameraState | undefined;
+  private readonly renderedBatchRevisions: number[] = [];
   private expectedSplatCount = GAUSSIAN_SPLAT_BATCH_COUNT * GAUSSIAN_SPLATS_PER_BATCH;
   private expectedBatchCount = GAUSSIAN_SPLAT_BATCH_COUNT;
   private loadedSplatCount = 0;
@@ -343,7 +347,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.requestRedraw();
     }
 
-    if (!this.needsRedraw && !this.autoOrbit) {
+    const hasUpdatedBatches = this.batches.some(
+      (batch, batchIndex) => batch.revision !== this.renderedBatchRevisions[batchIndex]
+    );
+    if (!this.needsRedraw && !this.autoOrbit && !hasUpdatedBatches) {
       return;
     }
 
@@ -376,6 +383,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       renderPass.end();
     }
     this.needsRedraw = false;
+    this.renderedBatchRevisions.length = this.batches.length;
+    for (let batchIndex = 0; batchIndex < this.batches.length; batchIndex++) {
+      this.renderedBatchRevisions[batchIndex] = this.batches[batchIndex].revision;
+    }
 
     this.frameIndex++;
     if (graphChanged || this.frameIndex % 20 === 0) {
@@ -422,7 +433,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       }
     });
 
-    for await (const batch of makeGPUSplatDataFromArrowStream(this.device, source)) {
+    const sourceOptions: MakeGPUSplatDataFromArrowOptions | undefined =
+      this.executionMode === 'graph' ? {maxSphericalHarmonicsDegree: 0} : undefined;
+    for await (const batch of makeGPUSplatDataFromArrowStream(this.device, source, sourceOptions)) {
       if (this.isFinalized || this.loadAbortController.signal.aborted) {
         batch.destroy();
         break;
@@ -518,10 +531,15 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       up: this.cameraFrame.up
     });
     const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
-    this.renderer.setProps({
+    const cameraProps: Pick<SplatRendererProps, 'modelViewProjectionMatrix' | 'viewportSize'> = {
       modelViewProjectionMatrix,
       viewportSize: [cameraState.viewportWidth, cameraState.viewportHeight]
-    });
+    };
+    if (this.renderer instanceof SplatRenderer) {
+      this.renderer.setProps({...cameraProps, cameraPosition});
+    } else {
+      this.renderer.setProps(cameraProps);
+    }
   }
 
   private fitCameraToBatches(): void {

@@ -3,7 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {makeGPUSplatData, type GPUSplatData, type SplatSource} from '@luma.gl/splats';
+import {
+  getSplatSphericalHarmonicCoefficientCount,
+  getSplatSphericalHarmonicsDegree,
+  makeGPUSplatData,
+  type GPUSplatData,
+  type SplatSource,
+  type SplatSphericalHarmonicsDegree
+} from '@luma.gl/splats';
 import {
   DataType,
   type Data,
@@ -64,6 +71,10 @@ export type MakeGPUSplatDataFromArrowOptions = {
   sourceBatchIndex?: number;
   /** Global source-row index assigned to the first nonempty Arrow record batch. */
   rowIndexBase?: number;
+  /** Highest non-DC spherical-harmonic degree uploaded from GraphDECO `f_rest_*` columns. */
+  maxSphericalHarmonicsDegree?: SplatSphericalHarmonicsDegree;
+  /** Explicit source column containing numeric semantic class identifiers. */
+  semanticColumn?: string;
 };
 
 type GPUSplatArrowSourceOffsets = {
@@ -99,15 +110,25 @@ export async function* makeGPUSplatDataFromArrowStream(
   source: AsyncIterable<GPUSplatArrowSource> | Iterable<GPUSplatArrowSource>,
   options: MakeGPUSplatDataFromArrowOptions = {}
 ): AsyncIterable<GPUSplatData> {
-  let offsets: GPUSplatArrowSourceOffsets = {
-    sourceBatchIndex: options.sourceBatchIndex ?? 0,
-    rowIndexBase: options.rowIndexBase ?? 0
-  };
+  let sourceBatchIndex = options.sourceBatchIndex ?? 0;
+  let rowIndexBase = options.rowIndexBase ?? 0;
 
   for await (const arrowSource of source) {
-    const prepared = prepareArrowSplatSource(device, arrowSource, options, offsets);
-    offsets = prepared.nextOffsets;
-    for (const data of prepared.data) {
+    const columnSource = isArrowSplatColumnSource(arrowSource) ? arrowSource : arrowSource.data;
+    const recordBatches = isArrowSplatTable(columnSource) ? columnSource.batches : [columnSource];
+    for (const recordBatch of recordBatches) {
+      if (recordBatch.numRows === 0) {
+        sourceBatchIndex++;
+        continue;
+      }
+
+      const splatSource = makeSplatSourceFromArrowRecordBatch(recordBatch, options, {
+        sourceBatchIndex,
+        rowIndexBase
+      });
+      const data = makeGPUSplatData(device, splatSource);
+      rowIndexBase += data.rowCount;
+      sourceBatchIndex++;
       yield data;
     }
   }
@@ -185,6 +206,11 @@ function makeSplatSourceFromArrowRecordBatch(
   ];
   const hasSphericalHarmonicColors = sphericalHarmonicColumns.every(Boolean);
   const opacityColumn = getOptionalArrowSplatColumn(recordBatch, 'opacity');
+  const semanticColumn = getArrowSplatSemanticColumn(recordBatch, options.semanticColumn);
+  const higherOrderSphericalHarmonics = getArrowSplatSphericalHarmonics(
+    recordBatch,
+    options.maxSphericalHarmonicsDegree
+  );
   const scaleEncodings = scaleColumns.map((_, componentIndex) =>
     getArrowSplatFieldEncoding(recordBatch, `scale_${componentIndex}`)
   );
@@ -193,6 +219,7 @@ function makeSplatSourceFromArrowRecordBatch(
   const rotations = new Float32Array(rowCount * 4);
   const colors = new Float32Array(rowCount * 4);
   const opacities = new Float32Array(rowCount);
+  const semanticIds = semanticColumn ? new Uint32Array(rowCount) : undefined;
 
   for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
     for (let componentIndex = 0; componentIndex < 3; componentIndex++) {
@@ -223,9 +250,94 @@ function makeSplatSourceFromArrowRecordBatch(
       : encodedOpacity;
     // Opacity has its own GPU column; copying it into color alpha would apply it twice.
     colors[rowIndex * 4 + 3] = normalizeSplatColorByte(fallbackColor[3] ?? DEFAULT_SPLAT_COLOR[3]);
+    if (semanticColumn && semanticIds) {
+      const semanticId = semanticColumn.get(rowIndex);
+      if (semanticId === null || semanticId === undefined) {
+        throw new Error('Gaussian splat semantic identifiers cannot be null');
+      }
+      semanticIds[rowIndex] = Number(semanticId);
+    }
   }
 
-  return {positions, scales, rotations, colors, opacities, ...offsets};
+  return {
+    positions,
+    scales,
+    rotations,
+    colors,
+    opacities,
+    ...(semanticIds ? {semanticIds} : {}),
+    ...(higherOrderSphericalHarmonics
+      ? {
+          sphericalHarmonics: higherOrderSphericalHarmonics.coefficients,
+          sphericalHarmonicsDegree: higherOrderSphericalHarmonics.degree
+        }
+      : {}),
+    ...offsets
+  };
+}
+
+/** Reorders GraphDECO's channel-major `f_rest_*` fields into row-major RGB basis triplets. */
+function getArrowSplatSphericalHarmonics(
+  recordBatch: GPUSplatArrowRecordBatchLike,
+  maximumDegree: SplatSphericalHarmonicsDegree = 3
+): {coefficients: Float32Array; degree: SplatSphericalHarmonicsDegree} | undefined {
+  if (maximumDegree === 0) {
+    return undefined;
+  }
+
+  const fieldCount = recordBatch.schema.fields.filter(field =>
+    /^f_rest_\d+$/.test(field.name)
+  ).length;
+  if (fieldCount === 0) {
+    return undefined;
+  }
+  const sourceDegree = getSplatSphericalHarmonicsDegree(fieldCount);
+  const degree = sourceDegree < maximumDegree ? sourceDegree : maximumDegree;
+  const sourceCoefficientsPerColor = fieldCount / 3;
+  const targetCoefficientCount = getSplatSphericalHarmonicCoefficientCount(degree);
+  const targetCoefficientsPerColor = targetCoefficientCount / 3;
+  const coefficients = new Float32Array(recordBatch.numRows * targetCoefficientCount);
+
+  for (let colorComponentIndex = 0; colorComponentIndex < 3; colorComponentIndex++) {
+    for (
+      let coefficientIndex = 0;
+      coefficientIndex < targetCoefficientsPerColor;
+      coefficientIndex++
+    ) {
+      const sourceCoefficientIndex =
+        colorComponentIndex * sourceCoefficientsPerColor + coefficientIndex;
+      const column = getRequiredArrowSplatColumn(recordBatch, `f_rest_${sourceCoefficientIndex}`);
+      for (let rowIndex = 0; rowIndex < recordBatch.numRows; rowIndex++) {
+        const coefficientOffset = rowIndex * targetCoefficientCount + coefficientIndex * 3;
+        coefficients[coefficientOffset + colorComponentIndex] = Number(column.get(rowIndex) ?? 0);
+      }
+    }
+  }
+
+  return {coefficients, degree};
+}
+
+function getArrowSplatSemanticColumn(
+  recordBatch: GPUSplatArrowRecordBatchLike,
+  semanticColumnName: string | undefined
+): Vector | null {
+  if (semanticColumnName) {
+    return getRequiredArrowSplatColumn(recordBatch, semanticColumnName);
+  }
+  for (const columnName of [
+    'semantic_id',
+    'semanticId',
+    'class_id',
+    'classId',
+    'label',
+    'semantic'
+  ]) {
+    const column = getOptionalArrowSplatColumn(recordBatch, columnName);
+    if (column) {
+      return column;
+    }
+  }
+  return null;
 }
 
 function getArrowSplatPositions(recordBatch: GPUSplatArrowRecordBatchLike): Float32Array {

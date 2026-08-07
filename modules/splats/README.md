@@ -7,6 +7,11 @@ loaders.gl, or deck.gl.
 `GPUSplatGraphRenderer` progressively streams preserved batches through reusable WebGPU command
 graphs, global GPU sorting, and one indirect draw.
 
+Prepared batches support degree-one through degree-three spherical harmonics, semantic class IDs,
+and in-place row updates. `SplatRenderer` evaluates view-dependent radiance, filters semantic
+classes, composes splats with depth-tested meshes, and works with `SplatPicker`. Use
+`SplatResidencyManager` to bound independently owned streamed batches by GPU bytes, rows, or chunks.
+
 Use optional `expectedSplatCount` and `expectedBatchCount` hints to reserve graph capacity.
 Renderers borrow source batches, preserve HDR colors, and must be destroyed before their data.
 

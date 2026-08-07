@@ -5,10 +5,43 @@
 export {
   GPUSplatData,
   makeGPUSplatData,
+  type SplatDataUpdate,
   type GPUSplatTypeMap,
   type GPUSplatVectors,
   type SplatSource
 } from './splat-data';
+export {
+  evaluateSplatSphericalHarmonics,
+  getSplatSphericalHarmonicCoefficientCount,
+  getSplatSphericalHarmonicsDegree,
+  type SplatSphericalHarmonicsDegree
+} from './splat-spherical-harmonics';
+export {
+  acceptsSplatSemantic,
+  type SplatSemanticFilter,
+  type SplatSemanticSelection
+} from './splat-filter';
+export {
+  SplatPicker,
+  resolveSplatPickInfo,
+  SPLAT_COLOR_PICKING_FS_GLSL,
+  SPLAT_PICKING_ATTRIBUTE_WGSL_SHADER,
+  SPLAT_PICKING_FS_GLSL,
+  SPLAT_PICKING_STORAGE_WGSL_SHADER,
+  type SplatPickingInfo,
+  type SplatPickingProps
+} from './splat-picking';
+export {
+  SplatResidencyManager,
+  type SplatResidencyBounds,
+  type SplatResidencyBudget,
+  type SplatResidencyCallbacks,
+  type SplatResidencyChunk,
+  type SplatResidencyChunkOptions,
+  type SplatResidencyEvictionReason,
+  type SplatResidencyManagerProps,
+  type SplatResidencyStats
+} from './splat-residency';
 export {
   getCovarianceEllipseAxes,
   getQuaternionScaledAxes,
@@ -30,6 +63,9 @@ export {
 export {
   SplatRenderer,
   SPLAT_STORAGE_GPU_INPUT_SCHEMA,
+  type SplatDrawRun,
+  type SplatMeshRenderable,
+  type SplatMixedRenderOptions,
   type SplatRendererProps,
   type SplatRendererStats
 } from './splat-renderer';
