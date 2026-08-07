@@ -93,15 +93,20 @@ test('GPUTableShaderBindings resolves draw-ready buffers per preserved batch', t
 
 test('GPUTableShaderBindings binds complete fixed-size-list rows without trailing padding', t => {
   const device = new NullDevice({});
-  const embeddings = new GPUVector({
-    type: 'buffer',
-    name: 'embeddings',
+  const embeddingsData = new GPUData({
     buffer: device.createBuffer({byteLength: 32}),
     format: 'fixed-size-list<float32,3>',
     length: 2,
     byteOffset: 4,
     byteStride: 16,
+    valueByteLength: 24,
     ownsBuffer: true
+  });
+  const embeddings = new GPUVector({
+    type: 'data',
+    name: 'embeddings',
+    data: [embeddingsData],
+    ownsData: true
   });
   const table = new GPUTable({vectors: {embeddings}});
   const gpuInputSchema = [
@@ -132,7 +137,7 @@ test('GPUTableShaderBindings binds complete fixed-size-list rows without trailin
       offset: 4,
       size: 28
     },
-    'storage binding includes row padding but does not require nonexistent final-row padding'
+    'storage binding includes row padding even when explicit value bytes omit that padding'
   );
 
   shaderBindings.destroy();
