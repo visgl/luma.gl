@@ -36,6 +36,8 @@ export type SplatUniforms = {
   sortedOffset: number;
   exposure: number;
   toneMapping: number;
+  cameraPosition: [number, number, number];
+  sphericalHarmonicsDegree: number;
 };
 
 /** Uniform module shared by WebGPU storage and WebGL2 attribute-backed splat models. */
@@ -53,7 +55,9 @@ export const splatUniforms = {
     maxScreenSpaceSplatSize: 'f32',
     sortedOffset: 'u32',
     exposure: 'f32',
-    toneMapping: 'u32'
+    toneMapping: 'u32',
+    cameraPosition: 'vec3<f32>',
+    sphericalHarmonicsDegree: 'u32'
   }
 } satisfies ShaderModule<SplatUniforms>;
 
@@ -81,7 +85,8 @@ export const SPLAT_STORAGE_SHADER_LAYOUT = {
     {name: 'splatColors', type: 'read-only-storage', group: 0, location: 4},
     {name: 'splatOpacities', type: 'read-only-storage', group: 0, location: 5},
     {name: 'splatRowIndices', type: 'read-only-storage', group: 0, location: 6},
-    {name: 'splatSortedIndices', type: 'read-only-storage', group: 0, location: 7}
+    {name: 'splatSortedIndices', type: 'read-only-storage', group: 0, location: 7},
+    {name: 'splatSphericalHarmonics', type: 'read-only-storage', group: 0, location: 8}
   ]
 } satisfies ShaderLayout;
 
@@ -99,6 +104,8 @@ struct SplatUniforms {
   sortedOffset : u32,
   exposure : f32,
   toneMapping : u32,
+  cameraPosition : vec3<f32>,
+  sphericalHarmonicsDegree : u32,
 };
 
 @group(0) @binding(auto) var<uniform> splat : SplatUniforms;
@@ -107,6 +114,7 @@ struct SplatFragmentInputs {
   @builtin(position) position : vec4<f32>,
   @location(0) gaussianCoordinate : vec2<f32>,
   @location(1) color : vec4<f32>,
+  @location(2) @interpolate(flat) sourceRowIndex : i32,
 };
 
 fn getSplatScreenPosition(position : vec3<f32>) -> vec2<f32> {
@@ -138,7 +146,8 @@ fn projectSplatVertex(
   scale : vec3<f32>,
   rotation : vec4<f32>,
   color : vec4<f32>,
-  opacity : f32
+  opacity : f32,
+  rowIndex : u32
 ) -> SplatFragmentInputs {
   let corners = array<vec2<f32>, 4>(
     vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0),
@@ -179,6 +188,7 @@ fn projectSplatVertex(
   var output : SplatFragmentInputs;
   output.position = vec4<f32>(clipCenter.xy + clipOffset, clipCenter.z, clipCenter.w);
   output.gaussianCoordinate = corner * splat.gaussianSupportRadius;
+  output.sourceRowIndex = i32(rowIndex);
   let visible = select(0.0, 1.0, maximumAxisLength * splat.radiusScale >= splat.screenSizeCutoffPixels);
   output.color = vec4<f32>(color.rgb, color.a * opacity * splat.alphaScale * visible);
   return output;
@@ -188,7 +198,7 @@ fn projectSplatVertex(
 fn fragmentMain(input : SplatFragmentInputs) -> @location(0) vec4<f32> {
   let gaussianWeight = exp(-0.5 * dot(input.gaussianCoordinate, input.gaussianCoordinate));
   let alpha = input.color.a * gaussianWeight;
-  if (alpha < splat.alphaCutoff) {
+  if (alpha <= 0.0 || alpha < splat.alphaCutoff) {
     discard;
   }
   let linearColor = max(input.color.rgb * splat.exposure, vec3<f32>(0.0));
@@ -212,6 +222,62 @@ ${SPLAT_WGSL_SHARED}
 @group(0) @binding(auto) var<storage, read> splatOpacities : array<f32>;
 @group(0) @binding(auto) var<storage, read> splatRowIndices : array<u32>;
 @group(0) @binding(auto) var<storage, read> splatSortedIndices : array<u32>;
+@group(0) @binding(auto) var<storage, read> splatSphericalHarmonics : array<f32>;
+
+fn getSplatSphericalHarmonicBasis(basisIndex : u32, direction : vec3<f32>) -> f32 {
+  let directionXX = direction.x * direction.x;
+  let directionYY = direction.y * direction.y;
+  let directionZZ = direction.z * direction.z;
+  switch basisIndex {
+    case 0u: { return -0.4886025119029199 * direction.y; }
+    case 1u: { return 0.4886025119029199 * direction.z; }
+    case 2u: { return -0.4886025119029199 * direction.x; }
+    case 3u: { return 1.0925484305920792 * direction.x * direction.y; }
+    case 4u: { return -1.0925484305920792 * direction.y * direction.z; }
+    case 5u: { return 0.31539156525252005 * (2.0 * directionZZ - directionXX - directionYY); }
+    case 6u: { return -1.0925484305920792 * direction.x * direction.z; }
+    case 7u: { return 0.5462742152960396 * (directionXX - directionYY); }
+    case 8u: { return -0.5900435899266435 * direction.y * (3.0 * directionXX - directionYY); }
+    case 9u: { return 2.890611442640554 * direction.x * direction.y * direction.z; }
+    case 10u: { return -0.4570457994644658 * direction.y * (4.0 * directionZZ - directionXX - directionYY); }
+    case 11u: { return 0.3731763325901154 * direction.z * (2.0 * directionZZ - 3.0 * directionXX - 3.0 * directionYY); }
+    case 12u: { return -0.4570457994644658 * direction.x * (4.0 * directionZZ - directionXX - directionYY); }
+    case 13u: { return 1.445305721320277 * direction.z * (directionXX - directionYY); }
+    case 14u: { return -0.5900435899266435 * direction.x * (directionXX - 3.0 * directionYY); }
+    default: { return 0.0; }
+  }
+}
+
+fn evaluateSplatSphericalHarmonics(
+  color : vec3<f32>,
+  position : vec3<f32>,
+  rowIndex : u32
+) -> vec3<f32> {
+  let coefficientCount = arrayLength(&splatSphericalHarmonics) /
+    max(arrayLength(&splatOpacities), 1u);
+  let requestedBasisCount =
+    (splat.sphericalHarmonicsDegree + 1u) * (splat.sphericalHarmonicsDegree + 1u) - 1u;
+  let basisCount = min(coefficientCount / 3u, requestedBasisCount);
+  let direction = position - splat.cameraPosition;
+  let directionLength = length(direction);
+  if (basisCount == 0u || directionLength <= 0.000001) {
+    return color;
+  }
+
+  let normalizedDirection = direction / directionLength;
+  var evaluatedColor = color;
+  for (var basisIndex = 0u; basisIndex < basisCount; basisIndex++) {
+    let coefficientOffset = rowIndex * coefficientCount + basisIndex * 3u;
+    let coefficients = vec3<f32>(
+      splatSphericalHarmonics[coefficientOffset],
+      splatSphericalHarmonics[coefficientOffset + 1u],
+      splatSphericalHarmonics[coefficientOffset + 2u]
+    );
+    evaluatedColor += coefficients *
+      getSplatSphericalHarmonicBasis(basisIndex, normalizedDirection);
+  }
+  return evaluatedColor;
+}
 
 @vertex
 fn vertexMain(
@@ -238,9 +304,11 @@ fn vertexMain(
       f32((packedColor >> 16u) & 255u), f32((packedColor >> 24u) & 255u)
     ) / 255.0;
   }
-  let sourceRowIndex = splatRowIndices[rowIndex];
-  _ = sourceRowIndex;
-  return projectSplatVertex(vertexIndex, position, scale, splatRotations[rowIndex], color, splatOpacities[rowIndex]);
+  color = vec4<f32>(evaluateSplatSphericalHarmonics(color.rgb, position, rowIndex), color.a);
+  return projectSplatVertex(
+    vertexIndex, position, scale, splatRotations[rowIndex], color,
+    splatOpacities[rowIndex], splatRowIndices[rowIndex]
+  );
 }
 `;
 
@@ -260,8 +328,10 @@ struct SplatVertexInputs {
 
 @vertex
 fn vertexMain(input : SplatVertexInputs) -> SplatFragmentInputs {
-  _ = input.rowIndices;
-  return projectSplatVertex(input.vertexIndex, input.positions, input.scales, input.rotations, input.colors, input.opacities);
+  return projectSplatVertex(
+    input.vertexIndex, input.positions, input.scales, input.rotations,
+    input.colors, input.opacities, input.rowIndices
+  );
 }
 `;
 
@@ -291,10 +361,13 @@ layout(std140) uniform splatUniforms {
   uint sortedOffset;
   float exposure;
   uint toneMapping;
+  vec3 cameraPosition;
+  uint sphericalHarmonicsDegree;
 } splat;
 
 out vec2 gaussianCoordinate;
 out vec4 splatColor;
+flat out int sourceRowIndex;
 
 vec2 getSplatScreenPosition(vec3 position) {
   vec4 clipPosition = splat.modelViewProjectionMatrix * vec4(position, 1.0);
@@ -354,6 +427,7 @@ void main() {
   vec2 clipOffset = vec2(screenOffset.x * 2.0 / max(splat.viewportSize.x, 1.0), -screenOffset.y * 2.0 / max(splat.viewportSize.y, 1.0)) * clipCenter.w;
   gl_Position = vec4(clipCenter.xy + clipOffset, clipCenter.z, clipCenter.w);
   gaussianCoordinate = corner * splat.gaussianSupportRadius;
+  sourceRowIndex = int(rowIndices);
   float visible = maximumAxisLength * splat.radiusScale >= splat.screenSizeCutoffPixels ? 1.0 : 0.0;
   splatColor = vec4(colors.rgb, colors.a * opacities * splat.alphaScale * visible);
 }
@@ -378,16 +452,19 @@ layout(std140) uniform splatUniforms {
   uint sortedOffset;
   float exposure;
   uint toneMapping;
+  vec3 cameraPosition;
+  uint sphericalHarmonicsDegree;
 } splat;
 
 in vec2 gaussianCoordinate;
 in vec4 splatColor;
+flat in int sourceRowIndex;
 out vec4 fragmentColor;
 
 void main() {
   float gaussianWeight = exp(-0.5 * dot(gaussianCoordinate, gaussianCoordinate));
   float alpha = splatColor.a * gaussianWeight;
-  if (alpha < splat.alphaCutoff) {
+  if (alpha <= 0.0 || alpha < splat.alphaCutoff) {
     discard;
   }
   vec3 linearColor = max(splatColor.rgb * splat.exposure, vec3(0.0));

@@ -25,6 +25,9 @@ type SplatRecordBatchOptions = {
   opacities?: readonly number[];
   colors?: readonly number[];
   sphericalHarmonicCoefficients?: readonly number[];
+  higherOrderSphericalHarmonicCoefficients?: readonly number[];
+  semanticIds?: readonly number[];
+  semanticColumnName?: string;
   scaleEncoding?: 'linear' | 'log';
   scaleEncodings?: readonly ('linear' | 'log' | undefined)[];
   opacityEncoding?: 'linear' | 'logit';
@@ -115,6 +118,116 @@ test('makeGPUSplatDataFromArrow preserves real GraphDECO Train HDR and negative 
   );
 
   batch.destroy();
+  t.end();
+});
+
+test('makeGPUSplatDataFromArrow preserves higher spherical harmonics and semantic source rows', async t => {
+  const device = new NullDevice({});
+  const recordBatch = makeSplatRecordBatch({
+    positions: [0, 0, 0, 1, 1, 1],
+    higherOrderSphericalHarmonicCoefficients: [
+      1, 2, 3, 10, 20, 30, 100, 200, 300, -1, -2, -3, -10, -20, -30, -100, -200, -300
+    ],
+    semanticIds: [7, 42]
+  });
+  const prepared = makeGPUSplatDataFromArrow(device, recordBatch)[0]!;
+  const expectedCoefficients = [
+    1, 10, 100, 2, 20, 200, 3, 30, 300, -1, -10, -100, -2, -20, -200, -3, -30, -300
+  ];
+
+  t.equal(prepared.sphericalHarmonicsDegree, 1, 'infers complete first-order spherical harmonics');
+  t.equal(
+    prepared.sphericalHarmonics?.format,
+    'float32',
+    'retains independently owned coefficients'
+  );
+  t.deepEqual(
+    Array.from(prepared.source.sphericalHarmonics ?? []),
+    expectedCoefficients,
+    'reorders channel-major GraphDECO columns into basis-major RGB source rows'
+  );
+  t.deepEqual(
+    Array.from(prepared.source.semanticIds ?? []),
+    [7, 42],
+    'preserves compact semantic class identifiers'
+  );
+  const coefficientBytes = await prepared.sphericalHarmonics?.data[0].buffer.readAsync();
+  if (coefficientBytes) {
+    t.deepEqual(
+      Array.from(
+        new Float32Array(
+          coefficientBytes.buffer,
+          coefficientBytes.byteOffset,
+          coefficientBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+        )
+      ),
+      expectedCoefficients,
+      'uploads directional radiance without collapsing Arrow source boundaries'
+    );
+  }
+
+  prepared.destroy();
+  t.end();
+});
+
+test('makeGPUSplatDataFromArrow caps higher-order bands and honors explicit semantic columns', t => {
+  const device = new NullDevice({});
+  const recordBatch = makeSplatRecordBatch({
+    positions: [0, 0, 0],
+    higherOrderSphericalHarmonicCoefficients: Array.from(
+      {length: 24},
+      (_, coefficientIndex) => coefficientIndex + 1
+    ),
+    semanticIds: [13],
+    semanticColumnName: 'custom_category'
+  });
+  const prepared = makeGPUSplatDataFromArrow(device, recordBatch, {
+    maxSphericalHarmonicsDegree: 1,
+    semanticColumn: 'custom_category'
+  })[0]!;
+
+  t.equal(prepared.sphericalHarmonicsDegree, 1, 'caps second-order source coefficients on upload');
+  t.deepEqual(
+    Array.from(prepared.source.sphericalHarmonics ?? []),
+    [1, 9, 17, 2, 10, 18, 3, 11, 19],
+    'retains first-order RGB basis triples from each original channel block'
+  );
+  t.deepEqual(
+    Array.from(prepared.source.semanticIds ?? []),
+    [13],
+    'reads an explicitly named semantic class column'
+  );
+
+  const dcOnly = makeGPUSplatDataFromArrow(device, recordBatch, {
+    maxSphericalHarmonicsDegree: 0
+  })[0]!;
+  t.equal(dcOnly.sphericalHarmonicsDegree, 0, 'supports an explicit DC-only memory budget');
+  t.notOk(dcOnly.sphericalHarmonics, 'avoids allocating excluded higher-order coefficients');
+
+  prepared.destroy();
+  dcOnly.destroy();
+  t.end();
+});
+
+test('makeGPUSplatDataFromArrow rejects nullable semantic identifiers', t => {
+  const device = new NullDevice({});
+  const source = makeSplatRecordBatch({
+    positions: [0, 0, 0, 1, 1, 1],
+    semanticIds: [7, 0]
+  });
+  const semanticIds = arrow.vectorFromArray([7, null], new arrow.Uint32());
+  const recordBatch: GPUSplatArrowRecordBatchLike = {
+    numRows: source.numRows,
+    schema: source.schema,
+    getChild: columnName =>
+      columnName === 'semantic_id' ? semanticIds : source.getChild(columnName)
+  };
+
+  t.throws(
+    () => makeGPUSplatDataFromArrow(device, recordBatch),
+    /semantic identifiers cannot be null/,
+    'never fabricates class zero for an unlabeled Arrow source row'
+  );
   t.end();
 });
 
@@ -369,6 +482,53 @@ test('makeGPUSplatDataFromArrowStream preserves mixed sources and progressive so
   t.end();
 });
 
+test('makeGPUSplatDataFromArrowStream allocates record batches lazily and honors early cancellation', async t => {
+  const device = new NullDevice({});
+  const allocatedBuffers: Array<ReturnType<typeof device.createBuffer>> = [];
+  const createBuffer = device.createBuffer.bind(device);
+  device.createBuffer = properties => {
+    const buffer = createBuffer(properties);
+    allocatedBuffers.push(buffer);
+    return buffer;
+  };
+  const firstRecordBatch = makeSplatRecordBatch({
+    positions: [0, 0, 0],
+    scaleEncoding: 'linear'
+  });
+  const secondRecordBatch = makeSplatRecordBatch({
+    positions: [1, 1, 1, 2, 2, 2],
+    scaleEncoding: 'linear'
+  });
+  const source = new arrow.Table([firstRecordBatch, secondRecordBatch]);
+  const yieldedBatches: GPUSplatData[] = [];
+
+  for await (const batch of makeGPUSplatDataFromArrowStream(device, [source], {
+    sourceBatchIndex: 6,
+    rowIndexBase: 12
+  })) {
+    yieldedBatches.push(batch);
+    break;
+  }
+
+  t.equal(yieldedBatches.length, 1, 'cancels the stream after transferring one caller-owned batch');
+  t.deepEqual(
+    [yieldedBatches[0]?.sourceBatchIndex, yieldedBatches[0]?.rowIndexBase],
+    [6, 12],
+    'preserves source identity before the consumer cancels'
+  );
+  t.equal(
+    allocatedBuffers.length,
+    Object.keys(yieldedBatches[0]?.table.batches[0].gpuData ?? {}).length,
+    'does not allocate unrequested record-batch GPU buffers before yielding'
+  );
+  yieldedBatches[0]?.destroy();
+  t.ok(
+    allocatedBuffers.every(buffer => buffer.destroyed),
+    'early cancellation leaves no inaccessible or leaked prepared-batch allocations'
+  );
+  t.end();
+});
+
 test('makeGPUSplatDataFromArrowStream preserves structural cross-realm Arrow batch boundaries', async t => {
   const device = new NullDevice({});
   const firstRecordBatch = makeSplatRecordBatch({
@@ -489,7 +649,24 @@ function makeSplatRecordBatch(options: SplatRecordBatchOptions): arrow.RecordBat
   for (let componentIndex = 0; componentIndex < 4; componentIndex++) {
     addColumn(`rot_${componentIndex}`, makeScalarVector(rotations, componentIndex, 4, rowCount));
   }
+  const higherOrderCoefficients = options.higherOrderSphericalHarmonicCoefficients;
+  if (higherOrderCoefficients) {
+    const coefficientCount = higherOrderCoefficients.length / rowCount;
+    for (let coefficientIndex = 0; coefficientIndex < coefficientCount; coefficientIndex++) {
+      addColumn(
+        `f_rest_${coefficientIndex}`,
+        makeScalarVector(higherOrderCoefficients, coefficientIndex, coefficientCount, rowCount),
+        'coefficient'
+      );
+    }
+  }
   addColumn('opacity', arrow.makeVector(Float32Array.from(opacities)), options.opacityEncoding);
+  if (options.semanticIds) {
+    addColumn(
+      options.semanticColumnName ?? 'semantic_id',
+      arrow.makeVector(Uint32Array.from(options.semanticIds))
+    );
+  }
 
   const recordBatch = new arrow.Table(new arrow.Schema(fields), columns).batches[0];
   if (!recordBatch) {

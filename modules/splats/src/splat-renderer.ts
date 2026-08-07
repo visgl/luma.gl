@@ -5,6 +5,7 @@
 import {
   Buffer,
   type BufferLayout,
+  type CompareFunction,
   type CommandEncoder,
   type Device,
   type RenderPass
@@ -19,6 +20,11 @@ import {
 } from '@luma.gl/tables';
 import {GPUSplatData} from './splat-data';
 import {projectSplatCovarianceToScreen} from './splat-covariance';
+import {acceptsSplatSemantic, type SplatSemanticFilter} from './splat-filter';
+import {
+  evaluateSplatSphericalHarmonics,
+  type SplatSphericalHarmonicsDegree
+} from './splat-spherical-harmonics';
 import {
   sortSplatReferences,
   SPLAT_TILE_SIZE_PIXELS,
@@ -44,6 +50,12 @@ export type SplatRendererProps = {
   modelViewProjectionMatrix?: ArrayLike<number>;
   /** Drawing-buffer width and height in physical pixels. */
   viewportSize?: readonly [number, number];
+  /** World-space camera location used for view-dependent spherical-harmonic radiance. */
+  cameraPosition?: readonly [number, number, number];
+  /** Highest spherical-harmonic degree evaluated for prepared source coefficients. */
+  sphericalHarmonicsDegree?: SplatSphericalHarmonicsDegree;
+  /** Optional semantic classes or application-owned predicate used to exclude source rows. */
+  semanticFilter?: SplatSemanticFilter;
   /** Camera-dependent depth ordering strategy. Defaults to `global`. */
   sortMode?: SplatSortMode;
   /** Minimum fragment opacity retained after Gaussian attenuation. */
@@ -68,6 +80,23 @@ export type SplatRendererProps = {
   exposure?: number;
   /** SDR highlight compression, automatically enabled for Float32 colors on SDR targets. */
   toneMapping?: 'none' | 'reinhard';
+  /** Depth comparison against opaque meshes already recorded into the same render pass. */
+  depthCompare?: CompareFunction;
+  /** Whether transparent splats update the shared mesh depth buffer. Defaults to `false`. */
+  depthWriteEnabled?: boolean;
+};
+
+/** Application-owned opaque or transparent mesh compatible with an existing render pass. */
+export type SplatMeshRenderable = {
+  draw(renderPass: RenderPass): boolean | void;
+};
+
+/** Ordered scene integration points surrounding depth-tested Gaussian splat rendering. */
+export type SplatMixedRenderOptions = {
+  /** Opaque meshes drawn first so their shared depth buffer occludes farther splats. */
+  opaqueMeshes?: readonly SplatMeshRenderable[];
+  /** Additional transparent meshes composited after the globally sorted splat runs. */
+  transparentMeshes?: readonly SplatMeshRenderable[];
 };
 
 /** Renderer diagnostics aggregated across all caller-owned source batches. */
@@ -95,6 +124,9 @@ export type SplatRendererStats = {
 type ResolvedSplatRendererProps = {
   modelViewProjectionMatrix: SplatUniforms['modelViewProjectionMatrix'];
   viewportSize: [number, number];
+  cameraPosition: [number, number, number];
+  sphericalHarmonicsDegree: SplatSphericalHarmonicsDegree;
+  semanticFilter?: SplatSemanticFilter;
   sortMode: SplatSortMode;
   alphaCutoff: number;
   screenSizeCutoffPixels: number;
@@ -105,9 +137,12 @@ type ResolvedSplatRendererProps = {
   alphaScale: number;
   exposure: number;
   toneMapping: 'none' | 'reinhard';
+  depthCompare: CompareFunction;
+  depthWriteEnabled: boolean;
 };
 
-type SplatDrawRun = {
+/** Borrowed batch-local draw run and optional WebGPU sorted-index allocation. */
+export type SplatDrawRun = {
   batchIndex: number;
   rowIndices: Uint32Array;
   indexBuffer?: Buffer;
@@ -184,10 +219,15 @@ export class SplatRenderer {
 
   private readonly shaderInputs = new ShaderInputs<{splat: SplatUniforms}>({splat: splatUniforms});
   private readonly cachedReferences: Array<Array<SplatSortReference | undefined>> = [];
+  private readonly cachedBatchRevisions: number[] = [];
+  private readonly evaluatedColorBuffers: Array<Buffer | undefined> = [];
+  private readonly opacityMaskBuffers: Array<Buffer | undefined> = [];
   private drawRuns: SplatDrawRun[] = [];
   private placeholderIndexBuffer?: Buffer;
+  private placeholderSphericalHarmonicsBuffer?: Buffer;
   private requiresUpdate = true;
   private requiresUniformUpdate = false;
+  private requiresWebGLSourceUpdate = false;
   private hasExplicitToneMapping = false;
   private isDestroyed = false;
 
@@ -197,6 +237,9 @@ export class SplatRenderer {
     this.props = {
       modelViewProjectionMatrix: toSplatMatrix(props.modelViewProjectionMatrix),
       viewportSize: [...(props.viewportSize ?? [1, 1])],
+      cameraPosition: [...(props.cameraPosition ?? [0, 0, 0])],
+      sphericalHarmonicsDegree: props.sphericalHarmonicsDegree ?? 3,
+      semanticFilter: props.semanticFilter,
       sortMode: props.sortMode ?? 'global',
       alphaCutoff: props.alphaCutoff ?? props.opacityThreshold ?? 1 / 255,
       screenSizeCutoffPixels: props.screenSizeCutoffPixels ?? 0,
@@ -206,7 +249,9 @@ export class SplatRenderer {
       radiusScale: props.radiusScale ?? props.pointSize ?? 1,
       alphaScale: props.alphaScale ?? 1,
       exposure: props.exposure ?? 1,
-      toneMapping: props.toneMapping ?? 'none'
+      toneMapping: props.toneMapping ?? 'none',
+      depthCompare: props.depthCompare ?? 'less-equal',
+      depthWriteEnabled: props.depthWriteEnabled ?? false
     };
     this.hasExplicitToneMapping = props.toneMapping !== undefined;
     this.updateShaderInputs();
@@ -235,6 +280,9 @@ export class SplatRenderer {
     const borrowedBatch = createBorrowedSplatBatch(data, this.device.type === 'webgpu');
     this.batches.push(data);
     this.cachedReferences.push([]);
+    this.cachedBatchRevisions.push(data.revision);
+    this.evaluatedColorBuffers.push(undefined);
+    this.opacityMaskBuffers.push(undefined);
     if (
       !this.hasExplicitToneMapping &&
       data.colors.format === 'float32x4' &&
@@ -250,6 +298,7 @@ export class SplatRenderer {
       this.model = this.createModel(this.table);
     }
     this.requiresUpdate = true;
+    this.requiresWebGLSourceUpdate = this.device.type !== 'webgpu';
   }
 
   /** Updates camera, sorting, visibility, and styling controls in place. */
@@ -281,6 +330,20 @@ export class SplatRenderer {
       !areSplatArrayValuesEqual(this.props.viewportSize, props.viewportSize)
     ) {
       this.setResolvedProp('viewportSize', [...props.viewportSize]);
+    }
+    if (
+      props.cameraPosition !== undefined &&
+      !areSplatArrayValuesEqual(this.props.cameraPosition, props.cameraPosition)
+    ) {
+      this.setResolvedProp('cameraPosition', [...props.cameraPosition]);
+    }
+    if (props.sphericalHarmonicsDegree !== undefined) {
+      this.setResolvedProp('sphericalHarmonicsDegree', props.sphericalHarmonicsDegree);
+    }
+    if ('semanticFilter' in props && !Object.is(this.props.semanticFilter, props.semanticFilter)) {
+      this.props.semanticFilter = props.semanticFilter;
+      this.requiresUpdate = true;
+      this.requiresWebGLSourceUpdate = this.device.type !== 'webgpu';
     }
     if (props.sortMode !== undefined) {
       this.setResolvedProp('sortMode', props.sortMode);
@@ -319,6 +382,19 @@ export class SplatRenderer {
       this.hasExplicitToneMapping = true;
       this.setResolvedProp('toneMapping', props.toneMapping);
     }
+    if (
+      (props.depthCompare !== undefined && props.depthCompare !== this.props.depthCompare) ||
+      (props.depthWriteEnabled !== undefined &&
+        props.depthWriteEnabled !== this.props.depthWriteEnabled)
+    ) {
+      this.props.depthCompare = props.depthCompare ?? this.props.depthCompare;
+      this.props.depthWriteEnabled = props.depthWriteEnabled ?? this.props.depthWriteEnabled;
+      this.model?.setParameters({
+        ...this.model.parameters,
+        depthCompare: this.props.depthCompare,
+        depthWriteEnabled: this.props.depthWriteEnabled
+      });
+    }
   }
 
   /** Recomputes camera-dependent ordering and flushes managed uniforms before a render pass. */
@@ -343,6 +419,64 @@ export class SplatRenderer {
     return this.draw(renderPass);
   }
 
+  /** Draws opaque meshes, depth-tested splats, and transparent overlays into one shared pass. */
+  drawMixed(renderPass: RenderPass, options: SplatMixedRenderOptions = {}): boolean {
+    this.update();
+    let drawSuccess = true;
+    let recordedDraw = false;
+    for (const mesh of options.opaqueMeshes ?? []) {
+      drawSuccess = mesh.draw(renderPass) !== false && drawSuccess;
+      recordedDraw = true;
+    }
+    if (this.sortedReferences.length > 0) {
+      drawSuccess = this.draw(renderPass) && drawSuccess;
+      recordedDraw = true;
+    }
+    for (const mesh of options.transparentMeshes ?? []) {
+      drawSuccess = mesh.draw(renderPass) !== false && drawSuccess;
+      recordedDraw = true;
+    }
+    return recordedDraw && drawSuccess;
+  }
+
+  /** Returns renderer-owned sorted runs borrowed by application-owned auxiliary render passes. */
+  getDrawRuns(): readonly SplatDrawRun[] {
+    this.update();
+    return this.drawRuns;
+  }
+
+  /** Returns the source opacity buffer or the renderer-owned WebGL semantic visibility mask. */
+  getBatchOpacityBuffer(batchIndex: number): Buffer {
+    this.update();
+    const batch = this.batches[batchIndex];
+    if (!batch) {
+      throw new Error('Unknown Gaussian splat source batch');
+    }
+    const buffer =
+      this.props.semanticFilter && this.device.type !== 'webgpu'
+        ? (this.opacityMaskBuffers[batchIndex] ?? batch.opacities.data[0].buffer)
+        : batch.opacities.data[0].buffer;
+    if (!(buffer instanceof Buffer)) {
+      throw new Error('Gaussian splat opacity requires a prepared GPU buffer');
+    }
+    return buffer;
+  }
+
+  /** Returns borrowed higher-order coefficients or the renderer-owned zero storage fallback. */
+  getBatchSphericalHarmonicsBuffer(batchIndex: number): Buffer {
+    this.update();
+    const batch = this.batches[batchIndex];
+    if (!batch) {
+      throw new Error('Unknown Gaussian splat source batch');
+    }
+    const buffer =
+      batch.sphericalHarmonics?.data[0]?.buffer ?? this.placeholderSphericalHarmonicsBuffer;
+    if (!(buffer instanceof Buffer)) {
+      throw new Error('Spherical-harmonic storage requires a WebGPU source batch');
+    }
+    return buffer;
+  }
+
   /** Returns current renderer diagnostics after refreshing camera-dependent source ordering. */
   getStats(): SplatRendererStats {
     this.update();
@@ -353,7 +487,10 @@ export class SplatRenderer {
     );
     const rendererGpuByteLength =
       (this.placeholderIndexBuffer?.byteLength ?? 0) +
+      (this.placeholderSphericalHarmonicsBuffer?.byteLength ?? 0) +
       (this.model?.tableBindingByteLength ?? 0) +
+      this.evaluatedColorBuffers.reduce((total, buffer) => total + (buffer?.byteLength ?? 0), 0) +
+      this.opacityMaskBuffers.reduce((total, buffer) => total + (buffer?.byteLength ?? 0), 0) +
       this.drawRuns.reduce((totalBytes, run) => totalBytes + (run.indexBuffer?.byteLength ?? 0), 0);
     return {
       splatCount,
@@ -385,8 +522,12 @@ export class SplatRenderer {
     this.table?.destroy();
     this.table = undefined;
     this.cachedReferences.length = 0;
+    this.cachedBatchRevisions.length = 0;
+    this.destroyWebGLSourceBuffers();
     this.placeholderIndexBuffer?.destroy();
     this.placeholderIndexBuffer = undefined;
+    this.placeholderSphericalHarmonicsBuffer?.destroy();
+    this.placeholderSphericalHarmonicsBuffer = undefined;
     this.shaderInputs.destroy();
     this.isDestroyed = true;
   }
@@ -397,6 +538,13 @@ export class SplatRenderer {
       this.placeholderIndexBuffer = this.device.createBuffer({
         id: 'splat-empty-sorted-indices',
         data: new Uint32Array(1),
+        usage: Buffer.STORAGE | Buffer.COPY_DST
+      });
+    }
+    if (isWebGPU && !this.placeholderSphericalHarmonicsBuffer) {
+      this.placeholderSphericalHarmonicsBuffer = this.device.createBuffer({
+        id: 'splat-empty-spherical-harmonics',
+        data: new Float32Array(1),
         usage: Buffer.STORAGE | Buffer.COPY_DST
       });
     }
@@ -419,7 +567,10 @@ export class SplatRenderer {
               splatColors: table.batches[0].gpuData['colors'].buffer,
               splatOpacities: table.batches[0].gpuData['opacities'].buffer,
               splatRowIndices: table.batches[0].gpuData['rowIndices'].buffer,
-              splatSortedIndices: this.placeholderIndexBuffer!
+              splatSortedIndices: this.placeholderIndexBuffer!,
+              splatSphericalHarmonics:
+                this.batches[0]?.sphericalHarmonics?.data[0]?.buffer ??
+                this.placeholderSphericalHarmonicsBuffer!
             }
           }
         : {}),
@@ -428,8 +579,8 @@ export class SplatRenderer {
       vertexCount: 4,
       topology: 'triangle-strip',
       parameters: {
-        depthWriteEnabled: false,
-        depthCompare: 'less-equal',
+        depthWriteEnabled: this.props.depthWriteEnabled,
+        depthCompare: this.props.depthCompare,
         blend: true,
         blendColorOperation: 'add',
         blendAlphaOperation: 'add',
@@ -445,9 +596,21 @@ export class SplatRenderer {
     if (this.isDestroyed) {
       return;
     }
+    for (let batchIndex = 0; batchIndex < this.batches.length; batchIndex++) {
+      const revision = this.batches[batchIndex].revision;
+      if (revision !== this.cachedBatchRevisions[batchIndex]) {
+        this.cachedBatchRevisions[batchIndex] = revision;
+        this.requiresUpdate = true;
+        this.requiresWebGLSourceUpdate = this.device.type !== 'webgpu';
+      }
+    }
     if (this.requiresUniformUpdate) {
       this.updateShaderInputs();
       this.requiresUniformUpdate = false;
+    }
+    if (this.requiresWebGLSourceUpdate) {
+      this.updateWebGLSourceBuffers();
+      this.requiresWebGLSourceUpdate = false;
     }
     if (!this.requiresUpdate) {
       return;
@@ -468,6 +631,10 @@ export class SplatRenderer {
     }
     this.props[propertyName] = value;
     this.requiresUniformUpdate = true;
+    if (propertyName === 'cameraPosition' || propertyName === 'sphericalHarmonicsDegree') {
+      this.requiresWebGLSourceUpdate = this.device.type !== 'webgpu';
+      return;
+    }
     if (
       propertyName === 'gaussianSupportRadius' ||
       propertyName === 'exposure' ||
@@ -503,7 +670,9 @@ export class SplatRenderer {
         maxScreenSpaceSplatSize: this.props.maxScreenSpaceSplatSize,
         sortedOffset: 0,
         exposure: this.props.exposure,
-        toneMapping: this.props.toneMapping === 'reinhard' ? 1 : 0
+        toneMapping: this.props.toneMapping === 'reinhard' ? 1 : 0,
+        cameraPosition: this.props.cameraPosition,
+        sphericalHarmonicsDegree: this.props.sphericalHarmonicsDegree
       }
     });
   }
@@ -521,6 +690,9 @@ export class SplatRenderer {
       const colorAlphaScale = colors instanceof Float32Array ? 1 : 1 / 255;
       const cachedBatchReferences = this.cachedReferences[batchIndex];
       for (let batchRowIndex = 0; batchRowIndex < batch.length; batchRowIndex++) {
+        if (!acceptsSplatSemantic(this.props.semanticFilter, batch, batchRowIndex)) {
+          continue;
+        }
         const opacity =
           opacities[batchRowIndex] *
           colors[batchRowIndex * 4 + 3] *
@@ -720,7 +892,10 @@ export class SplatRenderer {
         splatColors: batch.gpuData['colors'].buffer,
         splatOpacities: batch.gpuData['opacities'].buffer,
         splatRowIndices: batch.gpuData['rowIndices'].buffer,
-        splatSortedIndices: run.indexBuffer
+        splatSortedIndices: run.indexBuffer,
+        splatSphericalHarmonics:
+          this.batches[run.batchIndex].sphericalHarmonics?.data[0]?.buffer ??
+          this.placeholderSphericalHarmonicsBuffer!
       });
       this.model.setInstanceCount(run.rowIndices.length);
       drawSuccess = this.model.draw(renderPass) && drawSuccess;
@@ -742,8 +917,18 @@ export class SplatRenderer {
       if (!batch) {
         continue;
       }
+      const evaluatedColorBuffer = this.evaluatedColorBuffers[run.batchIndex];
       this.model.setAttributes(
-        Object.fromEntries(Object.entries(batch.gpuData).map(([name, data]) => [name, data.buffer]))
+        Object.fromEntries(
+          Object.entries(batch.gpuData).map(([name, data]) => [
+            name,
+            name === 'colors' && this.props.sphericalHarmonicsDegree > 0 && evaluatedColorBuffer
+              ? evaluatedColorBuffer
+              : name === 'opacities'
+                ? this.getBatchOpacityBuffer(run.batchIndex)
+                : data.buffer
+          ])
+        )
       );
       this.model.setInstanceCount(batch.numRows);
       drawSuccess = this.model.draw(renderPass) && drawSuccess;
@@ -760,6 +945,8 @@ export class SplatRenderer {
     this.table = undefined;
     this.batches.length = 0;
     this.cachedReferences.length = 0;
+    this.cachedBatchRevisions.length = 0;
+    this.destroyWebGLSourceBuffers();
     for (const batch of batches) {
       this.appendData(batch);
     }
@@ -771,6 +958,101 @@ export class SplatRenderer {
       run.indexBuffer?.destroy();
     }
     this.drawRuns = [];
+  }
+
+  private updateWebGLSourceBuffers(): void {
+    if (this.device.type === 'webgpu') {
+      return;
+    }
+    for (const [batchIndex, batch] of this.batches.entries()) {
+      const coefficients = batch.source.sphericalHarmonics;
+      if (coefficients && this.props.sphericalHarmonicsDegree > 0) {
+        this.updateWebGLSphericalHarmonicColors(batchIndex, batch, coefficients);
+      }
+      if (this.props.semanticFilter) {
+        const opacities = new Float32Array(batch.source.opacities);
+        for (let rowIndex = 0; rowIndex < batch.length; rowIndex++) {
+          if (!acceptsSplatSemantic(this.props.semanticFilter, batch, rowIndex)) {
+            opacities[rowIndex] = 0;
+          }
+        }
+        const existingBuffer = this.opacityMaskBuffers[batchIndex];
+        if (existingBuffer) {
+          existingBuffer.write(opacities);
+        } else {
+          this.opacityMaskBuffers[batchIndex] = this.device.createBuffer({
+            id: `splat-filtered-opacities-${batch.sourceBatchIndex}`,
+            ...(opacities.byteLength > 0
+              ? {data: opacities}
+              : {byteLength: Float32Array.BYTES_PER_ELEMENT}),
+            usage: Buffer.VERTEX | Buffer.COPY_DST
+          });
+        }
+      }
+    }
+  }
+
+  private updateWebGLSphericalHarmonicColors(
+    batchIndex: number,
+    batch: GPUSplatData,
+    coefficients: Float32Array
+  ): void {
+    const sourceColors = batch.source.colors;
+    const colors =
+      sourceColors instanceof Float32Array
+        ? new Float32Array(sourceColors)
+        : new Uint8Array(sourceColors);
+    const coefficientCount = batch.length > 0 ? coefficients.length / batch.length : 0;
+    const degree =
+      this.props.sphericalHarmonicsDegree < batch.sphericalHarmonicsDegree
+        ? this.props.sphericalHarmonicsDegree
+        : batch.sphericalHarmonicsDegree;
+    for (let rowIndex = 0; rowIndex < batch.length; rowIndex++) {
+      const colorOffset = rowIndex * 4;
+      const positionOffset = rowIndex * 3;
+      const sourceColorScale = sourceColors instanceof Float32Array ? 1 : 1 / 255;
+      const color = evaluateSplatSphericalHarmonics(
+        [
+          sourceColors[colorOffset] * sourceColorScale,
+          sourceColors[colorOffset + 1] * sourceColorScale,
+          sourceColors[colorOffset + 2] * sourceColorScale
+        ],
+        coefficients.subarray(rowIndex * coefficientCount, (rowIndex + 1) * coefficientCount),
+        [
+          batch.source.positions[positionOffset] - this.props.cameraPosition[0],
+          batch.source.positions[positionOffset + 1] - this.props.cameraPosition[1],
+          batch.source.positions[positionOffset + 2] - this.props.cameraPosition[2]
+        ],
+        degree
+      );
+      for (let colorComponentIndex = 0; colorComponentIndex < 3; colorComponentIndex++) {
+        colors[colorOffset + colorComponentIndex] =
+          colors instanceof Float32Array
+            ? color[colorComponentIndex]
+            : Math.round(Math.min(Math.max(color[colorComponentIndex], 0), 1) * 255);
+      }
+    }
+    const existingBuffer = this.evaluatedColorBuffers[batchIndex];
+    if (existingBuffer) {
+      existingBuffer.write(colors);
+    } else {
+      this.evaluatedColorBuffers[batchIndex] = this.device.createBuffer({
+        id: `splat-evaluated-colors-${batch.sourceBatchIndex}`,
+        ...(colors.byteLength > 0 ? {data: colors} : {byteLength: Float32Array.BYTES_PER_ELEMENT}),
+        usage: Buffer.VERTEX | Buffer.COPY_DST
+      });
+    }
+  }
+
+  private destroyWebGLSourceBuffers(): void {
+    for (const buffer of this.evaluatedColorBuffers) {
+      buffer?.destroy();
+    }
+    for (const buffer of this.opacityMaskBuffers) {
+      buffer?.destroy();
+    }
+    this.evaluatedColorBuffers.length = 0;
+    this.opacityMaskBuffers.length = 0;
   }
 }
 

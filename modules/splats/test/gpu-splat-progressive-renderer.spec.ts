@@ -66,6 +66,24 @@ test('GPUSplatGraphRenderer progressively sorts preserved batches with one preco
       'does not repeat GPU projection or global sorting after streaming and camera motion stop'
     );
 
+    firstBatch.updateRows(0, {positions: new Float32Array([0, 0, 0.98])});
+    await verifyProgressiveFrame(t, device, renderer, [0, 4, 1, 2, 3, 5]);
+    t.equal(
+      renderer.compiledGraph,
+      initialCompiledGraph,
+      'reprojects dynamic source updates without rebuilding the compiled command graph'
+    );
+    t.equal(
+      firstBatch.positions.data[0].buffer,
+      sourceBuffers[0],
+      'retains the original dynamically updated source allocation'
+    );
+    t.equal(
+      renderer.encode(device.commandEncoder),
+      undefined,
+      'returns to an unchanged graph after encoding the updated source revision'
+    );
+
     renderer.destroy();
     for (const sourceBuffer of sourceBuffers) {
       t.notOk(sourceBuffer.destroyed, 'destroying graph slots never destroys borrowed source data');

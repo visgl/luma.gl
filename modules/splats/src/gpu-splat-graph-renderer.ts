@@ -29,7 +29,14 @@ import type {SplatRendererProps, SplatRendererStats} from './splat-renderer';
 import type {SplatSortMode} from './splat-sort';
 
 /** Camera, styling, borrowed data, and canvas clearing for graph-native Gaussian rendering. */
-export type GPUSplatGraphRendererProps = SplatRendererProps & {
+export type GPUSplatGraphRendererProps = Omit<
+  SplatRendererProps,
+  | 'cameraPosition'
+  | 'sphericalHarmonicsDegree'
+  | 'semanticFilter'
+  | 'depthCompare'
+  | 'depthWriteEnabled'
+> & {
   /** Color used when the graph opens its single default-framebuffer render pass. */
   clearColor?: [number, number, number, number];
   /** Optional final row count used to reserve one persistent progressively populated graph. */
@@ -115,6 +122,7 @@ export class GPUSplatGraphRenderer {
   private readonly expectedBatchCount?: number;
   private readonly ownedBuffers: Buffer[] = [];
   private readonly batchUniforms: Buffer[] = [];
+  private readonly cachedBatchRevisions: number[] = [];
   private model?: Model;
   private sortedValuesBuffer?: Buffer;
   private requiresGraphRebuild = true;
@@ -199,6 +207,7 @@ export class GPUSplatGraphRenderer {
       throw new Error('GPUSplatGraphRenderer requires live data prepared on its own device');
     }
     this.batches.push(batch);
+    this.cachedBatchRevisions.push(batch.revision);
     if (
       !this.hasExplicitToneMapping &&
       batch.colors.format === 'float32x4' &&
@@ -217,7 +226,7 @@ export class GPUSplatGraphRenderer {
   }
 
   /** Updates camera or styling uniforms in O(batch count), never O(splat count). */
-  setProps(props: Partial<SplatRendererProps>): void {
+  setProps(props: Partial<GPUSplatGraphRendererProps>): void {
     if (props.data !== undefined) {
       const replacementBatches = normalizeSplatGraphBatches(props.data);
       const matchesRetainedBatches =
@@ -226,6 +235,7 @@ export class GPUSplatGraphRenderer {
       if (!matchesRetainedBatches) {
         this.releaseCompiledGraph();
         this.batches.length = 0;
+        this.cachedBatchRevisions.length = 0;
         for (const batch of replacementBatches) {
           this.appendData(batch);
         }
@@ -289,7 +299,17 @@ export class GPUSplatGraphRenderer {
    * `undefined`, ensuring a stationary camera never repeatedly projects or sorts every source row.
    */
   encode(commandEncoder: CommandEncoder): GPUCommandGraphEncoding | undefined {
-    if (this.isDestroyed || !this.requiresEncoding || this.getRowCount() === 0) {
+    if (this.isDestroyed || this.getRowCount() === 0) {
+      return undefined;
+    }
+    for (let batchIndex = 0; batchIndex < this.batches.length; batchIndex++) {
+      const revision = this.batches[batchIndex].revision;
+      if (revision !== this.cachedBatchRevisions[batchIndex]) {
+        this.cachedBatchRevisions[batchIndex] = revision;
+        this.requiresEncoding = true;
+      }
+    }
+    if (!this.requiresEncoding) {
       return undefined;
     }
     if (this.requiresGraphRebuild) {
@@ -347,6 +367,7 @@ export class GPUSplatGraphRenderer {
     }
     this.releaseCompiledGraph();
     this.drawCommands.destroy();
+    this.cachedBatchRevisions.length = 0;
     this.isDestroyed = true;
   }
 
