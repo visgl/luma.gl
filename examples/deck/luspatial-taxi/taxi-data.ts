@@ -3,27 +3,47 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  PAUL_TAYLOR_POINT_COUNT,
   makeSyntheticTaxiPositions,
-  makeTaxiZones
+  makeTaxiZones,
+  PAUL_TAYLOR_POINT_COUNT
 } from '../../showcase/billion-point-spatial-atlas/spatial-atlas-data';
+import {
+  assertLongitudeLatitudeTaxiResidentWindow,
+  getSpatialAtlasTaxiSourceRow
+} from '../../showcase/billion-point-spatial-atlas/taxi-atlas-data';
+import {
+  getTaxiLongitudeLatitude,
+  projectTaxiLongitudeLatitude,
+  TAXI_LOCAL_LATITUDE_SCALE,
+  TAXI_LOCAL_LONGITUDE_SCALE,
+  TAXI_PROJECTION_ORIGIN
+} from '../../showcase/billion-point-spatial-atlas/taxi-coordinate-space';
 import type {TaxiPointResidentWindow} from '../../showcase/billion-point-spatial-atlas/taxi-resident-window';
-import type {
-  TaxiPointSourceMetadata,
-  TaxiPointSourceTelemetry
-} from '../../showcase/billion-point-spatial-atlas/taxi-source';
+import type {TaxiPointSourceTelemetry} from '../../showcase/billion-point-spatial-atlas/taxi-source';
 
 export const TAXI_POINT_COUNT = 1_000_000;
 export const TAXI_CORPUS_POINT_COUNT = PAUL_TAYLOR_POINT_COUNT;
-export const TAXI_PROJECTION_ORIGIN = [-73.97, 40.75] as const;
 export const TAXI_GRID_SIZE = [256, 256] as const;
 
 const TAXI_GENERATION_CHUNK_SIZE = 20_000;
 const TAXI_SOURCE_BOUNDS_PADDING = 0.002;
-const LOCAL_LONGITUDE_SCALE = 8;
-const LOCAL_LATITUDE_SCALE = 9;
-const KILOMETRES_PER_DEGREE = 40_000 / 360;
-const DEGREES_TO_RADIANS = Math.PI / 180;
+
+export {
+  assertLongitudeLatitudeTaxiResidentWindow,
+  getSpatialAtlasTaxiSourceRow,
+  makeSpatialAtlasTaxiDataFromResidentWindow,
+  makeSyntheticSpatialAtlasTaxiData,
+  type SpatialAtlasTaxiData
+} from '../../showcase/billion-point-spatial-atlas/taxi-atlas-data';
+export {
+  assertLongitudeLatitudeTaxiMetadata,
+  getTaxiLocalXY,
+  getTaxiLongitudeLatitude,
+  projectTaxiLongitudeLatitude,
+  TAXI_LOCAL_LATITUDE_SCALE,
+  TAXI_LOCAL_LONGITUDE_SCALE,
+  TAXI_PROJECTION_ORIGIN
+} from '../../showcase/billion-point-spatial-atlas/taxi-coordinate-space';
 
 export type LuSpatialTaxiData = {
   pointCount: number;
@@ -104,9 +124,9 @@ function appendTaxiPositionChunk(
     const localOffset = localPointIndex * 3;
     const longitudeLatitudeOffset = (firstPointIndex + localPointIndex) * 2;
     const longitude =
-      localPositions[localOffset] / LOCAL_LONGITUDE_SCALE + TAXI_PROJECTION_ORIGIN[0];
+      localPositions[localOffset] / TAXI_LOCAL_LONGITUDE_SCALE + TAXI_PROJECTION_ORIGIN[0];
     const latitude =
-      localPositions[localOffset + 1] / LOCAL_LATITUDE_SCALE + TAXI_PROJECTION_ORIGIN[1];
+      localPositions[localOffset + 1] / TAXI_LOCAL_LATITUDE_SCALE + TAXI_PROJECTION_ORIGIN[1];
     longitudeLatitudes[longitudeLatitudeOffset] = longitude;
     longitudeLatitudes[longitudeLatitudeOffset + 1] = latitude;
     sourceBounds[0] = Math.min(sourceBounds[0], longitude);
@@ -200,13 +220,7 @@ function yieldTaxiGeneration(signal?: AbortSignal): Promise<void> {
 export function makeLuSpatialTaxiDataFromResidentWindow(
   window: TaxiPointResidentWindow
 ): LuSpatialTaxiData {
-  assertLongitudeLatitudeTaxiMetadata(window.metadata);
-  if (window.positions.length !== window.rowCount * 2) {
-    throw new Error('Taxi resident window positions must contain two values per row');
-  }
-  if (window.sourceRowIndices.length !== window.rowCount) {
-    throw new Error('Taxi resident window sourceRowIndices must align with positions');
-  }
+  assertLongitudeLatitudeTaxiResidentWindow(window);
 
   const sourceBounds = [Infinity, Infinity, -Infinity, -Infinity];
   const projectedBounds = [Infinity, Infinity, -Infinity, -Infinity];
@@ -254,47 +268,18 @@ export function makeLuSpatialTaxiDataFromResidentWindow(
   };
 }
 
-/** Rejects source-XY data until its manifest explicitly declares WGS84 longitude/latitude. */
-export function assertLongitudeLatitudeTaxiMetadata(metadata: TaxiPointSourceMetadata): void {
-  const coordinateReferenceSystem = metadata.coordinateSpace.crs?.trim().toUpperCase();
-  if (
-    coordinateReferenceSystem !== 'OGC:CRS84' &&
-    coordinateReferenceSystem !== 'CRS84' &&
-    coordinateReferenceSystem !== 'EPSG:4326' &&
-    coordinateReferenceSystem !== 'WGS84'
-  ) {
-    throw new Error(
-      'luSpatial taxi sources must explicitly declare OGC:CRS84 or WGS84/EPSG:4326 longitude/latitude coordinates'
-    );
-  }
-}
-
-/** CPU projection provider and tiny query-input companion for the adaptive luProj GPU plan. */
-export function projectTaxiLongitudeLatitude(
-  longitudeLatitude: readonly [number, number]
-): readonly [number, number] {
-  const [longitude, latitude] = longitudeLatitude;
-  const midpointLatitudeRadians = (latitude + TAXI_PROJECTION_ORIGIN[1]) * 0.5 * DEGREES_TO_RADIANS;
-  return [
-    (TAXI_PROJECTION_ORIGIN[0] - longitude) *
-      KILOMETRES_PER_DEGREE *
-      Math.cos(midpointLatitudeRadians),
-    (TAXI_PROJECTION_ORIGIN[1] - latitude) * KILOMETRES_PER_DEGREE
-  ];
-}
-
 /** Taxi-zone centers used as navigation and radius-query presets. */
 export function makeTaxiZonePresets(): readonly TaxiZonePreset[] {
   return makeTaxiZones().map(zone => {
     const localWidth = zone.bounds[2] - zone.bounds[0];
     const localHeight = zone.bounds[3] - zone.bounds[1];
-    const longitude =
-      ((zone.bounds[0] + zone.bounds[2]) * 0.5) / LOCAL_LONGITUDE_SCALE + TAXI_PROJECTION_ORIGIN[0];
-    const latitude =
-      ((zone.bounds[1] + zone.bounds[3]) * 0.5) / LOCAL_LATITUDE_SCALE + TAXI_PROJECTION_ORIGIN[1];
+    const [longitude, latitude] = getTaxiLongitudeLatitude([
+      (zone.bounds[0] + zone.bounds[2]) * 0.5,
+      (zone.bounds[1] + zone.bounds[3]) * 0.5
+    ]);
     const maximumExtent = Math.max(
-      localWidth / LOCAL_LONGITUDE_SCALE,
-      localHeight / LOCAL_LATITUDE_SCALE
+      localWidth / TAXI_LOCAL_LONGITUDE_SCALE,
+      localHeight / TAXI_LOCAL_LATITUDE_SCALE
     );
     return {
       id: zone.id,
@@ -318,10 +303,12 @@ export function getTaxiPoint(
   if (!Number.isSafeInteger(pointIndex) || pointIndex < 0 || pointIndex >= data.pointCount) {
     return null;
   }
+  const sourceRowIndex = getSpatialAtlasTaxiSourceRow(data, pointIndex);
+  if (sourceRowIndex === null) return null;
   return {
     longitude: data.longitudeLatitudes[pointIndex * 2],
     latitude: data.longitudeLatitudes[pointIndex * 2 + 1],
-    sourceRowIndex: data.sourceRowIndices?.[pointIndex] ?? pointIndex,
+    sourceRowIndex,
     sourceKind: data.sourceKind
   };
 }
