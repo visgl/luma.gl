@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {TRACE_DEPENDENCY_RECORD_WORD_LENGTH, TRACE_SPAN_RECORD_WORD_LENGTH} from './trace-data';
+import {
+  TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
+  TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
+  TRACE_SPAN_RECORD_WORD_LENGTH
+} from './trace-data';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
@@ -69,6 +73,9 @@ export type TraceCapacityContract = {
   fitsStorageBufferBindingSize: boolean;
   fitsMaxBufferSize: boolean;
   fitsDeviceLimits: boolean;
+  spanChunkCount: number;
+  largestSpanChunkByteLength: number;
+  fitsChunkedDeviceLimits: boolean;
 };
 
 /** Persistent GPU-buffer accounting independent of command-graph transient allocations. */
@@ -112,6 +119,22 @@ export function getTraceCapacityContract(
   const fitsStorageBufferBindingSize =
     largestSourceBufferByteLength <= limits.maxStorageBufferBindingSize;
   const fitsMaxBufferSize = largestSourceBufferByteLength <= limits.maxBufferSize;
+  const maximumSpanChunkByteLength = Math.min(
+    TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
+    limits.maxStorageBufferBindingSize,
+    limits.maxBufferSize
+  );
+  const spanChunkCount =
+    maximumSpanChunkByteLength > 0
+      ? Math.max(1, Math.ceil(spanBufferByteLength / maximumSpanChunkByteLength))
+      : 0;
+  const largestSpanChunkByteLength =
+    maximumSpanChunkByteLength > 0 ? Math.min(spanBufferByteLength, maximumSpanChunkByteLength) : 0;
+  const fitsChunkedDeviceLimits =
+    maximumSpanChunkByteLength >= TRACE_SPAN_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH &&
+    dependencyBufferByteLength <= limits.maxStorageBufferBindingSize &&
+    dependencyBufferByteLength <= limits.maxBufferSize &&
+    (dependencyCapacity === 0 || (fitsStorageBufferBindingSize && fitsMaxBufferSize));
   return Object.freeze({
     spanCapacity,
     dependencyCapacity,
@@ -122,7 +145,10 @@ export function getTraceCapacityContract(
     maxBufferSize: limits.maxBufferSize,
     fitsStorageBufferBindingSize,
     fitsMaxBufferSize,
-    fitsDeviceLimits: fitsStorageBufferBindingSize && fitsMaxBufferSize
+    fitsDeviceLimits: fitsStorageBufferBindingSize && fitsMaxBufferSize,
+    spanChunkCount,
+    largestSpanChunkByteLength,
+    fitsChunkedDeviceLimits
   });
 }
 

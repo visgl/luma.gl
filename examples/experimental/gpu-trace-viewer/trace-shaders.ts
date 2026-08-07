@@ -26,6 +26,20 @@ import {
 const TRACE_WORKGROUP_SIZE = 256;
 export const TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE = 64;
 
+export type TraceSpanChunkShaderProps = {
+  firstSpanIndex: number;
+  spanCount: number;
+  firstBatchIndex: number;
+  batchCount: number;
+};
+
+function getSpanChunkDeclarations(props: TraceSpanChunkShaderProps): string {
+  return `const CHUNK_FIRST_SPAN_INDEX: u32 = ${props.firstSpanIndex}u;
+const CHUNK_SPAN_COUNT: u32 = ${props.spanCount}u;
+const CHUNK_FIRST_BATCH_INDEX: u32 = ${props.firstBatchIndex}u;
+const CHUNK_BATCH_COUNT: u32 = ${props.batchCount}u;`;
+}
+
 const TRACE_SHADER_DECLARATIONS = /* wgsl */ `
 struct TraceSpan {
   start: f32,
@@ -137,6 +151,13 @@ ${TRACE_SHADER_DECLARATIONS}
 @group(0) @binding(3) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(4) var<storage, read> reachedSpans: array<u32>;
 @group(0) @binding(5) var<uniform> viewUniforms: ViewUniforms;
+struct SpanChunkUniforms {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  firstBatchIndex: u32,
+  batchCount: u32,
+};
+@group(0) @binding(6) var<uniform> spanChunk: SpanChunkUniforms;
 
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -149,7 +170,7 @@ struct VertexOutput {
   @builtin(instance_index) instanceIndex: u32
 ) -> VertexOutput {
   let sourceIndex = visibleIds[instanceIndex];
-  let span = spans[sourceIndex];
+  let span = spans[sourceIndex - spanChunk.firstSpanIndex];
   let corner = getCorner(vertexIndex);
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
@@ -523,9 +544,10 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }
 
 /** Classifies and aggregates focused candidate density without span-sized intermediate keys. */
-export function getCandidateDensityShader(): string {
+export function getCandidateDensityShader(props: TraceSpanChunkShaderProps): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
 struct TraceSpanBatch {
   firstSpanIndex: u32,
   spanCount: u32,
@@ -552,13 +574,20 @@ fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
+  let batchIndex = candidateBatchIds[workgroupId.y];
+  if (
+    batchIndex < CHUNK_FIRST_BATCH_INDEX ||
+    batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT
+  ) {
+    return;
+  }
+  let batch = spanBatches[batchIndex];
   let batchRowIndex = globalId.x;
   if (batchRowIndex >= batch.spanCount) {
     return;
   }
   let sourceIndex = batch.firstSpanIndex + batchRowIndex;
-  let span = spans[sourceIndex];
+  let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
   let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
   let expandedLane = threadOffsets[span.threadIndex] + localLane;
@@ -580,41 +609,42 @@ fn main(
 }`;
 }
 
-/** Publishes stable global visible-ID slices into the per-group indirect draw commands. */
+/** Publishes stable visible-ID slices into the per-group, per-chunk indirect draw commands. */
 export function getTraceDrawCommandsShader(
-  groupBatchRanges: readonly {firstBatchIndex: number; batchCount: number}[]
+  drawBatchRanges: readonly {firstBatchIndex: number; batchCount: number}[]
 ): string {
-  const firstBatchIndices = groupBatchRanges.map(range => `${range.firstBatchIndex}u`).join(', ');
-  const lastBatchIndices = groupBatchRanges
+  const firstBatchIndices = drawBatchRanges.map(range => `${range.firstBatchIndex}u`).join(', ');
+  const lastBatchIndices = drawBatchRanges
     .map(range => `${range.firstBatchIndex + range.batchCount - 1}u`)
     .join(', ');
   return /* wgsl */ `
-const GROUP_COUNT: u32 = ${groupBatchRanges.length}u;
-const FIRST_BATCH_INDICES = array<u32, ${groupBatchRanges.length}>(${firstBatchIndices});
-const LAST_BATCH_INDICES = array<u32, ${groupBatchRanges.length}>(${lastBatchIndices});
+const DRAW_COUNT: u32 = ${drawBatchRanges.length}u;
+const FIRST_BATCH_INDICES = array<u32, ${drawBatchRanges.length}>(${firstBatchIndices});
+const LAST_BATCH_INDICES = array<u32, ${drawBatchRanges.length}>(${lastBatchIndices});
 @group(0) @binding(0) var<storage, read> rangeCounts: array<u32>;
 @group(0) @binding(1) var<storage, read> rangeOffsets: array<u32>;
 @group(0) @binding(2) var<storage, read_write> drawCommands: array<u32>;
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let groupIndex = globalId.x;
-  if (groupIndex >= GROUP_COUNT) {
+  let drawIndex = globalId.x;
+  if (drawIndex >= DRAW_COUNT) {
     return;
   }
-  let firstBatchIndex = FIRST_BATCH_INDICES[groupIndex];
-  let lastBatchIndex = LAST_BATCH_INDICES[groupIndex];
+  let firstBatchIndex = FIRST_BATCH_INDICES[drawIndex];
+  let lastBatchIndex = LAST_BATCH_INDICES[drawIndex];
   let firstInstance = rangeOffsets[firstBatchIndex];
   let endInstance = rangeOffsets[lastBatchIndex] + rangeCounts[lastBatchIndex];
-  let commandOffset = groupIndex * 4u;
+  let commandOffset = drawIndex * 4u;
   drawCommands[commandOffset + 1u] = endInstance - firstInstance;
   drawCommands[commandOffset + 3u] = firstInstance;
 }`;
 }
 
 /** Publishes focused, generation-tagged exact visibility for candidate spans. */
-export function getCandidateVisibilityShader(): string {
+export function getCandidateVisibilityShader(props: TraceSpanChunkShaderProps): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
 struct TraceSpanBatch {
   firstSpanIndex: u32,
   spanCount: u32,
@@ -641,13 +671,20 @@ fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
+  let batchIndex = candidateBatchIds[workgroupId.y];
+  if (
+    batchIndex < CHUNK_FIRST_BATCH_INDEX ||
+    batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT
+  ) {
+    return;
+  }
+  let batch = spanBatches[batchIndex];
   let batchRowIndex = globalId.x;
   if (batchRowIndex >= batch.spanCount) {
     return;
   }
   let sourceIndex = batch.firstSpanIndex + batchRowIndex;
-  let span = spans[sourceIndex];
+  let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
   let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
   let expandedLane = threadOffsets[span.threadIndex] + localLane;
@@ -668,9 +705,10 @@ fn main(
 }
 
 /** Resolves explicit picking inside the same compacted candidate batches as classification. */
-export function getCandidatePickShader(): string {
+export function getCandidatePickShader(props: TraceSpanChunkShaderProps): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
 struct TraceSpanBatch {
   firstSpanIndex: u32,
   spanCount: u32,
@@ -699,13 +737,20 @@ fn main(
   if (viewUniforms.pickLane < 0.0) {
     return;
   }
-  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
+  let batchIndex = candidateBatchIds[workgroupId.y];
+  if (
+    batchIndex < CHUNK_FIRST_BATCH_INDEX ||
+    batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT
+  ) {
+    return;
+  }
+  let batch = spanBatches[batchIndex];
   let batchRowIndex = globalId.x;
   if (batchRowIndex >= batch.spanCount) {
     return;
   }
   let sourceIndex = batch.firstSpanIndex + batchRowIndex;
-  let span = spans[sourceIndex];
+  let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
   let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
   let expandedLane = threadOffsets[span.threadIndex] + localLane;

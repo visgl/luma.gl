@@ -20,6 +20,8 @@ export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 8;
 export const TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH = 6;
 // One span batch maps to one portable WebGPU workgroup for candidate-driven local compaction.
 export const TRACE_SPAN_BATCH_CAPACITY = 256;
+/** Keeps each chunk comfortably below portable storage-binding and allocation ceilings. */
+export const TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH = 64 * 1024 * 1024;
 // One dependency batch maps to one portable WebGPU workgroup for candidate-driven compaction.
 export const TRACE_DEPENDENCY_BATCH_CAPACITY = 128;
 const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000];
@@ -50,16 +52,19 @@ export const TRACE_COLLAPSED_STATE = 0;
 export const TRACE_EXPANDED_STATE = 1;
 export const TRACE_INVALID_SPAN_INDEX = 0xffffffff;
 
-/** Returns useful demonstration sizes that fit in one span storage-buffer binding. */
+/** Returns useful demonstration sizes when one portable span batch fits in a storage chunk. */
 export function getTraceCapacityOptions(
   maxStorageBufferBindingSize: number,
   maxBufferSize: number
 ): number[] {
   const spanRecordByteLength = TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
-  const maximumSpanCapacity = Math.floor(
-    Math.min(maxStorageBufferBindingSize, maxBufferSize) / spanRecordByteLength
+  const maximumChunkSpanCount = Math.floor(
+    Math.min(maxStorageBufferBindingSize, maxBufferSize, TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH) /
+      spanRecordByteLength
   );
-  return TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumSpanCapacity);
+  return maximumChunkSpanCount >= TRACE_SPAN_BATCH_CAPACITY
+    ? [...TRACE_DEMONSTRATION_CAPACITIES]
+    : TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumChunkSpanCount);
 }
 
 /** Returns useful dependency limits that fit in one dependency storage-buffer binding. */
@@ -72,7 +77,10 @@ export function getTraceDependencyCapacityOptions(
   const maximumDependencyCapacity = Math.floor(
     Math.min(maxStorageBufferBindingSize, maxBufferSize) / dependencyRecordByteLength
   );
-  return TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumDependencyCapacity);
+  return [
+    0,
+    ...TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumDependencyCapacity)
+  ];
 }
 
 /** Matches the GPU's adaptive exact-span versus density-rendering decision. */
@@ -108,6 +116,16 @@ export type TraceSpanBatchData = {
   laneMin: number;
   laneMax: number;
   /** Borrowed source-aligned view into the canonical span allocation. */
+  data: Uint32Array;
+};
+
+/** Borrowed contiguous span rows grouped on complete candidate-batch boundaries. */
+export type TraceSpanChunkData = {
+  chunkIndex: number;
+  firstSpanIndex: number;
+  spanCount: number;
+  firstBatchIndex: number;
+  batchCount: number;
   data: Uint32Array;
 };
 
@@ -388,6 +406,49 @@ export function makeTraceSpanBatches(
     spanBatchIndex[wordOffset + 7] = batch.batchIndex;
   }
   return {spanBatches, spanBatchIndex};
+}
+
+/** Splits canonical spans without repacking rows or cutting candidate batches. */
+export function makeTraceSpanChunks(
+  spans: Uint32Array,
+  spanBatches: readonly TraceSpanBatchData[],
+  maximumChunkByteLength: number
+): TraceSpanChunkData[] {
+  const spanRecordByteLength = TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
+  const maximumChunkSpanCount = Math.floor(maximumChunkByteLength / spanRecordByteLength);
+  // Candidate shaders require every portable batch to remain wholly addressable in one chunk.
+  if (maximumChunkSpanCount < TRACE_SPAN_BATCH_CAPACITY) {
+    throw new RangeError();
+  }
+  const chunks: TraceSpanChunkData[] = [];
+  let firstBatchIndex = 0;
+  while (firstBatchIndex < spanBatches.length) {
+    const firstBatch = spanBatches[firstBatchIndex];
+    let batchCount = 0;
+    let spanCount = 0;
+    while (firstBatchIndex + batchCount < spanBatches.length) {
+      const batch = spanBatches[firstBatchIndex + batchCount];
+      if (batchCount > 0 && spanCount + batch.count > maximumChunkSpanCount) {
+        break;
+      }
+      spanCount += batch.count;
+      batchCount++;
+    }
+    const firstSpanIndex = firstBatch.firstSpanIndex;
+    chunks.push({
+      chunkIndex: chunks.length,
+      firstSpanIndex,
+      spanCount,
+      firstBatchIndex,
+      batchCount,
+      data: spans.subarray(
+        firstSpanIndex * TRACE_SPAN_RECORD_WORD_LENGTH,
+        (firstSpanIndex + spanCount) * TRACE_SPAN_RECORD_WORD_LENGTH
+      )
+    });
+    firstBatchIndex += batchCount;
+  }
+  return chunks;
 }
 
 /** Maintains the original example API while retaining canonical source references. */
