@@ -37,6 +37,7 @@
     "test-headless": "ocular-test headless",
     "test-coverage": "ocular-test headless --coverage",
     "test-geospatial-package": "node ./scripts/verify-experimental-geospatial-package.mjs",
+    "test-luraster-package": "node ./scripts/verify-experimental-luraster-package.mjs",
     "examples:typecheck": "node ./scripts/examples-typecheck.mjs",
     "test-fast": "yarn lint && yarn test-node",
     "test-website": "yarn website:build",
