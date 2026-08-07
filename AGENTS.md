@@ -40,7 +40,7 @@
 - TypeScript strict mode
 - We end lines with semicolons
 - Single quotes
-- First-party source files with `SPDX-License-Identifier` must also declare each actual copyright holder using `SPDX-FileCopyrightText`.
+- Every first-party source file with `SPDX-License-Identifier`, including tests and examples, must also declare each actual copyright holder using `SPDX-FileCopyrightText` (for example, `// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors`).
 - Preserve existing license expressions and upstream attribution; do not infer MIT licensing or ownership for generated, vendored, or third-party files.
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
