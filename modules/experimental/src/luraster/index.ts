@@ -106,6 +106,12 @@ export type {
   GPURasterRegionMeasurementsProps
 } from './gpu-raster-region-measurements';
 
+export {GPURasterCrossTileComponents} from './gpu-raster-cross-tile-components';
+export type {
+  GPURasterCrossTile,
+  GPURasterCrossTileComponentsProps
+} from './gpu-raster-cross-tile-components';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

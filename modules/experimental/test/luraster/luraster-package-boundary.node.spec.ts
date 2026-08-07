@@ -157,6 +157,21 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
   });
 
+  test('keeps cross-tile identity, region merging, and execution graph-native', () => {
+    const crossTileComponentsImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-cross-tile-components.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(crossTileComponentsImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(crossTileComponentsImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(crossTileComponentsImplementation).not.toMatch(
+      /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/
+    );
+  });
+
   test('exposes source, tile, global, component, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
@@ -167,6 +182,8 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterClosing).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConnectedComponents).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConnectedComponents.prototype.addToGraph).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterCrossTileComponents).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterCrossTileComponents.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterDenseComponents).toBeTypeOf('function');
     expect(lurasterModule.GPURasterDenseComponents.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterRegionMeasurements).toBeTypeOf('function');

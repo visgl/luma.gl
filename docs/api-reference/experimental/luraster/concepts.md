@@ -250,7 +250,7 @@ actual component count:        5
 
 The five labels identify five regions, not five foreground pixels; one region can cover many
 pixels. The count describes the selected raster or owned tile core only. Regions touching a
-different tile are not reconciled automatically.
+different tile are reconciled only when `GPURasterCrossTileComponents` is composed explicitly.
 
 ### Required count, bounded count, and overflow
 
@@ -337,7 +337,71 @@ its intensity extrema/mean and centroid are `NaN`.
 Nonconverged labels, dense capacity overflow, or an out-of-range published component count
 invalidate **every** region measurement row. Individual missing/truncated labels cannot enter a
 region. This fail-closed contract prevents a partial or stale measurement table from looking
-like a completed segmentation. Cross-tile component identity is not inferred.
+like a completed segmentation. Cross-tile component identity is never inferred implicitly.
+
+### One object can cross an owned tile boundary
+
+Independent local region IDs do not describe dataset-wide identity. Consider two nonoverlapping
+owned cores with one foreground object crossing their shared boundary:
+
+```text
+Owned core:                   west   |   east
+
+Local dense labels:          1 1 0  |  0 0 0
+                             0 0 0  |  0 1 1
+                             0 2 2  |  1 1 0
+
+Global dense labels:         1 1 0  |  0 0 0
+                             0 0 0  |  0 2 2
+                             0 2 2  |  2 2 0
+```
+
+Western local label `2` and eastern local label `1` meet directly across the seam, so both
+become global label `2`. Western label `1` remains global label `1`; no halo pixel is counted
+twice. Local number `1` on the two tiles never implied the same region.
+
+With **four-connectivity**, only direct horizontal or vertical seam neighbors join. With
+**eight-connectivity**, diagonal seam neighbors and genuine opposing corners at a four-tile
+junction also join. Both endpoints must be valid foreground. Real zero-valued background does
+not connect regions, and an invalid seam pixel is a missing-data barrier.
+
+`GPURasterCrossTileComponents` accepts separately converged, nonoverflowing local dense labels,
+their independent masks, half-open owned bounds, and local measurement tables. It resolves seam
+equivalences on the GPU and assigns global IDs by the actual minimum **dataset-wide row-major
+pixel** in each object. This distinction matters: sorting whole tiles before their local labels
+can place a later western row ahead of an earlier eastern row. Sorting the globally translated
+representative pixels instead reproduces monolithic IDs and remains unchanged when the caller
+supplies the tiles in a different order.
+
+### Merge counts and raw moments, never tile averages
+
+A region split across tiles must be measured once from its merged populations:
+
+```text
+                           west      east      global
+
+geometric pixel count:       3         2           5
+valid intensity count:       1         2           3
+intensity sum:              10        50          60
+intensity mean:             10        25          20
+```
+
+The true global mean is `60 / 3 = 20`; averaging the tile means gives `17.5`, which incorrectly
+weights a tile containing one observation equally with a tile containing two. Missing intensity
+therefore reduces only the intensity population, not the object's geometric count or area.
+
+Local spatial moments likewise require translation before merging. A region row with geometric
+count `n`, local column sum `s`, and owned-core origin `x0` contributes `s + n * x0` in the
+dataset's pixel coordinate system. Divide the merged moments by merged geometric count to
+obtain the global local-pixel centroid, then apply the dataset affine once in JavaScript double
+precision. Square coordinate-unit area follows the same affine determinant as a local region.
+
+Global dense labels are explicitly bounded. The exact required population can exceed the
+published capacity; retained IDs stay deterministic, dropped foreground becomes invalid, true
+background remains valid, and overflow is visible. Unconverged or overflowing local inputs
+cannot be promoted to completed global regions. Counter domains are bounded rather than silently
+wrapping. Applications still choose the disjoint tiles, pin their leases, submit the graph,
+provide completion fences, and decide whether to inspect one compact result.
 
 The Satellite Raster Lab lets you switch between **OFF** and **COMPONENTS**, select
 **4-CONNECTED** or **8-CONNECTED**, compare **SPARSE ROOTS** with **DENSE 1..N**, and adjust
@@ -349,13 +413,22 @@ capacity is exceeded or convergence fails, while correctly converged sparse root
 even if the separate dense capacity is too small.
 
 Its optional **INSPECT REGION** control publishes exactly one selected dense region record,
-not the complete GPU measurement table. Inspection explicitly changes the real displayed
-histogram from 48 bins to 40 bins; the eight freed four-byte positions contain geometric count,
-intensity sum/minimum/maximum/mean, local column/row centroid, and affine area. World
-coordinates are reconstructed after that same read using the double-precision affine. Leaving
-inspection restores the full 48-bin histogram. Both modes transfer exactly 228 bytes; the
-separate Otsu baseline, global population, component count, convergence, and iteration slots
-remain intact.
+not the complete GPU measurement table. **LOCAL TILE** displays the selected core's own region;
+**STITCHED DATASET** displays the same merged global row from either explicitly pinned source
+tile. Reversing **WEST → EAST** and **EAST → WEST** cannot change the globally row-major region
+ID or its merged population. Stitched scope requires **DENSE 1..N**; choosing **SPARSE ROOTS**
+explicitly restores **LOCAL TILE**. It deliberately supports native/source-provided
+overview samples, pointwise analysis, and manual thresholds only; generated means, seamless
+neighborhoods, smoothing, edge/morphology operators, local Otsu, and dataset-wide histogram
+mode return to an explicitly compatible scope.
+
+Inspection explicitly changes the real displayed histogram from 48 bins to 40 bins; the eight
+freed four-byte positions contain one local or stitched geometric count, intensity
+sum/minimum/maximum/mean, local column/row centroid, and affine area. World coordinates are
+reconstructed after that same read using the double-precision affine. Leaving inspection
+restores the full 48-bin histogram. Every scope transfers exactly 228 bytes; the separate Otsu
+baseline, global population, component count, convergence, and selected tile's local iteration
+slots remain intact.
 
 ## Tiles and owned pixel cores
 
@@ -667,6 +740,7 @@ does not submit commands or create an implicit completion fence.
 | Decoded tile metadata, source windows, native arrays, and cancellation                 | An application-owned tile source, validated by `GPURasterTileReader`. |
 | Optional bounded uploads, GPU residency, eviction, and compiled-graph reuse            | `GPURasterTileCache`, when explicitly selected.                       |
 | Neighbor planning, borrowed source tiles, GPU halo assembly, and owned-core extraction | LuRaster halo contributors and explicit leases.                       |
+| Cross-tile region equivalences, canonical global IDs, and merged measurement rows      | Explicit LuRaster contributors over application-owned, pinned cores.  |
 | Analytical overview values, counts, validity, and exact category policies              | LuRaster GPU overview contributors.                                   |
 | Indices, filters, morphology, distributions, thresholds, regions, and contours         | LuRaster contributors inside the caller's command graph.              |
 | Command submission, completion fences, renderer integration, and optional readback     | The application.                                                      |
@@ -691,6 +765,7 @@ transport, format parsing, and worker policy on the loading side of the boundary
 | Identify connected thresholded foreground without inventing missing samples     | `GPURasterConnectedComponents` with four/eight connectivity and explicit convergence.                                  |
 | Count regions or obtain bounded contiguous region identifiers                   | `GPURasterDenseComponents` after converged sparse labeling, with explicit capacity and overflow.                       |
 | Measure each region's valid intensity, geometry, centroid, and affine area      | `GPURasterRegionMeasurements`; use `getRasterRegionWorldCentroid` for precise world coordinates.                       |
+| Give a region crossing tile seams one global ID and correctly merged metrics    | `GPURasterCrossTileComponents` over converged owned cores and mergeable local measurement rows.                        |
 | Look up complete constructors, format constraints, ownership, and code examples | The [LuRaster API reference](/docs/api-reference/experimental/luraster).                                               |
 
 ## A short glossary
@@ -705,6 +780,8 @@ transport, format parsing, and worker policy on the loading side of the boundary
 - **Connectivity:** the pixel-neighbor policy; four excludes diagonals and eight includes them.
 - **Convergence:** GPU proof that bounded component-label propagation reached a stable fixed point.
 - **Core:** the half-open region of a tile that owns analytical outputs.
+- **Cross-tile equivalence:** valid foreground contact proving two owned tiles describe the
+  same four- or eight-connected region.
 - **Dense component ID:** a contiguous row-major region rank starting at `1`; `0` remains background.
 - **Domain:** the minimum and maximum values used to interpret histogram bins.
 - **Fence:** proof that previously submitted GPU work has completed.
@@ -727,6 +804,8 @@ transport, format parsing, and worker policy on the loading side of the boundary
   connected component; these labels can be sparse.
 - **Region area:** geometric pixel population times the absolute affine determinant, in square
   CRS coordinate units rather than implicitly square meters.
+- **Region moment:** an additive population-weighted pixel-coordinate sum that can be translated
+  into one dataset frame before calculating a merged centroid.
 - **Required component count:** the exact converged region population before capacity clamping.
 - **Replayable:** able to process tiles again after discovering global dataset information.
 - **Sentinel:** a source-defined raw numeric value that means missing.

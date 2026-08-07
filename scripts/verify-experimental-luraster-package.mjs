@@ -63,6 +63,10 @@ const regionMeasurementsImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-region-measurements.ts'),
   'utf8'
 );
+const crossTileComponentsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-cross-tile-components.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -185,6 +189,21 @@ assert.doesNotMatch(
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'raster region measurements do not submit, synchronize, or read back grouped records'
 );
+assert.doesNotMatch(
+  crossTileComponentsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'cross-tile segmentation does not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  crossTileComponentsImplementation,
+  /\bfetch\s*\(/,
+  'cross-tile segmentation does not choose an application source transport'
+);
+assert.doesNotMatch(
+  crossTileComponentsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'cross-tile segmentation never submits, synchronizes, or reads back labels or region tables'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -206,6 +225,7 @@ const requiredRuntimeExportNames = [
   'GPURasterContourClassifier',
   'GPURasterContours',
   'GPURasterConvolution',
+  'GPURasterCrossTileComponents',
   'GPURasterDenseComponents',
   'GPURasterDilation',
   'GPURasterErosion',
@@ -266,6 +286,7 @@ assert.equal(
 for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
   for (const exportName of [
     'GPURasterConnectedComponents',
+    'GPURasterCrossTileComponents',
     'GPURasterDenseComponents',
     'GPURasterRegionMeasurements',
     'GPURasterGlobalHistogramMerge',
@@ -348,6 +369,7 @@ try {
   GPURasterContourClassifier,
   GPURasterContours,
   GPURasterConvolution,
+  GPURasterCrossTileComponents,
   GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
@@ -402,6 +424,8 @@ try {
   type GPURasterContourLevel,
   type GPURasterContoursProps,
   type GPURasterConvolutionProps,
+  type GPURasterCrossTile,
+  type GPURasterCrossTileComponentsProps,
   type GPURasterDecodedBand,
   type GPURasterDecodedTile,
   type GPURasterDenseComponentsProps,
@@ -541,6 +565,8 @@ declare const overviewCategoricalPolicy: GPURasterOverviewCategoricalPolicy;
 declare const overviewMetadataOptions: GPURasterOverviewMetadataOptions;
 declare const regionMeasurementOutputs: GPURasterRegionMeasurementOutputs;
 declare const regionMeasurementsOptions: GPURasterRegionMeasurementsProps;
+declare const crossTile: GPURasterCrossTile;
+declare const crossTileComponentsOptions: GPURasterCrossTileComponentsProps;
 declare const overviewOptions: GPURasterOverviewProps;
 declare const overviewScale: GPURasterOverviewScale;
 declare const pixelBounds: GPURasterPixelBounds;
@@ -583,6 +609,7 @@ declare const contrast: GPURasterContrast;
 declare const contourClassifier: GPURasterContourClassifier;
 declare const contours: GPURasterContours;
 declare const convolution: GPURasterConvolution;
+declare const crossTileComponents: GPURasterCrossTileComponents;
 declare const denseComponents: GPURasterDenseComponents;
 declare const dilation: GPURasterDilation;
 declare const erosion: GPURasterErosion;
@@ -624,6 +651,7 @@ const contrastContributor: GPUCommandGraphContributor = contrast;
 const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
 const contoursContributor: GPUCommandGraphContributor = contours;
 const convolutionContributor: GPUCommandGraphContributor = convolution;
+const crossTileComponentsContributor: GPUCommandGraphContributor = crossTileComponents;
 const denseComponentsContributor: GPUCommandGraphContributor = denseComponents;
 const regionMeasurementsContributor: GPUCommandGraphContributor = regionMeasurements;
 const dilationContributor: GPUCommandGraphContributor = dilation;
@@ -672,6 +700,8 @@ const configuredDenseComponents: GPUCommandGraphContributor =
   new GPURasterDenseComponents(denseComponentsOptions);
 const configuredRegionMeasurements: GPUCommandGraphContributor =
   new GPURasterRegionMeasurements(regionMeasurementsOptions);
+const configuredCrossTileComponents: GPUCommandGraphContributor =
+  new GPURasterCrossTileComponents(crossTileComponentsOptions);
 const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
 const configuredGlobalInitialize: GPUCommandGraphContributor = new GPURasterGlobalInitialize(
   globalInitializeOptions
@@ -872,6 +902,29 @@ const declaredRegionOverflow: GraphDataView<'uint32'> = regionMeasurements.overf
 const declaredRegionIntensity: GPURasterBufferBand<'float32'> = regionMeasurements.intensity;
 const declaredRegionOutputs: GPURasterRegionMeasurementOutputs = regionMeasurements.output;
 const declaredRegionCapacity: number = regionMeasurements.capacity;
+const crossTileMetadata: GPURasterMetadata = crossTile.metadata;
+const crossTileBounds: GPURasterPixelBounds = crossTile.pixelBounds;
+const crossTileLabels: GraphDataView<'uint32'> = crossTile.labels;
+const crossTileValidity: GraphDataView<'uint32'> = crossTile.labelValidity;
+const crossTileLocalCount: GraphDataView<'uint32'> = crossTile.componentCount;
+const crossTileLocalConvergence: GraphDataView<'uint32'> = crossTile.converged;
+const crossTileLocalOverflow: GraphDataView<'uint32'> = crossTile.overflow;
+const crossTileLocalMeasurements: GPURasterRegionMeasurementOutputs = crossTile.measurements;
+const crossTileGlobalLabels: GraphDataView<'uint32'> = crossTile.outputLabels;
+const crossTileGlobalValidity: GraphDataView<'uint32'> = crossTile.outputValidity;
+const crossTileDatasetMetadata: GPURasterMetadata = crossTileComponentsOptions.metadata;
+const crossTileInputs: readonly GPURasterCrossTile[] = crossTileComponentsOptions.tiles;
+const optionalCrossTileConnectivity: GPURasterConnectivity | undefined =
+  crossTileComponentsOptions.connectivity;
+const optionalCrossTileIterations: number | undefined = crossTileComponentsOptions.maximumIterations;
+const crossTileBoundedCount: GraphDataView<'uint32'> = crossTileComponentsOptions.componentCount;
+const optionalCrossTileRequiredCount: GraphDataView<'uint32'> | undefined =
+  crossTileComponentsOptions.requiredComponentCount;
+const crossTileGlobalConvergence: GraphDataView<'uint32'> = crossTileComponentsOptions.converged;
+const crossTileGlobalOverflow: GraphDataView<'uint32'> = crossTileComponentsOptions.overflow;
+const crossTileGlobalMeasurements: GPURasterRegionMeasurementOutputs =
+  crossTileComponentsOptions.output;
+const optionalCrossTileCapacity: number | undefined = crossTileComponentsOptions.capacity;
 const persistentGlobalExtent: GraphDataView<'float32'> = globalAccumulator.extent;
 const persistentGlobalCount: GraphDataView<'uint32'> = globalAccumulator.count;
 const persistentGlobalSum: GraphDataView<'float32'> = globalAccumulator.sum;
@@ -1036,6 +1089,14 @@ const invalidRegionCentroid: GraphDataView<'uint32'> =
   regionMeasurementOutputs.centroidColumns;
 // @ts-expect-error Affine-coordinate-unit areas are floating measurements.
 const invalidRegionArea: GraphDataView<'uint32'> = regionMeasurementOutputs.areas;
+// @ts-expect-error Cross-tile local component labels preserve exact unsigned identity.
+const invalidCrossTileLocalLabels: GraphDataView<'float32'> = crossTile.labels;
+// @ts-expect-error Global raster component IDs preserve exact unsigned identity.
+const invalidCrossTileGlobalLabels: GraphDataView<'float32'> = crossTile.outputLabels;
+// @ts-expect-error Dataset-wide component populations are unsigned GPU scalars.
+const invalidCrossTileCount: GraphDataView<'float32'> = crossTileComponentsOptions.componentCount;
+// @ts-expect-error Cross-tile connectivity accepts only four or eight neighbors.
+const unsupportedCrossTileConnectivity: GPURasterCrossTileComponentsProps['connectivity'] = 6;
 // @ts-expect-error Morphology exposes binary and grayscale scalar contracts only.
 const unsupportedMorphologyMode: GPURasterMorphologyMode = 'rgb';
 // @ts-expect-error Opening and closing are explicit composed contributors.
@@ -1109,6 +1170,7 @@ void GPURasterContrast;
 void GPURasterContourClassifier;
 void GPURasterContours;
 void GPURasterConvolution;
+void GPURasterCrossTileComponents;
 void GPURasterDenseComponents;
 void GPURasterDilation;
 void GPURasterErosion;
@@ -1205,6 +1267,8 @@ void overviewCategoricalPolicy;
 void overviewMetadataOptions;
 void regionMeasurementOutputs;
 void regionMeasurementsOptions;
+void crossTile;
+void crossTileComponentsOptions;
 void overviewOptions;
 void overviewScale;
 void pixelBounds;
@@ -1247,6 +1311,7 @@ void contrastContributor;
 void contourClassifierContributor;
 void contoursContributor;
 void convolutionContributor;
+void crossTileComponentsContributor;
 void denseComponentsContributor;
 void regionMeasurementsContributor;
 void dilationContributor;
@@ -1286,6 +1351,7 @@ void configuredClosing;
 void configuredConnectedComponents;
 void configuredDenseComponents;
 void configuredRegionMeasurements;
+void configuredCrossTileComponents;
 void configuredOverview;
 void configuredGlobalInitialize;
 void configuredGlobalStatisticsMerge;
@@ -1408,6 +1474,26 @@ void declaredRegionOverflow;
 void declaredRegionIntensity;
 void declaredRegionOutputs;
 void declaredRegionCapacity;
+void crossTileMetadata;
+void crossTileBounds;
+void crossTileLabels;
+void crossTileValidity;
+void crossTileLocalCount;
+void crossTileLocalConvergence;
+void crossTileLocalOverflow;
+void crossTileLocalMeasurements;
+void crossTileGlobalLabels;
+void crossTileGlobalValidity;
+void crossTileDatasetMetadata;
+void crossTileInputs;
+void optionalCrossTileConnectivity;
+void optionalCrossTileIterations;
+void crossTileBoundedCount;
+void optionalCrossTileRequiredCount;
+void crossTileGlobalConvergence;
+void crossTileGlobalOverflow;
+void crossTileGlobalMeasurements;
+void optionalCrossTileCapacity;
 void isotropicOverviewScale;
 void anisotropicOverviewScale;
 void supportedCategoricalOverviewFormats;
@@ -1503,6 +1589,10 @@ void invalidRegionIntensityCount;
 void invalidRegionIntensitySum;
 void invalidRegionCentroid;
 void invalidRegionArea;
+void invalidCrossTileLocalLabels;
+void invalidCrossTileGlobalLabels;
+void invalidCrossTileCount;
+void unsupportedCrossTileConnectivity;
 void unsupportedMorphologyMode;
 void unsupportedMorphologyOperation;
 void unsupportedStructuringElement;
@@ -1558,6 +1648,7 @@ void categoricalOverview;
 void connectedComponents;
 void denseComponents;
 void regionMeasurements;
+void crossTileComponents;
 void globalHistogramMerge;
 void globalInitialize;
 void globalPercentile;
@@ -1602,6 +1693,9 @@ void RootGPURasterConnectedComponents;
 // @ts-expect-error Dense raster component relabeling stays isolated from the experimental root.
 import {GPURasterDenseComponents as RootGPURasterDenseComponents} from '@luma.gl/experimental';
 void RootGPURasterDenseComponents;
+// @ts-expect-error Cross-tile region reconciliation stays isolated from the experimental root.
+import {GPURasterCrossTileComponents as RootGPURasterCrossTileComponents} from '@luma.gl/experimental';
+void RootGPURasterCrossTileComponents;
 // @ts-expect-error Raster region measurement stays isolated from the experimental root.
 import {GPURasterRegionMeasurements as RootGPURasterRegionMeasurements} from '@luma.gl/experimental';
 void RootGPURasterRegionMeasurements;

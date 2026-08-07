@@ -21,7 +21,9 @@ through the caller's command graph. `GPURasterOverview` and
 coverage without mistaking source-selected samples or presentation mipmaps for scientific
 reductions. Explicit global initialization, tiled statistic merges, stable-domain histogram
 replay, and bounded percentile selection preserve caller-owned dataset-wide results across
-separately processed tiles. The reader, cache, and assembler never submit commands.
+separately processed tiles. `GPURasterCrossTileComponents` additionally reconciles connected
+regions across explicitly owned tile cores and merges their scientific measurements without
+downloading a label image. The reader, cache, and assembler never submit commands.
 
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
@@ -29,7 +31,8 @@ scalar summaries, contrast/gamma/equalization transforms, analytical thresholds,
 neighborhood stencils, direct convolution, separable Gaussian/box smoothing, signed
 Sobel/Scharr/Laplacian derivatives, gradient magnitude, binary/grayscale dilation, erosion,
 opening, closing, deterministic connected foreground components, bounded dense region labels and
-counts, grouped intensity and spatial region measurements, GPU-resident marching-squares
+counts, grouped intensity and spatial region measurements, deterministic cross-tile region
+identity and merged measurements, GPU-resident marching-squares
 contours, indirect vector overlays, and adapter-limit planning. They implement
 `GPUCommandGraphContributor` structurally: calling `addToGraph(graph)` only declares work. No
 contributor submits commands or reads results back.
@@ -52,6 +55,7 @@ computation instead of flattening them into display colors.
 | Identify connected classified foreground regions | `GPURasterConnectedComponents` | Four- or eight-neighbor grouping preserves missing-data barriers and publishes an explicit GPU convergence signal. |
 | Obtain contiguous region IDs and a bounded exact component count | `GPURasterDenseComponents` | Converged representative roots become compact deterministic IDs with explicit capacity and overflow. |
 | Measure intensity, population, centroid, and area for each region | `GPURasterRegionMeasurements` | Independent geometry and intensity masks produce bounded GPU records while preserving high-precision spatial metadata. |
+| Identify and measure one region that spans multiple owned tiles | `GPURasterCrossTileComponents` | Seam equivalences become deterministic global IDs; counts and moments merge without averaging tile averages. |
 
 For a guided explanation of missing observations, grid ownership, replay, resource lifetimes,
 and common mistakes, read
@@ -173,6 +177,7 @@ import {
   GPURasterContours,
   GPURasterContrast,
   GPURasterConvolution,
+  GPURasterCrossTileComponents,
   GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
@@ -208,6 +213,8 @@ import {
   type GPURasterCategoricalOverviewProps,
   type GPURasterConnectedComponentsProps,
   type GPURasterConnectivity,
+  type GPURasterCrossTile,
+  type GPURasterCrossTileComponentsProps,
   type GPURasterDecodedBand,
   type GPURasterDenseComponentsProps,
   type GPURasterGlobalAccumulator,
@@ -356,19 +363,31 @@ relabeling and count contributor. Sparse coloring remains usable if dense capaci
 the dense overlay is suppressed entirely when capacity is insufficient or propagation did not
 converge. Missing observations remain distinct from valid background.
 
-Region mode operates on the selected local tile, explicitly exits **FULL GLOBAL**, and disables
-contours temporarily. Three existing contour diagnostic words carry exact required component
-count, GPU convergence, and actual rounds; the displayed bounded count and overflow derive from
-that required count and visible capacity. This does not replace the contributor's genuine
-caller-owned GPU bounded-count and overflow outputs. The separate foreground readout still counts
-selected pixels rather than regions. Existing source/analytical overviews, seam-safe local
-processing, smoothing, derivatives, morphology, manual thresholds, and local Otsu remain
-available; leaving component mode restores the previous contour policy and the summary remains
-exactly 228 bytes.
+**LOCAL TILE** keeps segmentation on the selected owned core. **STITCHED DATASET** explicitly
+pins both source tiles, reconciles their actual boundary labels, and renders the same
+deterministic global region IDs from either core. Reversing **WEST → EAST** to **EAST → WEST**
+does not change identities or merged measurements. Four-connected seams require direct contact;
+eight-connected seams also admit genuine diagonal foreground contact, never an invalid sample.
+Stitched scope requires **DENSE 1..N**; selecting **SPARSE ROOTS** returns to **LOCAL TILE**
+instead of misrepresenting a globally dense label as a sparse representative.
 
-The optional **REGION METRICS** inspector selects one converged dense region and displays its
-real GPU pixel count, intensity sum/minimum/maximum/mean, local centroid transformed by the
-original double-precision affine, and coordinate-aware area. In this explicitly selected mode,
+Both region scopes exit **FULL GLOBAL** and temporarily disable contours. Three existing
+contour diagnostic words carry the exact required local or global component count, proven GPU
+convergence, and the selected tile's actual local labeling rounds. The displayed bounded count
+and overflow derive from that required count and visible capacity; genuine caller-owned GPU
+bounded-count and overflow outputs remain separate. The foreground readout still counts
+selected pixels rather than regions. **LOCAL TILE** retains source/analytical overviews,
+seam-safe neighborhoods, smoothing, derivatives, morphology, manual thresholds, and local Otsu.
+**STITCHED DATASET** deliberately supports pointwise native or source-provided overview data
+with manual thresholds only; choosing generated means, seamless neighborhoods, smoothing,
+derivatives, morphology, local Otsu, or dataset-wide histogram mode exits stitched scope.
+Leaving component mode restores the previous contour policy. Every path retains the same
+228-byte summary.
+
+The optional **REGION METRICS** inspector selects one converged dense local or stitched global
+region and displays its real GPU pixel count, intensity sum/minimum/maximum/mean, local centroid
+transformed by the original double-precision affine, and coordinate-aware area. In this
+explicitly selected mode,
 the analytical histogram truly uses **40 bins** instead of its ordinary **48 bins**; the eight
 freed four-byte positions contain exactly one selected region record. The existing population,
 domain, component count, convergence, iteration count, and automatic threshold retain their
@@ -2112,7 +2131,8 @@ independent of workgroup execution order. Component identifiers are deliberately
 labels `1`, `3`, `5`, `7`, and `9` do not mean nine components. Compose the separate
 `GPURasterDenseComponents` contributor when contiguous IDs or an actual component count are
 required. Compose `GPURasterRegionMeasurements` after dense relabeling for bounded per-region
-geometry and intensity; cross-tile component merging remains a separate contract.
+geometry and intensity. Compose `GPURasterCrossTileComponents` explicitly when adjacent owned
+cores must share region identities and merged measurements.
 
 ### Convergence is required, not assumed
 
@@ -2233,8 +2253,9 @@ sparse representatives are rejected at the affected pixels without out-of-bounds
 
 Capacity is a bound on published component IDs, not a count of foreground pixels and not a
 global multi-tile region limit. Ordering is deterministic within the current raster/core.
-`GPURasterRegionMeasurements` can consume those converged dense IDs directly; cross-tile region
-identity reconciliation remains a separate future contributor. Source decoding, graph
+`GPURasterRegionMeasurements` can consume those converged dense IDs directly;
+`GPURasterCrossTileComponents` can explicitly reconcile independently labeled owned cores.
+Source decoding, graph
 submission, fences, and any optional compact readback remain application-owned.
 
 ## Per-region intensity and spatial measurements
@@ -2365,9 +2386,149 @@ intermediate keys, masks, calibrated values, and moments are graph-owned transie
 
 All result columns, metadata, source samples, submission, completion fences, optional inspection,
 and coordinate policy remain application-owned. No full label array, region table, source
-imagery, or CPU result is read by the contributor. Cross-tile region identity reconciliation,
-global region merges, polygon-zonal metrics, and exact integer intensity aggregation remain
-separate future integrations.
+imagery, or CPU result is read by the contributor. Compose
+`GPURasterCrossTileComponents` explicitly for region identities and merged measurements across
+owned tiles. Polygon-zonal metrics and exact integer intensity aggregation remain separate future
+integrations.
+
+## Cross-tile region identities and merged measurements
+
+Use `GPURasterCrossTileComponents` when one classified field, water body, or microscopy object
+crosses the boundary between separately analyzed owned tile cores. Labeling each tile
+independently cannot infer that its local region `1` and a neighboring tile's local region `3`
+describe the same object. A shared halo can fix neighborhood values, but it does not assign a
+shared connected-component identity or merge measurement rows.
+
+Each application-selected `GPURasterCrossTile` supplies its own metadata; half-open core bounds;
+converged, nonoverflowing dense local labels and observation validity; local component count,
+convergence, and overflow scalars; all 11 mergeable local measurement columns; and separate
+caller-owned per-pixel global label and validity outputs:
+
+```ts
+const westernTile: GPURasterCrossTile = {
+  metadata: westernMetadata,
+  pixelBounds: [0, 0, 4, 3],
+  labels: westernDenseLabels,
+  labelValidity: westernDenseValidity,
+  componentCount: westernComponentCount,
+  converged: westernConvergence,
+  overflow: westernOverflow,
+  measurements: westernRegionMeasurements,
+  outputLabels: westernGlobalLabels,
+  outputValidity: westernGlobalValidity
+};
+
+new GPURasterCrossTileComponents({
+  id: 'dataset-vegetation-components',
+  metadata: datasetMetadata,
+  tiles: [westernTile, easternTile],
+  connectivity: 8,
+  maximumIterations: 24,
+  capacity: 256,
+  componentCount: boundedGlobalRegionCount,
+  requiredComponentCount: exactGlobalRegionCount,
+  converged: globalRegionConvergence,
+  overflow: globalRegionOverflow,
+  output: globalRegionMeasurements
+}).addToGraph(graph);
+```
+
+All local and global labels, validity masks, counts, convergence flags, and overflow flags are
+caller-owned `GraphDataView<'uint32'>` values. The local and global measurement records use the
+same `GPURasterRegionMeasurementOutputs` contract: two unsigned population columns and nine
+floating intensity, moment, centroid, and area columns. Input cores may arrive in any order;
+their nonoverlapping half-open ownership, metadata, graph, and device must be compatible.
+Every tile must describe the same selected level, CRS, pixel interpretation, linear affine,
+and correctly translated spatial origin. Connectivity defaults to `4`; explicit iteration
+budgets accept `1..64`, while the default is bounded by the available local-region capacity.
+Global capacity defaults to the length of the global output columns and can be any integer
+from zero through that length. No overlapping halo pixel becomes an extra observation.
+
+### Direct seams, diagonal contacts, and deterministic global IDs
+
+Under four-connectivity, two foreground pixels connect across a seam only when their edges
+touch. Under eight-connectivity, diagonally touching foreground also connects, including a
+genuine diagonal between opposing corners at a four-tile junction:
+
+```text
+Local labels on owned cores:      Four-connected:      Eight-connected:
+
+west | east                       west | east          west | east
+ 1 1 | 0 0                         1 1 | 0 0            1 1 | 0 0
+ 0 0 | 1 1                         0 0 | 2 2            0 0 | 1 1
+```
+
+The upper western region touches the lower eastern region diagonally. They remain separate
+under connectivity `4` and become one global region under connectivity `8`. Both endpoints
+must be valid foreground; valid background `0` never connects regions, and missing observations
+cannot bridge a seam.
+
+Global IDs are not assigned by the caller's tile order or by tile-major traversal. The
+contributor identifies the globally earliest foreground pixel in each reconciled region,
+orders those representatives by their true full-raster row-major coordinates using GPU sort,
+and scans them into contiguous global IDs `1..N`. This matches monolithic row-major component
+numbering even when a western tile contains a later-row region and an eastern tile contains an
+earlier-row region. Reversing tile arrival therefore preserves exact identities, not merely the
+number of objects. Background remains label `0` with validity `1`; missing or bounded-out
+foreground remains label `0` with validity `0`.
+
+### Merge populations and moments, not already divided averages
+
+A tile-local component row is a mergeable partial, not a complete dataset measurement. For a
+region spanning two owned cores:
+
+```text
+                         western core    eastern core    global region
+
+geometric pixels:                 3               2                5
+valid intensity samples:          1               2                3
+intensity sum:                   10              50               60
+tile intensity mean:             10              25               20
+```
+
+The global mean is `(10 + 50) / (1 + 2) = 20`, not `(10 + 25) / 2 = 17.5`.
+Geometric pixels and valid-intensity samples retain independent populations. Global intensity
+minimum/maximum use only rows containing a valid intensity observation; a geometric region
+without accepted intensity remains real while its intensity extrema and mean are `NaN`.
+
+Spatial moments must also enter one common pixel coordinate system before addition. If a tile
+begins at global column `x0`, its contribution is
+`localColumnSum + x0 * geometricPixelCount`; rows use the same translation. The merged
+centroid divides each translated moment by the merged geometric population. Area remains
+`abs(a * e - b * d) * mergedPixelCount` in square CRS coordinate units. Apply
+`getRasterRegionWorldCentroid(datasetMetadata, centroidColumn, centroidRow)` once using the
+dataset's retained double-precision affine; never add an already encoded tile or level-zero
+origin a second time.
+
+### Global capacity, convergence, overflow, and ownership
+
+The optional required count describes all distinct converged global regions before truncation;
+the required caller-owned count publishes only `min(requiredCount, capacity)`. Global IDs above
+capacity are not wrapped or silently published: their foreground labels and observation-validity
+outputs are cleared, while true valid background remains valid. The overflow flag makes bounded
+truncation explicit without discarding the correctly retained first `capacity` regions:
+global convergence stays `1`, the bounded count is clamped, and the optional required count
+retains the exact population. Upstream tile nonconvergence, tile overflow, failed global
+equivalence propagation, inconsistent metadata, and invalid component references must not
+present a plausible completed region table. The boolean overflow output also reports
+malformed/capacity conditions, saturating unsigned population accumulation, or nonfinite
+merged sums; `uint32` population can never silently wrap into a smaller valid-looking count.
+
+Globally ordered representative keys are bounded to the exact `uint32` pixel-index domain;
+the declared dataset must contain at most `2^32 - 1` pixels, and GPU sorting rejects candidate
+populations beyond its supported domain. Composite identifiers for larger logical datasets
+are not provided. Floating reductions retain their normal order-dependent precision;
+measurement equality should use an appropriate numerical tolerance.
+
+The application supplies already resident, disjoint owned cores and retains their resources
+until an explicitly submitted command buffer finishes. The contributor declares GPU seam
+equivalence, global representative sorting, prefix ranking, relabeling, and partial merging;
+it does not fetch or decode tiles, upload them, choose eviction, submit commands, create a
+fence, poll convergence, read back a label raster, or automatically partition an entire image.
+Source adapters and any future loaders.gl 5 integration remain application-owned. Scratch and
+work scale with selected tile pixels, local component populations, actual seams, and caller
+capacity; no full-dataset output raster is allocated implicitly. These are explicit execution
+and residency properties, not a claim of measured universal speedup.
 
 ## Raster compute versus image effects
 
@@ -2503,8 +2664,8 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-driven contrast application, built-in GeoTIFF/COG decoding, cross-tile region
-identity, tiled contour stitching, automatic whole-image result placement, and FFT-backed
+Percentile-driven contrast application, built-in GeoTIFF/COG decoding, tiled contour stitching,
+automatic whole-image result placement, and FFT-backed
 raster convolution are not part of the current implementation.
 Application-owned tile ingress, source-provided overviews/windows, independently budgeted
 multi-tile CPU/GPU residency, fence-safe eviction, compatible compiled-graph reuse, explicit
@@ -2516,6 +2677,8 @@ opening, closing, deterministic four/eight-connected sparse representative label
 fail-closed GPU convergence, deterministic dense root ranks, exact/bounded component counts and
 per-execution capacity overflow, grouped geometric and valid-intensity populations,
 float-only intensity sum/min/max/mean, mergeable local centroid moments and affine area,
+connectivity-aware cross-tile region equivalences, deterministic globally row-major dense IDs,
+bounded global component populations and merged intensity/spatial measurements,
 replayable global tiled extent/population/sum/histogram merges,
 explicit sticky/saturating overflow diagnostics, bounded histogram-based percentiles, global
 Otsu input, and single-raster contour extraction are implemented.

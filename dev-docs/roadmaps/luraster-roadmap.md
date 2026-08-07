@@ -1,10 +1,10 @@
 # LuRaster Roadmap
 
-- **Status:** Active; foundation, tiled analysis, dense components, and region metrics implemented
+- **Status:** Active; foundation, tiled analysis, and complete cross-tile segmentation implemented
 - **Experimental API:** `@luma.gl/experimental/luraster`
 - **Execution model:** WebGPU `GPUCommandGraph` contributors
 - **Positioning:** GPU-resident raster analytics complementing `@luma.gl/experimental/geospatial`
-- **Next tranche:** 5.4, cross-tile region identities and mergeable segmentation measurements
+- **Next tranche:** 6.3, seam-safe contour ownership and external vector overlays
 
 ## Overview
 
@@ -24,8 +24,9 @@ vegetation index (NDVI), statistics, histograms, contrast adjustment, thresholdi
 filters, morphology, single-raster contour extraction, bounded tile residency, seam-safe
 neighborhoods, analytical overviews, dataset-wide replayable summaries, convergence-gated
 four/eight-connected sparse component labels, deterministic dense identifiers, bounded exact
-component counts, and validity-aware per-region intensity/geometric measurements. Cross-tile
-component or contour ownership and vector/raster zonal composition remain planned.
+component counts, validity-aware per-region intensity/geometric measurements, and deterministic
+cross-tile region identity with mergeable global measurements. Cross-tile contour ownership and
+vector/raster zonal composition remain planned.
 Three-dimensional microscopy, sophisticated segmentation, reprojection, and frequency-domain
 algorithms are separate, evidence-gated extensions.
 
@@ -38,14 +39,15 @@ their precise contracts; the [Satellite Raster Lab](/examples/showcase/raster-la
 contracts interactively. This roadmap distinguishes those implemented contracts from planned
 extensions, engineering prerequisites, and explicit decision gates.
 
-Phases 0, 1, 3, and 4 are complete for their stated boundaries. Phase 2's core analytical
+Phases 0, 1, 3, 4, and 5 are complete for their stated boundaries. Phase 2's core analytical
 operations are available, with narrower percentile/stretch/presentation follow-ups still open.
 Phase 5 includes deterministic sparse foreground components, explicit GPU convergence, dense
 identifiers, bounded counts, capacity overflow, grouped intensity summaries, local centroids,
-and affine area; cross-tile identity remains open.
+affine area, and connectivity-correct cross-tile identity with merged dataset-wide rows.
 Phase 6 already includes single-raster contour classification and indirect drawing, but not
 cross-tile contour ownership or zonal statistics. The next dependency-ready implementation is
-Tranche 5.4; Tranche 6.3 is an alternative when contour integration takes priority.
+Tranche 6.3; Tranche 6.4 remains an independently available alternative when zonal analytics
+take priority.
 
 Completing a phase means its separately documented contracts exist; it does not imply that every
 feature combination is automatic. In particular, the Raster Lab deliberately separates generated
@@ -509,7 +511,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | Follow-ups  | High   | Medium |
 | 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Complete    | High   | Large  |
 | 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Complete    | High   | Large  |
-| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | In progress | High   | Large  |
+| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Complete    | High   | Large  |
 | 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | In progress | High   | Large  |
 | 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred    | Medium | Large  |
 | 8 — Productization               | Satellite/microscopy showcases, documentation, benchmarks, and release gates | In progress | High   | Medium |
@@ -685,9 +687,20 @@ when their tests and rollback boundaries remain understandable.
   double precision without duplicating tile origins. The Raster Lab exposes one selected GPU
   region record by explicitly switching from 48 to 40 histogram bins while keeping its single
   analytical summary at exactly 228 bytes.
-- **5.4 next:** cross-tile component equivalences, deterministic global relabeling, and
-  mergeable region measurements; tranche 6.3 seam-safe contour ownership remains
-  independently available when vector integration takes priority.
+- **5.4 complete for deterministic cross-tile segmentation:** `GPURasterCrossTileComponents`
+  consumes explicitly owned converged tile labels, validity, topology, metadata, and mergeable
+  local measurement columns. Four-connected seam contacts and eight-connected diagonal/four-tile
+  junctions resolve into canonical global representatives; `GPUSort` and unsigned `GPUScan`
+  publish the same dense full-raster row-major IDs regardless of tile arrival order.
+  Caller-owned per-tile global labels retain real background and nodata distinctions; explicit
+  required/published counts, bounded capacity, convergence, and unsigned-population overflow
+  prevent silent truncation or wraparound. Region geometry/intensity populations, calibrated
+  sums/extrema, translated spatial moments, weighted means/centroids, and coordinate-unit areas
+  merge only over disjoint owned cores. Raster Lab switches explicitly between local and
+  stitched native/source-overview regions while retaining pinned source leases, honest
+  compatibility boundaries, and its existing 48/40-bin, one-record, 228-byte summary.
+- **6.3 next:** seam-safe contour ownership and example-only external vector overlays; tranche
+  6.4 zonal composition is an independently available alternative when analytics take priority.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -1125,7 +1138,7 @@ iteration count make completion explicit; exhausted iteration budgets zero every
 output-validity element. The Raster Lab colors sparse labels directly, exposes connectivity and
 bounded convergence, and reuses its existing compact scalar summary. Dense numbering and bounded
 component counts are provided by the separate Tranche 5.2 contributor; region statistics and
-cross-tile identity resolution remain future tranches.
+cross-tile identity resolution are provided by the separate Tranche 5.3 and 5.4 contributors.
 
 **Work:** Implement deterministic `uint32` union-by-minimum-root with explicit 4/8 connectivity,
 separate graph passes for initialization, hooking, path compression, and convergence state.
@@ -1156,7 +1169,8 @@ clear every published label, validity flag, count, and overflow state. The Raste
 its existing 228-byte readback by publishing exact required count, convergence, and actual
 rounds in prior contour slots; bounded display count and overflow derive from that exact
 required count and the visible capacity. Region measurements are provided by the separate
-Tranche 5.3 contributor; cross-tile IDs remain unimplemented.
+Tranche 5.3 contributor; globally reconciled IDs are provided by the separate Tranche 5.4
+contributor.
 
 **Work:** Mark representative roots, apply `GPUScan` to unsigned root flags, and scatter dense
 labels with background `0` and foreground `1..componentCount`. Return caller-owned count,
@@ -1206,6 +1220,24 @@ Geographic-degree CRS never claims square-meter area without an explicit externa
 ### Tranche 5.4 — Cross-tile segmentation
 
 **Entry:** Tranches 5.3, 4.3, and 4.5.
+
+**Status:** Complete through `GPURasterCrossTileComponents`, `GPURasterCrossTile`, and
+`GPURasterCrossTileComponentsProps`. Explicit, nonoverlapping half-open tile cores retain their
+own metadata, convergence-gated dense labels, observation masks, bounded component counts, and
+11 mergeable local measurement columns. GPU seam equivalences include horizontal/vertical
+neighbors and, under eight-connectivity, diagonal contacts and four-tile junctions; invalid
+observations remain absolute barriers. Globally translated representative pixels are sorted in
+true full-raster row-major order rather than tile-major arrival order, then unsigned GPU scan
+assigns canonical bounded dense identities. Caller-owned per-tile outputs, global required and
+published populations, convergence, overflow, and merged records remain GPU-resident. Distinct
+geometric/intensity counts, calibrated sums/extrema, translated center moments, weighted means,
+centroids, and square-coordinate-unit areas merge without averaging per-tile averages.
+Nonconverged or overflowing local inputs, exhausted global propagation, bounded global IDs, and
+unsigned population overflow use explicit fail-closed or saturation/overflow contracts.
+The Raster Lab exercises owned WEST/EAST cores, four/eight connectivity, reversible traversal,
+global dense identity, merged one-region inspection, and explicit source/operation exclusions
+while retaining its single truthful 40-or-48-bin, 228-byte readback. No decoder, CPU label
+traversal, hidden command submission, full-image result allocation, or readback is introduced.
 
 **Work:** Record equivalences across neighboring tile edges, including diagonal contacts for
 8-connectivity. Resolve representative identities deterministically, apply a second dense global
@@ -1668,8 +1700,9 @@ as a monolithic reference without tile seams or last-tile-only global histograms
 
 **Status:** Started with completed sparse, convergence-gated connected-component labeling,
 bounded dense region identifiers and counts, validity-aware region intensity/geometric
-measurements, single-raster marching squares, and indirect contour draws. Cross-tile
-component/contour ownership and zonal statistics remain open.
+measurements, globally reconciled cross-tile component identities and merged region rows,
+single-raster marching squares, and indirect contour draws. Cross-tile contour ownership and
+zonal statistics remain open.
 
 Add tranches 5.1–5.4 and 6.1–6.4. An application can label components, calculate region and
 polygon-zonal statistics, and render stable georeferenced contours through indirect GPU draws
@@ -1687,8 +1720,8 @@ Advanced Phase 7 work is not a prerequisite.
 ## Completed foundation sequence
 
 These already-delivered slices document the original dependency order; they are not proposed
-future pull requests. The next implementation boundary is Tranche 5.4, with Tranche 6.3 available
-independently when contour seam ownership is more urgent.
+future pull requests. The next implementation boundary is Tranche 6.3; Tranche 6.4 remains
+independently available when zonal analytics take priority.
 
 ### Foundation slice 1 — Optional package and reproducible fixtures
 
