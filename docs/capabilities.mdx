@@ -526,7 +526,8 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Imported GPU instancing | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Render authored `EXT_mesh_gpu_instancing` transforms through one real instanced draw per source primitive. |
 | Imported node visibility | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply authored `KHR_node_visibility` recursively to compatible descendants and punctual lights. |
 | Source-faithful glTF and GLB export | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported hierarchy, geometry, accessors, images, skins, morph targets, animation, and extensions. |
-| Screen-space crowd level of detail | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Authored `MSFT_lod` fixtures are available; per-actor coverage selection, culling, and GPU-driven LOD draws are not implemented. |
+| Screen-space crowd level of detail | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Classify independently animated actors into authored or automatically decimated mesh-detail buckets, cull offscreen/tiny actors, and submit one instanced draw per occupied source-primitive/detail group. GPU-driven indirect selection remains future work. |
+| Global animated-crowd vertex budgets | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Limit submitted index references across all visible actor primitives, deterministically demote farther characters first, and report unsatisfied limits without hiding actors. |
 
 The ownership boundaries are intentional: `@luma.gl/gltf` interprets assets,
 `@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,

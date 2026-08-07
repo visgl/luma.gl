@@ -41,6 +41,7 @@ needs independently rendered morph geometry, material variants, or animated mate
 | Independently posed skeletal actors | Supported, with one model and draw per actor. | Not represented by the extension. | Supported, with one draw per source primitive. |
 | Distinct clips, speeds, phases, and crossfades | Supported with independent scenegraphs. | Not represented by the extension. | Supported without splitting draw groups. |
 | Authored static copies in an interoperable glTF asset | Requires separate source nodes. | Source-defined instance transforms. | Runtime-created actors, not an interchange extension. |
+| Screen-size-dependent actor mesh detail | Application-managed per scenegraph. | Not represented by the extension. | Authored or generated mesh levels, one draw per occupied detail bucket. |
 | Actor-specific material variants or rendered morph targets | Supported with separate scenegraphs. | Source instances share render state. | Not independently rendered. |
 | GPU model, geometry, and texture duplication | Repeated for each independently parsed scenegraph. | Shared within the authored instance group. | Shared across all actors in the crowd. |
 
@@ -208,7 +209,13 @@ shared primitive into separate draw calls.
    Robot Expressive draw count remains approximately 19.
 5. Toggle **glTF Animation** to pause or resume playback, or toggle **Camera Animation** to stop
    the automatic orbit without changing actor state.
-6. Choose another animated model, including **Simple Skin LOD**, from the model selector.
+6. Enable **Auto LOD** to assign each actor a mesh detail level from its projected screen size.
+7. Adjust **Detail Bias** and optionally set **Vertex Budget** to cap submitted indexed work;
+   leave the budget at zero for ordinary screen-size selection without a global limit.
+8. Inspect the authored/generated source, per-level actor counts, culled actors, submitted
+   vertices and triangles, budget-driven demotions, and actual shared draws.
+9. Choose **Simple Skin LOD** to inspect three authored skeletal detail levels, or keep
+   **Robot Expressive** to inspect automatically generated index-only levels.
 
 The model menu deliberately excludes static assets. Robot Expressive is an externally hosted CC0
 model with 14 authored actions:
@@ -316,10 +323,10 @@ Batching reduces GPU draw calls, but large crowds can still be limited by CPU an
 | Joint matrices and CPU-side morph-weight values. | Four instance-transform column buffers per primitive. |
 | World placement and independently evaluated rigid-node motion. | One packed GPU joint palette per skinned primitive. |
 
-Detached glTF nodes that are not reachable from a source scene do not produce crowd draw groups.
-This matters for authored `MSFT_lod` assets: lower-detail alternative nodes remain stored in the
-document, but only the ordinary highest-detail scene root is drawn until actual LOD selection is
-implemented.
+Detached glTF nodes that are not reachable from a source scene do not produce crowd draw groups
+by default. When `lod` is explicitly configured, authored or generated `MSFT_lod` alternatives
+are mapped back to their reachable highest-detail animation node. Each occupied detail level
+then receives its own compact actor transforms and independently posed joint palettes.
 
 ## Graphics backends
 
@@ -374,8 +381,10 @@ eliminate the cost of independently evaluating animations:
 - Source parsing, material creation, and geometry allocation happen once per crowd.
 - Each frame evaluates one existing animation mixer per active actor.
 - Each actor's node hierarchy and skin transforms are updated on the CPU.
-- Active transform columns and joint palettes are uploaded once per primitive group.
-- The CPU submits one instanced draw per compatible reachable source primitive.
+- Active transform columns and joint palettes are uploaded once per occupied primitive/detail group.
+- Without LOD, the CPU submits one instanced draw per compatible reachable source primitive.
+- With LOD, each occupied source-primitive/detail bucket submits one instanced draw; empty
+  buckets submit none.
 - Unused fixed-capacity slots are allocated but are not rewritten every frame.
 
 Real performance therefore depends on actor count, source node count, joint count, clip
@@ -386,11 +395,232 @@ Prefer `addActors()`, `removeActors()`, and one `crowd.update()` per frame. Avoi
 crowd when clips change, issuing one `actor.update()` per character, or allocating a capacity
 that greatly exceeds your actual hardware budget.
 
-GPU-side clip sampling, distance-based animation-rate reduction, compute-driven culling, indirect
-multi-draw, and automatic screen-space LOD selection are possible future improvements; none is
-implemented or implied by the current API.
+Screen-space actor classification, compact bucket assignment, and mesh decimation currently run
+on the CPU; the resulting instance transforms and skin palettes are consumed by GPU vertex
+shaders. GPU-side clip sampling, distance-based animation-rate reduction, compute-driven
+classification, GPU-produced indirect commands, lazy geometry upload, and progressive streaming
+remain separate potential improvements.
 
-## Authored levels of detail
+## Screen-space levels of detail
+
+Opt in to detail selection when creating the crowd, then provide the current camera and viewport
+whenever they change:
+
+```ts
+import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+
+const crowd = createGLTFAnimatedCrowd(device, gltf, {
+  capacity: 100,
+  lod: {
+    enabled: true,
+    autoGenerate: true,
+    ratios: [0.5, 0.25],
+    preserveBoundary: false,
+    screenCoverage: [0.5, 0.2, 0.01],
+    hysteresis: 0.1,
+    vertexBudget: 12000
+  }
+});
+
+crowd.update(deltaSeconds, {
+  viewMatrix,
+  projectionMatrix,
+  viewportWidth: canvas.width,
+  viewportHeight: canvas.height
+});
+
+console.table(crowd.lodStats.levels);
+console.log({
+  source: crowd.lodStats.source,
+  visibleActors: crowd.lodStats.visibleActors,
+  culledActors: crowd.lodStats.culledActors,
+  instancedDraws: crowd.lodStats.drawCount,
+  submittedTriangles: crowd.lodStats.triangles,
+  submittedVertices: crowd.lodStats.vertices,
+  vertexBudget: crowd.lodStats.vertexBudget,
+  demotedActors: crowd.lodStats.demotedActors,
+  budgetSatisfied: crowd.lodStats.budgetSatisfied
+});
+```
+
+If the asset already contains authored `MSFT_lod` nodes, those levels take precedence and
+`lodStats.source` is `'authored'`. Otherwise `autoGenerate: true` attempts to create lower-detail
+index buffers and reports `'generated'` when simplification succeeds. Assets that cannot be
+simplified retain their original geometry and report `'none'`.
+
+| Option or control | Meaning |
+| --- | --- |
+| `lod.enabled` | Enables per-actor screen-size classification. Defaults to `false`. |
+| `lod.autoGenerate` | Derives index-only alternatives when no authored node levels are present. |
+| `lod.ratios` | Descending target index-count ratios, such as `[0.5, 0.25]`. |
+| `lod.preserveBoundary` | Keeps open mesh-chart boundaries fixed when `true`; generated LOD defaults to `false`. |
+| `lod.screenCoverage` | Optional descending thresholds overriding authored screen-coverage hints. |
+| `lod.hysteresis` | Relative transition dead band; defaults to `0.1`. |
+| `lod.vertexBudget` | Optional maximum submitted index references across all visible actors; zero or omission means unlimited. |
+| `crowd.update(deltaSeconds, view)` | Advances animation and applies the current camera in one shared-buffer refresh. |
+| `crowd.setLODView(view)` | Updates camera selection immediately when animation is paused or state changes independently. |
+| `crowd.setLODEnabled(enabled)` | Toggles prepared levels without recreating actors or changing clips. |
+| `crowd.setLODBias(bias)` | Positive detail multiplier; larger values retain higher-detail meshes longer. |
+| `crowd.setLODVertexBudget(vertexBudget?)` | Applies or clears the global indexed-vertex limit and refreshes existing actor buckets immediately. |
+| `crowd.lodStats` | Source kind, visibility, draw/triangle/index counts, level histogram, and budget diagnostics. |
+
+Actor coverage is estimated from the model's bounding sphere, actor placement and maximum axis
+scale, camera-space distance, projection scale, and viewport shape. Offscreen actors, actors
+behind the camera, and actors smaller than the lowest coverage threshold are excluded. Hysteresis
+prevents minor camera movement from repeatedly switching actors across a threshold.
+
+For example, a one-primitive asset with three mesh levels and actors in every bucket submits
+three instanced draws rather than one; 100 actors still do not create 100 draw calls:
+
+```text
+near actors   → LOD 0 → original indices      → one shared instanced draw
+middle actors → LOD 1 → fewer indices         → one shared instanced draw
+far actors    → LOD 2 → fewest indices        → one shared instanced draw
+tiny actors   → culled                        → no draw
+```
+
+Each bucket preserves the selected actor's original animation hierarchy, clip, phase, world
+placement, and skin pose. Actor identities do not change when the camera moves between buckets.
+
+### Keep visible geometry within a global vertex budget
+
+Screen coverage selects the appropriate detail for each individual actor, but many individually
+reasonable actors can still exceed a frame's aggregate geometry budget. Set `lod.vertexBudget`
+to redistribute detail across the entire crowd while preserving every visible character:
+
+```ts
+const crowd = createGLTFAnimatedCrowd(device, gltf, {
+  capacity: 100,
+  lod: {
+    enabled: true,
+    autoGenerate: true,
+    ratios: [0.5, 0.25],
+    vertexBudget: 12000
+  }
+});
+
+crowd.addActors(actorOptions);
+crowd.update(deltaSeconds, {
+  viewMatrix,
+  projectionMatrix,
+  viewportWidth: canvas.width,
+  viewportHeight: canvas.height
+});
+
+const {vertices, vertexBudget, demotedActors, budgetSatisfied, visibleActors} = crowd.lodStats;
+console.log({vertices, vertexBudget, demotedActors, budgetSatisfied, visibleActors});
+
+crowd.setLODVertexBudget(6000); // Reclassify and upload once immediately.
+crowd.setLODVertexBudget(0); // Disable the limit without removing actors or LOD levels.
+```
+
+Here **vertices means submitted index references**, not distinct positions in the source mesh:
+
+```text
+submitted vertices = sum over visible actors and their selected source primitives
+                     of that primitive's index count at the chosen detail level
+```
+
+A triangle-list primitive with 600 indices contributes 600 submitted vertices, or 200 submitted
+triangles, for **each actor** using that level. Repeated references are counted intentionally:
+the limit estimates indexed draw work across instances rather than immutable vertex-buffer size.
+It is not a promise about exact GPU vertex-shader invocation counts, which also depend on
+hardware post-transform caching, nor is it a memory-allocation budget.
+
+The selection policy is deterministic:
+
+1. Classify and cull actors using their ordinary projected screen coverage and hysteresis.
+2. Add the selected index counts for every source primitive belonging to every visible actor.
+3. If the total exceeds the configured limit, demote the actor with the smallest projected
+   coverage first, changing all of that character's compatible source primitives together.
+4. Continue toward lower prepared levels, resolving equal coverage in stable actor insertion
+   order, until the budget is satisfied or every eligible actor is already at minimum detail.
+
+This policy protects nearer, larger characters before reducing distant ones. A 19-primitive
+character is charged for all 19 source primitives, not treated as one mesh. Independent clips,
+joint palettes, placement, and actor identities remain intact; budget-only demotions do not
+overwrite the screen-size hysteresis state used when the limit is relaxed.
+
+An impossibly small budget **never hides actors to manufacture success**. Existing frustum and
+minimum-screen-size culling still apply, but actors that remain visible stay visible at their
+lowest available detail. In that case `lodStats.vertices` can exceed `lodStats.vertexBudget`,
+and `lodStats.budgetSatisfied` is `false`. Increase the limit, supply more effective lower-detail
+levels, or reduce the number of visible actors yourself.
+
+The limit is opt-in and applies only while crowd LOD is enabled. An omitted, `undefined`, or
+zero budget is unlimited; `lodStats.vertexBudget` is then absent and normal screen-coverage
+selection is unchanged. `lodStats.demotedActors` counts actors reduced below their preferred
+screen-space level, not the number of primitive groups or individual level transitions.
+
+Budgeting remains CPU-side and does not require GPU readback. Per-level primitive costs are
+prepared once for the crowd, visible actors are sorted by projected coverage, and selected
+levels reuse the existing single packed-buffer upload. For `A` visible actors, `P` source
+primitive groups, and `L` detail levels, preparation costs `O(P × L)` once, followed by
+approximately `O(A × log(A) + A × L)` when a refresh needs budget-driven demotion. Independent
+CPU animation and skin-palette preparation can still dominate large crowds.
+
+### Automatic index-only mesh decimation
+
+Automatic levels use the reusable `simplifyMesh()` function from `@luma.gl/engine`. The
+dependency-free simplifier performs deterministic, quadric-error edge collapses while retaining
+existing vertex endpoints. It protects triangle orientation and categorical joint assignments,
+and considers available normal, texture-coordinate, and skin-weight data. The standalone helper
+preserves open mesh boundaries by default:
+
+```ts
+import {simplifyMesh} from '@luma.gl/engine';
+
+const result = simplifyMesh({
+  positions: sourcePositions,
+  indices: sourceIndices,
+  targetRatio: 0.5,
+  attributes: [{values: sourceTextureCoordinates, size: 2}],
+  preserveBoundary: true
+});
+
+console.log(result.indices.length, result.geometricError);
+```
+
+The resulting index array keeps the source `Uint8Array`, `Uint16Array`, or `Uint32Array` type
+and references the original vertices. Position, normal, UV, joint, weight, material, and morph
+accessors remain unchanged. Conservative boundary or skinning constraints can prevent reaching
+an exact requested ratio; no invalid geometry is synthesized merely to satisfy a target.
+
+Automatic crowd generation defaults to `preserveBoundary: false` because production character
+meshes often split hard normals and UV charts into independent boundaries; preserving all of
+those chart edges can prevent meaningful decimation. Enable `lod.preserveBoundary` when open
+silhouette or chart-boundary fidelity is more important than reaching lower triangle counts.
+Joint-domain protection, unchanged source attributes, and triangle-orientation checks remain
+active in either mode.
+
+For explicit document preparation, use `generateGLTFLODLevels()`:
+
+```ts
+import {generateGLTFLODLevels, getGLTFNodeLODs} from '@luma.gl/gltf';
+
+const prepared = generateGLTFLODLevels(gltf, {
+  ratios: [0.5, 0.25],
+  screenCoverage: [0.5, 0.2, 0.01],
+  preserveBoundary: false
+});
+
+const levels = getGLTFNodeLODs(prepared, 0);
+console.table(
+  levels?.map(level => ({
+    level: level.level,
+    nodeIndex: level.nodeIndex,
+    screenCoverage: level.screenCoverage,
+    indices: level.node.mesh?.primitives[0]?.indices?.count
+  }))
+);
+```
+
+The source document is not mutated. Lower-detail nodes remain detached alternatives and reuse
+the original postprocessed vertex accessors, materials, skin references, and animation tracks.
+Prepared render levels still own their normal GPU models and instance resources; index-only
+source sharing does not imply lazy GPU upload or zero additional GPU memory.
+
+### Authored `MSFT_lod` assets
 
 The Microsoft vendor extension `MSFT_lod` can describe multiple geometry levels on the highest
 quality glTF node:
@@ -424,15 +654,16 @@ The repository includes two complementary fixtures:
   three-level model contains 5,796, 324, and 36 indices. It is retained for reference and testing,
   and is intentionally excluded from the Studio's animation-only model menu.
 
-**Current behavior is highest-detail fallback only.** The regular glTF scenegraph and animated
-crowd render only scene-reachable mesh nodes. Authored lower-detail alternatives are preserved
-but remain detached; no screen-size measurement, threshold evaluation, runtime mesh switching,
-per-actor LOD bucketing, lazy loading, or progressive LOD streaming currently occurs.
+The ordinary scenegraph and crowds without `lod` configured retain highest-detail fallback. An
+opted-in crowd resolves authored alternatives with `getGLTFNodeLODs()`, selects each actor's
+level from projected coverage, and submits one draw per occupied source-primitive/detail bucket.
+Detached lower-detail meshes reuse the highest-detail node's animation and skin binding rather
+than incorrectly evaluating their own detached hierarchy.
 
-`getGLTFExtensionSupport()` truthfully reports `MSFT_lod` as unsupported. Loading the example
-demonstrates interoperable authored data and highest-detail compatibility, not an implemented
-LOD renderer. Strict extension validation rejects assets that list the unsupported extension in
-`extensionsRequired`; the crowd API does not override that policy.
+`getGLTFExtensionSupport()` reports `MSFT_lod` as `parsed-and-wired`, so strict extension
+validation accepts supported node-level LOD assets. Material-level LOD, GPU-compute
+classification, indirect drawing, progressive transfer, and lazy resource creation are not
+implemented.
 
 ## Current boundaries
 
@@ -440,8 +671,8 @@ LOD renderer. Strict extension validation rejects assets that list the unsupport
   texture-transform pointers, camera/light pointers, and renderer state are not isolated.
 - Actor morph weights can advance independently on their CPU-side nodes, but independently
   deformed morph-target vertex data is not yet evaluated or drawn per actor.
-- Per-actor visibility, culling, transparency sorting, and source-authored
-  `EXT_mesh_gpu_instancing` composition are not promised by this crowd API.
+- Per-actor transparency sorting, source-authored `EXT_mesh_gpu_instancing` composition,
+  GPU-driven indirect LOD draws, and material-level LOD are not supported.
 - Each source primitive still has its own draw, and every actor's clip evaluation and palette
   preparation currently occur on the CPU.
 - Crowd buffers have a fixed capacity; recreate the crowd to increase it.
@@ -472,7 +703,11 @@ Inspect actual shared primitive groups instead of estimating draw counts from th
 ```ts
 console.table(
   crowd.primitiveGroups.map(group => ({
-    sourceNode: group.nodeIndex,
+    animationNode: group.nodeIndex,
+    sourceNode: group.sourceNodeIndex,
+    detailLevel: group.lodLevel,
+    indicesPerActor: group.vertexCount,
+    trianglesPerActor: group.triangleCount,
     actorInstances: group.model.instanceCount,
     joints: group.jointCount,
     transformBuffers: group.transformBuffers.length,
@@ -499,7 +734,12 @@ console.table(
 | Adding actors fails at a fixed count. | Recreate the crowd with a larger `capacity`, subject to device storage or texture limits. |
 | Individual actor changes make large crowds slow. | Prefer `addActors()`, `removeActors()`, and one crowd-level `update()` per frame. |
 | Facial expressions differ in CPU state but not on screen. | Independent GPU morph deformation is not implemented for crowds. |
-| The LOD sample never changes mesh. | `MSFT_lod` is authored fixture data; runtime screen-space LOD selection is not implemented. |
+| The LOD sample never changes mesh. | Configure `lod`, enable it, supply `setLODView()`, and move actors across the authored coverage thresholds. |
+| Several draws appear with Auto LOD enabled. | Expected: each occupied source-primitive/detail bucket submits one instanced draw. |
+| An actor disappears at a great distance. | Actors below the lowest coverage threshold are culled; increase detail bias or lower the threshold. |
+| The vertex count exceeds the configured limit. | Every visible actor may already be at its lowest available detail; inspect `budgetSatisfied` and add lower levels or raise the budget. |
+| A faraway actor becomes less detailed than its screen coverage suggests. | The global vertex budget demotes smaller, more distant actors before reducing closer characters. |
+| Generated detail stays at full resolution. | Boundary, topology, or joint constraints can prevent safe simplification; inspect `lodStats.source` and the source mesh. |
 
 ## Public API
 
@@ -523,7 +763,8 @@ import {
 | `crowd.removeActors(ids)` | Remove and compact many actors with one upload. |
 | `crowd.actorCount`, `crowd.capacity`, `crowd.actors` | Inspect live actors and fixed storage capacity. |
 | `crowd.scenegraphs`, `crowd.models`, `crowd.primitiveGroups` | Inspect the shared parsed asset and primitive draw groups. |
-| `crowd.update(deltaSeconds)` | Evaluate actor clips and upload current transforms and palettes. |
+| `crowd.update(deltaSeconds, view?)` | Evaluate actor clips, optionally classify camera-dependent LOD, and upload once. |
+| `crowd.setLODVertexBudget(vertexBudget?)`, `crowd.lodStats` | Adjust a global indexed-work budget and inspect its actual geometry and visibility diagnostics. |
 | `crowd.draw(renderPass)` | Issue one instanced draw per compatible source primitive. |
 | `crowd.destroy()` | Release owned actor, palette, and shared scenegraph resources. |
 | `actor.selectClip()`, `actor.seek()`, `actor.setPhase()` | Select, crossfade, or reposition an independent clip. |

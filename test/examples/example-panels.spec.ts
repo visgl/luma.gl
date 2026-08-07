@@ -21,7 +21,10 @@ import {
   setTextSpaceCrawlColorKind
 } from '../../examples/text-space-crawl-color';
 import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
-import {isAnimatedGLTFCatalogModel} from '../../examples/showcase/gltf/gltf-catalog-app';
+import {
+  formatGLTFCrowdInfo,
+  isAnimatedGLTFCatalogModel
+} from '../../examples/showcase/gltf/gltf-catalog-app';
 import {
   flattenEffectSettings,
   getEffectResolutionScale,
@@ -823,6 +826,100 @@ describe('glTF controls', () => {
         step: 1
       })
     );
+  });
+
+  test('exposes automatic per-actor LOD and bounded screen-space detail bias', () => {
+    const settings = getSettingDefinitions(makeGltfSettingsSchema());
+
+    expect(settings.get('autoLOD')).toEqual(
+      expect.objectContaining({
+        label: 'Auto LOD',
+        type: 'boolean',
+        persist: 'none'
+      })
+    );
+    expect(settings.get('detailBias')).toEqual(
+      expect.objectContaining({
+        label: 'Detail Bias',
+        type: 'number',
+        min: 0.25,
+        max: 4,
+        step: 0.25
+      })
+    );
+    expect(settings.get('vertexBudget')).toEqual(
+      expect.objectContaining({
+        label: 'Vertex Budget',
+        type: 'number',
+        min: 0,
+        max: 1_000_000,
+        step: 100
+      })
+    );
+  });
+
+  test('reports real generated LOD buckets, culled actors, triangles, and draw counts', () => {
+    const summary = formatGLTFCrowdInfo(8, 3, ['Walking', 'Wave'], {
+      source: 'generated',
+      visibleActors: 7,
+      culledActors: 1,
+      drawCount: 3,
+      triangles: 1234,
+      vertices: 3702,
+      vertexBudget: 4500,
+      demotedActors: 2,
+      budgetSatisfied: true,
+      levels: [
+        {level: 0, actors: 2, triangles: 900},
+        {level: 1, actors: 3, triangles: 270},
+        {level: 2, actors: 2, triangles: 64}
+      ]
+    });
+
+    expect(summary).toContain('8 independently animated actors');
+    expect(summary).toContain('3 shared GPU draws');
+    expect(summary).toContain('Mixed actions: Walking, Wave');
+    expect(summary).toContain('Generated LOD');
+    expect(summary).toContain('L0: 2 · L1: 3 · L2: 2');
+    expect(summary).toContain('Visible: 7 · Culled: 1');
+    expect(summary).toContain('Triangles: 1,234');
+    expect(summary).toContain('Vertices: 3,702 / 4,500 · Demoted: 2');
+    expect(summary).not.toContain('Budget exceeded');
+  });
+
+  test('distinguishes authored mesh levels from generated detail', () => {
+    const summary = formatGLTFCrowdInfo(2, 1, [], {
+      source: 'authored',
+      visibleActors: 2,
+      culledActors: 0,
+      drawCount: 1,
+      triangles: 8,
+      vertices: 24,
+      demotedActors: 0,
+      budgetSatisfied: true,
+      levels: [{level: 0, actors: 2, triangles: 8}]
+    });
+
+    expect(summary).toContain('Authored LOD');
+    expect(summary).not.toContain('Generated LOD');
+  });
+
+  test('reports an impossible vertex budget without implying actors were silently culled', () => {
+    const summary = formatGLTFCrowdInfo(4, 1, [], {
+      source: 'generated',
+      visibleActors: 4,
+      culledActors: 0,
+      drawCount: 1,
+      triangles: 20,
+      vertices: 60,
+      vertexBudget: 30,
+      demotedActors: 4,
+      budgetSatisfied: false,
+      levels: [{level: 2, actors: 4, triangles: 20}]
+    });
+
+    expect(summary).toContain('Visible: 4 · Culled: 0');
+    expect(summary).toContain('Vertices: 60 / 30 · Demoted: 4 · Budget exceeded');
   });
 });
 
