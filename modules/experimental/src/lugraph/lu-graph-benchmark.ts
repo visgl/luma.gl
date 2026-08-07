@@ -15,6 +15,7 @@ import {LuGraph} from './lu-graph';
 import {
   LU_GRAPH_BENCHMARK_BOUNDS,
   LU_GRAPH_BENCHMARK_FORCE_PROPS,
+  LU_GRAPH_BENCHMARK_LABEL_ITERATIONS,
   getLuGraphBenchmarkTime,
   prepareLuGraphBenchmark,
   summarizeLuGraphBenchmarkSamples,
@@ -29,12 +30,16 @@ import {
 import {LuGraphBreadthFirstSearch} from './lu-graph-breadth-first-search';
 import {LuGraphConnectedComponents} from './lu-graph-connected-components';
 import {LuGraphForceLayout} from './lu-graph-force-layout';
+import {LuGraphLabelPropagation} from './lu-graph-label-propagation';
+import {LuGraphLocalClusteringCoefficient} from './lu-graph-local-clustering-coefficient';
 import {LuGraphPageRank} from './lu-graph-page-rank';
+import {LuGraphSingleSourceShortestPath} from './lu-graph-single-source-shortest-path';
 import {LuGraphSpatialForceLayout} from './lu-graph-spatial-force-layout';
 import {LuGraphTopology, type LuGraphAdjacency} from './lu-graph-topology';
 
 const SCALAR_BYTE_LENGTH = 4;
 const PAGE_RANK_TOLERANCE = 0.0001;
+const CLUSTERING_TOLERANCE = 0.000001;
 const FORCE_LAYOUT_TOLERANCE = 0.0005;
 
 type BenchmarkScalarFormat = 'uint32' | 'float32';
@@ -89,7 +94,10 @@ export async function runLuGraphBenchmark(
     const contributors: [LuGraphBenchmarkAlgorithm, GPUCommandGraphContributor][] = [
       ['topology', resources.topology],
       ['breadth-first-search', resources.search],
+      ['single-source-shortest-path', resources.shortestPath],
       ['connected-components', resources.components],
+      ['label-propagation', resources.communities],
+      ['local-clustering-coefficient', resources.clustering],
       ['page-rank', resources.pageRank],
       ['exact-layout', resources.exactLayout],
       ['spatial-layout', resources.spatialLayout]
@@ -148,7 +156,15 @@ export async function runLuGraphBenchmark(
         algorithm: path.algorithm,
         ...(finalValidation.converged === undefined
           ? {}
-          : {iterations: resources.components.iterations, converged: finalValidation.converged}),
+          : {
+              iterations:
+                path.algorithm === 'connected-components'
+                  ? resources.components.iterations
+                  : path.algorithm === 'label-propagation'
+                    ? resources.communities.iterations
+                    : resources.shortestPath.maxIterations,
+              converged: finalValidation.converged
+            }),
         ...(finalValidation.residual === undefined
           ? {}
           : {iterations: resources.pageRank.iterations, residual: finalValidation.residual}),
@@ -209,7 +225,10 @@ class LuGraphBenchmarkResources {
   readonly graph: LuGraph;
   readonly topology: LuGraphTopology;
   readonly search: LuGraphBreadthFirstSearch;
+  readonly shortestPath: LuGraphSingleSourceShortestPath;
   readonly components: LuGraphConnectedComponents;
+  readonly communities: LuGraphLabelPropagation;
+  readonly clustering: LuGraphLocalClusteringCoefficient;
   readonly pageRank: LuGraphPageRank;
   readonly exactLayout: LuGraphForceLayout;
   readonly spatialLayout: LuGraphSpatialForceLayout;
@@ -224,8 +243,9 @@ class LuGraphBenchmarkResources {
     this.graph = new LuGraph({
       vertexCount,
       directed: true,
-      sourceVertices: this.createChunkedVector('sources', context.dataset.sourceChunks),
-      targetVertices: this.createChunkedVector('targets', context.dataset.targetChunks)
+      sourceVertices: this.createChunkedVector('sources', 'uint32', context.dataset.sourceChunks),
+      targetVertices: this.createChunkedVector('targets', 'uint32', context.dataset.targetChunks),
+      edgeWeights: this.createChunkedVector('weights', 'float32', context.dataset.weightChunks)
     });
     const forward = this.createAdjacency('forward', vertexCount, edgeCount);
     const reverse = this.createAdjacency('reverse', vertexCount, edgeCount);
@@ -245,11 +265,34 @@ class LuGraphBenchmarkResources {
       maxDepth: context.options.maxDepth,
       direction: 'outgoing'
     });
+    this.shortestPath = new LuGraphSingleSourceShortestPath({
+      id: 'lugraph-benchmark-shortest-path',
+      topology: this.topology,
+      sourceVertex: 0,
+      distances: this.createScalarVector('weighted-distances', 'float32', vertexCount),
+      predecessors: this.createScalarVector('weighted-predecessors', 'uint32', vertexCount),
+      converged: this.createScalarVector('shortest-path-convergence', 'uint32', 1),
+      invalidWeightCount: this.createScalarVector('invalid-edge-weights', 'uint32', 1),
+      direction: 'outgoing'
+    });
     this.components = new LuGraphConnectedComponents({
       id: 'lugraph-benchmark-components',
       topology: this.topology,
       output: this.createScalarVector('component-labels', 'uint32', vertexCount),
       converged: this.createScalarVector('component-convergence', 'uint32', 1)
+    });
+    this.communities = new LuGraphLabelPropagation({
+      id: 'lugraph-benchmark-communities',
+      topology: this.topology,
+      output: this.createScalarVector('community-labels', 'uint32', vertexCount),
+      iterations: LU_GRAPH_BENCHMARK_LABEL_ITERATIONS,
+      converged: this.createScalarVector('community-convergence', 'uint32', 1)
+    });
+    this.clustering = new LuGraphLocalClusteringCoefficient({
+      id: 'lugraph-benchmark-local-clustering',
+      topology: this.topology,
+      output: this.createScalarVector('local-clustering', 'float32', vertexCount),
+      triangles: this.createScalarVector('triangle-counts', 'uint32', vertexCount)
     });
     this.pageRank = new LuGraphPageRank({
       id: 'lugraph-benchmark-page-rank',
@@ -322,25 +365,34 @@ class LuGraphBenchmarkResources {
   }
 
   /** Preserves aligned original source batches, including the deterministic empty middle chunk. */
-  private createChunkedVector(name: string, chunks: Uint32Array[]): GPUVector<'uint32'> {
+  private createChunkedVector<Format extends BenchmarkScalarFormat>(
+    name: string,
+    format: Format,
+    chunks: Format extends 'uint32' ? Uint32Array[] : Float32Array[]
+  ): GPUVector<Format> {
     const data = chunks.map((values, chunkIndex) => {
       const buffer = this.device.createBuffer({
         id: `lugraph-benchmark-${name}-${chunkIndex}`,
-        data: values.length === 0 ? new Uint32Array(1) : values,
+        data:
+          values.length === 0
+            ? format === 'float32'
+              ? new Float32Array(1)
+              : new Uint32Array(1)
+            : values,
         usage: Buffer.STORAGE | Buffer.COPY_DST
       });
       this.buffers.push(buffer);
-      return new GPUData<'uint32'>({
+      return new GPUData<Format>({
         buffer,
-        format: 'uint32',
+        format,
         length: values.length,
         ownsBuffer: false
       });
     });
-    const vector = new GPUVector<'uint32'>({
+    const vector = new GPUVector<Format>({
       type: 'data',
       name,
-      format: 'uint32',
+      format,
       data,
       ownsData: false
     });
@@ -400,6 +452,7 @@ class LuGraphBenchmarkResources {
       offsets: this.createScalarVector(`${name}-offsets`, 'uint32', vertexCount + 1),
       neighbors: this.createScalarVector(`${name}-neighbors`, 'uint32', edgeCount),
       edgeIds: this.createScalarVector(`${name}-edge-ids`, 'uint32', edgeCount),
+      edgeWeights: this.createScalarVector(`${name}-edge-weights`, 'float32', edgeCount),
       count: this.createScalarVector(`${name}-count`, 'uint32', 1),
       overflow: this.createScalarVector(`${name}-overflow`, 'uint32', 1)
     };
@@ -548,14 +601,23 @@ async function readBenchmarkPath(
 
   switch (algorithm) {
     case 'topology': {
-      const [forwardOffsets, forwardNeighbors, reverseOffsets, reverseNeighbors, invalid] =
-        await readOutputs(
-          resources.topology.forward.offsets,
-          resources.topology.forward.neighbors,
-          resources.topology.reverse!.offsets,
-          resources.topology.reverse!.neighbors,
-          resources.topology.invalidEdgeCount
-        );
+      const [
+        forwardOffsets,
+        forwardNeighbors,
+        forwardWeights,
+        reverseOffsets,
+        reverseNeighbors,
+        reverseWeights,
+        invalid
+      ] = await readOutputs(
+        resources.topology.forward.offsets,
+        resources.topology.forward.neighbors,
+        resources.topology.forward.edgeWeights!,
+        resources.topology.reverse!.offsets,
+        resources.topology.reverse!.neighbors,
+        resources.topology.reverse!.edgeWeights!,
+        resources.topology.invalidEdgeCount
+      );
       maxAbsoluteError = Math.max(
         getMaximumAbsoluteError(forwardOffsets, context.reference.forwardOffsets),
         getMaximumAbsoluteError(reverseOffsets, context.reference.reverseOffsets),
@@ -563,13 +625,17 @@ async function readBenchmarkPath(
           forwardOffsets,
           forwardNeighbors,
           context.reference.forwardOffsets,
-          context.reference.forwardNeighbors
+          context.reference.forwardNeighbors,
+          forwardWeights,
+          context.reference.forwardWeights
         ),
         getMaximumAdjacencyError(
           reverseOffsets,
           reverseNeighbors,
           context.reference.reverseOffsets,
-          context.reference.reverseNeighbors
+          context.reference.reverseNeighbors,
+          reverseWeights,
+          context.reference.reverseWeights
         ),
         invalid[0]
       );
@@ -586,6 +652,21 @@ async function readBenchmarkPath(
       );
       break;
     }
+    case 'single-source-shortest-path': {
+      const [distances, predecessors, convergenceValues, invalidWeights] = await readOutputs(
+        resources.shortestPath.distances,
+        resources.shortestPath.predecessors,
+        resources.shortestPath.converged!,
+        resources.shortestPath.invalidWeightCount!
+      );
+      converged = convergenceValues[0] === 1;
+      maxAbsoluteError = Math.max(
+        getMaximumAbsoluteError(distances, context.reference.weightedDistances),
+        getMaximumAbsoluteError(predecessors, context.reference.weightedPredecessors),
+        invalidWeights[0]
+      );
+      break;
+    }
     case 'connected-components': {
       const [components, convergenceValues] = await readOutputs(
         resources.components.output,
@@ -595,6 +676,29 @@ async function readBenchmarkPath(
       maxAbsoluteError = Math.max(
         getMaximumAbsoluteError(components, context.reference.components),
         Math.abs(convergenceValues[0] - 1)
+      );
+      break;
+    }
+    case 'label-propagation': {
+      const [communities, convergenceValues] = await readOutputs(
+        resources.communities.output,
+        resources.communities.converged!
+      );
+      converged = convergenceValues[0] === 1;
+      maxAbsoluteError = Math.max(
+        getMaximumAbsoluteError(communities, context.reference.communities),
+        Math.abs(convergenceValues[0] - Number(context.reference.communityConverged))
+      );
+      break;
+    }
+    case 'local-clustering-coefficient': {
+      const [coefficients, triangles] = await readOutputs(
+        resources.clustering.output,
+        resources.clustering.triangles!
+      );
+      maxAbsoluteError = Math.max(
+        getMaximumAbsoluteError(coefficients, context.reference.clusteringCoefficients),
+        getMaximumAbsoluteError(triangles, context.reference.triangleCounts)
       );
       break;
     }
@@ -650,9 +754,11 @@ async function readBenchmarkPath(
   const tolerance =
     algorithm === 'page-rank'
       ? PAGE_RANK_TOLERANCE
-      : algorithm === 'exact-layout' || algorithm === 'spatial-layout'
-        ? FORCE_LAYOUT_TOLERANCE
-        : 0;
+      : algorithm === 'local-clustering-coefficient'
+        ? CLUSTERING_TOLERANCE
+        : algorithm === 'exact-layout' || algorithm === 'spatial-layout'
+          ? FORCE_LAYOUT_TOLERANCE
+          : 0;
   if (!Number.isFinite(maxAbsoluteError) || maxAbsoluteError > tolerance) {
     throw new Error(
       `luGraph benchmark ${algorithm} disagrees with its CPU oracle: ${maxAbsoluteError}`
@@ -687,18 +793,38 @@ function getMaximumAdjacencyError(
   actualOffsets: readonly number[],
   actualNeighbors: readonly number[],
   expectedOffsets: ArrayLike<number>,
-  expectedNeighbors: ArrayLike<number>
+  expectedNeighbors: ArrayLike<number>,
+  actualWeights?: readonly number[],
+  expectedWeights?: ArrayLike<number>
 ): number {
   let maximumError = 0;
   const expectedValues = Array.from(expectedNeighbors);
   for (let vertex = 0; vertex < expectedOffsets.length - 1; vertex++) {
     const actual = actualNeighbors
       .slice(actualOffsets[vertex], actualOffsets[vertex + 1])
-      .sort((left, right) => left - right);
+      .map((neighbor, row) => ({
+        neighbor,
+        weight: actualWeights?.[actualOffsets[vertex] + row] ?? 0
+      }))
+      .sort((left, right) => left.neighbor - right.neighbor || left.weight - right.weight);
     const expected = expectedValues
       .slice(expectedOffsets[vertex], expectedOffsets[vertex + 1])
-      .sort((left, right) => left - right);
-    maximumError = Math.max(maximumError, getMaximumAbsoluteError(actual, expected));
+      .map((neighbor, row) => ({
+        neighbor,
+        weight: expectedWeights?.[expectedOffsets[vertex] + row] ?? 0
+      }))
+      .sort((left, right) => left.neighbor - right.neighbor || left.weight - right.weight);
+    maximumError = Math.max(
+      maximumError,
+      getMaximumAbsoluteError(
+        actual.map(value => value.neighbor),
+        expected.map(value => value.neighbor)
+      ),
+      getMaximumAbsoluteError(
+        actual.map(value => value.weight),
+        expected.map(value => value.weight)
+      )
+    );
   }
   return maximumError;
 }
@@ -708,6 +834,7 @@ function getMaximumAbsoluteError(actual: ArrayLike<number>, expected: ArrayLike<
   if (actual.length !== expected.length) return Number.POSITIVE_INFINITY;
   let maximumError = 0;
   for (let index = 0; index < actual.length; index++) {
+    if (actual[index] === expected[index]) continue;
     const difference = Math.abs(actual[index] - expected[index]);
     if (!Number.isFinite(difference)) return Number.POSITIVE_INFINITY;
     maximumError = Math.max(maximumError, difference);

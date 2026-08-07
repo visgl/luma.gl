@@ -142,14 +142,16 @@ visibility, flat scenes, and indirect rendering without adding trace concepts to
 </p>
 
 [`@luma.gl/experimental/lugraph`](/docs/api-reference/experimental/lugraph) turns existing GPU
-edge columns into reusable compressed adjacency, vertex degrees, bounded shortest-path searches,
-weakly connected components, and dangling-aware PageRank scores. Social networks, dependency graphs,
+edge columns into reusable compressed adjacency, vertex degrees, unweighted and nonnegative
+weighted shortest paths, weakly connected components, label-propagation communities, local
+clustering coefficients, and dangling-aware PageRank scores. Social networks, dependency graphs,
 transaction investigations, and infrastructure maps can compose those operations into one WebGPU
 command graph without copying source batches or reading complete results back to JavaScript.
 The [interactive graph explorer](/examples/experimental/lugraph-explorer) adds directly renderable
 exact force-layout coordinates, neighborhood highlighting, stable GPU picking, dragging, and pinning.
-An opt-in live benchmark compares six actual CPU and WebGPU graph workloads across five graph
-families while reporting command encoding, completion fences, setup costs, and layout accuracy.
+An opt-in live benchmark compares nine actual CPU and WebGPU graph workloads across five graph
+families, covering all six Graphalytics workload families while reporting command encoding,
+completion fences, setup costs, and layout accuracy.
 
 ## GPU-Resident Dataframes
 

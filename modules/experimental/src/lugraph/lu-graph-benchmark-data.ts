@@ -32,6 +32,8 @@ export type LuGraphBenchmarkDataset = {
   edgeCount: number;
   sourceChunks: Uint32Array[];
   targetChunks: Uint32Array[];
+  /** Positive float32 edge costs aligned with every original source partition. */
+  weightChunks: Float32Array[];
   positions: Float32Array;
 };
 
@@ -39,7 +41,10 @@ export type LuGraphBenchmarkDataset = {
 export type LuGraphBenchmarkAlgorithm =
   | 'topology'
   | 'breadth-first-search'
+  | 'single-source-shortest-path'
   | 'connected-components'
+  | 'label-propagation'
+  | 'local-clustering-coefficient'
   | 'page-rank'
   | 'exact-layout'
   | 'spatial-layout';
@@ -91,11 +96,19 @@ export type LuGraphBenchmarkReport = {
 export type LuGraphBenchmarkReference = {
   forwardOffsets: Uint32Array;
   forwardNeighbors: Uint32Array;
+  forwardWeights: Float32Array;
   reverseOffsets: Uint32Array;
   reverseNeighbors: Uint32Array;
+  reverseWeights: Float32Array;
   distances: Uint32Array;
   predecessors: Uint32Array;
+  weightedDistances: Float32Array;
+  weightedPredecessors: Uint32Array;
   components: Uint32Array;
+  communities: Uint32Array;
+  communityConverged: boolean;
+  clusteringCoefficients: Float32Array;
+  triangleCounts: Uint32Array;
   pageRank: Float32Array;
   exactPositions: Float32Array;
   exactVelocities: Float32Array;
@@ -113,10 +126,30 @@ export type LuGraphBenchmarkContext = {
 
 type LuGraphBenchmarkAdjacency = Pick<
   LuGraphBenchmarkReference,
-  'forwardOffsets' | 'forwardNeighbors' | 'reverseOffsets' | 'reverseNeighbors'
+  | 'forwardOffsets'
+  | 'forwardNeighbors'
+  | 'forwardWeights'
+  | 'reverseOffsets'
+  | 'reverseNeighbors'
+  | 'reverseWeights'
 >;
 
 type LuGraphBenchmarkSearch = Pick<LuGraphBenchmarkReference, 'distances' | 'predecessors'>;
+
+type LuGraphBenchmarkShortestPath = Pick<
+  LuGraphBenchmarkReference,
+  'weightedDistances' | 'weightedPredecessors'
+>;
+
+type LuGraphBenchmarkCommunities = Pick<
+  LuGraphBenchmarkReference,
+  'communities' | 'communityConverged'
+>;
+
+type LuGraphBenchmarkClustering = Pick<
+  LuGraphBenchmarkReference,
+  'clusteringCoefficients' | 'triangleCounts'
+>;
 
 type LuGraphBenchmarkLayout = {positions: Float32Array; velocities: Float32Array};
 
@@ -127,8 +160,11 @@ type MeasuredLuGraphBenchmarkValue<Value> = {
 
 const UINT32_MAXIMUM = 0xffffffff;
 const MAXIMUM_VERTEX_COUNT = 0xfffffffe;
+const MAXIMUM_SHORTEST_PATH_ITERATIONS = 1024;
 const MINIMUM_REPULSION_DISTANCE_SQUARED = 0.0001;
 const PAGE_RANK_DAMPING = 0.85;
+/** @internal Fixed, honestly reported synchronous majority-vote workload. */
+export const LU_GRAPH_BENCHMARK_LABEL_ITERATIONS = 8;
 const DATASET_KINDS: readonly LuGraphBenchmarkDatasetKind[] = [
   'sparse',
   'dense',
@@ -262,6 +298,14 @@ export function makeLuGraphBenchmarkDataset(
   }
 
   const split = Math.ceil(sources.length / 2);
+  const weights = Float32Array.from(sources, (source, edgeIndex) =>
+    Math.fround(
+      0.25 +
+        (((Math.imul(source, 31) + Math.imul(targets[edgeIndex], 17) + edgeIndex + seed) >>> 0) %
+          16) *
+          0.25
+    )
+  );
   return {
     kind,
     vertexCount,
@@ -276,6 +320,7 @@ export function makeLuGraphBenchmarkDataset(
       new Uint32Array(0),
       Uint32Array.from(targets.slice(split))
     ],
+    weightChunks: [weights.slice(0, split), new Float32Array(0), weights.slice(split)],
     positions
   };
 }
@@ -290,8 +335,17 @@ export function prepareLuGraphBenchmark(options: LuGraphBenchmarkOptions): LuGra
   const search = measureLuGraphBenchmarkValue(normalizedOptions, () =>
     evaluateLuGraphBenchmarkBreadthFirstSearch(adjacency.value, normalizedOptions.maxDepth)
   );
+  const shortestPath = measureLuGraphBenchmarkValue(normalizedOptions, () =>
+    evaluateLuGraphBenchmarkShortestPath(adjacency.value)
+  );
   const components = measureLuGraphBenchmarkValue(normalizedOptions, () =>
     evaluateLuGraphBenchmarkConnectedComponents(dataset)
+  );
+  const communities = measureLuGraphBenchmarkValue(normalizedOptions, () =>
+    evaluateLuGraphBenchmarkLabelPropagation(adjacency.value, LU_GRAPH_BENCHMARK_LABEL_ITERATIONS)
+  );
+  const clustering = measureLuGraphBenchmarkValue(normalizedOptions, () =>
+    evaluateLuGraphBenchmarkLocalClustering(adjacency.value)
   );
   const pageRank = measureLuGraphBenchmarkValue(normalizedOptions, () =>
     evaluateLuGraphBenchmarkPageRank(adjacency.value, normalizedOptions.pageRankIterations)
@@ -309,7 +363,10 @@ export function prepareLuGraphBenchmark(options: LuGraphBenchmarkOptions): LuGra
     reference: {
       ...adjacency.value,
       ...search.value,
+      ...shortestPath.value,
       components: components.value,
+      ...communities.value,
+      ...clustering.value,
       pageRank: pageRank.value,
       exactPositions: exactLayout.value.positions,
       exactVelocities: exactLayout.value.velocities,
@@ -319,7 +376,10 @@ export function prepareLuGraphBenchmark(options: LuGraphBenchmarkOptions): LuGra
     cpuTimeMilliseconds: {
       topology: adjacency.timeMilliseconds,
       'breadth-first-search': search.timeMilliseconds,
+      'single-source-shortest-path': shortestPath.timeMilliseconds,
       'connected-components': components.timeMilliseconds,
+      'label-propagation': communities.timeMilliseconds,
+      'local-clustering-coefficient': clustering.timeMilliseconds,
       'page-rank': pageRank.timeMilliseconds,
       'exact-layout': exactLayout.timeMilliseconds,
       'spatial-layout': spatialLayout.timeMilliseconds
@@ -420,14 +480,27 @@ function buildLuGraphBenchmarkAdjacency(
     reverseOffsets[vertex + 1] += reverseOffsets[vertex];
   }
   const forwardNeighbors = new Uint32Array(dataset.edgeCount);
+  const forwardWeights = new Float32Array(dataset.edgeCount);
   const reverseNeighbors = new Uint32Array(dataset.edgeCount);
+  const reverseWeights = new Float32Array(dataset.edgeCount);
   const forwardCursors = forwardOffsets.slice(0, -1);
   const reverseCursors = reverseOffsets.slice(0, -1);
-  forEachBenchmarkEdge(dataset, (source, target) => {
-    forwardNeighbors[forwardCursors[source]++] = target;
-    reverseNeighbors[reverseCursors[target]++] = source;
+  forEachBenchmarkEdge(dataset, (source, target, weight) => {
+    const forwardSlot = forwardCursors[source]++;
+    const reverseSlot = reverseCursors[target]++;
+    forwardNeighbors[forwardSlot] = target;
+    forwardWeights[forwardSlot] = weight;
+    reverseNeighbors[reverseSlot] = source;
+    reverseWeights[reverseSlot] = weight;
   });
-  return {forwardOffsets, forwardNeighbors, reverseOffsets, reverseNeighbors};
+  return {
+    forwardOffsets,
+    forwardNeighbors,
+    forwardWeights,
+    reverseOffsets,
+    reverseNeighbors,
+    reverseWeights
+  };
 }
 
 function evaluateLuGraphBenchmarkBreadthFirstSearch(
@@ -463,6 +536,54 @@ function evaluateLuGraphBenchmarkBreadthFirstSearch(
   return {distances, predecessors};
 }
 
+/** @internal Independently evaluates exactly the bounded GPU relaxation workload. */
+export function evaluateLuGraphBenchmarkShortestPath(
+  adjacency: LuGraphBenchmarkAdjacency
+): LuGraphBenchmarkShortestPath {
+  const vertexCount = adjacency.forwardOffsets.length - 1;
+  const weightedDistances = new Float32Array(vertexCount).fill(Number.POSITIVE_INFINITY);
+  const weightedPredecessors = new Uint32Array(vertexCount).fill(UINT32_MAXIMUM);
+  weightedDistances[0] = 0;
+
+  const maximumIterations = Math.min(
+    Math.max(vertexCount - 1, 0),
+    MAXIMUM_SHORTEST_PATH_ITERATIONS
+  );
+  for (let iteration = 0; iteration < maximumIterations; iteration++) {
+    const previousDistances = weightedDistances.slice();
+    let changed = false;
+
+    for (let source = 0; source < vertexCount; source++) {
+      const sourceDistance = previousDistances[source];
+      if (!Number.isFinite(sourceDistance)) continue;
+
+      for (
+        let slot = adjacency.forwardOffsets[source];
+        slot < adjacency.forwardOffsets[source + 1];
+        slot++
+      ) {
+        const target = adjacency.forwardNeighbors[slot];
+        const distance = Math.fround(sourceDistance + adjacency.forwardWeights[slot]);
+        if (distance < weightedDistances[target]) {
+          weightedDistances[target] = distance;
+          weightedPredecessors[target] = source;
+          changed = true;
+        } else if (
+          distance === weightedDistances[target] &&
+          distance < previousDistances[target] &&
+          source < weightedPredecessors[target]
+        ) {
+          weightedPredecessors[target] = source;
+        }
+      }
+    }
+
+    if (!changed) break;
+  }
+
+  return {weightedDistances, weightedPredecessors};
+}
+
 function evaluateLuGraphBenchmarkConnectedComponents(
   dataset: LuGraphBenchmarkDataset
 ): Uint32Array {
@@ -484,6 +605,92 @@ function evaluateLuGraphBenchmarkConnectedComponents(
     else if (secondRoot < firstRoot) parents[firstRoot] = secondRoot;
   });
   return Uint32Array.from(parents, (_, vertex) => findRoot(vertex));
+}
+
+/** Independently reproduces duplicate-sensitive, synchronous weak-neighbor community voting. */
+function evaluateLuGraphBenchmarkLabelPropagation(
+  adjacency: LuGraphBenchmarkAdjacency,
+  iterations: number
+): LuGraphBenchmarkCommunities {
+  const vertexCount = adjacency.forwardOffsets.length - 1;
+  let communities = Uint32Array.from({length: vertexCount}, (_, vertex) => vertex);
+  let communityConverged = vertexCount === 0;
+
+  for (let iteration = 0; iteration < iterations; iteration++) {
+    const next = new Uint32Array(vertexCount);
+    communityConverged = true;
+    for (let vertex = 0; vertex < vertexCount; vertex++) {
+      const votes = new Map<number, number>([[communities[vertex], 1]]);
+      for (const [offsets, neighbors] of [
+        [adjacency.forwardOffsets, adjacency.forwardNeighbors],
+        [adjacency.reverseOffsets, adjacency.reverseNeighbors]
+      ] as const) {
+        for (let slot = offsets[vertex]; slot < offsets[vertex + 1]; slot++) {
+          const neighbor = neighbors[slot];
+          if (neighbor === vertex) continue;
+          const label = communities[neighbor];
+          votes.set(label, (votes.get(label) ?? 0) + 1);
+        }
+      }
+
+      let selectedLabel = communities[vertex];
+      let selectedVotes = votes.get(selectedLabel)!;
+      for (const [label, count] of votes) {
+        if (count > selectedVotes || (count === selectedVotes && label < selectedLabel)) {
+          selectedLabel = label;
+          selectedVotes = count;
+        }
+      }
+      next[vertex] = selectedLabel;
+      if (selectedLabel !== communities[vertex]) communityConverged = false;
+    }
+    communities = next;
+  }
+
+  return {communities, communityConverged};
+}
+
+/** Evaluates Graphalytics directed closure using unique weak neighbors and actual directed links. */
+function evaluateLuGraphBenchmarkLocalClustering(
+  adjacency: LuGraphBenchmarkAdjacency
+): LuGraphBenchmarkClustering {
+  const vertexCount = adjacency.forwardOffsets.length - 1;
+  const clusteringCoefficients = new Float32Array(vertexCount);
+  const triangleCounts = new Uint32Array(vertexCount);
+
+  for (let vertex = 0; vertex < vertexCount; vertex++) {
+    const neighbors = new Set<number>();
+    for (const [offsets, adjacent] of [
+      [adjacency.forwardOffsets, adjacency.forwardNeighbors],
+      [adjacency.reverseOffsets, adjacency.reverseNeighbors]
+    ] as const) {
+      for (let slot = offsets[vertex]; slot < offsets[vertex + 1]; slot++) {
+        if (adjacent[slot] !== vertex) neighbors.add(adjacent[slot]);
+      }
+    }
+    if (neighbors.size < 2) continue;
+
+    let closures = 0;
+    for (const source of neighbors) {
+      const uniqueTargets = new Set<number>();
+      for (
+        let slot = adjacency.forwardOffsets[source];
+        slot < adjacency.forwardOffsets[source + 1];
+        slot++
+      ) {
+        const target = adjacency.forwardNeighbors[slot];
+        if (target !== source && neighbors.has(target)) uniqueTargets.add(target);
+      }
+      closures += uniqueTargets.size;
+    }
+
+    triangleCounts[vertex] = closures;
+    clusteringCoefficients[vertex] = Math.fround(
+      closures / (neighbors.size * (neighbors.size - 1))
+    );
+  }
+
+  return {clusteringCoefficients, triangleCounts};
 }
 
 function evaluateLuGraphBenchmarkPageRank(
@@ -694,11 +901,15 @@ function getLuGraphBenchmarkCellCoordinate(position: number, size: number): numb
 
 function forEachBenchmarkEdge(
   dataset: LuGraphBenchmarkDataset,
-  visit: (source: number, target: number) => void
+  visit: (source: number, target: number, weight: number, edgeIndex: number) => void
 ): void {
+  let edgeIndex = 0;
   for (let chunkIndex = 0; chunkIndex < dataset.sourceChunks.length; chunkIndex++) {
     const sources = dataset.sourceChunks[chunkIndex];
     const targets = dataset.targetChunks[chunkIndex];
-    for (let row = 0; row < sources.length; row++) visit(sources[row], targets[row]);
+    const weights = dataset.weightChunks[chunkIndex];
+    for (let row = 0; row < sources.length; row++) {
+      visit(sources[row], targets[row], weights[row], edgeIndex++);
+    }
   }
 }

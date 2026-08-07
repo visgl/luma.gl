@@ -163,7 +163,11 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
 
     expect(graphDocumentation).toContain('`V × (V - 1)` edges');
     expect(graphDocumentation).toContain('including an intentionally empty');
-    expect(graphDocumentation).toContain('six genuine GPU algorithms');
+    expect(graphDocumentation).toContain('nine genuine GPU');
+    expect(graphDocumentation).toContain('weighted single-source shortest paths');
+    expect(graphDocumentation).toContain('local clustering coefficients');
+    expect(graphDocumentation).toContain('label-propagation communities');
+    expect(graphDocumentation).toContain('six Graphalytics workload families');
     expect(graphDocumentation).toContain('not\nmillion-vertex benchmarks');
     expect(graphDocumentation).toContain("from '@luma.gl/experimental/lugraph/benchmarks';");
     expect(graphDocumentation).toContain('makeLuGraphBenchmarkDataset');
@@ -205,7 +209,9 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('Knowledge and citation graphs');
     expect(graphDocumentation).toContain('A small, CPU-resident, one-off analysis');
     expect(graphDocumentation).toContain('**Question: How many direct relationships');
+    expect(graphDocumentation).toContain("**Question: Do this vertex's neighbors actually connect");
     expect(graphDocumentation).toContain('**Question: Which entities can I reach');
+    expect(graphDocumentation).toContain('**Question: Which route from my starting vertex costs');
     expect(graphDocumentation).toContain('**Question: Which vertices belong to the same connected');
     expect(graphDocumentation).toContain('**Question: Which vertices form closely connected');
     expect(graphDocumentation).toContain('**Question: Which vertices receive influence');
@@ -217,7 +223,9 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
       'LuGraph',
       'LuGraphTopology',
       'LuGraphDegree',
+      'LuGraphLocalClusteringCoefficient',
       'LuGraphBreadthFirstSearch',
+      'LuGraphSingleSourceShortestPath',
       'LuGraphConnectedComponents',
       'LuGraphLabelPropagation',
       'LuGraphPageRank',
@@ -230,6 +238,10 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('compressed adjacency');
     expect(packageDocumentation).toContain('vertex-degree queries');
     expect(packageDocumentation).toContain('breadth-first shortest paths');
+    expect(packageDocumentation).toContain('nonnegative weighted single-source routes');
+    expect(packageDocumentation).toContain('LuGraphSingleSourceShortestPath');
+    expect(packageDocumentation).toContain('local clustering coefficients');
+    expect(packageDocumentation).toContain('LuGraphLocalClusteringCoefficient');
     expect(packageDocumentation).toContain('weakly connected components');
     expect(packageDocumentation).toContain('deterministic label-propagation communities');
     expect(packageDocumentation).toContain('LuGraphLabelPropagation');
@@ -238,12 +250,103 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('LuGraphSpatialForceLayout');
     expect(packageDocumentation).toContain('## Overview');
     expect(packageDocumentation).toContain('## When to use luGraph');
+    expect(packageDocumentation).toContain('## Weighted routes and local neighborhoods');
     expect(packageDocumentation).toContain('flat-grid approximation');
     expect(graphDocumentation).toContain("from '@luma.gl/experimental/lugraph';");
     expect(graphDocumentation).toContain('topology.addToGraph(workflow);');
     expect(graphDocumentation).toContain('const compiled = workflow.compile();');
     expect(graphDocumentation).toContain('compiled.encode(encoder, {parameters: undefined});');
     expect(graphDocumentation).toContain('device.submit(encoder.finish());');
+  });
+
+  test('explains complete Graphalytics workload coverage without overstating benchmark conformance', () => {
+    expect(graphDocumentation).toContain(
+      '## What does complete Graphalytics workload coverage mean?'
+    );
+    expect(graphDocumentation).toContain('breadth-first search (BFS)');
+    expect(graphDocumentation).toContain('single-source shortest');
+    expect(graphDocumentation).toContain('paths (SSSP)');
+    expect(graphDocumentation).toContain('weakly connected components (WCC)');
+    expect(graphDocumentation).toContain('community detection by label propagation');
+    expect(graphDocumentation).toContain('(CDLP)');
+    expect(graphDocumentation).toContain('local clustering coefficient (LCC)');
+    expect(graphDocumentation).toContain('PageRank (PR)');
+    expect(graphDocumentation).toContain('not a claim of official Graphalytics certification');
+    expect(graphDocumentation).toContain('comparable published scores');
+    expect(packageDocumentation).toContain('Graphalytics workload');
+    expect(packageDocumentation).toContain('does not');
+    expect(packageDocumentation).toContain('official benchmark certification');
+  });
+
+  test('explains unique weak-neighborhood triangles and honest local clustering complexity', () => {
+    expect(graphDocumentation).toContain(
+      '## Measure neighborhood density with LuGraphLocalClusteringCoefficient'
+    );
+    expect(graphDocumentation).toContain('tightly connected friend circle');
+    expect(graphDocumentation).toContain('mutually connected transaction accounts');
+    expect(graphDocumentation).toContain('new LuGraphLocalClusteringCoefficient({');
+    expect(graphDocumentation).toContain('output: clusteringCoefficients');
+    expect(graphDocumentation).toContain('triangles: incidentTriangleCounts');
+    expect(graphDocumentation).toContain("GPUVector<'float32'>");
+    expect(graphDocumentation).toContain("GPUVector<'uint32'>");
+    expect(graphDocumentation).toContain('`2 × T / (d × (d - 1))`');
+    expect(graphDocumentation).toContain('fewer than two distinct neighbors');
+    expect(graphDocumentation).toContain('**weak**, neighborhood');
+    expect(graphDocumentation).toContain('both forward and reverse CSR');
+    expect(graphDocumentation).toContain('Self-loops never make a vertex its own neighbor');
+    expect(graphDocumentation).toContain('`C / (d × (d - 1))`');
+    expect(graphDocumentation).toContain('Reciprocal neighbor relationships count as two');
+    expect(graphDocumentation).toContain('repeated copies of the');
+    expect(graphDocumentation).toContain('not silently collapsed');
+    expect(graphDocumentation).toContain('cannot fit in `uint32`');
+    expect(graphDocumentation).toContain('allocating a graph-owned scratch buffer');
+    expect(graphDocumentation).toContain('fails closed to zero');
+    expect(graphDocumentation).toContain('triangle counts become `0xffffffff`');
+    expect(graphDocumentation).toContain('`O(sum(degree³))`');
+    expect(graphDocumentation).toContain('not a claim of constant-time triangle counting');
+  });
+
+  test('distinguishes nonnegative weighted routes from unweighted hops and documents failures', () => {
+    expect(graphDocumentation).toContain(
+      '## Find least-cost routes with LuGraphSingleSourceShortestPath'
+    );
+    expect(graphDocumentation).toContain('40 minutes');
+    expect(graphDocumentation).toContain('20 minutes');
+    expect(graphDocumentation).toContain('travel-time maps');
+    expect(graphDocumentation).toContain('communication latency');
+    expect(graphDocumentation).toContain('service-dependency recovery costs');
+    expect(graphDocumentation).toContain('new LuGraphSingleSourceShortestPath({');
+    expect(graphDocumentation).toContain('sourceVertex: selectedVertex');
+    expect(graphDocumentation).toContain('distances: routeCosts');
+    expect(graphDocumentation).toContain('predecessors: routeParents');
+    expect(graphDocumentation).toContain('maxIterations: 64');
+    expect(graphDocumentation).toContain('converged: shortestPathsConverged');
+    expect(graphDocumentation).toContain('invalidWeightCount');
+    expect(graphDocumentation).toContain('positive infinity (`+Infinity`)');
+    expect(graphDocumentation).toContain('predecessor `0xffffffff`');
+    expect(graphDocumentation).toContain('the one with fewer hops wins');
+    expect(graphDocumentation).toContain('lowest stable predecessor identifier wins');
+    expect(graphDocumentation).toContain('Zero-weight edges are\nvalid');
+    expect(graphDocumentation).toContain('every edge then costs one');
+    expect(graphDocumentation).toContain('Negative weights, `NaN`, positive infinity');
+    expect(graphDocumentation).toContain('number of invalid **source edges**');
+    expect(graphDocumentation).toContain(
+      'Directed `incoming` or `both` routing requires reverse CSR'
+    );
+    expect(graphDocumentation).toContain('bounded Bellman–Ford-style synchronized relaxation');
+    expect(graphDocumentation).toContain('from `0` through `1024`');
+    expect(graphDocumentation).toContain('`min(max(vertexCount - 1, 0), 1024)`');
+    expect(graphDocumentation).toContain('partially relaxed routes');
+    expect(graphDocumentation).toContain('`O(K × (V + E))`');
+    expect(graphDocumentation).toContain('`O(V)` graph-owned scratch');
+    expect(graphDocumentation).toContain('new LuGraphLocalClusteringCoefficient({');
+    expect(graphDocumentation).toContain('}).addToGraph(workflow);');
+    expect(graphDocumentation).not.toContain(
+      'Choose another tool when the application needs weighted shortest paths'
+    );
+    expect(graphDocumentation).not.toContain(
+      'weighted shortest paths, or a CPU execution fallback'
+    );
   });
 
   test('explains deterministic GPU communities, practical use cases, and honest limitations', () => {

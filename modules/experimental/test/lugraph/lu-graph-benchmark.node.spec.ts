@@ -16,6 +16,7 @@ import {
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 import {
+  evaluateLuGraphBenchmarkShortestPath,
   prepareLuGraphBenchmark,
   summarizeLuGraphBenchmarkSamples
 } from '../../src/lugraph/lu-graph-benchmark-data';
@@ -105,8 +106,10 @@ describe('luGraph benchmark deterministic source datasets', () => {
     expect(first.vertexCount).toBe(32);
     expect(first.sourceChunks).toHaveLength(3);
     expect(first.targetChunks).toHaveLength(3);
+    expect(first.weightChunks).toHaveLength(3);
     expect(first.sourceChunks[1]).toHaveLength(0);
     expect(first.targetChunks[1]).toHaveLength(0);
+    expect(first.weightChunks[1]).toHaveLength(0);
     expect(first.positions).toBeInstanceOf(Float32Array);
     expect(first.positions).toHaveLength(64);
     expect(first.positions).not.toBe(repeated.positions);
@@ -117,17 +120,24 @@ describe('luGraph benchmark deterministic source datasets', () => {
     let edgeCount = 0;
     for (const [chunkIndex, sources] of first.sourceChunks.entries()) {
       const targets = first.targetChunks[chunkIndex];
+      const weights = first.weightChunks[chunkIndex];
       expect(sources).toBeInstanceOf(Uint32Array);
       expect(targets).toBeInstanceOf(Uint32Array);
+      expect(weights).toBeInstanceOf(Float32Array);
       expect(targets.length).toBe(sources.length);
+      expect(weights.length).toBe(sources.length);
       expect(Array.from(sources)).toEqual(Array.from(repeated.sourceChunks[chunkIndex]));
       expect(Array.from(targets)).toEqual(Array.from(repeated.targetChunks[chunkIndex]));
+      expect(Array.from(weights)).toEqual(Array.from(repeated.weightChunks[chunkIndex]));
+      expect(weights).not.toBe(repeated.weightChunks[chunkIndex]);
       expect(Array.from(sources).every(vertex => vertex < first.vertexCount)).toBe(true);
       expect(Array.from(targets).every(vertex => vertex < first.vertexCount)).toBe(true);
+      expect(Array.from(weights).every(weight => Number.isFinite(weight) && weight > 0)).toBe(true);
       edgeCount += sources.length;
     }
     expect(first.edgeCount).toBe(edgeCount);
     expect(first.edgeCount).toBeGreaterThan(0);
+    expect(new Set(first.weightChunks.flatMap(chunk => Array.from(chunk))).size).toBeGreaterThan(1);
   });
 
   test('dense inputs contain every distinct ordered pair rather than synthetic edge counts', () => {
@@ -239,12 +249,13 @@ describe('luGraph benchmark deterministic source datasets', () => {
     expect(dataset.positions).toHaveLength(2);
     expect(dataset.sourceChunks).toHaveLength(3);
     expect(dataset.targetChunks).toHaveLength(3);
+    expect(dataset.weightChunks).toHaveLength(3);
     expect(dataset.edgeCount).toBe(0);
   });
 });
 
 describe('luGraph benchmark independent CPU oracles', () => {
-  test.each(DATASET_KINDS)('evaluates all six real CPU references for %s workloads', kind => {
+  test.each(DATASET_KINDS)('evaluates all nine real CPU references for %s workloads', kind => {
     const context = prepareLuGraphBenchmark({
       kind,
       vertexCount: 12,
@@ -264,12 +275,27 @@ describe('luGraph benchmark independent CPU oracles', () => {
     expect(reference.forwardOffsets[12]).toBe(context.dataset.edgeCount);
     expect(reference.reverseOffsets[12]).toBe(context.dataset.edgeCount);
     expect(reference.forwardNeighbors).toHaveLength(context.dataset.edgeCount);
+    expect(reference.forwardWeights).toHaveLength(context.dataset.edgeCount);
     expect(reference.reverseNeighbors).toHaveLength(context.dataset.edgeCount);
+    expect(reference.reverseWeights).toHaveLength(context.dataset.edgeCount);
     expect(reference.distances).toHaveLength(12);
     expect(reference.predecessors).toHaveLength(12);
     expect(reference.distances[0]).toBe(0);
     expect(reference.predecessors[0]).toBe(0xffffffff);
+    expect(reference.weightedDistances).toHaveLength(12);
+    expect(reference.weightedPredecessors).toHaveLength(12);
+    expect(reference.weightedDistances[0]).toBe(0);
+    expect(reference.weightedPredecessors[0]).toBe(0xffffffff);
     expect(reference.components).toHaveLength(12);
+    expect(reference.communities).toHaveLength(12);
+    expect(typeof reference.communityConverged).toBe('boolean');
+    expect(reference.clusteringCoefficients).toHaveLength(12);
+    expect(reference.triangleCounts).toHaveLength(12);
+    expect(
+      Array.from(reference.clusteringCoefficients).every(
+        coefficient => coefficient >= 0 && coefficient <= 1
+      )
+    ).toBe(true);
     expect(reference.pageRank).toHaveLength(12);
     expect(Array.from(reference.pageRank).reduce((sum, score) => sum + score, 0)).toBeCloseTo(1, 5);
     expect(reference.exactPositions).toHaveLength(24);
@@ -285,7 +311,10 @@ describe('luGraph benchmark independent CPU oracles', () => {
     expect(Object.keys(context.cpuTimeMilliseconds)).toEqual([
       'topology',
       'breadth-first-search',
+      'single-source-shortest-path',
       'connected-components',
+      'label-propagation',
+      'local-clustering-coefficient',
       'page-rank',
       'exact-layout',
       'spatial-layout'
@@ -314,6 +343,64 @@ describe('luGraph benchmark independent CPU oracles', () => {
     expect(context.reference.components[7]).toBe(7);
     expect(context.reference.distances[7]).toBe(0xffffffff);
     expect(context.reference.predecessors[7]).toBe(0xffffffff);
+    expect(context.reference.weightedDistances[7]).toBe(Number.POSITIVE_INFINITY);
+    expect(context.reference.weightedPredecessors[7]).toBe(0xffffffff);
+    expect(context.reference.clusteringCoefficients[7]).toBe(0);
+    expect(context.reference.triangleCounts[7]).toBe(0);
+  });
+
+  test('uses weighted routes rather than relabeling unweighted hop counts', () => {
+    const context = prepareLuGraphBenchmark({
+      kind: 'sparse',
+      vertexCount: 16,
+      seed: 42,
+      warmupIterations: 0,
+      measuredIterations: 1
+    });
+
+    expect(
+      Array.from(context.reference.weightedDistances).some(
+        (distance, vertex) =>
+          Number.isFinite(distance) && distance !== context.reference.distances[vertex]
+      )
+    ).toBe(true);
+  });
+
+  test('bounds the shortest-path oracle to the same 1,024 GPU relaxation rounds', () => {
+    const vertexCount = 1030;
+    const edgeCount = vertexCount - 1;
+    const forwardOffsets = Uint32Array.from({length: vertexCount + 1}, (_, vertex) =>
+      Math.min(vertex, edgeCount)
+    );
+    const forwardNeighbors = Uint32Array.from({length: edgeCount}, (_, vertex) => vertex + 1);
+    const forwardWeights = new Float32Array(edgeCount).fill(1);
+
+    const reference = evaluateLuGraphBenchmarkShortestPath({
+      forwardOffsets,
+      forwardNeighbors,
+      forwardWeights,
+      reverseOffsets: new Uint32Array(vertexCount + 1),
+      reverseNeighbors: new Uint32Array(0),
+      reverseWeights: new Float32Array(0)
+    });
+
+    expect(reference.weightedDistances[1024]).toBe(1024);
+    expect(reference.weightedPredecessors[1024]).toBe(1023);
+    expect(reference.weightedDistances[1025]).toBe(Number.POSITIVE_INFINITY);
+    expect(reference.weightedPredecessors[1025]).toBe(0xffffffff);
+    expect(reference.weightedDistances[vertexCount - 1]).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  test('counts distinct directed closures and normalizes complete graph neighborhoods', () => {
+    const context = prepareLuGraphBenchmark({
+      kind: 'dense',
+      vertexCount: 8,
+      warmupIterations: 0,
+      measuredIterations: 1
+    });
+
+    expect(Array.from(context.reference.clusteringCoefficients)).toEqual(Array(8).fill(1));
+    expect(Array.from(context.reference.triangleCounts)).toEqual(Array(8).fill(42));
   });
 
   test.each([
@@ -368,6 +455,9 @@ describe('luGraph live documentation benchmark isolation', () => {
     expect(component).toContain("typeof navigator === 'undefined'");
     expect(component).toContain('spatialIndexBuildTimeMilliseconds');
     expect(component).toContain('approximationMaxAbsoluteError');
+    expect(component).toContain('Weighted shortest paths');
+    expect(component).toContain('Label-propagation communities');
+    expect(component).toContain('Local clustering coefficient');
     expect(component.match(/await runLuGraphBenchmark\(/g)).toHaveLength(1);
     expect(documentation).toContain('<LuGraphBenchmark />');
     expect(documentation).toContain('explicit completion fence');

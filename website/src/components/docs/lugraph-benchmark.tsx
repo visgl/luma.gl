@@ -78,7 +78,7 @@ export function LuGraphBenchmark(): ReactNode {
 
       <LiveBenchmarkPanel
         title="Live CPU versus WebGPU graph analytics"
-        description="Run the same deterministic graph through real CPU and GPU adjacency, neighborhood search, weak components, PageRank, exact force layout, and explicitly approximate spatial force layout."
+        description="Run the same weighted graph through real CPU and GPU adjacency, neighborhood search, shortest paths, weak components, communities, local clustering, PageRank, and two force layouts."
         runLabel="Run graph benchmark on this device"
         unsupportedReason={
           webGPUUnavailable
@@ -176,9 +176,9 @@ function LuGraphBenchmarkResults({
       </p>
 
       <p style={{fontSize: 12, margin: '8px 0 0'}}>
-        Weak-component convergence is read from its final GPU status after the stated bounded pass
-        count. PageRank reports its actual final GPU L₁ residual after its separately stated pass
-        count; neither metric changes the measured timing or implies early termination.
+        Shortest-path, weak-component, and community convergence are read from their actual final
+        GPU statuses after the stated bounded pass counts. PageRank reports its real final GPU L₁
+        residual; none of these measurements imply early termination.
       </p>
     </div>
   );
@@ -223,7 +223,10 @@ function formatAlgorithm(algorithm: LuGraphBenchmarkAlgorithm): string {
   const labels: Record<LuGraphBenchmarkAlgorithm, string> = {
     topology: 'CSR adjacency',
     'breadth-first-search': 'Neighborhood search',
+    'single-source-shortest-path': 'Weighted shortest paths',
     'connected-components': 'Weak components',
+    'label-propagation': 'Label-propagation communities',
+    'local-clustering-coefficient': 'Local clustering coefficient',
     'page-rank': 'PageRank',
     'exact-layout': 'Exact force layout',
     'spatial-layout': 'Approximate spatial layout'
@@ -244,7 +247,12 @@ function formatError(error: number): string {
 }
 
 function formatConvergence(path: LuGraphBenchmarkPathReport): string {
-  if (path.algorithm === 'connected-components' && path.iterations !== undefined) {
+  if (
+    (path.algorithm === 'connected-components' ||
+      path.algorithm === 'label-propagation' ||
+      path.algorithm === 'single-source-shortest-path') &&
+    path.iterations !== undefined
+  ) {
     const status =
       path.converged === undefined
         ? 'status unavailable'
