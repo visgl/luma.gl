@@ -67,7 +67,6 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
-  getCandidateDependencyEndpointCountShader,
   getCandidateDependencyEndpointScatterShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
@@ -1287,9 +1286,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           byteOffset: UINT32_BYTE_LENGTH
         })
       }).addToGraph(graph);
+      addTraceComputePass(graph, {
+        id: 'trace-clear-dependency-endpoint-routes',
+        source: getDependencyEndpointRouteClearShader(resources.spanChunks.length),
+        bindings: [storageWrite('endpointChunkState', dependencyEndpointChunkState)],
+        length: resources.spanChunks.length
+      });
       addTraceIndirectComputePass(graph, {
         id: 'trace-candidate-dependency-visibility',
-        source: getCandidateDependencyVisibilityShader(resources.spanCount),
+        source: getCandidateDependencyVisibilityShader(endpointRoutingProps),
         bindings: [
           storageRead('dependencies', handles.dependencies),
           storageRead('dependencyBatches', handles.dependencyBatchIndex),
@@ -1298,23 +1303,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('processStates', handles.processStates),
           storageRead('parentSpans', handles.parentSpans),
           uniformBinding('viewUniforms', handles.uniforms),
-          storageWrite('dependencyResults', handles.dependencyResults)
-        ],
-        dispatchBuffer: handles.candidateDependencyDispatchCommands
-      });
-      addTraceComputePass(graph, {
-        id: 'trace-clear-dependency-endpoint-routes',
-        source: getDependencyEndpointRouteClearShader(resources.spanChunks.length),
-        bindings: [storageWrite('endpointChunkState', dependencyEndpointChunkState)],
-        length: resources.spanChunks.length
-      });
-      addTraceIndirectComputePass(graph, {
-        id: 'trace-count-dependency-endpoint-routes',
-        source: getCandidateDependencyEndpointCountShader(endpointRoutingProps),
-        bindings: [
-          storageRead('dependencyBatches', handles.dependencyBatchIndex),
-          storageRead('candidateBatchIds', handles.candidateDependencyBatchIds),
-          storageRead('dependencyResults', handles.dependencyResults),
+          storageWrite('dependencyResults', handles.dependencyResults),
           storageWrite('endpointChunkState', dependencyEndpointChunkState)
         ],
         dispatchBuffer: handles.candidateDependencyDispatchCommands

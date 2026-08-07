@@ -759,10 +759,15 @@ fn main() {
 }`;
 }
 
-/** Filters dependency rows inside GPU-selected candidate batches. */
-export function getCandidateDependencyVisibilityShader(spanCount: number): string {
+/** Filters dependency rows and counts visible endpoints by span chunk. */
+export function getCandidateDependencyVisibilityShader(
+  props: TraceDependencyEndpointRoutingShaderProps
+): string {
+  const spanCount = props.spanChunks.at(-1)?.spanCount || 0;
+  const firstSpanIndex = props.spanChunks.at(-1)?.firstSpanIndex || 0;
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
+${getDependencyEndpointRoutingDeclarations(props)}
 struct DependencyBatch {
   firstIndex: u32,
   count: u32,
@@ -771,7 +776,7 @@ struct DependencyBatch {
   familyMask: u32,
   batchIndex: u32,
 };
-const SPAN_COUNT: u32 = ${spanCount}u;
+const SPAN_COUNT: u32 = ${firstSpanIndex + spanCount}u;
 const MAXIMUM_ANCESTOR_DEPTH: u32 = 32u;
 @group(0) @binding(0) var<storage, read> dependencies: array<TraceDependency>;
 @group(0) @binding(1) var<storage, read> dependencyBatches: array<DependencyBatch>;
@@ -781,6 +786,8 @@ const MAXIMUM_ANCESTOR_DEPTH: u32 = 32u;
 @group(0) @binding(5) var<storage, read> parentSpans: array<u32>;
 @group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(7) var<storage, read_write> dependencyResults: array<u32>;
+@group(0) @binding(8) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
+var<workgroup> localChunkCounts: array<atomic<u32>, ${props.spanChunks.length}>;
 
 fn resolveVisibleAncestor(sourceIndex: u32) -> u32 {
   var currentIndex = sourceIndex;
@@ -802,44 +809,60 @@ fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x >= batch.count) {
-    return;
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+    atomicStore(&localChunkCounts[chunkIndex], 0u);
   }
-  let index = batch.firstIndex + localId.x;
-  let dependency = dependencies[index];
-  let projectedSource = resolveVisibleAncestor(dependency.sourceIndex);
-  let projectedDestination = resolveVisibleAncestor(dependency.destinationIndex);
-  let sourceProcessIndex =
-    (dependency.flags >> ${TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT}u) &
-    ${TRACE_DEPENDENCY_PROCESS_MASK}u;
-  let destinationProcessIndex =
-    (dependency.flags >> ${TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT}u) &
-    ${TRACE_DEPENDENCY_PROCESS_MASK}u;
-  let sourceCollapsed = processStates[sourceProcessIndex] == 0u;
-  let destinationCollapsed = processStates[destinationProcessIndex] == 0u;
-  let familyVisible = (viewUniforms.dependencyMask & (1u << dependency.family)) != 0u;
-  let sourceVisible =
-    spanVisibility[dependency.sourceIndex] == viewUniforms.visibilityGeneration || sourceCollapsed ||
-    projectedSource != 0xffffffffu;
-  let destinationVisible =
-    spanVisibility[dependency.destinationIndex] == viewUniforms.visibilityGeneration ||
-    destinationCollapsed || projectedDestination != 0xffffffffu;
-  let effectiveSource = select(projectedSource, dependency.sourceIndex, sourceCollapsed);
-  let effectiveDestination = select(
-    projectedDestination,
-    dependency.destinationIndex,
-    destinationCollapsed
-  );
-  let distinctEndpoints = effectiveSource != effectiveDestination;
-  dependencyResults[index] = select(
-    0u,
-    1u,
-    familyVisible && sourceVisible && destinationVisible && distinctEndpoints && !isDensityMode()
-  );
-  let endpointResultOffset = viewUniforms.dependencyEndpointOffset + index * 2u;
-  dependencyResults[endpointResultOffset] = effectiveSource;
-  dependencyResults[endpointResultOffset + 1u] = effectiveDestination;
+  workgroupBarrier();
+
+  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
+  if (localId.x < batch.count) {
+    let index = batch.firstIndex + localId.x;
+    let dependency = dependencies[index];
+    let projectedSource = resolveVisibleAncestor(dependency.sourceIndex);
+    let projectedDestination = resolveVisibleAncestor(dependency.destinationIndex);
+    let sourceProcessIndex =
+      (dependency.flags >> ${TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT}u) &
+      ${TRACE_DEPENDENCY_PROCESS_MASK}u;
+    let destinationProcessIndex =
+      (dependency.flags >> ${TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT}u) &
+      ${TRACE_DEPENDENCY_PROCESS_MASK}u;
+    let sourceCollapsed = processStates[sourceProcessIndex] == 0u;
+    let destinationCollapsed = processStates[destinationProcessIndex] == 0u;
+    let familyVisible = (viewUniforms.dependencyMask & (1u << dependency.family)) != 0u;
+    let sourceVisible =
+      spanVisibility[dependency.sourceIndex] == viewUniforms.visibilityGeneration || sourceCollapsed ||
+      projectedSource != 0xffffffffu;
+    let destinationVisible =
+      spanVisibility[dependency.destinationIndex] == viewUniforms.visibilityGeneration ||
+      destinationCollapsed || projectedDestination != 0xffffffffu;
+    let effectiveSource = select(projectedSource, dependency.sourceIndex, sourceCollapsed);
+    let effectiveDestination = select(
+      projectedDestination,
+      dependency.destinationIndex,
+      destinationCollapsed
+    );
+    let visible = familyVisible && sourceVisible && destinationVisible &&
+      effectiveSource != effectiveDestination && !isDensityMode();
+    dependencyResults[index] = select(0u, 1u, visible);
+    let endpointResultOffset = viewUniforms.dependencyEndpointOffset + index * 2u;
+    dependencyResults[endpointResultOffset] = effectiveSource;
+    dependencyResults[endpointResultOffset + 1u] = effectiveDestination;
+    if (visible) {
+      let sourceChunkIndex = getSpanChunkIndex(effectiveSource);
+      let destinationChunkIndex = getSpanChunkIndex(effectiveDestination);
+      if (sourceChunkIndex != INVALID_CHUNK_INDEX) {
+        atomicAdd(&localChunkCounts[sourceChunkIndex], 1u);
+      }
+      if (destinationChunkIndex != INVALID_CHUNK_INDEX) {
+        atomicAdd(&localChunkCounts[destinationChunkIndex], 1u);
+      }
+    }
+  }
+  workgroupBarrier();
+
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+    atomicAdd(&endpointChunkState[chunkIndex], atomicLoad(&localChunkCounts[chunkIndex]));
+  }
 }`;
 }
 
@@ -879,57 +902,6 @@ const CHUNK_COUNT: u32 = ${chunkCount}u;
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   if (globalId.x < CHUNK_COUNT) {
     atomicStore(&endpointChunkState[globalId.x], 0u);
-  }
-}`;
-}
-
-/** Counts visible dependency endpoints per bounded source span chunk. */
-export function getCandidateDependencyEndpointCountShader(
-  props: TraceDependencyEndpointRoutingShaderProps
-): string {
-  return /* wgsl */ `
-${getDependencyEndpointRoutingDeclarations(props)}
-struct DependencyBatch {
-  firstIndex: u32,
-  count: u32,
-  timeMin: f32,
-  timeMax: f32,
-  familyMask: u32,
-  batchIndex: u32,
-};
-@group(0) @binding(0) var<storage, read> dependencyBatches: array<DependencyBatch>;
-@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
-@group(0) @binding(2) var<storage, read> dependencyResults: array<u32>;
-@group(0) @binding(3) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
-var<workgroup> localChunkCounts: array<atomic<u32>, ${props.spanChunks.length}>;
-
-@compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
-fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
-) {
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
-    atomicStore(&localChunkCounts[chunkIndex], 0u);
-  }
-  workgroupBarrier();
-
-  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x < batch.count) {
-    let dependencyIndex = batch.firstIndex + localId.x;
-    if (dependencyResults[dependencyIndex] != 0u) {
-      let endpointResultOffset = DEPENDENCY_COUNT + dependencyIndex * 2u;
-      for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
-        let chunkIndex = getSpanChunkIndex(dependencyResults[endpointResultOffset + endpointIndex]);
-        if (chunkIndex != INVALID_CHUNK_INDEX) {
-          atomicAdd(&localChunkCounts[chunkIndex], 1u);
-        }
-      }
-    }
-  }
-  workgroupBarrier();
-
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
-    atomicAdd(&endpointChunkState[chunkIndex], atomicLoad(&localChunkCounts[chunkIndex]));
   }
 }`;
 }
