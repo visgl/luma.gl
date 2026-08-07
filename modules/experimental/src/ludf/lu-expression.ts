@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Portable scalar values accepted by GPU-resident dataframe expressions. */
 export type LuExpressionValue = number | boolean | null;
