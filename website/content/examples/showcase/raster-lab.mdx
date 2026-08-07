@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Explore bounded dense GPU-connected components, global raster histograms, nodata-aware overviews, exact categories, seam-safe halos, NDVI, and contours.
+description: Explore GPU region measurements, bounded connected components, global raster histograms, nodata-aware overviews, seam-safe halos, NDVI, and contours.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -22,9 +22,10 @@ location is being downloaded.
 
 The map displays one selected **FULL**, **WEST**, or **EAST** output window.
 The sidebar reports the actual analytical values behind that map: its selected
-band, valid population, 48-bin histogram, measured extent, GPU mean, source
+band, valid population, adaptive 48- or 40-bin histogram, measured extent, GPU mean, source
 identity, overview provenance, cache residency, optional contours, and sparse
-or bounded dense connected-component overlays with exact region counts. A
+or bounded dense connected-component overlays with exact region counts and
+selected-region geometry/intensity measurements. A
 control changes a histogram only when it changes the measured values or their
 selection; changing a contour level changes generated geometry without
 necessarily changing the underlying distribution.
@@ -66,6 +67,11 @@ For the underlying object model, ownership rules, and execution phases, see
    capacity** below that count: dense labels disappear with an explicit overflow
    warning, while sparse roots remain usable. Restore the capacity, then lower
    **Propagation budget** to `1` to see all unconverged labels fail closed.
+8. Restore a sufficient budget, choose **DENSE 1..N**, and enable **INSPECT
+   REGION**. Select different dense identifiers and compare their pixel count,
+   intensity range/mean, world centroid, and affine area. The histogram
+   explicitly changes from `48 bins` to `40 bins · 8 region scalars` while
+   preserving the exact same 228-byte GPU-to-CPU transfer.
 
 Every combination is deliberately explicit. Requesting a feature that cannot
 compose correctly with the current scope switches to a supported scope instead
@@ -137,6 +143,8 @@ neighbor. Neither policy invents an observation at an invalid center.
 | **4-CONNECTED / 8-CONNECTED**                     | Orthogonal-only or orthogonal-plus-diagonal foreground adjacency.                          | Decide whether corners touching diagonally belong to the same component.                                         |
 | **SPARSE ROOTS / DENSE 1..N**                     | Minimum representative roots versus consecutive GPU-generated region identifiers.          | Compare stable source representatives with compact IDs suitable for bounded region-indexed outputs.              |
 | **Region capacity**                               | Maximum number of published dense region IDs; exact required count remains visible.        | Verify zero capacity, explicit overflow, safe dense-overlay suppression, and the independent sparse fallback.    |
+| **OFF / INSPECT REGION**                          | Actual 40-bin analysis plus one selected dense region's eight GPU-generated scalar fields. | Inspect pixel population, intensity summary, affine centroid, and area without copying a region table or raster. |
+| **Dense region**                                  | The one-based dense component row copied from already-resident GPU measurement arrays.     | Compare individual region records without recompiling the analytical graph or increasing readback.               |
 | **Propagation budget**                            | The bounded maximum number of GPU hooking/compression rounds.                              | Compare a proven fixed point with an explicitly unconverged, safely cleared output.                              |
 | **Contrast / gamma / threshold / Otsu / epsilon** | Analytical transfer, classification, automatic histogram cutoff, or denominator stability. | Compare actual transformed measurements and valid selection policies.                                            |
 | **Contours / contour level**                      | GPU-generated marching-squares isolines and an indirect draw.                              | Inspect reusable scalar boundaries without downloading their vertices.                                           |
@@ -211,6 +219,11 @@ publishes explicit convergence before sparse labels are safe to render.
 stable consecutive foreground IDs, and publishes an exact required count,
 capacity-clamped count, and explicit overflow without treating sparse pixel
 indices as compact array offsets.
+`GPURasterRegionMeasurements` groups converged dense IDs into separate
+geometry-pixel counts, valid-intensity counts/sums/minima/maxima/means,
+pixel-column/row moments, local centroids, and affine areas. These eleven
+bounded arrays stay on the GPU; overflowed or unconverged inputs clear every
+measurement before publication.
 `GPURasterOtsuThreshold` can select the threshold from a separate baseline
 histogram without introducing a CPU synchronization point.
 `GPURasterContours` classifies valid four-corner cells, resolves ambiguous
@@ -227,20 +240,32 @@ compute pass is encoded into one explicitly submitted `GPUCommandGraph`.
 
 The map renderer consumes the original reflectance bands, derived vegetation
 index, contrast-adjusted active band, and validity flags directly from their GPU
-buffers. Only the two-value extent, 48 histogram bins, valid count, sum, mean,
-optional automatic threshold, and three contour diagnostics—228 bytes
-total—are copied back after submission to update visible summary statistics.
+buffers. Normally only the two-value extent, 48 histogram bins, valid count,
+sum, mean, optional automatic threshold, and three contour diagnostics—228
+bytes total—are copied back after submission to update visible summary
+statistics. Enabling the region inspector changes the **actual GPU histogram**
+to 40 bins and uses its freed 32 bytes for eight selected-region scalars; the
+overall transfer stays exactly 228 bytes.
 
 | Published aggregate                                           | Encoding                           |   Bytes |
 | ------------------------------------------------------------- | ---------------------------------- | ------: |
 | Observed minimum and maximum                                  | Two `float32` values               |       8 |
-| Histogram                                                     | 48 `uint32` bins                   |     192 |
+| Histogram, inspection off                                     | 48 `uint32` bins                   |     192 |
 | Valid or selected population                                  | One `uint32`                       |       4 |
 | Sum of valid or selected values                               | One `float32`                      |       4 |
 | Mean of valid or selected values                              | One `float32`                      |       4 |
 | Otsu cutoff **or** global median                              | One shared `float32` slot          |       4 |
 | Contour diagnostics **or** component count/convergence/rounds | Three existing `uint32` slots      |      12 |
 | **Total per submitted analysis**                              | **One compact aggregate transfer** | **228** |
+
+With **INSPECT REGION** enabled, the 192-byte histogram row instead consists
+of 40 real `uint32` bins (160 bytes), one selected region's exact `uint32`
+geometry count (4 bytes), and seven `float32` values (28 bytes): intensity
+sum, minimum, maximum, mean, pixel-local centroid column, pixel-local centroid
+row, and affine area. The visible histogram renders exactly those 40 bins, and
+their sum still equals the displayed selected population. The automatic Otsu
+baseline remains an independent full-resolution 48-bin GPU histogram, so
+turning on inspection does not alter classification thresholds.
 
 The source imagery, output imagery, validity masks, generated parent sums and
 counts, categorical and connected-component labels, contour vertices, and
@@ -256,9 +281,12 @@ reports actual executed rounds. The dense contributor also produces genuine
 GPU-resident capacity-clamped count and overflow outputs. The interface derives
 the same displayed published count as `min(required, capacity)` and overflow as
 `required > capacity` from the already-read exact count; it does not transfer
-those additional GPU scalars. Neither representation increases the 228-byte
-summary, downloads labels, or interferes with the independent Otsu-threshold
-slot. Disabling component mode restores the previous contour preference.
+those additional GPU scalars. Selected-region inspection copies one scalar from
+each of eight bounded GPU arrays by direct buffer offset; the remaining region
+rows, separate intensity-population counts, and mergeable geometry moments are
+never downloaded. Neither representation increases the 228-byte summary,
+downloads labels, or interferes with the independent Otsu-threshold slot.
+Disabling component mode restores the previous contour preference.
 
 Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
 derivative direction, morphological operation/mode/footprint/radius/nodata/
@@ -613,10 +641,39 @@ preprocessing, smoothing, derivatives, grayscale/binary morphology, and local
 manual or Otsu thresholds remain available. Labeling operates on the final
 selected owned core; it does not merge root identities across tile seams.
 
-Per-region area, centroid, intensity measurements, and cross-tile identity
-merging remain separate future tranches. Dense IDs and exact counts apply only
-to the currently selected owned core; they are not stitched dataset-wide
-component identities.
+### Inspecting one region without downloading a region table
+
+Enable **INSPECT REGION** after selecting **DENSE 1..N**, then move **Dense
+region** between the available one-based component IDs. The graph computes
+bounded arrays for every published region, but the application copies only the
+selected row's eight scalar fields into its existing compact summary. Changing
+the selected identifier changes buffer-copy offsets; it does not rebuild or
+recompile the GPU graph.
+
+**Region pixels** counts every valid labeled foreground observation. The
+intensity sum, minimum, maximum, and mean separately include only valid finite
+floating-point intensity observations. A region's shape can therefore contain
+more pixels than its valid intensity sample population; the displayed mean is
+not defined as `sum / region pixels` when intensity observations are missing.
+The separate intensity count remains GPU-resident alongside mergeable row and
+column moments.
+
+Centroids are first calculated in tile-local pixel-center coordinates on the
+GPU. `getRasterRegionWorldCentroid` then applies the retained affine transform
+in JavaScript double precision. This avoids rounding a large projected origin
+to `float32` before adding small local offsets and preserves rotated,
+non-square, overview-scaled, and translated tile grids. Pixel area uses the
+absolute affine determinant, so region area is `pixel count × abs(det)`.
+The example labels square meters only for its explicitly recognized projected
+UTM source; unknown or geographic coordinate systems remain **coordinate
+units²** and are never presented as square meters.
+
+Capacity overflow, an insufficient propagation budget, invalid labels,
+out-of-range selected IDs, and empty regions leave the inspector unavailable;
+previous region values are not reused. Switching back to **OFF**, sparse roots,
+or a non-component analysis restores a genuine 48-bin histogram. Region
+identities and measurements remain local to the selected owned core;
+cross-tile identity merging is still a separate future tranche.
 
 ### Grayscale and binary morphology
 
@@ -671,8 +728,8 @@ All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Per-region measurement, cross-tile component stitching, stitched contour
-seams, automatic full-image output
+Cross-tile component stitching, stitched contour seams, automatic full-image
+output
 placement, global neighborhood/overview composition, marker-based
 segmentation, and seamless native-halo-to-generated-overview processing remain
 planned capabilities.

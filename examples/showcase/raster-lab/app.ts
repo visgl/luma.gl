@@ -19,6 +19,7 @@ import {
   type RasterLabGeneratedOverviewSources,
   type RasterLabGlobalSources,
   type RasterLabHaloSources,
+  type RasterLabRegionMeasurement,
   type RasterLabResidentSources,
   type RasterLabSummary
 } from './raster-engine';
@@ -54,7 +55,7 @@ import {
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'Dense GPU-connected components, bounded region counts, global reductions, overviews, and halos.';
+  'GPU region measurements, dense connected components, global reductions, overviews, and halos.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -115,6 +116,9 @@ type RasterLabDebugController = {
   readonly componentMaximumIterations: number;
   readonly componentIterations: number;
   readonly componentConverged: boolean;
+  readonly regionMetricsEnabled: boolean;
+  readonly selectedRegionId: number;
+  readonly regionMeasurement: RasterLabRegionMeasurement | null;
   readonly mode: RasterLabDisplayMode;
   readonly smoothingMode: RasterLabSmoothingMode;
   readonly smoothingRadius: number;
@@ -168,6 +172,8 @@ type RasterLabDebugController = {
   setComponentLabelMode: (mode: RasterLabComponentLabelMode) => void;
   setComponentCapacity: (capacity: number) => void;
   setComponentMaximumIterations: (iterations: number) => void;
+  setRegionMetricsEnabled: (enabled: boolean) => void;
+  setSelectedRegionId: (id: number) => void;
   setContrast: (contrast: number) => void;
   setGamma: (gamma: number) => void;
   setThreshold: (threshold: number, enabled?: boolean) => void;
@@ -214,6 +220,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     componentLabelMode: 'sparse',
     componentCapacity: 1024,
     componentMaximumIterations: 24,
+    regionMetricsEnabled: false,
     contoursEnabled: true,
     contourLevel: 0.35
   };
@@ -228,6 +235,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private activePipelineKey: string | null = null;
   private activeDataset: RasterLabDataset | null = null;
   private latestSummary: RasterLabSummary | null = null;
+  private selectedRegionId = 1;
   private debugController: RasterLabDebugController | null = null;
   private requestedEpsilon: number | null = null;
   private epsilon = 0.0001;
@@ -302,6 +310,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onComponentLabelMode: mode => this.setComponentLabelMode(mode),
       onComponentCapacity: capacity => this.setComponentCapacity(capacity),
       onComponentMaximumIterations: iterations => this.setComponentMaximumIterations(iterations),
+      onRegionMetricsEnabled: enabled => this.setRegionMetricsEnabled(enabled),
+      onSelectedRegionId: id => this.setSelectedRegionId(id),
       onContrast: contrast => this.setContrast(contrast),
       onGamma: gamma => this.setGamma(gamma),
       onThreshold: (threshold, enabled) => this.setThreshold(threshold, enabled),
@@ -715,7 +725,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       }
       replacement.setResidentTile(dataset, sources, haloSources, generatedOverview, globalSources);
       replacementSubmitted = true;
-      const summary = await replacement.update();
+      const summary = await replacement.update(this.selectedRegionId);
       controller.signal.throwIfAborted();
       if (generation !== this.sourceRequestGeneration || this.finalized) return;
 
@@ -961,6 +971,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private disableComponents(): void {
     if (!this.display.componentsEnabled) return;
     this.display.componentsEnabled = false;
+    this.display.regionMetricsEnabled = false;
     this.display.contoursEnabled = this.previousComponentContours;
     this.interface?.setContours(this.display.contoursEnabled, this.display.contourLevel);
     this.publishComponents();
@@ -976,6 +987,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private setComponentLabelMode(mode: RasterLabComponentLabelMode): void {
     if (mode === this.display.componentLabelMode) return;
     this.display.componentLabelMode = mode;
+    if (mode === 'sparse') this.display.regionMetricsEnabled = false;
     this.publishComponents();
     if (this.display.componentsEnabled) this.requestUpdate();
   }
@@ -994,6 +1006,27 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.display.componentMaximumIterations = maximumIterations;
     this.publishComponents();
     if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
+  private setRegionMetricsEnabled(enabled: boolean): void {
+    if (enabled === this.display.regionMetricsEnabled) return;
+    if (
+      enabled &&
+      (!this.display.componentsEnabled || this.display.componentLabelMode !== 'dense')
+    ) {
+      return;
+    }
+    this.display.regionMetricsEnabled = enabled;
+    this.publishComponents();
+    this.requestUpdate();
+  }
+
+  private setSelectedRegionId(id: number): void {
+    const selectedRegionId = Math.max(1, Math.min(2048, Math.round(id)));
+    if (selectedRegionId === this.selectedRegionId) return;
+    this.selectedRegionId = selectedRegionId;
+    this.publishComponents();
+    if (this.display.regionMetricsEnabled) this.requestUpdate();
   }
 
   private syncBinaryMorphology(): void {
@@ -1171,7 +1204,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
           const engine: RasterLabEngine = replacementGraphLease?.value ?? this.engine;
           replacementSubmitted = Boolean(replacementGraphLease);
-          const summary = await engine.update();
+          const summary = await engine.update(this.selectedRegionId);
           if (this.finalized) return;
 
           if (replacementGraphLease) {
@@ -1293,6 +1326,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       componentCount: summary?.componentsEnabled ? summary.componentCount : 0,
       publishedCount: summary?.componentsEnabled ? summary.componentPublishedCount : 0,
       overflow: summary?.componentsEnabled ? summary.componentOverflow : false,
+      regionMetricsEnabled: this.display.regionMetricsEnabled,
+      selectedRegionId: this.selectedRegionId,
+      regionMeasurement: summary?.regionMetricsEnabled ? summary.regionMeasurement : null,
       maximumIterations: this.display.componentMaximumIterations,
       iterations: summary?.componentsEnabled ? summary.componentIterations : 0,
       converged: summary?.componentsEnabled ? summary.componentConverged : false,
@@ -1550,6 +1586,15 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get componentConverged() {
         return viewer.latestSummary?.componentConverged ?? false;
       },
+      get regionMetricsEnabled() {
+        return viewer.display.regionMetricsEnabled;
+      },
+      get selectedRegionId() {
+        return viewer.selectedRegionId;
+      },
+      get regionMeasurement() {
+        return viewer.latestSummary?.regionMeasurement ?? null;
+      },
       get mode() {
         return viewer.display.mode;
       },
@@ -1657,6 +1702,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setComponentLabelMode: mode => viewer.setComponentLabelMode(mode),
       setComponentCapacity: capacity => viewer.setComponentCapacity(capacity),
       setComponentMaximumIterations: iterations => viewer.setComponentMaximumIterations(iterations),
+      setRegionMetricsEnabled: enabled => viewer.setRegionMetricsEnabled(enabled),
+      setSelectedRegionId: id => viewer.setSelectedRegionId(id),
       setContrast: contrast => viewer.setContrast(contrast),
       setGamma: gamma => viewer.setGamma(gamma),
       setThreshold: (threshold, enabled) => viewer.setThreshold(threshold, enabled),
@@ -1746,8 +1793,8 @@ function makeRasterPipelineKey(
 }
 
 function estimateRasterGraphBytes(pixelCount: number): number {
-  // Covers output/indirect records plus every physically allocated graph scratch buffer.
-  return pixelCount * 256 + 65_536;
+  // Covers output/indirect records, bounded region arrays, and physical graph scratch.
+  return pixelCount * 256 + 196_608;
 }
 
 function getInitialRasterSize(): readonly [number, number] {

@@ -1,10 +1,10 @@
 # LuRaster Roadmap
 
-- **Status:** Active; foundation, tiled analysis, and bounded dense connected components implemented
+- **Status:** Active; foundation, tiled analysis, dense components, and region metrics implemented
 - **Experimental API:** `@luma.gl/experimental/luraster`
 - **Execution model:** WebGPU `GPUCommandGraph` contributors
 - **Positioning:** GPU-resident raster analytics complementing `@luma.gl/experimental/geospatial`
-- **Next tranche:** 5.3, per-region measurements over converged dense component labels
+- **Next tranche:** 5.4, cross-tile region identities and mergeable segmentation measurements
 
 ## Overview
 
@@ -23,11 +23,11 @@ The implemented two-dimensional toolkit includes validity-aware band math, norma
 vegetation index (NDVI), statistics, histograms, contrast adjustment, thresholding, spatial
 filters, morphology, single-raster contour extraction, bounded tile residency, seam-safe
 neighborhoods, analytical overviews, dataset-wide replayable summaries, convergence-gated
-four/eight-connected sparse component labels, deterministic dense identifiers, and bounded exact
-component counts. Region measurements, cross-tile component or contour ownership, and
-vector/raster zonal composition remain planned. Three-dimensional microscopy, sophisticated
-segmentation, reprojection, and frequency-domain algorithms are separate, evidence-gated
-extensions.
+four/eight-connected sparse component labels, deterministic dense identifiers, bounded exact
+component counts, and validity-aware per-region intensity/geometric measurements. Cross-tile
+component or contour ownership and vector/raster zonal composition remain planned.
+Three-dimensional microscopy, sophisticated segmentation, reprojection, and frequency-domain
+algorithms are separate, evidence-gated extensions.
 
 ### Reading this roadmap
 
@@ -41,11 +41,11 @@ extensions, engineering prerequisites, and explicit decision gates.
 Phases 0, 1, 3, and 4 are complete for their stated boundaries. Phase 2's core analytical
 operations are available, with narrower percentile/stretch/presentation follow-ups still open.
 Phase 5 includes deterministic sparse foreground components, explicit GPU convergence, dense
-identifiers, bounded counts, and capacity overflow; region measurements and cross-tile identity
-remain open.
+identifiers, bounded counts, capacity overflow, grouped intensity summaries, local centroids,
+and affine area; cross-tile identity remains open.
 Phase 6 already includes single-raster contour classification and indirect drawing, but not
 cross-tile contour ownership or zonal statistics. The next dependency-ready implementation is
-Tranche 5.3; Tranche 6.3 is an alternative when contour integration takes priority.
+Tranche 5.4; Tranche 6.3 is an alternative when contour integration takes priority.
 
 Completing a phase means its separately documented contracts exist; it does not imply that every
 feature combination is automatic. In particular, the Raster Lab deliberately separates generated
@@ -77,6 +77,8 @@ commands, retain in-flight resources, and choose whether to inspect results.
 | Sparse representative               | One plus the smallest row-major pixel index in a connected component; zero is background, and representative identifiers are not dense component counts.                    |
 | Dense component ID                  | A contiguous row-major root rank beginning at one; zero remains background, and capacity-truncated foreground is marked invalid.                                              |
 | Required and published count        | Required is the complete converged component population; published is the minimum of that population and the caller's explicit output capacity.                             |
+| Geometry and intensity population   | A region's valid labeled pixels define its geometry; only separately valid finite intensity samples contribute to its intensity population and statistics.                    |
+| Local centroid and affine area      | Centroid coordinates stay raster-local on the GPU; retained double-precision affine metadata converts them to world coordinates and areas remain in square CRS units.       |
 | Convergence                         | Explicit GPU evidence that bounded component hooking/compression reached a fixed point; exhausted budgets clear every published label and validity flag.                     |
 
 Official cuCIM references:
@@ -673,9 +675,19 @@ when their tests and rollback boundaries remain understandable.
   Nonconverged inputs clear every label, validity element, count, and overflow flag.
   The Raster Lab exposes sparse/dense presentation, exact and bounded counts, capacity,
   overflow, convergence, and actual rounds without exceeding its existing 228-byte summary.
-- **5.3 next:** per-region count, intensity, centroid, and area measurements over converged
-  dense component labels; tranche 6.3 seam-safe contour ownership remains independently
-  available when vector integration takes priority.
+- **5.3 complete for bounded region measurements:** `GPURasterRegionMeasurements` composes
+  the shared grouped-aggregation primitive over convergence-gated dense labels. Caller-owned
+  outputs separately preserve exact geometry and finite-intensity populations; calibrated
+  floating intensity sum/min/max/mean; mergeable row/column moments; local pixel centroids;
+  and affine area in square CRS-coordinate units. Missing intensity does not erase valid
+  component geometry. Upstream nonconvergence, capacity overflow, and unusable rows fail
+  closed; `getRasterRegionWorldCentroid` applies retained affine coefficients in JavaScript
+  double precision without duplicating tile origins. The Raster Lab exposes one selected GPU
+  region record by explicitly switching from 48 to 40 histogram bins while keeping its single
+  analytical summary at exactly 228 bytes.
+- **5.4 next:** cross-tile component equivalences, deterministic global relabeling, and
+  mergeable region measurements; tranche 6.3 seam-safe contour ownership remains
+  independently available when vector integration takes priority.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -1143,7 +1155,8 @@ foreground, and repeated encodings have explicit deterministic behavior. Unconve
 clear every published label, validity flag, count, and overflow state. The Raster Lab retains
 its existing 228-byte readback by publishing exact required count, convergence, and actual
 rounds in prior contour slots; bounded display count and overflow derive from that exact
-required count and the visible capacity. Region measurements and cross-tile IDs are not implied.
+required count and the visible capacity. Region measurements are provided by the separate
+Tranche 5.3 contributor; cross-tile IDs remain unimplemented.
 
 **Work:** Mark representative roots, apply `GPUScan` to unsigned root flags, and scatter dense
 labels with background `0` and foreground `1..componentCount`. Return caller-owned count,
@@ -1159,6 +1172,22 @@ Global identifiers never silently wrap past `uint32`.
 ### Tranche 5.3 — Per-region measurements
 
 **Entry:** Tranches 5.2 and 1.3.
+
+**Status:** Complete through `GPURasterRegionMeasurements`,
+`GPURasterRegionMeasurementsProps`, `GPURasterRegionMeasurementOutputs`, and the pure
+`getRasterRegionWorldCentroid` metadata helper. Converged, nonoverflowing dense labels are
+translated into zero-based groups. Independent caller-owned `uint32` pixel and finite-intensity
+counts preserve the difference between spatial region membership and available measurements.
+Caller-owned `float32` outputs retain calibrated intensity sums, minima, maxima, and means;
+mergeable local column/row sums; pixel-space centroids; and affine area in square coordinate
+units. Area pixels use a half-pixel center, point pixels use integer centers, and retained
+double-precision affine coefficients convert local centroids without projected-origin
+cancellation. Invalid labels, missing/nonfinite/raw-nodata intensity, upstream nonconvergence,
+capacity overflow, unused rows, and zero capacity follow explicit cleared/empty contracts.
+Integer intensity inputs are not silently promoted; floating atomic accumulation order remains
+documented. The Raster Lab transfers only one selected region: an honest 40-bin histogram plus
+eight GPU scalar words replaces the ordinary 48-bin histogram inside the same 228-byte summary.
+No complete measurement table, label raster, source image, or additional transfer is introduced.
 
 **Work:** Convert converged dense foreground labels to zero-based group IDs, mask
 background/nodata, and compose `GPUGroupAggregation` for `uint32` pixel counts and
@@ -1390,7 +1419,7 @@ modules/experimental/src/luraster/
   gpu-raster-global-statistics.ts
   gpu-raster-connected-components.ts
   gpu-raster-dense-components.ts
-  gpu-raster-region-statistics.ts
+  gpu-raster-region-measurements.ts
   gpu-raster-contours.ts
   README.md
 
@@ -1417,7 +1446,8 @@ modules/experimental/test/luraster/
   gpu-raster-connected-components.spec.ts
   gpu-raster-dense-components-pipeline.spec.ts
   gpu-raster-dense-components.spec.ts
-  gpu-raster-region-statistics.spec.ts
+  gpu-raster-region-measurements-pipeline.spec.ts
+  gpu-raster-region-measurements.spec.ts
   gpu-raster-contours.spec.ts
 ```
 
@@ -1637,9 +1667,9 @@ as a monolithic reference without tile seams or last-tile-only global histograms
 ### Milestone C — Segmentation and vector-ready output
 
 **Status:** Started with completed sparse, convergence-gated connected-component labeling,
-bounded dense region identifiers and counts, single-raster marching squares, and indirect
-contour draws. Region measurements, cross-tile component/contour ownership, and zonal statistics
-remain open.
+bounded dense region identifiers and counts, validity-aware region intensity/geometric
+measurements, single-raster marching squares, and indirect contour draws. Cross-tile
+component/contour ownership and zonal statistics remain open.
 
 Add tranches 5.1–5.4 and 6.1–6.4. An application can label components, calculate region and
 polygon-zonal statistics, and render stable georeferenced contours through indirect GPU draws
@@ -1657,7 +1687,7 @@ Advanced Phase 7 work is not a prerequisite.
 ## Completed foundation sequence
 
 These already-delivered slices document the original dependency order; they are not proposed
-future pull requests. The next implementation boundary is Tranche 5.3, with Tranche 6.3 available
+future pull requests. The next implementation boundary is Tranche 5.4, with Tranche 6.3 available
 independently when contour seam ownership is more urgent.
 
 ### Foundation slice 1 — Optional package and reproducible fixtures

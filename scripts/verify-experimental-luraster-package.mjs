@@ -59,6 +59,10 @@ const denseComponentsImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-dense-components.ts'),
   'utf8'
 );
+const regionMeasurementsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-region-measurements.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -166,6 +170,21 @@ assert.doesNotMatch(
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'dense raster relabeling never submits commands, polls convergence, or reads back counts'
 );
+assert.doesNotMatch(
+  regionMeasurementsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'raster region measurements do not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  regionMeasurementsImplementation,
+  /\bfetch\s*\(/,
+  'raster region measurements do not choose an application source transport'
+);
+assert.doesNotMatch(
+  regionMeasurementsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'raster region measurements do not submit, synchronize, or read back grouped records'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -205,6 +224,7 @@ const requiredRuntimeExportNames = [
   'GPURasterOpening',
   'GPURasterOtsuThreshold',
   'GPURasterOverview',
+  'GPURasterRegionMeasurements',
   'GPURasterScharr',
   'GPURasterSobel',
   'GPURasterStatistics',
@@ -219,6 +239,7 @@ const requiredRuntimeExportNames = [
   'GPURasterTileReader',
   'GPURasterTextureToBuffer',
   'getRasterDeviceLimits',
+  'getRasterRegionWorldCentroid',
   'makeRasterOverviewMetadata',
   'planRasterDispatchStripes'
 ];
@@ -246,6 +267,7 @@ for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
   for (const exportName of [
     'GPURasterConnectedComponents',
     'GPURasterDenseComponents',
+    'GPURasterRegionMeasurements',
     'GPURasterGlobalHistogramMerge',
     'GPURasterGlobalInitialize',
     'GPURasterGlobalPercentile',
@@ -344,6 +366,7 @@ try {
   GPURasterOpening,
   GPURasterOtsuThreshold,
   GPURasterOverview,
+  GPURasterRegionMeasurements,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
@@ -358,6 +381,7 @@ try {
   GPURasterTileReader,
   GPURasterTextureToBuffer,
   getRasterDeviceLimits,
+  getRasterRegionWorldCentroid,
   makeRasterOverviewMetadata,
   planRasterDispatchStripes,
   type GPURasterBand,
@@ -418,6 +442,8 @@ try {
   type GPURasterOverviewProps,
   type GPURasterOverviewScale,
   type GPURasterPixelBounds,
+  type GPURasterRegionMeasurementOutputs,
+  type GPURasterRegionMeasurementsProps,
   type GPURasterResidentBand,
   type GPURasterResidentTile,
   type GPURasterScharrProps,
@@ -513,6 +539,8 @@ declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
 declare const overviewCategoricalPolicy: GPURasterOverviewCategoricalPolicy;
 declare const overviewMetadataOptions: GPURasterOverviewMetadataOptions;
+declare const regionMeasurementOutputs: GPURasterRegionMeasurementOutputs;
+declare const regionMeasurementsOptions: GPURasterRegionMeasurementsProps;
 declare const overviewOptions: GPURasterOverviewProps;
 declare const overviewScale: GPURasterOverviewScale;
 declare const pixelBounds: GPURasterPixelBounds;
@@ -568,6 +596,7 @@ declare const gradientMagnitude: GPURasterGradientMagnitude;
 declare const laplacian: GPURasterLaplacian;
 declare const morphology: GPURasterMorphology;
 declare const ndvi: GPURasterNDVI;
+declare const regionMeasurements: GPURasterRegionMeasurements;
 declare const neighborhood: GPURasterNeighborhood;
 declare const opening: GPURasterOpening;
 declare const otsu: GPURasterOtsuThreshold;
@@ -596,6 +625,7 @@ const contourClassifierContributor: GPUCommandGraphContributor = contourClassifi
 const contoursContributor: GPUCommandGraphContributor = contours;
 const convolutionContributor: GPUCommandGraphContributor = convolution;
 const denseComponentsContributor: GPUCommandGraphContributor = denseComponents;
+const regionMeasurementsContributor: GPUCommandGraphContributor = regionMeasurements;
 const dilationContributor: GPUCommandGraphContributor = dilation;
 const erosionContributor: GPUCommandGraphContributor = erosion;
 const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
@@ -640,6 +670,8 @@ const configuredConnectedComponents: GPUCommandGraphContributor =
   new GPURasterConnectedComponents(connectedComponentsOptions);
 const configuredDenseComponents: GPUCommandGraphContributor =
   new GPURasterDenseComponents(denseComponentsOptions);
+const configuredRegionMeasurements: GPUCommandGraphContributor =
+  new GPURasterRegionMeasurements(regionMeasurementsOptions);
 const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
 const configuredGlobalInitialize: GPUCommandGraphContributor = new GPURasterGlobalInitialize(
   globalInitializeOptions
@@ -676,6 +708,11 @@ const generatedOverviewMetadata: GPURasterMetadata = makeRasterOverviewMetadata(
   overviewMetadataOptions
 );
 const defaultOverviewMetadata: GPURasterMetadata = makeRasterOverviewMetadata(rasterMetadata, 2);
+const worldRegionCentroid: readonly [number, number] = getRasterRegionWorldCentroid(
+  rasterMetadata,
+  1.5,
+  2.5
+);
 const residentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(tileRequest);
 const cancelledResidentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(
   tileRequest,
@@ -804,6 +841,37 @@ const declaredDenseComponentOverflow: GraphDataView<'uint32'> = denseComponents.
 const declaredRequiredDenseComponentCount: GraphDataView<'uint32'> | undefined =
   denseComponents.requiredComponentCount;
 const declaredDenseComponentCapacity: number = denseComponents.capacity;
+const regionMetadata: GPURasterMetadata = regionMeasurementsOptions.metadata;
+const regionDenseLabels: GraphDataView<'uint32'> = regionMeasurementsOptions.labels;
+const regionLabelValidity: GraphDataView<'uint32'> = regionMeasurementsOptions.labelValidity;
+const regionConvergence: GraphDataView<'uint32'> = regionMeasurementsOptions.converged;
+const regionComponentCount: GraphDataView<'uint32'> = regionMeasurementsOptions.componentCount;
+const regionComponentOverflow: GraphDataView<'uint32'> = regionMeasurementsOptions.overflow;
+const regionIntensity: GPURasterBufferBand<'float32'> = regionMeasurementsOptions.intensity;
+const regionOutputs: GPURasterRegionMeasurementOutputs = regionMeasurementsOptions.output;
+const optionalRegionCapacity: number | undefined = regionMeasurementsOptions.capacity;
+const regionPixelCounts: GraphDataView<'uint32'> = regionMeasurementOutputs.pixelCounts;
+const regionIntensityCounts: GraphDataView<'uint32'> = regionMeasurementOutputs.intensityCounts;
+const regionIntensitySums: GraphDataView<'float32'> = regionMeasurementOutputs.intensitySums;
+const regionIntensityMinimums: GraphDataView<'float32'> =
+  regionMeasurementOutputs.intensityMinimums;
+const regionIntensityMaximums: GraphDataView<'float32'> =
+  regionMeasurementOutputs.intensityMaximums;
+const regionIntensityMeans: GraphDataView<'float32'> = regionMeasurementOutputs.intensityMeans;
+const regionColumnSums: GraphDataView<'float32'> = regionMeasurementOutputs.columnSums;
+const regionRowSums: GraphDataView<'float32'> = regionMeasurementOutputs.rowSums;
+const regionCentroidColumns: GraphDataView<'float32'> = regionMeasurementOutputs.centroidColumns;
+const regionCentroidRows: GraphDataView<'float32'> = regionMeasurementOutputs.centroidRows;
+const regionAreas: GraphDataView<'float32'> = regionMeasurementOutputs.areas;
+const declaredRegionMetadata: GPURasterMetadata = regionMeasurements.metadata;
+const declaredRegionLabels: GraphDataView<'uint32'> = regionMeasurements.labels;
+const declaredRegionValidity: GraphDataView<'uint32'> = regionMeasurements.labelValidity;
+const declaredRegionConvergence: GraphDataView<'uint32'> = regionMeasurements.converged;
+const declaredRegionComponentCount: GraphDataView<'uint32'> = regionMeasurements.componentCount;
+const declaredRegionOverflow: GraphDataView<'uint32'> = regionMeasurements.overflow;
+const declaredRegionIntensity: GPURasterBufferBand<'float32'> = regionMeasurements.intensity;
+const declaredRegionOutputs: GPURasterRegionMeasurementOutputs = regionMeasurements.output;
+const declaredRegionCapacity: number = regionMeasurements.capacity;
 const persistentGlobalExtent: GraphDataView<'float32'> = globalAccumulator.extent;
 const persistentGlobalCount: GraphDataView<'uint32'> = globalAccumulator.count;
 const persistentGlobalSum: GraphDataView<'float32'> = globalAccumulator.sum;
@@ -953,6 +1021,21 @@ const invalidDenseComponentOutput: GraphDataView<'float32'> = denseComponentsOpt
 const invalidDenseComponentCount: GraphDataView<'float32'> = denseComponentsOptions.componentCount;
 // @ts-expect-error Dense truncation status is a required unsigned GPU scalar.
 const invalidDenseComponentOverflow: GraphDataView<'float32'> = denseComponentsOptions.overflow;
+// @ts-expect-error Region intensity does not silently convert exact unsigned integer bands.
+const invalidRegionIntensity: GPURasterBufferBand<'uint32'> = regionMeasurementsOptions.intensity;
+// @ts-expect-error Region geometry population is an exact unsigned counter.
+const invalidRegionPixelCount: GraphDataView<'float32'> = regionMeasurementOutputs.pixelCounts;
+// @ts-expect-error Region intensity population is an exact unsigned counter.
+const invalidRegionIntensityCount: GraphDataView<'float32'> =
+  regionMeasurementOutputs.intensityCounts;
+// @ts-expect-error Region intensity statistics preserve calibrated floating values.
+const invalidRegionIntensitySum: GraphDataView<'uint32'> =
+  regionMeasurementOutputs.intensitySums;
+// @ts-expect-error Local centroids retain floating pixel coordinates.
+const invalidRegionCentroid: GraphDataView<'uint32'> =
+  regionMeasurementOutputs.centroidColumns;
+// @ts-expect-error Affine-coordinate-unit areas are floating measurements.
+const invalidRegionArea: GraphDataView<'uint32'> = regionMeasurementOutputs.areas;
 // @ts-expect-error Morphology exposes binary and grayscale scalar contracts only.
 const unsupportedMorphologyMode: GPURasterMorphologyMode = 'rgb';
 // @ts-expect-error Opening and closing are explicit composed contributors.
@@ -1044,6 +1127,7 @@ void GPURasterNeighborhood;
 void GPURasterOpening;
 void GPURasterOtsuThreshold;
 void GPURasterOverview;
+void GPURasterRegionMeasurements;
 void GPURasterScharr;
 void GPURasterSobel;
 void GPURasterStatistics;
@@ -1058,6 +1142,7 @@ void GPURasterTileLease;
 void GPURasterTileReader;
 void GPURasterTextureToBuffer;
 void getRasterDeviceLimits;
+void getRasterRegionWorldCentroid;
 void makeRasterOverviewMetadata;
 void planRasterDispatchStripes;
 void contributor;
@@ -1118,6 +1203,8 @@ void otsuDomain;
 void otsuOptions;
 void overviewCategoricalPolicy;
 void overviewMetadataOptions;
+void regionMeasurementOutputs;
+void regionMeasurementsOptions;
 void overviewOptions;
 void overviewScale;
 void pixelBounds;
@@ -1161,6 +1248,7 @@ void contourClassifierContributor;
 void contoursContributor;
 void convolutionContributor;
 void denseComponentsContributor;
+void regionMeasurementsContributor;
 void dilationContributor;
 void erosionContributor;
 void gaussianBlurContributor;
@@ -1197,6 +1285,7 @@ void configuredOpening;
 void configuredClosing;
 void configuredConnectedComponents;
 void configuredDenseComponents;
+void configuredRegionMeasurements;
 void configuredOverview;
 void configuredGlobalInitialize;
 void configuredGlobalStatisticsMerge;
@@ -1214,6 +1303,7 @@ void configuredTileReader;
 void normalizedTileRequest;
 void generatedOverviewMetadata;
 void defaultOverviewMetadata;
+void worldRegionCentroid;
 void residentTilePromise;
 void cancelledResidentTilePromise;
 void plannedTileHalo;
@@ -1289,6 +1379,35 @@ void declaredDenseComponentCount;
 void declaredDenseComponentOverflow;
 void declaredRequiredDenseComponentCount;
 void declaredDenseComponentCapacity;
+void regionMetadata;
+void regionDenseLabels;
+void regionLabelValidity;
+void regionConvergence;
+void regionComponentCount;
+void regionComponentOverflow;
+void regionIntensity;
+void regionOutputs;
+void optionalRegionCapacity;
+void regionPixelCounts;
+void regionIntensityCounts;
+void regionIntensitySums;
+void regionIntensityMinimums;
+void regionIntensityMaximums;
+void regionIntensityMeans;
+void regionColumnSums;
+void regionRowSums;
+void regionCentroidColumns;
+void regionCentroidRows;
+void regionAreas;
+void declaredRegionMetadata;
+void declaredRegionLabels;
+void declaredRegionValidity;
+void declaredRegionConvergence;
+void declaredRegionComponentCount;
+void declaredRegionOverflow;
+void declaredRegionIntensity;
+void declaredRegionOutputs;
+void declaredRegionCapacity;
 void isotropicOverviewScale;
 void anisotropicOverviewScale;
 void supportedCategoricalOverviewFormats;
@@ -1378,6 +1497,12 @@ void invalidDenseComponentInput;
 void invalidDenseComponentOutput;
 void invalidDenseComponentCount;
 void invalidDenseComponentOverflow;
+void invalidRegionIntensity;
+void invalidRegionPixelCount;
+void invalidRegionIntensityCount;
+void invalidRegionIntensitySum;
+void invalidRegionCentroid;
+void invalidRegionArea;
 void unsupportedMorphologyMode;
 void unsupportedMorphologyOperation;
 void unsupportedStructuringElement;
@@ -1432,6 +1557,7 @@ void declaredGlobalPercentileValidity;
 void categoricalOverview;
 void connectedComponents;
 void denseComponents;
+void regionMeasurements;
 void globalHistogramMerge;
 void globalInitialize;
 void globalPercentile;
@@ -1476,6 +1602,12 @@ void RootGPURasterConnectedComponents;
 // @ts-expect-error Dense raster component relabeling stays isolated from the experimental root.
 import {GPURasterDenseComponents as RootGPURasterDenseComponents} from '@luma.gl/experimental';
 void RootGPURasterDenseComponents;
+// @ts-expect-error Raster region measurement stays isolated from the experimental root.
+import {GPURasterRegionMeasurements as RootGPURasterRegionMeasurements} from '@luma.gl/experimental';
+void RootGPURasterRegionMeasurements;
+// @ts-expect-error High-precision raster centroid helpers remain in the raster subpath.
+import {getRasterRegionWorldCentroid as getRootRasterRegionWorldCentroid} from '@luma.gl/experimental';
+void getRootRasterRegionWorldCentroid;
 // @ts-expect-error External raster tile sources remain isolated from the experimental root.
 import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/experimental';
 void RootGPURasterTileReader;

@@ -640,7 +640,7 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
       'utf8'
     );
     const denseComponents = rasterEngine.slice(
-      rasterEngine.indexOf('new GPURasterDenseComponents({'),
+      rasterEngine.indexOf('const denseComponentLabels ='),
       rasterEngine.indexOf(
         'if (this.settings.contoursEnabled)',
         rasterEngine.indexOf('new GPURasterDenseComponents({')
@@ -653,7 +653,8 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(denseComponents).toContain('requiredComponentCount: contourSegmentCount');
     expect(denseComponents).toContain("'raster-lab-bounded-component-count'");
     expect(denseComponents).toContain("'raster-lab-component-overflow'");
-    expect(denseComponents).toContain('capacity: Math.min(');
+    expect(denseComponents).toContain('const componentCapacity = Math.min(');
+    expect(denseComponents).toContain('capacity: componentCapacity');
     expect(rasterEngine).toContain('aggregateView.getUint32(CONTOUR_COUNT_BYTE_OFFSET, true)');
     expect(rasterEngine).toContain('Math.min(componentCount, this.settings.componentCapacity)');
     expect(rasterEngine.match(/\.readAsync\(/g)).toHaveLength(1);
@@ -670,5 +671,50 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(rasterInterface).toContain('capacity exceeded · sparse roots visible');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
     expect(rasterInterface).not.toContain('data-raster-largest-component');
+  });
+
+  test('inspects one GPU-measured dense region inside the existing 228-byte boundary', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(rasterEngine).toContain('const HISTOGRAM_BIN_COUNT = 48');
+    expect(rasterEngine).toContain('const REGION_MEASUREMENT_SCALAR_COUNT = 8');
+    expect(rasterEngine).toContain('HISTOGRAM_BIN_COUNT - REGION_MEASUREMENT_SCALAR_COUNT');
+    expect(rasterEngine).toContain('const REGION_RESULT_CAPACITY = 2048');
+    expect(rasterEngine).toContain('new GPURasterRegionMeasurements({');
+    expect(rasterEngine).toContain('intensity: analyzedBand');
+    expect(rasterEngine).toContain('pixelCounts: this.importView(');
+    expect(rasterEngine).toContain('intensityCounts: this.importView(');
+    expect(rasterEngine).toContain('columnSums: this.importView(');
+    expect(rasterEngine).toContain('centroidColumns: this.importView(');
+    expect(rasterEngine).toContain('areas: this.importView(');
+    expect(rasterEngine).toContain('const sourceOffset =');
+    expect(rasterEngine).toContain('REGION_MEASUREMENT_BYTE_OFFSET + scalarIndex');
+    expect(rasterEngine).toContain('getRasterRegionWorldCentroid(');
+    expect(rasterEngine).toContain("? 'm²'");
+    expect(rasterEngine).toContain(": 'coordinate units²'");
+    expect(rasterEngine.match(/\.readAsync\(/g)).toHaveLength(1);
+    expect(rasterApplication).toContain('await engine.update(this.selectedRegionId)');
+    expect(rasterInterface).toContain('data-raster-region-metrics="on"');
+    expect(rasterInterface).toContain('data-raster-control="region-id"');
+    expect(rasterInterface).toContain('data-raster-region-pixels');
+    expect(rasterInterface).toContain('data-raster-region-intensity-mean');
+    expect(rasterInterface).toContain('data-raster-region-centroid');
+    expect(rasterInterface).toContain('data-raster-region-area');
+    expect(rasterInterface).toContain('40 bins · 8 region scalars · 228 bytes');
+    expect(rasterInterface).toContain('48 bins · region inspection off');
+    expect(rasterInterface).toContain('data-raster-histogram-bin-count');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
+    expect(rasterInterface).not.toContain('data-raster-region-table');
   });
 });
