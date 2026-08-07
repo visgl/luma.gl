@@ -143,6 +143,40 @@ describe('LuDataFrame immutable unique-right joins and bounded lookups', () => {
     rightFixture.table.destroy();
   });
 
+  test('plans frozen left outer, semi, and anti joins without touching either source', () => {
+    const leftFixture = createJoinSourceFixture('left', [3, 0, 5], LEFT_FIELDS);
+    const rightFixture = createJoinSourceFixture('right', [2, 0, 3], RIGHT_FIELDS);
+    const left = new LuDataFrame({table: leftFixture.table});
+    const right = new LuDataFrame({table: rightFixture.table});
+    const createBuffer = vi.spyOn(leftFixture.device, 'createBuffer');
+    const filtered = left.filter(column('amount').greaterThan(parameter('minimumAmount', 5)));
+
+    const plans = [
+      left.innerJoin(right, {leftOn: 'key', rightOn: 'lookupKey'}),
+      left.leftJoin(right, {leftOn: 'key', rightOn: 'lookupKey', capacity: 2}),
+      filtered.semiJoin(right, {leftOn: 'key', rightOn: 'lookupKey'}),
+      filtered.antiJoin(right, {leftOn: 'key', rightOn: 'lookupKey', capacity: 0})
+    ];
+
+    expect(plans.map(plan => plan.joinType)).toEqual(['inner', 'left', 'semi', 'anti']);
+    expect(plans.every(plan => plan instanceof LuDataFrameJoinQuery)).toBe(true);
+    expect(plans.every(plan => Object.isFrozen(plan) && Object.isFrozen(plan.options))).toBe(true);
+    expect(plans[1].options.capacity).toBe(2);
+    expect(plans[3].options.capacity).toBe(0);
+    expect(plans[2].query.predicates).toEqual(filtered.predicates);
+    expect(plans[3].query.predicates).toEqual(filtered.predicates);
+    expect(createBuffer).not.toHaveBeenCalled();
+    expectTypeOf(plans[1].compile).returns.toEqualTypeOf<
+      CompiledLuDataFrameJoin<LeftJoinColumns, RightJoinColumns>
+    >();
+
+    createBuffer.mockRestore();
+    left.destroy();
+    right.destroy();
+    leftFixture.table.destroy();
+    rightFixture.table.destroy();
+  });
+
   test('clones bounded options and safely clamps default cumulative hash probing', () => {
     const leftFixture = createJoinSourceFixture('left', [3], LEFT_FIELDS);
     const rightFixture = createJoinSourceFixture('right', [70_000], RIGHT_FIELDS);
