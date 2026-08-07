@@ -15,8 +15,9 @@ represent their relationships.
 `@luma.gl/experimental/lugraph` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
 degrees, shortest-path neighborhoods, weakly connected groups, PageRank importance, and progressive
-two-dimensional graph layouts into caller-owned GPU buffers. Every operation composes with the
-existing `GPUCommandGraph`.
+two-dimensional graph layouts into caller-owned GPU buffers. Layout can evaluate every repulsive
+interaction exactly or explicitly approximate distant groups through a caller-owned uniform grid.
+Every operation composes with the existing `GPUCommandGraph`.
 
 This is an experimental, headless graph analytics API, not a graph database, visualization
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
@@ -113,8 +114,10 @@ combine graph analytics with further GPU work:
 Choose another tool when the application needs weighted shortest paths, a graph query language,
 automatic CPU fallback, distributed execution, or compatibility with a CUDA or Python graph API.
 Exact force-directed layout also becomes expensive on very large graphs because it evaluates every
-pair of vertices. luGraph currently operates on one browser WebGPU device and intentionally does
-not provide those features or an approximate layout method.
+pair of vertices. An optional spatial layout can exchange some far-field accuracy for fewer
+individual repulsion calculations, but its flat grid does not guarantee subquadratic complexity or
+make arbitrary graph sizes interactive. luGraph operates on one browser WebGPU device and does not
+provide the other unsupported features above.
 
 ## Choose the right graph operation
 
@@ -127,9 +130,12 @@ not provide those features or an approximate layout method.
 | `LuGraphConnectedComponents` | Which vertices belong to the same weakly connected group? | One `uint32` component identifier per vertex | At most `O(K × (V + E))` for `K` bounded iterations |
 | `LuGraphPageRank` | Which vertices receive influence from other important vertices? | One normalized `float32` score per vertex | `O(K × (V + E))` for `K` iterations |
 | `LuGraphForceLayout` | How can related vertices be positioned as a readable network? | Directly renderable `float32x2` positions and persistent velocities | `O(V² + E)` per exact force iteration |
+| `LuGraphSpatialForceLayout` | Can distant graph regions be approximated while nearby relationships remain exact? | The existing renderable layout positions plus explicit uniform-grid diagnostics | `Θ(V × G + P + E)` per spatial force iteration |
 
-`V` is the graph's explicit vertex count and `E` is its source-edge count. Undirected adjacency
-contains both directions for ordinary edges; an undirected self-loop appears once.
+`V` is the graph's explicit vertex count, `E` is its source-edge count, `G` is the uniform-grid
+cell count, and `P` counts individual interactions in near or insufficiently distant cells.
+Undirected adjacency contains both directions for ordinary edges; an undirected self-loop appears
+once.
 
 ## Describe existing relationships with LuGraph
 
@@ -433,11 +439,121 @@ it for very large networks, already meaningful geographic coordinates, or applic
 weighted springs. This implementation does not approximate pairwise interactions and does not
 claim to implement ForceAtlas2 or Barnes–Hut.
 
+## Approximate distant forces with LuGraphSpatialForceLayout
+
+**Question: How can I make a larger relationship map easier to explore when exact repulsion spends
+too much time comparing every individual vertex?**
+
+`LuGraphSpatialForceLayout` adds an explicitly approximate, opt-in execution path around an existing
+`LuGraphForceLayout`. Imagine looking across a city: nearby pedestrians need individual attention,
+but a distant crowd can often be treated as one group at its average position. The spatial layout
+divides the current drawing area into a regular grid, calculates nearby forces exactly, and
+represents sufficiently distant occupied cells by their population and center of mass.
+
+Use it when an interactive dependency map, social network, transaction investigation, or citation
+visualization already owns GPU-resident graph data and can trade a bounded amount of visual
+accuracy for fewer individual far-field calculations. Keep the exact layout when every pairwise
+force must be reproducible, the network is small enough that index construction costs more than
+it saves, vertices are too concentrated to benefit from grouping, or meaningful fixed coordinates
+should not be replaced by a force-directed arrangement.
+
+```ts
+import {
+  LuGraphForceLayout,
+  LuGraphSpatialForceLayout
+} from '@luma.gl/experimental/lugraph';
+
+const layout = new LuGraphForceLayout({
+  topology,
+  positions: nodePositions,
+  velocities: nodeVelocities,
+  pinned: pinnedVertices,
+  reset: resetRequested,
+  iterationsPerFrame: 4
+});
+
+const spatialLayout = new LuGraphSpatialForceLayout({
+  layout,
+  gridSize: [32, 32],
+  bounds: [-4, -4, 4, 4],
+  theta: 0.6,
+  nearCellRadius: 1,
+  cellOffsets: spatialCellOffsets,
+  vertexIds: spatialVertexIds,
+  cellCenters: spatialCellCenters,
+  count: indexedVertexCount,
+  overflow: spatialIndexOverflow
+});
+
+spatialLayout.addToGraph(workflow);
+```
+
+Add either `layout` or `spatialLayout` to a workflow, not both: the spatial contributor advances
+the same base positions and velocities itself. Existing directed and undirected spring behavior,
+deterministic resets, pinned vertices, velocity limits, progressive warm starts, and directly
+renderable position buffers remain intact. Directed attraction still requires reverse adjacency;
+existing edge-weight columns remain intentionally unused by the unweighted spring model.
+
+### Accuracy and spatial controls
+
+The source vertex's own cell and every cell within `nearCellRadius` use exact, individual vertex
+interactions. This neighborhood is a square measured in grid cells: the default radius `1` covers
+the source cell and up to eight surrounding cells. Other occupied cells are approximated only when
+`cellDiagonal / distanceToCellCenter < theta`; cells that fail that test still contribute all of
+their individual interactions. No distant vertex is silently dropped.
+
+The default `theta: 0.6` controls the speed-versus-accuracy tradeoff. Larger values accept more
+distant cell approximations and can increase layout error; smaller values require a cell to be
+farther away before its population-weighted center of mass can represent its contents. Set
+`theta: 0` to disable every approximation and recover exact all-pairs repulsion while retaining
+the explicit grid rebuild and cell-scan overhead. Increasing `nearCellRadius` expands the exact
+neighborhood and can also prevent approximation across the entire grid.
+
+This implementation is a **flat uniform-grid monopole approximation**, not hierarchical
+Barnes–Hut, ForceAtlas2, an adaptive tree, or a claim of million-vertex throughput. It computes
+cell centers from grouped vertex identifiers without floating-point atomics.
+
+### Bounds, buffers, and failure behavior
+
+`gridSize: [columns, rows]` creates `G = columns × rows` equally sized cells inside the explicit,
+inclusive `bounds: [minimumX, minimumY, maximumX, maximumY]`. The application supplies five
+packed, single-chunk GPU vectors with physically distinct buffer allocations:
+
+- `cellOffsets`: `GPUVector<'uint32'>` with exactly `G + 1` rows.
+- `vertexIds`: `GPUVector<'uint32'>` with caller-selected indexing capacity; allow at least `V`
+  rows to accept every vertex without overflow.
+- `cellCenters`: `GPUVector<'float32x2'>` with exactly `G` rows.
+- `count`: a one-row `GPUVector<'uint32'>` reporting accepted in-domain vertices.
+- `overflow`: a one-row `GPUVector<'uint32'>` signaling insufficient `vertexIds` capacity.
+
+The GPU rebuilds these caller-owned buffers on every spatial force iteration because vertices can
+cross cell boundaries as the layout moves. Choose bounds that include every current coordinate,
+deterministic reset positions in `[-1, 1]`, and sufficient room for future movement. Bounds do not
+expand automatically; a vertex outside the domain makes `count` smaller than `vertexCount` even
+when indexing capacity is sufficient.
+
+If any vertex is outside the bounds, the index overflows, or required forward/reverse adjacency
+overflows, the spatial step fails closed: it preserves every existing position and clears all
+velocities. Counts and overflow flags remain explicit GPU-resident outputs until an application
+deliberately reads them back. Caller-owned layout and grid allocations are never destroyed or
+silently replaced.
+
+### Cost and when acceleration helps
+
+Every vertex still scans every grid cell, even empty cells. With `V` vertices, `G` cells, `P`
+individual near-field or rejected-far-field interactions, and `E` edges, each iteration performs
+`Θ(V × G + P + E)` work plus one grid rebuild and uses `Θ(V + G)` caller-owned grid storage.
+A sensible grid can reduce the number of individual interactions when vertices are distributed
+across well-separated regions, but an oversized grid wastes scans and a crowded grid cell
+restores pairwise work. The worst case can return to `Θ(V² + E)`; a grid with more cells than
+vertices can be even more expensive. Measure the application's actual graph distribution,
+index-rebuild cost, accuracy, and frame budget before choosing this path.
+
 ## Compose one GPU-resident workflow
 
 All graph contributors add work to the same caller-owned `GPUCommandGraph`. The following example
-assumes that the source columns, packed result vectors, and one-row status vectors already exist
-on the same WebGPU device:
+assumes that the source columns, packed result vectors, spatial index buffers, and one-row status
+vectors already exist on the same WebGPU device:
 
 ```ts
 import {GPUCommandGraph} from '@luma.gl/experimental';
@@ -448,6 +564,7 @@ import {
   LuGraphDegree,
   LuGraphForceLayout,
   LuGraphPageRank,
+  LuGraphSpatialForceLayout,
   LuGraphTopology
 } from '@luma.gl/experimental/lugraph';
 
@@ -503,13 +620,25 @@ new LuGraphPageRank({
   iterations: 40,
   residual: finalRankChange
 }).addToGraph(workflow);
-new LuGraphForceLayout({
+const layout = new LuGraphForceLayout({
   topology,
   positions: nodePositions,
   velocities: nodeVelocities,
   pinned: pinnedVertices,
   reset: resetRequested,
   iterationsPerFrame: 4
+});
+new LuGraphSpatialForceLayout({
+  layout,
+  gridSize: [32, 32],
+  bounds: [-4, -4, 4, 4],
+  theta: 0.6,
+  nearCellRadius: 1,
+  cellOffsets: spatialCellOffsets,
+  vertexIds: spatialVertexIds,
+  cellCenters: spatialCellCenters,
+  count: indexedVertexCount,
+  overflow: spatialIndexOverflow
 }).addToGraph(workflow);
 
 const compiled = workflow.compile();
@@ -522,7 +651,8 @@ Constructors validate existing metadata; they do not upload graph data, submit c
 results. `addToGraph()` declares GPU work, `compile()` resolves the workflow, and the application
 explicitly encodes and submits it. Re-encoding rebuilds topology and recomputes the declared
 results from the current source and control buffers while progressively advancing the existing
-layout positions and velocities.
+layout positions and velocities. Replace the spatial contributor with `layout.addToGraph(workflow)`
+when exact all-pairs repulsion is the better fit.
 
 ## Ownership, capacity, and failure boundaries
 
@@ -534,6 +664,8 @@ layout positions and velocities.
   unreachable distances, weak components publish `0xffffffff`, and PageRank publishes zero scores
   when a required neighbor list overflowed. Force layout preserves its existing positions and
   clears velocities on required adjacency overflow.
+- Spatial layout also preserves positions and clears velocities when its accepted count excludes
+  any out-of-domain vertex or its explicit vertex-ID capacity overflows.
 - Degree remains exact under neighbor overflow because its input is the complete CSR offset range.
 - Renderable layout positions require both `Buffer.STORAGE` and `Buffer.VERTEX` usage on their
   original caller-owned allocation; position readback or repacking is never implicit.

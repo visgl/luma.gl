@@ -20,3 +20,5 @@ export {LuGraphPageRank} from './lu-graph-page-rank';
 export type {LuGraphPageRankProps} from './lu-graph-page-rank';
 export {LuGraphForceLayout} from './lu-graph-force-layout';
 export type {LuGraphForceLayoutProps} from './lu-graph-force-layout';
+export {LuGraphSpatialForceLayout} from './lu-graph-spatial-force-layout';
+export type {LuGraphSpatialForceLayoutProps} from './lu-graph-spatial-force-layout';
