@@ -2,10 +2,42 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {describe, expect, test} from 'vitest';
-import {summarizeLuDataFrameBenchmarkSamples} from '../../examples/experimental/gpu-data-analysis/src/ludf-benchmark';
+import {describe, expect, test, vi} from 'vitest';
+import {
+  createLuDataFrameBenchmarkReference,
+  summarizeLuDataFrameBenchmarkSamples
+} from '../../examples/experimental/gpu-data-analysis/src/ludf-benchmark';
 
 describe('million-row luDF benchmark measurements', () => {
+  test('materializes adjusted fares for every row of all four CPU workloads', () => {
+    const roundFloat32 = vi.spyOn(Math, 'fround');
+
+    try {
+      const reference = createLuDataFrameBenchmarkReference(
+        {
+          fares: Float32Array.from([999, 21, 30, 50, 10]),
+          categories: Uint32Array.from([0, 0, 1, 2, 3]),
+          fareValidity: Uint8Array.from([0xff]),
+          categoryValidity: Uint8Array.from([0xff]),
+          rowCount: 4,
+          sliceOffset: 1
+        },
+        [2, 0, 2]
+      );
+
+      expect(roundFloat32).toHaveBeenCalledTimes(16);
+      expect(roundFloat32.mock.calls.map(([fare]) => fare)).toEqual(
+        Array.from({length: 4}, () => [23.5, 32.5, 52.5, 12.5]).flat()
+      );
+      expect(reference.filterCounts).toEqual([2, 0, 1]);
+      expect(reference.groupSums).toEqual([23.5, 32.5, 52.5, 0]);
+      expect(reference.topKRowIds).toEqual([[1, 0], [], [2]]);
+      expect(reference.joinRequiredCounts).toEqual([2, 0, 1]);
+    } finally {
+      roundFloat32.mockRestore();
+    }
+  });
+
   test('reports median CPU/GPU durations, observed throughput, and honest speedup', () => {
     expect(summarizeLuDataFrameBenchmarkSamples(1_000_000, [24, 8, 12], [10, 4, 6])).toEqual({
       cpuMilliseconds: 12,

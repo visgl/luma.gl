@@ -204,7 +204,7 @@ export async function runLuDataFrameBenchmark(
   signal?.throwIfAborted();
 
   const dataset = createBenchmarkDataset(rowCount);
-  const reference = createBenchmarkReference(dataset.rows, dataset.batchRowCounts);
+  const reference = createLuDataFrameBenchmarkReference(dataset.rows, dataset.batchRowCounts);
   const cpuSamples = measureBenchmarkCPUWorkloads(
     dataset.rows,
     dataset.batchRowCounts,
@@ -547,8 +547,8 @@ function createBenchmarkDataset(rowCount: number): BenchmarkDataset {
   };
 }
 
-/** Computes exact source-batch-aware CPU oracles for every independent GPU workload. */
-function createBenchmarkReference(
+/** @internal Computes equivalent projected CPU work for every independent GPU workload. */
+export function createLuDataFrameBenchmarkReference(
   rows: BenchmarkSourceRows,
   batchRowCounts: readonly number[]
 ): BenchmarkReference {
@@ -603,10 +603,20 @@ function isBenchmarkRowSelected(rows: BenchmarkSourceRows, rowId: number): boole
   );
 }
 
+/** Materializes the same complete float32 projection present in every compiled GPU query. */
+function createBenchmarkAdjustedFares(rows: BenchmarkSourceRows): Float32Array {
+  const adjustedFares = new Float32Array(rows.rowCount);
+  for (let rowId = 0; rowId < rows.rowCount; rowId++) {
+    adjustedFares[rowId] = Math.fround(rows.fares[rowId + rows.sliceOffset] + DRIVER_TIP);
+  }
+  return adjustedFares;
+}
+
 function createBenchmarkFilterReference(
   rows: BenchmarkSourceRows,
   batchRowCounts: readonly number[]
 ): number[] {
+  createBenchmarkAdjustedFares(rows);
   const counts = batchRowCounts.map(() => 0);
   const midpoint = batchRowCounts[0];
   for (let rowId = 0; rowId < rows.rowCount; rowId++) {
@@ -619,6 +629,7 @@ function createBenchmarkGroupReference(rows: BenchmarkSourceRows): {
   groupCounts: number[];
   groupSums: number[];
 } {
+  const adjustedFares = createBenchmarkAdjustedFares(rows);
   const groupCounts = CATEGORY_LABELS.map(() => 0);
   const groupSums = CATEGORY_LABELS.map(() => 0);
   for (let rowId = 0; rowId < rows.rowCount; rowId++) {
@@ -626,7 +637,7 @@ function createBenchmarkGroupReference(rows: BenchmarkSourceRows): {
     const sourceIndex = rowId + rows.sliceOffset;
     const category = rows.categories[sourceIndex];
     groupCounts[category]++;
-    groupSums[category] += Math.fround(rows.fares[sourceIndex] + DRIVER_TIP);
+    groupSums[category] += adjustedFares[rowId];
   }
   return {groupCounts, groupSums};
 }
@@ -635,6 +646,7 @@ function createBenchmarkSortingReference(
   rows: BenchmarkSourceRows,
   batchRowCounts: readonly number[]
 ): number[][] {
+  const adjustedFares = createBenchmarkAdjustedFares(rows);
   const midpoint = batchRowCounts[0];
   const selectedByBatch: number[][] = batchRowCounts.map(() => []);
   for (let rowId = 0; rowId < rows.rowCount; rowId++) {
@@ -644,10 +656,7 @@ function createBenchmarkSortingReference(
   }
   return selectedByBatch.map(rowIds =>
     rowIds
-      .sort(
-        (left, right) =>
-          rows.fares[right + rows.sliceOffset] - rows.fares[left + rows.sliceOffset] || left - right
-      )
+      .sort((left, right) => adjustedFares[right] - adjustedFares[left] || left - right)
       .slice(0, TOP_K_LIMIT)
   );
 }
@@ -656,6 +665,7 @@ function createBenchmarkJoinReference(
   rows: BenchmarkSourceRows,
   batchRowCounts: readonly number[]
 ): Pick<BenchmarkReference, 'joinRequiredCounts' | 'joinLeftRowIds' | 'joinRightRowIds'> {
+  createBenchmarkAdjustedFares(rows);
   const joinRequiredCounts = batchRowCounts.map(() => 0);
   const joinLeftRowIds: number[][] = batchRowCounts.map(() => []);
   const joinRightRowIds: number[][] = batchRowCounts.map(() => []);
