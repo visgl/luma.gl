@@ -2643,7 +2643,12 @@ try {
   );
   assert.equal(globallyExcludedHalo.analysisScope, 'tile');
   assert.equal(globallyExcludedHalo.haloEnabled, true);
-  assert.equal(globallyExcludedHalo.haloSourceTileCount, 2);
+  assert.equal(globallyExcludedHalo.haloRadius, 0);
+  assert.equal(
+    globallyExcludedHalo.haloSourceTileCount,
+    1,
+    'a pointwise seamless pipeline truthfully avoids pinning a neighbor without a required halo'
+  );
   const globalAfterHalo = await loadSourceSelection(
     '[data-raster-analysis-scope="global"]',
     'west',
