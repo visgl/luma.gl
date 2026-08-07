@@ -767,13 +767,13 @@ describe('glTF controls', () => {
     );
   });
 
-  test('exposes a genuinely instanced animated crowd of up to one thousand actors', () => {
+  test('exposes a genuinely instanced animated crowd of up to one hundred actors', () => {
     expect(getSettingDefinitions(makeGltfSettingsSchema()).get('instanceCount')).toEqual(
       expect.objectContaining({
         label: 'GPU Crowd Actors',
         type: 'number',
         min: 1,
-        max: 1000,
+        max: 100,
         step: 1
       })
     );

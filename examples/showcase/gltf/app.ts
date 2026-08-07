@@ -484,7 +484,7 @@ export function makeGltfSettingsSchema(
             type: 'number',
             persist: 'none',
             min: 1,
-            max: 1000,
+            max: 100,
             step: 1,
             sliderDebounceMs: 120
           },

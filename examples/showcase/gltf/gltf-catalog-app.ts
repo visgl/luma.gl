@@ -32,7 +32,7 @@ export const GLTF_CONTROL_ROW_STYLE =
 export const GLTF_SELECT_STYLE = 'width: 100%; min-width: 0;';
 const MAX_CAMERA_TILT = 0.7;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
-const MAXIMUM_GLTF_CROWD_ACTORS = 1000;
+const MAXIMUM_GLTF_CROWD_ACTORS = 100;
 
 const lightSources = {
   ambientLight: {

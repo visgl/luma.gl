@@ -80,7 +80,7 @@ The default capacity is 16 actors. Capacity is fixed so shared GPU allocations a
 remain stable; creating more actors than the configured capacity is rejected.
 
 The glTF Asset Studio exposes this path through its **GPU Crowd Actors** control, supporting
-1–1,000 actors and reporting the actual number of shared GPU draws.
+1–100 actors and reporting the actual number of shared GPU draws.
 
 ## Independent playback
 
@@ -120,8 +120,8 @@ of live crowd actors as its instance count. Different source primitives, materia
 topologies, or render-state requirements remain separate draw groups.
 
 For example, a character containing 19 source primitives requires approximately 19 instanced
-draws whether the crowd contains two actors or 1,000. Rendering 1,000 independent scenegraphs
-would instead require approximately 19,000 draws. This API does **not** claim that arbitrary
+draws whether the crowd contains two actors or 100. Rendering 100 independent scenegraphs
+would instead require approximately 1,900 draws. This API does **not** claim that arbitrary
 multi-primitive or multi-material models collapse into one universal draw call.
 
 Animated rigid node transforms are uploaded as per-actor instance attributes. Authored source
@@ -140,8 +140,8 @@ Batching reduces GPU draw calls, but large crowds can still be limited by CPU an
 | WebGPU | One packed read-only storage buffer per skinned primitive draw group. | Vertex shaders index the buffer with the instance and joint indices. |
 | WebGL 2 | One nearest-sampled `rgba32float` palette texture per skinned primitive draw group. | Vertex shaders retrieve four matrix columns using `texelFetch()` and `gl_InstanceID`. |
 
-A joint matrix occupies 64 bytes. One 43-joint palette for 1,000 actors therefore requires
-approximately 2.75 MB of packed GPU data per pose update. Each skinned primitive draw group owns
+A joint matrix occupies 64 bytes. One 43-joint palette for 100 actors therefore requires
+approximately 275 KB of packed GPU data per pose update. Each skinned primitive draw group owns
 its own packed palette; assets with multiple skinned primitives allocate one palette per group.
 
 WebGPU capacity is constrained by storage-buffer and binding-size limits. WebGL 2 capacity is
