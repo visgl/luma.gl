@@ -9,8 +9,10 @@ their behalf.
 `GPURasterTileReader` validates application-owned, asynchronously decoded raster sources without
 choosing a network transport, image codec, or GPU uploader. `GPURasterTileCache` optionally adds
 explicitly budgeted CPU/GPU tile residency, cancellation-safe loading, and reusable compiled
-graphs around that reader. Neither object is a GPU command-graph contributor, and command
-submission remains application-owned.
+graphs around that reader. `GPURasterTileHaloAssembler` coordinates cumulative receptive-field
+planning and fence-safe neighboring tile leases; `GPURasterTileHaloFill` and
+`GPURasterTileCoreExtract` explicitly assemble native samples and publish seam-safe owned cores
+through the caller's command graph. The reader, cache, and assembler never submit commands.
 
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
@@ -48,10 +50,16 @@ import {
   GPURasterStatistics,
   GPURasterThreshold,
   GPURasterTileCache,
+  GPURasterTileCoreExtract,
+  GPURasterTileHaloAssembler,
+  GPURasterTileHaloFill,
   GPURasterTileReader,
   type GPURasterBufferBand,
   type GPURasterDecodedBand,
   type GPURasterTileGraphLease,
+  type GPURasterTileHaloLease,
+  type GPURasterTileHaloRequest,
+  type GPURasterTileHaloSource,
   type GPURasterTileLease,
   type GPURasterTileRequest,
   type GPURasterTileSource
@@ -89,9 +97,13 @@ misses, active lease pins, and compiled-graph reuse. Equally sized western and e
 reuse one compiled graph through per-encoding source-buffer replacement; full-resolution,
 overview, or differently specialized pipelines use separate compatible graph entries. Rapid
 changes cancel stale requests without destroying submitted GPU resources. CPU-to-GPU uploads do
-not increase the unchanged 228-byte GPU-to-CPU summary. The example caches multiple tiles while
-analyzing one active tile; it does not assemble halos, stitch boundaries, or generate analytical
-overviews. Its 2× source overview selects existing nearest samples, not a nodata-aware aggregate.
+not increase the unchanged 228-byte GPU-to-CPU summary. Select **TILE ONLY** to analyze one
+source tile independently or **SEAMLESS HALO** to gather real neighboring resident samples,
+run smoothing, derivatives, and grayscale morphology over the cumulative padded region, and
+extract only the selected half-open core before displaying its statistics. Cumulative halo,
+owned-core bounds, and resident-source counts update with analytical controls and the chosen
+overview. Its 2× source overview still selects existing nearest samples, not a nodata-aware
+aggregate; generated analytical overviews and global tiled reductions remain separate work.
 
 ## Raster bands and validity
 
@@ -300,10 +312,12 @@ resource-lifetime boundaries.
 This reader contract returns one explicitly requested decoded result. It does not implement an
 HTTP range transport, GeoTIFF/COG decoder, loader package, GPU upload, or cache by itself.
 Applications that need bounded upload, residency, eviction, deduplicated concurrent requests,
-and graph reuse can explicitly compose it with `GPURasterTileCache`, described below. Neither
-object assembles neighborhood halos, stitches contours, merges global tiled statistics, or
-generates nodata-aware analytical overviews. Existing source overviews are accepted as
-source-provided samples; their scientific aggregation policy remains application-owned.
+and graph reuse can explicitly compose it with `GPURasterTileCache`, described below.
+`GPURasterTileHaloAssembler` can then acquire the complete neighboring coverage required by an
+explicitly declared analytical pipeline. None of these objects stitches contour geometry,
+merges global tiled statistics, or generates nodata-aware analytical overviews. Existing source
+overviews are accepted as source-provided samples; their scientific aggregation policy remains
+application-owned.
 
 ## Bounded tile residency and compiled-graph reuse
 
@@ -464,6 +478,155 @@ graph exactly once when an unpinned graph entry is evicted. Cache-owned source b
 borrowed and must not be destroyed by the callback. Keep a graph lease pinned until any render
 submission consuming its outputs has also completed.
 
+## Seam-safe tile halos and owned cores
+
+Use `GPURasterTileHaloAssembler` when a neighborhood operation crosses an independently owned
+tile boundary. Filtering, derivatives, and morphology need real adjacent observations; treating
+an interior tile edge as a dataset border produces visible seams and analytically incorrect
+values. Pointwise-only pipelines can omit stages or use the cache directly because neighboring
+pixels cannot influence their outputs.
+
+The assembler wraps an existing bounded `GPURasterTileCache`; it does not install a decoder,
+create a CPU-side stitched raster, allocate an unbounded full-dataset image, submit GPU commands,
+or replace the source-owned transport policy:
+
+```ts
+const assembler = new GPURasterTileHaloAssembler(cache);
+const request: GPURasterTileHaloRequest = {
+  level: 0,
+  column: 1,
+  row: 0,
+  bandIds: ['red', 'near-infrared'],
+  stages: [
+    {requiredHalo: 3}, // Gaussian smoothing, radius three.
+    {requiredHalo: 1}, // Sobel derivative, radius one.
+    {requiredHalo: 4} // Opening at radius two includes both morphology passes.
+  ]
+};
+
+const plan = assembler.plan(request);
+// plan.horizontalHalo === 8; plan.verticalHalo === 8.
+// plan.corePixelBounds owns only this tile; availablePixelBounds includes its real neighbors.
+
+const controller = new AbortController();
+const haloLease = await assembler.acquire(request, controller.signal);
+// haloLease.core is the first pinned tile; haloLease.tiles includes every required neighbor.
+```
+
+### Cumulative, anisotropic, and overview receptive fields
+
+`stages` is ordered, explicit, and required. Each stage advertises its complete `requiredHalo`;
+optional `horizontalRadius` and `verticalRadius` narrow its independent axes. Omitted axes use
+`requiredHalo`, and neither axis may exceed that stage's declared maximum. The planner sums
+each axis across the entire pipeline rather than choosing only the largest stage.
+
+For example, Gaussian radius `3` followed by Sobel radius `1` requires four source pixels per
+axis. Opening or closing at radius `2` already reports `requiredHalo: 4` because its erosion and
+dilation passes both contribute. Combining those three operations therefore requires eight
+source pixels, not three, four, or six. An explicitly horizontal radius-three stage followed by
+an explicitly vertical radius-two stage can instead declare:
+
+```ts
+stages: [
+  {requiredHalo: 3, horizontalRadius: 3, verticalRadius: 0},
+  {requiredHalo: 2, horizontalRadius: 0, verticalRadius: 2}
+];
+// horizontalHalo === 3; verticalHalo === 2; requiredHalo === 3.
+```
+
+All stage radii, `corePixelBounds`, and `availablePixelBounds` use the selected overview's own
+pixel grid. `levelZeroHalo` separately exposes the original-resolution footprint as
+`[ceil(horizontalHalo * downsampleX), ceil(verticalHalo * downsampleY)]`, preserving odd source
+dimensions and anisotropic overview scales without conflating coordinate systems.
+
+The core and available coverage are half-open rectangles. Available coverage expands the core
+by the complete per-axis halo and clips only against the selected level's actual dimensions;
+ragged right/bottom tiles are never implicitly padded. An explicitly addressed core acquires its
+canonical owning tile first, then every intersecting physical neighbor, including diagonal
+neighbors. An unaddressed full-level or explicit-window request instead acquires one normalized
+expanded source window. Source readers, formats, selected bands, budgets, and cancellation
+remain the existing cache's responsibility.
+
+### GPU-native neighbor assembly and core extraction
+
+Create caller-owned packed output views for the planned expanded width/height, import each
+leased resident band into the same graph, and identify its absolute overview-space coverage:
+
+```ts
+const sources: GPURasterTileHaloSource<'float32'>[] =
+  makeApplicationOwnedGraphSources(haloLease.tiles, 'red');
+
+new GPURasterTileHaloFill({
+  id: 'assemble-red-neighborhood',
+  pixelBounds: plan.availablePixelBounds,
+  sources,
+  output: assembledRedValues,
+  outputValidity: assembledRedValidity
+}).addToGraph(graph);
+
+// Run every selected neighborhood stage over plan.width × plan.height.
+// Keep stage scratch and source band metadata explicit and caller-controlled.
+
+new GPURasterTileCoreExtract({
+  id: 'publish-owned-red-core',
+  availablePixelBounds: plan.availablePixelBounds,
+  corePixelBounds: plan.corePixelBounds,
+  input: processedExpandedBand,
+  output: ownedCoreValues,
+  outputValidity: ownedCoreValidity
+}).addToGraph(graph);
+```
+
+The application supplies `makeApplicationOwnedGraphSources` and every output allocation; it is
+not an implicit LuRaster loader. `GPURasterTileHaloFill` requires exact, nonoverlapping source
+coverage of the expanded destination and identical band identity, native format, nodata, and
+calibration metadata across all contributors. It declares one bounded compute pass per source,
+keeping even diagonal neighborhoods below portable WebGPU storage-binding limits. Exact
+`float32`, `uint32`, and `sint32` values are copied without recalibration, and each pixel's
+separate validity is preserved; a source without a mask publishes valid observations.
+
+Execute smoothing, gradients, or morphology over the expanded intermediate region before
+`GPURasterTileCoreExtract` copies exactly the owned half-open core and its validity into
+separate caller-owned packed views. Adjacent cores therefore never overlap or double-publish
+seam pixels. A neighborhood border policy is meaningful only where available coverage meets a
+true dataset edge; sufficient real halo coverage keeps interior tile boundaries out of every
+owned output's receptive field. Missing observations remain missing rather than being silently
+filled by adjacent tiles.
+
+### Neighbor lifetime, cost, and remaining boundaries
+
+`GPURasterTileHaloLease` pins both `core` and every entry in `tiles`. Retain that composite
+lease while imported source buffers are encoded or submitted. After application-owned command
+submission, create the completion fence and release every source through the same fence:
+
+```ts
+device.submit(encoder.finish());
+const completionFence = device.createFence();
+await Promise.all([
+  graphLease.releaseAfter(completionFence),
+  haloLease.releaseAfter(completionFence)
+]);
+```
+
+Use immediate `haloLease.release()` only before encoding or after completion is already known.
+Cancellation or a cache-admission failure releases partially acquired pins without destroying
+resources retained by another lease. Cache capacity must fit all simultaneously pinned neighbors;
+otherwise admission fails explicitly instead of evicting an in-flight source.
+
+A nominal `w × h` core with horizontal/vertical radii `rx`/`ry` processes at most
+`(w + 2rx) × (h + 2ry)` pixels before real dataset-edge clipping. Each selected band adds one
+GPU gather pass per intersecting source tile; core extraction adds one more pass per published
+band. Larger tiles reduce repeated halo work while smaller tiles lower peak resident memory;
+actual throughput depends on radius, source tiling, band count, cache hits, GPU bandwidth,
+graph specialization, and measured workloads. This explicit numerical workflow preserves
+downstream analytical values and bounded residency, unlike a framebuffer-only image effect,
+but it does not guarantee a universal performance improvement.
+
+Halo planning and graph contributors do not automatically write one global stitched image,
+deduplicate contour segments across tiles, merge dataset-wide histograms, generate analytical
+overviews, or integrate a GeoTIFF/COG transport. Applications own result placement and command
+submission; those additional feature contracts remain separate roadmap tranches.
+
 ### Analytical tiling versus screen-space image effects
 
 Use bounded residency when source dimensions or interaction frequency make monolithic raster
@@ -481,10 +644,11 @@ pipelines, but they do not guarantee a particular speedup: source latency, tile 
 rate, memory bandwidth, graph complexity, adapter limits, and measured application workloads
 determine actual performance.
 
-Bounded residency does not yet assemble cumulative neighborhood halos, assign cross-tile core
-ownership, stitch morphology or contour seams, merge dataset-wide statistics, or generate
-analytical overviews. Those capabilities require separate correctness contracts and roadmap
-tranches.
+Bounded residency alone does not assemble neighborhoods or decide output ownership; applications
+explicitly compose `GPURasterTileHaloAssembler`, `GPURasterTileHaloFill`, and
+`GPURasterTileCoreExtract` when those contracts are required. Automatic full-image output
+stitching, contour seam ownership, dataset-wide statistic merges, and generated analytical
+overviews remain separate roadmap tranches.
 
 ## Pointwise band math
 
@@ -744,7 +908,7 @@ Choose the border mode according to the meaning of samples beyond the known rast
 | `clamp`     | Repeats the closest edge sample.                                                                  | Continuous fields whose outermost measured value is the best available extension.                    |
 | `reflect`   | Mirrors the interior without duplicating the boundary sample; a single-pixel axis repeats itself. | Smoothing terrain, reflectance, or microscopy without the flat edge plateaus introduced by clamping. |
 | `constant`  | Uses the caller-provided `borderValue`.                                                           | Padding against a known background, such as zero-valued calibrated intensity.                        |
-| `nodata`    | Treats out-of-bounds samples as invalid neighbors.                                                | Keeping missing exterior coverage explicit, especially before tiled halo support is available.       |
+| `nodata`    | Treats out-of-bounds samples as invalid neighbors.                                                | Keeping missing exterior coverage explicit at genuine dataset boundaries.                            |
 
 The default is `borderMode: 'clamp'`; `constant` defaults to `borderValue: 0` in the calibrated
 sample domain. For samples `[a, b, c]`, reflect-101 maps both the left position `-1` and right
@@ -1229,7 +1393,8 @@ The square and diamond both perform `O(r²)` neighborhood work per pixel; openin
 that footprint across two passes. These explicit pass counts, buffer formats, and residency
 properties describe scalability and composability, not a measured throughput claim. Actual
 performance depends on pixel count, radius, GPU limits, memory bandwidth, and workload. Halo
-metadata does not assemble tiled halos or partition oversized rasters automatically.
+metadata can drive explicit `GPURasterTileHaloAssembler` planning, but does not partition
+oversized rasters or schedule neighborhood assembly automatically.
 
 ## Raster compute versus image effects
 
@@ -1243,11 +1408,11 @@ raster algorithms without copying intermediate pixels to the CPU.
 
 Prefer ordinary image effects when the desired result is only a visual postprocess. Prefer
 LuRaster when filtered values must retain scientific meaning, compose with reusable command
-graphs and transient scratch, or fit a future tiled analytical pipeline. Separable Gaussian and
+graphs and transient scratch, or fit an explicitly tiled analytical pipeline. Separable Gaussian and
 box kernels have a documented tap-count advantage over equivalent direct square convolution;
 end-to-end speed and large-raster throughput remain adapter- and workload-dependent until they
-are measured. Automatic halo assembly, transparent oversized-raster partitioning, and
-FFT-backed filtering are not provided by these contributors.
+are measured. Halo assembly remains explicitly requested; transparent oversized-raster
+partitioning and FFT-backed filtering are not provided by these contributors.
 
 ## Marching-squares contour classification
 
@@ -1354,8 +1519,9 @@ Pointwise and neighborhood contributors use bounded two-dimensional dispatch. Hi
 extent primitives still use bounded 256-invocation one-dimensional passes. On adapters allowing
 65,535 workgroups per dimension, a `4096 × 4096` single-view histogram needs 65,536 workgroups
 and is rejected; the application must process smaller tiles or explicitly managed stripes.
-Transparent large-raster partitioning, tiled halo assembly, and global tiled histogram merges
-are not yet implemented.
+Transparent large-raster partitioning and global tiled histogram merges are not yet implemented.
+Halo planning, neighbor assembly, and core extraction are explicit caller-composed operations;
+they do not automatically partition an oversized source or bypass adapter limits.
 
 Compiled graph destruction releases graph-owned transient allocations and computations but not
 caller-owned imported buffers or textures. The application controls graph encoding, submission,
@@ -1363,13 +1529,15 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, built-in GeoTIFF/COG decoding, cross-tile halo assembly, generated
-analytical overviews, global merged statistics, connected components, tiled contour stitching,
-and FFT-backed raster convolution are not part of the current implementation. Application-owned
-tile ingress, source-provided overviews/windows, independently budgeted multi-tile CPU/GPU
-residency, fence-safe eviction, compatible compiled-graph reuse, Sobel, Scharr, Laplacian,
-gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion, opening,
-closing, and single-raster contour extraction are implemented.
+Percentile-based contrast, built-in GeoTIFF/COG decoding, generated analytical overviews,
+global merged statistics, connected components, tiled contour stitching, automatic whole-image
+result placement, and FFT-backed raster convolution are not part of the current implementation.
+Application-owned tile ingress, source-provided overviews/windows, independently budgeted
+multi-tile CPU/GPU residency, fence-safe eviction, compatible compiled-graph reuse, explicit
+cumulative neighborhood halo planning and native-format GPU assembly, half-open core
+extraction, Sobel, Scharr, Laplacian, gradient magnitude, bounded spatial smoothing,
+binary/grayscale dilation, erosion, opening, closing, and single-raster contour extraction are
+implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not
