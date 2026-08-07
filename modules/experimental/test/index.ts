@@ -41,3 +41,4 @@ import './ludf/lu-data-frame.spec';
 import './luxfilter';
 import './luproj/luproj.spec';
 import './luproj/projection-benchmark.spec';
+import './luvs/gpu-similarity-search.spec';
