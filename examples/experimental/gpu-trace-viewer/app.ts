@@ -185,9 +185,9 @@ type TraceGraphResources = {
   dependencyBatchIndex: Buffer;
   candidateDependencyBatchIds: Buffer;
   parentSpans: Buffer;
-  outgoingOffsets: Buffer;
+  outgoingTopology: Buffer;
   outgoingNeighbors: Buffer;
-  incomingOffsets: Buffer;
+  incomingTopology: Buffer;
   incomingNeighbors: Buffer;
   processStates: Buffer;
   threadStates: Buffer;
@@ -230,9 +230,9 @@ function getTraceResourceBuffers(resources: TraceGraphResources): Array<{byteLen
     resources.dependencyBatchIndex,
     resources.candidateDependencyBatchIds,
     resources.parentSpans,
-    resources.outgoingOffsets,
+    resources.outgoingTopology,
     resources.outgoingNeighbors,
-    resources.incomingOffsets,
+    resources.incomingTopology,
     resources.incomingNeighbors,
     resources.processStates,
     resources.threadStates,
@@ -590,9 +590,16 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     );
     const dependencyMaskByteLength = Math.max(dataset.dependencyCount, 1) * UINT32_BYTE_LENGTH;
     const densityBinCount = TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT;
-    const topologyChunkLengths = getTopologyChunkLengths(dataset.spanCount);
-    const outgoingOffsets = makePartitionedOffsets(dataset.outgoing.offsets, topologyChunkLengths);
-    const incomingOffsets = makePartitionedOffsets(dataset.incoming.offsets, topologyChunkLengths);
+    const outgoingTopologyChunkLengths = getTopologyChunkLengths(dataset.outgoing.nodes.length);
+    const incomingTopologyChunkLengths = getTopologyChunkLengths(dataset.incoming.nodes.length);
+    const outgoingTopology = makeSparseTopologyRows(
+      dataset.outgoing.nodes,
+      makePartitionedOffsets(dataset.outgoing.offsets, outgoingTopologyChunkLengths)
+    );
+    const incomingTopology = makeSparseTopologyRows(
+      dataset.incoming.nodes,
+      makePartitionedOffsets(dataset.incoming.offsets, incomingTopologyChunkLengths)
+    );
     const maximumDirectSpanByteLength = Math.min(
       this.device.limits.maxStorageBufferBindingSize,
       this.device.limits.maxBufferSize
@@ -726,12 +733,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         Buffer.COPY_SRC
       ),
       parentSpans: this.createDataBuffer('gpu-trace-parent-spans', dataset.parentSpans),
-      outgoingOffsets: this.createDataBuffer('gpu-trace-outgoing-offsets', outgoingOffsets),
+      outgoingTopology: this.createDataBuffer('gpu-trace-outgoing-topology', outgoingTopology),
       outgoingNeighbors: this.createDataBuffer(
         'gpu-trace-outgoing-neighbors',
         dataset.outgoing.neighbors
       ),
-      incomingOffsets: this.createDataBuffer('gpu-trace-incoming-offsets', incomingOffsets),
+      incomingTopology: this.createDataBuffer('gpu-trace-incoming-topology', incomingTopology),
       incomingNeighbors: this.createDataBuffer(
         'gpu-trace-incoming-neighbors',
         dataset.incoming.neighbors
@@ -882,13 +889,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         resources.candidateDependencyDispatchCommands.buffer
       ),
       parentSpans: importTraceBuffer(graph, 'parent-spans', resources.parentSpans),
-      outgoingOffsets: importTraceBuffer(graph, 'outgoing-offsets', resources.outgoingOffsets),
+      outgoingTopology: importTraceBuffer(graph, 'outgoing-topology', resources.outgoingTopology),
       outgoingNeighbors: importTraceBuffer(
         graph,
         'outgoing-neighbors',
         resources.outgoingNeighbors
       ),
-      incomingOffsets: importTraceBuffer(graph, 'incoming-offsets', resources.incomingOffsets),
+      incomingTopology: importTraceBuffer(graph, 'incoming-topology', resources.incomingTopology),
       incomingNeighbors: importTraceBuffer(
         graph,
         'incoming-neighbors',
@@ -951,14 +958,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       TRACE_THREADS_PER_PROCESS + 1,
       TRACE_THREAD_COUNT - TRACE_THREADS_PER_PROCESS - 1
     ];
-    const topologyChunkLengths = getTopologyChunkLengths(resources.spanCount);
+    const outgoingTopologyChunkLengths = getTopologyChunkLengths(dataset.outgoing.nodes.length);
+    const incomingTopologyChunkLengths = getTopologyChunkLengths(dataset.incoming.nodes.length);
     const outgoingNeighborChunkLengths = getNeighborChunkLengths(
       dataset.outgoing.offsets,
-      topologyChunkLengths
+      outgoingTopologyChunkLengths
     );
     const incomingNeighborChunkLengths = getNeighborChunkLengths(
       dataset.incoming.offsets,
-      topologyChunkLengths
+      incomingTopologyChunkLengths
     );
 
     const candidateBatchFlags = graph.createTransientBuffer({
@@ -1105,41 +1113,44 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         length: 1,
         workgroupSize: 1
       });
-      let sourceNodeBase = 0;
-      let offsetWordBase = 0;
-      let outgoingNeighborWordBase = 0;
-      let incomingNeighborWordBase = 0;
-      for (const [partitionIndex, sourceNodeCount] of topologyChunkLengths.entries()) {
-        for (const direction of [
-          {
-            name: 'outgoing',
-            offsets: handles.outgoingOffsets,
-            neighbors: handles.outgoingNeighbors,
-            neighborWordBase: outgoingNeighborWordBase,
-            neighborCount: outgoingNeighborChunkLengths[partitionIndex]
-          },
-          {
-            name: 'incoming',
-            offsets: handles.incomingOffsets,
-            neighbors: handles.incomingNeighbors,
-            neighborWordBase: incomingNeighborWordBase,
-            neighborCount: incomingNeighborChunkLengths[partitionIndex]
-          }
-        ]) {
+      for (const direction of [
+        {
+          name: 'outgoing',
+          topology: handles.outgoingTopology,
+          neighbors: handles.outgoingNeighbors,
+          nodeChunkLengths: outgoingTopologyChunkLengths,
+          neighborChunkLengths: outgoingNeighborChunkLengths
+        },
+        {
+          name: 'incoming',
+          topology: handles.incomingTopology,
+          neighbors: handles.incomingNeighbors,
+          nodeChunkLengths: incomingTopologyChunkLengths,
+          neighborChunkLengths: incomingNeighborChunkLengths
+        }
+      ]) {
+        let nodeWordBase = 0;
+        let offsetWordBase = direction.nodeChunkLengths.reduce(
+          (total, nodeCount) => total + nodeCount,
+          0
+        );
+        let neighborWordBase = 0;
+        for (const [partitionIndex, sourceNodeCount] of direction.nodeChunkLengths.entries()) {
+          const neighborCount = direction.neighborChunkLengths[partitionIndex];
           addTraceIndirectComputePass(graph, {
             id: `trace-focus-frontier-${depth}-${direction.name}-${partitionIndex}`,
             source: getFocusFrontierExpansionShader({
               spanCount: resources.spanCount,
               frontierCapacity: resources.focusFrontierCapacity,
-              sourceNodeBase,
+              nodeWordBase,
               sourceNodeCount,
               offsetWordBase,
-              neighborWordBase: direction.neighborWordBase,
-              neighborCount: direction.neighborCount,
+              neighborWordBase,
+              neighborCount,
               depth
             }),
             bindings: [
-              storageRead('offsets', direction.offsets),
+              storageRead('topology', direction.topology),
               storageRead('neighbors', direction.neighbors),
               storageRead('frontier', focusFrontiers[currentFrontierIndex]),
               storageRead('frontierCount', focusFrontierCounts[currentFrontierIndex]),
@@ -1150,11 +1161,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             ],
             dispatchBuffer: focusDispatchCommands[currentFrontierIndex]
           });
+          nodeWordBase += sourceNodeCount;
+          offsetWordBase += sourceNodeCount + 1;
+          neighborWordBase += neighborCount;
         }
-        sourceNodeBase += sourceNodeCount;
-        offsetWordBase += sourceNodeCount + 1;
-        outgoingNeighborWordBase += outgoingNeighborChunkLengths[partitionIndex];
-        incomingNeighborWordBase += incomingNeighborChunkLengths[partitionIndex];
       }
       addTraceComputePass(graph, {
         id: `trace-focus-frontier-${depth}-publish`,
@@ -1660,9 +1670,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.dependencyBatchIndex,
       resources.candidateDependencyBatchIds,
       resources.parentSpans,
-      resources.outgoingOffsets,
+      resources.outgoingTopology,
       resources.outgoingNeighbors,
-      resources.incomingOffsets,
+      resources.incomingTopology,
       resources.incomingNeighbors,
       resources.processStates,
       resources.threadStates,
@@ -2162,7 +2172,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   };
 }
 
-/** Splits source-aligned topology into two stable global-ID partitions. */
+/** Splits sparse adjacency rows into two stable global-ID partitions. */
 function getTopologyChunkLengths(length: number): number[] {
   if (length < 2) {
     return [length];
@@ -2199,6 +2209,14 @@ function makePartitionedOffsets(
     nodeBase += nodeCount;
   }
   return Uint32Array.from(partitionedOffsets);
+}
+
+/** Packs sparse owner IDs and partition-local CSR offsets into one portable shader binding. */
+function makeSparseTopologyRows(nodes: Uint32Array, offsets: Uint32Array): Uint32Array {
+  const topology = new Uint32Array(nodes.length + offsets.length);
+  topology.set(nodes);
+  topology.set(offsets, nodes.length);
+  return topology;
 }
 
 /** Adapts consecutive subranges of one caller-owned allocation as a chunk-preserving vector. */

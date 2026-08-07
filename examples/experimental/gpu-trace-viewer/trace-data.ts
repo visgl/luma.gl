@@ -150,13 +150,21 @@ export type TraceDependencyBatchData = {
   familyMask: number;
 };
 
-/** Compact forward or reverse compressed sparse dependency adjacency. */
+/** Compact forward or reverse adjacency containing rows only for nodes that own edges. */
 export type TraceAdjacencyData = {
-  /** One stable offset per source node plus the final edge count. */
+  /** Sorted stable global span IDs for rows that own at least one edge. */
+  nodes: Uint32Array;
+  /** One stable offset per sparse row plus the final edge count. */
   offsets: Uint32Array;
   /** Stable destination span indices in source edge order. */
   neighbors: Uint32Array;
 };
+
+/** Worst-case storage for both sparse adjacency directions at a dependency capacity. */
+export function getMaximumTraceAdjacencyByteLength(dependencyCount: number): number {
+  const maximumWordCount = dependencyCount * 6 + 2;
+  return maximumWordCount * Uint32Array.BYTES_PER_ELEMENT;
+}
 
 /** GPU-upload-ready trace source data and hierarchy-preserving graph topology. */
 export type TraceDatasetData = {
@@ -256,8 +264,8 @@ export function makeTraceDataset(
     dependencyBatches,
     dependencyBatchIndex,
     parentSpans: topology.parentSpans,
-    outgoing: buildTraceAdjacency(totalSpanCount, topology.dependencies, 'outgoing'),
-    incoming: buildTraceAdjacency(totalSpanCount, topology.dependencies, 'incoming'),
+    outgoing: buildTraceAdjacency(topology.dependencies, 'outgoing'),
+    incoming: buildTraceAdjacency(topology.dependencies, 'incoming'),
     spanCount: totalSpanCount,
     dependencyCount,
     processCount: TRACE_PROCESS_COUNT,
@@ -628,29 +636,35 @@ function writeTraceDependency(
 
 /** Builds stable compressed sparse rows without materializing per-node edge arrays. */
 function buildTraceAdjacency(
-  nodeCount: number,
   dependencies: Uint32Array,
   direction: 'outgoing' | 'incoming'
 ): TraceAdjacencyData {
-  const offsets = new Uint32Array(nodeCount + 1);
   const edgeCount = dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
   const sourceWord = direction === 'outgoing' ? 0 : 1;
   const destinationWord = direction === 'outgoing' ? 1 : 0;
+  const edgeCounts = new Map<number, number>();
 
   for (let edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
     const source = dependencies[edgeIndex * TRACE_DEPENDENCY_RECORD_WORD_LENGTH + sourceWord];
-    offsets[source + 1]++;
+    edgeCounts.set(source, (edgeCounts.get(source) || 0) + 1);
   }
-  for (let nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
-    offsets[nodeIndex + 1] += offsets[nodeIndex];
+
+  const nodes = Uint32Array.from(edgeCounts.keys()).sort();
+  const offsets = new Uint32Array(nodes.length + 1);
+  const rowByNode = new Map<number, number>();
+  for (let rowIndex = 0; rowIndex < nodes.length; rowIndex++) {
+    const node = nodes[rowIndex];
+    rowByNode.set(node, rowIndex);
+    offsets[rowIndex + 1] = offsets[rowIndex] + (edgeCounts.get(node) || 0);
   }
 
   const neighbors = new Uint32Array(edgeCount);
-  const cursors = offsets.slice(0, nodeCount);
+  const cursors = offsets.slice(0, nodes.length);
   for (let edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
     const wordOffset = edgeIndex * TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
     const source = dependencies[wordOffset + sourceWord];
-    neighbors[cursors[source]++] = dependencies[wordOffset + destinationWord];
+    const rowIndex = rowByNode.get(source)!;
+    neighbors[cursors[rowIndex]++] = dependencies[wordOffset + destinationWord];
   }
-  return {offsets, neighbors};
+  return {nodes, offsets, neighbors};
 }

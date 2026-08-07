@@ -428,7 +428,7 @@ fn main() {
 export function getFocusFrontierExpansionShader(options: {
   spanCount: number;
   frontierCapacity: number;
-  sourceNodeBase: number;
+  nodeWordBase: number;
   sourceNodeCount: number;
   offsetWordBase: number;
   neighborWordBase: number;
@@ -438,13 +438,13 @@ export function getFocusFrontierExpansionShader(options: {
   return /* wgsl */ `
 const SPAN_COUNT: u32 = ${options.spanCount}u;
 const FRONTIER_CAPACITY: u32 = ${options.frontierCapacity}u;
-const SOURCE_NODE_BASE: u32 = ${options.sourceNodeBase}u;
+const NODE_WORD_BASE: u32 = ${options.nodeWordBase}u;
 const SOURCE_NODE_COUNT: u32 = ${options.sourceNodeCount}u;
 const OFFSET_WORD_BASE: u32 = ${options.offsetWordBase}u;
 const NEIGHBOR_WORD_BASE: u32 = ${options.neighborWordBase}u;
 const NEIGHBOR_COUNT: u32 = ${options.neighborCount}u;
 const DEPTH: u32 = ${options.depth}u;
-@group(0) @binding(0) var<storage, read> offsets: array<u32>;
+@group(0) @binding(0) var<storage, read> topology: array<u32>;
 @group(0) @binding(1) var<storage, read> neighbors: array<u32>;
 @group(0) @binding(2) var<storage, read> frontier: array<u32>;
 @group(0) @binding(3) var<storage, read> frontierCount: array<u32>;
@@ -453,6 +453,24 @@ const DEPTH: u32 = ${options.depth}u;
 @group(0) @binding(6) var<storage, read_write> reachedSpans: array<atomic<u32>>;
 @group(0) @binding(7) var<storage, read> focusTraversalState: array<u32>;
 
+fn findSparseRow(sourceIndex: u32) -> u32 {
+  var low = 0u;
+  var high = SOURCE_NODE_COUNT;
+  while (low < high) {
+    let middle = low + (high - low) / 2u;
+    let node = topology[NODE_WORD_BASE + middle];
+    if (node < sourceIndex) {
+      low = middle + 1u;
+    } else {
+      high = middle;
+    }
+  }
+  if (low < SOURCE_NODE_COUNT && topology[NODE_WORD_BASE + low] == sourceIndex) {
+    return low;
+  }
+  return 0xffffffffu;
+}
+
 @compute @workgroup_size(${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let frontierIndex = globalId.x;
@@ -460,12 +478,12 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     return;
   }
   let sourceIndex = frontier[frontierIndex];
-  if (sourceIndex < SOURCE_NODE_BASE || sourceIndex - SOURCE_NODE_BASE >= SOURCE_NODE_COUNT) {
+  let localSourceIndex = findSparseRow(sourceIndex);
+  if (localSourceIndex == 0xffffffffu) {
     return;
   }
-  let localSourceIndex = sourceIndex - SOURCE_NODE_BASE;
-  let firstNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex], NEIGHBOR_COUNT);
-  let lastNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex + 1u], NEIGHBOR_COUNT);
+  let firstNeighbor = min(topology[OFFSET_WORD_BASE + localSourceIndex], NEIGHBOR_COUNT);
+  let lastNeighbor = min(topology[OFFSET_WORD_BASE + localSourceIndex + 1u], NEIGHBOR_COUNT);
   for (var neighborIndex = firstNeighbor; neighborIndex < lastNeighbor; neighborIndex++) {
     let neighbor = neighbors[NEIGHBOR_WORD_BASE + neighborIndex];
     let reachedMask = 1u << (neighbor & 31u);
