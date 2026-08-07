@@ -767,7 +767,6 @@ export function getCandidateDependencyVisibilityShader(
   const firstSpanIndex = props.spanChunks.at(-1)?.firstSpanIndex || 0;
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
-${getDependencyEndpointRoutingDeclarations(props)}
 struct DependencyBatch {
   firstIndex: u32,
   count: u32,
@@ -786,8 +785,6 @@ const MAXIMUM_ANCESTOR_DEPTH: u32 = 32u;
 @group(0) @binding(5) var<storage, read> parentSpans: array<u32>;
 @group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(7) var<storage, read_write> dependencyResults: array<u32>;
-@group(0) @binding(8) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
-var<workgroup> localChunkCounts: array<atomic<u32>, ${props.spanChunks.length}>;
 
 fn resolveVisibleAncestor(sourceIndex: u32) -> u32 {
   var currentIndex = sourceIndex;
@@ -809,11 +806,6 @@ fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
-    atomicStore(&localChunkCounts[chunkIndex], 0u);
-  }
-  workgroupBarrier();
-
   let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
   if (localId.x < batch.count) {
     let index = batch.firstIndex + localId.x;
@@ -847,21 +839,6 @@ fn main(
     let endpointResultOffset = viewUniforms.dependencyEndpointOffset + index * 2u;
     dependencyResults[endpointResultOffset] = effectiveSource;
     dependencyResults[endpointResultOffset + 1u] = effectiveDestination;
-    if (visible) {
-      let sourceChunkIndex = getSpanChunkIndex(effectiveSource);
-      let destinationChunkIndex = getSpanChunkIndex(effectiveDestination);
-      if (sourceChunkIndex != INVALID_CHUNK_INDEX) {
-        atomicAdd(&localChunkCounts[sourceChunkIndex], 1u);
-      }
-      if (destinationChunkIndex != INVALID_CHUNK_INDEX) {
-        atomicAdd(&localChunkCounts[destinationChunkIndex], 1u);
-      }
-    }
-  }
-  workgroupBarrier();
-
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
-    atomicAdd(&endpointChunkState[chunkIndex], atomicLoad(&localChunkCounts[chunkIndex]));
   }
 }`;
 }
@@ -870,138 +847,6 @@ export type TraceDependencyEndpointRoutingShaderProps = {
   dependencyCount: number;
   spanChunks: readonly TraceSpanChunkShaderProps[];
 };
-
-function getDependencyEndpointRoutingDeclarations(
-  props: TraceDependencyEndpointRoutingShaderProps
-): string {
-  const chunkEnds = props.spanChunks
-    .map(chunk => `${chunk.firstSpanIndex + chunk.spanCount}u`)
-    .join(', ');
-  return `const DEPENDENCY_COUNT: u32 = ${props.dependencyCount}u;
-const CHUNK_COUNT: u32 = ${props.spanChunks.length}u;
-const INVALID_CHUNK_INDEX: u32 = 0xffffffffu;
-const CHUNK_ENDS = array<u32, ${props.spanChunks.length}>(${chunkEnds});
-
-fn getSpanChunkIndex(spanIndex: u32) -> u32 {
-  for (var chunkIndex = 0u; chunkIndex < CHUNK_COUNT; chunkIndex++) {
-    if (spanIndex < CHUNK_ENDS[chunkIndex]) {
-      return chunkIndex;
-    }
-  }
-  return INVALID_CHUNK_INDEX;
-}`;
-}
-
-/** Clears endpoint-route counts before candidate dependency routing. */
-export function getDependencyEndpointRouteClearShader(chunkCount: number): string {
-  return /* wgsl */ `
-const CHUNK_COUNT: u32 = ${chunkCount}u;
-@group(0) @binding(0) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
-
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x < CHUNK_COUNT) {
-    atomicStore(&endpointChunkState[globalId.x], 0u);
-  }
-}`;
-}
-
-/** Publishes chunk offsets, scatter cursors, and indirect endpoint dispatches. */
-export function getDependencyEndpointDispatchShader(
-  chunkCount: number,
-  visibleDependencyCountWordOffset: number
-): string {
-  return /* wgsl */ `
-const CHUNK_COUNT: u32 = ${chunkCount}u;
-const ENDPOINT_WORKGROUP_SIZE: u32 = ${TRACE_WORKGROUP_SIZE}u;
-const OFFSET_BASE: u32 = ${chunkCount}u;
-const CURSOR_BASE: u32 = ${chunkCount * 2}u;
-@group(0) @binding(0) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
-@group(0) @binding(1) var<storage, read_write> endpointDispatchCommands: array<u32>;
-@group(0) @binding(2) var<storage, read> dependencyDrawCommands: array<u32>;
-@group(0) @binding(3) var<storage, read_write> endpointScatterDispatchCommand: array<u32>;
-
-@compute @workgroup_size(1)
-fn main() {
-  var offset = 0u;
-  for (var chunkIndex = 0u; chunkIndex < CHUNK_COUNT; chunkIndex++) {
-    let count = atomicLoad(&endpointChunkState[chunkIndex]);
-    atomicStore(&endpointChunkState[OFFSET_BASE + chunkIndex], offset);
-    atomicStore(&endpointChunkState[CURSOR_BASE + chunkIndex], offset);
-    endpointDispatchCommands[chunkIndex * 3u] =
-      (count + ENDPOINT_WORKGROUP_SIZE - 1u) / ENDPOINT_WORKGROUP_SIZE;
-    endpointDispatchCommands[chunkIndex * 3u + 1u] = 1u;
-    endpointDispatchCommands[chunkIndex * 3u + 2u] = 1u;
-    offset += count;
-  }
-  let visibleDependencyCount = dependencyDrawCommands[${visibleDependencyCountWordOffset}u];
-  endpointScatterDispatchCommand[0] =
-    (visibleDependencyCount + ENDPOINT_WORKGROUP_SIZE - 1u) / ENDPOINT_WORKGROUP_SIZE;
-  endpointScatterDispatchCommand[1] = 1u;
-  endpointScatterDispatchCommand[2] = 1u;
-}`;
-}
-
-/** Scatters visible endpoint jobs into the chunk ranges published by the count pass. */
-export function getVisibleDependencyEndpointScatterShader(
-  props: TraceDependencyEndpointRoutingShaderProps,
-  visibleDependencyCountWordOffset: number
-): string {
-  return /* wgsl */ `
-${getDependencyEndpointRoutingDeclarations(props)}
-const CURSOR_BASE: u32 = ${props.spanChunks.length * 2}u;
-@group(0) @binding(0) var<storage, read> visibleDependencyIds: array<u32>;
-@group(0) @binding(1) var<storage, read> dependencyResults: array<u32>;
-@group(0) @binding(2) var<storage, read> dependencyDrawCommands: array<u32>;
-@group(0) @binding(3) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
-@group(0) @binding(4) var<storage, read_write> endpointJobs: array<u32>;
-var<workgroup> localChunkCounts: array<atomic<u32>, ${props.spanChunks.length}>;
-var<workgroup> chunkOutputBases: array<u32, ${props.spanChunks.length}>;
-
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>
-) {
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_WORKGROUP_SIZE}u) {
-    atomicStore(&localChunkCounts[chunkIndex], 0u);
-  }
-  workgroupBarrier();
-
-  var endpointChunks = array<u32, 2>(INVALID_CHUNK_INDEX, INVALID_CHUNK_INDEX);
-  var endpointLocalOffsets = array<u32, 2>(0u, 0u);
-  var dependencyIndex = 0u;
-  let visibleDependencyCount = dependencyDrawCommands[${visibleDependencyCountWordOffset}u];
-  if (globalId.x < visibleDependencyCount) {
-    dependencyIndex = visibleDependencyIds[globalId.x];
-    let endpointResultOffset = DEPENDENCY_COUNT + dependencyIndex * 2u;
-    for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
-      let chunkIndex = getSpanChunkIndex(dependencyResults[endpointResultOffset + endpointIndex]);
-      endpointChunks[endpointIndex] = chunkIndex;
-      if (chunkIndex != INVALID_CHUNK_INDEX) {
-        endpointLocalOffsets[endpointIndex] = atomicAdd(&localChunkCounts[chunkIndex], 1u);
-      }
-    }
-  }
-  workgroupBarrier();
-
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_WORKGROUP_SIZE}u) {
-    chunkOutputBases[chunkIndex] = atomicAdd(
-      &endpointChunkState[CURSOR_BASE + chunkIndex],
-      atomicLoad(&localChunkCounts[chunkIndex])
-    );
-  }
-  workgroupBarrier();
-
-  for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
-    let chunkIndex = endpointChunks[endpointIndex];
-    if (chunkIndex != INVALID_CHUNK_INDEX) {
-      endpointJobs[chunkOutputBases[chunkIndex] + endpointLocalOffsets[endpointIndex]] =
-        dependencyIndex * 2u + endpointIndex;
-    }
-  }
-}`;
-}
 
 /** Resolves the routed endpoint jobs for one bounded source span chunk. */
 export function getDependencyEndpointResolveShader(

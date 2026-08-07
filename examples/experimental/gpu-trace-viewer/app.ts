@@ -10,6 +10,7 @@ import {
   type CompiledGPUCommandGraph,
   DispatchCommandBuffer,
   DrawCommandBuffer,
+  GPUChunkedIndexedScatter,
   GPUCommandGraph,
   type GPUCommandGraphEncoding,
   GPUCommandGraphInspector,
@@ -73,16 +74,13 @@ import {
   getCandidateVisibilityShader,
   getDensityClearShader,
   getDependencyBatchVisibilityShader,
-  getDependencyEndpointDispatchShader,
   getDependencyEndpointResolveShader,
-  getDependencyEndpointRouteClearShader,
   getFocusFrontierClearShader,
   getFocusFrontierDispatchShader,
   getFocusFrontierExpansionShader,
   getFocusFrontierSeedShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
-  getVisibleDependencyEndpointScatterShader,
   TRACE_DENSITY_RENDER_SHADER,
   TRACE_DEPENDENCY_RENDER_SHADER,
   TRACE_RENDER_SHADER
@@ -1243,21 +1241,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         byteLength: resources.dependencyCount * 2 * UINT32_BYTE_LENGTH,
         usage: Buffer.STORAGE
       });
-      const dependencyEndpointChunkState = graph.createTransientBuffer({
-        id: 'trace-dependency-endpoint-chunk-state',
-        byteLength: resources.spanChunks.length * 3 * UINT32_BYTE_LENGTH,
-        usage: Buffer.STORAGE
-      });
-      const dependencyEndpointDispatchCommands = graph.createTransientBuffer({
-        id: 'trace-dependency-endpoint-dispatch-commands',
-        byteLength: resources.spanChunks.length * 3 * UINT32_BYTE_LENGTH,
-        usage: Buffer.STORAGE | Buffer.INDIRECT
-      });
-      const dependencyEndpointScatterDispatchCommands = graph.createTransientBuffer({
-        id: 'trace-dependency-endpoint-scatter-dispatch-commands',
-        byteLength: 3 * UINT32_BYTE_LENGTH,
-        usage: Buffer.STORAGE | Buffer.INDIRECT
-      });
       const candidateDependencyBatchFlags = graph.createTransientBuffer({
         id: 'trace-candidate-dependency-batch-flags',
         byteLength: resources.dependencyBatchCount * UINT32_BYTE_LENGTH,
@@ -1294,12 +1277,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           byteOffset: UINT32_BYTE_LENGTH
         })
       }).addToGraph(graph);
-      addTraceComputePass(graph, {
-        id: 'trace-clear-dependency-endpoint-routes',
-        source: getDependencyEndpointRouteClearShader(resources.spanChunks.length),
-        bindings: [storageWrite('endpointChunkState', dependencyEndpointChunkState)],
-        length: resources.spanChunks.length
-      });
       addTraceIndirectComputePass(graph, {
         id: 'trace-candidate-dependency-visibility',
         source: getCandidateDependencyVisibilityShader(endpointRoutingProps),
@@ -1311,10 +1288,18 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('processStates', handles.processStates),
           storageRead('parentSpans', handles.parentSpans),
           uniformBinding('viewUniforms', handles.uniforms),
-          storageWrite('dependencyResults', handles.dependencyResults),
-          storageWrite('endpointChunkState', dependencyEndpointChunkState)
+          storageWrite('dependencyResults', handles.dependencyResults)
         ],
         dispatchBuffer: handles.candidateDependencyDispatchCommands
+      });
+      const visibleDependencyIds = graph.createDataView(handles.visibleDependencyIds, {
+        format: 'uint32',
+        length: resources.dependencyCount
+      });
+      const visibleDependencyCount = graph.createDataView(handles.drawCommands, {
+        format: 'uint32',
+        length: 1,
+        byteOffset: visibleDependencyCountWordOffset * UINT32_BYTE_LENGTH
       });
       new GPUIndexedRangeCompaction({
         id: 'trace-visible-dependencies',
@@ -1334,46 +1319,25 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         }),
         activeRangeDispatch: handles.candidateDependencyDispatchCommands,
         maximumRangeLength: TRACE_DEPENDENCY_BATCH_CAPACITY,
-        output: graph.createDataView(handles.visibleDependencyIds, {
+        output: visibleDependencyIds,
+        count: visibleDependencyCount
+      }).addToGraph(graph);
+      const endpointScatter = new GPUChunkedIndexedScatter({
+        id: 'trace-dependency-endpoints',
+        sourceIds: visibleDependencyIds,
+        sourceCount: visibleDependencyCount,
+        routes: graph.createDataView(handles.dependencyResults, {
           format: 'uint32',
-          length: resources.dependencyCount
+          length: resources.dependencyCount * 2,
+          byteOffset: resources.dependencyCount * UINT32_BYTE_LENGTH
         }),
-        count: graph.createDataView(handles.drawCommands, {
+        routeLayout: {wordStride: 2, firstRouteWordOffset: 0, routeCount: 2},
+        chunkEnds: resources.spanChunks.map(chunk => chunk.firstSpanIndex + chunk.spanCount),
+        output: graph.createDataView(dependencyEndpointJobs, {
           format: 'uint32',
-          length: 1,
-          byteOffset: visibleDependencyCountWordOffset * UINT32_BYTE_LENGTH
+          length: resources.dependencyCount * 2
         })
       }).addToGraph(graph);
-      addTraceComputePass(graph, {
-        id: 'trace-publish-dependency-endpoint-routes',
-        source: getDependencyEndpointDispatchShader(
-          resources.spanChunks.length,
-          visibleDependencyCountWordOffset
-        ),
-        bindings: [
-          storageWrite('endpointChunkState', dependencyEndpointChunkState),
-          storageWrite('endpointDispatchCommands', dependencyEndpointDispatchCommands),
-          storageRead('dependencyDrawCommands', handles.drawCommands),
-          storageWrite('endpointScatterDispatchCommand', dependencyEndpointScatterDispatchCommands)
-        ],
-        length: 1,
-        workgroupSize: 1
-      });
-      addTraceIndirectComputePass(graph, {
-        id: 'trace-scatter-dependency-endpoint-routes',
-        source: getVisibleDependencyEndpointScatterShader(
-          endpointRoutingProps,
-          visibleDependencyCountWordOffset
-        ),
-        bindings: [
-          storageRead('visibleDependencyIds', handles.visibleDependencyIds),
-          storageRead('dependencyResults', handles.dependencyResults),
-          storageRead('dependencyDrawCommands', handles.drawCommands),
-          storageWrite('endpointChunkState', dependencyEndpointChunkState),
-          storageWrite('endpointJobs', dependencyEndpointJobs)
-        ],
-        dispatchBuffer: dependencyEndpointScatterDispatchCommands
-      });
       for (const chunk of handles.spanChunks) {
         addTraceIndirectComputePass(graph, {
           id: `trace-resolve-routed-dependency-endpoints-${chunk.chunkIndex}`,
@@ -1381,14 +1345,14 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           bindings: [
             storageRead('spans', chunk.spans),
             storageRead('endpointJobs', dependencyEndpointJobs),
-            storageRead('endpointChunkState', dependencyEndpointChunkState),
+            storageRead('endpointChunkState', endpointScatter.chunkCounts.buffer),
             storageRead('dependencyResults', handles.dependencyResults),
             storageRead('processStates', handles.processStates),
             storageRead('threadStates', handles.threadStates),
             storageRead('threadOffsets', handles.threadOffsets),
             storageWrite('dependencyEndpointPositions', handles.dependencyEndpointPositions)
           ],
-          dispatchBuffer: dependencyEndpointDispatchCommands,
+          dispatchBuffer: endpointScatter.dispatchCommands.buffer,
           dispatchByteOffset: chunk.chunkIndex * 3 * UINT32_BYTE_LENGTH
         });
       }
