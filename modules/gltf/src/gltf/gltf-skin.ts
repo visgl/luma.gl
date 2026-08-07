@@ -84,6 +84,14 @@ function makeSkinBindings(props: GLTFSkinControllerProps): GLTFSkinBinding[] {
   const {gltf, gltfNodeIndexToNodeMap} = props;
   const bindings: GLTFSkinBinding[] = [];
   const sourceSkins = gltf.skins || [];
+  const reachableNodes = new Set<GroupNode>();
+  for (const scene of props.scenes) {
+    scene.preorderTraversal(node => {
+      if (node instanceof GroupNode) {
+        reachableNodes.add(node);
+      }
+    });
+  }
 
   for (const [nodeIndex, sourceNode] of gltf.nodes.entries()) {
     const sourceNodeSkin = sourceNode.skin;
@@ -94,7 +102,7 @@ function makeSkinBindings(props: GLTFSkinControllerProps): GLTFSkinBinding[] {
     const skinIndex = resolveGLTFSkinIndex(gltf, sourceNodeSkin);
     const sourceSkin = sourceSkins[skinIndex];
     const node = gltfNodeIndexToNodeMap.get(nodeIndex);
-    if (!sourceSkin || !node) {
+    if (!sourceSkin || !node || !reachableNodes.has(node)) {
       continue;
     }
 

@@ -242,6 +242,10 @@ export const GLTF_EXTENSION_DEMOS: GLTFExtensionDemo[] = [
     models: [{name: 'SimpleInstancing', label: 'Simple Instancing'}]
   },
   {
+    extensionName: 'MSFT_lod',
+    models: [{name: 'SimpleSkinLOD', label: 'Simple Skin (Animated LOD)'}]
+  },
+  {
     extensionName: 'KHR_materials_diffuse_transmission',
     models: [
       {name: 'DiffuseTransmissionPlant', label: 'Diffuse Transmission Plant'},

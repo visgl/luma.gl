@@ -156,6 +156,18 @@ See [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation), t
 [engine animation guide](/docs/api-guide/engine/animation), and
 [glTF extension support](/docs/api-reference/gltf/gltf-extensions) for details and limitations.
 
+### Independently animated GPU crowds
+
+`createGLTFAnimatedCrowd()` shares one parsed asset and one GPU model per reachable source
+primitive across actors with independently selected clips, phases, playback speeds, and poses.
+WebGPU stores joint palettes in read-only storage buffers; WebGL 2 reads equivalent floating-point
+palette textures. Distinct actions and crossfades do not split an instanced draw: 100 Robot
+Expressive actors still use its 19 source-primitive draws instead of 1,900 separate draws.
+
+See [GPU-animated glTF crowds](/docs/api-reference/gltf/gltf-animated-crowd) for the complete
+render loop, actor lifecycle, batching, backend requirements, current morph and LOD limitations,
+and Animation Studio controls.
+
 ## Source-faithful asset interchange
 
 `exportGLTF()` serializes renderer-independent glTF scene descriptors as embedded JSON or binary

@@ -271,8 +271,14 @@ Status meanings:
     <SupportRow name="EXT_texture_video" support="❌">
       Video textures are not created automatically by the glTF pipeline.
     </SupportRow>
-    <SupportRow name="MSFT_lod" support="❌">
-      Level-of-detail switching is not implemented in the stock scenegraph loader.
+    <SupportRow name="MSFT_lod" support="✅" fromVersion="10.0">
+      Animated crowds resolve authored node levels and{' '}
+      <code>MSFT_screencoverage</code> thresholds, select independently animated
+      actors by projected screen size, and compact each occupied mesh level into
+      one instanced draw per primitive on WebGPU and WebGL 2. Optional index-only
+      mesh decimation generates levels for assets that do not author them.
+      Material-level LOD, GPU-driven selection, and progressive streaming are not
+      implemented.
     </SupportRow>
   </tbody>
 </table>
