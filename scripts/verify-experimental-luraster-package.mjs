@@ -48,6 +48,8 @@ const requiredRuntimeExportNames = [
   'GPURasterBoxBlur',
   'GPURasterBufferToTexture',
   'GPURasterContrast',
+  'GPURasterContourClassifier',
+  'GPURasterContours',
   'GPURasterConvolution',
   'GPURasterGaussianBlur',
   'GPURasterHistogram',
@@ -97,6 +99,8 @@ try {
   GPURasterBoxBlur,
   GPURasterBufferToTexture,
   GPURasterContrast,
+  GPURasterContourClassifier,
+  GPURasterContours,
   GPURasterConvolution,
   GPURasterGaussianBlur,
   GPURasterHistogram,
@@ -115,6 +119,9 @@ try {
   type GPURasterContrastDomain,
   type GPURasterContrastMode,
   type GPURasterContrastProps,
+  type GPURasterContourClassifierProps,
+  type GPURasterContourLevel,
+  type GPURasterContoursProps,
   type GPURasterConvolutionProps,
   type GPURasterGaussianBlurProps,
   type GPURasterHistogramDomain,
@@ -144,6 +151,9 @@ declare const borderMode: GPURasterBorderMode;
 declare const contrastDomain: GPURasterContrastDomain;
 declare const contrastMode: GPURasterContrastMode;
 declare const contrastOptions: GPURasterContrastProps;
+declare const contourClassifierOptions: GPURasterContourClassifierProps;
+declare const contourLevel: GPURasterContourLevel;
+declare const contourOptions: GPURasterContoursProps;
 declare const convolutionOptions: GPURasterConvolutionProps;
 declare const gaussianOptions: GPURasterGaussianBlurProps;
 declare const histogramDomain: GPURasterHistogramDomain<'float32'>;
@@ -166,6 +176,8 @@ declare const reductionMask: GPUReductionMask;
 declare const bandMath: GPURasterBandMath;
 declare const boxBlur: GPURasterBoxBlur;
 declare const contrast: GPURasterContrast;
+declare const contourClassifier: GPURasterContourClassifier;
+declare const contours: GPURasterContours;
 declare const convolution: GPURasterConvolution;
 declare const gaussianBlur: GPURasterGaussianBlur;
 declare const ndvi: GPURasterNDVI;
@@ -178,6 +190,8 @@ declare const textureToBuffer: GPURasterTextureToBuffer;
 const bandMathContributor: GPUCommandGraphContributor = bandMath;
 const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
 const contrastContributor: GPUCommandGraphContributor = contrast;
+const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
+const contoursContributor: GPUCommandGraphContributor = contours;
 const convolutionContributor: GPUCommandGraphContributor = convolution;
 const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
 const ndviContributor: GPUCommandGraphContributor = ndvi;
@@ -193,6 +207,8 @@ void GPURasterBandMath;
 void GPURasterBoxBlur;
 void GPURasterBufferToTexture;
 void GPURasterContrast;
+void GPURasterContourClassifier;
+void GPURasterContours;
 void GPURasterConvolution;
 void GPURasterGaussianBlur;
 void GPURasterHistogram;
@@ -212,6 +228,9 @@ void borderMode;
 void contrastDomain;
 void contrastMode;
 void contrastOptions;
+void contourClassifierOptions;
+void contourLevel;
+void contourOptions;
 void convolutionOptions;
 void gaussianOptions;
 void histogramDomain;
@@ -234,6 +253,8 @@ void reductionMask;
 void bandMathContributor;
 void boxBlurContributor;
 void contrastContributor;
+void contourClassifierContributor;
+void contoursContributor;
 void convolutionContributor;
 void gaussianBlurContributor;
 void ndviContributor;
@@ -250,6 +271,9 @@ void RootGPURaster;
 // @ts-expect-error Pointwise contributors stay isolated from the experimental root.
 import {GPURasterNDVI as RootGPURasterNDVI} from '@luma.gl/experimental';
 void RootGPURasterNDVI;
+// @ts-expect-error Contour contributors stay isolated from the experimental root.
+import {GPURasterContours as RootGPURasterContours} from '@luma.gl/experimental';
+void RootGPURasterContours;
 // @ts-expect-error Neighborhood contributors stay isolated from the experimental root.
 import {GPURasterGaussianBlur as RootGPURasterGaussianBlur} from '@luma.gl/experimental';
 void RootGPURasterGaussianBlur;

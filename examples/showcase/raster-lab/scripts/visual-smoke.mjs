@@ -84,6 +84,10 @@ try {
       nodeCount: rasterLab.nodeCount,
       executionCount: rasterLab.executionCount,
       frameCount: rasterLab.frameCount,
+      contoursEnabled: rasterLab.contoursEnabled,
+      contourLevel: rasterLab.contourLevel,
+      contourSegmentCount: rasterLab.contourSegmentCount,
+      contourOverflow: rasterLab.contourOverflow,
       canvasWidth: document.querySelector('canvas')?.width,
       canvasHeight: document.querySelector('canvas')?.height
     };
@@ -113,6 +117,13 @@ try {
     Math.abs(initialState.mean - initialState.sum / initialState.validPixelCount) < 0.00001,
     'the GPU computes the exact masked mean from its sum and count'
   );
+  assert.equal(initialState.contoursEnabled, true, 'GPU contour overlays are enabled initially');
+  assert(initialState.contourSegmentCount > 0, 'marching squares generates visible GPU isolines');
+  assert.equal(initialState.contourOverflow, false, 'the bounded contour output fits its capacity');
+  assert(
+    (await page.locator('[data-raster-contour-count]').textContent()).includes('CONTOUR SEGMENTS'),
+    'the map exposes the GPU-computed contour segment count'
+  );
 
   const surfaceBounds = await page.locator('[data-raster-surface]').boundingBox();
   assert(
@@ -130,6 +141,81 @@ try {
   assert(mapCenter.byteLength > 1_000, 'the first-frame raster viewport contains rendered imagery');
 
   let previousExecutionCount = initialState.executionCount;
+  let previousFrameCount = initialState.frameCount;
+  const contourSurface = await page.screenshot({
+    clip: {
+      x: Math.ceil(surfaceBounds.x),
+      y: Math.ceil(surfaceBounds.y),
+      width: Math.floor(surfaceBounds.width) - 1,
+      height: Math.floor(surfaceBounds.height) - 1
+    }
+  });
+  await page.locator('[data-raster-control="contours-enabled"]').uncheck();
+  await page.waitForFunction(
+    ({executionCount, frameCount}) =>
+      !window.__luRasterLab.contoursEnabled &&
+      window.__luRasterLab.executionCount > executionCount &&
+      window.__luRasterLab.frameCount > frameCount,
+    {executionCount: previousExecutionCount, frameCount: previousFrameCount}
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.contourSegmentCount),
+    0,
+    'disabling contours removes GPU geometry from the visible summary'
+  );
+  const plainSurface = await page.screenshot({
+    clip: {
+      x: Math.ceil(surfaceBounds.x),
+      y: Math.ceil(surfaceBounds.y),
+      width: Math.floor(surfaceBounds.width) - 1,
+      height: Math.floor(surfaceBounds.height) - 1
+    }
+  });
+  assert.notDeepEqual(contourSurface, plainSurface, 'indirect contour geometry changes map pixels');
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.locator('[data-raster-control="contours-enabled"]').check();
+  await page.waitForFunction(
+    executionCount =>
+      window.__luRasterLab.contoursEnabled && window.__luRasterLab.executionCount > executionCount,
+    previousExecutionCount
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.contourSegmentCount),
+    initialState.contourSegmentCount,
+    're-enabling contours restores the same deterministic GPU geometry'
+  );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.locator('[data-raster-control="contour-level"]').fill('0.05');
+  await page.waitForFunction(
+    executionCount =>
+      window.__luRasterLab.contourLevel === 0.05 &&
+      window.__luRasterLab.executionCount > executionCount,
+    previousExecutionCount
+  );
+  assert.notEqual(
+    await page.evaluate(() => window.__luRasterLab.contourSegmentCount),
+    initialState.contourSegmentCount,
+    'changing the isoline value recomputes GPU marching-squares geometry'
+  );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  previousFrameCount = await page.evaluate(() => window.__luRasterLab.frameCount);
+  await page.locator('[data-raster-control="contour-level"]').fill(String(initialState.contourLevel));
+  await page.waitForFunction(
+    ({executionCount, frameCount, segmentCount}) =>
+      window.__luRasterLab.executionCount > executionCount &&
+      window.__luRasterLab.frameCount > frameCount &&
+      window.__luRasterLab.contourSegmentCount === segmentCount,
+    {
+      executionCount: previousExecutionCount,
+      frameCount: previousFrameCount,
+      segmentCount: initialState.contourSegmentCount
+    }
+  );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
   await page.locator('[data-raster-mode="red"]').click();
   await page.waitForFunction(
     previousCount =>

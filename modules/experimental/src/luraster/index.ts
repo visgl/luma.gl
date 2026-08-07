@@ -51,6 +51,13 @@ export type {
   GPURasterContrastProps
 } from './gpu-raster-contrast';
 
+export {GPURasterContourClassifier, GPURasterContours} from './gpu-raster-contours';
+export type {
+  GPURasterContourClassifierProps,
+  GPURasterContourLevel,
+  GPURasterContoursProps
+} from './gpu-raster-contours';
+
 export {GPURasterNDVI} from './gpu-raster-ndvi';
 export type {GPURasterNDVIProps} from './gpu-raster-ndvi';
 

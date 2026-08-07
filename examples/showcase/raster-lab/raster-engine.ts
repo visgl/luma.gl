@@ -4,6 +4,7 @@
 
 import {Buffer, type CanvasContext, type Device} from '@luma.gl/core';
 import {
+  DrawCommandBuffer,
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GraphDataView
@@ -11,6 +12,7 @@ import {
 import {
   GPURasterBoxBlur,
   GPURasterContrast,
+  GPURasterContours,
   GPURasterGaussianBlur,
   GPURasterHistogram,
   GPURasterNDVI,
@@ -33,7 +35,10 @@ const COUNT_BYTE_OFFSET = DOMAIN_BYTE_LENGTH + HISTOGRAM_BYTE_LENGTH;
 const SUM_BYTE_OFFSET = COUNT_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 const MEAN_BYTE_OFFSET = SUM_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT;
 const THRESHOLD_BYTE_OFFSET = MEAN_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT;
-const SUMMARY_BYTE_LENGTH = THRESHOLD_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT;
+const CONTOUR_COUNT_BYTE_OFFSET = THRESHOLD_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT;
+const CONTOUR_OVERFLOW_BYTE_OFFSET = CONTOUR_COUNT_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
+const CONTOUR_REQUIRED_BYTE_OFFSET = CONTOUR_OVERFLOW_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
+const SUMMARY_BYTE_LENGTH = CONTOUR_REQUIRED_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 
 /** Compact post-submit aggregate data; source reflectance and NDVI pixels are never downloaded. */
 export type RasterLabSummary = {
@@ -51,6 +56,11 @@ export type RasterLabSummary = {
   threshold: number;
   thresholdEnabled: boolean;
   automaticThreshold: boolean;
+  contoursEnabled: boolean;
+  contourLevel: number;
+  contourSegmentCount: number;
+  contourOverflow: boolean;
+  contourRequiredSegmentCount: number;
   nodeCount: number;
   residentByteLength: number;
   executionCount: number;
@@ -76,6 +86,10 @@ type RasterLabBuffers = {
   mean: Buffer;
   histogram: Buffer;
   domain: Buffer;
+  contourVertices: Buffer;
+  contourSegmentCount: Buffer;
+  contourOverflow: Buffer;
+  contourRequiredSegmentCount: Buffer;
   summaryReadback: Buffer;
 };
 
@@ -86,6 +100,8 @@ export class RasterLabEngine {
 
   private readonly buffers: RasterLabBuffers;
   private readonly renderer: RasterLabRenderer;
+  private readonly contourCommands: DrawCommandBuffer;
+  private readonly contourSegmentCapacity: number;
   private compiledGraph: CompiledGPUCommandGraph;
   private settings: RasterLabDisplaySettings = {
     mode: 'ndvi',
@@ -96,7 +112,9 @@ export class RasterLabEngine {
     gamma: 1,
     threshold: 0.35,
     thresholdEnabled: false,
-    automaticThreshold: false
+    automaticThreshold: false,
+    contoursEnabled: true,
+    contourLevel: 0.35
   };
   private epsilon = 0.0001;
   private executionCount = 0;
@@ -105,6 +123,7 @@ export class RasterLabEngine {
   constructor(device: Device, dataset: RasterLabDataset) {
     this.device = device;
     this.dataset = dataset;
+    this.contourSegmentCapacity = Math.max((dataset.width - 1) * (dataset.height - 1) * 2, 1);
     const sourceUsage = Buffer.STORAGE | Buffer.COPY_DST;
     const outputUsage = Buffer.STORAGE | Buffer.COPY_SRC;
     this.buffers = {
@@ -194,6 +213,26 @@ export class RasterLabEngine {
         byteLength: DOMAIN_BYTE_LENGTH,
         usage: outputUsage
       }),
+      contourVertices: device.createBuffer({
+        id: 'raster-lab-contour-vertices',
+        byteLength: this.contourSegmentCapacity * 2 * Float32Array.BYTES_PER_ELEMENT * 2,
+        usage: outputUsage
+      }),
+      contourSegmentCount: device.createBuffer({
+        id: 'raster-lab-contour-segment-count',
+        byteLength: Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      contourOverflow: device.createBuffer({
+        id: 'raster-lab-contour-overflow',
+        byteLength: Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      contourRequiredSegmentCount: device.createBuffer({
+        id: 'raster-lab-required-contour-segments',
+        byteLength: Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
       summaryReadback: device.createBuffer({
         id: 'raster-lab-summary-readback',
         byteLength: SUMMARY_BYTE_LENGTH,
@@ -203,7 +242,14 @@ export class RasterLabEngine {
 
     let initializedGraph: CompiledGPUCommandGraph | undefined;
     let initializedRenderer: RasterLabRenderer | undefined;
+    let initializedContourCommands: DrawCommandBuffer | undefined;
     try {
+      initializedContourCommands = new DrawCommandBuffer(device, {
+        id: 'raster-lab-contour-draw',
+        type: 'draw',
+        commands: [{vertexCount: 2, instanceCount: 0}]
+      });
+      this.contourCommands = initializedContourCommands;
       initializedGraph = this.createCompiledGraph();
       initializedRenderer = new RasterLabRenderer(device, {
         width: dataset.width,
@@ -213,13 +259,16 @@ export class RasterLabEngine {
         vegetationIndex: this.buffers.vegetationIndex,
         analyzedValues: this.buffers.analyzedValues,
         validity: this.buffers.outputValidity,
-        thresholdValidity: this.buffers.thresholdValidity
+        thresholdValidity: this.buffers.thresholdValidity,
+        contourVertices: this.buffers.contourVertices,
+        contourCommands: initializedContourCommands
       });
       this.compiledGraph = initializedGraph;
       this.renderer = initializedRenderer;
     } catch (error) {
       initializedRenderer?.destroy();
       initializedGraph?.destroy();
+      initializedContourCommands?.destroy();
       for (const buffer of Object.values(this.buffers)) buffer.destroy();
       throw error;
     }
@@ -241,6 +290,8 @@ export class RasterLabEngine {
       Math.abs(settings.threshold - this.settings.threshold) < 0.0000001 &&
       settings.thresholdEnabled === this.settings.thresholdEnabled &&
       settings.automaticThreshold === this.settings.automaticThreshold &&
+      settings.contoursEnabled === this.settings.contoursEnabled &&
+      Math.abs(settings.contourLevel - this.settings.contourLevel) < 0.0000001 &&
       Math.abs(epsilon - this.epsilon) < 0.0000001
     ) {
       return false;
@@ -306,6 +357,24 @@ export class RasterLabEngine {
         size: Float32Array.BYTES_PER_ELEMENT
       });
     }
+    encoder.copyBufferToBuffer({
+      sourceBuffer: this.buffers.contourSegmentCount,
+      destinationBuffer: this.buffers.summaryReadback,
+      destinationOffset: CONTOUR_COUNT_BYTE_OFFSET,
+      size: Uint32Array.BYTES_PER_ELEMENT
+    });
+    encoder.copyBufferToBuffer({
+      sourceBuffer: this.buffers.contourOverflow,
+      destinationBuffer: this.buffers.summaryReadback,
+      destinationOffset: CONTOUR_OVERFLOW_BYTE_OFFSET,
+      size: Uint32Array.BYTES_PER_ELEMENT
+    });
+    encoder.copyBufferToBuffer({
+      sourceBuffer: this.buffers.contourRequiredSegmentCount,
+      destinationBuffer: this.buffers.summaryReadback,
+      destinationOffset: CONTOUR_REQUIRED_BYTE_OFFSET,
+      size: Uint32Array.BYTES_PER_ELEMENT
+    });
     this.device.submit(encoder.finish());
     this.executionCount++;
 
@@ -341,6 +410,17 @@ export class RasterLabEngine {
         : this.settings.threshold,
       thresholdEnabled: this.settings.thresholdEnabled,
       automaticThreshold: this.settings.automaticThreshold,
+      contoursEnabled: this.settings.contoursEnabled,
+      contourLevel: this.settings.contourLevel,
+      contourSegmentCount: this.settings.contoursEnabled
+        ? aggregateView.getUint32(CONTOUR_COUNT_BYTE_OFFSET, true)
+        : 0,
+      contourOverflow:
+        this.settings.contoursEnabled &&
+        aggregateView.getUint32(CONTOUR_OVERFLOW_BYTE_OFFSET, true) !== 0,
+      contourRequiredSegmentCount: this.settings.contoursEnabled
+        ? aggregateView.getUint32(CONTOUR_REQUIRED_BYTE_OFFSET, true)
+        : 0,
       nodeCount: this.nodeCount,
       residentByteLength:
         this.compiledGraph.stats.importedBufferBytes +
@@ -364,6 +444,7 @@ export class RasterLabEngine {
     this.destroyed = true;
     this.renderer.destroy();
     this.compiledGraph.destroy();
+    this.contourCommands.destroy();
     for (const buffer of Object.values(this.buffers)) buffer.destroy();
   }
 
@@ -471,6 +552,39 @@ export class RasterLabEngine {
       HISTOGRAM_BIN_COUNT
     );
     const domain = this.importView(graph, 'domain', this.buffers.domain, 'float32', 2);
+    const contourVertexHandle = graph.importBuffer(
+      {
+        id: 'contour-vertices',
+        byteLength: this.buffers.contourVertices.byteLength,
+        usage: this.buffers.contourVertices.usage
+      },
+      this.buffers.contourVertices
+    );
+    const contourVertices = graph.createDataView(contourVertexHandle, {
+      format: 'float32x2',
+      length: this.contourSegmentCapacity * 2
+    });
+    const contourSegmentCount = this.importView(
+      graph,
+      'contour-segment-count',
+      this.buffers.contourSegmentCount,
+      'uint32',
+      1
+    );
+    const contourOverflow = this.importView(
+      graph,
+      'contour-overflow',
+      this.buffers.contourOverflow,
+      'uint32',
+      1
+    );
+    const contourRequiredSegmentCount = this.importView(
+      graph,
+      'contour-required-segment-count',
+      this.buffers.contourRequiredSegmentCount,
+      'uint32',
+      1
+    );
 
     const red: GPURasterBufferBand<'float32'> = {
       id: 'red-reflectance',
@@ -559,6 +673,22 @@ export class RasterLabEngine {
       storage: {kind: 'buffer', values: analyzedValues},
       validity: analyzedValidity
     };
+
+    if (this.settings.contoursEnabled) {
+      const contourDraw = this.contourCommands.importToGraph(graph);
+      new GPURasterContours({
+        id: 'raster-lab-contours',
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: analyzedBand,
+        level: this.settings.contourLevel,
+        vertices: contourVertices,
+        segmentCount: contourSegmentCount,
+        overflow: contourOverflow,
+        requiredSegmentCount: contourRequiredSegmentCount,
+        draw: contourDraw
+      }).addToGraph(graph);
+    }
 
     if (this.settings.thresholdEnabled) {
       if (this.settings.automaticThreshold) {

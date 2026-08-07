@@ -8,15 +8,18 @@ submission, and optional readback.
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
 scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, mask-aware
-neighborhood stencils, direct convolution, separable Gaussian/box smoothing, and adapter-limit
-planning. They implement `GPUCommandGraphContributor` structurally: calling `addToGraph(graph)`
-only declares work. No contributor submits commands or reads results back.
+neighborhood stencils, direct convolution, separable Gaussian/box smoothing, GPU-resident
+marching-squares contours, indirect vector overlays, and adapter-limit planning. They implement
+`GPUCommandGraphContributor` structurally: calling `addToGraph(graph)` only declares work. No
+contributor submits commands or reads results back.
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {DrawCommandBuffer, GPUCommandGraph} from '@luma.gl/experimental';
 import {
   GPURasterBandMath,
   GPURasterBoxBlur,
+  GPURasterContourClassifier,
+  GPURasterContours,
   GPURasterContrast,
   GPURasterConvolution,
   GPURasterGaussianBlur,
@@ -38,10 +41,12 @@ The `./luraster` subpath is an explicit opt-in. Its runtime symbols are not expo
 The [Satellite Raster Lab](/examples/showcase/raster-lab) visualizes deterministic synthetic
 red and near-infrared imagery, GPU-derived NDVI, nodata/cloud masks, and a valid-pixel
 histogram. Layer selection, Gaussian or box smoothing, neighborhood radius, Gaussian sigma,
-contrast, gamma, manual or automatic Otsu threshold selection, and denominator tolerance rebuild
-the actual GPU analysis pipeline; the displayed raster, histogram, and scalar statistics reflect
-the selected, smoothed, transformed, valid pixels. Only 216 bytes of scalar summaries, histogram
-bins, and the automatic cutoff are read back after graph submission.
+contrast, gamma, manual or automatic Otsu threshold selection, denominator tolerance, and contour
+levels rebuild the actual GPU analysis pipeline. The displayed raster, histogram, and scalar
+statistics reflect the selected, smoothed, transformed, valid pixels; interpolated contour lines
+are generated and drawn directly from GPU buffers. Only 228 bytes of scalar summaries, histogram
+bins, cutoff, and contour diagnostics are read back after graph submission. The indirect draw
+consumes its GPU-written instance count rather than a CPU-supplied count.
 
 ## Raster bands and validity
 
@@ -455,6 +460,99 @@ end-to-end speed and large-raster throughput remain adapter- and workload-depend
 are measured. Automatic halo assembly, transparent oversized-raster partitioning, and
 FFT-backed filtering are not provided by these contributors.
 
+## Marching-squares contour classification
+
+Use `GPURasterContourClassifier` when another GPU algorithm needs to know where a scalar
+surface crosses a value, but should own geometry emission or downstream topology itself. For
+example, classify vegetation-index boundaries before creating custom polygon overlays, or
+mark temperature isotherms without copying the source raster to the CPU.
+
+```ts
+new GPURasterContourClassifier({
+  id: 'vegetation-boundary-cells',
+  width,
+  height,
+  input: ndviBand,
+  level: 0.35,
+  cases: contourCases,
+  segmentCounts: contourSegmentCounts
+}).addToGraph(graph);
+```
+
+The caller allocates one `uint32` case and count for each of
+`(width - 1) * (height - 1)` cells. Corners are classified with `value >= level`; the low
+four case bits represent top-left, top-right, bottom-right, and bottom-left. Ambiguous
+diagonal cases 5 and 10 use a deterministic bilinear/asymptotic decider, recorded in the
+`0x10` flag.
+A cell touching masked, nodata, or non-finite corners produces no segments. Each valid case
+emits zero, one, or two segments. A one-row GPU `float32` view can replace a literal level
+when another graph pass computes the threshold.
+
+Classification is useful when callers need compact topology, custom styling, or a later
+segmentation step. It is not a replacement for a screen-space shader when the only goal is a
+temporary visual highlight.
+
+## GPU contour geometry and indirect overlays
+
+Use `GPURasterContours` when an analytical boundary should become reusable line geometry:
+vegetation isolines, elevation contours, concentration thresholds, or map overlays. The
+contributor composes case classification, a GPU prefix scan, bounded segment scattering, and
+an optional GPU-written indirect draw count without reading the raster or segment count.
+
+```ts
+const contourCommands = new DrawCommandBuffer(device, {
+  id: 'vegetation-contour-draw',
+  type: 'draw',
+  commands: [{vertexCount: 2, instanceCount: 0}]
+});
+
+new GPURasterContours({
+  id: 'vegetation-contours',
+  width,
+  height,
+  input: ndviBand,
+  level: 0.35,
+  vertices: contourVertices,
+  segmentCount: visibleSegmentCount,
+  overflow: contourOverflow,
+  requiredSegmentCount: totalSegmentCount,
+  draw: contourCommands.importToGraph(graph),
+  metadata: rasterMetadata
+}).addToGraph(graph);
+
+// Bind a line-list model whose vertex shader reads contourVertices, then:
+contourCommands.draw(renderPass, 0);
+```
+
+`vertices` is a caller-owned packed `float32x2` view containing two vertices per segment.
+Its length must therefore be even. `segmentCount` is clamped to vertex capacity, `overflow`
+signals truncated output, and optional `requiredSegmentCount` reports the original
+unclamped requirement. Cases are emitted in deterministic row-major order. The draw record
+must describe a non-indexed, two-vertex instanced line; only its instance count is rewritten
+on the GPU.
+
+Coordinates remain raster-local `float32` pixel positions. Pixel-area rasters use pixel
+centers; point-sampled rasters use integer sample coordinates. Preserve the supplied affine
+transform, tile origin, and CRS on the CPU when projecting positions into a geographic
+overlay; silently converting large world coordinates to `float32` would lose precision.
+Multi-tile seam ownership and deck.gl-specific adapters remain separate future work.
+
+### Analytical contours versus presentation effects
+
+Existing luma.gl image effects primarily shade or filter a rendered framebuffer. They are
+appropriate when the output only needs to look different on screen. LuRaster contours process
+the original scalar samples and nodata mask, produce reusable numerical vector geometry, and
+keep classification, scan, scatter, and indirect rendering in one GPU-owned workflow.
+
+Classification and bounded scattering scale linearly with raster-cell count, while emitted
+geometry scales with crossing-segment count. Prefix scanning introduces explicit additional
+passes and scratch storage. GPU-written indirect counts also let an application draw without
+waiting for a CPU count, although this particular dashboard separately reads compact scalar
+summaries for its controls. These structural advantages matter for repeated analysis or
+downstream vector consumers, but they are not a universal speed guarantee: source resolution,
+memory bandwidth, segment density, adapter limits, and application benchmarks determine actual
+cost.
+
 ## Adapter limits and ownership
 
 `getRasterDeviceLimits(device)` reports effective dispatch, allocation, and storage-binding
@@ -475,7 +573,7 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 ## Current scope and clean-room implementation
 
 Percentile-based contrast, derivative/morphology operators, tiled GeoTIFF/COG processing,
-connected components, contour extraction, and FFT-backed raster convolution are not part of
+connected components, tiled contour stitching, and FFT-backed raster convolution are not part of
 the current implementation.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),

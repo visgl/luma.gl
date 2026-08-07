@@ -95,4 +95,25 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
       existsSync(new URL('../../examples/showcase/raster-lab/package.json', import.meta.url))
     ).toBe(false);
   });
+
+  test('keeps contour extraction and indirect presentation inside the raster lab', () => {
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(rasterEngine).toContain('new GPURasterContours(');
+    expect(rasterEngine).toContain('this.contourCommands.importToGraph(graph)');
+    expect(rasterRenderer).toContain('this.contourCommands.draw(renderPass, 0)');
+    expect(rasterInterface).toContain('data-raster-control="contours-enabled"');
+    expect(rasterInterface).toContain('data-raster-control="contour-level"');
+  });
 });
