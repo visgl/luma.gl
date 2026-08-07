@@ -244,9 +244,11 @@ The instance-bounds pass reads each mesh BLAS root directly, producing a tight t
 AABB instead of expanding elongated meshes to their enclosing sphere. Small sorts and hierarchy
 builds execute inside one workgroup; larger sorts use stable four-bit radix passes, and consecutive
 compute nodes share a command-encoder compute pass when per-node GPU timestamps are not requested.
-The same `GPUCommandGraph` evaluates direct lights, progressively accumulates unchanged primary-ray
-samples, and presents HDR when the canvas is configured for it. Generated quads, cylinders, and
-cones use their existing triangle geometry.
+The same `GPUCommandGraph` evaluates direct lights with scalar metallic/roughness GGX shading,
+progressively accumulates unchanged primary-ray samples, and presents into either the canvas or a
+caller-owned offscreen framebuffer. The fullscreen presentation matches the actual target format,
+selected tone-mapping mode, and linear/sRGB output encoding, preserving HDR for floating-point
+targets. Generated quads, cylinders, and cones use their existing triangle geometry.
 
 Ray tracing starts at half the display width and height, reducing its initial pixel workload to one
 quarter of full resolution. Adaptive quality can lower that scale to `0.25`, interleave sampled
@@ -272,8 +274,9 @@ Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight 
 while every TLAS or BLAS construction pass stays within the default WebGPU CORE limit of eight
 storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a
 Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing.
-Skeletal skinning, morph-target deformation, material textures, alpha/transmission, advanced PBR
-shading, indirect bounces, denoising, and volume objects remain unsupported by this renderer.
+Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced
+PBR material extensions, indirect bounces, denoising, and volume objects remain unsupported by
+this renderer.
 `maxBounces` is reserved for future multi-bounce transport.
 
 ## Understand staging and commits
@@ -566,6 +569,21 @@ Debug renderers automatically skip bloom. Switch to `deferred` for the WebGPU G-
 `raytrace` for WebGPU software ray tracing, or `default` for the portable forward renderer with
 bloom.
 
+Renderer presentation controls are ordinary committed ANARI parameters and are also accepted in
+JSON renderer descriptions:
+
+```ts
+beauty
+  .setParameters({toneMapMode: 2, outputColorSpace: 'srgb'})
+  .commitParameters();
+```
+
+`toneMapMode` selects no tone mapping (`0`), Reinhard (`1`), Khronos PBR Neutral (`2`), or ACES
+(`3`). `outputColorSpace` selects `'linear'` or `'srgb'`. Omit either setting to retain automatic,
+target-aware defaults: floating-point targets default to no tone mapping and linear output,
+integer targets default to Khronos PBR Neutral, and hardware-sRGB attachments avoid an additional
+software sRGB transfer.
+
 ## Handle resizing
 
 If `frame.size` is omitted, the renderer derives its size from the graphics device's current drawing buffer:
@@ -714,6 +732,12 @@ Ray-traced frames additionally report their internal resolution and effective sc
 coverage, smoothed frame time, and accumulated sample count. Other renderer subtypes omit
 `statistics.rayTracing`.
 
+When present, `statistics.rayTracing.graph` exposes the actual logical node count, physical compute
+pass count, coalesced compute-node count, and synchronous CPU encoding time. Its `trace` stage is
+present on every ray-traced frame; `topology`, `acceleration`, and `refit` appear only when the
+corresponding work runs. `acceleration` and `refit` are mutually exclusive. These counters do not
+request GPU timestamp queries, read resources back, or submit an additional command buffer.
+
 The renderer also supports capability discovery:
 
 ```ts
@@ -773,12 +797,14 @@ for the runtime contract and ownership details.
 | T0: renderer and graph foundation | Lazy subtype registration, retained-scene adapters, the shared experimental `RayTracingSceneRenderer`, explicit WebGPU command-graph resources, and application-owned submission. | Implemented. |
 | T1: direct rays and shadows | Transformed analytic spheres, mesh triangles, tessellated analytic shapes, perspective/orthographic cameras, direct lights, hard shadow rays, progressive primary-ray sampling, and HDR presentation. | Implemented with WebGPU compute rather than hardware ray tracing. |
 | T2a: GPU object acceleration | World-space instance bounds, graph-owned complete-binary TLAS construction and refitting, nearest-hit object traversal, early-exit shadow rays, and default-CORE storage limits. | Implemented. |
-| T2b: interactive frame budgeting | Half-resolution defaults, bounded adaptive quality, interleaved pixel coverage, retained-identity temporal reprojection, rotating shadow samples, and dirty-only object acceleration. | Implemented; frame pacing uses CPU animation intervals. |
-| T2c: large-scene acceleration | GPU Morton-sorted object/instance TLAS leaves with retained-permutation transform refits, per-mesh triangle BLASes, and explicit traversal/build diagnostics. | Morton TLAS, transform refits, and Morton mesh BLASes implemented; SAH/Karras topology and diagnostics remain planned. |
-| T2d: dynamic scene extraction | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration. | Planned. |
+| T2b: interactive frame budgeting | Half-resolution defaults, bounded adaptive quality, interleaved pixel coverage, retained-identity temporal reprojection, rotating shadow samples, and dirty-triggered object acceleration. | Implemented; frame pacing uses CPU animation intervals. |
+| T2c: large-scene acceleration | GPU Morton-sorted object/instance TLAS leaves, retained-permutation transform refits, tight transformed BLAS-root bounds, four-bit radix sorting, batched small-mesh sort/BVH construction, and CORE-compatible packed traversal. | Implemented; SAH/Karras topology, wide hierarchies, and traversal counters remain planned. |
+| T2d: retained scene updates | Categorized world/topology/transform/material/light revisions, cached scene descriptors, stable animated placement identities, sparse packed-transform uploads, and rotating copy-free texture history. | Implemented; camera- and light-only frames avoid acceleration rebuilds. |
+| T2e: presentation and direct-light parity | Caller-owned offscreen framebuffers, actual-target color/depth formats, exact SDR/HDR tone mapping and sRGB/linear presentation, incoming directional-light agreement, scalar metallic/roughness GGX shading, and per-stage graph encoding diagnostics. | Implemented for direct lighting; material textures, alpha/transmission, indirect transport, and GPU-stage timestamps remain separate work. |
+| T2f: deforming scene extraction | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration. | Planned. |
 | T3: indirect transport and denoising | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1. | Planned. |
 | T4: ray marching and volumes | Signed-distance-field ray marching, retained spatial fields, 3D textures, transfer functions, and ANARI volume objects. | Planned. |
-| T5: hybrid composition and diagnostics | Raster/ray composition, reusable graph timings, renderer capability reporting, and debug visualization channels. | Planned. |
+| T5: hybrid composition and advanced diagnostics | Raster/ray composition, GPU-stage timings, traversal counters, renderer capability reporting, and debug visualization channels. | Basic graph node/pass/CPU-encoding counters are implemented; hybrid composition, GPU timings, and advanced diagnostics remain planned. |
 
 ### Ray-tracing technique background and tradeoffs
 
@@ -885,6 +911,43 @@ coherent work. In WebGPU that also means more graph nodes, queue buffers, scans/
 indirect dispatch bookkeeping, so it should follow measured pressure from multi-bounce or complex
 materials rather than replace the direct-light megakernel preemptively.
 
+#### Target-aware presentation and physically based direct lighting
+
+**Implemented.** Radiance and progressive history remain in linear floating-point textures until a
+fullscreen graph render node presents the current frame. That node can render directly into the
+canvas or a compatible caller-owned offscreen framebuffer without taking ownership of command
+submission. Its pipeline follows the selected target's actual color and depth/stencil formats,
+including depthless targets, rather than assuming the canvas format.
+
+Presentation applies the same selected transfer policy as the forward renderer: no tone map,
+Reinhard, Khronos PBR Neutral, or ACES, followed by the exact piecewise IEC sRGB transfer function
+when software sRGB encoding is required. Floating-point and hardware-sRGB targets preserve linear
+shader output by default. Switching incompatible target formats or presentation policies refreshes
+the presentation pipeline; switching compatible caller-owned framebuffers does not require a new
+graph solely because their identities differ.
+
+Direct lighting evaluates scalar base color, metallic, and roughness with GGX distribution, Smith
+visibility, and Fresnel terms while retaining immediate ambient and emissive contributions. All
+renderer paths interpret the retained scene's directional-light vector as incoming light; the
+forward raster boundary adapts that vector to its shader module's outgoing convention without
+mutating shared scene lights. Multiple retained ambient lights are also combined consistently
+across forward, deferred, and ray-traced rendering. This closes direct-light and scalar-material
+gaps, but does not add material textures, alpha masking, transmission, image-based lighting, or
+indirect bounces to the ray tracer.
+
+#### Graph-stage diagnostics
+
+**Implemented without synchronization.** Ray-traced frame statistics expose logical node counts,
+physical compute passes, coalesced compute nodes, and synchronous CPU encoding time for the entire
+frame and for each graph stage actually encoded. The trace/presentation stage is always present;
+topology construction, Morton acceleration rebuild, and retained-order refit appear only when
+necessary. Stage counters make camera-only, light-only, topology-changing, and transform-changing
+frames distinguishable without GPU readback, timestamp-query requirements, or hidden submission.
+
+These values describe graph recording and scheduling, not GPU execution duration, ray throughput,
+hierarchy traversal quality, achieved frames per second, or image quality. Meaningful speed claims
+still require workload-controlled measurements against explicit hardware and image-quality targets.
+
 #### Frame budget, sparse sampling, and temporal reconstruction
 
 **Implemented.** The default internal target is half the display width and height, which traces
@@ -904,6 +967,12 @@ color checks reject disocclusions and incompatible samples, then valid history i
 effective sample count. This is temporal sample reuse, not a general frame-interpolation system and
 not a full denoiser.
 
+When `samplesPerPixel` is one and both `progressive` and `temporalReprojection` are explicitly
+disabled, the centered guide ray also supplies that pixel's radiance sample. This removes animated
+subpixel jitter and its otherwise redundant second nearest-hit traversal. Progressive or temporally
+reprojected rendering retains separate centered guide and jittered radiance samples, preserving
+the normal antialiasing and history-validation behavior.
+
 Color and metadata each use a reusable `GPUTextureHistory` pair. The command graph binds one texture
 as the previous frame and the other as the current output, then exchanges their logical roles only
 after encoding succeeds. This removes all full-frame history copies without increasing the four
@@ -922,11 +991,11 @@ current renderer.
 
 | Area | Implemented now | Planned or absent |
 | --- | --- | --- |
-| Acceleration | Morton-sorted TLAS, retained transform refits, topology-only Morton per-mesh BLASes | Karras/SAH topology, wide/compressed nodes, traversal-driven rebuild policy |
-| Execution | Direct-light megakernel with hard shadow rays | Wavefront queues, compaction, multi-bounce transport |
+| Acceleration | Morton-sorted TLAS/BLAS, retained transform refits, tight BLAS-root bounds, batched segmented sort/BVH construction | Karras/SAH topology, wide/compressed nodes, traversal-driven rebuild policy |
+| Execution | Direct-light megakernel, hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters | Wavefront queues, compaction, multi-bounce transport, GPU-stage timings |
 | Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples | Variance-driven adaptive sampling and reservoir-based many-light reuse |
 | Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, manual HDR upscale | SVGF-class denoising, stronger edge-aware upscaling, reactive masks |
-| Shading | Analytic spheres, mesh triangles, direct lights | Full PBR texture parity, alpha/transmission, deformation, indirect bounces |
+| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, indirect bounces |
 
 ### Cache invalidation
 
@@ -1097,7 +1166,7 @@ for each orb.
 | `version` | JSON schema version; currently `1`. |
 | `name`, `description` | Human-readable preview title and optional scene description. |
 | `camera` | Camera `@@type`, normal ANARI camera parameters, optional `target`, and optional orbit speed. |
-| `renderer` | Optional renderer preset parameters for exposure, bloom, background, and fog. The playground's renderer selector chooses the active renderer subtype independently of the scene. |
+| `renderer` | Optional renderer preset parameters for exposure, tone mapping, output color space, bloom, background, and fog. The playground's renderer selector chooses the active renderer subtype independently of the scene. |
 | `geometries` | Named geometry declarations; triangle meshes accept number arrays or compact `torus`, `crystal`, and beveled `prism` generators. |
 | `materials` | Named `matte` or `physicallyBased` material declarations. |
 | `surfaces` | Named surface declarations referencing geometry and material identifiers. |
@@ -1348,7 +1417,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Group-attached lights are not transformed by their owning instance.
 - The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR parity, indirect bounces, and denoising are unsupported.
+- The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, indirect bounces, and denoising are unsupported.
 - Visibility, picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Imported glTF skin attributes require an application-supplied retained joint palette; automatic

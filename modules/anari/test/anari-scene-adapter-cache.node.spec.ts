@@ -67,6 +67,60 @@ describe('ANARI retained scene adapter caching', () => {
     }
   });
 
+  test('forwards only committed presentation overrides without invalidating the retained scene', () => {
+    const fixture = createCachedSceneFixture();
+
+    try {
+      const initialOptions = fixture.adapter.makeRenderOptions(fixture.frame);
+      const initialPrimitives = fixture.adapter.getAnalyticPrimitives(fixture.world);
+      const initialSceneCommitRevision = fixture.device.getSceneCommitRevision();
+
+      expect(initialOptions).not.toHaveProperty('toneMapMode');
+      expect(initialOptions).not.toHaveProperty('outputColorSpace');
+
+      fixture.renderer.setParameters({toneMapMode: 0, outputColorSpace: 'linear'});
+      const stagedOptions = fixture.adapter.makeRenderOptions(fixture.frame);
+      expect(stagedOptions).not.toHaveProperty('toneMapMode');
+      expect(stagedOptions).not.toHaveProperty('outputColorSpace');
+
+      fixture.renderer.commitParameters();
+      const linearOptions = fixture.adapter.makeRenderOptions(fixture.frame);
+      expect(linearOptions?.toneMapMode).toBe(0);
+      expect(linearOptions?.outputColorSpace).toBe('linear');
+
+      fixture.renderer.setParameters({toneMapMode: 3, outputColorSpace: 'srgb'}).commitParameters();
+      const encodedOptions = fixture.adapter.makeRenderOptions(fixture.frame);
+      expect(encodedOptions?.toneMapMode).toBe(3);
+      expect(encodedOptions?.outputColorSpace).toBe('srgb');
+
+      fixture.renderer.unsetParameter('toneMapMode').unsetParameter('outputColorSpace');
+      const stagedRemoval = fixture.adapter.makeRenderOptions(fixture.frame);
+      expect(stagedRemoval?.toneMapMode).toBe(3);
+      expect(stagedRemoval?.outputColorSpace).toBe('srgb');
+
+      fixture.renderer.commitParameters();
+      const automaticOptions = fixture.adapter.makeRenderOptions(fixture.frame);
+      expect(automaticOptions).not.toHaveProperty('toneMapMode');
+      expect(automaticOptions).not.toHaveProperty('outputColorSpace');
+
+      for (const options of [
+        stagedOptions,
+        linearOptions,
+        encodedOptions,
+        stagedRemoval,
+        automaticOptions
+      ]) {
+        expect(options?.surfaces).toBe(initialOptions?.surfaces);
+        expect(options?.lights).toBe(initialOptions?.lights);
+        expect(options?.sceneRevisions).toEqual(initialOptions?.sceneRevisions);
+      }
+      expect(fixture.adapter.getAnalyticPrimitives(fixture.world)).toBe(initialPrimitives);
+      expect(fixture.device.getSceneCommitRevision()).toBe(initialSceneCommitRevision);
+    } finally {
+      destroyCachedSceneFixture(fixture);
+    }
+  });
+
   test('updates only committed instance placements and publishes exact stable dirty identifiers', () => {
     const fixture = createCachedSceneFixture();
 

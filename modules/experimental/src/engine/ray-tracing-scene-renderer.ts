@@ -2,14 +2,23 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, Texture} from '@luma.gl/core';
+import {
+  Buffer,
+  type Device,
+  type Framebuffer,
+  Texture,
+  type TextureFormatColor,
+  type TextureFormatDepthStencil,
+  textureFormatDecoder
+} from '@luma.gl/core';
 import {Computation, type Geometry, Model} from '@luma.gl/engine';
-import type {Light} from '@luma.gl/shadertools';
+import {type Light, PBR_TONE_MAP_MODE} from '@luma.gl/shadertools';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import {GPUBVH} from '../gpu-primitives/gpu-bvh';
 import {
   type CompiledGPUCommandGraph,
   GPUCommandGraph,
+  type GPUCommandGraphEncodingStats,
   type GraphDataView
 } from '../gpu-primitives/gpu-command-graph';
 import {GPUSegmentedBVH, type GPUBVHSegment} from '../gpu-primitives/gpu-segmented-bvh';
@@ -27,7 +36,13 @@ import {
   RAY_TRACING_HISTORY_CARRY_SHADER,
   RAY_TRACING_SCENE_SHADER
 } from './ray-tracing-scene-shaders';
-import type {SceneRenderOptions, SceneRenderStatistics, SceneSurface} from './scene-renderer';
+import type {
+  RayTracingGraphStageStatistics,
+  RayTracingGraphStatistics,
+  SceneRenderOptions,
+  SceneRenderStatistics,
+  SceneSurface
+} from './scene-renderer';
 
 const PRIMITIVE_FLOAT_COUNT = 68;
 const TRIANGLE_FLOAT_COUNT = 24;
@@ -527,13 +542,22 @@ type RayTracingQualityOptions = {
 type RayTracingTraceGraphParameters = {
   dispatchWidth: number;
   carryWidth: number;
+  framebuffer?: Framebuffer;
 };
 
 type RayTracingAccelerationUpdateMode = 'rebuild' | 'refit' | 'none';
 
+type RayTracingPresentationOptions = {
+  colorFormat: TextureFormatColor;
+  depthStencilFormat?: TextureFormatDepthStencil;
+  toneMapMode: number;
+  outputEncoding: number;
+};
+
 type RayTracingFrameResources = {
   displayWidth: number;
   displayHeight: number;
+  presentation: RayTracingPresentationOptions;
   internalWidth: number;
   internalHeight: number;
   resolutionScale: number;
@@ -611,6 +635,7 @@ type RayTracingStatistics = {
   sampledPixelCoverage: number;
   frameTimeMilliseconds: number;
   accumulatedSamples: number;
+  graph: RayTracingGraphStatistics;
 };
 
 /** Shared WebGPU software ray tracer consuming the canonical retained-scene contract. */
@@ -627,11 +652,8 @@ export class RayTracingSceneRenderer {
   }
 
   render(options: RayTracingSceneRenderOptions): SceneRenderStatistics {
-    const [defaultWidth, defaultHeight] = this.device
-      .getDefaultCanvasContext()
-      .getDrawingBufferSize();
-    const displayWidth = options.width ?? defaultWidth;
-    const displayHeight = options.height ?? defaultHeight;
+    const [displayWidth, displayHeight] = getRayTracingDisplaySize(this.device, options);
+    const presentation = getRayTracingPresentationOptions(this.device, options);
     const lights = options.lights ?? [];
     const quality = getQualityOptions(options);
     const viewProjection = new Matrix4(options.camera.projectionMatrix).multiplyRight(
@@ -662,6 +684,7 @@ export class RayTracingSceneRenderer {
         frameIdentifier: options.id,
         displayWidth,
         displayHeight,
+        presentation,
         scene,
         topology,
         primitiveData,
@@ -759,6 +782,7 @@ export class RayTracingSceneRenderer {
           frameIdentifier: options.id,
           displayWidth,
           displayHeight,
+          presentation,
           scene,
           topology,
           primitiveData,
@@ -879,8 +903,11 @@ export class RayTracingSceneRenderer {
         displayWidth,
         displayHeight,
         internalDimensions.width,
-        internalDimensions.height
+        internalDimensions.height,
+        presentation
       );
+    } else if (!areRayTracingPresentationOptionsEqual(resources.presentation, presentation)) {
+      this.recreateTraceGraph(options.id, resources, presentation);
     }
 
     const progressive = options.progressive ?? true;
@@ -920,31 +947,41 @@ export class RayTracingSceneRenderer {
       })
     );
 
+    let topologyEncodingStats: GPUCommandGraphEncodingStats | undefined;
+    let accelerationEncodingStats: GPUCommandGraphEncodingStats | undefined;
+    let refitEncodingStats: GPUCommandGraphEncodingStats | undefined;
     if (resources.topologyNeedsUpdate) {
-      resources.topologyGraph.encode(this.device.commandEncoder, {parameters: undefined});
+      topologyEncodingStats = resources.topologyGraph.encode(this.device.commandEncoder, {
+        parameters: undefined
+      }).stats;
       resources.topologyNeedsUpdate = false;
     }
     if (resources.accelerationUpdateMode === 'rebuild') {
-      resources.accelerationGraph.encode(this.device.commandEncoder, {parameters: undefined});
+      accelerationEncodingStats = resources.accelerationGraph.encode(this.device.commandEncoder, {
+        parameters: undefined
+      }).stats;
       resources.refitsSinceMortonRebuild = 0;
     } else if (resources.accelerationUpdateMode === 'refit') {
-      resources.refitGraph.encode(this.device.commandEncoder, {parameters: undefined});
+      refitEncodingStats = resources.refitGraph.encode(this.device.commandEncoder, {
+        parameters: undefined
+      }).stats;
       resources.refitsSinceMortonRebuild++;
     }
     resources.accelerationUpdateMode = 'none';
-    resources.traceGraph.encode(this.device.commandEncoder, {
+    const traceEncodingStats = resources.traceGraph.encode(this.device.commandEncoder, {
       parameters: {
         dispatchWidth: Math.ceil(resources.internalWidth / activePhaseCount),
         carryWidth:
           activePhaseCount > 1
             ? Math.ceil((resources.internalWidth * (activePhaseCount - 1)) / activePhaseCount)
-            : 0
+            : 0,
+        ...(options.framebuffer ? {framebuffer: options.framebuffer} : {})
       },
       textures: {
         ...resources.colorHistory.getBindings('history', 'output'),
         ...resources.metadataHistory.getBindings('history-metadata', 'output-metadata')
       }
-    });
+    }).stats;
     resources.colorHistory.advance();
     resources.metadataHistory.advance();
     resources.previousViewProjection = new Matrix4(viewProjection);
@@ -969,7 +1006,13 @@ export class RayTracingSceneRenderer {
           resources.averageFrameTimeMilliseconds ?? resources.targetFrameTimeMilliseconds,
         accumulatedSamples: progressive
           ? Math.min(resources.accumulatedFrameCount * samplesPerPixel, MAXIMUM_HISTORY_SAMPLES)
-          : samplesPerPixel
+          : samplesPerPixel,
+        graph: makeRayTracingGraphStatistics({
+          topology: topologyEncodingStats,
+          acceleration: accelerationEncodingStats,
+          refit: refitEncodingStats,
+          trace: traceEncodingStats
+        })
       } satisfies RayTracingStatistics
     };
     return statistics as SceneRenderStatistics;
@@ -1012,6 +1055,7 @@ export class RayTracingSceneRenderer {
     frameIdentifier: string;
     displayWidth: number;
     displayHeight: number;
+    presentation: RayTracingPresentationOptions;
     scene: RayTracingScene;
     topology: RayTracingTopology;
     primitiveData: RayTracingPrimitiveData;
@@ -1157,6 +1201,7 @@ export class RayTracingSceneRenderer {
       frameIdentifier,
       internalWidth: internalDimensions.width,
       internalHeight: internalDimensions.height,
+      presentation: props.presentation,
       uniformBuffer,
       primitiveBuffer,
       triangleBuffer,
@@ -1173,6 +1218,7 @@ export class RayTracingSceneRenderer {
     return {
       displayWidth: props.displayWidth,
       displayHeight: props.displayHeight,
+      presentation: props.presentation,
       internalWidth: internalDimensions.width,
       internalHeight: internalDimensions.height,
       resolutionScale: props.quality.resolutionScale,
@@ -1237,7 +1283,8 @@ export class RayTracingSceneRenderer {
     displayWidth: number,
     displayHeight: number,
     internalWidth: number,
-    internalHeight: number
+    internalHeight: number,
+    presentation: RayTracingPresentationOptions
   ): void {
     resources.traceGraph.destroy();
     resources.colorHistory.destroy();
@@ -1258,6 +1305,7 @@ export class RayTracingSceneRenderer {
       frameIdentifier,
       internalWidth,
       internalHeight,
+      presentation,
       uniformBuffer: resources.uniformBuffer,
       primitiveBuffer: resources.primitiveBuffer,
       triangleBuffer: resources.triangleBuffer,
@@ -1272,10 +1320,38 @@ export class RayTracingSceneRenderer {
     });
     resources.displayWidth = displayWidth;
     resources.displayHeight = displayHeight;
+    resources.presentation = presentation;
     resources.internalWidth = internalWidth;
     resources.internalHeight = internalHeight;
     resources.phaseIndex = 0;
     resources.historyNeedsReset = true;
+  }
+
+  private recreateTraceGraph(
+    frameIdentifier: string,
+    resources: RayTracingFrameResources,
+    presentation: RayTracingPresentationOptions
+  ): void {
+    const traceGraph = this.createTraceGraph({
+      frameIdentifier,
+      internalWidth: resources.internalWidth,
+      internalHeight: resources.internalHeight,
+      presentation,
+      uniformBuffer: resources.uniformBuffer,
+      primitiveBuffer: resources.primitiveBuffer,
+      triangleBuffer: resources.triangleBuffer,
+      lightBuffer: resources.lightBuffer,
+      nodeMinimaBuffer: resources.nodeMinimaBuffer,
+      nodeMaximaBuffer: resources.nodeMaximaBuffer,
+      sortedPrimitiveIdsBuffer: resources.sortedPrimitiveIdsBuffer,
+      blasNodesBuffer: resources.blasNodesBuffer,
+      blasTriangleIdsBuffer: resources.blasTriangleIdsBuffer,
+      colorHistory: resources.colorHistory,
+      metadataHistory: resources.metadataHistory
+    });
+    resources.traceGraph.destroy();
+    resources.traceGraph = traceGraph;
+    resources.presentation = presentation;
   }
 
   private createTextureHistory(
@@ -2394,6 +2470,7 @@ export class RayTracingSceneRenderer {
     frameIdentifier: string;
     internalWidth: number;
     internalHeight: number;
+    presentation: RayTracingPresentationOptions;
     uniformBuffer: Buffer;
     primitiveBuffer: Buffer;
     triangleBuffer: Buffer;
@@ -2703,12 +2780,15 @@ export class RayTracingSceneRenderer {
       compile: ({device}) => {
         const model = new Model(device, {
           id: `${props.frameIdentifier}-ray-tracing-presentation`,
-          source: getRayTracingScenePresentationShader(
-            device.preferredColorFormat === 'rgba16float'
-          ),
+          source: getRayTracingScenePresentationShader({
+            toneMapMode: props.presentation.toneMapMode,
+            outputEncoding: props.presentation.outputEncoding
+          }),
           vertexCount: 3,
-          colorAttachmentFormats: [device.preferredColorFormat],
-          depthStencilAttachmentFormat: 'depth24plus',
+          colorAttachmentFormats: [props.presentation.colorFormat],
+          ...(props.presentation.depthStencilFormat
+            ? {depthStencilAttachmentFormat: props.presentation.depthStencilFormat}
+            : {}),
           shaderLayout: {
             attributes: [],
             bindings: [
@@ -2721,9 +2801,16 @@ export class RayTracingSceneRenderer {
               }
             ]
           },
-          parameters: {depthWriteEnabled: false, depthCompare: 'always'}
+          parameters: {
+            depthWriteEnabled: false,
+            ...(props.presentation.depthStencilFormat ? {depthCompare: 'always'} : {})
+          }
         });
         return {
+          getRenderPassProps: ({parameters}) => ({
+            id: `${props.frameIdentifier}-present-ray-tracing`,
+            ...(parameters.framebuffer ? {framebuffer: parameters.framebuffer} : {})
+          }),
           encode: ({renderPass, getTextureView}) => {
             model.setBindings({image: getTextureView(outputView)});
             model.draw(renderPass);
@@ -2735,6 +2822,104 @@ export class RayTracingSceneRenderer {
 
     return graph.compile();
   }
+}
+
+function getRayTracingDisplaySize(
+  device: Device,
+  options: RayTracingSceneRenderOptions
+): [number, number] {
+  if (options.framebuffer) {
+    return [options.framebuffer.width, options.framebuffer.height];
+  }
+  if (options.width !== undefined && options.height !== undefined) {
+    return [options.width, options.height];
+  }
+  const [defaultWidth, defaultHeight] = device.getDefaultCanvasContext().getDrawingBufferSize();
+  return [options.width ?? defaultWidth, options.height ?? defaultHeight];
+}
+
+function getRayTracingPresentationOptions(
+  device: Device,
+  options: RayTracingSceneRenderOptions
+): RayTracingPresentationOptions {
+  const colorFormat =
+    (options.framebuffer?.colorAttachments[0]?.texture.format as TextureFormatColor | undefined) ??
+    device.preferredColorFormat;
+  const formatInformation = textureFormatDecoder.getInfo(colorFormat);
+  const floatingPoint = Boolean(
+    formatInformation.dataType?.startsWith('float') || colorFormat.endsWith('ufloat')
+  );
+  const depthStencilFormat = options.framebuffer
+    ? (options.framebuffer.depthStencilAttachment?.texture.format as
+        | TextureFormatDepthStencil
+        | undefined)
+    : 'depth24plus';
+
+  return {
+    colorFormat,
+    ...(depthStencilFormat ? {depthStencilFormat} : {}),
+    toneMapMode:
+      options.toneMapMode ??
+      (floatingPoint ? PBR_TONE_MAP_MODE.NONE : PBR_TONE_MAP_MODE.KHRONOS_PBR_NEUTRAL),
+    outputEncoding: options.outputColorSpace
+      ? Number(options.outputColorSpace === 'srgb')
+      : Number(!floatingPoint && !colorFormat.endsWith('-srgb'))
+  };
+}
+
+function areRayTracingPresentationOptionsEqual(
+  first: RayTracingPresentationOptions,
+  second: RayTracingPresentationOptions
+): boolean {
+  return (
+    first.colorFormat === second.colorFormat &&
+    first.depthStencilFormat === second.depthStencilFormat &&
+    first.toneMapMode === second.toneMapMode &&
+    first.outputEncoding === second.outputEncoding
+  );
+}
+
+function makeRayTracingGraphStageStatistics(
+  statistics: GPUCommandGraphEncodingStats
+): RayTracingGraphStageStatistics {
+  return {
+    nodeCount: statistics.nodeCount,
+    computePassCount: statistics.computePassCount,
+    coalescedComputeNodeCount: statistics.coalescedComputeNodeCount,
+    cpuEncodeTimeMilliseconds: statistics.cpuEncodeTimeMilliseconds
+  };
+}
+
+function makeRayTracingGraphStatistics(props: {
+  topology?: GPUCommandGraphEncodingStats;
+  acceleration?: GPUCommandGraphEncodingStats;
+  refit?: GPUCommandGraphEncodingStats;
+  trace: GPUCommandGraphEncodingStats;
+}): RayTracingGraphStatistics {
+  const topology = props.topology && makeRayTracingGraphStageStatistics(props.topology);
+  const acceleration = props.acceleration && makeRayTracingGraphStageStatistics(props.acceleration);
+  const refit = props.refit && makeRayTracingGraphStageStatistics(props.refit);
+  const trace = makeRayTracingGraphStageStatistics(props.trace);
+  const stages = [topology, acceleration, refit, trace].filter(
+    (stage): stage is RayTracingGraphStageStatistics => Boolean(stage)
+  );
+
+  return {
+    nodeCount: stages.reduce((total, stage) => total + stage.nodeCount, 0),
+    computePassCount: stages.reduce((total, stage) => total + stage.computePassCount, 0),
+    coalescedComputeNodeCount: stages.reduce(
+      (total, stage) => total + stage.coalescedComputeNodeCount,
+      0
+    ),
+    cpuEncodeTimeMilliseconds: stages.reduce(
+      (total, stage) => total + stage.cpuEncodeTimeMilliseconds,
+      0
+    ),
+    ...(topology ? {topology} : {}),
+    ...(acceleration ? {acceleration} : {}),
+    ...(refit ? {refit} : {}),
+    trace
+  };
 }
 
 function getMaximumSparsePrimitiveUpdateCount(resources: RayTracingFrameResources): number {
@@ -3245,7 +3430,7 @@ function makeUniformData(props: {
   data[47] = (props.options.temporalReprojection ?? true) ? 1 : 0;
   data.set(props.previousViewProjection, 48);
   data.set(props.previousCameraPosition, 64);
-  data[67] = 1;
+  data[67] = (props.options.progressive ?? true) ? 1 : 0;
   return data;
 }
 

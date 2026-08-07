@@ -222,6 +222,10 @@ export type ANARIRendererParameters = {
     rotation?: number;
   };
   exposure?: number;
+  /** Tone mapping: 0 none, 1 Reinhard, 2 Khronos PBR Neutral, or 3 ACES. */
+  toneMapMode?: 0 | 1 | 2 | 3;
+  /** Explicit output transfer; omitted values follow the render-target format. */
+  outputColorSpace?: 'linear' | 'srgb';
   samplesPerPixel?: number;
   maxBounces?: number;
   progressive?: boolean;
@@ -250,6 +254,22 @@ export type ANARIFrameParameters = {
   size?: readonly [number, number];
 };
 
+/** Synchronous command-graph costs for one retained ray-tracing frame stage. */
+export type ANARIRayTracingGraphStageStatistics = {
+  nodeCount: number;
+  computePassCount: number;
+  coalescedComputeNodeCount: number;
+  cpuEncodeTimeMilliseconds: number;
+};
+
+/** Aggregate command-graph diagnostics plus the stages encoded for one frame. */
+export type ANARIRayTracingGraphStatistics = ANARIRayTracingGraphStageStatistics & {
+  topology?: ANARIRayTracingGraphStageStatistics;
+  acceleration?: ANARIRayTracingGraphStageStatistics;
+  refit?: ANARIRayTracingGraphStageStatistics;
+  trace: ANARIRayTracingGraphStageStatistics;
+};
+
 export type ANARIFrameStatistics = {
   surfaceCount: number;
   instanceCount: number;
@@ -262,6 +282,7 @@ export type ANARIFrameStatistics = {
     sampledPixelCoverage: number;
     frameTimeMilliseconds: number;
     accumulatedSamples: number;
+    graph?: ANARIRayTracingGraphStatistics;
   };
 };
 

@@ -440,6 +440,39 @@ ordered after the render pass.
 Multisample resolve is currently a WebGPU contract. Render-pass callbacks cannot also supply their
 own framebuffer or resolve targets when graph attachments are present.
 
+### Caller-owned per-encoding framebuffers
+
+A render node without graph-managed `attachments` can select an existing application framebuffer
+through its compiled executable's `getRenderPassProps()` callback:
+
+```ts
+const graph = new GPUCommandGraph<{framebuffer: Framebuffer}>(device);
+
+graph.addRenderPass({
+  id: 'present-offscreen',
+  resources: [{texture: tracedImage, usage: 'sampled'}],
+  compile: () => ({
+    getRenderPassProps: ({parameters}) => ({framebuffer: parameters.framebuffer}),
+    encode: ({renderPass}) => model.draw(renderPass)
+  })
+});
+
+const compiled = graph.compile();
+compiled.encode(commandEncoder, {parameters: {framebuffer: firstTarget}});
+compiled.encode(otherCommandEncoder, {parameters: {framebuffer: secondTarget}});
+```
+
+Changing the compatible framebuffer does not recompile the graph, and both framebuffers remain
+caller-owned. The graph still opens and closes the render pass; acquiring or destroying the
+framebuffer and submitting each command encoder remain the application's responsibilities. Render
+pipelines must match the selected target's color and depth/stencil formats, so callers should
+recreate incompatible pipelines when those formats change.
+
+Because an application-provided framebuffer is not a declared graph resource, the graph cannot
+infer hazards for its attachment textures or order later nodes that sample them. Import the target
+texture and declare graph-managed `attachments` when later work in the same graph depends on its
+output. A node cannot combine graph-managed attachments with a callback-provided framebuffer.
+
 ## Node APIs and graph commands
 
 A graph command is a reusable description of GPU work, not a second command queue or a hidden
@@ -451,7 +484,7 @@ readback share one dependency-ordered execution without taking ownership of the 
 | Feature | Why it exists | Typical use |
 | --- | --- | --- |
 | `addComputePass()` | Schedule shader dispatch alongside its declared buffer and texture hazards. | Filtering, scans, sorting, hash-index construction, aggregation, and indirect-command generation. |
-| `addRenderPass()` | Schedule drawing with graph-managed attachments, resolves, and sampled resources. | Scene rendering, picking, off-screen layers, and multisampled frame composition. |
+| `addRenderPass()` | Schedule drawing with graph-managed attachments or compatible caller-owned framebuffers. | Scene rendering, picking, off-screen layers, and multisampled frame composition. |
 | `addCopyPass()` | Express transfers or encoder-level operations in the same ordered graph. | Explicit compact-result readback, staging uploads, and copying finished render targets. |
 | `dependsOn` | Describe an ordering requirement that no shared graph resource can express. | External side effects, timestamp boundaries, and application-owned synchronization. |
 | Repeated `encode()` | Reuse compiled pipelines and scratch allocations with new parameters or imports. | Interactive filters, animation frames, changing selections, and reusable query plans. |
@@ -498,7 +531,9 @@ graph.addRenderPass({
 ```
 
 The graph owns the `RenderPass` lifecycle. The executable records drawing commands; it must not
-end the pass, submit the encoder, or replace a graph-managed framebuffer.
+end the pass, submit the encoder, or replace a graph-managed framebuffer. When no `attachments` are
+declared, `getRenderPassProps()` may choose a compatible caller-owned framebuffer for each
+encoding.
 
 ### `addCopyPass(node)`
 

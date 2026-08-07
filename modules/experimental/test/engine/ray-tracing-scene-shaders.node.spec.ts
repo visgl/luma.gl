@@ -480,8 +480,13 @@ describe('graph-accelerated ray tracing shaders', () => {
       )
     ).toHaveLength(1);
     for (const invariant of [
-      'let diffuse = baseColor * (1.0 - metallic) / PI',
-      'let specularPower = mix(128.0, 4.0, roughness)',
+      'let dielectricReflectance = vec3<f32>(0.04)',
+      'let reflectance = mix(dielectricReflectance, baseColor, metallic)',
+      'let grazingReflectance = vec3<f32>(clamp(maximumReflectance * 25.0, 0.0, 1.0))',
+      'let alphaRoughness = roughness * roughness',
+      'let alphaRoughnessSquared = alphaRoughness * alphaRoughness',
+      'let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance)',
+      'let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0)',
       'let lightSampleWeight = f32(directLightCount) / f32(max(shadowSampleCount, 1u))'
     ]) {
       const invariantIndex = functionSource.indexOf(invariant);
@@ -497,6 +502,39 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(pointLightBranch).toBeGreaterThan(loopStart);
     expect(directionalNormalization).toBeGreaterThan(pointLightBranch);
     expect(functionSource.match(/normalize\(-light\.directionType\.xyz\)/g)).toHaveLength(1);
+  });
+
+  test('matches canonical energy-balanced GGX, Smith visibility, and Schlick Fresnel', () => {
+    const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn evaluateDirectLighting(');
+    const functionEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', functionStart + 1);
+    const functionSource = RAY_TRACING_SCENE_SHADER.slice(functionStart, functionEnd);
+
+    expect(functionSource).toContain('let roughness = clamp(primitive.properties.x, 0.04, 1.0)');
+    expect(functionSource).toContain('let metallic = clamp(primitive.emissive.w, 0.0, 1.0)');
+    expect(functionSource).toContain(
+      'let maximumReflectance = max(reflectance.r, max(reflectance.g, reflectance.b))'
+    );
+    expect(functionSource).toContain('grazingReflectance - reflectance');
+    expect(functionSource).toContain('pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0)');
+    expect(functionSource).toContain(
+      '(normalHalf * alphaRoughnessSquared - normalHalf) * normalHalf + 1.0'
+    );
+    expect(functionSource).toContain(
+      'alphaRoughnessSquared /\n      (PI * distributionDenominator * distributionDenominator)'
+    );
+    expect(functionSource).toContain('let lightVisibility = 2.0 * normalLight');
+    expect(functionSource).toContain('let viewVisibility = 2.0 * normalView');
+    expect(functionSource).toContain('let geometricOcclusion = lightVisibility * viewVisibility');
+    expect(functionSource).toContain(
+      'let diffuseContribution = (vec3<f32>(1.0) - fresnel) * diffuse'
+    );
+    expect(functionSource).toContain(
+      'let specular = fresnel * geometricOcclusion * distribution /'
+    );
+    expect(functionSource).toContain('(4.0 * normalLight * normalView)');
+    expect(functionSource).toContain('result += baseColor * lightColor');
+    expect(functionSource).not.toContain('specularPower');
+    expect(functionSource).not.toContain('pow(normalHalf,');
   });
 
   test('uses a stable guide ray and low-discrepancy radiance samples', () => {
@@ -525,6 +563,46 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(orthographicBranch).toBeGreaterThan(farPoint);
     expect(nearPoint).toBeGreaterThan(orthographicBranch);
     expect(cameraRaySource).not.toContain('let nearPosition =');
+  });
+
+  test('reuses the centered guide hit only for explicitly non-temporal single samples', () => {
+    const mainStart = RAY_TRACING_SCENE_SHADER.indexOf('@compute @workgroup_size(8, 8, 1)');
+    const mainSource = RAY_TRACING_SCENE_SHADER.slice(mainStart);
+    const guideHitIndex = mainSource.indexOf(
+      'let guideHit = intersectScene(guideRay, RAY_INFINITY)'
+    );
+    const stableGuardIndex = mainSource.indexOf('let useStableGuideSample = sampleCount == 1u');
+    const loopIndex = mainSource.indexOf(
+      'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
+    );
+    const reusedRayIndex = mainSource.indexOf('var ray = guideRay');
+    const reusedHitIndex = mainSource.indexOf('var hit = guideHit');
+    const jitterGuardIndex = mainSource.indexOf('if (!useStableGuideSample)');
+    const jitteredRayIndex = mainSource.indexOf('ray = makeCameraRay(pixel, sampleIndex)');
+    const tracedHitIndex = mainSource.indexOf('hit = intersectScene(ray, RAY_INFINITY)');
+
+    expect(guideHitIndex).toBeGreaterThan(0);
+    expect(stableGuardIndex).toBeGreaterThan(guideHitIndex);
+    expect(mainSource).toContain('uniforms.previousCameraPosition.w < 0.5');
+    expect(mainSource).toContain('uniforms.temporal.w < 0.5');
+    expect(loopIndex).toBeGreaterThan(stableGuardIndex);
+    expect(reusedRayIndex).toBeGreaterThan(loopIndex);
+    expect(reusedHitIndex).toBeGreaterThan(reusedRayIndex);
+    expect(jitterGuardIndex).toBeGreaterThan(reusedHitIndex);
+    expect(jitteredRayIndex).toBeGreaterThan(jitterGuardIndex);
+    expect(tracedHitIndex).toBeGreaterThan(jitteredRayIndex);
+    expect(mainSource.match(/intersectScene\(/g)).toHaveLength(2);
+
+    for (const [sampleCount, progressive, temporalReprojection, reusesGuide] of [
+      [1, false, false, true],
+      [1, true, false, false],
+      [1, false, true, false],
+      [1, true, true, false],
+      [2, false, false, false],
+      [16, false, false, false]
+    ] as const) {
+      expect(sampleCount === 1 && !progressive && !temporalReprojection).toBe(reusesGuide);
+    }
   });
 
   test('reprojects bilinear per-instance radiance and rejects invalid history', () => {
@@ -615,24 +693,67 @@ describe('graph-accelerated ray tracing shaders', () => {
     }
   });
 
-  test('manually reconstructs full-resolution HDR and SDR presentation without a sampler', () => {
-    for (const highDynamicRange of [false, true]) {
-      const presentationShader = getRayTracingScenePresentationShader(highDynamicRange);
-      const reflection = new WgslReflect(presentationShader);
+  test('manually reconstructs every canonical tone map and output encoding without new bindings', () => {
+    for (const toneMapMode of [0, 1, 2, 3]) {
+      for (const outputEncoding of [0, 1]) {
+        const presentationShader = getRayTracingScenePresentationShader({
+          toneMapMode,
+          outputEncoding
+        });
+        const reflection = new WgslReflect(presentationShader);
 
-      expect(reflection.entry.vertex.map(({name}) => name)).toEqual(['vertexMain']);
-      expect(reflection.entry.fragment.map(({name}) => name)).toEqual(['fragmentMain']);
-      expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
-        {name: 'image', binding: 0}
-      ]);
-      expect(reflection.uniforms).toHaveLength(0);
-      expect(presentationShader).toContain('textureDimensions(image)');
-      expect(presentationShader).toContain('let topLeft = textureLoad');
-      expect(presentationShader).toContain('let topRight = textureLoad');
-      expect(presentationShader).toContain('let bottomLeft = textureLoad');
-      expect(presentationShader).toContain('let bottomRight = textureLoad');
-      expect(presentationShader).toContain('vec4<f32>(radiance, 1.0)');
-      expect(presentationShader).not.toContain('@binding(1)');
+        expect(reflection.entry.vertex.map(({name}) => name)).toEqual(['vertexMain']);
+        expect(reflection.entry.fragment.map(({name}) => name)).toEqual(['fragmentMain']);
+        expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
+          {name: 'image', binding: 0}
+        ]);
+        expect(reflection.uniforms).toHaveLength(0);
+        expect(presentationShader).toContain('textureDimensions(image)');
+        expect(presentationShader).toContain('let topLeft = textureLoad');
+        expect(presentationShader).toContain('let topRight = textureLoad');
+        expect(presentationShader).toContain('let bottomLeft = textureLoad');
+        expect(presentationShader).toContain('let bottomRight = textureLoad');
+        expect(presentationShader).toContain(`if (${toneMapMode} == 1)`);
+        expect(presentationShader).toContain(`if (${outputEncoding} == 0)`);
+        expect(presentationShader).toContain('vec4<f32>(color, 1.0)');
+        expect(presentationShader).not.toContain('@binding(1)');
+      }
+    }
+  });
+
+  test('uses the exact canonical Khronos Neutral, ACES, and linear-to-sRGB equations', () => {
+    const presentationShader = getRayTracingScenePresentationShader({
+      toneMapMode: 2,
+      outputEncoding: 1
+    });
+
+    expect(presentationShader).toContain('fn toneMapRayTracingKhronosPBRNeutral(');
+    expect(presentationShader).toContain('let startCompression = 0.76');
+    expect(presentationShader).toContain('darkestChannel - 6.25 * darkestChannel * darkestChannel');
+    expect(presentationShader).toContain('let compressedPeak = 1.0 - compressionRange');
+    expect(presentationShader).toContain('0.15 * (peak - compressedPeak) + 1.0');
+    expect(presentationShader).toContain('color /= vec3<f32>(1.0) + color');
+    expect(presentationShader).toContain(
+      '(color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14)'
+    );
+    expect(presentationShader).toContain('fn encodeRayTracingLinearSRGB(');
+    expect(presentationShader).toContain('positiveColor * 12.92');
+    expect(presentationShader).toContain(
+      '1.055 * pow(positiveColor, vec3<f32>(1.0 / 2.4)) - 0.055'
+    );
+    expect(presentationShader).toContain('positiveColor > vec3<f32>(0.0031308)');
+    expect(presentationShader).not.toContain('exp(-radiance)');
+    expect(presentationShader).not.toContain('1.0 / 2.2');
+  });
+
+  test('keeps the prior boolean presentation shortcut compatible during graph migration', () => {
+    for (const [highDynamicRange, toneMapMode, outputEncoding] of [
+      [true, 0, 0],
+      [false, 2, 1]
+    ] as const) {
+      expect(getRayTracingScenePresentationShader(highDynamicRange)).toEqual(
+        getRayTracingScenePresentationShader({toneMapMode, outputEncoding})
+      );
     }
   });
 });
