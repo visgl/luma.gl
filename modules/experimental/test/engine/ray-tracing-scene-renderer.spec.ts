@@ -101,7 +101,11 @@ test('RayTracingSceneRenderer adaptive budget requires sustained pressure', test
 
   updateRayTracingAdaptiveBudget(budget, 6000);
   testCase.equal(budget.resolutionScale, 0.375, 'sustained pressure steps down one scale');
-  testCase.equal(budget.historyNeedsReset, true, 'resolution changes explicitly invalidate history');
+  testCase.equal(
+    budget.historyNeedsReset,
+    true,
+    'resolution changes explicitly invalidate history'
+  );
   testCase.end();
 });
 

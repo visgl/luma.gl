@@ -1641,9 +1641,7 @@ export function updateRayTracingAdaptiveBudget(
     if (lowerResolutionScale < resources.resolutionScale) {
       resources.resolutionScale = lowerResolutionScale;
       resources.historyNeedsReset = true;
-    } else if (
-      resources.accumulatedFrameCount >= MINIMUM_HISTORY_FRAMES_FOR_SPARSE_SCHEDULING
-    ) {
+    } else if (resources.accumulatedFrameCount >= MINIMUM_HISTORY_FRAMES_FOR_SPARSE_SCHEDULING) {
       resources.phaseCount = Math.min(4, resources.phaseCount * 2);
       resources.phaseIndex %= resources.phaseCount;
     } else {

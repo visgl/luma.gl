@@ -8,11 +8,7 @@ import {
   createCameraReprojectionTAAShaderPassPipeline
 } from '@luma.gl/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {
-  DeferredSceneRenderer,
-  SceneRenderer,
-  type SceneRenderOptions
-} from '@luma.gl/experimental';
+import {DeferredSceneRenderer, SceneRenderer, type SceneRenderOptions} from '@luma.gl/experimental';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
@@ -73,9 +69,7 @@ export class ANARIRenderingRuntime implements ANARIRendererRuntime {
     }
 
     const bloomIntensity =
-      renderOptions.renderMode === 'default'
-        ? (renderer.getParameter('bloomIntensity') ?? 0)
-        : 0;
+      renderOptions.renderMode === 'default' ? (renderer.getParameter('bloomIntensity') ?? 0) : 0;
     const temporalAntialiasingEnabled =
       this.device.type === 'webgpu' &&
       renderOptions.renderMode === 'default' &&
@@ -128,8 +122,7 @@ export class ANARIRenderingRuntime implements ANARIRendererRuntime {
             inverseViewProjectionMatrix: new Matrix4(
               temporalAntialiasingFrame.currentViewProjectionMatrix
             ).invert(),
-            previousViewProjectionMatrix:
-              temporalAntialiasingFrame.previousViewProjectionMatrix,
+            previousViewProjectionMatrix: temporalAntialiasingFrame.previousViewProjectionMatrix,
             currentJitter: temporalAntialiasingFrame.currentJitter,
             previousJitter: temporalAntialiasingFrame.previousJitter
           }
@@ -343,10 +336,7 @@ function prepareTemporalAntialiasingFrame(
     previousViewProjectionMatrix: resetHistory
       ? currentViewProjectionMatrix
       : state.previousViewProjectionMatrix!,
-    jitteredProjectionMatrix: makeJitteredProjectionMatrix(
-      currentProjectionMatrix,
-      currentJitter
-    ),
+    jitteredProjectionMatrix: makeJitteredProjectionMatrix(currentProjectionMatrix, currentJitter),
     currentJitter,
     previousJitter: resetHistory ? currentJitter : state.previousJitter,
     topologySignature,
@@ -430,8 +420,7 @@ export function makeJitteredProjectionMatrix(
   for (let columnIndex = 0; columnIndex < 4; columnIndex++) {
     const columnOffset = columnIndex * 4;
     const clipWCoefficient = jitteredProjectionMatrix[columnOffset + 3];
-    jitteredProjectionMatrix[columnOffset] +=
-      normalizedDeviceCoordinateOffsetX * clipWCoefficient;
+    jitteredProjectionMatrix[columnOffset] += normalizedDeviceCoordinateOffsetX * clipWCoefficient;
     jitteredProjectionMatrix[columnOffset + 1] +=
       normalizedDeviceCoordinateOffsetY * clipWCoefficient;
   }

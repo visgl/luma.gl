@@ -219,9 +219,7 @@ test('shadertools#pbrMaterial widens base and clearcoat specular lobes', testCas
       language + ' bounds the normal-variance roughness contribution'
     );
     testCase.ok(
-      source.includes(
-        'perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n)'
-      ),
+      source.includes('perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n)'),
       language + ' widens the base specular lobe'
     );
     testCase.ok(

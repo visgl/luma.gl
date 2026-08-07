@@ -14,9 +14,7 @@ describe('ANARI raster temporal antialiasing', () => {
     const firstJitter = getTemporalAntialiasingJitter(0, 8, 12);
     expect(firstJitter[0]).toBeCloseTo(0);
     expect(firstJitter[1]).toBeCloseTo(-1 / 72);
-    expect(getTemporalAntialiasingJitter(8, 8, 12)).toEqual(
-      firstJitter
-    );
+    expect(getTemporalAntialiasingJitter(8, 8, 12)).toEqual(firstJitter);
 
     for (let frameIndex = 0; frameIndex < 8; frameIndex++) {
       const jitter = getTemporalAntialiasingJitter(frameIndex, 8, 12);
