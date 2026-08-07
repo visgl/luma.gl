@@ -76,9 +76,10 @@ Official cuCIM references:
 | Imported/transient graph textures | `gpu-command-graph.ts`; `gpu-command-graph-types.ts`                                     | Borrow input/output textures and declare graph-owned intermediate textures.                   |
 | Texture graph integration tests   | `modules/experimental/test/gpu-primitives/gpu-command-graph-textures.spec.ts`            | Existing coverage proves storage-texture compute followed by sampled rendering.               |
 | Typed packed buffer views         | `gpu-command-graph-types.ts`; `graph-data-view-utils.ts`                                 | Existing analysis primitives consume buffers, so texture bridges must be explicit.            |
-| Hierarchical reduction            | `modules/experimental/src/gpu-primitives/gpu-reduction.ts`                               | Reuse `sum`, `min`, `max`, and `extent`; add opt-in masked reduction if justified.            |
+| Hierarchical reduction            | `modules/experimental/src/gpu-primitives/gpu-reduction.ts`                               | Reuse `sum`, `min`, `max`, and `extent` with their additive validity-mask option.             |
 | Masked scalar histogram           | `modules/experimental/src/gpu-primitives/gpu-histogram.ts`                               | Reuse equal-width/irregular histograms, but provide explicit valid-pixel domains.             |
 | Unsigned scans                    | `modules/experimental/src/gpu-primitives/gpu-scan.ts`                                    | Reuse for cumulative distributions, dense labels, and contour offsets.                        |
+| Bounded multidimensional dispatch | `modules/experimental/src/gpu-primitives/gpu-dispatch-utils.ts`                          | Reuse existing 3D planning/index helpers; `GPUScan` already uses them correctly.              |
 | Unsigned compaction               | `modules/experimental/src/gpu-primitives/gpu-compaction.ts`                              | Reuse only for `uint32` IDs; float values and vertices require typed scatter.                 |
 | Grouped statistics                | `modules/experimental/src/gpu-primitives/gpu-group-aggregation.ts`                       | Reuse dense label keys with masked count, sum, min, max, and mean.                            |
 | Two-dimensional complex FFT       | `modules/experimental/src/gpu-primitives/gpu-fft2d.ts`                                   | Reuse bounded power-of-two transforms after designing an explicit graph-native adapter.       |
@@ -338,8 +339,8 @@ new GPUHistogram({
 }).addToGraph(graph);
 ```
 
-The proposed `mask` option is additive and does not exist today. It must validate view kind,
-length, chunk topology, graph ownership, output aliasing, and the all-masked case. Integer
+The additive `mask` option validates view kind, length, chunk topology, graph ownership, output
+aliasing, and the all-masked case. Integer
 min/max/extent need validity propagation even though existing unmasked integer reductions do not.
 Masked sums ignore rejected rows. Existing unmasked reduction behavior and the documented
 `GPUHistogram` automatic-domain behavior remain unchanged.
@@ -408,7 +409,7 @@ bounded dispatch dimensions, and buffer bindings below the active adapter's limi
 requesting linear filtering. Compute shaders use `textureLoad` or `textureSampleLevel`; ordinary
 `textureSample` cannot be used in compute.
 
-Existing analysis primitives generally use 256-thread one-dimensional dispatch. At a common
+Several existing analysis primitives still use 256-thread one-dimensional dispatch. At a common
 `maxComputeWorkgroupsPerDimension` of 65,535:
 
 ```text
@@ -418,14 +419,18 @@ required workgroups                 = 65,536
 ```
 
 A full 4K-square raster therefore exceeds the existing 1D limit by one workgroup. Reduction,
-scan, histogram, mask, compaction, grid binning, and grid aggregation contain affected passes.
-Grouped aggregation already bounds its accumulation dispatch in three dimensions, but some output
-initialization/finalization passes remain one-dimensional.
+histogram, mask, compaction, grid binning, and grid aggregation still contain affected passes.
+`GPUScan` already uses the reusable bounded 3D helpers in `gpu-dispatch-utils.ts`; grouped
+aggregation bounds its accumulation dispatch, although some output initialization/finalization
+passes remain one-dimensional.
 
-The lowest-risk initial solution is explicit bounded raster tiles or ordered stripes. A reusable
-multidimensional-dispatch enhancement must also change WGSL indexing: simply calling
-`dispatch(x, y, z)` is incorrect while shaders read only `global_invocation_id.x`. Reduction
-partials, scan block ordering, and carry propagation must flatten group coordinates consistently.
+The lowest-risk initial solution is explicit bounded raster tiles or ordered stripe planning. The
+Phase 1 planner reports safe, caller-managed stripe boundaries; it does not automatically rewrite
+oversized reduction or histogram inputs. Future integrations can adapt the existing bounded
+dispatch helpers, but must also change WGSL indexing: simply calling `dispatch(x, y, z)` is
+incorrect while shaders read only `global_invocation_id.x`. Reduction partial ordering must
+flatten group coordinates consistently, and the graph's already-correct scan ordering must
+remain unchanged.
 
 Some compatibility adapters expose fewer than 256 invocations per workgroup. Either adapt shared
 primitive workgroup sizes or reject unsupported adapters explicitly. A `4096²` `float32` band
@@ -440,7 +445,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | Phase                            | Outcome                                                                      | Status   | Impact | Cost   |
 | -------------------------------- | ---------------------------------------------------------------------------- | -------- | ------ | ------ |
 | 0 — Package foundation           | Approved scope, clean-room boundary, isolated imports, and CPU fixtures      | Complete | High   | Small  |
-| 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Planned  | High   | Large  |
+| 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete | High   | Large  |
 | 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | Planned  | High   | Medium |
 | 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Planned  | High   | Large  |
 | 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Planned  | High   | Large  |
@@ -579,15 +584,19 @@ unchanged.
 
 **Entry:** Tranche 1.2.
 
-**Work:** First implement explicit bounded image tiles or ordered buffer stripes. If wider
-repository demand justifies it, extract a reusable 2D/3D dispatch planner, update every affected
-WGSL kernel to flatten workgroup coordinates correctly, preserve reduction partial and scan carry
-ordering, and adapt or gate 256-thread workgroups.
+**Work:** Implement adapter capability checks and explicit, ordered buffer-stripe planning that
+accounts for existing 256-byte graph binding alignment, storage limits, and the current
+256-invocation reduction/histogram kernels. Raster texture contributors use independently bounded
+two-dimensional dispatch. Keep stripe materialization caller-owned during this phase; do not
+claim that large monolithic reduction or histogram views are transparently partitioned. Reuse
+the existing bounded 3D dispatch helpers for any later approved generic primitive adaptation.
 
 **Exit evidence:** Tests cover `limit - 1`, `limit`, and `limit + 1` workgroups; the
 `4096 x 4096` threshold; oversized `8192 x 8192` binding requests; 128-invocation compatibility
-devices; and adapter-specific storage, texture, and workgroup limits. No silently invalid
-dispatch remains on the selected execution path.
+devices; and adapter-specific storage, texture, and workgroup limits. Every raster texture
+contributor dispatch is validated before graph encoding. Oversized generic reduction/histogram
+views remain unsupported until callers apply their explicit stripe/tile plans or Tranche 2.2
+adds a cross-package-safe materialization path.
 
 ### Tranche 2.1 — Pointwise math and NDVI
 
@@ -613,7 +622,11 @@ maximum, and mean. Exact integer min/max/extents and histograms remain in the ra
 floating sums/means use `float32`. Integer sums expose the existing modulo-`2^32` behavior plus an
 overflow indication, or require a separately approved wide accumulator. Support caller-owned
 fixed domains, explicit GPU domains, irregular edges, and histogram-estimated percentiles with
-documented bin-resolution error.
+documented bin-resolution error. Before advertising monolithic 4K-plus reduction/histogram
+support, either adapt both primitives with the existing bounded 3D WGSL helpers or add a
+root-owned graph-vector factory that materializes source/mask stripes with matching chunk
+boundaries, separately budgeted nonzero binding offsets, and verified ESM/CommonJS class
+identity.
 
 **Exit evidence:** Finite nodata sentinels do not distort inferred domains; empty/all-invalid
 images have defined output; irregular edges and exact maximum values match primitive contracts;
@@ -1244,19 +1257,20 @@ Deliver tranches 0.1, 0.2, and the initial portion of 0.3. Add the isolated expo
 `luraster/index.ts`, built ESM/CommonJS/declaration verification, root-isolation tests, and tiny
 offline fixtures. Avoid unrelated graph/core changes.
 
-### PR 2 — Raster contract, texture bridge, and device limits
+### PR 2 — Raster contracts, masked reductions, and device limits
 
-Deliver tranches 1.1, 1.2, and the explicit capability/stripe policy from 1.4. Add typed raster
-metadata, borrowed bands, validity masks, full affine/CRS rules, and a graph-native texture
-gather/scatter path. Verify odd rows, precision, ownership, and 4096² dispatch planning before
-claiming large-image support.
+Deliver tranches 1.1–1.4. Add typed raster metadata, borrowed bands, validity masks, full
+affine/CRS rules, graph-native texture gather/scatter, opt-in masked reductions, explicit GPU
+histogram domains, and caller-managed capability/stripe planning. Verify odd rows, precision,
+ownership, actual graph-only histogram composition, and 4096² dispatch boundaries without
+claiming automatic large-image partitioning.
 
-### PR 3 — Masked statistics and NDVI vertical slice
+### PR 3 — NDVI and extended scalar-analysis vertical slice
 
-Deliver tranche 1.3, tranche 2.1, and the minimum viable portion of 2.2. Add separately reviewed
-opt-in masked reductions, preserve existing histogram auto-domain semantics, and demonstrate
-NDVI -> valid extent -> masked histogram in one caller-encoded graph. Include node and headless
-WebGPU regression coverage for a finite nodata sentinel and a zero NDVI denominator.
+Deliver tranche 2.1 and the minimum viable portion of 2.2. Reuse the existing opt-in masked
+reductions, preserve histogram auto-domain semantics, and demonstrate NDVI -> valid extent ->
+masked histogram in one caller-encoded graph. Include node and headless WebGPU regression
+coverage for a finite nodata sentinel and a zero NDVI denominator.
 
 ## Verification commands
 

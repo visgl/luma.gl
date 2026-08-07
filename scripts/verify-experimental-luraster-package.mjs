@@ -40,14 +40,25 @@ const ecmaScriptRootModule = await import(pathToFileURL(ecmaScriptRootEntry).hre
 const commonJsRootModule = require(commonJsRootEntry);
 const ecmaScriptExportNames = Object.keys(ecmaScriptRasterModule).sort();
 const commonJsExportNames = Object.keys(commonJsRasterModule)
-  .filter(exportName => exportName !== '__esModule')
+  .filter((exportName) => exportName !== '__esModule')
   .sort();
+const requiredRuntimeExportNames = [
+  'GPURaster',
+  'GPURasterBufferToTexture',
+  'GPURasterTextureToBuffer',
+  'getRasterDeviceLimits',
+  'planRasterDispatchStripes'
+];
 
 assert.deepEqual(
   commonJsExportNames,
   ecmaScriptExportNames,
   'ESM and CommonJS expose the same optional LuRaster runtime symbols'
 );
+for (const exportName of requiredRuntimeExportNames) {
+  assert.equal(typeof ecmaScriptRasterModule[exportName], 'function');
+  assert.equal(typeof commonJsRasterModule[exportName], 'function');
+}
 for (const exportName of ecmaScriptExportNames) {
   assert.equal(
     exportName in ecmaScriptRootModule,
@@ -69,19 +80,50 @@ try {
   const typeTestPath = path.join(temporaryDirectory, 'index.mts');
   writeFileSync(
     typeTestPath,
-    `import type {} from '@luma.gl/experimental/luraster';
-import * as rasterModule from '@luma.gl/experimental/luraster';
-import type {GPUCommandGraphContributor} from '@luma.gl/experimental';
+    `import {
+  GPURaster,
+  GPURasterBufferToTexture,
+  GPURasterTextureToBuffer,
+  getRasterDeviceLimits,
+  planRasterDispatchStripes,
+  type GPURasterBand,
+  type GPURasterMetadata,
+  type RasterDeviceLimits,
+  type RasterDispatchStripe
+} from '@luma.gl/experimental/luraster';
+import type {GPUCommandGraphContributor, GPUReductionMask} from '@luma.gl/experimental';
 
 declare const contributor: GPUCommandGraphContributor;
-void rasterModule;
+declare const rasterBand: GPURasterBand;
+declare const rasterMetadata: GPURasterMetadata;
+declare const rasterDeviceLimits: RasterDeviceLimits;
+declare const rasterDispatchStripe: RasterDispatchStripe;
+declare const reductionMask: GPUReductionMask;
+declare const textureToBuffer: GPURasterTextureToBuffer;
+const rasterContributor: GPUCommandGraphContributor = textureToBuffer;
+
+void GPURaster;
+void GPURasterBufferToTexture;
+void GPURasterTextureToBuffer;
+void getRasterDeviceLimits;
+void planRasterDispatchStripes;
 void contributor;
+void rasterBand;
+void rasterMetadata;
+void rasterDeviceLimits;
+void rasterDispatchStripe;
+void reductionMask;
+void rasterContributor;
+
+// @ts-expect-error Raster algorithms stay isolated from the experimental root.
+import {GPURaster as RootGPURaster} from '@luma.gl/experimental';
+void RootGPURaster;
 `
   );
   assert.equal(
     createRequire(typeTestPath).resolve('@luma.gl/experimental/luraster'),
     commonJsEntry,
-    'the temporary consumer resolves this worktree\'s experimental package'
+    "the temporary consumer resolves this worktree's experimental package"
   );
 
   const program = typescript.createProgram([typeTestPath], {
@@ -98,7 +140,7 @@ void contributor;
     diagnostics.length,
     0,
     typescript.formatDiagnosticsWithColorAndContext(diagnostics, {
-      getCanonicalFileName: fileName => fileName,
+      getCanonicalFileName: (fileName) => fileName,
       getCurrentDirectory: () => temporaryDirectory,
       getNewLine: () => '\n'
     })

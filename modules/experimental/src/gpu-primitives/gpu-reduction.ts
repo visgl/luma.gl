@@ -15,6 +15,8 @@ import {
   getViewBinding,
   getViewElementOffset,
   type GPUScalarFormat,
+  validateMatchingVectorTopology,
+  validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
 
@@ -37,12 +39,17 @@ export type GPUReductionInput<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | GraphVectorView<T>;
 
+/** Optional nonzero/zero row selection with the same topology as reduction input. */
+export type GPUReductionMask = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+
 /** Properties for a graph-native scalar reduction. */
 export type GPUReductionProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
   /** Packed scalar data view or ordered vector of packed scalar chunks. */
   input: GPUReductionInput<T>;
+  /** Optional nonzero/zero selection with the same view kind and chunk topology as `input`. */
+  mask?: GPUReductionMask;
   /** Caller-owned result view: one row, or two rows for `extent`. */
   output: GraphDataView<T>;
   /** Aggregate to compute. */
@@ -65,6 +72,8 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly id: string;
   /** Scalar input chunk or vector. */
   readonly input: GPUReductionInput<T>;
+  /** Optional source-aligned row selection. */
+  readonly mask?: GPUReductionMask;
   /** Caller-owned result view. */
   readonly output: GraphDataView<T>;
   /** Aggregate computed by this reduction. */
@@ -79,6 +88,7 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
   constructor(props: GPUReductionProps<T>) {
     this.id = props.id ?? 'gpu-reduction';
     this.input = props.input;
+    this.mask = props.mask;
     this.output = props.output;
     this.operation = props.operation;
     for (const [chunkIndex, input] of getReductionInputs(this.input).entries()) {
@@ -102,6 +112,22 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
     if (getReductionInputs(this.input).some(input => input.buffer === this.output.buffer)) {
       throw new Error(`${this.id} inputs and output must use separate buffers`);
     }
+    if (this.mask) {
+      if (this.input instanceof GraphVectorView !== this.mask instanceof GraphVectorView) {
+        throw new Error(`${this.id} input and mask must use the same view kind`);
+      }
+      for (const [chunkIndex, mask] of getReductionMasks(this.mask).entries()) {
+        validatePackedUint32View(mask, `${this.id} mask chunk ${chunkIndex}`);
+        if (mask.buffer === this.output.buffer) {
+          throw new Error(`${this.id} mask and output must use separate buffers`);
+        }
+      }
+      if (this.input instanceof GraphVectorView && this.mask instanceof GraphVectorView) {
+        validateMatchingVectorTopology(this.input, this.mask, `${this.id} input and mask`);
+      } else if (this.input.length !== this.mask.length) {
+        throw new Error(`${this.id} input and mask lengths must match`);
+      }
+    }
   }
 
   /**
@@ -116,10 +142,17 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
    */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const inputs = getReductionInputs(this.input);
-    if (inputs.some(input => input.buffer.graph !== graph) || this.output.buffer.graph !== graph) {
+    const masks = this.mask ? getReductionMasks(this.mask) : undefined;
+    if (
+      inputs.some(input => input.buffer.graph !== graph) ||
+      masks?.some(mask => mask.buffer.graph !== graph) ||
+      this.output.buffer.graph !== graph
+    ) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
-    const nonEmptyInputs = inputs.filter(input => input.length > 0);
+    const nonEmptyInputs = inputs
+      .map((input, chunkIndex) => ({input, mask: masks?.[chunkIndex]}))
+      .filter(({input}) => input.length > 0);
     if (nonEmptyInputs.length === 0) {
       addClearReductionPass(graph, this.id, this.output);
       return;
@@ -127,7 +160,7 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
 
     const valuesPerRow = this.operation === 'extent' ? 2 : 1;
     const needsValidity =
-      this.input.format === 'float32' && ['min', 'max', 'extent'].includes(this.operation);
+      this.operation !== 'sum' && (this.input.format === 'float32' || Boolean(this.mask));
     let reductionResult: ReductionResult<T>;
 
     if (nonEmptyInputs.length === 1) {
@@ -135,8 +168,9 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
         id: this.id,
         format: this.input.format,
         operation: this.operation,
-        inputValues: nonEmptyInputs[0],
-        inputLength: nonEmptyInputs[0].length,
+        inputValues: nonEmptyInputs[0].input,
+        inputValidity: nonEmptyInputs[0].mask,
+        inputLength: nonEmptyInputs[0].input.length,
         valuesPerRow,
         firstLevel: true,
         needsValidity
@@ -152,12 +186,13 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
         ? createTransientView(graph, `${this.id}-chunk-validity`, 'uint32', nonEmptyInputs.length)
         : undefined;
 
-      nonEmptyInputs.forEach((input, partialIndex) => {
+      nonEmptyInputs.forEach(({input, mask}, partialIndex) => {
         addReductionLevels(graph, {
           id: `${this.id}-chunk-${partialIndex}`,
           format: this.input.format,
           operation: this.operation,
           inputValues: input,
+          inputValidity: mask,
           inputLength: input.length,
           valuesPerRow,
           firstLevel: true,
@@ -201,7 +236,7 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
 type ReductionResult<T extends GPUScalarFormat> = {
   /** One packed row for sum/min/max, or two packed components for extent. */
   values: GraphDataView<T>;
-  /** One row indicating whether a finite min/max/extent value was observed. */
+  /** One row indicating whether an eligible min/max/extent value was observed. */
   validity?: GraphDataView<'uint32'>;
 };
 
@@ -214,7 +249,7 @@ type ReductionLevelsProps<T extends GPUScalarFormat> = {
   operation: GPUReductionOperation;
   /** Packed values consumed by the first generated level. */
   inputValues: GraphDataView<T>;
-  /** Optional validity rows paired with already-reduced input rows. */
+  /** Optional source selection or validity rows paired with already-reduced input rows. */
   inputValidity?: GraphDataView<'uint32'>;
   /** Number of logical rows consumed by the first generated level. */
   inputLength: number;
@@ -222,7 +257,7 @@ type ReductionLevelsProps<T extends GPUScalarFormat> = {
   valuesPerRow: number;
   /** Whether the first level reads raw scalar rows instead of partial rows. */
   firstLevel: boolean;
-  /** Whether levels must preserve finite-value validity. */
+  /** Whether levels must preserve finite-value or source-selection validity. */
   needsValidity: boolean;
   /** Optional destination for the last level's value row. */
   finalValues?: GraphDataView<T>;
@@ -314,6 +349,11 @@ function getReductionInputs<T extends GPUScalarFormat>(
   return input instanceof GraphVectorView ? input.data : [input];
 }
 
+/** Normalizes a source-aligned selection into its ordered chunk list. */
+function getReductionMasks(mask: GPUReductionMask): readonly GraphDataView<'uint32'>[] {
+  return mask instanceof GraphVectorView ? mask.data : [mask];
+}
+
 /** Adds one 256-way reduction level from raw or already-reduced rows. */
 function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
   graph: GPUCommandGraph<Parameters>,
@@ -341,10 +381,19 @@ function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
   const outputValidityBinding = outputValuesBinding + 1;
   const finiteExpression =
     props.format === 'float32' ? 'value == value && abs(value) <= 3.402823466e+38' : 'true';
-  const readFirst = props.firstLevel
-    ? `value = inputValues[INPUT_OFFSET + index];
+  const normalizeMaskedFloatSum =
+    props.firstLevel && props.inputValidity && props.format === 'float32' && isSum
+      ? '\n    if (valid == 0u) { value = 0.0; secondValue = 0.0; }'
+      : '';
+  const readRawValue = `value = inputValues[INPUT_OFFSET + index];
     secondValue = value;
-    valid = select(0u, 1u, ${finiteExpression});`
+    valid = select(0u, 1u, ${finiteExpression});${normalizeMaskedFloatSum}`;
+  const readFirst = props.firstLevel
+    ? props.inputValidity
+      ? `if (inputValidity[VALIDITY_OFFSET + index] != 0u) {
+      ${readRawValue}
+    }`
+      : readRawValue
     : `value = inputValues[INPUT_OFFSET + index * VALUES_PER_ROW];
     secondValue = inputValues[INPUT_OFFSET + index * VALUES_PER_ROW + ${isExtent ? '1u' : '0u'}];
     ${props.inputValidity ? 'valid = inputValidity[VALIDITY_OFFSET + index];' : 'valid = 1u;'}`;
