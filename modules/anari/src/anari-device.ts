@@ -75,6 +75,18 @@ const SUPPORTED_EXTENSIONS = [
   'KHR_SAMPLER_IMAGE2D'
 ] as const;
 
+const MAXIMUM_SCENE_COMMIT_HISTORY = 256;
+
+/** @internal Committed retained-scene category observed by format adapters. */
+export type ANARISceneCommitCategory = 'topology' | 'transforms' | 'materials' | 'lights';
+
+/** @internal One bounded, device-local retained-object commit notification. */
+export type ANARISceneCommit = {
+  revision: number;
+  objectId: string;
+  categories: readonly ANARISceneCommitCategory[];
+};
+
 export class ANARIDevice {
   readonly device: Device;
   readonly extensions = SUPPORTED_EXTENSIONS;
@@ -84,6 +96,8 @@ export class ANARIDevice {
     ANARIRendererRuntimeFactory
   >();
   private readonly renderingRuntimes = new Map<ANARIRendererRuntimeFactory, ANARIRendererRuntime>();
+  private readonly sceneCommits: ANARISceneCommit[] = [];
+  private sceneCommitRevision = 0;
 
   constructor(device: Device) {
     this.device = device;
@@ -188,6 +202,60 @@ export class ANARIDevice {
     return {type, subtypes: this.getObjectSubtypes(type), extensions: this.extensions};
   }
 
+  /** @internal Returns the latest committed non-camera scene mutation. */
+  getSceneCommitRevision(): number {
+    return this.sceneCommitRevision;
+  }
+
+  /** @internal Returns bounded commits after a revision, or null when history expired. */
+  getSceneCommitsSince(revision: number): readonly ANARISceneCommit[] | null {
+    if (revision === this.sceneCommitRevision) {
+      return [];
+    }
+    if (this.sceneCommits.length === 0 || revision < this.sceneCommits[0].revision - 1) {
+      return null;
+    }
+    return this.sceneCommits.filter(commit => commit.revision > revision);
+  }
+
+  /** @internal Publishes retained-object commits without invalidating camera-only frames. */
+  recordSceneObjectCommit(
+    objectType: ANARIObjectType,
+    objectId: string,
+    instanceGroupChanged = false
+  ): void {
+    let categories: readonly ANARISceneCommitCategory[];
+    switch (objectType) {
+      case 'world':
+      case 'group':
+      case 'array':
+        categories = ['topology', 'lights'];
+        break;
+      case 'geometry':
+      case 'surface':
+        categories = ['topology'];
+        break;
+      case 'instance':
+        categories = instanceGroupChanged ? ['topology', 'lights'] : ['transforms'];
+        break;
+      case 'material':
+      case 'sampler':
+        categories = ['materials'];
+        break;
+      case 'light':
+        categories = ['lights'];
+        break;
+      default:
+        return;
+    }
+
+    this.sceneCommitRevision++;
+    this.sceneCommits.push({revision: this.sceneCommitRevision, objectId, categories});
+    if (this.sceneCommits.length > MAXIMUM_SCENE_COMMIT_HISTORY) {
+      this.sceneCommits.shift();
+    }
+  }
+
   renderFrame(frame: ANARIFrame): ANARIFrameStatistics {
     const rendererSubtype = frame.getParameter('renderer')?.subtype ?? 'default';
     const runtimeFactory = this.rendererRuntimeFactories.get(rendererSubtype);
@@ -214,5 +282,6 @@ export class ANARIDevice {
       renderingRuntime.destroy();
     }
     this.renderingRuntimes.clear();
+    this.sceneCommits.length = 0;
   }
 }

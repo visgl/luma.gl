@@ -281,10 +281,10 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     const encodeBlasMortonIndex = findNodeIndex(topologyNodeOrder, 'blas-0-build-morton-keys');
     const sortBlasMortonCompletionIndex = findLastNodeIndex(
       topologyNodeOrder,
-      'blas-0-sort-triangle-morton-keys'
+      'blas-sort-triangle-morton-keys'
     );
     const gatherBlasBoundsIndex = findNodeIndex(topologyNodeOrder, 'blas-0-gather-sorted-bounds');
-    const fusedBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-0-bvh-fused-refit');
+    const fusedBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-bvh-fused-refit-4');
     const packBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-0-pack-nodes');
     testCase.ok(
       [
@@ -304,13 +304,13 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         sortBlasMortonCompletionIndex < gatherBlasBoundsIndex &&
         gatherBlasBoundsIndex < fusedBlasIndex &&
         fusedBlasIndex < packBlasIndex,
-      'the topology graph Morton-sorts mesh triangles, fuses the BLAS hierarchy, and packs trace nodes'
+      'the topology graph Morton-sorts mesh triangles, batches the BLAS hierarchy, and packs trace nodes'
     );
     testCase.ok(
       topologyNodeOrder.some(identifier =>
-        identifier.includes('blas-0-sort-triangle-morton-keys-bitonic-local')
+        identifier.includes('blas-sort-triangle-morton-keys-bitonic-local-4')
       ),
-      'small mesh triangle permutations reuse the general single-dispatch GPU sort primitive'
+      'small mesh triangle permutations reuse the general segmented single-dispatch GPU sort primitive'
     );
     testCase.ok(
       getGraphBufferIdentifiers(frameResources.topologyGraph).includes('blas-nodes') &&
@@ -358,6 +358,38 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       9,
       'the trace graph imports one uniform plus exactly eight storage buffers within CORE limits'
     );
+    testCase.equal(
+      frameResources.traceGraph.stats.importedTextureCount,
+      4,
+      'the trace graph borrows two rotating color textures and two rotating metadata textures'
+    );
+    testCase.equal(
+      frameResources.traceGraph.stats.logicalTransientTextureCount,
+      0,
+      'retained ping-pong history avoids hidden transient presentation or metadata textures'
+    );
+    const historyCarryIndex = findNodeIndex(
+      frameResources.traceGraph.stats.nodeOrder,
+      'carry-ray-tracing-history'
+    );
+    const traceRaysIndex = findNodeIndex(frameResources.traceGraph.stats.nodeOrder, 'trace-rays');
+    const presentationIndex = findNodeIndex(
+      frameResources.traceGraph.stats.nodeOrder,
+      'present-ray-tracing'
+    );
+    testCase.ok(
+      historyCarryIndex >= 0 &&
+        historyCarryIndex < traceRaysIndex &&
+        traceRaysIndex < presentationIndex,
+      'sparse history carry and packed ray dispatch run before fullscreen presentation'
+    );
+    testCase.notOk(
+      frameResources.traceGraph.stats.nodeOrder.some(
+        identifier =>
+          identifier.includes('prefill-ray-tracing') || identifier.includes('remember-ray-tracing')
+      ),
+      'rotating graph texture roles eliminate all four full-frame history copies'
+    );
     testCase.ok(
       frameResources.traceGraph.stats.nodeOrder.some(identifier =>
         identifier.includes('trace-rays')
@@ -400,6 +432,10 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       2,
       'ray-tracing telemetry reports samples per pixel rather than encoded frames'
     );
+    const initialColorHistory = frameResources.colorHistory.previousTexture;
+    const initialColorOutput = frameResources.colorHistory.currentTexture;
+    const initialMetadataHistory = frameResources.metadataHistory.previousTexture;
+    const initialMetadataOutput = frameResources.metadataHistory.currentTexture;
 
     if (supportsRawValidationErrorScopes) {
       device.handle.pushErrorScope('validation');
@@ -416,6 +452,47 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       4,
       'progressive telemetry accumulates the requested samples per pixel'
     );
+    testCase.equal(
+      frameResources.colorHistory.previousTexture,
+      initialColorOutput,
+      'successful encoding rotates the current color into the next history role'
+    );
+    testCase.equal(
+      frameResources.colorHistory.currentTexture,
+      initialColorHistory,
+      'successful encoding reuses the previous color as the next output without copying'
+    );
+    testCase.equal(
+      frameResources.metadataHistory.previousTexture,
+      initialMetadataOutput,
+      'surface metadata rotates in lockstep with color history'
+    );
+    testCase.equal(
+      frameResources.metadataHistory.currentTexture,
+      initialMetadataHistory,
+      'surface metadata reuses its previous allocation without copying'
+    );
+
+    frameResources.phaseCount = 2;
+    frameResources.phaseIndex = 0;
+    const halfCoverageStatistics = renderer.render(options);
+    device.submit();
+    testCase.equal(
+      halfCoverageStatistics.rayTracing?.sampledPixelCoverage,
+      0.5,
+      'half-frame ray sampling preserves untouched pixels through compact history carry'
+    );
+    frameResources.phaseCount = 4;
+    frameResources.phaseIndex = 0;
+    const quarterCoverageStatistics = renderer.render(options);
+    device.submit();
+    testCase.equal(
+      quarterCoverageStatistics.rayTracing?.sampledPixelCoverage,
+      0.25,
+      'quarter-frame sampling carries every untouched pixel without full-frame copies'
+    );
+    frameResources.phaseCount = 1;
+    frameResources.phaseIndex = 0;
 
     const nonReprojectedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
@@ -565,10 +642,315 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
   testCase.end();
 });
 
+test('RayTracingSceneRenderer batches small mesh sorting while retaining large-mesh radix and sparse history', async testCase => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    testCase.comment('WebGPU is not available');
+    testCase.end();
+    return;
+  }
+
+  const surfaces = [1, 3, 4, 5, 257].map((triangleCount, surfaceIndex): SceneSurface => {
+    const positions = new Float32Array(triangleCount * 9);
+    const normals = new Float32Array(triangleCount * 9);
+    for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
+      const triangleOffset = triangleIndex * 9;
+      const horizontalOffset = (triangleIndex % 16) * 0.01;
+      positions.set(
+        [
+          -0.2 + horizontalOffset,
+          -0.2,
+          0,
+          0.2 + horizontalOffset,
+          -0.2,
+          0,
+          horizontalOffset,
+          0.2,
+          0
+        ],
+        triangleOffset
+      );
+      normals.set([0, 0, 1, 0, 0, 1, 0, 0, 1], triangleOffset);
+    }
+
+    return {
+      id: `segmented-mesh-surface-${surfaceIndex}`,
+      geometry: new Geometry({
+        id: `segmented-mesh-geometry-${surfaceIndex}`,
+        topology: 'triangle-list',
+        attributes: {
+          POSITION: {size: 3, value: positions},
+          NORMAL: {size: 3, value: normals}
+        }
+      }),
+      material: {
+        id: `segmented-mesh-material-${surfaceIndex}`,
+        uniforms: {baseColorFactor: [0.2 + surfaceIndex * 0.15, 0.55, 0.9, 1]}
+      },
+      transforms: [new Matrix4().translate([(surfaceIndex - 2) * 0.35, 0, 0])]
+    };
+  });
+  const options: RayTracingSceneRenderOptions = {
+    id: 'ray-tracing-segmented-mesh-history',
+    surfaces,
+    camera: {
+      viewMatrix: new Matrix4().lookAt({eye: [0, 0, 3], center: [0, 0, 0], up: [0, 1, 0]}),
+      projectionMatrix: new Matrix4().perspective({
+        fovy: Math.PI / 3,
+        aspect: 33 / 27,
+        near: 0.1,
+        far: 100
+      }),
+      position: [0, 0, 3]
+    },
+    lights: [{type: 'ambient', color: [1, 1, 1], intensity: 0.5}],
+    samplesPerPixel: 1,
+    progressive: true,
+    adaptiveResolution: false,
+    width: 33,
+    height: 27
+  };
+  const renderer = new RayTracingSceneRenderer(device);
+
+  try {
+    const initialStatistics = renderer.render(options);
+    device.submit();
+    const resources = getRayTracingFrameResources(renderer, options.id);
+    const segmentedSortNodes = resources.topologyGraph.stats.nodeOrder.filter(identifier =>
+      identifier.includes('blas-sort-triangle-morton-keys-bitonic-local-')
+    );
+    testCase.deepEqual(
+      segmentedSortNodes.map(identifier => Number(identifier.split('-').at(-1))),
+      [2, 4, 8],
+      'four independent mesh permutations share three width-bucketed segmented sort dispatches'
+    );
+    const segmentedHierarchyNodes = resources.topologyGraph.stats.nodeOrder.filter(identifier =>
+      identifier.includes('blas-bvh-fused-refit-')
+    );
+    testCase.deepEqual(
+      segmentedHierarchyNodes.map(identifier => Number(identifier.split('-').at(-1))),
+      [1, 4, 8],
+      'four independent small mesh hierarchies share three leaf-capacity-bucketed BVH dispatches'
+    );
+    testCase.ok(
+      resources.topologyGraph.stats.nodeOrder.some(identifier =>
+        identifier.includes('blas-4-sort-triangle-morton-keys-radix-digit-0-histogram')
+      ),
+      'meshes exceeding one workgroup retain the independent four-bit radix fallback'
+    );
+    testCase.equal(initialStatistics.instanceCount, 5, 'all independently sorted meshes render');
+    testCase.equal(
+      initialStatistics.triangleCount,
+      270,
+      'segmented and radix sorting preserve every mesh'
+    );
+
+    const firstColorHistory = resources.colorHistory.previousTexture;
+    resources.phaseCount = 2;
+    resources.phaseIndex = 1;
+    const halfCoverage = renderer.render(options);
+    device.submit();
+    testCase.equal(
+      halfCoverage.rayTracing?.sampledPixelCoverage,
+      0.5,
+      'odd-sized half-phase rendering carries the complementary retained pixels'
+    );
+    testCase.notEqual(
+      resources.colorHistory.previousTexture,
+      firstColorHistory,
+      'half-phase output rotates into retained history without a texture copy'
+    );
+
+    resources.phaseCount = 4;
+    resources.phaseIndex = 3;
+    const quarterCoverage = renderer.render(options);
+    device.submit();
+    testCase.equal(
+      quarterCoverage.rayTracing?.sampledPixelCoverage,
+      0.25,
+      'odd-sized quarter-phase rendering carries every non-selected pixel'
+    );
+    testCase.equal(
+      resources.colorHistory.previousTexture,
+      firstColorHistory,
+      'two successful sparse encodings return to the original retained history allocation'
+    );
+  } finally {
+    renderer.destroy();
+  }
+
+  testCase.end();
+});
+
+test('RayTracingSceneRenderer uploads only committed dirty placement transforms', async testCase => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    testCase.comment('WebGPU is not available');
+    testCase.end();
+    return;
+  }
+
+  const transforms = Array.from({length: 8}, (_, index) =>
+    new Matrix4().translate([(index - 4) * 0.25, 0, 0])
+  );
+  const instanceIds = transforms.map((_, index) => `dirty-placement-${index}`);
+  const surface: SceneSurface = {
+    id: 'dirty-placement-surface',
+    geometry: new Geometry({
+      topology: 'triangle-list',
+      attributes: {
+        POSITION: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, 0, 1, 0])},
+        NORMAL: {size: 3, value: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])}
+      }
+    }),
+    material: {
+      id: 'dirty-placement-material',
+      uniforms: {baseColorFactor: [0.8, 0.45, 0.2, 1]}
+    },
+    transforms,
+    instanceIds
+  };
+  const revisions: NonNullable<RayTracingSceneRenderOptions['sceneRevisions']> = {
+    identity: 'dirty-placement-world',
+    topology: 0,
+    transforms: 0,
+    materials: 0,
+    lights: 0
+  };
+  const options: RayTracingSceneRenderOptions = {
+    id: 'ray-tracing-dirty-placement-transforms',
+    surfaces: [surface],
+    sceneRevisions: revisions,
+    primitives: {[surface.id]: {type: 'sphere', radius: 0.08}},
+    camera: {
+      viewMatrix: new Matrix4().lookAt({eye: [0, 0, 3], center: [0, 0, 0], up: [0, 1, 0]}),
+      projectionMatrix: new Matrix4().perspective({
+        fovy: Math.PI / 3,
+        aspect: 1,
+        near: 0.1,
+        far: 100
+      }),
+      position: [0, 0, 3]
+    },
+    lights: [{type: 'ambient', color: [1, 1, 1], intensity: 0.5}],
+    samplesPerPixel: 1,
+    progressive: true,
+    adaptiveResolution: false,
+    width: 16,
+    height: 16
+  };
+  const renderer = new RayTracingSceneRenderer(device);
+
+  try {
+    renderer.render(options);
+    device.submit();
+    const resources = getRayTracingFrameResources(renderer, options.id);
+    const primitiveBuffer: {
+      write(data: ArrayBufferView, byteOffset?: number): void;
+    } = Reflect.get(resources, 'primitiveBuffer');
+    const originalWrite = primitiveBuffer.write.bind(primitiveBuffer);
+    const writes: {byteOffset: number; values: Float32Array}[] = [];
+    primitiveBuffer.write = (data, byteOffset = 0) => {
+      writes.push({
+        byteOffset,
+        values: new Float32Array(
+          data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+        )
+      });
+      originalWrite(data, byteOffset);
+    };
+
+    const previousThirdTranslation = transforms[3][12];
+    transforms[3] = new Matrix4().translate([0.9, 0.25, 0]);
+    revisions.transforms++;
+    revisions.dirtyInstanceIds = [instanceIds[3]];
+    renderer.render(options);
+    device.submit();
+    testCase.deepEqual(
+      writes.map(write => [write.byteOffset, write.values.byteLength]),
+      [
+        [3 * 68 * Float32Array.BYTES_PER_ELEMENT, 32 * Float32Array.BYTES_PER_ELEMENT],
+        [(3 * 68 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
+      ],
+      'one committed placement writes only its current/inverse matrices and previous motion matrix'
+    );
+    testCase.equal(
+      writes[0].values[12],
+      Math.fround(0.9),
+      'the current sparse transform is packed'
+    );
+    testCase.equal(
+      writes[1].values[12],
+      Math.fround(previousThirdTranslation),
+      'the previous sparse transform preserves the exact prior placement'
+    );
+
+    writes.length = 0;
+    transforms[5] = new Matrix4().translate([1.25, 0, 0]);
+    revisions.transforms++;
+    revisions.dirtyInstanceIds = [instanceIds[5]];
+    renderer.render(options);
+    device.submit();
+    testCase.deepEqual(
+      writes.map(write => write.values.byteLength),
+      [16, 32, 16].map(floatCount => floatCount * Float32Array.BYTES_PER_ELEMENT),
+      'the next sparse placement commits the prior row without repacking unchanged instances'
+    );
+
+    writes.length = 0;
+    renderer.render(options);
+    device.submit();
+    testCase.deepEqual(
+      writes.map(write => [write.byteOffset, write.values.byteLength]),
+      [[(5 * 68 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]],
+      'the following unchanged frame commits only the pending previous-motion matrix'
+    );
+    testCase.notOk(resources.previousTransformsNeedCommit, 'no previous transforms remain pending');
+
+    writes.length = 0;
+    const freshSurface = {...surface, transforms: [...transforms], instanceIds: [...instanceIds]};
+    freshSurface.transforms[1] = new Matrix4().translate([-0.3, 0.2, 0]);
+    revisions.transforms++;
+    revisions.dirtyInstanceIds = [instanceIds[1]];
+    const freshOptions = {...options, surfaces: [freshSurface]};
+    renderer.render(freshOptions);
+    device.submit();
+    testCase.deepEqual(
+      writes.map(write => write.values.byteLength),
+      [8 * 68 * Float32Array.BYTES_PER_ELEMENT],
+      'fresh scene descriptor arrays conservatively fall back to a complete primitive upload'
+    );
+
+    writes.length = 0;
+    const replacementSurface = {
+      ...freshSurface,
+      transforms: [...freshSurface.transforms],
+      instanceIds: [...instanceIds]
+    };
+    replacementSurface.transforms[2] = new Matrix4().translate([0.6, -0.1, 0]);
+    freshOptions.surfaces[0] = replacementSurface;
+    revisions.transforms++;
+    revisions.dirtyInstanceIds = [instanceIds[2]];
+    renderer.render(freshOptions);
+    device.submit();
+    testCase.deepEqual(
+      writes.map(write => write.values.byteLength),
+      [8 * 68 * Float32Array.BYTES_PER_ELEMENT],
+      'in-place descriptor replacement never reuses a stale retained placement reference'
+    );
+  } finally {
+    renderer.destroy();
+  }
+
+  testCase.end();
+});
+
 type InspectableCompiledGraph = {
   stats: {
     nodeOrder: string[];
     importedBufferCount: number;
+    importedTextureCount: number;
+    logicalTransientTextureCount: number;
   };
 };
 
@@ -580,6 +962,10 @@ type InspectableRayTracingFrameResources = {
   topologyNeedsUpdate: boolean;
   previousTransformsNeedCommit: boolean;
   refitsSinceMortonRebuild: number;
+  phaseCount: number;
+  phaseIndex: number;
+  colorHistory: {previousTexture: object; currentTexture: object};
+  metadataHistory: {previousTexture: object; currentTexture: object};
 };
 
 function getRayTracingFrameResources(

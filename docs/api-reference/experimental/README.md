@@ -46,15 +46,22 @@ rays and early-exit shadows. Transform-only animation gathers updated bounds thr
 permutation and refits without sorting; topology changes and periodic spatial refreshes rebuild the
 Morton order. A topology-only graph Morton-sorts each mesh's triangles into GPU-built BLASes, which
 transform-only updates reuse. The general-purpose graph sorter fuses inputs of up to 256 rows into
-one workgroup and uses stable four-bit radix passes for larger inputs; small BVHs likewise build
-and refit in one workgroup. Consecutive compute nodes automatically share a compute pass when
-per-node GPU timestamp profiling is inactive. `RayTracingSceneRenderOptions` add analytic sphere metadata,
+one workgroup and uses stable four-bit radix passes for larger inputs; `GPUSegmentedSort` and
+`GPUSegmentedBVH` group many small packed mesh permutations and hierarchies into at most eight
+dispatches each. Traversal caches inverse ray directions and queued box-entry distances
+without changing visibility or temporal jitter. Consecutive compute nodes automatically share a
+compute pass when per-node GPU timestamp profiling is inactive. `RayTracingSceneRenderOptions` add
+analytic sphere metadata,
 perspective/orthographic camera selection, adaptive half-resolution rendering, interleaved pixel
 phases, retained-identity temporal reprojection, bounded rotating shadow samples, progressive
-accumulation, and upsampled HDR presentation. The default `0.5` resolution scale can decrease to
+accumulation, and upsampled HDR presentation. Reusable `GPUTextureHistory` pairs rotate color and
+metadata graph bindings without full-frame copies; sparse phases carry only untouched pixels. The
+default `0.5` resolution scale can decrease to
 `0.25` toward a `33.3` millisecond smoothed animation-frame budget; GPU timestamp queries are not
 required. Acceleration passes run only when geometry or instance transforms change. Shared scene
-statistics optionally expose internal dimensions, effective scale, sampled-pixel coverage, frame
+adapters can provide categorized committed-scene revisions so camera-only frames avoid repeatedly
+serializing every instance transform, material, and light.
+Shared scene statistics optionally expose internal dimensions, effective scale, sampled-pixel coverage, frame
 timing, and accumulated samples. The ray pass uses exactly eight storage buffers, and every TLAS or
 BLAS construction pass fits the default WebGPU CORE limit of eight storage buffers. Applications
 retain command-submission ownership.
