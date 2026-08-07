@@ -331,6 +331,7 @@
           "api-reference/gltf/gltf-materials",
           "api-reference/gltf/gltf-native-extensions",
           "api-reference/gltf/gltf-animation",
+          "api-reference/gltf/gltf-animated-crowd",
           "api-reference/gltf/gltf-interchange",
           "api-reference/gltf/gltf-extensions"
         ]

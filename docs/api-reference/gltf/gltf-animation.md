@@ -95,6 +95,9 @@ See the [engine animation guide](/docs/api-guide/engine/animation) and
 [AnimationMixer API reference](/docs/api-reference/engine/animation/animation-mixer) for pause,
 seek, reverse playback, once/repeat/ping-pong loops, weighted blending, and crossfading.
 
+To share GPU models across independently posed actors, see
+[GPU-animated glTF crowds](/docs/api-reference/gltf/gltf-animated-crowd).
+
 ## Supported channels and interpolation
 
 | Source channel | Runtime target |

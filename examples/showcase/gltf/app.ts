@@ -20,6 +20,7 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import GLTFCatalogApp, {
+  GLTF_CROWD_INFO_ID,
   GLTF_MODEL_INFO_ID,
   saveOptions,
   type GLTFCatalogModel,
@@ -89,12 +90,13 @@ void main(void) {
 `;
 
 const GLTF_DESCRIPTION_HTML = `\
-<p>Browse production-quality glTF sample assets with interactive camera and animation controls.</p>
+<p>Explore animated glTF characters, skeletal rigs, and expressive motion.</p>
 <div id="loading-state" class="gltf-loading-indicator" hidden>
   <span class="gltf-loading-spinner" aria-hidden="true"></span>
 </div>
 <p style="margin-top: 8px;">Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
 <div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
+<div id="${GLTF_CROWD_INFO_ID}" style="margin-top: 8px;" hidden></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="extension-support" style="margin-top: 12px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
@@ -138,11 +140,11 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   getDefaultModelName(): string {
-    return 'DamagedHelmet';
+    return 'RobotExpressive';
   }
 
   getModelStorageKey(): string {
-    return 'showcase-last-gltf-model-v2';
+    return 'showcase-last-gltf-model-v3';
   }
 
   getClearColor(): [number, number, number, number] {
@@ -266,6 +268,7 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     return {
       extensionName: this.extensionName,
       modelValue: this.selectedModelValue || LOADING_MODEL_VALUE,
+      instanceCount: this.getAnimationInstanceCount(),
       useModelLights: this.options['useModelLights'],
       cameraAnimation: this.options['cameraAnimation'],
       gltfAnimation: this.options['gltfAnimation']
@@ -292,6 +295,11 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     const modelValue = getChangedSetting(changedSettings, 'modelValue')?.nextValue;
     if (typeof modelValue === 'string') {
       this.selectModel(modelValue);
+      return;
+    }
+    const instanceCount = getChangedSetting(changedSettings, 'instanceCount')?.nextValue;
+    if (typeof instanceCount === 'number') {
+      this.setAnimationInstanceCount(instanceCount);
       return;
     }
     for (const optionName of ['useModelLights', 'cameraAnimation', 'gltfAnimation'] as const) {
@@ -417,6 +425,7 @@ function encodeModelOption(modelOption: GLTFModelReference): string {
 type GltfSettingsState = {
   extensionName: string;
   modelValue: string;
+  instanceCount: number;
   useModelLights: boolean;
   cameraAnimation: boolean;
   gltfAnimation: boolean;
@@ -469,6 +478,16 @@ export function makeGltfSettingsSchema(
         name: 'Animation',
         initiallyCollapsed: false,
         settings: [
+          {
+            name: 'instanceCount',
+            label: 'GPU Crowd Actors',
+            type: 'number',
+            persist: 'none',
+            min: 1,
+            max: 100,
+            step: 1,
+            sliderDebounceMs: 120
+          },
           {
             name: 'useModelLights',
             label: 'Use Model Lights',

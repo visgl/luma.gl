@@ -5,6 +5,7 @@
 import './webgl-to-webgpu/convert-webgl-sampler.spec';
 
 import './gltf/gltf-animator.spec';
+import './gltf/gltf-animated-crowd.spec';
 import './gltf/gltf.spec';
 import './gltf/gltf-extension-support.spec';
 import './gltf/lights.spec';
