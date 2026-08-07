@@ -35,6 +35,15 @@ type CapabilityTable = {
   sourceOffset: number;
 };
 
+type CapabilityRow = {
+  heading: string;
+  feature: string;
+  status: string;
+  backend: string;
+  packageName: string;
+  details: string;
+};
+
 describe('framework capabilities documentation', () => {
   test('introduces an official, noncomparative capabilities page', () => {
     expect(existsSync(CAPABILITIES_SOURCE_PATH)).toBe(true);
@@ -156,6 +165,293 @@ describe('framework capabilities documentation', () => {
         `The leading data/compute matrices must explain ${capability}`
       ).toMatch(capability);
     }
+  });
+
+  test('documents implemented GPU dataframe, graph, and raster analytics in dedicated feature matrices', () => {
+    const capabilitiesSource = readCapabilitiesSource();
+    const capabilityTables = readCapabilityTables(capabilitiesSource);
+    const capabilityRows = readDetailedCapabilityRows(capabilitiesSource);
+
+    for (const {heading, packageName, capabilities, minimumRowCount} of [
+      {
+        heading: /GPU dataframe analytics/i,
+        packageName: '@luma.gl/experimental/ludf',
+        minimumRowCount: 7,
+        capabilities: [
+          /LuDataFrame/i,
+          /filter|predicate/i,
+          /derived|expression/i,
+          /null|validity/i,
+          /(?:dense|categorical)[\s\S]{0,100}group|group[\s\S]{0,100}(?:dense|categorical)/i,
+          /global[\s\S]{0,60}(?:reduction|aggregat)|(?:reduction|aggregat)[\s\S]{0,60}global/i,
+          /histogram/i,
+          /sort/i,
+          /top[\s-]*k/i,
+          /inner[\s-]*join|innerJoin/i,
+          /lookup/i,
+          /batch[\s\S]{0,100}(?:join|lookup)|(?:join|lookup)[\s\S]{0,100}batch/i,
+          /batch|chunk/i
+        ]
+      },
+      {
+        heading: /GPU graph analytics and layout/i,
+        packageName: '@luma.gl/experimental/lugraph',
+        minimumRowCount: 5,
+        capabilities: [
+          /LuGraph/i,
+          /\bCSR\b|compressed[\s-]+sparse/i,
+          /breadth[\s-]+first|\bBFS\b/i,
+          /connected[\s-]+components/i,
+          /label[\s-]+propagation|communit/i,
+          /PageRank/i,
+          /force[\s-]+(?:directed|layout)/i,
+          /spatial/i
+        ]
+      },
+      {
+        heading: /GPU raster and satellite analysis/i,
+        packageName: '@luma.gl/experimental/luraster',
+        minimumRowCount: 7,
+        capabilities: [
+          /GPURaster/i,
+          /band[\s-]+math/i,
+          /\bNDVI\b/i,
+          /histogram/i,
+          /Otsu|threshold/i,
+          /convolution|Gaussian|blur|smoothing/i,
+          /contour/i,
+          /Sobel|Scharr|Laplacian|gradient/i,
+          /morpholog/i,
+          /dilat/i,
+          /erosion|erod/i,
+          /opening/i,
+          /closing/i,
+          /nodata|no[\s-]+data|validity/i,
+          /GPURasterTileCache|tile[\s-]+(?:cache|residen)/i,
+          /lease|pin|fence/i,
+          /compiled[\s\S]{0,60}graph[\s\S]{0,60}reus|graph[\s\S]{0,60}reus/i
+        ]
+      }
+    ]) {
+      const capabilityTable = capabilityTables.find(table => heading.test(table.heading));
+      const familyRows = capabilityRows.filter(
+        row => heading.test(row.heading) && row.packageName.includes(packageName)
+      );
+      const familyCapabilities = familyRows.map(row => `${row.feature} ${row.details}`).join('\n');
+
+      expect(capabilityTable, `${packageName} needs its own feature matrix`).toBeDefined();
+      expect(
+        familyRows.length,
+        `${packageName} must document its individual implemented capabilities`
+      ).toBeGreaterThanOrEqual(minimumRowCount);
+
+      for (const row of familyRows) {
+        expect(row.status, `${row.feature} lives in a private package`).toBe('Experimental');
+        expect(row.backend, `${row.feature} currently requires WebGPU`).toBe('WebGPU');
+      }
+
+      for (const capability of capabilities) {
+        expect(
+          familyCapabilities,
+          `${packageName} must document its implemented ${capability} capability`
+        ).toMatch(capability);
+      }
+    }
+  });
+
+  test('documents renderer-independent Arrow analytics ingestion and its GPU data contracts', () => {
+    const arrowRows = readDetailedCapabilityRows(readCapabilitiesSource()).filter(
+      row =>
+        /Apache Arrow, geometry, and text/i.test(row.heading) &&
+        row.packageName.includes('@luma.gl/arrow')
+    );
+    const analyticsRows = arrowRows.filter(row =>
+      /analytics|renderer[\s-]+independent/i.test(`${row.feature} ${row.details}`)
+    );
+    const analyticsCapabilities = analyticsRows
+      .map(row => `${row.feature} ${row.details}`)
+      .join('\n');
+
+    expect(
+      analyticsRows.length,
+      'Renderer-independent Arrow analytics uploads need dedicated feature coverage'
+    ).toBeGreaterThan(0);
+
+    for (const row of analyticsRows) {
+      expect(row.status, `${row.feature} lives in a private adapter`).toBe('Experimental');
+      expect(row.backend, `${row.feature} requires storage-capable GPU resources`).toBe('WebGPU');
+    }
+
+    for (const capability of [
+      /renderer[\s-]+independent/i,
+      /batch|chunk/i,
+      /validity|null/i,
+      /categorical|dictionary/i
+    ]) {
+      expect(
+        analyticsCapabilities,
+        `Arrow analytics ingestion must preserve ${capability}`
+      ).toMatch(capability);
+    }
+  });
+
+  test('recognizes implemented glTF materials, native extensions, and retained-scene skeletal animation', () => {
+    const capabilityRows = readDetailedCapabilityRows(readCapabilitiesSource());
+
+    for (const {feature, status, packageName, implementation} of [
+      {
+        feature: 'Authored PBR texture slots',
+        status: 'Available',
+        packageName: '@luma.gl/gltf',
+        implementation: /\b21\b[\s\S]{0,50}texture\s+slots/i
+      },
+      {
+        feature: 'Native material variants',
+        status: 'Available',
+        packageName: '@luma.gl/gltf',
+        implementation: /KHR_materials_variants/
+      },
+      {
+        feature: 'Typed animation pointers',
+        status: 'Available',
+        packageName: '@luma.gl/gltf',
+        implementation: /KHR_animation_pointer[\s\S]{0,150}cameras?[\s\S]{0,40}lights?/i
+      },
+      {
+        feature: 'Imported GPU instancing',
+        status: 'Available',
+        packageName: '@luma.gl/gltf',
+        implementation: /EXT_mesh_gpu_instancing/
+      },
+      {
+        feature: 'Imported node visibility',
+        status: 'Available',
+        packageName: '@luma.gl/gltf',
+        implementation: /KHR_node_visibility/
+      },
+      {
+        feature: 'Independently animated GPU crowds',
+        status: 'Available',
+        packageName: '@luma.gl/gltf',
+        implementation: /createGLTFAnimatedCrowd[\s\S]{0,120}actor/i
+      },
+      {
+        feature: 'Scene-level skeletal animation',
+        status: 'Experimental',
+        packageName: '@luma.gl/anari',
+        implementation: /automatic|joint|palette|skin/i
+      }
+    ]) {
+      const capabilityRow = capabilityRows.find(row => row.feature === feature);
+
+      expect(capabilityRow, `${feature} is implemented and needs a feature row`).toBeDefined();
+      expect(capabilityRow!.status, `${feature} must not be presented as future work`).toBe(status);
+      expect(capabilityRow!.backend, `${feature} supports both graphics backends`).toBe(
+        'WebGPU + WebGL2'
+      );
+      expect(capabilityRow!.packageName).toContain(packageName);
+      expect(capabilityRow!.details).toMatch(implementation);
+    }
+  });
+
+  test('documents reusable chunked GPU routing as an implemented WebGPU primitive', () => {
+    const scatterRow = readDetailedCapabilityRows(readCapabilitiesSource()).find(
+      row => row.feature === 'Chunked indexed scatter'
+    );
+
+    expect(
+      scatterRow,
+      'Chunked indexed scatter is available in the experimental graph'
+    ).toBeDefined();
+    expect(scatterRow!.status).toBe('Experimental');
+    expect(scatterRow!.backend).toBe('WebGPU');
+    expect(scatterRow!.packageName).toContain('@luma.gl/experimental');
+    expect(scatterRow!.details).toMatch(/GPUChunkedIndexedScatter/);
+    expect(scatterRow!.details).toMatch(/chunk/i);
+    expect(scatterRow!.details).toMatch(/indirect/i);
+  });
+
+  test('recognizes implemented portable Gaussian-splat interaction and bounded residency', () => {
+    const capabilitiesSource = readCapabilitiesSource();
+    const splatRows = readDetailedCapabilityRows(capabilitiesSource).filter(row =>
+      /Gaussian splats and captured-scene rendering/i.test(row.heading)
+    );
+
+    for (const {feature, implementation} of [
+      {
+        feature: 'View-dependent harmonics',
+        implementation: /degree[\s-]+one[\s\S]{0,40}degree[\s-]+three/i
+      },
+      {feature: 'Dedicated splat picking', implementation: /pick|semantic|row/i},
+      {feature: 'Semantic splat filtering', implementation: /include|exclude|predicate/i},
+      {feature: 'Dynamic splat updates', implementation: /update/i},
+      {feature: 'Mixed mesh and splat rendering', implementation: /mesh|opaque|transparent/i},
+      {feature: 'Bounded splat residency', implementation: /evict|budget|prioriti/i}
+    ]) {
+      const splatRow = splatRows.find(row => row.feature === feature);
+
+      expect(splatRow, `${feature} is implemented and must not be labeled a gap`).toBeDefined();
+      expect(splatRow!.status).toBe('Experimental');
+      expect(splatRow!.backend).toBe('WebGPU + WebGL2');
+      expect(splatRow!.packageName).toContain('@luma.gl/splats');
+      expect(splatRow!.details).toMatch(implementation);
+    }
+
+    expect(capabilitiesSource).toMatch(/SplatRenderer[\s\S]{0,200}GPUSplatGraphRenderer/i);
+    expect(capabilitiesSource).not.toMatch(
+      /\|\s*(?:View-dependent harmonics|Dedicated splat picking)\s*\|\s*Opportunity\s*\|/i
+    );
+  });
+
+  test('distinguishes implemented WebGPU ray tracing from future multi-bounce path tracing', () => {
+    const capabilitiesSource = readCapabilitiesSource();
+    const rayTracingRows = readDetailedCapabilityRows(capabilitiesSource).filter(row =>
+      /GPU ray tracing and progressive rendering/i.test(row.heading)
+    );
+    const implementedRows = rayTracingRows.filter(row => !/opportunity/i.test(row.status));
+    const implementedRayTracing = implementedRows
+      .map(row => `${row.feature} ${row.details}`)
+      .join('\n');
+    const multiBounceRow = rayTracingRows.find(row =>
+      /multi[\s-]+bounce[\s\S]{0,40}path[\s-]+trac/i.test(row.feature)
+    );
+
+    expect(
+      implementedRows.length,
+      'Current WebGPU ray-tracing capabilities need independently inspectable feature rows'
+    ).toBeGreaterThanOrEqual(4);
+
+    for (const row of implementedRows) {
+      expect(row.status, `${row.feature} lives in a private package`).toBe('Experimental');
+      expect(row.backend, `${row.feature} currently requires WebGPU`).toBe('WebGPU');
+      expect(row.packageName).toMatch(/@luma\.gl\/(?:experimental|anari)/);
+    }
+
+    for (const capability of [
+      /ray[\s-]+trac/i,
+      /\bBVH\b|bounding[\s-]+volume/i,
+      /\bTLAS\b|top[\s-]+level[\s\S]{0,50}accelerat/i,
+      /\bBLAS\b|bottom[\s-]+level[\s\S]{0,50}accelerat/i,
+      /Morton/i,
+      /direct[\s-]+light|shadow[\s-]+ray/i,
+      /progressive|accumulat/i,
+      /resolution|adaptive|budget/i
+    ]) {
+      expect(
+        implementedRayTracing,
+        `The implemented ray-tracing matrix must explain ${capability}`
+      ).toMatch(capability);
+    }
+
+    expect(multiBounceRow, 'Multi-bounce path tracing remains a genuine limitation').toBeDefined();
+    expect(multiBounceRow!.status).toBe('Opportunity');
+    expect(multiBounceRow!.backend).toBe('WebGPU');
+    expect(capabilitiesSource).not.toMatch(
+      /general\s+ray\s+traversal[\s\S]{0,100}(?:not|never)\s+implemented/i
+    );
+    expect(capabilitiesSource).not.toMatch(
+      /\|\s*Triangle[\s-]+level[\s\S]{0,80}\|\s*Opportunity\s*\|/i
+    );
   });
 
   test('keeps backend requirements and private-package maturity visible on the affected feature rows', () => {
@@ -429,6 +725,12 @@ describe('framework capabilities documentation', () => {
   test('frames future opportunities around massive data, GPU computation, and visualization', () => {
     const capabilitiesSource = readCapabilitiesSource();
     const opportunitiesOffset = capabilitiesSource.indexOf(DATA_OPPORTUNITIES_HEADING);
+    const dataframeJoinOpportunities = readDetailedCapabilityRows(capabilitiesSource).filter(
+      row =>
+        /opportunity/i.test(row.status) &&
+        row.packageName.includes('@luma.gl/experimental/ludf') &&
+        /join/i.test(`${row.feature} ${row.details}`)
+    );
 
     expect(opportunitiesOffset).toBeGreaterThan(
       capabilitiesSource.indexOf(RENDERING_CAPABILITIES_HEADING)
@@ -449,6 +751,17 @@ describe('framework capabilities documentation', () => {
         opportunities,
         `The roadmap must prioritize data-intensive visualization: ${opportunity}`
       ).toMatch(opportunity);
+    }
+
+    expect(opportunities).not.toMatch(
+      /(?:expand|add|introduce|implement)\s+(?:group(?:ed|ing|By)\s+(?:queries|aggregation)|(?:stable\s+)?sort(?:ing|s)?|top[\s-]*k)/i
+    );
+
+    for (const opportunity of dataframeJoinOpportunities) {
+      expect(
+        `${opportunity.feature} ${opportunity.details}`,
+        'Dataframe join opportunities must describe limitations beyond existing inner joins'
+      ).toMatch(/advanced|non[\s-]*unique|outer|multi[\s-]*key/i);
     }
   });
 
@@ -546,6 +859,19 @@ function readCapabilityTables(capabilitiesSource: string): CapabilityTable[] {
   }
 
   return capabilityTables;
+}
+
+function readDetailedCapabilityRows(capabilitiesSource: string): CapabilityRow[] {
+  return readCapabilityTables(capabilitiesSource).flatMap(table =>
+    table.rows.map(row => ({
+      heading: table.heading,
+      feature: row[table.headers.indexOf('feature')],
+      status: row[table.headers.indexOf('status')],
+      backend: row[table.headers.indexOf('backend')],
+      packageName: row[table.headers.indexOf('package')],
+      details: row[table.headers.indexOf('details')]
+    }))
+  );
 }
 
 function isTableSeparator(sourceLine: string): boolean {
