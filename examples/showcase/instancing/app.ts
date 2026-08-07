@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, Device} from '@luma.gl/core';
+import {Buffer, Device, log} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -13,7 +13,6 @@ import {
   ShaderInputs,
   makeRandomGenerator,
   PickingManager,
-  supportsIndexPicking,
   picking,
   colorPicking,
   indexPicking
@@ -129,6 +128,17 @@ fn fragmentPicking(inputs: FragmentInputs) -> PickingFragmentOutputs {
 
 // GLSL
 
+const APP_UNIFORMS_GLSL = /* glsl */ `\
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  float geometryScale;
+  float time;
+  float highDynamicRange;
+} app;
+`;
+
 const VS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
@@ -140,14 +150,7 @@ in vec3 normals;
 in vec2 instanceOffsets;
 in vec3 instanceColors;
 
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 viewMatrix;
-  mat4 projectionMatrix;
-  float geometryScale;
-  float time;
-  float highDynamicRange;
-} app;
+${APP_UNIFORMS_GLSL}
 
 out vec3 color;
 out float crestEnergy;
@@ -175,6 +178,8 @@ const FS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 precision highp int;
+
+${APP_UNIFORMS_GLSL}
 
 in vec3 color;
 in float crestEnergy;
@@ -402,7 +407,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.picker = new PickingManager(device, {
       shaderInputs: this.shaderInputs,
-      mode: 'auto'
+      mode: device.type === 'webgpu' ? 'index' : 'color'
     });
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'showcase-instancing-settings',
@@ -478,7 +483,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     pickingPass.end();
 
     this.shaderInputs.setProps({picking: {isActive: false}});
-    this.picker.updatePickInfo(mousePosition as [number, number]);
+    // WebGPU readback submits its own encoder, so let the animation loop submit the pick first.
+    void Promise.resolve()
+      .then(() => this.picker.updatePickInfo(mousePosition as [number, number]))
+      .catch(error => {
+        log.error('Instancing pick readback failed', error)();
+      });
   }
 
   createCube(): InstancedCube {
@@ -489,7 +499,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   createPickingCube(): Model | null {
-    if (!supportsIndexPicking(this.device)) {
+    if (this.device.type !== 'webgpu') {
       return null;
     }
 
