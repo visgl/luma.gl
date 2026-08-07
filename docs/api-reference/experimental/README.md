@@ -46,15 +46,22 @@ rays and early-exit shadows. Transform-only animation gathers updated bounds thr
 permutation and refits without sorting; topology changes and periodic spatial refreshes rebuild the
 Morton order. A topology-only graph Morton-sorts each mesh's triangles into GPU-built BLASes, which
 transform-only updates reuse. The general-purpose graph sorter fuses inputs of up to 256 rows into
-one workgroup and uses stable four-bit radix passes for larger inputs; small BVHs likewise build
-and refit in one workgroup. Consecutive compute nodes automatically share a compute pass when
-per-node GPU timestamp profiling is inactive. `RayTracingSceneRenderOptions` add analytic sphere metadata,
+one workgroup and uses stable four-bit radix passes for larger inputs; `GPUSegmentedSort` and
+`GPUSegmentedBVH` group many small packed mesh permutations and hierarchies into at most eight
+dispatches each. Traversal caches inverse ray directions and queued box-entry distances
+without changing visibility or temporal jitter. Consecutive compute nodes automatically share a
+compute pass when per-node GPU timestamp profiling is inactive. `RayTracingSceneRenderOptions` add
+analytic sphere metadata,
 perspective/orthographic camera selection, adaptive half-resolution rendering, interleaved pixel
 phases, retained-identity temporal reprojection, bounded rotating shadow samples, progressive
-accumulation, and upsampled HDR presentation. The default `0.5` resolution scale can decrease to
+accumulation, and upsampled HDR presentation. Reusable `GPUTextureHistory` pairs rotate color and
+metadata graph bindings without full-frame copies; sparse phases carry only untouched pixels. The
+default `0.5` resolution scale can decrease to
 `0.25` toward a `33.3` millisecond smoothed animation-frame budget; GPU timestamp queries are not
 required. Acceleration passes run only when geometry or instance transforms change. Shared scene
-statistics optionally expose internal dimensions, effective scale, sampled-pixel coverage, frame
+adapters can provide categorized committed-scene revisions so camera-only frames avoid repeatedly
+serializing every instance transform, material, and light.
+Shared scene statistics optionally expose internal dimensions, effective scale, sampled-pixel coverage, frame
 timing, and accumulated samples. The ray pass uses exactly eight storage buffers, and every TLAS or
 BLAS construction pass fits the default WebGPU CORE limit of eight storage buffers. Applications
 retain command-submission ownership.
@@ -144,14 +151,20 @@ visibility, flat scenes, and indirect rendering without adding trace concepts to
 [`@luma.gl/experimental/lugraph`](/docs/api-reference/experimental/lugraph) turns existing GPU
 edge columns into reusable compressed adjacency, vertex degrees, unweighted and nonnegative
 weighted shortest paths, weakly connected components, label-propagation communities, local
-clustering coefficients, and dangling-aware PageRank scores. Social networks, dependency graphs,
-transaction investigations, and infrastructure maps can compose those operations into one WebGPU
-command graph without copying source batches or reading complete results back to JavaScript.
+clustering coefficients, durable core numbers, community modularity scores, and dangling-aware
+PageRank scores. Social networks, dependency graphs, transaction investigations, and
+infrastructure maps can compose those operations into one WebGPU command graph without copying
+source batches or reading complete results back to JavaScript.
 The [interactive graph explorer](/examples/experimental/lugraph-explorer) adds directly renderable
 exact force-layout coordinates, neighborhood highlighting, stable GPU picking, dragging, and pinning.
 An opt-in live benchmark compares nine actual CPU and WebGPU graph workloads across five graph
-families, covering all six Graphalytics workload families while reporting command encoding,
-completion fences, setup costs, and layout accuracy.
+families, covering all six
+[LDBC Graphalytics algorithm families](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/)
+defined by the [Graph Data Council (GDC)](https://ldbcouncil.org/) while reporting command
+encoding, completion fences, setup costs, and layout accuracy. The council was formerly the Linked
+Data Benchmark Council (LDBC); its benchmark name remains LDBC Graphalytics. Core numbers and
+modularity extend beyond those six families. Feature coverage and the local benchmark do not
+claim an official submission, certification, or published result.
 
 ## GPU-Resident Dataframes
 

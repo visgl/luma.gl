@@ -13,8 +13,10 @@ import {
   TRACE_BENCHMARK_SCENARIOS
 } from '../../examples/experimental/gpu-trace-viewer/trace-benchmark';
 import {
+  getMaximumTraceAdjacencyByteLength,
   getTraceCapacityOptions,
   getTraceDependencyCapacityOptions,
+  getTraceFocusFrontierCapacity,
   isTraceDensityMode,
   makeTraceDataset,
   makeTraceDependencyBatches,
@@ -34,7 +36,8 @@ import {
   TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
   TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_THREAD_COUNT,
-  TRACE_THREADS_PER_PROCESS
+  TRACE_THREADS_PER_PROCESS,
+  type TraceAdjacencyData
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
 import {
   getBatchVisibilityShader,
@@ -50,6 +53,7 @@ import {
   getFocusFrontierDispatchShader,
   getFocusFrontierExpansionShader,
   getFocusFrontierSeedShader,
+  getFocusReachabilityClearShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -109,6 +113,25 @@ test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t =>
     getTraceCapacityOptions(1024 * 1024 * 1024, 1024 * 1024 * 1024),
     [250_000, 1_000_000, 4_000_000, 10_000_000],
     'maximum adapters expose the ten-million-span demonstration'
+  );
+  t.end();
+});
+
+test('GPU trace focus frontiers scale with reachable dependency population', t => {
+  t.equal(
+    getTraceFocusFrontierCapacity(100_000_000, 250_000),
+    250_001,
+    'a sparse 100M-span trace allocates one frontier entry per dependency plus its seed'
+  );
+  t.equal(
+    getTraceFocusFrontierCapacity(100_000_000, 100_000_000),
+    100_000_000,
+    'a dense trace retains enough capacity to reach every span'
+  );
+  t.equal(
+    getTraceFocusFrontierCapacity(0, 0),
+    1,
+    'an empty trace retains one allocation-safe frontier word'
   );
   t.end();
 });
@@ -292,11 +315,13 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getDependencyEndpointResolveShader(endpointRouting, 0),
     getDependencyEndpointResolveShader(endpointRouting, 1),
     getCandidateDependencyVisibilityShader(endpointRouting),
+    getFocusReachabilityClearShader(1),
     getFocusFrontierSeedShader(11),
     getFocusFrontierClearShader(),
     getFocusFrontierExpansionShader({
       spanCount: 11,
-      sourceNodeBase: 0,
+      frontierCapacity: 5,
+      nodeWordBase: 0,
       sourceNodeCount: 6,
       offsetWordBase: 0,
       neighborWordBase: 0,
@@ -482,33 +507,49 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
   t.ok(dataset.dependencyCount > 0, 'generates realistic sparse dependencies');
   t.equal(
     dataset.outgoing.offsets.length,
-    dataset.spanCount + 1,
-    'forward CSR owns one offset per span plus its sentinel'
+    dataset.outgoing.nodes.length + 1,
+    'forward CSR owns one offset per active source plus its sentinel'
   );
   t.equal(
     dataset.incoming.offsets.length,
-    dataset.spanCount + 1,
-    'reverse CSR owns one offset per span plus its sentinel'
+    dataset.incoming.nodes.length + 1,
+    'reverse CSR owns one offset per active destination plus its sentinel'
   );
   t.equal(
-    dataset.outgoing.offsets[dataset.spanCount],
+    dataset.outgoing.offsets[dataset.outgoing.nodes.length],
     dataset.dependencyCount,
     'forward sentinel equals the canonical dependency count'
   );
   t.equal(
-    dataset.incoming.offsets[dataset.spanCount],
+    dataset.incoming.offsets[dataset.incoming.nodes.length],
     dataset.dependencyCount,
     'reverse sentinel equals the canonical dependency count'
   );
+  t.ok(
+    dataset.outgoing.nodes.length <= dataset.dependencyCount &&
+      dataset.incoming.nodes.length <= dataset.dependencyCount,
+    'both directions allocate rows only for nodes that own edges'
+  );
+  for (const adjacency of [dataset.outgoing, dataset.incoming]) {
+    for (let rowIndex = 0; rowIndex < adjacency.nodes.length; rowIndex++) {
+      if (rowIndex > 0) {
+        t.ok(
+          adjacency.nodes[rowIndex] > adjacency.nodes[rowIndex - 1],
+          'sparse owner rows preserve strict global-ID order for GPU binary search'
+        );
+      }
+      t.ok(
+        adjacency.offsets[rowIndex + 1] > adjacency.offsets[rowIndex],
+        'every sparse owner row contains at least one dependency'
+      );
+    }
+  }
   for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
     const parentSpanIndex = dataset.parentSpans[spanIndex];
     if (parentSpanIndex === TRACE_INVALID_SPAN_INDEX) {
       continue;
     }
-    const incoming = dataset.incoming.neighbors.subarray(
-      dataset.incoming.offsets[spanIndex],
-      dataset.incoming.offsets[spanIndex + 1]
-    );
+    const incoming = getTraceAdjacencyNeighbors(dataset.incoming, spanIndex);
     t.ok(incoming.includes(parentSpanIndex), 'canonical ancestry is backed by a real parent edge');
   }
 
@@ -520,14 +561,8 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
     const destination = dataset.dependencies[wordOffset + 1];
     const family = dataset.dependencies[wordOffset + 2];
     const metadata = dataset.dependencies[wordOffset + 3];
-    const outgoing = dataset.outgoing.neighbors.subarray(
-      dataset.outgoing.offsets[source],
-      dataset.outgoing.offsets[source + 1]
-    );
-    const incoming = dataset.incoming.neighbors.subarray(
-      dataset.incoming.offsets[destination],
-      dataset.incoming.offsets[destination + 1]
-    );
+    const outgoing = getTraceAdjacencyNeighbors(dataset.outgoing, source);
+    const incoming = getTraceAdjacencyNeighbors(dataset.incoming, destination);
     t.ok(outgoing.includes(destination), 'forward CSR contains the canonical destination');
     t.ok(incoming.includes(source), 'reverse CSR contains the canonical source');
     t.equal(metadata & 0xff, TRACE_PARENT_DEPENDENCY_FLAG, 'parent classification remains numeric');
@@ -549,6 +584,16 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
   }
   t.ok(sameProcessCount > 0, 'includes same-thread parent dependencies');
   t.ok(crossProcessCount > 0, 'includes cross-process parent dependencies');
+  t.equal(
+    getMaximumTraceAdjacencyByteLength(250_000),
+    6_000_008,
+    '250K dependencies need at most 6 MB of bidirectional sparse adjacency at any span count'
+  );
+  t.ok(
+    getMaximumTraceAdjacencyByteLength(250_000) * 100 <
+      2 * (100_000_000 + 1 + 250_000) * Uint32Array.BYTES_PER_ELEMENT,
+    '100M spans with 250K dependencies use over 100x less adjacency storage than dense CSR'
+  );
   t.end();
 });
 
@@ -565,7 +610,9 @@ test('GPU trace data handles empty inputs and rejects invalid capacities', t => 
     0,
     'empty traces have no dependency batch index records'
   );
+  t.deepEqual(Array.from(dataset.outgoing.nodes), [], 'empty forward CSR has no active rows');
   t.deepEqual(Array.from(dataset.outgoing.offsets), [0], 'empty forward CSR has a sentinel');
+  t.deepEqual(Array.from(dataset.incoming.nodes), [], 'empty reverse CSR has no active rows');
   t.deepEqual(Array.from(dataset.incoming.offsets), [0], 'empty reverse CSR has a sentinel');
   t.throws(() => makeTraceDataset(-1), /nonnegative uint32/, 'negative capacity is rejected');
   t.throws(() => makeTraceDataset(1.5), /nonnegative uint32/, 'fractional capacity is rejected');
@@ -576,3 +623,10 @@ test('GPU trace data handles empty inputs and rejects invalid capacities', t => 
   );
   t.end();
 });
+
+function getTraceAdjacencyNeighbors(adjacency: TraceAdjacencyData, node: number): Uint32Array {
+  const rowIndex = adjacency.nodes.indexOf(node);
+  return rowIndex < 0
+    ? adjacency.neighbors.subarray(0, 0)
+    : adjacency.neighbors.subarray(adjacency.offsets[rowIndex], adjacency.offsets[rowIndex + 1]);
+}

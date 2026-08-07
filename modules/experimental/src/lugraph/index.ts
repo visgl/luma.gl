@@ -21,8 +21,12 @@ export type {
 } from './lu-graph-single-source-shortest-path';
 export {LuGraphConnectedComponents} from './lu-graph-connected-components';
 export type {LuGraphConnectedComponentsProps} from './lu-graph-connected-components';
+export {LuGraphCoreNumber} from './lu-graph-core-number';
+export type {LuGraphCoreNumberProps} from './lu-graph-core-number';
 export {LuGraphLabelPropagation} from './lu-graph-label-propagation';
 export type {LuGraphLabelPropagationProps} from './lu-graph-label-propagation';
+export {LuGraphModularity} from './lu-graph-modularity';
+export type {LuGraphModularityProps} from './lu-graph-modularity';
 export {LuGraphLocalClusteringCoefficient} from './lu-graph-local-clustering-coefficient';
 export type {LuGraphLocalClusteringCoefficientProps} from './lu-graph-local-clustering-coefficient';
 export {LuGraphPageRank} from './lu-graph-page-rank';

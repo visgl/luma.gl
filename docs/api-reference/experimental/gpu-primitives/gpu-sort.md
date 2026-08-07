@@ -9,8 +9,10 @@ import {GPUSortExample} from '@site/src/examples';
 
 `GPUSort` adds one stable, out-of-place key/value ordering to a `GPUCommandGraph`.
 `GPUBatchSort` applies the same ordering independently to aligned GPU vector chunks, preserving
-streaming and record-batch boundaries without implicitly packing them. Neither API submits
-commands or reads results back to the CPU.
+streaming and record-batch boundaries without implicitly packing them.
+[`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort) batches
+many small, independent domains that already share packed parent buffers into at most eight graph
+dispatches. None of these APIs submits commands or reads results back to the CPU.
 
 ## Concepts
 
@@ -38,6 +40,12 @@ The distinction is deliberate. Silently concatenating chunks would allocate pack
 discard useful partition metadata, and turn an incremental operation into whole-dataset work.
 Callers that need a global order across chunks must explicitly choose and provision a packed
 representation.
+
+When independent domains are already packed into four shared parent buffers,
+[`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort) keeps the
+boundaries and inter-segment padding intact while sorting equal-width domains together. It does
+not combine separately allocated streaming chunks; it only exploits storage that the application
+explicitly packed in advance.
 
 ### Algorithm selection follows the work unit
 

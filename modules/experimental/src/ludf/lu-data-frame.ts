@@ -40,7 +40,11 @@ import type {
   LuDataFrameLookupOptions,
   LuDataFrameLookupQuery
 } from './lu-join-query';
-import type {LuDataFrameSortOptions, LuDataFrameSortQuery} from './lu-sort-query';
+import type {
+  LuDataFrameGlobalSortQuery,
+  LuDataFrameSortOptions,
+  LuDataFrameSortQuery
+} from './lu-sort-query';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
 export type LuDataFrameOwnership = 'borrowed' | 'owned';
@@ -264,6 +268,32 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
   ): LuDataFrameSortQuery<T, keyof T & string, Column, T> {
     this.assertAvailable();
     return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).topK(
+      column,
+      limit,
+      options
+    );
+  }
+
+  /** Plans explicit stable ordering across every source batch without copying source columns. */
+  sortByGlobal<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameGlobalSortQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).sortByGlobal(
+      column,
+      options
+    );
+  }
+
+  /** Plans one descending top-K result across all original source record batches. */
+  topKGlobal<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    limit: number,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameGlobalSortQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).topKGlobal(
       column,
       limit,
       options

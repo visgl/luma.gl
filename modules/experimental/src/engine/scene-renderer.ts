@@ -112,6 +112,21 @@ export type SceneRenderOptions = {
   id: string;
   /** Format-independent retained surface batches. */
   surfaces: readonly SceneSurface[];
+  /** Optional committed-scene revisions supplied by a retained format adapter. */
+  sceneRevisions?: {
+    /** Stable world identity; replacing a world must change this value. */
+    identity: string;
+    /** Increments when geometry, surface membership, or placement topology changes. */
+    topology: number;
+    /** Increments when retained placement transforms change. */
+    transforms: number;
+    /** Increments when material or sampler state changes. */
+    materials: number;
+    /** Increments when authored lights or ambient radiance changes. */
+    lights: number;
+    /** Stable placement identities affected by the current transform revision. */
+    dirtyInstanceIds?: readonly string[];
+  };
   /** Camera projection and world-space position. */
   camera: SceneCamera;
   /** Normalized scene lights. */

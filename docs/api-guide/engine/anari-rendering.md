@@ -237,6 +237,9 @@ hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-onl
 updated bounds through the retained permutation and refits the TLAS without sorting; topology
 changes and periodic spatial refreshes rebuild the Morton order. A topology-only graph also
 Morton-sorts each mesh's triangles into GPU-built BLASes, which transform-only animation reuses.
+Small mesh permutations and hierarchies sharing packed scene storage are grouped into reusable
+segmented sort and BVH dispatches instead of opening separate sorting and hierarchy dispatches for
+every mesh.
 The instance-bounds pass reads each mesh BLAS root directly, producing a tight transformed local
 AABB instead of expanding elongated meshes to their enclosing sphere. Small sorts and hierarchy
 builds execute inside one workgroup; larger sorts use stable four-bit radix passes, and consecutive
@@ -251,11 +254,18 @@ pixels across animation frames, and rotate one shadowed direct light per frame t
 default `33.3` millisecond frame budget. The fullscreen resolve upsamples the retained HDR image.
 Temporal reprojection follows camera and stable instance motion while rejecting incompatible depth,
 normal, and color history; camera cuts, topology changes, light-count changes, and resolution
-changes reset invalid history. Set `shadowSamplesPerFrame: 0` to evaluate every direct light in
-one frame. Adaptive timing uses smoothed animation-frame intervals and does not require GPU timestamp
-queries. Acceleration updates run only when retained transforms or geometry change, so camera-only
-and lighting-only frames do not rebuild the TLAS. Transform-only frames use the retained-permutation
-gather/refit path; topology changes and periodic refreshes run the Morton sort path.
+changes reset invalid history. Retained color and surface-metadata texture pairs exchange their
+previous/current graph roles after each successful encoding, eliminating the former four full-image
+history copies. Interleaved frames carry only their untouched pixels through a small coalesced
+compute dispatch; full-coverage frames perform no history carry. Set `shadowSamplesPerFrame: 0` to
+evaluate every direct light in one frame. Adaptive timing uses smoothed animation-frame intervals
+and does not require GPU timestamp queries. Acceleration updates run only when retained transforms
+or geometry change, so camera-only and lighting-only frames do not rebuild the TLAS. Transform-only
+frames use the retained-permutation gather/refit path; topology changes and periodic refreshes run
+the Morton sort path. The ANARI adapter caches normalized surfaces, materials, lights, and analytic
+primitives by committed world identity. Categorized topology, transform, material, and light
+revisions let camera-only frames reuse those descriptors without serializing the entire scene;
+committed instance changes additionally expose their exact stable placement identities.
 
 The Morton-sorted TLAS indexes objects and instances; surviving meshes traverse GPU-built,
 Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight storage buffers,
@@ -811,9 +821,13 @@ complete-binary hierarchy. Morton order is cheap and parallel because nearby cen
 become nearby leaves. It is an LBVH-style spatial ordering strategy, used for both object/instance
 TLAS leaves and per-mesh triangle BLAS leaves. The reusable graph-native sorter resolves inputs of
 up to 256 elements with a single-workgroup stable bitonic dispatch and larger inputs with a stable
-four-bit radix histogram, prefix scan, and scatter pipeline. `GPUBVH` similarly fuses hierarchies
-of up to 128 leaves into a single workgroup while retaining its level-by-level fallback for larger
-trees. These are general graph contributors, not ANARI-specific acceleration implementations.
+four-bit radix histogram, prefix scan, and scatter pipeline. `GPUSegmentedSort` additionally groups
+many small, independent packed mesh permutations by workgroup width, so arbitrary mesh counts need
+at most eight local sorting dispatches. `GPUBVH` similarly fuses hierarchies of up to 128 leaves
+into a single workgroup while retaining its level-by-level fallback for larger trees.
+`GPUSegmentedBVH` extends that contract across packed independent mesh hierarchies, grouping all
+trees of the same leaf capacity into one dispatch and using at most eight capacity buckets. These
+are general graph contributors, not ANARI-specific acceleration implementations.
 
 Morton sorting is not the same as a full high-quality BVH builder. In particular, the current code
 does not implement the binary-radix-tree topology from
@@ -834,6 +848,20 @@ leaf order, and refits TLAS parents without rerunning the scene-bounds reduction
 light, and material-only frames do not encode acceleration work. After a bounded run of refits, the
 renderer periodically rebuilds Morton order so large object motion cannot degrade the hierarchy
 forever.
+
+Adapters that provide categorized scene revisions avoid materializing transform signatures on every
+frame. Other callers materialize transform revisions once and reuse them for primitive changes.
+Updated instance records are written directly into their final packed `Float32Array`, avoiding the
+previous intermediate JavaScript number arrays and duplicate copied transform matrices. When a
+retained adapter reports a small set of stable dirty placements, only their current/inverse
+matrices and previous-motion matrices are uploaded; the following frame commits only the remaining
+previous-motion slots. Larger updates and replaced descriptors safely use the full packed path.
+
+Nearest-hit and shadow traversal compute guarded inverse ray directions once per world-space ray
+and mesh-local ray. Pending TLAS and BLAS stack entries retain their already-computed box entry
+distances, avoiding the former second slab test when a queued child is popped. Mesh traversal
+starts from its exact BLAS root, analytic spheres evaluate their quadratic intersection only once,
+and the CPU publishes the direct-light count so shading does not rescan every light per sample.
 
 Refit is much cheaper than rebuild, but it preserves old leaf neighborhoods even when objects have
 moved apart. Rebuild restores spatial quality but pays for bounds reduction, key generation, sort,
@@ -875,6 +903,12 @@ instance transforms to find compatible history. Depth, normal, primitive identit
 color checks reject disocclusions and incompatible samples, then valid history increases the
 effective sample count. This is temporal sample reuse, not a general frame-interpolation system and
 not a full denoiser.
+
+Color and metadata each use a reusable `GPUTextureHistory` pair. The command graph binds one texture
+as the previous frame and the other as the current output, then exchanges their logical roles only
+after encoding succeeds. This removes all full-frame history copies without increasing the four
+physical history/output allocations. Sparse phases preserve untouched pixels with a densely packed
+carry dispatch that is coalesced with ray tracing; full-coverage phases skip that dispatch.
 
 **Planned.** Stronger reconstruction should add variance-guided spatial filtering, adaptive
 per-pixel sampling, reactive/disocclusion handling, and a better edge-aware upscaler. The relevant

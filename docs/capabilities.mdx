@@ -323,13 +323,15 @@ primitives](/docs/api-reference/experimental/gpu-primitives).
 | Chunk-preserving graph inputs | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Preserve independently owned source batches and caller-controlled graph resource lifetimes. |
 | Compressed graph adjacency | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Build reusable forward and optional reverse compressed sparse row (CSR) adjacency for supported graph operations. |
 | Directional vertex degree | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Compute supported incoming or outgoing degree values directly into GPU result columns. |
+| Structural graph core numbers | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Find bounded simple weak-graph k-core values, convergence, and maximum degeneracy without counting loops or duplicate neighbors. |
 | Breadth-first graph search | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Traverse bounded unweighted neighborhoods and generate deterministic predecessor or selection results. |
 | Weighted single-source shortest paths | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Find least-cost routes over nonnegative single-precision edge weights with bounded relaxation and deterministic predecessors. |
 | Weakly connected components | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Label supported connected groups within an explicit iteration budget and expose convergence information. |
 | Deterministic graph communities | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | `LuGraphLabelPropagation` assigns communities through bounded unweighted majority votes and deterministic label tie-breaking. |
+| Weighted community modularity | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Score existing directed or undirected community partitions, preserving original edge weights and multiplicity without claiming Louvain optimization. |
 | Local clustering coefficients | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Measure exact weak-neighborhood closure with distinct directed links or optional undirected triangle counts. |
 | GPU PageRank | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Rank vertices using iterative GPU execution with supported dangling-node redistribution. |
-| Six Graphalytics workload families | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Implement BFS, weighted SSSP, weak components, label propagation, local clustering, and PageRank without claiming official benchmark certification. |
+| Six Graphalytics workload families | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Implement the [Graph Data Council's six LDBC Graphalytics algorithms](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/) without claiming official validation, certification, or published benchmark results. |
 | Exact force-directed layout | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Generate directly renderable graph positions through supported pairwise attraction and repulsion. |
 | Spatially accelerated layout | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Approximate supported distant forces through a flat GPU spatial grid; this is not hierarchical Barnes-Hut. |
 | Interactive graph exploration | Experimental | WebGPU | `@luma.gl/experimental/lugraph` | Coordinate layout, neighborhood highlighting, GPU picking, dragging, and pinned graph vertices. |
@@ -339,6 +341,12 @@ primitives](/docs/api-reference/experimental/gpu-primitives).
 Read the [GPU-resident graph analytics reference](/docs/api-reference/experimental/lugraph),
 the [interactive luGraph explorer](/examples/experimental/lugraph-explorer), or the
 [deck.gl graph explorer](/examples/deck/lugraph-explorer).
+
+The [Graph Data Council (GDC)](https://ldbcouncil.org/), formerly the Linked Data Benchmark
+Council, maintains the [LDBC Graphalytics benchmark](https://ldbcouncil.org/benchmarks/graphalytics/).
+Its formal reference datasets, correctness outputs, driver, and competition rules are separate
+from luGraph's local demonstrations. Structural core numbers and modularity scoring go beyond its
+six standardized workload families.
 
 ### GPU raster and satellite analysis
 
@@ -655,7 +663,7 @@ commitments to release dates.
 | Advanced dataframe analytics | Opportunity | WebGPU | `@luma.gl/experimental/ludf` | Extend existing grouped analytics, joins, lookups, sorting, and top-K toward non-unique/outer joins, temporal windows, and incremental updates. |
 | GPU vector similarity search | Opportunity | WebGPU | `@luma.gl/experimental` | Add embedding similarity, nearest-neighbor indexes, top-K distance queries, and compatible metadata filtering. |
 | Seam-safe multi-tile raster analysis | Opportunity | WebGPU | `@luma.gl/experimental/luraster` | Build on existing tile residency and graph reuse with assembled cross-tile halos, stitched contours, global aggregates, and generated analytical overviews. |
-| Advanced GPU graph analytics | Opportunity | WebGPU | `@luma.gl/experimental/lugraph` | Build on existing weighted shortest paths, local clustering, all six Graphalytics workload families, PageRank, communities, and layouts with Louvain/Leiden modularity optimization and dynamic graph updates. |
+| Advanced GPU graph analytics | Opportunity | WebGPU | `@luma.gl/experimental/lugraph` | Build on existing core numbers, weighted shortest paths, local clustering, community modularity scoring, all six Graphalytics families, and layouts with Louvain/Leiden partition optimization and dynamic graph updates. |
 | Hierarchical spatial indexes | Opportunity | WebGPU | `@luma.gl/experimental/geospatial` | Extend supported spatial queries toward tiled indexing, nearest neighbors, and spatial joins. |
 | High-precision geospatial pipelines | Opportunity | WebGPU | `@luma.gl/experimental/luproj` | Broaden projection, local-origin precision, coordinate systems, and streamed map-scale workflows. |
 | Cross-view GPU-native provenance | Opportunity | WebGPU | `@luma.gl/experimental/luxfilter` | Extend existing linked filters and histograms with shared picking, provenance, and selection across more charts, maps, and scene views. |

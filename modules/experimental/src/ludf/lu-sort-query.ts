@@ -7,6 +7,10 @@ import type {GPUTypeMap} from '@luma.gl/tables';
 import type {GPUCommandGraph} from '../gpu-primitives/gpu-command-graph';
 import type {LuDataFrameQuery} from './lu-data-frame-query';
 import {
+  compileLuDataFrameGlobalSort,
+  type CompiledLuDataFrameGlobalSort
+} from './lu-global-sort-compiler';
+import {
   getLuDataFrameAnalyticColumnFormat,
   type LuDataFrameScalarColumnNames
 } from './lu-global-aggregation-query';
@@ -90,6 +94,41 @@ export class LuDataFrameSortQuery<
     graph: GPUCommandGraph<LuDataFrameQueryParameters>
   ): CompiledLuDataFrameSort<Pick<Logical, SelectedColumns>> {
     return compileLuDataFrameSort<Source, Pick<Logical, SelectedColumns>>(
+      this.query.source,
+      this.query.predicates,
+      this.query.selectedColumns,
+      this.query.derivedColumns,
+      this.column,
+      this.options,
+      graph
+    );
+  }
+}
+
+/**
+ * Explicit global scalar ordering across all preserved source batches.
+ *
+ * Source columns and record batches remain untouched; compilation creates only the GPU-resident
+ * permutation, selected count, and explicitly required sort scratch.
+ */
+export class LuDataFrameGlobalSortQuery<
+  Logical extends GPUTypeMap,
+  SelectedColumns extends keyof Logical & string,
+  Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>,
+  Source extends GPUTypeMap = Logical
+> extends LuDataFrameSortQuery<Logical, SelectedColumns, Column, Source> {
+  /** Applies one global top-K bound across all source batches while preserving sort controls. */
+  override topK(
+    limit: number
+  ): LuDataFrameGlobalSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameGlobalSortQuery(this.query, this.column, this.options, limit);
+  }
+
+  /** Adds one cross-batch GPU permutation and global selected count to a reusable command graph. */
+  override compile(
+    graph: GPUCommandGraph<LuDataFrameQueryParameters>
+  ): CompiledLuDataFrameGlobalSort<Pick<Logical, SelectedColumns>> {
+    return compileLuDataFrameGlobalSort<Source, Pick<Logical, SelectedColumns>>(
       this.query.source,
       this.query.predicates,
       this.query.selectedColumns,
