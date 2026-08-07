@@ -39,6 +39,7 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
+  getCandidateDependencyEndpointsShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
@@ -171,7 +172,7 @@ test('GPU trace supremacy contract exposes standard scales and interaction scena
   t.end();
 });
 
-test('GPU trace capacity contract makes the monolithic 10M limit explicit', t => {
+test('GPU trace capacity contract separates chunked spans from dependency capacity', t => {
   const portable = getTraceCapacityContract(10_000_000, 10_000_000, {
     maxStorageBufferBindingSize: 128 * 1024 * 1024,
     maxBufferSize: 256 * 1024 * 1024
@@ -190,15 +191,15 @@ test('GPU trace capacity contract makes the monolithic 10M limit explicit', t =>
       maxBufferSize: 256 * 1024 * 1024
     }).fitsChunkedDeviceLimits,
     true,
-    'portable limits admit ten million spans when dependency endpoint lookup is disabled'
+    'portable limits admit ten million spans without dependencies'
   );
   t.equal(
     getTraceCapacityContract(10_000_000, 250_000, {
       maxStorageBufferBindingSize: 128 * 1024 * 1024,
       maxBufferSize: 256 * 1024 * 1024
     }).fitsChunkedDeviceLimits,
-    false,
-    'dependency endpoint lookup keeps its monolithic span requirement explicit'
+    true,
+    'chunk-resolved endpoints admit dependencies without a monolithic span allocation'
   );
 
   const maximum = getTraceCapacityContract(10_000_000, 10_000_000, {
@@ -281,6 +282,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       {firstBatchIndex: 2, batchCount: 1}
     ]),
     getDependencyBatchVisibilityShader(3),
+    getCandidateDependencyEndpointsShader(spanChunk),
     getCandidateDependencyVisibilityShader(11),
     getFocusFrontierSeedShader(11),
     getFocusFrontierClearShader(),

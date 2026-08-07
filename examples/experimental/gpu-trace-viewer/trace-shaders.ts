@@ -212,29 +212,13 @@ ${TRACE_SHADER_DECLARATIONS}
 
 @group(0) @binding(0) var<storage, read> dependencies: array<TraceDependency>;
 @group(0) @binding(1) var<storage, read> visibleDependencyIds: array<u32>;
-@group(0) @binding(2) var<storage, read> spans: array<TraceSpan>;
-@group(0) @binding(3) var<storage, read> processStates: array<u32>;
-@group(0) @binding(4) var<storage, read> threadStates: array<u32>;
-@group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
-@group(0) @binding(6) var<storage, read> dependencyResults: array<u32>;
-@group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(2) var<storage, read> dependencyEndpointPositions: array<vec2<f32>>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
 
 struct DependencyVertexOutput {
   @builtin(position) position: vec4<f32>,
   @location(0) color: vec4<f32>,
 };
-
-fn getEndpointLane(span: TraceSpan) -> u32 {
-  if (processStates[span.processIndex] == 0u) {
-    return threadOffsets[span.processIndex * THREADS_PER_PROCESS];
-  }
-  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  return threadOffsets[span.threadIndex] + localLane;
-}
-
-fn getResolvedEndpoint(endpointResultIndex: u32) -> TraceSpan {
-  return spans[dependencyResults[viewUniforms.dependencyEndpointOffset + endpointResultIndex]];
-}
 
 @vertex fn vertexMain(
   @builtin(vertex_index) vertexIndex: u32,
@@ -243,16 +227,14 @@ fn getResolvedEndpoint(endpointResultIndex: u32) -> TraceSpan {
   let dependency = dependencies[visibleDependencyIds[instanceIndex]];
   let dependencyIndex = visibleDependencyIds[instanceIndex];
   let endpointResultIndex = dependencyIndex * 2u + select(0u, 1u, vertexIndex == 1u);
-  let span = getResolvedEndpoint(endpointResultIndex);
+  let endpointPosition = dependencyEndpointPositions[endpointResultIndex];
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
-  let endpointTime = select(span.start + span.duration, span.start, vertexIndex == 1u);
-  let endpointLane = f32(getEndpointLane(span)) + 0.4;
   let crossProcess = dependency.family != 0u;
   var output: DependencyVertexOutput;
   output.position = vec4<f32>(
-    ((endpointTime - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0,
-    1.0 - ((endpointLane - viewUniforms.laneMin) / laneRange) * 2.0,
+    ((endpointPosition.x - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0,
+    1.0 - ((endpointPosition.y - viewUniforms.laneMin) / laneRange) * 2.0,
     0.0,
     1.0
   );
@@ -858,5 +840,67 @@ fn main(
   let endpointResultOffset = viewUniforms.dependencyEndpointOffset + index * 2u;
   dependencyResults[endpointResultOffset] = effectiveSource;
   dependencyResults[endpointResultOffset + 1u] = effectiveDestination;
+}`;
+}
+
+/** Resolves dependency endpoint positions from one bounded source span chunk. */
+export function getCandidateDependencyEndpointsShader(props: TraceSpanChunkShaderProps): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
+struct DependencyBatch {
+  firstIndex: u32,
+  count: u32,
+  timeMin: f32,
+  timeMax: f32,
+  familyMask: u32,
+  batchIndex: u32,
+};
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> dependencyBatches: array<DependencyBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<storage, read> dependencyResults: array<u32>;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(6) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(8) var<storage, read_write> dependencyEndpointPositions: array<vec2<f32>>;
+
+fn getEndpointLane(span: TraceSpan) -> u32 {
+  if (processStates[span.processIndex] == 0u) {
+    return threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  }
+  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
+  return threadOffsets[span.threadIndex] + localLane;
+}
+
+@compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
+  if (localId.x >= batch.count) {
+    return;
+  }
+  let dependencyIndex = batch.firstIndex + localId.x;
+  if (dependencyResults[dependencyIndex] == 0u) {
+    return;
+  }
+  let endpointResultOffset = viewUniforms.dependencyEndpointOffset + dependencyIndex * 2u;
+  for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
+    let sourceIndex = dependencyResults[endpointResultOffset + endpointIndex];
+    if (
+      sourceIndex >= CHUNK_FIRST_SPAN_INDEX &&
+      sourceIndex < CHUNK_FIRST_SPAN_INDEX + CHUNK_SPAN_COUNT
+    ) {
+      let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
+      let endpointTime = select(span.start + span.duration, span.start, endpointIndex == 1u);
+      dependencyEndpointPositions[dependencyIndex * 2u + endpointIndex] = vec2<f32>(
+        endpointTime,
+        f32(getEndpointLane(span)) + 0.4
+      );
+    }
+  }
 }`;
 }
