@@ -42,6 +42,7 @@ const LINEAR_CANDIDATE_ALLOWLIST_LIMIT = 16;
 
 type CandidateMembershipIndex = {
   keys: GraphDataView<'uint32'>;
+  statistics: GraphDataView<'uint32'>;
   capacity: number;
 };
 
@@ -687,7 +688,7 @@ function createCandidateMembershipIndex<Parameters>(
     tableValues,
     statistics
   }).addToGraph(graph);
-  return {keys: tableKeys, capacity};
+  return {keys: tableKeys, statistics, capacity};
 }
 
 function addInitializeQueryPass<Parameters>(
@@ -776,7 +777,11 @@ function addPrepareDatasetTilePass<Parameters>(
     ...(tile.validity ? {sourceValidity: tile.validity} : {}),
     ...(tile.filterMask ? {selectionMask: tile.filterMask} : {}),
     ...(candidateMembership
-      ? {candidateIndexKeys: candidateMembership.keys}
+      ? {
+          candidateIndexKeys: candidateMembership.keys,
+          candidateIndexStatistics: candidateMembership.statistics,
+          candidateIds: search.candidateIds!
+        }
       : search.candidateIds
         ? {candidateIds: search.candidateIds}
         : {})
@@ -793,7 +798,7 @@ ${tile.validity ? `const VALIDITY_OFFSET: u32 = ${getViewElementOffset(tile.vali
 ${tile.filterMask ? `const SELECTION_OFFSET: u32 = ${getViewElementOffset(tile.filterMask)}u;` : ''}
 ${
   candidateMembership
-    ? `const CANDIDATE_INDEX_OFFSET: u32 = ${getViewElementOffset(candidateMembership.keys)}u;\nconst CANDIDATE_INDEX_MASK: u32 = ${candidateMembership.capacity - 1}u;\nconst CANDIDATE_INDEX_CAPACITY: u32 = ${candidateMembership.capacity}u;`
+    ? `const CANDIDATE_INDEX_OFFSET: u32 = ${getViewElementOffset(candidateMembership.keys)}u;\nconst CANDIDATE_INDEX_MASK: u32 = ${candidateMembership.capacity - 1}u;\nconst CANDIDATE_INDEX_CAPACITY: u32 = ${candidateMembership.capacity}u;\nconst CANDIDATE_STATISTICS_OFFSET: u32 = ${getViewElementOffset(candidateMembership.statistics)}u;\nconst CANDIDATE_ID_OFFSET: u32 = ${getViewElementOffset(search.candidateIds!)}u;\nconst CANDIDATE_ID_COUNT: u32 = ${search.candidateIds!.length}u;`
     : search.candidateIds
       ? `const CANDIDATE_ID_OFFSET: u32 = ${getViewElementOffset(search.candidateIds)}u;\nconst CANDIDATE_ID_COUNT: u32 = ${search.candidateIds.length}u;`
       : ''
@@ -805,7 +810,7 @@ ${tile.validity ? '@group(0) @binding(auto) var<storage, read> sourceValidity: a
 ${tile.filterMask ? '@group(0) @binding(auto) var<storage, read> selectionMask: array<u32>;' : ''}
 ${
   candidateMembership
-    ? '@group(0) @binding(auto) var<storage, read> candidateIndexKeys: array<u32>;'
+    ? '@group(0) @binding(auto) var<storage, read> candidateIndexKeys: array<u32>;\n@group(0) @binding(auto) var<storage, read> candidateIndexStatistics: array<u32>;\n@group(0) @binding(auto) var<storage, read> candidateIds: array<u32>;'
     : search.candidateIds
       ? '@group(0) @binding(auto) var<storage, read> candidateIds: array<u32>;'
       : ''
@@ -833,7 +838,7 @@ fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_ind
   }
   ${
     candidateMembership
-      ? `var allowed = false;\n  let firstSlot = hashCandidateKey(sourceId) & CANDIDATE_INDEX_MASK;\n  for (var probe = 0u; probe < CANDIDATE_INDEX_CAPACITY; probe++) {\n    let stored = candidateIndexKeys[CANDIDATE_INDEX_OFFSET + ((firstSlot + probe) & CANDIDATE_INDEX_MASK)];\n    if (stored == INVALID_ID) { break; }\n    if (stored == sourceId) { allowed = true; break; }\n  }\n  eligible = eligible && allowed;`
+      ? `var allowed = false;\n  if (candidateIndexStatistics[CANDIDATE_STATISTICS_OFFSET + 2u] == 0u) {\n    let firstSlot = hashCandidateKey(sourceId) & CANDIDATE_INDEX_MASK;\n    for (var probe = 0u; probe < CANDIDATE_INDEX_CAPACITY; probe++) {\n      let stored = candidateIndexKeys[CANDIDATE_INDEX_OFFSET + ((firstSlot + probe) & CANDIDATE_INDEX_MASK)];\n      if (stored == INVALID_ID) { break; }\n      if (stored == sourceId) { allowed = true; break; }\n    }\n  } else {\n    for (var candidateIndex = 0u; candidateIndex < CANDIDATE_ID_COUNT; candidateIndex++) {\n      allowed = allowed || candidateIds[CANDIDATE_ID_OFFSET + candidateIndex] == sourceId;\n    }\n  }\n  eligible = eligible && allowed;`
       : search.candidateIds
         ? `var allowed = false;\n  for (var candidateIndex = 0u; candidateIndex < CANDIDATE_ID_COUNT; candidateIndex++) {\n    allowed = allowed || candidateIds[CANDIDATE_ID_OFFSET + candidateIndex] == sourceId;\n  }\n  eligible = eligible && allowed;`
         : ''
