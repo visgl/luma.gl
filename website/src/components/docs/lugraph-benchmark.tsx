@@ -36,6 +36,22 @@ export function LuGraphBenchmark(): ReactNode {
 
   return (
     <div>
+      <p style={{fontSize: 13, margin: '0 0 14px'}}>
+        This local demonstration includes the six graph-analysis workloads standardized by the{' '}
+        <a href="https://ldbcouncil.org/" rel="noreferrer" target="_blank">
+          Graph Data Council
+        </a>{' '}
+        in its{' '}
+        <a
+          href="https://ldbcouncil.org/benchmarks/graphalytics/"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Graphalytics benchmark
+        </a>
+        . Its small synthetic datasets and local CPU checks are not an official benchmark submission,
+        certification, or cross-platform performance claim.
+      </p>
       <div style={{display: 'flex', flexWrap: 'wrap', gap: 18, marginBottom: 12}}>
         <label
           htmlFor="lugraph-benchmark-dataset"
