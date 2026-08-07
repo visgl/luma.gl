@@ -54,7 +54,7 @@ try {
   });
 
   const smokeUrl = new URL(url);
-  smokeUrl.searchParams.set('visual-smoke', 'true');
+  smokeUrl.searchParams.set('visual-smoke', requireGPUReadback ? 'reference' : 'software');
   await page.goto(smokeUrl.toString(), {waitUntil: 'domcontentloaded'});
   await page.waitForFunction(
     () => {
@@ -656,6 +656,13 @@ async function assertBoundedLayout(page, label) {
   assert.deepEqual(layout.viewport, viewport, `${label}: viewport stays deterministic`);
   assert(layout.canvas, `${label}: canvas exists`);
   assert(layout.canvas.width > 10 && layout.canvas.height > 10, `${label}: canvas has GPU pixels`);
+  if (!requireGPUReadback) {
+    assert.deepEqual(
+      {width: layout.canvas.width, height: layout.canvas.height},
+      {width: viewport.width / 2, height: viewport.height / 2},
+      `${label}: SwiftShader uses a reduced-resolution GPU backing buffer`
+    );
+  }
   assert(
     layout.canvas.clientWidth === viewport.width && layout.canvas.clientHeight === viewport.height,
     `${label}: canvas fills the viewport`
