@@ -508,9 +508,10 @@ when their tests and rollback boundaries remain understandable.
 - **2.2 substantially complete:** `GPURasterHistogram` composes a nodata-aware validity mask, an
   explicit masked GPU extent, and caller-owned bins. `GPURasterStatistics` adds GPU-resident
   floating-band count, sum, mean, minimum, and maximum outputs. Caller-owned literal domains, GPU
-  domains, and optional published automatic extents are available. Percentiles, wide counters,
-  wide histogram counters and transparent 4K-plus reduction/histogram partitioning remain
-  pending; explicit replayable global tiled extent/statistic/histogram merges are available.
+  domains, and optional published automatic extents are available. Histogram-estimated global
+  percentiles and replayable global tiled extent/statistic/histogram merges are implemented;
+  exact or standalone percentile-domain contracts, wide counters, and transparent 4K-plus
+  reduction/histogram partitioning remain pending.
 - **2.3 substantially complete:** `GPURasterContrast` implements calibrated linear stretching,
   explicitly selected gamma adjustment, and global histogram equalization through an inclusive
   GPU CDF scan. Linear mode remains affine even when a nondefault gamma option is present.
