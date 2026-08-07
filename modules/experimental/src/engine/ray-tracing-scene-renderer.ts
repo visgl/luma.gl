@@ -28,7 +28,12 @@ const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
 const RESOLUTION_SCALES = [0.25, 0.375, 0.5, 0.75, 1] as const;
-const FRAME_BUDGET_COOLDOWN_MILLISECONDS = 250;
+const FRAME_BUDGET_COOLDOWN_MILLISECONDS = 750;
+const OVER_BUDGET_FRAME_TIME_RATIO = 1.2;
+const UNDER_BUDGET_FRAME_TIME_RATIO = 0.65;
+const OVER_BUDGET_FRAME_COUNT = 6;
+const UNDER_BUDGET_FRAME_COUNT = 45;
+const MINIMUM_HISTORY_FRAMES_FOR_SPARSE_SCHEDULING = 8;
 const MAXIMUM_HISTORY_SAMPLES = 64;
 
 /** Optional analytic primitive supplied by a format-specific scene adapter. */
@@ -94,6 +99,7 @@ type RayTracingPrimitiveData = {
 
 type RayTracingQualityOptions = {
   resolutionScale: number;
+  requestedResolutionScale: number;
   minimumResolutionScale: number;
   adaptiveResolution: boolean;
   targetFrameTimeMilliseconds: number;
@@ -240,7 +246,6 @@ export class RayTracingSceneRenderer {
       if (updateQualityOptions(resources, quality)) {
         resources.historyNeedsReset = true;
       }
-      updateAdaptiveBudget(resources, currentTimeMilliseconds);
 
       const topologyChanged = resources.topologyRevision !== topologyRevision;
       const primitiveChanged = resources.primitiveRevision !== primitiveRevision;
@@ -351,6 +356,27 @@ export class RayTracingSceneRenderer {
     if (!resources.lastRenderTimeMilliseconds) {
       resources.lastRenderTimeMilliseconds = currentTimeMilliseconds;
     }
+    const renderRevision = getRenderRevision(options, inverseViewProjection);
+    if (resources.renderRevision !== renderRevision) {
+      resources.renderRevision = renderRevision;
+      resources.historyNeedsReset = true;
+    }
+    if (
+      (options.temporalReprojection ?? true) &&
+      isCameraCut(
+        resources.previousViewProjection,
+        viewProjection,
+        resources.previousCameraPosition,
+        options.camera.position
+      )
+    ) {
+      resources.historyNeedsReset = true;
+    }
+    if (resources.displayWidth !== displayWidth || resources.displayHeight !== displayHeight) {
+      resources.historyNeedsReset = true;
+    }
+    updateRayTracingAdaptiveBudget(resources, currentTimeMilliseconds);
+
     const internalDimensions = getInternalDimensions(
       displayWidth,
       displayHeight,
@@ -372,26 +398,11 @@ export class RayTracingSceneRenderer {
       );
     }
 
-    const renderRevision = getRenderRevision(options, inverseViewProjection);
-    if (resources.renderRevision !== renderRevision) {
-      resources.renderRevision = renderRevision;
-      resources.historyNeedsReset = true;
-    }
-    if (
-      (options.temporalReprojection ?? true) &&
-      isCameraCut(
-        resources.previousViewProjection,
-        viewProjection,
-        resources.previousCameraPosition,
-        options.camera.position
-      )
-    ) {
-      resources.historyNeedsReset = true;
-    }
-
     const progressive = options.progressive ?? true;
     if (resources.historyNeedsReset) {
       resources.accumulatedFrameCount = 0;
+      resources.phaseCount = 1;
+      resources.phaseIndex = 0;
     }
     const activePhaseCount = resources.historyNeedsReset ? 1 : resources.phaseCount;
     const activePhaseIndex = resources.historyNeedsReset
@@ -606,7 +617,7 @@ export class RayTracingSceneRenderer {
       internalWidth: internalDimensions.width,
       internalHeight: internalDimensions.height,
       resolutionScale: props.quality.resolutionScale,
-      requestedResolutionScale: props.quality.resolutionScale,
+      requestedResolutionScale: props.quality.requestedResolutionScale,
       minimumResolutionScale: props.quality.minimumResolutionScale,
       adaptiveResolution: props.quality.adaptiveResolution,
       targetFrameTimeMilliseconds: props.quality.targetFrameTimeMilliseconds,
@@ -1508,9 +1519,8 @@ function getQualityOptions(options: RayTracingSceneRenderOptions): RayTracingQua
     1
   );
   return {
-    resolutionScale: adaptiveResolution
-      ? getClosestResolutionScale(requestedResolutionScale, minimumResolutionScale)
-      : requestedResolutionScale,
+    resolutionScale: requestedResolutionScale,
+    requestedResolutionScale,
     minimumResolutionScale,
     adaptiveResolution,
     targetFrameTimeMilliseconds: Math.max(
@@ -1528,12 +1538,12 @@ function updateQualityOptions(
     resources.minimumResolutionScale === quality.minimumResolutionScale &&
     resources.adaptiveResolution === quality.adaptiveResolution &&
     resources.targetFrameTimeMilliseconds === quality.targetFrameTimeMilliseconds &&
-    resources.requestedResolutionScale === quality.resolutionScale
+    resources.requestedResolutionScale === quality.requestedResolutionScale
   ) {
     return false;
   }
   resources.resolutionScale = quality.resolutionScale;
-  resources.requestedResolutionScale = quality.resolutionScale;
+  resources.requestedResolutionScale = quality.requestedResolutionScale;
   resources.minimumResolutionScale = quality.minimumResolutionScale;
   resources.adaptiveResolution = quality.adaptiveResolution;
   resources.targetFrameTimeMilliseconds = quality.targetFrameTimeMilliseconds;
@@ -1541,6 +1551,7 @@ function updateQualityOptions(
   resources.phaseIndex = 0;
   resources.overBudgetFrameCount = 0;
   resources.underBudgetFrameCount = 0;
+  resources.averageFrameTimeMilliseconds = undefined;
   return true;
 }
 
@@ -1563,20 +1574,51 @@ function updateFrameTiming(
       : resources.averageFrameTimeMilliseconds * 0.8 + frameTimeMilliseconds * 0.2;
 }
 
-function updateAdaptiveBudget(
-  resources: RayTracingFrameResources,
+type RayTracingAdaptiveBudgetState = Pick<
+  RayTracingFrameResources,
+  | 'resolutionScale'
+  | 'requestedResolutionScale'
+  | 'minimumResolutionScale'
+  | 'adaptiveResolution'
+  | 'targetFrameTimeMilliseconds'
+  | 'phaseCount'
+  | 'phaseIndex'
+  | 'averageFrameTimeMilliseconds'
+  | 'overBudgetFrameCount'
+  | 'underBudgetFrameCount'
+  | 'lastBudgetAdjustmentTimeMilliseconds'
+  | 'historyNeedsReset'
+  | 'accumulatedFrameCount'
+>;
+
+/** @internal Advances the conservative adaptive ray-work scheduler for one frame. */
+export function updateRayTracingAdaptiveBudget(
+  resources: RayTracingAdaptiveBudgetState,
   currentTimeMilliseconds: number
 ): void {
+  if (resources.historyNeedsReset) {
+    resources.phaseCount = 1;
+    resources.phaseIndex = 0;
+    resources.overBudgetFrameCount = 0;
+    resources.underBudgetFrameCount = 0;
+    return;
+  }
   if (!resources.adaptiveResolution || resources.averageFrameTimeMilliseconds === undefined) {
     return;
   }
   const frameTimeMilliseconds = resources.averageFrameTimeMilliseconds;
   const targetFrameTimeMilliseconds = resources.targetFrameTimeMilliseconds;
-  if (frameTimeMilliseconds > targetFrameTimeMilliseconds * 1.1) {
-    resources.overBudgetFrameCount++;
+  if (frameTimeMilliseconds > targetFrameTimeMilliseconds * OVER_BUDGET_FRAME_TIME_RATIO) {
+    resources.overBudgetFrameCount = Math.min(
+      OVER_BUDGET_FRAME_COUNT,
+      resources.overBudgetFrameCount + 1
+    );
     resources.underBudgetFrameCount = 0;
-  } else if (frameTimeMilliseconds < targetFrameTimeMilliseconds * 0.75) {
-    resources.underBudgetFrameCount++;
+  } else if (frameTimeMilliseconds < targetFrameTimeMilliseconds * UNDER_BUDGET_FRAME_TIME_RATIO) {
+    resources.underBudgetFrameCount = Math.min(
+      UNDER_BUDGET_FRAME_COUNT,
+      resources.underBudgetFrameCount + 1
+    );
     resources.overBudgetFrameCount = 0;
   } else {
     resources.overBudgetFrameCount = 0;
@@ -1589,33 +1631,44 @@ function updateAdaptiveBudget(
     return;
   }
 
-  if (resources.overBudgetFrameCount >= 3) {
+  if (resources.overBudgetFrameCount >= OVER_BUDGET_FRAME_COUNT) {
     const lowerResolutionScale = getAdjacentResolutionScale(
       resources.resolutionScale,
       resources.minimumResolutionScale,
+      resources.requestedResolutionScale,
       -1
     );
     if (lowerResolutionScale < resources.resolutionScale) {
       resources.resolutionScale = lowerResolutionScale;
-    } else {
+      resources.historyNeedsReset = true;
+    } else if (resources.accumulatedFrameCount >= MINIMUM_HISTORY_FRAMES_FOR_SPARSE_SCHEDULING) {
       resources.phaseCount = Math.min(4, resources.phaseCount * 2);
-      resources.phaseIndex = 0;
+      resources.phaseIndex %= resources.phaseCount;
+    } else {
+      return;
     }
     resources.overBudgetFrameCount = 0;
     resources.lastBudgetAdjustmentTimeMilliseconds = currentTimeMilliseconds;
     return;
   }
 
-  if (resources.underBudgetFrameCount >= 20) {
+  if (resources.underBudgetFrameCount >= UNDER_BUDGET_FRAME_COUNT) {
     if (resources.phaseCount > 1) {
       resources.phaseCount = Math.max(1, resources.phaseCount / 2);
-      resources.phaseIndex = 0;
+      resources.phaseIndex %= resources.phaseCount;
     } else {
-      resources.resolutionScale = getAdjacentResolutionScale(
+      const higherResolutionScale = getAdjacentResolutionScale(
         resources.resolutionScale,
         resources.minimumResolutionScale,
+        resources.requestedResolutionScale,
         1
       );
+      if (higherResolutionScale <= resources.resolutionScale) {
+        resources.underBudgetFrameCount = 0;
+        return;
+      }
+      resources.resolutionScale = higherResolutionScale;
+      resources.historyNeedsReset = true;
     }
     resources.underBudgetFrameCount = 0;
     resources.lastBudgetAdjustmentTimeMilliseconds = currentTimeMilliseconds;
@@ -1633,32 +1686,32 @@ function getInternalDimensions(
   };
 }
 
-function getClosestResolutionScale(
-  requestedResolutionScale: number,
-  minimumResolutionScale: number
-): number {
-  const scales = getAvailableResolutionScales(minimumResolutionScale);
-  return scales.reduce((closestScale, scale) =>
-    Math.abs(scale - requestedResolutionScale) < Math.abs(closestScale - requestedResolutionScale)
-      ? scale
-      : closestScale
-  );
-}
-
 function getAdjacentResolutionScale(
   currentResolutionScale: number,
   minimumResolutionScale: number,
+  maximumResolutionScale: number,
   direction: -1 | 1
 ): number {
-  const scales = getAvailableResolutionScales(minimumResolutionScale);
+  const scales = getAvailableResolutionScales(minimumResolutionScale, maximumResolutionScale);
   const currentIndex = scales.findIndex(scale => scale >= currentResolutionScale - 0.0001);
   const index = currentIndex < 0 ? scales.length - 1 : currentIndex;
   return scales[Math.max(0, Math.min(scales.length - 1, index + direction))];
 }
 
-function getAvailableResolutionScales(minimumResolutionScale: number): number[] {
-  const scales = RESOLUTION_SCALES.filter(scale => scale >= minimumResolutionScale);
-  return scales.length > 0 ? [...scales] : [minimumResolutionScale];
+function getAvailableResolutionScales(
+  minimumResolutionScale: number,
+  maximumResolutionScale: number
+): number[] {
+  const scales = [
+    minimumResolutionScale,
+    ...RESOLUTION_SCALES.filter(
+      scale => scale > minimumResolutionScale && scale < maximumResolutionScale
+    ),
+    maximumResolutionScale
+  ].sort((leftScale, rightScale) => leftScale - rightScale);
+  return scales.filter(
+    (scale, index) => index === 0 || Math.abs(scale - scales[index - 1]) > 0.0001
+  );
 }
 
 function clampResolutionScale(value: number, minimum: number, maximum: number): number {

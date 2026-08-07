@@ -91,6 +91,10 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGP
       device.handle.pushErrorScope('validation');
     }
     const deferredStatistics = renderer.render(options);
+    testCase.ok(
+      renderer.getLastDepthTexture(options.id),
+      'compatible deferred frames expose their sampleable G-buffer depth'
+    );
     device.submit();
     if (supportsRawValidationErrorScopes) {
       const deferredValidationError = await device.handle.popErrorScope();
@@ -139,6 +143,11 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGP
 
     surface.material.uniforms = {...surface.material.uniforms, transmissionFactor: 0.4};
     const forwardStatistics = renderer.render(options);
+    testCase.equal(
+      renderer.getLastDepthTexture(options.id),
+      null,
+      'forward fallback does not expose stale deferred depth'
+    );
     device.submit();
     testCase.equal(
       forwardStatistics.drawCount,

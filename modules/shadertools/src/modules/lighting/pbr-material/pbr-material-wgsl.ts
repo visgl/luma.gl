@@ -429,6 +429,23 @@ struct PBRInfo {
 const M_PI = 3.141592653589793;
 const c_MinRoughness = 0.04;
 
+// Widen sub-pixel specular lobes using the screen-space normal footprint.
+// This is geometric specular antialiasing: the normal variance is converted
+// into an additional squared perceptual roughness before evaluating BRDFs.
+fn widenSpecularRoughness(perceptualRoughness: f32, normal: vec3f) -> f32 {
+  let normalDerivativeX = dpdx(normal);
+  let normalDerivativeY = dpdy(normal);
+  let normalVariance =
+    dot(normalDerivativeX, normalDerivativeX) +
+    dot(normalDerivativeY, normalDerivativeY);
+  let kernelRoughnessSquared = min(2.0 * normalVariance, 1.0);
+  return clamp(
+    sqrt(perceptualRoughness * perceptualRoughness + kernelRoughnessSquared),
+    c_MinRoughness,
+    1.0
+  );
+}
+
 fn SRGBtoLINEAR(srgbIn: vec4f ) -> vec4f
 {
   var linOut: vec3f = srgbIn.xyz;
@@ -1331,6 +1348,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
     metallic = clamp(metallic, 0.0, 1.0);
     let tbn = getTBN(normalUV);
     let n = getNormal(tbn, normalUV);                          // normal at surface point
+    perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n);
     let v = normalize(pbrProjection.camera - fragmentInputs.pbr_vPosition);  // Vector from surface point to camera
     let NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
     var useExtendedPBR = false;
@@ -1570,6 +1588,7 @@ fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
     clearcoatFactor = clamp(clearcoatFactor, 0.0, 1.0);
     clearcoatRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
     let clearcoatNormal = getClearcoatNormal(getTBN(clearcoatNormalUV), n, clearcoatNormalUV);
+    clearcoatRoughness = widenSpecularRoughness(clearcoatRoughness, clearcoatNormal);
 
     var sheenColor = pbrMaterial.sheenColorFactor;
     var sheenRoughness = pbrMaterial.sheenRoughnessFactor;

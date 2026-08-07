@@ -138,6 +138,8 @@ const BVH_STACK_CAPACITY = 32u;
 const MAXIMUM_HISTORY_SAMPLES = 64.0;
 const MINIMUM_HISTORY_NORMAL_ALIGNMENT = 0.75;
 const MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE = 0.06;
+const MAXIMUM_EXACT_HISTORY_PRIMITIVE_INDEX = 2047u;
+const OVERFLOW_HISTORY_PRIMITIVE_IDENTIFIER = 65504.0;
 
 fn makeRandom(seed: u32) -> f32 {
   var value = seed * 747796405u + 2891336453u;
@@ -146,12 +148,7 @@ fn makeRandom(seed: u32) -> f32 {
   return f32(value) / 4294967295.0;
 }
 
-fn makeCameraRay(pixel: vec2<u32>, sampleIndex: u32) -> Ray {
-  let frameIndex = uniforms.acceleration.w;
-  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
-  let seed = pixelIndex * 1973u + frameIndex * 9277u + sampleIndex * 26699u +
-    uniforms.displayPhase.z * 3181u + 17u;
-  let offset = vec2<f32>(makeRandom(seed), makeRandom(seed + 101u));
+fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
   let coordinates = (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy);
   let clipCoordinates = vec2<f32>(coordinates.x * 2.0 - 1.0, 1.0 - coordinates.y * 2.0);
   let nearPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, -1.0, 1.0);
@@ -161,6 +158,28 @@ fn makeCameraRay(pixel: vec2<u32>, sampleIndex: u32) -> Ray {
   let orthographic = uniforms.cameraPosition.w > 0.5;
   let origin = select(uniforms.cameraPosition.xyz, nearPosition, orthographic);
   return Ray(origin, normalize(farPosition - origin));
+}
+
+fn makeRadianceSampleOffset(pixel: vec2<u32>, sampleIndex: u32) -> vec2<f32> {
+  let pixelIndex = pixel.y * uniforms.dimensions.x + pixel.x;
+  let pixelRotation = vec2<f32>(
+    makeRandom(pixelIndex * 1973u + 17u),
+    makeRandom(pixelIndex * 26699u + 101u)
+  );
+  let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
+  let lowDiscrepancyOffset = vec2<f32>(
+    f32(sequenceIndex) * 0.7548776662466927,
+    f32(sequenceIndex) * 0.5698402909980532
+  );
+  return fract(pixelRotation + lowDiscrepancyOffset);
+}
+
+fn makeCameraRay(pixel: vec2<u32>, sampleIndex: u32) -> Ray {
+  return makeCameraRayAtOffset(pixel, makeRadianceSampleOffset(pixel, sampleIndex));
+}
+
+fn makeGuideCameraRay(pixel: vec2<u32>) -> Ray {
+  return makeCameraRayAtOffset(pixel, vec2<f32>(0.5));
 }
 
 fn intersectsBounds(ray: Ray, center: vec3<f32>, radius: f32, maximumDistance: f32) -> bool {
@@ -510,6 +529,72 @@ fn rejectHistoricalRaySample() -> HistoricalRaySample {
   return HistoricalRaySample(vec3<f32>(0.0), 0.0, false);
 }
 
+fn signNotZero(value: f32) -> f32 {
+  return select(-1.0, 1.0, value >= 0.0);
+}
+
+fn encodeRayNormal(normal: vec3<f32>) -> vec2<f32> {
+  let normalizedNormal = normal / max(
+    abs(normal.x) + abs(normal.y) + abs(normal.z),
+    RAY_EPSILON
+  );
+  var encodedNormal = normalizedNormal.xy;
+  if (normalizedNormal.z < 0.0) {
+    encodedNormal = (vec2<f32>(1.0) - abs(encodedNormal.yx)) * vec2<f32>(
+      signNotZero(encodedNormal.x),
+      signNotZero(encodedNormal.y)
+    );
+  }
+  return encodedNormal * 0.5 + vec2<f32>(0.5);
+}
+
+fn decodeRayNormal(encodedNormal: vec2<f32>) -> vec3<f32> {
+  let signedNormal = encodedNormal * 2.0 - vec2<f32>(1.0);
+  var normal = vec3<f32>(
+    signedNormal,
+    1.0 - abs(signedNormal.x) - abs(signedNormal.y)
+  );
+  let fold = max(-normal.z, 0.0);
+  normal.x += select(-fold, fold, normal.x < 0.0);
+  normal.y += select(-fold, fold, normal.y < 0.0);
+  return normalize(normal);
+}
+
+fn encodeRayPrimitiveIdentifier(primitiveIndex: u32) -> f32 {
+  return select(
+    OVERFLOW_HISTORY_PRIMITIVE_IDENTIFIER,
+    f32(primitiveIndex + 1u),
+    primitiveIndex <= MAXIMUM_EXACT_HISTORY_PRIMITIVE_INDEX
+  );
+}
+
+fn isHistoricalRayMetadataValid(
+  historicalMetadata: vec4<f32>,
+  hit: RayHit,
+  previousDistance: f32
+) -> bool {
+  if (hit.distance >= RAY_INFINITY) {
+    return historicalMetadata.a <= RAY_EPSILON;
+  }
+
+  let expectedPrimitiveIdentifier = encodeRayPrimitiveIdentifier(hit.primitiveIndex);
+  let primitiveIdentifierOverflow =
+    expectedPrimitiveIdentifier == OVERFLOW_HISTORY_PRIMITIVE_IDENTIFIER ||
+    historicalMetadata.a == OVERFLOW_HISTORY_PRIMITIVE_IDENTIFIER;
+  let primitiveIdentifierMatches =
+    abs(historicalMetadata.a - expectedPrimitiveIdentifier) <= 0.5;
+  if (historicalMetadata.a <= RAY_EPSILON ||
+      primitiveIdentifierOverflow ||
+      !primitiveIdentifierMatches ||
+      dot(decodeRayNormal(historicalMetadata.xy), hit.normal) <
+        MINIMUM_HISTORY_NORMAL_ALIGNMENT) {
+    return false;
+  }
+  let relativeDepthDifference = abs(historicalMetadata.z - previousDistance) /
+    max(previousDistance, RAY_EPSILON);
+  return relativeDepthDifference <= MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE;
+}
+
 fn clampHistoricalRayColor(
   historyPixel: vec2<i32>,
   historicalColor: vec3<f32>,
@@ -536,6 +621,27 @@ fn clampHistoricalRayColor(
   return clamp(historicalColor, currentColor - neighborhoodRadius, currentColor + neighborhoodRadius);
 }
 
+fn loadHistoricalRaySample(
+  historyPixel: vec2<i32>,
+  hit: RayHit,
+  previousDistance: f32
+) -> HistoricalRaySample {
+  let historicalMetadata = textureLoad(historyMetadata, historyPixel, 0);
+  if (!isHistoricalRayMetadataValid(historicalMetadata, hit, previousDistance)) {
+    return rejectHistoricalRaySample();
+  }
+
+  let historicalColor = textureLoad(historyImage, historyPixel, 0);
+  if (historicalColor.a <= 0.0) {
+    return rejectHistoricalRaySample();
+  }
+  return HistoricalRaySample(
+    historicalColor.rgb,
+    min(historicalColor.a, MAXIMUM_HISTORY_SAMPLES),
+    true
+  );
+}
+
 fn getHistoricalRaySample(
   pixel: vec2<u32>,
   ray: Ray,
@@ -546,7 +652,7 @@ fn getHistoricalRaySample(
     return rejectHistoricalRaySample();
   }
 
-  var historyPixel = vec2<i32>(pixel);
+  var historySamplePosition = vec2<f32>(pixel);
   var previousDistance = distance(
     ray.origin + ray.direction * min(hit.distance, 65504.0),
     uniforms.cameraPosition.xyz
@@ -572,37 +678,71 @@ fn getHistoricalRaySample(
       return rejectHistoricalRaySample();
     }
 
-    historyPixel = min(
-      vec2<i32>(previousTextureCoordinates * vec2<f32>(uniforms.dimensions.xy)),
-      vec2<i32>(uniforms.dimensions.xy) - vec2<i32>(1)
-    );
+    historySamplePosition = previousTextureCoordinates *
+      vec2<f32>(uniforms.dimensions.xy) - vec2<f32>(0.5);
     previousDistance = distance(previousHitPosition, uniforms.previousCameraPosition.xyz);
   }
 
-  let historicalMetadata = textureLoad(historyMetadata, historyPixel, 0);
-  if (hit.distance >= RAY_INFINITY) {
-    if (historicalMetadata.a > RAY_EPSILON) {
-      return rejectHistoricalRaySample();
-    }
-  } else {
-    if (historicalMetadata.a <= RAY_EPSILON ||
-        dot(normalize(historicalMetadata.xyz), hit.normal) < MINIMUM_HISTORY_NORMAL_ALIGNMENT) {
-      return rejectHistoricalRaySample();
-    }
-    let relativeDepthDifference = abs(historicalMetadata.a - previousDistance) /
-      max(previousDistance, RAY_EPSILON);
-    if (relativeDepthDifference > MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE) {
-      return rejectHistoricalRaySample();
-    }
+  let maximumPixel = vec2<i32>(uniforms.dimensions.xy) - vec2<i32>(1);
+  let clampedHistorySamplePosition = clamp(
+    historySamplePosition,
+    vec2<f32>(0.0),
+    vec2<f32>(maximumPixel)
+  );
+  let firstHistoryPixel = vec2<i32>(floor(clampedHistorySamplePosition));
+  let secondHistoryPixel = min(firstHistoryPixel + vec2<i32>(1), maximumPixel);
+  let historyFraction = fract(clampedHistorySamplePosition);
+  let topLeftWeight = (1.0 - historyFraction.x) * (1.0 - historyFraction.y);
+  let topRightWeight = historyFraction.x * (1.0 - historyFraction.y);
+  let bottomLeftWeight = (1.0 - historyFraction.x) * historyFraction.y;
+  let bottomRightWeight = historyFraction.x * historyFraction.y;
+  let topLeftSample = loadHistoricalRaySample(firstHistoryPixel, hit, previousDistance);
+  let topRightSample = loadHistoricalRaySample(
+    vec2<i32>(secondHistoryPixel.x, firstHistoryPixel.y),
+    hit,
+    previousDistance
+  );
+  let bottomLeftSample = loadHistoricalRaySample(
+    vec2<i32>(firstHistoryPixel.x, secondHistoryPixel.y),
+    hit,
+    previousDistance
+  );
+  let bottomRightSample = loadHistoricalRaySample(secondHistoryPixel, hit, previousDistance);
+  var historicalColor = vec3<f32>(0.0);
+  var historicalSampleCount = 0.0;
+  var totalWeight = 0.0;
+  if (topLeftSample.valid) {
+    historicalColor += topLeftSample.color * topLeftWeight;
+    historicalSampleCount += topLeftSample.sampleCount * topLeftWeight;
+    totalWeight += topLeftWeight;
+  }
+  if (topRightSample.valid) {
+    historicalColor += topRightSample.color * topRightWeight;
+    historicalSampleCount += topRightSample.sampleCount * topRightWeight;
+    totalWeight += topRightWeight;
+  }
+  if (bottomLeftSample.valid) {
+    historicalColor += bottomLeftSample.color * bottomLeftWeight;
+    historicalSampleCount += bottomLeftSample.sampleCount * bottomLeftWeight;
+    totalWeight += bottomLeftWeight;
+  }
+  if (bottomRightSample.valid) {
+    historicalColor += bottomRightSample.color * bottomRightWeight;
+    historicalSampleCount += bottomRightSample.sampleCount * bottomRightWeight;
+    totalWeight += bottomRightWeight;
   }
 
-  let historicalColor = textureLoad(historyImage, historyPixel, 0);
-  if (historicalColor.a <= 0.0) {
+  if (totalWeight <= 0.0) {
     return rejectHistoricalRaySample();
   }
+  let nearestHistoryPixel = clamp(
+    vec2<i32>(round(clampedHistorySamplePosition)),
+    vec2<i32>(0),
+    maximumPixel
+  );
   return HistoricalRaySample(
-    clampHistoricalRayColor(historyPixel, historicalColor.rgb, currentColor),
-    min(historicalColor.a, MAXIMUM_HISTORY_SAMPLES),
+    clampHistoricalRayColor(nearestHistoryPixel, historicalColor / totalWeight, currentColor),
+    min(historicalSampleCount / totalWeight, MAXIMUM_HISTORY_SAMPLES),
     true
   );
 }
@@ -617,16 +757,12 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   }
 
   let sampleCount = clamp(u32(uniforms.settings.z), 1u, 16u);
-  let primaryRay = makeCameraRay(pixel, 0u);
-  let primaryHit = intersectScene(primaryRay, RAY_INFINITY);
+  let guideRay = makeGuideCameraRay(pixel);
+  let guideHit = intersectScene(guideRay, RAY_INFINITY);
   var accumulatedColor = vec3<f32>(0.0);
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
-    var ray = primaryRay;
-    var hit = primaryHit;
-    if (sampleIndex > 0u) {
-      ray = makeCameraRay(pixel, sampleIndex);
-      hit = intersectScene(ray, RAY_INFINITY);
-    }
+    let ray = makeCameraRay(pixel, sampleIndex);
+    let hit = intersectScene(ray, RAY_INFINITY);
     var color = uniforms.background.rgb;
     if (hit.distance < RAY_INFINITY) {
       color = evaluateDirectLighting(ray, hit);
@@ -635,7 +771,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   }
 
   var color = accumulatedColor / f32(sampleCount) * uniforms.settings.x;
-  let historicalSample = getHistoricalRaySample(pixel, primaryRay, primaryHit, color);
+  let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color);
   var totalSampleCount = f32(sampleCount);
   if (historicalSample.valid) {
     totalSampleCount = min(
@@ -645,15 +781,16 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     let currentWeight = f32(sampleCount) / totalSampleCount;
     color = mix(historicalSample.color, color, currentWeight);
   }
-  let primaryHitPosition = primaryRay.origin +
-    primaryRay.direction * min(primaryHit.distance, 65504.0);
+  let guideHitPosition = guideRay.origin +
+    guideRay.direction * min(guideHit.distance, 65504.0);
   let metadata = select(
     vec4<f32>(0.0),
     vec4<f32>(
-      primaryHit.normal,
-      min(distance(primaryHitPosition, uniforms.cameraPosition.xyz), 65504.0)
+      encodeRayNormal(guideHit.normal),
+      min(distance(guideHitPosition, uniforms.cameraPosition.xyz), 65504.0),
+      encodeRayPrimitiveIdentifier(guideHit.primitiveIndex)
     ),
-    primaryHit.distance < RAY_INFINITY
+    guideHit.distance < RAY_INFINITY
   );
   textureStore(outputImage, vec2<i32>(pixel), vec4<f32>(color, totalSampleCount));
   textureStore(outputMetadata, vec2<i32>(pixel), metadata);

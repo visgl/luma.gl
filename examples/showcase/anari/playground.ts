@@ -1,4 +1,9 @@
-import {ANARIDevice, type ANARIRendererSubtype, type ANARIVector3} from '@luma.gl/anari';
+import {
+  ANARIDevice,
+  type ANARIRendererParameters,
+  type ANARIRendererSubtype,
+  type ANARIVector3
+} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
@@ -26,6 +31,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private orbitElevation = 0.2;
   private orbitDistance = 20;
   private rendererSubtype: ANARIRendererSubtype = 'default';
+  private temporalAntialiasingEnabled = true;
   private lastStatisticsUpdate = 0;
   private readonly editor: ANARISceneEditor;
   private readonly canvas: HTMLCanvasElement;
@@ -209,11 +215,29 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       raytraceOption.disabled = true;
       raytraceOption.title = 'Graph-based ray tracing requires WebGPU.';
     }
+    const temporalAntialiasingToggle = getRequiredElement('temporal-aa-toggle', HTMLButtonElement);
+    temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(this.rendererSubtype);
     rendererSelector.addEventListener('change', event => {
       const selector = event.currentTarget;
       if (selector instanceof HTMLSelectElement) {
         this.rendererSubtype = selector.value as ANARIRendererSubtype;
+        temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(this.rendererSubtype);
         this.applyEditorScene();
+      }
+    });
+
+    temporalAntialiasingToggle.addEventListener('click', event => {
+      this.temporalAntialiasingEnabled = !this.temporalAntialiasingEnabled;
+      const button = event.currentTarget;
+      if (button instanceof HTMLButtonElement) {
+        button.classList.toggle('active', this.temporalAntialiasingEnabled);
+        button.setAttribute('aria-pressed', String(this.temporalAntialiasingEnabled));
+      }
+      if (isTemporalAntialiasingRenderer(this.rendererSubtype)) {
+        this.scene?.frame
+          .getParameter('renderer')
+          ?.setParameters(this.getTemporalAntialiasingParameters())
+          .commitParameters();
       }
     });
 
@@ -307,6 +331,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       const nextScene = createANARIJSONScene(this.anari, sceneDescription, {
         rendererSubtype: this.rendererSubtype
       });
+      if (isTemporalAntialiasingRenderer(this.rendererSubtype)) {
+        nextScene.frame
+          .getParameter('renderer')
+          ?.setParameters(this.getTemporalAntialiasingParameters())
+          .commitParameters();
+      }
       const previousScene = this.scene;
       this.scene = nextScene;
       previousScene?.destroy();
@@ -325,6 +355,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       document.getElementById('scene-error')?.classList.add('visible');
       document.getElementById('editor-status')?.classList.add('invalid');
     }
+  }
+
+  private getTemporalAntialiasingParameters(): ANARIRendererParameters {
+    return this.rendererSubtype === 'raytrace'
+      ? {
+          temporalReprojection: this.temporalAntialiasingEnabled,
+          progressive: this.temporalAntialiasingEnabled
+        }
+      : {temporalAntialiasing: this.temporalAntialiasingEnabled};
   }
 
   private formatEditorScene(): void {
@@ -497,6 +536,10 @@ function setElementText(identifier: string, value: string): void {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function isTemporalAntialiasingRenderer(rendererName: string): boolean {
+  return rendererName === 'default' || rendererName === 'deferred' || rendererName === 'raytrace';
 }
 
 function formatSceneJSON(scene: unknown): string {

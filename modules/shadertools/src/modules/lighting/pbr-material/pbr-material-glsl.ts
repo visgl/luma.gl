@@ -286,6 +286,24 @@ struct PBRInfo {
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
 
+// Widen sub-pixel specular lobes using the screen-space normal footprint.
+// This is geometric specular antialiasing: the normal variance is converted
+// into an additional squared perceptual roughness before evaluating BRDFs.
+float widenSpecularRoughness(float perceptualRoughness, vec3 normal)
+{
+  vec3 normalDerivativeX = dFdx(normal);
+  vec3 normalDerivativeY = dFdy(normal);
+  float normalVariance =
+    dot(normalDerivativeX, normalDerivativeX) +
+    dot(normalDerivativeY, normalDerivativeY);
+  float kernelRoughnessSquared = min(2.0 * normalVariance, 1.0);
+  return clamp(
+    sqrt(perceptualRoughness * perceptualRoughness + kernelRoughnessSquared),
+    c_MinRoughness,
+    1.0
+  );
+}
+
 vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor);
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
@@ -1118,6 +1136,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
     metallic = clamp(metallic, 0.0, 1.0);
     mat3 tbn = getTBN(normalUV);
     vec3 n = getNormal(tbn, normalUV);                          // normal at surface point
+    perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n);
     vec3 v = normalize(pbrProjection.camera - pbr_vPosition);  // Vector from surface point to camera
     float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
 #ifdef USE_MATERIAL_EXTENSIONS
@@ -1313,6 +1332,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
     clearcoatFactor = clamp(clearcoatFactor, 0.0, 1.0);
     clearcoatRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
     vec3 clearcoatNormal = getClearcoatNormal(getTBN(clearcoatNormalUV), n, clearcoatNormalUV);
+    clearcoatRoughness = widenSpecularRoughness(clearcoatRoughness, clearcoatNormal);
 
     vec3 sheenColor = pbrMaterial.sheenColorFactor;
     float sheenRoughness = pbrMaterial.sheenRoughnessFactor;

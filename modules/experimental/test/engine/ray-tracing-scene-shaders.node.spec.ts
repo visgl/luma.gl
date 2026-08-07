@@ -113,12 +113,43 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('let lightSampleWeight');
   });
 
-  test('reprojects per-instance radiance and rejects invalid history', () => {
+  test('uses a stable guide ray and low-discrepancy radiance samples', () => {
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn makeCameraRayAtOffset');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn makeRadianceSampleOffset');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('lowDiscrepancyOffset');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn makeGuideCameraRay');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('vec2<f32>(0.5)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let guideRay = makeGuideCameraRay(pixel)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color)'
+    );
+  });
+
+  test('reprojects bilinear per-instance radiance and rejects invalid history', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('primitive.previousTransform * localHitPosition');
     expect(RAY_TRACING_SCENE_SHADER).toContain('uniforms.previousViewProjection');
     expect(RAY_TRACING_SCENE_SHADER).toContain('uniforms.previousCameraPosition.xyz');
     expect(RAY_TRACING_SCENE_SHADER).toContain('MINIMUM_HISTORY_NORMAL_ALIGNMENT');
     expect(RAY_TRACING_SCENE_SHADER).toContain('MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn signNotZero');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn encodeRayNormal');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn decodeRayNormal');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn encodeRayPrimitiveIdentifier');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('expectedPrimitiveIdentifier');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'expectedPrimitiveIdentifier == OVERFLOW_HISTORY_PRIMITIVE_IDENTIFIER'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'historicalMetadata.a == OVERFLOW_HISTORY_PRIMITIVE_IDENTIFIER'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let topLeftWeight');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let topRightWeight');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let bottomLeftWeight');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let bottomRightWeight');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('historicalColor / totalWeight');
     expect(RAY_TRACING_SCENE_SHADER).toContain('clampHistoricalRayColor');
     expect(RAY_TRACING_SCENE_SHADER).toContain('historicalColor.a');
     expect(RAY_TRACING_SCENE_SHADER).toContain('vec4<f32>(color, totalSampleCount)');

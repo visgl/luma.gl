@@ -230,6 +230,10 @@ export type ANARIRendererParameters = {
   minimumResolutionScale?: number;
   adaptiveResolution?: boolean;
   targetFrameTimeMilliseconds?: number;
+  /**
+   * Enables camera-reprojection temporal antialiasing for raster renderers. Defaults to true.
+   */
+  temporalAntialiasing?: boolean;
   temporalReprojection?: boolean;
   shadowSamplesPerFrame?: number;
   bloomIntensity?: number;

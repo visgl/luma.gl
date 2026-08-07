@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, type TextureFormatColor} from '@luma.gl/core';
+import {Buffer, type Device, type Texture, type TextureFormatColor} from '@luma.gl/core';
 import {type ModelProps, ShaderPassRenderer} from '@luma.gl/engine';
 import type {Light} from '@luma.gl/shadertools';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
@@ -93,6 +93,7 @@ export class DeferredSceneRenderer extends SceneRenderer {
   private readonly pointLightBuffer: Buffer;
   private readonly lightingRenderer: ShaderPassRenderer;
   private forwardRenderer: SceneRenderer | null = null;
+  private readonly lastDeferredFrameIdentifiers = new Set<string>();
 
   constructor(device: Device) {
     if (device.type !== 'webgpu') {
@@ -114,12 +115,14 @@ export class DeferredSceneRenderer extends SceneRenderer {
   /** Draws compatible scenes through deferred lighting and falls back for advanced materials. */
   override render(options: SceneRenderOptions): SceneRenderStatistics {
     if (!supportsDeferredScene(options)) {
+      this.lastDeferredFrameIdentifiers.delete(options.id);
       this.forwardRenderer ||= new SceneRenderer(this.device);
       return this.forwardRenderer.render(options);
     }
 
     const [width, height] = getSceneSize(this.device, options);
     const gBuffer = this.getGBuffer(options.id, width, height);
+    this.lastDeferredFrameIdentifiers.add(options.id);
     const scene = this.prepareScene(options);
     const background = options.background || [0, 0, 0, 1];
     const renderPass = this.device.beginRenderPass({
@@ -188,12 +191,28 @@ export class DeferredSceneRenderer extends SceneRenderer {
     return scene.statistics;
   }
 
+  /**
+   * Returns the sampleable depth written by the last compatible deferred render for a frame.
+   *
+   * A null result means the last render used the forward fallback, so callers should sample
+   * their forward framebuffer depth instead.
+   *
+   * @internal
+   */
+  getLastDepthTexture(frameIdentifier: string): Texture | null {
+    if (!this.lastDeferredFrameIdentifiers.has(frameIdentifier)) {
+      return null;
+    }
+    return this.buffers.get(frameIdentifier)?.depthTexture || null;
+  }
+
   /** Releases cached forward/deferred models and G-buffer attachments for one frame. */
   override destroyFrame(frameIdentifier: string): void {
     super.destroyFrame(frameIdentifier);
     this.forwardRenderer?.destroyFrame(frameIdentifier);
     this.buffers.get(frameIdentifier)?.destroy();
     this.buffers.delete(frameIdentifier);
+    this.lastDeferredFrameIdentifiers.delete(frameIdentifier);
   }
 
   /** Releases all cached G-buffers, lighting resources, and fallback forward models. */
@@ -204,6 +223,7 @@ export class DeferredSceneRenderer extends SceneRenderer {
       buffer.destroy();
     }
     this.buffers.clear();
+    this.lastDeferredFrameIdentifiers.clear();
     this.lightingRenderer.destroy();
     this.pointLightBuffer.destroy();
   }

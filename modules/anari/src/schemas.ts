@@ -290,6 +290,7 @@ const rendererProperties = {
   bloomIntensity: nonnegativeNumberSchema.optional(),
   bloomThreshold: nonnegativeNumberSchema.optional(),
   bloomRadius: nonnegativeNumberSchema.optional(),
+  temporalAntialiasing: z.boolean().optional(),
   fogColor: ANARIVector3Schema.optional(),
   fogDensity: nonnegativeNumberSchema.optional()
 };

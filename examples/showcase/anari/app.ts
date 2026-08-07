@@ -29,6 +29,7 @@ type ShowcaseScene = {
   elevation: number;
   azimuth: number;
   rendererParameters?: ANARIRendererParameters;
+  rayTracingShadowSamplesPerFrame?: number;
 };
 
 type SceneContents = {
@@ -53,6 +54,7 @@ const DEFAULT_RENDERER_PARAMETERS: ANARIRendererParameters = {
   bloomIntensity: 0.82,
   bloomThreshold: 0.64,
   bloomRadius: 8,
+  temporalAntialiasing: true,
   fogColor: [0.018, 0.025, 0.065],
   fogDensity: 0.00024
 };
@@ -84,6 +86,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private orbitDistance = 24;
   private pointerPosition: [number, number] | null = null;
   private bloomEnabled = true;
+  private temporalAntialiasingEnabled = true;
   private lastStatisticsUpdate = 0;
   private canvas: HTMLCanvasElement | null = null;
   private readonly deferredRendererAvailable: boolean;
@@ -97,10 +100,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     this.deferredRendererAvailable = device.type === 'webgpu';
     this.renderers = {
       default: this.anari.newRenderer('default', DEFAULT_RENDERER_PARAMETERS),
-      deferred: this.anari.newRenderer('deferred', {
-        ...DEFAULT_RENDERER_PARAMETERS,
-        bloomIntensity: 0
-      }),
+      deferred: this.anari.newRenderer('deferred', DEFAULT_RENDERER_PARAMETERS),
       raytrace: this.anari.newRenderer('raytrace', {
         ...DEFAULT_RENDERER_PARAMETERS,
         bloomIntensity: 0,
@@ -279,6 +279,14 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
           for (const control of document.querySelectorAll('[data-renderer]')) {
             control.classList.toggle('active', control === button);
           }
+          const temporalAntialiasingToggle = document.getElementById('temporal-aa-toggle');
+          if (temporalAntialiasingToggle instanceof HTMLButtonElement) {
+            temporalAntialiasingToggle.hidden = !isTemporalAntialiasingRenderer(rendererName);
+          }
+          const temporalAntialiasingSeparator = document.getElementById('temporal-aa-separator');
+          if (temporalAntialiasingSeparator instanceof HTMLElement) {
+            temporalAntialiasingSeparator.hidden = !isTemporalAntialiasingRenderer(rendererName);
+          }
         }
       });
     }
@@ -290,7 +298,31 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
       this.renderers.default
         .setParameter('bloomIntensity', this.bloomEnabled ? rendererParameters.bloomIntensity : 0)
         .commitParameters();
+      this.renderers.deferred
+        .setParameter('bloomIntensity', this.bloomEnabled ? rendererParameters.bloomIntensity : 0)
+        .commitParameters();
       document.getElementById('bloom-toggle')?.classList.toggle('active', this.bloomEnabled);
+    });
+
+    document.getElementById('temporal-aa-toggle')?.addEventListener('click', event => {
+      this.temporalAntialiasingEnabled = !this.temporalAntialiasingEnabled;
+      this.renderers.default
+        .setParameter('temporalAntialiasing', this.temporalAntialiasingEnabled)
+        .commitParameters();
+      this.renderers.deferred
+        .setParameter('temporalAntialiasing', this.temporalAntialiasingEnabled)
+        .commitParameters();
+      this.renderers.raytrace
+        .setParameters({
+          temporalReprojection: this.temporalAntialiasingEnabled,
+          progressive: this.temporalAntialiasingEnabled
+        })
+        .commitParameters();
+      const button = event.currentTarget;
+      if (button instanceof HTMLButtonElement) {
+        button.classList.toggle('active', this.temporalAntialiasingEnabled);
+        button.setAttribute('aria-pressed', String(this.temporalAntialiasingEnabled));
+      }
     });
   }
 
@@ -305,14 +337,16 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
       .setParameters({
         ...DEFAULT_RENDERER_PARAMETERS,
         ...rendererParameters,
-        bloomIntensity: this.bloomEnabled ? rendererParameters.bloomIntensity : 0
+        bloomIntensity: this.bloomEnabled ? rendererParameters.bloomIntensity : 0,
+        temporalAntialiasing: this.temporalAntialiasingEnabled
       })
       .commitParameters();
     this.renderers.deferred
       .setParameters({
         ...DEFAULT_RENDERER_PARAMETERS,
         ...rendererParameters,
-        bloomIntensity: 0
+        bloomIntensity: this.bloomEnabled ? rendererParameters.bloomIntensity : 0,
+        temporalAntialiasing: this.temporalAntialiasingEnabled
       })
       .commitParameters();
     this.renderers.raytrace
@@ -320,7 +354,12 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         ...DEFAULT_RENDERER_PARAMETERS,
         ...rendererParameters,
         bloomIntensity: 0,
-        ...DEFAULT_RAY_TRACING_PARAMETERS
+        ...DEFAULT_RAY_TRACING_PARAMETERS,
+        temporalReprojection: this.temporalAntialiasingEnabled,
+        progressive: this.temporalAntialiasingEnabled,
+        shadowSamplesPerFrame:
+          scene.rayTracingShadowSamplesPerFrame ??
+          DEFAULT_RAY_TRACING_PARAMETERS.shadowSamplesPerFrame
       })
       .commitParameters();
     this.frame.setParameter('world', scene.world).commitParameters();
@@ -518,7 +557,10 @@ function makeChromaticAtlas(device: ANARIDevice): ShowcaseScene {
     target: [0, 4.1, 0],
     distance: 31,
     elevation: 0.23,
-    azimuth: 0.2
+    azimuth: 0.2,
+    // The built-in scene has only three direct lights. Sampling all of them avoids
+    // rotating-light shimmer while keeping the showcase's ray budget bounded.
+    rayTracingShadowSamplesPerFrame: contents.lights.length
   };
 }
 
@@ -754,7 +796,8 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
     target: [0, 4.8, -1],
     distance: 40,
     elevation: 0.19,
-    azimuth: 0.035
+    azimuth: 0.035,
+    rayTracingShadowSamplesPerFrame: contents.lights.length
   };
 }
 
@@ -884,7 +927,8 @@ function makeCelestialEngine(device: ANARIDevice): ShowcaseScene {
     target: [0, 7, 0],
     distance: 28,
     elevation: 0.32,
-    azimuth: 0.44
+    azimuth: 0.44,
+    rayTracingShadowSamplesPerFrame: contents.lights.length
   };
 }
 
@@ -939,11 +983,13 @@ function addStarfield(
   starCount: number,
   radius: number
 ): void {
-  const geometry = device.newGeometry('sphere', {radius: 0.035, segments: 7});
+  // Keep the smallest background stars above a roughly two-pixel footprint at the showcase's
+  // default framing so continuous camera motion does not make subpixel triangles blink.
+  const geometry = device.newGeometry('sphere', {radius: 0.055, segments: 12});
   const material = device.newMaterial('physicallyBased', {
     baseColor: [0.58, 0.66, 1],
     emissive: [0.52, 0.62, 1],
-    emissiveStrength: 3.5,
+    emissiveStrength: 1.8,
     roughness: 0.2
   });
   const group = makeSurfaceGroup(device, geometry, material);
@@ -958,9 +1004,9 @@ function addStarfield(
         Math.sin(azimuth) * Math.cos(elevation) * distance
       ],
       scale: [
-        0.7 + hash(starIndex * 19) * 2,
-        0.7 + hash(starIndex * 19) * 2,
-        0.7 + hash(starIndex * 19) * 2
+        1 + hash(starIndex * 19) * 1.1,
+        1 + hash(starIndex * 19) * 1.1,
+        1 + hash(starIndex * 19) * 1.1
       ]
     });
   }
@@ -1152,6 +1198,10 @@ function hash(value: number): number {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function isTemporalAntialiasingRenderer(rendererName: string | undefined): boolean {
+  return rendererName === 'default' || rendererName === 'deferred' || rendererName === 'raytrace';
 }
 
 function setElementText(identifier: string, value: string): void {
