@@ -284,6 +284,32 @@ test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase =
   testCase.end();
 });
 
+test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kernel', testCase => {
+  const anamorphicCases = [
+    {radius: 12, anamorphicRatio: 1, horizontalRadius: 24, verticalRadius: 12},
+    {radius: 18, anamorphicRatio: 0.5, horizontalRadius: 24, verticalRadius: 16},
+    {radius: 18, anamorphicRatio: -0.5, horizontalRadius: 16, verticalRadius: 24},
+    {radius: 24, anamorphicRatio: 1, horizontalRadius: 24, verticalRadius: 12},
+    {radius: 24, anamorphicRatio: -1, horizontalRadius: 12, verticalRadius: 24},
+    {radius: 24, anamorphicRatio: 0, horizontalRadius: 24, verticalRadius: 24}
+  ];
+
+  for (const {radius, anamorphicRatio, horizontalRadius, verticalRadius} of anamorphicCases) {
+    const pipeline = createBloomShaderPassPipeline({radius, anamorphicRatio});
+    const blurSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomBlur');
+
+    testCase.deepEqual(
+      blurSteps.map(step => step.uniforms?.radius),
+      Array.from({length: blurSteps.length}, (_, stepIndex) =>
+        stepIndex % 2 === 0 ? horizontalRadius : verticalRadius
+      ),
+      `radius ${radius} preserves anamorphic ratio ${anamorphicRatio} within every shader kernel`
+    );
+  }
+
+  testCase.end();
+});
+
 test('HDR bloom covers source texels at quarter pyramid resolution', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {

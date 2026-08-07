@@ -781,8 +781,12 @@ export function createBloomShaderPassPipeline(
   const fireflyReduction = options.fireflyReduction ?? 0;
   const anamorphicRatio = Math.min(Math.max(options.anamorphicRatio ?? 0, -1), 1);
   const tint = options.tint ?? [1, 1, 1];
-  const horizontalRadius = radius * (1 + Math.max(anamorphicRatio, 0));
-  const verticalRadius = radius * (1 + Math.max(-anamorphicRatio, 0));
+  const anamorphicRadius = Math.min(
+    radius,
+    MAX_BLOOM_BLUR_RADIUS / (1 + Math.abs(anamorphicRatio))
+  );
+  const horizontalRadius = anamorphicRadius * (1 + Math.max(anamorphicRatio, 0));
+  const verticalRadius = anamorphicRadius * (1 + Math.max(-anamorphicRatio, 0));
   const levels = BLOOM_PYRAMID_LEVELS.slice(0, BLOOM_QUALITY_LEVELS[quality]);
   const renderTargets: Record<string, ShaderPassRenderTarget> = {};
   const steps: ShaderPassPipelineStep[] = [];
