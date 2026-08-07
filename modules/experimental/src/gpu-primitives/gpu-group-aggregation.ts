@@ -11,6 +11,11 @@ import {
   type GraphDataView
 } from './gpu-command-graph';
 import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource,
+  type GPUBoundedDispatchLayout
+} from './gpu-dispatch-utils';
+import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
@@ -22,7 +27,7 @@ import {
 const GROUP_AGGREGATION_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_GROUP_COUNT = 256;
 
-type GPUGroupAggregationDispatchLayout = {x: number; y: number; z: number};
+type GPUGroupAggregationDispatchLayout = GPUBoundedDispatchLayout;
 
 /** One packed group-key chunk or an ordered vector of packed group-key chunks. */
 export type GPUGroupAggregationKeys = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
@@ -250,15 +255,23 @@ function addClearGroupsPass<Parameters>(
   id: string,
   output: GraphDataView<'uint32'>
 ): void {
+  const dispatchLayout = getGPUGroupAggregationDispatchLayout(
+    output.length,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const source = /* wgsl */ `
 const GROUP_COUNT: u32 = ${output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputCounts: array<atomic<u32>>;
 
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x < GROUP_COUNT) {
-    atomicStore(&outputCounts[OUTPUT_OFFSET + globalId.x], 0u);
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getBoundedInvocationIndexSource(dispatchLayout, GROUP_AGGREGATION_WORKGROUP_SIZE)}
+  if (index < GROUP_COUNT) {
+    atomicStore(&outputCounts[OUTPUT_OFFSET + index], 0u);
   }
 }`;
   addComputationPass(graph, {
@@ -266,7 +279,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     source,
     resources: [{buffer: output, usage: 'storage-write'}],
     bindings: {outputCounts: output},
-    dispatchCount: Math.ceil(output.length / GROUP_AGGREGATION_WORKGROUP_SIZE)
+    dispatchSize: dispatchLayout
   });
 }
 
@@ -348,6 +361,10 @@ function addInitializeGroupStatisticsPass<Parameters>(
   operation: Exclude<GPUGroupAggregationOperation, 'count'>,
   counts?: GraphDataView<'uint32'>
 ): void {
+  const dispatchLayout = getGPUGroupAggregationDispatchLayout(
+    output.length,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const initialBits = operation === 'min' ? '0xffffffffu' : '0u';
   const countBinding = counts
     ? '@group(0) @binding(1) var<storage, read_write> outputCounts: array<atomic<u32>>;'
@@ -361,9 +378,10 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<atomic<u32>>;
 ${countBinding}
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
+  ${getBoundedInvocationIndexSource(dispatchLayout, GROUP_AGGREGATION_WORKGROUP_SIZE)}
   if (index < GROUP_COUNT) {
     atomicStore(&outputValues[OUTPUT_OFFSET + index], ${initialBits});
     ${countInitialization}
@@ -377,7 +395,7 @@ ${countBinding}
       ...(counts ? ([{buffer: counts, usage: 'storage-write'}] as GraphBufferUse[]) : [])
     ],
     bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-    dispatchCount: Math.ceil(output.length / GROUP_AGGREGATION_WORKGROUP_SIZE)
+    dispatchSize: dispatchLayout
   });
 }
 
@@ -467,6 +485,10 @@ function addFinalizeGroupStatisticsPass<Parameters>(
   operation: 'min' | 'max' | 'mean',
   counts?: GraphDataView<'uint32'>
 ): void {
+  const dispatchLayout = getGPUGroupAggregationDispatchLayout(
+    output.length,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const countBinding = counts
     ? '@group(0) @binding(1) var<storage, read> outputCounts: array<u32>;'
     : '';
@@ -499,9 +521,10 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 ${countBinding}
 ${decodeFunction}
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
+  ${getBoundedInvocationIndexSource(dispatchLayout, GROUP_AGGREGATION_WORKGROUP_SIZE)}
   if (index < GROUP_COUNT) {
     ${finalizeStatement}
   }
@@ -514,7 +537,7 @@ ${decodeFunction}
       ...(counts ? ([{buffer: counts, usage: 'storage-read'}] as GraphBufferUse[]) : [])
     ],
     bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-    dispatchCount: Math.ceil(output.length / GROUP_AGGREGATION_WORKGROUP_SIZE)
+    dispatchSize: dispatchLayout
   });
 }
 
@@ -556,17 +579,12 @@ export function getGPUGroupAggregationDispatchLayout(
   elementCount: number,
   maxComputeWorkgroupsPerDimension: number
 ): GPUGroupAggregationDispatchLayout {
-  const maximum = Math.floor(maxComputeWorkgroupsPerDimension);
-  const workgroupCount = Math.max(1, Math.ceil(elementCount / GROUP_AGGREGATION_WORKGROUP_SIZE));
-  const x = Math.min(workgroupCount, maximum);
-  const y = Math.min(Math.ceil(workgroupCount / x), maximum);
-  const z = Math.ceil(workgroupCount / x / y);
-  if (z > maximum) {
-    throw new Error(
-      `GPUGroupAggregation requires ${workgroupCount} workgroups, exceeding the 3D dispatch limit of ${maximum} per dimension`
-    );
-  }
-  return {x, y, z};
+  return getBoundedDispatchLayout(
+    'GPUGroupAggregation',
+    elementCount,
+    GROUP_AGGREGATION_WORKGROUP_SIZE,
+    maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Wraps generated WGSL in one graph compute node with deferred physical buffer resolution. */

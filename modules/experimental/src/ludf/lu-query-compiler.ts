@@ -397,18 +397,18 @@ export function compileLuDataFrameQuery<
   }
 }
 
-/** Keeps legacy visibility identity/scatter dispatches within the device's 1D workgroup limit. */
+/** Rejects source batches only when even bounded three-dimensional dispatch cannot represent them. */
 function validateLuQueryBatchCapacity<T extends GPUTypeMap>(
   source: LuDataFrame<T>,
   graph: GPUCommandGraph<LuDataFrameQueryParameters>
 ): void {
-  const maximum = graph.device.limits.maxComputeWorkgroupsPerDimension * LU_QUERY_WORKGROUP_SIZE;
   for (const [batchIndex, batch] of source.batches.entries()) {
-    if (batch.numRows > maximum) {
-      throw new Error(
-        `LuDataFrame source batch ${batchIndex} exceeds visibility dispatch capacity`
-      );
-    }
+    getBoundedDispatchLayout(
+      `LuDataFrame source batch ${batchIndex}`,
+      batch.numRows,
+      LU_QUERY_WORKGROUP_SIZE,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
   }
 }
 
