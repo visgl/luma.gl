@@ -29,6 +29,13 @@ flat-grid approximation suits applications that can trade some far-field accurac
 individual force calculations. It is not Barnes–Hut, ForceAtlas2, or a guaranteed subquadratic
 layout.
 
+The native and deck.gl graph explorers additionally demonstrate an application-owned,
+constant-sample force contributor for graphs with up to 1,048,576 real vertices and 2,097,343
+resident directed edges. It evaluates every original edge plus four deterministic repulsion
+samples per vertex, retains every rendered vertex, and limits only visible edge detail. This
+explicitly approximate `O(E + 4V)` showcase strategy is not a public graph algorithm, an exact
+all-pairs solver, or a promise of device-independent frame rates.
+
 See the [luGraph graph analytics guide](/docs/api-reference/experimental/lugraph) for when to use
 each operation, complete GPU-resident composition examples, and ownership and capacity contracts.
 

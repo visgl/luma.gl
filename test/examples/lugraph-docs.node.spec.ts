@@ -21,6 +21,14 @@ const graphExplorerExample = readFileSync(
   new URL('../../website/content/examples/experimental/lugraph-explorer.mdx', import.meta.url),
   'utf8'
 );
+const deckGraphExplorerExample = readFileSync(
+  new URL('../../website/content/examples/deck/lugraph-explorer.mdx', import.meta.url),
+  'utf8'
+);
+const privateLayerDocumentation = readFileSync(
+  new URL('../../modules/arrow-layers/README.md', import.meta.url),
+  'utf8'
+);
 const sidebar = readFileSync(new URL('../../docs/table-of-contents.json', import.meta.url), 'utf8');
 const experimentalTabs = readFileSync(
   new URL('../../website/src/components/docs/experimental-docs-tabs.tsx', import.meta.url),
@@ -41,7 +49,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('/docs/api-reference/experimental/lugraph');
   });
 
-  test('embeds an honest 128-vertex GPU explorer and explains its practical interactions', () => {
+  test('embeds an honest full-population GPU explorer and explains its practical interactions', () => {
     expect(graphDocumentation).toContain(
       "import {LuGraphExplorerExample} from '@site/src/examples';"
     );
@@ -51,19 +59,28 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     );
 
     for (const documentation of [graphDocumentation, graphExplorerExample]) {
-      expect(documentation).toContain('128-vertex');
+      expect(documentation).toContain('1,024');
+      expect(documentation).toContain('1,048,576');
+      expect(documentation).toContain('2,097,343');
+      expect(documentation).toContain('16,384');
+      expect(documentation).toContain('65,536');
+      expect(documentation).toContain('512 vertices');
       expect(documentation).toContain('weakly connected');
-      expect(documentation).toContain('not community-detection');
+      expect(documentation).toMatch(/label.propagation/u);
       expect(documentation).toContain('PageRank');
       expect(documentation).toContain('8-byte');
       expect(documentation).toContain('`O(V² + E)`');
+      expect(documentation).toContain('`O(E + 4V)`');
     }
 
     expect(graphExplorerExample).toContain('## Overview');
     expect(graphExplorerExample).toContain('## How to read the network');
     expect(graphExplorerExample).toContain('## Try the controls');
     expect(graphExplorerExample).toContain('## What actually stays on the GPU');
+    expect(graphExplorerExample).toContain('## How scale changes the real GPU workload');
     expect(graphExplorerExample).toContain('<LuGraphExplorerExample />');
+    expect(graphExplorerExample).toContain('**Choose a graph size**');
+    expect(graphExplorerExample).toContain('**Choose a layout mode**');
     expect(graphExplorerExample).toContain('**Choose a node color mode**');
     expect(graphExplorerExample).toContain('**Choose a node size mode**');
     expect(graphExplorerExample).toContain('**Adjust neighborhood depth**');
@@ -76,13 +93,50 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphExplorerExample).toContain('/docs/api-reference/experimental/lugraph');
 
     for (const documentation of [graphDocumentation, graphExplorerExample]) {
+      expect(documentation).toContain('**Label-propagation communities**');
       expect(documentation).toContain('**Weak components**');
       expect(documentation).toContain('**Vertex degree**');
       expect(documentation).toContain('**PageRank importance**');
       expect(documentation).toContain('**Neighborhood distance**');
-      expect(documentation).toContain('legend');
-      expect(documentation).toContain('execution times');
+      expect(documentation).toContain('inspector');
     }
+    expect(graphDocumentation).toContain('CPU encoding is never mislabeled');
+    expect(graphExplorerExample).toContain('fabricated GPU timing');
+  });
+
+  test('distinguishes complete graph residency, bounded visible edges, and real layout modes', () => {
+    for (const documentation of [
+      graphDocumentation,
+      graphExplorerExample,
+      deckGraphExplorerExample
+    ]) {
+      expect(documentation).toContain('1,024');
+      expect(documentation).toContain('1,048,576');
+      expect(documentation).toContain('2,097,343');
+      expect(documentation).toContain('16,384');
+      expect(documentation).toContain('65,536');
+      expect(documentation).toContain('512 vertices');
+      expect(documentation).toContain('O(E + 4V)');
+      expect(documentation).toMatch(/flat.grid/u);
+      expect(documentation).toMatch(/label.propagation/u);
+      expect(documentation).toMatch(/convergen/u);
+    }
+
+    expect(graphDocumentation).toContain('Only rendered edge detail');
+    expect(graphExplorerExample).toContain('only visible\n  original edges are capped');
+    expect(deckGraphExplorerExample).toContain('Only visible original edge detail');
+    expect(graphDocumentation).toContain('CPU encoding is never mislabeled');
+    expect(deckGraphExplorerExample).toContain('does not invent convergence, timestamps');
+    expect(deckGraphExplorerExample).toContain('as an injected callback');
+    expect(privateLayerDocumentation).toContain('@deck.gl-community/arrow-layers');
+    expect(privateLayerDocumentation).toContain('## Overview');
+    expect(privateLayerDocumentation).toContain('## When to use graph layers');
+    expect(privateLayerDocumentation).toContain('## Graph effects and layers');
+    expect(privateLayerDocumentation).toContain('application-owned sampled-layout contributor');
+    expect(privateLayerDocumentation).toContain('never imports application or example source');
+    expect(privateLayerDocumentation).toContain('1,048,576');
+    expect(privateLayerDocumentation).toContain('2,097,343');
+    expect(privateLayerDocumentation).toContain('65,536');
   });
 
   test('documents opt-in CPU and actual WebGPU benchmarks with reproducible graph workloads', () => {

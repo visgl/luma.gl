@@ -9,13 +9,15 @@ import {
   LuGraph,
   LuGraphBreadthFirstSearch,
   LuGraphConnectedComponents,
+  LuGraphDegree,
   LuGraphForceLayout,
+  LuGraphLabelPropagation,
   LuGraphPageRank,
+  LuGraphSpatialForceLayout,
   LuGraphTopology,
   type LuGraphAdjacency
 } from '@luma.gl/experimental/lugraph';
 import {GPUData, GPUVector} from '@luma.gl/tables';
-
 /** Caller-owned graph input preserving original edge partitions and vertex allocations. */
 export type LuGraphDeckDataset = {
   /** Number of stable zero-based graph vertices. */
@@ -33,8 +35,55 @@ export type LuGraphDeckDataset = {
 const SCALAR_BYTE_LENGTH = 4;
 const MAXIMUM_NEIGHBORHOOD_DEPTH = 8;
 const DEFAULT_NEIGHBORHOOD_DEPTH = 2;
+const LUGRAPH_DECK_MAXIMUM_EXACT_VERTEX_COUNT = 512;
+const LUGRAPH_DECK_LINEAR_LAYOUT_VERTEX_COUNT = 16_384;
+const LUGRAPH_DECK_POINT_VERTEX_COUNT = 65_536;
+const LUGRAPH_DECK_MAX_VISIBLE_EDGES = 65_536;
+const LUGRAPH_DECK_SPATIAL_BOUNDS = [-2, -2, 2, 2] as const;
+const SPATIAL_DRAG_MARGIN = 0.1;
 
 type ScalarFormat = 'uint32' | 'float32';
+
+/** Selects exact forces, a flat spatial grid, or a caller-provided sampled layout. */
+export type LuGraphDeckLayoutMode = 'auto' | 'exact' | 'spatial' | 'sampled';
+
+/** Immediately available encoding, memory, and frame measurements; no graph data is read. */
+export type LuGraphDeckEffectStats = {
+  vertexCount: number;
+  edgeCount: number;
+  renderedVertexCount: number;
+  renderedEdgeCount: number;
+  frameCount: number;
+  layoutMode: 'exact' | 'spatial' | 'sampled';
+  renderMode: 'circles' | 'points';
+  gridCellCount: number;
+  residentBufferBytes: number;
+  transientBufferBytes: number;
+  spatialIndexBytes: number;
+  analysisNodeCount: number;
+  frameNodeCount: number;
+  analysisEncodeMilliseconds: number;
+  frameEncodeMilliseconds: number;
+  framesPerSecond: number;
+  completedAnalysisStages: number;
+  totalAnalysisStages: number;
+  pageRankIterations: number;
+  componentIterations: number;
+  communityIterations: number;
+};
+
+/** Optional bounded layout selection and CPU-only diagnostic callback. */
+export type LuGraphDeckEffectOptions = {
+  layoutMode?: LuGraphDeckLayoutMode;
+  pointMode?: boolean;
+  maxVisibleEdges?: number;
+  onStats?: (stats: LuGraphDeckEffectStats) => void;
+  /** Adds an explicitly provided O(E + 4V) contributor without importing application code. */
+  addSampledLayoutToGraph?: (
+    commandGraph: GPUCommandGraph<void>,
+    layout: LuGraphForceLayout
+  ) => void;
+};
 
 /**
  * Declares resident luGraph analytics and progressive layout inside deck.gl's own render encoder.
@@ -52,11 +101,19 @@ export class LuGraphDeckEffect implements Effect {
   readonly dataset: LuGraphDeckDataset;
   readonly graph: LuGraph;
   readonly topology: LuGraphTopology;
+  readonly degree: LuGraphDegree;
   readonly pageRank: LuGraphPageRank;
   readonly components: LuGraphConnectedComponents;
+  readonly communities: LuGraphLabelPropagation;
   readonly search: LuGraphBreadthFirstSearch;
   readonly layout: LuGraphForceLayout;
+  readonly spatialLayout?: LuGraphSpatialForceLayout;
+  readonly activeLayoutMode: 'exact' | 'spatial' | 'sampled';
+  readonly renderMode: 'circles' | 'points';
+  readonly renderedVertexCount: number;
+  readonly renderedEdgeCount: number;
   readonly analysisGraph: CompiledGPUCommandGraph<void>;
+  readonly searchGraph?: CompiledGPUCommandGraph<void>;
   readonly frameGraph: CompiledGPUCommandGraph<void>;
 
   private readonly buffers: Buffer[] = [];
@@ -67,15 +124,51 @@ export class LuGraphDeckEffect implements Effect {
   private readonly pinned: GPUVector<'uint32'>;
   private readonly reset: GPUVector<'uint32'>;
   private readonly pinnedVertices = new Set<number>();
+  private readonly onStats?: (stats: LuGraphDeckEffectStats) => void;
+  private readonly analysisStages: CompiledGPUCommandGraph<void>[];
   private selectedVertex: number | null = 0;
   private neighborhoodDepth = DEFAULT_NEIGHBORHOOD_DEPTH;
-  private analyticsPending = true;
+  private completedAnalysisStages = 0;
+  private searchPending = true;
+  private frameCount = 0;
+  private previousFrameTime = 0;
+  private analysisEncodeMilliseconds = 0;
+  private smoothedFramesPerSecond = 0;
   private destroyed = false;
 
-  constructor(device: Device, dataset: LuGraphDeckDataset) {
+  constructor(device: Device, dataset: LuGraphDeckDataset, options: LuGraphDeckEffectOptions = {}) {
     if (device.type !== 'webgpu') throw new Error('LuGraphDeckEffect requires WebGPU');
     this.device = device;
     this.dataset = dataset;
+    this.onStats = options.onStats;
+    const edgeCount = dataset.sourceChunks.reduce((total, chunk) => total + chunk.length, 0);
+    const largestBufferBytes = Math.max(dataset.vertexCount * 8, edgeCount * SCALAR_BYTE_LENGTH);
+    if (
+      largestBufferBytes > device.limits.maxStorageBufferBindingSize ||
+      largestBufferBytes > device.limits.maxBufferSize
+    ) {
+      throw new Error('Graph population exceeds the current WebGPU adapter buffer limits');
+    }
+    const massiveGraph = dataset.vertexCount >= LUGRAPH_DECK_LINEAR_LAYOUT_VERTEX_COUNT;
+    this.activeLayoutMode =
+      options.layoutMode === 'sampled' || massiveGraph
+        ? 'sampled'
+        : options.layoutMode === 'spatial' ||
+            dataset.vertexCount > LUGRAPH_DECK_MAXIMUM_EXACT_VERTEX_COUNT
+          ? 'spatial'
+          : 'exact';
+    if (this.activeLayoutMode === 'sampled' && !options.addSampledLayoutToGraph) {
+      throw new Error('Sampled graph layout requires a caller-provided GPU contributor');
+    }
+    this.renderMode =
+      (options.pointMode ?? dataset.vertexCount >= LUGRAPH_DECK_POINT_VERTEX_COUNT)
+        ? 'points'
+        : 'circles';
+    this.renderedVertexCount = dataset.vertexCount;
+    const visibleEdgeCapacity = Math.max(
+      0,
+      Math.floor(options.maxVisibleEdges ?? LUGRAPH_DECK_MAX_VISIBLE_EDGES)
+    );
 
     this.graph = new LuGraph({
       vertexCount: dataset.vertexCount,
@@ -83,6 +176,7 @@ export class LuGraphDeckEffect implements Effect {
       sourceVertices: this.createChunkedVector('source-vertices', dataset.sourceChunks),
       targetVertices: this.createChunkedVector('target-vertices', dataset.targetChunks)
     });
+    this.renderedEdgeCount = Math.min(this.graph.edgeCount, visibleEdgeCapacity);
     this.topology = new LuGraphTopology({
       id: 'lugraph-deck-topology',
       graph: this.graph,
@@ -90,17 +184,28 @@ export class LuGraphDeckEffect implements Effect {
       reverse: this.createAdjacency('reverse', dataset.vertexCount, this.graph.edgeCount),
       invalidEdgeCount: this.createScalarVector('invalid-edges', 'uint32', 1)
     });
+    this.degree = new LuGraphDegree({
+      id: 'lugraph-deck-degree',
+      topology: this.topology,
+      output: this.createScalarVector('degrees', 'uint32', dataset.vertexCount)
+    });
     this.pageRank = new LuGraphPageRank({
       id: 'lugraph-deck-page-rank',
       topology: this.topology,
       output: this.createScalarVector('importance', 'float32', dataset.vertexCount),
-      iterations: 12
+      iterations: massiveGraph ? 2 : 12
     });
     this.components = new LuGraphConnectedComponents({
       id: 'lugraph-deck-components',
       topology: this.topology,
       output: this.createScalarVector('components', 'uint32', dataset.vertexCount),
-      iterations: 16
+      iterations: massiveGraph ? 2 : 16
+    });
+    this.communities = new LuGraphLabelPropagation({
+      id: 'lugraph-deck-communities',
+      topology: this.topology,
+      output: this.createScalarVector('communities', 'uint32', dataset.vertexCount),
+      iterations: massiveGraph ? 2 : 8
     });
 
     this.seeds = this.createScalarVector('seeds', 'uint32', 1, Uint32Array.of(0));
@@ -134,23 +239,77 @@ export class LuGraphDeckEffect implements Effect {
       pinned: this.pinned,
       reset: this.reset,
       seed: 0x1a2b3c4d,
-      iterationsPerFrame: 2,
-      repulsion: 0.005,
-      attraction: 0.045,
-      gravity: 0.025,
-      damping: 0.85,
-      maxVelocity: 0.045
+      iterationsPerFrame: this.activeLayoutMode === 'exact' ? 2 : 1,
+      // Four sampled repulsion evaluations remain constant-cost as population grows; applying
+      // the exact all-pairs 1/V normalization would collapse every million-row cloud to a dot.
+      repulsion:
+        this.activeLayoutMode === 'sampled'
+          ? 0.0015
+          : 0.005 * Math.min(1, 128 / dataset.vertexCount),
+      attraction: this.activeLayoutMode === 'sampled' ? 0.04 : 0.045,
+      gravity: this.activeLayoutMode === 'sampled' ? 0.005 : 0.025,
+      damping: this.activeLayoutMode === 'sampled' ? 0.9 : 0.85,
+      maxVelocity:
+        this.activeLayoutMode === 'sampled'
+          ? 0.02
+          : this.activeLayoutMode === 'spatial'
+            ? 0.025
+            : 0.045
     });
+    if (this.activeLayoutMode === 'spatial') {
+      const gridSize = getLuGraphDeckGridSize(dataset.vertexCount);
+      const cellCount = gridSize[0] * gridSize[1];
+      this.spatialLayout = new LuGraphSpatialForceLayout({
+        id: 'lugraph-deck-spatial-layout',
+        layout: this.layout,
+        gridSize,
+        bounds: LUGRAPH_DECK_SPATIAL_BOUNDS,
+        theta: 0.65,
+        nearCellRadius: 1,
+        cellOffsets: this.createScalarVector('spatial-cell-offsets', 'uint32', cellCount + 1),
+        vertexIds: this.createScalarVector('spatial-vertex-ids', 'uint32', dataset.vertexCount),
+        cellCenters: this.createCoordinateVector(
+          'spatial-cell-centers',
+          new Float32Array(cellCount * 2)
+        ),
+        count: this.createScalarVector('spatial-count', 'uint32', 1),
+        overflow: this.createScalarVector('spatial-overflow', 'uint32', 1)
+      });
+    }
 
     const analysis = new GPUCommandGraph<void>(device, {id: 'lugraph-deck-analysis'});
     this.topology.addToGraph(analysis);
-    this.components.addToGraph(analysis);
-    this.pageRank.addToGraph(analysis);
+    this.degree.addToGraph(analysis);
+    if (!massiveGraph) {
+      this.components.addToGraph(analysis);
+      this.communities.addToGraph(analysis);
+      this.pageRank.addToGraph(analysis);
+    }
     this.analysisGraph = analysis.compile();
+    this.analysisStages = [this.analysisGraph];
+    if (massiveGraph) {
+      for (const [name, contributor] of [
+        ['components', this.components],
+        ['communities', this.communities],
+        ['page-rank', this.pageRank]
+      ] as const) {
+        const stage = new GPUCommandGraph<void>(device, {id: `lugraph-deck-${name}-analysis`});
+        contributor.addToGraph(stage);
+        this.analysisStages.push(stage.compile());
+      }
+    }
 
     const frame = new GPUCommandGraph<void>(device, {id: 'lugraph-deck-frame'});
-    this.search.addToGraph(frame);
-    this.layout.addToGraph(frame);
+    if (this.activeLayoutMode === 'sampled') {
+      const search = new GPUCommandGraph<void>(device, {id: 'lugraph-deck-selection'});
+      this.search.addToGraph(search);
+      this.searchGraph = search.compile();
+      options.addSampledLayoutToGraph!(frame, this.layout);
+    } else {
+      this.search.addToGraph(frame);
+      if (this.spatialLayout) this.spatialLayout.addToGraph(frame);
+      else this.layout.addToGraph(frame);
+    }
     this.frameGraph = frame.compile();
   }
 
@@ -165,6 +324,14 @@ export class LuGraphDeckEffect implements Effect {
 
   get componentLabels(): Buffer {
     return this.getVectorBuffer(this.components.output);
+  }
+
+  get communityLabels(): Buffer {
+    return this.getVectorBuffer(this.communities.output);
+  }
+
+  get degreeValues(): Buffer {
+    return this.getVectorBuffer(this.degree.output);
   }
 
   get distances(): Buffer {
@@ -188,11 +355,34 @@ export class LuGraphDeckEffect implements Effect {
   /** Appends compute to Deck's current frame; Deck remains the sole queue submission owner. */
   preRender(options: Parameters<Effect['preRender']>[0]): void {
     if (this.destroyed || !options.viewports[0]) return;
-    if (this.analyticsPending) {
-      this.analysisGraph.encode(this.device.commandEncoder, {parameters: undefined});
-      this.analyticsPending = false;
+    let advancedAnalysis = false;
+    if (this.completedAnalysisStages < this.analysisStages.length) {
+      const stage = this.analysisStages[this.completedAnalysisStages];
+      const encoding = stage.encode(this.device.commandEncoder, {
+        parameters: undefined
+      });
+      this.analysisEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
+      this.completedAnalysisStages++;
+      advancedAnalysis = true;
     }
-    this.frameGraph.encode(this.device.commandEncoder, {parameters: undefined});
+    if (this.searchGraph && this.searchPending && this.completedAnalysisStages > 0) {
+      this.searchGraph.encode(this.device.commandEncoder, {parameters: undefined});
+      this.searchPending = false;
+    }
+    const encoding = this.frameGraph.encode(this.device.commandEncoder, {parameters: undefined});
+    this.frameCount++;
+    const frameTime = performance.now();
+    if (this.previousFrameTime > 0 && frameTime > this.previousFrameTime) {
+      const framesPerSecond = 1_000 / (frameTime - this.previousFrameTime);
+      this.smoothedFramesPerSecond =
+        this.smoothedFramesPerSecond === 0
+          ? framesPerSecond
+          : this.smoothedFramesPerSecond * 0.85 + framesPerSecond * 0.15;
+    }
+    this.previousFrameTime = frameTime;
+    if (this.frameCount === 1 || advancedAnalysis || this.frameCount % 10 === 0) {
+      this.publishStats(encoding.stats.cpuEncodeTimeMilliseconds);
+    }
   }
 
   /** Publishes a genuinely picked stable source vertex without reading any graph column. */
@@ -205,12 +395,14 @@ export class LuGraphDeckEffect implements Effect {
       this.getVectorBuffer(this.seeds).write(Uint32Array.of(vertex));
       this.getVectorBuffer(this.seedCount).write(Uint32Array.of(1));
     }
+    this.searchPending = true;
   }
 
   /** Updates the existing GPU-resident dynamic hop limit without recompiling traversal passes. */
   setNeighborhoodDepth(depth: number): void {
     this.neighborhoodDepth = Math.max(0, Math.min(MAXIMUM_NEIGHBORHOOD_DEPTH, Math.round(depth)));
     this.getVectorBuffer(this.activeDepth).write(Uint32Array.of(this.neighborhoodDepth));
+    this.searchPending = true;
   }
 
   /** Pins or releases exactly one original source vertex; no other rows are repacked. */
@@ -231,7 +423,15 @@ export class LuGraphDeckEffect implements Effect {
   /** Moves the same physical vertex allocation consumed by the active Deck node model. */
   setVertexPosition(vertex: number, position: readonly [number, number]): void {
     if (!this.isValidVertex(vertex) || !position.every(Number.isFinite)) return;
-    this.positions.write(Float32Array.from(position), vertex * 2 * SCALAR_BYTE_LENGTH);
+    const boundedPosition = this.spatialLayout
+      ? position.map((coordinate, dimension) =>
+          Math.min(
+            LUGRAPH_DECK_SPATIAL_BOUNDS[dimension + 2] - SPATIAL_DRAG_MARGIN,
+            Math.max(LUGRAPH_DECK_SPATIAL_BOUNDS[dimension] + SPATIAL_DRAG_MARGIN, coordinate)
+          )
+        )
+      : position;
+    this.positions.write(Float32Array.from(boundedPosition), vertex * 2 * SCALAR_BYTE_LENGTH);
     this.getVectorBuffer(this.layout.velocities).write(
       Float32Array.of(0, 0),
       vertex * 2 * SCALAR_BYTE_LENGTH
@@ -251,7 +451,8 @@ export class LuGraphDeckEffect implements Effect {
   cleanup(_context: EffectContext): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.analysisGraph.destroy();
+    for (const stage of this.analysisStages) stage.destroy();
+    this.searchGraph?.destroy();
     this.frameGraph.destroy();
     for (const vector of this.vectors.reverse()) vector.destroy();
     for (const buffer of this.buffers.reverse()) buffer.destroy();
@@ -259,6 +460,53 @@ export class LuGraphDeckEffect implements Effect {
 
   private isValidVertex(vertex: number): boolean {
     return Number.isSafeInteger(vertex) && vertex >= 0 && vertex < this.graph.vertexCount;
+  }
+
+  /** Publishes real CPU encoding and allocation metadata without waiting on GPU work. */
+  private publishStats(frameEncodeMilliseconds: number): void {
+    if (!this.onStats) return;
+    const spatial = this.spatialLayout;
+    const spatialIndexBytes = spatial
+      ? [
+          spatial.cellOffsets,
+          spatial.vertexIds,
+          spatial.cellCenters,
+          spatial.count,
+          spatial.overflow
+        ].reduce((total, vector) => total + this.getVectorBuffer(vector).byteLength, 0)
+      : 0;
+    this.onStats({
+      vertexCount: this.graph.vertexCount,
+      edgeCount: this.graph.edgeCount,
+      renderedVertexCount: this.renderedVertexCount,
+      renderedEdgeCount: this.renderedEdgeCount,
+      frameCount: this.frameCount,
+      layoutMode: this.activeLayoutMode,
+      renderMode: this.renderMode,
+      gridCellCount: spatial?.cellCount ?? 0,
+      residentBufferBytes: this.buffers.reduce((total, buffer) => total + buffer.byteLength, 0),
+      transientBufferBytes:
+        this.analysisStages.reduce(
+          (total, stage) => total + stage.stats.physicalTransientBytes,
+          0
+        ) +
+        (this.searchGraph?.stats.physicalTransientBytes ?? 0) +
+        this.frameGraph.stats.physicalTransientBytes,
+      spatialIndexBytes,
+      analysisNodeCount: this.analysisStages.reduce(
+        (total, stage) => total + stage.stats.nodeOrder.length,
+        0
+      ),
+      frameNodeCount: this.frameGraph.stats.nodeOrder.length,
+      analysisEncodeMilliseconds: this.analysisEncodeMilliseconds,
+      frameEncodeMilliseconds,
+      framesPerSecond: this.smoothedFramesPerSecond,
+      completedAnalysisStages: this.completedAnalysisStages,
+      totalAnalysisStages: this.analysisStages.length,
+      pageRankIterations: this.pageRank.iterations,
+      componentIterations: this.components.iterations,
+      communityIterations: this.communities.iterations
+    });
   }
 
   /** Preserves all original aligned GPUData partitions, including zero-length source batches. */
@@ -349,4 +597,10 @@ export class LuGraphDeckEffect implements Effect {
   private getVectorBuffer(vector: GPUVector): Buffer {
     return vector.data[0].buffer as Buffer;
   }
+}
+
+/** Bounds the caller-owned spatial grid without depending on example fixtures. */
+function getLuGraphDeckGridSize(vertexCount: number): readonly [number, number] {
+  const dimension = Math.max(4, Math.min(32, Math.ceil(Math.sqrt(3) * vertexCount ** 0.25)));
+  return [dimension, dimension];
 }

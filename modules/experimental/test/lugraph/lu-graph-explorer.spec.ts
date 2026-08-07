@@ -10,7 +10,19 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 import {vi} from 'vitest';
 import LuGraphExplorerAnimationLoopTemplate from '../../../../examples/experimental/lugraph-explorer/app';
-import {makeGraphExplorerDataset} from '../../../../examples/experimental/lugraph-explorer/graph-data';
+import {
+  GRAPH_EXPLORER_VERTEX_COUNTS,
+  makeGraphExplorerDataset,
+  type GraphExplorerDataset,
+  type GraphExplorerLayoutMode
+} from '../../../../examples/experimental/lugraph-explorer/graph-data';
+
+type ExplorerAnimationProps = AnimationProps & {
+  dataset?: GraphExplorerDataset;
+  layoutMode?: GraphExplorerLayoutMode;
+  pointMode?: boolean;
+  maxVisibleEdges?: number;
+};
 
 type ExplorerGraphBindings = {
   frameColorId: string;
@@ -44,7 +56,7 @@ test('luGraph explorer constructs actual GPU models and computes source-aligned 
   const submitSpy = vi.spyOn(device, 'submit');
   let explorer: LuGraphExplorerAnimationLoopTemplate | undefined;
   try {
-    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
+    explorer = createExplorer(device);
     tapeTest.equal(submitSpy.mock.calls.length, 0, 'construction never submits hidden GPU work');
     submitSpy.mockRestore();
 
@@ -89,16 +101,25 @@ test('luGraph explorer constructs actual GPU models and computes source-aligned 
     );
 
     executeAnalysis(device, explorer);
-    const [degrees, componentLabels, importance, forwardCount, reverseCount, invalid, overflow] =
-      await Promise.all([
-        readUint32Vector(explorer.degree.output),
-        readUint32Vector(explorer.components.output),
-        readFloat32Vector(explorer.pageRank.output),
-        readUint32Vector(explorer.topology.forward.count),
-        readUint32Vector(explorer.topology.reverse!.count),
-        readUint32Vector(explorer.topology.invalidEdgeCount),
-        readUint32Vector(explorer.topology.forward.overflow)
-      ]);
+    const [
+      degrees,
+      componentLabels,
+      communityLabels,
+      importance,
+      forwardCount,
+      reverseCount,
+      invalid,
+      overflow
+    ] = await Promise.all([
+      readUint32Vector(explorer.degree.output),
+      readUint32Vector(explorer.components.output),
+      readUint32Vector(explorer.communities.output),
+      readFloat32Vector(explorer.pageRank.output),
+      readUint32Vector(explorer.topology.forward.count),
+      readUint32Vector(explorer.topology.reverse!.count),
+      readUint32Vector(explorer.topology.invalidEdgeCount),
+      readUint32Vector(explorer.topology.forward.overflow)
+    ]);
 
     tapeTest.equal(
       forwardCount[0],
@@ -123,6 +144,17 @@ test('luGraph explorer constructs actual GPU models and computes source-aligned 
       componentLabels[32],
       0,
       'one actual bridge joins the first two weak communities'
+    );
+    tapeTest.equal(communityLabels[0], 0, 'GPU label propagation preserves the first community');
+    tapeTest.equal(
+      communityLabels[32],
+      32,
+      'the same bridge leaves the second majority-vote community visibly distinct'
+    );
+    tapeTest.notEqual(
+      communityLabels[32],
+      componentLabels[32],
+      'true GPU community coloring is not a relabeled weak-component result'
     );
     tapeTest.equal(componentLabels[64], 64, 'third disconnected community keeps its own component');
     tapeTest.equal(
@@ -167,7 +199,7 @@ test('luGraph explorer renders original GPU chunks, highlights neighborhoods, pi
     .spyOn(device.getDefaultCanvasContext(), 'getDevicePixelSize')
     .mockReturnValue([320, 240]);
   try {
-    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
+    explorer = createExplorer(device);
     const bindings = explorer as unknown as ExplorerGraphBindings;
     tapeTest.deepEqual(
       [bindings.frameWidth, bindings.frameHeight],
@@ -283,7 +315,7 @@ test('luGraph explorer exposes genuine GPU analytics and only expands its own gr
 
   let explorer: LuGraphExplorerAnimationLoopTemplate | undefined;
   try {
-    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
+    explorer = createExplorer(device);
     const dashboard = explorer as unknown as ExplorerDashboardBindings;
     tapeTest.equal(graphExpansion.mock.calls.length, 1, 'the graph inspector opens exactly once');
     tapeTest.equal(
@@ -299,8 +331,8 @@ test('luGraph explorer exposes genuine GPU analytics and only expands its own gr
     const depth = host.querySelector<HTMLInputElement>('[data-depth]');
     tapeTest.deepEqual(
       Array.from(color!.options, option => option.value),
-      ['component', 'degree', 'pagerank', 'distance'],
-      'all four available GPU analytics are selectable as node colors'
+      ['community', 'component', 'degree', 'pagerank', 'distance'],
+      'all five available GPU analytics are selectable as node colors'
     );
     tapeTest.deepEqual(
       Array.from(size!.options, option => option.value),
@@ -327,7 +359,7 @@ test('luGraph explorer exposes genuine GPU analytics and only expands its own gr
         28,
         true
       ),
-      (1 << 4) | (1 << 8),
+      (2 << 1) | (1 << 4),
       'the shared node and picking uniform packs the selected genuine GPU metric modes'
     );
     uniformWrite.mockRestore();
@@ -380,6 +412,157 @@ test('luGraph explorer exposes genuine GPU analytics and only expands its own gr
   tapeTest.end();
 });
 
+test('luGraph native showcase renders every real GPU point while sampling only forces and visible original edges', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  let explorer: LuGraphExplorerAnimationLoopTemplate | undefined;
+  let color: Texture | undefined;
+  let depth: Texture | undefined;
+  let pickingReadback: Buffer | undefined;
+  // Odd dimensions place the pinned origin on a pixel center across software GPU backends.
+  const devicePixelSizeSpy = vi
+    .spyOn(device.getDefaultCanvasContext(), 'getDevicePixelSize')
+    .mockReturnValue([65, 49]);
+  try {
+    explorer = createExplorer(device, 32, 'sampled', {pointMode: true, maxVisibleEdges: 4});
+    tapeTest.equal(
+      explorer.activeLayoutMode,
+      'sampled',
+      'the actual four-sample force path is used'
+    );
+    tapeTest.equal(
+      explorer.layout.repulsion,
+      0.0015,
+      'four-sample repulsion remains positive and independent of population size'
+    );
+    tapeTest.equal(
+      explorer.layout.gravity,
+      0.005,
+      'bounded sampled gravity preserves visible source communities'
+    );
+    tapeTest.equal(explorer.pointMode, true, 'full-population point rendering is enabled');
+    tapeTest.equal(explorer.renderedVertexCount, 32, 'every actual original vertex stays rendered');
+    tapeTest.equal(explorer.renderedEdgeCount, 4, 'only displayed original edges are decimated');
+    tapeTest.ok(explorer.graph.edgeCount > 4, 'full GPU adjacency retains all original edge rows');
+    tapeTest.equal(
+      explorer.spatialLayout,
+      null,
+      'sampled forces do not misrepresent a spatial grid'
+    );
+    tapeTest.deepEqual(
+      explorer.edgeModels.map(({model}) => model.instanceCount),
+      [2, 2],
+      'edge-only detail remains source-aligned across both nonempty original batches'
+    );
+    tapeTest.equal(
+      explorer.nodeModel.topology,
+      'point-list',
+      'nodes use a real GPU point pipeline'
+    );
+    tapeTest.equal(explorer.nodeModel.vertexCount, 1, 'each source vertex produces one GPU point');
+    tapeTest.equal(
+      explorer.nodeModel.instanceCount,
+      32,
+      'point instances cover every graph vertex'
+    );
+    tapeTest.equal(
+      explorer.pickingModel.topology,
+      'point-list',
+      'integer picking consumes real points'
+    );
+    tapeTest.equal(
+      explorer.pickingModel.instanceCount,
+      32,
+      'picking preserves every stable source ID'
+    );
+
+    const bindings = explorer as unknown as ExplorerGraphBindings;
+    color = device.createTexture({
+      id: 'lugraph-showcase-sampled-point-color',
+      format: device.preferredColorFormat,
+      width: bindings.frameWidth,
+      height: bindings.frameHeight,
+      usage: Texture.RENDER
+    });
+    depth = device.createTexture({
+      id: 'lugraph-showcase-sampled-point-depth',
+      format: 'depth24plus',
+      width: bindings.frameWidth,
+      height: bindings.frameHeight,
+      usage: Texture.RENDER
+    });
+    pickingReadback = device.createBuffer({
+      id: 'lugraph-showcase-sampled-point-picking',
+      byteLength: INDEX_PICKING_READBACK_BYTE_LENGTH,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    (explorer.layout.positions.data[0].buffer as Buffer).write(Float32Array.of(0, 0));
+    (explorer.layout.pinned!.data[0].buffer as Buffer).write(Uint32Array.of(1));
+
+    const encoder = device.createCommandEncoder({id: 'lugraph-showcase-real-sampled-point-frame'});
+    explorer.analysisGraph.encode(encoder, {parameters: undefined});
+    const searchGraph = (explorer as unknown as {searchGraph: typeof explorer.analysisGraph | null})
+      .searchGraph;
+    searchGraph?.encode(encoder, {parameters: undefined});
+    explorer.frameGraph.encode(encoder, {
+      parameters: {width: bindings.frameWidth, height: bindings.frameHeight},
+      frameTextures: {
+        [bindings.frameColorId]: {texture: color, frameId: 0},
+        [bindings.frameDepthId]: {texture: depth, frameId: 0}
+      }
+    });
+    explorer.pickingGraph.encode(encoder, {
+      parameters: {
+        pixel: [Math.floor(bindings.frameWidth / 2), Math.floor(bindings.frameHeight / 2)]
+      },
+      buffers: {[bindings.pickingReadbackId]: pickingReadback}
+    });
+    device.submit(encoder.finish());
+
+    const [forward, reverse, degrees, components, communities, importance, bytes] =
+      await Promise.all([
+        readUint32Vector(explorer.topology.forward.count),
+        readUint32Vector(explorer.topology.reverse!.count),
+        readUint32Vector(explorer.degree.output),
+        readUint32Vector(explorer.components.output),
+        readUint32Vector(explorer.communities.output),
+        readFloat32Vector(explorer.pageRank.output),
+        pickingReadback.readAsync(0, INDEX_PICKING_READBACK_BYTE_LENGTH)
+      ]);
+    tapeTest.equal(forward[0], explorer.graph.edgeCount, 'GPU retains every original forward edge');
+    tapeTest.equal(reverse[0], explorer.graph.edgeCount, 'GPU retains every original reverse edge');
+    tapeTest.equal(
+      degrees.reduce((sum, degree) => sum + degree, 0),
+      explorer.graph.edgeCount,
+      'GPU degrees use the complete edge graph instead of its displayed subset'
+    );
+    tapeTest.equal(components[8], 0, 'actual weak components still span the source bridge');
+    tapeTest.equal(communities[8], 8, 'GPU majority-vote communities remain distinct');
+    tapeTest.ok(
+      Math.abs(importance.reduce((sum, score) => sum + score, 0) - 1) < 5e-5,
+      'full-graph GPU PageRank remains normalized in sampled-force mode'
+    );
+    tapeTest.equal(
+      decodeGPUIndexPickInfo(bytes).objectIndex,
+      0,
+      'actual integer GPU point picking returns the stable original source vertex'
+    );
+  } finally {
+    devicePixelSizeSpy.mockRestore();
+    pickingReadback?.destroy();
+    depth?.destroy();
+    color?.destroy();
+    explorer?.onFinalize();
+  }
+
+  tapeTest.end();
+});
+
 test('luGraph explorer waits for the current asynchronous GPU pick before dragging a different node', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -421,7 +604,7 @@ test('luGraph explorer waits for the current asynchronous GPU pick before draggi
   cleanup.push(() => releaseCaptureSpy.mockRestore());
 
   try {
-    explorer = new LuGraphExplorerAnimationLoopTemplate({device} as unknown as AnimationProps);
+    explorer = createExplorer(device);
     await explorer.onInitialize({device, canvas} as unknown as AnimationProps);
     const pointerBindings = explorer as unknown as ExplorerPointerBindings;
     const pinnedBuffer = explorer.layout.pinned!.data[0].buffer as Buffer;
@@ -522,6 +705,246 @@ test('luGraph explorer waits for the current asynchronous GPU pick before draggi
 
   tapeTest.end();
 });
+
+test('luGraph showcase rebuilds an accessible graph slider with real spatial indexing and community colors', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const previousHost = document.getElementById('example-panel-host');
+  const host = previousHost ?? document.createElement('div');
+  const previousParent = previousHost?.parentNode ?? null;
+  const previousSibling = previousHost?.nextSibling ?? null;
+  const infoBox = document.createElement('section');
+  infoBox.setAttribute('data-info-box-appearance', 'cinematic');
+  const expandInfoBox = document.createElement('button');
+  expandInfoBox.type = 'button';
+  expandInfoBox.setAttribute('aria-label', 'Expand info box');
+  expandInfoBox.setAttribute('aria-expanded', 'false');
+  expandInfoBox.addEventListener('click', () => {
+    expandInfoBox.setAttribute('aria-expanded', 'true');
+    host.hidden = false;
+    host.setAttribute('aria-hidden', 'false');
+  });
+  const unrelatedInfoBox = document.createElement('button');
+  unrelatedInfoBox.type = 'button';
+  unrelatedInfoBox.setAttribute('aria-label', 'Expand info box');
+  unrelatedInfoBox.setAttribute('aria-expanded', 'false');
+  const ownExpandSpy = vi.spyOn(expandInfoBox, 'click');
+  const unrelatedExpandSpy = vi.spyOn(unrelatedInfoBox, 'click');
+  document.body.appendChild(unrelatedInfoBox);
+  if (previousParent) previousParent.insertBefore(infoBox, host);
+  else document.body.appendChild(infoBox);
+  if (!previousHost) host.id = 'example-panel-host';
+  host.hidden = true;
+  host.setAttribute('aria-hidden', 'true');
+  infoBox.append(expandInfoBox, host);
+
+  const devicePixelSizeSpy = vi
+    .spyOn(device.getDefaultCanvasContext(), 'getDevicePixelSize')
+    .mockReturnValue([64, 48]);
+  let explorer: LuGraphExplorerAnimationLoopTemplate | undefined;
+  let color: Texture | undefined;
+  let depth: Texture | undefined;
+  try {
+    explorer = createExplorer(device, 32, 'spatial');
+    tapeTest.equal(explorer.graph.vertexCount, 32, 'the tiny real-GPU fixture remains injectable');
+    tapeTest.ok(explorer.spatialLayout, 'explicit spatial mode creates a real caller-owned index');
+    if (!explorer.spatialLayout) throw new Error('The showcase did not create its spatial layout');
+    tapeTest.equal(
+      ownExpandSpy.mock.calls.length,
+      1,
+      'the native showcase opens its own collapsed graph-inspector controls once'
+    );
+    tapeTest.equal(
+      expandInfoBox.getAttribute('aria-expanded'),
+      'true',
+      'the actual accessible website InfoBox becomes visible immediately'
+    );
+    tapeTest.equal(host.hidden, false, 'the graph-size slider is visible without a hidden InfoBox');
+    tapeTest.equal(
+      unrelatedExpandSpy.mock.calls.length,
+      0,
+      'other unrelated website InfoBox controls are never opened'
+    );
+
+    const slider = host.querySelector<HTMLInputElement>('[data-graph-size]');
+    const layoutMode = host.querySelector<HTMLSelectElement>('[data-layout-mode]');
+    const colorMode = host.querySelector<HTMLSelectElement>('[data-color-mode]');
+    const sizeMode = host.querySelector<HTMLSelectElement>('[data-node-size]');
+    const edgeVisibility = host.querySelector<HTMLInputElement>('[data-edge-toggle]');
+    const legend = host.querySelector<HTMLElement>('[data-graph-legend]');
+    const adapter = host.querySelector<HTMLElement>('[data-graph-adapter]');
+    const memory = host.querySelector<HTMLElement>('[data-graph-memory]');
+    const status = host.querySelector<HTMLElement>('[role="status"]');
+    tapeTest.ok(slider, 'the native showcase publishes a keyboard-accessible graph-size slider');
+    tapeTest.equal(slider?.type, 'range', 'graph scale is an actual accessible range control');
+    tapeTest.equal(slider?.min, '0', 'the first slider step maps to 128 resident vertices');
+    tapeTest.equal(
+      slider?.max,
+      String(GRAPH_EXPLORER_VERTEX_COUNTS.length - 1),
+      'the fourteenth slider step maps to the actual 1,048,576-vertex graph'
+    );
+    tapeTest.equal(
+      GRAPH_EXPLORER_VERTEX_COUNTS.at(-1),
+      1_048_576,
+      'the final scale represents actual original resident vertices'
+    );
+    tapeTest.ok(layoutMode, 'exact, automatic, spatial, and four-sample modes are user-visible');
+    tapeTest.ok(colorMode, 'actual analytic color choices are user-visible');
+    tapeTest.ok(sizeMode, 'GPU PageRank, degree, and uniform sizes are selectable');
+    tapeTest.deepEqual(
+      Array.from(layoutMode?.options ?? [], option => option.value),
+      ['auto', 'exact', 'spatial', 'sampled'],
+      'layout choices select real exact, flat-grid, and linear-work GPU contributors'
+    );
+    tapeTest.deepEqual(
+      Array.from(colorMode?.options ?? [], option => option.value),
+      ['community', 'component', 'degree', 'pagerank', 'distance'],
+      'all advertised node colors correspond to real GPU analytics'
+    );
+    tapeTest.deepEqual(
+      Array.from(sizeMode?.options ?? [], option => option.value),
+      ['pagerank', 'degree', 'uniform'],
+      'all advertised node sizes use real resident metrics or a uniform radius'
+    );
+    tapeTest.ok(edgeVisibility, 'original source-chunk edges can be hidden accessibly');
+    tapeTest.ok(legend, 'a visible accessible legend describes actual GPU analytic colors');
+    tapeTest.ok(
+      legend?.getAttribute('aria-label'),
+      'color meaning remains screen-reader accessible'
+    );
+    tapeTest.ok(adapter?.textContent, 'the graph inspector reports real adapter information');
+    tapeTest.ok(
+      memory?.textContent,
+      'the graph inspector reports actual GPU allocation accounting'
+    );
+    tapeTest.ok(
+      /resident|transient/i.test(memory?.textContent ?? ''),
+      'GPU memory statistics distinguish owned graph and transient allocations'
+    );
+    tapeTest.equal(status?.getAttribute('aria-live'), 'polite', 'graph changes announce politely');
+
+    const firstBindings = explorer as unknown as ExplorerGraphBindings;
+    color = device.createTexture({
+      id: 'lugraph-showcase-test-color',
+      format: device.preferredColorFormat,
+      width: firstBindings.frameWidth,
+      height: firstBindings.frameHeight,
+      usage: Texture.RENDER
+    });
+    depth = device.createTexture({
+      id: 'lugraph-showcase-test-depth',
+      format: 'depth24plus',
+      width: firstBindings.frameWidth,
+      height: firstBindings.frameHeight,
+      usage: Texture.RENDER
+    });
+
+    executeShowcaseFrame(device, explorer, color, depth);
+    const [initialCount, initialOverflow, initialCommunity, initialComponents] = await Promise.all([
+      readUint32Vector(explorer.spatialLayout.count),
+      readUint32Vector(explorer.spatialLayout.overflow),
+      readUint32Vector(explorer.communities.output),
+      readUint32Vector(explorer.components.output)
+    ]);
+    tapeTest.equal(initialCount[0], 32, 'the actual GPU grid accepts every original vertex');
+    tapeTest.equal(initialOverflow[0], 0, 'caller-owned vertex-ID capacity does not overflow');
+    tapeTest.equal(initialComponents[8], 0, 'one bridge joins the first two weak components');
+    tapeTest.equal(initialCommunity[8], 8, 'actual majority votes retain a separate community');
+
+    const previousPositions = explorer.layout.positions.data[0].buffer;
+    const previousAnalysis = explorer.analysisGraph;
+    if (!slider) throw new Error('The native graph-size control was not mounted');
+    slider.value = '0';
+    slider.dispatchEvent(new Event('change', {bubbles: true}));
+    tapeTest.equal(explorer.graph.vertexCount, 128, 'a real slider change rebuilds the GPU graph');
+    tapeTest.equal(
+      ownExpandSpy.mock.calls.length,
+      1,
+      'resizing never repeatedly reopens a user-controlled website InfoBox'
+    );
+    tapeTest.notEqual(
+      explorer.layout.positions.data[0].buffer,
+      previousPositions,
+      'new vertex attributes use fresh caller-owned physical storage'
+    );
+    tapeTest.notEqual(explorer.analysisGraph, previousAnalysis, 'analytics graphs are rebuilt');
+    tapeTest.deepEqual(
+      explorer.graph.sourceVertices.data.map(chunk => chunk.length === 0),
+      [false, true, false],
+      'graph resizing still preserves the original empty source batch'
+    );
+    tapeTest.ok(explorer.spatialLayout, 'the selected spatial mode survives graph resizing');
+    if (!explorer.spatialLayout) throw new Error('The rebuilt showcase lost its spatial layout');
+
+    executeShowcaseFrame(device, explorer, color, depth);
+    const [resizedCount, resizedOverflow, resizedCommunities, resizedComponents] =
+      await Promise.all([
+        readUint32Vector(explorer.spatialLayout.count),
+        readUint32Vector(explorer.spatialLayout.overflow),
+        readUint32Vector(explorer.communities.output),
+        readUint32Vector(explorer.components.output)
+      ]);
+    tapeTest.equal(resizedCount[0], 128, 'rebuilt spatial passes index all resized vertices');
+    tapeTest.equal(resizedOverflow[0], 0, 'rebuilt explicit index buffers remain large enough');
+    tapeTest.equal(resizedComponents[32], 0, 'resized weak components still cross the bridge');
+    tapeTest.equal(resizedCommunities[32], 32, 'resized GPU community labels remain distinct');
+    tapeTest.ok(
+      !/GPU\s+(?:frame|execution|duration)\s*[:=]\s*\d/i.test(status?.textContent ?? ''),
+      'the live inspector never fabricates GPU execution timings'
+    );
+  } finally {
+    devicePixelSizeSpy.mockRestore();
+    ownExpandSpy.mockRestore();
+    unrelatedExpandSpy.mockRestore();
+    depth?.destroy();
+    color?.destroy();
+    explorer?.onFinalize();
+    if (previousHost && previousParent) previousParent.insertBefore(host, previousSibling);
+    else host.remove();
+    infoBox.remove();
+    unrelatedInfoBox.remove();
+  }
+
+  tapeTest.end();
+});
+
+function createExplorer(
+  device: Device,
+  vertexCount = 128,
+  layoutMode?: GraphExplorerLayoutMode,
+  options: Pick<ExplorerAnimationProps, 'pointMode' | 'maxVisibleEdges'> = {}
+): LuGraphExplorerAnimationLoopTemplate {
+  return new LuGraphExplorerAnimationLoopTemplate({
+    device,
+    dataset: makeGraphExplorerDataset(vertexCount),
+    ...(layoutMode ? {layoutMode} : {}),
+    ...options
+  } as ExplorerAnimationProps);
+}
+
+function executeShowcaseFrame(
+  device: Device,
+  explorer: LuGraphExplorerAnimationLoopTemplate,
+  color: Texture,
+  depth: Texture
+): void {
+  const bindings = explorer as unknown as ExplorerGraphBindings;
+  const encoder = device.createCommandEncoder({id: 'lugraph-showcase-real-spatial-frame'});
+  explorer.analysisGraph.encode(encoder, {parameters: undefined});
+  explorer.frameGraph.encode(encoder, {
+    parameters: {width: bindings.frameWidth, height: bindings.frameHeight},
+    frameTextures: {
+      [bindings.frameColorId]: {texture: color, frameId: 0},
+      [bindings.frameDepthId]: {texture: depth, frameId: 0}
+    }
+  });
+  device.submit(encoder.finish());
+}
 
 function executeAnalysis(device: Device, explorer: LuGraphExplorerAnimationLoopTemplate): void {
   const encoder = device.createCommandEncoder({id: 'lugraph-explorer-analysis-test'});

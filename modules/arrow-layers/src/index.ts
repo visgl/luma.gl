@@ -20,7 +20,13 @@ export {
   type ArrowTextLayerProps
 } from './layers/arrow-text-layer';
 export type {ArrowLayerPickingInfo} from './layers/arrow-layer-types';
-export {LuGraphDeckEffect, type LuGraphDeckDataset} from './lugraph/lugraph-effect';
+export {
+  LuGraphDeckEffect,
+  type LuGraphDeckDataset,
+  type LuGraphDeckEffectOptions,
+  type LuGraphDeckEffectStats,
+  type LuGraphDeckLayoutMode
+} from './lugraph/lugraph-effect';
 export {
   LUGRAPH_DECK_EDGE_SHADER,
   LuGraphEdgeLayer,
@@ -29,5 +35,7 @@ export {
 export {
   LUGRAPH_DECK_NODE_SHADER,
   LuGraphNodeLayer,
+  type LuGraphDeckColorMode,
+  type LuGraphDeckNodeSizeMode,
   type LuGraphNodeLayerProps
 } from './lugraph/lugraph-node-layer';
