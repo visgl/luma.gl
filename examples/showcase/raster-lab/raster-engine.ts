@@ -9,7 +9,9 @@ import {
   type GraphDataView
 } from '@luma.gl/experimental';
 import {
+  GPURasterBoxBlur,
   GPURasterContrast,
+  GPURasterGaussianBlur,
   GPURasterHistogram,
   GPURasterNDVI,
   GPURasterOtsuThreshold,
@@ -41,6 +43,9 @@ export type RasterLabSummary = {
   sum: number;
   mean: number;
   mode: RasterLabDisplaySettings['mode'];
+  smoothingMode: RasterLabDisplaySettings['smoothingMode'];
+  smoothingRadius: number;
+  smoothingSigma: number;
   contrast: number;
   gamma: number;
   threshold: number;
@@ -58,6 +63,8 @@ type RasterLabBuffers = {
   sourceValidity: Buffer;
   vegetationIndex: Buffer;
   outputValidity: Buffer;
+  smoothedValues: Buffer;
+  smoothedValidity: Buffer;
   analyzedValues: Buffer;
   analyzedValidity: Buffer;
   thresholdValidity: Buffer;
@@ -82,6 +89,9 @@ export class RasterLabEngine {
   private compiledGraph: CompiledGPUCommandGraph;
   private settings: RasterLabDisplaySettings = {
     mode: 'ndvi',
+    smoothingMode: 'none',
+    smoothingRadius: 2,
+    smoothingSigma: 1.25,
     contrast: 1.15,
     gamma: 1,
     threshold: 0.35,
@@ -116,6 +126,16 @@ export class RasterLabEngine {
       }),
       outputValidity: device.createBuffer({
         id: 'raster-lab-output-validity',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      smoothedValues: device.createBuffer({
+        id: 'raster-lab-smoothed-values',
+        byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      smoothedValidity: device.createBuffer({
+        id: 'raster-lab-smoothed-validity',
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
@@ -213,6 +233,9 @@ export class RasterLabEngine {
   configure(settings: RasterLabDisplaySettings, epsilon: number): boolean {
     if (
       settings.mode === this.settings.mode &&
+      settings.smoothingMode === this.settings.smoothingMode &&
+      settings.smoothingRadius === this.settings.smoothingRadius &&
+      Math.abs(settings.smoothingSigma - this.settings.smoothingSigma) < 0.0000001 &&
       Math.abs(settings.contrast - this.settings.contrast) < 0.0000001 &&
       Math.abs(settings.gamma - this.settings.gamma) < 0.0000001 &&
       Math.abs(settings.threshold - this.settings.threshold) < 0.0000001 &&
@@ -308,6 +331,9 @@ export class RasterLabEngine {
       sum: aggregateView.getFloat32(SUM_BYTE_OFFSET, true),
       mean: aggregateView.getFloat32(MEAN_BYTE_OFFSET, true),
       mode: this.settings.mode,
+      smoothingMode: this.settings.smoothingMode,
+      smoothingRadius: this.settings.smoothingRadius,
+      smoothingSigma: this.settings.smoothingSigma,
       contrast: this.settings.contrast,
       gamma: this.settings.gamma,
       threshold: this.settings.automaticThreshold
@@ -375,6 +401,20 @@ export class RasterLabEngine {
       graph,
       'output-validity',
       this.buffers.outputValidity,
+      'uint32',
+      this.dataset.pixelCount
+    );
+    const smoothedValues = this.importView(
+      graph,
+      'smoothed-values',
+      this.buffers.smoothedValues,
+      'float32',
+      this.dataset.pixelCount
+    );
+    const smoothedValidity = this.importView(
+      graph,
+      'smoothed-validity',
+      this.buffers.smoothedValidity,
       'uint32',
       this.dataset.pixelCount
     );
@@ -465,17 +505,46 @@ export class RasterLabEngine {
           ? redValues
           : nearInfraredValues;
 
+    const sourceBand: GPURasterBufferBand<'float32'> = {
+      id: `${this.settings.mode}-source`,
+      format: 'float32',
+      storage: {kind: 'buffer', values: selectedValues},
+      validity: outputValidity,
+      ...(this.settings.mode === 'ndvi' ? {} : {noDataValue: RASTER_LAB_NO_DATA_VALUE})
+    };
+
+    if (this.settings.smoothingMode !== 'none') {
+      const smoothingProps = {
+        id: `raster-lab-${this.settings.smoothingMode}-blur`,
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: sourceBand,
+        output: smoothedValues,
+        outputValidity: smoothedValidity,
+        radius: this.settings.smoothingRadius,
+        borderMode: 'reflect' as const,
+        noDataPolicy: 'ignore-renormalize' as const
+      };
+      const smoothing =
+        this.settings.smoothingMode === 'gaussian'
+          ? new GPURasterGaussianBlur({...smoothingProps, sigma: this.settings.smoothingSigma})
+          : new GPURasterBoxBlur(smoothingProps);
+      smoothing.addToGraph(graph);
+    }
+
     new GPURasterContrast({
       id: 'raster-lab-contrast',
       width: this.dataset.width,
       height: this.dataset.height,
-      input: {
-        id: `${this.settings.mode}-source`,
-        format: 'float32',
-        storage: {kind: 'buffer', values: selectedValues},
-        validity: outputValidity,
-        ...(this.settings.mode === 'ndvi' ? {} : {noDataValue: RASTER_LAB_NO_DATA_VALUE})
-      },
+      input:
+        this.settings.smoothingMode === 'none'
+          ? sourceBand
+          : {
+              id: `${this.settings.mode}-${this.settings.smoothingMode}-smoothed`,
+              format: 'float32',
+              storage: {kind: 'buffer', values: smoothedValues},
+              validity: smoothedValidity
+            },
       output: analyzedValues,
       outputValidity: analyzedValidity,
       domain: this.settings.mode === 'ndvi' ? [-1, 1] : [0, 1],

@@ -7,11 +7,15 @@ import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
 import {makeRasterLabDataset} from './raster-data';
 import {RasterLabEngine, type RasterLabSummary} from './raster-engine';
 import {RasterLabInterface} from './raster-interface';
-import type {RasterLabDisplayMode, RasterLabDisplaySettings} from './raster-renderer';
+import type {
+  RasterLabDisplayMode,
+  RasterLabDisplaySettings,
+  RasterLabSmoothingMode
+} from './raster-renderer';
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'GPU-resident synthetic reflectance, masked NDVI, contrast, thresholding, and live histograms.';
+  'GPU-resident reflectance, masked NDVI, separable smoothing, thresholds, and live histograms.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -23,6 +27,9 @@ type RasterLabDebugController = {
   readonly frameCount: number;
   readonly executionCount: number;
   readonly mode: RasterLabDisplayMode;
+  readonly smoothingMode: RasterLabSmoothingMode;
+  readonly smoothingRadius: number;
+  readonly smoothingSigma: number;
   readonly contrast: number;
   readonly gamma: number;
   readonly threshold: number;
@@ -34,6 +41,9 @@ type RasterLabDebugController = {
   readonly mean: number;
   readonly epsilon: number;
   setMode: (mode: RasterLabDisplayMode) => void;
+  setSmoothingMode: (mode: RasterLabSmoothingMode) => void;
+  setSmoothingRadius: (radius: number) => void;
+  setSmoothingSigma: (sigma: number) => void;
   setContrast: (contrast: number) => void;
   setGamma: (gamma: number) => void;
   setThreshold: (threshold: number, enabled?: boolean) => void;
@@ -52,6 +62,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private readonly rasterSize: readonly [number, number];
   private readonly display: RasterLabDisplaySettings = {
     mode: 'ndvi',
+    smoothingMode: 'none',
+    smoothingRadius: 2,
+    smoothingSigma: 1.25,
     contrast: 1.15,
     gamma: 1,
     threshold: 0.35,
@@ -86,6 +99,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
     this.interface = new RasterLabInterface(canvas.parentElement ?? document.body, canvas, {
       onMode: mode => this.setMode(mode),
+      onSmoothingMode: mode => this.setSmoothingMode(mode),
+      onSmoothingRadius: radius => this.setSmoothingRadius(radius),
+      onSmoothingSigma: sigma => this.setSmoothingSigma(sigma),
       onContrast: contrast => this.setContrast(contrast),
       onGamma: gamma => this.setGamma(gamma),
       onThreshold: (threshold, enabled) => this.setThreshold(threshold, enabled),
@@ -103,7 +119,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     try {
       const dataset = makeRasterLabDataset(this.rasterSize[0], this.rasterSize[1]);
       this.interface.setSource(dataset);
-      this.interface.setStatus('Compiling masked NDVI, contrast, and histogram GPU passes');
+      this.interface.setStatus('Compiling masked NDVI, smoothing, and histogram GPU passes');
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       if (this.finalized) return;
 
@@ -145,6 +161,27 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.display.mode = mode;
     this.interface?.setMode(mode);
     this.requestUpdate();
+  }
+
+  private setSmoothingMode(mode: RasterLabSmoothingMode): void {
+    if (mode === this.display.smoothingMode) return;
+    this.display.smoothingMode = mode;
+    this.interface?.setSmoothingMode(mode);
+    this.requestUpdate();
+  }
+
+  private setSmoothingRadius(radius: number): void {
+    if (radius === this.display.smoothingRadius) return;
+    this.display.smoothingRadius = radius;
+    this.interface?.setSmoothingRadius(radius);
+    if (this.display.smoothingMode !== 'none') this.requestUpdate();
+  }
+
+  private setSmoothingSigma(sigma: number): void {
+    if (Math.abs(sigma - this.display.smoothingSigma) < 0.0000001) return;
+    this.display.smoothingSigma = sigma;
+    this.interface?.setSmoothingSigma(sigma);
+    if (this.display.smoothingMode === 'gaussian') this.requestUpdate();
   }
 
   private setContrast(contrast: number): void {
@@ -263,6 +300,15 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get mode() {
         return viewer.display.mode;
       },
+      get smoothingMode() {
+        return viewer.display.smoothingMode;
+      },
+      get smoothingRadius() {
+        return viewer.display.smoothingRadius;
+      },
+      get smoothingSigma() {
+        return viewer.display.smoothingSigma;
+      },
       get contrast() {
         return viewer.display.contrast;
       },
@@ -294,6 +340,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         return viewer.epsilon;
       },
       setMode: mode => viewer.setMode(mode),
+      setSmoothingMode: mode => viewer.setSmoothingMode(mode),
+      setSmoothingRadius: radius => viewer.setSmoothingRadius(radius),
+      setSmoothingSigma: sigma => viewer.setSmoothingSigma(sigma),
       setContrast: contrast => viewer.setContrast(contrast),
       setGamma: gamma => viewer.setGamma(gamma),
       setThreshold: (threshold, enabled) => viewer.setThreshold(threshold, enabled),

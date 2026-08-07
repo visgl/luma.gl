@@ -447,7 +447,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | 0 — Package foundation           | Approved scope, clean-room boundary, isolated imports, and CPU fixtures      | Complete    | High   | Small  |
 | 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete    | High   | Large  |
 | 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | In progress | High   | Medium |
-| 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Planned     | High   | Large  |
+| 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | In progress | High   | Large  |
 | 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Planned     | High   | Large  |
 | 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
 | 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | Planned     | High   | Large  |
@@ -517,9 +517,20 @@ when their tests and rollback boundaries remain understandable.
   above, below, and range classification from fixed values or GPU-resident threshold views.
   `GPURasterOtsuThreshold` computes deterministic Otsu cutoffs entirely on the GPU; threshold
   masks alter real downstream histograms and scalar summaries.
+- **3.1 complete for bounded packed-buffer neighborhoods:** `GPURasterNeighborhood` defines
+  bounded rectangular stencils, `clamp`/`reflect`/`constant`/`nodata` borders, strict invalid
+  propagation and valid-neighbor renormalization, calibrated raw-format nodata comparisons, and
+  separate caller-owned output/value masks. Invalid center pixels never become valid. Tiled halo
+  assembly remains a distinct Phase 4 contract.
+- **3.2 complete for bounded spatial kernels:** `GPURasterConvolution` supports direct signed or
+  nonnegative kernels, while `GPURasterGaussianBlur` and `GPURasterBoxBlur` compose normalized,
+  separable horizontal/vertical passes with graph-owned intermediate scratch. The Raster Lab
+  changes its rendered values, histogram, and scalar statistics when filter, radius, or sigma
+  controls change. FFT-backed convolution remains explicitly deferred.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
-  demonstrate the current NDVI/histogram workflow. The full satellite/microscopy/tiled/vector
-  showcase matrix, broader documentation set, benchmarks, and final release gates remain pending.
+  demonstrate the current NDVI/smoothing/histogram workflow. The full satellite/microscopy/tiled/
+  vector showcase matrix, broader documentation set, benchmarks, and final release gates remain
+  pending.
 
 ## Detailed tranche definitions
 
@@ -699,6 +710,11 @@ fixtures, all-invalid input, signed data, and repeated encoding are stable and C
 
 **Entry:** Tranches 1.1 and 1.4.
 
+**Status:** Complete for bounded packed-buffer stencils. All four border modes, strict and
+renormalized nodata policies, rectangular radii, exact source-format nodata, calibrated samples,
+center-validity preservation, and separate output/value masks are implemented. Tile halos and
+automatic large-raster partitioning remain separate Phase 4 work.
+
 **Work:** Define operator radius, workgroup-local neighborhood tiles, separate input/output
 resources, and border modes `clamp`, `reflect`, `constant`, and `nodata`. Define strict nodata
 propagation and valid-neighbor renormalization for appropriate nonnegative smoothing kernels.
@@ -711,6 +727,11 @@ select one mip.
 ### Tranche 3.2 — Convolution and smoothing
 
 **Entry:** Tranche 3.1.
+
+**Status:** Complete for bounded spatial kernels. Direct signed/nonnegative convolution and
+separable normalized Gaussian/box smoothing produce caller-owned values and validity; the two
+smoothing passes reuse graph-owned intermediate scratch. Interactive Raster Lab controls drive
+the analytical GPU graph, not a display-only image effect.
 
 **Work:** Implement bounded direct convolution, separable box/Gaussian filters, reusable
 intermediate scratch, kernel normalization, and explicit smoothing validity policy. Select direct

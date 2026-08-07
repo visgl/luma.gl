@@ -3,11 +3,18 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {RasterLabSummary} from './raster-engine';
-import type {RasterLabDisplayMode, RasterLabViewport} from './raster-renderer';
+import type {
+  RasterLabDisplayMode,
+  RasterLabSmoothingMode,
+  RasterLabViewport
+} from './raster-renderer';
 import {RASTER_LAB_STYLES} from './raster-styles';
 
 export type RasterLabInterfaceCallbacks = {
   onMode?: (mode: RasterLabDisplayMode) => void;
+  onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
+  onSmoothingRadius?: (radius: number) => void;
+  onSmoothingSigma?: (sigma: number) => void;
   onContrast?: (contrast: number) => void;
   onGamma?: (gamma: number) => void;
   onThreshold?: (threshold: number, enabled: boolean) => void;
@@ -102,6 +109,10 @@ export class RasterLabInterface {
     this.getElement('[data-raster-histogram-maximum]').textContent = summary.domain[1].toFixed(2);
     this.getElement('[data-raster-histogram-axis]').textContent = modeLabel;
     this.getElement('[data-raster-histogram]').setAttribute('aria-label', `${modeLabel} histogram`);
+    this.getElement('[data-raster-smoothing-state]').textContent =
+      summary.smoothingMode === 'none'
+        ? 'off'
+        : `${summary.smoothingMode === 'gaussian' ? 'GAUSS' : 'BOX'} r${summary.smoothingRadius}`;
     this.getElement('[data-raster-threshold-state]').textContent = summary.thresholdEnabled
       ? `${summary.automaticThreshold ? 'AUTO ' : ''}≥ ${summary.threshold.toFixed(2)}`
       : 'off';
@@ -129,6 +140,24 @@ export class RasterLabInterface {
       mode === 'ndvi' ? 'Water / bare' : 'Low response';
     this.getElement('[data-raster-legend-maximum]').textContent =
       mode === 'ndvi' ? 'Dense canopy' : 'High response';
+  }
+
+  setSmoothingMode(mode: RasterLabSmoothingMode): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-raster-smoothing]')) {
+      button.setAttribute('aria-pressed', String(button.dataset['rasterSmoothing'] === mode));
+    }
+    this.getInput('smoothing-radius').disabled = mode === 'none';
+    this.getInput('smoothing-sigma').disabled = mode !== 'gaussian';
+  }
+
+  setSmoothingRadius(radius: number): void {
+    this.getElement('[data-raster-smoothing-radius-value]').textContent = `${radius} px`;
+    this.getInput('smoothing-radius').value = String(radius);
+  }
+
+  setSmoothingSigma(sigma: number): void {
+    this.getElement('[data-raster-smoothing-sigma-value]').textContent = sigma.toFixed(2);
+    this.getInput('smoothing-sigma').value = String(sigma);
   }
 
   setContrast(contrast: number): void {
@@ -223,6 +252,13 @@ export class RasterLabInterface {
         this.callbacks.onAutomaticThreshold?.(enabled);
         return;
       }
+      const smoothingButton = target.closest<HTMLButtonElement>('[data-raster-smoothing]');
+      const smoothingMode = smoothingButton?.dataset['rasterSmoothing'];
+      if (smoothingMode === 'none' || smoothingMode === 'gaussian' || smoothingMode === 'box') {
+        this.setSmoothingMode(smoothingMode);
+        this.callbacks.onSmoothingMode?.(smoothingMode);
+        return;
+      }
       const button = target.closest<HTMLButtonElement>('[data-raster-mode]');
       const mode = button?.dataset['rasterMode'];
       if (mode === 'ndvi' || mode === 'red' || mode === 'near-infrared') {
@@ -235,6 +271,14 @@ export class RasterLabInterface {
       if (!(target instanceof HTMLInputElement)) return;
       const value = Number(target.value);
       switch (target.dataset['rasterControl']) {
+        case 'smoothing-radius':
+          this.setSmoothingRadius(value);
+          this.callbacks.onSmoothingRadius?.(value);
+          break;
+        case 'smoothing-sigma':
+          this.setSmoothingSigma(value);
+          this.callbacks.onSmoothingSigma?.(value);
+          break;
         case 'contrast':
           this.setContrast(value);
           this.callbacks.onContrast?.(value);
@@ -395,6 +439,22 @@ function makeRasterLabMarkup(): string {
               <button class="raster-mode-button" data-raster-mode="red" aria-pressed="false">RED</button>
               <button class="raster-mode-button" data-raster-mode="near-infrared" aria-pressed="false">NEAR IR</button>
             </div>
+            <div class="raster-control raster-smoothing-control">
+              <span class="raster-control-label">Neighborhood smoothing <span class="raster-kicker">2 GPU passes</span></span>
+              <div class="raster-smoothing-buttons" aria-label="Smoothing filter">
+                <button class="raster-mode-button" data-raster-smoothing="none" aria-pressed="true">OFF</button>
+                <button class="raster-mode-button" data-raster-smoothing="gaussian" aria-pressed="false">GAUSSIAN</button>
+                <button class="raster-mode-button" data-raster-smoothing="box" aria-pressed="false">BOX</button>
+              </div>
+              <label class="raster-smoothing-setting">
+                <span class="raster-control-label">Kernel radius <span class="raster-control-value" data-raster-smoothing-radius-value>2 px</span></span>
+                <input class="raster-slider" data-raster-control="smoothing-radius" type="range" min="1" max="8" step="1" value="2" disabled />
+              </label>
+              <label class="raster-smoothing-setting">
+                <span class="raster-control-label">Gaussian sigma <span class="raster-control-value" data-raster-smoothing-sigma-value>1.25</span></span>
+                <input class="raster-slider" data-raster-control="smoothing-sigma" type="range" min="0.35" max="4" step="0.05" value="1.25" disabled />
+              </label>
+            </div>
             <label class="raster-control">
               <span class="raster-control-label">Analysis contrast <span class="raster-control-value" data-raster-contrast-value>1.15×</span></span>
               <input class="raster-slider" data-raster-control="contrast" type="range" min="0.6" max="2" step="0.05" value="1.15" />
@@ -432,7 +492,7 @@ function makeRasterLabMarkup(): string {
               <span data-raster-histogram-maximum>—</span>
             </div>
             <div class="raster-histogram-caption">
-              Threshold, statistics, and histogram share one GPU graph; only 216 summary bytes are read.
+              Smoothing, threshold, and histogram share one GPU graph; only 216 summary bytes are read.
             </div>
           </section>
 
@@ -444,9 +504,10 @@ function makeRasterLabMarkup(): string {
             <div class="raster-pipeline-step"><span class="raster-step-number">01</span><span class="raster-step-name">RED + near-infrared</span><span class="raster-step-state">source</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">02</span><span class="raster-step-name">Validity + nodata</span><span class="raster-step-state">mask</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">03</span><span class="raster-step-name">Normalized difference</span><span class="raster-step-state">NDVI</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">04</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">05</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">06</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">04</span><span class="raster-step-name">Separable smoothing</span><span class="raster-step-state" data-raster-smoothing-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">05</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">06</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">07</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
             <div class="raster-histogram-caption" data-raster-footprint>Allocating GPU buffers</div>
           </section>
         </aside>
@@ -455,7 +516,7 @@ function makeRasterLabMarkup(): string {
       <footer class="raster-footer">
         <div class="raster-roadmap" aria-label="Planned raster capabilities">
           <span class="raster-kicker">Coming next</span>
-          <span class="raster-roadmap-chip">Convolution</span>
+          <span class="raster-roadmap-chip">Gradients</span>
           <span class="raster-roadmap-chip">Morphology</span>
           <span class="raster-roadmap-chip">Segmentation</span>
           <span class="raster-roadmap-chip">Contours + tiles</span>

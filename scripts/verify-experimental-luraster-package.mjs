@@ -45,10 +45,14 @@ const commonJsExportNames = Object.keys(commonJsRasterModule)
 const requiredRuntimeExportNames = [
   'GPURaster',
   'GPURasterBandMath',
+  'GPURasterBoxBlur',
   'GPURasterBufferToTexture',
   'GPURasterContrast',
+  'GPURasterConvolution',
+  'GPURasterGaussianBlur',
   'GPURasterHistogram',
   'GPURasterNDVI',
+  'GPURasterNeighborhood',
   'GPURasterOtsuThreshold',
   'GPURasterStatistics',
   'GPURasterThreshold',
@@ -90,10 +94,14 @@ try {
     `import {
   GPURaster,
   GPURasterBandMath,
+  GPURasterBoxBlur,
   GPURasterBufferToTexture,
   GPURasterContrast,
+  GPURasterConvolution,
+  GPURasterGaussianBlur,
   GPURasterHistogram,
   GPURasterNDVI,
+  GPURasterNeighborhood,
   GPURasterOtsuThreshold,
   GPURasterStatistics,
   GPURasterThreshold,
@@ -103,16 +111,23 @@ try {
   type GPURasterBand,
   type GPURasterBandMathOperation,
   type GPURasterBandMathProps,
+  type GPURasterBorderMode,
   type GPURasterContrastDomain,
   type GPURasterContrastMode,
   type GPURasterContrastProps,
+  type GPURasterConvolutionProps,
+  type GPURasterGaussianBlurProps,
   type GPURasterHistogramDomain,
   type GPURasterHistogramProps,
   type GPURasterMetadata,
   type GPURasterNDVIProps,
+  type GPURasterNeighborhoodProps,
+  type GPURasterNeighborhoodRadius,
+  type GPURasterNoDataPolicy,
   type GPURasterOtsuDomain,
   type GPURasterOtsuThresholdProps,
   type GPURasterStatisticsProps,
+  type GPURasterSmoothingProps,
   type GPURasterThresholdOperation,
   type GPURasterThresholdProps,
   type GPURasterThresholdValue,
@@ -125,16 +140,23 @@ declare const contributor: GPUCommandGraphContributor;
 declare const rasterBand: GPURasterBand;
 declare const bandMathOperation: GPURasterBandMathOperation;
 declare const bandMathOptions: GPURasterBandMathProps;
+declare const borderMode: GPURasterBorderMode;
 declare const contrastDomain: GPURasterContrastDomain;
 declare const contrastMode: GPURasterContrastMode;
 declare const contrastOptions: GPURasterContrastProps;
+declare const convolutionOptions: GPURasterConvolutionProps;
+declare const gaussianOptions: GPURasterGaussianBlurProps;
 declare const histogramDomain: GPURasterHistogramDomain<'float32'>;
 declare const histogramOptions: GPURasterHistogramProps<'float32'>;
 declare const rasterMetadata: GPURasterMetadata;
 declare const ndviOptions: GPURasterNDVIProps;
+declare const neighborhoodOptions: GPURasterNeighborhoodProps;
+declare const neighborhoodRadius: GPURasterNeighborhoodRadius;
+declare const noDataPolicy: GPURasterNoDataPolicy;
 declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
 declare const statisticsOptions: GPURasterStatisticsProps;
+declare const smoothingOptions: GPURasterSmoothingProps;
 declare const thresholdOperation: GPURasterThresholdOperation;
 declare const thresholdOptions: GPURasterThresholdProps;
 declare const thresholdValue: GPURasterThresholdValue;
@@ -142,16 +164,24 @@ declare const rasterDeviceLimits: RasterDeviceLimits;
 declare const rasterDispatchStripe: RasterDispatchStripe;
 declare const reductionMask: GPUReductionMask;
 declare const bandMath: GPURasterBandMath;
+declare const boxBlur: GPURasterBoxBlur;
 declare const contrast: GPURasterContrast;
+declare const convolution: GPURasterConvolution;
+declare const gaussianBlur: GPURasterGaussianBlur;
 declare const ndvi: GPURasterNDVI;
+declare const neighborhood: GPURasterNeighborhood;
 declare const otsu: GPURasterOtsuThreshold;
 declare const statistics: GPURasterStatistics;
 declare const histogram: GPURasterHistogram<'float32'>;
 declare const threshold: GPURasterThreshold;
 declare const textureToBuffer: GPURasterTextureToBuffer;
 const bandMathContributor: GPUCommandGraphContributor = bandMath;
+const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
 const contrastContributor: GPUCommandGraphContributor = contrast;
+const convolutionContributor: GPUCommandGraphContributor = convolution;
+const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
 const ndviContributor: GPUCommandGraphContributor = ndvi;
+const neighborhoodContributor: GPUCommandGraphContributor = neighborhood;
 const otsuContributor: GPUCommandGraphContributor = otsu;
 const statisticsContributor: GPUCommandGraphContributor = statistics;
 const histogramContributor: GPUCommandGraphContributor = histogram;
@@ -160,10 +190,14 @@ const rasterContributor: GPUCommandGraphContributor = textureToBuffer;
 
 void GPURaster;
 void GPURasterBandMath;
+void GPURasterBoxBlur;
 void GPURasterBufferToTexture;
 void GPURasterContrast;
+void GPURasterConvolution;
+void GPURasterGaussianBlur;
 void GPURasterHistogram;
 void GPURasterNDVI;
+void GPURasterNeighborhood;
 void GPURasterOtsuThreshold;
 void GPURasterStatistics;
 void GPURasterThreshold;
@@ -174,16 +208,23 @@ void contributor;
 void rasterBand;
 void bandMathOperation;
 void bandMathOptions;
+void borderMode;
 void contrastDomain;
 void contrastMode;
 void contrastOptions;
+void convolutionOptions;
+void gaussianOptions;
 void histogramDomain;
 void histogramOptions;
 void rasterMetadata;
 void ndviOptions;
+void neighborhoodOptions;
+void neighborhoodRadius;
+void noDataPolicy;
 void otsuDomain;
 void otsuOptions;
 void statisticsOptions;
+void smoothingOptions;
 void thresholdOperation;
 void thresholdOptions;
 void thresholdValue;
@@ -191,8 +232,12 @@ void rasterDeviceLimits;
 void rasterDispatchStripe;
 void reductionMask;
 void bandMathContributor;
+void boxBlurContributor;
 void contrastContributor;
+void convolutionContributor;
+void gaussianBlurContributor;
 void ndviContributor;
+void neighborhoodContributor;
 void otsuContributor;
 void statisticsContributor;
 void histogramContributor;
@@ -205,6 +250,9 @@ void RootGPURaster;
 // @ts-expect-error Pointwise contributors stay isolated from the experimental root.
 import {GPURasterNDVI as RootGPURasterNDVI} from '@luma.gl/experimental';
 void RootGPURasterNDVI;
+// @ts-expect-error Neighborhood contributors stay isolated from the experimental root.
+import {GPURasterGaussianBlur as RootGPURasterGaussianBlur} from '@luma.gl/experimental';
+void RootGPURasterGaussianBlur;
 `
   );
   assert.equal(

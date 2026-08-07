@@ -184,6 +184,187 @@ try {
   );
 
   previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.locator('[data-raster-smoothing="gaussian"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingMode === 'gaussian' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const gaussianState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    validPixelCount: window.__luRasterLab.validPixelCount,
+    bins: window.__luRasterLab.bins,
+    mean: window.__luRasterLab.mean,
+    nodeCount: window.__luRasterLab.nodeCount
+  }));
+  assert.notDeepEqual(
+    gaussianState.bins,
+    initialState.bins,
+    'Gaussian smoothing changes analytical GPU histogram counts'
+  );
+  assert.equal(
+    gaussianState.validPixelCount,
+    initialState.validPixelCount,
+    'Gaussian smoothing preserves masked clouds and nodata center pixels'
+  );
+  assert(
+    gaussianState.nodeCount >= initialState.nodeCount + 2,
+    'Gaussian smoothing adds separate horizontal and vertical GPU graph passes'
+  );
+  assert.equal(
+    gaussianState.bins.reduce((total, count) => total + count, 0),
+    gaussianState.validPixelCount,
+    'smoothed histogram bins preserve every valid source observation'
+  );
+  assert.equal(
+    await page.locator('[data-raster-control="smoothing-sigma"]').isEnabled(),
+    true,
+    'Gaussian smoothing exposes its analytical sigma control'
+  );
+
+  previousExecutionCount = gaussianState.executionCount;
+  await page.locator('[data-raster-control="smoothing-radius"]').fill('4');
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingRadius === 4 &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const widerGaussianState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins,
+    mean: window.__luRasterLab.mean
+  }));
+  assert.notDeepEqual(
+    widerGaussianState.bins,
+    gaussianState.bins,
+    'Gaussian radius changes actual resident raster values and their histogram'
+  );
+
+  previousExecutionCount = widerGaussianState.executionCount;
+  await page.locator('[data-raster-control="smoothing-sigma"]').fill('2.5');
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingSigma === 2.5 &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const adjustedGaussianState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins,
+    domain: window.__luRasterLab.domain,
+    mean: window.__luRasterLab.mean
+  }));
+  assert.notDeepEqual(
+    adjustedGaussianState.bins,
+    widerGaussianState.bins,
+    'Gaussian sigma recomputes normalized neighborhood weights and the histogram'
+  );
+
+  previousExecutionCount = adjustedGaussianState.executionCount;
+  await page.locator('[data-raster-control="otsu"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.automaticThreshold &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const smoothedOtsuState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    threshold: window.__luRasterLab.threshold,
+    validPixelCount: window.__luRasterLab.validPixelCount,
+    bins: window.__luRasterLab.bins
+  }));
+  assert(
+    smoothedOtsuState.threshold >= adjustedGaussianState.domain[0] &&
+      smoothedOtsuState.threshold <= adjustedGaussianState.domain[1],
+    'automatic Otsu derives its GPU threshold from the smoothed raster distribution'
+  );
+  assert(
+    smoothedOtsuState.validPixelCount > 0 &&
+      smoothedOtsuState.validPixelCount < initialState.validPixelCount,
+    'smoothed pixels compose directly with GPU Otsu and threshold classification'
+  );
+  assert.equal(
+    smoothedOtsuState.bins.reduce((total, count) => total + count, 0),
+    smoothedOtsuState.validPixelCount,
+    'Gaussian smoothing, Otsu, mask, and histogram share one GPU-resident graph'
+  );
+
+  previousExecutionCount = smoothedOtsuState.executionCount;
+  await page.locator('[data-raster-control="threshold-enabled"]').uncheck();
+  await page.waitForFunction(
+    previousCount =>
+      !window.__luRasterLab.automaticThreshold &&
+      !window.__luRasterLab.thresholdEnabled &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.locator('[data-raster-smoothing="box"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingMode === 'box' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const boxState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins,
+    validPixelCount: window.__luRasterLab.validPixelCount
+  }));
+  assert.notDeepEqual(
+    boxState.bins,
+    adjustedGaussianState.bins,
+    'uniform box averaging produces a different analytical distribution than Gaussian weights'
+  );
+  assert.equal(
+    boxState.validPixelCount,
+    initialState.validPixelCount,
+    'box smoothing keeps invalid center pixels outside the histogram'
+  );
+  assert.equal(
+    await page.locator('[data-raster-control="smoothing-sigma"]').isDisabled(),
+    true,
+    'uniform box smoothing disables the Gaussian-only sigma control'
+  );
+
+  previousExecutionCount = boxState.executionCount;
+  await page.locator('[data-raster-control="smoothing-radius"]').fill('2');
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingRadius === 2 &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  assert.notDeepEqual(
+    await page.evaluate(() => window.__luRasterLab.bins),
+    boxState.bins,
+    'box radius recomputes the measured GPU distribution'
+  );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.locator('[data-raster-smoothing="none"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingMode === 'none' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  assert.deepEqual(
+    await page.evaluate(() => window.__luRasterLab.bins),
+    initialState.bins,
+    'disabling smoothing restores the original unsmoothed GPU histogram exactly'
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.nodeCount),
+    initialState.nodeCount,
+    'disabling smoothing removes both separable neighborhood passes'
+  );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
   await page.locator('[data-raster-control="contrast"]').fill('1.65');
   await page.waitForFunction(
     previousCount => window.__luRasterLab.executionCount > previousCount,
@@ -375,6 +556,23 @@ try {
   await page.waitForFunction(
     initialFrameCount => window.__luRasterLab.frameCount > initialFrameCount,
     initialState.frameCount
+  );
+
+  const finalUnsmoothedState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    frameCount: window.__luRasterLab.frameCount
+  }));
+  previousExecutionCount = finalUnsmoothedState.executionCount;
+  await page.locator('[data-raster-smoothing="gaussian"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingMode === 'gaussian' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  await page.waitForFunction(
+    previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
+    finalUnsmoothedState.frameCount
   );
 
   await mkdir(dirname(screenshotPath), {recursive: true});

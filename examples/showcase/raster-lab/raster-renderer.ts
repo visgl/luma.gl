@@ -6,6 +6,7 @@ import {Buffer, type CanvasContext, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
 export type RasterLabDisplayMode = 'ndvi' | 'red' | 'near-infrared';
+export type RasterLabSmoothingMode = 'none' | 'gaussian' | 'box';
 
 /** Canvas-backed rectangle in physical pixels, measured from the upper-left corner. */
 export type RasterLabViewport = {x: number; y: number; width: number; height: number};
@@ -23,6 +24,9 @@ export type RasterLabRendererSources = {
 
 export type RasterLabDisplaySettings = {
   mode: RasterLabDisplayMode;
+  smoothingMode: RasterLabSmoothingMode;
+  smoothingRadius: number;
+  smoothingSigma: number;
   contrast: number;
   gamma: number;
   threshold: number;

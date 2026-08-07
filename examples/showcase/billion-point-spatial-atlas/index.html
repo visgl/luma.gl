@@ -48,6 +48,10 @@
       const supportsHighDynamicRange =
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(dynamic-range: high)').matches;
+      const softwareVisualSmoke =
+        new URLSearchParams(window.location.search).get('visual-smoke') === 'software';
+      // Preserve the full CSS viewport while limiting SwiftShader's render-target workload.
+      const standardCanvasContext = softwareVisualSmoke ? {useDevicePixels: 0.5} : true;
 
       try {
         let device;
@@ -56,15 +60,20 @@
             id: 'billion-point-spatial-atlas',
             adapters: [webgpuAdapter],
             createCanvasContext: supportsHighDynamicRange
-              ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
-              : true
+              ? {
+                  colorFormat: 'rgba16float',
+                  colorSpace: 'display-p3',
+                  toneMapping: 'extended',
+                  ...(softwareVisualSmoke ? {useDevicePixels: 0.5} : {})
+                }
+              : standardCanvasContext
           });
         } catch (error) {
           if (!supportsHighDynamicRange) throw error;
           device = await luma.createDevice({
             id: 'billion-point-spatial-atlas-sdr-fallback',
             adapters: [webgpuAdapter],
-            createCanvasContext: true
+            createCanvasContext: standardCanvasContext
           });
         }
 
