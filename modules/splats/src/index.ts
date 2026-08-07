@@ -11,6 +11,18 @@ export {
   type SplatSource
 } from './splat-data';
 export {
+  isGLTFSplatPrimitive,
+  loadGPUSplatDataFromGLTF,
+  makeGPUSplatDataFromGLTF,
+  makeSplatSourceFromGLTF,
+  type GLTFSplatAttribute,
+  type GLTFSplatAttributeValues,
+  type GLTFSplatCompressionDecoder,
+  type GLTFSplatPrimitive,
+  type LoadGPUSplatDataFromGLTFOptions,
+  type MakeGPUSplatDataFromGLTFOptions
+} from './splat-gltf';
+export {
   evaluateSplatSphericalHarmonics,
   getSplatSphericalHarmonicCoefficientCount,
   getSplatSphericalHarmonicsDegree,
@@ -43,6 +55,21 @@ export {
   type SplatResidencyStats
 } from './splat-residency';
 export {
+  SplatHierarchyManager,
+  getSplatHierarchyFoveatedPriority,
+  getSplatHierarchyScreenSpaceError,
+  isSplatHierarchyNodeVisible,
+  type SplatHierarchyFoveation,
+  type SplatHierarchyFrontierEntry,
+  type SplatHierarchyLoadContext,
+  type SplatHierarchyManagerProps,
+  type SplatHierarchyNode,
+  type SplatHierarchyPageLoader,
+  type SplatHierarchyRefinement,
+  type SplatHierarchyStats,
+  type SplatHierarchyView
+} from './splat-hierarchy';
+export {
   getCovarianceEllipseAxes,
   getQuaternionScaledAxes,
   projectSplatCovarianceToScreen,
@@ -73,6 +100,13 @@ export {
   GPUSplatGraphRenderer,
   type GPUSplatGraphRendererProps
 } from './gpu-splat-graph-renderer';
+export {
+  GPUSplatGraphMixedRenderer,
+  GPUSplatGraphPicker,
+  resolveGPUSplatGraphPickInfo,
+  GPU_SPLAT_GRAPH_PICKING_SHADER,
+  type GPUSplatGraphMixedRendererProps
+} from './gpu-splat-graph-interaction';
 export {
   SPLAT_ATTRIBUTE_SHADER_LAYOUT,
   SPLAT_ATTRIBUTE_WGSL_SHADER,

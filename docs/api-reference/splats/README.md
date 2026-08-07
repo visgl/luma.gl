@@ -1,9 +1,9 @@
 # @luma.gl/splats
 
 `@luma.gl/splats` provides experimental GPU-native Gaussian splat rendering. It owns prepared
-splat data, directional spherical harmonics, semantic filtering, GPU picking, bounded residency,
-covariance projection, depth ordering, and render models without depending on Apache
-Arrow, loaders.gl, or deck.gl.
+splat data, directional spherical harmonics, semantic filtering, GPU picking, hierarchy traversal,
+bounded residency, decoded Khronos glTF attributes, covariance projection, depth ordering, and
+render models without depending on Apache Arrow, loaders.gl, glTF packages, or deck.gl.
 
 The module is currently a private, unpublished luma.gl workspace. Install dependencies from the
 repository root and add `"@luma.gl/splats": "workspace:*"` to another workspace package when
@@ -85,15 +85,17 @@ tone-mapping options from `SplatRenderer`, plus the following graph-specific pro
 | `expectedSplatCount` | `number` | Optional positive final row-count hint; reserves projected records and global sort buffers once. |
 | `expectedBatchCount` | `number` | Optional positive final batch-count hint; reserves one reusable graph source slot per streamed batch. |
 | `clearColor` | `[number, number, number, number]` | Color used when the graph opens its default-framebuffer render pass. Defaults to transparent black. |
+| `cameraPosition` | `[number, number, number]` | World-space camera position used to evaluate directional source radiance directly on the GPU. |
+| `sphericalHarmonicsDegree` | `0 \| 1 \| 2 \| 3` | Highest fully prepared spherical-harmonic band evaluated by graph projection. |
+| `semanticFilter` | `SplatSemanticFilter` | GPU-resident include/exclude class selection and unlabeled-source visibility. |
 
 Provide both expected counts when source metadata is available. For example, a 741,883-row Train
 capture streamed in twelve Arrow record batches can reuse one compiled graph throughout its entire
 download. Omit either hint when the corresponding dimension is unknown. The renderer always uses
 stable global GPU depth ordering and requires a WebGPU device; use `SplatRenderer` for WebGL2,
-source ordering, tile ordering, higher-order spherical harmonics, semantic filtering and picking,
-or mixed mesh rendering. The graph renderer consumes spherical-harmonic DC colors only; pass
-`{maxSphericalHarmonicsDegree: 0}` when converting graph-bound Arrow sources to avoid allocating
-unused higher-order coefficient buffers.
+source ordering, tile ordering, or JavaScript semantic predicates. Graph-native semantic selection
+accepts numeric include/exclude sets and `includeUnlabeled`; arbitrary JavaScript predicates are
+rejected because they cannot execute inside a GPU command graph.
 
 ### Progressive graph lifecycle
 
@@ -111,6 +113,9 @@ future batches ─> reusable source slots     ─┘            │
                          GPU project + cull each active source slot
                                                           │
                                                           v
+                         GPU directional SH + semantic feature pass
+                                                          │
+                                                          v
                          stable global 16-bit GPU radix depth sort
                                                           │
                                                           v
@@ -121,22 +126,25 @@ The initialization pass assigns `65535` to every padded or unoccupied depth key 
 indirect instance counter. Each active batch slot projects its original positions, anisotropic
 scales, rotations, colors, and opacity; culls invalid, transparent, offscreen, or clipped splats;
 writes a valid depth key from `0` through `65534`; and atomically increments the visible instance
-count. Inactive source slots do not dispatch projection work. One stable GPU radix sort orders
+count. A separate bounded-storage feature pass evaluates camera-dependent degree-one through
+degree-three coefficients and applies source semantic visibility before sorting. Keeping this pass
+separate preserves the baseline WebGPU guarantee of eight storage bindings per shader stage.
+Inactive source slots do not dispatch projection or feature work. One stable GPU radix sort orders
 every active batch together, leaving invalid padding at the end; one indirect draw consumes only
-the visible prefix. The complete Train graph contains 126 scheduled nodes: one initialization
-pass, twelve reusable source-slot passes, 112 radix and hierarchical scan passes, and one render
-pass.
+the visible prefix.
 
 No source batches are concatenated, previously uploaded source columns are not reuploaded, and no
 frame requires a CPU source-row walk, CPU depth sort, sorted-index upload, or implicit GPU readback.
 Floating-point HDR radiance, mixed source color formats, opacity thresholds, exposure, and display
 tone mapping remain valid from the first streamed frame.
 
-`encode()` returns a `GPUCommandGraphEncoding` when it records work, or `undefined` when the source
-is empty, the renderer is destroyed, or neither its data nor its camera/style properties changed.
+`encode()` returns a `GPUCommandGraphEncoding` when it records work, or `undefined` for an initially
+empty source, a destroyed renderer, or unchanged data/camera/style properties. When a previously
+visible hierarchy frontier becomes empty, the first encoding clears the existing presentation and
+indirect count once while retaining the compiled graph; subsequent empty frames return `undefined`.
 Calling `setProps(...)`, `appendData(...)`, or `updateRows(...)` on a retained source batch marks
 the next frame dirty; a stationary, unchanged scene is not repeatedly projected or sorted. Source
-row updates reuse the existing compiled graph and caller-owned GPU buffers.
+row updates and compatible frontier restoration reuse the compiled graph and caller-owned buffers.
 
 ### Reserved capacity and unknown-size streams
 
@@ -161,9 +169,10 @@ Every source batch remains caller-owned and must stay alive while the renderer r
 scratch, source-slot placeholders, uniforms, and indirect commands; it never destroys source
 batches. Destroy the renderer before independently destroying those batches.
 
-`renderer.setProps({data: replacementBatch})` replaces the borrowed source collection and
-invalidates its graph. The previous source batches are not destroyed; the caller remains
-responsible for their lifetime. The next nonempty `encode()` builds a graph for the replacement.
+`renderer.setProps({data: replacementBatches})` replaces the borrowed source collection without
+destroying previous caller-owned batches. Frontier replacements that remain inside the reserved
+row and source-slot capacities reuse their compiled graph and update only its borrowed bindings;
+exceeding either capacity recompiles the graph before the next nonempty encoding.
 
 The renderer exposes lightweight diagnostics without synchronizing GPU work:
 
@@ -175,6 +184,8 @@ The renderer exposes lightweight diagnostics without synchronizing GPU work:
 - `renderer.compiledGraph` and `renderer.lastEncoding` expose the current compiled graph and most
   recent encoding for graph inspectors.
 - `renderer.sortedIndexBuffer` exposes the GPU-owned projected-row permutation after compilation.
+- `renderer.projectedRecordBuffer` and `renderer.uniformBuffer` expose the shared graph-owned
+  records and render uniforms used by graph-native interaction and composition.
 - `renderer.drawCommands` contains the GPU-written indirect command and exact visible instance
   count.
 
@@ -191,9 +202,11 @@ Train scene, the primary renderer buffers use approximately 45.3 MiB and graph s
 approximately 19.8 MiB; packed source columns add approximately 36.8 MiB separately.
 
 The projected-record allocation must fit the device's `maxStorageBufferBindingSize`. A 128 MiB
-storage-binding limit supports at most 2,796,202 splats in one graph. Larger scenes or constrained
-adapters require a different rendering strategy; the showcase falls back to `SplatRenderer` when
-graph compilation fails synchronously.
+storage-binding limit supports at most 2,796,202 splats in one graph. Larger active frontiers or
+constrained adapters require a different rendering strategy. Hierarchy and RAD integrations must
+limit their simultaneously resident frontier to this device-dependent capacity; the complete
+source hierarchy may contain many more rows. The showcase falls back to `SplatRenderer` when graph
+compilation fails synchronously.
 
 Reserving the final scene size avoids repeated graph compilation, but the global radix sort processes
 the entire reserved capacity on every dirty progressive frame, even while most source rows are
@@ -214,10 +227,10 @@ zero, until rendering. Prepared GPU columns use the `float32x3`, `float32x4`, `u
 `SplatRenderer` supports `none`, `global`, and `tile` depth-ordering modes alongside camera matrix,
 viewport, radius, opacity, and visibility controls; `GPUSplatGraphRenderer` always uses global
 GPU ordering. WebGPU uses GPU-ready splat buffers and WGSL; WebGL2 uses an attribute-backed GLSL
-fallback. `SplatRenderer` additionally supports higher-order directional radiance, semantic
-filtering, dedicated GPU picking, and mixed mesh composition. When globally sorted source batches
-are densely interleaved, `SplatRenderer` bounds draw-call growth by grouping rows into
-depth-ordered batch runs without changing or repacking their source buffers.
+fallback. Both renderers support higher-order directional radiance, semantic filtering, dedicated
+GPU picking, and mixed mesh composition through their corresponding interaction helpers. When
+globally sorted source batches are densely interleaved, `SplatRenderer` bounds draw-call growth by
+grouping rows into depth-ordered batch runs without changing or repacking their source buffers.
 
 The `exposure` property scales linear color before display mapping. Floating-point source colors
 automatically enable Reinhard highlight compression on standard dynamic range targets; set
@@ -250,10 +263,10 @@ const renderer = new SplatRenderer(device, {
 });
 ```
 
-WebGPU evaluates the directional coefficients directly from a source-owned storage buffer. The
-WebGL2 fallback evaluates directional radiance into a renderer-owned color buffer without changing
-the original source colors. Changing `cameraPosition` refreshes directional colors independently
-from depth sorting.
+WebGPU evaluates the directional coefficients directly from source-owned storage buffers in either
+the standard renderer or the reusable graph feature pass. The WebGL2 fallback evaluates
+directional radiance into a renderer-owned color buffer without changing the original source
+colors. Changing `cameraPosition` refreshes directional colors independently from source ownership.
 
 ## Semantic filtering and dynamic updates
 
@@ -310,6 +323,23 @@ batch-local row, and optional semantic identifier. Stable global rows range from
 changing the original source indices. Destroy the picker before destroying the borrowing renderer
 or its caller-owned source batches.
 
+For a WebGPU command graph, use `GPUSplatGraphPicker` instead:
+
+```ts
+import {GPUSplatGraphPicker} from '@luma.gl/splats';
+
+const graphPicker = new GPUSplatGraphPicker(graphRenderer, {
+  onPick: info => console.log(info.rowIndex, info.batchIndex, info.semanticId)
+});
+
+const selected = await graphPicker.pick([pointerX, pointerY]);
+graphPicker.destroy();
+```
+
+The graph picker borrows the existing projected records, globally sorted indices, uniforms, and
+GPU-counted indirect command. It performs one integer-attachment draw and explicit asynchronous
+pixel readback without walking, copying, or repacking source batches.
+
 ## Mixed mesh and splat scenes
 
 Use an existing render pass to draw opaque meshes, depth-tested Gaussian splats, and transparent
@@ -325,6 +355,24 @@ renderer.drawMixed(renderPass, {
 Opaque meshes are drawn first, splats are composited in their selected depth order, and transparent
 meshes are drawn last. Set `depthCompare` for reversed-depth scenes and enable `depthWriteEnabled`
 only when the application explicitly needs splat depth writes.
+
+`GPUSplatGraphMixedRenderer` provides the equivalent WebGPU graph composition against a
+caller-owned color/depth pass:
+
+```ts
+const composition = new GPUSplatGraphMixedRenderer(graphRenderer, {
+  depthCompare: 'less-equal'
+});
+
+composition.predraw(commandEncoder);
+const renderPass = device.beginRenderPass({framebuffer, clearDepth: 1});
+composition.draw(renderPass, {opaqueMeshes, transparentMeshes});
+renderPass.end();
+```
+
+The graph's current preparation step also records its normal presentation pass. The mixed pass
+then reuses its original projected records and one indirect draw; it does not project source rows
+or sort splats a second time.
 
 ## Scalable residency
 
@@ -358,6 +406,78 @@ their batches safely. Supply `estimatedGpuBytes` and `estimatedSplatCount` when 
 resident chunks are evicted before a new batch allocates GPU memory; without estimates, budgets
 bound retained resident allocations but cannot prevent a temporary upload spike.
 
+## Hierarchical paging and foveated level of detail
+
+`SplatHierarchyManager` selects an active frontier from source-owned page metadata. Nodes carry
+world-space bounds, geometric approximation error, independent source identities, optional content
+URIs, and caller-supplied asynchronous page decoders:
+
+```ts
+import {SplatHierarchyManager} from '@luma.gl/splats';
+
+const hierarchy = new SplatHierarchyManager({
+  roots: sourceTileRoots,
+  residencyBudget: {
+    maxGpuBytes: 256 * 1024 * 1024,
+    maxResidentSplats: 1_000_000,
+    maxResidentChunks: 32
+  },
+  maximumScreenSpaceError: 8,
+  maxConcurrentLoads: 4,
+  loadPage: async (node, {signal}) => decodeSourcePage(node.contentUri, {signal}),
+  onFrontierChange: batches => graphRenderer.setProps({data: batches})
+});
+
+hierarchy.update({
+  cameraPosition,
+  modelViewProjectionMatrix,
+  viewportSize: [width, height],
+  foveation: {center: [0.5, 0.5], radius: 0.2, strength: 2}
+});
+
+await hierarchy.waitForIdle();
+console.log(hierarchy.frontier, hierarchy.stats, hierarchy.residencyManager.stats);
+```
+
+Traversal conservatively culls bounding spheres, computes projected screen-space error, and
+prioritizes pages near the current gaze position. Replace-refined parents remain visible and
+pinned until every visible child is resident; additive refinement retains parent detail. Requests
+use bounded decoder concurrency, abort work that leaves the current view, and forward each page's
+`estimatedGpuBytes` and `estimatedSplatCount` to pre-upload residency reservations. Source pages,
+compressed payloads, worker scheduling, RAD parsing, and 3D Tiles transport remain application-
+or loader-owned. Prepared pages remain caller-owned by default; set `node.ownsData: true` when
+the hierarchy should destroy an asynchronously decoded page on eviction or shutdown. An externally
+supplied residency manager is always borrowed and must be destroyed by its original owner.
+
+## Khronos Gaussian splats, 3D Tiles, and SPZ
+
+Decoded glTF primitives declaring `KHR_gaussian_splatting` can be prepared directly without adding
+a loaders.gl or glTF dependency to the rendering package:
+
+```ts
+import {loadGPUSplatDataFromGLTF, makeGPUSplatDataFromGLTF} from '@luma.gl/splats';
+
+const prepared = makeGPUSplatDataFromGLTF(device, decodedPrimitive, {
+  sourceBatchIndex: tile.sourceBatchIndex,
+  rowIndexBase: tile.firstSourceRow,
+  maxSphericalHarmonicsDegree: 2
+});
+
+const compressed = await loadGPUSplatDataFromGLTF(device, compressedPrimitive, {
+  signal,
+  decodeCompressedPrimitive: (primitive, options) =>
+    applicationOwnedSPZDecoder.decode(primitive, options)
+});
+```
+
+The structural adapter validates POINTS primitives, the supported ellipse kernel, color space,
+projection, and sorting method. It preserves source `POSITION`, decodes normalized scale/opacity
+accessors, converts glTF XYZW quaternions to renderer WXYZ order, reconstructs spherical-harmonic
+DC radiance, and packs complete degree-one through degree-three RGB coefficient bands. Authored
+`EXT_mesh_features` feature identifiers become stable source semantic IDs. Compressed
+`KHR_gaussian_splatting_compression_spz_2` payloads are handed to an explicitly caller-owned
+decoder; this renderer does not claim to parse SPZ or fetch 3D Tiles itself.
+
 ## Apache Arrow conversion
 
 ```ts
@@ -375,11 +495,15 @@ for await (const batch of makeGPUSplatDataFromArrowStream(device, arrowBatchStre
 Arrow conversion recognizes GraphDECO-style `POSITION`, `scale_0` through `scale_2`, `rot_0`
 through `rot_3`, `opacity`, optional `f_dc_0` through `f_dc_2` columns, higher-order `f_rest_*`
 coefficients, and common semantic-class columns. Set `maxSphericalHarmonicsDegree` to cap decoded
-bands or `semanticColumn` to select an explicit semantic field. Field metadata selects
+bands or `semanticColumn` to select an explicit semantic field. Native RAD/SPZ basis-major RGB and
+KSPLAT band-major, channel-major layouts are normalized into renderer-ready RGB basis triplets, and
+valid degree-four SPZ sources are safely capped at supported degree three. Field metadata selects
 linear versus logarithmic scales and linear versus logit opacity. SH DC colors remain unclamped
 linear `float32x4` radiance rather than being prematurely quantized into bytes. Each Arrow record
 batch becomes one independently owned `GPUSplatData` object with stable source batch and row
-identities. Streamed tables prepare and yield one record batch at a time, keeping transient GPU
+identities. Paged source wrappers can supply `loaderData.base` and `loaderData.chunkIndex` to
+preserve authored global row and chunk identities even when pages arrive out of source order.
+Streamed tables prepare and yield one record batch at a time, keeping transient GPU
 allocations compatible with residency budgets and releasing no caller-owned yielded buffers.
 Arrow sources are recognized structurally, so loaders.gl 5 alpha can use a different installed
 Apache Arrow version from luma.gl without breaking record-batch detection or source identity.
@@ -401,13 +525,19 @@ same Hugging Face catalog used by the loaders.gl Gaussian splat example. Use
 scenes. If the Hugging Face CDN is unavailable, Train automatically falls back to its two
 GitHub-hosted PLY segments; `scene=train-github` selects those segments directly.
 
+`?scene=coit` selects Spark's 50,937,127-splat Coit Tower RAD source. Its metadata and independent
+pages are fetched with HTTP range requests and bounded to a one-million-splat resident preview by
+default; set `&residentSplats=250000` to choose another whole-page source budget. The overlay keeps
+reporting the complete authored source count, and unneeded RAD pages are never fetched or uploaded.
+This is a bounded page window, not a claim that all 50 million rows fit inside one WebGPU graph.
+
 Use `?loaders=local&scene=fixture` for the lightweight 1,000-splat parser fixture, or provide
 `source` to select a custom `.ply`, `.splat`, `.ksplat`, `.spz`, or `.rad` file. Full PLY scenes
 are streamed through their original Arrow record batches, and the showcase reports download,
 batch, and splat progress while retaining independently owned GPU buffers. The loader remains an
 application-level dependency; `@luma.gl/splats` continues to own only GPU data and rendering.
-The default WebGPU graph decodes DC colors without allocating unused higher-order coefficients;
-add `&renderer=cpu` to evaluate and inspect camera-dependent spherical harmonics instead.
+Both the default WebGPU graph and the explicit `&renderer=cpu` comparison retain and evaluate
+camera-dependent higher-order spherical harmonics.
 
 GraphDECO captures do not embed a universal world-up direction. The showcase applies known
 scene-specific up vectors and, for Truck, its published initial camera; unfamiliar custom sources

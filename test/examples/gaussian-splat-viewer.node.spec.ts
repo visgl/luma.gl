@@ -7,7 +7,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 import type {AnimationProps} from '@luma.gl/engine';
-import {GPUSplatGraphRenderer, SplatRenderer} from '@luma.gl/splats';
+import {GPUSplatGraphRenderer, SplatRenderer, type GPUSplatData} from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   default as GaussianSplatsAnimationLoopTemplate,
@@ -91,9 +91,8 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerPanel).toContain('data-gaussian-splats-execution');
     expect(viewerPanel).toContain('data-gaussian-splats-graph-inspector');
     expect(viewerSource).toContain('activeRenderer.encode(device.commandEncoder)');
-    expect(viewerSource).toContain(
-      'expectedSplatCount: this.localLoadersConfiguration?.expectedSplatCount'
-    );
+    expect(viewerSource).toContain('this.localLoadersConfiguration?.maxResidentSplatCount');
+    expect(viewerSource).toContain('this.localLoadersConfiguration?.expectedSplatCount');
     expect(viewerSource).not.toContain('this.activateGraphRenderer()');
     expect(viewerSource).not.toContain('CPU preview → GPU graph');
     expect(viewerDocumentation).toContain('GPU command');
@@ -200,6 +199,22 @@ describe('published Gaussian splat viewer', () => {
     installViewerWindow('?scene=train-github');
     expect(getLocalGaussianSplatLoadersConfiguration()?.sourceUrls).toHaveLength(2);
 
+    installViewerWindow('?scene=coit');
+    expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
+      sceneId: 'coit',
+      sourceFormat: 'RAD',
+      expectedSplatCount: 50_937_127,
+      expectedBatchCount: 16,
+      maxResidentSplatCount: 1_000_000
+    });
+
+    installViewerWindow('?scene=coit&residentSplats=250000');
+    expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
+      expectedSplatCount: 50_937_127,
+      expectedBatchCount: 4,
+      maxResidentSplatCount: 250_000
+    });
+
     installViewerWindow('?source=https%3A%2F%2Fexample.test%2Fcaptured.spz');
     expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
       loaderMode: 'bundled',
@@ -208,8 +223,17 @@ describe('published Gaussian splat viewer', () => {
       sourceFormat: 'SPZ'
     });
 
+    installViewerWindow('?source=https%3A%2F%2Fexample.test%2Fcaptured.rad');
+    expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
+      loaderMode: 'bundled',
+      sceneId: 'custom',
+      sourceUrl: 'https://example.test/captured.rad',
+      sourceFormat: 'RAD',
+      maxResidentSplatCount: 1_000_000
+    });
+
     expect(GAUSSIAN_SPLAT_SOURCE_CATALOG.map(scene => scene.id)).toEqual(
-      expect.arrayContaining(['train', 'drjohnson', 'playroom', 'truck', 'train-github'])
+      expect.arrayContaining(['train', 'drjohnson', 'playroom', 'truck', 'coit', 'train-github'])
     );
   });
 
@@ -263,6 +287,148 @@ describe('published Gaussian splat viewer', () => {
         })
       ])
     );
+  });
+
+  test('range-fetches RAD pages lazily and preserves source-global chunk identities', async () => {
+    installViewerWindow('?source=https%3A%2F%2Fexample.test%2Fscene.rad');
+    const configuration = getLocalGaussianSplatLoadersConfiguration();
+    expect(configuration).toBeDefined();
+    configuration!.loaderBundleUrl = pathToFileURL(
+      path.join(process.cwd(), 'website/static/standalone-examples/gaussian-splats/loaders-gl.mjs')
+    ).href;
+    vi.stubGlobal('window', {
+      location: {href: 'file:///gaussian-splat-viewer.html', origin: 'null'}
+    });
+
+    const source = makeGaussianRADFixture();
+    const requestedRanges: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_input: string | URL | Request, options?: RequestInit) => {
+        const range = new Headers(options?.headers).get('Range');
+        if (range) {
+          requestedRanges.push(range);
+        }
+        const match = range?.match(/^bytes=(\d+)-(\d+)$/);
+        const start = Number(match?.[1] ?? 0);
+        const end = Math.min(Number(match?.[2] ?? source.byteLength - 1) + 1, source.byteLength);
+        return new Response(source.slice(start, end), {
+          status: range ? 206 : 200,
+          headers: {'content-length': String(end - start)}
+        });
+      })
+    );
+
+    const progressUpdates: LocalGaussianSplatLoadProgress[] = [];
+    const receivedPages: Array<{rows: number; base: unknown; chunkIndex: unknown}> = [];
+    for await (const page of loadLocalGaussianSplatArrowSources(configuration!, {
+      onProgress: progress => progressUpdates.push(progress)
+    })) {
+      if (!('data' in page)) {
+        throw new Error('RAD source did not preserve its loader-owned wrapper');
+      }
+      receivedPages.push({
+        rows: page.data.numRows,
+        base: page.loaderData?.base,
+        chunkIndex: page.loaderData?.chunkIndex
+      });
+      if (receivedPages.length === 1) {
+        expect(requestedRanges).toHaveLength(2);
+      }
+    }
+
+    expect(receivedPages).toEqual([
+      {rows: 1, base: 0, chunkIndex: 0},
+      {rows: 1, base: 10, chunkIndex: 1}
+    ]);
+    expect(requestedRanges).toHaveLength(3);
+    expect(configuration).toMatchObject({expectedSplatCount: 2, expectedBatchCount: 2});
+    expect(progressUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({expectedSplatCount: 2, expectedBatchCount: 2}),
+        expect.objectContaining({phase: 'complete', loadedSplatCount: 2})
+      ])
+    );
+  });
+
+  test('stops RAD page requests at the caller-selected resident source-row budget', async () => {
+    installViewerWindow('?source=https%3A%2F%2Fexample.test%2Fscene.rad&residentSplats=1');
+    const configuration = getLocalGaussianSplatLoadersConfiguration();
+    expect(configuration?.maxResidentSplatCount).toBe(1);
+    configuration!.loaderBundleUrl = pathToFileURL(
+      path.join(process.cwd(), 'website/static/standalone-examples/gaussian-splats/loaders-gl.mjs')
+    ).href;
+    vi.stubGlobal('window', {
+      location: {href: 'file:///gaussian-splat-viewer.html', origin: 'null'}
+    });
+
+    const source = makeGaussianRADFixture();
+    const requestedRanges: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_input: string | URL | Request, options?: RequestInit) => {
+        const range = new Headers(options?.headers).get('Range');
+        if (range) requestedRanges.push(range);
+        const match = range?.match(/^bytes=(\d+)-(\d+)$/);
+        const start = Number(match?.[1] ?? 0);
+        const end = Math.min(Number(match?.[2] ?? source.byteLength - 1) + 1, source.byteLength);
+        return new Response(source.slice(start, end), {status: range ? 206 : 200});
+      })
+    );
+
+    const receivedPages: GPUSplatData[] = [];
+    const device = new NullDevice({});
+    const arrow = await import('@luma.gl/arrow');
+    for await (const page of arrow.makeGPUSplatDataFromArrowStream(
+      device,
+      loadLocalGaussianSplatArrowSources(configuration!)
+    )) {
+      receivedPages.push(page);
+    }
+
+    expect(receivedPages).toHaveLength(1);
+    expect(receivedPages[0].rowIndexBase).toBe(0);
+    expect(requestedRanges).toHaveLength(2);
+    expect(configuration?.expectedSplatCount).toBe(2);
+    receivedPages[0].destroy();
+    device.destroy();
+  });
+
+  test('rejects invalid RAD resident source-row budgets', () => {
+    installViewerWindow('?scene=coit&residentSplats=0');
+    expect(() => getLocalGaussianSplatLoadersConfiguration()).toThrow('positive safe integer');
+  });
+
+  test('rejects a first RAD page larger than the resident source-row budget before fetching it', async () => {
+    installViewerWindow('?source=https%3A%2F%2Fexample.test%2Fscene.rad&residentSplats=1');
+    const configuration = getLocalGaussianSplatLoadersConfiguration();
+    configuration!.loaderBundleUrl = pathToFileURL(
+      path.join(process.cwd(), 'website/static/standalone-examples/gaussian-splats/loaders-gl.mjs')
+    ).href;
+    vi.stubGlobal('window', {
+      location: {href: 'file:///gaussian-splat-viewer.html', origin: 'null'}
+    });
+
+    const source = makeGaussianRADFixture(2);
+    const requestedRanges: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_input: string | URL | Request, options?: RequestInit) => {
+        const range = new Headers(options?.headers).get('Range');
+        if (range) requestedRanges.push(range);
+        const match = range?.match(/^bytes=(\d+)-(\d+)$/);
+        const start = Number(match?.[1] ?? 0);
+        const end = Math.min(Number(match?.[2] ?? source.byteLength - 1) + 1, source.byteLength);
+        return new Response(source.slice(start, end), {status: range ? 206 : 200});
+      })
+    );
+
+    await expect(async () => {
+      for await (const _page of loadLocalGaussianSplatArrowSources(configuration!)) {
+        throw new Error('An oversized RAD page was unexpectedly yielded.');
+      }
+    }).rejects.toThrow('exceeds residentSplats');
+    expect(requestedRanges).toHaveLength(1);
   });
 
   test('preserves explicit synthetic rendering and the local checkout override', () => {
@@ -345,4 +511,73 @@ function makeGaussianSplatPLYFixture(): string {
     '0 0 0 1 0.5 0.25 1 -2 -2 -2 1 0 0 0',
     ''
   ].join('\n');
+}
+
+function makeGaussianRADFixture(firstChunkRowCount = 1): ArrayBuffer {
+  const chunks = [
+    makeGaussianRADChunkFixture(0, 1, firstChunkRowCount),
+    makeGaussianRADChunkFixture(10, 2)
+  ];
+  const metadata = {
+    version: 1,
+    type: 'gsplat',
+    count: firstChunkRowCount + 1,
+    maxSh: 0,
+    chunkSize: 1,
+    allChunkBytes: chunks.reduce((byteLength, chunk) => byteLength + chunk.byteLength, 0),
+    chunks: chunks.map((chunk, index) => ({
+      offset: index === 0 ? 0 : chunks[0].byteLength,
+      bytes: chunk.byteLength,
+      base: index * 10,
+      count: index === 0 ? firstChunkRowCount : 1
+    }))
+  };
+  const metadataBytes = new TextEncoder().encode(JSON.stringify(metadata));
+  const chunkByteOffset = 8 + alignGaussianRADBytes(metadataBytes.byteLength);
+  const data = new ArrayBuffer(chunkByteOffset + metadata.allChunkBytes);
+  const view = new DataView(data);
+  const bytes = new Uint8Array(data);
+  view.setUint32(0, 0x30444152, true);
+  view.setUint32(4, metadataBytes.byteLength, true);
+  bytes.set(metadataBytes, 8);
+  let byteOffset = chunkByteOffset;
+  for (const chunk of chunks) {
+    bytes.set(new Uint8Array(chunk), byteOffset);
+    byteOffset += chunk.byteLength;
+  }
+  return data;
+}
+
+function makeGaussianRADChunkFixture(base: number, coordinate: number, rowCount = 1): ArrayBuffer {
+  const position = Float32Array.from(
+    {length: rowCount * 3},
+    (_, componentIndex) => coordinate + componentIndex
+  );
+  const payloadByteLength = alignGaussianRADBytes(position.byteLength);
+  const metadataBytes = new TextEncoder().encode(
+    JSON.stringify({
+      version: 1,
+      base,
+      count: rowCount,
+      payloadBytes: payloadByteLength,
+      maxSh: 0,
+      lodTree: false,
+      properties: [{offset: 0, bytes: position.byteLength, property: 'center', encoding: 'f32'}]
+    })
+  );
+  const payloadByteLengthOffset = 8 + alignGaussianRADBytes(metadataBytes.byteLength);
+  const payloadByteOffset = payloadByteLengthOffset + 8;
+  const data = new ArrayBuffer(payloadByteOffset + payloadByteLength);
+  const view = new DataView(data);
+  const bytes = new Uint8Array(data);
+  view.setUint32(0, 0x43444152, true);
+  view.setUint32(4, metadataBytes.byteLength, true);
+  bytes.set(metadataBytes, 8);
+  view.setBigUint64(payloadByteLengthOffset, BigInt(payloadByteLength), true);
+  bytes.set(new Uint8Array(position.buffer), payloadByteOffset);
+  return data;
+}
+
+function alignGaussianRADBytes(byteLength: number): number {
+  return (byteLength + 7) & ~7;
 }
