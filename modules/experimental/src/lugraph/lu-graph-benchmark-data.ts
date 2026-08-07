@@ -160,6 +160,7 @@ type MeasuredLuGraphBenchmarkValue<Value> = {
 
 const UINT32_MAXIMUM = 0xffffffff;
 const MAXIMUM_VERTEX_COUNT = 0xfffffffe;
+const MAXIMUM_SHORTEST_PATH_ITERATIONS = 1024;
 const MINIMUM_REPULSION_DISTANCE_SQUARED = 0.0001;
 const PAGE_RANK_DAMPING = 0.85;
 /** @internal Fixed, honestly reported synchronous majority-vote workload. */
@@ -535,49 +536,49 @@ function evaluateLuGraphBenchmarkBreadthFirstSearch(
   return {distances, predecessors};
 }
 
-/** Independently evaluates positive float32 shortest paths without reusing GPU relaxation. */
-function evaluateLuGraphBenchmarkShortestPath(
+/** @internal Independently evaluates exactly the bounded GPU relaxation workload. */
+export function evaluateLuGraphBenchmarkShortestPath(
   adjacency: LuGraphBenchmarkAdjacency
 ): LuGraphBenchmarkShortestPath {
   const vertexCount = adjacency.forwardOffsets.length - 1;
   const weightedDistances = new Float32Array(vertexCount).fill(Number.POSITIVE_INFINITY);
   const weightedPredecessors = new Uint32Array(vertexCount).fill(UINT32_MAXIMUM);
-  const hopCounts = new Uint32Array(vertexCount).fill(UINT32_MAXIMUM);
-  const visited = new Uint8Array(vertexCount);
   weightedDistances[0] = 0;
-  hopCounts[0] = 0;
 
-  for (let iteration = 0; iteration < vertexCount; iteration++) {
-    let source = UINT32_MAXIMUM;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    for (let vertex = 0; vertex < vertexCount; vertex++) {
-      if (!visited[vertex] && weightedDistances[vertex] < nearestDistance) {
-        source = vertex;
-        nearestDistance = weightedDistances[vertex];
-      }
-    }
-    if (source === UINT32_MAXIMUM) break;
-    visited[source] = 1;
+  const maximumIterations = Math.min(
+    Math.max(vertexCount - 1, 0),
+    MAXIMUM_SHORTEST_PATH_ITERATIONS
+  );
+  for (let iteration = 0; iteration < maximumIterations; iteration++) {
+    const previousDistances = weightedDistances.slice();
+    let changed = false;
 
-    for (
-      let slot = adjacency.forwardOffsets[source];
-      slot < adjacency.forwardOffsets[source + 1];
-      slot++
-    ) {
-      const target = adjacency.forwardNeighbors[slot];
-      const distance = Math.fround(nearestDistance + adjacency.forwardWeights[slot]);
-      const hopCount = hopCounts[source] + 1;
-      if (
-        distance < weightedDistances[target] ||
-        (distance === weightedDistances[target] &&
-          (hopCount < hopCounts[target] ||
-            (hopCount === hopCounts[target] && source < weightedPredecessors[target])))
+    for (let source = 0; source < vertexCount; source++) {
+      const sourceDistance = previousDistances[source];
+      if (!Number.isFinite(sourceDistance)) continue;
+
+      for (
+        let slot = adjacency.forwardOffsets[source];
+        slot < adjacency.forwardOffsets[source + 1];
+        slot++
       ) {
-        weightedDistances[target] = distance;
-        weightedPredecessors[target] = source;
-        hopCounts[target] = hopCount;
+        const target = adjacency.forwardNeighbors[slot];
+        const distance = Math.fround(sourceDistance + adjacency.forwardWeights[slot]);
+        if (distance < weightedDistances[target]) {
+          weightedDistances[target] = distance;
+          weightedPredecessors[target] = source;
+          changed = true;
+        } else if (
+          distance === weightedDistances[target] &&
+          distance < previousDistances[target] &&
+          source < weightedPredecessors[target]
+        ) {
+          weightedPredecessors[target] = source;
+        }
       }
     }
+
+    if (!changed) break;
   }
 
   return {weightedDistances, weightedPredecessors};

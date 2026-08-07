@@ -16,6 +16,7 @@ import {
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 import {
+  evaluateLuGraphBenchmarkShortestPath,
   prepareLuGraphBenchmark,
   summarizeLuGraphBenchmarkSamples
 } from '../../src/lugraph/lu-graph-benchmark-data';
@@ -363,6 +364,31 @@ describe('luGraph benchmark independent CPU oracles', () => {
           Number.isFinite(distance) && distance !== context.reference.distances[vertex]
       )
     ).toBe(true);
+  });
+
+  test('bounds the shortest-path oracle to the same 1,024 GPU relaxation rounds', () => {
+    const vertexCount = 1030;
+    const edgeCount = vertexCount - 1;
+    const forwardOffsets = Uint32Array.from({length: vertexCount + 1}, (_, vertex) =>
+      Math.min(vertex, edgeCount)
+    );
+    const forwardNeighbors = Uint32Array.from({length: edgeCount}, (_, vertex) => vertex + 1);
+    const forwardWeights = new Float32Array(edgeCount).fill(1);
+
+    const reference = evaluateLuGraphBenchmarkShortestPath({
+      forwardOffsets,
+      forwardNeighbors,
+      forwardWeights,
+      reverseOffsets: new Uint32Array(vertexCount + 1),
+      reverseNeighbors: new Uint32Array(0),
+      reverseWeights: new Float32Array(0)
+    });
+
+    expect(reference.weightedDistances[1024]).toBe(1024);
+    expect(reference.weightedPredecessors[1024]).toBe(1023);
+    expect(reference.weightedDistances[1025]).toBe(Number.POSITIVE_INFINITY);
+    expect(reference.weightedPredecessors[1025]).toBe(0xffffffff);
+    expect(reference.weightedDistances[vertexCount - 1]).toBe(Number.POSITIVE_INFINITY);
   });
 
   test('counts distinct directed closures and normalizes complete graph neighborhoods', () => {
