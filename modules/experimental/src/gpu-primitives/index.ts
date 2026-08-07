@@ -72,11 +72,16 @@ export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
-export {GPUIndexedRangeCompaction} from './gpu-indexed-range-compaction';
+export {
+  GPUIndexedRangeCompaction,
+  GPUPartitionedIndexedRangeCompaction
+} from './gpu-indexed-range-compaction';
 export type {
   GPUIndexedRangeCompactionProps,
   GPUIndexedRangeCompactionResult,
-  GPUIndexedRangeLayout
+  GPUIndexedRangeLayout,
+  GPUPartitionedIndexedRangeCompactionProps,
+  GPUPartitionedIndexedRangeCompactionResult
 } from './gpu-indexed-range-compaction';
 export {GPUChunkedIndexedScatter} from './gpu-chunked-indexed-scatter';
 export type {
