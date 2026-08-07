@@ -113,9 +113,11 @@ export type GPUVectorFormatForArrowType<T extends DataType = DataType> = T exten
         ? GPUVectorFormat
         : VertexList<VertexFormatForArrowType<ChildType>>
       : T extends FixedSizeList<infer ChildType>
-        ?
-            | VertexFormatForArrowFixedSizeListType<ChildType>
-            | FixedSizeListFormatForArrowScalarType<ChildType>
+        ? [VertexFormatForArrowScalarType<ChildType>] extends [never]
+          ? GPUVectorFormat
+          :
+              | VertexFormatForArrowFixedSizeListType<ChildType>
+              | FixedSizeListFormatForArrowScalarType<ChildType>
         : VertexFormatForArrowType<T> extends never
           ? GPUVectorFormat
           : VertexFormatForArrowType<T>;

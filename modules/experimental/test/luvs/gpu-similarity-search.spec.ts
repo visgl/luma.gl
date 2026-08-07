@@ -4,11 +4,14 @@
 
 import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from '@luma.gl/experimental';
 import {GPUData, GPURecordBatch, GPUTable, GPUVector, type FixedSizeList} from '@luma.gl/tables';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import test, {type Test} from 'test/utils/vitest-tape';
+import {getViewBinding, getViewElementOffset} from '../../src/gpu-primitives/graph-data-view-utils';
+import {GPUHashIndex} from '../../src/gpu-primitives/gpu-hash-index';
 import {importGPUEmbeddingTable, importGPUEmbeddingVector} from '../../src/luvs/embedding-matrix';
 import {GPUSimilaritySearch} from '../../src/luvs/gpu-similarity-search';
 import type {GPUEmbeddingMetric, GraphEmbeddingMatrix} from '../../src/luvs/types';
@@ -1222,6 +1225,82 @@ test('GPUSimilaritySearch indexes substantial stable candidate-ID allowlists on 
     [selectedIds.length, selectedIds.length],
     'duplicate requested IDs do not duplicate eligible dataset rows'
   );
+  t.end();
+});
+
+test('GPUSimilaritySearch preserves every allowlisted ID when bounded GPU hash insertion overflows', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return finishWithoutWebGPU(t);
+
+  const sourceRowIds = Array.from({length: 24}, (_, rowIndex) => 7000 + rowIndex * 13);
+  const fixture: SimilaritySearchFixture = {
+    dimensions: 2,
+    dataset: [{rows: sourceRowIds.map((_, rowIndex) => [rowIndex, rowIndex % 3]), sourceRowIds}],
+    queries: [{rows: [[12, 0]]}],
+    candidateIds: sourceRowIds,
+    candidateCounts: true,
+    k: 6
+  };
+  const originalAddToGraph = GPUHashIndex.prototype.addToGraph;
+  GPUHashIndex.prototype.addToGraph = function <Parameters>(graph: GPUCommandGraph<Parameters>) {
+    originalAddToGraph.call(this, graph);
+    const index = this;
+    const identifier = `${index.id}-simulate-candidate-overflow`;
+    const source = /* wgsl */ `
+@group(0) @binding(0) var<storage, read_write> tableKeys: array<u32>;
+@group(0) @binding(1) var<storage, read_write> statistics: array<u32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
+  let slot = globalInvocationId.x;
+  if (slot < ${index.tableKeys.length}u) {
+    tableKeys[${getViewElementOffset(index.tableKeys)}u + slot] = 0xffffffffu;
+  }
+  if (slot == 0u) {
+    statistics[${getViewElementOffset(index.statistics)}u + 2u] = 1u;
+  }
+}`;
+    graph.addComputePass({
+      id: identifier,
+      resources: [
+        {buffer: index.tableKeys, usage: 'storage-read-write'},
+        {buffer: index.statistics, usage: 'storage-read-write'}
+      ],
+      compile: ({device: graphDevice}) => {
+        const computation = new Computation(graphDevice, {
+          id: identifier,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'tableKeys', type: 'storage', group: 0, location: 0},
+              {name: 'statistics', type: 'storage', group: 0, location: 1}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings({
+              tableKeys: getViewBinding(index.tableKeys, getBuffer),
+              statistics: getViewBinding(index.statistics, getBuffer)
+            });
+            computation.dispatch(computePass, Math.ceil(index.tableKeys.length / 64), 1, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    });
+  };
+
+  try {
+    const result = await runGPUSimilaritySearch(device, fixture);
+    assertMatchesIndependentCPU(t, fixture, result, 'overflowed GPU candidate index fallback');
+    t.ok(
+      result.nodeOrder.some(nodeId => nodeId.includes('-simulate-candidate-overflow')),
+      'the real GPU build reports overflow after every hash-table key is removed'
+    );
+    t.deepEqual(result.candidateCounts, [sourceRowIds.length], 'no allowlisted row disappears');
+  } finally {
+    GPUHashIndex.prototype.addToGraph = originalAddToGraph;
+  }
   t.end();
 });
 
