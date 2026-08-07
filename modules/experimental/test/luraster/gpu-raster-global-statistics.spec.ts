@@ -483,8 +483,10 @@ function writeLogical(entry: GuardedGlobalBuffer, values: readonly number[]): vo
 
 async function readGuarded(entry: GuardedGlobalBuffer): Promise<number[]> {
   const bytes = await entry.buffer.readAsync();
-  const constructor = entry.format === 'float32' ? Float32Array : Uint32Array;
-  return Array.from(new constructor(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4));
+  const typedArrayConstructor = entry.format === 'float32' ? Float32Array : Uint32Array;
+  return Array.from(
+    new typedArrayConstructor(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4)
+  );
 }
 
 async function readLogical(entry: GuardedGlobalBuffer): Promise<number[]> {
