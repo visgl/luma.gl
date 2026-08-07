@@ -83,6 +83,9 @@ describe('portable independently animated glTF crowd LOD', () => {
         culledActors: 1,
         drawCount: 3,
         triangles: 14,
+        vertices: 42,
+        demotedActors: 0,
+        budgetSatisfied: true,
         levels: [
           {level: 0, actors: 1, triangles: 8},
           {level: 1, actors: 1, triangles: 4},
@@ -126,6 +129,148 @@ describe('portable independently animated glTF crowd LOD', () => {
       crowd.destroy();
       expect(resourceCounts.get('Buffers Active').count).toBe(initialBuffers);
       expect(resourceCounts.get('Textures Active').count).toBe(initialTextures);
+      device.destroy();
+    }
+  });
+
+  test('demotes the smallest visible actors first to satisfy a global indexed-vertex budget', async () => {
+    const gltf = await loadAnimatedLODFixture();
+    const device = new NullDevice({});
+    const crowd = createGLTFAnimatedCrowd(device, gltf, {
+      capacity: 3,
+      lod: {enabled: true, hysteresis: 0, vertexBudget: 48}
+    });
+
+    try {
+      const radius = crowd.scenegraphs.modelBounds.radius;
+      const [near, middle, far] = crowd.addActors([
+        {id: 'near', phase: 0, transform: new Matrix4().translate([0, 0, -radius / 0.9])},
+        {id: 'middle', phase: 0.25, transform: new Matrix4().translate([0, 0, -radius / 0.75])},
+        {id: 'far', phase: 0.5, transform: new Matrix4().translate([0, 0, -radius / 0.6])}
+      ]);
+      crowd.setLODView(makeLODView());
+
+      expect(crowd.primitiveGroups.map(group => group.vertexCount)).toEqual([24, 12, 6]);
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([1, 1, 1]);
+      expect(crowd.lodStats).toMatchObject({
+        visibleActors: 3,
+        culledActors: 0,
+        vertices: 42,
+        vertexBudget: 48,
+        demotedActors: 2,
+        budgetSatisfied: true
+      });
+      for (const [level, actor] of [near, middle, far].entries()) {
+        expect(Array.from(crowd.primitiveGroups[level].jointMatrices!.subarray(0, 32))).toEqual(
+          Array.from(actor.skins.bindings[0].jointMatrices)
+        );
+      }
+
+      crowd.setLODVertexBudget(17);
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([0, 0, 3]);
+      expect(crowd.lodStats).toMatchObject({
+        visibleActors: 3,
+        culledActors: 0,
+        vertices: 18,
+        vertexBudget: 17,
+        demotedActors: 3,
+        budgetSatisfied: false
+      });
+      expect(crowd.getActor('far')).toBe(far);
+
+      crowd.setLODVertexBudget(0);
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([3, 0, 0]);
+      expect(crowd.lodStats).toMatchObject({vertices: 72, demotedActors: 0, budgetSatisfied: true});
+      expect(crowd.lodStats.vertexBudget).toBeUndefined();
+
+      crowd.setLODVertexBudget(12).setLODEnabled(false);
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([3, 0, 0]);
+      expect(crowd.lodStats).toMatchObject({
+        visibleActors: 3,
+        vertices: 72,
+        vertexBudget: 12,
+        demotedActors: 0,
+        budgetSatisfied: true
+      });
+    } finally {
+      crowd.destroy();
+      device.destroy();
+    }
+  });
+
+  test('breaks equal screen-coverage budget ties in stable actor insertion order', async () => {
+    const gltf = await loadAnimatedLODFixture();
+    const device = new NullDevice({});
+    const crowd = createGLTFAnimatedCrowd(device, gltf, {
+      capacity: 2,
+      lod: {enabled: true, hysteresis: 0, vertexBudget: 36}
+    });
+
+    try {
+      const radius = crowd.scenegraphs.modelBounds.radius;
+      const transform = new Matrix4().translate([0, 0, -radius / 0.75]);
+      const [first, second] = crowd.addActors([
+        {id: 'first', phase: 0.25, transform},
+        {id: 'second', phase: 0.5, transform}
+      ]);
+      crowd.setLODView(makeLODView());
+
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([1, 1, 0]);
+      expect(crowd.lodStats).toMatchObject({vertices: 36, demotedActors: 1, budgetSatisfied: true});
+      expect(Array.from(crowd.primitiveGroups[0].jointMatrices!.subarray(0, 32))).toEqual(
+        Array.from(second.skins.bindings[0].jointMatrices)
+      );
+      expect(Array.from(crowd.primitiveGroups[1].jointMatrices!.subarray(0, 32))).toEqual(
+        Array.from(first.skins.bindings[0].jointMatrices)
+      );
+    } finally {
+      crowd.destroy();
+      device.destroy();
+    }
+  });
+
+  test('keeps the nearer actor detailed and never culls when the vertex budget is impossible', async () => {
+    const gltf = await loadAnimatedLODFixture();
+    const device = new NullDevice({});
+    const crowd = createGLTFAnimatedCrowd(device, gltf, {
+      capacity: 2,
+      lod: {enabled: true, hysteresis: 0, vertexBudget: 36}
+    });
+
+    try {
+      const radius = crowd.scenegraphs.modelBounds.radius;
+      const [near, far] = crowd.addActors([
+        {id: 'near', phase: 0.25, transform: new Matrix4().translate([0, 0, -radius / 0.9])},
+        {id: 'far', phase: 0.5, transform: new Matrix4().translate([0, 0, -radius / 0.6])}
+      ]);
+      crowd.setLODView(makeLODView());
+
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([1, 1, 0]);
+      expect(crowd.lodStats).toMatchObject({vertices: 36, demotedActors: 1, budgetSatisfied: true});
+      expect(Array.from(crowd.primitiveGroups[0].jointMatrices!.subarray(0, 32))).toEqual(
+        Array.from(near.skins.bindings[0].jointMatrices)
+      );
+      expect(Array.from(crowd.primitiveGroups[1].jointMatrices!.subarray(0, 32))).toEqual(
+        Array.from(far.skins.bindings[0].jointMatrices)
+      );
+
+      crowd.setLODVertexBudget(5);
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([0, 0, 2]);
+      expect(crowd.lodStats).toMatchObject({
+        visibleActors: 2,
+        culledActors: 0,
+        vertices: 12,
+        vertexBudget: 5,
+        demotedActors: 2,
+        budgetSatisfied: false
+      });
+
+      crowd.setLODVertexBudget(0);
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([2, 0, 0]);
+      expect(crowd.lodStats).toMatchObject({vertices: 48, demotedActors: 0, budgetSatisfied: true});
+      expect(crowd.lodStats.vertexBudget).toBeUndefined();
+    } finally {
+      crowd.destroy();
       device.destroy();
     }
   });
@@ -223,7 +368,7 @@ describe('portable independently animated glTF crowd LOD', () => {
     const device = new NullDevice({});
     const crowd = createGLTFAnimatedCrowd(device, gltf, {
       capacity: 2,
-      lod: {enabled: true, hysteresis: 0}
+      lod: {enabled: true, hysteresis: 0, vertexBudget: 6}
     });
 
     try {
@@ -234,14 +379,15 @@ describe('portable independently animated glTF crowd LOD', () => {
       });
       const startingTime = actor.time;
       const refresh = vi.spyOn(crowd, 'refresh');
-      const upload = vi.spyOn(crowd.primitiveGroups[1].transformBuffers[0], 'write');
+      const upload = vi.spyOn(crowd.primitiveGroups[2].transformBuffers[0], 'write');
 
       crowd.update(0.1, makeLODView());
 
       expect(refresh).toHaveBeenCalledOnce();
       expect(upload).toHaveBeenCalledOnce();
       expect(actor.time).toBeGreaterThan(startingTime);
-      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([0, 1, 0]);
+      expect(crowd.primitiveGroups.map(group => group.model.instanceCount)).toEqual([0, 0, 1]);
+      expect(crowd.lodStats).toMatchObject({vertices: 6, demotedActors: 1, budgetSatisfied: true});
       refresh.mockRestore();
       upload.mockRestore();
     } finally {

@@ -210,9 +210,11 @@ shared primitive into separate draw calls.
 5. Toggle **glTF Animation** to pause or resume playback, or toggle **Camera Animation** to stop
    the automatic orbit without changing actor state.
 6. Enable **Auto LOD** to assign each actor a mesh detail level from its projected screen size.
-7. Adjust **Detail Bias** and inspect the authored/generated source, per-level actor counts,
-   culled actors, submitted triangles, and actual shared draws.
-8. Choose **Simple Skin LOD** to inspect three authored skeletal detail levels, or keep
+7. Adjust **Detail Bias** and optionally set **Vertex Budget** to cap submitted indexed work;
+   leave the budget at zero for ordinary screen-size selection without a global limit.
+8. Inspect the authored/generated source, per-level actor counts, culled actors, submitted
+   vertices and triangles, budget-driven demotions, and actual shared draws.
+9. Choose **Simple Skin LOD** to inspect three authored skeletal detail levels, or keep
    **Robot Expressive** to inspect automatically generated index-only levels.
 
 The model menu deliberately excludes static assets. Robot Expressive is an externally hosted CC0
@@ -415,7 +417,8 @@ const crowd = createGLTFAnimatedCrowd(device, gltf, {
     ratios: [0.5, 0.25],
     preserveBoundary: false,
     screenCoverage: [0.5, 0.2, 0.01],
-    hysteresis: 0.1
+    hysteresis: 0.1,
+    vertexBudget: 12000
   }
 });
 
@@ -432,7 +435,11 @@ console.log({
   visibleActors: crowd.lodStats.visibleActors,
   culledActors: crowd.lodStats.culledActors,
   instancedDraws: crowd.lodStats.drawCount,
-  submittedTriangles: crowd.lodStats.triangles
+  submittedTriangles: crowd.lodStats.triangles,
+  submittedVertices: crowd.lodStats.vertices,
+  vertexBudget: crowd.lodStats.vertexBudget,
+  demotedActors: crowd.lodStats.demotedActors,
+  budgetSatisfied: crowd.lodStats.budgetSatisfied
 });
 ```
 
@@ -449,11 +456,13 @@ simplified retain their original geometry and report `'none'`.
 | `lod.preserveBoundary` | Keeps open mesh-chart boundaries fixed when `true`; generated LOD defaults to `false`. |
 | `lod.screenCoverage` | Optional descending thresholds overriding authored screen-coverage hints. |
 | `lod.hysteresis` | Relative transition dead band; defaults to `0.1`. |
+| `lod.vertexBudget` | Optional maximum submitted index references across all visible actors; zero or omission means unlimited. |
 | `crowd.update(deltaSeconds, view)` | Advances animation and applies the current camera in one shared-buffer refresh. |
 | `crowd.setLODView(view)` | Updates camera selection immediately when animation is paused or state changes independently. |
 | `crowd.setLODEnabled(enabled)` | Toggles prepared levels without recreating actors or changing clips. |
 | `crowd.setLODBias(bias)` | Positive detail multiplier; larger values retain higher-detail meshes longer. |
-| `crowd.lodStats` | Source kind, visible/culled counts, draw count, triangle count, and level histogram. |
+| `crowd.setLODVertexBudget(vertexBudget?)` | Applies or clears the global indexed-vertex limit and refreshes existing actor buckets immediately. |
+| `crowd.lodStats` | Source kind, visibility, draw/triangle/index counts, level histogram, and budget diagnostics. |
 
 Actor coverage is estimated from the model's bounding sphere, actor placement and maximum axis
 scale, camera-space distance, projection scale, and viewport shape. Offscreen actors, actors
@@ -472,6 +481,83 @@ tiny actors   → culled                        → no draw
 
 Each bucket preserves the selected actor's original animation hierarchy, clip, phase, world
 placement, and skin pose. Actor identities do not change when the camera moves between buckets.
+
+### Keep visible geometry within a global vertex budget
+
+Screen coverage selects the appropriate detail for each individual actor, but many individually
+reasonable actors can still exceed a frame's aggregate geometry budget. Set `lod.vertexBudget`
+to redistribute detail across the entire crowd while preserving every visible character:
+
+```ts
+const crowd = createGLTFAnimatedCrowd(device, gltf, {
+  capacity: 100,
+  lod: {
+    enabled: true,
+    autoGenerate: true,
+    ratios: [0.5, 0.25],
+    vertexBudget: 12000
+  }
+});
+
+crowd.addActors(actorOptions);
+crowd.update(deltaSeconds, {
+  viewMatrix,
+  projectionMatrix,
+  viewportWidth: canvas.width,
+  viewportHeight: canvas.height
+});
+
+const {vertices, vertexBudget, demotedActors, budgetSatisfied, visibleActors} = crowd.lodStats;
+console.log({vertices, vertexBudget, demotedActors, budgetSatisfied, visibleActors});
+
+crowd.setLODVertexBudget(6000); // Reclassify and upload once immediately.
+crowd.setLODVertexBudget(0); // Disable the limit without removing actors or LOD levels.
+```
+
+Here **vertices means submitted index references**, not distinct positions in the source mesh:
+
+```text
+submitted vertices = sum over visible actors and their selected source primitives
+                     of that primitive's index count at the chosen detail level
+```
+
+A triangle-list primitive with 600 indices contributes 600 submitted vertices, or 200 submitted
+triangles, for **each actor** using that level. Repeated references are counted intentionally:
+the limit estimates indexed draw work across instances rather than immutable vertex-buffer size.
+It is not a promise about exact GPU vertex-shader invocation counts, which also depend on
+hardware post-transform caching, nor is it a memory-allocation budget.
+
+The selection policy is deterministic:
+
+1. Classify and cull actors using their ordinary projected screen coverage and hysteresis.
+2. Add the selected index counts for every source primitive belonging to every visible actor.
+3. If the total exceeds the configured limit, demote the actor with the smallest projected
+   coverage first, changing all of that character's compatible source primitives together.
+4. Continue toward lower prepared levels, resolving equal coverage in stable actor insertion
+   order, until the budget is satisfied or every eligible actor is already at minimum detail.
+
+This policy protects nearer, larger characters before reducing distant ones. A 19-primitive
+character is charged for all 19 source primitives, not treated as one mesh. Independent clips,
+joint palettes, placement, and actor identities remain intact; budget-only demotions do not
+overwrite the screen-size hysteresis state used when the limit is relaxed.
+
+An impossibly small budget **never hides actors to manufacture success**. Existing frustum and
+minimum-screen-size culling still apply, but actors that remain visible stay visible at their
+lowest available detail. In that case `lodStats.vertices` can exceed `lodStats.vertexBudget`,
+and `lodStats.budgetSatisfied` is `false`. Increase the limit, supply more effective lower-detail
+levels, or reduce the number of visible actors yourself.
+
+The limit is opt-in and applies only while crowd LOD is enabled. An omitted, `undefined`, or
+zero budget is unlimited; `lodStats.vertexBudget` is then absent and normal screen-coverage
+selection is unchanged. `lodStats.demotedActors` counts actors reduced below their preferred
+screen-space level, not the number of primitive groups or individual level transitions.
+
+Budgeting remains CPU-side and does not require GPU readback. Per-level primitive costs are
+prepared once for the crowd, visible actors are sorted by projected coverage, and selected
+levels reuse the existing single packed-buffer upload. For `A` visible actors, `P` source
+primitive groups, and `L` detail levels, preparation costs `O(P × L)` once, followed by
+approximately `O(A × log(A) + A × L)` when a refresh needs budget-driven demotion. Independent
+CPU animation and skin-palette preparation can still dominate large crowds.
 
 ### Automatic index-only mesh decimation
 
@@ -620,6 +706,7 @@ console.table(
     animationNode: group.nodeIndex,
     sourceNode: group.sourceNodeIndex,
     detailLevel: group.lodLevel,
+    indicesPerActor: group.vertexCount,
     trianglesPerActor: group.triangleCount,
     actorInstances: group.model.instanceCount,
     joints: group.jointCount,
@@ -650,6 +737,8 @@ console.table(
 | The LOD sample never changes mesh. | Configure `lod`, enable it, supply `setLODView()`, and move actors across the authored coverage thresholds. |
 | Several draws appear with Auto LOD enabled. | Expected: each occupied source-primitive/detail bucket submits one instanced draw. |
 | An actor disappears at a great distance. | Actors below the lowest coverage threshold are culled; increase detail bias or lower the threshold. |
+| The vertex count exceeds the configured limit. | Every visible actor may already be at its lowest available detail; inspect `budgetSatisfied` and add lower levels or raise the budget. |
+| A faraway actor becomes less detailed than its screen coverage suggests. | The global vertex budget demotes smaller, more distant actors before reducing closer characters. |
 | Generated detail stays at full resolution. | Boundary, topology, or joint constraints can prevent safe simplification; inspect `lodStats.source` and the source mesh. |
 
 ## Public API
@@ -674,7 +763,8 @@ import {
 | `crowd.removeActors(ids)` | Remove and compact many actors with one upload. |
 | `crowd.actorCount`, `crowd.capacity`, `crowd.actors` | Inspect live actors and fixed storage capacity. |
 | `crowd.scenegraphs`, `crowd.models`, `crowd.primitiveGroups` | Inspect the shared parsed asset and primitive draw groups. |
-| `crowd.update(deltaSeconds)` | Evaluate actor clips and upload current transforms and palettes. |
+| `crowd.update(deltaSeconds, view?)` | Evaluate actor clips, optionally classify camera-dependent LOD, and upload once. |
+| `crowd.setLODVertexBudget(vertexBudget?)`, `crowd.lodStats` | Adjust a global indexed-work budget and inspect its actual geometry and visibility diagnostics. |
 | `crowd.draw(renderPass)` | Issue one instanced draw per compatible source primitive. |
 | `crowd.destroy()` | Release owned actor, palette, and shared scenegraph resources. |
 | `actor.selectClip()`, `actor.seek()`, `actor.setPhase()` | Select, crossfade, or reposition an independent clip. |

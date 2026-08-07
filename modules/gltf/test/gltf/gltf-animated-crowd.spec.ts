@@ -226,6 +226,7 @@ test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU
       testContext.equal(crowd.lodStats.visibleActors, 3, `${device.type} retains visible actors`);
       testContext.equal(crowd.lodStats.culledActors, 1, `${device.type} culls the distant actor`);
       testContext.equal(crowd.lodStats.triangles, 14, `${device.type} reports submitted triangles`);
+      testContext.equal(crowd.lodStats.vertices, 42, `${device.type} counts submitted indices`);
 
       for (const [level, actor] of [near, middle, far].entries()) {
         const group = crowd.primitiveGroups[level];
@@ -241,6 +242,53 @@ test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU
           `${device.type} preserves its portable per-level skin palette`
         );
       }
+
+      crowd.setLODVertexBudget(24);
+      testContext.deepEqual(
+        crowd.primitiveGroups.map(group => group.model.instanceCount),
+        [0, 1, 2],
+        `${device.type} repacks the smallest actors into lower-detail GPU groups`
+      );
+      testContext.deepEqual(
+        {
+          vertices: crowd.lodStats.vertices,
+          vertexBudget: crowd.lodStats.vertexBudget,
+          demotedActors: crowd.lodStats.demotedActors,
+          budgetSatisfied: crowd.lodStats.budgetSatisfied,
+          visibleActors: crowd.lodStats.visibleActors
+        },
+        {vertices: 24, vertexBudget: 24, demotedActors: 2, budgetSatisfied: true, visibleActors: 3},
+        `${device.type} enforces the global vertex limit without hiding visible actors`
+      );
+      testContext.deepEqual(
+        Array.from(crowd.primitiveGroups[1].jointMatrices!.subarray(0, 32)),
+        Array.from(near.skins.bindings[0].jointMatrices),
+        `${device.type} preserves the near actor's independent skin pose after demotion`
+      );
+      testContext.deepEqual(
+        Array.from(crowd.primitiveGroups[2].jointMatrices!.subarray(0, 32)),
+        Array.from(middle.skins.bindings[0].jointMatrices),
+        `${device.type} packs the middle actor into the first compacted low-detail palette`
+      );
+      testContext.deepEqual(
+        Array.from(crowd.primitiveGroups[2].jointMatrices!.subarray(32, 64)),
+        Array.from(far.skins.bindings[0].jointMatrices),
+        `${device.type} packs the far actor into the second compacted low-detail palette`
+      );
+
+      const budgetedPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: 1
+      });
+      const budgetedDrawCount = crowd.draw(budgetedPass);
+      budgetedPass.end();
+      device.submit();
+      testContext.equal(
+        budgetedDrawCount,
+        2,
+        `${device.type} issues one real instanced draw per occupied budgeted detail bucket`
+      );
 
       if (
         device.info.gpu !== 'software' &&

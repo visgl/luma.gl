@@ -34,6 +34,8 @@ export type GLTFCrowdLODOptions = {
   ratios?: readonly number[];
   /** Keeps open mesh boundaries fixed when generating levels. Defaults to false for glTF assets. */
   preserveBoundary?: boolean;
+  /** Maximum submitted indexed vertices; zero or undefined leaves detail selection unlimited. */
+  vertexBudget?: number;
 };
 
 /** Camera and viewport state used to classify crowd actors without a backend-specific pass. */
@@ -58,6 +60,14 @@ export type GLTFCrowdLODStats = {
   culledActors: number;
   drawCount: number;
   triangles: number;
+  /** Actual submitted indexed vertices across every visible actor and primitive. */
+  vertices: number;
+  /** Active indexed-vertex limit; omitted when vertex budgeting is unlimited. */
+  vertexBudget?: number;
+  /** Visible actors temporarily moved below their ideal screen-space detail level. */
+  demotedActors: number;
+  /** Whether the submitted indexed work fits the active limit without hiding actors. */
+  budgetSatisfied: boolean;
   levels: GLTFCrowdLODLevelStats[];
 };
 
@@ -101,6 +111,8 @@ export type GLTFCrowdPrimitiveGroup = {
   lodLevel: number;
   /** Number of triangles submitted for one actor at this detail level. */
   triangleCount: number;
+  /** Indexed vertex references submitted for one actor at this detail level. */
+  vertexCount: number;
   /** One shared immutable-geometry/material model used for every actor. */
   model: Model;
   /** Four shared per-instance matrix-column vertex buffers. */
@@ -350,11 +362,15 @@ export class GLTFAnimatedCrowd {
 
   private readonly actorsById = new Map<string, GLTFCrowdActor>();
   private readonly actorLODLevels = new Map<string, number>();
+  private readonly actorLODCoverage = new Map<string, number>();
+  private readonly maximumGroupLevels = new Map<number, number>();
   private readonly lodOptions?: GLTFCrowdLODOptions;
   private readonly lodSource: GLTFCrowdLODStats['source'];
   private readonly lodScreenCoverage: readonly number[];
   private readonly maximumLODLevel: number;
+  private readonly lodVertexCounts: readonly number[];
   private currentLODView: GLTFCrowdLODView | null = null;
+  private currentVertexBudget?: number;
   private isLODEnabled: boolean;
   private lodBias = 1;
   private currentLODStats: GLTFCrowdLODStats;
@@ -370,6 +386,12 @@ export class GLTFAnimatedCrowd {
     this.capacity = capacity;
     this.lodOptions = lod;
     this.isLODEnabled = lod?.enabled ?? false;
+    // A zero budget disables the optional limit instead of unexpectedly hiding every actor.
+    assert(
+      lod?.vertexBudget === undefined ||
+        (Number.isSafeInteger(lod.vertexBudget) && lod.vertexBudget >= 0)
+    );
+    this.currentVertexBudget = lod?.vertexBudget || undefined;
 
     const authoredLOD = Boolean(
       lod &&
@@ -403,6 +425,22 @@ export class GLTFAnimatedCrowd {
     this.primitiveGroups = createPrimitiveGroups(this.scenegraphs, Boolean(lod));
     this.models = this.primitiveGroups.map(group => group.model);
     this.maximumLODLevel = Math.max(0, ...this.primitiveGroups.map(group => group.lodLevel));
+    for (const group of this.primitiveGroups) {
+      this.maximumGroupLevels.set(
+        group.nodeIndex,
+        Math.max(this.maximumGroupLevels.get(group.nodeIndex) || 0, group.lodLevel)
+      );
+    }
+    const lodVertexCounts = Array.from({length: this.maximumLODLevel + 1}, () => 0);
+    for (const group of this.primitiveGroups) {
+      const maximumGroupLevel = this.getMaximumGroupLevel(group.nodeIndex);
+      for (let level = 0; level < lodVertexCounts.length; level++) {
+        if (Math.min(level, maximumGroupLevel) === group.lodLevel) {
+          lodVertexCounts[level] += group.vertexCount;
+        }
+      }
+    }
+    this.lodVertexCounts = lodVertexCounts;
     const authoredScreenCoverage = lod ? this.getAuthoredScreenCoverage() : [0];
     this.lodScreenCoverage = lod?.screenCoverage || authoredScreenCoverage;
     this.currentLODStats = {
@@ -411,6 +449,10 @@ export class GLTFAnimatedCrowd {
       culledActors: 0,
       drawCount: 0,
       triangles: 0,
+      vertices: 0,
+      ...(this.currentVertexBudget ? {vertexBudget: this.currentVertexBudget} : {}),
+      demotedActors: 0,
+      budgetSatisfied: true,
       levels: []
     };
   }
@@ -441,6 +483,7 @@ export class GLTFAnimatedCrowd {
   setLODEnabled(enabled: boolean): this {
     this.isLODEnabled = enabled;
     this.actorLODLevels.clear();
+    this.actorLODCoverage.clear();
     this.refresh();
     return this;
   }
@@ -450,6 +493,15 @@ export class GLTFAnimatedCrowd {
     // A finite positive bias keeps projected-size ordering stable across both graphics backends.
     assert(Number.isFinite(bias) && bias > 0);
     this.lodBias = bias;
+    this.refresh();
+    return this;
+  }
+
+  /** Sets a global indexed-vertex budget; zero or undefined restores ideal screen-space detail. */
+  setLODVertexBudget(vertexBudget?: number): this {
+    // Negative and fractional budgets cannot represent a submitted indexed vertex count.
+    assert(vertexBudget === undefined || (Number.isSafeInteger(vertexBudget) && vertexBudget >= 0));
+    this.currentVertexBudget = vertexBudget || undefined;
     this.refresh();
     return this;
   }
@@ -512,6 +564,7 @@ export class GLTFAnimatedCrowd {
     }
     this.actorsById.delete(id);
     this.actorLODLevels.delete(id);
+    this.actorLODCoverage.delete(id);
     if (!actor.destroyed) {
       actor.destroy();
     }
@@ -574,7 +627,8 @@ export class GLTFAnimatedCrowd {
       actor.updateSkinMatrices(worldMatrices);
       return worldMatrices;
     });
-    const selectedLevels = actors.map(actor => this.selectActorLOD(actor));
+    const idealLevels = actors.map(actor => this.selectActorLOD(actor));
+    const {levels: selectedLevels, demotedActors} = this.applyVertexBudget(actors, idealLevels);
     const visibleActors = selectedLevels.filter(level => level !== null).length;
     const levelStats = new Map<number, GLTFCrowdLODLevelStats>();
     for (const level of selectedLevels) {
@@ -587,6 +641,7 @@ export class GLTFAnimatedCrowd {
     }
     let drawCount = 0;
     let triangles = 0;
+    let vertices = 0;
 
     for (const group of this.primitiveGroups) {
       const modelNode = findCrowdModelNode(this.scenegraphs, group.sourceNodeIndex, group.model);
@@ -655,6 +710,7 @@ export class GLTFAnimatedCrowd {
         statistics.triangles += groupTriangles;
         levelStats.set(group.lodLevel, statistics);
         triangles += groupTriangles;
+        vertices += instanceCount * group.vertexCount;
         drawCount++;
       }
       group.model.setInstanceCount(instanceCount);
@@ -666,6 +722,11 @@ export class GLTFAnimatedCrowd {
       culledActors: actors.length - visibleActors,
       drawCount,
       triangles,
+      vertices,
+      ...(this.currentVertexBudget ? {vertexBudget: this.currentVertexBudget} : {}),
+      demotedActors,
+      budgetSatisfied:
+        !this.isLODEnabled || !this.currentVertexBudget || vertices <= this.currentVertexBudget,
       levels: [...levelStats.values()].sort((first, second) => first.level - second.level)
     };
   }
@@ -681,18 +742,66 @@ export class GLTFAnimatedCrowd {
   }
 
   private getMaximumGroupLevel(nodeIndex: number): number {
-    let maximumLevel = 0;
-    for (const group of this.primitiveGroups) {
-      if (group.nodeIndex === nodeIndex) {
-        maximumLevel = Math.max(maximumLevel, group.lodLevel);
+    return this.maximumGroupLevels.get(nodeIndex) || 0;
+  }
+
+  private applyVertexBudget(
+    actors: readonly GLTFCrowdActor[],
+    idealLevels: readonly (number | null)[]
+  ): {levels: (number | null)[]; demotedActors: number} {
+    const levels = [...idealLevels];
+    if (!this.isLODEnabled || !this.currentVertexBudget || this.maximumLODLevel === 0) {
+      return {levels, demotedActors: 0};
+    }
+
+    let vertices = levels.reduce<number>(
+      (total, level) => total + (level === null ? 0 : this.lodVertexCounts[level]),
+      0
+    );
+    if (vertices <= this.currentVertexBudget) {
+      return {levels, demotedActors: 0};
+    }
+
+    const actorIndices = actors
+      .map((actor, actorIndex) => ({actor, actorIndex}))
+      .filter(({actorIndex}) => levels[actorIndex] !== null)
+      .sort((first, second) => {
+        const firstCoverage = this.actorLODCoverage.get(first.actor.id) ?? Number.POSITIVE_INFINITY;
+        const secondCoverage =
+          this.actorLODCoverage.get(second.actor.id) ?? Number.POSITIVE_INFINITY;
+        return firstCoverage - secondCoverage || first.actorIndex - second.actorIndex;
+      });
+
+    let demotedActors = 0;
+    for (const {actorIndex} of actorIndices) {
+      if (vertices <= this.currentVertexBudget) {
+        break;
+      }
+      let level = levels[actorIndex]!;
+      let actorWasDemoted = false;
+      while (vertices > this.currentVertexBudget && level < this.maximumLODLevel) {
+        const nextLevel = level + 1;
+        const savedVertices = this.lodVertexCounts[level] - this.lodVertexCounts[nextLevel];
+        if (savedVertices < 0) {
+          break;
+        }
+        levels[actorIndex] = nextLevel;
+        vertices -= savedVertices;
+        level = nextLevel;
+        actorWasDemoted = true;
+      }
+      if (actorWasDemoted) {
+        demotedActors++;
       }
     }
-    return maximumLevel;
+
+    return {levels, demotedActors};
   }
 
   private selectActorLOD(actor: GLTFCrowdActor): number | null {
     if (!this.isLODEnabled || !this.currentLODView || this.maximumLODLevel === 0) {
       this.actorLODLevels.set(actor.id, 0);
+      this.actorLODCoverage.set(actor.id, Number.POSITIVE_INFINITY);
       return 0;
     }
 
@@ -745,6 +854,7 @@ export class GLTFAnimatedCrowd {
 
     if (clipW <= 0) {
       this.actorLODLevels.delete(actor.id);
+      this.actorLODCoverage.delete(actor.id);
       return null;
     }
 
@@ -755,6 +865,7 @@ export class GLTFAnimatedCrowd {
       Math.abs(clipY / clipW) > 1 + normalizedRadiusY
     ) {
       this.actorLODLevels.delete(actor.id);
+      this.actorLODCoverage.delete(actor.id);
       return null;
     }
 
@@ -763,6 +874,7 @@ export class GLTFAnimatedCrowd {
         ? viewportHeight / Math.min(viewportWidth, viewportHeight)
         : 1;
     const coverage = normalizedRadiusY * viewportScale * this.lodBias;
+    this.actorLODCoverage.set(actor.id, coverage);
     const candidateLevel = this.lodScreenCoverage.findIndex(threshold => coverage >= threshold);
     const nextLevel = candidateLevel === -1 ? null : Math.min(candidateLevel, this.maximumLODLevel);
     const previousLevel = this.actorLODLevels.get(actor.id);
@@ -783,6 +895,7 @@ export class GLTFAnimatedCrowd {
 
     if (nextLevel === null) {
       this.actorLODLevels.delete(actor.id);
+      this.actorLODCoverage.delete(actor.id);
     } else {
       this.actorLODLevels.set(actor.id, nextLevel);
     }
@@ -926,6 +1039,7 @@ function createPrimitiveGroups(
           sourceNodeIndex: level.nodeIndex,
           lodLevel: level.level,
           triangleCount: Math.floor(indexCount / 3),
+          vertexCount: indexCount,
           model: child.model,
           transformBuffers: resources.transformBuffers,
           jointCount: skinBinding?.joints.length || 0,

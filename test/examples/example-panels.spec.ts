@@ -847,6 +847,15 @@ describe('glTF controls', () => {
         step: 0.25
       })
     );
+    expect(settings.get('vertexBudget')).toEqual(
+      expect.objectContaining({
+        label: 'Vertex Budget',
+        type: 'number',
+        min: 0,
+        max: 1_000_000,
+        step: 100
+      })
+    );
   });
 
   test('reports real generated LOD buckets, culled actors, triangles, and draw counts', () => {
@@ -856,6 +865,10 @@ describe('glTF controls', () => {
       culledActors: 1,
       drawCount: 3,
       triangles: 1234,
+      vertices: 3702,
+      vertexBudget: 4500,
+      demotedActors: 2,
+      budgetSatisfied: true,
       levels: [
         {level: 0, actors: 2, triangles: 900},
         {level: 1, actors: 3, triangles: 270},
@@ -870,6 +883,8 @@ describe('glTF controls', () => {
     expect(summary).toContain('L0: 2 · L1: 3 · L2: 2');
     expect(summary).toContain('Visible: 7 · Culled: 1');
     expect(summary).toContain('Triangles: 1,234');
+    expect(summary).toContain('Vertices: 3,702 / 4,500 · Demoted: 2');
+    expect(summary).not.toContain('Budget exceeded');
   });
 
   test('distinguishes authored mesh levels from generated detail', () => {
@@ -879,11 +894,32 @@ describe('glTF controls', () => {
       culledActors: 0,
       drawCount: 1,
       triangles: 8,
+      vertices: 24,
+      demotedActors: 0,
+      budgetSatisfied: true,
       levels: [{level: 0, actors: 2, triangles: 8}]
     });
 
     expect(summary).toContain('Authored LOD');
     expect(summary).not.toContain('Generated LOD');
+  });
+
+  test('reports an impossible vertex budget without implying actors were silently culled', () => {
+    const summary = formatGLTFCrowdInfo(4, 1, [], {
+      source: 'generated',
+      visibleActors: 4,
+      culledActors: 0,
+      drawCount: 1,
+      triangles: 20,
+      vertices: 60,
+      vertexBudget: 30,
+      demotedActors: 4,
+      budgetSatisfied: false,
+      levels: [{level: 2, actors: 4, triangles: 20}]
+    });
+
+    expect(summary).toContain('Visible: 4 · Culled: 0');
+    expect(summary).toContain('Vertices: 60 / 30 · Demoted: 4 · Budget exceeded');
   });
 });
 

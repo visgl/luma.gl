@@ -169,6 +169,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   previousCrowdFrameTime?: number;
   crowdActionNames: string[] = [];
   levelOfDetailBias = 1;
+  levelOfDetailVertexBudget = 0;
   modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraHeight = 0;
@@ -339,6 +340,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.animatedCrowd?.setLODBias(this.levelOfDetailBias);
   }
 
+  /** Limits submitted actor vertices without changing animation state; zero means unlimited. */
+  setLevelOfDetailVertexBudget(vertexBudget: number): void {
+    this.levelOfDetailVertexBudget = clampNumber(Math.round(vertexBudget), 0, 1_000_000);
+    this.animatedCrowd?.setLODVertexBudget(this.levelOfDetailVertexBudget || undefined);
+  }
+
   /** Places independently phased actors in one GPU-instanced draw per source primitive. */
   setAnimationInstanceCount(instanceCount: number): void {
     const actorCount = Math.max(1, Math.min(MAXIMUM_GLTF_CROWD_ACTORS, Math.floor(instanceCount)));
@@ -360,7 +367,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           lod: {
             enabled: this.options['autoLOD'],
             autoGenerate: true,
-            ratios: [0.5, 0.25]
+            ratios: [0.5, 0.25],
+            ...(this.levelOfDetailVertexBudget > 0
+              ? {vertexBudget: this.levelOfDetailVertexBudget}
+              : {})
           }
         });
         this.animatedCrowd.setLODBias(this.levelOfDetailBias);
@@ -1158,11 +1168,20 @@ export function formatGLTFCrowdInfo(
       : levelOfDetailStats?.source === 'generated'
         ? 'Generated LOD'
         : 'Single-level geometry';
+  const vertexBudgetSummary = levelOfDetailStats
+    ? ` · Vertices: ${levelOfDetailStats.vertices.toLocaleString()}` +
+      (levelOfDetailStats.vertexBudget
+        ? ` / ${levelOfDetailStats.vertexBudget.toLocaleString()}` +
+          ` · Demoted: ${levelOfDetailStats.demotedActors.toLocaleString()}` +
+          (levelOfDetailStats.budgetSatisfied ? '' : ' · Budget exceeded')
+        : '')
+    : '';
   const levelOfDetailSummary = levelOfDetailStats
     ? ` · ${levelSource}` +
       ` · ${levelSummary} · Visible: ${levelOfDetailStats.visibleActors.toLocaleString()}` +
       ` · Culled: ${levelOfDetailStats.culledActors.toLocaleString()}` +
-      ` · Triangles: ${levelOfDetailStats.triangles.toLocaleString()}`
+      ` · Triangles: ${levelOfDetailStats.triangles.toLocaleString()}` +
+      vertexBudgetSummary
     : '';
   return actorCount > 1
     ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws${actionSummary}${levelOfDetailSummary}`

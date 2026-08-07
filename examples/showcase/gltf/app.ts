@@ -271,6 +271,7 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       instanceCount: this.getAnimationInstanceCount(),
       autoLOD: this.options['autoLOD'],
       detailBias: this.levelOfDetailBias,
+      vertexBudget: this.levelOfDetailVertexBudget,
       useModelLights: this.options['useModelLights'],
       cameraAnimation: this.options['cameraAnimation'],
       gltfAnimation: this.options['gltfAnimation']
@@ -313,6 +314,11 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     const detailBias = getChangedSetting(changedSettings, 'detailBias')?.nextValue;
     if (typeof detailBias === 'number') {
       this.setLevelOfDetailBias(detailBias);
+      return;
+    }
+    const vertexBudget = getChangedSetting(changedSettings, 'vertexBudget')?.nextValue;
+    if (typeof vertexBudget === 'number') {
+      this.setLevelOfDetailVertexBudget(vertexBudget);
       return;
     }
     for (const optionName of ['useModelLights', 'cameraAnimation', 'gltfAnimation'] as const) {
@@ -441,6 +447,7 @@ type GltfSettingsState = {
   instanceCount: number;
   autoLOD: boolean;
   detailBias: number;
+  vertexBudget: number;
   useModelLights: boolean;
   cameraAnimation: boolean;
   gltfAnimation: boolean;
@@ -542,6 +549,16 @@ export function makeGltfSettingsSchema(
             min: 0.25,
             max: 4,
             step: 0.25,
+            sliderDebounceMs: 120
+          },
+          {
+            name: 'vertexBudget',
+            label: 'Vertex Budget',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1_000_000,
+            step: 100,
             sliderDebounceMs: 120
           }
         ]
