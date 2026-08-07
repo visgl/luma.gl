@@ -332,7 +332,8 @@ export const RASTER_LAB_STYLES = /* css */ `
 .raster-analysis-scope-buttons,
 .raster-replay-order-buttons,
 .raster-component-buttons,
-.raster-component-connectivity-buttons {
+.raster-component-connectivity-buttons,
+.raster-component-label-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;

@@ -121,6 +121,11 @@ try {
       globalMedian: rasterLab.globalMedian,
       componentsEnabled: rasterLab.componentsEnabled,
       componentConnectivity: rasterLab.componentConnectivity,
+      componentLabelMode: rasterLab.componentLabelMode,
+      componentCapacity: rasterLab.componentCapacity,
+      componentCount: rasterLab.componentCount,
+      componentPublishedCount: rasterLab.componentPublishedCount,
+      componentOverflow: rasterLab.componentOverflow,
       componentMaximumIterations: rasterLab.componentMaximumIterations,
       componentIterations: rasterLab.componentIterations,
       componentConverged: rasterLab.componentConverged,
@@ -154,6 +159,11 @@ try {
   assert.equal(initialState.globalMedian, null, 'tile scope does not repurpose the threshold slot');
   assert.equal(initialState.componentsEnabled, false, 'sparse component overlays remain opt-in');
   assert.equal(initialState.componentConnectivity, 4, 'component labeling defaults to edge adjacency');
+  assert.equal(initialState.componentLabelMode, 'sparse', 'minimum-root labels remain the default');
+  assert.equal(initialState.componentCapacity, 1024, 'dense IDs have an explicit bounded capacity');
+  assert.equal(initialState.componentCount, 0, 'inactive dense counts are never fabricated');
+  assert.equal(initialState.componentPublishedCount, 0, 'inactive bounded outputs remain empty');
+  assert.equal(initialState.componentOverflow, false, 'inactive outputs never claim overflow');
   assert.equal(initialState.componentMaximumIterations, 24, 'component propagation has an explicit bounded budget');
   assert.equal(initialState.componentConverged, false, 'inactive component status is not fabricated');
   assert.deepEqual(initialState.tileOrigin, [0, 0], 'the native tile preserves its level-zero origin');
@@ -1502,6 +1512,11 @@ try {
         globalMedian: rasterLab.globalMedian,
         componentsEnabled: rasterLab.componentsEnabled,
         componentConnectivity: rasterLab.componentConnectivity,
+        componentLabelMode: rasterLab.componentLabelMode,
+        componentCapacity: rasterLab.componentCapacity,
+        componentCount: rasterLab.componentCount,
+        componentPublishedCount: rasterLab.componentPublishedCount,
+        componentOverflow: rasterLab.componentOverflow,
         componentMaximumIterations: rasterLab.componentMaximumIterations,
         componentIterations: rasterLab.componentIterations,
         componentConverged: rasterLab.componentConverged,
@@ -2706,6 +2721,11 @@ try {
   assert.equal(componentWestern.analysisScope, 'tile');
   assert.equal(componentWestern.componentsEnabled, true);
   assert.equal(componentWestern.componentConnectivity, 4);
+  assert.equal(componentWestern.componentLabelMode, 'sparse');
+  assert.equal(componentWestern.componentCapacity, 1024);
+  assert(componentWestern.componentCount > 0);
+  assert.equal(componentWestern.componentPublishedCount, componentWestern.componentCount);
+  assert.equal(componentWestern.componentOverflow, false);
   assert.equal(componentWestern.componentMaximumIterations, 24);
   assert.equal(componentWestern.componentConverged, true);
   assert(componentWestern.componentIterations > 0);
@@ -2736,10 +2756,16 @@ try {
     ),
     'region telemetry reports classified foreground observations rather than inventing a component count'
   );
+  assert(
+    (await page.locator('[data-raster-component-count]').textContent()).includes(
+      componentWestern.componentCount.toLocaleString()
+    ),
+    'the exact connected-component count is an actual GPU root scan, not foreground pixel count'
+  );
   assert.equal(
-    await page.locator('[data-raster-component-count]').count(),
+    await page.locator('[data-raster-largest-component]').count(),
     0,
-    'dense relabeling and component counts remain future tranches'
+    'per-region measurements remain a separate future tranche'
   );
   assert.equal(
     componentWestern.bins.reduce((total, count) => total + count, 0),
@@ -2824,6 +2850,11 @@ try {
     componentOracle.fourCount > componentOracle.eightCount,
     'the deterministic synthetic fixture actually contains diagonal-only component connections'
   );
+  assert.equal(
+    componentWestern.componentCount,
+    componentOracle.fourCount,
+    'GPU root-flag scan exactly matches independent four-connected synthetic CPU topology'
+  );
 
   const componentSurfaceBounds = await page.locator('[data-raster-surface]').boundingBox();
   assert(componentSurfaceBounds);
@@ -2870,6 +2901,11 @@ try {
       return {
         componentsEnabled: raster.componentsEnabled,
         componentConnectivity: raster.componentConnectivity,
+        componentLabelMode: raster.componentLabelMode,
+        componentCapacity: raster.componentCapacity,
+        componentCount: raster.componentCount,
+        componentPublishedCount: raster.componentPublishedCount,
+        componentOverflow: raster.componentOverflow,
         componentMaximumIterations: raster.componentMaximumIterations,
         componentIterations: raster.componentIterations,
         componentConverged: raster.componentConverged,
@@ -2884,18 +2920,151 @@ try {
     });
   };
 
+  const fourDense = await updateComponentControl(
+    '[data-raster-component-labels="dense"]',
+    undefined,
+    {componentsEnabled: true, componentLabelMode: 'dense', componentOverflow: false}
+  );
+  assert.equal(fourDense.componentCount, componentOracle.fourCount);
+  assert.equal(fourDense.componentPublishedCount, componentOracle.fourCount);
+  assert.deepEqual(fourDense.bins, componentWestern.bins);
+  const fourDenseSurface = await page.screenshot({clip: componentClip});
+  assert.notDeepEqual(
+    fourDenseSurface,
+    fourConnectedSurface,
+    'sparse row-major roots and real consecutive dense GPU identifiers produce distinct map colors'
+  );
+
   const eightConnected = await updateComponentControl(
     '[data-raster-component-connectivity="8"]',
     undefined,
-    {componentsEnabled: true, componentConnectivity: 8, componentConverged: true}
+    {
+      componentsEnabled: true,
+      componentLabelMode: 'dense',
+      componentConnectivity: 8,
+      componentConverged: true,
+      componentOverflow: false
+    }
   );
   assert.equal(eightConnected.validPixelCount, componentWestern.validPixelCount);
   assert.deepEqual(eightConnected.bins, componentWestern.bins);
+  assert.equal(
+    eightConnected.componentCount,
+    componentOracle.eightCount,
+    'GPU compact dense count exactly matches independent eight-connected synthetic CPU topology'
+  );
+  assert.equal(eightConnected.componentPublishedCount, componentOracle.eightCount);
   const eightConnectedSurface = await page.screenshot({clip: componentClip});
   assert.notDeepEqual(
     eightConnectedSurface,
-    fourConnectedSurface,
-    'changing diagonal adjacency changes actual GPU sparse-root colors without changing foreground'
+    fourDenseSurface,
+    'changing diagonal adjacency changes actual GPU dense-identifier colors without changing foreground'
+  );
+
+  const insufficientCapacity = Math.max(componentOracle.eightCount - 1, 0);
+  const denseOverflow = await updateComponentControl(
+    '[data-raster-control="component-capacity"]',
+    insufficientCapacity,
+    {
+      componentsEnabled: true,
+      componentLabelMode: 'dense',
+      componentCapacity: insufficientCapacity,
+      componentConverged: true,
+      componentOverflow: true
+    }
+  );
+  assert.equal(denseOverflow.componentCount, componentOracle.eightCount);
+  assert.equal(denseOverflow.componentPublishedCount, insufficientCapacity);
+  assert.deepEqual(denseOverflow.bins, componentWestern.bins);
+  assert(
+    (await page.locator('[data-raster-component-state]').textContent()).includes('dense labels hidden'),
+    'insufficient dense capacity explicitly suppresses all presentation instead of displaying partial regions'
+  );
+  assert(
+    (await page.locator('[data-raster-contour-count]').textContent()).includes('CAPACITY EXCEEDED'),
+    'the map itself advertises dense capacity overflow'
+  );
+  const overflowSurface = await page.screenshot({clip: componentClip});
+  assert.notDeepEqual(
+    overflowSurface,
+    eightConnectedSurface,
+    'over-capacity dense GPU output cannot present a plausible partial segmentation'
+  );
+
+  const sparseOverflowFallback = await updateComponentControl(
+    '[data-raster-component-labels="sparse"]',
+    undefined,
+    {
+      componentsEnabled: true,
+      componentLabelMode: 'sparse',
+      componentOverflow: true,
+      componentConverged: true
+    }
+  );
+  assert.equal(sparseOverflowFallback.componentCount, componentOracle.eightCount);
+  assert.equal(sparseOverflowFallback.componentPublishedCount, insufficientCapacity);
+  assert(
+    (await page.locator('[data-raster-component-state]').textContent()).includes('sparse roots visible'),
+    'unbounded sparse representatives remain available when compact dense capacity is insufficient'
+  );
+  const sparseOverflowSurface = await page.screenshot({clip: componentClip});
+  assert.notDeepEqual(
+    sparseOverflowSurface,
+    overflowSurface,
+    'the capacity-independent sparse fallback genuinely renders its real GPU representative labels'
+  );
+
+  const zeroCapacitySparse =
+    insufficientCapacity === 0
+      ? sparseOverflowFallback
+      : await updateComponentControl('[data-raster-control="component-capacity"]', 0, {
+          componentsEnabled: true,
+          componentLabelMode: 'sparse',
+          componentCapacity: 0,
+          componentOverflow: true
+        });
+  assert.equal(zeroCapacitySparse.componentCount, componentOracle.eightCount);
+  assert.equal(zeroCapacitySparse.componentPublishedCount, 0);
+  assert.deepEqual(
+    await page.screenshot({clip: componentClip}),
+    sparseOverflowSurface,
+    'zero dense capacity changes neither sparse identities nor their independently valid presentation'
+  );
+
+  const zeroCapacityDense = await updateComponentControl(
+    '[data-raster-component-labels="dense"]',
+    undefined,
+    {
+      componentsEnabled: true,
+      componentLabelMode: 'dense',
+      componentCapacity: 0,
+      componentOverflow: true
+    }
+  );
+  assert.equal(zeroCapacityDense.componentPublishedCount, 0);
+  assert.deepEqual(
+    await page.screenshot({clip: componentClip}),
+    overflowSurface,
+    'zero capacity is an explicit empty dense output, never an unlimited sentinel'
+  );
+
+  const denseCapacityRestored = await updateComponentControl(
+    '[data-raster-control="component-capacity"]',
+    1024,
+    {
+      componentsEnabled: true,
+      componentLabelMode: 'dense',
+      componentCapacity: 1024,
+      componentConverged: true,
+      componentOverflow: false
+    }
+  );
+  assert.equal(denseCapacityRestored.componentCount, componentOracle.eightCount);
+  assert.equal(denseCapacityRestored.componentPublishedCount, componentOracle.eightCount);
+  assert.deepEqual(
+    await page.screenshot({clip: componentClip}),
+    eightConnectedSurface,
+    'restored dense capacity republishes the identical deterministic row-major identifiers'
   );
 
   const unconverged = await updateComponentControl(
@@ -2904,6 +3073,9 @@ try {
     {componentsEnabled: true, componentMaximumIterations: 1, componentConverged: false}
   );
   assert.equal(unconverged.componentIterations, 1);
+  assert.equal(unconverged.componentCount, 0);
+  assert.equal(unconverged.componentPublishedCount, 0);
+  assert.equal(unconverged.componentOverflow, false);
   assert.deepEqual(unconverged.bins, componentWestern.bins);
   assert(
     (await page.locator('[data-raster-component-state]').textContent()).includes('labels cleared'),
@@ -2948,6 +3120,11 @@ try {
     noComponentSurface,
     'failed convergence suppresses the entire overlay and exactly preserves ordinary classified rendering'
   );
+  assert.deepEqual(
+    overflowSurface,
+    noComponentSurface,
+    'dense-capacity overflow and nonconvergence share the same fail-closed unoverlaid presentation'
+  );
 
   const stillUnconverged = await updateComponentControl(
     '[data-raster-component-mode="on"]',
@@ -2962,6 +3139,8 @@ try {
   );
   assert(recoveredComponents.componentIterations > 1);
   assert(recoveredComponents.componentIterations < recoveredComponents.componentMaximumIterations);
+  assert.equal(recoveredComponents.componentCount, componentOracle.eightCount);
+  assert.equal(recoveredComponents.componentPublishedCount, componentOracle.eightCount);
   const recoveredSurface = await page.screenshot({clip: componentClip});
   assert.notDeepEqual(
     recoveredSurface,
@@ -3028,7 +3207,10 @@ try {
   );
   assert.equal(generatedComponents.generatedOverview, true);
   assert.equal(generatedComponents.componentsEnabled, true);
+  assert.equal(generatedComponents.componentLabelMode, 'dense');
   assert.equal(generatedComponents.componentConverged, true);
+  assert.equal(generatedComponents.componentOverflow, false);
+  assert(generatedComponents.componentCount > 0);
   assert.equal(generatedComponents.haloEnabled, false);
   assert.equal(generatedComponents.morphologyOperation, 'close');
   assert(generatedComponents.automaticThreshold);
@@ -3054,7 +3236,10 @@ try {
   );
   assert.equal(restoredLocalComponents.analysisScope, 'tile');
   assert.equal(restoredLocalComponents.componentsEnabled, true);
+  assert.equal(restoredLocalComponents.componentLabelMode, 'dense');
   assert.equal(restoredLocalComponents.componentConverged, true);
+  assert.equal(restoredLocalComponents.componentOverflow, false);
+  assert(restoredLocalComponents.componentCount > 0);
   assert.equal(restoredLocalComponents.globalTileCount, 0);
   assert(
     (
@@ -3063,7 +3248,7 @@ try {
         .filter({hasText: 'only 228 summary bytes'})
         .textContent()
     ).includes('only 228 summary bytes'),
-    'sparse roots remain GPU-resident while convergence and actual rounds reuse existing contour words'
+    'dense IDs remain GPU-resident while exact count, convergence, and rounds reuse existing contour words'
   );
 
   await page.waitForFunction(
@@ -3083,7 +3268,7 @@ try {
 
   process.stdout.write(
     `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, 4/8-connected sparse roots, safe convergence, and composed resident analysis verified)\n`
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, 4/8-connected sparse/dense roots, exact bounded component counts, safe overflow/convergence, and composed resident analysis verified)\n`
   );
 } finally {
   await browser?.close();

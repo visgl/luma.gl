@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Explore replayable global GPU raster histograms, nodata-aware overviews, exact categories, seam-safe halos, bounded residency, NDVI, and contours.
+description: Explore bounded dense GPU-connected components, global raster histograms, nodata-aware overviews, exact categories, seam-safe halos, NDVI, and contours.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -24,7 +24,7 @@ The map displays one selected **FULL**, **WEST**, or **EAST** output window.
 The sidebar reports the actual analytical values behind that map: its selected
 band, valid population, 48-bin histogram, measured extent, GPU mean, source
 identity, overview provenance, cache residency, optional contours, and sparse
-connected-component overlays. A
+or bounded dense connected-component overlays with exact region counts. A
 control changes a histogram only when it changes the measured values or their
 selection; changing a contour level changes generated geometry without
 necessarily changing the underlying distribution.
@@ -61,9 +61,11 @@ For the underlying object model, ownership rules, and execution phases, see
    readout reports the additional neighbor coverage and the half-open output
    core that still belongs exclusively to WEST.
 7. Return to **TILE**, enable **COMPONENTS**, and compare **4-CONNECTED** with
-   **8-CONNECTED**. Lower the propagation budget to `1`: the dashboard reports
-   nonconvergence and the GPU clears every region label. Restore the budget to
-   see deterministic component colors return without downloading raster pixels.
+   **8-CONNECTED**. Switch **SPARSE ROOTS** to **DENSE 1..N** and compare the
+   exact region count with the number of published bounded IDs. Lower **Region
+   capacity** below that count: dense labels disappear with an explicit overflow
+   warning, while sparse roots remain usable. Restore the capacity, then lower
+   **Propagation budget** to `1` to see all unconverged labels fail closed.
 
 Every combination is deliberately explicit. Requesting a feature that cannot
 compose correctly with the current scope switches to a supported scope instead
@@ -131,8 +133,10 @@ neighbor. Neither policy invents an observation at an invalid center.
 | **Gaussian / box / radius / sigma**               | Validity-aware spatial smoothing.                                                          | Reduce local sensor noise or calculate a uniformly weighted local mean.                                          |
 | **Sobel / Scharr / Laplacian / direction**        | First-order boundaries, gradient magnitude, or second-order response.                      | Study edge orientation, overall boundary strength, ridges, or valleys.                                           |
 | **Dilate / erode / open / close**                 | Grayscale extrema or binary foreground morphology.                                         | Expand/shrink regions, remove small islands, reconnect breaks, or fill small holes.                              |
-| **OFF / COMPONENTS**                              | An optional GPU-colored overlay of sparse foreground component roots.                      | Inspect classified islands while preserving missing data and valid background.                                   |
+| **OFF / COMPONENTS**                              | An optional GPU-colored overlay and exact connected foreground-region count.               | Inspect classified islands while preserving missing data and valid background.                                   |
 | **4-CONNECTED / 8-CONNECTED**                     | Orthogonal-only or orthogonal-plus-diagonal foreground adjacency.                          | Decide whether corners touching diagonally belong to the same component.                                         |
+| **SPARSE ROOTS / DENSE 1..N**                     | Minimum representative roots versus consecutive GPU-generated region identifiers.          | Compare stable source representatives with compact IDs suitable for bounded region-indexed outputs.              |
+| **Region capacity**                               | Maximum number of published dense region IDs; exact required count remains visible.        | Verify zero capacity, explicit overflow, safe dense-overlay suppression, and the independent sparse fallback.    |
 | **Propagation budget**                            | The bounded maximum number of GPU hooking/compression rounds.                              | Compare a proven fixed point with an explicitly unconverged, safely cleared output.                              |
 | **Contrast / gamma / threshold / Otsu / epsilon** | Analytical transfer, classification, automatic histogram cutoff, or denominator stability. | Compare actual transformed measurements and valid selection policies.                                            |
 | **Contours / contour level**                      | GPU-generated marching-squares isolines and an indirect draw.                              | Inspect reusable scalar boundaries without downloading their vertices.                                           |
@@ -203,6 +207,10 @@ minimum, and maximum.
 and their separate observation validity, propagates minimum representative
 roots through a bounded sequence of GPU hooking/compression rounds, and
 publishes explicit convergence before sparse labels are safe to render.
+`GPURasterDenseComponents` then scans true representative-root flags, assigns
+stable consecutive foreground IDs, and publishes an exact required count,
+capacity-clamped count, and explicit overflow without treating sparse pixel
+indices as compact array offsets.
 `GPURasterOtsuThreshold` can select the threshold from a separate baseline
 histogram without introducing a CPU synchronization point.
 `GPURasterContours` classifies valid four-corner cells, resolves ambiguous
@@ -223,16 +231,16 @@ buffers. Only the two-value extent, 48 histogram bins, valid count, sum, mean,
 optional automatic threshold, and three contour diagnostics—228 bytes
 total—are copied back after submission to update visible summary statistics.
 
-| Published aggregate                                     | Encoding                           |   Bytes |
-| ------------------------------------------------------- | ---------------------------------- | ------: |
-| Observed minimum and maximum                            | Two `float32` values               |       8 |
-| Histogram                                               | 48 `uint32` bins                   |     192 |
-| Valid or selected population                            | One `uint32`                       |       4 |
-| Sum of valid or selected values                         | One `float32`                      |       4 |
-| Mean of valid or selected values                        | One `float32`                      |       4 |
-| Otsu cutoff **or** global median                        | One shared `float32` slot          |       4 |
-| Contour diagnostics **or** component convergence/rounds | Three existing `uint32` slots      |      12 |
-| **Total per submitted analysis**                        | **One compact aggregate transfer** | **228** |
+| Published aggregate                                           | Encoding                           |   Bytes |
+| ------------------------------------------------------------- | ---------------------------------- | ------: |
+| Observed minimum and maximum                                  | Two `float32` values               |       8 |
+| Histogram                                                     | 48 `uint32` bins                   |     192 |
+| Valid or selected population                                  | One `uint32`                       |       4 |
+| Sum of valid or selected values                               | One `float32`                      |       4 |
+| Mean of valid or selected values                              | One `float32`                      |       4 |
+| Otsu cutoff **or** global median                              | One shared `float32` slot          |       4 |
+| Contour diagnostics **or** component count/convergence/rounds | Three existing `uint32` slots      |      12 |
+| **Total per submitted analysis**                              | **One compact aggregate transfer** | **228** |
 
 The source imagery, output imagery, validity masks, generated parent sums and
 counts, categorical and connected-component labels, contour vertices, and
@@ -241,12 +249,16 @@ on the GPU. The shared four-byte slot cannot report a global median and an
 automatic Otsu threshold simultaneously; the interface says so rather than
 issuing a second readback.
 
-Component mode temporarily disables contours and reuses two of their existing
-four-byte diagnostic slots: one records whether the bounded GPU propagation
-converged, and the other records the actual number of executed rounds. It does
-not increase the 228-byte summary, read the label raster, add a component count,
-or interfere with the independent Otsu-threshold slot. Disabling component mode
-restores the previous contour preference.
+Component mode temporarily disables contours and reuses all three existing
+four-byte diagnostic slots: the first reports the exact GPU-required component
+count, the second reports whether bounded propagation converged, and the third
+reports actual executed rounds. The dense contributor also produces genuine
+GPU-resident capacity-clamped count and overflow outputs. The interface derives
+the same displayed published count as `min(required, capacity)` and overflow as
+`required > capacity` from the already-read exact count; it does not transfer
+those additional GPU scalars. Neither representation increases the 228-byte
+summary, downloads labels, or interferes with the independent Otsu-threshold
+slot. Disabling component mode restores the previous contour preference.
 
 Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
 derivative direction, morphological operation/mode/footprint/radius/nodata/
@@ -329,7 +341,7 @@ its summary population and coverage denominator cover both cores.
 | Manual threshold and Otsu                         | Yes, tile-local                  | Yes, one shared dataset-wide cutoff                       |
 | GPU median                                        | Not shown                        | Yes, unless Otsu owns the same compact scalar             |
 | Contours                                          | Yes                              | Yes, for the selected visible core only                   |
-| Sparse connected-component overlay                | Yes; temporarily pauses contours | No; enabling components returns to **TILE**               |
+| Sparse or dense connected-component overlay       | Yes; temporarily pauses contours | No; enabling components returns to **TILE**               |
 | Gaussian/box smoothing, edges, morphology         | Yes                              | No; enabling one returns to **TILE**                      |
 | **SEAMLESS HALO**                                 | Yes with source-provided data    | No; selecting global returns to **TILE ONLY**             |
 | **GPU MEAN** generated overview                   | Yes without seamless halos       | No; selecting global restores **SOURCE NEAREST**          |
@@ -540,7 +552,7 @@ to one stable baseline histogram, so WEST and EAST share the same cutoff. Their
 final global histogram describes only selected observations; it is not the
 unclassified baseline that produced the threshold.
 
-### Sparse connected-component labeling
+### Sparse roots, dense component IDs, and bounded output
 
 Use **COMPONENTS** to identify connected islands in the current thresholded
 foreground. The input remains a true `uint32` classification: nonzero means
@@ -557,11 +569,34 @@ foreground  .           4-connected: two separate regions
 .           foreground  8-connected: one shared region
 ```
 
-Each foreground region receives its smallest row-major pixel index plus one.
-For example, an island rooted at raster-local index `27` receives sparse label `28`;
-background receives `0`. These representative labels are deterministic but
-**not dense sequential region IDs**. The map hashes each resident root into a
-false color directly in its fragment shader; no label raster is read back.
+**SPARSE ROOTS** gives each foreground region its smallest row-major pixel
+index plus one. An island rooted at raster-local index `27`, for example,
+receives sparse label `28`; known background receives `0`. These representative
+labels are deterministic but not sequential: the next island might begin at
+index `491` and receive `492`.
+
+**DENSE 1..N** scans representative-root flags in row-major order and replaces
+those same example roots with compact consecutive IDs `1` and `2`. Valid
+background remains label `0` with validity `1`; missing observations remain
+label `0` with validity `0`. The exact **Components** value comes from the
+GPU's unclamped required count, not the number of selected foreground pixels.
+**Valid foreground** continues to count pixels, so one component can contain
+many foreground observations.
+
+**Region capacity** bounds how many dense component identities are published.
+For `9` real regions and capacity `4`, the exact readout remains `9 required`,
+the bounded output reports `4 / 4`, and the contributor invalidates foreground
+pixels belonging to components beyond the first four while preserving valid
+background. The example applies an intentionally stricter presentation policy:
+it hides the _entire_ dense overlay while overflow is present instead of
+showing a misleading partial segmentation. Selecting **SPARSE ROOTS** still
+renders every converged sparse region because sparse representatives do not
+depend on dense capacity. Capacity `0` is valid and makes every nonempty dense
+result overflow; it is not interpreted as unlimited.
+
+Both representations are rendered from their real GPU-resident label buffer;
+the alternate representation and scan scratch remain graph-owned. No component
+label raster is copied to the CPU.
 
 The **Propagation budget** predeclares at most 1–32 hooking/path-compression
 rounds. Completed fixed points gate later rounds with GPU-written indirect
@@ -578,10 +613,10 @@ preprocessing, smoothing, derivatives, grayscale/binary morphology, and local
 manual or Otsu thresholds remain available. Labeling operates on the final
 selected owned core; it does not merge root identities across tile seams.
 
-The **Valid foreground** readout reuses the existing selected-pixel statistic:
-it counts foreground pixels, not connected components. Dense `1..N` labels,
-component counts, per-region area/centroid/intensity, and cross-tile identity
-merging remain separate future tranches.
+Per-region area, centroid, intensity measurements, and cross-tile identity
+merging remain separate future tranches. Dense IDs and exact counts apply only
+to the currently selected owned core; they are not stitched dataset-wide
+component identities.
 
 ### Grayscale and binary morphology
 
@@ -636,8 +671,8 @@ All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Dense region IDs and component counts, per-region measurement, cross-tile
-component stitching, stitched contour seams, automatic full-image output
+Per-region measurement, cross-tile component stitching, stitched contour
+seams, automatic full-image output
 placement, global neighborhood/overview composition, marker-based
 segmentation, and seamless native-halo-to-generated-overview processing remain
 planned capabilities.

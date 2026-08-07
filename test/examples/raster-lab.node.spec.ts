@@ -599,8 +599,8 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
       'validity: binaryMorphologyEnabled ? binaryMorphologyValidity : analyzedValidity'
     );
     expect(components).toContain('new GPURasterConnectedComponents({');
-    expect(components).toContain('output: componentLabels');
-    expect(components).toContain('outputValidity: componentValidity');
+    expect(components).toContain('output: sparseComponentLabels');
+    expect(components).toContain('outputValidity: sparseComponentValidity');
     expect(components).toContain('converged: contourOverflow');
     expect(components).toContain('iterationCount: contourRequiredSegmentCount');
     expect(rasterEngine.match(/\.readAsync\(/g)).toHaveLength(1);
@@ -609,9 +609,8 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
       'this.display.contoursEnabled = this.previousComponentContours'
     );
     expect(rasterApplication).toContain('this.resetGlobalAnalysis()');
-    expect(rasterApplication).toContain(
-      'this.latestSummary.componentsEnabled && this.latestSummary.componentConverged'
-    );
+    expect(rasterApplication).toContain('this.latestSummary.componentsEnabled &&');
+    expect(rasterApplication).toContain('this.latestSummary.componentConverged &&');
     expect(rasterRenderer).toContain('componentLabelValues[pixelIndex]');
     expect(rasterRenderer).toContain('if (label == 0u)');
     expect(rasterInterface).toContain('data-raster-component-mode="on"');
@@ -620,7 +619,56 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(rasterInterface).toContain('data-raster-control="component-iterations"');
     expect(rasterInterface).toContain('unresolved · labels cleared');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
-    expect(rasterInterface).not.toContain('data-raster-component-count');
+    expect(rasterInterface).not.toContain('data-raster-largest-component');
+  });
+
+  test('compacts sparse roots into bounded dense identifiers without expanding readback', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+    const denseComponents = rasterEngine.slice(
+      rasterEngine.indexOf('new GPURasterDenseComponents({'),
+      rasterEngine.indexOf(
+        'if (this.settings.contoursEnabled)',
+        rasterEngine.indexOf('new GPURasterDenseComponents({')
+      )
+    );
+
+    expect(denseComponents).toContain('input: sparseComponentLabels');
+    expect(denseComponents).toContain('inputValidity: sparseComponentValidity');
+    expect(denseComponents).toContain('converged: contourOverflow');
+    expect(denseComponents).toContain('requiredComponentCount: contourSegmentCount');
+    expect(denseComponents).toContain("'raster-lab-bounded-component-count'");
+    expect(denseComponents).toContain("'raster-lab-component-overflow'");
+    expect(denseComponents).toContain('capacity: Math.min(');
+    expect(rasterEngine).toContain('aggregateView.getUint32(CONTOUR_COUNT_BYTE_OFFSET, true)');
+    expect(rasterEngine).toContain('Math.min(componentCount, this.settings.componentCapacity)');
+    expect(rasterEngine.match(/\.readAsync\(/g)).toHaveLength(1);
+    expect(rasterApplication).toContain("this.display.componentLabelMode === 'sparse'");
+    expect(rasterApplication).toContain('!this.latestSummary.componentOverflow');
+    expect(rasterRenderer).toContain('@group(0) @binding(7)');
+    expect(rasterRenderer).not.toContain('@binding(8) var<storage');
+    expect(rasterInterface).toContain('data-raster-component-labels="sparse"');
+    expect(rasterInterface).toContain('data-raster-component-labels="dense"');
+    expect(rasterInterface).toContain('data-raster-control="component-capacity"');
+    expect(rasterInterface).toContain('data-raster-component-count');
+    expect(rasterInterface).toContain('data-raster-component-published');
+    expect(rasterInterface).toContain('capacity exceeded · dense labels hidden');
+    expect(rasterInterface).toContain('capacity exceeded · sparse roots visible');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
     expect(rasterInterface).not.toContain('data-raster-largest-component');
   });
 });
