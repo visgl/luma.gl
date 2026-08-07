@@ -470,6 +470,13 @@ For matching vector input, flags, and output, compaction uses vector-wide scan o
 existing output chunks as one logical sequence. It does not concatenate, repack, or replace caller
 buffers, and the count remains a single total for the complete vector.
 
+Candidate-driven applications can compact only active source ranges. `GPUIndexedRangeCompaction`
+keeps one dense output sequence, while `GPUPartitionedIndexedRangeCompaction` preserves matching
+flag and output chunks. The partitioned form scans each chunk's canonical range interval
+independently, emits global source IDs into bounded destinations, and publishes both per-partition
+and total counts. This lets a trace viewer move visibility scratch and visible-ID lists beyond one
+storage-buffer binding without changing source identity or reading candidate counts on the CPU.
+
 ## Composable visibility masks
 
 Interactive applications rarely have one visibility predicate. A trace viewer may combine its
