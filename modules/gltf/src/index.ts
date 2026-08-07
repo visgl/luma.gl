@@ -26,6 +26,15 @@ export {
   type GLTFAnimatorProps
 } from './gltf/gltf-animator';
 export {
+  createGLTFAnimatedCrowd,
+  GLTFAnimatedCrowd,
+  type GLTFAnimatedCrowdOptions,
+  GLTFCrowdActor,
+  type GLTFCrowdActorOptions,
+  type GLTFCrowdClipSelectionOptions,
+  type GLTFCrowdPrimitiveGroup
+} from './gltf/gltf-animated-crowd';
+export {
   type GLTFExtensionSupport,
   type GLTFExtensionSupportLevel,
   getGLTFExtensionSupport

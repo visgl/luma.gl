@@ -6,8 +6,14 @@ import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine'
 import {Color, Device, RenderPass, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF, type PBREnvironment} from '@luma.gl/gltf';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {
+  createGLTFAnimatedCrowd,
+  createScenegraphsFromGLTF,
+  type GLTFAnimatedCrowd,
+  type GLTFCrowdActorOptions,
+  type PBREnvironment
+} from '@luma.gl/gltf';
+import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 
 /* eslint-disable camelcase */
@@ -19,12 +25,14 @@ const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
 const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
 export const GLTF_MODEL_INFO_ID = 'model-info';
+export const GLTF_CROWD_INFO_ID = 'gltf-crowd-info';
 export const GLTF_CONTROL_PANEL_STYLE = 'display: grid; gap: 8px;';
 export const GLTF_CONTROL_ROW_STYLE =
   'display: grid; grid-template-columns: 7rem minmax(0, 1fr); align-items: center; column-gap: 0.75rem;';
 export const GLTF_SELECT_STYLE = 'width: 100%; min-width: 0;';
 const MAX_CAMERA_TILT = 0.7;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
+const MAXIMUM_GLTF_CROWD_ACTORS = 1000;
 
 const lightSources = {
   ambientLight: {
@@ -69,6 +77,7 @@ const INFO_HTML = `\
 <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
 </div>
 <div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
+<div id="${GLTF_CROWD_INFO_ID}" style="margin-top: 8px;" hidden></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
@@ -107,6 +116,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
   availableModels: GLTFCatalogModel[] = [];
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
+  animatedCrowd?: GLTFAnimatedCrowd;
+  activeScenegraphOptions: Parameters<typeof createScenegraphsFromGLTF>[2] = {};
+  loadedGLTF?: GLTFPostprocessed;
+  previousCrowdFrameTime?: number;
   modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraHeight = 0;
@@ -197,11 +210,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       cleanupCallback();
     }
     this.cleanupCallbacks = [];
+    this.animatedCrowd?.destroy();
+    this.animatedCrowd = undefined;
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
+    this.loadedGLTF = undefined;
     this.modelLights = [];
     this.setViewerLoadingState(false);
     updateModelInfoBox();
+    updateCrowdInfo();
     updateExtensionSupportTable();
   }
 
@@ -248,6 +265,77 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   drawBackground(_renderPass: RenderPass): void {}
 
+  /** Returns the number of independently animated actors sharing the current asset. */
+  getAnimationInstanceCount(): number {
+    return this.animatedCrowd?.actorCount || 1;
+  }
+
+  /** Places independently phased actors in one GPU-instanced draw per source primitive. */
+  setAnimationInstanceCount(instanceCount: number): void {
+    const actorCount = Math.max(1, Math.min(MAXIMUM_GLTF_CROWD_ACTORS, Math.floor(instanceCount)));
+    if (!this.loadedGLTF || (!this.animatedCrowd && actorCount === 1)) {
+      return;
+    }
+
+    if (!this.animatedCrowd) {
+      if (this.scenegraphsFromGLTF?.extensionSupport.has('EXT_mesh_gpu_instancing')) {
+        showError(new Error('GPU animated crowds cannot nest EXT_mesh_gpu_instancing.'));
+        return;
+      }
+
+      const previousScenegraphs = this.scenegraphsFromGLTF;
+      try {
+        this.animatedCrowd = createGLTFAnimatedCrowd(this.device, this.loadedGLTF, {
+          ...this.activeScenegraphOptions,
+          capacity: MAXIMUM_GLTF_CROWD_ACTORS
+        });
+      } catch (error) {
+        showError(error);
+        return;
+      }
+      destroyScenegraphs(previousScenegraphs);
+      this.scenegraphsFromGLTF = this.animatedCrowd.scenegraphs;
+      this.modelLights = this.animatedCrowd.scenegraphs.lights;
+      this.previousCrowdFrameTime = undefined;
+      showError();
+    }
+
+    const clipNames = this.animatedCrowd.scenegraphs.animations
+      .map(animation => animation.name)
+      .filter((name): name is string => Boolean(name));
+    const preferredClips = ['Walking', 'Running', 'Dance', 'Wave', 'Idle'];
+    const availableClips = preferredClips.filter(name => clipNames.includes(name));
+    const playableClips = availableClips.length ? availableClips : clipNames;
+
+    const actorOptions: GLTFCrowdActorOptions[] = [];
+    const spacing = Math.max(this.sceneRadius * 2.5, 0.75);
+    for (let actorIndex = this.animatedCrowd.actorCount; actorIndex < actorCount; actorIndex++) {
+      const clip = playableClips.length
+        ? playableClips[actorIndex % playableClips.length]
+        : undefined;
+      const angle = actorIndex * 2.39996322973;
+      const radius = Math.sqrt(actorIndex) * spacing;
+      actorOptions.push({
+        id: `gltf-crowd-actor-${actorIndex}`,
+        ...(clip ? {clip} : {}),
+        phase: (actorIndex * 0.61803398875) % 1,
+        speed: 0.8 + (actorIndex % 5) * 0.1,
+        transform: new Matrix4().translate([Math.cos(angle) * radius, 0, Math.sin(angle) * radius])
+      });
+    }
+    if (actorOptions.length) {
+      this.animatedCrowd.addActors(actorOptions);
+    }
+
+    if (this.animatedCrowd.actorCount > actorCount) {
+      this.animatedCrowd.removeActors(
+        this.animatedCrowd.actors.slice(actorCount).map(actor => actor.id)
+      );
+    }
+
+    updateCrowdInfo(actorCount, this.animatedCrowd.models.length);
+  }
+
   onRender({aspect, device, time}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
     this.drawBackground(renderPass);
@@ -259,8 +347,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
 
-    const orbitDistance = this.cameraOrbitDistance;
-    const far = Math.max(orbitDistance + this.sceneRadius * 8, 10);
+    const actorCount = this.getAnimationInstanceCount();
+    const actorSpacing = Math.max(this.sceneRadius * 2.5, 0.75);
+    const crowdRadius =
+      actorCount > 1
+        ? Math.sqrt(actorCount - 1) * actorSpacing + this.sceneRadius
+        : this.sceneRadius;
+    const orbitDistance =
+      this.cameraOrbitDistance * Math.max(1, crowdRadius / Math.max(this.sceneRadius, 0.001));
+    const far = Math.max(orbitDistance + crowdRadius * 2, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
     const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
@@ -274,7 +369,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       orbitDistance * horizontalOrbitScale * Math.cos(orbitAngle)
     ];
 
-    if (this.options['gltfAnimation']) {
+    if (this.options['gltfAnimation'] && !this.animatedCrowd) {
       this.scenegraphsFromGLTF.animator?.setTime(time);
     }
 
@@ -282,6 +377,44 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const pbrMaterialProps = this.getPBRMaterialProps();
     const hasPBRMaterialProps = Object.keys(pbrMaterialProps).length > 0;
+
+    if (this.animatedCrowd) {
+      const deltaSeconds =
+        this.previousCrowdFrameTime === undefined
+          ? 0
+          : Math.min(Math.max(time - this.previousCrowdFrameTime, 0) / 1000, 0.1);
+      this.previousCrowdFrameTime = time;
+      if (this.options['gltfAnimation']) {
+        this.animatedCrowd.update(deltaSeconds);
+      }
+
+      const modelMatrix = new Matrix4();
+      const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
+      for (const model of this.animatedCrowd.models) {
+        const sceneShaderInputProps: Record<string, unknown> = {
+          lighting: this.getLightingProps(),
+          pbrProjection: {
+            camera: cameraPos,
+            modelViewProjectionMatrix,
+            modelMatrix,
+            normalMatrix: modelMatrix
+          }
+        };
+        if (hasPBRMaterialProps) {
+          if (model.material?.ownsModule('pbrMaterial')) {
+            model.material.setProps({pbrMaterial: pbrMaterialProps});
+          } else {
+            sceneShaderInputProps.pbrMaterial = pbrMaterialProps;
+          }
+        }
+        model.shaderInputs.setProps(sceneShaderInputProps);
+      }
+
+      const drawCount = this.animatedCrowd.draw(renderPass);
+      updateCrowdInfo(this.animatedCrowd.actorCount, drawCount);
+      renderPass.end();
+      return;
+    }
 
     this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
@@ -354,12 +487,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       )();
       const processedGLTF = postProcessGLTF(gltf);
 
-      const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
+      const scenegraphOptions = {
         lights: true,
         imageBasedLightingEnvironment,
         pbrDebug: false,
         useTangents: true
-      });
+      };
+      const scenegraphsFromGLTF = createScenegraphsFromGLTF(
+        this.device,
+        processedGLTF,
+        scenegraphOptions
+      );
       log.log(0, `Created glTF scenegraphs: ${modelDescription}`)();
 
       if (this.isLoadStale(loadGeneration)) {
@@ -367,9 +505,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         return;
       }
 
+      this.animatedCrowd?.destroy();
+      this.animatedCrowd = undefined;
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
+      this.loadedGLTF = processedGLTF;
+      this.activeScenegraphOptions = scenegraphOptions;
+      this.previousCrowdFrameTime = undefined;
       this.modelLights = scenegraphsFromGLTF.lights;
+      updateCrowdInfo();
       this.updateModelInfo(resolvedModelReference, loadGeneration);
       updateExtensionSupportTable(scenegraphsFromGLTF.extensionSupport);
 
@@ -825,6 +969,19 @@ function updateModelLightIndicator(modelLights: Light[], useModelLights: boolean
   const activeSource =
     useModelLights && modelLights.length > 0 ? 'using model lights' : 'using fallback demo lights';
   indicator.textContent = `Model lights: ${summary}; ${activeSource}.`;
+}
+
+function updateCrowdInfo(actorCount: number = 1, drawCount: number = 0): void {
+  const container = document.getElementById(GLTF_CROWD_INFO_ID) as HTMLDivElement | null;
+  if (!container) {
+    return;
+  }
+
+  container.hidden = actorCount <= 1;
+  container.textContent =
+    actorCount > 1
+      ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws`
+      : '';
 }
 
 function updateExtensionSupportTable(extensionSupport?: GLTFExtensionSupportMap) {

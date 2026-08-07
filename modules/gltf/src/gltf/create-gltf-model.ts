@@ -52,6 +52,9 @@ struct VertexInputs {
   @location(10) instanceModelMatrixCol2: vec4f,
   @location(11) instanceModelMatrixCol3: vec4f,
 #endif
+#ifdef HAS_INSTANCED_SKIN
+  @builtin(instance_index) instanceIndex: u32,
+#endif
 };
 
 struct FragmentInputs {
@@ -99,7 +102,16 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   tangent = inputs.TANGENT;
 #endif
 #ifdef HAS_SKIN
+#ifdef HAS_INSTANCED_SKIN
+  let skinMatrix = getInstancedSkinMatrix(
+    inputs.WEIGHTS_0,
+    inputs.JOINTS_0,
+    inputs.instanceIndex,
+    u32(CROWD_JOINTS_PER_INSTANCE)
+  );
+#else
   let skinMatrix = getSkinMatrix(inputs.WEIGHTS_0, inputs.JOINTS_0);
+#endif
   position = skinMatrix * position;
   normal = normalize((skinMatrix * vec4f(normal, 0.0)).xyz);
 #ifdef HAS_TANGENTS
@@ -221,7 +233,16 @@ const vs = /* glsl */ `\
     vec4 pos = positions;
 
     #ifdef HAS_SKIN
+      #ifdef HAS_INSTANCED_SKIN
+        mat4 skinMat = getInstancedSkinMatrix(
+          WEIGHTS_0,
+          JOINTS_0,
+          uint(gl_InstanceID),
+          uint(CROWD_JOINTS_PER_INSTANCE)
+        );
+      #else
       mat4 skinMat = getSkinMatrix(WEIGHTS_0, JOINTS_0);
+      #endif
       pos = skinMat * pos;
       _NORMAL = skinMat * _NORMAL;
       _TANGENT = vec4((skinMat * vec4(_TANGENT.xyz, 0.)).xyz, _TANGENT.w);
@@ -280,6 +301,21 @@ export type CreateGLTFMaterialOptions = {
   materialFactory?: MaterialFactory;
 };
 
+/** Internal shared primitive configuration supplied by the glTF crowd adapter. */
+export type GLTFCrowdModelConfiguration = {
+  capacity: number;
+  jointsPerInstance: number;
+};
+
+/** Internal instance resources owned by exactly one canonical glTF primitive model. */
+export type GLTFCrowdModelResources = {
+  transformBuffers: readonly Buffer[];
+  transformColumns: readonly Float32Array[];
+  skinJointMatrices?: Buffer | Texture;
+  jointMatrices?: Float32Array;
+  jointsPerInstance: number;
+};
+
 export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOptions): Material {
   const materialFactory =
     options.materialFactory || new MaterialFactory(device, {modules: [pbrMaterial]});
@@ -314,6 +350,12 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     modelOptions = {},
     instanceMatrices
   } = options;
+  const crowd = modelOptions.userData?.['gltfAnimatedCrowd'] as
+    | GLTFCrowdModelConfiguration
+    | undefined;
+  if (crowd && instanceMatrices) {
+    throw new Error('Nested glTF crowd instancing is unsupported');
+  }
 
   log.info(4, 'createGLTFModel defines: ', parsedPPBRMaterial.defines)();
 
@@ -333,10 +375,12 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
   const instanceAttributes: Record<string, Buffer> = {};
   const instanceBufferLayout: BufferLayout[] = [];
-  if (instanceMatrices) {
+  const transformBuffers: Buffer[] = [];
+  const transformColumns: Float32Array[] = [];
+  if (instanceMatrices || crowd) {
     for (let columnIndex = 0; columnIndex < 4; columnIndex++) {
-      const values = new Float32Array(instanceMatrices.length * 4);
-      instanceMatrices.forEach((matrix, instanceIndex) => {
+      const values = new Float32Array((crowd?.capacity || instanceMatrices?.length || 0) * 4);
+      instanceMatrices?.forEach((matrix, instanceIndex) => {
         for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
           values[instanceIndex * 4 + rowIndex] = matrix[columnIndex * 4 + rowIndex];
         }
@@ -350,12 +394,39 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
       instanceAttributes[attributeName] = buffer;
       instanceBufferLayout.push({name: attributeName, format: 'float32x4', stepMode: 'instance'});
       managedResources.push(buffer);
+      transformBuffers.push(buffer);
+      transformColumns.push(values);
     }
+  }
+
+  const hasInstancedSkin = Boolean(crowd && parsedPPBRMaterial.defines['HAS_SKIN']);
+  let skinJointMatrices: Buffer | Texture | undefined;
+  let jointMatrices: Float32Array | undefined;
+  if (crowd && hasInstancedSkin) {
+    jointMatrices = new Float32Array(crowd.capacity * crowd.jointsPerInstance * 16);
+    skinJointMatrices =
+      device.type === 'webgpu'
+        ? device.createBuffer({
+            id: `${id || 'gltf'}-crowd-joint-matrices`,
+            byteLength: jointMatrices.byteLength,
+            usage: Buffer.STORAGE | Buffer.COPY_DST
+          })
+        : device.createTexture({
+            id: `${id || 'gltf'}-crowd-joint-matrices`,
+            format: 'rgba32float',
+            width: crowd.jointsPerInstance * 4,
+            height: crowd.capacity,
+            usage: Texture.SAMPLE | Texture.COPY_DST,
+            sampler: {minFilter: 'nearest', magFilter: 'nearest', mipmapFilter: 'nearest'}
+          });
+    managedResources.push(skinJointMatrices);
   }
 
   const modelProps: ModelProps = {
     id,
-    source: SHADER,
+    source: hasInstancedSkin
+      ? SHADER.replace('u32(CROWD_JOINTS_PER_INSTANCE)', `u32(${crowd!.jointsPerInstance})`)
+      : SHADER,
     vs,
     fs,
     geometry,
@@ -364,18 +435,21 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     modules: [pbrMaterial, skin],
     ...modelOptions,
 
-    ...(instanceMatrices
+    ...(instanceMatrices || crowd
       ? {
           attributes: {...modelOptions.attributes, ...instanceAttributes},
           bufferLayout: [...(modelOptions.bufferLayout || []), ...instanceBufferLayout],
-          instanceCount: instanceMatrices.length,
+          instanceCount: instanceMatrices?.length || 0,
           isInstanced: true
         }
       : {}),
     defines: {
       ...parsedPPBRMaterial.defines,
-      ...(instanceMatrices ? {HAS_GLTF_INSTANCING: true} : {}),
-      ...modelOptions.defines
+      ...modelOptions.defines,
+      ...(instanceMatrices || crowd ? {HAS_GLTF_INSTANCING: true} : {}),
+      ...(hasInstancedSkin
+        ? {HAS_INSTANCED_SKIN: true, CROWD_JOINTS_PER_INSTANCE: crowd!.jointsPerInstance}
+        : {})
     },
     parameters: {...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters}
   };
@@ -402,12 +476,25 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     sceneShaderInputValues
   );
   model.shaderInputs.setProps(sceneShaderInputProps);
-  return new ModelNode({
+  if (skinJointMatrices) {
+    model.shaderInputs.setProps({skin: {jointMatrices: [], skinJointMatrices}});
+  }
+  const modelNode = new ModelNode({
     managedResources,
     model,
     bounds: options.bounds,
     instanceMatrices
   });
+  if (crowd) {
+    modelNode.userData['gltfAnimatedCrowd'] = {
+      transformBuffers,
+      transformColumns,
+      skinJointMatrices,
+      jointMatrices,
+      jointsPerInstance: crowd.jointsPerInstance
+    } satisfies GLTFCrowdModelResources;
+  }
+  return modelNode;
 }
 
 function isMaterialBindingResource(value: unknown): boolean {

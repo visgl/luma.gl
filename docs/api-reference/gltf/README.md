@@ -77,8 +77,11 @@ bundle contains:
 | --- | --- |
 | `scenes` | One `@luma.gl/engine` `GroupNode` root per source scene. |
 | `materials` | Shared engine materials in source glTF material order. |
+| `variants` | Source-aware runtime controller for authored material variants. |
+| `cameras` | Runtime camera projections updated by supported animation pointers. |
 | `animator` | A `GLTFAnimator` backed by the shared engine animation mixer. |
 | `animations` | Decoded source clips, including supported animation-pointer channels. |
+| `skins` | Automatically updated source skin bindings and reusable joint palettes. |
 | `lights` | World-space directional, point, and spot lights from `KHR_lights_punctual`. |
 | `extensionSupport` | A map describing support for extensions reported by the asset. |
 | `sceneBounds` | World-space bounds and camera-framing recommendations for each scene. |
@@ -149,6 +152,7 @@ and `CUBICSPLINE` tracks through the format-independent engine mixer. Existing s
 and morph-target helpers preserve authored joint attributes, target deltas, and per-node weights.
 
 See [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation), the
+[GPU-animated crowd reference](/docs/api-reference/gltf/gltf-animated-crowd), the
 [engine animation guide](/docs/api-guide/engine/animation), and
 [glTF extension support](/docs/api-reference/gltf/gltf-extensions) for details and limitations.
 
