@@ -75,6 +75,24 @@ describe('published Gaussian splat viewer', () => {
     device.destroy();
   });
 
+  test('uses an isolated per-instance default scene to select the paged RAD renderer', () => {
+    installViewerWindow();
+    const device = makeViewerWebGPUDevice();
+    const animation = new GaussianSplatsAnimationLoopTemplate({
+      device,
+      width: 640,
+      height: 480,
+      defaultScene: 'coit'
+    } as AnimationProps & {defaultScene: 'coit'});
+
+    expect(animation.renderer).toBeInstanceOf(GPUPagedSplatRenderer);
+    expect(animation.renderer).not.toBeInstanceOf(GPUSplatGraphRenderer);
+    expect(getLocalGaussianSplatLoadersConfiguration()?.sceneId).toBe('train');
+
+    animation.renderer.destroy();
+    device.destroy();
+  });
+
   test('retains the explicit CPU comparison for captured WebGPU scenes', () => {
     installViewerWindow('?renderer=cpu');
     const device = makeViewerWebGPUDevice();
@@ -294,6 +312,27 @@ describe('published Gaussian splat viewer', () => {
       'https://raw.githubusercontent.com/visgl/deck.gl-data/master/formats/ply/gaussian-splat/train-iteration-7000-part-00.ply',
       'https://raw.githubusercontent.com/visgl/deck.gl-data/master/formats/ply/gaussian-splat/train-iteration-7000-part-01.ply'
     ]);
+  });
+
+  test('keeps embedded Coit defaults isolated and honors explicit scene and mode overrides', () => {
+    installViewerWindow();
+
+    expect(getLocalGaussianSplatLoadersConfiguration('coit')).toMatchObject({
+      sceneId: 'coit',
+      sourceFormat: 'RAD',
+      expectedSplatCount: 50_937_127,
+      maxResidentSplatCount: 1_000_000
+    });
+    expect(getLocalGaussianSplatLoadersConfiguration()?.sceneId).toBe('train');
+
+    installViewerWindow('?scene=truck');
+    expect(getLocalGaussianSplatLoadersConfiguration('coit')).toMatchObject({
+      sceneId: 'truck',
+      sourceFormat: 'PLY'
+    });
+
+    installViewerWindow('?mode=synthetic');
+    expect(getLocalGaussianSplatLoadersConfiguration('coit')).toBeUndefined();
   });
 
   test('retains catalog scenes, direct GitHub sources, and custom source URLs', () => {

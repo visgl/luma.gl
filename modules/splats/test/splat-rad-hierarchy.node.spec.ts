@@ -348,6 +348,60 @@ test('SplatRADHierarchyManager respects active-row budgets and missing-page back
   t.end();
 });
 
+test('SplatRADHierarchyManager budgets only visible rows while retaining authored traversal limits', t => {
+  const device = new NullDevice({});
+  const parent = makeRADPage(device, {
+    id: 'parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    childCounts: [5],
+    childStarts: [1]
+  });
+  const children = makeRADPage(device, {
+    id: 'children',
+    rowIndexBase: 1,
+    positions: [0, 0, 0, 4, 0, 0, -4, 0, 0, 0, 4, 0, 0, -4, 0],
+    childCounts: [2, 0, 0, 0, 0],
+    childStarts: [6, 0, 0, 0, 0]
+  });
+  const grandchildren = makeRADPage(device, {
+    id: 'grandchildren',
+    rowIndexBase: 6,
+    positions: [-0.1, 0, 0, 0.1, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [parent, children, grandchildren],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 2,
+    maxTraversalRows: 8,
+    refinementHysteresis: 0
+  });
+
+  manager.update(makeRADView());
+
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier),
+    [[6, 7]],
+    'refines the sole visible child through its next level instead of reserving culled siblings'
+  );
+  t.equal(manager.stats.activeRowCount, 2, 'accounts for only original visible frontier rows');
+  t.equal(manager.stats.culledRowCount, 4, 'still evaluates each authored invisible source child');
+  t.equal(
+    manager.stats.visibleRowCount + manager.stats.culledRowCount,
+    8,
+    'continues charging every authored child against the synchronous traversal budget'
+  );
+  t.equal(manager.stats.fallbackRowCount, 0, 'removes every fully replaced resident parent');
+  t.equal(manager.stats.requestedPageCount, 0, 'retains complete resident child-page readiness');
+  t.equal(manager.frontier[0].data, grandchildren.data, 'borrows the original finest source page');
+
+  manager.destroy();
+  parent.data.destroy();
+  children.data.destroy();
+  grandchildren.data.destroy();
+  t.end();
+});
+
 test('SplatRADHierarchyManager retains fallback when protected page budgets deny child admission', t => {
   const device = new NullDevice({});
   const residency = new SplatResidencyManager({maxResidentChunks: 2});

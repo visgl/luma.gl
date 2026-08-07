@@ -30,12 +30,12 @@ type GaussianSplatRADWorkerResponse =
       shape?: string;
       loaderData: LocalGaussianSplatRADPage['loaderData'];
     }
-  | {id: number; status: 'error'; name?: string; message: string};
+  | {id: number; status: 'error'; name?: string; message: string; startup?: boolean};
 
 type GaussianSplatRADWorkerJob = {
   id: number;
   context: LocalGaussianSplatRADPageDecodeContext;
-  bytes: ArrayBuffer;
+  bytes?: ArrayBuffer;
   resolve: (page: LocalGaussianSplatRADPage) => void;
   reject: (error: unknown) => void;
   removeAbortListener: () => void;
@@ -60,9 +60,11 @@ let loaderBundlePromise;
 
 self.addEventListener('message', async event => {
   const request = event.data;
+  let loaderBundleReady = false;
   try {
     loaderBundlePromise ||= import(request.bundleUrl);
     const loaderBundle = await loaderBundlePromise;
+    loaderBundleReady = true;
     const page = loaderBundle.parseRADChunk(request.bytes, {
       radChunk: {
         splatEncoding: request.splatEncoding,
@@ -87,7 +89,8 @@ self.addEventListener('message', async event => {
       id: request.id,
       status: 'error',
       name: error instanceof Error ? error.name : 'Error',
-      message: error instanceof Error ? error.message : String(error)
+      message: error instanceof Error ? error.message : String(error),
+      startup: !loaderBundleReady
     });
   }
 });
@@ -95,16 +98,16 @@ self.addEventListener('message', async event => {
 
 /** Parses original RAD pages in real browser workers while preserving source-owned identities. */
 export class GaussianSplatRADWorkerDecoder {
-  readonly mode = 'worker';
-
   private readonly bundleUrl: string;
   private readonly maxWorkers: number;
   private readonly workerUrl: string;
   private readonly slots: GaussianSplatRADWorkerSlot[] = [];
   private readonly queue: GaussianSplatRADWorkerJob[] = [];
+  private readonly activeFallbackJobs = new Set<GaussianSplatRADWorkerJob>();
   private loaderBundlePromise?: Promise<GaussianSplatRADWorkerBundle>;
   private nextRequestId = 0;
   private completedDecodes = 0;
+  private workersAvailable = true;
   private destroyed = false;
 
   constructor(bundleUrl: string, options: GaussianSplatRADWorkerDecoderOptions = {}) {
@@ -122,6 +125,11 @@ export class GaussianSplatRADWorkerDecoder {
       URL.revokeObjectURL(this.workerUrl);
       throw error;
     }
+  }
+
+  /** Current decoder backend after accounting for asynchronous module-worker failures. */
+  get mode(): 'worker' | 'main-thread' {
+    return this.workersAvailable ? 'worker' : 'main-thread';
   }
 
   /** Number of currently live browser workers, including an idle reusable worker. */
@@ -142,7 +150,7 @@ export class GaussianSplatRADWorkerDecoder {
       throw makeGaussianSplatWorkerAbortError(context.signal);
     }
     context.signal.throwIfAborted();
-    const bytes = await context.fetchChunkBytes();
+    const bytes = this.workersAvailable ? await context.fetchChunkBytes() : undefined;
     context.signal.throwIfAborted();
     if (this.destroyed) {
       throw makeGaussianSplatWorkerAbortError(context.signal);
@@ -179,6 +187,9 @@ export class GaussianSplatRADWorkerDecoder {
     for (const job of [...this.queue]) {
       this.cancelWorkerJob(job);
     }
+    for (const job of [...this.activeFallbackJobs]) {
+      this.cancelWorkerJob(job);
+    }
     for (const slot of [...this.slots]) {
       if (slot.job) {
         this.cancelWorkerJob(slot.job);
@@ -206,39 +217,41 @@ export class GaussianSplatRADWorkerDecoder {
     );
     slot.worker.addEventListener('error', event => {
       event.preventDefault();
-      const error =
-        event.error || new Error(event.message || 'RAD worker could not decode a page.');
-      const job = slot.job;
-      this.removeWorkerSlot(slot);
-      if (job) {
-        this.finishWorkerJob(job, error);
-      } else {
-        this.dispatchQueuedJobs();
-      }
+      this.disableWorkerBackend();
     });
     slot.worker.addEventListener('messageerror', () => {
-      const job = slot.job;
-      this.removeWorkerSlot(slot);
-      if (job) {
-        this.finishWorkerJob(job, new Error('RAD worker returned an unreadable page.'));
-      }
+      this.disableWorkerBackend();
     });
     this.slots.push(slot);
     return slot;
   }
 
   private dispatchQueuedJobs(): void {
+    if (!this.workersAvailable) {
+      while (
+        !this.destroyed &&
+        this.queue.length > 0 &&
+        this.activeFallbackJobs.size < this.maxWorkers
+      ) {
+        const job = this.queue.shift()!;
+        if (job.context.signal.aborted) {
+          this.cancelWorkerJob(job);
+          continue;
+        }
+        this.activeFallbackJobs.add(job);
+        void this.decodeFallbackJob(job);
+      }
+      return;
+    }
+
     while (!this.destroyed && this.queue.length > 0) {
       let slot = this.slots.find(candidate => !candidate.job);
       if (!slot && this.slots.length < this.maxWorkers) {
         try {
           slot = this.createWorkerSlot();
-        } catch (error) {
-          const job = this.queue.shift();
-          if (job) {
-            this.finishWorkerJob(job, error);
-          }
-          continue;
+        } catch {
+          this.disableWorkerBackend();
+          return;
         }
       }
       if (!slot) {
@@ -255,16 +268,16 @@ export class GaussianSplatRADWorkerDecoder {
         id: job.id,
         chunkIndex: job.context.chunkIndex,
         bundleUrl: this.bundleUrl,
-        bytes: job.bytes,
+        bytes: job.bytes!,
         ...(job.context.metadata.splatEncoding === undefined
           ? {}
           : {splatEncoding: job.context.metadata.splatEncoding})
       };
       try {
-        slot.worker.postMessage(request, [job.bytes]);
-      } catch (error) {
-        this.removeWorkerSlot(slot);
-        this.finishWorkerJob(job, error);
+        slot.worker.postMessage(request, [request.bytes]);
+      } catch {
+        this.disableWorkerBackend();
+        return;
       }
     }
   }
@@ -278,6 +291,10 @@ export class GaussianSplatRADWorkerDecoder {
       return;
     }
     if (response.status === 'error') {
+      if (response.startup) {
+        this.disableWorkerBackend();
+        return;
+      }
       const error = new Error(response.message);
       error.name = response.name || 'Error';
       this.finishWorkerJob(job, error);
@@ -303,6 +320,43 @@ export class GaussianSplatRADWorkerDecoder {
       /* webpackIgnore: true */ /* @vite-ignore */ this.bundleUrl
     );
     return await this.loaderBundlePromise;
+  }
+
+  private disableWorkerBackend(): void {
+    if (!this.workersAvailable || this.destroyed) {
+      return;
+    }
+    this.workersAvailable = false;
+    const interruptedJobs: GaussianSplatRADWorkerJob[] = [];
+    for (const slot of [...this.slots]) {
+      const job = slot.job;
+      if (job && !job.settled) {
+        slot.job = undefined;
+        job.slot = undefined;
+        interruptedJobs.push(job);
+      }
+      this.removeWorkerSlot(slot);
+    }
+    this.queue.unshift(...interruptedJobs);
+    this.dispatchQueuedJobs();
+  }
+
+  private async decodeFallbackJob(job: GaussianSplatRADWorkerJob): Promise<void> {
+    try {
+      job.context.signal.throwIfAborted();
+      const page = (await job.context.decodeDefault()) as LocalGaussianSplatRADPage;
+      job.context.signal.throwIfAborted();
+      if (job.settled || this.destroyed) {
+        return;
+      }
+      this.completedDecodes++;
+      this.finishWorkerJob(job, undefined, page);
+    } catch (error) {
+      this.finishWorkerJob(job, error);
+    } finally {
+      this.activeFallbackJobs.delete(job);
+      this.dispatchQueuedJobs();
+    }
   }
 
   private cancelWorkerJob(job: GaussianSplatRADWorkerJob): void {

@@ -146,6 +146,8 @@ export type SplatDrawRun = {
   batchIndex: number;
   rowIndices: Uint32Array;
   indexBuffer?: Buffer;
+  /** Renderer-owned WebGL attributes reordered without modifying borrowed source data. */
+  attributeBuffers?: Record<string, Buffer>;
 };
 
 const IDENTITY_MATRIX: SplatUniforms['modelViewProjectionMatrix'] = [
@@ -221,6 +223,7 @@ export class SplatRenderer {
   private readonly cachedReferences: Array<Array<SplatSortReference | undefined>> = [];
   private readonly cachedBatchRevisions: number[] = [];
   private readonly evaluatedColorBuffers: Array<Buffer | undefined> = [];
+  private readonly evaluatedColorValues: Array<Float32Array | undefined> = [];
   private readonly opacityMaskBuffers: Array<Buffer | undefined> = [];
   private drawRuns: SplatDrawRun[] = [];
   private placeholderIndexBuffer?: Buffer;
@@ -228,6 +231,7 @@ export class SplatRenderer {
   private requiresUpdate = true;
   private requiresUniformUpdate = false;
   private requiresWebGLSourceUpdate = false;
+  private usesFloatWebGLColors = false;
   private hasExplicitToneMapping = false;
   private isDestroyed = false;
 
@@ -282,6 +286,7 @@ export class SplatRenderer {
     this.cachedReferences.push([]);
     this.cachedBatchRevisions.push(data.revision);
     this.evaluatedColorBuffers.push(undefined);
+    this.evaluatedColorValues.push(undefined);
     this.opacityMaskBuffers.push(undefined);
     if (
       !this.hasExplicitToneMapping &&
@@ -292,7 +297,11 @@ export class SplatRenderer {
     }
     if (this.table) {
       this.table.addBatch(borrowedBatch);
+      const previousVertexArray = this.model?.vertexArray;
       this.model?.setProps({table: this.table});
+      if (previousVertexArray && previousVertexArray !== this.model?.vertexArray) {
+        previousVertexArray.destroy();
+      }
     } else {
       this.table = new GPUTable({batches: [borrowedBatch]});
       this.model = this.createModel(this.table);
@@ -491,7 +500,16 @@ export class SplatRenderer {
       (this.model?.tableBindingByteLength ?? 0) +
       this.evaluatedColorBuffers.reduce((total, buffer) => total + (buffer?.byteLength ?? 0), 0) +
       this.opacityMaskBuffers.reduce((total, buffer) => total + (buffer?.byteLength ?? 0), 0) +
-      this.drawRuns.reduce((totalBytes, run) => totalBytes + (run.indexBuffer?.byteLength ?? 0), 0);
+      this.drawRuns.reduce(
+        (totalBytes, run) =>
+          totalBytes +
+          (run.indexBuffer?.byteLength ?? 0) +
+          Object.values(run.attributeBuffers ?? {}).reduce(
+            (attributeBytes, buffer) => attributeBytes + buffer.byteLength,
+            0
+          ),
+        0
+      );
     return {
       splatCount,
       rowCount: splatCount,
@@ -867,11 +885,23 @@ export class SplatRenderer {
           });
         }
       }
-      this.drawRuns.push({batchIndex: nextRun.batchIndex, rowIndices, indexBuffer});
+      const drawRun: SplatDrawRun = {
+        batchIndex: nextRun.batchIndex,
+        rowIndices,
+        indexBuffer,
+        ...(reusableRun?.attributeBuffers ? {attributeBuffers: reusableRun.attributeBuffers} : {})
+      };
+      if (this.device.type !== 'webgpu') {
+        this.updateWebGLDrawRunAttributes(drawRun);
+      }
+      this.drawRuns.push(drawRun);
     }
 
     for (const previousRun of previousRuns) {
       previousRun.indexBuffer?.destroy();
+      for (const buffer of Object.values(previousRun.attributeBuffers ?? {})) {
+        buffer.destroy();
+      }
     }
   }
 
@@ -908,31 +938,28 @@ export class SplatRenderer {
       return false;
     }
     let drawSuccess = true;
-    const drawnBatches = new Set<number>();
     for (const run of this.drawRuns) {
-      if (drawnBatches.has(run.batchIndex)) {
-        continue;
-      }
       const batch = this.table.batches[run.batchIndex];
       if (!batch) {
         continue;
       }
       const evaluatedColorBuffer = this.evaluatedColorBuffers[run.batchIndex];
+      const usesEvaluatedColors = this.usesFloatWebGLColors && Boolean(evaluatedColorBuffer);
       this.model.setAttributes(
         Object.fromEntries(
           Object.entries(batch.gpuData).map(([name, data]) => [
             name,
-            name === 'colors' && this.props.sphericalHarmonicsDegree > 0 && evaluatedColorBuffer
-              ? evaluatedColorBuffer
-              : name === 'opacities'
-                ? this.getBatchOpacityBuffer(run.batchIndex)
-                : data.buffer
+            run.attributeBuffers?.[name] ??
+              (name === 'colors' && usesEvaluatedColors && evaluatedColorBuffer
+                ? evaluatedColorBuffer
+                : name === 'opacities'
+                  ? this.getBatchOpacityBuffer(run.batchIndex)
+                  : data.buffer)
           ])
         )
       );
-      this.model.setInstanceCount(batch.numRows);
+      this.model.setInstanceCount(run.rowIndices.length);
       drawSuccess = this.model.draw(renderPass) && drawSuccess;
-      drawnBatches.add(run.batchIndex);
     }
     return drawSuccess;
   }
@@ -947,6 +974,9 @@ export class SplatRenderer {
     this.cachedReferences.length = 0;
     this.cachedBatchRevisions.length = 0;
     this.destroyWebGLSourceBuffers();
+    if (!this.hasExplicitToneMapping) {
+      this.setResolvedProp('toneMapping', 'none');
+    }
     for (const batch of batches) {
       this.appendData(batch);
     }
@@ -956,18 +986,118 @@ export class SplatRenderer {
   private destroyDrawRuns(): void {
     for (const run of this.drawRuns) {
       run.indexBuffer?.destroy();
+      for (const buffer of Object.values(run.attributeBuffers ?? {})) {
+        buffer.destroy();
+      }
     }
     this.drawRuns = [];
+  }
+
+  private updateWebGLDrawRunAttributes(run: SplatDrawRun): void {
+    const batch = this.batches[run.batchIndex];
+    if (!batch) {
+      return;
+    }
+    const needsSortedAttributes =
+      run.rowIndices.length !== batch.length ||
+      run.rowIndices.some((rowIndex, sortedRowIndex) => rowIndex !== sortedRowIndex);
+    if (!needsSortedAttributes) {
+      for (const buffer of Object.values(run.attributeBuffers ?? {})) {
+        buffer.destroy();
+      }
+      delete run.attributeBuffers;
+      return;
+    }
+
+    const evaluatedColors = this.usesFloatWebGLColors
+      ? this.evaluatedColorValues[run.batchIndex]
+      : undefined;
+    const sourceColors = evaluatedColors ?? batch.source.colors;
+    const sortedValues = {
+      positions: new Float32Array(run.rowIndices.length * 3),
+      scales: new Float32Array(run.rowIndices.length * 3),
+      rotations: new Float32Array(run.rowIndices.length * 4),
+      colors:
+        sourceColors instanceof Float32Array
+          ? new Float32Array(run.rowIndices.length * 4)
+          : new Uint8Array(run.rowIndices.length * 4),
+      opacities: new Float32Array(run.rowIndices.length),
+      rowIndices: new Uint32Array(run.rowIndices.length)
+    };
+
+    for (const [sortedRowIndex, sourceRowIndex] of run.rowIndices.entries()) {
+      sortedValues.positions.set(
+        batch.source.positions.subarray(sourceRowIndex * 3, sourceRowIndex * 3 + 3),
+        sortedRowIndex * 3
+      );
+      sortedValues.scales.set(
+        batch.source.scales.subarray(sourceRowIndex * 3, sourceRowIndex * 3 + 3),
+        sortedRowIndex * 3
+      );
+      sortedValues.rotations.set(
+        batch.source.rotations.subarray(sourceRowIndex * 4, sourceRowIndex * 4 + 4),
+        sortedRowIndex * 4
+      );
+      sortedValues.colors.set(
+        sourceColors.subarray(sourceRowIndex * 4, sourceRowIndex * 4 + 4),
+        sortedRowIndex * 4
+      );
+      sortedValues.opacities[sortedRowIndex] = batch.source.opacities[sourceRowIndex];
+      sortedValues.rowIndices[sortedRowIndex] = batch.rowIndexBase + sourceRowIndex;
+    }
+
+    const attributeBuffers = run.attributeBuffers ?? {};
+    for (const [name, values] of Object.entries(sortedValues)) {
+      const existingBuffer = attributeBuffers[name];
+      if (existingBuffer && existingBuffer.byteLength >= values.byteLength) {
+        existingBuffer.write(values);
+      } else {
+        existingBuffer?.destroy();
+        attributeBuffers[name] = this.device.createBuffer({
+          id: `splat-sorted-${name}-${batch.sourceBatchIndex}`,
+          data: values,
+          usage: Buffer.VERTEX | Buffer.COPY_DST
+        });
+      }
+    }
+    run.attributeBuffers = attributeBuffers;
   }
 
   private updateWebGLSourceBuffers(): void {
     if (this.device.type === 'webgpu') {
       return;
     }
+    this.usesFloatWebGLColors =
+      this.props.sphericalHarmonicsDegree > 0 &&
+      this.batches.some(batch => Boolean(batch.source.sphericalHarmonics));
+    const colorFormat = this.usesFloatWebGLColors ? 'float32x4' : this.batches[0]?.colors.format;
+    const currentColorFormat = this.model?.bufferLayout.find(
+      bufferLayout => bufferLayout.name === 'colors'
+    )?.format;
+    if (this.model && colorFormat && currentColorFormat !== colorFormat) {
+      const previousVertexArray = this.model.vertexArray;
+      this.model.setBufferLayout(
+        this.model.bufferLayout.map(bufferLayout =>
+          bufferLayout.name === 'colors'
+            ? {
+                ...bufferLayout,
+                format: colorFormat,
+                byteStride: colorFormat === 'float32x4' ? 16 : 4
+              }
+            : bufferLayout
+        )
+      );
+      if (this.model.vertexArray !== previousVertexArray) {
+        previousVertexArray.destroy();
+      }
+    }
     for (const [batchIndex, batch] of this.batches.entries()) {
       const coefficients = batch.source.sphericalHarmonics;
       if (coefficients && this.props.sphericalHarmonicsDegree > 0) {
         this.updateWebGLSphericalHarmonicColors(batchIndex, batch, coefficients);
+      } else if (this.usesFloatWebGLColors && batch.source.colors instanceof Uint8Array) {
+        const normalizedColors = Float32Array.from(batch.source.colors, color => color / 255);
+        this.setWebGLEvaluatedColors(batchIndex, batch, normalizedColors);
       }
       if (this.props.semanticFilter) {
         const opacities = new Float32Array(batch.source.opacities);
@@ -990,6 +1120,11 @@ export class SplatRenderer {
         }
       }
     }
+    if (!this.requiresUpdate) {
+      for (const run of this.drawRuns) {
+        this.updateWebGLDrawRunAttributes(run);
+      }
+    }
   }
 
   private updateWebGLSphericalHarmonicColors(
@@ -998,10 +1133,8 @@ export class SplatRenderer {
     coefficients: Float32Array
   ): void {
     const sourceColors = batch.source.colors;
-    const colors =
-      sourceColors instanceof Float32Array
-        ? new Float32Array(sourceColors)
-        : new Uint8Array(sourceColors);
+    const colors = new Float32Array(sourceColors.length);
+    const sourceColorScale = sourceColors instanceof Float32Array ? 1 : 1 / 255;
     const coefficientCount = batch.length > 0 ? coefficients.length / batch.length : 0;
     const degree =
       this.props.sphericalHarmonicsDegree < batch.sphericalHarmonicsDegree
@@ -1010,7 +1143,6 @@ export class SplatRenderer {
     for (let rowIndex = 0; rowIndex < batch.length; rowIndex++) {
       const colorOffset = rowIndex * 4;
       const positionOffset = rowIndex * 3;
-      const sourceColorScale = sourceColors instanceof Float32Array ? 1 : 1 / 255;
       const color = evaluateSplatSphericalHarmonics(
         [
           sourceColors[colorOffset] * sourceColorScale,
@@ -1026,12 +1158,19 @@ export class SplatRenderer {
         degree
       );
       for (let colorComponentIndex = 0; colorComponentIndex < 3; colorComponentIndex++) {
-        colors[colorOffset + colorComponentIndex] =
-          colors instanceof Float32Array
-            ? color[colorComponentIndex]
-            : Math.round(Math.min(Math.max(color[colorComponentIndex], 0), 1) * 255);
+        colors[colorOffset + colorComponentIndex] = color[colorComponentIndex];
       }
+      colors[colorOffset + 3] = sourceColors[colorOffset + 3] * sourceColorScale;
     }
+    this.setWebGLEvaluatedColors(batchIndex, batch, colors);
+  }
+
+  private setWebGLEvaluatedColors(
+    batchIndex: number,
+    batch: GPUSplatData,
+    colors: Float32Array
+  ): void {
+    this.evaluatedColorValues[batchIndex] = colors;
     const existingBuffer = this.evaluatedColorBuffers[batchIndex];
     if (existingBuffer) {
       existingBuffer.write(colors);
@@ -1052,7 +1191,9 @@ export class SplatRenderer {
       buffer?.destroy();
     }
     this.evaluatedColorBuffers.length = 0;
+    this.evaluatedColorValues.length = 0;
     this.opacityMaskBuffers.length = 0;
+    this.usesFloatWebGLColors = false;
   }
 }
 
