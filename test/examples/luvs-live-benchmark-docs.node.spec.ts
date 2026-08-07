@@ -182,8 +182,8 @@ describe('luVS live vector-similarity benchmark documentation', () => {
     selectedDevice = {type: 'webgpu'};
     runLuvsBenchmark.mockResolvedValue({
       results: [
-        {label: 'CPU exact', medianMilliseconds: 2, resultCount: 10, candidateCount: 2048},
-        {label: 'WebGPU exact', medianMilliseconds: 1, resultCount: 10, candidateCount: 2048},
+        {label: 'CPU exact', medianMilliseconds: 2, resultCount: 10, candidateCount: 8192},
+        {label: 'WebGPU exact', medianMilliseconds: 1, resultCount: 10, candidateCount: 8192},
         {
           label: 'WebGPU exact + selection',
           medianMilliseconds: 0.8,
@@ -225,6 +225,9 @@ describe('luVS live vector-similarity benchmark documentation', () => {
     expect(markup).toContain('WebGPU IVF-flat + selection');
     expect(markup).toContain('75.0%');
     expect(markup).toContain('Recall@K');
+    expect(markup).toContain('Candidate evaluations');
+    expect(markup).toContain('8,192');
+    expect(markup).not.toContain('Eligible rows');
     expect(markup).toContain('Reader GPU');
     expect(markup).toContain('completion fence');
   });
@@ -257,6 +260,8 @@ describe('luVS live vector-similarity benchmark documentation', () => {
     expect(benchmarkRuntimeSource).toContain('indexBuildMilliseconds');
     expect(benchmarkRuntimeSource).toContain('readbackMilliseconds');
     expect(benchmarkRuntimeSource).toContain('rerankMilliseconds');
+    expect(benchmarkRuntimeSource).toContain('isLuvsCandidatePass(node.id)');
+    expect(benchmarkRuntimeSource).not.toContain('rerank|search|select');
     expect(benchmarkSource).toContain('Recall@K');
   });
 });

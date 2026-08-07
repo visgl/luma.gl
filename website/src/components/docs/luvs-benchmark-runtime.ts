@@ -329,10 +329,7 @@ function createBenchmarkEmbeddingTable(
   for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
     const sourceRowOffset = Math.floor((chunkIndex * rowCount) / chunkCount);
     const endRowOffset = Math.floor(((chunkIndex + 1) * rowCount) / chunkCount);
-    const chunkValues = values.subarray(
-      sourceRowOffset * dimensions,
-      endRowOffset * dimensions
-    );
+    const chunkValues = values.subarray(sourceRowOffset * dimensions, endRowOffset * dimensions);
     const buffer = device.createBuffer({
       id: `${identifier}-chunk-${chunkIndex}`,
       data: chunkValues,
@@ -679,15 +676,20 @@ async function profileLuvsCandidatePasses(
     const execution = await executeLuvsGraph(device, graph, `${identifier}-profile`, querySet);
     if (!execution.encoding.canReadGPUTimings) return undefined;
     const report = await execution.encoding.readTimings();
-    const candidatePasses = report.nodes.filter(node =>
-      /candidate|distance|score|rerank|search|select/i.test(node.id)
-    );
+    const candidatePasses = report.nodes.filter(node => isLuvsCandidatePass(node.id));
     const measuredPasses = candidatePasses.filter(node => node.gpuTimeMilliseconds !== undefined);
     if (measuredPasses.length === 0) return undefined;
     return measuredPasses.reduce((duration, node) => duration + (node.gpuTimeMilliseconds ?? 0), 0);
   } finally {
     querySet.destroy();
   }
+}
+
+/** Excludes shared graph prefixes and unrelated initialization or centroid-probe passes. */
+export function isLuvsCandidatePass(nodeIdentifier: string): boolean {
+  return /(?:^|[-/:])(?:candidates?|distances?|scores?|rerank|select)(?:[-/:]|$)/i.test(
+    nodeIdentifier
+  );
 }
 
 async function readLuvsSearchOutput(
@@ -704,11 +706,7 @@ async function readLuvsSearchOutput(
   return {
     ids: new Uint32Array(ids.buffer, ids.byteOffset, outputLength),
     scores: new Float32Array(scores.buffer, scores.byteOffset, outputLength),
-    resultCounts: new Uint32Array(
-      resultCounts.buffer,
-      resultCounts.byteOffset,
-      options.queryCount
-    ),
+    resultCounts: new Uint32Array(resultCounts.buffer, resultCounts.byteOffset, options.queryCount),
     candidateCounts: new Uint32Array(
       candidateCounts.buffer,
       candidateCounts.byteOffset,
@@ -751,7 +749,9 @@ export function validateLuvsOutput(
       if (!approximate) {
         const expectedPosition = expectedIds.get(actualIdentifier);
         if (expectedPosition === undefined || actualIds.has(actualIdentifier)) {
-          throw new Error(`${label} returned a different nearest-neighbor set than the CPU oracle.`);
+          throw new Error(
+            `${label} returned a different nearest-neighbor set than the CPU oracle.`
+          );
         }
         actualIds.add(actualIdentifier);
         const expectedRankingScore = oracle.scores[resultOffset + resultIndex];
@@ -760,7 +760,9 @@ export function validateLuvsOutput(
           Math.max(1, Math.abs(expectedRankingScore), Math.abs(expectedScore)) *
           FLOAT32_RANKING_TOLERANCE;
         if (Math.abs(expectedRankingScore - expectedScore) > rankingTolerance) {
-          throw new Error(`${label} returned a different nearest-neighbor order than the CPU oracle.`);
+          throw new Error(
+            `${label} returned a different nearest-neighbor order than the CPU oracle.`
+          );
         }
         const actualScore = actual.scores[resultOffset + resultIndex];
         if (Math.abs(actualScore - expectedScore) > Math.max(0.0001, expectedScore * 0.0001)) {

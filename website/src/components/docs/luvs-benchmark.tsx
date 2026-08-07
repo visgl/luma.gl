@@ -183,7 +183,7 @@ function LuvsBenchmarkResults({report}: {report: LuvsBenchmarkReport}): ReactNod
             <th>Candidate GPU</th>
             <th>Readback</th>
             <th>CPU comparison</th>
-            <th>Eligible rows</th>
+            <th>Candidate evaluations</th>
             <th>Recall@K</th>
           </tr>
         </thead>
@@ -215,9 +215,11 @@ function LuvsBenchmarkResults({report}: {report: LuvsBenchmarkReport}): ReactNod
         <strong>{options.probeCount}</strong> lists without fallback expansion.
       </p>
       <p>
-        Query medians include encoding, submission, and an explicit GPU completion fence, but
-        exclude upload, graph compilation, index training, and the separately reported correctness
-        readback. Medians use {LUVS_BENCHMARK_WARMUP_ITERATIONS} warmup and {LUVS_BENCHMARK_MEASURED_ITERATIONS} measured runs.
+        Candidate evaluations sum eligible candidates across all selected queries. Query medians
+        include encoding, submission, and an explicit GPU completion fence, but exclude upload,
+        graph compilation, index training, and the separately reported correctness readback. Medians
+        use {LUVS_BENCHMARK_WARMUP_ITERATIONS} warmup and {LUVS_BENCHMARK_MEASURED_ITERATIONS}{' '}
+        measured runs.
         {timestampQueries
           ? ' Candidate GPU time uses available per-pass timestamp queries.'
           : ' Candidate GPU timing is unavailable because this adapter has no timestamp queries.'}
