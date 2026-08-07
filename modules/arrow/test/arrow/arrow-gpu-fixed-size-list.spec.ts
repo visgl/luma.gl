@@ -4,19 +4,41 @@
 
 import test from 'test/utils/vitest-tape';
 import {
+  makeArrowFixedSizeListVector,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
-  readArrowGPUVectorAsync
+  readArrowGPUVectorAsync,
+  type GPUVectorFormatForArrowType
 } from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
-import {GPUData, GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPURecordBatch, GPUTable, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
+import {expectTypeOf} from 'vitest';
 
 type ArrowEmbeddingType = arrow.FixedSizeList<arrow.Float32>;
+
+test('unmapped Float16 fixed-size lists retain a usable broad GPU vector format', t => {
+  const device = new NullDevice({});
+  const source = makeArrowFixedSizeListVector(
+    new arrow.Float16(),
+    4,
+    new Uint16Array([0x3c00, 0x4000, 0x4200, 0x4400])
+  );
+  const vector = makeGPUVectorFromArrow(device, source);
+
+  expectTypeOf<
+    GPUVectorFormatForArrowType<arrow.FixedSizeList<arrow.Float16>>
+  >().toEqualTypeOf<GPUVectorFormat>();
+  expectTypeOf(vector).toEqualTypeOf<GPUVector<GPUVectorFormat>>();
+  t.equal(vector.format, 'float16x4', 'retains the supported runtime Float16 vertex format');
+
+  vector.destroy();
+  t.end();
+});
 
 test('Arrow GPU adapters represent high-dimensional FixedSizeList rows as table-native storage', async t => {
   const device = new NullDevice({});
