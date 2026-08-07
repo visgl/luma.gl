@@ -233,6 +233,17 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
               `GPUTable.packBatches() does not support variable-length GPUData "${columnName}"`
             );
           }
+          const firstData = batchGroup[0].gpuData[columnName];
+          if (
+            data.format &&
+            isFixedSizeListGPUVectorFormat(data.format) &&
+            (data.byteStride !== firstData.byteStride ||
+              data.rowByteLength !== firstData.rowByteLength)
+          ) {
+            throw new Error(
+              `GPUTable.packBatches() requires matching fixed-size-list row layouts for GPUData "${columnName}"`
+            );
+          }
           if (data.nullBitmap?.length || data.readbackMetadata !== undefined) {
             throw new Error(
               `GPUTable.packBatches() cannot preserve null or readback metadata for GPUData "${columnName}"`
