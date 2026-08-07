@@ -322,6 +322,31 @@ export const RASTER_LAB_STYLES = /* css */ `
   gap: 4px;
 }
 
+.raster-overview-policy-buttons,
+.raster-category-policy-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.raster-overview-statistics {
+  display: grid;
+  gap: 2px;
+  padding: 3px 0;
+  color: var(--raster-muted);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.raster-overview-statistics > :first-child {
+  color: var(--raster-accent);
+}
+
+.raster-overview-statistics > :last-child {
+  color: var(--raster-muted);
+  font-size: 7px;
+}
+
 .raster-halo-buttons {
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;
