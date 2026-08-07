@@ -10,7 +10,7 @@ import {
   type ComputePipeline,
   type QuerySet
 } from '@luma.gl/core';
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph, GPUCommandGraphEncoding} from '@luma.gl/experimental';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
@@ -22,6 +22,93 @@ type ComputePassFixture = {
   events: string[];
   timestampQuerySet?: QuerySet;
 };
+
+describe('GPUCommandGraphEncoding constructor compatibility', () => {
+  test('preserves two-argument render-only synthetic encodings', () => {
+    const encoding = new GPUCommandGraphEncoding(
+      [
+        {
+          stats: {
+            id: 'synthetic-clear',
+            type: 'render',
+            cpuEncodeTimeMilliseconds: 0,
+            hasGPUTimestamps: false
+          }
+        }
+      ],
+      0
+    );
+
+    expect(encoding.stats.nodeCount).toBe(1);
+    expect(encoding.stats.computePassCount).toBe(0);
+    expect(encoding.stats.coalescedComputeNodeCount).toBe(0);
+    expect(encoding.canReadGPUTimings).toBe(false);
+  });
+
+  test('assumes separate passes for legacy two-argument compute encodings', () => {
+    const encoding = new GPUCommandGraphEncoding(
+      [
+        {
+          stats: {
+            id: 'first',
+            type: 'compute',
+            cpuEncodeTimeMilliseconds: 1,
+            hasGPUTimestamps: false
+          }
+        },
+        {
+          stats: {
+            id: 'copy',
+            type: 'copy',
+            cpuEncodeTimeMilliseconds: 1,
+            hasGPUTimestamps: false
+          }
+        },
+        {
+          stats: {
+            id: 'second',
+            type: 'compute',
+            cpuEncodeTimeMilliseconds: 1,
+            hasGPUTimestamps: false
+          }
+        }
+      ],
+      3
+    );
+
+    expect(encoding.stats.nodeCount).toBe(3);
+    expect(encoding.stats.computePassCount).toBe(2);
+    expect(encoding.stats.coalescedComputeNodeCount).toBe(0);
+  });
+
+  test('preserves explicitly reported coalesced compute-pass counts', () => {
+    const encoding = new GPUCommandGraphEncoding(
+      [
+        {
+          stats: {
+            id: 'first',
+            type: 'compute',
+            cpuEncodeTimeMilliseconds: 1,
+            hasGPUTimestamps: false
+          }
+        },
+        {
+          stats: {
+            id: 'second',
+            type: 'compute',
+            cpuEncodeTimeMilliseconds: 1,
+            hasGPUTimestamps: false
+          }
+        }
+      ],
+      2,
+      1
+    );
+
+    expect(encoding.stats.computePassCount).toBe(1);
+    expect(encoding.stats.coalescedComputeNodeCount).toBe(1);
+  });
+});
 
 describe('GPUCommandGraph compute-pass coalescing', () => {
   test('coalesces consecutive compute nodes while preserving node order and debug groups', () => {

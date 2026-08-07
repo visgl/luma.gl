@@ -165,7 +165,7 @@ export class GPUCommandGraphEncoding {
   constructor(
     nodes: EncodedGPUCommandGraphNode[],
     cpuEncodeTimeMilliseconds: number,
-    computePassCount: number
+    computePassCount = nodes.filter(node => node.stats.type === 'compute').length
   ) {
     this.nodes = nodes;
     this.canReadGPUTimings = nodes.some(node => node.timestamp !== undefined);
