@@ -272,7 +272,11 @@ Status meanings:
       Video textures are not created automatically by the glTF pipeline.
     </SupportRow>
     <SupportRow name="MSFT_lod" support="❌">
-      Level-of-detail switching is not implemented in the stock scenegraph loader.
+      Authored node levels and <code>MSFT_screencoverage</code> hints remain
+      available in the source asset. Scenegraphs and animated crowds render the
+      reachable highest-detail level; automatic screen-space selection and LOD
+      switching are not implemented. The Asset Studio includes an animated,
+      skinned three-level reference fixture.
     </SupportRow>
   </tbody>
 </table>

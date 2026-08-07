@@ -768,6 +768,12 @@ describe('glTF controls', () => {
     ).toBe(true);
     expect(
       isAnimatedGLTFCatalogModel({
+        name: 'SimpleSkinLOD',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
         name: 'CesiumMan',
         screenshot: 'screenshot/screenshot.gif'
       })
@@ -781,6 +787,12 @@ describe('glTF controls', () => {
     expect(
       isAnimatedGLTFCatalogModel({
         name: 'DamagedHelmet',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(false);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'BabylonMSFTLOD',
         screenshot: 'screenshot/screenshot.png'
       })
     ).toBe(false);

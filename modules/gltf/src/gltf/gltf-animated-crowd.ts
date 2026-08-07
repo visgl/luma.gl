@@ -587,12 +587,24 @@ function createActorNodes(scenegraphs: GLTFScenegraphs, id: string): GLTFCrowdAc
 
 function createPrimitiveGroups(scenegraphs: GLTFScenegraphs): GLTFCrowdPrimitiveGroup[] {
   const groups: GLTFCrowdPrimitiveGroup[] = [];
+  const reachableNodes = new Set<GroupNode>();
+  for (const scene of scenegraphs.scenes) {
+    scene.preorderTraversal(node => {
+      if (node instanceof GroupNode) {
+        reachableNodes.add(node);
+      }
+    });
+  }
+
   for (const [nodeIndex, sourceNode] of scenegraphs.gltf.nodes.entries()) {
     if (!sourceNode.mesh) {
       continue;
     }
     const node = scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex);
-    const mesh = node?.userData['gltfMesh'];
+    if (!node || !reachableNodes.has(node)) {
+      continue;
+    }
+    const mesh = node.userData['gltfMesh'];
     if (!(mesh instanceof GroupNode)) {
       continue;
     }

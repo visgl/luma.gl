@@ -23,6 +23,10 @@ const MODEL_DIRECTORY_URL =
 const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
 const ROBOT_EXPRESSIVE_MODEL_URL =
   'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
+const SIMPLE_SKIN_LOD_MODEL_URL = new URL(
+  '../../../modules/gltf/test/data/SimpleSkinLOD.gltf',
+  import.meta.url
+).href;
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
 const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
@@ -41,7 +45,8 @@ const ADDITIONAL_ANIMATED_GLTF_MODELS = new Set([
   'Fox',
   'MorphStressTest',
   'RobotExpressive',
-  'SimpleMorph'
+  'SimpleMorph',
+  'SimpleSkinLOD'
 ]);
 
 const lightSources = {
@@ -128,6 +133,10 @@ const GLTF_MODEL_METADATA_OVERRIDES: Record<string, GLTFModelMetadata> = {
   RobotExpressive: {
     summary:
       'An expressive skinned robot with 14 named actions, facial expressions, and independently animated crowd playback.'
+  },
+  SimpleSkinLOD: {
+    summary:
+      'An animated, skinned character with three authored MSFT_lod mesh levels and screen-coverage thresholds.'
   }
 };
 const ROBOT_EXPRESSIVE_CATALOG_MODEL: GLTFCatalogModel = {
@@ -135,6 +144,12 @@ const ROBOT_EXPRESSIVE_CATALOG_MODEL: GLTFCatalogModel = {
   name: 'RobotExpressive',
   ...GLTF_MODEL_METADATA_OVERRIDES['RobotExpressive'],
   variants: {'glTF-Binary': 'RobotExpressive.glb'}
+};
+const SIMPLE_SKIN_LOD_CATALOG_MODEL: GLTFCatalogModel = {
+  label: 'Simple Skin LOD',
+  name: 'SimpleSkinLOD',
+  ...GLTF_MODEL_METADATA_OVERRIDES['SimpleSkinLOD'],
+  variants: {glTF: 'SimpleSkinLOD.gltf'}
 };
 export type GLTFModelReference = {
   name: string;
@@ -499,12 +514,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   async fetchModelList(): Promise<GLTFCatalogModel[]> {
     const response = await fetch(MODEL_LIST_URL);
     const models = (await response.json()) as GLTFCatalogModel[];
-    return [ROBOT_EXPRESSIVE_CATALOG_MODEL, ...models.filter(isAnimatedGLTFCatalogModel)].map(
-      model => ({
-        ...model,
-        hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
-      })
-    );
+    return [
+      ROBOT_EXPRESSIVE_CATALOG_MODEL,
+      SIMPLE_SKIN_LOD_CATALOG_MODEL,
+      ...models.filter(isAnimatedGLTFCatalogModel)
+    ].map(model => ({
+      ...model,
+      hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
+    }));
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {
@@ -779,6 +796,9 @@ function getModelUrl(modelReference: Required<GLTFModelReference>): string {
   if (modelReference.name === 'RobotExpressive') {
     return ROBOT_EXPRESSIVE_MODEL_URL;
   }
+  if (modelReference.name === 'SimpleSkinLOD') {
+    return SIMPLE_SKIN_LOD_MODEL_URL;
+  }
 
   return `${MODEL_DIRECTORY_URL}/${modelReference.name}/${modelReference.variant}/${modelReference.fileName}`;
 }
@@ -874,7 +894,7 @@ function getModelLoadingLabel(modelDescription: string): string {
 }
 
 async function loadModelMetadata(modelName: string): Promise<GLTFModelMetadata> {
-  if (modelName === 'RobotExpressive') {
+  if (modelName === 'RobotExpressive' || modelName === 'SimpleSkinLOD') {
     return GLTF_MODEL_METADATA_OVERRIDES[modelName] || {};
   }
 

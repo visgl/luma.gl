@@ -415,8 +415,10 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Selected animation pointers | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Update supported `KHR_animation_pointer` transforms, material factors, and UV properties. |
 | Existing joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse established skin shaders and automatically bind mesh-local glTF joint palettes. |
 | Morph-target animation | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Animate POSITION, NORMAL, and TANGENT morph targets through shared glTF, engine, and retained-scene paths. |
-| Imported GPU instancing | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | `EXT_mesh_gpu_instancing` is not yet translated into retained instance batches. |
-| Imported node visibility | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | `KHR_node_visibility` does not yet have a supported runtime integration. |
+| Imported GPU instancing | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Render authored `EXT_mesh_gpu_instancing` transforms through one instanced model per source primitive. |
+| Independently animated GPU crowds | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Share primitive draws, geometry, and materials while actors independently select, phase, blend, and skin authored animation clips. |
+| Imported node visibility | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply authored `KHR_node_visibility` recursively and update supported animated visibility pointers. |
+| Screen-space crowd level of detail | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Authored `MSFT_lod` fixtures are available; per-actor coverage selection, culling, and GPU-driven LOD draws are not implemented. |
 
 The ownership boundaries are intentional: `@luma.gl/gltf` interprets assets,
 `@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,
@@ -424,7 +426,8 @@ The ownership boundaries are intentional: `@luma.gl/gltf` interprets assets,
 retained scene objects. Reuse each capability at its existing layer rather than creating
 parallel implementations.
 
-See the [glTF extension support matrix](/docs/api-reference/gltf/gltf-extensions).
+See the [glTF extension support matrix](/docs/api-reference/gltf/gltf-extensions) and the
+[GPU-animated crowd guide](/docs/api-reference/gltf/gltf-animated-crowd).
 
 ### Declarative scenes and asset integration
 
