@@ -678,7 +678,7 @@ fn main(
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
     reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
-  visibilityFlags[sourceIndex] = select(
+  visibilityFlags[sourceIndex - CHUNK_FIRST_SPAN_INDEX] = select(
     0u,
     viewUniforms.visibilityGeneration,
     exactVisible && focusVisible
