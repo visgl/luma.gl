@@ -10,12 +10,14 @@ import {RasterLabInterface} from './raster-interface';
 import type {
   RasterLabDisplayMode,
   RasterLabDisplaySettings,
+  RasterLabEdgeDirection,
+  RasterLabEdgeMode,
   RasterLabSmoothingMode
 } from './raster-renderer';
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'GPU-resident NDVI, separable smoothing, indirect contour overlays, and live histograms.';
+  'GPU-resident NDVI, smoothing, signed edge detection, contour overlays, and live histograms.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -30,6 +32,8 @@ type RasterLabDebugController = {
   readonly smoothingMode: RasterLabSmoothingMode;
   readonly smoothingRadius: number;
   readonly smoothingSigma: number;
+  readonly edgeMode: RasterLabEdgeMode;
+  readonly edgeDirection: RasterLabEdgeDirection;
   readonly contrast: number;
   readonly gamma: number;
   readonly threshold: number;
@@ -48,6 +52,8 @@ type RasterLabDebugController = {
   setSmoothingMode: (mode: RasterLabSmoothingMode) => void;
   setSmoothingRadius: (radius: number) => void;
   setSmoothingSigma: (sigma: number) => void;
+  setEdgeMode: (mode: RasterLabEdgeMode) => void;
+  setEdgeDirection: (direction: RasterLabEdgeDirection) => void;
   setContrast: (contrast: number) => void;
   setGamma: (gamma: number) => void;
   setThreshold: (threshold: number, enabled?: boolean) => void;
@@ -71,6 +77,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     smoothingMode: 'none',
     smoothingRadius: 2,
     smoothingSigma: 1.25,
+    edgeMode: 'none',
+    edgeDirection: 'magnitude',
     contrast: 1.15,
     gamma: 1,
     threshold: 0.35,
@@ -110,6 +118,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onSmoothingMode: mode => this.setSmoothingMode(mode),
       onSmoothingRadius: radius => this.setSmoothingRadius(radius),
       onSmoothingSigma: sigma => this.setSmoothingSigma(sigma),
+      onEdgeMode: mode => this.setEdgeMode(mode),
+      onEdgeDirection: direction => this.setEdgeDirection(direction),
       onContrast: contrast => this.setContrast(contrast),
       onGamma: gamma => this.setGamma(gamma),
       onThreshold: (threshold, enabled) => this.setThreshold(threshold, enabled),
@@ -129,7 +139,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     try {
       const dataset = makeRasterLabDataset(this.rasterSize[0], this.rasterSize[1]);
       this.interface.setSource(dataset);
-      this.interface.setStatus('Compiling masked NDVI, smoothing, and histogram GPU passes');
+      this.interface.setStatus('Compiling masked NDVI, spatial filters, and histogram GPU passes');
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       if (this.finalized) return;
 
@@ -192,6 +202,22 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.display.smoothingSigma = sigma;
     this.interface?.setSmoothingSigma(sigma);
     if (this.display.smoothingMode === 'gaussian') this.requestUpdate();
+  }
+
+  private setEdgeMode(mode: RasterLabEdgeMode): void {
+    if (mode === this.display.edgeMode) return;
+    this.display.edgeMode = mode;
+    this.interface?.setEdgeMode(mode);
+    this.requestUpdate();
+  }
+
+  private setEdgeDirection(direction: RasterLabEdgeDirection): void {
+    if (direction === this.display.edgeDirection) return;
+    this.display.edgeDirection = direction;
+    this.interface?.setEdgeDirection(direction);
+    if (this.display.edgeMode !== 'none' && this.display.edgeMode !== 'laplacian') {
+      this.requestUpdate();
+    }
   }
 
   private setContrast(contrast: number): void {
@@ -333,6 +359,12 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get smoothingSigma() {
         return viewer.display.smoothingSigma;
       },
+      get edgeMode() {
+        return viewer.display.edgeMode;
+      },
+      get edgeDirection() {
+        return viewer.display.edgeDirection;
+      },
       get contrast() {
         return viewer.display.contrast;
       },
@@ -379,6 +411,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setSmoothingMode: mode => viewer.setSmoothingMode(mode),
       setSmoothingRadius: radius => viewer.setSmoothingRadius(radius),
       setSmoothingSigma: sigma => viewer.setSmoothingSigma(sigma),
+      setEdgeMode: mode => viewer.setEdgeMode(mode),
+      setEdgeDirection: direction => viewer.setEdgeDirection(direction),
       setContrast: contrast => viewer.setContrast(contrast),
       setGamma: gamma => viewer.setGamma(gamma),
       setThreshold: (threshold, enabled) => viewer.setThreshold(threshold, enabled),

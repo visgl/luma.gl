@@ -244,6 +244,14 @@ export const RASTER_LAB_STYLES = /* css */ `
   background: linear-gradient(90deg, #211831, #526275, #a4edcf);
 }
 
+.raster-legend[data-mode='edge-magnitude'] .raster-legend-ramp {
+  background: linear-gradient(90deg, #071018, #128eb5, #2dd6dc, #ffbd57);
+}
+
+.raster-legend[data-mode='edge-signed'] .raster-legend-ramp {
+  background: linear-gradient(90deg, #1ac1eb, #09121b, #ffa843);
+}
+
 .raster-legend-labels {
   display: flex;
   justify-content: space-between;
@@ -260,8 +268,16 @@ export const RASTER_LAB_STYLES = /* css */ `
 .raster-sidebar {
   display: grid;
   min-height: 0;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  max-height: 100%;
+  align-content: start;
+  grid-template-rows: repeat(3, max-content);
   gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(156 233 196 / 35%) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  pointer-events: auto;
 }
 
 .raster-panel {
@@ -298,6 +314,18 @@ export const RASTER_LAB_STYLES = /* css */ `
   gap: 5px;
 }
 
+.raster-edge-buttons {
+  display: grid;
+  grid-template-columns: 0.6fr 0.85fr 0.95fr 1.1fr;
+  gap: 4px;
+}
+
+.raster-edge-direction-buttons {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr;
+  gap: 4px;
+}
+
 .raster-mode-button {
   min-height: 28px;
   padding: 0 5px;
@@ -314,6 +342,18 @@ export const RASTER_LAB_STYLES = /* css */ `
   border-color: rgb(156 233 196 / 48%);
   background: rgb(91 162 123 / 17%);
   color: var(--raster-accent);
+}
+
+.raster-mode-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.raster-edge-buttons .raster-mode-button,
+.raster-edge-direction-buttons .raster-mode-button {
+  min-height: 24px;
+  padding: 0 3px;
+  font-size: 9px;
 }
 
 .raster-control {
@@ -595,7 +635,7 @@ export const RASTER_LAB_STYLES = /* css */ `
 
 @media (max-height: 780px) and (min-width: 651px) {
   .raster-sidebar {
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: repeat(3, max-content);
   }
 
   .raster-panel {
@@ -611,8 +651,5 @@ export const RASTER_LAB_STYLES = /* css */ `
     height: 50px;
   }
 
-  .raster-pipeline {
-    display: none;
-  }
 }
 `;

@@ -527,6 +527,14 @@ when their tests and rollback boundaries remain understandable.
   separable horizontal/vertical passes with graph-owned intermediate scratch. The Raster Lab
   changes its rendered values, histogram, and scalar statistics when filter, radius, or sigma
   controls change. FFT-backed convolution remains explicitly deferred.
+- **3.3 complete for bounded analytical derivatives:** `GPURasterGradient`, `GPURasterSobel`,
+  and `GPURasterScharr` provide signed horizontal/vertical first derivatives;
+  `GPURasterLaplacian` provides four- or eight-connected second derivatives; and
+  `GPURasterGradientMagnitude` combines both first-derivative axes through graph-owned scratch.
+  Explicit scaling, strict nodata propagation, caller-owned outputs, and interactive Raster Lab
+  edge controls preserve the analytical command-graph contract.
+- **3.4 pending:** binary/grayscale dilation, erosion, opening, and closing remain a separate
+  morphology tranche; neither smoothing nor gradient operators implement these operations.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -536,7 +544,7 @@ when their tests and rollback boundaries remain understandable.
   its resulting line overlay without reading a draw count. Tile stitching and external deck.gl
   integration remain in Tranche 6.3.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
-  demonstrate the current NDVI/smoothing/histogram/contour workflow. The full
+  demonstrate the current NDVI/smoothing/gradient/histogram/contour workflow. The full
   satellite/microscopy/tiled/vector showcase matrix, broader documentation set, benchmarks, and
   final release gates remain pending.
 
@@ -753,6 +761,13 @@ No documentation claims FFT-backed acceleration.
 
 **Entry:** Tranche 3.1.
 
+**Status:** Complete for bounded packed-buffer raster derivatives. Sobel/Scharr horizontal and
+vertical gradients, four/eight-connected Laplacians, explicit positive coefficient scaling, and
+three-pass gradient magnitude retain signed conventions, strict missing-neighbor validity, and
+graph-owned scratch. The Raster Lab routes edge responses through its existing histogram,
+threshold, contour, and indirect-rendering pipeline without downloading raster pixels. Derivatives
+are measured in raster-pixel coordinates; world-space affine conversion remains application-owned.
+
 **Work:** Implement Sobel, Scharr, Laplacian, directional gradients, and gradient magnitude.
 Signed derivative filters use an explicit valid-neighborhood policy rather than applying
 positive-weight smoothing renormalization.
@@ -763,6 +778,9 @@ fixtures, and nodata-adjacent neighborhoods match CPU references within document
 ### Tranche 3.4 — Binary and grayscale morphology
 
 **Entry:** Tranches 2.4 and 3.1.
+
+**Status:** Pending. Binary/grayscale dilation, erosion, opening, and closing are not implemented
+by the smoothing, first-derivative, second-derivative, or contour contributors.
 
 **Work:** Implement dilation and erosion for defined square/cross structuring elements and
 compose opening/closing from explicit ping-pong passes. Define 4/8-neighborhood interpretation

@@ -52,10 +52,15 @@ const requiredRuntimeExportNames = [
   'GPURasterContours',
   'GPURasterConvolution',
   'GPURasterGaussianBlur',
+  'GPURasterGradient',
+  'GPURasterGradientMagnitude',
   'GPURasterHistogram',
+  'GPURasterLaplacian',
   'GPURasterNDVI',
   'GPURasterNeighborhood',
   'GPURasterOtsuThreshold',
+  'GPURasterScharr',
+  'GPURasterSobel',
   'GPURasterStatistics',
   'GPURasterThreshold',
   'GPURasterTextureToBuffer',
@@ -103,10 +108,15 @@ try {
   GPURasterContours,
   GPURasterConvolution,
   GPURasterGaussianBlur,
+  GPURasterGradient,
+  GPURasterGradientMagnitude,
   GPURasterHistogram,
+  GPURasterLaplacian,
   GPURasterNDVI,
   GPURasterNeighborhood,
   GPURasterOtsuThreshold,
+  GPURasterScharr,
+  GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
   GPURasterTextureToBuffer,
@@ -123,9 +133,16 @@ try {
   type GPURasterContourLevel,
   type GPURasterContoursProps,
   type GPURasterConvolutionProps,
+  type GPURasterEdgeProps,
   type GPURasterGaussianBlurProps,
+  type GPURasterGradientDirection,
+  type GPURasterGradientMagnitudeProps,
+  type GPURasterGradientOperator,
+  type GPURasterGradientProps,
   type GPURasterHistogramDomain,
   type GPURasterHistogramProps,
+  type GPURasterLaplacianConnectivity,
+  type GPURasterLaplacianProps,
   type GPURasterMetadata,
   type GPURasterNDVIProps,
   type GPURasterNeighborhoodProps,
@@ -133,6 +150,8 @@ try {
   type GPURasterNoDataPolicy,
   type GPURasterOtsuDomain,
   type GPURasterOtsuThresholdProps,
+  type GPURasterScharrProps,
+  type GPURasterSobelProps,
   type GPURasterStatisticsProps,
   type GPURasterSmoothingProps,
   type GPURasterThresholdOperation,
@@ -155,9 +174,16 @@ declare const contourClassifierOptions: GPURasterContourClassifierProps;
 declare const contourLevel: GPURasterContourLevel;
 declare const contourOptions: GPURasterContoursProps;
 declare const convolutionOptions: GPURasterConvolutionProps;
+declare const edgeOptions: GPURasterEdgeProps;
 declare const gaussianOptions: GPURasterGaussianBlurProps;
+declare const gradientDirection: GPURasterGradientDirection;
+declare const gradientMagnitudeOptions: GPURasterGradientMagnitudeProps;
+declare const gradientOperator: GPURasterGradientOperator;
+declare const gradientOptions: GPURasterGradientProps;
 declare const histogramDomain: GPURasterHistogramDomain<'float32'>;
 declare const histogramOptions: GPURasterHistogramProps<'float32'>;
+declare const laplacianConnectivity: GPURasterLaplacianConnectivity;
+declare const laplacianOptions: GPURasterLaplacianProps;
 declare const rasterMetadata: GPURasterMetadata;
 declare const ndviOptions: GPURasterNDVIProps;
 declare const neighborhoodOptions: GPURasterNeighborhoodProps;
@@ -165,6 +191,8 @@ declare const neighborhoodRadius: GPURasterNeighborhoodRadius;
 declare const noDataPolicy: GPURasterNoDataPolicy;
 declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
+declare const scharrOptions: GPURasterScharrProps;
+declare const sobelOptions: GPURasterSobelProps;
 declare const statisticsOptions: GPURasterStatisticsProps;
 declare const smoothingOptions: GPURasterSmoothingProps;
 declare const thresholdOperation: GPURasterThresholdOperation;
@@ -180,9 +208,14 @@ declare const contourClassifier: GPURasterContourClassifier;
 declare const contours: GPURasterContours;
 declare const convolution: GPURasterConvolution;
 declare const gaussianBlur: GPURasterGaussianBlur;
+declare const gradient: GPURasterGradient;
+declare const gradientMagnitude: GPURasterGradientMagnitude;
+declare const laplacian: GPURasterLaplacian;
 declare const ndvi: GPURasterNDVI;
 declare const neighborhood: GPURasterNeighborhood;
 declare const otsu: GPURasterOtsuThreshold;
+declare const scharr: GPURasterScharr;
+declare const sobel: GPURasterSobel;
 declare const statistics: GPURasterStatistics;
 declare const histogram: GPURasterHistogram<'float32'>;
 declare const threshold: GPURasterThreshold;
@@ -194,13 +227,34 @@ const contourClassifierContributor: GPUCommandGraphContributor = contourClassifi
 const contoursContributor: GPUCommandGraphContributor = contours;
 const convolutionContributor: GPUCommandGraphContributor = convolution;
 const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
+const gradientContributor: GPUCommandGraphContributor = gradient;
+const gradientMagnitudeContributor: GPUCommandGraphContributor = gradientMagnitude;
+const laplacianContributor: GPUCommandGraphContributor = laplacian;
 const ndviContributor: GPUCommandGraphContributor = ndvi;
 const neighborhoodContributor: GPUCommandGraphContributor = neighborhood;
 const otsuContributor: GPUCommandGraphContributor = otsu;
+const scharrContributor: GPUCommandGraphContributor = scharr;
+const sobelContributor: GPUCommandGraphContributor = sobel;
 const statisticsContributor: GPUCommandGraphContributor = statistics;
 const histogramContributor: GPUCommandGraphContributor = histogram;
 const thresholdContributor: GPUCommandGraphContributor = threshold;
 const rasterContributor: GPUCommandGraphContributor = textureToBuffer;
+const configuredGradient: GPUCommandGraphContributor = new GPURasterGradient(gradientOptions);
+const configuredGradientMagnitude: GPUCommandGraphContributor = new GPURasterGradientMagnitude(
+  gradientMagnitudeOptions
+);
+const configuredLaplacian: GPUCommandGraphContributor = new GPURasterLaplacian(laplacianOptions);
+const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
+const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
+const supportedGradientOperators: readonly GPURasterGradientOperator[] = ['sobel', 'scharr'];
+const supportedGradientDirections: readonly GPURasterGradientDirection[] = ['x', 'y'];
+const supportedLaplacianConnectivities: readonly GPURasterLaplacianConnectivity[] = [4, 8];
+// @ts-expect-error Only the independently implemented Sobel and Scharr kernels are public.
+const unsupportedGradientOperator: GPURasterGradientOperator = 'prewitt';
+// @ts-expect-error Two-dimensional rasters expose only horizontal and vertical derivatives.
+const unsupportedGradientDirection: GPURasterGradientDirection = 'z';
+// @ts-expect-error Laplacian neighborhoods support four or eight adjacent raster pixels.
+const unsupportedLaplacianConnectivity: GPURasterLaplacianConnectivity = 6;
 
 void GPURaster;
 void GPURasterBandMath;
@@ -211,10 +265,15 @@ void GPURasterContourClassifier;
 void GPURasterContours;
 void GPURasterConvolution;
 void GPURasterGaussianBlur;
+void GPURasterGradient;
+void GPURasterGradientMagnitude;
 void GPURasterHistogram;
+void GPURasterLaplacian;
 void GPURasterNDVI;
 void GPURasterNeighborhood;
 void GPURasterOtsuThreshold;
+void GPURasterScharr;
+void GPURasterSobel;
 void GPURasterStatistics;
 void GPURasterThreshold;
 void GPURasterTextureToBuffer;
@@ -232,9 +291,16 @@ void contourClassifierOptions;
 void contourLevel;
 void contourOptions;
 void convolutionOptions;
+void edgeOptions;
 void gaussianOptions;
+void gradientDirection;
+void gradientMagnitudeOptions;
+void gradientOperator;
+void gradientOptions;
 void histogramDomain;
 void histogramOptions;
+void laplacianConnectivity;
+void laplacianOptions;
 void rasterMetadata;
 void ndviOptions;
 void neighborhoodOptions;
@@ -242,6 +308,8 @@ void neighborhoodRadius;
 void noDataPolicy;
 void otsuDomain;
 void otsuOptions;
+void scharrOptions;
+void sobelOptions;
 void statisticsOptions;
 void smoothingOptions;
 void thresholdOperation;
@@ -257,13 +325,29 @@ void contourClassifierContributor;
 void contoursContributor;
 void convolutionContributor;
 void gaussianBlurContributor;
+void gradientContributor;
+void gradientMagnitudeContributor;
+void laplacianContributor;
 void ndviContributor;
 void neighborhoodContributor;
 void otsuContributor;
+void scharrContributor;
+void sobelContributor;
 void statisticsContributor;
 void histogramContributor;
 void thresholdContributor;
 void rasterContributor;
+void configuredGradient;
+void configuredGradientMagnitude;
+void configuredLaplacian;
+void configuredScharr;
+void configuredSobel;
+void supportedGradientOperators;
+void supportedGradientDirections;
+void supportedLaplacianConnectivities;
+void unsupportedGradientOperator;
+void unsupportedGradientDirection;
+void unsupportedLaplacianConnectivity;
 
 // @ts-expect-error Raster algorithms stay isolated from the experimental root.
 import {GPURaster as RootGPURaster} from '@luma.gl/experimental';
@@ -277,6 +361,12 @@ void RootGPURasterContours;
 // @ts-expect-error Neighborhood contributors stay isolated from the experimental root.
 import {GPURasterGaussianBlur as RootGPURasterGaussianBlur} from '@luma.gl/experimental';
 void RootGPURasterGaussianBlur;
+// @ts-expect-error Analytical gradient contributors stay isolated from the experimental root.
+import {GPURasterGradient as RootGPURasterGradient} from '@luma.gl/experimental';
+void RootGPURasterGradient;
+// @ts-expect-error Gradient-magnitude contributors stay isolated from the experimental root.
+import {GPURasterGradientMagnitude as RootGPURasterGradientMagnitude} from '@luma.gl/experimental';
+void RootGPURasterGradientMagnitude;
 `
   );
   assert.equal(

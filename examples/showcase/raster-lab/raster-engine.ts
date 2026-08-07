@@ -14,9 +14,13 @@ import {
   GPURasterContrast,
   GPURasterContours,
   GPURasterGaussianBlur,
+  GPURasterGradientMagnitude,
   GPURasterHistogram,
+  GPURasterLaplacian,
   GPURasterNDVI,
   GPURasterOtsuThreshold,
+  GPURasterScharr,
+  GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
   type GPURasterBufferBand
@@ -51,6 +55,8 @@ export type RasterLabSummary = {
   smoothingMode: RasterLabDisplaySettings['smoothingMode'];
   smoothingRadius: number;
   smoothingSigma: number;
+  edgeMode: RasterLabDisplaySettings['edgeMode'];
+  edgeDirection: RasterLabDisplaySettings['edgeDirection'];
   contrast: number;
   gamma: number;
   threshold: number;
@@ -75,6 +81,8 @@ type RasterLabBuffers = {
   outputValidity: Buffer;
   smoothedValues: Buffer;
   smoothedValidity: Buffer;
+  edgeValues: Buffer;
+  edgeValidity: Buffer;
   analyzedValues: Buffer;
   analyzedValidity: Buffer;
   thresholdValidity: Buffer;
@@ -108,6 +116,8 @@ export class RasterLabEngine {
     smoothingMode: 'none',
     smoothingRadius: 2,
     smoothingSigma: 1.25,
+    edgeMode: 'none',
+    edgeDirection: 'magnitude',
     contrast: 1.15,
     gamma: 1,
     threshold: 0.35,
@@ -155,6 +165,16 @@ export class RasterLabEngine {
       }),
       smoothedValidity: device.createBuffer({
         id: 'raster-lab-smoothed-validity',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      edgeValues: device.createBuffer({
+        id: 'raster-lab-edge-values',
+        byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      edgeValidity: device.createBuffer({
+        id: 'raster-lab-edge-validity',
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
@@ -258,7 +278,7 @@ export class RasterLabEngine {
         nearInfrared: this.buffers.nearInfrared,
         vegetationIndex: this.buffers.vegetationIndex,
         analyzedValues: this.buffers.analyzedValues,
-        validity: this.buffers.outputValidity,
+        validity: this.buffers.analyzedValidity,
         thresholdValidity: this.buffers.thresholdValidity,
         contourVertices: this.buffers.contourVertices,
         contourCommands: initializedContourCommands
@@ -285,6 +305,8 @@ export class RasterLabEngine {
       settings.smoothingMode === this.settings.smoothingMode &&
       settings.smoothingRadius === this.settings.smoothingRadius &&
       Math.abs(settings.smoothingSigma - this.settings.smoothingSigma) < 0.0000001 &&
+      settings.edgeMode === this.settings.edgeMode &&
+      settings.edgeDirection === this.settings.edgeDirection &&
       Math.abs(settings.contrast - this.settings.contrast) < 0.0000001 &&
       Math.abs(settings.gamma - this.settings.gamma) < 0.0000001 &&
       Math.abs(settings.threshold - this.settings.threshold) < 0.0000001 &&
@@ -403,6 +425,8 @@ export class RasterLabEngine {
       smoothingMode: this.settings.smoothingMode,
       smoothingRadius: this.settings.smoothingRadius,
       smoothingSigma: this.settings.smoothingSigma,
+      edgeMode: this.settings.edgeMode,
+      edgeDirection: this.settings.edgeDirection,
       contrast: this.settings.contrast,
       gamma: this.settings.gamma,
       threshold: this.settings.automaticThreshold
@@ -496,6 +520,20 @@ export class RasterLabEngine {
       graph,
       'smoothed-validity',
       this.buffers.smoothedValidity,
+      'uint32',
+      this.dataset.pixelCount
+    );
+    const edgeValues = this.importView(
+      graph,
+      'edge-values',
+      this.buffers.edgeValues,
+      'float32',
+      this.dataset.pixelCount
+    );
+    const edgeValidity = this.importView(
+      graph,
+      'edge-validity',
+      this.buffers.edgeValidity,
       'uint32',
       this.dataset.pixelCount
     );
@@ -646,22 +684,69 @@ export class RasterLabEngine {
       smoothing.addToGraph(graph);
     }
 
+    const filteredBand: GPURasterBufferBand<'float32'> =
+      this.settings.smoothingMode === 'none'
+        ? sourceBand
+        : {
+            id: `${this.settings.mode}-${this.settings.smoothingMode}-smoothed`,
+            format: 'float32',
+            storage: {kind: 'buffer', values: smoothedValues},
+            validity: smoothedValidity
+          };
+
+    if (this.settings.edgeMode !== 'none') {
+      const edgeProps = {
+        id: `raster-lab-${this.settings.edgeMode}-${this.settings.edgeDirection}`,
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: filteredBand,
+        output: edgeValues,
+        outputValidity: edgeValidity,
+        borderMode: 'reflect' as const,
+        scale: this.settings.edgeMode === 'scharr' ? 0.25 : 1
+      };
+
+      if (this.settings.edgeMode === 'laplacian') {
+        new GPURasterLaplacian({...edgeProps, connectivity: 4}).addToGraph(graph);
+      } else if (this.settings.edgeDirection === 'magnitude') {
+        new GPURasterGradientMagnitude({
+          ...edgeProps,
+          operator: this.settings.edgeMode
+        }).addToGraph(graph);
+      } else if (this.settings.edgeMode === 'sobel') {
+        new GPURasterSobel({...edgeProps, direction: this.settings.edgeDirection}).addToGraph(
+          graph
+        );
+      } else {
+        new GPURasterScharr({...edgeProps, direction: this.settings.edgeDirection}).addToGraph(
+          graph
+        );
+      }
+    }
+
     new GPURasterContrast({
       id: 'raster-lab-contrast',
       width: this.dataset.width,
       height: this.dataset.height,
       input:
-        this.settings.smoothingMode === 'none'
-          ? sourceBand
+        this.settings.edgeMode === 'none'
+          ? filteredBand
           : {
-              id: `${this.settings.mode}-${this.settings.smoothingMode}-smoothed`,
+              id: `${this.settings.mode}-${this.settings.edgeMode}-edges`,
               format: 'float32',
-              storage: {kind: 'buffer', values: smoothedValues},
-              validity: smoothedValidity
+              storage: {kind: 'buffer', values: edgeValues},
+              validity: edgeValidity
             },
       output: analyzedValues,
       outputValidity: analyzedValidity,
-      domain: this.settings.mode === 'ndvi' ? [-1, 1] : [0, 1],
+      domain:
+        this.settings.edgeMode === 'none'
+          ? this.settings.mode === 'ndvi'
+            ? [-1, 1]
+            : [0, 1]
+          : this.settings.edgeMode !== 'laplacian' && this.settings.edgeDirection === 'magnitude'
+            ? [0, 1]
+            : [-1, 1],
       contrast: this.settings.contrast,
       gamma: this.settings.gamma,
       mode: this.settings.gamma === 1 ? 'linear' : 'gamma'
