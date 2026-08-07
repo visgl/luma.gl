@@ -18,3 +18,5 @@ export {LuGraphConnectedComponents} from './lu-graph-connected-components';
 export type {LuGraphConnectedComponentsProps} from './lu-graph-connected-components';
 export {LuGraphPageRank} from './lu-graph-page-rank';
 export type {LuGraphPageRankProps} from './lu-graph-page-rank';
+export {LuGraphForceLayout} from './lu-graph-force-layout';
+export type {LuGraphForceLayoutProps} from './lu-graph-force-layout';
