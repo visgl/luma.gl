@@ -89,6 +89,7 @@ test('RayTracingSceneRenderer builds and traverses an instance BVH within WebGPU
     samplesPerPixel: 2,
     progressive: true,
     shadows: true,
+    adaptiveResolution: false,
     width: 32,
     height: 32
   };
