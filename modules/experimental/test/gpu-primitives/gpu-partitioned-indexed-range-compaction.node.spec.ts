@@ -38,6 +38,17 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
     }
   });
 
+  test('accepts one packed visibility bit per source row', () => {
+    const fixture = createCompactionFixture('bitset');
+    try {
+      const result = fixture.compaction.addToGraph(fixture.graph);
+      expect(fixture.compaction.flags.data.map(chunk => chunk.length)).toEqual([1, 1]);
+      expect(result.localOffsets.data.map(chunk => chunk.length)).toEqual([6, 5]);
+    } finally {
+      fixture.device.destroy();
+    }
+  });
+
   test('requires matching bounded chunks and complete range partitions', () => {
     const fixture = createCompactionFixture();
     const props = {
@@ -75,13 +86,22 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
             output: createVector(fixture.graph, 'mismatched-output', [5, 6])
           })
       ).toThrow(/same chunk topology/i);
+      expect(
+        () =>
+          new GPUPartitionedIndexedRangeCompaction({
+            ...props,
+            flagEncoding: 'bitset',
+            flags: createVector(fixture.graph, 'short-bitset-flags', [1, 1]),
+            output: createVector(fixture.graph, 'long-bitset-output', [33, 5])
+          })
+      ).toThrow(/one bit per output row/i);
     } finally {
       fixture.device.destroy();
     }
   });
 });
 
-function createCompactionFixture(): {
+function createCompactionFixture(flagEncoding: 'uint32' | 'bitset' = 'uint32'): {
   device: NullDevice;
   graph: GPUCommandGraph;
   compaction: GPUPartitionedIndexedRangeCompaction;
@@ -94,7 +114,8 @@ function createCompactionFixture(): {
   const graph = new GPUCommandGraph(device, {id: 'partitioned-range-compaction-node-graph'});
   const compaction = new GPUPartitionedIndexedRangeCompaction({
     id: 'visible',
-    flags: createVector(graph, 'flags', [6, 5]),
+    flags: createVector(graph, 'flags', flagEncoding === 'bitset' ? [1, 1] : [6, 5]),
+    flagEncoding,
     ranges: createView(graph, 'ranges', 8),
     rangeCount: 4,
     rangeLayout: {wordStride: 2, firstIndexWordOffset: 0, countWordOffset: 1},

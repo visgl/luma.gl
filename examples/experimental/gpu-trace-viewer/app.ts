@@ -71,6 +71,7 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
+  getCandidateDependencySpanVisibilityShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
@@ -698,7 +699,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           uniforms,
           visibility: this.createStorageBuffer(
             `gpu-trace-span-visibility-${chunk.chunkIndex}`,
-            chunk.spanCount * UINT32_BYTE_LENGTH,
+            Math.ceil(chunk.spanCount / 32) * UINT32_BYTE_LENGTH,
             Buffer.COPY_SRC
           ),
           visibleIds: this.createStorageBuffer(
@@ -944,7 +945,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const spanVisibility = makeTraceGraphVector(
       'trace-span-visibility',
       handles.spanChunks.map(chunk =>
-        graph.createDataView(chunk.visibility, {format: 'uint32', length: chunk.spanCount})
+        graph.createDataView(chunk.visibility, {
+          format: 'uint32',
+          length: Math.ceil(chunk.spanCount / 32)
+        })
       )
     );
     const visibleSpanIds = makeTraceGraphVector(
@@ -1204,22 +1208,17 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         dispatchBuffer: handles.exactCandidateDispatchCommands
       });
       if (resources.dependencyCount > 0) {
-        graph.addCopyPass({
-          id: `trace-copy-dependency-span-visibility-${chunk.chunkIndex}`,
-          resources: [
-            {buffer: chunk.visibility, usage: 'copy-source'},
-            {buffer: handles.dependencySpanVisibility, usage: 'copy-destination'}
+        addTraceIndirectComputePass(graph, {
+          id: `trace-publish-dependency-span-visibility-${chunk.chunkIndex}`,
+          source: getCandidateDependencySpanVisibilityShader(chunk),
+          bindings: [
+            storageRead('visibilityFlags', chunk.visibility),
+            storageRead('spanBatches', handles.spanBatchIndex),
+            storageRead('candidateBatchIds', handles.candidateBatchIds),
+            uniformBinding('viewUniforms', handles.uniforms),
+            storageWrite('dependencySpanVisibility', handles.dependencySpanVisibility)
           ],
-          compile: () => ({
-            encode: ({commandEncoder, getBuffer}) => {
-              commandEncoder.copyBufferToBuffer({
-                sourceBuffer: getBuffer(chunk.visibility),
-                destinationBuffer: getBuffer(handles.dependencySpanVisibility),
-                destinationOffset: chunk.firstSpanIndex * UINT32_BYTE_LENGTH,
-                size: chunk.spanCount * UINT32_BYTE_LENGTH
-              });
-            }
-          })
+          dispatchBuffer: handles.exactCandidateDispatchCommands
         });
       }
     }
@@ -1271,6 +1270,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const rangeCompaction = new GPUPartitionedIndexedRangeCompaction({
       id: 'trace-visible-spans',
       flags: spanVisibility,
+      flagEncoding: 'bitset',
       ranges: graph.createDataView(handles.spanBatchIndex, {
         format: 'uint32',
         length: resources.spanBatchCount * 8

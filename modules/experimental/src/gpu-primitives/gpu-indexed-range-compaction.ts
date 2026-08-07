@@ -32,6 +32,9 @@ export type GPUIndexedRangeLayout = {
   countWordOffset: number;
 };
 
+/** Physical representation of source-aligned selection flags. */
+export type GPUIndexedRangeFlagEncoding = 'uint32' | 'bitset';
+
 /** Properties for candidate-driven stable source-index compaction. */
 export type GPUIndexedRangeCompactionProps = {
   /** Prefix for generated resources and graph nodes. */
@@ -72,6 +75,8 @@ export type GPUPartitionedIndexedRangeCompactionProps = {
   id?: string;
   /** Source-aligned flags split at complete range boundaries. */
   flags: GraphVectorView<'uint32'>;
+  /** Flag representation. Defaults to one uint32 per source row. */
+  flagEncoding?: GPUIndexedRangeFlagEncoding;
   /** Packed source-range records shared by every partition. */
   ranges: GraphDataView<'uint32'>;
   /** Number of range records. */
@@ -223,6 +228,7 @@ export class GPUIndexedRangeCompaction {
 export class GPUPartitionedIndexedRangeCompaction {
   readonly id: string;
   readonly flags: GraphVectorView<'uint32'>;
+  readonly flagEncoding: GPUIndexedRangeFlagEncoding;
   readonly ranges: GraphDataView<'uint32'>;
   readonly rangeCount: number;
   readonly rangeLayout: GPUIndexedRangeLayout;
@@ -236,6 +242,7 @@ export class GPUPartitionedIndexedRangeCompaction {
   constructor(props: GPUPartitionedIndexedRangeCompactionProps) {
     this.id = props.id ?? 'gpu-partitioned-indexed-range-compaction';
     this.flags = props.flags;
+    this.flagEncoding = props.flagEncoding ?? 'uint32';
     this.ranges = props.ranges;
     this.rangeCount = props.rangeCount;
     this.rangeLayout = props.rangeLayout;
@@ -255,7 +262,11 @@ export class GPUPartitionedIndexedRangeCompaction {
     }
     validatePartitionedVector(this.id, 'flags', this.flags);
     validatePartitionedVector(this.id, 'output', this.output);
-    validateMatchingVectorTopology(this.flags, this.output, `${this.id} output`);
+    if (this.flagEncoding === 'bitset') {
+      validateBitsetVectorTopology(this.id, this.flags, this.output);
+    } else {
+      validateMatchingVectorTopology(this.flags, this.output, `${this.id} output`);
+    }
     validateRangeCompactionShape(this);
     validatePartitionRangeEnds(
       this.id,
@@ -284,7 +295,7 @@ export class GPUPartitionedIndexedRangeCompaction {
       throw new Error(`${this.id} activeRangeDispatch must belong to the target graph`);
     }
 
-    const localOffsets = createTransientVectorView(graph, `${this.id}-local-offsets`, this.flags);
+    const localOffsets = createTransientVectorView(graph, `${this.id}-local-offsets`, this.output);
     const rangeCounts: GraphDataView<'uint32'> = createTransientView(
       graph,
       `${this.id}-range-counts`,
@@ -311,7 +322,7 @@ export class GPUPartitionedIndexedRangeCompaction {
       const flags = this.flags.data[partitionIndex];
       const output = this.output.data[partitionIndex];
       const offsets = localOffsets.data[partitionIndex];
-      const sourceEnd = sourceStart + flags.length;
+      const sourceEnd = sourceStart + output.length;
       const rangeEnd = this.partitionRangeEnds[partitionIndex];
       addPartitionLocalScanPass(graph, this, {
         partitionIndex,
@@ -355,6 +366,23 @@ export class GPUPartitionedIndexedRangeCompaction {
     }
     addPartitionCountPass(graph, this, rangeCounts, rangeOffsets, partitionCounts);
     return {localOffsets, rangeCounts, rangeOffsets, partitionCounts};
+  }
+}
+
+function validateBitsetVectorTopology(
+  id: string,
+  flags: GraphVectorView<'uint32'>,
+  output: GraphVectorView<'uint32'>
+): void {
+  if (flags.data.length !== output.data.length) {
+    throw new Error(`${id} bitset flags must contain one chunk per output chunk`);
+  }
+  for (let chunkIndex = 0; chunkIndex < flags.data.length; chunkIndex++) {
+    const flagWordCount = flags.data[chunkIndex].length;
+    const sourceLength = output.data[chunkIndex].length;
+    if (flagWordCount !== Math.ceil(sourceLength / 32)) {
+      throw new Error(`${id} bitset flag chunks must contain one bit per output row`);
+    }
   }
 }
 
@@ -451,6 +479,7 @@ function addPartitionLocalScanPass<Parameters>(
   }
 ): void {
   const {rangeLayout} = compaction;
+  const selectedExpression = getFlagSelectionExpression(compaction.flagEncoding, 'chunkIndex');
   const source = /* wgsl */ `
 const RANGE_START: u32 = ${props.rangeStart}u;
 const RANGE_END: u32 = ${props.rangeEnd}u;
@@ -489,7 +518,7 @@ fn main(
   let localIndex = localId.x;
   let chunkIndex = firstIndex - SOURCE_START + localIndex;
   var selected = 0u;
-  if (localIndex < elementCount && flags[FLAGS_OFFSET + chunkIndex] != 0u) {
+  if (localIndex < elementCount && ${selectedExpression}) {
     selected = 1u;
   }
   prefixes[localIndex] = selected;
@@ -558,6 +587,7 @@ function addPartitionScatterPass<Parameters>(
   }
 ): void {
   const {rangeLayout} = compaction;
+  const selectedExpression = getFlagSelectionExpression(compaction.flagEncoding, 'chunkIndex');
   const source = /* wgsl */ `
 const RANGE_START: u32 = ${props.rangeStart}u;
 const RANGE_END: u32 = ${props.rangeEnd}u;
@@ -596,7 +626,7 @@ fn main(
     return;
   }
   let chunkIndex = firstIndex - SOURCE_START + localId.x;
-  if (flags[FLAGS_OFFSET + chunkIndex] != 0u) {
+  if (${selectedExpression}) {
     let outputIndex = rangeOffsets[RANGE_OFFSETS_OFFSET + rangeId] +
       localOffsets[LOCAL_OFFSETS_OFFSET + chunkIndex];
     outputIds[OUTPUT_OFFSET + outputIndex] = firstIndex + localId.x;
@@ -623,6 +653,15 @@ fn main(
     ],
     dispatchBuffer: compaction.activeRangeDispatch
   });
+}
+
+function getFlagSelectionExpression(
+  encoding: GPUIndexedRangeFlagEncoding,
+  sourceIndex: string
+): string {
+  return encoding === 'bitset'
+    ? `(flags[FLAGS_OFFSET + (${sourceIndex} >> 5u)] & (1u << (${sourceIndex} & 31u))) != 0u`
+    : `flags[FLAGS_OFFSET + ${sourceIndex}] != 0u`;
 }
 
 function addPartitionCountPass<Parameters>(

@@ -51,7 +51,11 @@ describe('GPU hierarchical trace viewer', () => {
             buffer: {readAsync: () => Promise<Uint8Array>};
           };
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
-          spanChunks: Array<{visibleIds: {readAsync: () => Promise<Uint8Array>}}>;
+          spanChunks: Array<{
+            spanCount: number;
+            visibility: {byteLength: number};
+            visibleIds: {readAsync: () => Promise<Uint8Array>};
+          }>;
           visibleDependencyIds: {readAsync: () => Promise<Uint8Array>};
           dependencyResults: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
@@ -91,6 +95,13 @@ describe('GPU hierarchical trace viewer', () => {
       expect(state.resources.focusFrontierCapacity).toBe(
         getTraceFocusFrontierCapacity(state.resources.spanCount, state.resources.dependencyCount)
       );
+      expect(
+        state.resources.spanChunks.every(
+          chunk =>
+            chunk.visibility.byteLength ===
+            Math.ceil(chunk.spanCount / 32) * Uint32Array.BYTES_PER_ELEMENT
+        )
+      ).toBe(true);
       expect(state.resources.dependencyBatchCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);

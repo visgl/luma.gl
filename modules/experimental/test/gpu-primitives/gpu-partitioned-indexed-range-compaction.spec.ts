@@ -22,10 +22,7 @@ test('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks',
 
   const resources: Buffer[] = [];
   const graph = new GPUCommandGraph(device, {id: 'partitioned-range-compaction-graph'});
-  const flags = createImportedVector(graph, device, resources, 'flags', [
-    [1, 0, 1, 0, 1, 1],
-    [0, 1, 1, 0, 1]
-  ]);
+  const flags = createImportedVector(graph, device, resources, 'flags', [[0b110101], [0b10110]]);
   const output = createOutputVector(graph, device, resources, 'output', [6, 5]);
   const ranges = createImportedView(graph, device, resources, 'ranges', [0, 3, 3, 3, 6, 2, 8, 3]);
   const activeRangeIdsResource = createImportedBuffer(
@@ -48,6 +45,7 @@ test('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks',
   const compaction = new GPUPartitionedIndexedRangeCompaction({
     id: 'visible',
     flags,
+    flagEncoding: 'bitset',
     ranges,
     rangeCount: 4,
     rangeLayout: {wordStride: 2, firstIndexWordOffset: 0, countWordOffset: 1},
