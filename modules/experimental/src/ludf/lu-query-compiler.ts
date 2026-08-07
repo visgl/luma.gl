@@ -2,9 +2,23 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Binding, type CommandEncoder, type Device} from '@luma.gl/core';
+import {
+  Buffer,
+  type Binding,
+  type BufferLayout,
+  type CommandEncoder,
+  type Device
+} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUData, GPUVector, type GPUTable, type GPUTypeMap} from '@luma.gl/tables';
+import {
+  GPUData,
+  GPURecordBatch,
+  GPUTable,
+  GPUVector,
+  type GPUConstant,
+  type GPUField,
+  type GPUTypeMap
+} from '@luma.gl/tables';
 import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraph,
@@ -23,14 +37,17 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-primitives/graph-data-view-utils';
-import type {LuDataFrame} from './lu-data-frame';
+import type {LuDataFrame, LuDataFrameDictionaries, LuDataFrameValidity} from './lu-data-frame';
+import type {LuDataFrameDerivedColumn} from './lu-data-frame-query';
 import type {LuExpression} from './lu-expression';
 import {
   encodeLuQueryExpressionControls,
   getLuQueryShaderType,
   makeLuQueryExpressionShaderPlan,
   type LuQueryExpressionColumn,
-  type LuQueryExpressionShaderPlan
+  type LuQueryExpressionOutput,
+  type LuQueryExpressionShaderPlan,
+  type LuQueryScalarFormat
 } from './lu-expression-shader';
 
 const LU_QUERY_WORKGROUP_SIZE = 256;
@@ -44,13 +61,28 @@ type LuQuerySourceView = {
   validity?: GraphVectorView<'uint32'>;
 };
 
+type LuQueryDerivedOutput = {
+  plan: LuQueryExpressionOutput;
+  values: GPUVector<LuQueryScalarFormat>;
+  validity?: GPUVector<'uint32'>;
+};
+
+type LuQueryDerivedView = {
+  values: GraphVectorView<LuQueryScalarFormat>;
+  validity?: GraphVectorView<'uint32'>;
+};
+
 type CompiledLuDataFrameQueryProps<T extends GPUTypeMap> = {
   table: GPUTable<T>;
+  validity: Readonly<LuDataFrameValidity<T>>;
+  dictionaries: Readonly<LuDataFrameDictionaries<T>>;
   selectionMask: GPUVector<'uint32'>;
   rowIndices: GPUVector<'uint32'>;
   selectedCounts: GPUVector<'uint32'>;
   graph: CompiledGPUCommandGraph<LuDataFrameQueryParameters>;
   sourceViews: readonly Pick<LuDataFrame, 'destroy'>[];
+  ownedTable?: GPUTable<T>;
+  ownedVectors?: readonly GPUVector[];
 };
 
 /**
@@ -62,6 +94,10 @@ type CompiledLuDataFrameQueryProps<T extends GPUTypeMap> = {
 export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
   /** Non-destructive projection of the original source table. */
   readonly table: GPUTable<T>;
+  /** Explicit validity sidecars for every selected nullable source or derived column. */
+  readonly validity: Readonly<LuDataFrameValidity<T>>;
+  /** Source categorical labels retained for selected, unmodified dictionary columns. */
+  readonly dictionaries: Readonly<LuDataFrameDictionaries<T>>;
   /** Canonical 0/1 selection flags with exactly the original source batch topology. */
   readonly selectionMask: GPUVector<'uint32'>;
   /** Stable, batch-local compacted source-row identities. */
@@ -71,16 +107,22 @@ export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
 
   private readonly graph: CompiledGPUCommandGraph<LuDataFrameQueryParameters>;
   private readonly sourceViews: readonly Pick<LuDataFrame, 'destroy'>[];
+  private readonly ownedTable?: GPUTable<T>;
+  private readonly ownedVectors: readonly GPUVector[];
   private destroyed = false;
 
   /** @internal */
   constructor(props: CompiledLuDataFrameQueryProps<T>) {
     this.table = props.table;
+    this.validity = props.validity;
+    this.dictionaries = props.dictionaries;
     this.selectionMask = props.selectionMask;
     this.rowIndices = props.rowIndices;
     this.selectedCounts = props.selectedCounts;
     this.graph = props.graph;
     this.sourceViews = props.sourceViews;
+    this.ownedTable = props.ownedTable;
+    this.ownedVectors = props.ownedVectors ?? [];
   }
 
   /** Encodes reusable graph work without finishing or submitting the application encoder. */
@@ -104,6 +146,10 @@ export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
     this.selectionMask.destroy();
     this.rowIndices.destroy();
     this.selectedCounts.destroy();
+    this.ownedTable?.destroy();
+    for (const vector of this.ownedVectors) {
+      vector.destroy();
+    }
     for (const sourceView of this.sourceViews) {
       sourceView.destroy();
     }
@@ -111,44 +157,91 @@ export class CompiledLuDataFrameQuery<T extends GPUTypeMap = GPUTypeMap> {
 }
 
 /** Compiles immutable dataframe predicates into source-batch-preserving WebGPU command work. */
-export function compileLuDataFrameQuery<T extends GPUTypeMap, ColumnName extends keyof T & string>(
-  source: LuDataFrame<T>,
+export function compileLuDataFrameQuery<Source extends GPUTypeMap, Result extends GPUTypeMap>(
+  source: LuDataFrame<Source>,
   predicates: readonly LuExpression<boolean, string>[],
-  selectedColumns: readonly ColumnName[],
-  graph: GPUCommandGraph<LuDataFrameQueryParameters>
-): CompiledLuDataFrameQuery<Pick<T, ColumnName>> {
-  const retainedSource = source.select<keyof T & string>(source.columnNames);
-  let selectedSource: LuDataFrame<Pick<T, ColumnName>> | undefined;
+  selectedColumns: readonly (keyof Result & string)[],
+  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
+  derivedColumns: readonly LuDataFrameDerivedColumn[] = []
+): CompiledLuDataFrameQuery<Result> {
+  const retainedSource = source.select<keyof Source & string>(source.columnNames);
+  let selectedSource: LuDataFrame | undefined;
+  let ownedTable: GPUTable<Result> | undefined;
+  const derivedOutputs: LuQueryDerivedOutput[] = [];
   let selectionMask: GPUVector<'uint32'> | undefined;
   let rowIndices: GPUVector<'uint32'> | undefined;
   let selectedCounts: GPUVector<'uint32'> | undefined;
   let compiledGraph: CompiledGPUCommandGraph<LuDataFrameQueryParameters> | undefined;
 
   try {
-    selectedSource = retainedSource.select(selectedColumns) as LuDataFrame<Pick<T, ColumnName>>;
-    const plan = makeLuQueryExpressionShaderPlan(retainedSource, predicates);
+    const sourceColumns = selectedColumns.filter(columnName =>
+      retainedSource.schema.fields.some(field => field.name === columnName)
+    ) as (keyof Source & string)[];
+    selectedSource = retainedSource.select(sourceColumns) as unknown as LuDataFrame;
+    const plan = makeLuQueryExpressionShaderPlan(
+      retainedSource,
+      predicates,
+      derivedColumns,
+      selectedColumns
+    );
     validateLuQueryBatchCapacity(retainedSource, graph);
     validateLuQueryBindingCapacity(plan, graph);
 
     selectionMask = createLuQueryOutputVector(
       graph.device,
       'ludf-selection-mask',
-      retainedSource.batches.map(batch => batch.numRows)
+      retainedSource.batches.map(batch => batch.numRows),
+      'uint32'
     );
     rowIndices = createLuQueryOutputVector(
       graph.device,
       'ludf-row-indices',
       retainedSource.batches.map(batch => batch.numRows),
+      'uint32',
       true
     );
     selectedCounts = createLuQueryOutputVector(
       graph.device,
       'ludf-selected-counts',
-      retainedSource.batches.map(() => 1)
+      retainedSource.batches.map(() => 1),
+      'uint32'
     );
+    for (const output of plan.outputs) {
+      const values = createLuQueryOutputVector(
+        graph.device,
+        `ludf-derived-${output.index}`,
+        retainedSource.batches.map(batch => batch.numRows),
+        output.format,
+        false,
+        true
+      );
+      const derivedOutput: LuQueryDerivedOutput = {plan: output, values};
+      derivedOutputs.push(derivedOutput);
+      if (output.nullable && retainedSource.batches.length > 0) {
+        derivedOutput.validity = createLuQueryOutputVector(
+          graph.device,
+          `ludf-derived-${output.index}-validity`,
+          retainedSource.batches.map(batch => batch.numRows),
+          'uint32'
+        );
+      }
+    }
+    if (derivedOutputs.length > 0) {
+      ownedTable = createLuQueryDerivedTable<Result>(
+        selectedSource.table,
+        selectedColumns,
+        derivedOutputs
+      );
+    }
+
+    const validity = selectLuQueryValidity<Result>(selectedSource, derivedOutputs);
+    const dictionaries = Object.freeze({
+      ...selectedSource.dictionaries
+    }) as Readonly<LuDataFrameDictionaries<Result>>;
 
     const queryId = `${graph.id}-ludf-query`;
     const sourceViews = importLuQuerySourceViews(graph, retainedSource, plan, queryId);
+    const derivedViews = importLuQueryDerivedViews(graph, derivedOutputs, queryId);
     const maskView = graph.importGPUVector(`${queryId}-selection-mask`, selectionMask);
     const rowIndexView = graph.importGPUVector(`${queryId}-row-indices`, rowIndices);
     const countView = graph.importGPUVector(`${queryId}-selected-counts`, selectedCounts);
@@ -177,6 +270,7 @@ export function compileLuDataFrameQuery<T extends GPUTypeMap, ColumnName extends
           batchIndex,
           columns: plan.columns,
           sourceViews,
+          derivedViews,
           controls,
           output: mask,
           plan
@@ -195,19 +289,30 @@ export function compileLuDataFrameQuery<T extends GPUTypeMap, ColumnName extends
     }
 
     compiledGraph = graph.compile();
-    return new CompiledLuDataFrameQuery<Pick<T, ColumnName>>({
-      table: selectedSource.table,
+    return new CompiledLuDataFrameQuery<Result>({
+      table: ownedTable ?? (selectedSource.table as GPUTable<Result>),
+      validity,
+      dictionaries,
       selectionMask,
       rowIndices,
       selectedCounts,
       graph: compiledGraph,
-      sourceViews: [selectedSource, retainedSource]
+      sourceViews: [selectedSource, retainedSource],
+      ...(ownedTable ? {ownedTable} : {}),
+      ownedVectors: derivedOutputs.flatMap(output =>
+        output.validity ? [output.values, output.validity] : [output.values]
+      )
     });
   } catch (error) {
     compiledGraph?.destroy();
     selectionMask?.destroy();
     rowIndices?.destroy();
     selectedCounts?.destroy();
+    ownedTable?.destroy();
+    for (const output of derivedOutputs) {
+      output.values.destroy();
+      output.validity?.destroy();
+    }
     selectedSource?.destroy();
     retainedSource.destroy();
     throw error;
@@ -238,43 +343,192 @@ function validateLuQueryBindingCapacity(
     (bindingCount, column) => bindingCount + 1 + (column.nullable ? 1 : 0),
     0
   );
-  const bindingCount = sourceCount + (plan.controls.length > 0 ? 1 : 0) + 1;
+  const outputCount = plan.outputs.reduce(
+    (bindingCount, output) => bindingCount + 1 + (output.nullable ? 1 : 0),
+    0
+  );
+  const bindingCount = sourceCount + outputCount + (plan.controls.length > 0 ? 1 : 0) + 1;
   if (bindingCount > graph.device.limits.maxStorageBuffersPerShaderStage) {
     throw new Error('LuDataFrame filter exceeds the available WebGPU storage-buffer bindings');
   }
 }
 
 /** Creates one independently owned fixed-width GPU output chunk for every source batch. */
-function createLuQueryOutputVector(
+function createLuQueryOutputVector<Format extends LuQueryScalarFormat>(
   device: Device,
   name: string,
   lengths: readonly number[],
-  indexBuffer = false
-): GPUVector<'uint32'> {
-  const data: GPUData<'uint32'>[] = [];
+  format: Format,
+  indexBuffer = false,
+  vertexBuffer = false
+): GPUVector<Format> {
+  const data: GPUData<Format>[] = [];
   try {
     for (const [batchIndex, length] of lengths.entries()) {
       const buffer = device.createBuffer({
         id: `${name}-batch-${batchIndex}`,
         byteLength: Math.max(length, 1) * UINT32_BYTE_LENGTH,
         usage:
-          Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST | (indexBuffer ? Buffer.INDEX : 0),
+          Buffer.STORAGE |
+          Buffer.COPY_SRC |
+          Buffer.COPY_DST |
+          (indexBuffer ? Buffer.INDEX : 0) |
+          (vertexBuffer ? Buffer.VERTEX : 0),
         ...(indexBuffer ? {indexType: 'uint32' as const} : {})
       });
       try {
-        data.push(new GPUData({buffer, format: 'uint32', length, ownsBuffer: true}));
+        data.push(new GPUData({buffer, format, length, ownsBuffer: true}));
       } catch (error) {
         buffer.destroy();
         throw error;
       }
     }
-    return new GPUVector({type: 'data', name, format: 'uint32', data, ownsData: true});
+    return new GPUVector({type: 'data', name, format, data, ownsData: true});
   } catch (error) {
     for (const chunk of data) {
       chunk.destroy();
     }
     throw error;
   }
+}
+
+/** Preserves source sidecars while adding only independently owned derived validity vectors. */
+function selectLuQueryValidity<Result extends GPUTypeMap>(
+  selectedSource: LuDataFrame,
+  outputs: readonly LuQueryDerivedOutput[]
+): Readonly<LuDataFrameValidity<Result>> {
+  const validity: Record<string, GPUVector<'uint32'>> = {};
+  for (const [name, vector] of Object.entries(selectedSource.validity)) {
+    if (vector) {
+      validity[name] = vector;
+    }
+  }
+  for (const output of outputs) {
+    if (output.validity) {
+      validity[output.plan.name] = output.validity;
+    }
+  }
+  return Object.freeze(validity) as Readonly<LuDataFrameValidity<Result>>;
+}
+
+/** Builds a borrowed result table without repacking batches or changing ownership of source data. */
+function createLuQueryDerivedTable<Result extends GPUTypeMap>(
+  selectedSource: GPUTable,
+  selectedColumns: readonly (keyof Result & string)[],
+  outputs: readonly LuQueryDerivedOutput[]
+): GPUTable<Result> {
+  const outputsByName = new Map(outputs.map(output => [output.plan.name, output]));
+  const fields: GPUField<keyof Result & string>[] = selectedColumns.map(name => {
+    const output = outputsByName.get(name);
+    if (output) {
+      return {
+        name,
+        format: output.plan.format,
+        nullable: output.plan.nullable,
+        metadata: new Map()
+      };
+    }
+    const sourceField = selectedSource.schema.fields.find(field => field.name === name);
+    if (!sourceField) {
+      throw new Error(`LuDataFrame result column "${name}" does not exist`);
+    }
+    return {
+      ...(sourceField as GPUField<keyof Result & string>),
+      ...(sourceField.metadata ? {metadata: new Map(sourceField.metadata)} : {})
+    };
+  });
+  const layouts: BufferLayout[] = selectedColumns.flatMap(name => {
+    const output = outputsByName.get(name);
+    if (output) {
+      return [{name, format: output.plan.format, byteStride: UINT32_BYTE_LENGTH}];
+    }
+    return selectedSource.bufferLayout
+      .filter(layout => layout.name === name)
+      .map(layout => ({
+        ...layout,
+        ...(layout.attributes
+          ? {attributes: layout.attributes.map(attribute => ({...attribute}))}
+          : {})
+      }));
+  });
+  const metadata = new Map(selectedSource.schema.metadata);
+  if (selectedSource.batches.length === 0) {
+    return new GPUTable<Result>({schema: {fields, metadata}, bufferLayout: layouts});
+  }
+
+  const constants: Record<string, GPUConstant> = {};
+  for (const name of selectedColumns) {
+    const constant = selectedSource.gpuConstants[name];
+    if (constant) {
+      constants[name] = constant;
+    }
+  }
+
+  const batches: GPURecordBatch<Result>[] = [];
+  try {
+    for (const [batchIndex, sourceBatch] of selectedSource.batches.entries()) {
+      const gpuData: Record<string, GPUData> = {};
+      const varyingFields: GPUField[] = [];
+      for (const field of fields) {
+        const output = outputsByName.get(field.name);
+        const data = output ? output.values.data[batchIndex] : sourceBatch.gpuData[field.name];
+        if (!data) {
+          continue;
+        }
+        gpuData[field.name] = createLuQueryBorrowedData(data);
+        varyingFields.push(field);
+      }
+      batches.push(
+        new GPURecordBatch<Result>({
+          gpuData,
+          bufferLayout: layouts,
+          fields: varyingFields,
+          numRows: sourceBatch.numRows,
+          metadata: new Map(sourceBatch.schema.metadata),
+          sourceInfo: sourceBatch.sourceInfo,
+          nullCount: sourceBatch.nullCount
+        })
+      );
+    }
+    const table = new GPUTable<Result>({batches, constants});
+    table.schema = {fields, metadata};
+    table.numCols = fields.length;
+    for (const name of Object.keys(table.gpuColumns)) {
+      delete table.gpuColumns[name];
+    }
+    for (const name of selectedColumns) {
+      const column = table.gpuVectors[name] ?? table.gpuConstants[name];
+      if (column) {
+        table.gpuColumns[name] = column;
+      }
+    }
+    return table;
+  } catch (error) {
+    for (const batch of batches) {
+      batch.destroy();
+    }
+    throw error;
+  }
+}
+
+/** Copies complete chunk metadata while ensuring result-table destruction never owns a buffer. */
+function createLuQueryBorrowedData(source: GPUData): GPUData {
+  return new GPUData({
+    buffer: source.buffer,
+    format: source.format,
+    length: source.length,
+    valueLength: source.valueLength,
+    stride: source.stride,
+    byteOffset: source.byteOffset,
+    byteStride: source.byteStride,
+    rowByteLength: source.rowByteLength,
+    ownsBuffer: false,
+    readbackMetadata: source.readbackMetadata,
+    valueOffsets: source.valueOffsets,
+    nullBitmap: source.nullBitmap,
+    valueByteLength: source.valueByteLength,
+    dataType: source.dataType
+  });
 }
 
 /** Imports each referenced source vector and validity sidecar exactly once. */
@@ -300,6 +554,23 @@ function importLuQuerySourceViews<T extends GPUTypeMap>(
         ? graph.importGPUVector(`${queryId}-validity-${column.index}`, validityVector)
         : undefined;
     views.set(column.name, {values, ...(validity ? {validity} : {})});
+  }
+  return views;
+}
+
+/** Registers independently owned derived values and nullable sidecars without changing chunks. */
+function importLuQueryDerivedViews(
+  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
+  outputs: readonly LuQueryDerivedOutput[],
+  queryId: string
+): Map<string, LuQueryDerivedView> {
+  const views = new Map<string, LuQueryDerivedView>();
+  for (const output of outputs) {
+    const values = graph.importGPUVector(`${queryId}-derived-${output.plan.index}`, output.values);
+    const validity = output.validity
+      ? graph.importGPUVector(`${queryId}-derived-${output.plan.index}-validity`, output.validity)
+      : undefined;
+    views.set(output.plan.name, {values, ...(validity ? {validity} : {})});
   }
   return views;
 }
@@ -331,6 +602,7 @@ function addLuQueryPredicatePass(
     batchIndex: number;
     columns: readonly LuQueryExpressionColumn[];
     sourceViews: ReadonlyMap<string, LuQuerySourceView>;
+    derivedViews: ReadonlyMap<string, LuQueryDerivedView>;
     controls?: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
     plan: LuQueryExpressionShaderPlan;
@@ -381,6 +653,44 @@ function addLuQueryPredicatePass(
     resources.push({buffer: props.controls, usage: 'storage-read'});
   }
 
+  const derivedWrites: string[] = [];
+  for (const output of props.plan.outputs) {
+    const views = props.derivedViews.get(output.name);
+    const values = views?.values.data[props.batchIndex];
+    if (!values) {
+      throw new Error('LuDataFrame derived expression output chunk is missing');
+    }
+    declarations.push(
+      `const DERIVED_${output.index}_OFFSET: u32 = ${getViewElementOffset(values)}u;`
+    );
+    declarations.push(
+      `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derived${output.index}: array<${getLuQueryShaderType(output.format)}>;`
+    );
+    bindings[`derived${output.index}`] = values;
+    resources.push({buffer: values, usage: 'storage-write'});
+    derivedWrites.push(
+      `derived${output.index}[DERIVED_${output.index}_OFFSET + index] = ${output.value};`
+    );
+
+    if (output.nullable) {
+      const validity = views?.validity?.data[props.batchIndex];
+      if (!validity) {
+        throw new Error('LuDataFrame derived expression validity chunk is missing');
+      }
+      declarations.push(
+        `const DERIVED_VALIDITY_${output.index}_OFFSET: u32 = ${getViewElementOffset(validity)}u;`
+      );
+      declarations.push(
+        `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derivedValidity${output.index}: array<u32>;`
+      );
+      bindings[`derivedValidity${output.index}`] = validity;
+      resources.push({buffer: validity, usage: 'storage-write'});
+      derivedWrites.push(
+        `derivedValidity${output.index}[DERIVED_VALIDITY_${output.index}_OFFSET + index] = select(0u, 1u, ${output.valid});`
+      );
+    }
+  }
+
   declarations.push(`const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;`);
   declarations.push(
     `@group(0) @binding(${bindingIndex}) var<storage, read_write> outputMask: array<u32>;`
@@ -408,6 +718,7 @@ fn main(
     return;
   }
   ${props.plan.statements.join('\n  ')}
+  ${derivedWrites.join('\n  ')}
   outputMask[OUTPUT_OFFSET + index] = select(0u, 1u, ${props.plan.condition});
 }`;
 
