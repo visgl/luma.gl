@@ -2675,7 +2675,12 @@ try {
   assert.equal(finalGlobalOverview.globalTileCount, 2);
   assert.deepEqual(finalGlobalOverview.bins, monolithicSourceOverview.bins);
   assert(
-    (await page.locator('.raster-histogram-caption').textContent()).includes('only 228 summary bytes'),
+    (
+      await page
+        .locator('.raster-histogram-caption')
+        .filter({hasText: 'only 228 summary bytes'})
+        .textContent()
+    ).includes('only 228 summary bytes'),
     'merged global extrema, bins, population, mean, and multiplexed median retain one 228-byte read'
   );
 
