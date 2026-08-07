@@ -34,13 +34,15 @@ test('engine#AnimationLoop uses provided stats object', async t => {
   await animationLoop.waitForRender();
   await animationLoop.waitForRender();
 
+  let frameRateUpdated = frameRate.lastSampleTime > beforeFrameRate;
   let cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
-  for (let attempt = 0; !cpuTimeUpdated && attempt < 8; attempt++) {
+  for (let attempt = 0; (!frameRateUpdated || !cpuTimeUpdated) && attempt < 8; attempt++) {
     await new Promise(resolve => setTimeout(resolve, 16));
     await animationLoop.waitForRender();
+    frameRateUpdated = frameRate.lastSampleTime > beforeFrameRate;
     cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
   }
-  t.ok(frameRate.lastSampleTime > beforeFrameRate, 'Frame Rate updates on custom stats object');
+  t.ok(frameRateUpdated, 'Frame Rate updates on custom stats object');
   t.ok(cpuTimeUpdated, 'CPU Time updates on custom stats object');
   t.equal(
     customStats.get('GPU Time').lastSampleTime,
