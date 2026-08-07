@@ -447,7 +447,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | 0 — Package foundation           | Approved scope, clean-room boundary, isolated imports, and CPU fixtures      | Complete    | High   | Small  |
 | 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete    | High   | Large  |
 | 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | In progress | High   | Medium |
-| 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | In progress | High   | Large  |
+| 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Complete    | High   | Large  |
 | 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Planned     | High   | Large  |
 | 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
 | 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | In progress | High   | Large  |
@@ -533,8 +533,16 @@ when their tests and rollback boundaries remain understandable.
   `GPURasterGradientMagnitude` combines both first-derivative axes through graph-owned scratch.
   Explicit scaling, strict nodata propagation, caller-owned outputs, and interactive Raster Lab
   edge controls preserve the analytical command-graph contract.
-- **3.4 pending:** binary/grayscale dilation, erosion, opening, and closing remain a separate
-  morphology tranche; neither smoothing nor gradient operators implement these operations.
+- **3.4 complete for bounded binary and grayscale morphology:** `GPURasterMorphology`,
+  `GPURasterDilation`, `GPURasterErosion`, `GPURasterOpening`, and `GPURasterClosing` implement
+  radius-bounded square and Manhattan-diamond footprints, explicit border/nodata policies, and
+  center-preserving validity. Binary contributors consume and publish exact `uint32` masks with
+  distinct observation validity; grayscale contributors apply source calibration once and publish
+  `float32` extrema. Opening and closing compose graph-owned typed intermediate values and
+  validity, with a cumulative halo of twice the radius. The Raster Lab exposes every operation,
+  both modes, both footprints, radius, nodata policy, and all border policies.
+- **4.1 next:** define an application-owned raster tile-source interface without importing
+  GeoTIFF/COG decoders, network clients, codec choices, or tile residency into the runtime.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -544,7 +552,7 @@ when their tests and rollback boundaries remain understandable.
   its resulting line overlay without reading a draw count. Tile stitching and external deck.gl
   integration remain in Tranche 6.3.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
-  demonstrate the current NDVI/smoothing/gradient/histogram/contour workflow. The full
+  demonstrate the current NDVI/smoothing/gradient/morphology/histogram/contour workflow. The full
   satellite/microscopy/tiled/vector showcase matrix, broader documentation set, benchmarks, and
   final release gates remain pending.
 
@@ -779,8 +787,13 @@ fixtures, and nodata-adjacent neighborhoods match CPU references within document
 
 **Entry:** Tranches 2.4 and 3.1.
 
-**Status:** Pending. Binary/grayscale dilation, erosion, opening, and closing are not implemented
-by the smoothing, first-derivative, second-derivative, or contour contributors.
+**Status:** Complete for bounded packed-buffer raster morphology. Exact binary `uint32` masks and
+calibrated grayscale `float32` extrema support dilation, erosion, opening, and closing over
+square or Manhattan-diamond footprints. Separate validity preserves the distinction between
+legitimate background and missing observations. All four border modes, strict/ignore nodata
+policies, identity-radius behavior, graph-owned composite scratch, and cumulative halo metadata
+are implemented. Interactive Raster Lab controls compose these operators with smoothing,
+derivatives, thresholding, valid histograms, and scalar or binary contour overlays.
 
 **Work:** Implement dilation and erosion for defined square/cross structuring elements and
 compose opening/closing from explicit ping-pong passes. Define 4/8-neighborhood interpretation
@@ -793,6 +806,8 @@ intermediate ownership.
 ### Tranche 4.1 — External raster tile source
 
 **Entry:** Tranche 1.1.
+
+**Status:** Next planned tranche; no tile-source implementation is provided by Phase 3.
 
 **Work:** Define an application-supplied asynchronous tile-source interface with dataset
 metadata, requested level, explicit coordinate reference frame, selected bands, spatial window,

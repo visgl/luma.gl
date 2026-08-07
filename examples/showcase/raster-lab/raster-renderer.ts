@@ -10,6 +10,11 @@ export type RasterLabDisplayMode = 'ndvi' | 'red' | 'near-infrared';
 export type RasterLabSmoothingMode = 'none' | 'gaussian' | 'box';
 export type RasterLabEdgeMode = 'none' | 'sobel' | 'scharr' | 'laplacian';
 export type RasterLabEdgeDirection = 'magnitude' | 'x' | 'y';
+export type RasterLabMorphologyOperation = 'none' | 'dilate' | 'erode' | 'open' | 'close';
+export type RasterLabMorphologyMode = 'grayscale' | 'binary';
+export type RasterLabMorphologyShape = 'square' | 'cross';
+export type RasterLabMorphologyNoDataPolicy = 'propagate' | 'ignore';
+export type RasterLabMorphologyBorderMode = 'clamp' | 'reflect' | 'constant' | 'nodata';
 
 /** Canvas-backed rectangle in physical pixels, measured from the upper-left corner. */
 export type RasterLabViewport = {x: number; y: number; width: number; height: number};
@@ -23,6 +28,7 @@ export type RasterLabRendererSources = {
   analyzedValues: Buffer;
   validity: Buffer;
   thresholdValidity: Buffer;
+  morphologyValidity: Buffer;
   contourVertices: Buffer;
   contourCommands: DrawCommandBuffer;
 };
@@ -34,6 +40,13 @@ export type RasterLabDisplaySettings = {
   smoothingSigma: number;
   edgeMode: RasterLabEdgeMode;
   edgeDirection: RasterLabEdgeDirection;
+  morphologyOperation: RasterLabMorphologyOperation;
+  morphologyMode: RasterLabMorphologyMode;
+  morphologyShape: RasterLabMorphologyShape;
+  morphologyRadius: number;
+  morphologyNoDataPolicy: RasterLabMorphologyNoDataPolicy;
+  morphologyBorderMode: RasterLabMorphologyBorderMode;
+  morphologyBorderValue: number;
   contrast: number;
   gamma: number;
   threshold: number;
@@ -55,7 +68,8 @@ struct DisplayUniforms {
 @group(0) @binding(3) var<storage, read> analyzedValues: array<f32>;
 @group(0) @binding(4) var<storage, read> validityValues: array<u32>;
 @group(0) @binding(5) var<storage, read> thresholdValidityValues: array<u32>;
-@group(0) @binding(6) var<uniform> uniforms: DisplayUniforms;
+@group(0) @binding(6) var<storage, read> morphologyValidityValues: array<u32>;
+@group(0) @binding(7) var<uniform> uniforms: DisplayUniforms;
 
 struct VertexOutput {
   @builtin(position) position: vec4f,
@@ -91,7 +105,8 @@ fn getVegetationColor(value: f32) -> vec3f {
   let row = min(u32(input.coordinates.y * f32(rasterHeight)), rasterHeight - 1u);
   let pixelIndex = row * rasterWidth + column;
 
-  if (validityValues[pixelIndex] == 0u) {
+  if (validityValues[pixelIndex] == 0u ||
+      (uniforms.presentation.x > 0.5 && morphologyValidityValues[pixelIndex] == 0u)) {
     let hatch = fract((input.position.x + input.position.y) / 12.0);
     let cloud = mix(vec3f(0.14, 0.2, 0.25), vec3f(0.32, 0.4, 0.42), step(0.56, hatch));
     return vec4f(cloud, 1.0);
@@ -204,7 +219,8 @@ export class RasterLabRenderer {
             {name: 'analyzedValues', type: 'read-only-storage', group: 0, location: 3},
             {name: 'validityValues', type: 'read-only-storage', group: 0, location: 4},
             {name: 'thresholdValidityValues', type: 'read-only-storage', group: 0, location: 5},
-            {name: 'uniforms', type: 'uniform', group: 0, location: 6}
+            {name: 'morphologyValidityValues', type: 'read-only-storage', group: 0, location: 6},
+            {name: 'uniforms', type: 'uniform', group: 0, location: 7}
           ]
         },
         bindings: {
@@ -214,6 +230,7 @@ export class RasterLabRenderer {
           analyzedValues: sources.analyzedValues,
           validityValues: sources.validity,
           thresholdValidityValues: sources.thresholdValidity,
+          morphologyValidityValues: sources.morphologyValidity,
           uniforms: this.uniformBuffer
         },
         parameters: {depthCompare: 'always', depthWriteEnabled: false}
@@ -278,7 +295,7 @@ export class RasterLabRenderer {
         this.rasterHeight,
         settings.mode === 'ndvi' ? 0 : settings.mode === 'red' ? 1 : 2,
         settings.contrast,
-        settings.threshold,
+        Number(settings.morphologyOperation !== 'none' && settings.morphologyMode === 'binary'),
         Number(settings.thresholdEnabled),
         Number(settings.edgeMode !== 'none'),
         Number(settings.edgeDirection !== 'magnitude' || settings.edgeMode === 'laplacian')

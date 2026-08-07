@@ -47,17 +47,22 @@ const requiredRuntimeExportNames = [
   'GPURasterBandMath',
   'GPURasterBoxBlur',
   'GPURasterBufferToTexture',
+  'GPURasterClosing',
   'GPURasterContrast',
   'GPURasterContourClassifier',
   'GPURasterContours',
   'GPURasterConvolution',
+  'GPURasterDilation',
+  'GPURasterErosion',
   'GPURasterGaussianBlur',
   'GPURasterGradient',
   'GPURasterGradientMagnitude',
   'GPURasterHistogram',
   'GPURasterLaplacian',
+  'GPURasterMorphology',
   'GPURasterNDVI',
   'GPURasterNeighborhood',
+  'GPURasterOpening',
   'GPURasterOtsuThreshold',
   'GPURasterScharr',
   'GPURasterSobel',
@@ -103,17 +108,22 @@ try {
   GPURasterBandMath,
   GPURasterBoxBlur,
   GPURasterBufferToTexture,
+  GPURasterClosing,
   GPURasterContrast,
   GPURasterContourClassifier,
   GPURasterContours,
   GPURasterConvolution,
+  GPURasterDilation,
+  GPURasterErosion,
   GPURasterGaussianBlur,
   GPURasterGradient,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
   GPURasterLaplacian,
+  GPURasterMorphology,
   GPURasterNDVI,
   GPURasterNeighborhood,
+  GPURasterOpening,
   GPURasterOtsuThreshold,
   GPURasterScharr,
   GPURasterSobel,
@@ -125,7 +135,9 @@ try {
   type GPURasterBand,
   type GPURasterBandMathOperation,
   type GPURasterBandMathProps,
+  type GPURasterBinaryMorphologyProps,
   type GPURasterBorderMode,
+  type GPURasterClosingProps,
   type GPURasterContrastDomain,
   type GPURasterContrastMode,
   type GPURasterContrastProps,
@@ -133,8 +145,11 @@ try {
   type GPURasterContourLevel,
   type GPURasterContoursProps,
   type GPURasterConvolutionProps,
+  type GPURasterDilationProps,
   type GPURasterEdgeProps,
+  type GPURasterErosionProps,
   type GPURasterGaussianBlurProps,
+  type GPURasterGrayscaleMorphologyProps,
   type GPURasterGradientDirection,
   type GPURasterGradientMagnitudeProps,
   type GPURasterGradientOperator,
@@ -144,29 +159,42 @@ try {
   type GPURasterLaplacianConnectivity,
   type GPURasterLaplacianProps,
   type GPURasterMetadata,
+  type GPURasterMorphologyBaseProps,
+  type GPURasterMorphologyMode,
+  type GPURasterMorphologyNoDataPolicy,
+  type GPURasterMorphologyOperation,
+  type GPURasterMorphologyProps,
   type GPURasterNDVIProps,
   type GPURasterNeighborhoodProps,
   type GPURasterNeighborhoodRadius,
   type GPURasterNoDataPolicy,
+  type GPURasterOpeningProps,
   type GPURasterOtsuDomain,
   type GPURasterOtsuThresholdProps,
   type GPURasterScharrProps,
   type GPURasterSobelProps,
   type GPURasterStatisticsProps,
   type GPURasterSmoothingProps,
+  type GPURasterStructuringElement,
   type GPURasterThresholdOperation,
   type GPURasterThresholdProps,
   type GPURasterThresholdValue,
   type RasterDeviceLimits,
   type RasterDispatchStripe
 } from '@luma.gl/experimental/luraster';
-import type {GPUCommandGraphContributor, GPUReductionMask} from '@luma.gl/experimental';
+import type {
+  GPUCommandGraphContributor,
+  GPUReductionMask,
+  GraphDataView
+} from '@luma.gl/experimental';
 
 declare const contributor: GPUCommandGraphContributor;
 declare const rasterBand: GPURasterBand;
 declare const bandMathOperation: GPURasterBandMathOperation;
 declare const bandMathOptions: GPURasterBandMathProps;
+declare const binaryMorphologyOptions: GPURasterBinaryMorphologyProps;
 declare const borderMode: GPURasterBorderMode;
+declare const closingOptions: GPURasterClosingProps;
 declare const contrastDomain: GPURasterContrastDomain;
 declare const contrastMode: GPURasterContrastMode;
 declare const contrastOptions: GPURasterContrastProps;
@@ -174,8 +202,11 @@ declare const contourClassifierOptions: GPURasterContourClassifierProps;
 declare const contourLevel: GPURasterContourLevel;
 declare const contourOptions: GPURasterContoursProps;
 declare const convolutionOptions: GPURasterConvolutionProps;
+declare const dilationOptions: GPURasterDilationProps;
 declare const edgeOptions: GPURasterEdgeProps;
+declare const erosionOptions: GPURasterErosionProps;
 declare const gaussianOptions: GPURasterGaussianBlurProps;
+declare const grayscaleMorphologyOptions: GPURasterGrayscaleMorphologyProps;
 declare const gradientDirection: GPURasterGradientDirection;
 declare const gradientMagnitudeOptions: GPURasterGradientMagnitudeProps;
 declare const gradientOperator: GPURasterGradientOperator;
@@ -185,16 +216,23 @@ declare const histogramOptions: GPURasterHistogramProps<'float32'>;
 declare const laplacianConnectivity: GPURasterLaplacianConnectivity;
 declare const laplacianOptions: GPURasterLaplacianProps;
 declare const rasterMetadata: GPURasterMetadata;
+declare const morphologyBaseOptions: GPURasterMorphologyBaseProps;
+declare const morphologyMode: GPURasterMorphologyMode;
+declare const morphologyNoDataPolicy: GPURasterMorphologyNoDataPolicy;
+declare const morphologyOperation: GPURasterMorphologyOperation;
+declare const morphologyOptions: GPURasterMorphologyProps;
 declare const ndviOptions: GPURasterNDVIProps;
 declare const neighborhoodOptions: GPURasterNeighborhoodProps;
 declare const neighborhoodRadius: GPURasterNeighborhoodRadius;
 declare const noDataPolicy: GPURasterNoDataPolicy;
+declare const openingOptions: GPURasterOpeningProps;
 declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
 declare const scharrOptions: GPURasterScharrProps;
 declare const sobelOptions: GPURasterSobelProps;
 declare const statisticsOptions: GPURasterStatisticsProps;
 declare const smoothingOptions: GPURasterSmoothingProps;
+declare const structuringElement: GPURasterStructuringElement;
 declare const thresholdOperation: GPURasterThresholdOperation;
 declare const thresholdOptions: GPURasterThresholdProps;
 declare const thresholdValue: GPURasterThresholdValue;
@@ -203,16 +241,21 @@ declare const rasterDispatchStripe: RasterDispatchStripe;
 declare const reductionMask: GPUReductionMask;
 declare const bandMath: GPURasterBandMath;
 declare const boxBlur: GPURasterBoxBlur;
+declare const closing: GPURasterClosing;
 declare const contrast: GPURasterContrast;
 declare const contourClassifier: GPURasterContourClassifier;
 declare const contours: GPURasterContours;
 declare const convolution: GPURasterConvolution;
+declare const dilation: GPURasterDilation;
+declare const erosion: GPURasterErosion;
 declare const gaussianBlur: GPURasterGaussianBlur;
 declare const gradient: GPURasterGradient;
 declare const gradientMagnitude: GPURasterGradientMagnitude;
 declare const laplacian: GPURasterLaplacian;
+declare const morphology: GPURasterMorphology;
 declare const ndvi: GPURasterNDVI;
 declare const neighborhood: GPURasterNeighborhood;
+declare const opening: GPURasterOpening;
 declare const otsu: GPURasterOtsuThreshold;
 declare const scharr: GPURasterScharr;
 declare const sobel: GPURasterSobel;
@@ -222,16 +265,21 @@ declare const threshold: GPURasterThreshold;
 declare const textureToBuffer: GPURasterTextureToBuffer;
 const bandMathContributor: GPUCommandGraphContributor = bandMath;
 const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
+const closingContributor: GPUCommandGraphContributor = closing;
 const contrastContributor: GPUCommandGraphContributor = contrast;
 const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
 const contoursContributor: GPUCommandGraphContributor = contours;
 const convolutionContributor: GPUCommandGraphContributor = convolution;
+const dilationContributor: GPUCommandGraphContributor = dilation;
+const erosionContributor: GPUCommandGraphContributor = erosion;
 const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
 const gradientContributor: GPUCommandGraphContributor = gradient;
 const gradientMagnitudeContributor: GPUCommandGraphContributor = gradientMagnitude;
 const laplacianContributor: GPUCommandGraphContributor = laplacian;
+const morphologyContributor: GPUCommandGraphContributor = morphology;
 const ndviContributor: GPUCommandGraphContributor = ndvi;
 const neighborhoodContributor: GPUCommandGraphContributor = neighborhood;
+const openingContributor: GPUCommandGraphContributor = opening;
 const otsuContributor: GPUCommandGraphContributor = otsu;
 const scharrContributor: GPUCommandGraphContributor = scharr;
 const sobelContributor: GPUCommandGraphContributor = sobel;
@@ -244,33 +292,74 @@ const configuredGradientMagnitude: GPUCommandGraphContributor = new GPURasterGra
   gradientMagnitudeOptions
 );
 const configuredLaplacian: GPUCommandGraphContributor = new GPURasterLaplacian(laplacianOptions);
+const configuredMorphology: GPUCommandGraphContributor = new GPURasterMorphology(morphologyOptions);
+const configuredBinaryDilation: GPUCommandGraphContributor = new GPURasterDilation(
+  binaryMorphologyOptions
+);
+const configuredGrayscaleErosion: GPUCommandGraphContributor = new GPURasterErosion(
+  grayscaleMorphologyOptions
+);
+const configuredDilation: GPUCommandGraphContributor = new GPURasterDilation(dilationOptions);
+const configuredErosion: GPUCommandGraphContributor = new GPURasterErosion(erosionOptions);
+const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openingOptions);
+const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
 const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
 const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
 const supportedGradientOperators: readonly GPURasterGradientOperator[] = ['sobel', 'scharr'];
 const supportedGradientDirections: readonly GPURasterGradientDirection[] = ['x', 'y'];
 const supportedLaplacianConnectivities: readonly GPURasterLaplacianConnectivity[] = [4, 8];
+const supportedMorphologyModes: readonly GPURasterMorphologyMode[] = ['binary', 'grayscale'];
+const supportedMorphologyOperations: readonly GPURasterMorphologyOperation[] = [
+  'dilate',
+  'erode'
+];
+const supportedStructuringElements: readonly GPURasterStructuringElement[] = ['square', 'cross'];
+const supportedMorphologyNoDataPolicies: readonly GPURasterMorphologyNoDataPolicy[] = [
+  'propagate',
+  'ignore'
+];
+const binaryMorphologyOutput: GraphDataView<'uint32'> = binaryMorphologyOptions.output;
+const grayscaleMorphologyOutput: GraphDataView<'float32'> = grayscaleMorphologyOptions.output;
+const binaryMorphologyInputFormat: 'uint32' = binaryMorphologyOptions.input.format;
 // @ts-expect-error Only the independently implemented Sobel and Scharr kernels are public.
 const unsupportedGradientOperator: GPURasterGradientOperator = 'prewitt';
 // @ts-expect-error Two-dimensional rasters expose only horizontal and vertical derivatives.
 const unsupportedGradientDirection: GPURasterGradientDirection = 'z';
 // @ts-expect-error Laplacian neighborhoods support four or eight adjacent raster pixels.
 const unsupportedLaplacianConnectivity: GPURasterLaplacianConnectivity = 6;
+// @ts-expect-error Morphology exposes binary and grayscale scalar contracts only.
+const unsupportedMorphologyMode: GPURasterMorphologyMode = 'rgb';
+// @ts-expect-error Opening and closing are explicit composed contributors.
+const unsupportedMorphologyOperation: GPURasterMorphologyOperation = 'opening';
+// @ts-expect-error Only square and Manhattan-cross footprints are implemented.
+const unsupportedStructuringElement: GPURasterStructuringElement = 'disk';
+// @ts-expect-error Max/min morphology never renormalizes missing neighbors.
+const unsupportedMorphologyNoDataPolicy: GPURasterMorphologyNoDataPolicy = 'ignore-renormalize';
+// @ts-expect-error Binary morphology publishes canonical uint32 values, not float32.
+const invalidBinaryMorphologyOutput: GraphDataView<'float32'> = binaryMorphologyOptions.output;
+// @ts-expect-error Grayscale morphology publishes calibrated float32 values, not uint32.
+const invalidGrayscaleMorphologyOutput: GraphDataView<'uint32'> = grayscaleMorphologyOptions.output;
 
 void GPURaster;
 void GPURasterBandMath;
 void GPURasterBoxBlur;
 void GPURasterBufferToTexture;
+void GPURasterClosing;
 void GPURasterContrast;
 void GPURasterContourClassifier;
 void GPURasterContours;
 void GPURasterConvolution;
+void GPURasterDilation;
+void GPURasterErosion;
 void GPURasterGaussianBlur;
 void GPURasterGradient;
 void GPURasterGradientMagnitude;
 void GPURasterHistogram;
 void GPURasterLaplacian;
+void GPURasterMorphology;
 void GPURasterNDVI;
 void GPURasterNeighborhood;
+void GPURasterOpening;
 void GPURasterOtsuThreshold;
 void GPURasterScharr;
 void GPURasterSobel;
@@ -283,7 +372,9 @@ void contributor;
 void rasterBand;
 void bandMathOperation;
 void bandMathOptions;
+void binaryMorphologyOptions;
 void borderMode;
+void closingOptions;
 void contrastDomain;
 void contrastMode;
 void contrastOptions;
@@ -291,8 +382,11 @@ void contourClassifierOptions;
 void contourLevel;
 void contourOptions;
 void convolutionOptions;
+void dilationOptions;
 void edgeOptions;
+void erosionOptions;
 void gaussianOptions;
+void grayscaleMorphologyOptions;
 void gradientDirection;
 void gradientMagnitudeOptions;
 void gradientOperator;
@@ -302,16 +396,23 @@ void histogramOptions;
 void laplacianConnectivity;
 void laplacianOptions;
 void rasterMetadata;
+void morphologyBaseOptions;
+void morphologyMode;
+void morphologyNoDataPolicy;
+void morphologyOperation;
+void morphologyOptions;
 void ndviOptions;
 void neighborhoodOptions;
 void neighborhoodRadius;
 void noDataPolicy;
+void openingOptions;
 void otsuDomain;
 void otsuOptions;
 void scharrOptions;
 void sobelOptions;
 void statisticsOptions;
 void smoothingOptions;
+void structuringElement;
 void thresholdOperation;
 void thresholdOptions;
 void thresholdValue;
@@ -320,16 +421,21 @@ void rasterDispatchStripe;
 void reductionMask;
 void bandMathContributor;
 void boxBlurContributor;
+void closingContributor;
 void contrastContributor;
 void contourClassifierContributor;
 void contoursContributor;
 void convolutionContributor;
+void dilationContributor;
+void erosionContributor;
 void gaussianBlurContributor;
 void gradientContributor;
 void gradientMagnitudeContributor;
 void laplacianContributor;
+void morphologyContributor;
 void ndviContributor;
 void neighborhoodContributor;
+void openingContributor;
 void otsuContributor;
 void scharrContributor;
 void sobelContributor;
@@ -340,14 +446,34 @@ void rasterContributor;
 void configuredGradient;
 void configuredGradientMagnitude;
 void configuredLaplacian;
+void configuredMorphology;
+void configuredBinaryDilation;
+void configuredGrayscaleErosion;
+void configuredDilation;
+void configuredErosion;
+void configuredOpening;
+void configuredClosing;
 void configuredScharr;
 void configuredSobel;
 void supportedGradientOperators;
 void supportedGradientDirections;
 void supportedLaplacianConnectivities;
+void supportedMorphologyModes;
+void supportedMorphologyOperations;
+void supportedStructuringElements;
+void supportedMorphologyNoDataPolicies;
+void binaryMorphologyOutput;
+void grayscaleMorphologyOutput;
+void binaryMorphologyInputFormat;
 void unsupportedGradientOperator;
 void unsupportedGradientDirection;
 void unsupportedLaplacianConnectivity;
+void unsupportedMorphologyMode;
+void unsupportedMorphologyOperation;
+void unsupportedStructuringElement;
+void unsupportedMorphologyNoDataPolicy;
+void invalidBinaryMorphologyOutput;
+void invalidGrayscaleMorphologyOutput;
 
 // @ts-expect-error Raster algorithms stay isolated from the experimental root.
 import {GPURaster as RootGPURaster} from '@luma.gl/experimental';
@@ -367,6 +493,12 @@ void RootGPURasterGradient;
 // @ts-expect-error Gradient-magnitude contributors stay isolated from the experimental root.
 import {GPURasterGradientMagnitude as RootGPURasterGradientMagnitude} from '@luma.gl/experimental';
 void RootGPURasterGradientMagnitude;
+// @ts-expect-error Morphology contributors remain isolated from the experimental root.
+import {GPURasterMorphology as RootGPURasterMorphology} from '@luma.gl/experimental';
+void RootGPURasterMorphology;
+// @ts-expect-error Composed morphology remains isolated from the experimental root.
+import {GPURasterClosing as RootGPURasterClosing} from '@luma.gl/experimental';
+void RootGPURasterClosing;
 `
   );
   assert.equal(

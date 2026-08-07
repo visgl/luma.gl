@@ -143,4 +143,39 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(rasterInterface).toContain('data-raster-edge-direction="magnitude"');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
   });
+
+  test('composes grayscale and binary morphology without reading raster pixels', () => {
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(rasterEngine).toContain('GPURasterDilation');
+    expect(rasterEngine).toContain('GPURasterErosion');
+    expect(rasterEngine).toContain('GPURasterOpening');
+    expect(rasterEngine).toContain('GPURasterClosing');
+    expect(rasterEngine).toContain("storage: {kind: 'buffer', values: thresholdSeed}");
+    expect(rasterEngine).toContain('validity: analyzedValidity');
+    expect(rasterEngine).toContain('outputValidity: binaryMorphologyValidity');
+    expect(rasterEngine).toContain('level: binaryMorphologyEnabled ? 0.5');
+    expect(rasterRenderer).toContain('morphologyValidityValues[pixelIndex] == 0u');
+    expect(rasterInterface).toContain('data-raster-morphology="dilate"');
+    expect(rasterInterface).toContain('data-raster-morphology="erode"');
+    expect(rasterInterface).toContain('data-raster-morphology="open"');
+    expect(rasterInterface).toContain('data-raster-morphology="close"');
+    expect(rasterInterface).toContain('data-raster-morphology-mode="binary"');
+    expect(rasterInterface).toContain('data-raster-morphology-shape="cross"');
+    expect(rasterInterface).toContain('data-raster-morphology-shape="square"');
+    expect(rasterInterface).toContain('data-raster-morphology-nodata="propagate"');
+    expect(rasterInterface).toContain('data-raster-morphology-border="constant"');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
+  });
 });

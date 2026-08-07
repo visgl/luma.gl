@@ -11,14 +11,18 @@ import {
 } from '@luma.gl/experimental';
 import {
   GPURasterBoxBlur,
+  GPURasterClosing,
   GPURasterContrast,
   GPURasterContours,
+  GPURasterDilation,
+  GPURasterErosion,
   GPURasterGaussianBlur,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
   GPURasterLaplacian,
   GPURasterNDVI,
   GPURasterOtsuThreshold,
+  GPURasterOpening,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
@@ -57,6 +61,13 @@ export type RasterLabSummary = {
   smoothingSigma: number;
   edgeMode: RasterLabDisplaySettings['edgeMode'];
   edgeDirection: RasterLabDisplaySettings['edgeDirection'];
+  morphologyOperation: RasterLabDisplaySettings['morphologyOperation'];
+  morphologyMode: RasterLabDisplaySettings['morphologyMode'];
+  morphologyShape: RasterLabDisplaySettings['morphologyShape'];
+  morphologyRadius: number;
+  morphologyNoDataPolicy: RasterLabDisplaySettings['morphologyNoDataPolicy'];
+  morphologyBorderMode: RasterLabDisplaySettings['morphologyBorderMode'];
+  morphologyBorderValue: number;
   contrast: number;
   gamma: number;
   threshold: number;
@@ -83,9 +94,13 @@ type RasterLabBuffers = {
   smoothedValidity: Buffer;
   edgeValues: Buffer;
   edgeValidity: Buffer;
+  morphologyValues: Buffer;
+  grayscaleMorphologyValidity: Buffer;
   analyzedValues: Buffer;
   analyzedValidity: Buffer;
+  thresholdSeed: Buffer;
   thresholdValidity: Buffer;
+  binaryMorphologyValidity: Buffer;
   automaticThreshold: Buffer;
   baselineHistogram: Buffer;
   baselineDomain: Buffer;
@@ -118,6 +133,13 @@ export class RasterLabEngine {
     smoothingSigma: 1.25,
     edgeMode: 'none',
     edgeDirection: 'magnitude',
+    morphologyOperation: 'none',
+    morphologyMode: 'grayscale',
+    morphologyShape: 'square',
+    morphologyRadius: 2,
+    morphologyNoDataPolicy: 'ignore',
+    morphologyBorderMode: 'clamp',
+    morphologyBorderValue: 0,
     contrast: 1.15,
     gamma: 1,
     threshold: 0.35,
@@ -178,6 +200,16 @@ export class RasterLabEngine {
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
+      morphologyValues: device.createBuffer({
+        id: 'raster-lab-grayscale-morphology-values',
+        byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      grayscaleMorphologyValidity: device.createBuffer({
+        id: 'raster-lab-grayscale-morphology-validity',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
       analyzedValues: device.createBuffer({
         id: 'raster-lab-analyzed-values',
         byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
@@ -188,8 +220,18 @@ export class RasterLabEngine {
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
+      thresholdSeed: device.createBuffer({
+        id: 'raster-lab-threshold-seed',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
       thresholdValidity: device.createBuffer({
         id: 'raster-lab-threshold-validity',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      binaryMorphologyValidity: device.createBuffer({
+        id: 'raster-lab-binary-morphology-validity',
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
@@ -280,6 +322,7 @@ export class RasterLabEngine {
         analyzedValues: this.buffers.analyzedValues,
         validity: this.buffers.analyzedValidity,
         thresholdValidity: this.buffers.thresholdValidity,
+        morphologyValidity: this.buffers.binaryMorphologyValidity,
         contourVertices: this.buffers.contourVertices,
         contourCommands: initializedContourCommands
       });
@@ -307,6 +350,13 @@ export class RasterLabEngine {
       Math.abs(settings.smoothingSigma - this.settings.smoothingSigma) < 0.0000001 &&
       settings.edgeMode === this.settings.edgeMode &&
       settings.edgeDirection === this.settings.edgeDirection &&
+      settings.morphologyOperation === this.settings.morphologyOperation &&
+      settings.morphologyMode === this.settings.morphologyMode &&
+      settings.morphologyShape === this.settings.morphologyShape &&
+      settings.morphologyRadius === this.settings.morphologyRadius &&
+      settings.morphologyNoDataPolicy === this.settings.morphologyNoDataPolicy &&
+      settings.morphologyBorderMode === this.settings.morphologyBorderMode &&
+      Math.abs(settings.morphologyBorderValue - this.settings.morphologyBorderValue) < 0.0000001 &&
       Math.abs(settings.contrast - this.settings.contrast) < 0.0000001 &&
       Math.abs(settings.gamma - this.settings.gamma) < 0.0000001 &&
       Math.abs(settings.threshold - this.settings.threshold) < 0.0000001 &&
@@ -427,6 +477,13 @@ export class RasterLabEngine {
       smoothingSigma: this.settings.smoothingSigma,
       edgeMode: this.settings.edgeMode,
       edgeDirection: this.settings.edgeDirection,
+      morphologyOperation: this.settings.morphologyOperation,
+      morphologyMode: this.settings.morphologyMode,
+      morphologyShape: this.settings.morphologyShape,
+      morphologyRadius: this.settings.morphologyRadius,
+      morphologyNoDataPolicy: this.settings.morphologyNoDataPolicy,
+      morphologyBorderMode: this.settings.morphologyBorderMode,
+      morphologyBorderValue: this.settings.morphologyBorderValue,
       contrast: this.settings.contrast,
       gamma: this.settings.gamma,
       threshold: this.settings.automaticThreshold
@@ -435,7 +492,10 @@ export class RasterLabEngine {
       thresholdEnabled: this.settings.thresholdEnabled,
       automaticThreshold: this.settings.automaticThreshold,
       contoursEnabled: this.settings.contoursEnabled,
-      contourLevel: this.settings.contourLevel,
+      contourLevel:
+        this.settings.morphologyOperation !== 'none' && this.settings.morphologyMode === 'binary'
+          ? 0.5
+          : this.settings.contourLevel,
       contourSegmentCount: this.settings.contoursEnabled
         ? aggregateView.getUint32(CONTOUR_COUNT_BYTE_OFFSET, true)
         : 0,
@@ -537,6 +597,20 @@ export class RasterLabEngine {
       'uint32',
       this.dataset.pixelCount
     );
+    const morphologyValues = this.importView(
+      graph,
+      'grayscale-morphology-values',
+      this.buffers.morphologyValues,
+      'float32',
+      this.dataset.pixelCount
+    );
+    const grayscaleMorphologyValidity = this.importView(
+      graph,
+      'grayscale-morphology-validity',
+      this.buffers.grayscaleMorphologyValidity,
+      'uint32',
+      this.dataset.pixelCount
+    );
     const analyzedValues = this.importView(
       graph,
       'analyzed-values',
@@ -551,10 +625,24 @@ export class RasterLabEngine {
       'uint32',
       this.dataset.pixelCount
     );
+    const thresholdSeed = this.importView(
+      graph,
+      'threshold-seed',
+      this.buffers.thresholdSeed,
+      'uint32',
+      this.dataset.pixelCount
+    );
     const thresholdValidity = this.importView(
       graph,
       'threshold-validity',
       this.buffers.thresholdValidity,
+      'uint32',
+      this.dataset.pixelCount
+    );
+    const binaryMorphologyValidity = this.importView(
+      graph,
+      'binary-morphology-validity',
+      this.buffers.binaryMorphologyValidity,
       'uint32',
       this.dataset.pixelCount
     );
@@ -724,19 +812,62 @@ export class RasterLabEngine {
       }
     }
 
+    const derivativeBand: GPURasterBufferBand<'float32'> =
+      this.settings.edgeMode === 'none'
+        ? filteredBand
+        : {
+            id: `${this.settings.mode}-${this.settings.edgeMode}-edges`,
+            format: 'float32',
+            storage: {kind: 'buffer', values: edgeValues},
+            validity: edgeValidity
+          };
+    const morphologyClass =
+      this.settings.morphologyOperation === 'dilate'
+        ? GPURasterDilation
+        : this.settings.morphologyOperation === 'erode'
+          ? GPURasterErosion
+          : this.settings.morphologyOperation === 'open'
+            ? GPURasterOpening
+            : GPURasterClosing;
+    const morphologyProps = {
+      id: `raster-lab-${this.settings.morphologyMode}-${this.settings.morphologyOperation}`,
+      width: this.dataset.width,
+      height: this.dataset.height,
+      radius: this.settings.morphologyRadius,
+      structuringElement: this.settings.morphologyShape,
+      borderMode: this.settings.morphologyBorderMode,
+      borderValue: this.settings.morphologyBorderValue,
+      noDataPolicy: this.settings.morphologyNoDataPolicy
+    };
+    const grayscaleMorphologyEnabled =
+      this.settings.morphologyOperation !== 'none' && this.settings.morphologyMode === 'grayscale';
+    const binaryMorphologyEnabled =
+      this.settings.morphologyOperation !== 'none' && this.settings.morphologyMode === 'binary';
+
+    if (grayscaleMorphologyEnabled) {
+      new morphologyClass({
+        ...morphologyProps,
+        mode: 'grayscale',
+        input: derivativeBand,
+        output: morphologyValues,
+        outputValidity: grayscaleMorphologyValidity
+      }).addToGraph(graph);
+    }
+
+    const morphologyBand: GPURasterBufferBand<'float32'> = grayscaleMorphologyEnabled
+      ? {
+          id: `${this.settings.mode}-${this.settings.morphologyOperation}-morphology`,
+          format: 'float32',
+          storage: {kind: 'buffer', values: morphologyValues},
+          validity: grayscaleMorphologyValidity
+        }
+      : derivativeBand;
+
     new GPURasterContrast({
       id: 'raster-lab-contrast',
       width: this.dataset.width,
       height: this.dataset.height,
-      input:
-        this.settings.edgeMode === 'none'
-          ? filteredBand
-          : {
-              id: `${this.settings.mode}-${this.settings.edgeMode}-edges`,
-              format: 'float32',
-              storage: {kind: 'buffer', values: edgeValues},
-              validity: edgeValidity
-            },
+      input: morphologyBand,
       output: analyzedValues,
       outputValidity: analyzedValidity,
       domain:
@@ -759,23 +890,7 @@ export class RasterLabEngine {
       validity: analyzedValidity
     };
 
-    if (this.settings.contoursEnabled) {
-      const contourDraw = this.contourCommands.importToGraph(graph);
-      new GPURasterContours({
-        id: 'raster-lab-contours',
-        width: this.dataset.width,
-        height: this.dataset.height,
-        input: analyzedBand,
-        level: this.settings.contourLevel,
-        vertices: contourVertices,
-        segmentCount: contourSegmentCount,
-        overflow: contourOverflow,
-        requiredSegmentCount: contourRequiredSegmentCount,
-        draw: contourDraw
-      }).addToGraph(graph);
-    }
-
-    if (this.settings.thresholdEnabled) {
+    if (this.settings.thresholdEnabled || binaryMorphologyEnabled) {
       if (this.settings.automaticThreshold) {
         new GPURasterHistogram({
           id: 'raster-lab-baseline-histogram',
@@ -797,16 +912,59 @@ export class RasterLabEngine {
         width: this.dataset.width,
         height: this.dataset.height,
         input: analyzedBand,
-        output: thresholdValidity,
+        output: binaryMorphologyEnabled ? thresholdSeed : thresholdValidity,
         threshold: this.settings.automaticThreshold ? automaticThreshold : this.settings.threshold,
         operation: 'above',
         inclusive: true
       }).addToGraph(graph);
     }
 
+    if (binaryMorphologyEnabled) {
+      const binarySeed: GPURasterBufferBand<'uint32'> = {
+        id: 'raster-lab-binary-threshold-seed',
+        format: 'uint32',
+        storage: {kind: 'buffer', values: thresholdSeed},
+        validity: analyzedValidity
+      };
+      new morphologyClass({
+        ...morphologyProps,
+        mode: 'binary',
+        input: binarySeed,
+        output: thresholdValidity,
+        outputValidity: binaryMorphologyValidity
+      }).addToGraph(graph);
+    }
+
+    if (this.settings.contoursEnabled) {
+      const contourDraw = this.contourCommands.importToGraph(graph);
+      const contourBand: GPURasterBufferBand = binaryMorphologyEnabled
+        ? {
+            id: 'raster-lab-binary-morphology-mask',
+            format: 'uint32',
+            storage: {kind: 'buffer', values: thresholdValidity},
+            validity: binaryMorphologyValidity
+          }
+        : analyzedBand;
+      new GPURasterContours({
+        id: 'raster-lab-contours',
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: contourBand,
+        level: binaryMorphologyEnabled ? 0.5 : this.settings.contourLevel,
+        vertices: contourVertices,
+        segmentCount: contourSegmentCount,
+        overflow: contourOverflow,
+        requiredSegmentCount: contourRequiredSegmentCount,
+        draw: contourDraw
+      }).addToGraph(graph);
+    }
+
     const selectedBand: GPURasterBufferBand<'float32'> = {
       ...analyzedBand,
-      validity: this.settings.thresholdEnabled ? thresholdValidity : analyzedValidity
+      validity:
+        this.settings.thresholdEnabled || binaryMorphologyEnabled
+          ? thresholdValidity
+          : analyzedValidity
     };
 
     new GPURasterStatistics({
