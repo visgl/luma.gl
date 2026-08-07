@@ -302,6 +302,40 @@ export const RASTER_LAB_STYLES = /* css */ `
   font-weight: 590;
 }
 
+.raster-source-control {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 9px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--raster-border);
+}
+
+.raster-source-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.raster-source-overview-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.raster-source-description,
+.raster-source-origin {
+  overflow: hidden;
+  color: var(--raster-muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raster-source-description {
+  color: var(--raster-accent);
+}
+
 .raster-mode-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr 1.15fr;
@@ -375,6 +409,8 @@ export const RASTER_LAB_STYLES = /* css */ `
 
 .raster-edge-buttons .raster-mode-button,
 .raster-edge-direction-buttons .raster-mode-button,
+.raster-source-buttons .raster-mode-button,
+.raster-source-overview-buttons .raster-mode-button,
 .raster-morphology-buttons .raster-mode-button,
 .raster-morphology-toggle .raster-mode-button,
 .raster-morphology-border-buttons .raster-mode-button {

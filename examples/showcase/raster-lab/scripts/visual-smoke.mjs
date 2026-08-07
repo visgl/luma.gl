@@ -84,6 +84,12 @@ try {
       nodeCount: rasterLab.nodeCount,
       executionCount: rasterLab.executionCount,
       frameCount: rasterLab.frameCount,
+      sourceTile: rasterLab.sourceTile,
+      overviewLevel: rasterLab.overviewLevel,
+      tileOrigin: rasterLab.tileOrigin,
+      coordinateReferenceSystem: rasterLab.coordinateReferenceSystem,
+      tileLoadCount: rasterLab.tileLoadCount,
+      abortedTileRequestCount: rasterLab.abortedTileRequestCount,
       edgeMode: rasterLab.edgeMode,
       edgeDirection: rasterLab.edgeDirection,
       morphologyOperation: rasterLab.morphologyOperation,
@@ -104,6 +110,15 @@ try {
   assert.equal(initialState.canvasCount, 1, 'the raster lab uses exactly one GPU canvas');
   assert.equal(initialState.histogramBinCount, 48, 'the valid-pixel histogram contains 48 bins');
   assert.equal(initialState.pixelCount, 320 * 224, 'visual smoke selects the bounded raster tier');
+  assert.equal(initialState.sourceTile, 'full', 'the complete decoded source tile loads first');
+  assert.equal(initialState.overviewLevel, 0, 'the source starts at native resolution');
+  assert.deepEqual(initialState.tileOrigin, [0, 0], 'the native tile preserves its level-zero origin');
+  assert.equal(
+    initialState.coordinateReferenceSystem,
+    'EPSG:32610',
+    'source coordinate-reference metadata survives decoding'
+  );
+  assert.equal(initialState.tileLoadCount, 1, 'initialization uploads exactly one decoded tile');
   assert(initialState.canvasWidth > 300, 'first-frame canvas uses its real drawing-buffer width');
   assert(initialState.canvasHeight > 150, 'first-frame canvas uses its real drawing-buffer height');
   assert(initialState.validPixelCount > 0, 'valid synthetic reflectance reaches the GPU histogram');
@@ -142,6 +157,14 @@ try {
   assert(
     (await page.locator('[data-raster-contour-count]').textContent()).includes('CONTOUR SEGMENTS'),
     'the map exposes the GPU-computed contour segment count'
+  );
+  assert(
+    (await page.locator('[data-raster-source-origin]').textContent()).includes('EPSG:32610'),
+    'the source card displays its actual georeferenced identity'
+  );
+  assert(
+    (await page.locator('.raster-scale').textContent()).includes('single tile · no halo'),
+    'the dashboard does not imply unimplemented halo assembly or multitile residency'
   );
 
   const sidebar = page.locator('.raster-sidebar');
@@ -1305,17 +1328,193 @@ try {
     (await page.locator('[data-raster-binary-morphology-state]').textContent()).includes('CLOSE'),
     'the scrollable lineage exposes the active binary morphology stage'
   );
+
+  const composedFullSurface = await page.screenshot({
+    clip: {
+      x: Math.ceil(surfaceBounds.x),
+      y: Math.ceil(surfaceBounds.y),
+      width: Math.floor(surfaceBounds.width) - 1,
+      height: Math.floor(surfaceBounds.height) - 1
+    }
+  });
+  const loadSourceSelection = async (selector, tile, level) => {
+    const previous = await page.evaluate(() => ({
+      loadCount: window.__luRasterLab.tileLoadCount,
+      executionCount: window.__luRasterLab.executionCount,
+      frameCount: window.__luRasterLab.frameCount
+    }));
+    const control = page.locator(selector);
+    await control.scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    });
+    await control.click();
+    await page.waitForFunction(
+      ({loadCount, executionCount, frameCount, expectedTile, expectedLevel}) =>
+        !window.__luRasterLab.sourceLoading &&
+        window.__luRasterLab.tileLoadCount > loadCount &&
+        window.__luRasterLab.executionCount > executionCount &&
+        window.__luRasterLab.frameCount > frameCount &&
+        window.__luRasterLab.sourceTile === expectedTile &&
+        window.__luRasterLab.overviewLevel === expectedLevel,
+      {...previous, expectedTile: tile, expectedLevel: level},
+      {timeout: timeoutMilliseconds}
+    );
+    return await page.evaluate(() => {
+      const rasterLab = window.__luRasterLab;
+      return {
+        width: rasterLab.width,
+        height: rasterLab.height,
+        pixelCount: rasterLab.pixelCount,
+        validPixelCount: rasterLab.validPixelCount,
+        sourceTile: rasterLab.sourceTile,
+        overviewLevel: rasterLab.overviewLevel,
+        tileOrigin: rasterLab.tileOrigin,
+        coordinateReferenceSystem: rasterLab.coordinateReferenceSystem,
+        tileLoadCount: rasterLab.tileLoadCount,
+        abortedTileRequestCount: rasterLab.abortedTileRequestCount,
+        executionCount: rasterLab.executionCount,
+        edgeMode: rasterLab.edgeMode,
+        smoothingMode: rasterLab.smoothingMode,
+        morphologyOperation: rasterLab.morphologyOperation,
+        morphologyMode: rasterLab.morphologyMode,
+        automaticThreshold: rasterLab.automaticThreshold,
+        contourLevel: rasterLab.contourLevel,
+        contourSegmentCount: rasterLab.contourSegmentCount,
+        bins: rasterLab.bins
+      };
+    });
+  };
+
+  const westernTile = await loadSourceSelection('[data-raster-source-tile="west"]', 'west', 0);
+  assert.equal(westernTile.width, 160, 'the explicit western tile clips the source width');
+  assert.equal(westernTile.height, 224, 'the western tile retains full native source height');
+  assert.equal(westernTile.pixelCount, 160 * 224, 'only the selected tile is uploaded and analyzed');
+  assert.deepEqual(westernTile.tileOrigin, [0, 0]);
+  assert.equal(westernTile.smoothingMode, 'gaussian', 'tile swaps retain selected spatial smoothing');
+  assert.equal(westernTile.edgeMode, 'scharr', 'tile swaps retain selected gradient analysis');
+  assert.equal(westernTile.morphologyOperation, 'close', 'tile swaps retain morphology settings');
+  assert.equal(westernTile.morphologyMode, 'binary', 'binary morphology survives source changes');
+  assert(westernTile.automaticThreshold, 'the new tile computes its own resident Otsu threshold');
+  assert.equal(westernTile.contourLevel, 0.5, 'binary tile contours retain canonical mask semantics');
+  assert(westernTile.contourSegmentCount > 0, 'the selected tile generates its own GPU isolines');
+  assert.notDeepEqual(
+    westernTile.bins,
+    composedEdge.bins,
+    'the decoded western window recomputes a distinct histogram'
+  );
+  assert.equal(
+    westernTile.bins.reduce((total, count) => total + count, 0),
+    westernTile.validPixelCount,
+    'the selected tile preserves coherent masked histogram statistics'
+  );
+  const westernSurface = await page.screenshot({
+    clip: {
+      x: Math.ceil(surfaceBounds.x),
+      y: Math.ceil(surfaceBounds.y),
+      width: Math.floor(surfaceBounds.width) - 1,
+      height: Math.floor(surfaceBounds.height) - 1
+    }
+  });
+  assert.notDeepEqual(
+    westernSurface,
+    composedFullSurface,
+    'switching source tiles changes real GPU-presented raster pixels'
+  );
+
+  const easternTile = await loadSourceSelection('[data-raster-source-tile="east"]', 'east', 0);
+  assert.equal(easternTile.width, 160);
+  assert.deepEqual(
+    easternTile.tileOrigin,
+    [160, 0],
+    'the eastern native tile preserves its exact level-zero origin'
+  );
+  assert.notDeepEqual(
+    easternTile.bins,
+    westernTile.bins,
+    'different decoded source windows retain distinct scientific distributions'
+  );
+  assert(
+    (await page.locator('[data-raster-source-origin]').textContent()).includes('160'),
+    'the application exposes its selected tile origin in the dashboard'
+  );
+
+  const easternOverview = await loadSourceSelection(
+    '[data-raster-source-overview="1"]',
+    'east',
+    1
+  );
+  assert.equal(easternOverview.width, 80, 'the source-provided overview halves tile width');
+  assert.equal(easternOverview.height, 112, 'the source-provided overview halves tile height');
+  assert.equal(easternOverview.pixelCount, 80 * 112);
+  assert.deepEqual(
+    easternOverview.tileOrigin,
+    [160, 0],
+    'overview coordinates retain their exact native-resolution origin'
+  );
+  assert.notDeepEqual(
+    easternOverview.bins,
+    easternTile.bins,
+    'source-provided overview samples recompute their actual GPU histogram'
+  );
+  assert(easternOverview.contourSegmentCount > 0, 'overview analysis retains GPU binary contours');
+  assert(
+    (await page.locator('[data-raster-source-description]').textContent()).includes('L1'),
+    'the interface distinguishes the source-provided overview level'
+  );
+
+  const previousRequests = await page.evaluate(() => ({
+    loadCount: window.__luRasterLab.tileLoadCount,
+    abortedCount: window.__luRasterLab.abortedTileRequestCount,
+    executionCount: window.__luRasterLab.executionCount
+  }));
+  await page.evaluate(() => {
+    window.__luRasterLab.setSourceTile('west');
+    window.__luRasterLab.setSourceTile('east');
+    window.__luRasterLab.setSourceOverview(0);
+    window.__luRasterLab.setSourceOverview(1);
+    window.__luRasterLab.setEpsilon(0.0002);
+  });
+  await page.waitForFunction(
+    ({loadCount, abortedCount, executionCount}) =>
+      !window.__luRasterLab.sourceLoading &&
+      window.__luRasterLab.tileLoadCount > loadCount &&
+      window.__luRasterLab.abortedTileRequestCount > abortedCount &&
+      window.__luRasterLab.executionCount > executionCount &&
+      window.__luRasterLab.sourceTile === 'east' &&
+      window.__luRasterLab.overviewLevel === 1 &&
+      Math.abs(window.__luRasterLab.epsilon - 0.0002) < 0.0000001,
+    previousRequests,
+    {timeout: timeoutMilliseconds}
+  );
+  assert(
+    (await page.evaluate(() => window.__luRasterLab.abortedTileRequestCount)) >=
+      previousRequests.abortedCount + 2,
+    'rapid selection changes abort superseded decoded tile requests'
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.coordinateReferenceSystem),
+    'EPSG:32610',
+    'cancellation never replaces the final selected tile with stale spatial metadata'
+  );
+  assert(
+    await page.evaluate(() => window.__luRasterLab.contourSegmentCount > 0),
+    'the final selected overview preserves the complete morphology and contour pipeline'
+  );
+  assert.equal(
+    await page.evaluate(() =>
+      window.__luRasterLab.bins.reduce((total, count) => total + count, 0)
+    ),
+    await page.evaluate(() => window.__luRasterLab.validPixelCount),
+    'canceled requests cannot corrupt the surviving overview aggregate'
+  );
   await page.waitForFunction(
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
     composedSmoothing.frameCount,
     {timeout: timeoutMilliseconds}
   );
   await sidebar.evaluate(element => {
-    const morphology = element.querySelector('.raster-morphology-control');
-    if (!morphology) return;
-    const morphologyBounds = morphology.getBoundingClientRect();
-    const sidebarBounds = element.getBoundingClientRect();
-    element.scrollTop += morphologyBounds.top - sidebarBounds.top - 8;
+    element.scrollTop = 0;
   });
 
   await mkdir(dirname(screenshotPath), {recursive: true});

@@ -16,6 +16,19 @@ export type {
 export {GPURaster} from './gpu-raster';
 export type {GPURasterProps} from './gpu-raster';
 
+export {GPURasterTileReader} from './gpu-raster-tile-source';
+export type {
+  GPURasterDecodedBand,
+  GPURasterDecodedTile,
+  GPURasterPixelBounds,
+  GPURasterTileBandMetadata,
+  GPURasterTileCoordinateSpace,
+  GPURasterTileLevel,
+  GPURasterTileRequest,
+  GPURasterTileSource,
+  GPURasterTileSourceMetadata
+} from './gpu-raster-tile-source';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

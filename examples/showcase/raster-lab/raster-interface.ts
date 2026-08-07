@@ -18,6 +18,8 @@ import type {
 import {RASTER_LAB_STYLES} from './raster-styles';
 
 export type RasterLabInterfaceCallbacks = {
+  onSourceTile?: (tile: RasterLabSourceTile) => void;
+  onSourceOverview?: (level: RasterLabOverviewLevel) => void;
   onMode?: (mode: RasterLabDisplayMode) => void;
   onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
   onSmoothingRadius?: (radius: number) => void;
@@ -41,12 +43,19 @@ export type RasterLabInterfaceCallbacks = {
   onResize?: () => void;
 };
 
+export type RasterLabSourceTile = 'full' | 'west' | 'east';
+export type RasterLabOverviewLevel = 0 | 1;
+
 export type RasterLabSourceSummary = {
   width: number;
   height: number;
   pixelCount: number;
   cloudPixelCount: number;
   noDataPixelCount: number;
+  tile?: RasterLabSourceTile;
+  overviewLevel?: RasterLabOverviewLevel;
+  levelZeroOrigin?: readonly [number, number];
+  coordinateReferenceSystem?: string;
 };
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
@@ -109,6 +118,35 @@ export class RasterLabInterface {
     this.getElement('[data-raster-cloud]').textContent = `${cloudPercentage.toFixed(1)}%`;
     this.getElement('[data-raster-cloud-count]').textContent =
       `${NUMBER_FORMATTER.format(source.cloudPixelCount)} masked`;
+    const level = source.overviewLevel ?? 0;
+    const tile = source.tile ?? 'full';
+    const [originColumn, originRow] = source.levelZeroOrigin ?? [0, 0];
+    const coordinateReferenceSystem = source.coordinateReferenceSystem ?? 'EPSG:32610';
+    this.getElement('[data-raster-source-description]').textContent =
+      `L${level} · ${tile.toUpperCase()} · ${source.width} × ${source.height}`;
+    this.getElement('[data-raster-source-origin]').textContent =
+      `Origin ${NUMBER_FORMATTER.format(originColumn)}, ${NUMBER_FORMATTER.format(originRow)} · ${coordinateReferenceSystem}`;
+    this.getElement('[data-raster-coordinate]').textContent =
+      `L${level} / ${tile.toUpperCase()} · ORIGIN ${originColumn},${originRow} · ${coordinateReferenceSystem}`;
+  }
+
+  setSourceTile(tile: RasterLabSourceTile): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-source-tile]'
+    )) {
+      button.setAttribute('aria-pressed', String(button.dataset['rasterSourceTile'] === tile));
+    }
+  }
+
+  setSourceOverview(level: RasterLabOverviewLevel): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-source-overview]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(Number(button.dataset['rasterSourceOverview']) === level)
+      );
+    }
   }
 
   setSummary(summary: RasterLabSummary): void {
@@ -388,6 +426,21 @@ export class RasterLabInterface {
     const onClick = (event: Event): void => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+      const sourceTileButton = target.closest<HTMLButtonElement>('[data-raster-source-tile]');
+      const sourceTile = sourceTileButton?.dataset['rasterSourceTile'];
+      if (sourceTile === 'full' || sourceTile === 'west' || sourceTile === 'east') {
+        this.setSourceTile(sourceTile);
+        this.callbacks.onSourceTile?.(sourceTile);
+        return;
+      }
+      const overviewButton = target.closest<HTMLButtonElement>('[data-raster-source-overview]');
+      const overview = overviewButton?.dataset['rasterSourceOverview'];
+      if (overview === '0' || overview === '1') {
+        const level = overview === '0' ? 0 : 1;
+        this.setSourceOverview(level);
+        this.callbacks.onSourceOverview?.(level);
+        return;
+      }
       const otsuButton = target.closest<HTMLButtonElement>('[data-raster-control="otsu"]');
       if (otsuButton) {
         const enabled = !this.automaticThreshold;
@@ -712,8 +765,8 @@ function makeRasterLabMarkup(): string {
             <span class="raster-chip" data-raster-contour-count>SYNTHETIC SCENE</span>
           </div>
           <div class="raster-map-surface" data-raster-surface>
-            <span class="raster-coordinate">SCENE / 041 · ANALYTIC TERRAIN</span>
-            <span class="raster-scale">relative scale</span>
+            <span class="raster-coordinate" data-raster-coordinate>L0 / FULL · ORIGIN 0,0 · EPSG:32610</span>
+            <span class="raster-scale">single tile · no halo</span>
           </div>
           <div class="raster-map-footer">
             <div class="raster-legend" data-raster-legend data-mode="ndvi">
@@ -732,6 +785,20 @@ function makeRasterLabMarkup(): string {
             <div class="raster-panel-heading">
               <span class="raster-panel-title">Spectral layers</span>
               <span class="raster-kicker">GPU resident</span>
+            </div>
+            <div class="raster-source-control" aria-label="External raster tile source">
+              <span class="raster-control-label">External tile source <span class="raster-kicker">decoded input</span></span>
+              <div class="raster-source-buttons" aria-label="Selected source tile">
+                <button class="raster-mode-button" data-raster-source-tile="full" aria-pressed="true">FULL</button>
+                <button class="raster-mode-button" data-raster-source-tile="west" aria-pressed="false">WEST</button>
+                <button class="raster-mode-button" data-raster-source-tile="east" aria-pressed="false">EAST</button>
+              </div>
+              <div class="raster-source-overview-buttons" aria-label="Source-provided overview level">
+                <button class="raster-mode-button" data-raster-source-overview="0" aria-pressed="true">1× NATIVE</button>
+                <button class="raster-mode-button" data-raster-source-overview="1" aria-pressed="false">2× OVERVIEW</button>
+              </div>
+              <div class="raster-source-description" data-raster-source-description>L0 · FULL</div>
+              <div class="raster-source-origin" data-raster-source-origin>Origin 0, 0 · EPSG:32610</div>
             </div>
             <div class="raster-mode-buttons" aria-label="Display layer">
               <button class="raster-mode-button" data-raster-mode="ndvi" aria-pressed="true">NDVI</button>

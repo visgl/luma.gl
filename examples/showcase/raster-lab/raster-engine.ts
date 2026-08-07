@@ -955,7 +955,8 @@ export class RasterLabEngine {
         segmentCount: contourSegmentCount,
         overflow: contourOverflow,
         requiredSegmentCount: contourRequiredSegmentCount,
-        draw: contourDraw
+        draw: contourDraw,
+        ...(this.dataset.metadata ? {metadata: this.dataset.metadata} : {})
       }).addToGraph(graph);
     }
 

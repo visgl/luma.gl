@@ -37,7 +37,22 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     }
   });
 
-  test('exposes pointwise, neighborhood, edge, morphology, and contour contributors', () => {
+  test('keeps external tile decoding, transport, and GPU ownership in the application', () => {
+    const tileSourceImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-tile-source.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(tileSourceImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(tileSourceImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(tileSourceImplementation).not.toMatch(
+      /\b(?:createBuffer|createTexture|submit|mapAsync)\s*\(/
+    );
+  });
+
+  test('exposes tile-source, pointwise, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
@@ -63,6 +78,7 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterSobel).toBeTypeOf('function');
     expect(lurasterModule.GPURasterStatistics).toBeTypeOf('function');
     expect(lurasterModule.GPURasterThreshold).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileReader).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTextureToBuffer).toBeTypeOf('function');
     expect(lurasterModule.getRasterDeviceLimits).toBeTypeOf('function');
     expect(lurasterModule.planRasterDispatchStripes).toBeTypeOf('function');
