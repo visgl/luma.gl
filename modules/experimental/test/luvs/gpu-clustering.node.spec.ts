@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Buffer} from '@luma.gl/core';
+import {NullDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
-import type {GraphDataView} from '../../src/gpu-primitives/gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView} from '../../src/gpu-primitives/gpu-command-graph';
+import {getViewBindingRange} from '../../src/gpu-primitives/graph-data-view-utils';
 import {
   GPU_CLUSTERING_WORKGROUP_SIZE,
   getGPUClusteringDispatchLayout,
   getGPUClusteringInvocationIndexSource,
+  getGPUClusteringMatrixTiles,
+  getGPUClusteringTileRowView,
   validateGPUClusteringEmbeddingMatrix
 } from '../../src/luvs/gpu-clustering-utils';
 import type {GraphEmbeddingMatrix} from '../../src/luvs/types';
@@ -129,5 +134,90 @@ test('luVS clustering rejects malformed direct graph matrices before tiling or a
     /validity flags must contain one value per source row/,
     'optional GPU metadata must cover every source row'
   );
+  t.end();
+});
+
+test('luVS clustering bounds every independently aligned row-parallel scalar binding', t => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  device.limits.maxStorageBufferBindingSize = 512;
+  const graph = new GPUCommandGraph(device, {id: 'clustering-independent-scalar-alignment'});
+  const buffers = [512, 516, 764, 764, 516].map((byteLength, bufferIndex) =>
+    device.createBuffer({
+      id: `clustering-aligned-buffer-${bufferIndex}`,
+      byteLength,
+      usage: Buffer.STORAGE | Buffer.COPY_DST
+    })
+  );
+  const handles = buffers.map((buffer, bufferIndex) =>
+    graph.importBuffer(
+      {
+        id: `clustering-aligned-handle-${bufferIndex}`,
+        byteLength: buffer.byteLength,
+        usage: buffer.usage
+      },
+      buffer
+    )
+  );
+  const values = graph.createDataView(handles[0], {format: 'float32', length: 128});
+  const sourceRowIds = graph.createDataView(handles[1], {
+    format: 'uint32',
+    length: 128,
+    byteOffset: 4
+  });
+  const validity = graph.createDataView(handles[2], {
+    format: 'uint32',
+    length: 128,
+    byteOffset: 252
+  });
+  const labels = graph.createDataView(handles[3], {
+    format: 'uint32',
+    length: 128,
+    byteOffset: 252
+  });
+  const filter = graph.createDataView(handles[4], {
+    format: 'uint32',
+    length: 128,
+    byteOffset: 4
+  });
+  const matrix: GraphEmbeddingMatrix = {
+    dimensions: 1,
+    rowCount: 128,
+    chunks: [
+      {
+        values,
+        rowCount: 128,
+        rowStride: 1,
+        byteOffset: 0,
+        sourceRowOffset: 0,
+        sourceRowIds,
+        validity
+      }
+    ]
+  };
+
+  try {
+    const tiles = getGPUClusteringMatrixTiles(graph, matrix);
+    t.deepEqual(
+      tiles.map(tile => tile.rowCount),
+      [65, 63]
+    );
+    for (const tile of tiles) {
+      const views = [
+        tile.values,
+        tile.sourceRowIds!,
+        tile.validity!,
+        getGPUClusteringTileRowView(graph, labels, tile),
+        getGPUClusteringTileRowView(graph, filter, tile)
+      ];
+      t.ok(
+        views.every(view => getViewBindingRange(view).size <= 512),
+        'embedding values, source IDs, validity, labels, and filters all fit the binding limit'
+      );
+    }
+  } finally {
+    for (const buffer of buffers) buffer.destroy();
+    device.destroy();
+  }
   t.end();
 });
