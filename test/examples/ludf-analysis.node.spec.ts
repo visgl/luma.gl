@@ -98,7 +98,12 @@ describe('luDF dataframe documentation and opt-in Arrow benchmark integration', 
     expect(exampleShell).toContain('data-validated="false"');
     expect(example).toContain("addEventListener('click', this.handleLuDataFrameBenchmark)");
     expect(example).toContain('this.benchmarkController?.abort()');
-    expect(example).toContain('rowCount: 384');
+    expect(exampleShell).toContain('data-ludf-benchmark-rows');
+    expect(exampleShell).toContain('data-ludf-benchmark-iterations');
+    expect(exampleShell).toContain('1,048,576 rows');
+    expect(example).toContain('warmupIterations: 1');
+    expect(example).toContain('MEDIAN OPERATION COMPARISONS');
+    expect(example).toContain('data-ludf-crossover');
 
     for (const phase of ['upload', 'compile', 'index', 'execution', 'readback', 'cpu']) {
       expect(example).toContain(`['${phase}',`);
@@ -124,6 +129,9 @@ describe('luDF dataframe documentation and opt-in Arrow benchmark integration', 
     expect(benchmark).toContain('createFence');
     expect(benchmark).toContain('readbackBytes');
     expect(benchmark).toContain('signal');
+    expect(benchmark).toContain('MAXIMUM_ROW_COUNT = 1_048_576');
+    expect(benchmark).toContain('summarizeLuDataFrameBenchmarkSamples');
+    expect(benchmark).not.toContain('BenchmarkSourceRow[]');
     expect(tablesPackage.dependencies?.['apache-arrow']).toBeUndefined();
     expect(gpuPackage.dependencies?.['apache-arrow']).toBeUndefined();
   });

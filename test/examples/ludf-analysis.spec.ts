@@ -20,7 +20,11 @@ describe('Arrow-driven luDF dataframe example', () => {
       return;
     }
 
-    const result = await runLuDataFrameBenchmark(device, {rowCount: 128});
+    const result = await runLuDataFrameBenchmark(device, {
+      rowCount: 128,
+      iterations: 2,
+      warmupIterations: 1
+    });
 
     expect(result.rowCount).toBe(128);
     expect(result.batchRowCounts).toHaveLength(3);
@@ -42,6 +46,15 @@ describe('Arrow-driven luDF dataframe example', () => {
     expect(result.summaries.joinRightRowIds[1]).toEqual([]);
     expect(result.readbackBytes).toBeGreaterThan(0);
     expect(result.readbackBytes).toBeLessThanOrEqual(1024);
+    expect(result.measurement).toEqual({iterations: 2, warmupIterations: 1});
+
+    for (const workload of Object.values(result.workloads)) {
+      expect(workload.cpuMilliseconds).toBeGreaterThanOrEqual(0);
+      expect(workload.gpuMilliseconds).toBeGreaterThanOrEqual(0);
+      expect(workload.cpuRowsPerSecond).toBeGreaterThanOrEqual(0);
+      expect(workload.gpuRowsPerSecond).toBeGreaterThanOrEqual(0);
+      expect(workload.speedup).toBeGreaterThanOrEqual(0);
+    }
 
     for (const phase of [
       result.timings.uploadMilliseconds,
@@ -55,6 +68,23 @@ describe('Arrow-driven luDF dataframe example', () => {
       expect(phase).toBeGreaterThanOrEqual(0);
     }
   }, 30_000);
+
+  test('executes datasets larger than the former 4,096-row benchmark ceiling', async () => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return;
+
+    const result = await runLuDataFrameBenchmark(device, {
+      rowCount: 8192,
+      iterations: 1,
+      warmupIterations: 0
+    });
+
+    expect(result.rowCount).toBe(8192);
+    expect(result.batchRowCounts).toEqual([4096, 0, 4096]);
+    expect(result.validation).toEqual({filter: true, groups: true, sorting: true, join: true});
+    expect(result.readbackBytes).toBeLessThanOrEqual(1024);
+    expect(result.workloads.sorting.gpuRowsPerSecond).toBeGreaterThan(0);
+  }, 45_000);
 
   test('runs the real WebGPU benchmark only after an explicit interactive request', async () => {
     const availableDevice = await getWebGPUTestDevice();
@@ -74,6 +104,14 @@ describe('Arrow-driven luDF dataframe example', () => {
       dataset.value = 'small';
 
       const button = getRequiredElement<HTMLButtonElement>(root, '#analysis-ludf-benchmark-run');
+      const benchmarkRows = getRequiredElement<HTMLSelectElement>(
+        root,
+        '[data-ludf-benchmark-rows]'
+      );
+      const benchmarkIterations = getRequiredElement<HTMLSelectElement>(
+        root,
+        '[data-ludf-benchmark-iterations]'
+      );
       const status = getRequiredElement<HTMLElement>(root, '#analysis-ludf-benchmark-status');
       const results = getRequiredElement<HTMLElement>(root, '#analysis-ludf-benchmark-results');
 
@@ -83,6 +121,9 @@ describe('Arrow-driven luDF dataframe example', () => {
       expect(results.dataset.state).toBe('idle');
       expect(results.dataset.validated).toBe('false');
       expect(results.querySelectorAll('[data-ludf-phase]')).toHaveLength(0);
+      expect(Array.from(benchmarkRows.options, option => option.value)).toContain('1048576');
+      benchmarkRows.value = '1024';
+      benchmarkIterations.value = '1';
 
       await vi.waitFor(
         () => {
@@ -116,9 +157,11 @@ describe('Arrow-driven luDF dataframe example', () => {
         expect(Number.isFinite(milliseconds)).toBe(true);
         expect(milliseconds).toBeGreaterThanOrEqual(0);
       }
-      expect(status.textContent).toContain('384');
+      expect(status.textContent).toContain('1,024');
       expect(status.textContent).toMatch(/filter, grouping, sorting, and joins match/i);
       expect(status.textContent).toMatch(/summary bytes read/i);
+      expect(results.querySelectorAll('[data-ludf-workload]')).toHaveLength(4);
+      expect(results.querySelector('[data-ludf-crossover]')?.textContent).toMatch(/crossover/i);
     } finally {
       example?.destroy();
       root.remove();

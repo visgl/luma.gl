@@ -134,9 +134,27 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
             nullable, dictionary-encoded Arrow batches. Nothing runs until you ask.
           </p>
         </div>
-        <button id="analysis-ludf-benchmark-run" class="benchmark-button" data-ludf-benchmark disabled>
-          Run verified benchmark <span>→</span>
-        </button>
+        <div class="benchmark-controls">
+          <label>Benchmark rows
+            <select data-ludf-benchmark-rows>
+              <option value="1024">1,024 rows</option>
+              <option value="4096">4,096 rows</option>
+              <option value="65536" selected>65,536 rows</option>
+              <option value="262144">262,144 rows</option>
+              <option value="1048576">1,048,576 rows</option>
+            </select>
+          </label>
+          <label>Measured samples
+            <select data-ludf-benchmark-iterations>
+              <option value="1">1 sample</option>
+              <option value="3" selected>3 samples</option>
+              <option value="5">5 samples</option>
+            </select>
+          </label>
+          <button id="analysis-ludf-benchmark-run" class="benchmark-button" data-ludf-benchmark disabled>
+            Run verified benchmark <span>→</span>
+          </button>
+        </div>
       </div>
       <p id="analysis-ludf-benchmark-status" class="benchmark-status" data-ludf-benchmark-status>
         Filter, group, stable top-K, and unique-key joins remain GPU-resident.
@@ -458,13 +476,19 @@ export const GPU_DATA_ANALYSIS_STYLES = `
   .benchmark-heading .eyebrow { color: var(--blue); }
   .benchmark-heading h2 { margin: 0 0 7px; font-size: 21px; letter-spacing: -0.4px; }
   .benchmark-heading > div > p:last-child { max-width: 680px; margin: 0; color: var(--muted); }
-  .analysis-example .benchmark-button { width: 230px; border-color: rgba(115, 170, 250, 0.5); color: var(--blue); }
+  .benchmark-controls { display: grid; min-width: 260px; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .analysis-example .benchmark-button { grid-column: 1 / -1; width: 100%; border-color: rgba(115, 170, 250, 0.5); color: var(--blue); }
   .benchmark-status { margin: 16px 0 0; color: var(--muted); font-size: 11px; }
   .benchmark-results table { width: 100%; margin-top: 13px; border-collapse: collapse; }
   .benchmark-results th, .benchmark-results td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
   .benchmark-results thead th { color: var(--muted); font-size: 10px; letter-spacing: 0.5px; }
   .benchmark-results tbody th { color: var(--text); font-size: 12px; font-weight: 500; }
   .benchmark-results td { color: var(--green); text-align: right; font-variant-numeric: tabular-nums; }
+  .benchmark-results .workload-title { margin: 20px 0 3px; color: var(--blue); font-size: 11px; letter-spacing: 0.7px; }
+  .benchmark-results .workload-metadata { margin: 0 0 8px; color: var(--muted); font-size: 11px; }
+  .benchmark-results .workload-table td { color: var(--text); }
+  .benchmark-results .workload-table td:last-child { color: var(--green); font-weight: 700; }
+  .benchmark-results .benchmark-crossover { margin-top: 13px; color: var(--amber); font-size: 11px; }
   .benchmark-results[data-state="error"] { color: #ff8585; }
 
   .visualizations {
@@ -541,6 +565,7 @@ export const GPU_DATA_ANALYSIS_STYLES = `
     .dataframe-lab { padding: 15px; }
     .benchmark-lab { padding: 15px; }
     .benchmark-heading { align-items: flex-start; flex-direction: column; }
+    .benchmark-controls { width: 100%; }
     .analysis-example .benchmark-button { width: 100%; }
     .visualizations { grid-template-columns: 1fr; }
     .heatmap-card { grid-column: auto; }
