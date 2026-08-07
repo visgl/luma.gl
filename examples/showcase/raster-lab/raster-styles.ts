@@ -322,6 +322,30 @@ export const RASTER_LAB_STYLES = /* css */ `
   gap: 4px;
 }
 
+.raster-halo-buttons {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 4px;
+}
+
+.raster-halo-statistics {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 3px 6px;
+  padding: 3px 0;
+  color: var(--raster-muted);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.raster-halo-statistics > :nth-child(even) {
+  overflow: hidden;
+  color: var(--raster-accent);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .raster-source-description,
 .raster-source-origin {
   overflow: hidden;

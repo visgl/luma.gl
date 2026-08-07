@@ -21,7 +21,6 @@ import {
   type GPURasterBufferBand,
   type GPURasterDecodedTile,
   type GPURasterHaloStage,
-  type GPURasterPixelBounds,
   type GPURasterResidentBand,
   type GPURasterScalarFormat,
   type GPURasterTileHaloPlan,

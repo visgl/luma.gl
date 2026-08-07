@@ -119,6 +119,38 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(overview.bands[0]?.validity).toBeInstanceOf(Uint32Array);
   });
 
+  test('provides exact adjacent native and overview samples across a ragged owned seam', async () => {
+    const reader = new GPURasterTileReader(new RasterLabTileSource(97, 65));
+
+    for (const level of [0, 1]) {
+      const full = await reader.readTile({level});
+      const western = await reader.readTile({level, column: 0, row: 0});
+      const eastern = await reader.readTile({level, column: 1, row: 0});
+
+      expect(western.pixelBounds[2]).toBe(eastern.pixelBounds[0]);
+      expect(western.metadata.width + eastern.metadata.width).toBe(full.metadata.width);
+      expect(western.metadata.height).toBe(full.metadata.height);
+      expect(eastern.metadata.height).toBe(full.metadata.height);
+
+      for (const [bandIndex, fullBand] of full.bands.entries()) {
+        const westernBand = western.bands[bandIndex]!;
+        const easternBand = eastern.bands[bandIndex]!;
+        for (let row = 0; row < full.metadata.height; row++) {
+          const westernSeamIndex = row * western.metadata.width + western.metadata.width - 1;
+          const easternSeamIndex = row * eastern.metadata.width;
+          const fullSeamIndex = row * full.metadata.width + western.metadata.width;
+
+          expect(westernBand.values[westernSeamIndex]).toBe(fullBand.values[fullSeamIndex - 1]);
+          expect(easternBand.values[easternSeamIndex]).toBe(fullBand.values[fullSeamIndex]);
+          expect(westernBand.validity?.[westernSeamIndex]).toBe(
+            fullBand.validity?.[fullSeamIndex - 1]
+          );
+          expect(easternBand.validity?.[easternSeamIndex]).toBe(fullBand.validity?.[fullSeamIndex]);
+        }
+      }
+    }
+  });
+
   test('honors source band selection, normalized windows, and in-flight cancellation', async () => {
     const source = new RasterLabTileSource(97, 65);
     const reader = new GPURasterTileReader(source);
@@ -336,10 +368,8 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
 
     expect(rasterApplication).toContain('this.tileCache.acquireGraph(tileLease, {');
     expect(rasterApplication).toContain('pipelineKey,');
-    expect(rasterApplication).toContain('halo: 0,');
-    expect(rasterApplication).toContain(
-      'estimatedByteLength: estimateRasterGraphBytes(dataset.pixelCount)'
-    );
+    expect(rasterApplication).toContain('halo: halo?.plan.requiredHalo ?? 0,');
+    expect(rasterApplication).toContain('estimatedByteLength: estimateRasterGraphBytes(');
     expect(rasterApplication).toContain('graph: engine.commandGraph');
     expect(rasterApplication).toContain('byteLength: engine.ownedByteLength');
     expect(rasterApplication).toContain('destroy: () => engine.destroy()');
@@ -356,7 +386,7 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     );
   });
 
-  test('fences submitted tile/graph leases without expanding analytical readback or claiming halos', () => {
+  test('assembles resident neighbor halos, publishes only owned cores, and fences every lease', () => {
     const rasterApplication = readFileSync(
       new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
       'utf8'
@@ -375,22 +405,43 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     );
     const analysisSubmission = rasterEngine.indexOf('this.device.submit(encoder.finish());');
     const summaryReadback = rasterEngine.indexOf('await this.buffers.summaryReadback.readAsync()');
+    const haloAssembly = rasterEngine.indexOf('new GPURasterTileHaloFill({');
+    const coreExtraction = rasterEngine.indexOf('new GPURasterTileCoreExtract({');
+    const ownedStatistics = rasterEngine.indexOf('new GPURasterStatistics({');
     const shutdownStart = rasterApplication.indexOf('override onFinalize(): void {');
     const shutdownEnd = rasterApplication.indexOf('private setSourceTile(', shutdownStart);
     const shutdown = rasterApplication.slice(shutdownStart, shutdownEnd);
 
     expect(analysisSubmission).toBeGreaterThan(0);
     expect(summaryReadback).toBeGreaterThan(analysisSubmission);
+    expect(haloAssembly).toBeGreaterThan(0);
+    expect(coreExtraction).toBeGreaterThan(haloAssembly);
+    expect(ownedStatistics).toBeGreaterThan(coreExtraction);
     expect(rasterRenderer).toContain('this.device.submit(encoder.finish());');
+    expect(rasterApplication).toContain('new GPURasterTileHaloAssembler(this.tileCache)');
+    expect(rasterApplication).toContain('this.haloAssembler.acquire(');
+    expect(rasterApplication).toContain('stages: this.getHaloStages()');
+    expect(rasterApplication).toContain('replacementHaloLease.core');
+    expect(rasterApplication).toContain('halo: halo?.plan.requiredHalo ?? 0');
+    expect(rasterApplication).toContain('this.display.morphologyRadius * (composed ? 2 : 1)');
+    expect(rasterApplication).toContain("this.haloMode === 'seamless' && requestedCapacity < 2");
     expect(rasterApplication).toContain('const fence = this.device.createFence();');
     expect(rasterApplication).toContain('graphLease.releaseAfter(fence)');
     expect(rasterApplication).toContain('tileLease.releaseAfter(fence)');
+    expect(rasterApplication).toContain('haloLease.releaseAfter(fence)');
     expect(shutdown).toMatch(/(?:releaseAfterSubmittedWork\(|\.releaseAfter\()/);
     expect(shutdown).not.toContain('this.activeGraphLease?.release()');
     expect(shutdown).not.toContain('this.activeTileLease?.release()');
     expect(shutdown).toContain('this.tileCache.destroy()');
+    expect(rasterEngine).toContain('pixelBounds: this.halo.plan.availablePixelBounds');
+    expect(rasterEngine).toContain('corePixelBounds: this.halo.plan.corePixelBounds');
+    expect(rasterEngine).toContain('input: coreProcessingBand');
+    expect(rasterEngine).toContain('paddedBinarySeed');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
+    expect(rasterInterface).toContain('data-raster-halo-mode="seamless"');
+    expect(rasterInterface).toContain('data-raster-halo-radius');
+    expect(rasterInterface).toContain('data-raster-halo-core');
+    expect(rasterInterface).toContain('data-raster-halo-sources');
     expect(rasterInterface).toContain('single tile · no halo');
-    expect(rasterApplication).toContain('halo: 0');
   });
 });
