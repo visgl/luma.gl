@@ -12,6 +12,7 @@ One goal of luma.gl is to provide a fairly small, relatively un-opinionated, opt
 Some of the major classes that are provided by the engine module:
 
 * `AnimationLoop`
+* `AnimationMixer`, `AnimationClip`, and `AnimationTrack`
 * `Model`
 * `DynamicBuffer`
 * `DynamicTexture`
@@ -21,6 +22,7 @@ Some of the major classes that are provided by the engine module:
 
 Cross-module areas where the engine helps the user.
 
+* [Keyframe animation, clip playback, blending, and morph-target deformation](https://luma.gl/next/docs/api-guide/engine/animation.md)
 * Redraw tracking
 * Interactivity
 * Compute (Transforms)

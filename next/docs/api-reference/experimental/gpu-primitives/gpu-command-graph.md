@@ -1,6 +1,6 @@
 # GPUCommandGraph
 
-[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Trace Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Batch Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -36,6 +36,8 @@ The import kind communicates why a texture may be reused, replaced, or restricte
 | Transient texture | Graph-owned scratch with a compile-time lifetime         | An intermediate blur target or multisampled color attachment         |
 
 Use a normal imported texture when later passes need copies, storage access, mip generation, or reuse across frames. External textures avoid an explicit media-to-texture copy but accept a narrow sampling-only lifetime. Frame textures model presentation resources, while transients let the graph reuse internal allocations whose logical lifetimes do not overlap.
+
+[`GPUTextureHistory`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-texture-history.md) makes the persistent case reusable: its two caller-owned textures exchange previous/current roles through ordinary per-encoding texture overrides. No frame-scoped swapchain contract or texture-copy node is required.
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 
@@ -137,7 +139,7 @@ The exported `createTransientView()` helper creates packed, graph-owned typed st
 
 ### `importBuffer(descriptor, defaultBuffer?)`[​](#importbufferdescriptor-defaultbuffer "Direct link to importbufferdescriptor-defaultbuffer")
 
-Declares caller-owned storage. A default `Buffer` or `DynamicBuffer` may be supplied during graph construction, or the caller may provide a compatible override to each encoding. Represent each physical buffer with one logical handle and create multiple views from that handle. Distinct imported handles, including their per-encoding overrides, must not resolve to the same physical buffer because hazards are tracked by handle identity.
+Declares caller-owned storage. A default `Buffer` or `DynamicBuffer` may be supplied during graph construction, or the caller may provide a compatible override to each encoding. Represent each physical buffer with one logical handle whenever any graph access writes to it. Separate active handles may resolve to the same physical buffer only when every access through both handles is read-only. The same rule applies to `DynamicBuffer` wrappers and per-encoding overrides.
 
 ### `createTransientBuffer(descriptor)`[​](#createtransientbufferdescriptor "Direct link to createtransientbufferdescriptor")
 
@@ -155,32 +157,201 @@ Imports the backing allocation and preserves the supplied `GPUData` range.
 
 Imports every fixed-width `GPUData` chunk without packing and returns a `GraphVectorView`. Chunk order, vector metadata, per-chunk offsets, and shared backing buffers are preserved. Interleaved and variable-length vectors require explicit adapters and are rejected.
 
+### Choosing a buffer feature[​](#choosing-a-buffer-feature "Direct link to Choosing a buffer feature")
+
+Use `importBuffer()` when the application already owns persistent storage, such as source data, published results, or an indirect draw buffer. Use `createTransientBuffer()` for an intermediate that exists only while this graph executes; the compiler can safely reuse its allocation after its last scheduled use. Use `createDataView()` to describe a typed range of either kind of buffer.
+
+Use `importGPUData()` when one table chunk is the unit of work. Use `importGPUVector()` when the source arrived in several record batches and those boundaries matter. Importing a vector preserves its existing buffers, offsets, ordering, and empty chunks; it does not concatenate or upload rows. Multiple chunks backed by the same physical buffer reuse one canonical graph handle.
+
+### Physical buffer overlap and writable aliases[​](#physical-buffer-overlap-and-writable-aliases "Direct link to Physical buffer overlap and writable aliases")
+
+Scheduling tracks buffer hazards by logical `GraphBufferHandle`, not by individual byte ranges. Two independently imported handles that resolve to one physical buffer would therefore hide a read-after-write or write-after-write dependency from the scheduler. Before recording any node, each `encode()` resolves defaults, `DynamicBuffer` wrappers, and `options.buffers` replacements to their actual physical buffers and applies these rules:
+
+| Active graph resources                                                                                       | Result                        | Why                                                                                  |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------ |
+| Two handles share a buffer and both are read-only                                                            | Allowed                       | Concurrent reads cannot corrupt each other.                                          |
+| Two handles share a buffer and either has `storage-write`, `storage-read-write`, or `copy-destination` usage | Rejected before any node runs | Distinct handles cannot express the required write hazard.                           |
+| Several views share one canonical handle, including writable views                                           | Allowed and ordered           | Every access participates in the same inferred hazard chain.                         |
+| An otherwise duplicated import is not referenced by any graph node                                           | Allowed                       | Inactive imports cannot race with graph commands.                                    |
+| An encoding override introduces writable overlap                                                             | That encoding is rejected     | Compatibility is checked against current physical bindings, not just graph defaults. |
+
+The safe pattern is to import shared storage once and derive each logical range from that handle:
+
+```
+const sharedStorage = graph.importBuffer(
+
+  {id: 'shared-storage', byteLength: sharedBuffer.byteLength, usage: Buffer.STORAGE},
+
+  sharedBuffer
+
+);
+
+const sourceRows = graph.createDataView(sharedStorage, {
+
+  id: 'source-rows',
+
+  format: 'uint32',
+
+  length: rowCount
+
+});
+
+const updatedRows = graph.createDataView(sharedStorage, {
+
+  id: 'updated-rows',
+
+  format: 'uint32',
+
+  length: rowCount
+
+});
+
+
+
+graph.addComputePass({
+
+  id: 'update-shared-rows',
+
+  resources: [
+
+    {buffer: sourceRows, usage: 'storage-read'},
+
+    {buffer: updatedRows, usage: 'storage-write'}
+
+  ],
+
+  compile: () => ({encode: encodeUpdatedRows})
+
+});
+```
+
+Do not work around this check by importing the same writable physical allocation under separate IDs. If two independently authored contributors need it, pass them the same handle or typed view. Validation never destroys caller-owned imports; after a rejected override, the caller can retry with distinct buffers or the original compatible defaults.
+
 ## Primitive multi-chunk support[​](#primitive-multi-chunk-support "Direct link to Primitive multi-chunk support")
 
 The multi-chunk column means that the primitive directly accepts a `GraphVectorView` and computes one globally correct result across its ordered `GraphDataView` chunks. A ❌ primitive still accepts its documented atomic graph resources; callers must select, adapt, or explicitly pack chunks.
 
-| Primitive               | Primary graph input                                                 | Multi-chunk `GraphVectorView` |
-| ----------------------- | ------------------------------------------------------------------- | ----------------------------- |
-| `GPUScan`               | Scalar `GraphDataView` or `GraphVectorView`                         | ✅                            |
-| `GPUCompaction`         | Scalar `GraphDataView`s or matching `GraphVectorView`s              | ✅                            |
-| `GPUMask`               | Scalar masks or matching mask `GraphVectorView`s                    | ✅                            |
-| `GPUHierarchyLayout`    | Parent state, child state, heights, and offsets                     | ✅                            |
-| `GPUGraphTraversal`     | Packed CSR or aligned local CSR partitions with global neighbor IDs | ✅                            |
-| `GPUAncestorProjection` | Source-aligned parent, mask, and output views                       | ❌                            |
-| `GPUSort`               | Key and value `GraphDataView`s                                      | ❌                            |
-| `GPUReduction`          | Scalar `GraphDataView` or `GraphVectorView`                         | ✅                            |
-| `GPUHistogram`          | Scalar `GraphDataView` or `GraphVectorView`                         | ✅                            |
-| `GPUGridBinning`        | Position `GraphDataView` or `GraphVectorView`                       | ✅                            |
-| `GPUGridAggregation`    | Aligned position and weight views or vectors                        | ✅                            |
-| `GPUGroupAggregation`   | Dense group-key view or vector with optional aligned mask           | ✅                            |
-| `GPUIndexPickingTarget` | Texture and readback resources                                      | ❌                            |
-| `DrawCommandBuffer`     | Indirect command buffer                                             | ❌                            |
+| Primitive               | Primary graph input                                                     | Multi-chunk `GraphVectorView` |
+| ----------------------- | ----------------------------------------------------------------------- | ----------------------------- |
+| `GPUScan`               | Scalar `GraphDataView` or `GraphVectorView`                             | ✅                            |
+| `GPUCompaction`         | Scalar `GraphDataView`s or matching `GraphVectorView`s                  | ✅                            |
+| `GPUMask`               | Scalar masks or matching mask `GraphVectorView`s                        | ✅                            |
+| `GPUHierarchyLayout`    | Parent state, child state, heights, and offsets                         | ✅                            |
+| `GPUGraphTraversal`     | Packed CSR or aligned local CSR partitions with global neighbor IDs     | ✅                            |
+| `GPUAncestorProjection` | Source-aligned parent, mask, and output views                           | ❌                            |
+| `GPUSort`               | Key and value `GraphDataView`s                                          | ❌                            |
+| `GPUReduction`          | Scalar `GraphDataView` or `GraphVectorView`                             | ✅                            |
+| `GPUHistogram`          | Scalar `GraphDataView` or `GraphVectorView`                             | ✅                            |
+| `GPUGridBinning`        | Position `GraphDataView` or `GraphVectorView`                           | ✅                            |
+| `GPUGridAggregation`    | Aligned position and weight views or vectors                            | ✅                            |
+| `GPUGroupAggregation`   | Dense group-key view or vector with optional aligned mask               | ✅                            |
+| `GPUHashIndex`          | One packed unsigned-key `GraphDataView`                                 | ❌                            |
+| `GPUBatchHashIndex`     | Ordered unsigned-key chunks and optional aligned values or validity     | ✅                            |
+| `GPUHashIndexQuery`     | One packed left-key `GraphDataView` and a shared hash index             | ❌                            |
+| `GPUHashJoin`           | One packed left-key `GraphDataView` and a shared hash index             | ❌                            |
+| `GPUBatchHashJoin`      | Ordered left-key chunks and a shared single- or multi-batch right index | ✅                            |
+| `GPUIndexPickingTarget` | Texture and readback resources                                          | ❌                            |
+| `DrawCommandBuffer`     | Indirect command buffer                                                 | ❌                            |
 
 ## Texture APIs[​](#texture-apis "Direct link to Texture APIs")
 
 ### `importTexture(descriptor, defaultTexture?)`[​](#importtexturedescriptor-defaulttexture "Direct link to importtexturedescriptor-defaulttexture")
 
-Declares a caller-owned `Texture` or ready `DynamicTexture`. Texture descriptors are exact rather than capacity-based: format, dimension, extent, mip count, and sample count must match at every encoding, while concrete usage must contain every declared flag. Recompile canvas-sized graphs after a device-pixel resize.
+Declares a caller-owned `Texture` or ready `DynamicTexture`. Texture descriptors are exact rather than capacity-based: format, dimension, extent, mip count, and sample count must match at every encoding, while concrete usage must contain every declared flag. Recompile canvas-sized graphs after a device-pixel resize. Separate active imported handles cannot resolve to the same physical texture when either handle writes. Read-only aliases remain valid.
+
+### Retained texture history without copies[​](#retained-texture-history-without-copies "Direct link to Retained texture history without copies")
+
+[`GPUTextureHistory`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-texture-history.md) owns exactly two descriptor-identical textures. Import their initial roles once, compile the graph, and replace both role bindings when encoding later frames:
+
+```
+import {Texture} from '@luma.gl/core';
+
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/experimental';
+
+
+
+const descriptor = {
+
+  format: 'rgba16float' as const,
+
+  width,
+
+  height,
+
+  usage: Texture.SAMPLE | Texture.STORAGE
+
+};
+
+const history = new GPUTextureHistory(device, {id: 'radiance', ...descriptor});
+
+const graph = new GPUCommandGraph(device, {id: 'temporal-renderer'});
+
+const previous = graph.importTexture(
+
+  {id: 'previous-radiance', ...descriptor},
+
+  history.previousTexture
+
+);
+
+const current = graph.importTexture(
+
+  {id: 'current-radiance', ...descriptor},
+
+  history.currentTexture
+
+);
+
+
+
+graph.addComputePass({
+
+  id: 'accumulate-radiance',
+
+  resources: [
+
+    {texture: previous, usage: 'sampled'},
+
+    {texture: current, usage: 'storage-write'}
+
+  ],
+
+  compile: ({device}) => createAccumulationExecutable(device, previous, current)
+
+});
+
+
+
+const compiled = graph.compile();
+
+compiled.encode(commandEncoder, {
+
+  parameters: undefined,
+
+  textures: history.getBindings('previous-radiance', 'current-radiance')
+
+});
+
+history.advance();
+```
+
+Advance roles only after encoding succeeds. The application still owns encoder submission, and a failed encoding leaves both physical roles unchanged. Cached graph views recognize the alternating physical textures; graph destruction releases those views but never destroys the borrowed history textures. Destroy or replace the history explicitly when its descriptor changes.
+
+History textures are persistent `importTexture()` resources, not `importFrameTexture()` resources. The latter represents fresh presentation attachments and intentionally rejects reuse across frame IDs. `reset()` restores the original role order but does not clear either texture; shaders must explicitly invalidate stale samples after a camera cut, topology change, or resize.
+
+### Physical texture overlap and writable aliases[​](#physical-texture-overlap-and-writable-aliases "Direct link to Physical texture overlap and writable aliases")
+
+Texture hazard inference tracks views belonging to one logical `GraphTextureHandle`. Importing the same physical texture twice under separate handles would hide cross-handle write hazards, even if one binding is supplied through an encoding override or numbered frame texture. Before recording any node, `encode()` resolves the concrete textures and applies these rules:
+
+| Active imported resources                                                                                                                  | Result                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Two handles share a physical texture and both are read-only                                                                                | Allowed.                                                             |
+| Two handles share a physical texture and either declares `storage-write`, `storage-read-write`, `render-attachment`, or `copy-destination` | Rejected before recording any node.                                  |
+| Multiple texture views share one canonical imported handle                                                                                 | Allowed; overlapping ranges participate in inferred texture hazards. |
+| A duplicate import is unused by all graph nodes                                                                                            | Allowed.                                                             |
+| A persistent override or frame binding introduces writable overlap                                                                         | Only that encoding is rejected; corrected bindings can be retried.   |
+
+Import writable shared storage once and derive all mip, layer, or aspect ranges from that canonical handle with `createTextureView()`. Retained-history previous/current roles must resolve to two different physical textures on every encoding.
 
 ### `importFrameTexture(descriptor)`[​](#importframetexturedescriptor "Direct link to importframetexturedescriptor")
 
@@ -270,11 +441,125 @@ Resolve arrays have one entry per color attachment; `null` skips a slot. Every n
 
 Multisample resolve is currently a WebGPU contract. Render-pass callbacks cannot also supply their own framebuffer or resolve targets when graph attachments are present.
 
-## Node APIs[​](#node-apis "Direct link to Node APIs")
+### Caller-owned per-encoding framebuffers[​](#caller-owned-per-encoding-framebuffers "Direct link to Caller-owned per-encoding framebuffers")
 
-* `addComputePass(node)` compiles an executable callback that receives a graph-owned `ComputePass`.
-* `addRenderPass(node)` may declare graph texture `attachments`, resolve other `RenderPassProps` for each encoding, and receives a graph-owned `RenderPass`.
-* `addCopyPass(node)` records directly on the caller's `CommandEncoder`.
+A render node without graph-managed `attachments` can select an existing application framebuffer through its compiled executable's `getRenderPassProps()` callback:
+
+```
+const graph = new GPUCommandGraph<{framebuffer: Framebuffer}>(device);
+
+
+
+graph.addRenderPass({
+
+  id: 'present-offscreen',
+
+  resources: [{texture: tracedImage, usage: 'sampled'}],
+
+  compile: () => ({
+
+    getRenderPassProps: ({parameters}) => ({framebuffer: parameters.framebuffer}),
+
+    encode: ({renderPass}) => model.draw(renderPass)
+
+  })
+
+});
+
+
+
+const compiled = graph.compile();
+
+compiled.encode(commandEncoder, {parameters: {framebuffer: firstTarget}});
+
+compiled.encode(otherCommandEncoder, {parameters: {framebuffer: secondTarget}});
+```
+
+Changing the compatible framebuffer does not recompile the graph, and both framebuffers remain caller-owned. The graph still opens and closes the render pass; acquiring or destroying the framebuffer and submitting each command encoder remain the application's responsibilities. Render pipelines must match the selected target's color and depth/stencil formats, so callers should recreate incompatible pipelines when those formats change.
+
+Because an application-provided framebuffer is not a declared graph resource, the graph cannot infer hazards for its attachment textures or order later nodes that sample them. Import the target texture and declare graph-managed `attachments` when later work in the same graph depends on its output. A node cannot combine graph-managed attachments with a callback-provided framebuffer.
+
+## Node APIs and graph commands[​](#node-apis-and-graph-commands "Direct link to Node APIs and graph commands")
+
+A graph command is a reusable description of GPU work, not a second command queue or a hidden submission API. `compile()` prepares node executables once; `encode(commandEncoder, options)` records them into the application's existing `CommandEncoder`; the application decides when to submit that encoder. This distinction lets analytics, rendering, and explicitly requested readback share one dependency-ordered execution without taking ownership of the frame loop.
+
+| Feature             | Why it exists                                                                            | Typical use                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `addComputePass()`  | Schedule shader dispatch alongside its declared buffer and texture hazards.              | Filtering, scans, sorting, hash-index construction, aggregation, and indirect-command generation. |
+| `addRenderPass()`   | Schedule drawing with graph-managed attachments or compatible caller-owned framebuffers. | Scene rendering, picking, off-screen layers, and multisampled frame composition.                  |
+| `addCopyPass()`     | Express transfers or encoder-level operations in the same ordered graph.                 | Explicit compact-result readback, staging uploads, and copying finished render targets.           |
+| `dependsOn`         | Describe an ordering requirement that no shared graph resource can express.              | External side effects, timestamp boundaries, and application-owned synchronization.               |
+| Repeated `encode()` | Reuse compiled pipelines and scratch allocations with new parameters or imports.         | Interactive filters, animation frames, changing selections, and reusable query plans.             |
+
+### `addComputePass(node)`[​](#addcomputepassnode "Direct link to addcomputepassnode")
+
+Use a compute node whenever a shader reads or writes resources that other graph features consume. The graph manages the `ComputePass`; the executable only records dispatch commands. Consecutive compute nodes normally share one physical pass, preserving their individual execution order and debug groups without paying repeated pass-management overhead. A render or copy node always closes the active compute pass before recording its own commands. Declaring every input as `storage-read` and every output as `storage-write` lets later compute, render, or copy nodes automatically wait for the produced data.
+
+```
+graph.addComputePass({
+
+  id: 'select-visible-rows',
+
+  resources: [
+
+    {buffer: inputRows, usage: 'storage-read'},
+
+    {buffer: visibilityMask, usage: 'storage-write'}
+
+  ],
+
+  compile: ({device}) => createVisibilityExecutable(device)
+
+});
+```
+
+Primitives such as `GPUBatchHashIndex`, `GPUScan`, and `GPUHashJoin` use this same public graph contract: `primitive.addToGraph(graph)` contributes compute nodes but does not compile, submit, or read back the graph on the application's behalf.
+
+### `addRenderPass(node)`[​](#addrenderpassnode "Direct link to addrenderpassnode")
+
+Use a render node when graph-produced buffers or textures feed a draw, or when a draw produces a texture consumed by a later pass. Declare sampled and vertex inputs normally and supply graph-owned `attachments` when the graph should resolve the framebuffer. Multisampled attachments can provide `resolveTargets`; attachment writes then participate in ordinary texture hazard ordering.
+
+```
+graph.addRenderPass({
+
+  id: 'draw-visible-instances',
+
+  resources: [{buffer: visibleRows, usage: 'vertex'}],
+
+  attachments: {colorAttachments: [frameColor]},
+
+  compile: () => ({encode: encodeVisibleInstances})
+
+});
+```
+
+The graph owns the `RenderPass` lifecycle. The executable records drawing commands; it must not end the pass, submit the encoder, or replace a graph-managed framebuffer. When no `attachments` are declared, `getRenderPassProps()` may choose a compatible caller-owned framebuffer for each encoding.
+
+### `addCopyPass(node)`[​](#addcopypassnode "Direct link to addcopypassnode")
+
+Use a copy node when an operation belongs directly on the application's `CommandEncoder`, such as copying one small summary into an explicitly requested readback buffer. Copying is never implied by graph execution: an application that keeps all results GPU-resident should not add a readback node. Declare the source and destination so transfers are ordered after producers and before subsequent consumers.
+
+```
+graph.addCopyPass({
+
+  id: 'copy-result-summary',
+
+  resources: [
+
+    {buffer: resultSummary, usage: 'copy-source'},
+
+    {buffer: readbackSummary, usage: 'copy-destination'}
+
+  ],
+
+  compile: () => ({encode: encodeSummaryCopy})
+
+});
+```
+
+### Explicit dependencies and repeated encodings[​](#explicit-dependencies-and-repeated-encodings "Direct link to Explicit dependencies and repeated encodings")
+
+Prefer declared resource uses because they explain both ordering and transient lifetimes. Add `dependsOn: ['upstream-node-id']` only when an application-visible dependency has no corresponding buffer or texture hazard. Compile the complete graph once, then supply fresh parameters or compatible imported buffers and textures through later `encode()` calls. Writable physical-buffer and physical-texture overlap are revalidated for every encoding before any node records work.
 
 Buffer nodes declare storage, uniform, copy, indirect, vertex, and index uses. Texture nodes declare `sampled`, storage, render-attachment, and copy uses. Render attachments are automatically treated as read-write resources. `dependsOn` adds explicit ordering where resources do not express the dependency.
 
@@ -309,11 +594,15 @@ The implementation keeps dependencies one-directional: `gpu-command-graph-types.
 
 Records every compiled node. `options.parameters` is forwarded to callbacks. `options.buffers` may override imported buffers by ID if capacity and usage remain compatible. `options.textures` overrides exact-size imported textures. It returns a `GPUCommandGraphEncoding` with synchronous whole-graph and per-node CPU encoding statistics.
 
+Defaults, `DynamicBuffer` and `DynamicTexture` wrappers, per-encoding replacements, and numbered frame-texture bindings must not introduce writable aliases between separate active logical handles. Read-only aliases remain valid. All resource validation occurs before the first node executes.
+
 `encode()` never submits, maps, reads, or grows resources.
+
+Consecutive compute nodes share one physical compute pass by default. Node order, resource hazards, debug groups, and individual CPU measurements remain unchanged; render and copy nodes form strict pass boundaries. Set `options.coalesceComputePasses` to `false` when separate passes are required. `encoding.stats.computePassCount` reports the actual number of physical compute passes, and `encoding.stats.coalescedComputeNodeCount` reports how many nodes reused an already-open pass.
 
 `options.frameTextures` and `options.externalTextures` form one coherent frame transaction. The graph validates every binding before advancing its remembered frame IDs, so a rejected replacement can be corrected and retried without partially consuming a frame.
 
-If the caller's encoder has a timestamp query set, compute and render passes record timestamp pairs without changing graph code. `encoding.canReadGPUTimings` reports whether any pairs were captured. After submitting the command buffer, `await encoding.readTimings()` explicitly reads per-node and total GPU durations. The read is never automatic, and copy nodes remain CPU-timed until the portable command-encoder API exposes standalone timestamp writes.
+If the caller's encoder has a timestamp query set, compute and render passes record timestamp pairs without changing graph code. Compute-pass coalescing is automatically disabled for that encoding so every compute node retains its own GPU timestamp pair. `encoding.canReadGPUTimings` reports whether any pairs were captured. After submitting the command buffer, `await encoding.readTimings()` explicitly reads per-node and total GPU durations. The read is never automatic, and copy nodes remain CPU-timed until the portable command-encoder API exposes standalone timestamp writes.
 
 ### `capabilities`[​](#capabilities "Direct link to capabilities")
 
@@ -340,7 +629,7 @@ Destroys compiled node resources, cached views/framebuffers, and physical transi
 
 ## `GPUCommandGraphInspector`[​](#gpucommandgraphinspector "Direct link to gpucommandgraphinspector")
 
-`GPUCommandGraphInspector` is a data-only collector for one or more compiled graphs. Register each compiled graph once, record synchronous CPU measurements immediately after `encode()`, and request optional GPU timestamp readback only after submitting the command buffer:
+`GPUCommandGraphInspector` is a data-only collector for one or more compiled graphs. Its non-owning observation handle registers a graph and records synchronous CPU measurements whenever encoding is routed through the handle. Optional GPU timestamp readback remains explicit and happens only after the caller submits the command buffer:
 
 ```
 import {GPUCommandGraphInspector} from '@luma.gl/experimental';
@@ -349,15 +638,13 @@ import {GPUCommandGraphInspector} from '@luma.gl/experimental';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 
-inspector.registerGraph(compiled);
+const observation = inspector.observeGraph(compiled);
 
 
 
 const commandEncoder = device.createCommandEncoder();
 
-const encoding = compiled.encode(commandEncoder, {parameters: {time}});
-
-inspector.recordEncoding(compiled.id, encoding);
+const encoding = observation.encode(commandEncoder, {parameters: {time}});
 
 device.submit(commandEncoder.finish());
 
@@ -365,15 +652,23 @@ device.submit(commandEncoder.finish());
 
 if (encoding.canReadGPUTimings) {
 
-  await inspector.recordGPUTimings(compiled.id, encoding);
+  await observation.recordGPUTimings(encoding);
 
 }
 
 
 
+// The application remains responsible for any diagnostic-buffer readback.
+
+observation.recordCounters({candidates, matches});
+
+
+
 const snapshot = inspector.getSnapshot();
+
+observation.detach();
 ```
 
-`getSnapshot()` returns an immutable view of every registered graph in registration order. Each graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read counts, bounded whole-graph CPU and GPU duration summaries, and per-node summaries in compiled schedule order. Duration summaries contain the retained sample count plus latest, p50, and p95 milliseconds when samples exist. Pass `getNodeGroup` to the constructor to add application-specific semantic groups to node snapshots; pass `maxSamples` to bound each retained timing history.
+`getSnapshot()` returns an immutable view of every registered graph in registration order. Each graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read counts, bounded whole-graph CPU and GPU duration summaries, application-defined scalar counter summaries, and per-node summaries in compiled schedule order. Duration and counter summaries contain the retained sample count plus latest, p50, and p95 values. Counters remain in first-observed order. Pass `getNodeGroup` to the constructor to add application-specific semantic groups to node snapshots; pass `maxSamples` to bound every retained history.
 
-The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps automatically. `clear()` removes all registrations, while registering a new compiled graph with an existing ID replaces its captured metadata and resets its measurements.
+The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps automatically. An observation does not own or destroy its graph. `detach()` stops that observation and removes its registration when it is still current; an old handle cannot remove a replacement with the same graph ID or publish delayed counters into it. A handle accepts timing reads only for encodings it produced and records at most one GPU sample per encoding. `recordCounters()` only stores caller-provided finite, non-negative values; it does not read a buffer or synchronize the device. `clear()` removes all registrations. The lower-level `registerGraph()`, `recordEncoding()`, `recordGPUTimings()`, and `recordCounters()` methods remain available for applications that cannot route graph activity through an observation handle.

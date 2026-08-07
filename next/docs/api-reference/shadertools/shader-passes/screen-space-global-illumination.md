@@ -1,0 +1,110 @@
+# Screen-Space Global Illumination
+
+Gather colored diffuse light bouncing between surfaces that are visible in the current frame. `createSSGIShaderPassPipeline` traces a screen-space hemisphere, reprojects indirect-light history, denoises across compatible surfaces, and adds the stabilized radiance to scene color.
+
+### Deferred Rendering: Illumination Lab
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/deferred-rendering)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
+## At a Glance[​](#at-a-glance "Direct link to At a Glance")
+
+| Property          | Value                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| Export            | `createSSGIShaderPassPipeline`                                                             |
+| Backend           | WebGPU                                                                                     |
+| Render passes     | Six: hemisphere trace, temporal resolve, depth history, two spatial filters, and composite |
+| Required bindings | `depthTexture`, `normalTexture`, and `velocityTexture`                                     |
+| Persistent state  | `rgba16float` indirect-light and depth history                                             |
+| Lighting model    | Visible-screen diffuse bounce; no offscreen geometry                                       |
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+import {createGTAOShaderPassPipeline, createSSGIShaderPassPipeline} from '@luma.gl/effects';
+
+
+
+const renderer = new ShaderPassRenderer(device, {
+
+  colorFormat: 'rgba16float',
+
+  shaderPasses: [
+
+    createGTAOShaderPassPipeline(),
+
+    createSSGIShaderPassPipeline({resolutionScale: 0.5})
+
+  ]
+
+});
+
+
+
+renderer.renderToScreen({
+
+  sourceTexture: litSceneTexture,
+
+  bindings: gBuffer.getShaderPassBindings(),
+
+  uniforms: {
+
+    ssgiTrace: {
+
+      projectionMatrix,
+
+      inverseProjectionMatrix,
+
+      radius: 4.5,
+
+      thickness: 0.32,
+
+      intensity: 2.2,
+
+      rayCount: 7,
+
+      stepCount: 8,
+
+      frameIndex
+
+    },
+
+    ssgiTemporal: {inverseProjectionMatrix, historyWeight: 0.89, depthThreshold: 0.022}
+
+  }
+
+});
+```
+
+## Parameters[​](#parameters "Direct link to Parameters")
+
+| Parameter         | Default | Range or purpose                                                                    |
+| ----------------- | ------- | ----------------------------------------------------------------------------------- |
+| `resolutionScale` | `1`     | Relative resolution of tracing, history, denoising, and indirect-radiance textures. |
+| `radius`          | `4.5`   | View-space hemisphere tracing distance.                                             |
+| `thickness`       | `0.32`  | Depth thickness accepted when a ray intersects visible scene geometry.              |
+| `intensity`       | `2.2`   | Multiplier applied to gathered diffuse bounced radiance.                            |
+| `rayCount`        | `7`     | Hemisphere directions per pixel; supported range is `1` to `12`.                    |
+| `stepCount`       | `8`     | Samples per ray; supported range is `2` to `12`.                                    |
+| `historyWeight`   | `0.89`  | Contribution from depth-validated indirect-light history.                           |
+| `depthThreshold`  | `0.022` | Temporal depth rejection threshold.                                                 |
+| `strength`        | `1`     | Final `ssgiComposite` contribution added to scene color.                            |
+
+## Quality and Limitations[​](#quality-and-limitations "Direct link to Quality and Limitations")
+
+The trace cost grows with both `rayCount` and `stepCount`, while resolution affects every intermediate and history texture. Only geometry and radiance visible in the current screen can contribute; offscreen emitters and surfaces hidden behind the first depth layer are unavailable. Velocity reprojection and depth/normal-aware denoising reduce frame-to-frame noise but do not recover missing scene information.
+
+Place SSGI after direct lighting and ambient occlusion. Place it before [Screen-Space Reflections](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/screen-space-reflections.md) when reflective surfaces should include the newly added diffuse bounce.
+
+## Related Effects[​](#related-effects "Direct link to Related Effects")
+
+* [GTAO](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/gtao.md) removes unavailable ambient lighting instead of adding bounced radiance.
+* [Screen-Space Reflections](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/screen-space-reflections.md) gathers directional specular reflection.
+* [Depth-Aware Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/depth-aware-blur.md) explains edge-preserving screen-space denoising.

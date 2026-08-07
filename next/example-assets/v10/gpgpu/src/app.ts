@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {luma, type Device} from '@luma.gl/core';
 import {cleanEvaluate, type GPUDataEvaluator} from '@luma.gl/gpgpu';

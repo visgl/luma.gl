@@ -1,253 +1,94 @@
-# Image Processing
+# Shader Pass Catalog
 
-Screen space effects packaged as reusable shader modules in `@luma.gl/effects` based on the [glfx library](http://evanw.github.io/glfx.js/).
+Explore reusable image-processing filters, cinematic lens effects, temporal reconstruction, and scene-aware WebGPU pipelines from `@luma.gl/effects`. Every effect below has its own implementation guide, parameter reference, composition notes, and, where an existing showcase is available, a live interactive example.
 
-info
+### Effects: Image Processing
 
-luma.gl shader passes can be used directly with [deck.gl](https://deck.gl)'s postprocessing system. In luma.gl, run them through [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md). The older `Pass` classes from luma.gl v7 are not the current execution API.
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/showcase/postprocessing)Info
 
-For guidance on similar-looking alternatives, including single-pass versus multiscale bloom, SSAO versus GTAO, environment-map versus screen-space reflections, and FXAA versus temporal AA, see [Rendering Techniques and Tradeoffs](https://luma.gl/next/docs/api-guide/shaders/rendering-techniques.md).
+InfoSource
 
-## Attribution[​](#attribution "Direct link to Attribution")
+```
+// Loading source…
+```
 
-Most of these image post processing effects (and this documentation page) are forked from Evan Wallace's [glfx](https://github.com/evanw/glfx.js) library and have just been repackaged as luma.gl shader modules / shader passes.
+## Choosing an Effect[​](#choosing-an-effect "Direct link to Choosing an Effect")
+
+| Category                  | Effects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Typical placement                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Color and tone            | [Brightness and contrast](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/brightness-contrast.md), [hue and saturation](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/hue-saturation.md), [sepia](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/sepia.md), [vibrance](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/vibrance.md), [tone mapping](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/tone-mapping.md), [HDR auto exposure](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/hdr-auto-exposure.md)                                                                                                                                                         | Exposure and grading before the final display transform.                        |
+| Blur, bloom and focus     | [Bloom](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/bloom.md), [Gaussian blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/gaussian-blur.md), [triangle blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/triangle-blur.md), [tilt shift](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/tilt-shift.md), [zoom blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/zoom-blur.md), [depth of field](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/depth-of-field.md), [depth-aware blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/depth-aware-blur.md)                                                                       | Scene-linear lighting and camera effects before tone mapping.                   |
+| Temporal and antialiasing | [Persistence](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/persistence.md), [FXAA](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/fxaa.md), [temporal antialiasing](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/temporal-antialiasing.md), [camera-reprojection antialiasing](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/camera-reprojection-antialiasing.md), [motion blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/motion-blur.md)                                                                                                                                                                                                                                         | Temporal accumulation before lens effects; FXAA near presentation.              |
+| Lighting and visibility   | [SSAO](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/ssao.md), [GTAO](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/gtao.md), [screen-space global illumination](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/screen-space-global-illumination.md), [screen-space reflections](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/screen-space-reflections.md), [outlines](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/outlines.md)                                                                                                                                                                                                                                                       | After scene rendering while depth, normals, and velocity still align.           |
+| Atmosphere                | [Volumetric fog](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/volumetric-fog.md), [clustered volumetric lighting](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/clustered-volumetric-lighting.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | After opaque lighting and visibility; before exposure and bloom.                |
+| Stylization and detail    | [Color halftone](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/color-halftone.md), [dot screen](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/dot-screen.md), [edge work](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/edge-work.md), [hexagonal pixelation](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/hexagonal-pixelate.md), [ink](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/ink.md), [noise](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/noise.md), [vignette](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/vignette.md), [denoise](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/denoise.md) | Creative finishing or targeted source cleanup.                                  |
+| Warp and lens             | [Bulge and pinch](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/bulge-pinch.md), [magnify](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/magnify.md), [swirl](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/swirl.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | After depth-dependent effects unless auxiliary attachments are transformed too. |
 
 ## Usage[​](#usage "Direct link to Usage")
 
-Import the shader module(s) you would like to use from `@luma.gl/effects`, e.g:
+Individual [`ShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md) descriptors and complete [`ShaderPassPipeline`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md#shaderpasspipeline) graphs can share one ordered [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md):
 
 ```
-import {brightnessContrast} from '@luma.gl/effects';
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+import {createBloomShaderPassPipeline, toneMapping, vignette} from '@luma.gl/effects';
+
+
+
+const renderer = new ShaderPassRenderer(device, {
+
+  colorFormat: 'rgba16float',
+
+  shaderPasses: [
+
+    createBloomShaderPassPipeline({quality: 'high', blurAlgorithm: 'dual-kawase'}),
+
+    toneMapping,
+
+    vignette
+
+  ]
+
+});
+
+
+
+renderer.renderToScreen({
+
+  sourceTexture: sceneColorTexture,
+
+  uniforms: {
+
+    toneMapping: {exposure: 1, maximumLuminance: 1},
+
+    vignette: {radius: 0.7, amount: 0.35}
+
+  }
+
+});
 ```
 
-Pass imported effects to [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md) when running them inside luma.gl.
+Every pass receives the output from the preceding stage. Pipelines may additionally allocate named scratch textures or persistent history, and WebGPU-enabled pipelines can replace supported render stages with compute work. The renderer owns its internal targets; application-owned scene attachments remain explicit bindings.
 
-Some effects also consume extra bindings in addition to the default `sourceTexture`. For example, `persistenceEffect` expects a `persistenceTexture` binding containing the previously accumulated frame.
+## Inputs and Compatibility[​](#inputs-and-compatibility "Direct link to Inputs and Compatibility")
 
-## Shader Modules[​](#shader-modules "Direct link to Shader Modules")
+| Input             | Required by                                                                                                   | Ownership                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `sourceTexture`   | Every shader pass and pipeline.                                                                               | Application provides the current scene or image.                                                                         |
+| `depthTexture`    | Depth of field, bilateral blur, occlusion, reflections, temporal reconstruction, motion blur, and atmosphere. | Application retains the scene depth attachment.                                                                          |
+| `normalTexture`   | Normal-aware occlusion, screen-space lighting and reflections, and optional outlines.                         | Application supplies view-space normals or a compatible G-buffer attachment.                                             |
+| `velocityTexture` | Motion blur and velocity-based temporal reprojection.                                                         | Application supplies per-pixel screen-space motion.                                                                      |
+| History textures  | Temporal antialiasing, adaptive exposure, temporal occlusion/reflections, and fog.                            | Named pipeline targets are owned by `ShaderPassRenderer`; `persistenceEffect` uses an application-owned history texture. |
 
-|                                                                                                                         |
-| :---------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/mountain.jpg)*Original Image* |
+The image-only adjustments, blur filters, stylization passes, warps, FXAA, and depth of field include both WGSL and GLSL implementations for WebGPU and WebGL2. The advanced scene-aware pipelines documented here use WGSL and target WebGPU. Bloom's portable render path works on both backends; fused downsampling and FFT convolution additionally require WebGPU.
 
-### brightnessContrast[​](#brightnesscontrast "Direct link to brightnessContrast")
+info
 
-Provides additive brightness and multiplicative contrast control.
+deck.gl's existing [`PostProcessEffect`](https://deck.gl/docs/api-reference/core/post-process-effect) accepts individual shader-pass modules. Named-target `ShaderPassPipeline` graphs and the separate WebGPU FFT bloom renderer require an integration that explicitly executes those rendering paths.
 
-* `brightness` -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white). Default value is `0`.
-* `contrast` -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast). Default value is `0`.
+## Related Guides[​](#related-guides "Direct link to Related Guides")
 
-|                                                                                                                                                 |
-| :---------------------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/brightness.jpg)*Brightness / Contrast Effect* |
-
-### hueSaturation[​](#huesaturation "Direct link to hueSaturation")
-
-Provides rotational hue and multiplicative saturation control. RGB color space can be imagined as a cube where the axes are the red, green, and blue color values.
-
-Hue changing works by rotating the color vector around the grayscale line, which is the straight line from black (0, 0, 0) to white (1, 1, 1).
-
-Saturation is implemented by scaling all color channel values either toward or away from the average color channel value.
-
-* `hue` -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change, and 1 is 180 degree rotation in the positive direction). Default value is `0`.
-* `saturation` -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast). Default value is `0`.
-
-|                                                                                                                                     |
-| :---------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/hue.jpg)*Hue / Saturation Effect* |
-
-### noise[​](#noise "Direct link to noise")
-
-Adds black and white noise to the image.
-
-* `amount` 0 to 1 (0 for no effect, 1 for maximum noise). Default value is `0.5`.
-
-|                                                                                                                            |
-| :------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/noise.jpg)*Noise Effect* |
-
-### persistenceEffect[​](#persistenceeffect "Direct link to persistenceEffect")
-
-Blends the current frame with a caller-provided history texture to create fading trails and similar temporal feedback effects.
-
-* Extra binding: `persistenceTexture` - the previously accumulated frame.
-* Current-frame color is boosted before blending (`color * 4.0`), then clamped back into display range.
-* Alpha is rebuilt from both the current frame coverage and the faded history alpha so sparse bright samples remain visible across frames.
-
-This pass is intended for temporal workflows where the application manages history textures explicitly, for example by alternating two `ShaderPassRenderer` instances or application-owned ping-pong textures.
-
-### sepia[​](#sepia "Direct link to sepia")
-
-Gives the image a reddish-brown monochrome tint that imitates an old photograph.
-
-* `amount` 0 to 1 (0 for no effect, 1 for full sepia coloring). Default value is `0.5`.
-
-|                                                                                                                            |
-| :------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/sepia.jpg)*Sepia Effect* |
-
-### vibrance[​](#vibrance "Direct link to vibrance")
-
-Modifies the saturation of desaturated colors, leaving saturated colors unmodified.
-
-* `amount` -1 to 1 (-1 is minimum vibrance, 0 is no change, and 1 is maximum vibrance). Default value is `0`.
-
-|                                                                                                                                  |
-| :------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/vibrance.jpg)*Vibrance Effect* |
-
-### vignette[​](#vignette "Direct link to vignette")
-
-Adds a simulated lens edge darkening effect.
-
-* `size` 0 to 1 (0 for center of frame, 1 for edge of frame). Default value is `0.5`.
-* `amount` 0 to 1 (0 for no effect, 1 for maximum lens darkening). Default value is `0.5`.
-
-|                                                                                                                                  |
-| :------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/vignette.jpg)*Vignette Effect* |
-
-### tiltShift[​](#tiltshift "Direct link to tiltShift")
-
-Simulates the shallow depth of field normally encountered in close-up photography, which makes the scene seem much smaller than it actually is. This filter assumes the scene is relatively planar, in which case the part of the scene that is completely in focus can be described by a line (the intersection of the focal plane and the scene). An example of a planar scene might be looking at a road from above at a downward angle. The image is then blurred with a blur radius that starts at zero on the line and increases further from the line.
-
-* `start` \[x, y] coordinate of the start of the line segment. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0, 0]`.
-* `end` \[x, y] coordinate of the end of the line segment. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[1, 1]`.
-* `blurRadius` The maximum radius of the pyramid blur in pixels. Default value is `15`.
-* `gradientRadius` The distance in pixels from the line at which the maximum blur radius is reached. Default value is `200`.
-
-|                                                                                                                                      |
-| :----------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/tilt_shift.jpg)*Tilt Shift Effect* |
-
-### gaussianBlur[​](#gaussianblur "Direct link to gaussianBlur")
-
-Applies a true separable Gaussian blur with a radius-driven kernel and soft falloff. This is a better starting point than `triangleBlur` when you want a softer, more photographic blur kernel.
-
-* `radius` The blur radius in pixels. Default value is `12`, maximum value is `32`.
-
-### bloom[​](#bloom "Direct link to bloom")
-
-Adds a glow to bright areas of the image by extracting pixels above a luminance threshold, softly blurring them, and mixing them back with the source color.
-
-* `radius` Radius of the sampling kernel in pixels. Default value is `4`.
-* `threshold` Luminance threshold above which a pixel contributes to bloom. Default value is `0.8`.
-* `intensity` Strength of the bloom contribution. Default value is `1`.
-
-### triangleBlur[​](#triangleblur "Direct link to triangleBlur")
-
-This is the most basic blur filter, which convolves the image with a pyramid filter. The pyramid filter is separable and is applied as two perpendicular triangle filters.
-
-* `radius` The radius of the pyramid in pixels convolved with the image. Default value is `20`.
-
-|                                                                                                                                            |
-| :----------------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/triangle_blur.jpg)*Triangle Blur Effect* |
-
-### zoomBlur[​](#zoomblur "Direct link to zoomBlur")
-
-Blurs the image away from a certain point, which looks like radial motion blur.
-
-* `center` \[x, y] coordinate of the blur origin. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
-* `strength` The strength of the blur. Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 creates a highly blurred image. Default value is `0.3`.
-
-|                                                                                                                                    |
-| :--------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/zoom_blur.jpg)*Zoom Blur Effect* |
-
-### colorHalftone[​](#colorhalftone "Direct link to colorHalftone")
-
-Simulates a CMYK halftone rendering of the image by multiplying pixel values with a four rotated 2D sine wave patterns, one each for cyan, magenta, yellow, and black.
-
-* `center` \[x, y] coordinate of the pattern origin. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
-* `angle` The rotation of the pattern in radians. Default value is `1.1`.
-* `size` The diameter of a dot in pixels. Default value is `4`.
-
-|                                                                                                                                              |
-| :------------------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/color_halftone.jpg)*Color Halftone Effect* |
-
-### dotScreen[​](#dotscreen "Direct link to dotScreen")
-
-Simulates a black and white halftone rendering of the image by multiplying pixel values with a rotated 2D sine wave pattern.
-
-* `center` \[x, y] coordinate of the pattern origin. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
-* `angle` The rotation of the pattern in radians. Default value is `1.1`.
-* `size` The diameter of a dot in pixels. Default value is `3`.
-
-|                                                                                                                                      |
-| :----------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/dot_screen.jpg)*Dot Screen Effect* |
-
-### edgeWork[​](#edgework "Direct link to edgeWork")
-
-Picks out different frequencies in the image by subtracting two copies of the image blurred with different radii.
-
-* `radius` The radius of the effect in pixels. Default value is `2`.
-
-|                                                                                                                                    |
-| :--------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/edge_work.jpg)*Edge Work Effect* |
-
-### hexagonalPixelate[​](#hexagonalpixelate "Direct link to hexagonalPixelate")
-
-Renders the image using a pattern of hexagonal tiles. Tile colors are nearest-neighbor sampled from the centers of the tiles.
-
-* `center` \[x, y] coordinate of the pattern center. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
-* `scale` The width of an individual tile in pixels. Default value is `10`.
-
-|                                                                                                                                           |
-| :---------------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/hexagon.jpg)*Hexagonal Pixelate Effect* |
-
-### ink[​](#ink "Direct link to ink")
-
-Simulates outlining the image in ink by darkening edges stronger than a certain threshold. The edge detection value is the difference of two copies of the image, each blurred using a blur of a different radius.
-
-* `strength` The multiplicative scale of the ink edges. Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 adds lots of black edges. Negative strength values will create white ink edges instead of black ones. Default value is `0.25`.
-
-|                                                                                                                        |
-| :--------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/ink.jpg)*Ink Effect* |
-
-### bulgePinch[​](#bulgepinch "Direct link to bulgePinch")
-
-Bulges or pinches the image in a circle.
-
-* `center` \[x, y] coordinate of the center of the circle of effect. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
-* `radius` The radius of the circle of effect in pixels. Default value is `200`.
-* `strength` -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge). Default value is `0.5`.
-
-|                                                                                                                                        |
-| :------------------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/bulge_pinch.jpg)*Bulge Pinch Effect* |
-
-### swirl[​](#swirl "Direct link to swirl")
-
-Warps a circular region of the image in a swirl.
-
-* `center` \[x, y] coordinate of the center of the circular region. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
-* `radius` The radius of the circular region in pixels. Default value is `200`.
-* `angle` The angle in radians that the pixels in the center of the circular region will be rotated by. Default value is `3`.
-
-|                                                                                                                            |
-| :------------------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/swirl.jpg)*Swirl Effect* |
-
-### magnify[​](#magnify "Direct link to magnify")
-
-Apply magnify effect to the surrounding area of a given position.
-
-* `screenXY`: x, y position in screen coords, both x and y is normalized and in range `[0, 1]`. `[0, 0]` is the up left corner, `[1, 1]` is the bottom right corner. Default value is `[0, 0]`.
-* `radiusPixels`: effect radius in pixels. Default value is `100`.
-* `zoom`: magnify level. Default value is `2`.
-* `borderWidthPixels`: border width of the effect circle, will not show border if value <= 0.0. Default value is `0`.
-* `borderColor`: border color of the effect circle. Default value is `[255, 255, 255, 255]`.
-
-|                                                                                                                     |
-| :-----------------------------------------------------------------------------------------------------------------: |
-| ![](https://raw.githubusercontent.com/visgl/deck.gl-data/master/luma.gl/examples/effects/magnify.png)*Swirl Effect* |
-
-## Remarks[​](#remarks "Direct link to Remarks")
-
-* Coordinate is based on the original image. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner.
+* [Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) explains routing, history, and complete HDR render stacks.
+* [Rendering Techniques and Tradeoffs](https://luma.gl/next/docs/api-guide/shaders/rendering-techniques.md) compares blur, occlusion, reflections, transparency, and temporal techniques.
+* [ShaderPassRenderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md) documents execution, bindings, intermediate targets, and presentation.
+* Many classic image filters are derived from Evan Wallace's [glfx.js](https://github.com/evanw/glfx.js).

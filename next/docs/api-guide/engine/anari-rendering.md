@@ -316,6 +316,48 @@ const renderer = anariDevice.newRenderer('deferred', {
 
 The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
 
+The compact G-buffer runs within the default WebGPU CORE limit of 32 color-attachment bytes per sample. Its four targets retain HDR scene color (`rgba16float`), normal and roughness (`rgba8unorm`), base color and metallic (`rgba8unorm`), and HDR emissive color with occlusion (`rgba16float`). Each format costs eight render-target bytes under WebGPU accounting, for exactly 32 bytes total. ANARI's previous velocity target contained only zeroes and was never consumed, so omitting it preserves physically based direct lighting, HDR, and emissive response without requesting elevated device limits. Temporal motion-vector effects remain future work.
+
+## Try the graph-based ray tracer[​](#try-the-graph-based-ray-tracer "Direct link to Try the graph-based ray tracer")
+
+On WebGPU, switch the same retained scene to the software ray-tracing renderer:
+
+```
+const renderer = anariDevice.newRenderer('raytrace', {
+
+  samplesPerPixel: 1,
+
+  maxBounces: 1,
+
+  progressive: true,
+
+  shadows: true,
+
+  resolutionScale: 0.5,
+
+  minimumResolutionScale: 0.25,
+
+  adaptiveResolution: true,
+
+  targetFrameTimeMilliseconds: 33.3,
+
+  temporalReprojection: true,
+
+  shadowSamplesPerFrame: 1
+
+});
+
+
+
+frame.setParameter('renderer', renderer).commitParameters();
+```
+
+The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from `@luma.gl/experimental`. Its WebGPU compute graph derives world-space bounds for transformed analytic spheres and mesh instances, Morton-sorts active object/instance leaves into an explicit retained permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-only animation gathers updated bounds through the retained permutation and refits the TLAS without sorting; topology changes and periodic spatial refreshes rebuild the Morton order. A topology-only graph also Morton-sorts each mesh's triangles into GPU-built BLASes, which transform-only animation reuses. Small mesh permutations and hierarchies sharing packed scene storage are grouped into reusable segmented sort and BVH dispatches instead of opening separate sorting and hierarchy dispatches for every mesh. The instance-bounds pass reads each mesh BLAS root directly, producing a tight transformed local AABB instead of expanding elongated meshes to their enclosing sphere. Small sorts and hierarchy builds execute inside one workgroup; larger sorts use stable four-bit radix passes, and consecutive compute nodes share a command-encoder compute pass when per-node GPU timestamps are not requested. The same `GPUCommandGraph` evaluates direct lights with scalar metallic/roughness GGX shading, progressively accumulates unchanged primary-ray samples, and presents into either the canvas or a caller-owned offscreen framebuffer. The fullscreen presentation matches the actual target format, selected tone-mapping mode, and linear/sRGB output encoding, preserving HDR for floating-point targets. Generated quads, cylinders, and cones use their existing triangle geometry.
+
+Ray tracing starts at half the display width and height, reducing its initial pixel workload to one quarter of full resolution. Adaptive quality can lower that scale to `0.25`, interleave sampled pixels across animation frames, and rotate one shadowed direct light per frame to approach the default `33.3` millisecond frame budget. The fullscreen resolve upsamples the retained HDR image. Temporal reprojection follows camera and stable instance motion while rejecting incompatible depth, normal, and color history; camera cuts, topology changes, light-count changes, and resolution changes reset invalid history. Retained color and surface-metadata texture pairs exchange their previous/current graph roles after each successful encoding, eliminating the former four full-image history copies. Interleaved frames carry only their untouched pixels through a small coalesced compute dispatch; full-coverage frames perform no history carry. Set `shadowSamplesPerFrame: 0` to evaluate every direct light in one frame. Adaptive timing uses smoothed animation-frame intervals and does not require GPU timestamp queries. Acceleration updates run only when retained transforms or geometry change, so camera-only and lighting-only frames do not rebuild the TLAS. Transform-only frames use the retained-permutation gather/refit path; topology changes and periodic refreshes run the Morton sort path. The ANARI adapter caches normalized surfaces, materials, lights, and analytic primitives by committed world identity. Categorized topology, transform, material, and light revisions let camera-only frames reuse those descriptors without serializing the entire scene; committed instance changes additionally expose their exact stable placement identities.
+
+The Morton-sorted TLAS indexes objects and instances; surviving meshes traverse GPU-built, Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight storage buffers, while every TLAS or BLAS construction pass stays within the default WebGPU CORE limit of eight storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing. Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced PBR material extensions, indirect bounces, denoising, and volume objects remain unsupported by this renderer. `maxBounces` is reserved for future multi-bounce transport.
+
 ## Understand staging and commits[​](#understand-staging-and-commits "Direct link to Understand staging and commits")
 
 Every retained object has **pending** and **committed** parameters. Initial constructor parameters are committed automatically, but later changes are invisible until committed:
@@ -384,7 +426,7 @@ const cone = anariDevice.newGeometry('cone', {radius: 0.7, height: 1.4});
 const ground = anariDevice.newGeometry('quad', {width: 20, height: 20});
 ```
 
-For an explicit triangle mesh, provide packed positions and optionally normals and indices:
+For an explicit triangle mesh, provide packed positions and optionally normals, two texture coordinate sets, tangents, RGBA vertex colors, joint attributes, morph targets, and indices:
 
 ```
 const triangleMesh = anariDevice.newGeometry('triangle', {
@@ -409,10 +451,16 @@ const triangleMesh = anariDevice.newGeometry('triangle', {
 
   ]),
 
+  'vertex.attribute1': new Float32Array([0, 0, 1, 0, 0.5, 1]),
+
+  'vertex.attribute2': new Float32Array([0.25, 0, 0.75, 0, 0.5, 1]),
+
   'primitive.index': new Uint16Array([0, 1, 2])
 
 });
 ```
+
+`vertex.attribute1` and `vertex.attribute2` map to glTF `TEXCOORD_0` and `TEXCOORD_1`. `vertex.attribute0` retains RGB or RGBA vertex colors; `vertex.tangent` preserves tangent handedness. Joint indices and normalized floating-point weights use `vertex.joint` and `vertex.weight`. Morph targets contain optional `POSITION`, `NORMAL`, and `TANGENT` deltas; changing `morphWeights` updates the existing packed GPU vertex buffer without rebuilding the model.
 
 `ANARIArray` can wrap typed arrays without copying:
 
@@ -506,7 +554,7 @@ const transform = new Matrix4()
 
 ## Use physically based materials[​](#use-physically-based-materials "Direct link to Use physically based materials")
 
-`physicallyBased` exposes metallic/roughness shading plus emission, clearcoat, and an iridescence approximation:
+`physicallyBased` exposes metallic/roughness shading, emission, clearcoat, sheen, specular, transmission/volume parameters, iridescence, anisotropy, and explicit alpha controls:
 
 ```
 const polishedMetal = anariDevice.newMaterial('physicallyBased', {
@@ -542,7 +590,45 @@ const matteWall = anariDevice.newMaterial('matte', {
   color: [0.28, 0.3, 0.35]
 
 });
+
+
+
+const maskedLeaves = anariDevice.newMaterial('physicallyBased', {
+
+  alphaMode: 'mask',
+
+  alphaCutoff: 0.4,
+
+  doubleSided: true
+
+});
 ```
+
+All 17 supported glTF PBR texture slots map to retained image samplers. Base-color, emissive, specular-color, and sheen-color maps use sRGB inputs; normal, metallic/roughness, occlusion, and other data maps remain linear. Samplers preserve authored wrapping, filtering, mipmap selection, UV set, and texture transforms.
+
+Transmissive physical materials retain their authored `opaque` alpha mode. When a surface has a nonzero transmission factor, the shared forward renderer automatically captures the opaque background and refracts that scene color using its index of refraction, thickness, roughness, Fresnel response, and volume attenuation:
+
+```
+const glass = anariDevice.newMaterial('physicallyBased', {
+
+  alphaMode: 'opaque',
+
+  transmission: 1,
+
+  roughness: 0.08,
+
+  thickness: 0.4,
+
+  attenuationDistance: 2,
+
+  attenuationColor: [0.85, 0.96, 1],
+
+  indexOfRefraction: 1.5
+
+});
+```
+
+The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively resolved. Renderer parameters can also receive the caller-owned [prepared PBR lighting environment](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md) for roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.
 
@@ -584,6 +670,8 @@ const spot = anariDevice.newLight('spot', {
   direction: [0, -1, -0.25],
 
   openingAngle: Math.PI / 6,
+
+  falloffAngle: Math.PI / 9,
 
   intensity: 30
 
@@ -670,6 +758,8 @@ const normals = anariDevice.newRenderer('debugNormals');
 const depth = anariDevice.newRenderer('debugDepth');
 
 const deferred = anariDevice.newRenderer('deferred');
+
+const raytrace = anariDevice.newRenderer('raytrace', {shadows: true});
 ```
 
 Switch renderers by committing the frame:
@@ -678,7 +768,19 @@ Switch renderers by committing the frame:
 frame.setParameter('renderer', normals).commitParameters();
 ```
 
-Debug renderers automatically skip bloom. Switch to `deferred` to use the WebGPU G-buffer path, or switch back to `default` to restore the portable forward renderer with bloom.
+Debug renderers automatically skip bloom. Switch to `deferred` for the WebGPU G-buffer path, `raytrace` for WebGPU software ray tracing, or `default` for the portable forward renderer with bloom.
+
+Renderer presentation controls are ordinary committed ANARI parameters and are also accepted in JSON renderer descriptions:
+
+```
+beauty
+
+  .setParameters({toneMapMode: 2, outputColorSpace: 'srgb'})
+
+  .commitParameters();
+```
+
+`toneMapMode` selects no tone mapping (`0`), Reinhard (`1`), Khronos PBR Neutral (`2`), or ACES (`3`). `outputColorSpace` selects `'linear'` or `'srgb'`. Omit either setting to retain automatic, target-aware defaults: floating-point targets default to no tone mapping and linear output, integer targets default to Khronos PBR Neutral, and hardware-sRGB attachments avoid an additional software sRGB transfer.
 
 ## Handle resizing[​](#handle-resizing "Direct link to Handle resizing")
 
@@ -903,12 +1005,18 @@ console.log({
 
   drawCalls: statistics.drawCount,
 
-  renderedTriangles: statistics.triangleCount
+  renderedTriangles: statistics.triangleCount,
+
+  rayTracing: statistics.rayTracing
 
 });
 ```
 
 Use these numbers to verify batching behavior. If `instanceCount` is high but `drawCount` is similarly high, check whether each placement accidentally creates its own surface instead of reusing a retained surface.
+
+Ray-traced frames additionally report their internal resolution and effective scale, sampled-pixel coverage, smoothed frame time, and accumulated sample count. Other renderer subtypes omit `statistics.rayTracing`.
+
+When present, `statistics.rayTracing.graph` exposes the actual logical node count, physical compute pass count, coalesced compute-node count, and synchronous CPU encoding time. Its `trace` stage is present on every ray-traced frame; `topology`, `acceleration`, and `refit` appear only when the corresponding work runs. `acceleration` and `refit` are mutually exclusive. These counters do not request GPU timestamp queries, read resources back, or submit an additional command buffer.
 
 The renderer also supports capability discovery:
 
@@ -924,12 +1032,12 @@ anariDevice.extensions;
 
 ## Understand the renderer architecture[​](#understand-the-renderer-architecture "Direct link to Understand the renderer architecture")
 
-Each `frame.render()` performs the following work:
+Each raster `frame.render()` performs the following work:
 
 1. Resolve the frame's committed world, camera, and renderer.
 2. Collect directly attached world surfaces and surfaces reached through world instances.
 3. Group placements by retained surface object identity.
-4. Select the forward or deferred renderer runtime from the committed renderer subtype.
+4. Select the registered forward or deferred renderer runtime from the committed renderer subtype.
 5. Reuse or rebuild one luma.gl `Model` per distinct surface.
 6. Upload four per-instance matrix-column vertex buffers.
 7. Translate ANARI materials into luma.gl material uniforms and texture bindings.
@@ -939,17 +1047,126 @@ Each `frame.render()` performs the following work:
 11. Optionally run renderer-owned composition such as bloom or deferred lighting.
 12. Return surface, instance, draw-call, and triangle statistics.
 
-The forward runtime uses WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The deferred runtime is WebGPU-only and resolves the same retained object graph through `GBuffer` plus `deferredLighting`.
+The ANARI adapter does not own a second shader or material pipeline. It translates retained objects into the format-independent [`SceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md), [`DeferredSceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md), or `RayTracingSceneRenderer` descriptors from `@luma.gl/experimental`. The shared forward runtime uses WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves compatible opaque scenes through the same retained object graph and falls back to forward rendering for unsupported scene features. The WebGPU ray-tracing path instead uses command-graph compute, progressive HDR history, and a fullscreen presentation pass.
+
+Applications can add another renderer without changing retained scene objects:
+
+```
+anariDevice.registerRenderer(
+
+  'customRaymarch',
+
+  graphicsDevice => new CustomRaymarchRuntime(graphicsDevice)
+
+);
+
+
+
+const raymarch = anariDevice.newRenderer('customRaymarch');
+
+frame.setParameter('renderer', raymarch).commitParameters();
+```
+
+Runtime factories are lazy and device-owned. See [registering renderer runtimes](https://luma.gl/next/docs/api-reference/anari/anari-device.md#registering-renderer-runtimes) for the runtime contract and ownership details.
+
+### Ray-tracing implementation roadmap[​](#ray-tracing-implementation-roadmap "Direct link to Ray-tracing implementation roadmap")
+
+| Tranche                                         | Scope                                                                                                                                                                                                                                                   | Status                                                                                                                                     |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| T0: renderer and graph foundation               | Lazy subtype registration, retained-scene adapters, the shared experimental `RayTracingSceneRenderer`, explicit WebGPU command-graph resources, and application-owned submission.                                                                       | Implemented.                                                                                                                               |
+| T1: direct rays and shadows                     | Transformed analytic spheres, mesh triangles, tessellated analytic shapes, perspective/orthographic cameras, direct lights, hard shadow rays, progressive primary-ray sampling, and HDR presentation.                                                   | Implemented with WebGPU compute rather than hardware ray tracing.                                                                          |
+| T2a: GPU object acceleration                    | World-space instance bounds, graph-owned complete-binary TLAS construction and refitting, nearest-hit object traversal, early-exit shadow rays, and default-CORE storage limits.                                                                        | Implemented.                                                                                                                               |
+| T2b: interactive frame budgeting                | Half-resolution defaults, bounded adaptive quality, interleaved pixel coverage, retained-identity temporal reprojection, rotating shadow samples, and dirty-triggered object acceleration.                                                              | Implemented; frame pacing uses CPU animation intervals.                                                                                    |
+| T2c: large-scene acceleration                   | GPU Morton-sorted object/instance TLAS leaves, retained-permutation transform refits, tight transformed BLAS-root bounds, four-bit radix sorting, batched small-mesh sort/BVH construction, and CORE-compatible packed traversal.                       | Implemented; SAH/Karras topology, wide hierarchies, and traversal counters remain planned.                                                 |
+| T2d: retained scene updates                     | Categorized world/topology/transform/material/light revisions, cached scene descriptors, stable animated placement identities, sparse packed-transform uploads, and rotating copy-free texture history.                                                 | Implemented; camera- and light-only frames avoid acceleration rebuilds.                                                                    |
+| T2e: presentation and direct-light parity       | Caller-owned offscreen framebuffers, actual-target color/depth formats, exact SDR/HDR tone mapping and sRGB/linear presentation, incoming directional-light agreement, scalar metallic/roughness GGX shading, and per-stage graph encoding diagnostics. | Implemented for direct lighting; material textures, alpha/transmission, indirect transport, and GPU-stage timestamps remain separate work. |
+| T2f: deforming scene extraction                 | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration.                                                                                                                                          | Planned.                                                                                                                                   |
+| T3: indirect transport and denoising            | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1.                                                     | Planned.                                                                                                                                   |
+| T4: ray marching and volumes                    | Signed-distance-field ray marching, retained spatial fields, 3D textures, transfer functions, and ANARI volume objects.                                                                                                                                 | Planned.                                                                                                                                   |
+| T5: hybrid composition and advanced diagnostics | Raster/ray composition, GPU-stage timings, traversal counters, renderer capability reporting, and debug visualization channels.                                                                                                                         | Basic graph node/pass/CPU-encoding counters are implemented; hybrid composition, GPU timings, and advanced diagnostics remain planned.     |
+
+### Ray-tracing technique background and tradeoffs[​](#ray-tracing-technique-background-and-tradeoffs "Direct link to Ray-tracing technique background and tradeoffs")
+
+#### Software WebGPU, not hardware ray tracing[​](#software-webgpu-not-hardware-ray-tracing "Direct link to Software WebGPU, not hardware ray tracing")
+
+The `raytrace` subtype is deliberately a software ray tracer. It uses ordinary WebGPU compute passes, storage buffers, textures, and a fullscreen presentation draw; it does not request a hardware ray-tracing pipeline or browser-specific adapter feature. That keeps the implementation portable to default CORE WebGPU, but it also means the renderer owns acceleration-structure construction, traversal stacks, ray scheduling, and reconstruction itself.
+
+The default WebGPU profile exposes only eight storage-buffer bindings per shader stage; see the [WebGPU supported-limits table](https://gpuweb.github.io/gpuweb/#limits). The trace shader uses exactly those eight slots for scene records, TLAS data, and BLAS data. Construction is therefore split into command-graph passes that each stay at or below the same limit, and data that would be separate descriptors in a hardware RT API is packed into shared buffers. This constraint is not just bookkeeping: adding another traversal feature may require packing data, reusing a binding, or moving work into another graph pass rather than adding one more storage buffer.
+
+#### TLAS and BLAS[​](#tlas-and-blas "Direct link to TLAS and BLAS")
+
+**Implemented.** The renderer separates the hierarchy by update frequency. The top-level acceleration structure (TLAS) stores world-space bounds for analytic objects and mesh instances. Each mesh has a bottom-level acceleration structure (BLAS) over its local-space triangles. A ray first traverses the TLAS; after selecting a mesh instance, it transforms into local space and traverses that mesh's BLAS. Analytic spheres keep their direct intersection path and do not need triangle BLAS leaves.
+
+That split avoids duplicating triangle hierarchy data for every instance and makes transform animation cheaper: a moving instance changes TLAS bounds but not the mesh's local triangle BLAS. The cost is two nested traversals, extra packed hierarchy memory, and a topology-build phase when mesh geometry changes. It is still a useful separation even without hardware RT because it gives the software tracer the same coarse/fine reuse boundary that hardware APIs expose.
+
+#### Morton ordering, LBVH, and SAH[​](#morton-ordering-lbvh-and-sah "Direct link to Morton ordering, LBVH, and SAH")
+
+**Implemented, with an important limit.** The GPU build path computes bounds, quantizes centroids, encodes Morton keys, sorts keys and explicit leaf identifiers, gathers sorted bounds, and refits a complete-binary hierarchy. Morton order is cheap and parallel because nearby centroids tend to become nearby leaves. It is an LBVH-style spatial ordering strategy, used for both object/instance TLAS leaves and per-mesh triangle BLAS leaves. The reusable graph-native sorter resolves inputs of up to 256 elements with a single-workgroup stable bitonic dispatch and larger inputs with a stable four-bit radix histogram, prefix scan, and scatter pipeline. `GPUSegmentedSort` additionally groups many small, independent packed mesh permutations by workgroup width, so arbitrary mesh counts need at most eight local sorting dispatches. `GPUBVH` similarly fuses hierarchies of up to 128 leaves into a single workgroup while retaining its level-by-level fallback for larger trees. `GPUSegmentedBVH` extends that contract across packed independent mesh hierarchies, grouping all trees of the same leaf capacity into one dispatch and using at most eight capacity buckets. These are general graph contributors, not ANARI-specific acceleration implementations.
+
+Morton sorting is not the same as a full high-quality BVH builder. In particular, the current code does not implement the binary-radix-tree topology from [Karras, “Maximizing Parallelism in the Construction of BVHs, Octrees, and k-d Trees”](https://research.nvidia.com/publication/2012-06_maximizing-parallelism-construction-bvhs-octrees-and-k-d-trees), and it does not choose splits with the surface-area heuristic (SAH), as described by [Wald, “On fast Construction of SAH-based Bounding Volume Hierarchies”](https://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf). The implemented sorted complete-binary tree is cheaper to build and easy to express in the existing `GPUBVH` graph, but its traversal quality can be worse for clustered or highly overlapping geometry. Exact transformed BLAS-root bounds avoid the unnecessary enclosing-sphere overlap of elongated instances, but Karras-style topology, SAH refinement, wider nodes, and measured traversal diagnostics remain planned rather than implied by the word “Morton.”
+
+#### Refit versus rebuild[​](#refit-versus-rebuild "Direct link to Refit versus rebuild")
+
+**Implemented.** A topology change builds mesh BLASes and rebuilds the Morton TLAS permutation. Transform-only animation retains that permutation, gathers updated world-space bounds in the same leaf order, and refits TLAS parents without rerunning the scene-bounds reduction or sort. Camera, light, and material-only frames do not encode acceleration work. After a bounded run of refits, the renderer periodically rebuilds Morton order so large object motion cannot degrade the hierarchy forever.
+
+Adapters that provide categorized scene revisions avoid materializing transform signatures on every frame. Other callers materialize transform revisions once and reuse them for primitive changes. Updated instance records are written directly into their final packed `Float32Array`, avoiding the previous intermediate JavaScript number arrays and duplicate copied transform matrices. When a retained adapter reports a small set of stable dirty placements, only their current/inverse matrices and previous-motion matrices are uploaded; the following frame commits only the remaining previous-motion slots. Larger updates and replaced descriptors safely use the full packed path.
+
+Nearest-hit and shadow traversal compute guarded inverse ray directions once per world-space ray and mesh-local ray. Pending TLAS and BLAS stack entries retain their already-computed box entry distances, avoiding the former second slab test when a queued child is popped. Mesh traversal starts from its exact BLAS root, analytic spheres evaluate their quadratic intersection only once, and the CPU publishes the direct-light count so shading does not rescan every light per sample.
+
+Refit is much cheaper than rebuild, but it preserves old leaf neighborhoods even when objects have moved apart. Rebuild restores spatial quality but pays for bounds reduction, key generation, sort, gather, and hierarchy propagation. The current policy is intentionally simple and deterministic; a future policy could use measured overlap, visited-node counts, or build/traversal timing instead of only a bounded periodic refresh.
+
+#### Megakernel versus wavefront execution[​](#megakernel-versus-wavefront-execution "Direct link to Megakernel versus wavefront execution")
+
+**Implemented now:** one trace megakernel handles primary intersection, direct-light evaluation, hard shadow rays, temporal history validation, and output writes. For the current direct-light renderer this avoids queue storage, compaction passes, and extra synchronization, and it keeps command-graph submission straightforward.
+
+**Planned:** wavefront ray queues and compaction. A megakernel becomes less attractive as materials, multiple bounces, alpha/transmission, and heterogeneous ray types increase divergence and register pressure. The wavefront formulation described by [Laine, Karras, and Aila, “Megakernels Considered Harmful: Wavefront Path Tracing on GPUs”](https://research.nvidia.com/index.php/publication/2013-07_megakernels-considered-harmful-wavefront-path-tracing-gpus) separates ray generation, intersection, shading, and continuation into queues so each pass does more coherent work. In WebGPU that also means more graph nodes, queue buffers, scans/compaction, and indirect dispatch bookkeeping, so it should follow measured pressure from multi-bounce or complex materials rather than replace the direct-light megakernel preemptively.
+
+#### Target-aware presentation and physically based direct lighting[​](#target-aware-presentation-and-physically-based-direct-lighting "Direct link to Target-aware presentation and physically based direct lighting")
+
+**Implemented.** Radiance and progressive history remain in linear floating-point textures until a fullscreen graph render node presents the current frame. That node can render directly into the canvas or a compatible caller-owned offscreen framebuffer without taking ownership of command submission. Its pipeline follows the selected target's actual color and depth/stencil formats, including depthless targets, rather than assuming the canvas format.
+
+Presentation applies the same selected transfer policy as the forward renderer: no tone map, Reinhard, Khronos PBR Neutral, or ACES, followed by the exact piecewise IEC sRGB transfer function when software sRGB encoding is required. Floating-point and hardware-sRGB targets preserve linear shader output by default. Switching incompatible target formats or presentation policies refreshes the presentation pipeline; switching compatible caller-owned framebuffers does not require a new graph solely because their identities differ.
+
+Direct lighting evaluates scalar base color, metallic, and roughness with GGX distribution, Smith visibility, and Fresnel terms while retaining immediate ambient and emissive contributions. All renderer paths interpret the retained scene's directional-light vector as incoming light; the forward raster boundary adapts that vector to its shader module's outgoing convention without mutating shared scene lights. Multiple retained ambient lights are also combined consistently across forward, deferred, and ray-traced rendering. This closes direct-light and scalar-material gaps, but does not add material textures, alpha masking, transmission, image-based lighting, or indirect bounces to the ray tracer.
+
+#### Graph-stage diagnostics[​](#graph-stage-diagnostics "Direct link to Graph-stage diagnostics")
+
+**Implemented without synchronization.** Ray-traced frame statistics expose logical node counts, physical compute passes, coalesced compute nodes, and synchronous CPU encoding time for the entire frame and for each graph stage actually encoded. The trace/presentation stage is always present; topology construction, Morton acceleration rebuild, and retained-order refit appear only when necessary. Stage counters make camera-only, light-only, topology-changing, and transform-changing frames distinguishable without GPU readback, timestamp-query requirements, or hidden submission.
+
+These values describe graph recording and scheduling, not GPU execution duration, ray throughput, hierarchy traversal quality, achieved frames per second, or image quality. Meaningful speed claims still require workload-controlled measurements against explicit hardware and image-quality targets.
+
+#### Frame budget, sparse sampling, and temporal reconstruction[​](#frame-budget-sparse-sampling-and-temporal-reconstruction "Direct link to Frame budget, sparse sampling, and temporal reconstruction")
+
+**Implemented.** The default internal target is half the display width and height, which traces roughly one quarter of the primary pixels before temporal reuse. Adaptive resolution moves among bounded scales using smoothed animation-frame intervals and hysteresis. At minimum scale, rotating interleaved pixel phases spread work across frames; a manual HDR reconstruction pass upscales the retained result. Direct-light shadow sampling is also bounded and rotated across frames.
+
+Those controls trade instantaneous detail for latency and stability. Lower resolution softens small features; interleaving leaves some pixels dependent on history; rotating light samples add variance until accumulation converges. They reduce work without claiming that every frame is a complete, independent full-resolution render.
+
+**Implemented baseline.** Temporal reprojection uses previous camera matrices and stable retained instance transforms to find compatible history. Depth, normal, primitive identity, and neighborhood color checks reject disocclusions and incompatible samples, then valid history increases the effective sample count. This is temporal sample reuse, not a general frame-interpolation system and not a full denoiser.
+
+When `samplesPerPixel` is one and both `progressive` and `temporalReprojection` are explicitly disabled, the centered guide ray also supplies that pixel's radiance sample. This removes animated subpixel jitter and its otherwise redundant second nearest-hit traversal. Progressive or temporally reprojected rendering retains separate centered guide and jittered radiance samples, preserving the normal antialiasing and history-validation behavior.
+
+Color and metadata each use a reusable `GPUTextureHistory` pair. The command graph binds one texture as the previous frame and the other as the current output, then exchanges their logical roles only after encoding succeeds. This removes all full-frame history copies without increasing the four physical history/output allocations. Sparse phases preserve untouched pixels with a densely packed carry dispatch that is coalesced with ray tracing; full-coverage phases skip that dispatch.
+
+**Planned.** Stronger reconstruction should add variance-guided spatial filtering, adaptive per-pixel sampling, reactive/disocclusion handling, and a better edge-aware upscaler. The relevant reference point for low-sample denoising is [SVGF](https://research.nvidia.com/labs/rtr/publication/schied2017spatiotemporal/), which combines temporal accumulation, variance estimates, and hierarchical image-space filtering. For many-light direct illumination, [ReSTIR](https://research.nvidia.com/publication/2020-07_spatiotemporal-reservoir-resampling-real-time-ray-tracing-dynamic-direct) is a separate future direction: it reuses light-sampling reservoirs spatially and temporally rather than merely rotating a fixed subset of lights. Neither SVGF nor ReSTIR is implemented by the current renderer.
+
+| Area                     | Implemented now                                                                                                                                   | Planned or absent                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Acceleration             | Morton-sorted TLAS/BLAS, retained transform refits, tight BLAS-root bounds, batched segmented sort/BVH construction                               | Karras/SAH topology, wide/compressed nodes, traversal-driven rebuild policy |
+| Execution                | Direct-light megakernel, hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters                                               | Wavefront queues, compaction, multi-bounce transport, GPU-stage timings     |
+| Sampling                 | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples                                                       | Variance-driven adaptive sampling and reservoir-based many-light reuse      |
+| Reconstruction           | Motion-aware temporal reprojection, rejection, neighborhood clamp, manual HDR upscale                                                             | SVGF-class denoising, stronger edge-aware upscaling, reactive masks         |
+| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, indirect bounces  |
 
 ### Cache invalidation[​](#cache-invalidation "Direct link to Cache invalidation")
 
 The runtime rebuilds a compiled model when:
 
-* The committed geometry version changes.
+* A structural geometry attribute or its committed layout changes.
 * The number of placements for a retained surface changes.
+* Alpha mode, sidedness, texture bindings, or another structural material feature changes.
 * A previously removed surface becomes visible again.
 
-Transforms and material uniform values are updated without reconstructing geometry. Removing a surface from the world destroys its cached model and associated instance buffers.
+Transforms, nonstructural material uniforms, joint palettes, and animated morph weights update without reconstructing geometry. Removing a surface from the world destroys its cached model and associated instance buffers.
 
 ### Practical performance rules[​](#practical-performance-rules "Direct link to Practical performance rules")
 
@@ -1158,24 +1375,26 @@ Both orb instances reference the same named surface. The playground retains that
 
 ### Scene properties and object references[​](#scene-properties-and-object-references "Direct link to Scene properties and object references")
 
-| Property              | Meaning                                                                                                                                                                          |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `version`             | JSON schema version; currently `1`.                                                                                                                                              |
-| `name`, `description` | Human-readable preview title and optional scene description.                                                                                                                     |
-| `camera`              | Camera `@@type`, normal ANARI camera parameters, optional `target`, and optional orbit speed.                                                                                    |
-| `renderer`            | Optional renderer preset parameters for exposure, bloom, background, and fog. The playground's renderer selector chooses the active renderer subtype independently of the scene. |
-| `geometries`          | Named geometry declarations; triangle meshes accept number arrays or compact `torus`, `crystal`, and beveled `prism` generators.                                                 |
-| `materials`           | Named `matte` or `physicallyBased` material declarations.                                                                                                                        |
-| `surfaces`            | Named surface declarations referencing geometry and material identifiers.                                                                                                        |
-| `groups`              | Optional named groups referencing `surfaces` and optional `lights`.                                                                                                              |
-| `instances`           | Array of objects with `@@id`, a `group` or `surface` reference, transforms, and optional animation.                                                                              |
-| `distributions`       | Optional compact procedural instance distributions, including seeded `starfield` populations.                                                                                    |
-| `lights`              | Array of lights with `@@id`, ANARI subtype/parameters, and optional animation.                                                                                                   |
-| `world`               | Optional selected `surfaces`, `instances`, and `lights`; all instances and lights are included by default.                                                                       |
+| Property              | Meaning                                                                                                                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `version`             | JSON schema version; currently `1`.                                                                                                                                                                                |
+| `name`, `description` | Human-readable preview title and optional scene description.                                                                                                                                                       |
+| `camera`              | Camera `@@type`, normal ANARI camera parameters, optional `target`, and optional orbit speed.                                                                                                                      |
+| `renderer`            | Optional renderer preset parameters for exposure, tone mapping, output color space, bloom, background, and fog. The playground's renderer selector chooses the active renderer subtype independently of the scene. |
+| `geometries`          | Named geometry declarations; triangle meshes accept number arrays or compact `torus`, `crystal`, and beveled `prism` generators.                                                                                   |
+| `materials`           | Named `matte` or `physicallyBased` material declarations.                                                                                                                                                          |
+| `surfaces`            | Named surface declarations referencing geometry and material identifiers.                                                                                                                                          |
+| `groups`              | Optional named groups referencing `surfaces` and optional `lights`.                                                                                                                                                |
+| `instances`           | Array of objects with `@@id`, a `group` or `surface` reference, transforms, and optional animation.                                                                                                                |
+| `nodes`               | Optional imported animation hierarchy with transforms, retained instance references, and owned morph geometries.                                                                                                   |
+| `clips`, `playback`   | Optional keyframe animation clips plus selected clip, playback speed, playing state, and loop behavior.                                                                                                            |
+| `distributions`       | Optional compact procedural instance distributions, including seeded `starfield` populations.                                                                                                                      |
+| `lights`              | Array of lights with `@@id`, ANARI subtype/parameters, and optional animation.                                                                                                                                     |
+| `world`               | Optional selected `surfaces`, `instances`, and `lights`; all instances and lights are included by default.                                                                                                         |
 
 An instance can describe its transform with `position`, `rotation`, and `scale` three-component vectors, or supply a complete 16-element `matrix`. Rotations use radians and are applied in X, Y, Z order. Instances referencing a `surface` directly share an automatically generated group; use an explicit named `group` when multiple surfaces or group-attached lights are required.
 
-Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad` geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot` lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`, `deferred`, `debugNormals`, and `debugDepth`.
+Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad` geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot` lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`, `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept `samplesPerPixel`, `maxBounces`, `progressive`, `shadows`, `resolutionScale`, `minimumResolutionScale`, `adaptiveResolution`, `targetFrameTimeMilliseconds`, `temporalReprojection`, and `shadowSamplesPerFrame`.
 
 ### Generate compact triangle meshes and starfields[​](#generate-compact-triangle-meshes-and-starfields "Direct link to Generate compact triangle meshes and starfields")
 
@@ -1279,7 +1498,7 @@ This represents hundreds of individually transformed stars without filling the e
 
 ### Animate retained scene objects[​](#animate-retained-scene-objects "Direct link to Animate retained scene objects")
 
-Animations update existing objects through `setParameter(...).commitParameters()`; they do not rebuild the world each frame.
+Procedural animations update existing objects through `setParameter(...).commitParameters()`; authored glTF clips use the shared engine animation mixer. Neither path rebuilds the world each frame, and authored channels take precedence when both paths target the same retained object.
 
 | Animation `@@type` | Applies to           | Properties                                                                                                    |
 | ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -1342,7 +1561,27 @@ The editor applies valid changes automatically after a short debounce. Toggle **
 
 Both the Observatory and the JSON playground expose an experimental 3D scene selector supporting OpenUSD and glTF. Production-quality glTF samples include an Antique Camera, Brass Lantern, and Vintage Toy Car from Khronos Group's CC0 glTF Sample Assets. OpenUSD samples include a detailed Utah/Fancy teapot atelier, a cinematic Open Chess Set knight triptych, a composed vehicle gallery, a formula racer, a crimson sedan, a reusable wheel assembly, and a material laboratory. The teapot and vehicle models are selected from public-domain CC0 USD Working Group assets. The knight is attributed to the Academy Software Foundation's Open Chess Set under CC BY 4.0; complete credits accompany the bundled assets.
 
-The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes, reuses retained surfaces for repeated nodes, translates physically based materials, and retains base-color, normal, metallic-roughness, emissive, occlusion, clearcoat, transmission, and sheen maps as real fragment-sampled ANARI image samplers. It shares `@luma.gl/gltf`'s canonical `KHR_texture_transform` math. Local file selection supports standalone `.gltf` and `.glb` assets as well as supported OpenUSD files.
+The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes, reuses retained surfaces for repeated nodes, translates physically based materials, and retains all 17 canonical PBR texture slots as fragment-sampled ANARI image samplers. Source wrapping, filter and mipmap settings, color spaces, both UV sets, `KHR_texture_transform`, alpha masking, sidedness, and authored punctual lights are preserved. Joint attributes are imported, while animated joint deformation additionally requires an application-provided retained `surface.skin.jointMatrices` palette. POSITION, NORMAL, and TANGENT morph targets and animated morph weights play through the retained scene automatically.
+
+The optional `@luma.gl/anari/gltf` entry point translates parsed glTF clips and binds their node, material, sampler, and morph channels to existing retained objects:
+
+```
+import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
+
+
+
+const animation = makeANARIAnimationScene(description, retainedObjects);
+
+
+
+animation.play();
+
+animation.update(timeSeconds);
+
+animation.seek(1.5);
+```
+
+`update()` receives an absolute monotonic time in seconds. The handle shares the engine animation mixer and commits each changed retained object at most once per frame. See [ANARI glTF and keyframe animation](https://luma.gl/next/docs/api-reference/anari/anari-animation.md) and [glTF animation and deformation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md) for complete bindings, interpolation modes, ownership, and playback examples. Local file selection supports standalone `.gltf` and `.glb` assets as well as supported OpenUSD files.
 
 The example-local `USDLoader` follows the loaders.gl loader contract and is structured for future extraction into an `@loaders.gl/usd` module:
 
@@ -1384,7 +1623,7 @@ The showcase provides three scenes:
 * **Crystal Cathedral**: architectural geometry, emissive accents, and atmospheric lighting.
 * **Celestial Engine**: heavily instanced structures and animated orbiting emitters.
 
-Interactive controls switch scenes, select beauty/normals/depth renderers, toggle bloom, orbit the camera, and show retained instance and draw-call counts. Select **JSON LAB** to open the live JSON scene playground. Add `?backend=webgl` to either page to force the WebGL 2 path.
+Interactive controls switch scenes, select forward/deferred/ray-tracing/debug renderers, toggle bloom, orbit the camera, and show retained instance and draw-call counts. Select **JSON LAB** to open the live JSON scene playground. Add `?backend=webgl` to either page to force the WebGL 2 path; the deferred and ray-tracing controls are disabled when WebGPU is unavailable.
 
 The showcase implementation lives in `examples/showcase/anari/app.ts`; the playground lives in `examples/showcase/anari/playground.ts`, `playground-scene.ts`, and `playground-presets.ts`. Package-level tests demonstrate staged parameters, animated lights, shared-surface batching, zero-copy arrays, and rendering on available graphics backends.
 
@@ -1392,17 +1631,17 @@ The showcase implementation lives in `examples/showcase/anari/app.ts`; the playg
 
 The current package is a focused proof of concept, not a complete ANARI implementation:
 
-* No ANARI C API binding, binary protocol, conformance claim, or general renderer plug-in mechanism.
+* No ANARI C API binding, binary protocol, conformance claim, or dynamic native renderer-library loading; custom runtimes use the local renderer registry.
 * Geometry subtypes are limited to triangle meshes, spheres, cylinders, cones, and quads.
 * Only one-dimensional data/reference arrays are implemented; array metadata is not interpreted or validated.
-* Material `alphaMode` and light `falloffAngle` are accepted but not consumed by the renderer.
 * Automatically generated triangle normals assume non-indexed triangle-list positions.
-* Changing an opaque compiled material to transparent does not rebuild its blending pipeline.
 * Group-attached lights are not transformed by their owning instance.
 * The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-* Visibility, picking, volumes, clipping planes, shadows, and asynchronous frame mapping are not implemented.
+* The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting; hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha/transmission, advanced PBR extensions, indirect bounces, and denoising are unsupported.
+* Visibility, picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 * Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
-* Experimental glTF import supports common PBR textures and selected material extensions, but not skinning or animations.
+* Imported glTF skin attributes require an application-supplied retained joint palette; automatic skin-palette binding in the showcase importer and animated glTF export are not yet implemented.
+* Scene-color transmission samples an opaque-background capture and does not recursively refract multiple overlapping transmissive surfaces.
 * WebGL 2 preserves the same scene API but does not support the WebGPU HDR presentation path.
 * The ANARI device releases its renderer resources but does not destroy the underlying shared luma.gl graphics device.
 

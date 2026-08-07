@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Device, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -8,6 +8,7 @@ import {
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
+  OrbitControls,
   ShaderInputs,
   ShaderPassRenderer,
   SphereGeometry
@@ -27,7 +28,6 @@ import {
   GBuffer,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
-  OrbitControls,
   type DeferredPointLight
 } from '@luma.gl/experimental';
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';

@@ -249,6 +249,15 @@
         color: rgba(238, 242, 255, 0.87);
         font-size: 13px;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      #ray-tracing-resolution-telemetry {
+        flex: 0 0 22ch;
+      }
+
+      #ray-tracing-frame-telemetry {
+        flex: 0 0 28ch;
       }
 
       .hint {
@@ -322,12 +331,12 @@
         }
       }
     </style>
-    <script type="module" crossorigin src="./assets/showcase-CctwcQ0r.js"></script>
+    <script type="module" crossorigin src="./assets/showcase-BpMGa8Rb.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/chunk-BRNzzbbm.js">
-    <link rel="modulepreload" crossorigin href="./assets/buffer-layout-utils-CWqhVFEw.js">
-    <link rel="modulepreload" crossorigin href="./assets/debug-hooks-CahZvHz9.js">
-    <link rel="modulepreload" crossorigin href="./assets/wgsl-interface-scan-7-nPbp8k.js">
-    <link rel="modulepreload" crossorigin href="./assets/usd-samples-C-OfmIi4.js">
+    <link rel="modulepreload" crossorigin href="./assets/buffer-layout-utils-AS_ZT-we.js">
+    <link rel="modulepreload" crossorigin href="./assets/debug-hooks-DvrVC4QF.js">
+    <link rel="modulepreload" crossorigin href="./assets/wgsl-interface-scan-BjlVJGii.js">
+    <link rel="modulepreload" crossorigin href="./assets/usd-samples-B8nov3Q7.js">
   </head>
   <body>
     <div class="veil" aria-hidden="true"></div>
@@ -353,10 +362,20 @@
     <aside class="controls" aria-label="Renderer controls">
       <button class="mode-button active" data-renderer="default">LIT</button>
       <button class="mode-button" data-renderer="deferred">DEFERRED</button>
+      <button class="mode-button" data-renderer="raytrace">RAYTRACE</button>
       <button class="mode-button" data-renderer="debugNormals">NORMALS</button>
       <button class="mode-button" data-renderer="debugDepth">DEPTH</button>
       <span class="separator" aria-hidden="true"></span>
       <button id="bloom-toggle" class="mode-button active">BLOOM</button>
+      <span id="temporal-aa-separator" class="separator" aria-hidden="true"></span>
+      <button
+        id="temporal-aa-toggle"
+        class="mode-button active"
+        aria-pressed="true"
+        title="Stabilize edges and reuse valid samples across frames"
+      >
+        TEMPORAL AA
+      </button>
       <span class="separator" aria-hidden="true"></span>
       <a class="playground-link" href="./playground.html">JSON LAB ↗</a>
     </aside>
@@ -368,6 +387,14 @@
       <div>
         <div class="meta-label">Draw calls</div>
         <div id="draw-count" class="meta-value">—</div>
+      </div>
+      <div id="ray-tracing-resolution-telemetry" hidden>
+        <div class="meta-label">Ray resolution</div>
+        <div id="ray-tracing-resolution" class="meta-value">—</div>
+      </div>
+      <div id="ray-tracing-frame-telemetry" hidden>
+        <div class="meta-label">Ray frame</div>
+        <div id="ray-tracing-frame" class="meta-value">—</div>
       </div>
       <div>
         <div class="meta-label">Backend</div>

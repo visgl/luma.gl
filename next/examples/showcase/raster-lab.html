@@ -1,0 +1,524 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-examples docs-version-current docs-doc-page" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>luma.gl</title><meta data-rh=true property=og:title content=luma.gl /><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://luma.gl/next/examples/showcase/raster-lab /><meta data-rh=true property=og:locale content=en /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-examples-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-examples-current /><link data-rh=true rel=icon href=/next/favicon.png /><link data-rh=true rel=canonical href=https://luma.gl/next/examples/showcase/raster-lab /><link data-rh=true rel=alternate href=https://luma.gl/next/examples/showcase/raster-lab hreflang=en /><link data-rh=true rel=alternate href=https://luma.gl/next/examples/showcase/raster-lab hreflang=x-default /><link rel=stylesheet href=/next/assets/css/styles.881fcced.css /><script src=/next/assets/js/runtime~main.549fdf33.js defer></script><script src=/next/assets/js/main.f4d4ac49.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-c8a")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"light"),document.documentElement.setAttribute("data-theme-choice",t||"light")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><div role=region aria-label="Skip to main content"><a class=skipToContent_oPtH href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/next/><div class=navbar__logo><img src=/next/visgl-logo-dark.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--light_hHel"/><img src=/next/visgl-logo-light.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--dark_yETr"/></div><b class="navbar__title text--truncate">luma.gl</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/next/examples>Examples</a><a class="navbar__item navbar__link" href=/next/docs>Docs</a><a class="navbar__item navbar__link" href=/next/showcase>Showcase</a><a class="navbar__item navbar__link" href=/next/docs/tutorials>Tutorials</a><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><div class="toggle_ki11 colorModeToggle_Hewu"><button class="clean-btn toggleButton_MMFG toggleButtonDisabled_Uw7m" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ lightToggleIcon_lgto"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ darkToggleIcon_U96C"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ systemToggleIcon_E5c0"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_bzqh><div class=dsla-search-wrapper><div class=dsla-search-field data-tags=default,docs-default-current,docs-examples-current></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_MB5r"><div class=docsWrapper__sE8><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_iEvu" type=button></button><div class=docRoot_DfVB><aside class="theme-doc-sidebar-container docSidebarContainer_c7NB"><div class=sidebarViewport_KYo0><div class=sidebar_CUen><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_jmj1"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item" data-luma-example-sidebar-item=""><a class=menu__link data-luma-example-sidebar-link="" href=/next/examples><span title=Overview class=linkLabel_CDUV><span class=linkTitle_f4wm>Overview</span></span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/showcase/gaussian-splat-viewer><span class=categoryLinkLabel_ufhF>Showcase</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/showcase/lightstorm-megacity><span class=categoryLinkLabel_ufhF>WebGPU</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/next/examples/v10/gpgpu><span class=categoryLinkLabel_ufhF>GPGPU</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/next/examples/v10/gpgpu><span class=categoryLinkLabel_ufhF>GPGPU Graph</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true tabindex=0 href=/next/examples/showcase/million-row-crossfilter><span class=categoryLinkLabel_ufhF>GPGPU Graph Modules</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item" data-luma-example-sidebar-item=""><a class=menu__link data-luma-example-sidebar-link="" tabindex=0 href=/next/examples/showcase/million-row-crossfilter><span title="LuxFilter: Million-Row Crossfilter Explorer: WebGPU" class=linkLabel_CDUV><span class=linkTitle_f4wm>LuxFilter: Million-Row Crossfilter Explorer</span><span class=exampleCapabilities_LbvN aria-label="Example capabilities"><span class="exampleCapability_Vs7r webgpu_L3LQ">WebGPU</span></span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item" data-luma-example-sidebar-item=""><a class="menu__link menu__link--active" data-luma-example-sidebar-link="" aria-current=page tabindex=0 href=/next/examples/showcase/raster-lab><span title="LuRaster: Satellite Raster Lab: WebGPU" class=linkLabel_CDUV><span class=linkTitle_f4wm>LuRaster: Satellite Raster Lab</span><span class=exampleCapabilities_LbvN aria-label="Example capabilities"><span class="exampleCapability_Vs7r webgpu_L3LQ">WebGPU</span></span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item" data-luma-example-sidebar-item=""><a class=menu__link data-luma-example-sidebar-link="" tabindex=0 href=/next/examples/showcase/billion-point-spatial-atlas><span title="Billion-Point Spatial Atlas: WebGPU, HDR" class=linkLabel_CDUV><span class=linkTitle_f4wm>Billion-Point Spatial Atlas</span><span class=exampleCapabilities_LbvN aria-label="Example capabilities"><span class="exampleCapability_Vs7r webgpu_L3LQ">WebGPU</span><span class="exampleCapability_Vs7r hdr_quQe">HDR</span></span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item" data-luma-example-sidebar-item=""><a class=menu__link data-luma-example-sidebar-link="" tabindex=0 href=/next/examples/deck/luspatial-taxi><span title="luProj + luSpatial: Taxi Explorer: WebGPU" class=linkLabel_CDUV><span class=linkTitle_f4wm>luProj + luSpatial: Taxi Explorer</span><span class=exampleCapabilities_LbvN aria-label="Example capabilities"><span class="exampleCapability_Vs7r webgpu_L3LQ">WebGPU</span></span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item" data-luma-example-sidebar-item=""><a class=menu__link data-luma-example-sidebar-link="" tabindex=0 href=/next/examples/deck/lugraph-explorer><span title="luGraph + deck.gl: Network Explorer: WebGPU" class=linkLabel_CDUV><span class=linkTitle_f4wm>luGraph + deck.gl: Network Explorer</span><span class=exampleCapabilities_LbvN aria-label="Example capabilities"><span class="exampleCapability_Vs7r webgpu_L3LQ">WebGPU</span></span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item" data-luma-example-sidebar-item=""><a class=menu__link data-luma-example-sidebar-link="" tabindex=0 href=/next/examples/experimental/gpt-2><span title="GPT-2 Transformer: WebGPU" class=linkLabel_CDUV><span class=linkTitle_f4wm>GPT-2 Transformer</span><span class=exampleCapabilities_LbvN aria-label="Example capabilities"><span class="exampleCapability_Vs7r webgpu_L3LQ">WebGPU</span></span></span></a></ul></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/api/animation><span class=categoryLinkLabel_ufhF>API</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/integrations/external-context><span class=categoryLinkLabel_ufhF>Integrations</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/tutorials/hello-triangle><span class=categoryLinkLabel_ufhF>Tutorials</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/experimental/a-buffer><span class=categoryLinkLabel_ufhF>Experimental</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/arrow/arrow-points><span class=categoryLinkLabel_ufhF>Apache Arrow - luma.gl v10</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/next/examples/deck/arrow-path-layer><span class=categoryLinkLabel_ufhF>Arrow Layers - deck.gl v10</span></a></div></ul></nav></div></div></aside><main class=docMainContainer_a9sJ><div class="container padding-top--md padding-bottom--lg"><div class=demoContainer__blu data-luma-example-route=demo><div data-luma-example-page="" class=luma-example-page style="box-sizing:border-box;position:relative;width:100%;height:calc(100vh - var(--ifm-navbar-height));min-height:calc(100vh - var(--ifm-navbar-height));overflow:hidden;background:radial-gradient(ellipse at 22% 16%, rgba(56, 189, 248, 0.16), transparent 42%), #07101d"><div aria-live=polite role=status style=position:absolute;inset:0;display:grid;align-content:center;justify-content:center;gap:12px;padding:32px;color:#f1f5f9;text-align:center><span style=color:#7dd3fc;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase>Preparing GPU experience</span><strong style=font-size:22px;line-height:1.2>LuRaster: Satellite Raster Lab</strong><span style=max-width:420px;color:#b6c5d7;font-size:14px;line-height:1.6>Loading synthetic satellite bands and the GPU-native raster-analysis graph.</span></div></div>
+<h2 id=what-you-are-looking-at>What you are looking at</h2>
+<p>The Satellite Raster Lab is an interactive, GPU-resident raster-analysis
+workbench. Its landscape, red and near-infrared reflectance bands, clouds,
+waterways, fields, coordinates, and missing-data patterns are deterministic
+synthetic fixtures. No satellite scene, GeoTIFF, cloud service, or real-world
+location is being downloaded.</p>
+<p>The map displays one selected <strong>FULL</strong>, <strong>WEST</strong>, or <strong>EAST</strong> output window.
+The sidebar reports the actual analytical values behind that map: its selected
+band, valid population, 48-bin histogram, measured extent, GPU mean, source
+identity, overview provenance, cache residency, optional contours, and sparse
+or bounded dense connected-component overlays with exact region counts. A
+control changes a histogram only when it changes the measured values or their
+selection; changing a contour level changes generated geometry without
+necessarily changing the underlying distribution.</p>
+<p>The central distinction is <strong>where an operation gets its observations</strong>. A
+local tile owns only its selected core; a seamless neighborhood temporarily
+borrows adjacent source pixels; and global statistics replay both source cores
+while the map still displays just one. None of these policies silently stitches
+a new full-resolution CPU image.</p>
+<p>For the underlying object model, ownership rules, and execution phases, see
+<a href=/docs/api-reference/experimental/luraster/concepts>LuRaster Concepts and Execution Model</a>.</p>
+<h2 id=start-with-a-five-minute-walkthrough>Start with a five-minute walkthrough</h2>
+<ol>
+<li>Keep <strong>FULL</strong>, <strong>1× NATIVE</strong>, <strong>SOURCE NEAREST</strong>, <strong>TILE ONLY</strong>, and
+<strong>TILE</strong> selected. Switch between <strong>NDVI</strong>, <strong>RED</strong>, and <strong>NEAR IR</strong> and
+watch the histogram and extent follow the actual active quantity.</li>
+<li>Select <strong>WEST</strong>, then <strong>EAST</strong>. Their source origins and local histograms
+change. Revisit a resident tile and inspect the cache-hit and compiled-graph
+reuse counters.</li>
+<li>Select <strong>FULL GLOBAL</strong>. The map continues to show one half-width tile, but
+its count, histogram, extent, mean, and median now describe both owned
+halves. Reverse <strong>WEST → EAST</strong> to <strong>EAST → WEST</strong>; exact counts and bins do
+not change.</li>
+<li>Enable <strong>Otsu</strong> and switch between <strong>WEST</strong> and <strong>EAST</strong>. Both views use
+the same dataset-wide cutoff and selected global histogram. The median
+readout explains why it is unavailable while Otsu owns the compact scalar.</li>
+<li>Return to <strong>TILE</strong>, choose <strong>2× OVERVIEW</strong>, and compare <strong>SOURCE NEAREST</strong>
+with <strong>GPU MEAN</strong>. Switch <strong>MASK NEAREST</strong> to <strong>MASK MODE</strong> and observe
+that a genuine categorical-mask policy changes the resulting valid pixels.</li>
+<li>Restore <strong>SOURCE NEAREST</strong>, select <strong>WEST</strong>, enable Gaussian smoothing and
+Sobel edges, and compare <strong>TILE ONLY</strong> with <strong>SEAMLESS HALO</strong>. The halo
+readout reports the additional neighbor coverage and the half-open output
+core that still belongs exclusively to WEST.</li>
+<li>Return to <strong>TILE</strong>, enable <strong>COMPONENTS</strong>, and compare <strong>4-CONNECTED</strong> with
+<strong>8-CONNECTED</strong>. Switch <strong>SPARSE ROOTS</strong> to <strong>DENSE 1..N</strong> and compare the
+exact region count with the number of published bounded IDs. Lower <strong>Region
+capacity</strong> below that count: dense labels disappear with an explicit overflow
+warning, while sparse roots remain usable. Restore the capacity, then lower
+<strong>Propagation budget</strong> to <code>1</code> to see all unconverged labels fail closed.</li>
+</ol>
+<p>Every combination is deliberately explicit. Requesting a feature that cannot
+compose correctly with the current scope switches to a supported scope instead
+of presenting an unimplemented combination as valid.</p>
+<h2 id=missing-data-is-not-the-number-zero>Missing data is not the number zero</h2>
+<p>Raster correctness depends on keeping a measurement's <strong>value</strong> separate from
+whether that measurement is <strong>valid</strong>. The fixture deliberately demonstrates
+several distinct cases:</p>
+<table><thead><tr><th>Stored value<th>Separate validity<th>Meaning<th>Analytical behavior<tbody><tr><td>Finite reflectance, including a valid <code>0</code><td><code>1</code><td>An observed numeric value<td>Participates in statistics, filtering, and reduction.<tr><td>Any reflectance below a cloud<td><code>0</code><td>The observation is explicitly masked<td>Excluded even when its numeric bytes look plausible.<tr><td>Raw sentinel <code>-9999</code><td><code>1</code><td>Outside the source footprint; still nodata<td>Rejected by the band's exact raw nodata rule.<tr><td>Derived <code>NaN</code><td><code>0</code><td>No valid derived observation exists<td>Remains missing; it is never treated as a zero-valued sample.<tr><td>Binary category <code>0</code><td><code>1</code><td>Known background or another valid class<td>Remains a valid categorical value, not nodata.</table>
+<p>The sentinel row is intentional: the fixture leaves its explicit mask at <code>1</code>
+so the example must independently honor <strong>both</strong> the validity mask and the
+band's raw nodata sentinel. A valid sample must survive both checks. Scientific
+code cannot replace this model with <code>if (value)</code>, <code>value !== 0</code>, a transparent
+display color, or a guessed alpha channel.</p>
+<p>Consequently, the <strong>Cloud mask</strong> card counts explicitly masked source pixels,
+while the <strong>Valid observations</strong> card excludes clouds, raw nodata, unstable
+NDVI denominators, and any active selection. Those counts answer different
+questions and should not be expected to add up when several exclusion rules
+apply.</p>
+<p>In generated-overview mode, that card changes to <strong>Excluded observations</strong>:
+its value is inferred from the existing post-analysis summary, not from a
+downloaded per-parent cloud count or a claimed raw-source contribution count.</p>
+<p>The derived vegetation index is:</p>
+<pre><code class=language-text>NDVI = (nearInfrared - red) / (nearInfrared + red)
+</code></pre>
+<p>An NDVI of <code>0</code> can be a perfectly valid observation: its two bands are equal.
+Negative water responses are also valid. The <strong>epsilon</strong> control rejects
+unstable divisions whose denominator is too small; it does not redefine zero
+or negative NDVI as missing.</p>
+<p>For binary classification, the value <code>0</code> means “known background” and <code>1</code>
+means “known foreground”; a separate observation-validity flag still
+distinguishes either case from an unknown pixel. Strict neighborhood rules can
+invalidate an output near a missing neighbor, while ignore rules can skip that
+neighbor. Neither policy invents an observation at an invalid center.</p>
+<h2 id=control-reference>Control reference</h2>
+<table><thead><tr><th>Control<th>What changes<th>When to use it<tbody><tr><td><strong>FULL / WEST / EAST</strong><td>The selected source window and visible owned core.<td>Compare complete-scene references, adjacent tiles, source origins, and cache reuse.<tr><td><strong>1× NATIVE / 2× OVERVIEW</strong><td>The requested source level or generated target resolution.<td>Trade spatial resolution against downstream analytical work.<tr><td><strong>SOURCE NEAREST / GPU MEAN</strong><td>Existing nearest-sampled data versus an explicitly generated validity-aware mean.<td>Preserve source-provided samples, or aggregate continuous measurements without treating missing samples as zero.<tr><td><strong>MASK NEAREST / MASK MODE</strong><td>The representative categorical label versus the most frequent valid label.<td>Match discrete-class sampling to your actual cloud or classification semantics.<tr><td><strong>TILE ONLY / SEAMLESS HALO</strong><td>Whether neighborhood operations can borrow real adjacent source pixels.<td>Compare local-border behavior with seam-correct smoothing, derivatives, or morphology.<tr><td><strong>TILE / FULL GLOBAL</strong><td>Local selected-core statistics versus replayed dataset-wide statistics.<td>Choose tile-local summaries or one consistent cross-tile domain, histogram, median, and Otsu cutoff.<tr><td><strong>WEST → EAST / EAST → WEST</strong><td>The real order of global tile reduction and histogram replay.<td>Verify that valid populations, bins, extent, and Otsu do not depend on arrival order.<tr><td><strong>NDVI / RED / NEAR IR</strong><td>The analytical scalar field, not only its display colors.<td>Compare a derived vegetation measure with either source band.<tr><td><strong>Gaussian / box / radius / sigma</strong><td>Validity-aware spatial smoothing.<td>Reduce local sensor noise or calculate a uniformly weighted local mean.<tr><td><strong>Sobel / Scharr / Laplacian / direction</strong><td>First-order boundaries, gradient magnitude, or second-order response.<td>Study edge orientation, overall boundary strength, ridges, or valleys.<tr><td><strong>Dilate / erode / open / close</strong><td>Grayscale extrema or binary foreground morphology.<td>Expand/shrink regions, remove small islands, reconnect breaks, or fill small holes.<tr><td><strong>OFF / COMPONENTS</strong><td>An optional GPU-colored overlay and exact connected foreground-region count.<td>Inspect classified islands while preserving missing data and valid background.<tr><td><strong>4-CONNECTED / 8-CONNECTED</strong><td>Orthogonal-only or orthogonal-plus-diagonal foreground adjacency.<td>Decide whether corners touching diagonally belong to the same component.<tr><td><strong>SPARSE ROOTS / DENSE 1..N</strong><td>Minimum representative roots versus consecutive GPU-generated region identifiers.<td>Compare stable source representatives with compact IDs suitable for bounded region-indexed outputs.<tr><td><strong>Region capacity</strong><td>Maximum number of published dense region IDs; exact required count remains visible.<td>Verify zero capacity, explicit overflow, safe dense-overlay suppression, and the independent sparse fallback.<tr><td><strong>Propagation budget</strong><td>The bounded maximum number of GPU hooking/compression rounds.<td>Compare a proven fixed point with an explicitly unconverged, safely cleared output.<tr><td><strong>Contrast / gamma / threshold / Otsu / epsilon</strong><td>Analytical transfer, classification, automatic histogram cutoff, or denominator stability.<td>Compare actual transformed measurements and valid selection policies.<tr><td><strong>Contours / contour level</strong><td>GPU-generated marching-squares isolines and an indirect draw.<td>Inspect reusable scalar boundaries without downloading their vertices.<tr><td><strong>Resident tile capacity</strong><td>Explicit decoded-CPU/GPU tile limits and eviction pressure.<td>Observe cache hits, misses, graph reuse, active pins, and bounded memory.</table>
+<h2 id=gpu-execution-and-application-ownership>GPU execution and application ownership</h2>
+<p>The demonstration uses the optional <code>@luma.gl/experimental/luraster</code> entry point.</p>
+<h3 id=source-cache-and-neighboring-tiles>Source, cache, and neighboring tiles</h3>
+<p><code>GPURasterTileReader</code> validates an application-owned synthetic source, its
+selected red/near-infrared bands, explicit overview level, half-open source
+window, affine/CRS metadata, native decoded samples, validity masks, and
+<code>AbortSignal</code>. <code>GPURasterTileCache</code> adds explicit decoded-CPU and GPU byte
+budgets, deterministic least-recently-used eviction, cancellation-safe shared
+loads, owned native-band uploads, and compatible compiled-graph reuse. The
+browser application still owns source generation, cancellation policy, graph
+construction, command submission, and completion fences; one selected output
+core is rendered at a time while global analysis can also replay both owned
+cores and previously visited tiles can remain resident.
+<code>GPURasterTileHaloAssembler</code> adds explicit cumulative
+source-neighborhood planning and composite neighbor leases.
+<code>GPURasterTileHaloFill</code> gathers every selected native-format source band and
+its validity directly on the GPU; <code>GPURasterTileCoreExtract</code> later publishes
+only the selected core. The example does not install a GeoTIFF decoder or
+download real satellite imagery.</p>
+<h3 id=analytical-overviews-and-global-reductions>Analytical overviews and global reductions</h3>
+<p><code>GPURasterOverview</code> can instead reduce native floating-point observations into
+explicit calibrated sums, valid-sample counts, analytical means, and separate
+validity; <code>GPURasterCategoricalOverview</code> preserves exact source labels under
+the selected nearest or mode policy. <code>makeRasterOverviewMetadata</code> carries the
+generated grid's affine transform, CRS, level, pixel interpretation, and
+level-zero origin without registering it as a source-provided level.
+<code>GPURasterGlobalInitialize</code> explicitly clears caller-owned dataset-wide
+accumulators, <code>GPURasterGlobalStatisticsMerge</code> combines valid tile extrema,
+count, and calibrated sum, and <code>GPURasterGlobalHistogramMerge</code> replays each
+owned core against the finalized global domain. <code>GPURasterGlobalPercentile</code>
+then publishes a bounded histogram-derived median without CPU sample polling.
+Normalized source requests expand omitted bands and full windows, default to
+level-local coordinates, and map equivalent level-zero windows to the same
+cache identity before any duplicate decoding or upload.</p>
+<h3 id=pointwise-neighborhood-and-contour-operators>Pointwise, neighborhood, and contour operators</h3>
+<p><code>GPURasterNDVI</code> computes <code>(nearInfrared - red) / (nearInfrared + red)</code> directly
+from GPU-resident source bands while intersecting source validity and exact raw
+nodata. <code>GPURasterHistogram</code> composes a masked reduction with a GPU-domain
+histogram. <code>GPURasterGaussianBlur</code> and <code>GPURasterBoxBlur</code> smooth the active
+spectral band through separate horizontal and vertical GPU passes, reflecting
+raster borders and renormalizing valid neighboring samples without filling
+masked center pixels. <code>GPURasterSobel</code>, <code>GPURasterScharr</code>, and
+<code>GPURasterLaplacian</code> optionally calculate signed directional or second-order
+responses; <code>GPURasterGradientMagnitude</code> combines two directional passes into
+nonnegative edge strength with graph-owned scratch. Missing neighbors remain
+invalid, revealing an honest nodata halo around clouds. <code>GPURasterContrast</code>
+transforms that resident band on-device; grayscale <code>GPURasterDilation</code>,
+<code>GPURasterErosion</code>, <code>GPURasterOpening</code>, or <code>GPURasterClosing</code> runs after
+optional smoothing/edges and before contrast. <code>GPURasterThreshold</code> writes a
+genuine per-pixel selection mask; binary morphology instead runs after manual
+or Otsu thresholding and consumes that <code>uint32</code> mask as values while preserving
+the upstream observation validity separately. Threshold background is valid
+zero, not nodata. <code>GPURasterStatistics</code> calculates masked count, sum, mean,
+minimum, and maximum.
+<code>GPURasterConnectedComponents</code> consumes the final classified <code>uint32</code> values
+and their separate observation validity, propagates minimum representative
+roots through a bounded sequence of GPU hooking/compression rounds, and
+publishes explicit convergence before sparse labels are safe to render.
+<code>GPURasterDenseComponents</code> then scans true representative-root flags, assigns
+stable consecutive foreground IDs, and publishes an exact required count,
+capacity-clamped count, and explicit overflow without treating sparse pixel
+indices as compact array offsets.
+<code>GPURasterOtsuThreshold</code> can select the threshold from a separate baseline
+histogram without introducing a CPU synchronization point.
+<code>GPURasterContours</code> classifies valid four-corner cells, resolves ambiguous
+saddles, scans their segment counts, scatters interpolated line geometry, and
+publishes all four fields of a GPU-resident non-indexed indirect draw record in
+that same command graph. Binary
+morphology contours classify the foreground mask at a fixed level of <code>0.5</code>;
+grayscale contours retain their adjustable analytical level.
+The histogram consumes that same mask and GPU-resident extent, so excluded
+pixels disappear from both the map selection and distribution. Every dependent
+compute pass is encoded into one explicitly submitted <code>GPUCommandGraph</code>.</p>
+<h2 id=the-exact-gpu-to-cpu-readback-boundary>The exact GPU-to-CPU readback boundary</h2>
+<p>The map renderer consumes the original reflectance bands, derived vegetation
+index, contrast-adjusted active band, and validity flags directly from their GPU
+buffers. Only the two-value extent, 48 histogram bins, valid count, sum, mean,
+optional automatic threshold, and three contour diagnostics—228 bytes
+total—are copied back after submission to update visible summary statistics.</p>
+<table><thead><tr><th>Published aggregate<th>Encoding<th style=text-align:right>Bytes<tbody><tr><td>Observed minimum and maximum<td>Two <code>float32</code> values<td style=text-align:right>8<tr><td>Histogram<td>48 <code>uint32</code> bins<td style=text-align:right>192<tr><td>Valid or selected population<td>One <code>uint32</code><td style=text-align:right>4<tr><td>Sum of valid or selected values<td>One <code>float32</code><td style=text-align:right>4<tr><td>Mean of valid or selected values<td>One <code>float32</code><td style=text-align:right>4<tr><td>Otsu cutoff <strong>or</strong> global median<td>One shared <code>float32</code> slot<td style=text-align:right>4<tr><td>Contour diagnostics <strong>or</strong> component count/convergence/rounds<td>Three existing <code>uint32</code> slots<td style=text-align:right>12<tr><td><strong>Total per submitted analysis</strong><td><strong>One compact aggregate transfer</strong><td style=text-align:right><strong>228</strong></table>
+<p>The source imagery, output imagery, validity masks, generated parent sums and
+counts, categorical and connected-component labels, contour vertices, and
+indirect draw command remain
+on the GPU. The shared four-byte slot cannot report a global median and an
+automatic Otsu threshold simultaneously; the interface says so rather than
+issuing a second readback.</p>
+<p>Component mode temporarily disables contours and reuses all three existing
+four-byte diagnostic slots: the first reports the exact GPU-required component
+count, the second reports whether bounded propagation converged, and the third
+reports actual executed rounds. The dense contributor also produces genuine
+GPU-resident capacity-clamped count and overflow outputs. The interface derives
+the same displayed published count as <code>min(required, capacity)</code> and overflow as
+<code>required > capacity</code> from the already-read exact count; it does not transfer
+those additional GPU scalars. Neither representation increases the 228-byte
+summary, downloads labels, or interferes with the independent Otsu-threshold
+slot. Disabling component mode restores the previous contour preference.</p>
+<p>Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
+derivative direction, morphological operation/mode/footprint/radius/nodata/
+border, contrast, gamma, thresholding, contour levels, epsilon, generated
+overview policy, categorical policy, explicit seam-safe halo selection, and
+tile/global replay scope rebuild
+their specialized analysis graph while keeping every source and output raster
+buffer resident; source pixels are never downloaded. Selecting a source
+window or overview instead selects an existing resident tile or performs one
+explicit CPU-to-GPU upload on a cache miss; neither path increases the 228-byte
+GPU-to-CPU analytical readback. Visible generated-overview coverage derives
+from that same existing scalar summary and reports currently displayed
+analytical valid pixels after any filtering or threshold selection. It is not
+a count of raw observations contributing to each generated parent. Source
+pixels, per-parent overview counts, and categorical buffers are never downloaded.
+Global median reuses the existing four-byte automatic-threshold summary slot
+when Otsu is inactive; enabling global Otsu publishes its cutoff through that
+same slot instead. Either global result therefore preserves the original
+228-byte total, and global coverage divides by both owned cores rather than
+only the visible tile. The median readout explicitly reports that Otsu owns
+the compact scalar whenever automatic global thresholding is active.</p>
+<h2 id=local-tiles-versus-full-image-statistics>Local tiles versus full-image statistics</h2>
+<p>Use <strong>TILE</strong> when each selected west/east window should choose its own
+valid-pixel domain and distribution, or when generated analytical overviews,
+seam-safe neighborhood assembly, smoothing, derivatives, or morphology are
+required. Choose <strong>FULL GLOBAL</strong> when every window must use the same
+dataset-wide numerical extent, histogram, percentile, or Otsu threshold.
+Both cores apply the same selected contrast/gamma settings, but this example
+does not automatically equalize contrast against its global extent.</p>
+<h3 id=why-global-histograms-require-a-second-pass>Why global histograms require a second pass</h3>
+<p>Histogram bins only have meaning relative to their numerical domain. Suppose
+WEST contains values in <code>[0, 10]</code> and EAST contains values in <code>[100, 110]</code>.
+The first bin of WEST might represent <code>[0, 1)</code>, while the first bin of EAST
+might represent <code>[100, 101)</code>. Adding those local first bins would combine two
+different measurements and create an incorrect full-image distribution.</p>
+<p>The GPU must first discover the common extent <code>[0, 110]</code>, then replay both
+tile cores against that <strong>same</strong> domain:</p>
+<pre><code class=language-text>initialize global accumulator
+  → merge WEST extent, count, and sum
+  → merge EAST extent, count, and sum
+  → replay WEST into bins spanning the final global extent
+  → replay EAST into those same bins
+  → derive the global mean, percentile, or Otsu threshold
+</code></pre>
+<p>Reversing the first two tiles also reverses the real replay order, but exact
+unsaturated counts, bins, extrema, and Otsu results remain stable. Ordinary
+floating-point sums can differ by addition-order rounding.</p>
+<p>Global processing explicitly clears one caller-owned persistent accumulator,
+merges both selected western/eastern cores' valid extrema, calibrated sums,
+and populations, then replays both cores against the resulting stable GPU
+domain. Each replay clears only its graph-owned tile histogram partial before
+merging it into the separately persistent global bins; previously merged
+counts survive. The optional GPU Otsu stage consumes that stable global
+histogram and extent directly. Forward/reverse controls change the real source
+traversal while preserving exact unsaturated count/bin results, domain,
+threshold, and owned-core identity. Floating sums can differ by ordinary
+floating-point addition-order rounding.</p>
+<p>With automatic thresholding, the first global histogram describes all valid
+unclassified observations. Otsu selects one shared cutoff, both tile cores are
+classified against it, and a final global reduction/histogram reports only the
+selected observations. The displayed map remains one selected core even though
+its summary population and coverage denominator cover both cores.</p>
+<h3 id=supported-global-combinations>Supported global combinations</h3>
+<table><thead><tr><th>Capability<th><strong>TILE</strong><th><strong>FULL GLOBAL</strong><tbody><tr><td>Native source or existing source-nearest overview<td>Yes<td>Yes<tr><td>NDVI, red, near-infrared, contrast, gamma<td>Yes<td>Yes, applied independently and consistently to both cores<tr><td>Manual threshold and Otsu<td>Yes, tile-local<td>Yes, one shared dataset-wide cutoff<tr><td>GPU median<td>Not shown<td>Yes, unless Otsu owns the same compact scalar<tr><td>Contours<td>Yes<td>Yes, for the selected visible core only<tr><td>Sparse or dense connected-component overlay<td>Yes; temporarily pauses contours<td>No; enabling components returns to <strong>TILE</strong><tr><td>Gaussian/box smoothing, edges, morphology<td>Yes<td>No; enabling one returns to <strong>TILE</strong><tr><td><strong>SEAMLESS HALO</strong><td>Yes with source-provided data<td>No; selecting global returns to <strong>TILE ONLY</strong><tr><td><strong>GPU MEAN</strong> generated overview<td>Yes without seamless halos<td>No; selecting global restores <strong>SOURCE NEAREST</strong></table>
+<p><strong>FULL GLOBAL</strong> accepts either native resolution or an existing source-nearest
+overview and preserves pointwise NDVI, red, near-infrared, contrast, gamma,
+manual thresholds, and global Otsu. Selecting it switches generated GPU means
+back to <strong>SOURCE NEAREST</strong>, changes <strong>SEAMLESS HALO</strong> to <strong>TILE ONLY</strong>, and
+resets smoothing, edges, and morphology. Enabling any of those unsupported
+combinations returns to <strong>TILE</strong>; the example does not claim globally stitched
+neighborhood processing or generated-overview replay.</p>
+<h3 id=overflow-and-percentile-precision>Overflow and percentile precision</h3>
+<p>Persistent global populations and individual histogram bins saturate at
+<code>4,294,967,295</code> rather than wrapping. Sticky overflow bits distinguish total
+count (<code>1</code>), any histogram bin (<code>2</code>), and a nonfinite floating sum (<code>4</code>). A
+global percentile rejects empty or overflowed data; its endpoints are exact,
+while intermediate estimates use histogram-bin centers. Normal applications
+must respect the overflow signal before trusting global thresholds. Per-tile
+scratch scales with one core, persistent memory scales with bin count, and a
+correct stable-domain histogram reads each resident core twice. Actual
+performance depends on source replay, cache hits, tile size, bins, bandwidth,
+and GPU rather than promising an automatic speedup over framebuffer effects.</p>
+<h2 id=existing-source-overviews-versus-analytical-gpu-overviews>Existing source overviews versus analytical GPU overviews</h2>
+<h3 id=continuous-values-nearest-observation-or-valid-sample-mean>Continuous values: nearest observation or valid-sample mean</h3>
+<p>Use <strong>SOURCE NEAREST</strong> when an existing lower-resolution source level is
+trusted and avoiding native-resolution decoding, upload, or reduction is the
+priority. The synthetic source overview deliberately selects one existing
+nearest observation; it does not average neighboring observations or recover a
+missing selected sample. Use <strong>GPU MEAN</strong> when continuous observations require
+an honest valid-sample-weighted analytical reduction; choosing it automatically
+selects the 2× target when the current source view is native. For example, a <code>2 × 2</code>
+footprint containing values <code>[10, invalid, 30, invalid]</code> yields a generated
+sum of <code>40</code>, valid count of <code>2</code>, and mean of <code>20</code>, rather than diluting the
+result to <code>10</code>. An all-invalid parent retains zero sum/count, an invalid mask,
+and a <code>NaN</code> floating value. Odd right/bottom edges retain their real remaining
+coverage instead of being padded.</p>
+<p>When valid counts differ, chaining analytical overviews must retain the parent
+sums and counts rather than averaging already-computed means equally. For
+example, a parent with sum <code>30</code> and count <code>3</code> combined with a parent with sum
+<code>20</code> and count <code>1</code> yields <code>(30 + 20) / (3 + 1) = 12.5</code>, not the unweighted
+average <code>(10 + 20) / 2 = 15</code>. The underlying overview contributor supports
+these weighted chained inputs; the interactive lab demonstrates one generated
+2× level.</p>
+<h3 id=categories-valid-zero-nearest-and-deterministic-mode>Categories: valid zero, nearest, and deterministic mode</h3>
+<p>Choose <strong>MASK NEAREST</strong> when a categorical parent must retain one actual
+representative label. Even-sized footprints choose the upper-left of their
+central candidates; an invalid selected sample remains invalid even if
+another sample was valid. Choose <strong>MASK MODE</strong> when the most frequent valid
+label better represents the footprint; equal frequencies choose the smallest
+exact native label. Signed identifiers and unsigned categories larger than
+<code>2²⁴</code> remain integer values, and <code>0</code> can still be a valid category when its
+separate validity mask is set. The example uses an unsigned cloud-coverage
+mask; the underlying categorical contributor also supports those exact signed
+and wide unsigned label identities. Category reduction never interpolates
+labels.</p>
+<h3 id=overview-cost-and-provenance>Overview cost and provenance</h3>
+<p>The floating reducer visits each valid source footprint sample once and adds
+explicit GPU-resident output, sum, count, and validity buffers. Mode additionally
+compares bounded category frequencies, so it costs more than representative
+nearest selection. Smaller generated grids can reduce later filtering,
+histogram, and rendering work, but generating them first incurs a reduction
+pass and native-source residency. The useful tradeoff depends on source
+sampling quality, nodata, scale, category policy, memory bandwidth, cache hits,
+and the measured GPU; a framebuffer effect or texture mipmap cannot replace
+the same scientific validity and categorical contracts.</p>
+<h2 id=bounded-residency-cache-hits-and-completion-fences>Bounded residency, cache hits, and completion fences</h2>
+<p>Use the resident-tile capacity slider to compare revisits with constrained
+eviction. Visit WEST and EAST at the same overview level to reuse one compiled
+graph shape while rebinding the current imported source buffers on each
+encoding. Revisit a still-resident tile to avoid another source decode and
+upload; reduce capacity to force least-recently-used eviction, then revisit the
+evicted window to observe a new miss. A full-width tile, different overview, or
+different specialized analytical pipeline requires its own compatible graph.
+Active tile and graph leases remain pinned until an explicitly created
+post-submit GPU fence resolves, so cancellation and eviction cannot destroy
+resources still referenced by submitted commands. Shutdown must preserve that
+same fence boundary; immediately releasing active leases provides no GPU
+completion guarantee.</p>
+<p>The CPU budget counts the full allocation of each distinct <code>ArrayBuffer</code> or
+<code>SharedArrayBuffer</code> retained by a tile's decoded sample and validity views.
+Several views sharing one backing allocation count it once; a small view into a
+large pooled slab still retains and is charged for the entire slab. The GPU
+budget counts uploaded native bands/masks, actual compiled-graph physical
+transient allocations, and separately declared application-owned analysis/output
+resources without double-counting imported tile buffers.
+These limits bound allocation by selected tile shapes and graph variants rather
+than full source dimensions. Cache and graph hits can avoid repeated decoder,
+upload, and compilation work, but actual performance still depends on source
+latency, tile size, cache-hit rate, memory bandwidth, adapter limits, and the
+measured workload.</p>
+<p><strong>FULL GLOBAL</strong> and a nonzero cross-tile halo require two simultaneously
+resident source cores. Attempting to shrink their cache below two tiles is
+rejected transactionally. A zero-radius seamless configuration requires no
+neighbor and therefore truthfully retains only its selected core.</p>
+<h2 id=seam-safe-halos-and-half-open-ownership>Seam-safe halos and half-open ownership</h2>
+<p>Use <strong>TILE ONLY</strong> when a pointwise measurement needs no observations outside its
+selected source window, or when independent local-border behavior is the intended
+result. Choose <strong>SEAMLESS HALO</strong> for smoothing, gradients, or morphology whose
+neighborhood crosses the boundary of a western or eastern core. The planner sums
+every selected stage's source-pixel radius: Gaussian radius <code>r</code> followed by
+Sobel adds <code>r + 1</code>; opening or closing at morphology radius <code>m</code> adds <code>2m</code>
+because both component passes affect the final output. Horizontal and vertical
+radii remain independent; overview footprints are additionally reported in
+level-zero source pixels.</p>
+<p>For example, split a conceptual 320-column raster at column 160 and choose a
+three-pixel neighborhood:</p>
+<pre><code class=language-text>WEST owned core:  [  0, 160)   WEST sampled neighborhood: [  0, 163)
+EAST owned core:  [160, 320)   EAST sampled neighborhood: [157, 320)
+</code></pre>
+<p>Columns 157–162 can participate in <strong>both neighborhoods</strong>, but every output
+column belongs to exactly one half-open core. Pixels beyond the actual left or
+right dataset edge use the selected border policy. Pixels across the internal
+seam come from the adjacent real resident tile; they are not fabricated using
+clamp, padding, or an independent tile-local border.</p>
+<h3 id=what-is-gathered-and-what-gets-published>What is gathered and what gets published</h3>
+<p>The GPU gathers real red and near-infrared observations and validity from each
+intersecting resident tile before NDVI and padded neighborhood processing. It
+then extracts exactly the selected half-open core before contrast, histogram,
+scalar summaries, rendering, or contour generation. West and east core ownership
+therefore never overlaps; ragged source edges clip against the true overview
+dimensions, and a neighborhood's border mode applies only at a genuine dataset
+edge. For <strong>SOURCE NEAREST</strong> processing, combining separately measured
+west/east core counts and sums matches the corresponding full-raster
+analytical reference, including selected source
+overviews and missing observations, without downloading raster pixels or
+increasing the existing 228-byte per-analysis summary.</p>
+<h3 id=explicit-composition-limits>Explicit composition limits</h3>
+<p>This example does not yet compose native-resolution halo assembly with a
+subsequent generated overview. <strong>GPU MEAN</strong> therefore selects <strong>TILE ONLY</strong>;
+requesting <strong>SEAMLESS HALO</strong> switches back to <strong>SOURCE NEAREST</strong> rather than
+claiming seam parity for an unimplemented generated-overview path. Explicit
+native-halo → generated-overview composition remains future integration work.</p>
+<h3 id=halo-cost>Halo cost</h3>
+<p>One assembled band adds a graph-declared GPU gather pass for each intersecting
+source tile; publication adds an explicit core-copy pass. A nominal <code>w × h</code> core
+with cumulative radii <code>rx</code> and <code>ry</code> processes up to
+<code>(w + 2rx) × (h + 2ry)</code> pixels before true-edge clipping. All participating
+neighbors must fit the configured cache capacity and remain leased until a
+caller-created post-submit completion fence resolves. Large cores reduce
+duplicate halo work; small cores bound peak allocation. The best tradeoff
+depends on source tiling, stage radii, cache reuse, GPU bandwidth, and measured
+workload rather than a guaranteed speedup over presentation-only image effects.</p>
+<h2 id=choosing-an-analytical-operator>Choosing an analytical operator</h2>
+<h3 id=gaussian-and-box-smoothing>Gaussian and box smoothing</h3>
+<p>Choose Gaussian smoothing to reduce local sensor noise while weighting nearby
+observations most strongly; choose box smoothing when a uniformly weighted
+local mean is the intended measurement. Unlike a display-only image effect,
+these mask-aware compute stages change the values consumed by histograms,
+statistics, and Otsu classification. Their separable kernels evaluate <code>O(r)</code>
+taps per pixel for radius <code>r</code>, compared with <code>O(r²)</code> for direct square
+convolution; actual elapsed time depends on the workload and GPU.</p>
+<h3 id=sobel-scharr-gradient-magnitude-and-laplacian>Sobel, Scharr, gradient magnitude, and Laplacian</h3>
+<p>Choose Sobel for familiar signed horizontal or vertical boundaries and Scharr
+when orientation-sensitive or diagonal edges benefit from improved angular
+response. Both use the same <code>3 × 3</code> source neighborhood; a unit-per-pixel ramp
+produces a raw response of <code>8</code> or <code>32</code>, respectively, unless an explicit
+positive output scale normalizes the result. Choose nonnegative gradient
+magnitude when overall edge strength matters more than orientation. Its three
+GPU passes allocate four graph-owned intermediate sample/validity buffers, so
+it has higher dispatch and scratch costs than a single directional pass.
+Choose the signed four-connected Laplacian for second-order boundary or
+ridge/valley response; smooth first when sensor noise would dominate. Derivatives
+use raster-pixel coordinates, not CRS/world units, and remain genuine analytical
+inputs to the displayed histogram, threshold mask, and contours.</p>
+<h3 id=manual-classification-and-otsu-thresholds>Manual classification and Otsu thresholds</h3>
+<p>Use a manual threshold when the cutoff comes from domain knowledge and must
+remain constant across datasets. Use Otsu when the threshold should respond to
+the current valid distribution. Otsu first evaluates an unclassified baseline
+histogram; its resulting GPU scalar then classifies the same valid analytical
+values without a CPU synchronization step.</p>
+<p>In <strong>TILE</strong> scope, each selected window computes its own Otsu baseline and may
+choose a different threshold. In <strong>FULL GLOBAL</strong> scope, both tiles contribute
+to one stable baseline histogram, so WEST and EAST share the same cutoff. Their
+final global histogram describes only selected observations; it is not the
+unclassified baseline that produced the threshold.</p>
+<h3 id=sparse-roots-dense-component-ids-and-bounded-output>Sparse roots, dense component IDs, and bounded output</h3>
+<p>Use <strong>COMPONENTS</strong> to identify connected islands in the current thresholded
+foreground. The input remains a true <code>uint32</code> classification: nonzero means
+foreground, <code>0</code> means known background, and a separate validity mask excludes
+clouds, raw nodata, and other missing observations. Binary morphology, when
+enabled, contributes its final foreground values and its own observation
+validity; background never becomes missing just because its label is zero.</p>
+<p><strong>4-CONNECTED</strong> joins pixels sharing an edge. <strong>8-CONNECTED</strong> additionally
+joins pixels touching at a corner:</p>
+<pre><code class=language-text>foreground  .           4-connected: two separate regions
+.           foreground  8-connected: one shared region
+</code></pre>
+<p><strong>SPARSE ROOTS</strong> gives each foreground region its smallest row-major pixel
+index plus one. An island rooted at raster-local index <code>27</code>, for example,
+receives sparse label <code>28</code>; known background receives <code>0</code>. These representative
+labels are deterministic but not sequential: the next island might begin at
+index <code>491</code> and receive <code>492</code>.</p>
+<p><strong>DENSE 1..N</strong> scans representative-root flags in row-major order and replaces
+those same example roots with compact consecutive IDs <code>1</code> and <code>2</code>. Valid
+background remains label <code>0</code> with validity <code>1</code>; missing observations remain
+label <code>0</code> with validity <code>0</code>. The exact <strong>Components</strong> value comes from the
+GPU's unclamped required count, not the number of selected foreground pixels.
+<strong>Valid foreground</strong> continues to count pixels, so one component can contain
+many foreground observations.</p>
+<p><strong>Region capacity</strong> bounds how many dense component identities are published.
+For <code>9</code> real regions and capacity <code>4</code>, the exact readout remains <code>9 required</code>,
+the bounded output reports <code>4 / 4</code>, and the contributor invalidates foreground
+pixels belonging to components beyond the first four while preserving valid
+background. The example applies an intentionally stricter presentation policy:
+it hides the <em>entire</em> dense overlay while overflow is present instead of
+showing a misleading partial segmentation. Selecting <strong>SPARSE ROOTS</strong> still
+renders every converged sparse region because sparse representatives do not
+depend on dense capacity. Capacity <code>0</code> is valid and makes every nonempty dense
+result overflow; it is not interpreted as unlimited.</p>
+<p>Both representations are rendered from their real GPU-resident label buffer;
+the alternate representation and scan scratch remain graph-owned. No component
+label raster is copied to the CPU.</p>
+<p>The <strong>Propagation budget</strong> predeclares at most 1–32 hooking/path-compression
+rounds. Completed fixed points gate later rounds with GPU-written indirect
+dispatch; the dashboard reports the actual executed rounds and whether a
+fixed point was proven. An insufficient budget clears <strong>every</strong> output label
+and output-validity flag on the GPU and reports <code>unresolved · labels cleared</code>.
+The renderer therefore cannot present plausible but incorrect unfinished
+regions.</p>
+<p>Enabling components automatically activates the existing classification
+threshold, pauses contours, and exits <strong>FULL GLOBAL</strong> to <strong>TILE</strong>. Native
+sources, source-nearest overviews, generated GPU-mean overviews, seamless halo
+preprocessing, smoothing, derivatives, grayscale/binary morphology, and local
+manual or Otsu thresholds remain available. Labeling operates on the final
+selected owned core; it does not merge root identities across tile seams.</p>
+<p>Per-region area, centroid, intensity measurements, and cross-tile identity
+merging remain separate future tranches. Dense IDs and exact counts apply only
+to the currently selected owned core; they are not stitched dataset-wide
+component identities.</p>
+<h3 id=grayscale-and-binary-morphology>Grayscale and binary morphology</h3>
+<p>Choose dilation to expand classified foreground, bridge sufficiently narrow
+gaps, or calculate the local grayscale maximum; choose erosion to shrink
+foreground, remove small islands, or calculate the local minimum. Opening is
+erosion followed by dilation, useful for removing isolated small foreground
+regions. Closing is dilation followed by erosion, useful for reducing small
+background holes or reconnecting narrow breaks. Effects depend on the chosen
+footprint, radius, border policy, and valid observations.</p>
+<p>The eight-connected square evaluates <code>(2r + 1)²</code> positions at radius <code>r</code>;
+the four-connected cross is a Manhattan diamond with <code>2r(r + 1) + 1</code>
+positions, not merely a plus-shaped set of arms for radii above one. Both
+footprints therefore cost <code>O(r²)</code> taps per pixel, with the diamond using fewer
+samples. Strict nodata rejects an output when any included neighbor is invalid;
+ignore skips missing neighbors, but neither mode revives an invalid center.
+Opening and closing use two graph passes and <code>8 × width × height</code> logical bytes
+of graph-owned intermediate values/validity; radius zero uses one identity pass
+without scratch. Actual throughput depends on radius, source resolution,
+validity, and the GPU; these operations are numerical raster analysis rather
+than screen-space display effects.</p>
+<h3 id=marching-squares-contours>Marching-squares contours</h3>
+<p>Use contour overlays when a measured scalar boundary should become reusable
+vector geometry, such as vegetation isolines or concentration thresholds.
+Classification and bounded segment scattering scale linearly with raster-cell
+count, while a GPU-generated indirect draw avoids waiting for a CPU segment
+count. Prefix scans require additional graph passes and scratch storage, so
+actual performance depends on the workload, segment density, and GPU.</p>
+<h2 id=current-limitations-and-integration-responsibilities>Current limitations and integration responsibilities</h2>
+<p>Choose a source window when a smaller area of a decoded dataset is the desired
+analytical input; choose an existing source overview when its lower native
+resolution and nearest-sample policy are appropriate, or explicitly generate a
+nodata-aware analytical overview when valid weighted means or categorical
+policies matter. Both paths retain source pixel origin and affine metadata.
+The example renders one active
+output core at a time while retaining its selected real source neighbors and
+previously visited tiles within explicit CPU/GPU budgets. The optional
+seam-safe mode assembles cumulative neighborhoods and publishes nonoverlapping
+owned cores; it does not automatically construct one global stitched output,
+deduplicate contour segments across tiles, compose global replay with seamless
+native halos or generated overviews, or provide a GeoTIFF/COG transport or
+decoder. Global statistic/histogram merging is separately and explicitly
+available in <strong>FULL GLOBAL</strong> mode; remaining capabilities have separate
+ownership and correctness requirements.</p>
+<p>All imagery, coordinates, and terrain are synthetic. The visualization is a
+false-color illustration, not a real satellite acquisition, true-color image,
+georeferenced location, or scientifically calibrated product. Derivative
+measurements are not automatically projected into physical-world distances.
+Per-region measurement, cross-tile component stitching, stitched contour
+seams, automatic full-image output
+placement, global neighborhood/overview composition, marker-based
+segmentation, and seamless native-halo-to-generated-overview processing remain
+planned capabilities.</div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Other vis.gl Libraries</div><ul class="footer__items clean-list"><li class=footer__item><a href=https:/deck.gl target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://loaders.gl target=_blank rel="noopener noreferrer" class=footer__link-item>loaders.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/react-map-gl target=_blank rel="noopener noreferrer" class=footer__link-item>react-map-gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/deck.gl-community/ target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl-community<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>More</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class=footer__link-item>vis.gl blog on Medium<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 OpenJS Foundation</div></div></div></footer></div></body>

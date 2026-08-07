@@ -1,6 +1,6 @@
 # Timeline
 
-[AnimationLoop](https://luma.gl/next/docs/api-reference/engine/animation-loop.md)[Template](https://luma.gl/next/docs/api-reference/engine/animation-loop-template.md)[KeyFrames](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md)[Timeline](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md)
+[Guide](https://luma.gl/next/docs/api-guide/engine/animation.md)[Mixer](https://luma.gl/next/docs/api-reference/engine/animation/animation-mixer.md)[Morph Targets](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md)[AnimationLoop](https://luma.gl/next/docs/api-reference/engine/animation-loop.md)[Template](https://luma.gl/next/docs/api-reference/engine/animation-loop-template.md)[KeyFrames](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md)[Timeline](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md)
 
 Manages an animation timeline, with multiple channels that can be running at different rates, durations, etc. Many methods (`play`, `pause`) assume that the `update` method is being called once per frame with a "global time". This automatically done for `AnimationLoop.timeline` object.
 

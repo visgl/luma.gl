@@ -1,0 +1,82 @@
+# Magnify
+
+Place an adjustable circular magnifying lens over the current image. `magnify` samples the source at a configurable zoom factor inside the lens while preserving the surrounding image and optionally drawing a border.
+
+### Effects: Image Processing
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/showcase/postprocessing)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
+## At a Glance[​](#at-a-glance "Direct link to At a Glance")
+
+| Property          | Value                                |
+| ----------------- | ------------------------------------ |
+| Export            | `magnify`                            |
+| Backends          | WebGPU and WebGL2                    |
+| Render passes     | One fullscreen texture-sampling pass |
+| Additional inputs | None                                 |
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+import {magnify} from '@luma.gl/effects';
+
+
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [magnify]});
+
+
+
+renderer.renderToScreen({
+
+  sourceTexture: sceneColorTexture,
+
+  uniforms: {
+
+    magnify: {
+
+      screenXY: [0.5, 0.5],
+
+      radiusPixels: 150,
+
+      zoom: 2,
+
+      borderWidthPixels: 2,
+
+      borderColor: [1, 1, 1, 1]
+
+    }
+
+  }
+
+});
+```
+
+## Parameters[​](#parameters "Direct link to Parameters")
+
+| Parameter           | Default                | Description                                                                                               |
+| ------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| `screenXY`          | `[0, 0]`               | Normalized screen-space lens position; the origin is the upper-left corner.                               |
+| `radiusPixels`      | `200`                  | Radius of the circular magnifying region in image pixels.                                                 |
+| `zoom`              | `2`                    | Source magnification factor inside the lens.                                                              |
+| `borderWidthPixels` | `0`                    | Width of the optional lens outline; zero disables it.                                                     |
+| `borderColor`       | `[255, 255, 255, 255]` | Default configured RGBA border color; use normalized shader color values when setting an explicit border. |
+
+The actual `radiusPixels` descriptor default is `200`; an older type comment describing `100` is not consistent with the current implementation.
+
+## Composition and Cost[​](#composition-and-cost "Direct link to Composition and Cost")
+
+Magnification uses one fullscreen source-texture sample per output pixel. Drive `screenXY` from pointer coordinates to create an interactive inspection lens. Apply the effect after passes that depend on unwarped depth, normal, or velocity attachments.
+
+## Related Effects[​](#related-effects "Direct link to Related Effects")
+
+* [Bulge and Pinch](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/bulge-pinch.md) applies smoothly varying circular lens distortion.
+* [Swirl](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/swirl.md) rotates sample coordinates around a circular focal region.
+* [Zoom Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/zoom-blur.md) creates radial streaks instead of a sharply enlarged lens image.

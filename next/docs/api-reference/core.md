@@ -2,6 +2,10 @@
 
 The `@luma.gl/core` module provides an abstract API that enables application code to portably work with both WebGPU and WebGL. The main export is the `Device` class which provides methods for creating GPU resources such as `Buffer`, `Texture`, `Shader` etc.
 
+[![WebGPU](/img/standards/webgpu.svg)](https://www.w3.org/TR/webgpu/)[![WebGL](/img/standards/webgl.svg)](https://www.khronos.org/webgl/)
+
+WebGPU logo by<!-- --> <!-- -->[W3C](https://www.w3.org/) <!-- -->([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+
 The pages in this section provide curated explanations and portability guidance. For the exact public TypeScript declarations, overloads, inheritance, and source locations, use the [generated `@luma.gl/core` API index](https://luma.gl/next/docs/api-reference/generated/core.md).
 
 ## Installing adapters[​](#installing-adapters "Direct link to Installing adapters")

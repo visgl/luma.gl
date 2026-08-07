@@ -1,13 +1,21 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   MapView,
   type MapViewState,
   type PickingInfo,
+  type Viewport,
   type ViewStateChangeParameters
 } from '@deck.gl/core';
+import {LuSpatialPointLayer} from '@deck.gl-community/luspatial';
+import {
+  LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS,
+  LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS,
+  LuSpatialGeographicPointQueryEffect,
+  type LuSpatialGeographicPointQueryStats
+} from '@deck.gl-community/luspatial/query';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
@@ -17,18 +25,18 @@ import {
   type TaxiPointSource
 } from '../../showcase/billion-point-spatial-atlas/taxi-source';
 import {ArrowDeck} from '../arrow-deck';
-import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
-import {LuSpatialPointLayer} from './luspatial-point-layer';
-import {LuSpatialTaxiQueryEffect, type LuSpatialTaxiQueryStats} from './luspatial-query-effect';
+import {type DeckExampleDeviceOptions, getDeckExampleProps} from '../deck-example-device';
 import {
-  TAXI_CORPUS_POINT_COUNT,
-  TAXI_POINT_COUNT,
   assertLongitudeLatitudeTaxiMetadata,
   getTaxiPoint,
+  type LuSpatialTaxiData,
   makeLuSpatialTaxiDataAsync,
   makeLuSpatialTaxiDataFromResidentWindow,
   makeTaxiZonePresets,
-  type LuSpatialTaxiData,
+  TAXI_CORPUS_POINT_COUNT,
+  TAXI_GRID_SIZE,
+  TAXI_POINT_COUNT,
+  TAXI_PROJECTION_ORIGIN,
   type TaxiZonePreset
 } from './taxi-data';
 
@@ -94,9 +102,9 @@ export function createLuSpatialTaxiDeck(
     minZoom: 9,
     maxZoom: 20
   };
-  let queryEffect: LuSpatialTaxiQueryEffect | null = null;
+  let queryEffect: LuSpatialGeographicPointQueryEffect | null = null;
   let latestSelectionCenter: readonly [number, number] = initialZone.center;
-  let stagingQueryEffect: LuSpatialTaxiQueryEffect | null = null;
+  let stagingQueryEffect: LuSpatialGeographicPointQueryEffect | null = null;
   let activeLayers: LuSpatialPointLayer[] = [];
   let queryRadiusKilometres = 0.35;
   let taxiDataRevision = 0;
@@ -131,7 +139,6 @@ export function createLuSpatialTaxiDeck(
       queryRadiusKilometres = radiusKilometres;
       queryEffect?.setSelectionRadius(radiusKilometres);
       stagingQueryEffect?.setSelectionRadius(radiusKilometres);
-      deck?.redraw('luSpatial radius changed');
     },
     onZoneChange: zone => {
       latestSelectionCenter = zone.center;
@@ -141,12 +148,11 @@ export function createLuSpatialTaxiDeck(
         latitude: zone.center[1],
         zoom: zone.zoom
       };
+      deck?.setProps({viewState});
       queryEffect?.setSelection(zone.center, queryRadiusKilometres);
       stagingQueryEffect?.setSelection(zone.center, queryRadiusKilometres);
       controls.setCoordinate(zone.center, zone.name);
-      deck?.setProps({viewState});
       synchronizeBasemap(map, viewState);
-      deck?.redraw('luSpatial taxi zone changed');
     }
   });
   controls.setCoordinate(initialZone.center, initialZone.name);
@@ -186,7 +192,6 @@ export function createLuSpatialTaxiDeck(
       stagingQueryEffect?.setSelection(center, queryRadiusKilometres);
       controls.setCoordinate(center, 'Custom map query');
       controls.setCustomZone();
-      deck.redraw('luSpatial query moved');
     },
     onViewStateChange: ({viewState: nextViewState}: ViewStateChangeParameters) => {
       viewState = nextViewState as TaxiViewState;
@@ -211,10 +216,20 @@ export function createLuSpatialTaxiDeck(
         const previousQueryEffect = queryEffect;
         const previousLayers = activeLayers;
         const nextTaxiDataRevision = taxiDataRevision + 1;
-        let nextQueryEffect: LuSpatialTaxiQueryEffect;
+        let nextQueryEffect: LuSpatialGeographicPointQueryEffect;
         try {
-          nextQueryEffect = new LuSpatialTaxiQueryEffect(device, nextTaxiData, {
+          nextQueryEffect = new LuSpatialGeographicPointQueryEffect(device, {
             id: `luspatial-taxi-query-effect-${nextTaxiDataRevision}`,
+            longitudeLatitudes: nextTaxiData.longitudeLatitudes,
+            sourceBounds: nextTaxiData.sourceBounds,
+            projectedBounds: nextTaxiData.projectedBounds,
+            projectionOrigin: TAXI_PROJECTION_ORIGIN,
+            gridSize: TAXI_GRID_SIZE,
+            initialSelection: {
+              center: latestSelectionCenter,
+              radiusKilometres: queryRadiusKilometres
+            },
+            selectionRadiusRangeKilometres: [0.05, 5],
             onStats: stats => controls.updateStats(stats)
           });
         } catch (error) {
@@ -435,7 +450,7 @@ type TaxiControlPanel = {
   setCustomZone: () => void;
   setLoadingProgress: (processedPointCount: number, totalPointCount: number) => void;
   updateSourceStatus: (status: {corpusPointCount?: number; message: string}) => void;
-  updateStats: (stats: LuSpatialTaxiQueryStats) => void;
+  updateStats: (stats: LuSpatialGeographicPointQueryStats) => void;
 };
 
 type TaxiLoadingIndicator = {
@@ -624,8 +639,16 @@ function createControlPanel(
   const graphInspectorElement = root.querySelector<HTMLElement>('[data-graph-inspector]')!;
   const graphInspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
     graphLabels: {
-      'luspatial-taxi-build-graph': 'luProj projection + grid build',
-      'luspatial-taxi-query-graph': 'Viewport + radius queries'
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.build]: 'luProj projection + grid build',
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.query]: 'Viewport + radius queries'
+    },
+    counterLabels: {
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.viewportIntersectedCells]: 'Viewport cells',
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.viewportCandidates]: 'Viewport candidates',
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.viewportMatches]: 'Viewport matches',
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.selectionIntersectedCells]: 'Selection cells',
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.selectionCandidates]: 'Selection candidates',
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.selectionMatches]: 'Selection matches'
     }
   });
 
@@ -757,7 +780,10 @@ function createControlPanel(
       visibleElement.textContent = formatCount(stats.visiblePointCount);
       selectedElement.textContent = formatCount(stats.selectedPointCount);
       queryTimeElement.textContent = `${stats.queryEncodingMilliseconds.toFixed(2)} ms`;
-      graphInspectorPanel.update(stats.inspectorSnapshot, 'luspatial-taxi-query-graph');
+      graphInspectorPanel.update(
+        stats.inspectorSnapshot,
+        LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.query
+      );
     }
   };
 }
@@ -790,8 +816,8 @@ async function closeTaxiPointSource(source: TaxiPointSource | null): Promise<voi
 
 function retirePreviousQueryEffect(
   deck: ArrowDeck<MapView>,
-  previousQueryEffect: LuSpatialTaxiQueryEffect | null,
-  nextQueryEffect: LuSpatialTaxiQueryEffect,
+  previousQueryEffect: LuSpatialGeographicPointQueryEffect | null,
+  nextQueryEffect: LuSpatialGeographicPointQueryEffect,
   shouldSkip: () => boolean
 ): void {
   if (!previousQueryEffect) return;
@@ -811,7 +837,7 @@ type TaxiLayerStagingOptions = {
 };
 
 function makeTaxiLayers(
-  queryEffect: LuSpatialTaxiQueryEffect,
+  queryEffect: LuSpatialGeographicPointQueryEffect,
   taxiDataRevision: number,
   options: TaxiLayerStagingOptions = {}
 ): LuSpatialPointLayer[] {
@@ -822,12 +848,11 @@ function makeTaxiLayers(
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 140, 32, 230],
-      longitudeLatitudes: queryEffect.longitudeLatitudes,
-      visibleIds: queryEffect.viewportIds,
-      drawCommands: queryEffect.drawCommands,
-      commandIndex: 0,
+      ...queryEffect.outputs.viewport,
       color: [94, 172, 198, 105],
       radiusPixels: 0.9,
+      radiusScale: getTaxiPointRadiusScale,
+      highlightRadiusScale: 1.65,
       opacity: 0.46,
       staged: options.staged,
       onResourcesReady: () => options.onLayerReady?.(0),
@@ -842,12 +867,11 @@ function makeTaxiLayers(
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 140, 32, 245],
-      longitudeLatitudes: queryEffect.longitudeLatitudes,
-      visibleIds: queryEffect.selectedIds,
-      drawCommands: queryEffect.drawCommands,
-      commandIndex: 1,
+      ...queryEffect.outputs.selection,
       color: [52, 220, 244, 205],
       radiusPixels: 1.25,
+      radiusScale: getTaxiPointRadiusScale,
+      highlightRadiusScale: 1.65,
       opacity: 0.72,
       staged: options.staged,
       onResourcesReady: () => options.onLayerReady?.(1),
@@ -857,4 +881,9 @@ function makeTaxiLayers(
       }
     })
   ];
+}
+
+function getTaxiPointRadiusScale(viewport: Viewport): number {
+  const zoom = viewport.zoom ?? 12;
+  return Math.max(0.8, Math.min(2.2, 2 ** ((zoom - 12) * 0.2)));
 }

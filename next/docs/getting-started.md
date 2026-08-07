@@ -136,6 +136,8 @@ Simulate, filter, and visualize millions of records without shuttling data back 
 
 Share portable rendering across WebGPU and WebGL2, connect with deck.gl and Apache Arrow, and use WebGPU for compute shaders.
 
+[Explore the complete feature set→](https://luma.gl/next/docs/capabilities.md)
+
 04 · Find your starting point
 
 ## Choose your own first adventure.

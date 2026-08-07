@@ -1,0 +1,149 @@
+# Clustered Volumetric Lighting
+
+Integrate participating-media illumination from the same directional and clustered point lights used by scene shading. `createClusteredVolumetricLightingShaderPassPipeline` combines height fog, anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising, and Beer-Lambert extinction.
+
+### Deferred Rendering: Illumination Lab
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/deferred-rendering)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
+## At a Glance[​](#at-a-glance "Direct link to At a Glance")
+
+| Property                  | Value                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| Export                    | `createClusteredVolumetricLightingShaderPassPipeline`                                   |
+| Backend                   | WebGPU                                                                                  |
+| Render passes             | Six: integration, temporal resolve, depth history, two bilateral filters, and composite |
+| Required scene inputs     | Depth, velocity, camera transforms, directional lighting, and point-light storage       |
+| Required clustered inputs | `clusterLightCounts`, `clusterLightIndices`, and matching grid uniforms                 |
+| Persistent state          | Atmospheric radiance history and compact `rg16float` depth history                      |
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+import {createClusteredVolumetricLightingShaderPassPipeline} from '@luma.gl/effects';
+
+
+
+clusteredLightGrid.encode(device.commandEncoder, {
+
+  pointLights,
+
+  pointLightCount,
+
+  projectionMatrix,
+
+  nearPlane,
+
+  farPlane
+
+});
+
+
+
+const renderer = new ShaderPassRenderer(device, {
+
+  colorFormat: 'rgba16float',
+
+  shaderPasses: [
+
+    createClusteredVolumetricLightingShaderPassPipeline({resolutionScale: 0.5})
+
+  ]
+
+});
+
+
+
+renderer.renderToScreen({
+
+  sourceTexture: gBuffer.colorTexture,
+
+  bindings: {
+
+    ...gBuffer.getShaderPassBindings(),
+
+    pointLights,
+
+    ...clusteredLightGrid.getShaderPassBindings()
+
+  },
+
+  uniforms: {
+
+    clusteredVolumetricTrace: {
+
+      projectionMatrix,
+
+      inverseProjectionMatrix,
+
+      inverseViewMatrix,
+
+      directionalLightDirectionView,
+
+      directionalLightColor,
+
+      ...clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane),
+
+      density: 0.055,
+
+      sampleCount: 10,
+
+      godRayIntensity: 0.8
+
+    },
+
+    clusteredVolumetricTemporal: {
+
+      inverseProjectionMatrix,
+
+      inverseViewProjectionMatrix,
+
+      previousViewProjectionMatrix
+
+    },
+
+    clusteredVolumetricDepthHistoryCopy: {inverseProjectionMatrix}
+
+  }
+
+});
+```
+
+## Parameters[​](#parameters "Direct link to Parameters")
+
+| Parameter              | Default | Description                                                                       |
+| ---------------------- | ------- | --------------------------------------------------------------------------------- |
+| `resolutionScale`      | `1`     | Relative resolution of atmospheric integration, history, and bilateral filtering. |
+| `density`              | `0.055` | Participating-media density along each view ray.                                  |
+| `heightFalloff`        | `0.23`  | World-height density attenuation.                                                 |
+| `fogHeight`            | `0.2`   | Reference height of the atmospheric density profile.                              |
+| `anisotropy`           | `0.45`  | Scattering direction preference; supported range is `-0.8` to `0.85`.             |
+| `directionalIntensity` | `2.2`   | Strength of the directional scene light inside the medium.                        |
+| `pointLightIntensity`  | `1.8`   | Strength of retained clustered point-light candidates.                            |
+| `sampleCount`          | `10`    | View-ray integration samples; supported range is `3` to `20`.                     |
+| `godRayIntensity`      | `0`     | Strength of depth-occluded crepuscular light shafts.                              |
+| `godRaySampleCount`    | `18`    | Radial visibility samples when god rays are enabled; maximum is `32`.             |
+| `historyWeight`        | `0.88`  | Contribution from camera- and velocity-reprojected atmospheric history.           |
+| `strength`             | `0.9`   | Final `clusteredVolumetricComposite` contribution.                                |
+
+## Lighting Contract and Cost[​](#lighting-contract-and-cost "Direct link to Lighting Contract and Cost")
+
+Encode the `ClusteredLightGrid` after updating the point-light buffer and before running the fullscreen pipeline. The volumetric trace evaluates a bounded set of compute-retained cluster candidates instead of scanning every active light at each ray step. It also requires matching cluster dimensions, near/far planes, and the same camera transforms used to render scene depth.
+
+The six fullscreen stages are separate from the application's cluster-binning compute work. Lowering `resolutionScale`, `sampleCount`, or `godRaySampleCount` reduces integration cost; temporal history and two depth-aware filters reconstruct a more stable lower-resolution result. Reset history after camera cuts or scene-target recreation.
+
+See [Clustered Lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md) for point-light packing, cluster-grid allocation, buffer bindings, and the complete per-frame encode sequence.
+
+## Related Effects[​](#related-effects "Direct link to Related Effects")
+
+* [Volumetric Fog](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/volumetric-fog.md) offers a compact two-pass atmosphere without clustered scene-light evaluation.
+* [Depth-Aware Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/depth-aware-blur.md) describes the edge-preserving denoising stages.
+* [Bloom](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/bloom.md) spreads bright scattering and god-ray highlights later in the HDR pipeline.

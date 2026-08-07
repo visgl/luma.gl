@@ -15,6 +15,12 @@ Discover real-time rendering, physical simulation, GPU compute, and interactive 
 
 - [Your GPU is the canvas.](https://luma.gl/next/docs/getting-started.md): Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
 
+### capabilities
+
+Detailed feature matrices for GPU-native dataframes, graph and raster analytics, large-scale visualization, WebGPU and WebGL2 rendering, ray tracing, shaders, and assets.
+
+- [Visualization and compute, at GPU scale.](https://luma.gl/next/docs/capabilities.md): Detailed feature matrices for GPU-native dataframes, graph and raster analytics, large-scale visualization, WebGPU and WebGL2 rendering, ray tracing, shaders, and assets.
+
 ### tutorials
 
 A living scene begins with a single draw call. Start with a triangle, add depth and
@@ -105,6 +111,7 @@ The @luma.gl/engine module provides higher-level 3D engine functionality that ma
 
 - [Engine Programming](https://luma.gl/next/docs/api-guide/engine.md): The @luma.gl/engine module provides higher-level 3D engine functionality that makes it easier to build 3D applications.
 - [Declarative Rendering with ANARI](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md): @luma.gl/anari is an experimental, private retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
+- [Animation and Deformation](https://luma.gl/next/docs/api-guide/engine/animation.md): The @luma.gl/engine animation system plays reusable keyframe clips, blends overlapping actions, and applies morph-target deformation without depending on a particular asset format or renderer. glTF adapters, retained scenes, and custom applications can all use the same engine primitives.
 - [Interactivity](https://luma.gl/next/docs/api-guide/engine/interactivity.md): Event Management
 - [Materials](https://luma.gl/next/docs/api-guide/engine/materials.md): In luma.gl, a Material describes reusable surface state for one shading model
 - [Redraw detection](https://luma.gl/next/docs/api-guide/engine/redraw.md): luma.gl components track when they need to be redrawn. A number of classes expose a common pair of methods:
@@ -153,19 +160,20 @@ luma.gl applications must provide the shader source code that will ultimately
 
 ### api-reference
 
-luma.gl is packaged and published as a suite of composable npm modules, so that applications can choose what functionality they need.
+luma.gl combines published, composable npm modules with private experimental packages under active
 
-- [Overview](https://luma.gl/next/docs/api-reference.md): luma.gl is packaged and published as a suite of composable npm modules, so that applications can choose what functionality they need.
+- [Overview](https://luma.gl/next/docs/api-reference.md): luma.gl combines published, composable npm modules with private experimental packages under active
 
 #### anari
 
-@luma.gl/anari provides a private, experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe what to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides how to compile that description into portable WebGPU or WebGL rendering.
+Experimental asset import
 
-- [@luma.gl/anari](https://luma.gl/next/docs/api-reference/anari.md): @luma.gl/anari provides a private, experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe what to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides how to compile that description into portable WebGPU or WebGL rendering.
+- [@luma.gl/anari](https://luma.gl/next/docs/api-reference/anari.md): Experimental asset import
+- [ANARI Animation and glTF Integration](https://luma.gl/next/docs/api-reference/anari/anari-animation.md): @luma.gl/anari/gltf is an optional entry point that projects glTF-owned animation data onto
 - [ANARI C API and THREE.js Mapping](https://luma.gl/next/docs/api-reference/anari/anari-api-mapping.md): This page maps the official ANARI 1.1 specification to the experimental, private @luma.gl/anari implementation and, where helpful, to comparable THREE.js concepts.
 - [ANARIDevice and Object Lifecycle](https://luma.gl/next/docs/api-reference/anari/anari-device.md): ANARIDevice adapts an existing luma.gl Device into a retained, ANARI-inspired scene API. It creates scene objects, advertises supported subtypes and extensions, renders frames, and owns the renderer's cached GPU resources.
 - [ANARI Arrays and Geometry](https://luma.gl/next/docs/api-reference/anari/anari-geometry.md): ANARIArray describes shared application data, and ANARIGeometry describes one reusable geometric primitive. Geometry becomes visible when paired with a material in an ANARISurface.
-- [ANARI Materials and Lights](https://luma.gl/next/docs/api-reference/anari/anari-materials-and-lights.md): Materials define how a surface responds to light. Lights are attached to a world or an instanced group and contribute ambient, directional, point, or spot illumination.
+- [ANARI Materials and Lights](https://luma.gl/next/docs/api-reference/anari/anari-materials-and-lights.md): Retained ANARI materials translate directly into the canonical @luma.gl/shadertools PBR
 - [ANARI Cameras, Renderers, and Frames](https://luma.gl/next/docs/api-reference/anari/anari-rendering.md): An ANARICamera describes the view, an ANARIRenderer selects shading and presentation settings, and an ANARIFrame combines both with a world to produce an image.
 - [ANARI Scene Hierarchy](https://luma.gl/next/docs/api-reference/anari/anari-scene.md): The scene hierarchy combines geometry and materials into surfaces, groups related surfaces and lights, places groups through transform instances, and collects everything in a world.
 - [ANARI Scene Schemas](https://luma.gl/next/docs/api-reference/anari/anari-schemas.md): @luma.gl/anari/schemas exposes optional Zod schemas for the experimental retained-scene JSON
@@ -232,7 +240,9 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [Overview](https://luma.gl/next/docs/api-reference/engine.md): The @luma.gl/engine module contains higher-level rendering and application framework classes built on top of @luma.gl/core.
 - [AnimationLoop](https://luma.gl/next/docs/api-reference/engine/animation-loop.md): AnimationLoop manages a render loop around a luma.gl Device.
 - [AnimationLoopTemplate](https://luma.gl/next/docs/api-reference/engine/animation-loop-template.md): AnimationLoopTemplate is a small abstract base class for applications that prefer a class-based render lifecycle on top of AnimationLoop.
+- [AnimationMixer](https://luma.gl/next/docs/api-reference/engine/animation/animation-mixer.md): The AnimationMixer plays and blends reusable AnimationClip instances. A clip groups AnimationTrack objects, and each track updates an application property through an AnimationBinding. AnimationAction controls playback for an individual clip.
 - [KeyFrames](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md): Manages key frame animation data. Associates time points with arbitrary data and provides methods to access key times and data, and an interpolation factor, based on the current time.
+- [Morph-Target Helpers](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md): @luma.gl/engine provides format-independent helpers for weighted vertex deformation. They combine morph-target deltas with immutable base geometry and can update an existing model's GPU vertex buffers in place.
 - [Timeline](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md): Manages an animation timeline, with multiple channels that can be running at different rates, durations, etc. Many methods (play, pause) assume that the update method is being called once per frame with a "global time". This automatically done for AnimationLoop.timeline object.
 - [BackgroundTextureModel](https://luma.gl/next/docs/api-reference/engine/background-texture-model.md): BackgroundTextureModel is a specialized ClipSpace that renders one texture across the screen while preserving aspect ratio.
 - [ClipSpace](https://luma.gl/next/docs/api-reference/engine/clip-space.md): ClipSpace is a convenience subclass of Model that draws a fullscreen quad in clip space.
@@ -247,6 +257,7 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [GPUGeometry](https://luma.gl/next/docs/api-reference/engine/geometry/gpu-geometry.md): GPUGeometry is the GPU-backed counterpart to Geometry.
 - [loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md): A simple small utility to load images from URLs. The loaded ImageBitmaps can be used to create textures.
 - [Model](https://luma.gl/next/docs/api-reference/engine/model.md): Model is the main engine-level rendering class in luma.gl.
+- [OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md): OrbitControls adds pointer-driven orbiting, wheel zoom, optional automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
 - [ShaderPassRenderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md): ShaderPassRenderer applies one or more ShaderPass or ShaderPassPipeline definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 - [PickingManager](https://luma.gl/next/docs/api-reference/engine/picking-manager.md): PickingManager manages an offscreen picking framebuffer and the shader-input updates needed for luma.gl's engine picking modules.
 - [GroupNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/group-node.md): GroupNode extends ScenegraphNode with child-node management and traversal helpers.
@@ -262,13 +273,16 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [Overview](https://luma.gl/next/docs/api-reference/experimental.md): @luma.gl/experimental publishes incubating luma.gl APIs that are usable by applications but may
 - [ABufferRenderer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md): ABufferRenderer provides experimental WebGPU-only order-independent transparency for models that append final fragment colors into the aBuffer shader module.
 - [Clustered Lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md): ClusteredLightGrid is an experimental WebGPU-only compute stage for many-light deferred
+- [ComparisonSplitter](https://luma.gl/next/docs/api-reference/experimental/comparison-splitter.md): ComparisonSplitter provides a reusable, accessible divider for comparing two views of the same
 - [Deferred Lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md): deferredLighting is an experimental WebGPU-only fullscreen shader pass that resolves physically
+- [DeferredSceneRenderer](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md): DeferredSceneRenderer renders compatible physically based scene descriptions through a WebGPU
 - [GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md): GBuffer is an experimental WebGPU-only owner for the multiple render targets (MRTs) used by
 - [WebGPU Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md): The @luma.gl/experimental/geospatial entry point provides small, side-effect-free WebGPU
 - [Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md): glassMaterial is an experimental cross-backend shader module for refractive translucent surfaces.
 - [GPU Primitives and Command Graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md): Overview
 - [DrawCommandBuffer](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md): Overview
 - [GPUAncestorProjection](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md): Overview
+- [GPUBatchHashIndex](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-index.md): Overview
 - [GPUBatchHashJoin](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md): Overview
 - [GPUBVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md): Overview
 - [GPUBVHQuery](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md): Overview
@@ -295,25 +309,35 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [GPUScene adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md): Overview
 - [GPUSceneDrawGeneration](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md): Overview
 - [GPUSceneResourceGroups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md): Overview
+- [GPUSegmentedBVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-segmented-bvh.md): Overview
+- [GPUSegmentedSort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort.md): Overview
 - [GPUSort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md): Overview
 - [GPU spatial query benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md): Run on your device
+- [GPUTextureHistory](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-texture-history.md): Overview
 - [GPUTraceInteraction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md): Overview
+- [GPU Trace Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking.md): Overview
 - [GPUTraceScene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md): Overview
 - [GPUVirtualGeometrySelection](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md): Overview
 - [GPUVisibilityWorkflow](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md): Overview
+- [luDF: GPU-Resident Dataframes](https://luma.gl/next/docs/api-reference/experimental/ludf.md): @luma.gl/experimental/ludf provides immutable, visualization-oriented dataframe operations on
+- [luGraph: GPU-Resident Graph Analytics](https://luma.gl/next/docs/api-reference/experimental/lugraph.md): Overview
 - [GPU Coordinate Projection (luProj)](https://luma.gl/next/docs/api-reference/experimental/luproj.md): @luma.gl/experimental/luproj reprojects GPU-resident coordinates through WebGPU command graphs
+- [LuRaster: GPU-Resident Raster Analytics](https://luma.gl/next/docs/api-reference/experimental/luraster.md): @luma.gl/experimental/luraster provides optional, graph-native WebGPU operations for
+- [LuRaster Concepts and Execution Model](https://luma.gl/next/docs/api-reference/experimental/luraster/concepts.md): A satellite image, microscope slide, terrain model, and weather grid can all be represented as
 - [GPU Trace Exploration](https://luma.gl/next/docs/api-reference/experimental/lutrace.md): Overview
 - [LuxFilter: GPU-Resident Crossfiltering](https://luma.gl/next/docs/api-reference/experimental/luxfilter.md): @luma.gl/experimental/luxfilter coordinates linked selections across GPU-resident maps,
 - [MLSMPMFluidSimulation](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md): MLSMPMFluidSimulation is an experimental WebGPU-only, fixed-capacity two-dimensional fluid
+- [Physically Based Environment Lighting](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md): PBREnvironmentGenerator converts a caller-provided equirectangular GPU texture into the three
 - [Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md): reflectiveMaterial is a lightweight cross-backend shader module for glossy surfaces. It combines
+- [SceneRenderer](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md): SceneRenderer renders retained, physically based surface descriptions on WebGPU and WebGL. It
 - [ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md): ShadowMapRenderer is an experimental WebGPU-only light-space shadow system. It owns stable
 - [SpectralCausticsRenderer](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md): SpectralCausticsRenderer is an experimental WebGPU-only photon-caustics renderer. It captures
 - [SpectralOceanSimulation](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md): Overview
 - [VolumetricFireSimulation](https://luma.gl/next/docs/api-reference/experimental/volumetric-fire-simulation.md): VolumetricFireSimulation is an experimental WebGPU-only dense-grid fire and smoke simulation.
 - [WBOITRenderer](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md): WBOITRenderer implements weighted blended order-independent transparency on WebGPU and WebGL2.
-- [Experimental WebXR](https://luma.gl/next/docs/api-reference/experimental/webxr.md): @luma.gl/experimental exposes experimental WebGL-only WebXR helpers. They stay outside @luma.gl/engine because WebXR brings its own session lifecycle, frame scheduler, per-view rendering state, raw camera access, and future input/layer/depth APIs.
+- [Experimental WebXR](https://luma.gl/next/docs/api-reference/experimental/webxr.md): @luma.gl/experimental exposes experimental WebGPU and WebGL WebXR session helpers. They stay outside @luma.gl/engine because WebXR brings its own session lifecycle, frame scheduler, per-view rendering state, raw camera access, and future input/depth APIs.
 - [WebXRCameraTexture](https://luma.gl/next/docs/api-reference/experimental/webxr/webxr-camera-texture.md): WebXRCameraTexture is the experimental @luma.gl/experimental binding source for WebXR Raw Camera Access. It wraps the browser-owned camera WebGLTexture for one XRView as a borrowed read-only luma Texture.
-- [WebXRManager](https://luma.gl/next/docs/api-reference/experimental/webxr/webxr-manager.md): WebXRManager is the experimental WebGL-only session and per-view render-state helper for luma.gl. It prepares an XRWebGLLayer, requests a reference space, and resolves the framebuffer, viewports, projection matrices, and view matrices for one active XRFrame.
+- [WebXRManager](https://luma.gl/next/docs/api-reference/experimental/webxr/webxr-manager.md): WebXRManager is the experimental WebGPU and WebGL session and per-view render-state helper for luma.gl. It prepares a native WebGPU projection layer or an XRWebGLLayer, requests a reference space, and resolves framebuffers, viewports, projection matrices, and view matrices for one active XRFrame.
 
 #### generated
 
@@ -325,7 +349,7 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [Abstract Class: CommandEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
 - [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
 - [Abstract Class: ComputePipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in492
+- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in494
 - [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in244
 - [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in92
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
@@ -522,10 +546,15 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 
 #### gltf
 
-The @luma.gl/gltf modules utilities for turning glTF data into a
+<a
 
-- [Overview](https://luma.gl/next/docs/api-reference/gltf.md): The @luma.gl/gltf modules utilities for turning glTF data into a
+- [Overview](https://luma.gl/next/docs/api-reference/gltf.md): <a
+- [GPU-Animated glTF Crowds](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md): GLTFAnimatedCrowd renders independently animated characters using one shared GPU model and one
+- [glTF Animation and Deformation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md): @luma.gl/gltf interprets glTF animation channels and connects them to the format-independent
 - [glTF Extension Support](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md): This page summarizes the glTF extensions that @luma.gl/gltf handles in its
+- [glTF Asset Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md): @luma.gl/gltf owns format-native scene interchange. exportGLTF() writes standards-conformant
+- [glTF Materials, Textures, and Lighting](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md): @luma.gl/gltf translates source glTF material and lighting data into the existing
+- [Native glTF Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md): glTF extensions should describe what an asset actually does, not merely which JSON properties
 
 #### gpgpu
 
@@ -563,7 +592,43 @@ The @luma.gl/gpgpu module performs GPU-based data transformation.
 - [random](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/random.md): The random shader module injects a small random-number helper into shaders.
 - [skin](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/skin.md): The skin shader module provides GPU skinning helpers for skinned meshes,
 - [ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md): ShaderPass is a ShaderModule
-- [Image Processing](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md): Screen space effects packaged as reusable shader modules in @luma.gl/effects based on the glfx library.
+- [Bloom](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/bloom.md): Spread bright scene highlights into a controllable photographic glow. luma.gl provides a compact
+- [Brightness and Contrast](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/brightness-contrast.md): Shape overall exposure and tonal separation with a compact, single-pass color adjustment. Use
+- [Bulge and Pinch](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/bulge-pinch.md): Push image coordinates outward or pull them inward inside a circular region. bulgePinch
+- [Camera-Reprojection Antialiasing](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/camera-reprojection-antialiasing.md): Reconstruct previous-frame image coordinates from scene depth and camera transforms when a
+- [Clustered Volumetric Lighting](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/clustered-volumetric-lighting.md): Integrate participating-media illumination from the same directional and clustered point lights
+- [Color Halftone](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/color-halftone.md): Rebuild an image as rotated, offset print-screen patterns for its individual color channels.
+- [Denoise](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/denoise.md): Reduce visible image grain while preserving local color boundaries. denoise applies a
+- [Depth-Aware Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/depth-aware-blur.md): Smooth noisy screen-space results without bleeding across foreground/background boundaries.
+- [Depth of Field](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/depth-of-field.md): Keep a selected camera-space distance sharp while softening nearer and farther geometry.
+- [Dot Screen](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/dot-screen.md): Convert source-image luminance into a rotated monochrome dot pattern. dotScreen produces a
+- [Edge Work](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/edge-work.md): Extract image contours by comparing neighborhood frequencies at different blur widths.
+- [FXAA](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/fxaa.md): Reduce jagged high-contrast image edges with Fast Approximate Anti-Aliasing. fxaa operates on a
+- [Gaussian Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/gaussian-blur.md): Soften an image with a smooth, bell-shaped Gaussian kernel. gaussianBlur applies independent
+- [Ground-Truth Ambient Occlusion](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/gtao.md): Estimate horizon-based ambient visibility with temporally reprojected history and edge-aware
+- [HDR Auto Exposure](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/hdr-auto-exposure.md): Continuously meter scene luminance and adapt camera exposure entirely on the GPU.
+- [Hexagonal Pixelate](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/hexagonal-pixelate.md): Replace fine image detail with a regular mosaic of hexagonal cells. hexagonalPixelate snaps
+- [Hue and Saturation](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/hue-saturation.md): Rotate the image palette and control overall color intensity without changing the basic image
+- [Shader Pass Catalog](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md): Explore reusable image-processing filters, cinematic lens effects, temporal reconstruction, and
+- [Ink](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/ink.md): Emphasize local image contrast as dark illustrated contours. ink produces a graphic,
+- [Magnify](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/magnify.md): Place an adjustable circular magnifying lens over the current image. magnify samples the source
+- [Motion Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/motion-blur.md): Integrate scene color along per-pixel motion vectors while reducing bleed across depth
+- [Noise](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/noise.md): Add controllable monochrome grain to the current image. noise provides a simple tactile
+- [Screen-Space Outlines](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/outlines.md): Reveal object silhouettes and hard surface transitions by comparing nearby depth and normal
+- [Persistence](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/persistence.md): Accumulate the current frame into a fading history texture to create luminous motion trails and
+- [Screen-Space Global Illumination](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/screen-space-global-illumination.md): Gather colored diffuse light bouncing between surfaces that are visible in the current frame.
+- [Screen-Space Reflections](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/screen-space-reflections.md): Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals,
+- [Sepia](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/sepia.md): Blend a warm, reddish-brown photographic treatment into the source image. sepia provides an
+- [Screen-Space Ambient Occlusion](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/ssao.md): Darken tight creases and nearby surface contacts using the current scene depth buffer.
+- [Swirl](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/swirl.md): Rotate image samples around a configurable circular focal region. swirl creates a controllable
+- [Temporal Antialiasing](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/temporal-antialiasing.md): Accumulate jittered samples from successive frames while following scene motion and rejecting
+- [Tilt Shift](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/tilt-shift.md): Keep a chosen image-space line sharp while progressively blurring the surrounding scene.
+- [Tone Mapping](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/tone-mapping.md): Convert scene-linear high-dynamic-range lighting into display-ready color with an ACES-style
+- [Triangle Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/triangle-blur.md): Blend neighboring pixels with a linearly weighted pyramid kernel. triangleBlur uses separable
+- [Vibrance](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/vibrance.md): Adjust subdued colors while protecting hues that are already strongly saturated. vibrance
+- [Vignette](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/vignette.md): Darken the image perimeter with a smooth radial falloff. vignette concentrates visual attention
+- [Volumetric Fog](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/volumetric-fog.md): Add depth-aware height fog, directional atmospheric scattering, and temporally stabilized haze.
+- [Zoom Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/zoom-blur.md): Pull image samples toward a chosen focal point to suggest rapid zoom, radial motion, or a
 - [ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md): ShaderPlugin groups reusable shader assembly contributions that can be
 - [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md): @luma.gl/shadertools supports WGSL shader assembly in addition to GLSL.
 

@@ -2,33 +2,27 @@
 
 ![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)![Private workspace](https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square)![From-v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)
 
-Materials define how a surface responds to light. Lights are attached to a world or an instanced group and contribute ambient, directional, point, or spot illumination.
+Retained ANARI materials translate directly into the canonical `@luma.gl/shadertools` PBR uniforms and texture bindings. ANARI does not own a separate BRDF or shader implementation. Lights reuse the shared ambient, directional, point, and spot lighting descriptions.
 
 ## `ANARIMaterial`[​](#anarimaterial "Direct link to anarimaterial")
 
 ```
-new ANARIMaterial(
+const material = anariDevice.newMaterial('physicallyBased', {
 
-  device: ANARIDevice,
+  baseColor: [0.18, 0.52, 0.96, 0.8],
 
-  subtype: ANARIMaterialSubtype,
+  metallic: 0.7,
 
-  parameters?: ANARIMaterialParameters
+  roughness: 0.25,
 
-);
+  alphaMode: 'blend',
 
+  clearcoat: 0.35
 
-
-newMaterial(
-
-  subtype: 'matte' | 'physicallyBased',
-
-  parameters?: ANARIMaterialParameters
-
-): ANARIMaterial;
+});
 ```
 
-### Material parameters[​](#material-parameters "Direct link to Material parameters")
+The supported subtypes are `matte` and `physicallyBased`. Both share these parameters:
 
 ```
 type ANARIMaterialParameters = {
@@ -47,15 +41,31 @@ type ANARIMaterialParameters = {
 
   opacity?: number;
 
-  alphaMode?: 'opaque' | 'blend';
+  alphaMode?: 'opaque' | 'mask' | 'blend';
+
+  alphaCutoff?: number;
+
+  doubleSided?: boolean;
+
+  unlit?: boolean;
+
+  specularColor?: ANARIVector3;
+
+  specularIntensity?: number;
 
   clearcoat?: number;
 
   clearcoatRoughness?: number;
 
-  iridescence?: number;
-
   transmission?: number;
+
+  dispersion?: number;
+
+  thickness?: number;
+
+  attenuationDistance?: number;
+
+  attenuationColor?: ANARIVector3;
 
   indexOfRefraction?: number;
 
@@ -63,151 +73,231 @@ type ANARIMaterialParameters = {
 
   sheenRoughness?: number;
 
+  iridescence?: number;
+
+  iridescenceIndexOfRefraction?: number;
+
+  iridescenceThicknessMinimum?: number;
+
+  iridescenceThicknessMaximum?: number;
+
+  anisotropyStrength?: number;
+
+  anisotropyRotation?: number;
+
+  anisotropyDirection?: readonly [number, number];
+
   normalScale?: number;
 
   occlusionStrength?: number;
 
   baseColorTexture?: ANARISampler;
 
-  normalTexture?: ANARISampler;
-
   metallicRoughnessTexture?: ANARISampler;
 
-  emissiveTexture?: ANARISampler;
+  normalTexture?: ANARISampler;
 
   occlusionTexture?: ANARISampler;
 
-  clearcoatTexture?: ANARISampler;
+  emissiveTexture?: ANARISampler;
+
+  specularColorTexture?: ANARISampler;
+
+  specularIntensityTexture?: ANARISampler;
 
   transmissionTexture?: ANARISampler;
 
+  thicknessTexture?: ANARISampler;
+
+  clearcoatTexture?: ANARISampler;
+
+  clearcoatRoughnessTexture?: ANARISampler;
+
+  clearcoatNormalTexture?: ANARISampler;
+
   sheenColorTexture?: ANARISampler;
+
+  sheenRoughnessTexture?: ANARISampler;
+
+  iridescenceTexture?: ANARISampler;
+
+  iridescenceThicknessTexture?: ANARISampler;
+
+  anisotropyTexture?: ANARISampler;
 
 };
 ```
 
-| Parameter                           | Default                                              | Meaning                                                                                   |
-| ----------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `baseColor`                         | `color`, then `[0.8, 0.8, 0.8]`                      | Linear RGB or RGBA surface color. Takes precedence over `color`.                          |
-| `color`                             | `[0.8, 0.8, 0.8]`                                    | Alternate surface color when `baseColor` is not supplied.                                 |
-| `emissive`                          | `[0, 0, 0]`                                          | Linear RGB radiance added without external illumination.                                  |
-| `emissiveStrength`                  | `1`                                                  | Multiplier applied to `emissive`.                                                         |
-| `metallic`                          | `0`                                                  | Metallic response for `physicallyBased`; forced to `0` for `matte`.                       |
-| `roughness`                         | `0.38` for `physicallyBased`; `0.92` for `matte`     | Width of diffuse/specular response.                                                       |
-| `opacity`                           | Alpha component of the selected color, otherwise `1` | Surface opacity. Values below `1` enable alpha blending when the model is first compiled. |
-| `alphaMode`                         | —                                                    | Accepted parameter; the current runtime chooses blending from `opacity`, not `alphaMode`. |
-| `clearcoat`                         | `0`                                                  | Additional glossy clearcoat response.                                                     |
-| `clearcoatRoughness`                | `0.18`                                               | Width of the clearcoat highlight.                                                         |
-| `iridescence`                       | `0`                                                  | Angle-dependent spectral color effect.                                                    |
-| `transmission`, `indexOfRefraction` | `0`, `1.5`                                           | Approximate glass transmission and Fresnel response.                                      |
-| `sheenColor`, `sheenRoughness`      | `[0, 0, 0]`, `0.5`                                   | Cloth-like grazing response.                                                              |
-| `normalScale`, `occlusionStrength`  | `1`, `1`                                             | Multipliers for sampled normal and occlusion maps.                                        |
+### Core material factors[​](#core-material-factors "Direct link to Core material factors")
 
-### Image samplers[​](#image-samplers "Direct link to Image samplers")
+| Parameter                          | Default                                               | Meaning                                                   |
+| ---------------------------------- | ----------------------------------------------------- | --------------------------------------------------------- |
+| `baseColor`, `color`               | `[0.8, 0.8, 0.8]`                                     | Linear RGB/RGBA base color; `baseColor` takes precedence. |
+| `metallic`                         | `0`                                                   | Metallic factor; `matte` materials always use zero.       |
+| `roughness`                        | `0.38` physically based; `0.92` matte                 | Surface roughness.                                        |
+| `emissive`, `emissiveStrength`     | `[0, 0, 0]`, `1`                                      | Linear emitted color and intensity.                       |
+| `normalScale`, `occlusionStrength` | `1`, `1`                                              | Normal-map and occlusion-map multipliers.                 |
+| `opacity`                          | Base-color alpha, otherwise `1`                       | Explicit opacity overriding the color's alpha component.  |
+| `alphaMode`                        | `blend` when opacity is below one; otherwise `opaque` | Explicit `opaque`, `mask`, or `blend` rendering mode.     |
+| `alphaCutoff`                      | `0.5`                                                 | Fragment-discard threshold when `alphaMode` is `mask`.    |
+| `doubleSided`                      | `true`                                                | Whether both triangle faces are rendered.                 |
+| `unlit`                            | `false`                                               | Whether the canonical material bypasses lighting.         |
+
+### Extension material factors[​](#extension-material-factors "Direct link to Extension material factors")
+
+| Parameters                                                        | Meaning                                                                                                              |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `specularColor`, `specularIntensity`                              | Dielectric specular color and strength.                                                                              |
+| `clearcoat`, `clearcoatRoughness`                                 | Secondary surface coating and coating roughness.                                                                     |
+| `transmission`, `thickness`                                       | Screen-space transmission strength and medium thickness.                                                             |
+| `dispersion`                                                      | Nonnegative chromatic transmission spread using the ratified glTF 20/Abbe-number parameterization; defaults to zero. |
+| `attenuationColor`, `attenuationDistance`, `indexOfRefraction`    | Transmitted-light tint, attenuation distance, and IOR.                                                               |
+| `sheenColor`, `sheenRoughness`                                    | Cloth-like sheen response.                                                                                           |
+| `iridescence`, `iridescenceIndexOfRefraction`                     | Thin-film iridescence strength and film IOR.                                                                         |
+| `iridescenceThicknessMinimum`, `iridescenceThicknessMaximum`      | Authored iridescent film thickness range.                                                                            |
+| `anisotropyStrength`, `anisotropyRotation`, `anisotropyDirection` | Directional highlight response.                                                                                      |
+
+When a retained material has nonzero `transmission`, ANARI's shared [experimental SceneRenderer](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md) automatically captures opaque scene color and samples it for screen-space refraction. Thickness, attenuation, index of refraction, chromatic dispersion, and roughness shape the transmitted result. Opaque radiance is captured in linear HDR when supported, then exposed and tone-mapped only after the physical material response. This is a single opaque-scene capture, not ray tracing or arbitrary layered refraction. ANARI inherits this behavior from the shared renderer and does not implement a separate transmission pass.
+
+### Supported image maps[​](#supported-image-maps "Direct link to Supported image maps")
+
+Every retained image sampler maps to its existing canonical PBR texture binding:
+
+| Material parameter            | Texture contents                      | Color space |
+| ----------------------------- | ------------------------------------- | ----------- |
+| `baseColorTexture`            | Base color and optional alpha.        | sRGB        |
+| `metallicRoughnessTexture`    | Roughness in green; metallic in blue. | Linear      |
+| `normalTexture`               | Tangent-space surface normals.        | Linear      |
+| `occlusionTexture`            | Ambient-occlusion data.               | Linear      |
+| `emissiveTexture`             | Emitted color.                        | sRGB        |
+| `specularColorTexture`        | Dielectric specular color.            | sRGB        |
+| `specularIntensityTexture`    | Dielectric specular intensity.        | Linear      |
+| `transmissionTexture`         | Transmission factor.                  | Linear      |
+| `thicknessTexture`            | Volume thickness.                     | Linear      |
+| `clearcoatTexture`            | Clearcoat intensity.                  | Linear      |
+| `clearcoatRoughnessTexture`   | Clearcoat roughness.                  | Linear      |
+| `clearcoatNormalTexture`      | Clearcoat tangent-space normals.      | Linear      |
+| `sheenColorTexture`           | Sheen color.                          | sRGB        |
+| `sheenRoughnessTexture`       | Sheen roughness.                      | Linear      |
+| `iridescenceTexture`          | Iridescence strength.                 | Linear      |
+| `iridescenceThicknessTexture` | Thin-film thickness.                  | Linear      |
+| `anisotropyTexture`           | Anisotropy direction and strength.    | Linear      |
+
+Color textures should be uploaded with an sRGB format; data textures should use a linear format. Avoid applying an additional shader-side sRGB conversion to textures already decoded by hardware.
+
+### Samplers, UV transforms, and secondary coordinates[​](#samplers-uv-transforms-and-secondary-coordinates "Direct link to Samplers, UV transforms, and secondary coordinates")
 
 ```
-const sampler = anariDevice.newSampler('image2D', {
+const image = graphicsDevice.createTexture({
 
-  image: texture,
+  width: 256,
 
-  transform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+  height: 256,
+
+  format: 'rgba8unorm-srgb',
+
+  sampler: {
+
+    addressModeU: 'repeat',
+
+    addressModeV: 'mirror-repeat',
+
+    minFilter: 'linear',
+
+    magFilter: 'linear',
+
+    mipmapFilter: 'linear'
+
+  },
+
+  data: imageData
 
 });
-```
 
-`image2D` samplers retain a luma.gl `Texture` and an optional column-major 3×3 UV transform. Assign them to `baseColorTexture`, `normalTexture`, `metallicRoughnessTexture`, `emissiveTexture`, `occlusionTexture`, `clearcoatTexture`, `transmissionTexture`, or `sheenColorTexture`. glTF metallic-roughness maps follow the standard green roughness / blue metallic packing.
 
-Values are not automatically clamped or validated. Treat metallic, roughness, opacity, clearcoat, and iridescence as normalized values unless intentionally experimenting with the implementation.
 
-### Matte materials[​](#matte-materials "Direct link to Matte materials")
+const imageSampler = anariDevice.newSampler('image2D', {
 
-```
-const matte = anariDevice.newMaterial('matte', {
+  image,
 
-  color: [0.72, 0.2, 0.12],
+  textureCoordinateSet: 1,
 
-  roughness: 0.8
+  transform: [1, 0, 0, 0, 1, 0, 0.25, 0, 1]
 
 });
+
+
+
+material.setParameter('baseColorTexture', imageSampler).commitParameters();
 ```
 
-`matte` forces metallic response to zero. It defaults to roughness `0.92`, but an explicitly supplied `roughness` is respected.
+Addressing and filtering belong to the underlying luma.gl `Texture`. The retained ANARI sampler adds a column-major 3×3 transform and selects `0` or `1`, corresponding to geometry `'vertex.attribute1'` / `TEXCOORD_0` or `'vertex.attribute2'` / `TEXCOORD_1`.
 
-### Physically based materials[​](#physically-based-materials "Direct link to Physically based materials")
+The showcase glTF importer reuses `@luma.gl/gltf` helpers to retain authored wrap modes, nearest/linear filters, mipmapping, slot-specific UV transforms, and source color-space choices.
 
-```
-const metal = anariDevice.newMaterial('physicallyBased', {
-
-  baseColor: [0.18, 0.52, 0.96],
-
-  metallic: 0.9,
-
-  roughness: 0.16,
-
-  clearcoat: 0.35,
-
-  iridescence: 0.2
-
-});
-```
-
-The current shader combines a GGX-style specular term, Schlick Fresnel, diffuse response, optional clearcoat, and an angle-dependent iridescence approximation.
-
-### Emissive materials[​](#emissive-materials "Direct link to Emissive materials")
+### Dynamic material updates[​](#dynamic-material-updates "Direct link to Dynamic material updates")
 
 ```
-const emitter = anariDevice.newMaterial('physicallyBased', {
+material
 
-  baseColor: [0.06, 0.12, 0.18],
+  .setParameters({alphaMode: 'mask', alphaCutoff: 0.35, doubleSided: false})
 
-  emissive: [0.2, 0.8, 1],
+  .commitParameters();
 
-  emissiveStrength: 8,
 
-  metallic: 0,
-
-  roughness: 0.35
-
-});
-```
-
-Emission changes the surface's appearance but does not automatically create a light. Add a colocated [`ANARILight`](#anarilight) when nearby objects should also receive illumination.
-
-### Dynamic updates[​](#dynamic-updates "Direct link to Dynamic updates")
-
-```
-metal.setParameters({roughness: 0.08, metallic: 1}).commitParameters();
 
 frame.render();
 ```
 
-Committed material values are uploaded on subsequent renders. However, transparency pipeline state is chosen when a surface model is first compiled; changing an already compiled material from opaque to transparent does not currently rebuild blending state.
+Committed uniform changes update the shared cached material. Structural changes, including alpha mode and face-culling changes, select the appropriate shared renderer pipeline on later renders. Emission affects a surface's appearance but does not automatically illuminate surrounding objects; add a separate light when that behavior is needed.
+
+## Image-based lighting[​](#image-based-lighting "Direct link to Image-based lighting")
+
+An ANARI renderer can use existing, caller-owned image-based lighting textures:
+
+```
+const renderer = anariDevice.newRenderer('default', {
+
+  environment: {
+
+    diffuseTexture,
+
+    specularTexture,
+
+    brdfLUTTexture,
+
+    intensity: 1,
+
+    rotation: Math.PI / 4
+
+  }
+
+});
+```
+
+Supply the complete diffuse/specular/BRDF texture set to enable the existing shared environment shader. ANARI forwards these resources to the [experimental SceneRenderer](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md); it does not generate cubemaps or implement its own environment shader. Existing prefiltered source textures can be loaded with `@luma.gl/gltf`'s `loadPBREnvironment()` helper, or generated from an equirectangular source through the shared [`PBREnvironmentGenerator`](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md).
 
 ## `ANARILight`[​](#anarilight "Direct link to anarilight")
 
 ```
-new ANARILight(
+const light = anariDevice.newLight('spot', {
 
-  device: ANARIDevice,
+  position: [0, 5, 3],
 
-  subtype: ANARILightSubtype,
+  direction: [0, -1, -0.5],
 
-  parameters?: ANARILightParameters
+  color: [0.8, 0.9, 1],
 
-);
+  intensity: 24,
 
+  openingAngle: Math.PI / 5,
 
+  falloffAngle: Math.PI / 8
 
-newLight(
-
-  subtype: 'ambient' | 'directional' | 'point' | 'spot',
-
-  parameters?: ANARILightParameters
-
-): ANARILight;
+});
 ```
 
-### Light parameters[​](#light-parameters "Direct link to Light parameters")
+The supported light subtypes are `ambient`, `directional`, `point`, and `spot`.
 
 ```
 type ANARILightParameters = {
@@ -231,97 +321,17 @@ type ANARILightParameters = {
 };
 ```
 
-| Parameter      | Used by               | Default                                              | Meaning                                                                        |
-| -------------- | --------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `color`        | All lights            | `[1, 1, 1]`                                          | RGB light color.                                                               |
-| `direction`    | `directional`, `spot` | `[0, -1, -1]` for directional; `[0, -1, 0]` for spot | World-space light direction.                                                   |
-| `position`     | `point`, `spot`       | `[0, 0, 0]`                                          | World-space light position.                                                    |
-| `intensity`    | All lights            | `1`                                                  | General light-strength fallback.                                               |
-| `irradiance`   | `directional`         | `intensity`, then `1`                                | Directional-light strength.                                                    |
-| `radiance`     | `ambient`             | `intensity`, then `1`                                | Ambient-light strength.                                                        |
-| `openingAngle` | `spot`                | `0.5` radians                                        | Outer spotlight cone angle. The inner angle is currently `openingAngle * 0.7`. |
-| `falloffAngle` | None currently        | —                                                    | Accepted but not consumed by the current spotlight implementation.             |
+| Parameter      | Used by               | Meaning                                                        |
+| -------------- | --------------------- | -------------------------------------------------------------- |
+| `color`        | All lights            | Linear RGB light color; defaults to `[1, 1, 1]`.               |
+| `direction`    | `directional`, `spot` | World-space light direction.                                   |
+| `position`     | `point`, `spot`       | World-space light position.                                    |
+| `intensity`    | All lights            | General strength fallback.                                     |
+| `irradiance`   | `directional`         | Directional strength; overrides `intensity`.                   |
+| `radiance`     | `ambient`             | Ambient strength; overrides `intensity`.                       |
+| `openingAngle` | `spot`                | Outer cone angle in radians; defaults to `0.5`.                |
+| `falloffAngle` | `spot`                | Inner cone angle in radians; defaults to `openingAngle * 0.7`. |
 
-The renderer also supplies a base ambient light using `renderer.ambientRadiance`, which defaults to `0.12`.
+glTF showcase import reuses `parseGLTFLights(gltf, {useByteColors: false})`, preserving authored world transforms, linear light color, intensity, and both spotlight cone angles.
 
-### Ambient lights[​](#ambient-lights "Direct link to Ambient lights")
-
-```
-const ambient = anariDevice.newLight('ambient', {
-
-  color: [0.4, 0.55, 0.8],
-
-  radiance: 0.25
-
-});
-```
-
-Ambient lights have no position or direction. `radiance` takes precedence over `intensity`.
-
-### Directional lights[​](#directional-lights "Direct link to Directional lights")
-
-```
-const sunlight = anariDevice.newLight('directional', {
-
-  direction: [-0.7, -1, -0.35],
-
-  color: [1, 0.91, 0.74],
-
-  irradiance: 2.2
-
-});
-```
-
-Directional lights have no position. `irradiance` takes precedence over `intensity`.
-
-### Point lights[​](#point-lights "Direct link to Point lights")
-
-```
-const point = anariDevice.newLight('point', {
-
-  position: [2, 3, 1],
-
-  color: [1, 0.35, 0.12],
-
-  intensity: 30
-
-});
-```
-
-Point lights use a fixed attenuation configuration in the current runtime. Add them directly to a world or to a group referenced by an instance.
-
-### Spot lights[​](#spot-lights "Direct link to Spot lights")
-
-```
-const spotlight = anariDevice.newLight('spot', {
-
-  position: [0, 5, 3],
-
-  direction: [0, -1, -0.5],
-
-  color: [0.8, 0.9, 1],
-
-  intensity: 24,
-
-  openingAngle: Math.PI / 5
-
-});
-```
-
-Spotlights use fixed attenuation. The current implementation derives the inner cone automatically and ignores `falloffAngle`.
-
-### Committing animated lights[​](#committing-animated-lights "Direct link to Committing animated lights")
-
-```
-function updateLight(time: number): void {
-
-  point
-
-    .setParameter('position', [Math.cos(time) * 3, 2, Math.sin(time) * 3])
-
-    .commitParameters();
-
-}
-```
-
-Light changes remain invisible until committed. Group-attached lights are collected from instanced groups, but group instance transforms are not currently applied to light positions or directions; provide world-space light parameters explicitly.
+Lights attached to instanced groups are collected, but group instance transforms are not applied to their positions or directions; specify world-space light parameters. As with other retained objects, changed light parameters become visible after `commitParameters()`.

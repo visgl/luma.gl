@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, Texture} from '@luma.gl/core';
 import {AnimationLoopTemplate, ShaderPassRenderer, type AnimationProps} from '@luma.gl/engine';
@@ -62,6 +62,35 @@ type LookDefinition = {
   accent: string;
   passNames: string[];
   values: Record<string, EffectState>;
+};
+
+const FOCUSED_EFFECT_PREVIEW_VALUES: Record<string, EffectState> = {
+  brightnessContrast: {brightness: 0.08, contrast: 0.28},
+  hueSaturation: {hue: -0.08, saturation: 0.32},
+  sepia: {amount: 0.7},
+  toneMapping: {exposure: 1.8, maximumLuminance: 1},
+  vibrance: {amount: 0.45},
+  bloom: {radius: 9, threshold: 0.48, intensity: 1.85},
+  gaussianBlur: {radius: 10},
+  tiltShift: {
+    start: [0.12, 0.36],
+    end: [0.88, 0.64],
+    blurRadius: 18,
+    gradientRadius: 130
+  },
+  triangleBlur: {radius: 14},
+  zoomBlur: {center: [0.5, 0.5], strength: 0.16},
+  colorHalftone: {center: [0.5, 0.5], angle: 0.32, size: 5},
+  dotScreen: {center: [0.5, 0.5], angle: 0.42, size: 5},
+  edgeWork: {radius: 3},
+  hexagonalPixelate: {center: [0.5, 0.5], scale: 12},
+  ink: {strength: 0.36},
+  bulgePinch: {center: [0.5, 0.5], radius: 240, strength: 0.45},
+  magnify: {screenXY: [0.5, 0.5], radiusPixels: 150, zoom: 2},
+  swirl: {center: [0.5, 0.5], radius: 300, angle: 1.05},
+  denoise: {strength: 0.55},
+  noise: {amount: 0.2},
+  vignette: {radius: 0.7, amount: 0.45}
 };
 
 const LOOK_DEFINITIONS: Record<LookName, LookDefinition> = {
@@ -147,6 +176,7 @@ const LOOK_ORDER: LookName[] = [
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
+  static initialEffectName?: string;
 
   readonly device: Device;
   readonly sourceTexture: Texture;
@@ -180,7 +210,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.shaderPassMap = getShaderPasses();
     this.effectValuesByName = getInitialEffectValues(this.shaderPassMap);
     this.applyLookValues(LOOK_DEFINITIONS[this.selectedLookName]);
-    this.activePassNames = [...LOOK_DEFINITIONS[this.selectedLookName].passNames];
+    const initialEffectName = (this.constructor as typeof AppAnimationLoopTemplate)
+      .initialEffectName;
+    this.activePassNames = getInitialPostprocessingPassNames(initialEffectName);
+    if (initialEffectName && this.activePassNames[0] === initialEffectName) {
+      this.effectValuesByName[initialEffectName] = {
+        ...this.effectValuesByName[initialEffectName],
+        ...cloneEffectState(FOCUSED_EFFECT_PREVIEW_VALUES[initialEffectName] || {})
+      };
+    }
 
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'postprocessing-tune',
@@ -604,6 +642,15 @@ function getControllableProps(shaderPass: ShaderPass): [string, ShaderPropType][
     }
   }
   return controllableProps;
+}
+
+/** Opens documentation embeds on one actual effect without changing the gallery default. */
+export function getInitialPostprocessingPassNames(effectName?: string): string[] {
+  if (effectName && Object.hasOwn(EFFECT_SHADER_PASSES, effectName)) {
+    return [effectName];
+  }
+
+  return [...LOOK_DEFINITIONS[DEFAULT_LOOK_NAME].passNames];
 }
 
 /** Derives adaptive render resolution from the effects that are actually active. */

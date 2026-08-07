@@ -1,5 +1,5 @@
-loaders.gl 5.0.0-alpha.1
-Source: https://github.com/visgl/loaders.gl/tree/e0bdfb7a8977f6de7b7ff0592eaeaf9499310d44
+loaders.gl 5.0.0-alpha.2
+Source: https://github.com/visgl/loaders.gl/tree/fcca4d3ef526538b41546d514d4e74f32c432458
 
 loaders.gl is licensed under the MIT license
 

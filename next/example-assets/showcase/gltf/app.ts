@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {RenderPass, log} from '@luma.gl/core';
 import {AnimationProps, ClipSpace} from '@luma.gl/engine';
@@ -20,6 +20,7 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import GLTFCatalogApp, {
+  GLTF_CROWD_INFO_ID,
   GLTF_MODEL_INFO_ID,
   saveOptions,
   type GLTFCatalogModel,
@@ -89,12 +90,13 @@ void main(void) {
 `;
 
 const GLTF_DESCRIPTION_HTML = `\
-<p>Browse production-quality glTF sample assets with interactive camera and animation controls.</p>
+<p>Explore animated glTF characters, skeletal rigs, and expressive motion.</p>
 <div id="loading-state" class="gltf-loading-indicator" hidden>
   <span class="gltf-loading-spinner" aria-hidden="true"></span>
 </div>
 <p style="margin-top: 8px;">Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
 <div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
+<div id="${GLTF_CROWD_INFO_ID}" style="margin-top: 8px;" hidden></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="extension-support" style="margin-top: 12px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
@@ -138,11 +140,11 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   getDefaultModelName(): string {
-    return 'DamagedHelmet';
+    return 'RobotExpressive';
   }
 
   getModelStorageKey(): string {
-    return 'showcase-last-gltf-model-v2';
+    return 'showcase-last-gltf-model-v3';
   }
 
   getClearColor(): [number, number, number, number] {
@@ -266,6 +268,10 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     return {
       extensionName: this.extensionName,
       modelValue: this.selectedModelValue || LOADING_MODEL_VALUE,
+      instanceCount: this.getAnimationInstanceCount(),
+      autoLOD: this.options['autoLOD'],
+      detailBias: this.levelOfDetailBias,
+      vertexBudget: this.levelOfDetailVertexBudget,
       useModelLights: this.options['useModelLights'],
       cameraAnimation: this.options['cameraAnimation'],
       gltfAnimation: this.options['gltfAnimation']
@@ -292,6 +298,27 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     const modelValue = getChangedSetting(changedSettings, 'modelValue')?.nextValue;
     if (typeof modelValue === 'string') {
       this.selectModel(modelValue);
+      return;
+    }
+    const instanceCount = getChangedSetting(changedSettings, 'instanceCount')?.nextValue;
+    if (typeof instanceCount === 'number') {
+      this.setAnimationInstanceCount(instanceCount);
+      return;
+    }
+    const automaticLevelOfDetail = getChangedSetting(changedSettings, 'autoLOD')?.nextValue;
+    if (typeof automaticLevelOfDetail === 'boolean') {
+      this.setAutomaticLevelOfDetail(automaticLevelOfDetail);
+      saveOptions(this.options);
+      return;
+    }
+    const detailBias = getChangedSetting(changedSettings, 'detailBias')?.nextValue;
+    if (typeof detailBias === 'number') {
+      this.setLevelOfDetailBias(detailBias);
+      return;
+    }
+    const vertexBudget = getChangedSetting(changedSettings, 'vertexBudget')?.nextValue;
+    if (typeof vertexBudget === 'number') {
+      this.setLevelOfDetailVertexBudget(vertexBudget);
       return;
     }
     for (const optionName of ['useModelLights', 'cameraAnimation', 'gltfAnimation'] as const) {
@@ -417,6 +444,10 @@ function encodeModelOption(modelOption: GLTFModelReference): string {
 type GltfSettingsState = {
   extensionName: string;
   modelValue: string;
+  instanceCount: number;
+  autoLOD: boolean;
+  detailBias: number;
+  vertexBudget: number;
   useModelLights: boolean;
   cameraAnimation: boolean;
   gltfAnimation: boolean;
@@ -470,6 +501,16 @@ export function makeGltfSettingsSchema(
         initiallyCollapsed: false,
         settings: [
           {
+            name: 'instanceCount',
+            label: 'GPU Crowd Actors',
+            type: 'number',
+            persist: 'none',
+            min: 1,
+            max: 100,
+            step: 1,
+            sliderDebounceMs: 120
+          },
+          {
             name: 'useModelLights',
             label: 'Use Model Lights',
             type: 'boolean',
@@ -486,6 +527,39 @@ export function makeGltfSettingsSchema(
             label: 'glTF Animation',
             type: 'boolean',
             persist: 'none'
+          }
+        ]
+      },
+      {
+        id: 'level-of-detail',
+        name: 'Level of Detail',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'autoLOD',
+            label: 'Auto LOD',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'detailBias',
+            label: 'Detail Bias',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 4,
+            step: 0.25,
+            sliderDebounceMs: 120
+          },
+          {
+            name: 'vertexBudget',
+            label: 'Vertex Budget',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1_000_000,
+            step: 100,
+            sliderDebounceMs: 120
           }
         ]
       }

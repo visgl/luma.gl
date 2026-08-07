@@ -36,7 +36,7 @@ Use a plain `ShaderPass` when each stage only needs the original input texture o
 | `original` | The texture passed to `renderToTexture()` or `renderToScreen()`. |
 | `previous` | The current output in the shared pass chain.                     |
 
-Pipelines may add named render targets. The renderer validates routing, manages their size, and prevents a subpass from reading and writing the same named target in one draw.
+Pipelines may add named render targets. The renderer validates routing, manages their size, and prevents a subpass from reading and writing the same named target in one draw. Transient targets with non-overlapping lifetimes can set `aliasFor` to reuse an earlier allocation with identical dimensions, format, and sampler; persistent history targets cannot be aliased. Pipelines can also declare an optional WebGPU compute replacement while retaining equivalent fragment steps as the WebGL or unsupported-device fallback.
 
 Built-in effects consume `previous`, so the `shaderPasses` array has strict ordered-composition semantics even when it mixes plain `ShaderPass` objects and multi-step `ShaderPassPipeline` objects. Route an input from `original` only when an effect intentionally needs to bypass all preceding color processing.
 
@@ -301,7 +301,43 @@ SSAO, GTAO, screen-space global illumination, reflections, and clustered volumet
 3. Adapt persistent exposure history with independent brightening and darkening response rates.
 4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
 
-Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at half resolution, then successively filters and blurs them at quarter and eighth resolution using `rgba16float` intermediate targets. Its optional `resolutionScale` controls the entire pyramid without clamping highlight radiance to 8-bit normalized color. Use the exact HDR order: temporal effects, auto exposure, bloom, then tone mapping.
+Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at half resolution, then progressively filters and reconstructs two to five `rgba16float` pyramid levels. `quality: 'ultra'` reaches one-thirty-second resolution. `resolutionScale` controls the entire pyramid without clamping highlight radiance to 8-bit normalized color. The pipeline supports:
+
+* Exposure-aware highlight thresholds, soft knees, isolated-highlight suppression, configurable scatter, tint, and horizontal or vertical anamorphic stretching.
+* Separable Gaussian blur or `blurAlgorithm: 'dual-kawase'`, which reconstructs the downsampled pyramid without the separate Gaussian passes.
+* Normalized tent reconstruction or `reconstruction: 'bicubic'`, which uses four bilinear samples for a B-spline reconstruction.
+* `energyConserving: true` for thresholdless normalized scattering instead of additive glow.
+* Optional lens dirt, chromatic ghosts, radial halos, and aperture-diffraction starbursts.
+* Neighborhood-clamped temporal history, optional motion/depth reprojection, disocclusion rejection, and exposure-corrected history.
+* WebGPU compute downsampling with automatic WebGL and unsupported-device render-pass fallback.
+
+`downsample: 'auto'` fuses extraction and the complete downsampling pyramid into one WebGPU compute dispatch when the chosen format supports storage writes and the device has enough storage bindings. `downsample: 'render'` forces the portable fragment implementation. Expired extraction textures are reused for reconstruction by default; set `reuseRenderTargets: false` to retain separate allocations for inspection.
+
+| Quality  | Levels | Gaussian portable | Gaussian WebGPU       | Dual-Kawase portable | Dual-Kawase WebGPU   |
+| -------- | ------ | ----------------- | --------------------- | -------------------- | -------------------- |
+| `low`    | 2      | 8 render          | 6 render + 1 compute  | 4 render             | 2 render + 1 compute |
+| `medium` | 3      | 12 render         | 9 render + 1 compute  | 6 render             | 3 render + 1 compute |
+| `high`   | 4      | 16 render         | 12 render + 1 compute | 8 render             | 4 render + 1 compute |
+| `ultra`  | 5      | 20 render         | 15 render + 1 compute | 10 render            | 5 render + 1 compute |
+
+These counts describe bloom-pipeline work only; optional lens/history passes and renderer source-seeding or presentation passes are additional.
+
+Enable optional photographic optics through `lens`: aperture-diffraction starbursts, mirrored chromatic ghosts, and radial halos share one extra half-resolution pass. `lens.dirtIntensity` samples an application-provided `lensDirtTexture` during the existing composite and therefore adds no pass or intermediate render target. Pass that mask through `renderer.renderToScreen({sourceTexture, bindings: {lensDirtTexture}})`.
+
+`temporalStability` enables neighborhood-clamped, persistent half-resolution glow history for one additional pass. `temporalReprojection: true` additionally consumes caller-provided `velocityTexture` and `depthTexture` bindings, rejects disocclusions, and stores previous depth in the existing history alpha channel. `previousExposure` corrects history when exposure changes. The default configuration allocates neither history nor lens artifacts. Screen-space diffraction costs eight samples per ray, while each ghost costs one sample or three when chromatic aberration is enabled.
+
+For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/experimental` provides a separate WebGPU implementation. It accepts generated or measured point-spread functions, including independent red, green, and blue kernels; packs those channels into one forward and one inverse FFT schedule; and uses zero-padded guard bands to prevent opposite-edge wraparound. Optional lens artifacts, sampled dirt, and temporal history execute in its existing final compute pass. An optional GPU-resident exposure texture supplies adapted exposure without CPU readback. At 1920 x 1080 with quarter-resolution sampling and the default 12.5% guard band, the FFT uses a 1024 x 512 transform, 48 MiB of complex buffers, and 45 steady-state compute dispatches. Disabling the guard band reduces that configuration to a 512 x 512 transform, 24 MiB, and 43 dispatches while removing edge-wrap protection. Changing the optical kernel adds 21 initialization dispatches for the guarded configuration.
+
+Keep bloom in linear floating-point scene color before tone mapping. The stock deck.gl `PostProcessEffect` accepts shader-pass modules, but does not execute named-target `ShaderPassPipeline` graphs or the WebGPU FFT renderer. Its current intermediate buffers default to `rgba8unorm`, so an integration requiring unclamped HDR highlights must first arrange floating-point scene/postprocessing targets.
+
+Related technical references:
+
+* [Unreal Engine bloom documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/bloom-in-unreal-engine) documents FFT convolution, image-defined optical kernels, energy conservation, lens dirt, and edge-padding controls.
+* [AMD FidelityFX Single Pass Downsampler](https://gpuopen.com/manuals/fidelityfx_sdk/techniques/single-pass-downsampler/) describes workgroup-local image reduction in a single compute dispatch.
+* [Google Filament imaging pipeline](https://google.github.io/filament/main/filament.html) documents camera exposure, scene-linear bloom, and processing before tone mapping.
+* [deck.gl PostProcessEffect](https://deck.gl/docs/api-reference/core/post-process-effect) documents deck.gl's existing shader-module postprocessing interface.
+
+Use the HDR order: temporal effects, auto exposure, bloom, then tone mapping.
 
 ### Recommended ordering[​](#recommended-ordering "Direct link to Recommended ordering")
 

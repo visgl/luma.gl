@@ -1,6 +1,6 @@
 # AnimationLoop
 
-[AnimationLoop](https://luma.gl/next/docs/api-reference/engine/animation-loop.md)[Template](https://luma.gl/next/docs/api-reference/engine/animation-loop-template.md)[KeyFrames](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md)[Timeline](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md)
+[Guide](https://luma.gl/next/docs/api-guide/engine/animation.md)[Mixer](https://luma.gl/next/docs/api-reference/engine/animation/animation-mixer.md)[Morph Targets](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md)[AnimationLoop](https://luma.gl/next/docs/api-reference/engine/animation-loop.md)[Template](https://luma.gl/next/docs/api-reference/engine/animation-loop-template.md)[KeyFrames](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md)[Timeline](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md)
 
 `AnimationLoop` manages a render loop around a luma.gl [`Device`](https://luma.gl/next/docs/api-reference/core/device.md). It resolves the device, tracks frame timing, builds [`AnimationProps`](#animationprops), and invokes application callbacks for initialization, per-frame rendering, and teardown.
 

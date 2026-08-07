@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071016" />
+    <title>LuRaster Satellite Raster Lab · GPU Earth Observation</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: 'Avenir Next', Avenir, ui-sans-serif, system-ui, sans-serif;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 75% 12%, rgb(66 121 97 / 13%), transparent 45%),
+          #071016;
+        color: #ebf2ed;
+      }
+
+      canvas {
+        display: block;
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+
+      #raster-startup {
+        position: fixed;
+        z-index: 10;
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-content: center;
+        pointer-events: none;
+      }
+
+      .startup-card {
+        max-width: min(450px, calc(100vw - 60px));
+        padding: 25px 29px;
+        border: 1px solid rgb(156 233 196 / 23%);
+        border-radius: 14px;
+        background: rgb(10 19 25 / 93%);
+      }
+
+      .startup-eyebrow {
+        color: #9ce9c4;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .startup-title {
+        margin: 10px 0 8px;
+        font-size: 25px;
+        letter-spacing: -0.04em;
+      }
+
+      .startup-status {
+        margin: 0;
+        color: #a8b7ae;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .startup-status[data-state='error'] {
+        color: #ffaaaa;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>This interactive raster-analysis demonstration requires JavaScript and WebGPU.</noscript>
+    <main id="raster-startup" aria-live="polite">
+      <section class="startup-card">
+        <span class="startup-eyebrow">luma.gl · GPU earth observation</span>
+        <h1 class="startup-title">Satellite Raster Lab</h1>
+        <p class="startup-status" data-raster-startup-status>Preparing synthetic satellite bands…</p>
+      </section>
+    </main>
+    <script type="module">
+      const startup = document.querySelector('#raster-startup');
+      const status = document.querySelector('[data-raster-startup-status]');
+
+      try {
+        if (!navigator.gpu) {
+          throw new Error('WebGPU is unavailable. Try a recent Chromium browser with GPU access.');
+        }
+
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] =
+          await Promise.all([
+            import('@luma.gl/core'),
+            import('@luma.gl/engine'),
+            import('@luma.gl/webgpu'),
+            import('./app.ts')
+          ]);
+
+        status.textContent = 'Acquiring a WebGPU device for resident raster analysis…';
+        const device = await luma.createDevice({
+          id: 'luraster-satellite-raster-lab',
+          adapters: [webgpuAdapter],
+          featureLevel: 'best-available',
+          powerPreference: 'high-performance',
+          waitForPageLoad: false,
+          createCanvasContext: true
+        });
+
+        status.textContent = 'Compiling NDVI and validity-aware histogram passes…';
+        await makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+        startup.remove();
+      } catch (error) {
+        status.dataset.state = 'error';
+        status.textContent = error instanceof Error ? error.message : String(error);
+      }
+    </script>
+  </body>
+</html>

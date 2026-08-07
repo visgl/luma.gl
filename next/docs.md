@@ -8,7 +8,7 @@ Start with a live scene, follow the ideas behind a single rendered frame, and ch
 
 ## Choose your starting point[​](#choose-your-starting-point "Direct link to Choose your starting point")
 
-[New to luma.gl**Discover what you can build**Explore living worlds, physical simulations, visual effects, and GPU-powered data directly in your browser.No installation required](https://luma.gl/next/docs/getting-started)[Learn**Follow the fundamentals**Build from a triangle to textured geometry, instancing, reusable shaders, and GPU transforms.Live, backend-switchable examples](https://luma.gl/next/docs/tutorials)[Design and concepts**Browse the API guides**Understand the Engine, portable GPU, and Shader APIs before choosing individual resources.Task-oriented explanations](https://luma.gl/next/docs/api-guide)[Look up details**Use the API reference**Find packages, classes, resource methods, accepted formats, and backend-specific behavior.Organized by npm package](https://luma.gl/next/docs/api-reference)
+[New to luma.gl**Discover what you can build**Explore living worlds, physical simulations, visual effects, and GPU-powered data directly in your browser.No installation required](https://luma.gl/next/docs/getting-started)[Framework capabilities**Explore the complete feature set**See how GPU-native data, large-scale visualization, compute pipelines, portable rendering, and visual effects fit together.Packages, techniques, and maturity](https://luma.gl/next/docs/capabilities)[Learn**Follow the fundamentals**Build from a triangle to textured geometry, instancing, reusable shaders, and GPU transforms.Live, backend-switchable examples](https://luma.gl/next/docs/tutorials)[See it in action**Explore live GPU examples**Launch interactive scenes for lighting, oceans, fire, Gaussian splats, effects, and data visualization.Interactive examples in your browser](https://luma.gl/next/examples)[Design and concepts**Browse the API guides**Understand the Engine, portable GPU, and Shader APIs before choosing individual resources.Task-oriented explanations](https://luma.gl/next/docs/api-guide)[Look up details**Use the API reference**Find packages, classes, resource methods, accepted formats, and backend-specific behavior.Organized by npm package](https://luma.gl/next/docs/api-reference)
 
 When you are ready to turn an idea into your own application, the [Installing guide](https://luma.gl/next/docs/developer-guide/installing.md) walks through your first project, device adapters, and your first rendered frame.
 
@@ -22,12 +22,12 @@ When you are ready to turn an idea into your own application, the [Installing gu
 
 ## Is luma.gl the right level?[​](#is-lumagl-the-right-level "Direct link to Is luma.gl the right level?")
 
-| Choose                     | When                                                                                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **luma.gl**                | You are building a renderer, GPU compute workflow, visualization framework, or custom GPU feature and want explicit resource control. |
-| [deck.gl](https://deck.gl) | You need high-level geospatial or large-data visualization layers, picking, cameras, and interaction.                                 |
-| Three.js or Babylon.js     | You need a general-purpose scene engine with a large asset and material ecosystem.                                                    |
-| Raw WebGPU                 | You need exact control over one backend and do not need luma.gl's portability, lifecycle, or shader tooling.                          |
+| Choose                      | When                                                                                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **luma.gl**                 | You are building a renderer, GPU compute workflow, visualization framework, or custom GPU feature and want explicit resource control. |
+| [deck.gl](https://deck.gl)  | You need high-level geospatial or large-data visualization layers, picking, cameras, and interaction.                                 |
+| **A complete scene engine** | You need a batteries-included scene engine with an extensive asset and material ecosystem.                                            |
+| Raw WebGPU                  | You need exact control over one backend and do not need luma.gl's portability, lifecycle, or shader tooling.                          |
 
 ## Three cooperating APIs[​](#three-cooperating-apis "Direct link to Three cooperating APIs")
 

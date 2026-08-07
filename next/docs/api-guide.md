@@ -6,7 +6,9 @@ The luma.gl API enables the creation of portable GPU applications that can run o
 
 ## Engine API[​](#engine-api "Direct link to Engine API")
 
-The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`. Scenegraphs are included and glTF support is available through the `@luma.gl/gltf` add-on module.
+The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`. Its [shared animation system](https://luma.gl/next/docs/api-guide/engine/animation.md) adds keyframe tracks, clips, weighted mixing, crossfades, and portable morph-target deformation. Scenegraphs are included, while [glTF loading, physical materials, skeletal animation, and morph animation](https://luma.gl/next/docs/api-reference/gltf.md) live in the format-specific `@luma.gl/gltf` module.
+
+The experimental [`SceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md) and [`DeferredSceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md) consume format-independent scene descriptions instead of introducing a second glTF renderer. Their [physical lighting environments](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md) can be prepared from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see [Declarative Rendering with ANARI](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md). It introduces the experimental, private `@luma.gl/anari` workspace, scene objects, committed parameters, instancing, physically based lighting, and HDR presentation.
 

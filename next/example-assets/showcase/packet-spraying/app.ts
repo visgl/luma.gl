@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Texture} from '@luma.gl/core';
 import type {
@@ -20,6 +20,7 @@ import {
   GroupNode,
   Model,
   ModelNode,
+  OrbitControls,
   PickingManager,
   ShaderPassRenderer,
   ShaderInputs,
@@ -28,7 +29,6 @@ import {
 } from '@luma.gl/engine';
 import {
   ABufferRenderer,
-  OrbitControls,
   WBOITRenderer,
   aBuffer,
   aBufferPlugin,

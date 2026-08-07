@@ -1,0 +1,63 @@
+# Zoom Blur
+
+Pull image samples toward a chosen focal point to suggest rapid zoom, radial motion, or a stylized optical rush. `zoomBlur` preserves the selected center while increasingly stretching detail farther away.
+
+### Effects: Image Processing
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/showcase/postprocessing)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
+## At a Glance[​](#at-a-glance "Direct link to At a Glance")
+
+| Property          | Value                            |
+| ----------------- | -------------------------------- |
+| Export            | `zoomBlur`                       |
+| Backends          | WebGPU and WebGL2                |
+| Render passes     | One sample-heavy fullscreen pass |
+| Additional inputs | None                             |
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+import {zoomBlur} from '@luma.gl/effects';
+
+
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [zoomBlur]});
+
+
+
+renderer.renderToScreen({
+
+  sourceTexture: sceneColorTexture,
+
+  uniforms: {zoomBlur: {center: [0.5, 0.5], strength: 0.16}}
+
+});
+```
+
+## Parameters[​](#parameters "Direct link to Parameters")
+
+| Parameter  | Default      | Suggested range              | Description                                                      |
+| ---------- | ------------ | ---------------------------- | ---------------------------------------------------------------- |
+| `center`   | `[0.5, 0.5]` | Normalized image coordinates | Focal position toward which the sampling path converges.         |
+| `strength` | `0.3`        | `0` to `1`                   | Radial sample displacement; larger values create longer streaks. |
+
+The pass animates naturally when the application changes the focal center or strength each frame. It does not require motion vectors and does not distinguish actual object movement.
+
+## Composition and Cost[​](#composition-and-cost "Direct link to Composition and Cost")
+
+Although zoom blur occupies one render pass, it samples multiple positions along each radial path and can be materially more expensive than a one-sample color adjustment. Use reduced effect resolution for large canvases, and prefer [Motion Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/motion-blur.md) when physically meaningful per-pixel velocity is available.
+
+## Related Effects[​](#related-effects "Direct link to Related Effects")
+
+* [Motion Blur](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/motion-blur.md) follows scene-authored velocity and respects depth edges.
+* [Swirl](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/swirl.md) rotates image coordinates around a focal point.
+* [Tilt Shift](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/tilt-shift.md) preserves a focused line rather than a single center.

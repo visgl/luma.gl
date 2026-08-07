@@ -29,6 +29,16 @@ import {
 
   ANARIAnimationSchema,
 
+  ANARIAnimationNodeSchema,
+
+  ANARIAnimationTargetSchema,
+
+  ANARIAnimationTrackSchema,
+
+  ANARIAnimationClipSchema,
+
+  ANARIAnimationPlaybackSchema,
+
   ANARILightSchema,
 
   ANARICameraSchema,
@@ -54,28 +64,123 @@ import {
 
 ## Exported schemas[​](#exported-schemas "Direct link to Exported schemas")
 
-| Export                         | Validates                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `ANARIVector3Schema`           | Three finite XYZ, direction, scale, or linear RGB components.                                          |
-| `ANARIVector4Schema`           | Four finite RGBA components.                                                                           |
-| `ANARIMatrix4Schema`           | Sixteen finite column-major transform-matrix values.                                                   |
-| `ANARIGeometryGeneratorSchema` | Procedural `torus`, `crystal`, and `prism` generators.                                                 |
-| `ANARIGeometrySchema`          | `triangle`, `sphere`, `cylinder`, `cone`, and `quad` geometries.                                       |
-| `ANARITextureSchema`           | Retained image source, color space, and optional UV transform.                                         |
-| `ANARIMaterialSchema`          | `matte` and `physicallyBased` materials and bounded material properties.                               |
-| `ANARIAnimationSchema`         | `orbit`, `bob`, `spin`, `wobble`, `pulse`, and `follow` animations.                                    |
-| `ANARILightSchema`             | `ambient`, `directional`, `point`, and `spot` lights.                                                  |
-| `ANARICameraSchema`            | `perspective` and `orthographic` cameras.                                                              |
-| `ANARIRendererSchema`          | Optional renderer preset configuration for `default`, `deferred`, `debugNormals`, and `debugDepth`.    |
-| `ANARISurfaceSchema`           | Named geometry/material pairings.                                                                      |
-| `ANARIGroupSchema`             | Reusable retained surfaces and optional lights.                                                        |
-| `ANARIInstanceSchema`          | Named transform placements and composable animations.                                                  |
-| `ANARIStarfieldSchema`         | Deterministic retained background-star distributions.                                                  |
-| `ANARISceneSchema`             | A renderer-independent scene and its cross-object semantic references, plus optional renderer presets. |
-| `ANARI_SCENE_JSON_SCHEMA`      | Draft-07 JSON Schema generated from `ANARISceneSchema`.                                                |
-| `ANARISceneDescription`        | TypeScript scene type inferred from `ANARISceneSchema`.                                                |
+| Export                         | Validates                                                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `ANARIVector3Schema`           | Three finite XYZ, direction, scale, or linear RGB components.                                                             |
+| `ANARIVector4Schema`           | Four finite RGBA components.                                                                                              |
+| `ANARIMatrix4Schema`           | Sixteen finite column-major transform-matrix values.                                                                      |
+| `ANARIGeometryGeneratorSchema` | Procedural `torus`, `crystal`, and `prism` generators.                                                                    |
+| `ANARIGeometrySchema`          | Analytic primitives and triangle meshes, including RGBA colors, two UV sets, joint attributes, and morph targets/weights. |
+| `ANARITextureSchema`           | Retained image source, color space, sampler addressing/filtering, coordinate set, and UV transform.                       |
+| `ANARIMaterialSchema`          | `matte`/`physicallyBased` factors, alpha/culling options, and all 17 retained texture references.                         |
+| `ANARIAnimationSchema`         | `orbit`, `bob`, `spin`, `wobble`, `pulse`, and `follow` animations.                                                       |
+| `ANARIAnimationNodeSchema`     | Source-node parent, local transform, initial morph weights, and retained instance/geometry identifiers.                   |
+| `ANARIAnimationTargetSchema`   | Stable retained node, instance, material, sampler, light, or camera targets.                                              |
+| `ANARIAnimationTrackSchema`    | Increasing keyframe times, matching value counts, interpolation, and optional source UV transform.                        |
+| `ANARIAnimationClipSchema`     | Named clips containing one or more retained animation tracks.                                                             |
+| `ANARIAnimationPlaybackSchema` | Selected clip, initial playback state, speed, and once/repeat/ping-pong loop mode.                                        |
+| `ANARILightSchema`             | `ambient`, `directional`, `point`, and `spot` lights.                                                                     |
+| `ANARICameraSchema`            | `perspective` and `orthographic` cameras.                                                                                 |
+| `ANARIRendererSchema`          | Optional renderer preset configuration for `default`, `deferred`, `raytrace`, `debugNormals`, and `debugDepth`.           |
+| `ANARISurfaceSchema`           | Named geometry/material pairings.                                                                                         |
+| `ANARIGroupSchema`             | Reusable retained surfaces and optional lights.                                                                           |
+| `ANARIInstanceSchema`          | Named transform placements and composable animations.                                                                     |
+| `ANARIStarfieldSchema`         | Deterministic retained background-star distributions.                                                                     |
+| `ANARISceneSchema`             | A renderer-independent scene and its cross-object semantic references, plus optional renderer presets.                    |
+| `ANARI_SCENE_JSON_SCHEMA`      | Draft-07 JSON Schema generated from `ANARISceneSchema`.                                                                   |
+| `ANARISceneDescription`        | TypeScript scene type inferred from `ANARISceneSchema`.                                                                   |
 
 Each object schema uses a strict property set and discriminates supported subtypes through its `@@type` property. Numeric constraints reject invalid radii, segment counts, roughness, metallic values, light intensities, camera distances, and similar unsupported values.
+
+Ray-tracing presets additionally accept a positive integer `samplesPerPixel`, a nonnegative integer `maxBounces`, and boolean `progressive` and `shadows` settings. These subtype-specific properties remain invalid on forward, deferred, and debug renderer presets. Application-defined runtimes registered with `ANARIDevice.registerRenderer()` are not automatically added to the strict schema.
+
+## Texture and sampler declarations[​](#texture-and-sampler-declarations "Direct link to Texture and sampler declarations")
+
+```
+{
+
+  "source": "textures/fabric-color.png",
+
+  "colorSpace": "srgb",
+
+  "textureCoordinateSet": 1,
+
+  "sampler": {
+
+    "addressModeU": "repeat",
+
+    "addressModeV": "mirror-repeat",
+
+    "minFilter": "linear",
+
+    "magFilter": "linear",
+
+    "mipmapFilter": "linear"
+
+  },
+
+  "transform": [1, 0, 0, 0, 1, 0, 0.25, 0, 1]
+
+}
+```
+
+`textureCoordinateSet` accepts `0` or `1`. Address modes accept `repeat`, `clamp-to-edge`, and `mirror-repeat`; minification/magnification accept `nearest` or `linear`; mipmap filtering also accepts `none`. Color-bearing textures should use `srgb`, while normal/roughness and other data textures use `linear`.
+
+## Retained animation declarations[​](#retained-animation-declarations "Direct link to Retained animation declarations")
+
+Scenes can add optional `nodes`, `clips`, and `playback` sections:
+
+```
+{
+
+  "nodes": {
+
+    "character": {
+
+      "translation": [0, 0, 0],
+
+      "weights": [0],
+
+      "instances": ["character-instance"],
+
+      "geometries": ["character-geometry"]
+
+    }
+
+  },
+
+  "clips": [
+
+    {
+
+      "name": "Expression",
+
+      "tracks": [
+
+        {
+
+          "target": {"type": "node", "identifier": "character", "path": "weights"},
+
+          "times": [0, 1],
+
+          "values": [[0], [1]],
+
+          "interpolation": "LINEAR"
+
+        }
+
+      ]
+
+    }
+
+  ],
+
+  "playback": {"clip": "Expression", "playing": true, "loop": "repeat"}
+
+}
+```
+
+This fragment supplements the required top-level camera, geometry, material, and surface scene fields. `STEP` and `LINEAR` tracks require one value per keyframe; `CUBICSPLINE` requires three values per keyframe, corresponding to in-tangent, value, and out-tangent. Keyframe times must be strictly increasing.
 
 ## Validate a scene[​](#validate-a-scene "Direct link to Validate a scene")
 
@@ -111,6 +216,10 @@ In addition to validating local property shapes, `ANARISceneSchema` verifies:
 * Instances have unique identifiers and reference existing groups or surfaces.
 * Starfield distributions reference existing surfaces.
 * Animated lights follow existing named instances.
+* Animation-node parents exist, are not self-references, and do not form cycles.
+* Animation-node instance identifiers resolve to existing retained instances.
+* Animation tracks target existing nodes, instances, materials, samplers, lights, or the camera.
+* Clip names are unique, playback selects an existing clip, and keyframe values match interpolation.
 
 Zod issues include the exact object/property path, allowing editors to display error indicators on the invalid retained reference rather than only reporting a generic scene-level failure.
 
@@ -150,4 +259,4 @@ monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
 
 JSON Schema supplies syntax diagnostics, subtype-aware autocomplete, property documentation, and numeric constraints. Run `ANARISceneSchema.safeParse()` separately to add the semantic retained reference checks that cannot be expressed by ordinary JSON Schema alone.
 
-The [ANARI developer guide](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md#validate-scenes-with-zod-and-json-schema) and [JSON scene playground](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md#explore-the-json-scene-playground) show how these schemas integrate with live scene editing.
+The [ANARI developer guide](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md#validate-scenes-with-zod-and-json-schema) and [JSON scene playground](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md#explore-the-json-scene-playground) show how these schemas integrate with live scene editing. See [ANARI animation and glTF integration](https://luma.gl/next/docs/api-reference/anari/anari-animation.md) for retained playback and optional glTF adapter details.
