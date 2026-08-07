@@ -20,6 +20,8 @@ import {RASTER_LAB_STYLES} from './raster-styles';
 export type RasterLabInterfaceCallbacks = {
   onSourceTile?: (tile: RasterLabSourceTile) => void;
   onSourceOverview?: (level: RasterLabOverviewLevel) => void;
+  onOverviewPolicy?: (policy: RasterLabOverviewPolicy) => void;
+  onCategoryPolicy?: (policy: RasterLabCategoryPolicy) => void;
   onHaloMode?: (mode: RasterLabHaloMode) => void;
   onCacheCapacity?: (capacity: number) => void;
   onMode?: (mode: RasterLabDisplayMode) => void;
@@ -47,7 +49,21 @@ export type RasterLabInterfaceCallbacks = {
 
 export type RasterLabSourceTile = 'full' | 'west' | 'east';
 export type RasterLabOverviewLevel = 0 | 1;
+export type RasterLabOverviewPolicy = 'source' | 'mean';
+export type RasterLabCategoryPolicy = 'nearest' | 'mode';
 export type RasterLabHaloMode = 'off' | 'seamless';
+
+export type RasterLabOverviewSummary = {
+  policy: RasterLabOverviewPolicy;
+  categoryPolicy: RasterLabCategoryPolicy;
+  level: RasterLabOverviewLevel;
+  generated: boolean;
+  sourceWidth: number;
+  sourceHeight: number;
+  targetWidth: number;
+  targetHeight: number;
+  validPixelCount: number;
+};
 
 export type RasterLabHaloSummary = {
   mode: RasterLabHaloMode;
@@ -176,6 +192,49 @@ export class RasterLabInterface {
         String(Number(button.dataset['rasterSourceOverview']) === level)
       );
     }
+  }
+
+  setOverviewProcessing(summary: RasterLabOverviewSummary): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-overview-policy]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterOverviewPolicy'] === summary.policy)
+      );
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-category-policy]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterCategoryPolicy'] === summary.categoryPolicy)
+      );
+      button.disabled = summary.policy !== 'mean';
+    }
+    const targetPixelCount = summary.targetWidth * summary.targetHeight;
+    const validPercentage = (summary.validPixelCount / Math.max(targetPixelCount, 1)) * 100;
+    this.getElement('[data-raster-overview-provenance]').textContent = summary.generated
+      ? 'GPU nodata-aware mean · native resident source'
+      : summary.level === 0
+        ? 'Application-provided native source'
+        : 'Application-provided nearest overview';
+    this.getElement('[data-raster-overview-grid]').textContent = summary.generated
+      ? `${summary.sourceWidth} × ${summary.sourceHeight} → ${summary.targetWidth} × ${summary.targetHeight}`
+      : `${summary.targetWidth} × ${summary.targetHeight}`;
+    this.getElement('[data-raster-overview-coverage]').textContent =
+      `${NUMBER_FORMATTER.format(summary.validPixelCount)} displayed valid · ${validPercentage.toFixed(1)}%`;
+    this.getElement('[data-raster-cloud-label]').textContent = summary.generated
+      ? 'Excluded observations'
+      : 'Cloud mask';
+    if (summary.generated) {
+      this.getElement('[data-raster-cloud-count]').textContent =
+        `${NUMBER_FORMATTER.format(Math.max(targetPixelCount - summary.validPixelCount, 0))} excluded`;
+    }
+    this.getElement('[data-raster-overview-note]').textContent =
+      summary.policy === 'mean'
+        ? 'GPU mean uses tile-only ownership; seamless mode restores source overviews.'
+        : 'Source overviews preserve seamless neighbor assembly.';
   }
 
   setHalo(summary: RasterLabHaloSummary): void {
@@ -511,6 +570,22 @@ export class RasterLabInterface {
         this.callbacks.onSourceOverview?.(level);
         return;
       }
+      const overviewPolicyButton = target.closest<HTMLButtonElement>(
+        '[data-raster-overview-policy]'
+      );
+      const overviewPolicy = overviewPolicyButton?.dataset['rasterOverviewPolicy'];
+      if (overviewPolicy === 'source' || overviewPolicy === 'mean') {
+        this.callbacks.onOverviewPolicy?.(overviewPolicy);
+        return;
+      }
+      const categoryPolicyButton = target.closest<HTMLButtonElement>(
+        '[data-raster-category-policy]'
+      );
+      const categoryPolicy = categoryPolicyButton?.dataset['rasterCategoryPolicy'];
+      if (categoryPolicy === 'nearest' || categoryPolicy === 'mode') {
+        this.callbacks.onCategoryPolicy?.(categoryPolicy);
+        return;
+      }
       const haloButton = target.closest<HTMLButtonElement>('[data-raster-halo-mode]');
       const haloMode = haloButton?.dataset['rasterHaloMode'];
       if (haloMode === 'off' || haloMode === 'seamless') {
@@ -826,7 +901,7 @@ function makeRasterLabMarkup(): string {
           <span class="raster-metric-detail" data-raster-valid-percentage>GPU histogram</span>
         </div>
         <div class="raster-metric">
-          <span class="raster-kicker">Cloud mask</span>
+          <span class="raster-kicker" data-raster-cloud-label>Cloud mask</span>
           <strong class="raster-metric-value" data-raster-cloud>—</strong>
           <span class="raster-metric-detail" data-raster-cloud-count>Source validity</span>
         </div>
@@ -875,6 +950,20 @@ function makeRasterLabMarkup(): string {
               <div class="raster-source-overview-buttons" aria-label="Source-provided overview level">
                 <button class="raster-mode-button" data-raster-source-overview="0" aria-pressed="true">1× NATIVE</button>
                 <button class="raster-mode-button" data-raster-source-overview="1" aria-pressed="false">2× OVERVIEW</button>
+              </div>
+              <div class="raster-overview-policy-buttons" aria-label="Continuous overview generation policy">
+                <button class="raster-mode-button" data-raster-overview-policy="source" aria-pressed="true">SOURCE NEAREST</button>
+                <button class="raster-mode-button" data-raster-overview-policy="mean" aria-pressed="false">GPU MEAN</button>
+              </div>
+              <div class="raster-category-policy-buttons" aria-label="Categorical cloud-mask overview policy">
+                <button class="raster-mode-button" data-raster-category-policy="nearest" aria-pressed="true" disabled>MASK NEAREST</button>
+                <button class="raster-mode-button" data-raster-category-policy="mode" aria-pressed="false" disabled>MASK MODE</button>
+              </div>
+              <div class="raster-overview-statistics" aria-label="Scientific overview provenance and coverage">
+                <span data-raster-overview-provenance>Application-provided native source</span>
+                <span data-raster-overview-grid>—</span>
+                <span data-raster-overview-coverage>0 displayed valid · 0.0%</span>
+                <span data-raster-overview-note>Source overviews preserve seamless neighbor assembly.</span>
               </div>
               <div class="raster-halo-buttons" aria-label="Cross-tile neighborhood ownership">
                 <button class="raster-mode-button" data-raster-halo-mode="off" aria-pressed="true">TILE ONLY</button>

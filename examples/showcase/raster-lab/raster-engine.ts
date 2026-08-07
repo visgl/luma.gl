@@ -11,6 +11,7 @@ import {
 } from '@luma.gl/experimental';
 import {
   GPURasterBoxBlur,
+  GPURasterCategoricalOverview,
   GPURasterClosing,
   GPURasterContrast,
   GPURasterContours,
@@ -22,6 +23,7 @@ import {
   GPURasterLaplacian,
   GPURasterNDVI,
   GPURasterOtsuThreshold,
+  GPURasterOverview,
   GPURasterOpening,
   GPURasterScharr,
   GPURasterSobel,
@@ -30,6 +32,8 @@ import {
   GPURasterTileCoreExtract,
   GPURasterTileHaloFill,
   type GPURasterBufferBand,
+  type GPURasterMetadata,
+  type GPURasterOverviewCategoricalPolicy,
   type GPURasterPixelBounds,
   type GPURasterTileHaloPlan
 } from '@luma.gl/experimental/luraster';
@@ -136,6 +140,13 @@ export type RasterLabHaloSources = {
   }[];
 };
 
+/** Native cache-resident source reduced directly into owned, target-resolution GPU buffers. */
+export type RasterLabGeneratedOverviewSources = {
+  metadata: GPURasterMetadata;
+  sources: RasterLabResidentSources;
+  categoryPolicy: GPURasterOverviewCategoricalPolicy;
+};
+
 /** Runs NDVI, validity-aware extent, and histogram as one explicitly submitted GPU command graph. */
 export class RasterLabEngine {
   readonly device: Device;
@@ -148,6 +159,7 @@ export class RasterLabEngine {
   private readonly contourSegmentCapacity: number;
   private compiledGraph: CompiledGPUCommandGraph;
   private halo: RasterLabHaloSources | undefined;
+  private overview: RasterLabGeneratedOverviewSources | undefined;
   private settings: RasterLabDisplaySettings = {
     mode: 'ndvi',
     smoothingMode: 'none',
@@ -180,35 +192,52 @@ export class RasterLabEngine {
     sources?: RasterLabResidentSources,
     settings?: RasterLabDisplaySettings,
     epsilon = 0.0001,
-    halo?: RasterLabHaloSources
+    halo?: RasterLabHaloSources,
+    overview?: RasterLabGeneratedOverviewSources
   ) {
     this.device = device;
     this.dataset = dataset;
-    this.borrowedSources = Boolean(sources);
+    this.borrowedSources = Boolean(sources) && !overview;
     this.halo = halo;
+    this.overview = overview;
     if (settings) this.settings = {...settings};
     this.epsilon = epsilon;
     this.contourSegmentCapacity = Math.max((dataset.width - 1) * (dataset.height - 1) * 2, 1);
     const sourceUsage = Buffer.STORAGE | Buffer.COPY_DST;
     const outputUsage = Buffer.STORAGE | Buffer.COPY_SRC;
     this.buffers = {
-      red:
-        sources?.red ??
-        device.createBuffer({id: 'raster-lab-red', data: dataset.red, usage: sourceUsage}),
-      nearInfrared:
-        sources?.nearInfrared ??
-        device.createBuffer({
-          id: 'raster-lab-near-infrared',
-          data: dataset.nearInfrared,
-          usage: sourceUsage
-        }),
-      sourceValidity:
-        sources?.validity ??
-        device.createBuffer({
-          id: 'raster-lab-source-validity',
-          data: dataset.validity,
-          usage: sourceUsage
-        }),
+      red: overview
+        ? device.createBuffer({
+            id: 'raster-lab-generated-red',
+            byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
+            usage: outputUsage
+          })
+        : (sources?.red ??
+          device.createBuffer({id: 'raster-lab-red', data: dataset.red, usage: sourceUsage})),
+      nearInfrared: overview
+        ? device.createBuffer({
+            id: 'raster-lab-generated-near-infrared',
+            byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
+            usage: outputUsage
+          })
+        : (sources?.nearInfrared ??
+          device.createBuffer({
+            id: 'raster-lab-near-infrared',
+            data: dataset.nearInfrared,
+            usage: sourceUsage
+          })),
+      sourceValidity: overview
+        ? device.createBuffer({
+            id: 'raster-lab-generated-categorical-validity',
+            byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+            usage: outputUsage
+          })
+        : (sources?.validity ??
+          device.createBuffer({
+            id: 'raster-lab-source-validity',
+            data: dataset.validity,
+            usage: sourceUsage
+          })),
       vegetationIndex: device.createBuffer({
         id: 'raster-lab-vegetation-index',
         byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
@@ -403,21 +432,26 @@ export class RasterLabEngine {
   setResidentTile(
     dataset: RasterLabDataset,
     sources: RasterLabResidentSources,
-    halo?: RasterLabHaloSources
+    halo?: RasterLabHaloSources,
+    overview?: RasterLabGeneratedOverviewSources
   ): void {
     if (
-      !this.borrowedSources ||
+      (!this.borrowedSources && !this.overview) ||
       dataset.width !== this.dataset.width ||
-      dataset.height !== this.dataset.height
+      dataset.height !== this.dataset.height ||
+      Boolean(this.overview) !== Boolean(overview)
     ) {
       throw new Error('Raster tile graph reuse requires matching resident tile dimensions');
     }
     this.dataset = dataset;
     this.halo = halo;
-    this.buffers.red = sources.red;
-    this.buffers.nearInfrared = sources.nearInfrared;
-    this.buffers.sourceValidity = sources.validity;
-    this.renderer.setSourceBuffers(sources.red, sources.nearInfrared);
+    this.overview = overview;
+    if (!overview) {
+      this.buffers.red = sources.red;
+      this.buffers.nearInfrared = sources.nearInfrared;
+      this.buffers.sourceValidity = sources.validity;
+      this.renderer.setSourceBuffers(sources.red, sources.nearInfrared);
+    }
   }
 
   /** Reconfigures specialized graph passes without reallocating resident raster buffers. */
@@ -479,6 +513,11 @@ export class RasterLabEngine {
       importedBuffers[`halo-red-${tileIndex}`] = tile.sources.red;
       importedBuffers[`halo-near-infrared-${tileIndex}`] = tile.sources.nearInfrared;
       importedBuffers[`halo-validity-${tileIndex}`] = tile.sources.validity;
+    }
+    if (this.overview) {
+      importedBuffers['overview-source-red'] = this.overview.sources.red;
+      importedBuffers['overview-source-near-infrared'] = this.overview.sources.nearInfrared;
+      importedBuffers['overview-source-validity'] = this.overview.sources.validity;
     }
     this.compiledGraph.encode(encoder, {parameters: undefined, buffers: importedBuffers});
     encoder.copyBufferToBuffer({
@@ -656,6 +695,131 @@ export class RasterLabEngine {
       'uint32',
       this.dataset.pixelCount
     );
+
+    if (this.overview) {
+      const sourcePixelCount = this.overview.metadata.width * this.overview.metadata.height;
+      const nativeRed = this.importView(
+        graph,
+        'overview-source-red',
+        this.overview.sources.red,
+        'float32',
+        sourcePixelCount
+      );
+      const nativeNearInfrared = this.importView(
+        graph,
+        'overview-source-near-infrared',
+        this.overview.sources.nearInfrared,
+        'float32',
+        sourcePixelCount
+      );
+      const nativeValidity = this.importView(
+        graph,
+        'overview-source-validity',
+        this.overview.sources.validity,
+        'uint32',
+        sourcePixelCount
+      );
+      const redMeanValidity = this.createTransientView(
+        graph,
+        'overview-red-mean-validity',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const redSum = this.createTransientView(
+        graph,
+        'overview-red-sum',
+        'float32',
+        this.dataset.pixelCount
+      );
+      const redValidCount = this.createTransientView(
+        graph,
+        'overview-red-valid-count',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const nearInfraredMeanValidity = this.createTransientView(
+        graph,
+        'overview-near-infrared-mean-validity',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const nearInfraredSum = this.createTransientView(
+        graph,
+        'overview-near-infrared-sum',
+        'float32',
+        this.dataset.pixelCount
+      );
+      const nearInfraredValidCount = this.createTransientView(
+        graph,
+        'overview-near-infrared-valid-count',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const categoryValidity = this.createTransientView(
+        graph,
+        'overview-category-validity',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const categoryCoverage = this.createTransientView(
+        graph,
+        'overview-category-coverage',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const nativeRedBand: GPURasterBufferBand<'float32'> = {
+        id: 'native-red-reflectance',
+        format: 'float32',
+        storage: {kind: 'buffer', values: nativeRed},
+        validity: nativeValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+      const nativeNearInfraredBand: GPURasterBufferBand<'float32'> = {
+        id: 'native-near-infrared-reflectance',
+        format: 'float32',
+        storage: {kind: 'buffer', values: nativeNearInfrared},
+        validity: nativeValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+
+      new GPURasterOverview({
+        id: 'raster-lab-generated-red-overview',
+        metadata: this.overview.metadata,
+        scale: 2,
+        input: nativeRedBand,
+        output: redValues,
+        outputValidity: redMeanValidity,
+        sum: redSum,
+        validCount: redValidCount
+      }).addToGraph(graph);
+      new GPURasterOverview({
+        id: 'raster-lab-generated-near-infrared-overview',
+        metadata: this.overview.metadata,
+        scale: 2,
+        input: nativeNearInfraredBand,
+        output: nearInfraredValues,
+        outputValidity: nearInfraredMeanValidity,
+        sum: nearInfraredSum,
+        validCount: nearInfraredValidCount
+      }).addToGraph(graph);
+
+      const nativeCloudCategories: GPURasterBufferBand<'uint32'> = {
+        id: 'native-cloud-category',
+        format: 'uint32',
+        storage: {kind: 'buffer', values: nativeValidity}
+      };
+      new GPURasterCategoricalOverview({
+        id: `raster-lab-generated-cloud-${this.overview.categoryPolicy}`,
+        metadata: this.overview.metadata,
+        scale: 2,
+        input: nativeCloudCategories,
+        policy: this.overview.categoryPolicy,
+        output: sourceValidity,
+        outputValidity: categoryValidity,
+        validCount: categoryCoverage
+      }).addToGraph(graph);
+    }
+
     const vegetationIndex = this.importView(
       graph,
       'vegetation-index',

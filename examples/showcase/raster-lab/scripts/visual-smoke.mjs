@@ -86,6 +86,11 @@ try {
       frameCount: rasterLab.frameCount,
       sourceTile: rasterLab.sourceTile,
       overviewLevel: rasterLab.overviewLevel,
+      overviewPolicy: rasterLab.overviewPolicy,
+      categoryPolicy: rasterLab.categoryPolicy,
+      generatedOverview: rasterLab.generatedOverview,
+      overviewSourceDimensions: rasterLab.overviewSourceDimensions,
+      overviewCoverage: rasterLab.overviewCoverage,
       tileOrigin: rasterLab.tileOrigin,
       coordinateReferenceSystem: rasterLab.coordinateReferenceSystem,
       tileLoadCount: rasterLab.tileLoadCount,
@@ -130,6 +135,9 @@ try {
   assert.equal(initialState.pixelCount, 320 * 224, 'visual smoke selects the bounded raster tier');
   assert.equal(initialState.sourceTile, 'full', 'the complete decoded source tile loads first');
   assert.equal(initialState.overviewLevel, 0, 'the source starts at native resolution');
+  assert.equal(initialState.overviewPolicy, 'source', 'source-owned samples remain the default');
+  assert.equal(initialState.categoryPolicy, 'nearest', 'categorical overviews default to nearest');
+  assert.equal(initialState.generatedOverview, false, 'native source samples are not relabeled');
   assert.deepEqual(initialState.tileOrigin, [0, 0], 'the native tile preserves its level-zero origin');
   assert.equal(
     initialState.coordinateReferenceSystem,
@@ -1437,6 +1445,11 @@ try {
         validPixelCount: rasterLab.validPixelCount,
         sourceTile: rasterLab.sourceTile,
         overviewLevel: rasterLab.overviewLevel,
+        overviewPolicy: rasterLab.overviewPolicy,
+        categoryPolicy: rasterLab.categoryPolicy,
+        generatedOverview: rasterLab.generatedOverview,
+        overviewSourceDimensions: rasterLab.overviewSourceDimensions,
+        overviewCoverage: rasterLab.overviewCoverage,
         tileOrigin: rasterLab.tileOrigin,
         coordinateReferenceSystem: rasterLab.coordinateReferenceSystem,
         tileLoadCount: rasterLab.tileLoadCount,
@@ -2096,6 +2109,223 @@ try {
     'capacity-two source handoffs retain explicit CPU/GPU residency guarantees'
   );
 
+  await loadSourceSelection('[data-raster-halo-mode="off"]', 'west', 0);
+  const nearestSourceOverview = await loadSourceSelection(
+    '[data-raster-source-overview="1"]',
+    'west',
+    1
+  );
+  assert.equal(nearestSourceOverview.overviewPolicy, 'source');
+  assert.equal(nearestSourceOverview.generatedOverview, false);
+  assert(
+    (await page.locator('[data-raster-overview-provenance]').textContent()).includes(
+      'Application-provided nearest overview'
+    ),
+    'a decoded source overview retains its explicit nearest-sample provenance'
+  );
+
+  const generatedNearestOverview = await loadSourceSelection(
+    '[data-raster-overview-policy="mean"]',
+    'west',
+    1
+  );
+  assert.equal(generatedNearestOverview.overviewPolicy, 'mean');
+  assert.equal(generatedNearestOverview.generatedOverview, true);
+  assert.equal(generatedNearestOverview.categoryPolicy, 'nearest');
+  assert.equal(generatedNearestOverview.width, 80);
+  assert.equal(generatedNearestOverview.height, 112);
+  assert.deepEqual(
+    generatedNearestOverview.overviewSourceDimensions,
+    [160, 224],
+    'GPU reduction consumes only the selected, already resident native source tile'
+  );
+  assert.equal(
+    generatedNearestOverview.sourceReadCount,
+    nearestSourceOverview.sourceReadCount,
+    'switching to a cached native tile does not decode or reupload a complete raster'
+  );
+  assert.equal(
+    generatedNearestOverview.cacheHits,
+    nearestSourceOverview.cacheHits + 1,
+    'generated analysis obtains its exact existing native source lease through the bounded cache'
+  );
+  assert(
+    generatedNearestOverview.nodeCount >= nearestSourceOverview.nodeCount + 3,
+    'red mean, near-infrared mean, and categorical mask are three actual GPU graph passes'
+  );
+  assert.notDeepEqual(
+    generatedNearestOverview.bins,
+    nearestSourceOverview.bins,
+    'validity-aware four-sample means produce a genuinely different scientific distribution'
+  );
+  assert.equal(
+    generatedNearestOverview.bins.reduce((total, count) => total + count, 0),
+    generatedNearestOverview.validPixelCount,
+    'generated mean analysis preserves exact GPU mask and histogram coherence'
+  );
+  assert.equal(generatedNearestOverview.haloEnabled, false);
+  assert(
+    (await page.locator('[data-raster-overview-provenance]').textContent()).includes(
+      'GPU nodata-aware mean'
+    ),
+    'the dashboard distinguishes analytical GPU generation from source-provided overviews'
+  );
+  assert(
+    (await page.locator('[data-raster-overview-grid]').textContent()).includes('160 × 224 → 80 × 112'),
+    'source and generated overview dimensions remain explicit'
+  );
+  assert(
+    (await page.locator('[data-raster-overview-coverage]').textContent()).includes('displayed valid'),
+    'reported coverage honestly derives from the existing post-filter GPU scalar summary'
+  );
+  assert.equal(
+    await page.locator('[data-raster-cloud-label]').textContent(),
+    'Excluded observations',
+    'generated-mode diagnostics do not mislabel selected pixels as raw cloud-mask coverage'
+  );
+
+  const generatedModeOverview = await loadSourceSelection(
+    '[data-raster-category-policy="mode"]',
+    'west',
+    1
+  );
+  assert.equal(generatedModeOverview.categoryPolicy, 'mode');
+  assert.equal(
+    generatedModeOverview.sourceReadCount,
+    generatedNearestOverview.sourceReadCount,
+    'changing integer category policy retains its previously uploaded native source'
+  );
+  assert.equal(
+    generatedModeOverview.graphCompileCount,
+    generatedNearestOverview.graphCompileCount + 1,
+    'nearest and exact integer mode produce separately specialized GPU graphs'
+  );
+  assert.notEqual(
+    generatedModeOverview.validPixelCount,
+    generatedNearestOverview.validPixelCount,
+    'real zero/one categorical mode changes validity instead of averaging mask labels'
+  );
+  assert.notDeepEqual(
+    generatedModeOverview.bins,
+    generatedNearestOverview.bins,
+    'changing the categorical cloud policy propagates into real analytical GPU output'
+  );
+
+  const generatedEasternOverview = await loadSourceSelection(
+    '[data-raster-source-tile="east"]',
+    'east',
+    1
+  );
+  assert.equal(generatedEasternOverview.generatedOverview, true);
+  assert.equal(generatedEasternOverview.categoryPolicy, 'mode');
+  assert.deepEqual(generatedEasternOverview.tileOrigin, [160, 0]);
+  assert.equal(
+    generatedEasternOverview.graphCompileCount,
+    generatedModeOverview.graphCompileCount,
+    'equally shaped native eastern and western overviews reuse their category-specialized graph'
+  );
+  assert.equal(
+    generatedEasternOverview.graphReuseCount,
+    generatedModeOverview.graphReuseCount + 1,
+    'generated graph reuse dynamically replaces all three borrowed native source buffers'
+  );
+
+  const previousGeneratedExecution = generatedEasternOverview.executionCount;
+  await page.evaluate(() => {
+    const rasterLab = window.__luRasterLab;
+    rasterLab.setEdgeMode('scharr');
+    rasterLab.setMorphologyMode('binary');
+    rasterLab.setMorphologyOperation('close');
+    rasterLab.setAutomaticThreshold(true);
+    rasterLab.setContours(true);
+  });
+  await page.waitForFunction(
+    previousExecution => {
+      const rasterLab = window.__luRasterLab;
+      return (
+        rasterLab.generatedOverview &&
+        !rasterLab.sourceLoading &&
+        rasterLab.executionCount > previousExecution &&
+        rasterLab.edgeMode === 'scharr' &&
+        rasterLab.morphologyMode === 'binary' &&
+        rasterLab.morphologyOperation === 'close' &&
+        rasterLab.automaticThreshold &&
+        rasterLab.thresholdEnabled &&
+        rasterLab.contourSegmentCount > 0 &&
+        rasterLab.validPixelCount < rasterLab.pixelCount * 0.8
+      );
+    },
+    previousGeneratedExecution,
+    {timeout: timeoutMilliseconds}
+  );
+  const generatedComposedPipeline = await loadSourceSelection(
+    '[data-raster-category-policy="nearest"]',
+    'east',
+    1
+  );
+  assert.equal(generatedComposedPipeline.generatedOverview, true);
+  assert.equal(generatedComposedPipeline.edgeMode, 'scharr');
+  assert.equal(generatedComposedPipeline.morphologyMode, 'binary');
+  assert.equal(generatedComposedPipeline.morphologyOperation, 'close');
+  assert(generatedComposedPipeline.automaticThreshold);
+  assert(generatedComposedPipeline.contourSegmentCount > 0);
+  assert.equal(
+    generatedComposedPipeline.bins.reduce((total, count) => total + count, 0),
+    generatedComposedPipeline.validPixelCount,
+    'GPU mean, categorical mask, smoothing, Scharr, Otsu, binary closing, and contours compose'
+  );
+
+  const restoredSeamlessOverview = await loadSourceSelection(
+    '[data-raster-halo-mode="seamless"]',
+    'east',
+    1
+  );
+  assert.equal(restoredSeamlessOverview.overviewPolicy, 'source');
+  assert.equal(restoredSeamlessOverview.generatedOverview, false);
+  assert.equal(restoredSeamlessOverview.haloEnabled, true);
+  assert.equal(restoredSeamlessOverview.haloSourceTileCount, 2);
+  assert.equal(
+    await page.locator('[data-raster-overview-policy="source"]').getAttribute('aria-pressed'),
+    'true',
+    'requesting seamless processing visibly restores source-provided overview ownership'
+  );
+  const regeneratedOverview = await loadSourceSelection(
+    '[data-raster-overview-policy="mean"]',
+    'east',
+    1
+  );
+  assert.equal(regeneratedOverview.generatedOverview, true);
+  assert.equal(regeneratedOverview.haloEnabled, false);
+  assert.equal(
+    await page.locator('[data-raster-halo-mode="off"]').getAttribute('aria-pressed'),
+    'true',
+    'GPU overview generation explicitly returns to safe single-tile ownership'
+  );
+
+  const restoredNativeSource = await loadSourceSelection(
+    '[data-raster-source-overview="0"]',
+    'east',
+    0
+  );
+  assert.equal(restoredNativeSource.overviewPolicy, 'source');
+  assert.equal(restoredNativeSource.generatedOverview, false);
+  assert.equal(
+    await page.locator('[data-raster-cloud-label]').textContent(),
+    'Cloud mask',
+    'returning to native data restores truthful source-owned cloud diagnostics'
+  );
+  const generatedFromNativeControl = await loadSourceSelection(
+    '[data-raster-overview-policy="mean"]',
+    'east',
+    1
+  );
+  assert.equal(
+    generatedFromNativeControl.generatedOverview,
+    true,
+    'selecting GPU mean at native resolution automatically exposes its generated 2× target'
+  );
+  assert.equal(generatedFromNativeControl.overviewLevel, 1);
+
   await page.waitForFunction(
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
     composedSmoothing.frameCount,
@@ -2113,7 +2343,7 @@ try {
 
   process.stdout.write(
     `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, bounded cache, cumulative halos, and native/overview seam parity verified)\n`
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, and composed resident analysis verified)\n`
   );
 } finally {
   await browser?.close();
