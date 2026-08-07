@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLBWriter, GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 
 describe('source-faithful glTF asset export', () => {
   test('preserves hierarchy, complete geometry, normalized weights, skins, and morph targets', () => {
@@ -104,6 +104,31 @@ describe('source-faithful glTF asset export', () => {
     expect(gltf.meshes[0].primitives[0].targets).toHaveLength(2);
     expect(gltf.skins).toHaveLength(1);
     expect(gltf.animations).toHaveLength(1);
+  });
+
+  test('delegates GLB container encoding to the existing loaders.gl writer', () => {
+    const encodeGLB = vi.spyOn(GLBWriter, 'encodeSync');
+
+    try {
+      const binary = exportGLTF(makeAnimatedScene(), {binary: true});
+
+      expect(encodeGLB).toHaveBeenCalledOnce();
+      expect(encodeGLB.mock.calls[0][0]).toMatchObject({
+        json: {asset: {version: '2.0'}},
+        binary: expect.any(Uint8Array)
+      });
+      expect(binary).toBeInstanceOf(ArrayBuffer);
+    } finally {
+      encodeGLB.mockRestore();
+    }
+  });
+
+  test('omits the optional binary chunk when a GLB has no binary resources', async () => {
+    const binary = exportGLTF({name: 'Empty scene', nodes: [{name: 'Root'}]}, {binary: true});
+    const source = await parse(binary, GLTFLoader, {gltf: {loadImages: false}});
+
+    expect(source.json.buffers).toBeUndefined();
+    expect(postProcessGLTF(source).scenes[0].nodes[0].name).toBe('Root');
   });
 
   test('keeps all caller-owned source arrays and scene descriptors unchanged', () => {

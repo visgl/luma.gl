@@ -50,7 +50,7 @@ API and supported feature set can change.
 
 - [Device and object lifecycle](/docs/api-reference/anari/anari-device): `ANARIDevice`, object creation, renderer registration, discovery, staged parameters, commits, and destruction.
 - [Arrays and geometry](/docs/api-reference/anari/anari-geometry): triangle meshes, RGB/RGBA colors, secondary UVs, joint palettes, morph targets, and analytic primitives.
-- [Materials and lighting](/docs/api-reference/anari/anari-materials-and-lights): all 17 canonical PBR maps, alpha masking/blending, UV samplers, punctual lights, and existing image-based lighting.
+- [Materials and lighting](/docs/api-reference/anari/anari-materials-and-lights): all 21 canonical PBR maps, alpha masking/blending, UV samplers, punctual lights, and existing image-based lighting.
 - [Animation and glTF integration](/docs/api-reference/anari/anari-animation): retained node hierarchies, optional glTF adaptation, automatic skeletal and morph playback, mixer controls, and batched object commits.
 - [Scene hierarchy](/docs/api-reference/anari/anari-scene): surfaces, groups, transform instances, worlds, and instancing behavior.
 - [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, forward/deferred/ray-tracing renderer controls, bloom, fog, frame rendering, and statistics.
@@ -149,7 +149,7 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | --- | --- | --- |
 | Retained scene objects and instanced surfaces | Supported | Supported |
 | Matte and physically based materials | Supported | Supported |
-| All 17 canonical PBR image maps and slot-specific UV transforms | Supported | Supported |
+| All 21 canonical PBR image maps and slot-specific UV transforms | Supported | Supported |
 | Secondary UVs and RGB/RGBA vertex colors | Supported | Supported |
 | Alpha masking, blending, and double-sided materials | Supported | Supported |
 | Retained node/material/UV animation and morph targets | Supported | Supported |

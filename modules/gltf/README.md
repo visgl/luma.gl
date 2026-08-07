@@ -31,15 +31,18 @@ const gltfDocument = exportGLTF(exportScene);
 const binaryAsset = exportGLTF(exportScene, {binary: true});
 ```
 
-The module preserves all 17 supported core/PBR-extension texture slots, sampler filters and
+The module preserves all 21 supported core/PBR-extension texture slots, sampler filters and
 mipmaps, independent UV transforms and `TEXCOORD_1`, authored punctual lights, node transforms,
 material/texture animation pointers, skin attributes, and animated morph targets. Generic
 `exportGLTF()` descriptors also preserve hierarchy, skins, inverse bind matrices, morph targets,
 animation clips, variants, GPU instancing, cameras, lights, and source-faithful accessors.
 
-`@loaders.gl/gltf` owns asset loading and decompression. Generic animation, scenegraph, and morph
-primitives remain in `@luma.gl/engine`; shared PBR, lighting, and skinning shaders remain in
-`@luma.gl/shadertools`.
+`@loaders.gl/gltf` owns `.gltf` / `.glb` parsing, linked buffers and images, Draco and
+`EXT_meshopt_compression` decoding, Basis/KTX2 and supported WebP texture selection, typed
+accessor postprocessing, feature/structural metadata decoding, and GLB container encoding.
+`KHR_meshopt_compression` and automatic `EXT_texture_avif` source selection are not implemented
+by the installed loader. Generic animation, scenegraph, and morph primitives remain in
+`@luma.gl/engine`; shared PBR, lighting, and skinning shaders remain in `@luma.gl/shadertools`.
 
 - [glTF API overview](https://luma.gl/docs/api-reference/gltf)
 - [Materials, textures, and lighting](https://luma.gl/docs/api-reference/gltf/gltf-materials)

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {GLBWriter} from '@loaders.gl/gltf';
+
 type GLTFExportTypedArray =
   | Int8Array
   | Uint8Array
@@ -144,9 +146,6 @@ type GLTFJSONRecord = Record<string, unknown>;
 
 const ARRAY_BUFFER_TARGET = 34962;
 const ELEMENT_ARRAY_BUFFER_TARGET = 34963;
-const GLB_MAGIC = 0x46546c67;
-const GLB_JSON_CHUNK = 0x4e4f534a;
-const GLB_BINARY_CHUNK = 0x004e4942;
 
 /** Serializes source-faithful glTF 2.0 scenes into embedded JSON assets. */
 export function exportGLTF(
@@ -256,7 +255,13 @@ class GLTFExportWriter {
     }
 
     return this.options.binary
-      ? makeGLB(document, binary)
+      ? GLBWriter.encodeSync(
+          {
+            json: document,
+            ...(binary.byteLength > 0 ? {binary} : {})
+          },
+          {}
+        )
       : JSON.stringify(document, null, this.options.pretty === false ? undefined : 2);
   }
 
@@ -524,34 +529,6 @@ function collectExtensionNames(value: unknown, result: Set<string>): void {
     }
     collectExtensionNames(child, result);
   }
-}
-
-function makeGLB(document: GLTFJSONRecord, binary: Uint8Array): ArrayBuffer {
-  const json = new TextEncoder().encode(JSON.stringify(document));
-  const jsonPadding = (4 - (json.byteLength % 4)) % 4;
-  const binaryPadding = (4 - (binary.byteLength % 4)) % 4;
-  const jsonChunkLength = json.byteLength + jsonPadding;
-  const binaryChunkLength = binary.byteLength + binaryPadding;
-  const totalLength =
-    12 + 8 + jsonChunkLength + (binary.byteLength > 0 ? 8 + binaryChunkLength : 0);
-  const result = new ArrayBuffer(totalLength);
-  const bytes = new Uint8Array(result);
-  const view = new DataView(result);
-  view.setUint32(0, GLB_MAGIC, true);
-  view.setUint32(4, 2, true);
-  view.setUint32(8, totalLength, true);
-  view.setUint32(12, jsonChunkLength, true);
-  view.setUint32(16, GLB_JSON_CHUNK, true);
-  bytes.set(json, 20);
-  bytes.fill(0x20, 20 + json.byteLength, 20 + jsonChunkLength);
-
-  if (binary.byteLength > 0) {
-    const binaryHeaderOffset = 20 + jsonChunkLength;
-    view.setUint32(binaryHeaderOffset, binaryChunkLength, true);
-    view.setUint32(binaryHeaderOffset + 4, GLB_BINARY_CHUNK, true);
-    bytes.set(binary, binaryHeaderOffset + 8);
-  }
-  return result;
 }
 
 function encodeGLTFBase64(bytes: Uint8Array): string {

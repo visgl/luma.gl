@@ -437,7 +437,7 @@ const maskedLeaves = anariDevice.newMaterial('physicallyBased', {
 });
 ```
 
-All 17 supported glTF PBR texture slots map to retained image samplers. Base-color, emissive,
+All 21 supported glTF PBR texture slots map to retained image samplers. Base-color, emissive,
 specular-color, and sheen-color maps use sRGB inputs; normal, metallic/roughness, occlusion, and
 other data maps remain linear. Samplers preserve authored wrapping, filtering, mipmap selection,
 UV set, and texture transforms.
@@ -1224,7 +1224,7 @@ accompany the bundled assets.
 
 The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes,
 reuses retained surfaces for repeated nodes, translates physically based materials, and retains all
-17 canonical PBR texture slots as fragment-sampled ANARI image samplers. Source wrapping, filter and
+21 canonical PBR texture slots as fragment-sampled ANARI image samplers. Source wrapping, filter and
 mipmap settings, color spaces, both UV sets, `KHR_texture_transform`, alpha masking, sidedness, and
 authored punctual lights are preserved. Joint attributes are imported, while animated joint
 deformation additionally requires an application-provided retained `surface.skin.jointMatrices`

@@ -243,7 +243,7 @@ materials, HDR emissive accents, and bloom.
 
 The showcase glTF importer uses `@loaders.gl/gltf` and the canonical `@luma.gl/gltf` helpers,
 preserving indexed meshes, RGB/RGBA vertex colors, `TEXCOORD_0`/`TEXCOORD_1`, authored tangent and
-skin attributes, punctual lights, all 17 supported core/PBR-extension image maps, and source
+skin attributes, punctual lights, all 21 supported core/PBR-extension image maps, and source
 material factors. Per-slot sampler addressing/filtering/mipmap settings, sRGB versus linear color
 space, UV selection, and `KHR_texture_transform` matrices remain intact. `opaque`, `mask`, and
 `blend` materials retain authored cutoff and double-sided settings.
