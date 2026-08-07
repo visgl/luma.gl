@@ -5,9 +5,20 @@
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
 import {
+  isLuvsCandidatePass,
   runLuvsBenchmark,
   validateLuvsOutput
 } from '../../website/src/components/docs/luvs-benchmark-runtime';
+
+test('luVS candidate timings exclude common graph prefixes, initialization, and IVF probes', () => {
+  expect(isLuvsCandidatePass('exact-search-initialize')).toBe(false);
+  expect(isLuvsCandidatePass('filtered-search-clear-output')).toBe(false);
+  expect(isLuvsCandidatePass('approximate-search-probe-query-0')).toBe(false);
+  expect(isLuvsCandidatePass('exact-search-count-candidates-0-0')).toBe(true);
+  expect(isLuvsCandidatePass('filtered-search-score-tile-1')).toBe(true);
+  expect(isLuvsCandidatePass('approximate-search-rerank-query-0-tile-1')).toBe(true);
+  expect(isLuvsCandidatePass('exact-search-select-top-k')).toBe(true);
+});
 
 test('luVS benchmark accepts only Float32-equivalent exact-neighbor rank swaps', () => {
   const makeOutput = (ids: number[], scores: number[]) => ({
