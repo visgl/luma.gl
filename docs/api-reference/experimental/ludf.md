@@ -386,6 +386,18 @@ durations for:
 5. Explicitly reading only the outputs required for validation.
 6. Computing the corresponding CPU reference results.
 
+Choose a source size between **1,024 and 1,048,576 rows** and one, three, or five measured samples.
+Fixtures use packed typed arrays and genuine sliced nullable Arrow dictionary batches rather than
+allocating one JavaScript object per row. Every workload performs an excluded warmup before the
+measured samples; the reported filter, grouping, stable top-K, and join comparisons use median
+CPU and completion-fenced GPU durations, observed GPU rows per second, and measured speedup.
+
+The example records an overall GPU crossover only when a size actually measured on the current
+device has lower aggregate execution time than the equivalent CPU workloads. Upload, compilation,
+explicit validation readback, and the separately measured index are intentionally not hidden inside
+that execution-only comparison. Browser devices, available memory, and adapter limits still
+determine which selected sizes can complete.
+
 GPU durations wait for `device.createFence().signaled` rather than measuring command submission
 alone. The separately reported index-build phase is an equivalent standalone measurement; the
 complete join execution still includes construction of its own index. Timings must not be added or

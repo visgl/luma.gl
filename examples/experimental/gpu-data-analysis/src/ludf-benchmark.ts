@@ -24,8 +24,11 @@ import {
 import {GPUVector, type GPUData} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 
-const DEFAULT_ROW_COUNT = 512;
-const MAXIMUM_ROW_COUNT = 4096;
+const DEFAULT_ROW_COUNT = 65_536;
+const MAXIMUM_ROW_COUNT = 1_048_576;
+const DEFAULT_MEASUREMENT_ITERATIONS = 3;
+const DEFAULT_WARMUP_ITERATIONS = 1;
+const MAXIMUM_MEASUREMENT_ITERATIONS = 9;
 const SLICE_OFFSET = 9;
 const CATEGORY_LABELS = ['North', 'East', 'South', 'West'] as const;
 const MINIMUM_FARE = 20;
@@ -64,16 +67,20 @@ type BenchmarkRightColumns = {
 type BenchmarkDataset = {
   left: arrow.Table<BenchmarkArrowColumns>;
   right: arrow.Table<BenchmarkRightArrowColumns>;
-  rows: readonly BenchmarkSourceRow[];
+  rows: BenchmarkSourceRows;
   batchRowCounts: readonly number[];
 };
 
-type BenchmarkSourceRow = {
-  rowId: number;
-  batchIndex: number;
-  fare: number | null;
-  category: number | null;
+type BenchmarkSourceRows = {
+  fares: Float32Array;
+  categories: Uint32Array;
+  fareValidity: Uint8Array;
+  categoryValidity: Uint8Array;
+  rowCount: number;
+  sliceOffset: number;
 };
+
+type BenchmarkWorkloadName = 'filter' | 'groups' | 'sorting' | 'join';
 
 type BenchmarkReference = {
   filterCounts: number[];
@@ -113,6 +120,21 @@ export type LuDataFrameBenchmarkTimings = {
   cpuMilliseconds: number;
 };
 
+/** Median fence-synchronized GPU and equivalent CPU measurements for one dataframe operation. */
+export type LuDataFrameBenchmarkWorkload = {
+  cpuMilliseconds: number;
+  gpuMilliseconds: number;
+  cpuRowsPerSecond: number;
+  gpuRowsPerSecond: number;
+  speedup: number;
+};
+
+/** Repetition policy used to prevent a single cold submission from masquerading as throughput. */
+export type LuDataFrameBenchmarkMeasurement = {
+  iterations: number;
+  warmupIterations: number;
+};
+
 /** Small independently verified outputs; full Arrow columns are never read back from the GPU. */
 export type LuDataFrameBenchmarkSummaries = {
   filterCount: number;
@@ -128,6 +150,8 @@ export type LuDataFrameBenchmarkResult = {
   rowCount: number;
   batchRowCounts: number[];
   timings: LuDataFrameBenchmarkTimings;
+  workloads: Record<BenchmarkWorkloadName, LuDataFrameBenchmarkWorkload>;
+  measurement: LuDataFrameBenchmarkMeasurement;
   validation: {
     filter: boolean;
     groups: boolean;
@@ -141,7 +165,17 @@ export type LuDataFrameBenchmarkResult = {
 /** Runs real Arrow uploads and correctness-gated dataframe workloads only when explicitly invoked. */
 export async function runLuDataFrameBenchmark(
   device: Device,
-  {rowCount = DEFAULT_ROW_COUNT, signal}: {rowCount?: number; signal?: AbortSignal} = {}
+  {
+    rowCount = DEFAULT_ROW_COUNT,
+    iterations = DEFAULT_MEASUREMENT_ITERATIONS,
+    warmupIterations = DEFAULT_WARMUP_ITERATIONS,
+    signal
+  }: {
+    rowCount?: number;
+    iterations?: number;
+    warmupIterations?: number;
+    signal?: AbortSignal;
+  } = {}
 ): Promise<LuDataFrameBenchmarkResult> {
   if (device.type !== 'webgpu') {
     throw new Error('The luDF benchmark requires a WebGPU device');
@@ -149,12 +183,39 @@ export async function runLuDataFrameBenchmark(
   if (!Number.isSafeInteger(rowCount) || rowCount < 2 || rowCount > MAXIMUM_ROW_COUNT) {
     throw new Error(`The luDF benchmark requires between 2 and ${MAXIMUM_ROW_COUNT} rows`);
   }
+  if (
+    !Number.isSafeInteger(iterations) ||
+    iterations < 1 ||
+    iterations > MAXIMUM_MEASUREMENT_ITERATIONS
+  ) {
+    throw new Error(
+      `The luDF benchmark requires between 1 and ${MAXIMUM_MEASUREMENT_ITERATIONS} measured iterations`
+    );
+  }
+  if (
+    !Number.isSafeInteger(warmupIterations) ||
+    warmupIterations < 0 ||
+    warmupIterations > MAXIMUM_MEASUREMENT_ITERATIONS
+  ) {
+    throw new Error(
+      `The luDF benchmark requires between 0 and ${MAXIMUM_MEASUREMENT_ITERATIONS} warmup iterations`
+    );
+  }
   signal?.throwIfAborted();
 
   const dataset = createBenchmarkDataset(rowCount);
-  const cpuStarted = performance.now();
-  const reference = createBenchmarkReference(dataset.rows, dataset.batchRowCounts);
-  const cpuMilliseconds = performance.now() - cpuStarted;
+  const reference = createLuDataFrameBenchmarkReference(dataset.rows, dataset.batchRowCounts);
+  const cpuSamples = measureBenchmarkCPUWorkloads(
+    dataset.rows,
+    dataset.batchRowCounts,
+    iterations,
+    warmupIterations,
+    signal
+  );
+  const cpuMilliseconds = Object.values(cpuSamples).reduce(
+    (sum, samples) => sum + getBenchmarkMedian(samples),
+    0
+  );
 
   const ownedBuffers: Buffer[] = [];
   let left: LuDataFrame<BenchmarkColumns> | undefined;
@@ -193,20 +254,32 @@ export async function runLuDataFrameBenchmark(
       'ludf-benchmark-standalone-index',
       signal
     );
-    let executionMilliseconds = 0;
+    const gpuSamples: Record<BenchmarkWorkloadName, number[]> = {
+      filter: [],
+      groups: [],
+      sorting: [],
+      join: []
+    };
     for (const [name, graph] of [
       ['filter', graphs.filter],
       ['groups', graphs.groups],
       ['sorting', graphs.sorting],
       ['join', graphs.join]
     ] as const) {
-      executionMilliseconds += await executeBenchmarkGraph(
-        device,
-        graph,
-        `ludf-benchmark-${name}`,
-        signal
-      );
+      for (let iteration = 0; iteration < warmupIterations + iterations; iteration++) {
+        const milliseconds = await executeBenchmarkGraph(
+          device,
+          graph,
+          `ludf-benchmark-${name}-${iteration}`,
+          signal
+        );
+        if (iteration >= warmupIterations) gpuSamples[name].push(milliseconds);
+      }
     }
+    const executionMilliseconds = Object.values(gpuSamples).reduce(
+      (sum, samples) => sum + getBenchmarkMedian(samples),
+      0
+    );
 
     const readbackStarted = performance.now();
     const bytes = {value: 0};
@@ -269,7 +342,16 @@ export async function runLuDataFrameBenchmark(
       compareNestedNumberArrays(joinRightRowIds, reference.joinRightRowIds);
 
     if (!filter || !groups || !sorting || !join) {
-      throw new Error('The luDF benchmark GPU outputs do not match the shared CPU reference');
+      const failedWorkloads = Object.entries({filter, groups, sorting, join})
+        .filter(([, valid]) => !valid)
+        .map(([name]) => name)
+        .join(', ');
+      throw new Error(
+        `The luDF benchmark GPU outputs do not match the CPU reference: ${failedWorkloads}` +
+          (!groups
+            ? ` (GPU sums ${groupSums.join(', ')}; CPU sums ${reference.groupSums.join(', ')})`
+            : '')
+      );
     }
     signal?.throwIfAborted();
     return {
@@ -283,6 +365,25 @@ export async function runLuDataFrameBenchmark(
         readbackMilliseconds,
         cpuMilliseconds
       },
+      workloads: {
+        filter: summarizeLuDataFrameBenchmarkSamples(
+          rowCount,
+          cpuSamples.filter,
+          gpuSamples.filter
+        ),
+        groups: summarizeLuDataFrameBenchmarkSamples(
+          rowCount,
+          cpuSamples.groups,
+          gpuSamples.groups
+        ),
+        sorting: summarizeLuDataFrameBenchmarkSamples(
+          rowCount,
+          cpuSamples.sorting,
+          gpuSamples.sorting
+        ),
+        join: summarizeLuDataFrameBenchmarkSamples(rowCount, cpuSamples.join, gpuSamples.join)
+      },
+      measurement: {iterations, warmupIterations},
       validation: {filter, groups, sorting, join},
       summaries: {
         filterCount: filterCounts.reduce((total, count) => total + count, 0),
@@ -311,14 +412,22 @@ export async function runLuDataFrameBenchmark(
 /** Constructs sliced nullable Arrow columns and dictionary-compatible independent right batches. */
 function createBenchmarkDataset(rowCount: number): BenchmarkDataset {
   const totalRows = rowCount + SLICE_OFFSET;
-  const fares: (number | null)[] = [];
+  const fares = new Float32Array(totalRows);
   const categories = new Uint32Array(totalRows);
   const tripIds = new Uint32Array(totalRows);
+  const fareBitmap = new Uint8Array(Math.ceil(totalRows / 8));
   const categoryBitmap = new Uint8Array(Math.ceil(totalRows / 8));
+  let fareNullCount = 0;
   let categoryNullCount = 0;
 
   for (let index = 0; index < totalRows; index++) {
-    fares.push(index % 13 === 0 ? null : Math.fround(((index * 37) % 121) - 30 + (index % 7) / 10));
+    // Half-integer fares and the half-integer adjustment keep million-row sums exactly representable.
+    fares[index] = Math.fround(((index * 37) % 121) - 30 + 0.5);
+    if (index % 13 === 0) {
+      fareNullCount++;
+    } else {
+      fareBitmap[index >> 3] |= 1 << (index & 7);
+    }
     categories[index] = index % CATEGORY_LABELS.length;
     tripIds[index] = index - SLICE_OFFSET >= 0 ? index - SLICE_OFFSET : 0;
     if (index % 11 === 0) {
@@ -339,7 +448,15 @@ function createBenchmarkDataset(rowCount: number): BenchmarkDataset {
     dictionary
   });
   const categoryVector = new arrow.Vector([categoryData]);
-  const fareVector = arrow.vectorFromArray(fares, new arrow.Float32());
+  const fareVector = new arrow.Vector([
+    arrow.makeData({
+      type: new arrow.Float32(),
+      length: totalRows,
+      data: fares,
+      nullBitmap: fareBitmap,
+      nullCount: fareNullCount
+    })
+  ]);
   const tripIdVector = arrow.makeVector(tripIds);
   const fields = [
     new arrow.Field('fare', new arrow.Float32(), true, new Map([['unit', 'USD']])),
@@ -415,70 +532,183 @@ function createBenchmarkDataset(rowCount: number): BenchmarkDataset {
     );
   });
 
-  const rows: BenchmarkSourceRow[] = [];
-  for (let rowId = 0; rowId < rowCount; rowId++) {
-    const sourceIndex = rowId + SLICE_OFFSET;
-    rows.push({
-      rowId,
-      batchIndex: rowId < midpoint ? 0 : 2,
-      fare: fares[sourceIndex],
-      category: sourceIndex % 11 === 0 ? null : categories[sourceIndex]
-    });
-  }
   return {
     left: new arrow.Table(schema, batches),
     right: new arrow.Table(rightSchema, rightBatches),
-    rows,
+    rows: {
+      fares,
+      categories,
+      fareValidity: fareBitmap,
+      categoryValidity: categoryBitmap,
+      rowCount,
+      sliceOffset: SLICE_OFFSET
+    },
     batchRowCounts: [midpoint, 0, rowCount - midpoint]
   };
 }
 
-/** Computes exact source-batch-aware CPU oracles for every independent GPU workload. */
-function createBenchmarkReference(
-  rows: readonly BenchmarkSourceRow[],
+/** @internal Computes equivalent projected CPU work for every independent GPU workload. */
+export function createLuDataFrameBenchmarkReference(
+  rows: BenchmarkSourceRows,
   batchRowCounts: readonly number[]
 ): BenchmarkReference {
-  const filterCounts = batchRowCounts.map(() => 0);
+  return {
+    filterCounts: createBenchmarkFilterReference(rows, batchRowCounts),
+    ...createBenchmarkGroupReference(rows),
+    topKRowIds: createBenchmarkSortingReference(rows, batchRowCounts),
+    ...createBenchmarkJoinReference(rows, batchRowCounts)
+  };
+}
+
+/** Times equivalent CPU operations independently so fused JavaScript work cannot bias comparisons. */
+function measureBenchmarkCPUWorkloads(
+  rows: BenchmarkSourceRows,
+  batchRowCounts: readonly number[],
+  iterations: number,
+  warmupIterations: number,
+  signal: AbortSignal | undefined
+): Record<BenchmarkWorkloadName, number[]> {
+  const samples: Record<BenchmarkWorkloadName, number[]> = {
+    filter: [],
+    groups: [],
+    sorting: [],
+    join: []
+  };
+  const workloads = {
+    filter: () => createBenchmarkFilterReference(rows, batchRowCounts),
+    groups: () => createBenchmarkGroupReference(rows),
+    sorting: () => createBenchmarkSortingReference(rows, batchRowCounts),
+    join: () => createBenchmarkJoinReference(rows, batchRowCounts)
+  };
+  for (const name of ['filter', 'groups', 'sorting', 'join'] as const) {
+    for (let iteration = 0; iteration < warmupIterations + iterations; iteration++) {
+      signal?.throwIfAborted();
+      const started = performance.now();
+      workloads[name]();
+      const milliseconds = performance.now() - started;
+      if (iteration >= warmupIterations) samples[name].push(milliseconds);
+    }
+  }
+  return samples;
+}
+
+/** Checks packed nullable Arrow bitmaps without allocating one JavaScript object per source row. */
+function isBenchmarkRowSelected(rows: BenchmarkSourceRows, rowId: number): boolean {
+  const sourceIndex = rowId + rows.sliceOffset;
+  const mask = 1 << (sourceIndex & 7);
+  return (
+    (rows.fareValidity[sourceIndex >> 3] & mask) !== 0 &&
+    (rows.categoryValidity[sourceIndex >> 3] & mask) !== 0 &&
+    rows.fares[sourceIndex] > MINIMUM_FARE
+  );
+}
+
+/** Materializes the same complete float32 projection present in every compiled GPU query. */
+function createBenchmarkAdjustedFares(rows: BenchmarkSourceRows): Float32Array {
+  const adjustedFares = new Float32Array(rows.rowCount);
+  for (let rowId = 0; rowId < rows.rowCount; rowId++) {
+    adjustedFares[rowId] = Math.fround(rows.fares[rowId + rows.sliceOffset] + DRIVER_TIP);
+  }
+  return adjustedFares;
+}
+
+function createBenchmarkFilterReference(
+  rows: BenchmarkSourceRows,
+  batchRowCounts: readonly number[]
+): number[] {
+  createBenchmarkAdjustedFares(rows);
+  const counts = batchRowCounts.map(() => 0);
+  const midpoint = batchRowCounts[0];
+  for (let rowId = 0; rowId < rows.rowCount; rowId++) {
+    if (isBenchmarkRowSelected(rows, rowId)) counts[rowId < midpoint ? 0 : 2]++;
+  }
+  return counts;
+}
+
+function createBenchmarkGroupReference(rows: BenchmarkSourceRows): {
+  groupCounts: number[];
+  groupSums: number[];
+} {
+  const adjustedFares = createBenchmarkAdjustedFares(rows);
   const groupCounts = CATEGORY_LABELS.map(() => 0);
   const groupSums = CATEGORY_LABELS.map(() => 0);
-  const selectedByBatch = batchRowCounts.map(
-    () => [] as Array<{rowId: number; adjusted: number; category: number}>
-  );
-
-  for (const row of rows) {
-    if (row.fare === null || row.fare <= MINIMUM_FARE || row.category === null) {
-      continue;
-    }
-    const adjusted = Math.fround(row.fare + DRIVER_TIP);
-    filterCounts[row.batchIndex]++;
-    groupCounts[row.category]++;
-    groupSums[row.category] += adjusted;
-    selectedByBatch[row.batchIndex].push({rowId: row.rowId, adjusted, category: row.category});
+  for (let rowId = 0; rowId < rows.rowCount; rowId++) {
+    if (!isBenchmarkRowSelected(rows, rowId)) continue;
+    const sourceIndex = rowId + rows.sliceOffset;
+    const category = rows.categories[sourceIndex];
+    groupCounts[category]++;
+    groupSums[category] += adjustedFares[rowId];
   }
+  return {groupCounts, groupSums};
+}
 
-  const topKRowIds = selectedByBatch.map(values =>
-    [...values]
-      .sort((left, right) => right.adjusted - left.adjusted || left.rowId - right.rowId)
+function createBenchmarkSortingReference(
+  rows: BenchmarkSourceRows,
+  batchRowCounts: readonly number[]
+): number[][] {
+  const adjustedFares = createBenchmarkAdjustedFares(rows);
+  const midpoint = batchRowCounts[0];
+  const selectedByBatch: number[][] = batchRowCounts.map(() => []);
+  for (let rowId = 0; rowId < rows.rowCount; rowId++) {
+    if (isBenchmarkRowSelected(rows, rowId)) {
+      selectedByBatch[rowId < midpoint ? 0 : 2].push(rowId);
+    }
+  }
+  return selectedByBatch.map(rowIds =>
+    rowIds
+      .sort((left, right) => adjustedFares[right] - adjustedFares[left] || left - right)
       .slice(0, TOP_K_LIMIT)
-      .map(row => row.rowId)
   );
-  const joinRequiredCounts = selectedByBatch.map(values => values.length);
-  const joinLeftRowIds = selectedByBatch.map(values =>
-    values.slice(0, JOIN_CAPACITY).map(row => row.rowId)
-  );
-  const joinRightRowIds = selectedByBatch.map(values =>
-    values.slice(0, JOIN_CAPACITY).map(row => row.category)
-  );
+}
 
+function createBenchmarkJoinReference(
+  rows: BenchmarkSourceRows,
+  batchRowCounts: readonly number[]
+): Pick<BenchmarkReference, 'joinRequiredCounts' | 'joinLeftRowIds' | 'joinRightRowIds'> {
+  createBenchmarkAdjustedFares(rows);
+  const joinRequiredCounts = batchRowCounts.map(() => 0);
+  const joinLeftRowIds: number[][] = batchRowCounts.map(() => []);
+  const joinRightRowIds: number[][] = batchRowCounts.map(() => []);
+  const midpoint = batchRowCounts[0];
+  for (let rowId = 0; rowId < rows.rowCount; rowId++) {
+    if (!isBenchmarkRowSelected(rows, rowId)) continue;
+    const batchIndex = rowId < midpoint ? 0 : 2;
+    joinRequiredCounts[batchIndex]++;
+    if (joinLeftRowIds[batchIndex].length < JOIN_CAPACITY) {
+      joinLeftRowIds[batchIndex].push(rowId);
+      joinRightRowIds[batchIndex].push(rows.categories[rowId + rows.sliceOffset]);
+    }
+  }
+  return {joinRequiredCounts, joinLeftRowIds, joinRightRowIds};
+}
+
+/** Summarizes observed CPU/GPU samples without inventing a crossover or including setup phases. */
+export function summarizeLuDataFrameBenchmarkSamples(
+  rowCount: number,
+  cpuSamples: readonly number[],
+  gpuSamples: readonly number[]
+): LuDataFrameBenchmarkWorkload {
+  if (!Number.isSafeInteger(rowCount) || rowCount < 1) {
+    throw new Error('Benchmark throughput requires a positive row count');
+  }
+  const cpuMilliseconds = getBenchmarkMedian(cpuSamples);
+  const gpuMilliseconds = getBenchmarkMedian(gpuSamples);
   return {
-    filterCounts,
-    groupCounts,
-    groupSums,
-    topKRowIds,
-    joinRequiredCounts,
-    joinLeftRowIds,
-    joinRightRowIds
+    cpuMilliseconds,
+    gpuMilliseconds,
+    cpuRowsPerSecond: cpuMilliseconds > 0 ? (rowCount * 1000) / cpuMilliseconds : 0,
+    gpuRowsPerSecond: gpuMilliseconds > 0 ? (rowCount * 1000) / gpuMilliseconds : 0,
+    speedup: gpuMilliseconds > 0 ? cpuMilliseconds / gpuMilliseconds : 0
   };
+}
+
+function getBenchmarkMedian(samples: readonly number[]): number {
+  if (samples.length === 0 || samples.some(sample => !Number.isFinite(sample) || sample < 0)) {
+    throw new Error('Benchmark samples must contain finite nonnegative durations');
+  }
+  const sorted = [...samples].sort((left, right) => left - right);
+  const midpoint = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[midpoint - 1] + sorted[midpoint]) / 2 : sorted[midpoint];
 }
 
 /** Compiles four reusable dataframe workloads plus one truthful, standalone equivalent index. */

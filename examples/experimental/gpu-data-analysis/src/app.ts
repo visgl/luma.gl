@@ -63,7 +63,9 @@ type ExampleElements = {
   luDataFrameSelected: HTMLElement;
   luDataFrameThreshold: HTMLInputElement;
   ludfBenchmark: HTMLButtonElement;
+  ludfBenchmarkIterations: HTMLSelectElement;
   ludfBenchmarkResults: HTMLElement;
+  ludfBenchmarkRows: HTMLSelectElement;
   ludfBenchmarkStatus: HTMLElement;
   nodes: HTMLElement;
   reuse: HTMLElement;
@@ -91,6 +93,7 @@ class GPUDataAnalysisExample {
   private device: Device | null = null;
   private resources: ExampleResources | null = null;
   private benchmarkController: AbortController | null = null;
+  private readonly benchmarkHistory: LuDataFrameBenchmarkResult[] = [];
   private destroyed = false;
   private hasRunLuDataFrameDemo = false;
   private runVersion = 0;
@@ -740,16 +743,20 @@ class GPUDataAnalysisExample {
     this.elements.ludfBenchmark.disabled = true;
     this.elements.ludfBenchmarkResults.dataset.state = 'running';
     this.elements.ludfBenchmarkResults.dataset.validated = 'false';
-    this.elements.ludfBenchmarkStatus.textContent =
-      'Uploading a nullable Arrow dictionary dataset and validating GPU dataframe queries...';
+    const rowCount = Number(this.elements.ludfBenchmarkRows.value);
+    const iterations = Number(this.elements.ludfBenchmarkIterations.value);
+    this.elements.ludfBenchmarkStatus.textContent = `Preparing ${rowCount.toLocaleString()} nullable Arrow rows and ${iterations} measured samples...`;
 
     try {
       const result = await runLuDataFrameBenchmark(this.device, {
-        rowCount: 384,
+        rowCount,
+        iterations,
+        warmupIterations: 1,
         signal: controller.signal
       });
       if (this.destroyed || controller.signal.aborted) return;
-      renderLuDataFrameBenchmark(this.elements, result);
+      this.benchmarkHistory.push(result);
+      renderLuDataFrameBenchmark(this.elements, result, this.benchmarkHistory);
     } catch (error) {
       if (this.destroyed || controller.signal.aborted) return;
       this.elements.ludfBenchmarkResults.dataset.state = 'error';
@@ -1047,7 +1054,9 @@ function getElements(root: HTMLElement): ExampleElements {
     luDataFrameSelected: get('[data-ludf-selected]'),
     luDataFrameThreshold: get('[data-ludf-threshold]'),
     ludfBenchmark: get('[data-ludf-benchmark]'),
+    ludfBenchmarkIterations: get('[data-ludf-benchmark-iterations]'),
     ludfBenchmarkResults: get('[data-ludf-benchmark-phases]'),
+    ludfBenchmarkRows: get('[data-ludf-benchmark-rows]'),
     ludfBenchmarkStatus: get('[data-ludf-benchmark-status]'),
     nodes: get('[data-nodes]'),
     reuse: get('[data-reuse]'),
@@ -1068,7 +1077,8 @@ function ensureStyles(): void {
 /** Renders only bounded, independently fenced phase timings and explicit CPU-oracle validation. */
 function renderLuDataFrameBenchmark(
   elements: ExampleElements,
-  result: LuDataFrameBenchmarkResult
+  result: LuDataFrameBenchmarkResult,
+  history: readonly LuDataFrameBenchmarkResult[]
 ): void {
   const timingRows = [
     ['upload', 'Arrow upload', result.timings.uploadMilliseconds],
@@ -1078,18 +1088,43 @@ function renderLuDataFrameBenchmark(
     ['readback', 'Bounded result readback', result.timings.readbackMilliseconds],
     ['cpu', 'Equivalent CPU reference', result.timings.cpuMilliseconds]
   ] as const;
-  elements.ludfBenchmarkResults.innerHTML = `<table><thead><tr><th scope="col">Phase</th><th scope="col">Milliseconds</th></tr></thead><tbody>${timingRows
+  const phaseTable = `<table><thead><tr><th scope="col">Phase</th><th scope="col">Milliseconds</th></tr></thead><tbody>${timingRows
     .map(
       ([phase, label, milliseconds]) =>
         `<tr data-ludf-phase="${phase}"><th scope="row">${label}</th><td>${milliseconds.toFixed(2)}</td></tr>`
     )
     .join('')}</tbody></table>`;
+  const workloadRows = Object.entries(result.workloads)
+    .map(
+      ([name, workload]) =>
+        `<tr data-ludf-workload="${name}"><th scope="row">${name}</th><td>${workload.cpuMilliseconds.toFixed(2)}</td><td>${workload.gpuMilliseconds.toFixed(2)}</td><td>${formatBenchmarkThroughput(workload.gpuRowsPerSecond)}</td><td>${workload.speedup.toFixed(2)}×</td></tr>`
+    )
+    .join('');
+  const crossover = [...history]
+    .sort((left, right) => left.rowCount - right.rowCount)
+    .find(
+      measurement => measurement.timings.cpuMilliseconds > measurement.timings.executionMilliseconds
+    );
+  const crossoverMessage = crossover
+    ? `Measured end-to-end GPU crossover: ${crossover.rowCount.toLocaleString()} rows.`
+    : 'No GPU crossover observed yet; compare larger datasets on this device.';
+  elements.ludfBenchmarkResults.innerHTML = `${phaseTable}
+    <p class="workload-title">MEDIAN OPERATION COMPARISONS</p>
+    <p class="workload-metadata">${result.measurement.warmupIterations} warmup · ${result.measurement.iterations} measured sample${result.measurement.iterations === 1 ? '' : 's'} · GPU durations include completion fences</p>
+    <table class="workload-table"><thead><tr><th scope="col">Operation</th><th scope="col">CPU ms</th><th scope="col">GPU ms</th><th scope="col">GPU rows/s</th><th scope="col">GPU speedup</th></tr></thead><tbody>${workloadRows}</tbody></table>
+    <p class="benchmark-crossover" data-ludf-crossover>${crossoverMessage}</p>`;
   const validated = Object.values(result.validation).every(Boolean);
   elements.ludfBenchmarkResults.dataset.state = validated ? 'ok' : 'error';
   elements.ludfBenchmarkResults.dataset.validated = String(validated);
   elements.ludfBenchmarkStatus.textContent = validated
     ? `${result.rowCount.toLocaleString()} Arrow rows · batches ${result.batchRowCounts.join(' / ')} · filter, grouping, sorting, and joins match the CPU reference · ${result.readbackBytes.toLocaleString()} summary bytes read`
     : 'GPU dataframe results did not match their equivalent CPU reference.';
+}
+
+function formatBenchmarkThroughput(rowsPerSecond: number): string {
+  if (rowsPerSecond >= 1_000_000) return `${(rowsPerSecond / 1_000_000).toFixed(2)}M`;
+  if (rowsPerSecond >= 1_000) return `${(rowsPerSecond / 1_000).toFixed(1)}K`;
+  return rowsPerSecond.toFixed(0);
 }
 
 function getErrorMessage(error: unknown): string {
