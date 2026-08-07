@@ -77,7 +77,7 @@ relationships, analytics, or moving node positions into JavaScript objects?**
 
 The optional [luGraph + deck.gl network explorer](/examples/deck/lugraph-explorer) answers that
 question with the reusable `LuGraphDeckEffect`, `LuGraphNodeLayer`, and `LuGraphEdgeLayer`
-implementations from the existing private `@deck.gl-community/luspatial` adapter package, an
+implementations from the existing private `@deck.gl-community/arrow-layers` adapter package, an
 `OrthographicView`, and deck.gl's existing interaction and asynchronous WebGPU picking systems.
 Use it when a social-network, service-dependency, fraud-investigation, or citation visualization
 already uses deck.gl and needs GPU graph results to become directly drawable attributes.
@@ -99,7 +99,7 @@ exact `O(V² + E)` layout, not the optional spatial approximation, and does not 
 throughput.
 
 The reusable graph effect, node and edge layers, and graph integration's deck.gl imports live in
-the existing private `@deck.gl-community/luspatial` adapter. The website-only example consumes
+the existing private `@deck.gl-community/arrow-layers` adapter. The website-only example consumes
 those exported symbols without importing `@deck.gl/core` or adding an example package; neither
 `@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl.
 

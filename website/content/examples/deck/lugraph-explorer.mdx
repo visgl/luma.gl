@@ -31,7 +31,7 @@ existing responsibility while sharing the same actual GPU allocations.
 A reusable `LuGraphDeckEffect` schedules luGraph work inside the existing deck.gl frame.
 `LuGraphNodeLayer` and `LuGraphEdgeLayer` consume its results directly, and an `OrthographicView`
 provides familiar pan and zoom. Those reusable adapters and all graph integration-specific
-deck.gl imports live in the existing private `@deck.gl-community/luspatial` module. Graph
+deck.gl imports live in the existing private `@deck.gl-community/arrow-layers` module. Graph
 analytics remain in `@luma.gl/experimental/lugraph`, while this unpackaged example imports the
 adapter's public symbols without importing `@deck.gl/core` directly.
 

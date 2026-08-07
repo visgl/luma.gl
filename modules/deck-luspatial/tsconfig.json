@@ -10,7 +10,6 @@
   "references": [
     {"path": "../core"},
     {"path": "../engine"},
-    {"path": "../experimental"},
-    {"path": "../tables"}
+    {"path": "../experimental"}
   ]
 }

@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {EffectContext} from '@deck.gl/core';
-import {LuGraphDeckEffect, LuGraphEdgeLayer, LuGraphNodeLayer} from '@deck.gl-community/luspatial';
+import {
+  LuGraphDeckEffect,
+  LuGraphEdgeLayer,
+  LuGraphNodeLayer
+} from '@deck.gl-community/arrow-layers';
 import {Buffer} from '@luma.gl/core';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import type {GPUVector} from '@luma.gl/tables';

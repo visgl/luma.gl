@@ -10,7 +10,7 @@ import {
   LuGraphDeckEffect,
   LuGraphEdgeLayer,
   LuGraphNodeLayer
-} from '@deck.gl-community/luspatial';
+} from '@deck.gl-community/arrow-layers';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as luGraphModule from '@luma.gl/experimental/lugraph';
 import {describe, expect, test} from 'vitest';
@@ -51,13 +51,14 @@ describe('optional luGraph deck.gl integration package isolation', () => {
     expect('LuGraphEdgeLayer' in luGraphModule).toBe(false);
   });
 
-  test('keeps deck.gl and GPU table dependencies inside the private integration package', () => {
+  test('keeps deck.gl and GPU graph dependencies inside the existing private layers package', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8')
     ) as {private?: boolean; dependencies?: Record<string, string>};
 
     expect(packageJson.private).toBe(true);
     expect(packageJson.dependencies?.['@deck.gl/core']).toBe('9.3.4');
+    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBe('9.4.0-alpha.4');
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBe('9.4.0-alpha.4');
   });
 
@@ -67,7 +68,8 @@ describe('optional luGraph deck.gl integration package isolation', () => {
       'utf8'
     );
 
-    expect(exampleSource).toContain("from '@deck.gl-community/luspatial'");
+    expect(exampleSource).toContain("from '@deck.gl-community/arrow-layers'");
+    expect(exampleSource).not.toContain('@deck.gl-community/luspatial');
     expect(exampleSource).not.toContain('@deck.gl/core');
   });
 

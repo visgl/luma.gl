@@ -2,7 +2,7 @@
   "name": "@deck.gl-community/luspatial",
   "version": "9.4.0-alpha.4",
   "private": true,
-  "description": "deck.gl adapters for GPU-native spatial and graph data",
+  "description": "deck.gl layers for GPU-selected luSpatial data",
   "license": "MIT",
   "type": "module",
   "types": "dist/index.d.ts",
@@ -26,7 +26,6 @@
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
     "@luma.gl/experimental": "9.4.0-alpha.4",
-    "@luma.gl/shadertools": "9.4.0-alpha.4",
-    "@luma.gl/tables": "9.4.0-alpha.4"
+    "@luma.gl/shadertools": "9.4.0-alpha.4"
   }
 }

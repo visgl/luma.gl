@@ -26,6 +26,7 @@
     "@luma.gl/arrow": "9.4.0-alpha.4",
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/experimental": "9.4.0-alpha.4",
     "@luma.gl/shadertools": "9.4.0-alpha.4",
     "@luma.gl/tables": "9.4.0-alpha.4",
     "apache-arrow": "^17.0.0"

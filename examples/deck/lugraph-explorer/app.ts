@@ -8,7 +8,7 @@ import {
   LuGraphNodeLayer,
   OrthographicView,
   type PickingInfo
-} from '@deck.gl-community/luspatial';
+} from '@deck.gl-community/arrow-layers';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   ShaderAssembler,
