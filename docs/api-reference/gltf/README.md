@@ -86,9 +86,21 @@ bundle contains:
 | `gltfNodeIdToNodeMap`, `gltfNodeIndexToNodeMap` | Source-node lookup tables for application integration. |
 | `gltfMeshIdToNodeMap` | Source-mesh lookup table. |
 | `gltf` | The original postprocessed glTF document. |
+| `destroy()` | Idempotently releases scene-owned models, materials, buffers, and textures. |
 
 Each bounds object contains `bounds`, `center`, `size`, `radius`, and
 `recommendedOrbitDistance`.
+
+### Asset lifetime
+
+Release the returned scenegraphs when replacing or unloading an asset:
+
+```ts
+scenegraphs.destroy();
+```
+
+This includes hidden nodes, detached mesh templates, instancing buffers, and generated source-image
+textures. The application-owned device and borrowed image-based-lighting textures are not destroyed.
 
 ### Options
 
