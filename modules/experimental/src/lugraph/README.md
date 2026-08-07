@@ -10,8 +10,9 @@ Reusable compressed adjacency supports vertex-degree queries, bounded breadth-fi
 nonnegative weighted single-source routes, weakly connected components,
 deterministic label-propagation communities, local clustering coefficients, structural core
 numbers, and normalized PageRank with dangling-vertex redistribution. Partition modularity scores
-caller-owned community assignments directly against the original weighted source edges, and
-progressive exact force-directed layout produces directly renderable GPU positions. An optional
+caller-owned community assignments directly against the original weighted source edges, while
+bounded single-level optimization can improve those assignments one deterministic move at a time.
+The progressive exact force-directed layout produces directly renderable GPU positions. An optional
 `LuGraphSpatialForceLayout` can approximate distant
 uniform-grid cells while keeping nearby forces exact; it preserves the same positions, explicit
 bounds, caller-owned indexing buffers, and observable overflow status. These operations contribute
@@ -33,7 +34,9 @@ hub with 100 unconnected followers has degree 100 but core number one, whereas e
 four-person clique has core number three. Choose `LuGraphModularity` when you already have
 community labels and need to measure whether those groups retain more relationship weight than a
 degree-matched random network would predict. It scores a proposed partition; it does not discover
-or optimize communities.
+or optimize communities. Choose `LuGraphModularityOptimization` when you actually need to improve
+a starting partition, retain the best positive-gain move per bounded round, and publish both its
+final labels and actual weighted modularity score.
 
 Weakly connected components find disconnected
 islands; `LuGraphLabelPropagation` can expose friend circles, related service groups, or
@@ -68,7 +71,8 @@ Its rules allow single-node, GPU-based, and partial submissions, but formal resu
 the prescribed datasets, reference outputs, repeated runs, system disclosures, and reproducible
 validation. luGraph's local CPU/WebGPU benchmark is not that official driver, an audited
 submission, or a published Graphalytics score. Core numbers and modularity are additional
-capabilities **beyond** the six Graphalytics workload families.
+capabilities **beyond** the six Graphalytics workload families; modularity optimization likewise
+extends beyond the standard and does not become a seventh official workload.
 
 ## Weighted routes and local neighborhoods
 
@@ -109,6 +113,17 @@ accumulation overflow publish a zero score and zero validity. A finite nonnegati
 adjusts the degree-matched baseline; the default is one.
 This is a community-quality measurement, not Louvain, Leiden, hierarchical coarsening, or
 automatic modularity optimization.
+
+`LuGraphModularityOptimization` improves identity-initialized or caller-supplied `uint32`
+communities using the same directed or undirected weighted objective. Each bounded round selects
+the single globally largest strictly positive modularity gain, breaking ties by the lowest vertex
+identifier and then the lowest candidate community. It publishes improved labels, the actual
+one-row `float32` modularity score, and optional convergence and validity statuses without CPU
+synchronization. The default 32 rounds can be changed from zero through 1024; zero rounds score
+the unchanged initial partition. Directed graphs require reverse CSR, original weights and edge
+multiplicity are preserved, and invalid labels, invalid accepted weights, zero edge weight, or
+adjacency overflow fail closed. This is single-level Louvain-style local moving, not full
+multilevel Louvain, Leiden refinement, graph coarsening, or a global optimum.
 
 Exact layout suits smaller graphs and accuracy-sensitive workflows; the optional
 flat-grid approximation suits applications that can trade some far-field accuracy for fewer
