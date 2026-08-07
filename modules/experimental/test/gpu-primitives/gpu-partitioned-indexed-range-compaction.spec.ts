@@ -22,24 +22,12 @@ test('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks',
 
   const resources: Buffer[] = [];
   const graph = new GPUCommandGraph(device, {id: 'partitioned-range-compaction-graph'});
-  const flags = createImportedVector(
-    graph,
-    device,
-    resources,
-    'flags',
-    [
-      [1, 0, 1, 0, 1, 1],
-      [0, 1, 1, 0, 1]
-    ]
-  );
+  const flags = createImportedVector(graph, device, resources, 'flags', [
+    [1, 0, 1, 0, 1, 1],
+    [0, 1, 1, 0, 1]
+  ]);
   const output = createOutputVector(graph, device, resources, 'output', [6, 5]);
-  const ranges = createImportedView(
-    graph,
-    device,
-    resources,
-    'ranges',
-    [0, 3, 3, 3, 6, 2, 8, 3]
-  );
+  const ranges = createImportedView(graph, device, resources, 'ranges', [0, 3, 3, 3, 6, 2, 8, 3]);
   const activeRangeIdsResource = createImportedBuffer(
     graph,
     device,
@@ -84,7 +72,11 @@ test('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks',
     await encodeAndSubmit(device, compiled, 'partitioned-range-compaction-subset');
     t.deepEqual(await readUint32(output.buffers[0], 2), [4, 5], 'first candidate partition');
     t.deepEqual(await readUint32(output.buffers[1], 2), [8, 10], 'second candidate partition');
-    t.deepEqual(await readUint32(count.buffer, 1), [4], 'GPU candidate changes avoid recompilation');
+    t.deepEqual(
+      await readUint32(count.buffer, 1),
+      [4],
+      'GPU candidate changes avoid recompilation'
+    );
   } finally {
     compiled.destroy();
     for (const resource of resources) resource.destroy();
@@ -168,7 +160,11 @@ function createImportedBuffer(
     {id, byteLength: buffer.byteLength, usage: buffer.usage},
     buffer
   );
-  return {buffer, handle, view: graph.createDataView(handle, {format: 'uint32', length: values.length})};
+  return {
+    buffer,
+    handle,
+    view: graph.createDataView(handle, {format: 'uint32', length: values.length})
+  };
 }
 
 function createOutputView(
