@@ -539,7 +539,10 @@ function getGPUDataBinding(data: GPUData): Binding {
   return {
     buffer: data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer,
     offset: data.byteOffset,
-    size: data.valueByteLength ?? fixedSizeListByteLength ?? data.valueLength * data.byteStride
+    size:
+      fixedSizeListByteLength === undefined
+        ? (data.valueByteLength ?? data.valueLength * data.byteStride)
+        : Math.max(data.valueByteLength ?? 0, fixedSizeListByteLength)
   };
 }
 
