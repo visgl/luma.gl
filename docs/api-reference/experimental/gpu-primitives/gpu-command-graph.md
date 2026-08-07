@@ -152,9 +152,9 @@ byte offsets must be divisible by four.
 
 Declares caller-owned storage. A default `Buffer` or `DynamicBuffer` may be supplied during graph
 construction, or the caller may provide a compatible override to each encoding. Represent each
-physical buffer with one logical handle and create multiple views from that handle. Distinct imported
-handles, including their per-encoding overrides, must not resolve to the same physical buffer because
-hazards are tracked by handle identity.
+physical buffer with one logical handle whenever any graph access writes to it. Separate active
+handles may resolve to the same physical buffer only when every access through both handles is
+read-only. The same rule applies to `DynamicBuffer` wrappers and per-encoding overrides.
 
 ### `createTransientBuffer(descriptor)`
 
@@ -176,6 +176,67 @@ Imports every fixed-width `GPUData` chunk without packing and returns a `GraphVe
 order, vector metadata, per-chunk offsets, and shared backing buffers are preserved. Interleaved and
 variable-length vectors require explicit adapters and are rejected.
 
+### Choosing a buffer feature
+
+Use `importBuffer()` when the application already owns persistent storage, such as source data,
+published results, or an indirect draw buffer. Use `createTransientBuffer()` for an intermediate
+that exists only while this graph executes; the compiler can safely reuse its allocation after its
+last scheduled use. Use `createDataView()` to describe a typed range of either kind of buffer.
+
+Use `importGPUData()` when one table chunk is the unit of work. Use `importGPUVector()` when the
+source arrived in several record batches and those boundaries matter. Importing a vector preserves
+its existing buffers, offsets, ordering, and empty chunks; it does not concatenate or upload rows.
+Multiple chunks backed by the same physical buffer reuse one canonical graph handle.
+
+### Physical buffer overlap and writable aliases
+
+Scheduling tracks buffer hazards by logical `GraphBufferHandle`, not by individual byte ranges.
+Two independently imported handles that resolve to one physical buffer would therefore hide a
+read-after-write or write-after-write dependency from the scheduler. Before recording any node,
+each `encode()` resolves defaults, `DynamicBuffer` wrappers, and `options.buffers` replacements to
+their actual physical buffers and applies these rules:
+
+| Active graph resources | Result | Why |
+| --- | --- | --- |
+| Two handles share a buffer and both are read-only | Allowed | Concurrent reads cannot corrupt each other. |
+| Two handles share a buffer and either has `storage-write`, `storage-read-write`, or `copy-destination` usage | Rejected before any node runs | Distinct handles cannot express the required write hazard. |
+| Several views share one canonical handle, including writable views | Allowed and ordered | Every access participates in the same inferred hazard chain. |
+| An otherwise duplicated import is not referenced by any graph node | Allowed | Inactive imports cannot race with graph commands. |
+| An encoding override introduces writable overlap | That encoding is rejected | Compatibility is checked against current physical bindings, not just graph defaults. |
+
+The safe pattern is to import shared storage once and derive each logical range from that handle:
+
+```ts
+const sharedStorage = graph.importBuffer(
+  {id: 'shared-storage', byteLength: sharedBuffer.byteLength, usage: Buffer.STORAGE},
+  sharedBuffer
+);
+const sourceRows = graph.createDataView(sharedStorage, {
+  id: 'source-rows',
+  format: 'uint32',
+  length: rowCount
+});
+const updatedRows = graph.createDataView(sharedStorage, {
+  id: 'updated-rows',
+  format: 'uint32',
+  length: rowCount
+});
+
+graph.addComputePass({
+  id: 'update-shared-rows',
+  resources: [
+    {buffer: sourceRows, usage: 'storage-read'},
+    {buffer: updatedRows, usage: 'storage-write'}
+  ],
+  compile: () => ({encode: encodeUpdatedRows})
+});
+```
+
+Do not work around this check by importing the same writable physical allocation under separate
+IDs. If two independently authored contributors need it, pass them the same handle or typed view.
+Validation never destroys caller-owned imports; after a rejected override, the caller can retry
+with distinct buffers or the original compatible defaults.
+
 ## Primitive multi-chunk support
 
 The multi-chunk column means that the primitive directly accepts a `GraphVectorView` and computes
@@ -196,6 +257,11 @@ its documented atomic graph resources; callers must select, adapt, or explicitly
 | `GPUGridBinning` | Position `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUGridAggregation` | Aligned position and weight views or vectors | ✅ |
 | `GPUGroupAggregation` | Dense group-key view or vector with optional aligned mask | ✅ |
+| `GPUHashIndex` | One packed unsigned-key `GraphDataView` | ❌ |
+| `GPUBatchHashIndex` | Ordered unsigned-key chunks and optional aligned values or validity | ✅ |
+| `GPUHashIndexQuery` | One packed left-key `GraphDataView` and a shared hash index | ❌ |
+| `GPUHashJoin` | One packed left-key `GraphDataView` and a shared hash index | ❌ |
+| `GPUBatchHashJoin` | Ordered left-key chunks and a shared single- or multi-batch right index | ✅ |
 | `GPUIndexPickingTarget` | Texture and readback resources | ❌ |
 | `DrawCommandBuffer` | Indirect command buffer | ❌ |
 
@@ -295,12 +361,89 @@ ordered after the render pass.
 Multisample resolve is currently a WebGPU contract. Render-pass callbacks cannot also supply their
 own framebuffer or resolve targets when graph attachments are present.
 
-## Node APIs
+## Node APIs and graph commands
 
-- `addComputePass(node)` compiles an executable callback that receives a graph-owned `ComputePass`.
-- `addRenderPass(node)` may declare graph texture `attachments`, resolve other `RenderPassProps`
-  for each encoding, and receives a graph-owned `RenderPass`.
-- `addCopyPass(node)` records directly on the caller's `CommandEncoder`.
+A graph command is a reusable description of GPU work, not a second command queue or a hidden
+submission API. `compile()` prepares node executables once; `encode(commandEncoder, options)`
+records them into the application's existing `CommandEncoder`; the application decides when to
+submit that encoder. This distinction lets analytics, rendering, and explicitly requested
+readback share one dependency-ordered execution without taking ownership of the frame loop.
+
+| Feature | Why it exists | Typical use |
+| --- | --- | --- |
+| `addComputePass()` | Schedule shader dispatch alongside its declared buffer and texture hazards. | Filtering, scans, sorting, hash-index construction, aggregation, and indirect-command generation. |
+| `addRenderPass()` | Schedule drawing with graph-managed attachments, resolves, and sampled resources. | Scene rendering, picking, off-screen layers, and multisampled frame composition. |
+| `addCopyPass()` | Express transfers or encoder-level operations in the same ordered graph. | Explicit compact-result readback, staging uploads, and copying finished render targets. |
+| `dependsOn` | Describe an ordering requirement that no shared graph resource can express. | External side effects, timestamp boundaries, and application-owned synchronization. |
+| Repeated `encode()` | Reuse compiled pipelines and scratch allocations with new parameters or imports. | Interactive filters, animation frames, changing selections, and reusable query plans. |
+
+### `addComputePass(node)`
+
+Use a compute node whenever a shader reads or writes resources that other graph features consume.
+The graph opens and closes its own `ComputePass`; the executable only records dispatch commands.
+Declaring every input as `storage-read` and every output as `storage-write` lets later compute,
+render, or copy nodes automatically wait for the produced data.
+
+```ts
+graph.addComputePass({
+  id: 'select-visible-rows',
+  resources: [
+    {buffer: inputRows, usage: 'storage-read'},
+    {buffer: visibilityMask, usage: 'storage-write'}
+  ],
+  compile: ({device}) => createVisibilityExecutable(device)
+});
+```
+
+Primitives such as `GPUBatchHashIndex`, `GPUScan`, and `GPUHashJoin` use this same public graph
+contract: `primitive.addToGraph(graph)` contributes compute nodes but does not compile, submit, or
+read back the graph on the application's behalf.
+
+### `addRenderPass(node)`
+
+Use a render node when graph-produced buffers or textures feed a draw, or when a draw produces a
+texture consumed by a later pass. Declare sampled and vertex inputs normally and supply graph-owned
+`attachments` when the graph should resolve the framebuffer. Multisampled attachments can provide
+`resolveTargets`; attachment writes then participate in ordinary texture hazard ordering.
+
+```ts
+graph.addRenderPass({
+  id: 'draw-visible-instances',
+  resources: [{buffer: visibleRows, usage: 'vertex'}],
+  attachments: {colorAttachments: [frameColor]},
+  compile: () => ({encode: encodeVisibleInstances})
+});
+```
+
+The graph owns the `RenderPass` lifecycle. The executable records drawing commands; it must not
+end the pass, submit the encoder, or replace a graph-managed framebuffer.
+
+### `addCopyPass(node)`
+
+Use a copy node when an operation belongs directly on the application's `CommandEncoder`, such as
+copying one small summary into an explicitly requested readback buffer. Copying is never implied by
+graph execution: an application that keeps all results GPU-resident should not add a readback
+node. Declare the source and destination so transfers are ordered after producers and before
+subsequent consumers.
+
+```ts
+graph.addCopyPass({
+  id: 'copy-result-summary',
+  resources: [
+    {buffer: resultSummary, usage: 'copy-source'},
+    {buffer: readbackSummary, usage: 'copy-destination'}
+  ],
+  compile: () => ({encode: encodeSummaryCopy})
+});
+```
+
+### Explicit dependencies and repeated encodings
+
+Prefer declared resource uses because they explain both ordering and transient lifetimes. Add
+`dependsOn: ['upstream-node-id']` only when an application-visible dependency has no corresponding
+buffer or texture hazard. Compile the complete graph once, then supply fresh parameters or
+compatible imported buffers through later `encode()` calls. Writable physical-buffer overlap is
+revalidated for every encoding before any node records work.
 
 Buffer nodes declare storage, uniform, copy, indirect, vertex, and index uses. Texture nodes declare
 `sampled`, storage, render-attachment, and copy uses. Render attachments are automatically treated

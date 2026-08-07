@@ -257,6 +257,7 @@
               "api-reference/experimental/gpu-primitives/gpu-trace-picking",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/gpu-hash-index",
+              "api-reference/experimental/gpu-primitives/gpu-batch-hash-index",
               "api-reference/experimental/gpu-primitives/gpu-hash-join",
               "api-reference/experimental/gpu-primitives/gpu-batch-hash-join",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
@@ -387,6 +388,7 @@
               "api-reference/experimental/gpu-primitives/gpu-trace-picking",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/gpu-hash-index",
+              "api-reference/experimental/gpu-primitives/gpu-batch-hash-index",
               "api-reference/experimental/gpu-primitives/gpu-hash-join",
               "api-reference/experimental/gpu-primitives/gpu-batch-hash-join",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"

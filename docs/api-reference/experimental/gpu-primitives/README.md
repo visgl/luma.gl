@@ -1042,8 +1042,10 @@ deferred.
 
 The first larger-compute slice can proceed independently of package graduation because it uses the
 existing table-independent graph contract. Tranche 8.1a is implemented: `GPUHashIndex` rebuilds a
-fixed-capacity sparse `uint32` identity map, and `GPUHashIndexQuery` performs bounded batch lookup
-with deterministic duplicate values, explicit invalid and overflow counts, and probe statistics.
+fixed-capacity sparse `uint32` identity map from one packed batch, `GPUBatchHashIndex` builds the
+same shared map from preserved right-side chunks without concatenation, and `GPUHashIndexQuery`
+performs bounded lookup against either index with deterministic duplicate values, explicit invalid
+and overflow counts, and probe statistics.
 Tranche 8.2a is also implemented: `GPUHashJoin` composes lookup and stable scan into bounded
 many-to-one row-pair materialization with exact required-count and overflow reporting. It
 propagates incomplete source indices rather than presenting partial matches as complete. Tranche
@@ -1092,8 +1094,9 @@ consumers.
    documented decision gate gains a requesting consumer and positive evidence.
 5. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
 6. Develop the larger compute vocabulary independently where contracts are already bounded:
-   `GPUHashIndex` build/query, bounded many-to-one `GPUHashJoin`, and shared-right
-   `GPUBatchHashJoin` are implemented; require consumers and measurements before adding mutable
+   single-batch `GPUHashIndex`, preserved-right-batch `GPUBatchHashIndex`, bounded many-to-one
+   `GPUHashJoin`, and shared-right `GPUBatchHashJoin` are implemented; require consumers and
+   measurements before adding mutable
    maintenance, partitioned-right routing, multi-match joins, sparse graph algorithms, or
    generalized field solvers.
 
@@ -1660,6 +1663,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [GPU trace picking](/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-index)
+- [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-index)
 - [`GPUHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-join)
 - [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)

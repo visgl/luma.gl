@@ -7,8 +7,8 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 ## Overview
 
 `GPUHashJoin` turns sparse exact lookup into stable, capacity-bounded inner-join row pairs. It
-queries a previously built `GPUHashIndex`, scans the match mask, and publishes aligned left and
-right row IDs without CPU selection, hidden submission, or readback.
+queries a previously built `GPUHashIndex` or `GPUBatchHashIndex`, scans the match mask, and
+publishes aligned left and right row IDs without CPU selection, hidden submission, or readback.
 
 This solves a common GPU data-boundary problem: one buffer contains observations, instances, or
 selected objects identified by sparse stable keys, while another buffer contains properties in a
@@ -46,8 +46,10 @@ the aligned diagnostics available even when the primary result is compacted.
 ### The first contract is many-to-one
 
 The right index stores one value per distinct key. If right-side input contains duplicate keys,
-`GPUHashIndex` deterministically retains the value from the lowest source row. The resulting join
-is therefore many-left-to-one-right: repeated left keys may all map to one right row.
+either hash-index implementation deterministically retains the value from the lowest source row.
+For `GPUBatchHashIndex`, that winner is the earliest row across all preserved right-side chunks.
+The resulting join is therefore many-left-to-one-right: repeated left keys may all map to one
+right row.
 
 This is intentional. One-to-many and many-to-many joins require a different right-side structure,
 usually key-group offsets plus a value list, and can expand output far beyond left input length.

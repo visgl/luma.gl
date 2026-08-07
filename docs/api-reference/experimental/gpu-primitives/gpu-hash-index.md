@@ -17,6 +17,24 @@ most `maxProbeCount` slots, one key value is reserved as the empty marker, and b
 publish collision-work statistics. This makes worst-case GPU work and memory visible to command-
 graph consumers instead of hiding resize, allocation, or readback behind a map-like API.
 
+## Choosing the right hash-graph feature
+
+These features compose; they do not provide competing command schedulers or silently concatenate
+their inputs:
+
+| Feature | Input it owns logically | Use it when |
+| --- | --- | --- |
+| `GPUHashIndex` | One packed right-side key batch. | The complete lookup dictionary or property table already lives in one contiguous chunk. |
+| [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-index) | Several ordered right-side key chunks. | Streamed record batches must populate one shared index without repacking or losing source-row offsets. |
+| `GPUHashIndexQuery` | One left-side key batch against either index type. | Every source row must retain its position, a found mask, and an optional matched value. |
+| [`GPUHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-join) | One left-side key batch against either index type. | Only matching left/right row pairs should be published, with an explicit output capacity. |
+| [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join) | Several preserved left-side chunks against either index type. | Independent source batches need separate stable pairs, counts, capacities, and diagnostics. |
+
+The right-index choice and left-query choice are independent. For example, a
+`GPUBatchHashIndex` can index many Arrow record batches while `GPUHashIndexQuery` looks up one
+interactive selection, or `GPUBatchHashJoin` can join many left batches against that same shared
+multi-batch index. Every object contributes commands to the caller's existing `GPUCommandGraph`.
+
 ## Concepts
 
 ### Sparse identity is different from dense grouping
@@ -94,10 +112,11 @@ parallel insertion, and deterministic value-finalization passes; the graph owns 
 source-row buffer. Query contributes statistics initialization and lookup. Neither object compiles,
 encodes, submits, resizes, or reads back on its own.
 
-This first slice supports packed `uint32` keys and values and full rebuilds. Deletion and
-tombstones, preserved vector chunks, 64-bit keys, custom hash callbacks, partitioned tables, and
-join materialization remain future contracts. Starting with exact lookup keeps those additions
-grounded in real consumers rather than baking a general-purpose database into the primitive.
+This single-batch primitive supports packed `uint32` keys and values and full rebuilds.
+`GPUBatchHashIndex` adds preserved right-side vector chunks, while `GPUHashJoin` and
+`GPUBatchHashJoin` provide bounded row-pair publication. Deletion and tombstones, 64-bit keys,
+custom hash callbacks, independently partitioned right tables, and one-to-many matches remain
+outside the current contracts.
 
 ## Usage
 
