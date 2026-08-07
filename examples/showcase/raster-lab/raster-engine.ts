@@ -17,6 +17,7 @@ import {
   GPURasterConnectedComponents,
   GPURasterContrast,
   GPURasterContours,
+  GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
@@ -91,6 +92,11 @@ export type RasterLabSummary = {
   globalMedian: number | null;
   componentsEnabled: boolean;
   componentConnectivity: RasterLabDisplaySettings['componentConnectivity'];
+  componentLabelMode: RasterLabDisplaySettings['componentLabelMode'];
+  componentCapacity: number;
+  componentCount: number;
+  componentPublishedCount: number;
+  componentOverflow: boolean;
   componentMaximumIterations: number;
   componentIterations: number;
   componentConverged: boolean;
@@ -216,6 +222,8 @@ export class RasterLabEngine {
     automaticThreshold: false,
     componentsEnabled: false,
     componentConnectivity: 4,
+    componentLabelMode: 'sparse',
+    componentCapacity: 1024,
     componentMaximumIterations: 24,
     contoursEnabled: true,
     contourLevel: 0.35
@@ -530,6 +538,8 @@ export class RasterLabEngine {
       settings.automaticThreshold === this.settings.automaticThreshold &&
       settings.componentsEnabled === this.settings.componentsEnabled &&
       settings.componentConnectivity === this.settings.componentConnectivity &&
+      settings.componentLabelMode === this.settings.componentLabelMode &&
+      settings.componentCapacity === this.settings.componentCapacity &&
       settings.componentMaximumIterations === this.settings.componentMaximumIterations &&
       settings.contoursEnabled === this.settings.contoursEnabled &&
       Math.abs(settings.contourLevel - this.settings.contourLevel) < 0.0000001 &&
@@ -653,6 +663,12 @@ export class RasterLabEngine {
       SUMMARY_BYTE_LENGTH
     );
     const validPixelCount = aggregateView.getUint32(COUNT_BYTE_OFFSET, true);
+    const componentConverged =
+      this.settings.componentsEnabled &&
+      aggregateView.getUint32(CONTOUR_OVERFLOW_BYTE_OFFSET, true) !== 0;
+    const componentCount = componentConverged
+      ? aggregateView.getUint32(CONTOUR_COUNT_BYTE_OFFSET, true)
+      : 0;
 
     return {
       bins: copiedBins,
@@ -686,13 +702,16 @@ export class RasterLabEngine {
           : null,
       componentsEnabled: this.settings.componentsEnabled,
       componentConnectivity: this.settings.componentConnectivity,
+      componentLabelMode: this.settings.componentLabelMode,
+      componentCapacity: this.settings.componentCapacity,
+      componentCount,
+      componentPublishedCount: Math.min(componentCount, this.settings.componentCapacity),
+      componentOverflow: componentConverged && componentCount > this.settings.componentCapacity,
       componentMaximumIterations: this.settings.componentMaximumIterations,
       componentIterations: this.settings.componentsEnabled
         ? aggregateView.getUint32(CONTOUR_REQUIRED_BYTE_OFFSET, true)
         : 0,
-      componentConverged:
-        this.settings.componentsEnabled &&
-        aggregateView.getUint32(CONTOUR_OVERFLOW_BYTE_OFFSET, true) !== 0,
+      componentConverged,
       contoursEnabled: this.settings.contoursEnabled,
       contourLevel:
         this.settings.morphologyOperation !== 'none' && this.settings.morphologyMode === 'binary'
@@ -1606,6 +1625,23 @@ export class RasterLabEngine {
     }
 
     if (this.settings.componentsEnabled) {
+      const denseLabelMode = this.settings.componentLabelMode === 'dense';
+      const sparseComponentLabels = denseLabelMode
+        ? this.createTransientView(
+            graph,
+            'raster-lab-sparse-component-roots',
+            'uint32',
+            this.dataset.pixelCount
+          )
+        : componentLabels;
+      const sparseComponentValidity = denseLabelMode
+        ? this.createTransientView(
+            graph,
+            'raster-lab-sparse-component-validity',
+            'uint32',
+            this.dataset.pixelCount
+          )
+        : componentValidity;
       const componentInput: GPURasterBufferBand<'uint32'> = {
         id: 'raster-lab-classified-foreground',
         format: 'uint32',
@@ -1617,12 +1653,46 @@ export class RasterLabEngine {
         width: this.dataset.width,
         height: this.dataset.height,
         input: componentInput,
-        output: componentLabels,
-        outputValidity: componentValidity,
+        output: sparseComponentLabels,
+        outputValidity: sparseComponentValidity,
         converged: contourOverflow,
         iterationCount: contourRequiredSegmentCount,
         connectivity: this.settings.componentConnectivity,
         maximumIterations: this.settings.componentMaximumIterations
+      }).addToGraph(graph);
+
+      new GPURasterDenseComponents({
+        id: 'raster-lab-dense-connected-components',
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: sparseComponentLabels,
+        inputValidity: sparseComponentValidity,
+        converged: contourOverflow,
+        output: denseLabelMode
+          ? componentLabels
+          : this.createTransientView(
+              graph,
+              'raster-lab-dense-component-identifiers',
+              'uint32',
+              this.dataset.pixelCount
+            ),
+        outputValidity: denseLabelMode
+          ? componentValidity
+          : this.createTransientView(
+              graph,
+              'raster-lab-dense-component-validity',
+              'uint32',
+              this.dataset.pixelCount
+            ),
+        componentCount: this.createTransientView(
+          graph,
+          'raster-lab-bounded-component-count',
+          'uint32',
+          1
+        ),
+        overflow: this.createTransientView(graph, 'raster-lab-component-overflow', 'uint32', 1),
+        requiredComponentCount: contourSegmentCount,
+        capacity: Math.min(this.settings.componentCapacity, this.dataset.pixelCount)
       }).addToGraph(graph);
     }
 

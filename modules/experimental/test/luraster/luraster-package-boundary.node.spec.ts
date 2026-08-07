@@ -127,6 +127,21 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
   });
 
+  test('keeps dense relabeling, component counts, and capacity status graph-native', () => {
+    const denseComponentsImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-dense-components.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(denseComponentsImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(denseComponentsImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(denseComponentsImplementation).not.toMatch(
+      /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/
+    );
+  });
+
   test('exposes source, tile, global, component, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
@@ -137,6 +152,8 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterClosing).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConnectedComponents).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConnectedComponents.prototype.addToGraph).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterDenseComponents).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterDenseComponents.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContrast).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContourClassifier).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContours).toBeTypeOf('function');

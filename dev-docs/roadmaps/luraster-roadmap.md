@@ -1,10 +1,10 @@
 # LuRaster Roadmap
 
-- **Status:** Active; foundation, tiled analysis, and sparse connected components implemented
+- **Status:** Active; foundation, tiled analysis, and bounded dense connected components implemented
 - **Experimental API:** `@luma.gl/experimental/luraster`
 - **Execution model:** WebGPU `GPUCommandGraph` contributors
 - **Positioning:** GPU-resident raster analytics complementing `@luma.gl/experimental/geospatial`
-- **Next tranche:** 5.2, dense connected-component relabeling and bounded region outputs
+- **Next tranche:** 5.3, per-region measurements over converged dense component labels
 
 ## Overview
 
@@ -22,11 +22,12 @@ application decisions.
 The implemented two-dimensional toolkit includes validity-aware band math, normalized difference
 vegetation index (NDVI), statistics, histograms, contrast adjustment, thresholding, spatial
 filters, morphology, single-raster contour extraction, bounded tile residency, seam-safe
-neighborhoods, analytical overviews, dataset-wide replayable summaries, and convergence-gated
-four/eight-connected sparse component labels. Dense component identifiers/counts, region
-measurements, cross-tile component or contour ownership, and vector/raster zonal composition
-remain planned. Three-dimensional microscopy, sophisticated segmentation, reprojection, and
-frequency-domain algorithms are separate, evidence-gated extensions.
+neighborhoods, analytical overviews, dataset-wide replayable summaries, convergence-gated
+four/eight-connected sparse component labels, deterministic dense identifiers, and bounded exact
+component counts. Region measurements, cross-tile component or contour ownership, and
+vector/raster zonal composition remain planned. Three-dimensional microscopy, sophisticated
+segmentation, reprojection, and frequency-domain algorithms are separate, evidence-gated
+extensions.
 
 ### Reading this roadmap
 
@@ -39,11 +40,12 @@ extensions, engineering prerequisites, and explicit decision gates.
 
 Phases 0, 1, 3, and 4 are complete for their stated boundaries. Phase 2's core analytical
 operations are available, with narrower percentile/stretch/presentation follow-ups still open.
-Phase 5 has started with deterministic sparse foreground components and explicit GPU convergence;
-dense identifiers, compact counts, region measurements, and cross-tile identity remain open.
+Phase 5 includes deterministic sparse foreground components, explicit GPU convergence, dense
+identifiers, bounded counts, and capacity overflow; region measurements and cross-tile identity
+remain open.
 Phase 6 already includes single-raster contour classification and indirect drawing, but not
 cross-tile contour ownership or zonal statistics. The next dependency-ready implementation is
-Tranche 5.2; Tranche 6.3 is an alternative when contour integration takes priority.
+Tranche 5.3; Tranche 6.3 is an alternative when contour integration takes priority.
 
 Completing a phase means its separately documented contracts exist; it does not imply that every
 feature combination is automatic. In particular, the Raster Lab deliberately separates generated
@@ -73,6 +75,8 @@ commands, retain in-flight resources, and choose whether to inspect results.
 | Approximate percentile              | A histogram-bin estimate, not an exact sorted quantile. Minimum/maximum endpoints are exact; interior values use bin centers and reject overflow.                            |
 | Connected component                 | A maximal group of valid nonzero foreground observations reachable through explicitly selected four- or eight-neighbor connectivity.                                        |
 | Sparse representative               | One plus the smallest row-major pixel index in a connected component; zero is background, and representative identifiers are not dense component counts.                    |
+| Dense component ID                  | A contiguous row-major root rank beginning at one; zero remains background, and capacity-truncated foreground is marked invalid.                                              |
+| Required and published count        | Required is the complete converged component population; published is the minimum of that population and the caller's explicit output capacity.                             |
 | Convergence                         | Explicit GPU evidence that bounded component hooking/compression reached a fixed point; exhausted budgets clear every published label and validity flag.                     |
 
 Official cuCIM references:
@@ -661,9 +665,17 @@ when their tests and rollback boundaries remain understandable.
   clearing every published label and validity element. Application-owned command submission,
   decoding, leases, and optional readback remain unchanged. Dense IDs, component counts,
   region measurements, and cross-tile identities are explicitly not part of this tranche.
-- **5.2 next:** dense root relabeling, unsigned root scan, bounded component counts, and
-  convergence-gated compact outputs; tranche 6.3 seam-safe contour ownership remains
-  independently available when vector integration takes priority.
+- **5.2 complete for bounded dense component labels:** `GPURasterDenseComponents` marks
+  converged canonical representative roots, composes unsigned `GPUScan`, and remaps them to
+  deterministic contiguous IDs beginning at one. Caller-owned GPU outputs retain valid
+  background, distinguish missing or capacity-truncated foreground, publish exact required
+  and capacity-clamped component counts, and reset explicit overflow on every execution.
+  Nonconverged inputs clear every label, validity element, count, and overflow flag.
+  The Raster Lab exposes sparse/dense presentation, exact and bounded counts, capacity,
+  overflow, convergence, and actual rounds without exceeding its existing 228-byte summary.
+- **5.3 next:** per-region count, intensity, centroid, and area measurements over converged
+  dense component labels; tranche 6.3 seam-safe contour ownership remains independently
+  available when vector integration takes priority.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -1099,8 +1111,9 @@ atomic minimum-root hooking, pointer compression, GPU convergence detection, and
 publication never polls the CPU. A required caller-owned convergence scalar and optional actual
 iteration count make completion explicit; exhausted iteration budgets zero every label and
 output-validity element. The Raster Lab colors sparse labels directly, exposes connectivity and
-bounded convergence, and reuses its existing compact scalar summary. Dense component numbering,
-component counts, region statistics, and cross-tile identity resolution remain later tranches.
+bounded convergence, and reuses its existing compact scalar summary. Dense numbering and bounded
+component counts are provided by the separate Tranche 5.2 contributor; region statistics and
+cross-tile identity resolution remain future tranches.
 
 **Work:** Implement deterministic `uint32` union-by-minimum-root with explicit 4/8 connectivity,
 separate graph passes for initialization, hooking, path compression, and convergence state.
@@ -1118,6 +1131,19 @@ hidden readback occurs.
 ### Tranche 5.2 — Dense relabeling and bounded outputs
 
 **Entry:** Tranche 5.1.
+
+**Status:** Complete through `GPURasterDenseComponents` and `GPURasterDenseComponentsProps`.
+Canonical converged representative pixels become unsigned root flags; reusable exclusive
+`GPUScan` ranks them in row-major order, and a graph scatter publishes contiguous `1..N`
+identifiers. Valid background remains label `0` with validity `1`; missing or over-capacity
+foreground becomes label `0` with validity `0`. A caller-owned component count is clamped to
+explicit capacity, a separate caller-owned overflow scalar reports truncation, and an optional
+caller-owned required count preserves the exact unclamped population. Zero capacity, empty
+foreground, and repeated encodings have explicit deterministic behavior. Unconverged inputs
+clear every published label, validity flag, count, and overflow state. The Raster Lab retains
+its existing 228-byte readback by publishing exact required count, convergence, and actual
+rounds in prior contour slots; bounded display count and overflow derive from that exact
+required count and the visible capacity. Region measurements and cross-tile IDs are not implied.
 
 **Work:** Mark representative roots, apply `GPUScan` to unsigned root flags, and scatter dense
 labels with background `0` and foreground `1..componentCount`. Return caller-owned count,
@@ -1363,6 +1389,7 @@ modules/experimental/src/luraster/
   gpu-raster-overview.ts
   gpu-raster-global-statistics.ts
   gpu-raster-connected-components.ts
+  gpu-raster-dense-components.ts
   gpu-raster-region-statistics.ts
   gpu-raster-contours.ts
   README.md
@@ -1388,6 +1415,8 @@ modules/experimental/test/luraster/
   gpu-raster-global-statistics.spec.ts
   gpu-raster-global-pipeline.spec.ts
   gpu-raster-connected-components.spec.ts
+  gpu-raster-dense-components-pipeline.spec.ts
+  gpu-raster-dense-components.spec.ts
   gpu-raster-region-statistics.spec.ts
   gpu-raster-contours.spec.ts
 ```
@@ -1608,8 +1637,9 @@ as a monolithic reference without tile seams or last-tile-only global histograms
 ### Milestone C — Segmentation and vector-ready output
 
 **Status:** Started with completed sparse, convergence-gated connected-component labeling,
-single-raster marching squares, and indirect contour draws. Dense region identifiers/counts,
-region measurements, cross-tile component/contour ownership, and zonal statistics remain open.
+bounded dense region identifiers and counts, single-raster marching squares, and indirect
+contour draws. Region measurements, cross-tile component/contour ownership, and zonal statistics
+remain open.
 
 Add tranches 5.1–5.4 and 6.1–6.4. An application can label components, calculate region and
 polygon-zonal statistics, and render stable georeferenced contours through indirect GPU draws
@@ -1627,7 +1657,7 @@ Advanced Phase 7 work is not a prerequisite.
 ## Completed foundation sequence
 
 These already-delivered slices document the original dependency order; they are not proposed
-future pull requests. The next implementation boundary is Tranche 5.2, with Tranche 6.3 available
+future pull requests. The next implementation boundary is Tranche 5.3, with Tranche 6.3 available
 independently when contour seam ownership is more urgent.
 
 ### Foundation slice 1 — Optional package and reproducible fixtures

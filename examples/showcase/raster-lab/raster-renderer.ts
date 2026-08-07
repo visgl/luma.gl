@@ -16,6 +16,7 @@ export type RasterLabMorphologyShape = 'square' | 'cross';
 export type RasterLabMorphologyNoDataPolicy = 'propagate' | 'ignore';
 export type RasterLabMorphologyBorderMode = 'clamp' | 'reflect' | 'constant' | 'nodata';
 export type RasterLabComponentConnectivity = 4 | 8;
+export type RasterLabComponentLabelMode = 'sparse' | 'dense';
 
 /** Canvas-backed rectangle in physical pixels, measured from the upper-left corner. */
 export type RasterLabViewport = {x: number; y: number; width: number; height: number};
@@ -56,6 +57,8 @@ export type RasterLabDisplaySettings = {
   automaticThreshold: boolean;
   componentsEnabled: boolean;
   componentConnectivity: RasterLabComponentConnectivity;
+  componentLabelMode: RasterLabComponentLabelMode;
+  componentCapacity: number;
   componentMaximumIterations: number;
   contoursEnabled: boolean;
   contourLevel: number;

@@ -5,6 +5,7 @@
 import type {RasterLabSummary} from './raster-engine';
 import type {
   RasterLabComponentConnectivity,
+  RasterLabComponentLabelMode,
   RasterLabDisplayMode,
   RasterLabEdgeDirection,
   RasterLabEdgeMode,
@@ -42,6 +43,8 @@ export type RasterLabInterfaceCallbacks = {
   onMorphologyBorderValue?: (value: number) => void;
   onComponentsEnabled?: (enabled: boolean) => void;
   onComponentConnectivity?: (connectivity: RasterLabComponentConnectivity) => void;
+  onComponentLabelMode?: (mode: RasterLabComponentLabelMode) => void;
+  onComponentCapacity?: (capacity: number) => void;
   onComponentMaximumIterations?: (iterations: number) => void;
   onContrast?: (contrast: number) => void;
   onGamma?: (gamma: number) => void;
@@ -127,6 +130,11 @@ export type RasterLabResidencySummary = {
 export type RasterLabComponentSummary = {
   enabled: boolean;
   connectivity: RasterLabComponentConnectivity;
+  labelMode: RasterLabComponentLabelMode;
+  capacity: number;
+  componentCount: number;
+  publishedCount: number;
+  overflow: boolean;
   maximumIterations: number;
   iterations: number;
   converged: boolean;
@@ -360,28 +368,54 @@ export class RasterLabInterface {
       );
       button.disabled = !summary.enabled;
     }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-component-labels]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterComponentLabels'] === summary.labelMode)
+      );
+      button.disabled = !summary.enabled;
+    }
+    const capacityControl = this.getInput('component-capacity');
+    capacityControl.value = String(summary.capacity);
+    capacityControl.disabled = !summary.enabled;
     const iterationsControl = this.getInput('component-iterations');
     iterationsControl.value = String(summary.maximumIterations);
     iterationsControl.disabled = !summary.enabled;
     this.getInput('contours-enabled').disabled = summary.enabled;
     this.getElement('[data-raster-component-budget]').textContent =
       `${summary.maximumIterations} max`;
+    this.getElement('[data-raster-component-capacity-value]').textContent =
+      `${NUMBER_FORMATTER.format(summary.capacity)} max`;
+    this.getElement('[data-raster-component-count]').textContent = summary.enabled
+      ? `${NUMBER_FORMATTER.format(summary.componentCount)} required`
+      : 'off';
+    this.getElement('[data-raster-component-published]').textContent = summary.enabled
+      ? `${NUMBER_FORMATTER.format(summary.publishedCount)} / ${NUMBER_FORMATTER.format(summary.capacity)}`
+      : 'off';
     this.getElement('[data-raster-component-rounds]').textContent = summary.enabled
       ? `${summary.iterations} / ${summary.maximumIterations}`
       : 'off';
     this.getElement('[data-raster-component-state]').textContent = !summary.enabled
       ? 'off'
-      : summary.converged
-        ? 'verified fixed point'
-        : 'unresolved · labels cleared';
+      : !summary.converged
+        ? 'unresolved · labels cleared'
+        : summary.overflow
+          ? summary.labelMode === 'dense'
+            ? 'capacity exceeded · dense labels hidden'
+            : 'capacity exceeded · sparse roots visible'
+          : 'verified fixed point';
     this.getElement('[data-raster-component-foreground]').textContent = summary.enabled
       ? `${NUMBER_FORMATTER.format(summary.foregroundPixelCount)} valid foreground`
       : 'classification off';
     this.getElement('[data-raster-component-lineage]').textContent = !summary.enabled
       ? 'off'
-      : summary.converged
-        ? `${summary.connectivity}-WAY · ${summary.iterations}`
-        : 'NOT CONVERGED';
+      : !summary.converged
+        ? 'NOT CONVERGED'
+        : summary.overflow && summary.labelMode === 'dense'
+          ? 'CAPACITY EXCEEDED'
+          : `${summary.labelMode === 'dense' ? 'DENSE' : 'ROOTS'} · ${summary.componentCount}`;
     this.updateMorphologyControls();
     this.updateMapPresentation();
   }
@@ -465,9 +499,11 @@ export class RasterLabInterface {
       ? `${NUMBER_FORMATTER.format(summary.contourSegmentCount)}${summary.contourOverflow ? '+' : ''}`
       : 'off';
     this.getElement('[data-raster-contour-count]').textContent = summary.componentsEnabled
-      ? summary.componentConverged
-        ? `${summary.componentConnectivity}-CONNECTED COMPONENTS`
-        : 'COMPONENT LABELS UNRESOLVED'
+      ? !summary.componentConverged
+        ? 'COMPONENT LABELS UNRESOLVED'
+        : summary.componentOverflow && summary.componentLabelMode === 'dense'
+          ? 'COMPONENT CAPACITY EXCEEDED'
+          : `${summary.componentConnectivity}-CONNECTED ${summary.componentLabelMode === 'dense' ? 'DENSE IDs' : 'COMPONENTS'}`
       : summary.contoursEnabled
         ? `${NUMBER_FORMATTER.format(summary.contourSegmentCount)} CONTOUR SEGMENTS`
         : 'SYNTHETIC SCENE';
@@ -756,6 +792,14 @@ export class RasterLabInterface {
         this.callbacks.onComponentConnectivity?.(componentConnectivity === '4' ? 4 : 8);
         return;
       }
+      const componentLabelsButton = target.closest<HTMLButtonElement>(
+        '[data-raster-component-labels]'
+      );
+      const componentLabelMode = componentLabelsButton?.dataset['rasterComponentLabels'];
+      if (componentLabelMode === 'sparse' || componentLabelMode === 'dense') {
+        this.callbacks.onComponentLabelMode?.(componentLabelMode);
+        return;
+      }
       const otsuButton = target.closest<HTMLButtonElement>('[data-raster-control="otsu"]');
       if (otsuButton) {
         const enabled = !this.automaticThreshold;
@@ -876,6 +920,9 @@ export class RasterLabInterface {
           break;
         case 'component-iterations':
           this.callbacks.onComponentMaximumIterations?.(Math.round(value));
+          break;
+        case 'component-capacity':
+          this.callbacks.onComponentCapacity?.(Math.round(value));
           break;
         case 'contrast':
           this.setContrast(value);
@@ -1266,7 +1313,7 @@ function makeRasterLabMarkup(): string {
               <button class="raster-otsu-button" data-raster-control="otsu" type="button" aria-pressed="false">AUTO OTSU · GPU HISTOGRAM</button>
             </div>
             <div class="raster-control raster-component-control">
-              <span class="raster-control-label">Connected components <span class="raster-kicker">GPU sparse roots</span></span>
+              <span class="raster-control-label">Connected components <span class="raster-kicker">GPU roots · dense IDs</span></span>
               <div class="raster-component-buttons" aria-label="Connected-component label overlay">
                 <button class="raster-mode-button" data-raster-component-mode="off" aria-pressed="true">OFF</button>
                 <button class="raster-mode-button" data-raster-component-mode="on" aria-pressed="false">COMPONENTS</button>
@@ -1275,16 +1322,26 @@ function makeRasterLabMarkup(): string {
                 <button class="raster-mode-button" data-raster-component-connectivity="4" aria-pressed="true" disabled>4-CONNECTED</button>
                 <button class="raster-mode-button" data-raster-component-connectivity="8" aria-pressed="false" disabled>8-CONNECTED</button>
               </div>
+              <div class="raster-component-label-buttons" aria-label="Connected-component identifier representation">
+                <button class="raster-mode-button" data-raster-component-labels="sparse" aria-pressed="true" disabled>SPARSE ROOTS</button>
+                <button class="raster-mode-button" data-raster-component-labels="dense" aria-pressed="false" disabled>DENSE 1..N</button>
+              </div>
+              <label class="raster-component-setting">
+                <span class="raster-control-label">Region capacity <span class="raster-control-value" data-raster-component-capacity-value>1,024 max</span></span>
+                <input class="raster-slider" data-raster-control="component-capacity" aria-label="Maximum published dense component identifiers" type="range" min="0" max="2048" step="1" value="1024" disabled />
+              </label>
               <label class="raster-component-setting">
                 <span class="raster-control-label">Propagation budget <span class="raster-control-value" data-raster-component-budget>24 max</span></span>
                 <input class="raster-slider" data-raster-control="component-iterations" aria-label="Maximum component propagation rounds" type="range" min="1" max="32" step="1" value="24" disabled />
               </label>
               <div class="raster-component-statistics" aria-label="GPU component convergence and foreground telemetry">
+                <span>Components</span><span data-raster-component-count>off</span>
+                <span>Published IDs</span><span data-raster-component-published>off</span>
                 <span>Actual rounds</span><span data-raster-component-rounds>off</span>
                 <span>Convergence</span><span data-raster-component-state>off</span>
                 <span>Valid foreground</span><span data-raster-component-foreground>classification off</span>
               </div>
-              <span class="raster-component-note">Sparse minimum-root labels; contours pause while region diagnostics reuse their 228-byte summary.</span>
+              <span class="raster-component-note">GPU scan compacts sparse roots into bounded dense IDs; exact count and diagnostics reuse the same 228-byte summary.</span>
             </div>
             <div class="raster-control">
               <span class="raster-control-label">
@@ -1343,7 +1400,7 @@ function makeRasterLabMarkup(): string {
       <footer class="raster-footer">
         <div class="raster-roadmap" aria-label="Planned raster capabilities">
           <span class="raster-kicker">Coming next</span>
-          <span class="raster-roadmap-chip">Dense component IDs</span>
+          <span class="raster-roadmap-chip">Region measurements</span>
           <span class="raster-roadmap-chip">Segmentation</span>
           <span class="raster-roadmap-chip">Tiled contour seams</span>
         </div>

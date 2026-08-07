@@ -34,6 +34,7 @@ import {
 } from './raster-interface';
 import type {
   RasterLabComponentConnectivity,
+  RasterLabComponentLabelMode,
   RasterLabDisplayMode,
   RasterLabDisplaySettings,
   RasterLabEdgeDirection,
@@ -53,7 +54,7 @@ import {
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'Sparse GPU-connected components, global reductions, scientific overviews, halos, and NDVI.';
+  'Dense GPU-connected components, bounded region counts, global reductions, overviews, and halos.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -106,6 +107,11 @@ type RasterLabDebugController = {
   readonly globalMedian: number | null;
   readonly componentsEnabled: boolean;
   readonly componentConnectivity: RasterLabComponentConnectivity;
+  readonly componentLabelMode: RasterLabComponentLabelMode;
+  readonly componentCapacity: number;
+  readonly componentCount: number;
+  readonly componentPublishedCount: number;
+  readonly componentOverflow: boolean;
   readonly componentMaximumIterations: number;
   readonly componentIterations: number;
   readonly componentConverged: boolean;
@@ -159,6 +165,8 @@ type RasterLabDebugController = {
   setMorphologyBorderValue: (value: number) => void;
   setComponentsEnabled: (enabled: boolean) => void;
   setComponentConnectivity: (connectivity: RasterLabComponentConnectivity) => void;
+  setComponentLabelMode: (mode: RasterLabComponentLabelMode) => void;
+  setComponentCapacity: (capacity: number) => void;
   setComponentMaximumIterations: (iterations: number) => void;
   setContrast: (contrast: number) => void;
   setGamma: (gamma: number) => void;
@@ -203,6 +211,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     automaticThreshold: false,
     componentsEnabled: false,
     componentConnectivity: 4,
+    componentLabelMode: 'sparse',
+    componentCapacity: 1024,
     componentMaximumIterations: 24,
     contoursEnabled: true,
     contourLevel: 0.35
@@ -289,6 +299,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onMorphologyBorderValue: value => this.setMorphologyBorderValue(value),
       onComponentsEnabled: enabled => this.setComponentsEnabled(enabled),
       onComponentConnectivity: connectivity => this.setComponentConnectivity(connectivity),
+      onComponentLabelMode: mode => this.setComponentLabelMode(mode),
+      onComponentCapacity: capacity => this.setComponentCapacity(capacity),
       onComponentMaximumIterations: iterations => this.setComponentMaximumIterations(iterations),
       onContrast: contrast => this.setContrast(contrast),
       onGamma: gamma => this.setGamma(gamma),
@@ -339,7 +351,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       ? {
           ...this.display,
           componentsEnabled:
-            this.latestSummary.componentsEnabled && this.latestSummary.componentConverged
+            this.latestSummary.componentsEnabled &&
+            this.latestSummary.componentConverged &&
+            (this.display.componentLabelMode === 'sparse' || !this.latestSummary.componentOverflow)
         }
       : this.display;
     this.engine.render(canvasContext, viewport, settings);
@@ -959,6 +973,21 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     if (this.display.componentsEnabled) this.requestUpdate();
   }
 
+  private setComponentLabelMode(mode: RasterLabComponentLabelMode): void {
+    if (mode === this.display.componentLabelMode) return;
+    this.display.componentLabelMode = mode;
+    this.publishComponents();
+    if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
+  private setComponentCapacity(capacity: number): void {
+    const boundedCapacity = Math.max(0, Math.min(2048, Math.round(capacity)));
+    if (boundedCapacity === this.display.componentCapacity) return;
+    this.display.componentCapacity = boundedCapacity;
+    this.publishComponents();
+    if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
   private setComponentMaximumIterations(iterations: number): void {
     const maximumIterations = Math.max(1, Math.min(32, Math.round(iterations)));
     if (maximumIterations === this.display.componentMaximumIterations) return;
@@ -1259,6 +1288,11 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.interface.setComponents({
       enabled: this.display.componentsEnabled,
       connectivity: this.display.componentConnectivity,
+      labelMode: this.display.componentLabelMode,
+      capacity: this.display.componentCapacity,
+      componentCount: summary?.componentsEnabled ? summary.componentCount : 0,
+      publishedCount: summary?.componentsEnabled ? summary.componentPublishedCount : 0,
+      overflow: summary?.componentsEnabled ? summary.componentOverflow : false,
       maximumIterations: this.display.componentMaximumIterations,
       iterations: summary?.componentsEnabled ? summary.componentIterations : 0,
       converged: summary?.componentsEnabled ? summary.componentConverged : false,
@@ -1492,6 +1526,21 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get componentConnectivity() {
         return viewer.display.componentConnectivity;
       },
+      get componentLabelMode() {
+        return viewer.display.componentLabelMode;
+      },
+      get componentCapacity() {
+        return viewer.display.componentCapacity;
+      },
+      get componentCount() {
+        return viewer.latestSummary?.componentCount ?? 0;
+      },
+      get componentPublishedCount() {
+        return viewer.latestSummary?.componentPublishedCount ?? 0;
+      },
+      get componentOverflow() {
+        return viewer.latestSummary?.componentOverflow ?? false;
+      },
       get componentMaximumIterations() {
         return viewer.display.componentMaximumIterations;
       },
@@ -1605,6 +1654,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setMorphologyBorderValue: value => viewer.setMorphologyBorderValue(value),
       setComponentsEnabled: enabled => viewer.setComponentsEnabled(enabled),
       setComponentConnectivity: connectivity => viewer.setComponentConnectivity(connectivity),
+      setComponentLabelMode: mode => viewer.setComponentLabelMode(mode),
+      setComponentCapacity: capacity => viewer.setComponentCapacity(capacity),
       setComponentMaximumIterations: iterations => viewer.setComponentMaximumIterations(iterations),
       setContrast: contrast => viewer.setContrast(contrast),
       setGamma: gamma => viewer.setGamma(gamma),
