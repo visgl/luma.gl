@@ -45,6 +45,21 @@ export type {
   GPURasterTileReleaseFence
 } from './gpu-raster-tile-cache';
 
+export {
+  GPURasterTileCoreExtract,
+  GPURasterTileHaloAssembler,
+  GPURasterTileHaloFill,
+  GPURasterTileHaloLease
+} from './gpu-raster-tile-halo';
+export type {
+  GPURasterHaloStage,
+  GPURasterTileCoreExtractProps,
+  GPURasterTileHaloFillProps,
+  GPURasterTileHaloPlan,
+  GPURasterTileHaloRequest,
+  GPURasterTileHaloSource
+} from './gpu-raster-tile-halo';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

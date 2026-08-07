@@ -27,7 +27,11 @@ import {
   GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
-  type GPURasterBufferBand
+  GPURasterTileCoreExtract,
+  GPURasterTileHaloFill,
+  type GPURasterBufferBand,
+  type GPURasterPixelBounds,
+  type GPURasterTileHaloPlan
 } from '@luma.gl/experimental/luraster';
 import {RASTER_LAB_NO_DATA_VALUE, type RasterLabDataset} from './raster-data';
 import {
@@ -123,6 +127,15 @@ export type RasterLabResidentSources = {
   validity: Buffer;
 };
 
+/** Borrowed resident tiles cover a padded domain; the selected tile alone owns published pixels. */
+export type RasterLabHaloSources = {
+  plan: GPURasterTileHaloPlan;
+  tiles: readonly {
+    pixelBounds: GPURasterPixelBounds;
+    sources: RasterLabResidentSources;
+  }[];
+};
+
 /** Runs NDVI, validity-aware extent, and histogram as one explicitly submitted GPU command graph. */
 export class RasterLabEngine {
   readonly device: Device;
@@ -134,6 +147,7 @@ export class RasterLabEngine {
   private readonly contourCommands: DrawCommandBuffer;
   private readonly contourSegmentCapacity: number;
   private compiledGraph: CompiledGPUCommandGraph;
+  private halo: RasterLabHaloSources | undefined;
   private settings: RasterLabDisplaySettings = {
     mode: 'ndvi',
     smoothingMode: 'none',
@@ -165,11 +179,13 @@ export class RasterLabEngine {
     dataset: RasterLabDataset,
     sources?: RasterLabResidentSources,
     settings?: RasterLabDisplaySettings,
-    epsilon = 0.0001
+    epsilon = 0.0001,
+    halo?: RasterLabHaloSources
   ) {
     this.device = device;
     this.dataset = dataset;
     this.borrowedSources = Boolean(sources);
+    this.halo = halo;
     if (settings) this.settings = {...settings};
     this.epsilon = epsilon;
     this.contourSegmentCapacity = Math.max((dataset.width - 1) * (dataset.height - 1) * 2, 1);
@@ -384,7 +400,11 @@ export class RasterLabEngine {
   }
 
   /** Rebind a compatible resident tile without rebuilding pipelines or analysis outputs. */
-  setResidentTile(dataset: RasterLabDataset, sources: RasterLabResidentSources): void {
+  setResidentTile(
+    dataset: RasterLabDataset,
+    sources: RasterLabResidentSources,
+    halo?: RasterLabHaloSources
+  ): void {
     if (
       !this.borrowedSources ||
       dataset.width !== this.dataset.width ||
@@ -393,6 +413,7 @@ export class RasterLabEngine {
       throw new Error('Raster tile graph reuse requires matching resident tile dimensions');
     }
     this.dataset = dataset;
+    this.halo = halo;
     this.buffers.red = sources.red;
     this.buffers.nearInfrared = sources.nearInfrared;
     this.buffers.sourceValidity = sources.validity;
@@ -449,14 +470,17 @@ export class RasterLabEngine {
     const encoder = this.device.createCommandEncoder({
       id: `raster-lab-analysis-${this.executionCount}`
     });
-    this.compiledGraph.encode(encoder, {
-      parameters: undefined,
-      buffers: {
-        red: this.buffers.red,
-        'near-infrared': this.buffers.nearInfrared,
-        'source-validity': this.buffers.sourceValidity
-      }
-    });
+    const importedBuffers: Record<string, Buffer> = {
+      red: this.buffers.red,
+      'near-infrared': this.buffers.nearInfrared,
+      'source-validity': this.buffers.sourceValidity
+    };
+    for (const [tileIndex, tile] of this.halo?.tiles.entries() ?? []) {
+      importedBuffers[`halo-red-${tileIndex}`] = tile.sources.red;
+      importedBuffers[`halo-near-infrared-${tileIndex}`] = tile.sources.nearInfrared;
+      importedBuffers[`halo-validity-${tileIndex}`] = tile.sources.validity;
+    }
+    this.compiledGraph.encode(encoder, {parameters: undefined, buffers: importedBuffers});
     encoder.copyBufferToBuffer({
       sourceBuffer: this.buffers.domain,
       destinationBuffer: this.buffers.summaryReadback,
@@ -815,29 +839,217 @@ export class RasterLabEngine {
       epsilon: this.epsilon
     }).addToGraph(graph);
 
-    const selectedValues =
+    let processingWidth = this.dataset.width;
+    let processingHeight = this.dataset.height;
+    let selectedValues =
       this.settings.mode === 'ndvi'
         ? vegetationIndex
         : this.settings.mode === 'red'
           ? redValues
           : nearInfraredValues;
+    let selectedValidity = outputValidity;
+    let processingSmoothedValues = smoothedValues;
+    let processingSmoothedValidity = smoothedValidity;
+    let processingEdgeValues = edgeValues;
+    let processingEdgeValidity = edgeValidity;
+    let processingMorphologyValues = morphologyValues;
+    let processingMorphologyValidity = grayscaleMorphologyValidity;
+
+    if (this.halo) {
+      const haloPixelCount = this.halo.plan.width * this.halo.plan.height;
+      const assembledRed = this.createTransientView(graph, 'halo-red', 'float32', haloPixelCount);
+      const assembledNearInfrared = this.createTransientView(
+        graph,
+        'halo-near-infrared',
+        'float32',
+        haloPixelCount
+      );
+      const assembledRedValidity = this.createTransientView(
+        graph,
+        'halo-red-validity',
+        'uint32',
+        haloPixelCount
+      );
+      const assembledNearInfraredValidity = this.createTransientView(
+        graph,
+        'halo-near-infrared-validity',
+        'uint32',
+        haloPixelCount
+      );
+      const assembledVegetationIndex = this.createTransientView(
+        graph,
+        'halo-vegetation-index',
+        'float32',
+        haloPixelCount
+      );
+      const assembledVegetationValidity = this.createTransientView(
+        graph,
+        'halo-vegetation-validity',
+        'uint32',
+        haloPixelCount
+      );
+      const redSources: Array<{
+        pixelBounds: GPURasterPixelBounds;
+        input: GPURasterBufferBand<'float32'>;
+      }> = [];
+      const nearInfraredSources: Array<{
+        pixelBounds: GPURasterPixelBounds;
+        input: GPURasterBufferBand<'float32'>;
+      }> = [];
+
+      for (const [tileIndex, tile] of this.halo.tiles.entries()) {
+        const sourcePixelCount =
+          (tile.pixelBounds[2] - tile.pixelBounds[0]) * (tile.pixelBounds[3] - tile.pixelBounds[1]);
+        const tileValidity = this.importView(
+          graph,
+          `halo-validity-${tileIndex}`,
+          tile.sources.validity,
+          'uint32',
+          sourcePixelCount
+        );
+        redSources.push({
+          pixelBounds: tile.pixelBounds,
+          input: {
+            id: 'red-reflectance',
+            format: 'float32',
+            storage: {
+              kind: 'buffer',
+              values: this.importView(
+                graph,
+                `halo-red-${tileIndex}`,
+                tile.sources.red,
+                'float32',
+                sourcePixelCount
+              )
+            },
+            validity: tileValidity,
+            noDataValue: RASTER_LAB_NO_DATA_VALUE
+          }
+        });
+        nearInfraredSources.push({
+          pixelBounds: tile.pixelBounds,
+          input: {
+            id: 'near-infrared-reflectance',
+            format: 'float32',
+            storage: {
+              kind: 'buffer',
+              values: this.importView(
+                graph,
+                `halo-near-infrared-${tileIndex}`,
+                tile.sources.nearInfrared,
+                'float32',
+                sourcePixelCount
+              )
+            },
+            validity: tileValidity,
+            noDataValue: RASTER_LAB_NO_DATA_VALUE
+          }
+        });
+      }
+
+      new GPURasterTileHaloFill({
+        id: 'raster-lab-red-halo-assembly',
+        pixelBounds: this.halo.plan.availablePixelBounds,
+        sources: redSources,
+        output: assembledRed,
+        outputValidity: assembledRedValidity
+      }).addToGraph(graph);
+      new GPURasterTileHaloFill({
+        id: 'raster-lab-near-infrared-halo-assembly',
+        pixelBounds: this.halo.plan.availablePixelBounds,
+        sources: nearInfraredSources,
+        output: assembledNearInfrared,
+        outputValidity: assembledNearInfraredValidity
+      }).addToGraph(graph);
+
+      const paddedRed: GPURasterBufferBand<'float32'> = {
+        id: 'assembled-red-reflectance',
+        format: 'float32',
+        storage: {kind: 'buffer', values: assembledRed},
+        validity: assembledRedValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+      const paddedNearInfrared: GPURasterBufferBand<'float32'> = {
+        id: 'assembled-near-infrared-reflectance',
+        format: 'float32',
+        storage: {kind: 'buffer', values: assembledNearInfrared},
+        validity: assembledNearInfraredValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+      new GPURasterNDVI({
+        id: 'raster-lab-padded-ndvi',
+        width: this.halo.plan.width,
+        height: this.halo.plan.height,
+        nearInfrared: paddedNearInfrared,
+        red: paddedRed,
+        output: assembledVegetationIndex,
+        outputValidity: assembledVegetationValidity,
+        epsilon: this.epsilon
+      }).addToGraph(graph);
+
+      processingWidth = this.halo.plan.width;
+      processingHeight = this.halo.plan.height;
+      selectedValues =
+        this.settings.mode === 'ndvi'
+          ? assembledVegetationIndex
+          : this.settings.mode === 'red'
+            ? assembledRed
+            : assembledNearInfrared;
+      selectedValidity = assembledVegetationValidity;
+      processingSmoothedValues = this.createTransientView(
+        graph,
+        'halo-smoothed-values',
+        'float32',
+        haloPixelCount
+      );
+      processingSmoothedValidity = this.createTransientView(
+        graph,
+        'halo-smoothed-validity',
+        'uint32',
+        haloPixelCount
+      );
+      processingEdgeValues = this.createTransientView(
+        graph,
+        'halo-edge-values',
+        'float32',
+        haloPixelCount
+      );
+      processingEdgeValidity = this.createTransientView(
+        graph,
+        'halo-edge-validity',
+        'uint32',
+        haloPixelCount
+      );
+      processingMorphologyValues = this.createTransientView(
+        graph,
+        'halo-morphology-values',
+        'float32',
+        haloPixelCount
+      );
+      processingMorphologyValidity = this.createTransientView(
+        graph,
+        'halo-morphology-validity',
+        'uint32',
+        haloPixelCount
+      );
+    }
 
     const sourceBand: GPURasterBufferBand<'float32'> = {
       id: `${this.settings.mode}-source`,
       format: 'float32',
       storage: {kind: 'buffer', values: selectedValues},
-      validity: outputValidity,
+      validity: selectedValidity,
       ...(this.settings.mode === 'ndvi' ? {} : {noDataValue: RASTER_LAB_NO_DATA_VALUE})
     };
 
     if (this.settings.smoothingMode !== 'none') {
       const smoothingProps = {
         id: `raster-lab-${this.settings.smoothingMode}-blur`,
-        width: this.dataset.width,
-        height: this.dataset.height,
+        width: processingWidth,
+        height: processingHeight,
         input: sourceBand,
-        output: smoothedValues,
-        outputValidity: smoothedValidity,
+        output: processingSmoothedValues,
+        outputValidity: processingSmoothedValidity,
         radius: this.settings.smoothingRadius,
         borderMode: 'reflect' as const,
         noDataPolicy: 'ignore-renormalize' as const
@@ -855,18 +1067,18 @@ export class RasterLabEngine {
         : {
             id: `${this.settings.mode}-${this.settings.smoothingMode}-smoothed`,
             format: 'float32',
-            storage: {kind: 'buffer', values: smoothedValues},
-            validity: smoothedValidity
+            storage: {kind: 'buffer', values: processingSmoothedValues},
+            validity: processingSmoothedValidity
           };
 
     if (this.settings.edgeMode !== 'none') {
       const edgeProps = {
         id: `raster-lab-${this.settings.edgeMode}-${this.settings.edgeDirection}`,
-        width: this.dataset.width,
-        height: this.dataset.height,
+        width: processingWidth,
+        height: processingHeight,
         input: filteredBand,
-        output: edgeValues,
-        outputValidity: edgeValidity,
+        output: processingEdgeValues,
+        outputValidity: processingEdgeValidity,
         borderMode: 'reflect' as const,
         scale: this.settings.edgeMode === 'scharr' ? 0.25 : 1
       };
@@ -895,8 +1107,8 @@ export class RasterLabEngine {
         : {
             id: `${this.settings.mode}-${this.settings.edgeMode}-edges`,
             format: 'float32',
-            storage: {kind: 'buffer', values: edgeValues},
-            validity: edgeValidity
+            storage: {kind: 'buffer', values: processingEdgeValues},
+            validity: processingEdgeValidity
           };
     const morphologyClass =
       this.settings.morphologyOperation === 'dilate'
@@ -908,8 +1120,8 @@ export class RasterLabEngine {
             : GPURasterClosing;
     const morphologyProps = {
       id: `raster-lab-${this.settings.morphologyMode}-${this.settings.morphologyOperation}`,
-      width: this.dataset.width,
-      height: this.dataset.height,
+      width: processingWidth,
+      height: processingHeight,
       radius: this.settings.morphologyRadius,
       structuringElement: this.settings.morphologyShape,
       borderMode: this.settings.morphologyBorderMode,
@@ -926,8 +1138,8 @@ export class RasterLabEngine {
         ...morphologyProps,
         mode: 'grayscale',
         input: derivativeBand,
-        output: morphologyValues,
-        outputValidity: grayscaleMorphologyValidity
+        output: processingMorphologyValues,
+        outputValidity: processingMorphologyValidity
       }).addToGraph(graph);
     }
 
@@ -935,29 +1147,54 @@ export class RasterLabEngine {
       ? {
           id: `${this.settings.mode}-${this.settings.morphologyOperation}-morphology`,
           format: 'float32',
+          storage: {kind: 'buffer', values: processingMorphologyValues},
+          validity: processingMorphologyValidity
+        }
+      : derivativeBand;
+
+    const coreProcessingBand: GPURasterBufferBand<'float32'> = this.halo
+      ? {
+          id: 'owned-core-processed-values',
+          format: 'float32',
           storage: {kind: 'buffer', values: morphologyValues},
           validity: grayscaleMorphologyValidity
         }
-      : derivativeBand;
+      : morphologyBand;
+
+    if (this.halo) {
+      new GPURasterTileCoreExtract({
+        id: 'raster-lab-owned-core-extract',
+        availablePixelBounds: this.halo.plan.availablePixelBounds,
+        corePixelBounds: this.halo.plan.corePixelBounds,
+        input: morphologyBand,
+        output: morphologyValues,
+        outputValidity: grayscaleMorphologyValidity
+      }).addToGraph(graph);
+    }
+
+    const contrastDomain: readonly [number, number] =
+      this.settings.edgeMode === 'none'
+        ? this.settings.mode === 'ndvi'
+          ? [-1, 1]
+          : [0, 1]
+        : this.settings.edgeMode !== 'laplacian' && this.settings.edgeDirection === 'magnitude'
+          ? [0, 1]
+          : [-1, 1];
+    const contrastOptions = {
+      domain: contrastDomain,
+      contrast: this.settings.contrast,
+      gamma: this.settings.gamma,
+      mode: this.settings.gamma === 1 ? ('linear' as const) : ('gamma' as const)
+    };
 
     new GPURasterContrast({
       id: 'raster-lab-contrast',
       width: this.dataset.width,
       height: this.dataset.height,
-      input: morphologyBand,
+      input: coreProcessingBand,
       output: analyzedValues,
       outputValidity: analyzedValidity,
-      domain:
-        this.settings.edgeMode === 'none'
-          ? this.settings.mode === 'ndvi'
-            ? [-1, 1]
-            : [0, 1]
-          : this.settings.edgeMode !== 'laplacian' && this.settings.edgeDirection === 'magnitude'
-            ? [0, 1]
-            : [-1, 1],
-      contrast: this.settings.contrast,
-      gamma: this.settings.gamma,
-      mode: this.settings.gamma === 1 ? 'linear' : 'gamma'
+      ...contrastOptions
     }).addToGraph(graph);
 
     const analyzedBand: GPURasterBufferBand<'float32'> = {
@@ -997,19 +1234,111 @@ export class RasterLabEngine {
     }
 
     if (binaryMorphologyEnabled) {
-      const binarySeed: GPURasterBufferBand<'uint32'> = {
-        id: 'raster-lab-binary-threshold-seed',
-        format: 'uint32',
-        storage: {kind: 'buffer', values: thresholdSeed},
-        validity: analyzedValidity
-      };
-      new morphologyClass({
-        ...morphologyProps,
-        mode: 'binary',
-        input: binarySeed,
-        output: thresholdValidity,
-        outputValidity: binaryMorphologyValidity
-      }).addToGraph(graph);
+      if (this.halo) {
+        const haloPixelCount = processingWidth * processingHeight;
+        const paddedAnalyzedValues = this.createTransientView(
+          graph,
+          'halo-binary-analyzed-values',
+          'float32',
+          haloPixelCount
+        );
+        const paddedAnalyzedValidity = this.createTransientView(
+          graph,
+          'halo-binary-analyzed-validity',
+          'uint32',
+          haloPixelCount
+        );
+        const paddedThresholdSeed = this.createTransientView(
+          graph,
+          'halo-binary-threshold-seed',
+          'uint32',
+          haloPixelCount
+        );
+        const paddedBinaryMask = this.createTransientView(
+          graph,
+          'halo-binary-morphology-mask',
+          'uint32',
+          haloPixelCount
+        );
+        const paddedBinaryValidity = this.createTransientView(
+          graph,
+          'halo-binary-morphology-validity',
+          'uint32',
+          haloPixelCount
+        );
+
+        new GPURasterContrast({
+          id: 'raster-lab-padded-binary-contrast',
+          width: processingWidth,
+          height: processingHeight,
+          input: derivativeBand,
+          output: paddedAnalyzedValues,
+          outputValidity: paddedAnalyzedValidity,
+          ...contrastOptions
+        }).addToGraph(graph);
+
+        const paddedAnalyzedBand: GPURasterBufferBand<'float32'> = {
+          id: 'raster-lab-padded-binary-analysis',
+          format: 'float32',
+          storage: {kind: 'buffer', values: paddedAnalyzedValues},
+          validity: paddedAnalyzedValidity
+        };
+        new GPURasterThreshold({
+          id: 'raster-lab-padded-binary-threshold',
+          width: processingWidth,
+          height: processingHeight,
+          input: paddedAnalyzedBand,
+          output: paddedThresholdSeed,
+          threshold: this.settings.automaticThreshold
+            ? automaticThreshold
+            : this.settings.threshold,
+          operation: 'above',
+          inclusive: true
+        }).addToGraph(graph);
+
+        const paddedBinarySeed: GPURasterBufferBand<'uint32'> = {
+          id: 'raster-lab-padded-binary-threshold-seed',
+          format: 'uint32',
+          storage: {kind: 'buffer', values: paddedThresholdSeed},
+          validity: paddedAnalyzedValidity
+        };
+        new morphologyClass({
+          ...morphologyProps,
+          mode: 'binary',
+          input: paddedBinarySeed,
+          output: paddedBinaryMask,
+          outputValidity: paddedBinaryValidity
+        }).addToGraph(graph);
+
+        const paddedBinaryBand: GPURasterBufferBand<'uint32'> = {
+          id: 'raster-lab-padded-binary-morphology-result',
+          format: 'uint32',
+          storage: {kind: 'buffer', values: paddedBinaryMask},
+          validity: paddedBinaryValidity
+        };
+        new GPURasterTileCoreExtract({
+          id: 'raster-lab-owned-binary-core-extract',
+          availablePixelBounds: this.halo.plan.availablePixelBounds,
+          corePixelBounds: this.halo.plan.corePixelBounds,
+          input: paddedBinaryBand,
+          output: thresholdValidity,
+          outputValidity: binaryMorphologyValidity
+        }).addToGraph(graph);
+      } else {
+        const binarySeed: GPURasterBufferBand<'uint32'> = {
+          id: 'raster-lab-binary-threshold-seed',
+          format: 'uint32',
+          storage: {kind: 'buffer', values: thresholdSeed},
+          validity: analyzedValidity
+        };
+        new morphologyClass({
+          ...morphologyProps,
+          mode: 'binary',
+          input: binarySeed,
+          output: thresholdValidity,
+          outputValidity: binaryMorphologyValidity
+        }).addToGraph(graph);
+      }
     }
 
     if (this.settings.contoursEnabled) {
@@ -1077,6 +1406,20 @@ export class RasterLabEngine {
       {id, byteLength: buffer.byteLength, usage: buffer.usage},
       buffer
     );
+    return graph.createDataView(handle, {format, length});
+  }
+
+  private createTransientView<Format extends 'float32' | 'uint32'>(
+    graph: GPUCommandGraph,
+    id: string,
+    format: Format,
+    length: number
+  ): GraphDataView<Format> {
+    const handle = graph.createTransientBuffer({
+      id,
+      byteLength: length * Uint32Array.BYTES_PER_ELEMENT,
+      usage: Buffer.STORAGE
+    });
     return graph.createDataView(handle, {format, length});
   }
 }

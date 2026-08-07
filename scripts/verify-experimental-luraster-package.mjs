@@ -39,6 +39,10 @@ const tileCacheImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-tile-cache.ts'),
   'utf8'
 );
+const tileHaloImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-tile-halo.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -70,6 +74,21 @@ assert.doesNotMatch(
   tileCacheImplementation,
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'bounded tile residency leaves command submission, completion fences, and readback explicit'
+);
+assert.doesNotMatch(
+  tileHaloImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'tile halo assembly does not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  tileHaloImplementation,
+  /\bfetch\s*\(/,
+  'tile halo assembly does not choose an HTTP transport'
+);
+assert.doesNotMatch(
+  tileHaloImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'tile halo assembly leaves command submission, completion fences, and readback explicit'
 );
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
@@ -107,7 +126,11 @@ const requiredRuntimeExportNames = [
   'GPURasterStatistics',
   'GPURasterThreshold',
   'GPURasterTileCache',
+  'GPURasterTileCoreExtract',
   'GPURasterTileGraphLease',
+  'GPURasterTileHaloAssembler',
+  'GPURasterTileHaloFill',
+  'GPURasterTileHaloLease',
   'GPURasterTileLease',
   'GPURasterTileReader',
   'GPURasterTextureToBuffer',
@@ -134,6 +157,33 @@ assert.equal(
   'function',
   'CommonJS tile readers expose validated canonical request normalization'
 );
+for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
+  assert.equal(
+    typeof rasterModule.GPURasterTileHaloAssembler.prototype.plan,
+    'function',
+    'tile halo assemblers expose synchronous cumulative receptive-field planning'
+  );
+  assert.equal(
+    typeof rasterModule.GPURasterTileHaloAssembler.prototype.acquire,
+    'function',
+    'tile halo assemblers expose cancellable neighbor acquisition'
+  );
+  assert.equal(
+    typeof rasterModule.GPURasterTileHaloLease.prototype.releaseAfter,
+    'function',
+    'tile halo leases retain every neighbor until an application-owned fence resolves'
+  );
+  assert.equal(
+    typeof rasterModule.GPURasterTileHaloFill.prototype.addToGraph,
+    'function',
+    'tile halo fill declares explicit GPU command-graph work'
+  );
+  assert.equal(
+    typeof rasterModule.GPURasterTileCoreExtract.prototype.addToGraph,
+    'function',
+    'tile core extraction declares explicit GPU command-graph work'
+  );
+}
 for (const exportName of ecmaScriptExportNames) {
   assert.equal(
     exportName in ecmaScriptRootModule,
@@ -182,7 +232,11 @@ try {
   GPURasterStatistics,
   GPURasterThreshold,
   GPURasterTileCache,
+  GPURasterTileCoreExtract,
   GPURasterTileGraphLease,
+  GPURasterTileHaloAssembler,
+  GPURasterTileHaloFill,
+  GPURasterTileHaloLease,
   GPURasterTileLease,
   GPURasterTileReader,
   GPURasterTextureToBuffer,
@@ -212,6 +266,7 @@ try {
   type GPURasterGradientMagnitudeProps,
   type GPURasterGradientOperator,
   type GPURasterGradientProps,
+  type GPURasterHaloStage,
   type GPURasterHistogramDomain,
   type GPURasterHistogramProps,
   type GPURasterLaplacianConnectivity,
@@ -245,8 +300,13 @@ try {
   type GPURasterTileCacheProps,
   type GPURasterTileCacheStats,
   type GPURasterTileCoordinateSpace,
+  type GPURasterTileCoreExtractProps,
   type GPURasterTileGraphEntry,
   type GPURasterTileGraphRequest,
+  type GPURasterTileHaloFillProps,
+  type GPURasterTileHaloPlan,
+  type GPURasterTileHaloRequest,
+  type GPURasterTileHaloSource,
   type GPURasterTileLevel,
   type GPURasterTileReleaseFence,
   type GPURasterTileRequest,
@@ -289,6 +349,7 @@ declare const gradientDirection: GPURasterGradientDirection;
 declare const gradientMagnitudeOptions: GPURasterGradientMagnitudeProps;
 declare const gradientOperator: GPURasterGradientOperator;
 declare const gradientOptions: GPURasterGradientProps;
+declare const haloStage: GPURasterHaloStage;
 declare const histogramDomain: GPURasterHistogramDomain<'float32'>;
 declare const histogramOptions: GPURasterHistogramProps<'float32'>;
 declare const laplacianConnectivity: GPURasterLaplacianConnectivity;
@@ -322,8 +383,13 @@ declare const tileCacheBudgets: GPURasterTileCacheBudgets;
 declare const tileCacheOptions: GPURasterTileCacheProps;
 declare const tileCacheStats: GPURasterTileCacheStats;
 declare const tileCoordinateSpace: GPURasterTileCoordinateSpace;
+declare const tileCoreExtractOptions: GPURasterTileCoreExtractProps<'uint32'>;
 declare const tileGraphEntry: GPURasterTileGraphEntry<{readonly name: string}>;
 declare const tileGraphRequest: GPURasterTileGraphRequest<{readonly name: string}>;
+declare const tileHaloFillOptions: GPURasterTileHaloFillProps<'float32'>;
+declare const tileHaloPlan: GPURasterTileHaloPlan;
+declare const tileHaloRequest: GPURasterTileHaloRequest;
+declare const tileHaloSource: GPURasterTileHaloSource<'float32'>;
 declare const tileLevel: GPURasterTileLevel;
 declare const tileReleaseFence: GPURasterTileReleaseFence;
 declare const tileRequest: GPURasterTileRequest;
@@ -356,7 +422,11 @@ declare const statistics: GPURasterStatistics;
 declare const histogram: GPURasterHistogram<'float32'>;
 declare const threshold: GPURasterThreshold;
 declare const tileCache: GPURasterTileCache;
+declare const tileCoreExtract: GPURasterTileCoreExtract<'uint32'>;
 declare const tileGraphLease: GPURasterTileGraphLease<{readonly name: string}>;
+declare const tileHaloAssembler: GPURasterTileHaloAssembler;
+declare const tileHaloFill: GPURasterTileHaloFill<'float32'>;
+declare const tileHaloLease: GPURasterTileHaloLease;
 declare const tileLease: GPURasterTileLease;
 declare const tileReader: GPURasterTileReader;
 declare const textureToBuffer: GPURasterTextureToBuffer;
@@ -383,6 +453,8 @@ const sobelContributor: GPUCommandGraphContributor = sobel;
 const statisticsContributor: GPUCommandGraphContributor = statistics;
 const histogramContributor: GPUCommandGraphContributor = histogram;
 const thresholdContributor: GPUCommandGraphContributor = threshold;
+const tileCoreExtractContributor: GPUCommandGraphContributor = tileCoreExtract;
+const tileHaloFillContributor: GPUCommandGraphContributor = tileHaloFill;
 const rasterContributor: GPUCommandGraphContributor = textureToBuffer;
 const configuredGradient: GPUCommandGraphContributor = new GPURasterGradient(gradientOptions);
 const configuredGradientMagnitude: GPUCommandGraphContributor = new GPURasterGradientMagnitude(
@@ -403,6 +475,13 @@ const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closi
 const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
 const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
 const configuredTileCache = new GPURasterTileCache(tileCacheOptions);
+const configuredTileCoreExtract: GPUCommandGraphContributor = new GPURasterTileCoreExtract(
+  tileCoreExtractOptions
+);
+const configuredTileHaloAssembler = new GPURasterTileHaloAssembler(configuredTileCache);
+const configuredTileHaloFill: GPUCommandGraphContributor = new GPURasterTileHaloFill(
+  tileHaloFillOptions
+);
 const configuredTileReader = new GPURasterTileReader(tileSource);
 const normalizedTileRequest: GPURasterTileRequest = configuredTileReader.normalizeTileRequest(
   tileRequest
@@ -410,6 +489,14 @@ const normalizedTileRequest: GPURasterTileRequest = configuredTileReader.normali
 const residentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(tileRequest);
 const cancelledResidentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(
   tileRequest,
+  new AbortController().signal
+);
+const plannedTileHalo: GPURasterTileHaloPlan = configuredTileHaloAssembler.plan(tileHaloRequest);
+const acquiredTileHalo: Promise<GPURasterTileHaloLease> = configuredTileHaloAssembler.acquire(
+  tileHaloRequest
+);
+const cancelledTileHalo: Promise<GPURasterTileHaloLease> = configuredTileHaloAssembler.acquire(
+  tileHaloRequest,
   new AbortController().signal
 );
 const graphLeasePromise: Promise<GPURasterTileGraphLease<{readonly name: string}>> =
@@ -423,11 +510,13 @@ const explicitPromiseFence: GPURasterTileReleaseFence = Promise.resolve();
 const explicitSignaledFence: GPURasterTileReleaseFence = {signaled: Promise.resolve()};
 const releasedResidentTile: Promise<void> = tileLease.releaseAfter(tileReleaseFence);
 const releasedGraph: Promise<void> = tileGraphLease.releaseAfter(explicitPromiseFence);
+const releasedTileHalo: Promise<void> = tileHaloLease.releaseAfter(explicitSignaledFence);
 const publishedTileCacheBudgets: GPURasterTileCacheBudgets = configuredTileCache.budgets;
 const publishedTileCacheStats: GPURasterTileCacheStats = configuredTileCache.stats;
 configuredTileCache.setBudgets({maxTiles: 2, maxGpuBytes: 4194304});
 tileLease.release();
 tileGraphLease.release();
+tileHaloLease.release();
 const decodedTilePromise: Promise<GPURasterDecodedTile> = configuredTileReader.readTile(tileRequest);
 const cancelledTilePromise: Promise<GPURasterDecodedTile> = configuredTileReader.readTile(
   tileRequest,
@@ -484,6 +573,39 @@ const decodedValidity: Uint32Array | undefined = decodedFloatBand.validity;
 const exactTileDownsample: readonly [number, number] = tileLevel.downsample;
 const decodedTileBounds: GPURasterPixelBounds = decodedTile.pixelBounds;
 const decodedLevelZeroBounds: GPURasterPixelBounds = decodedTile.levelZeroBounds;
+const requestedHaloStages: readonly GPURasterHaloStage[] = tileHaloRequest.stages;
+const anisotropicHaloStage: GPURasterHaloStage = {
+  requiredHalo: 3,
+  horizontalRadius: 3,
+  verticalRadius: 0
+};
+const declaredStageHalo: number = haloStage.requiredHalo;
+const declaredHorizontalStageHalo: number | undefined = haloStage.horizontalRadius;
+const declaredVerticalStageHalo: number | undefined = haloStage.verticalRadius;
+const plannedHaloLevel: number = tileHaloPlan.level;
+const plannedHaloColumn: number = tileHaloPlan.column;
+const plannedHaloRow: number = tileHaloPlan.row;
+const plannedCumulativeHalo: number = tileHaloPlan.requiredHalo;
+const plannedHorizontalHalo: number = tileHaloPlan.horizontalHalo;
+const plannedVerticalHalo: number = tileHaloPlan.verticalHalo;
+const plannedLevelZeroHalo: readonly [number, number] = tileHaloPlan.levelZeroHalo;
+const plannedCoreBounds: GPURasterPixelBounds = tileHaloPlan.corePixelBounds;
+const plannedAvailableBounds: GPURasterPixelBounds = tileHaloPlan.availablePixelBounds;
+const plannedHaloWidth: number = tileHaloPlan.width;
+const plannedHaloHeight: number = tileHaloPlan.height;
+const plannedCoreWidth: number = tileHaloPlan.coreWidth;
+const plannedCoreHeight: number = tileHaloPlan.coreHeight;
+const plannedNeighborRequests: readonly GPURasterTileRequest[] = tileHaloPlan.requests;
+const leasedHaloPlan: GPURasterTileHaloPlan = tileHaloLease.plan;
+const leasedHaloCore: GPURasterTileLease = tileHaloLease.core;
+const leasedHaloSources: readonly GPURasterTileLease[] = tileHaloLease.tiles;
+const leasedNeighborCount: number = tileHaloLease.tiles.length;
+const selectedHaloSourceBounds: GPURasterPixelBounds = tileHaloSource.pixelBounds;
+const selectedHaloSourceFormat: 'float32' = tileHaloSource.input.format;
+const floatingHaloOutput: GraphDataView<'float32'> = tileHaloFillOptions.output;
+const floatingHaloValidity: GraphDataView<'uint32'> = tileHaloFillOptions.outputValidity;
+const unsignedCoreOutput: GraphDataView<'uint32'> = tileCoreExtractOptions.output;
+const unsignedCoreValidity: GraphDataView<'uint32'> = tileCoreExtractOptions.outputValidity;
 const boundedTileCapacity: number = tileCacheBudgets.maxTiles;
 const boundedGraphCapacity: number = tileCacheBudgets.maxGraphs;
 const boundedCpuBytes: number = tileCacheBudgets.maxCpuBytes;
@@ -543,6 +665,12 @@ const missingGraphOwnerCleanup: GPURasterTileGraphEntry<{readonly name: string}>
 };
 // @ts-expect-error Fence release accepts completion promises, never an arbitrary numeric delay.
 const invalidTileReleaseFence: GPURasterTileReleaseFence = 100;
+// @ts-expect-error Cumulative halo requests require an explicitly ordered stage sequence.
+const missingHaloStages: GPURasterTileHaloRequest = tileRequest;
+// @ts-expect-error Native floating-point halo sources cannot publish uint32 sample values.
+const invalidFloatingHaloOutput: GraphDataView<'uint32'> = tileHaloFillOptions.output;
+// @ts-expect-error Unsigned core extraction preserves uint32 samples without float conversion.
+const invalidUnsignedCoreOutput: GraphDataView<'float32'> = tileCoreExtractOptions.output;
 
 void GPURaster;
 void GPURasterBandMath;
@@ -570,7 +698,11 @@ void GPURasterSobel;
 void GPURasterStatistics;
 void GPURasterThreshold;
 void GPURasterTileCache;
+void GPURasterTileCoreExtract;
 void GPURasterTileGraphLease;
+void GPURasterTileHaloAssembler;
+void GPURasterTileHaloFill;
+void GPURasterTileHaloLease;
 void GPURasterTileLease;
 void GPURasterTileReader;
 void GPURasterTextureToBuffer;
@@ -603,6 +735,7 @@ void gradientDirection;
 void gradientMagnitudeOptions;
 void gradientOperator;
 void gradientOptions;
+void haloStage;
 void histogramDomain;
 void histogramOptions;
 void laplacianConnectivity;
@@ -636,8 +769,13 @@ void tileCacheBudgets;
 void tileCacheOptions;
 void tileCacheStats;
 void tileCoordinateSpace;
+void tileCoreExtractOptions;
 void tileGraphEntry;
 void tileGraphRequest;
+void tileHaloFillOptions;
+void tileHaloPlan;
+void tileHaloRequest;
+void tileHaloSource;
 void tileLevel;
 void tileReleaseFence;
 void tileRequest;
@@ -669,6 +807,8 @@ void sobelContributor;
 void statisticsContributor;
 void histogramContributor;
 void thresholdContributor;
+void tileCoreExtractContributor;
+void tileHaloFillContributor;
 void rasterContributor;
 void configuredGradient;
 void configuredGradientMagnitude;
@@ -683,10 +823,16 @@ void configuredClosing;
 void configuredScharr;
 void configuredSobel;
 void configuredTileCache;
+void configuredTileCoreExtract;
+void configuredTileHaloAssembler;
+void configuredTileHaloFill;
 void configuredTileReader;
 void normalizedTileRequest;
 void residentTilePromise;
 void cancelledResidentTilePromise;
+void plannedTileHalo;
+void acquiredTileHalo;
+void cancelledTileHalo;
 void graphLeasePromise;
 void leasedResidentTile;
 void leasedDecodedTile;
@@ -697,6 +843,7 @@ void explicitPromiseFence;
 void explicitSignaledFence;
 void releasedResidentTile;
 void releasedGraph;
+void releasedTileHalo;
 void publishedTileCacheBudgets;
 void publishedTileCacheStats;
 void decodedTilePromise;
@@ -723,6 +870,35 @@ void decodedValidity;
 void exactTileDownsample;
 void decodedTileBounds;
 void decodedLevelZeroBounds;
+void requestedHaloStages;
+void anisotropicHaloStage;
+void declaredStageHalo;
+void declaredHorizontalStageHalo;
+void declaredVerticalStageHalo;
+void plannedHaloLevel;
+void plannedHaloColumn;
+void plannedHaloRow;
+void plannedCumulativeHalo;
+void plannedHorizontalHalo;
+void plannedVerticalHalo;
+void plannedLevelZeroHalo;
+void plannedCoreBounds;
+void plannedAvailableBounds;
+void plannedHaloWidth;
+void plannedHaloHeight;
+void plannedCoreWidth;
+void plannedCoreHeight;
+void plannedNeighborRequests;
+void leasedHaloPlan;
+void leasedHaloCore;
+void leasedHaloSources;
+void leasedNeighborCount;
+void selectedHaloSourceBounds;
+void selectedHaloSourceFormat;
+void floatingHaloOutput;
+void floatingHaloValidity;
+void unsignedCoreOutput;
+void unsignedCoreValidity;
 void boundedTileCapacity;
 void boundedGraphCapacity;
 void boundedCpuBytes;
@@ -758,8 +934,15 @@ void invalidSignedDecodedValues;
 void missingGraphAllocationEstimate;
 void missingGraphOwnerCleanup;
 void invalidTileReleaseFence;
+void missingHaloStages;
+void invalidFloatingHaloOutput;
+void invalidUnsignedCoreOutput;
 void tileCache;
+void tileCoreExtract;
 void tileGraphLease;
+void tileHaloAssembler;
+void tileHaloFill;
+void tileHaloLease;
 void tileLease;
 void tileReader;
 
@@ -799,6 +982,15 @@ void RootGPURasterTileGraphLease;
 // @ts-expect-error Fence-safe resident tile leases stay isolated from the experimental root.
 import {GPURasterTileLease as RootGPURasterTileLease} from '@luma.gl/experimental';
 void RootGPURasterTileLease;
+// @ts-expect-error Cumulative halo planners stay isolated from the experimental root.
+import {GPURasterTileHaloAssembler as RootGPURasterTileHaloAssembler} from '@luma.gl/experimental';
+void RootGPURasterTileHaloAssembler;
+// @ts-expect-error Graph-native halo assembly stays isolated from the experimental root.
+import {GPURasterTileHaloFill as RootGPURasterTileHaloFill} from '@luma.gl/experimental';
+void RootGPURasterTileHaloFill;
+// @ts-expect-error Core-only extraction stays isolated from the experimental root.
+import {GPURasterTileCoreExtract as RootGPURasterTileCoreExtract} from '@luma.gl/experimental';
+void RootGPURasterTileCoreExtract;
 `
   );
   assert.equal(

@@ -20,6 +20,7 @@ import {RASTER_LAB_STYLES} from './raster-styles';
 export type RasterLabInterfaceCallbacks = {
   onSourceTile?: (tile: RasterLabSourceTile) => void;
   onSourceOverview?: (level: RasterLabOverviewLevel) => void;
+  onHaloMode?: (mode: RasterLabHaloMode) => void;
   onCacheCapacity?: (capacity: number) => void;
   onMode?: (mode: RasterLabDisplayMode) => void;
   onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
@@ -46,6 +47,16 @@ export type RasterLabInterfaceCallbacks = {
 
 export type RasterLabSourceTile = 'full' | 'west' | 'east';
 export type RasterLabOverviewLevel = 0 | 1;
+export type RasterLabHaloMode = 'off' | 'seamless';
+
+export type RasterLabHaloSummary = {
+  mode: RasterLabHaloMode;
+  radius: number;
+  levelZeroRadius: readonly [number, number];
+  coreBounds: readonly [number, number, number, number];
+  availableBounds: readonly [number, number, number, number];
+  sourceTileCount: number;
+};
 
 export type RasterLabSourceSummary = {
   width: number;
@@ -165,6 +176,30 @@ export class RasterLabInterface {
         String(Number(button.dataset['rasterSourceOverview']) === level)
       );
     }
+  }
+
+  setHalo(summary: RasterLabHaloSummary): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-raster-halo-mode]')) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterHaloMode'] === summary.mode)
+      );
+    }
+    const [minimumColumn, minimumRow, maximumColumn, maximumRow] = summary.coreBounds;
+    const [availableMinimumColumn, , availableMaximumColumn] = summary.availableBounds;
+    const enabled = summary.mode === 'seamless';
+    this.getElement('[data-raster-halo-radius]').textContent = enabled
+      ? `${summary.radius} px · L0 ${summary.levelZeroRadius[0]} × ${summary.levelZeroRadius[1]}`
+      : 'off';
+    this.getElement('[data-raster-halo-core]').textContent = enabled
+      ? `[${minimumColumn}, ${maximumColumn}) × [${minimumRow}, ${maximumRow})`
+      : 'selected tile only';
+    this.getElement('[data-raster-halo-sources]').textContent = enabled
+      ? `${summary.sourceTileCount} resident · [${availableMinimumColumn}, ${availableMaximumColumn})`
+      : 'no neighbor assembly';
+    this.getElement('[data-raster-map-scale]').textContent = enabled
+      ? `${summary.sourceTileCount} tiles · ${summary.radius} px halo · core only`
+      : 'single tile · no halo';
   }
 
   setResidency(summary: RasterLabResidencySummary): void {
@@ -474,6 +509,12 @@ export class RasterLabInterface {
         const level = overview === '0' ? 0 : 1;
         this.setSourceOverview(level);
         this.callbacks.onSourceOverview?.(level);
+        return;
+      }
+      const haloButton = target.closest<HTMLButtonElement>('[data-raster-halo-mode]');
+      const haloMode = haloButton?.dataset['rasterHaloMode'];
+      if (haloMode === 'off' || haloMode === 'seamless') {
+        this.callbacks.onHaloMode?.(haloMode);
         return;
       }
       const otsuButton = target.closest<HTMLButtonElement>('[data-raster-control="otsu"]');
@@ -804,7 +845,7 @@ function makeRasterLabMarkup(): string {
           </div>
           <div class="raster-map-surface" data-raster-surface>
             <span class="raster-coordinate" data-raster-coordinate>L0 / FULL · ORIGIN 0,0 · EPSG:32610</span>
-            <span class="raster-scale">single tile · no halo</span>
+            <span class="raster-scale" data-raster-map-scale>single tile · no halo</span>
           </div>
           <div class="raster-map-footer">
             <div class="raster-legend" data-raster-legend data-mode="ndvi">
@@ -834,6 +875,15 @@ function makeRasterLabMarkup(): string {
               <div class="raster-source-overview-buttons" aria-label="Source-provided overview level">
                 <button class="raster-mode-button" data-raster-source-overview="0" aria-pressed="true">1× NATIVE</button>
                 <button class="raster-mode-button" data-raster-source-overview="1" aria-pressed="false">2× OVERVIEW</button>
+              </div>
+              <div class="raster-halo-buttons" aria-label="Cross-tile neighborhood ownership">
+                <button class="raster-mode-button" data-raster-halo-mode="off" aria-pressed="true">TILE ONLY</button>
+                <button class="raster-mode-button" data-raster-halo-mode="seamless" aria-pressed="false">SEAMLESS HALO</button>
+              </div>
+              <div class="raster-halo-statistics" aria-label="Composed halo and half-open core ownership">
+                <span>Cumulative halo</span><span data-raster-halo-radius>off</span>
+                <span>Owned core</span><span data-raster-halo-core>selected tile only</span>
+                <span>Resident sources</span><span data-raster-halo-sources>no neighbor assembly</span>
               </div>
               <div class="raster-source-description" data-raster-source-description>L0 · FULL</div>
               <div class="raster-source-origin" data-raster-source-origin>Origin 0, 0 · EPSG:32610</div>

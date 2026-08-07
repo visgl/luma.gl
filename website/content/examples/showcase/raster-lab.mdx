@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Explore budgeted resident raster tiles and reusable GPU graphs with NDVI, smoothing, edges, morphology, contours, and live histograms.
+description: Explore seam-safe raster tile halos, budgeted GPU residency, NDVI, smoothing, edges, morphology, contours, and live histograms.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -22,8 +22,11 @@ resident-tile capacity and watch real CPU/GPU occupancy, cache hits, misses,
 evictions, active lease pins, and graph compilation/reuse. An uncached window
 is decoded and uploaded; revisiting a resident window reuses its buffers,
 equally sized western/eastern windows reuse their compiled graph, and
-superseded source requests are canceled. Switch between the derived vegetation
-index and its source bands, apply Gaussian or box
+superseded source requests are canceled. Switch between **TILE ONLY** and
+**SEAMLESS HALO** to compare an independently processed window with an
+explicitly assembled, fence-pinned neighborhood; inspect its cumulative radius,
+owned half-open core, and resident source count. Switch between the derived
+vegetation index and its source bands, apply Gaussian or box
 smoothing, adjust the kernel radius or Gaussian sigma, choose Sobel, Scharr,
 or Laplacian edge detection, switch between signed horizontal/vertical
 derivatives and nonnegative gradient magnitude, or select binary/grayscale
@@ -49,9 +52,14 @@ window, affine/CRS metadata, native decoded samples, validity masks, and
 budgets, deterministic least-recently-used eviction, cancellation-safe shared
 loads, owned native-band uploads, and compatible compiled-graph reuse. The
 browser application still owns source generation, cancellation policy, graph
-construction, command submission, and completion fences; one tile is analyzed
-at a time while multiple previously visited tiles can remain resident. It does
-not install a GeoTIFF decoder or download real satellite imagery.
+construction, command submission, and completion fences; one selected output
+core is analyzed at a time while cached neighbors and previously visited tiles
+can remain resident. `GPURasterTileHaloAssembler` adds explicit cumulative
+source-neighborhood planning and composite neighbor leases.
+`GPURasterTileHaloFill` gathers every selected native-format source band and
+its validity directly on the GPU; `GPURasterTileCoreExtract` later publishes
+only the selected core. The example does not install a GeoTIFF decoder or
+download real satellite imagery.
 Normalized source requests expand omitted bands and full windows, default to
 level-local coordinates, and map equivalent level-zero windows to the same
 cache identity before any duplicate decoding or upload.
@@ -93,7 +101,8 @@ optional automatic threshold, and three contour diagnostics—228 bytes
 total—are copied back after submission to update visible summary statistics.
 Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
 derivative direction, morphological operation/mode/footprint/radius/nodata/
-border, contrast, gamma, thresholding, contour levels, and epsilon rebuild
+border, contrast, gamma, thresholding, contour levels, epsilon, and explicit
+seam-safe halo selection rebuild
 their specialized analysis graph while keeping every source and output raster
 buffer resident; source pixels are never downloaded. Selecting a source
 window or overview instead selects an existing resident tile or performs one
@@ -112,6 +121,37 @@ post-submit GPU fence resolves, so cancellation and eviction cannot destroy
 resources still referenced by submitted commands. Shutdown must preserve that
 same fence boundary; immediately releasing active leases provides no GPU
 completion guarantee.
+
+Use **TILE ONLY** when a pointwise measurement needs no observations outside its
+selected source window, or when independent local-border behavior is the intended
+result. Choose **SEAMLESS HALO** for smoothing, gradients, or morphology whose
+neighborhood crosses the boundary of a western or eastern core. The planner sums
+every selected stage's source-pixel radius: Gaussian radius `r` followed by
+Sobel adds `r + 1`; opening or closing at morphology radius `m` adds `2m`
+because both component passes affect the final output. Horizontal and vertical
+radii remain independent; overview footprints are additionally reported in
+level-zero source pixels.
+
+The GPU gathers real red and near-infrared observations and validity from each
+intersecting resident tile before NDVI and padded neighborhood processing. It
+then extracts exactly the selected half-open core before contrast, histogram,
+scalar summaries, rendering, or contour generation. West and east core ownership
+therefore never overlaps; ragged source edges clip against the true overview
+dimensions, and a neighborhood's border mode applies only at a genuine dataset
+edge. Combining separately measured west/east core counts and sums matches the
+corresponding full-raster analytical reference, including selected source
+overviews and missing observations, without downloading raster pixels or
+increasing the existing 228-byte per-analysis summary.
+
+One assembled band adds a graph-declared GPU gather pass for each intersecting
+source tile; publication adds an explicit core-copy pass. A nominal `w × h` core
+with cumulative radii `rx` and `ry` processes up to
+`(w + 2rx) × (h + 2ry)` pixels before true-edge clipping. All participating
+neighbors must fit the configured cache capacity and remain leased until a
+caller-created post-submit completion fence resolves. Large cores reduce
+duplicate halo work; small cores bound peak allocation. The best tradeoff
+depends on source tiling, stage radii, cache reuse, GPU bandwidth, and measured
+workload rather than a guaranteed speedup over presentation-only image effects.
 
 The CPU budget counts the full allocation of each distinct `ArrayBuffer` or
 `SharedArrayBuffer` retained by a tile's decoded sample and validity views.
@@ -179,15 +219,19 @@ analytical input; choose an existing source overview when its lower native
 resolution is appropriate and the source describes its pixel origin and affine
 transform explicitly. The synthetic 2× source overview chooses nearest samples;
 it is not a nodata-aware analytical reduction. The example analyzes one active
-tile at a time while retaining other previously visited tiles within its
-explicit CPU/GPU budgets. It does not assemble neighborhood halos, stitch
-boundaries, merge dataset-wide histograms, generate nodata-aware analytical
-overviews, or provide a GeoTIFF/COG transport or decoder. Those capabilities
-have separate ownership and correctness requirements.
+output core at a time while retaining its selected real source neighbors and
+previously visited tiles within explicit CPU/GPU budgets. The optional
+seam-safe mode assembles cumulative neighborhoods and publishes nonoverlapping
+owned cores; it does not automatically construct one global stitched output,
+merge dataset-wide histograms, deduplicate contour segments across tiles,
+generate nodata-aware analytical overviews, or provide a GeoTIFF/COG transport
+or decoder. Those capabilities have separate ownership and correctness
+requirements.
 
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Segmentation, cross-tile halo assembly, stitched contour seams, global tiled
-statistics, and analytical overview generation remain planned capabilities.
+Segmentation, stitched contour seams, globally merged tiled statistics,
+automatic full-image output placement, and analytical overview generation
+remain planned capabilities.

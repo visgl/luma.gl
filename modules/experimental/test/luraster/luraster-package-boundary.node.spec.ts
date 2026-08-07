@@ -67,7 +67,22 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
   });
 
-  test('exposes tile-source/cache, neighborhood, morphology, and contour APIs', () => {
+  test('keeps halo assembly transport, submission, synchronization, and readback explicit', () => {
+    const tileHaloImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-tile-halo.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(tileHaloImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(tileHaloImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(tileHaloImplementation).not.toMatch(
+      /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/
+    );
+  });
+
+  test('exposes tile-source/cache/halo, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
@@ -94,7 +109,16 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterStatistics).toBeTypeOf('function');
     expect(lurasterModule.GPURasterThreshold).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTileCache).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileCoreExtract).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTileGraphLease).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileHaloAssembler).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileHaloAssembler.prototype.plan).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileHaloAssembler.prototype.acquire).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileHaloFill).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileHaloFill.prototype.addToGraph).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileHaloLease).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileHaloLease.prototype.releaseAfter).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileCoreExtract.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTileLease).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTileReader).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTileReader.prototype.normalizeTileRequest).toBeTypeOf(

@@ -105,6 +105,9 @@ try {
       graphReuseCount: rasterLab.graphReuseCount,
       pinnedTileCount: rasterLab.pinnedTileCount,
       pinnedGraphCount: rasterLab.pinnedGraphCount,
+      haloEnabled: rasterLab.haloEnabled,
+      haloRadius: rasterLab.haloRadius,
+      haloSourceTileCount: rasterLab.haloSourceTileCount,
       edgeMode: rasterLab.edgeMode,
       edgeDirection: rasterLab.edgeDirection,
       morphologyOperation: rasterLab.morphologyOperation,
@@ -159,6 +162,9 @@ try {
   assert.equal(initialState.graphReuseCount, 0, 'the initial shape has no previous graph to reuse');
   assert.equal(initialState.pinnedTileCount, 1, 'the displayed source retains an active tile lease');
   assert.equal(initialState.pinnedGraphCount, 1, 'the displayed analysis retains an active graph lease');
+  assert.equal(initialState.haloEnabled, false, 'independent tile processing remains the default');
+  assert.equal(initialState.haloRadius, 0, 'an independent tile acquires no adjacent source halo');
+  assert.equal(initialState.haloSourceTileCount, 1, 'the initial full scene has exactly one source');
   assert.equal(
     await page.locator('[data-raster-control="cache-capacity"]').getAttribute('max'),
     '4',
@@ -221,7 +227,12 @@ try {
   );
   assert(
     (await page.locator('.raster-scale').textContent()).includes('single tile · no halo'),
-    'the dashboard distinguishes one actively analyzed tile from unimplemented halo assembly'
+    'the default dashboard truthfully distinguishes independent tile processing from seamless mode'
+  );
+  assert.equal(
+    await page.locator('[data-raster-halo-mode="seamless"]').getAttribute('aria-pressed'),
+    'false',
+    'cross-tile halo assembly is an explicitly selectable application policy'
   );
 
   const sidebar = page.locator('.raster-sidebar');
@@ -1445,7 +1456,16 @@ try {
         graphReuseCount: rasterLab.graphReuseCount,
         pinnedTileCount: rasterLab.pinnedTileCount,
         pinnedGraphCount: rasterLab.pinnedGraphCount,
+        haloEnabled: rasterLab.haloEnabled,
+        haloRadius: rasterLab.haloRadius,
+        haloLevelZeroRadius: rasterLab.haloLevelZeroRadius,
+        haloCoreBounds: rasterLab.haloCoreBounds,
+        haloAvailableBounds: rasterLab.haloAvailableBounds,
+        haloSourceTileCount: rasterLab.haloSourceTileCount,
+        haloTransferCount: rasterLab.haloTransferCount,
+        nodeCount: rasterLab.nodeCount,
         executionCount: rasterLab.executionCount,
+        sum: rasterLab.sum,
         edgeMode: rasterLab.edgeMode,
         smoothingMode: rasterLab.smoothingMode,
         morphologyOperation: rasterLab.morphologyOperation,
@@ -1805,6 +1825,277 @@ try {
     await page.evaluate(() => window.__luRasterLab.validPixelCount),
     'canceled requests cannot corrupt the surviving overview aggregate'
   );
+
+  await loadSourceSelection('[data-raster-source-overview="0"]', 'east', 0);
+  await loadSourceSelection('[data-raster-source-tile="full"]', 'full', 0);
+  const previousMonolithicExecution = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.evaluate(() => {
+    const rasterLab = window.__luRasterLab;
+    rasterLab.setMorphologyMode('grayscale');
+    rasterLab.setAutomaticThreshold(false);
+    rasterLab.setThreshold(0.35, false);
+    rasterLab.setMorphologyOperation('open');
+    rasterLab.setMorphologyRadius(2);
+    rasterLab.setMorphologyShape('square');
+    rasterLab.setMorphologyNoDataPolicy('ignore');
+    rasterLab.setMorphologyBorderMode('reflect');
+    rasterLab.setSmoothingMode('gaussian');
+    rasterLab.setSmoothingRadius(2);
+    rasterLab.setEdgeMode('sobel');
+    rasterLab.setEdgeDirection('magnitude');
+  });
+  await page.waitForFunction(
+    previousExecution => {
+      const rasterLab = window.__luRasterLab;
+      return (
+        !rasterLab.sourceLoading &&
+        rasterLab.executionCount > previousExecution &&
+        rasterLab.sourceTile === 'full' &&
+        rasterLab.overviewLevel === 0 &&
+        rasterLab.smoothingMode === 'gaussian' &&
+        rasterLab.smoothingRadius === 2 &&
+        rasterLab.edgeMode === 'sobel' &&
+        rasterLab.morphologyOperation === 'open' &&
+        rasterLab.morphologyMode === 'grayscale' &&
+        !rasterLab.thresholdEnabled &&
+        rasterLab.validPixelCount > rasterLab.pixelCount * 0.8
+      );
+    },
+    previousMonolithicExecution,
+    {timeout: timeoutMilliseconds}
+  );
+
+  const readHaloState = async () =>
+    await page.evaluate(() => {
+      const rasterLab = window.__luRasterLab;
+      return {
+        width: rasterLab.width,
+        height: rasterLab.height,
+        pixelCount: rasterLab.pixelCount,
+        validPixelCount: rasterLab.validPixelCount,
+        sum: rasterLab.sum,
+        nodeCount: rasterLab.nodeCount,
+        sourceTile: rasterLab.sourceTile,
+        overviewLevel: rasterLab.overviewLevel,
+        tileLoadCount: rasterLab.tileLoadCount,
+        executionCount: rasterLab.executionCount,
+        frameCount: rasterLab.frameCount,
+        cacheCapacity: rasterLab.cacheCapacity,
+        residentTileCount: rasterLab.residentTileCount,
+        pinnedTileCount: rasterLab.pinnedTileCount,
+        residentCpuBytes: rasterLab.residentCpuBytes,
+        residentGpuBytes: rasterLab.residentGpuBytes,
+        maximumCpuBytes: rasterLab.maximumCpuBytes,
+        maximumGpuBytes: rasterLab.maximumGpuBytes,
+        haloEnabled: rasterLab.haloEnabled,
+        haloRadius: rasterLab.haloRadius,
+        haloLevelZeroRadius: rasterLab.haloLevelZeroRadius,
+        haloCoreBounds: rasterLab.haloCoreBounds,
+        haloAvailableBounds: rasterLab.haloAvailableBounds,
+        haloSourceTileCount: rasterLab.haloSourceTileCount,
+        haloTransferCount: rasterLab.haloTransferCount,
+        bins: rasterLab.bins
+      };
+    });
+
+  const nativeMonolithic = await readHaloState();
+  const independentWestern = await loadSourceSelection(
+    '[data-raster-source-tile="west"]',
+    'west',
+    0
+  );
+  const seamlessButton = page.locator('[data-raster-halo-mode="seamless"]');
+  await seamlessButton.scrollIntoViewIfNeeded();
+  await seamlessButton.click();
+  await page.waitForFunction(
+    previousLoadCount => {
+      const rasterLab = window.__luRasterLab;
+      return (
+        rasterLab.haloEnabled &&
+        !rasterLab.sourceLoading &&
+        rasterLab.tileLoadCount > previousLoadCount &&
+        rasterLab.haloRadius === 7 &&
+        rasterLab.haloSourceTileCount === 2 &&
+        rasterLab.sourceTile === 'west'
+      );
+    },
+    independentWestern.tileLoadCount,
+    {timeout: timeoutMilliseconds}
+  );
+
+  const seamlessWestern = await readHaloState();
+  assert.deepEqual(
+    seamlessWestern.haloCoreBounds,
+    [0, 0, 160, 224],
+    'the western tile owns only its half-open native core'
+  );
+  assert.deepEqual(
+    seamlessWestern.haloAvailableBounds,
+    [0, 0, 167, 224],
+    'the composed halo clips only at the real western dataset boundary'
+  );
+  assert.deepEqual(
+    seamlessWestern.haloLevelZeroRadius,
+    [7, 7],
+    'Gaussian radius two, Sobel radius one, and two opening stages sum to seven source pixels'
+  );
+  assert.equal(
+    seamlessWestern.haloTransferCount,
+    5,
+    'two resident neighbors contribute both native bands before one owned-core extraction'
+  );
+  assert.equal(seamlessWestern.pixelCount, 160 * 224, 'assembled halo pixels are never published');
+  assert(
+    seamlessWestern.pinnedTileCount >= 2,
+    'the displayed graph keeps both borrowed native source tiles pinned'
+  );
+  assert(
+    seamlessWestern.nodeCount >= independentWestern.nodeCount + seamlessWestern.haloTransferCount,
+    'halo assembly and core extraction are actual declared GPU command-graph work'
+  );
+  assert(
+    Math.abs(seamlessWestern.sum - independentWestern.sum) > 0.00001 ||
+      seamlessWestern.validPixelCount !== independentWestern.validPixelCount,
+    'borrowing the adjacent seam changes the independently bordered tile result'
+  );
+  assert(
+    (await page.locator('[data-raster-halo-radius]').textContent()).includes('7 px'),
+    'the dashboard publishes the cumulative pipeline receptive field'
+  );
+  assert(
+    (await page.locator('[data-raster-halo-core]').textContent()).includes('[0, 160)'),
+    'the dashboard exposes explicit half-open output ownership'
+  );
+  assert(
+    (await page.locator('[data-raster-map-scale]').textContent()).includes('2 tiles · 7 px halo'),
+    'the rendered map accurately identifies neighboring resident inputs'
+  );
+
+  const seamlessEastern = await loadSourceSelection(
+    '[data-raster-source-tile="east"]',
+    'east',
+    0
+  );
+  assert.deepEqual(seamlessEastern.haloCoreBounds, [160, 0, 320, 224]);
+  assert.deepEqual(
+    seamlessEastern.haloAvailableBounds,
+    [153, 0, 320, 224],
+    'the eastern halo borrows real western samples and clips only at the true outer edge'
+  );
+  assert.equal(
+    seamlessWestern.validPixelCount + seamlessEastern.validPixelCount,
+    nativeMonolithic.validPixelCount,
+    'half-open native cores reproduce every monolithic valid pixel exactly once'
+  );
+  assert(
+    Math.abs(seamlessWestern.sum + seamlessEastern.sum - nativeMonolithic.sum) < 0.05,
+    'GPU-only Gaussian, Sobel, and opening values match the full native raster across its seam'
+  );
+  assert(
+    seamlessEastern.residentCpuBytes <= seamlessEastern.maximumCpuBytes &&
+      seamlessEastern.residentGpuBytes <= seamlessEastern.maximumGpuBytes,
+    'resident neighbors and graph-owned padded scratch remain within explicit byte budgets'
+  );
+
+  await loadSourceSelection('[data-raster-source-tile="full"]', 'full', 0);
+  const monolithicOverview = await loadSourceSelection(
+    '[data-raster-source-overview="1"]',
+    'full',
+    1
+  );
+  assert.deepEqual(
+    monolithicOverview.haloLevelZeroRadius,
+    [14, 14],
+    'a source-provided overview scales the composed halo to level-zero coordinates'
+  );
+  const seamlessWesternOverview = await loadSourceSelection(
+    '[data-raster-source-tile="west"]',
+    'west',
+    1
+  );
+  const seamlessEasternOverview = await loadSourceSelection(
+    '[data-raster-source-tile="east"]',
+    'east',
+    1
+  );
+  assert.deepEqual(seamlessWesternOverview.haloCoreBounds, [0, 0, 80, 112]);
+  assert.deepEqual(seamlessWesternOverview.haloAvailableBounds, [0, 0, 87, 112]);
+  assert.deepEqual(seamlessEasternOverview.haloCoreBounds, [80, 0, 160, 112]);
+  assert.deepEqual(seamlessEasternOverview.haloAvailableBounds, [73, 0, 160, 112]);
+  assert.deepEqual(seamlessEasternOverview.haloLevelZeroRadius, [14, 14]);
+  assert.equal(
+    seamlessWesternOverview.validPixelCount + seamlessEasternOverview.validPixelCount,
+    monolithicOverview.validPixelCount,
+    'disjoint overview cores reproduce all valid monolithic overview samples'
+  );
+  assert(
+    Math.abs(
+      seamlessWesternOverview.sum + seamlessEasternOverview.sum - monolithicOverview.sum
+    ) < 0.05,
+    'scaled overview halos preserve the same composed GPU seam parity'
+  );
+
+  await cacheCapacityControl.fill('1');
+  await page.waitForFunction(
+    () =>
+      window.__luRasterLab.cacheCapacity === 3 &&
+      document.querySelector('[data-raster-control="cache-capacity"]').value === '3',
+    undefined,
+    {timeout: timeoutMilliseconds}
+  );
+  assert(
+    (await page.evaluate(() => window.__luRasterLab.pinnedTileCount)) >= 2,
+    'a rejected capacity-one shrink cannot evict either live cross-tile GPU source'
+  );
+
+  await cacheCapacityControl.fill('2');
+  await page.waitForFunction(
+    () => window.__luRasterLab.cacheCapacity === 2 && window.__luRasterLab.residentTileCount <= 2,
+    undefined,
+    {timeout: timeoutMilliseconds}
+  );
+  const capacityTwoFullOverview = await loadSourceSelection(
+    '[data-raster-source-tile="full"]',
+    'full',
+    1
+  );
+  assert.equal(
+    capacityTwoFullOverview.haloSourceTileCount,
+    1,
+    'a capacity-two handoff fences both former overview neighbors before loading a full overview'
+  );
+  const capacityTwoWesternOverview = await loadSourceSelection(
+    '[data-raster-source-tile="west"]',
+    'west',
+    1
+  );
+  assert.equal(
+    capacityTwoWesternOverview.haloSourceTileCount,
+    2,
+    'the full overview is fenced before both capacity-two neighbor tiles are acquired'
+  );
+  assert.equal(
+    capacityTwoWesternOverview.pinnedTileCount,
+    2,
+    'both cross-tile source buffers remain pinned after the bounded neighborhood replacement'
+  );
+  const capacityTwoNativeWest = await loadSourceSelection(
+    '[data-raster-source-overview="0"]',
+    'west',
+    0
+  );
+  assert.equal(
+    capacityTwoNativeWest.haloSourceTileCount,
+    2,
+    'changing overview levels fence-releases both obsolete neighbors before admitting new ones'
+  );
+  assert.deepEqual(capacityTwoNativeWest.haloAvailableBounds, [0, 0, 167, 224]);
+  assert(
+    capacityTwoNativeWest.residentCpuBytes <= capacityTwoNativeWest.maximumCpuBytes &&
+      capacityTwoNativeWest.residentGpuBytes <= capacityTwoNativeWest.maximumGpuBytes,
+    'capacity-two source handoffs retain explicit CPU/GPU residency guarantees'
+  );
+
   await page.waitForFunction(
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
     composedSmoothing.frameCount,
@@ -1822,7 +2113,7 @@ try {
 
   process.stdout.write(
     `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, bounded cache and graph reuse verified)\n`
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, bounded cache, cumulative halos, and native/overview seam parity verified)\n`
   );
 } finally {
   await browser?.close();
