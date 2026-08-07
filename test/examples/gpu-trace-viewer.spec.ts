@@ -50,7 +50,7 @@ describe('GPU hierarchical trace viewer', () => {
             buffer: {readAsync: () => Promise<Uint8Array>};
           };
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
-          visibleSpanIds: {readAsync: () => Promise<Uint8Array>};
+          spanChunks: Array<{visibleIds: {readAsync: () => Promise<Uint8Array>}}>;
           visibleDependencyIds: {readAsync: () => Promise<Uint8Array>};
           dependencyResults: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
@@ -132,7 +132,7 @@ describe('GPU hierarchical trace viewer', () => {
       );
       expect(firstCounts[1] + firstCounts[5] + firstCounts[9]).toBeGreaterThan(0);
       expect(firstCounts[13]).toBeGreaterThan(0);
-      const visibleSpanBytes = await state.resources.visibleSpanIds.readAsync();
+      const visibleSpanBytes = await state.resources.spanChunks[0].visibleIds.readAsync();
       const visibleSpanIds = new Uint32Array(
         visibleSpanBytes.buffer,
         visibleSpanBytes.byteOffset,
@@ -409,7 +409,12 @@ describe('GPU hierarchical trace viewer', () => {
       const state = viewer as unknown as {
         resources: {
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
-          spanChunks: Array<{buffer: {byteLength: number}}>;
+          spanChunks: Array<{
+            buffer: {byteLength: number};
+            visibleIds: {readAsync: () => Promise<Uint8Array>};
+            firstSpanIndex: number;
+            spanCount: number;
+          }>;
           spanDraws: Array<{commandIndex: number; chunkIndex: number}>;
           dependencyDrawCommandIndex: number;
           dependencyCount: number;
@@ -441,6 +446,28 @@ describe('GPU hierarchical trace viewer', () => {
         0
       );
       expect(visibleSpanCount).toBeGreaterThan(0);
+      for (const draw of state.resources.spanDraws) {
+        const chunk = state.resources.spanChunks[draw.chunkIndex];
+        const visibleIdBytes = await chunk.visibleIds.readAsync();
+        const visibleIds = new Uint32Array(
+          visibleIdBytes.buffer,
+          visibleIdBytes.byteOffset,
+          visibleIdBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+        );
+        const instanceCount = drawCommands[draw.commandIndex * 4 + 1];
+        const firstInstance = drawCommands[draw.commandIndex * 4 + 3];
+        const drawIds = Array.from(
+          visibleIds.subarray(firstInstance, firstInstance + instanceCount)
+        );
+        expect(drawIds).toEqual([...drawIds].sort((left, right) => left - right));
+        expect(
+          drawIds.every(
+            spanIndex =>
+              spanIndex >= chunk.firstSpanIndex &&
+              spanIndex < chunk.firstSpanIndex + chunk.spanCount
+          )
+        ).toBe(true);
+      }
       expect(drawCommands[state.resources.dependencyDrawCommandIndex * 4 + 1]).toBeGreaterThan(0);
     } finally {
       viewer?.onFinalize();
