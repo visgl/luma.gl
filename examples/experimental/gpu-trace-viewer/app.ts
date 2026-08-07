@@ -1119,22 +1119,22 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       workgroupSize: 1
     });
     for (const chunk of handles.spanChunks) {
-    addTraceIndirectComputePass(graph, {
+      addTraceIndirectComputePass(graph, {
         id: `trace-candidate-span-visibility-${chunk.chunkIndex}`,
         source: getCandidateVisibilityShader(chunk),
-      bindings: [
+        bindings: [
           storageRead('spans', chunk.spans),
-        storageRead('spanBatches', handles.spanBatchIndex),
-        storageRead('candidateBatchIds', handles.candidateBatchIds),
-        uniformBinding('viewUniforms', handles.uniforms),
-        storageRead('processStates', handles.processStates),
-        storageRead('threadOffsets', handles.threadOffsets),
-        storageRead('threadStates', handles.threadStates),
-        storageRead('reachedSpans', handles.reachedSpans),
-        storageWrite('visibilityFlags', handles.spanVisibility)
-      ],
-      dispatchBuffer: handles.exactCandidateDispatchCommands
-    });
+          storageRead('spanBatches', handles.spanBatchIndex),
+          storageRead('candidateBatchIds', handles.candidateBatchIds),
+          uniformBinding('viewUniforms', handles.uniforms),
+          storageRead('processStates', handles.processStates),
+          storageRead('threadOffsets', handles.threadOffsets),
+          storageRead('threadStates', handles.threadStates),
+          storageRead('reachedSpans', handles.reachedSpans),
+          storageWrite('visibilityFlags', handles.spanVisibility)
+        ],
+        dispatchBuffer: handles.exactCandidateDispatchCommands
+      });
     }
     addTraceComputePass(graph, {
       id: 'trace-clear-density',
@@ -1144,37 +1144,37 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       workgroupSize: TRACE_WORKGROUP_SIZE
     });
     for (const chunk of handles.spanChunks) {
-    addTraceIndirectComputePass(graph, {
+      addTraceIndirectComputePass(graph, {
         id: `trace-candidate-density-${chunk.chunkIndex}`,
         source: getCandidateDensityShader(chunk),
-      bindings: [
+        bindings: [
           storageRead('spans', chunk.spans),
-        storageRead('spanBatches', handles.spanBatchIndex),
-        storageRead('candidateBatchIds', handles.candidateBatchIds),
-        uniformBinding('viewUniforms', handles.uniforms),
-        storageRead('processStates', handles.processStates),
-        storageRead('threadOffsets', handles.threadOffsets),
-        storageRead('threadStates', handles.threadStates),
-        storageRead('reachedSpans', handles.reachedSpans),
-        storageWrite('densityBins', handles.densityBins)
-      ],
-      dispatchBuffer: handles.densityCandidateDispatchCommands
-    });
-    addTraceIndirectComputePass(graph, {
+          storageRead('spanBatches', handles.spanBatchIndex),
+          storageRead('candidateBatchIds', handles.candidateBatchIds),
+          uniformBinding('viewUniforms', handles.uniforms),
+          storageRead('processStates', handles.processStates),
+          storageRead('threadOffsets', handles.threadOffsets),
+          storageRead('threadStates', handles.threadStates),
+          storageRead('reachedSpans', handles.reachedSpans),
+          storageWrite('densityBins', handles.densityBins)
+        ],
+        dispatchBuffer: handles.densityCandidateDispatchCommands
+      });
+      addTraceIndirectComputePass(graph, {
         id: `trace-candidate-pick-${chunk.chunkIndex}`,
         source: getCandidatePickShader(chunk),
-      bindings: [
+        bindings: [
           storageRead('spans', chunk.spans),
-        storageRead('spanBatches', handles.spanBatchIndex),
-        storageRead('candidateBatchIds', handles.candidateBatchIds),
-        uniformBinding('viewUniforms', handles.uniforms),
-        storageRead('processStates', handles.processStates),
-        storageRead('threadOffsets', handles.threadOffsets),
-        storageRead('threadStates', handles.threadStates),
-        storageWrite('pickResult', handles.pickResult)
-      ],
-      dispatchBuffer: handles.pickCandidateDispatchCommands
-    });
+          storageRead('spanBatches', handles.spanBatchIndex),
+          storageRead('candidateBatchIds', handles.candidateBatchIds),
+          uniformBinding('viewUniforms', handles.uniforms),
+          storageRead('processStates', handles.processStates),
+          storageRead('threadOffsets', handles.threadOffsets),
+          storageRead('threadStates', handles.threadStates),
+          storageWrite('pickResult', handles.pickResult)
+        ],
+        dispatchBuffer: handles.pickCandidateDispatchCommands
+      });
     }
     const visibleSpanCountBuffer = graph.createTransientBuffer({
       id: 'trace-visible-span-count',
@@ -1357,18 +1357,18 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
 
     if (resources.dependencyCount > 0) {
-    encoder.setPipeline(this.dependencyModel.pipeline);
-    encoder.setVertexArray(this.dependencyModel.vertexArray);
-    encoder.setBindings({
-      dependencies: resources.dependencies,
-      visibleDependencyIds: resources.visibleDependencyIds,
+      encoder.setPipeline(this.dependencyModel.pipeline);
+      encoder.setVertexArray(this.dependencyModel.vertexArray);
+      encoder.setBindings({
+        dependencies: resources.dependencies,
+        visibleDependencyIds: resources.visibleDependencyIds,
         spans: resources.spanChunks[0].buffer,
-      processStates: resources.processStates,
-      threadStates: resources.threadStates,
-      threadOffsets: resources.threadOffsets,
-      dependencyResults: resources.dependencyResults,
-      viewUniforms: this.viewUniformBuffer
-    });
+        processStates: resources.processStates,
+        threadStates: resources.threadStates,
+        threadOffsets: resources.threadOffsets,
+        dependencyResults: resources.dependencyResults,
+        viewUniforms: this.viewUniformBuffer
+      });
       resources.drawCommands.draw(encoder, resources.dependencyDrawCommandIndex);
     }
 
