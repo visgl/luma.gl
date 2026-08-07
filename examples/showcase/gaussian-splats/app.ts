@@ -3,10 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
-import {
-  makeGPUSplatDataFromArrowStream,
-  type MakeGPUSplatDataFromArrowOptions
-} from '@luma.gl/arrow';
+import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {GPUCommandGraphInspector, type GPUCommandGraphInspectorGraph} from '@luma.gl/experimental';
@@ -259,7 +256,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         ? new GPUSplatGraphRenderer(device, {
             ...rendererProps,
             clearColor: CLEAR_COLOR,
-            expectedSplatCount: this.localLoadersConfiguration?.expectedSplatCount,
+            expectedSplatCount:
+              this.localLoadersConfiguration?.maxResidentSplatCount ??
+              this.localLoadersConfiguration?.expectedSplatCount,
             expectedBatchCount: this.localLoadersConfiguration?.expectedBatchCount
           })
         : new SplatRenderer(device, rendererProps);
@@ -429,13 +428,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         }
         this.loadingProgress = progress;
         this.expectedSplatCount = progress.expectedSplatCount ?? this.expectedSplatCount;
+        this.expectedBatchCount = progress.expectedBatchCount ?? this.expectedBatchCount;
         this.updatePanel();
       }
     });
 
-    const sourceOptions: MakeGPUSplatDataFromArrowOptions | undefined =
-      this.executionMode === 'graph' ? {maxSphericalHarmonicsDegree: 0} : undefined;
-    for await (const batch of makeGPUSplatDataFromArrowStream(this.device, source, sourceOptions)) {
+    for await (const batch of makeGPUSplatDataFromArrowStream(this.device, source)) {
       if (this.isFinalized || this.loadAbortController.signal.aborted) {
         batch.destroy();
         break;
@@ -470,8 +468,8 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.fitCameraToBatches();
     }
     this.isLoading = false;
-    this.expectedBatchCount = this.batches.length;
-    this.expectedSplatCount = this.loadedSplatCount;
+    this.expectedBatchCount = configuration.expectedBatchCount ?? this.batches.length;
+    this.expectedSplatCount = configuration.expectedSplatCount ?? this.loadedSplatCount;
     this.updatePanel();
   }
 
@@ -535,11 +533,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       modelViewProjectionMatrix,
       viewportSize: [cameraState.viewportWidth, cameraState.viewportHeight]
     };
-    if (this.renderer instanceof SplatRenderer) {
-      this.renderer.setProps({...cameraProps, cameraPosition});
-    } else {
-      this.renderer.setProps(cameraProps);
-    }
+    this.renderer.setProps({...cameraProps, cameraPosition});
   }
 
   private fitCameraToBatches(): void {
@@ -900,7 +894,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         statusElement.textContent = this.loadingError
           ? 'Unable to load scene'
           : !this.isLoading
-            ? 'Scene loaded'
+            ? this.loadedSplatCount < this.expectedSplatCount
+              ? 'Resident page window ready'
+              : 'Scene loaded'
             : progress?.fallbackActive
               ? 'Loading GitHub scene fallback…'
               : progress?.phase === 'loaded'

@@ -8,9 +8,14 @@ loaders.gl, or deck.gl.
 graphs, global GPU sorting, and one indirect draw.
 
 Prepared batches support degree-one through degree-three spherical harmonics, semantic class IDs,
-and in-place row updates. `SplatRenderer` evaluates view-dependent radiance, filters semantic
-classes, composes splats with depth-tested meshes, and works with `SplatPicker`. Use
-`SplatResidencyManager` to bound independently owned streamed batches by GPU bytes, rows, or chunks.
+and in-place row updates. Both rendering paths evaluate view-dependent radiance and filter semantic
+classes. `SplatPicker` and `GPUSplatGraphPicker` resolve original source rows; their corresponding
+mixed-scene helpers compose splats with caller-owned depth-tested meshes.
+
+`SplatHierarchyManager` traverses frustum-culled, foveated source hierarchies while preserving
+coarse parent fallback and bounded asynchronous loading. `SplatResidencyManager` bounds intact
+streamed batches by GPU bytes, rows, or chunks. Structural glTF adapters accept decoded
+`KHR_gaussian_splatting` attributes, mesh feature IDs, and caller-owned SPZ v2 decoder handoffs.
 
 Use optional `expectedSplatCount` and `expectedBatchCount` hints to reserve graph capacity.
 Renderers borrow source batches, preserve HDR colors, and must be destroyed before their data.

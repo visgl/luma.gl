@@ -7,9 +7,9 @@ import {Computation, Model} from '@luma.gl/engine';
 import {
   DrawCommandBuffer,
   GPUCommandGraph,
+  GPUCommandGraphEncoding,
   GPUSort,
   type CompiledGPUCommandGraph,
-  type GPUCommandGraphEncoding,
   type GPUCommandGraphStats,
   type GraphBufferHandle,
   type GraphDataView,
@@ -17,6 +17,9 @@ import {
 } from '@luma.gl/experimental';
 import {GPUSplatData} from './splat-data';
 import {
+  GPU_SPLAT_FEATURE_SHADER,
+  GPU_SPLAT_FEATURE_SHADER_LAYOUT,
+  GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_INVALID_DEPTH_KEY,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH,
@@ -26,16 +29,17 @@ import {
   GPU_SPLAT_RENDER_SHADER_LAYOUT
 } from './gpu-splat-graph-shaders';
 import type {SplatRendererProps, SplatRendererStats} from './splat-renderer';
+import type {SplatSemanticFilter, SplatSemanticSelection} from './splat-filter';
+import {
+  getSplatSphericalHarmonicCoefficientCount,
+  type SplatSphericalHarmonicsDegree
+} from './splat-spherical-harmonics';
 import type {SplatSortMode} from './splat-sort';
 
 /** Camera, styling, borrowed data, and canvas clearing for graph-native Gaussian rendering. */
 export type GPUSplatGraphRendererProps = Omit<
   SplatRendererProps,
-  | 'cameraPosition'
-  | 'sphericalHarmonicsDegree'
-  | 'semanticFilter'
-  | 'depthCompare'
-  | 'depthWriteEnabled'
+  'depthCompare' | 'depthWriteEnabled'
 > & {
   /** Color used when the graph opens its single default-framebuffer render pass. */
   clearColor?: [number, number, number, number];
@@ -65,6 +69,9 @@ type ResolvedGPUSplatGraphRendererProps = {
     number
   ];
   viewportSize: [number, number];
+  cameraPosition: [number, number, number];
+  sphericalHarmonicsDegree: SplatSphericalHarmonicsDegree;
+  semanticFilter?: SplatSemanticFilter;
   sortMode: SplatSortMode;
   alphaCutoff: number;
   screenSizeCutoffPixels: number;
@@ -94,7 +101,16 @@ const SOURCE_SLOT_COLUMNS = [
   {name: 'opacities', minimumByteLength: 4}
 ] as const;
 
-type SourceSlotColumnName = (typeof SOURCE_SLOT_COLUMNS)[number]['name'];
+const FEATURE_SOURCE_SLOT_COLUMNS = [
+  {name: 'sphericalHarmonics', minimumByteLength: 4},
+  {name: 'semanticIds', minimumByteLength: 4}
+] as const;
+
+const MINIMUM_SEMANTIC_SELECTION_CAPACITY = 64;
+
+type SourceSlotColumnName =
+  | (typeof SOURCE_SLOT_COLUMNS)[number]['name']
+  | (typeof FEATURE_SOURCE_SLOT_COLUMNS)[number]['name'];
 
 /**
  * WebGPU-only Gaussian renderer composed entirely from reusable GPU command-graph nodes.
@@ -122,14 +138,22 @@ export class GPUSplatGraphRenderer {
   private readonly expectedBatchCount?: number;
   private readonly ownedBuffers: Buffer[] = [];
   private readonly batchUniforms: Buffer[] = [];
+  private readonly batchFeatureUniforms: Buffer[] = [];
   private readonly cachedBatchRevisions: number[] = [];
   private model?: Model;
+  private projectedRecordsBuffer?: Buffer;
   private sortedValuesBuffer?: Buffer;
+  private semanticSelectionBuffer?: Buffer;
+  private semanticSelectionValues = new Uint32Array(0);
+  private semanticIncludeCount = 0;
+  private semanticExcludeCount = 0;
+  private semanticSelectionCapacity = 0;
   private requiresGraphRebuild = true;
   private requiresEncoding = true;
   private allocatedSplatCapacity = 0;
   private allocatedBatchCapacity = 0;
   private hasExplicitToneMapping: boolean;
+  private hasPresentedContent = false;
   private isDestroyed = false;
 
   /** Retains supplied batches lazily; graph compilation waits until the first `encode()`. */
@@ -154,6 +178,9 @@ export class GPUSplatGraphRenderer {
     this.props = {
       modelViewProjectionMatrix: toSplatGraphMatrix(props.modelViewProjectionMatrix),
       viewportSize: [...(props.viewportSize ?? [1, 1])],
+      cameraPosition: [...(props.cameraPosition ?? [0, 0, 0])],
+      sphericalHarmonicsDegree: props.sphericalHarmonicsDegree ?? 3,
+      ...(props.semanticFilter ? {semanticFilter: props.semanticFilter} : {}),
       sortMode: 'global',
       alphaCutoff: props.alphaCutoff ?? props.opacityThreshold ?? 1 / 255,
       screenSizeCutoffPixels: props.screenSizeCutoffPixels ?? 0,
@@ -166,6 +193,7 @@ export class GPUSplatGraphRenderer {
       toneMapping: props.toneMapping ?? 'none'
     };
     this.hasExplicitToneMapping = props.toneMapping !== undefined;
+    this.updateSemanticSelections(props.semanticFilter);
     this.drawCommands = new DrawCommandBuffer(device, {
       id: 'gaussian-splat-graph-draw-command',
       type: 'draw',
@@ -189,6 +217,16 @@ export class GPUSplatGraphRenderer {
   /** GPU-produced globally sorted projected-record indices, available after compilation. */
   get sortedIndexBuffer(): Buffer | undefined {
     return this.sortedValuesBuffer;
+  }
+
+  /** Renderer-owned projected Gaussian records reused by graph-native picking and composition. */
+  get projectedRecordBuffer(): Buffer | undefined {
+    return this.projectedRecordsBuffer;
+  }
+
+  /** First immutable graph uniform binding shared by projected-record consumer passes. */
+  get uniformBuffer(): Buffer | undefined {
+    return this.batchUniforms[0];
   }
 
   /** Source and renderer allocation diagnostics without forcing GPU readback or CPU sorting. */
@@ -233,12 +271,28 @@ export class GPUSplatGraphRenderer {
         replacementBatches.length === this.batches.length &&
         replacementBatches.every((batch, batchIndex) => batch === this.batches[batchIndex]);
       if (!matchesRetainedBatches) {
-        this.releaseCompiledGraph();
+        for (const batch of replacementBatches) {
+          if (batch.destroyed || batch.device !== this.device) {
+            throw new Error('GPUSplatGraphRenderer requires live data prepared on its own device');
+          }
+        }
+        const replacementSplatCount = replacementBatches.reduce(
+          (totalSplatCount, batch) => totalSplatCount + batch.length,
+          0
+        );
+        const canReuseGraph =
+          this.compiledGraph !== undefined &&
+          replacementBatches.length <= this.allocatedBatchCapacity &&
+          replacementSplatCount <= this.allocatedSplatCapacity;
+        if (!canReuseGraph) {
+          this.releaseCompiledGraph();
+        }
         this.batches.length = 0;
         this.cachedBatchRevisions.length = 0;
         for (const batch of replacementBatches) {
           this.appendData(batch);
         }
+        this.requiresEncoding = true;
       }
     }
 
@@ -257,6 +311,25 @@ export class GPUSplatGraphRenderer {
       !areSplatGraphValuesEqual(this.props.viewportSize, props.viewportSize)
     ) {
       this.props.viewportSize = [...props.viewportSize];
+      this.requiresEncoding = true;
+    }
+    if (
+      props.cameraPosition &&
+      !areSplatGraphValuesEqual(this.props.cameraPosition, props.cameraPosition)
+    ) {
+      this.props.cameraPosition = [...props.cameraPosition];
+      this.requiresEncoding = true;
+    }
+    if (
+      props.sphericalHarmonicsDegree !== undefined &&
+      this.props.sphericalHarmonicsDegree !== props.sphericalHarmonicsDegree
+    ) {
+      this.props.sphericalHarmonicsDegree = props.sphericalHarmonicsDegree;
+      this.requiresEncoding = true;
+    }
+    if ('semanticFilter' in props && !Object.is(this.props.semanticFilter, props.semanticFilter)) {
+      this.updateSemanticSelections(props.semanticFilter);
+      this.props.semanticFilter = props.semanticFilter;
       this.requiresEncoding = true;
     }
 
@@ -295,12 +368,44 @@ export class GPUSplatGraphRenderer {
   /**
    * Encodes projection, global sorting, and exactly one indirect canvas draw.
    *
-   * The caller still owns command submission. An unchanged scene or an empty source returns
-   * `undefined`, ensuring a stationary camera never repeatedly projects or sorts every source row.
+   * The caller still owns command submission. An unchanged scene or an initially empty source
+   * returns `undefined`; transitioning from presented content to an empty frontier clears once.
    */
   encode(commandEncoder: CommandEncoder): GPUCommandGraphEncoding | undefined {
-    if (this.isDestroyed || this.getRowCount() === 0) {
+    if (this.isDestroyed) {
       return undefined;
+    }
+    if (this.getRowCount() === 0) {
+      if (!this.requiresEncoding || !this.hasPresentedContent) {
+        return undefined;
+      }
+      this.drawCommands.buffer.write(
+        new Uint32Array([0]),
+        this.drawCommands.getInstanceCountByteOffset(0)
+      );
+      const renderPass = commandEncoder.beginRenderPass({
+        id: 'gaussian-splat-graph-clear-pass',
+        clearColor: this.clearColor,
+        clearDepth: 1,
+        clearStencil: false
+      });
+      renderPass.end();
+      this.lastEncoding = new GPUCommandGraphEncoding(
+        [
+          {
+            stats: {
+              id: 'gaussian-splat-clear',
+              type: 'render',
+              cpuEncodeTimeMilliseconds: 0,
+              hasGPUTimestamps: false
+            }
+          }
+        ],
+        0
+      );
+      this.hasPresentedContent = false;
+      this.requiresEncoding = false;
+      return this.lastEncoding;
     }
     for (let batchIndex = 0; batchIndex < this.batches.length; batchIndex++) {
       const revision = this.batches[batchIndex].revision;
@@ -324,6 +429,7 @@ export class GPUSplatGraphRenderer {
       parameters: undefined,
       buffers: this.getSourceBufferOverrides()
     });
+    this.hasPresentedContent = true;
     this.requiresEncoding = false;
     return this.lastEncoding;
   }
@@ -342,6 +448,10 @@ export class GPUSplatGraphRenderer {
         0
       ) +
       this.batchUniforms.reduce(
+        (totalByteLength, buffer) => totalByteLength + buffer.byteLength,
+        0
+      ) +
+      this.batchFeatureUniforms.reduce(
         (totalByteLength, buffer) => totalByteLength + buffer.byteLength,
         0
       ) +
@@ -395,6 +505,7 @@ export class GPUSplatGraphRenderer {
       'gaussian-splat-projected-records',
       projectedByteLength
     );
+    this.projectedRecordsBuffer = projectedRecordsBuffer;
     const depthKeysBuffer = this.createOwnedBuffer(
       'gaussian-splat-depth-keys',
       this.allocatedSplatCapacity * Uint32Array.BYTES_PER_ELEMENT
@@ -411,8 +522,17 @@ export class GPUSplatGraphRenderer {
       'gaussian-splat-sorted-indices',
       this.allocatedSplatCapacity * Uint32Array.BYTES_PER_ELEMENT
     );
+    this.semanticSelectionCapacity = Math.max(
+      MINIMUM_SEMANTIC_SELECTION_CAPACITY,
+      this.semanticSelectionValues.length
+    );
+    this.semanticSelectionBuffer = this.createOwnedBuffer(
+      'gaussian-splat-semantic-selection',
+      this.semanticSelectionCapacity * Uint32Array.BYTES_PER_ELEMENT
+    );
 
     const projectedRecords = this.importOwnedBuffer(graph, projectedRecordsBuffer);
+    const semanticSelections = this.importOwnedBuffer(graph, this.semanticSelectionBuffer);
     const depthKeys = this.importUint32Buffer(graph, depthKeysBuffer, this.allocatedSplatCapacity);
     const sourceIndices = this.importUint32Buffer(
       graph,
@@ -451,13 +571,37 @@ export class GPUSplatGraphRenderer {
         {id: uniformBuffer.id, byteLength: uniformBuffer.byteLength, usage: uniformBuffer.usage},
         uniformBuffer
       );
+      const featureUniformBuffer = this.device.createBuffer({
+        id: `gaussian-splat-feature-uniforms-${batchIndex}`,
+        byteLength: GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
+        usage: Buffer.UNIFORM | Buffer.COPY_DST
+      });
+      this.batchFeatureUniforms.push(featureUniformBuffer);
+      const featureUniforms = graph.importBuffer(
+        {
+          id: featureUniformBuffer.id,
+          byteLength: featureUniformBuffer.byteLength,
+          usage: featureUniformBuffer.usage
+        },
+        featureUniformBuffer
+      );
       firstUniform ??= uniforms;
-      this.addProjectionPass(graph, {
+      const positions = this.addProjectionPass(graph, {
         batchIndex,
         projectedRecords,
         depthKeys,
         drawCommands: drawCommandViews.buffer,
         uniforms
+      });
+      this.addFeaturePass(graph, {
+        batchIndex,
+        positions,
+        projectedRecords,
+        depthKeys,
+        drawCommands: drawCommandViews.buffer,
+        semanticSelections,
+        uniforms,
+        featureUniforms
       });
     }
 
@@ -598,7 +742,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       drawCommands: GraphBufferHandle;
       uniforms: GraphBufferHandle;
     }
-  ): void {
+  ): GraphBufferHandle {
     const {batchIndex, projectedRecords, depthKeys, drawCommands, uniforms} = props;
     const positions = this.importSourceSlotBuffer(graph, batchIndex, 'positions', 12);
     const scales = this.importSourceSlotBuffer(graph, batchIndex, 'scales', 12);
@@ -648,9 +792,93 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
         };
       }
     });
+    return positions;
+  }
+
+  private addFeaturePass(
+    graph: GPUCommandGraph,
+    props: {
+      batchIndex: number;
+      positions: GraphBufferHandle;
+      projectedRecords: GraphBufferHandle;
+      depthKeys: GraphDataView<'uint32'>;
+      drawCommands: GraphBufferHandle;
+      semanticSelections: GraphBufferHandle;
+      uniforms: GraphBufferHandle;
+      featureUniforms: GraphBufferHandle;
+    }
+  ): void {
+    const {
+      batchIndex,
+      positions,
+      projectedRecords,
+      depthKeys,
+      drawCommands,
+      semanticSelections,
+      uniforms,
+      featureUniforms
+    } = props;
+    const sphericalHarmonics = this.importSourceSlotBuffer(
+      graph,
+      batchIndex,
+      'sphericalHarmonics',
+      4
+    );
+    const semanticIds = this.importSourceSlotBuffer(graph, batchIndex, 'semanticIds', 4);
+
+    graph.addComputePass({
+      id: `gaussian-splat-features-batch-${batchIndex}`,
+      resources: [
+        {buffer: positions, usage: 'storage-read'},
+        {buffer: sphericalHarmonics, usage: 'storage-read'},
+        {buffer: semanticIds, usage: 'storage-read'},
+        {buffer: semanticSelections, usage: 'storage-read'},
+        {buffer: projectedRecords, usage: 'storage-read-write'},
+        {buffer: depthKeys, usage: 'storage-read-write'},
+        {buffer: drawCommands, usage: 'storage-read-write'},
+        {buffer: uniforms, usage: 'uniform'},
+        {buffer: featureUniforms, usage: 'uniform'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: `gaussian-splat-features-batch-${batchIndex}`,
+          source: GPU_SPLAT_FEATURE_SHADER,
+          shaderLayout: GPU_SPLAT_FEATURE_SHADER_LAYOUT
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const batch = this.batches[batchIndex];
+            if (
+              !batch ||
+              batch.length === 0 ||
+              (!this.props.semanticFilter &&
+                (!batch.sphericalHarmonics || this.props.sphericalHarmonicsDegree === 0))
+            ) {
+              return;
+            }
+            computation.setBindings({
+              positions: getBuffer(positions),
+              sphericalHarmonics: getBuffer(sphericalHarmonics),
+              semanticIds: getBuffer(semanticIds),
+              semanticSelections: getBuffer(semanticSelections),
+              projectedRecords: getBuffer(projectedRecords),
+              depthKeys: getBuffer(depthKeys),
+              drawCommands: getBuffer(drawCommands),
+              graphUniforms: getBuffer(uniforms),
+              featureUniforms: getBuffer(featureUniforms)
+            });
+            computation.dispatch(computePass, Math.ceil(batch.length / 256));
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    });
   }
 
   private writeBatchUniforms(): void {
+    if (this.semanticSelectionValues.length > 0) {
+      this.semanticSelectionBuffer?.write(this.semanticSelectionValues);
+    }
     let batchOffset = 0;
     for (let batchIndex = 0; batchIndex < this.allocatedBatchCapacity; batchIndex++) {
       const batch = this.batches[batchIndex];
@@ -672,6 +900,29 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       integerValues[28] = batch?.length ?? 0;
       integerValues[29] = batch?.colors.format === 'float32x4' ? 1 : 0;
       this.batchUniforms[batchIndex].write(new Uint8Array(uniformData));
+
+      const featureData = new ArrayBuffer(GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH);
+      const featureFloatValues = new Float32Array(featureData);
+      const featureIntegerValues = new Uint32Array(featureData);
+      const degree =
+        batch?.sphericalHarmonics && this.props.sphericalHarmonicsDegree > 0
+          ? Math.min(batch.sphericalHarmonicsDegree, this.props.sphericalHarmonicsDegree)
+          : 0;
+      featureFloatValues.set(this.props.cameraPosition, 0);
+      featureIntegerValues[3] = degree;
+      featureIntegerValues[4] = batch
+        ? getSplatSphericalHarmonicCoefficientCount(batch.sphericalHarmonicsDegree)
+        : 0;
+      featureIntegerValues[5] = batch?.semanticIds ? 1 : 0;
+      featureIntegerValues[6] = this.semanticIncludeCount;
+      featureIntegerValues[7] = this.semanticExcludeCount;
+      featureIntegerValues[8] = this.props.semanticFilter?.include ? 1 : 0;
+      featureIntegerValues[9] =
+        (this.props.semanticFilter?.includeUnlabeled ?? !this.props.semanticFilter?.include)
+          ? 1
+          : 0;
+      featureIntegerValues[10] = this.props.semanticFilter ? 1 : 0;
+      this.batchFeatureUniforms[batchIndex].write(new Uint8Array(featureData));
       batchOffset += batch?.length ?? 0;
     }
   }
@@ -685,8 +936,31 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       for (const {name} of SOURCE_SLOT_COLUMNS) {
         overrides[getSourceSlotBufferId(batchIndex, name)] = batch[name].data[0].buffer;
       }
+      for (const {name} of FEATURE_SOURCE_SLOT_COLUMNS) {
+        const vector = batch[name];
+        if (vector) {
+          overrides[getSourceSlotBufferId(batchIndex, name)] = vector.data[0].buffer;
+        }
+      }
     }
     return overrides;
+  }
+
+  private updateSemanticSelections(filter: SplatSemanticFilter | undefined): void {
+    if (filter?.predicate) {
+      throw new Error('GPU Gaussian semantic filters cannot evaluate JavaScript predicates');
+    }
+    const includedIds = getSplatSemanticSelectionValues(filter?.include);
+    const excludedIds = getSplatSemanticSelectionValues(filter?.exclude);
+    this.semanticIncludeCount = includedIds.length;
+    this.semanticExcludeCount = excludedIds.length;
+    this.semanticSelectionValues = Uint32Array.from([...includedIds, ...excludedIds]);
+    if (
+      this.compiledGraph &&
+      this.semanticSelectionValues.length > this.semanticSelectionCapacity
+    ) {
+      this.requiresGraphRebuild = true;
+    }
   }
 
   private importSourceSlotBuffer(
@@ -783,9 +1057,29 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       uniforms.destroy();
     }
     this.batchUniforms.length = 0;
+    for (const uniforms of this.batchFeatureUniforms) {
+      uniforms.destroy();
+    }
+    this.batchFeatureUniforms.length = 0;
+    this.projectedRecordsBuffer = undefined;
     this.sortedValuesBuffer = undefined;
+    this.semanticSelectionBuffer = undefined;
+    this.semanticSelectionCapacity = 0;
     this.requiresGraphRebuild = true;
   }
+}
+
+function getSplatSemanticSelectionValues(selection: SplatSemanticSelection | undefined): number[] {
+  if (!selection) {
+    return [];
+  }
+  const values = Array.from(selection);
+  for (const value of values) {
+    if (!Number.isSafeInteger(value) || value < 0 || value > 0xffff_ffff) {
+      throw new RangeError('GPU Gaussian semantic IDs must fit unsigned 32-bit integers');
+    }
+  }
+  return values;
 }
 
 function getSourceSlotBufferId(batchIndex: number, columnName: SourceSlotColumnName): string {

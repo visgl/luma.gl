@@ -595,16 +595,19 @@ Read the [ANARI ray-tracing renderer](/docs/api-reference/anari/anari-rendering)
 | Indirect splat drawing | Experimental | WebGPU | `@luma.gl/splats` | Generate one bounded indirect draw from the visible GPU-resident set. |
 | HDR spherical-harmonic DC | Experimental | WebGPU | `@luma.gl/splats` | Preserve supported floating-point source radiance on compatible presentation targets. |
 | Standard-dynamic-range fallback | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Apply supported display mapping when extended HDR output is unavailable. |
-| View-dependent harmonics | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Evaluate degree-one through degree-three spherical harmonics against the current camera. |
-| Dedicated splat picking | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Resolve stable streamed batch, global row, and semantic identity with integer or color GPU picking. |
-| Semantic splat filtering | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Include, exclude, or predicate-filter numeric source classes without repacking batches. |
+| View-dependent harmonics | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Evaluate degree-one through degree-three spherical harmonics in reusable WebGPU graphs or portable splat models. |
+| Dedicated splat picking | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Resolve stable batch, row, and semantic identities through graph-native integer picking or portable GPU passes. |
+| Semantic splat filtering | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Apply GPU-native graph class selection or portable class/predicate filtering without repacking batches. |
 | Dynamic splat updates | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Update prepared source rows in place while preserving GPU buffers and reusable command graphs. |
 | Mixed mesh and splat rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Composite depth-tested Gaussian splats between caller-owned opaque and transparent meshes. |
 | Bounded splat residency | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Reserve upload capacity and evict prioritized, unpinned source tiles within byte, row, and chunk budgets. |
+| Hierarchical splat refinement | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Select frustum-culled, foveated source-page frontiers with parent fallback and bounded asynchronous loading. |
+| Khronos glTF splat attributes | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Render decoded `KHR_gaussian_splatting` attributes, feature IDs, and externally decoded SPZ v2 content. |
+| Progressive RAD page sources | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` and `@luma.gl/splats` | Preserve independently range-fetched RAD chunk boundaries and authored global source identities. |
 
-Higher-order harmonics, semantic filtering, dedicated picking, and mixed-scene composition use
-the portable `SplatRenderer`. The WebGPU-only `GPUSplatGraphRenderer` currently retains its
-high-throughput DC-color projection, GPU depth sorting, and indirect-drawing path.
+Higher-order harmonics, semantic filtering, dedicated picking, and mixed-scene composition are
+available through the portable `SplatRenderer` and the WebGPU-only `GPUSplatGraphRenderer`. The
+graph renderer preserves its high-throughput GPU depth sorting and indirect-drawing path.
 
 View captured scenes in the [Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer).
 
@@ -650,7 +653,7 @@ commitments to release dates.
 | Massive geometry visualization | Opportunity | WebGPU | `@luma.gl/experimental` | Extend procedural virtual geometry toward imported mesh clusters and occlusion-aware residency. |
 | Motion-aware temporal reconstruction | Opportunity | WebGPU | `@luma.gl/effects` and `@luma.gl/anari` | Extend camera-reprojection antialiasing with animated-object motion vectors, compatible denoising, and temporal upscaling. |
 | GPU-resident crowd animation | Opportunity | WebGPU | `@luma.gl/gltf` | Extend existing instanced skeletal crowds toward GPU clip sampling, independent actor morph deformation, and material variation. |
-| Hierarchical captured-scene analytics | Opportunity | WebGPU | `@luma.gl/splats` | Extend existing interaction and bounded residency with hierarchy-driven LoD, compressed page decoding, and GPU-native out-of-core scheduling. |
+| Massive captured-scene parity | Opportunity | WebGPU | `@luma.gl/splats` | Add shared segmented page tables, worker-driven RAD row traversal, cross-page global sorting, and verified 50-million-splat Spark parity. |
 | Production-ready module boundaries | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine`, `@luma.gl/tables`, and `@luma.gl/gpgpu` | Graduate reusable scheduling, data adapters, and algorithms into their natural published packages. |
 
 `@luma.gl/experimental`, `@luma.gl/anari`, `@luma.gl/splats`, `@luma.gl/arrow`,

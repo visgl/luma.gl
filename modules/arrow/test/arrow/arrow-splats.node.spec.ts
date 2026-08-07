@@ -31,6 +31,7 @@ type SplatRecordBatchOptions = {
   scaleEncoding?: 'linear' | 'log';
   scaleEncodings?: readonly ('linear' | 'log' | undefined)[];
   opacityEncoding?: 'linear' | 'logit';
+  sourceFormat?: 'ply' | 'spz' | 'rad' | 'ksplat';
   omit?: readonly string[];
 };
 
@@ -206,6 +207,110 @@ test('makeGPUSplatDataFromArrow caps higher-order bands and honors explicit sema
 
   prepared.destroy();
   dcOnly.destroy();
+  t.end();
+});
+
+test('makeGPUSplatDataFromArrow preserves basis-major RGB coefficients from RAD and SPZ', t => {
+  const device = new NullDevice({});
+  const sourceCoefficients = [
+    1, 10, 100, 2, 20, 200, 3, 30, 300, 4, 40, 400, 5, 50, 500, 6, 60, 600, 7, 70, 700, 8, 80, 800
+  ];
+
+  for (const sourceFormat of ['rad', 'spz'] as const) {
+    const recordBatch = makeSplatRecordBatch({
+      positions: [0, 0, 0],
+      higherOrderSphericalHarmonicCoefficients: sourceCoefficients,
+      sourceFormat
+    });
+    const prepared = makeGPUSplatDataFromArrow(device, recordBatch)[0]!;
+    const firstDegree = makeGPUSplatDataFromArrow(device, recordBatch, {
+      maxSphericalHarmonicsDegree: 1
+    })[0]!;
+
+    t.deepEqual(
+      Array.from(prepared.source.sphericalHarmonics!),
+      sourceCoefficients,
+      `preserves native basis-major RGB ordering for ${sourceFormat.toUpperCase()} sources`
+    );
+    t.deepEqual(
+      Array.from(firstDegree.source.sphericalHarmonics!),
+      sourceCoefficients.slice(0, 9),
+      `caps ${sourceFormat.toUpperCase()} bands without scrambling the retained RGB triplets`
+    );
+    prepared.destroy();
+    firstDegree.destroy();
+  }
+  t.end();
+});
+
+test('makeGPUSplatDataFromArrow safely caps valid degree-four SPZ coefficients', t => {
+  const device = new NullDevice({});
+  const sourceCoefficients = Array.from(
+    {length: 72},
+    (_, coefficientIndex) => coefficientIndex + 1
+  );
+  const recordBatch = makeSplatRecordBatch({
+    positions: [0, 0, 0],
+    higherOrderSphericalHarmonicCoefficients: sourceCoefficients,
+    sourceFormat: 'spz'
+  });
+
+  const supportedBands = makeGPUSplatDataFromArrow(device, recordBatch)[0]!;
+  const requestedBands = makeGPUSplatDataFromArrow(device, recordBatch, {
+    maxSphericalHarmonicsDegree: 2
+  })[0]!;
+
+  t.equal(supportedBands.sphericalHarmonicsDegree, 3, 'caps valid degree-four SPZ at degree three');
+  t.deepEqual(
+    Array.from(supportedBands.source.sphericalHarmonics!),
+    sourceCoefficients.slice(0, 45),
+    'retains all supported RGB basis coefficients without scrambling the native source layout'
+  );
+  t.equal(requestedBands.sphericalHarmonicsDegree, 2, 'honors a narrower caller-selected band cap');
+  t.deepEqual(
+    Array.from(requestedBands.source.sphericalHarmonics!),
+    sourceCoefficients.slice(0, 24),
+    'drops unsupported and unrequested higher-order SPZ coefficients'
+  );
+
+  supportedBands.destroy();
+  requestedBands.destroy();
+  t.end();
+});
+
+test('makeGPUSplatDataFromArrow normalizes band-major KSPLAT spherical harmonics', t => {
+  const device = new NullDevice({});
+  const sourceCoefficients = [
+    1, 2, 3, 10, 20, 30, 100, 200, 300, 4, 5, 6, 7, 8, 40, 50, 60, 70, 80, 400, 500, 600, 700, 800
+  ];
+  const expectedCoefficients = [
+    1, 10, 100, 2, 20, 200, 3, 30, 300, 4, 40, 400, 5, 50, 500, 6, 60, 600, 7, 70, 700, 8, 80, 800
+  ];
+  const recordBatch = makeSplatRecordBatch({
+    positions: [0, 0, 0],
+    higherOrderSphericalHarmonicCoefficients: sourceCoefficients,
+    sourceFormat: 'ksplat'
+  });
+
+  const prepared = makeGPUSplatDataFromArrow(device, recordBatch)[0]!;
+  const firstDegree = makeGPUSplatDataFromArrow(device, recordBatch, {
+    maxSphericalHarmonicsDegree: 1
+  })[0]!;
+
+  t.equal(prepared.sphericalHarmonicsDegree, 2, 'preserves both authored KSPLAT bands');
+  t.deepEqual(
+    Array.from(prepared.source.sphericalHarmonics!),
+    expectedCoefficients,
+    'reorders each source band from channel-major components into RGB basis triplets'
+  );
+  t.deepEqual(
+    Array.from(firstDegree.source.sphericalHarmonics!),
+    expectedCoefficients.slice(0, 9),
+    'caps the source without interpreting its first band as global channel-major coefficients'
+  );
+
+  prepared.destroy();
+  firstDegree.destroy();
   t.end();
 });
 
@@ -482,6 +587,70 @@ test('makeGPUSplatDataFromArrowStream preserves mixed sources and progressive so
   t.end();
 });
 
+test('Arrow Gaussian paging preserves authored RAD identities across out-of-order chunks', async t => {
+  const device = new NullDevice({});
+  const firstRecordBatch = makeSplatRecordBatch({
+    positions: [0, 0, 0, 1, 1, 1],
+    scaleEncoding: 'linear'
+  });
+  const secondRecordBatch = makeSplatRecordBatch({
+    positions: [2, 2, 2],
+    scaleEncoding: 'linear'
+  });
+  const sources: GPUSplatArrowSource[] = [
+    {data: firstRecordBatch, loaderData: {format: 'rad', base: 512, chunkIndex: 8}},
+    {data: secondRecordBatch, loaderData: {format: 'rad', base: 12, chunkIndex: 1}}
+  ];
+  const batches: GPUSplatData[] = [];
+
+  for await (const batch of makeGPUSplatDataFromArrowStream(device, sources, {
+    sourceBatchIndex: 20,
+    rowIndexBase: 1_000
+  })) {
+    batches.push(batch);
+  }
+
+  t.deepEqual(
+    batches.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.rowCount]),
+    [
+      [28, 1_512, 2],
+      [21, 1_012, 1]
+    ],
+    'retains authored chunk/global-row identity independently of page request order'
+  );
+  t.deepEqual(
+    Array.from(await readUint32GPUVector(batches[0]!)),
+    [1_512, 1_513],
+    'uploads source-global RAD row IDs instead of sequential admission-order rows'
+  );
+
+  const eagerBatch = makeGPUSplatDataFromArrow(device, sources[1]!, {
+    sourceBatchIndex: 2,
+    rowIndexBase: 100
+  })[0]!;
+  t.equal(eagerBatch.sourceBatchIndex, 3, 'preserves eager source chunk identity');
+  t.equal(eagerBatch.rowIndexBase, 112, 'preserves eager source-global RAD row identity');
+
+  for (const batch of [...batches, eagerBatch]) {
+    batch.destroy();
+  }
+  t.end();
+});
+
+test('Arrow Gaussian paging rejects malformed loader-owned source identities', t => {
+  const device = new NullDevice({});
+  const recordBatch = makeSplatRecordBatch({positions: [0, 0, 0], scaleEncoding: 'linear'});
+
+  for (const loaderData of [{base: -1}, {base: Number.NaN}, {chunkIndex: -1}]) {
+    t.throws(
+      () => makeGPUSplatDataFromArrow(device, {data: recordBatch, loaderData}),
+      /nonnegative safe integers/,
+      'rejects invalid stable paged Gaussian source identities'
+    );
+  }
+  t.end();
+});
+
 test('makeGPUSplatDataFromArrowStream allocates record batches lazily and honors early cancellation', async t => {
   const device = new NullDevice({});
   const allocatedBuffers: Array<ReturnType<typeof device.createBuffer>> = [];
@@ -668,7 +837,10 @@ function makeSplatRecordBatch(options: SplatRecordBatchOptions): arrow.RecordBat
     );
   }
 
-  const recordBatch = new arrow.Table(new arrow.Schema(fields), columns).batches[0];
+  const schemaMetadata = options.sourceFormat
+    ? new Map([['loaders_gl.gaussian_splats.source_format', options.sourceFormat]])
+    : undefined;
+  const recordBatch = new arrow.Table(new arrow.Schema(fields, schemaMetadata), columns).batches[0];
   if (!recordBatch) {
     throw new Error('Expected an Arrow Gaussian splat record batch');
   }

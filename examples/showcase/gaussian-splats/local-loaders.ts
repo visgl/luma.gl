@@ -19,7 +19,7 @@ export type GaussianSplatCameraPreset = {
 
 /** Complete public reference scenes shared with the loaders.gl Gaussian splat showcase. */
 export type GaussianSplatSourceCatalogEntry = {
-  id: 'train' | 'drjohnson' | 'playroom' | 'truck' | 'train-github' | 'fixture';
+  id: 'train' | 'drjohnson' | 'playroom' | 'truck' | 'coit' | 'train-github' | 'fixture';
   label: string;
   sourceUrl: string;
   sourceUrls?: readonly string[];
@@ -43,6 +43,8 @@ export type LocalGaussianSplatLoadersConfiguration = {
   sourceLabel: string;
   expectedSplatCount?: number;
   expectedBatchCount?: number;
+  /** Maximum independently decoded RAD rows retained in the interactive source window. */
+  maxResidentSplatCount?: number;
   upAxis: 'y' | 'z';
   up: readonly [number, number, number];
   camera?: GaussianSplatCameraPreset;
@@ -59,6 +61,7 @@ export type LocalGaussianSplatLoadProgress = {
   fallbackActive: boolean;
   loadedSplatCount: number;
   expectedSplatCount?: number;
+  expectedBatchCount?: number;
 };
 
 /** Optional cancellation and progress reporting for progressive source loading. */
@@ -79,8 +82,24 @@ type LocalGaussianSplatLoadState = {
   fallbackActive: boolean;
 };
 
+type LocalGaussianSplatRADSource = {
+  getMetadata(): Promise<{
+    count: number;
+    chunks: readonly {base?: number; count?: number; bytes?: number}[];
+    allChunkBytes?: number;
+  }>;
+  getChunkTable(
+    chunkIndex: number,
+    options?: {
+      signal?: AbortSignal;
+      radChunk?: {includeLoDTree: boolean; includeSphericalHarmonics: boolean};
+    }
+  ): Promise<unknown>;
+};
+
 const DEFAULT_GAUSSIAN_PLY_PATH = 'modules/ply/test/data/gaussian/train-1000.ply';
 const GAUSSIAN_SPLAT_ARROW_BATCH_SIZE = 65_536;
+const DEFAULT_RAD_RESIDENT_SPLAT_COUNT = 1_000_000;
 const DOWNLOAD_PROGRESS_INTERVAL_MILLISECONDS = 125;
 const HUGGING_FACE_GAUSSIAN_SPLAT_BASE_URL =
   'https://huggingface.co/datasets/Voxel51/gaussian_splatting/resolve/main/FO_dataset';
@@ -132,6 +151,15 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
     }
   },
   {
+    id: 'coit',
+    label: 'Spark Coit Tower RAD (50.9M)',
+    sourceUrl:
+      'https://storage.googleapis.com/forge-dev-public/asundqui/rad/260217/coit-40m-sh1-lod.rad',
+    expectedSplatCount: 50_937_127,
+    upAxis: 'z',
+    up: [0, 0, 1]
+  },
+  {
     id: 'train-github',
     label: 'GitHub Train 7K (2 parts)',
     sourceUrl: TRAIN_GITHUB_SOURCE_URLS[0],
@@ -178,6 +206,7 @@ export function getLocalGaussianSplatLoadersConfiguration():
 
   const customSourceUrl = parameters.get('source');
   if (customSourceUrl) {
+    const sourceFormat = getGaussianSplatSourceFormat(customSourceUrl);
     return {
       loaderMode,
       loadersRoot,
@@ -185,9 +214,12 @@ export function getLocalGaussianSplatLoadersConfiguration():
       sourceUrl: customSourceUrl,
       sourceUrls: [customSourceUrl],
       fallbackSourceUrls: [],
-      sourceFormat: getGaussianSplatSourceFormat(customSourceUrl),
+      sourceFormat,
       sceneId: 'custom',
       sourceLabel: getGaussianSplatSourceLabel(customSourceUrl),
+      ...(sourceFormat === 'RAD'
+        ? {maxResidentSplatCount: getGaussianSplatResidentSplatCount(parameters)}
+        : {}),
       upAxis: 'z',
       up: [0, 0, 1]
     };
@@ -207,6 +239,9 @@ export function getLocalGaussianSplatLoadersConfiguration():
       ? makeLocalLoadersFileUrl(loadersRoot, scene.sourceUrl)
       : scene.sourceUrl;
   const sourceUrls = scene.sourceUrls || [sourceUrl];
+  const sourceFormat = getGaussianSplatSourceFormat(sourceUrl);
+  const maxResidentSplatCount =
+    sourceFormat === 'RAD' ? getGaussianSplatResidentSplatCount(parameters) : undefined;
 
   return {
     loaderMode,
@@ -215,11 +250,12 @@ export function getLocalGaussianSplatLoadersConfiguration():
     sourceUrl,
     sourceUrls,
     fallbackSourceUrls: scene.fallbackSourceUrls || [],
-    sourceFormat: getGaussianSplatSourceFormat(sourceUrl),
+    sourceFormat,
     sceneId: scene.id,
     sourceLabel: scene.label,
     expectedSplatCount: scene.expectedSplatCount,
-    expectedBatchCount: getExpectedGaussianSplatBatchCount(scene),
+    expectedBatchCount: getExpectedGaussianSplatBatchCount(scene, maxResidentSplatCount),
+    ...(maxResidentSplatCount === undefined ? {} : {maxResidentSplatCount}),
     upAxis: scene.upAxis,
     up: scene.up,
     camera: scene.camera
@@ -266,7 +302,8 @@ export async function* loadLocalGaussianSplatArrowSources(
       sourceLabel: fallbackSourceLabel,
       fallbackActive: true,
       loadedSplatCount: 0,
-      expectedSplatCount: configuration.expectedSplatCount
+      expectedSplatCount: configuration.expectedSplatCount,
+      expectedBatchCount: configuration.expectedBatchCount
     });
     yield* loadGaussianSplatSourceUrls(
       configuration,
@@ -289,7 +326,8 @@ export async function* loadLocalGaussianSplatArrowSources(
     sourceLabel: state.fallbackActive ? 'GitHub Train 7K fallback' : configuration.sourceLabel,
     fallbackActive: state.fallbackActive,
     loadedSplatCount: state.loadedSplatCount,
-    expectedSplatCount: configuration.expectedSplatCount
+    expectedSplatCount: configuration.expectedSplatCount,
+    expectedBatchCount: configuration.expectedBatchCount
   });
 }
 
@@ -344,7 +382,8 @@ async function* loadGaussianSplatSourceUrls(
         sourceLabel,
         fallbackActive: state.fallbackActive,
         loadedSplatCount: state.loadedSplatCount,
-        expectedSplatCount: configuration.expectedSplatCount
+        expectedSplatCount: configuration.expectedSplatCount,
+        expectedBatchCount: configuration.expectedBatchCount
       });
     };
 
@@ -356,7 +395,10 @@ async function* loadGaussianSplatSourceUrls(
       }
 
       const contentLength = Number(response.headers.get('content-length'));
-      totalBytes = Number.isFinite(contentLength) && contentLength > 0 ? contentLength : undefined;
+      if (configuration.sourceFormat !== 'RAD') {
+        totalBytes =
+          Number.isFinite(contentLength) && contentLength > 0 ? contentLength : undefined;
+      }
       reportProgress('loading', true);
 
       if (!response.body) {
@@ -396,7 +438,85 @@ async function* loadGaussianSplatSourceUrls(
       splats: {shape: 'arrow-table'}
     };
 
-    if (configuration.sourceFormat === 'PLY') {
+    if (configuration.sourceFormat === 'RAD') {
+      const source: unknown = await loaderModules.coreModule.load(
+        sourceUrl,
+        loaderModules.loader,
+        loaderOptions
+      );
+      if (!isGaussianSplatRADSource(source)) {
+        throw new Error('RADSourceLoader did not return a paged Gaussian source.');
+      }
+
+      const metadata = await source.getMetadata();
+      configuration.expectedSplatCount = metadata.count;
+      configuration.expectedBatchCount = metadata.chunks.length;
+      const chunkByteLength = metadata.chunks.reduce(
+        (totalByteLength, chunk) => totalByteLength + (chunk.bytes ?? 0),
+        0
+      );
+      totalBytes = metadata.allChunkBytes || chunkByteLength || undefined;
+      reportProgress('loading', true);
+
+      for (let chunkIndex = 0; chunkIndex < metadata.chunks.length; chunkIndex++) {
+        options.signal?.throwIfAborted();
+        const nextChunkSplatCount = metadata.chunks[chunkIndex]?.count;
+        if (
+          configuration.maxResidentSplatCount !== undefined &&
+          nextChunkSplatCount !== undefined &&
+          nextChunkSplatCount > configuration.maxResidentSplatCount &&
+          state.loadedSplatCount === 0
+        ) {
+          throw new RangeError('The first RAD page exceeds residentSplats; increase the budget.');
+        }
+        if (
+          configuration.maxResidentSplatCount !== undefined &&
+          state.loadedSplatCount > 0 &&
+          (state.loadedSplatCount >= configuration.maxResidentSplatCount ||
+            (nextChunkSplatCount !== undefined &&
+              state.loadedSplatCount + nextChunkSplatCount > configuration.maxResidentSplatCount))
+        ) {
+          break;
+        }
+        const arrowSource = await source.getChunkTable(chunkIndex, {
+          ...(options.signal ? {signal: options.signal} : {}),
+          radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
+        });
+        if (!isGaussianSplatArrowSource(arrowSource)) {
+          throw new Error('RADSourceLoader did not return a Gaussian Arrow page.');
+        }
+        if (
+          configuration.maxResidentSplatCount !== undefined &&
+          state.loadedSplatCount + arrowSource.data.numRows > configuration.maxResidentSplatCount
+        ) {
+          if (state.loadedSplatCount === 0) {
+            throw new RangeError('The first RAD page exceeds residentSplats; increase the budget.');
+          }
+          break;
+        }
+        const sourceLoaderData =
+          'loaderData' in arrowSource &&
+          typeof arrowSource.loaderData === 'object' &&
+          arrowSource.loaderData !== null
+            ? arrowSource.loaderData
+            : {};
+        state.loadedSplatCount += arrowSource.data.numRows;
+        state.yieldedArrowSourceCount++;
+        reportProgress('loading', true);
+        const pagedArrowSource = {
+          data: arrowSource.data,
+          ...(arrowSource.shape ? {shape: arrowSource.shape} : {}),
+          loaderData: {
+            ...sourceLoaderData,
+            ...(metadata.chunks[chunkIndex]?.base !== undefined
+              ? {base: metadata.chunks[chunkIndex].base}
+              : {}),
+            chunkIndex
+          }
+        };
+        yield pagedArrowSource;
+      }
+    } else if (configuration.sourceFormat === 'PLY') {
       const arrowSources: AsyncIterable<unknown> = await loaderModules.coreModule.loadInBatches(
         sourceUrl,
         loaderModules.loader,
@@ -435,7 +555,10 @@ async function* loadGaussianSplatSourceUrls(
 async function loadLocalGaussianSplatLoaderModules(
   configuration: LocalGaussianSplatLoadersConfiguration
 ): Promise<LocalGaussianSplatLoaderModules> {
-  const loaderName = `${configuration.sourceFormat}Loader`;
+  const loaderName =
+    configuration.sourceFormat === 'RAD'
+      ? 'RADSourceLoader'
+      : `${configuration.sourceFormat}Loader`;
   if (configuration.loaderMode === 'bundled') {
     if (!configuration.loaderBundleUrl) {
       throw new Error('The Gaussian splat loader bundle is unavailable.');
@@ -473,14 +596,32 @@ async function loadLocalGaussianSplatLoaderModules(
   return {coreModule, loader, loaderName};
 }
 
-function getExpectedGaussianSplatBatchCount(scene: GaussianSplatSourceCatalogEntry): number {
+function getExpectedGaussianSplatBatchCount(
+  scene: GaussianSplatSourceCatalogEntry,
+  maxResidentSplatCount?: number
+): number {
   if (scene.id === 'train-github') {
     return (
       Math.ceil(370_941 / GAUSSIAN_SPLAT_ARROW_BATCH_SIZE) +
       Math.ceil(370_942 / GAUSSIAN_SPLAT_ARROW_BATCH_SIZE)
     );
   }
-  return Math.ceil(scene.expectedSplatCount / GAUSSIAN_SPLAT_ARROW_BATCH_SIZE);
+  return Math.ceil(
+    Math.min(scene.expectedSplatCount, maxResidentSplatCount ?? Number.POSITIVE_INFINITY) /
+      GAUSSIAN_SPLAT_ARROW_BATCH_SIZE
+  );
+}
+
+function getGaussianSplatResidentSplatCount(parameters: URLSearchParams): number {
+  const requestedCount = parameters.get('residentSplats');
+  if (requestedCount === null) {
+    return DEFAULT_RAD_RESIDENT_SPLAT_COUNT;
+  }
+  const residentSplatCount = Number(requestedCount);
+  if (!Number.isSafeInteger(residentSplatCount) || residentSplatCount <= 0) {
+    throw new Error('Gaussian splat residentSplats must be a positive safe integer.');
+  }
+  return residentSplatCount;
 }
 
 function getGaussianSplatSourceFormat(
@@ -529,5 +670,16 @@ function isGaussianSplatArrowSource(
     'getChild' in arrowTable &&
     typeof arrowTable.getChild === 'function' &&
     'schema' in arrowTable
+  );
+}
+
+function isGaussianSplatRADSource(value: unknown): value is LocalGaussianSplatRADSource {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'getMetadata' in value &&
+    typeof value.getMetadata === 'function' &&
+    'getChunkTable' in value &&
+    typeof value.getChunkTable === 'function'
   );
 }

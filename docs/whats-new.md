@@ -143,8 +143,12 @@ Target Release Date: Q3, 2026
 - **HDR Gaussian colors** - Float32 color columns preserve spherical-harmonic DC radiance above the display range without premature clamping or quantization.
 - **Higher-order spherical harmonics** - Degree-one through degree-three coefficients provide camera-dependent Gaussian radiance on WebGPU and WebGL2.
 - **Semantic filtering and GPU picking** - Filter prepared semantic classes and pick stable source batch, global row, and semantic identities through dedicated GPU passes.
+- **Graph-native splat interaction** - Reusable WebGPU command graphs evaluate higher-order directional radiance, apply GPU semantic filters, support integer picking, and composite against caller-owned mesh depth passes.
 - **Dynamic splats and mixed scenes** - Update existing GPU source rows in place and composite depth-tested Gaussian splats between opaque and transparent mesh draws.
 - **Bounded splat residency** - Prioritized, pinned, least-recently-used source batches remain within configurable GPU byte, row, and chunk budgets.
+- **Hierarchical source paging** - Frustum-aware, foveated screen-space-error traversal preserves parent fallback, bounds asynchronous page decoding, and reserves GPU capacity before upload.
+- **Khronos glTF and 3D Tiles primitives** - Structural `KHR_gaussian_splatting` adapters retain feature IDs, complete spherical harmonics, stable tile identities, and externally decoded SPZ v2 compression.
+- **Progressive RAD sources** - Range-fetch independently owned Spark RAD pages, preserve authored source-global row identities, and cap interactive resident windows for large captures.
 - **Incremental splat streaming** - New prepared batches append without concatenating source data, rebuilding previous batches, or transferring ownership to the renderer.
 - **Layered adapters** - File parsing stays in loaders.gl, Apache Arrow conversion stays in `@luma.gl/arrow`, and deck.gl integration stays in downstream applications.
 

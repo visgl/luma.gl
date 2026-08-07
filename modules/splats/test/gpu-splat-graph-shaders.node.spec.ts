@@ -5,6 +5,9 @@
 import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {
+  GPU_SPLAT_FEATURE_SHADER,
+  GPU_SPLAT_FEATURE_SHADER_LAYOUT,
+  GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_INVALID_DEPTH_KEY,
   GPU_SPLAT_PROJECTION_SHADER,
@@ -91,6 +94,56 @@ test('GPU Gaussian projection stays within guaranteed WebGPU storage binding lim
       location: binding.location
     })),
     'one draw consumes only camera uniforms, projected records, and globally sorted IDs'
+  );
+  t.end();
+});
+
+test('GPU Gaussian enhancement evaluates harmonics and semantic filters within WebGPU limits', t => {
+  const feature = new WgslReflect(GPU_SPLAT_FEATURE_SHADER);
+  t.equal(feature.storage.length, 7, 'directional radiance and semantics need only seven buffers');
+  t.deepEqual(
+    feature.storage.map(resource => ({name: resource.name, location: resource.binding})),
+    GPU_SPLAT_FEATURE_SHADER_LAYOUT.bindings
+      .filter(binding => binding.type !== 'uniform')
+      .map(binding => ({name: binding.name, location: binding.location})),
+    'borrows separate source-owned coefficient and semantic buffers without packing source rows'
+  );
+  const featureUniforms = feature.uniforms.find(uniform => uniform.name === 'featureUniforms');
+  t.equal(
+    featureUniforms?.size,
+    GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,
+    'keeps optional view-dependent feature controls in one compact 48-byte uniform'
+  );
+  t.deepEqual(
+    featureUniforms?.members?.map(member => ({name: member.name, offset: member.offset})),
+    [
+      {name: 'cameraPosition', offset: 0},
+      {name: 'sphericalHarmonicsDegree', offset: 12},
+      {name: 'sphericalHarmonicsStride', offset: 16},
+      {name: 'hasSemanticIds', offset: 20},
+      {name: 'includeCount', offset: 24},
+      {name: 'excludeCount', offset: 28},
+      {name: 'hasIncludeSelection', offset: 32},
+      {name: 'includeUnlabeled', offset: 36},
+      {name: 'semanticFilterActive', offset: 40},
+      {name: 'padding', offset: 44}
+    ],
+    'retains source-local coefficient strides and complete semantic-selection metadata'
+  );
+  t.match(
+    GPU_SPLAT_FEATURE_SHADER,
+    /atomicSub\(&drawCommands\[1u\],\s*1u\)/,
+    'removes filtered rows from the existing GPU-owned indirect draw count'
+  );
+  t.match(
+    GPU_SPLAT_FEATURE_SHADER,
+    /depthKeys\[projectedRowIndex\]\s*=\s*INVALID_FEATURE_DEPTH_KEY/,
+    'moves rejected semantic rows behind globally sorted visible Gaussian projections'
+  );
+  t.match(
+    GPU_SPLAT_FEATURE_SHADER,
+    /case 14u:[\s\S]*?-0\.5900435899266435/,
+    'evaluates every Khronos/GraphDECO spherical-harmonic basis through degree three'
   );
   t.end();
 });

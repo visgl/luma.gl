@@ -89,6 +89,54 @@ test('GPUSplatGraphRenderer validates borrowing and replacement ownership', t =>
   t.end();
 });
 
+test('GPUSplatGraphRenderer preserves GPU-native camera, harmonics, and semantic controls', t => {
+  const device = makeWebGPUNullDevice();
+  const source = makeGraphSplatSource([0.25, 0.75], 17);
+  source.semanticIds = new Uint32Array([3, 7]);
+  source.sphericalHarmonics = new Float32Array(18);
+  source.sphericalHarmonicsDegree = 1;
+  const batch = makeGPUSplatData(device, source);
+  const initialFilter = {include: new Set([3, 7]), exclude: [7], includeUnlabeled: true};
+  const renderer = new GPUSplatGraphRenderer(device, {
+    data: batch,
+    cameraPosition: [1, 2, 3],
+    sphericalHarmonicsDegree: 1,
+    semanticFilter: initialFilter
+  });
+
+  t.deepEqual(renderer.props.cameraPosition, [1, 2, 3], 'preserves world-space camera position');
+  t.equal(renderer.props.sphericalHarmonicsDegree, 1, 'caps GPU-evaluated source SH bands');
+  t.equal(renderer.props.semanticFilter, initialFilter, 'retains included/excluded class controls');
+  t.equal(renderer.projectedRecordBuffer, undefined, 'keeps projected records lazy until encoding');
+  t.equal(renderer.uniformBuffer, undefined, 'keeps graph uniform bindings lazy until encoding');
+
+  renderer.setProps({
+    cameraPosition: [4, 5, 6],
+    sphericalHarmonicsDegree: 0,
+    semanticFilter: undefined
+  });
+  t.deepEqual(renderer.props.cameraPosition, [4, 5, 6], 'updates directional source lighting');
+  t.equal(renderer.props.sphericalHarmonicsDegree, 0, 'disables optional higher-order bands');
+  t.equal(renderer.props.semanticFilter, undefined, 'restores unfiltered source visibility');
+  t.equal(batch.sphericalHarmonics?.data[0].buffer.destroyed, false, 'borrows original SH storage');
+  t.equal(batch.semanticIds?.data[0].buffer.destroyed, false, 'borrows original semantic storage');
+
+  t.throws(
+    () => renderer.setProps({semanticFilter: {predicate: () => true}}),
+    /JavaScript predicates/,
+    'rejects JavaScript callbacks that cannot execute in a GPU-native graph'
+  );
+  t.throws(
+    () => renderer.setProps({semanticFilter: {include: [-1]}}),
+    /unsigned 32-bit/,
+    'rejects semantic classes that cannot be represented by source GPU identifiers'
+  );
+
+  renderer.destroy();
+  batch.destroy();
+  t.end();
+});
+
 function makeWebGPUNullDevice(): NullDevice {
   const device = new NullDevice({});
   Object.defineProperties(device, {

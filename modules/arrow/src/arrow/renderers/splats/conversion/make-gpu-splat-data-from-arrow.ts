@@ -24,6 +24,7 @@ import {getArrowDataBufferSource} from '../../../gpu/arrow-gpu-data';
 
 const SPHERICAL_HARMONIC_DC = 0.28209479177387814;
 const GAUSSIAN_SPLAT_ENCODING_METADATA_KEY = 'loaders_gl.gaussian_splats.encoding';
+const GAUSSIAN_SPLAT_SOURCE_FORMAT_METADATA_KEY = 'loaders_gl.gaussian_splats.source_format';
 const DEFAULT_SPLAT_COLOR = [255, 255, 255, 255] as const;
 
 /** Structural Arrow record-batch contract shared across installed Arrow versions. */
@@ -32,6 +33,8 @@ export type GPUSplatArrowRecordBatchLike = {
   readonly numRows: number;
   /** Arrow field names and field-level encoding metadata. */
   readonly schema: {
+    /** Optional loader-owned source-format metadata used to preserve coefficient packing. */
+    readonly metadata?: ReadonlyMap<string, string>;
     readonly fields: readonly {
       readonly name: string;
       readonly metadata: ReadonlyMap<string, string>;
@@ -61,6 +64,12 @@ export type GPUSplatArrowSource =
       readonly data: GPUSplatArrowColumnSource;
       /** Optional loaders.gl shape tag; no loaders.gl package is required. */
       readonly shape?: string;
+      /** Optional loader-owned page identity retained when chunks stream out of source order. */
+      readonly loaderData?: {
+        readonly base?: number;
+        readonly chunkIndex?: number;
+        readonly [metadataName: string]: unknown;
+      };
     };
 
 /** Optional styling and stable source-row offsets for Arrow Gaussian splat preparation. */
@@ -93,9 +102,13 @@ export function makeGPUSplatDataFromArrow(
   source: GPUSplatArrowSource,
   options: MakeGPUSplatDataFromArrowOptions = {}
 ): GPUSplatData[] {
-  return prepareArrowSplatSource(device, source, options, {
+  const sourceOffsets = getArrowSplatSourceOffsets(source, options, {
     sourceBatchIndex: options.sourceBatchIndex ?? 0,
     rowIndexBase: options.rowIndexBase ?? 0
+  });
+  return prepareArrowSplatSource(device, source, options, {
+    sourceBatchIndex: sourceOffsets.sourceBatchIndex,
+    rowIndexBase: sourceOffsets.rowIndexBase
   }).data;
 }
 
@@ -114,6 +127,10 @@ export async function* makeGPUSplatDataFromArrowStream(
   let rowIndexBase = options.rowIndexBase ?? 0;
 
   for await (const arrowSource of source) {
+    ({sourceBatchIndex, rowIndexBase} = getArrowSplatSourceOffsets(arrowSource, options, {
+      sourceBatchIndex,
+      rowIndexBase
+    }));
     const columnSource = isArrowSplatColumnSource(arrowSource) ? arrowSource : arrowSource.data;
     const recordBatches = isArrowSplatTable(columnSource) ? columnSource.batches : [columnSource];
     for (const recordBatch of recordBatches) {
@@ -132,6 +149,33 @@ export async function* makeGPUSplatDataFromArrowStream(
       yield data;
     }
   }
+}
+
+/** Paged RAD/3D Tiles sources retain their authored row/chunk identities across camera ordering. */
+function getArrowSplatSourceOffsets(
+  source: GPUSplatArrowSource,
+  options: MakeGPUSplatDataFromArrowOptions,
+  fallback: GPUSplatArrowSourceOffsets
+): GPUSplatArrowSourceOffsets {
+  if (isArrowSplatColumnSource(source) || !source.loaderData) {
+    return fallback;
+  }
+
+  const {base, chunkIndex} = source.loaderData;
+  if (
+    (base !== undefined && (!Number.isSafeInteger(base) || base < 0)) ||
+    (chunkIndex !== undefined && (!Number.isSafeInteger(chunkIndex) || chunkIndex < 0))
+  ) {
+    throw new RangeError('Paged Gaussian source identities must be nonnegative safe integers');
+  }
+
+  return {
+    sourceBatchIndex:
+      chunkIndex === undefined
+        ? fallback.sourceBatchIndex
+        : (options.sourceBatchIndex ?? 0) + chunkIndex,
+    rowIndexBase: base === undefined ? fallback.rowIndexBase : (options.rowIndexBase ?? 0) + base
+  };
 }
 
 function prepareArrowSplatSource(
@@ -276,7 +320,7 @@ function makeSplatSourceFromArrowRecordBatch(
   };
 }
 
-/** Reorders GraphDECO's channel-major `f_rest_*` fields into row-major RGB basis triplets. */
+/** Normalizes GraphDECO, native SPZ/RAD, and band-major KSPLAT source coefficients. */
 function getArrowSplatSphericalHarmonics(
   recordBatch: GPUSplatArrowRecordBatchLike,
   maximumDegree: SplatSphericalHarmonicsDegree = 3
@@ -291,12 +335,15 @@ function getArrowSplatSphericalHarmonics(
   if (fieldCount === 0) {
     return undefined;
   }
-  const sourceDegree = getSplatSphericalHarmonicsDegree(fieldCount);
-  const degree = sourceDegree < maximumDegree ? sourceDegree : maximumDegree;
+  // SPZ can author degree four; this renderer retains only its supported first three bands.
+  const sourceDegree = fieldCount === 72 ? 4 : getSplatSphericalHarmonicsDegree(fieldCount);
+  const degree = sourceDegree === 4 || sourceDegree > maximumDegree ? maximumDegree : sourceDegree;
   const sourceCoefficientsPerColor = fieldCount / 3;
   const targetCoefficientCount = getSplatSphericalHarmonicCoefficientCount(degree);
   const targetCoefficientsPerColor = targetCoefficientCount / 3;
   const coefficients = new Float32Array(recordBatch.numRows * targetCoefficientCount);
+  const sourceFormat = recordBatch.schema.metadata?.get(GAUSSIAN_SPLAT_SOURCE_FORMAT_METADATA_KEY);
+  const hasBasisMajorCoefficients = sourceFormat === 'spz' || sourceFormat === 'rad';
 
   for (let colorComponentIndex = 0; colorComponentIndex < 3; colorComponentIndex++) {
     for (
@@ -304,8 +351,11 @@ function getArrowSplatSphericalHarmonics(
       coefficientIndex < targetCoefficientsPerColor;
       coefficientIndex++
     ) {
-      const sourceCoefficientIndex =
-        colorComponentIndex * sourceCoefficientsPerColor + coefficientIndex;
+      const sourceCoefficientIndex = hasBasisMajorCoefficients
+        ? coefficientIndex * 3 + colorComponentIndex
+        : sourceFormat === 'ksplat'
+          ? getKSplatSphericalHarmonicCoefficientIndex(coefficientIndex, colorComponentIndex)
+          : colorComponentIndex * sourceCoefficientsPerColor + coefficientIndex;
       const column = getRequiredArrowSplatColumn(recordBatch, `f_rest_${sourceCoefficientIndex}`);
       for (let rowIndex = 0; rowIndex < recordBatch.numRows; rowIndex++) {
         const coefficientOffset = rowIndex * targetCoefficientCount + coefficientIndex * 3;
@@ -315,6 +365,23 @@ function getArrowSplatSphericalHarmonics(
   }
 
   return {coefficients, degree};
+}
+
+/** KSPLAT groups coefficients by spherical-harmonic band, then by RGB component. */
+function getKSplatSphericalHarmonicCoefficientIndex(
+  coefficientIndex: number,
+  colorComponentIndex: number
+): number {
+  const harmonicBand = coefficientIndex < 3 ? 1 : coefficientIndex < 8 ? 2 : 3;
+  const firstCoefficientInBand = harmonicBand * harmonicBand - 1;
+  const coefficientsInBand = harmonicBand * 2 + 1;
+
+  return (
+    firstCoefficientInBand * 3 +
+    colorComponentIndex * coefficientsInBand +
+    coefficientIndex -
+    firstCoefficientInBand
+  );
 }
 
 function getArrowSplatSemanticColumn(
