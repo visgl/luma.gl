@@ -83,6 +83,17 @@ export function getTraceDependencyCapacityOptions(
   ];
 }
 
+/**
+ * Returns the maximum number of unique spans that one dependency traversal can discover.
+ *
+ * Every reached span after the seed requires at least one dependency, so sparse traces do not
+ * need span-sized frontier allocations. One word is retained for an empty trace because WebGPU
+ * buffers cannot be empty.
+ */
+export function getTraceFocusFrontierCapacity(spanCount: number, dependencyCount: number): number {
+  return Math.max(Math.min(spanCount, dependencyCount + 1), 1);
+}
+
 /** Matches the GPU's adaptive exact-span versus density-rendering decision. */
 export function isTraceDensityMode(
   timeMin: number,

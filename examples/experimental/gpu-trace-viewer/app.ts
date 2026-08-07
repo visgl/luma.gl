@@ -41,6 +41,7 @@ import {
 import {
   getTraceCapacityOptions,
   getTraceDependencyCapacityOptions,
+  getTraceFocusFrontierCapacity,
   isTraceDensityMode,
   makeTraceDataset,
   makeTraceSpanChunks,
@@ -206,6 +207,7 @@ type TraceGraphResources = {
   spanBatchCount: number;
   dependencyBatchCount: number;
   dependencyCount: number;
+  focusFrontierCapacity: number;
 };
 
 function getTraceResourceBuffers(resources: TraceGraphResources): Array<{byteLength: number}> {
@@ -582,6 +584,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }));
     const spanMaskByteLength = Math.max(dataset.spanCount, 1) * UINT32_BYTE_LENGTH;
     const focusMaskWordCount = Math.max(Math.ceil(dataset.spanCount / 32), 1);
+    const focusFrontierCapacity = getTraceFocusFrontierCapacity(
+      dataset.spanCount,
+      dataset.dependencyCount
+    );
     const dependencyMaskByteLength = Math.max(dataset.dependencyCount, 1) * UINT32_BYTE_LENGTH;
     const densityBinCount = TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT;
     const topologyChunkLengths = getTopologyChunkLengths(dataset.spanCount);
@@ -783,7 +789,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       spanCount: dataset.spanCount,
       spanBatchCount: dataset.spanBatches.length,
       dependencyBatchCount: dataset.dependencyBatches.length,
-      dependencyCount: dataset.dependencyCount
+      dependencyCount: dataset.dependencyCount,
+      focusFrontierCapacity
     };
   }
 
@@ -1044,7 +1051,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const focusFrontiers = [0, 1].map(index =>
       graph.createTransientBuffer({
         id: `trace-focus-frontier-${index}`,
-        byteLength: Math.max(resources.spanCount, 1) * UINT32_BYTE_LENGTH,
+        byteLength: resources.focusFrontierCapacity * UINT32_BYTE_LENGTH,
         usage: Buffer.STORAGE
       })
     );
@@ -1123,6 +1130,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             id: `trace-focus-frontier-${depth}-${direction.name}-${partitionIndex}`,
             source: getFocusFrontierExpansionShader({
               spanCount: resources.spanCount,
+              frontierCapacity: resources.focusFrontierCapacity,
               sourceNodeBase,
               sourceNodeCount,
               offsetWordBase,

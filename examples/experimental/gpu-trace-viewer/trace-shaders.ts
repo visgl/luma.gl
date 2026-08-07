@@ -427,6 +427,7 @@ fn main() {
 /** Expands one CSR partition from a compact frontier into a bit-packed next frontier. */
 export function getFocusFrontierExpansionShader(options: {
   spanCount: number;
+  frontierCapacity: number;
   sourceNodeBase: number;
   sourceNodeCount: number;
   offsetWordBase: number;
@@ -436,6 +437,7 @@ export function getFocusFrontierExpansionShader(options: {
 }): string {
   return /* wgsl */ `
 const SPAN_COUNT: u32 = ${options.spanCount}u;
+const FRONTIER_CAPACITY: u32 = ${options.frontierCapacity}u;
 const SOURCE_NODE_BASE: u32 = ${options.sourceNodeBase}u;
 const SOURCE_NODE_COUNT: u32 = ${options.sourceNodeCount}u;
 const OFFSET_WORD_BASE: u32 = ${options.offsetWordBase}u;
@@ -470,7 +472,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     if (neighbor < SPAN_COUNT &&
       (atomicOr(&reachedSpans[neighbor >> 5u], reachedMask) & reachedMask) == 0u) {
       let nextIndex = atomicAdd(&nextFrontierCount[0], 1u);
-      if (nextIndex < SPAN_COUNT) {
+      if (nextIndex < FRONTIER_CAPACITY) {
         nextFrontier[nextIndex] = neighbor;
       }
     }

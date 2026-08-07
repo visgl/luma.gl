@@ -15,6 +15,7 @@ import {
 import {
   getTraceCapacityOptions,
   getTraceDependencyCapacityOptions,
+  getTraceFocusFrontierCapacity,
   isTraceDensityMode,
   makeTraceDataset,
   makeTraceDependencyBatches,
@@ -110,6 +111,25 @@ test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t =>
     getTraceCapacityOptions(1024 * 1024 * 1024, 1024 * 1024 * 1024),
     [250_000, 1_000_000, 4_000_000, 10_000_000],
     'maximum adapters expose the ten-million-span demonstration'
+  );
+  t.end();
+});
+
+test('GPU trace focus frontiers scale with reachable dependency population', t => {
+  t.equal(
+    getTraceFocusFrontierCapacity(100_000_000, 250_000),
+    250_001,
+    'a sparse 100M-span trace allocates one frontier entry per dependency plus its seed'
+  );
+  t.equal(
+    getTraceFocusFrontierCapacity(100_000_000, 100_000_000),
+    100_000_000,
+    'a dense trace retains enough capacity to reach every span'
+  );
+  t.equal(
+    getTraceFocusFrontierCapacity(0, 0),
+    1,
+    'an empty trace retains one allocation-safe frontier word'
   );
   t.end();
 });
@@ -298,6 +318,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getFocusFrontierClearShader(),
     getFocusFrontierExpansionShader({
       spanCount: 11,
+      frontierCapacity: 5,
       sourceNodeBase: 0,
       sourceNodeCount: 6,
       offsetWordBase: 0,

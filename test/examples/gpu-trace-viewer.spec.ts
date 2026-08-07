@@ -7,6 +7,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {describe, expect, test} from 'vitest';
 import GPUTraceViewerAnimationLoopTemplate from '../../examples/experimental/gpu-trace-viewer/app';
 import {
+  getTraceFocusFrontierCapacity,
   TRACE_COLLAPSED_STATE,
   TRACE_DENSITY_BIN_COUNT,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
@@ -59,6 +60,7 @@ describe('GPU hierarchical trace viewer', () => {
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
           };
           dependencyCount: number;
+          focusFrontierCapacity: number;
           spanCount: number;
           spanBatchCount: number;
           dependencyBatchCount: number;
@@ -86,6 +88,12 @@ describe('GPU hierarchical trace viewer', () => {
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
+      expect(state.resources.focusFrontierCapacity).toBe(
+        getTraceFocusFrontierCapacity(
+          state.resources.spanCount,
+          state.resources.dependencyCount
+        )
+      );
       expect(state.resources.dependencyBatchCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
