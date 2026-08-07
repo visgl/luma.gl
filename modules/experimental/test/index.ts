@@ -42,3 +42,5 @@ import './luxfilter';
 import './luproj/luproj.spec';
 import './luproj/projection-benchmark.spec';
 import './luvs/gpu-similarity-search.spec';
+import './luvs/gpu-k-means.spec';
+import './luvs/gpu-ivf-flat-index.spec';
