@@ -9,16 +9,16 @@ import {LuGraphExplorerExample} from '@site/src/examples';
 ## Overview
 
 A graph answers questions that individual table rows cannot: which accounts share a transaction,
-which services depend on a failed service, which people are two introductions apart, and which
-pages matter because other important pages link to them. Vertices represent those entities; edges
-represent their relationships.
+which services depend on a failed service, which people are two introductions apart, which tightly
+connected groups exist inside a wider network, and which pages matter because other important
+pages link to them. Vertices represent those entities; edges represent their relationships.
 
 `@luma.gl/experimental/lugraph` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
-degrees, shortest-path neighborhoods, weakly connected groups, PageRank importance, and progressive
-two-dimensional graph layouts into caller-owned GPU buffers. Layout can evaluate every repulsive
-interaction exactly or explicitly approximate distant groups through a caller-owned uniform grid.
-Every operation composes with the existing `GPUCommandGraph`.
+degrees, shortest-path neighborhoods, weakly connected groups, densely connected communities,
+PageRank importance, and progressive two-dimensional graph layouts into caller-owned GPU buffers.
+Layout can evaluate every repulsive interaction exactly or explicitly approximate distant groups
+through a caller-owned uniform grid. Every operation composes with the existing `GPUCommandGraph`.
 
 This is an experimental, headless graph analytics API, not a graph database, visualization
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
@@ -213,7 +213,7 @@ luGraph keeps the complete intermediate pipeline on one WebGPU device:
 ```text
 Existing GPU edge columns
     -> compressed adjacency
-    -> degree / shortest paths / weak components / PageRank / force layout
+    -> degree / shortest paths / weak components / communities / PageRank / force layout
     -> caller-owned GPU result columns and directly renderable positions
 ```
 
@@ -233,12 +233,14 @@ Use luGraph for browser applications that already own typed GPU relationship col
 combine graph analytics with further GPU work:
 
 - **Social and communication networks:** count contacts, highlight friends within a bounded number
-  of introductions, group disconnected networks, rank influential accounts, and arrange connected
-  people into a readable map.
+  of introductions, distinguish friend circles within connected networks, group disconnected
+  networks, rank influential accounts, and arrange connected people into a readable map.
 - **Software and service dependencies:** follow incoming or outgoing dependency chains, find
-  isolated dependency islands, and identify packages that many important packages depend on.
+  isolated dependency islands, reveal tightly linked ownership groups, and identify packages that
+  many important packages depend on.
 - **Transaction and fraud investigations:** follow transfers around a selected account, identify
-  connected groups of counterparties, and prioritize structurally important entities.
+  coordinated clusters inside a larger connected group of counterparties, and prioritize
+  structurally important entities.
 - **Transport and infrastructure maps:** inspect junction degree, unweighted hop reachability,
   disconnected subnetworks, and relationship-driven importance across a network.
 - **Knowledge and citation graphs:** follow citation links, identify connected collections, and
@@ -261,14 +263,15 @@ provide the other unsupported features above.
 | `LuGraphDegree` | How many relationships touch each vertex in one direction? | One `uint32` degree per vertex | `O(V)` after adjacency exists |
 | `LuGraphBreadthFirstSearch` | Which vertices are within a chosen number of unweighted hops? | Distances, deterministic predecessors, and an optional selection mask | At most `O(D × (V + E))` for `D` compiled hops |
 | `LuGraphConnectedComponents` | Which vertices belong to the same weakly connected group? | One `uint32` component identifier per vertex | At most `O(K × (V + E))` for `K` bounded iterations |
+| `LuGraphLabelPropagation` | Which densely connected communities exist inside a connected network? | One deterministic `uint32` community label per vertex | At most `O(K × sum(degree²))` for `K` bounded iterations |
 | `LuGraphPageRank` | Which vertices receive influence from other important vertices? | One normalized `float32` score per vertex | `O(K × (V + E))` for `K` iterations |
 | `LuGraphForceLayout` | How can related vertices be positioned as a readable network? | Directly renderable `float32x2` positions and persistent velocities | `O(V² + E)` per exact force iteration |
 | `LuGraphSpatialForceLayout` | Can distant graph regions be approximated while nearby relationships remain exact? | The existing renderable layout positions plus explicit uniform-grid diagnostics | `Θ(V × G + P + E)` per spatial force iteration |
 
 `V` is the graph's explicit vertex count, `E` is its source-edge count, `G` is the uniform-grid
-cell count, and `P` counts individual interactions in near or insufficiently distant cells.
-Undirected adjacency contains both directions for ordinary edges; an undirected self-loop appears
-once.
+cell count, `P` counts individual interactions in near or insufficiently distant cells, and
+`sum(degree²)` adds the squared weak-neighbor count of every vertex. Undirected adjacency contains
+both directions for ordinary edges; an undirected self-loop appears once.
 
 ## Describe existing relationships with LuGraph
 
@@ -449,6 +452,63 @@ The caller chooses a bounded iteration budget. The optional one-row `uint32` `co
 one only when the final iteration reaches a fixed point; zero means convergence was not established
 or the required adjacency overflowed. A connected component answers whether entities connect at
 all; it does not claim to discover densely connected communities within one connected network.
+
+## Discover densely connected communities with LuGraphLabelPropagation
+
+**Question: Which vertices form closely connected communities inside a network that is otherwise
+connected?**
+
+`LuGraphLabelPropagation` groups vertices by the labels most common in their immediate
+neighborhood. Use it to reveal circles of friends within a social network, identify related
+transaction accounts within a larger fraud investigation, separate service ownership groups inside
+a connected dependency graph, or color locally cohesive regions of a citation network.
+
+A connected component answers whether any path links two vertices. Community detection asks a
+different question: are these vertices more strongly connected to one another than to the rest of
+the same network? Imagine two teams whose members interact frequently within their own team but
+share only one relationship across teams. That single bridge makes the whole network one weakly
+connected component, while label propagation can still give each team a different community label.
+Use weak components to find disconnected islands; use community labels to inspect local structure
+within an island.
+
+```ts
+import {LuGraphLabelPropagation} from '@luma.gl/experimental/lugraph';
+
+const communities = new LuGraphLabelPropagation({
+  topology,
+  output: communityIds,
+  iterations: 32,
+  converged: communitiesConverged
+});
+```
+
+Every vertex begins with its stable vertex identifier as its label. Each synchronous round reads
+the preceding round's complete label snapshot and selects the most frequent label among one self
+vote and all incoming or outgoing neighbor occurrences. Equal vote counts choose the numerically
+lowest label, so the result does not depend on unspecified adjacency ordering. Self-loops add no
+extra self votes; duplicate edges and reciprocal directed edges vote independently. Existing edge
+weights are preserved by topology but ignored by this unweighted majority vote.
+
+Directed graphs require both forward and reverse adjacency to include every weak neighbor.
+Undirected graphs reuse symmetric forward adjacency without reverse CSR. `output` is a
+caller-owned, packed `GPUVector<'uint32'>` containing exactly one community label per vertex;
+the optional `converged` output is a separate, caller-owned one-row `GPUVector<'uint32'>`.
+Neither allocation may physically alias graph inputs, adjacency storage, or another writable
+output.
+
+The default is `32` synchronous rounds; applications can explicitly choose an integer from `1`
+through `1024`. Every declared round is encoded without CPU synchronization, automatic readback,
+or early termination. `converged` becomes one only when the final round changes no labels; zero
+means that the chosen budget did not establish a fixed point. Some graphs can oscillate between
+label assignments, so a bounded round count never guarantees convergence. An empty graph reports
+convergence, and an isolated vertex retains its own identifier.
+
+If required forward or reverse adjacency overflows, all output labels become `0xffffffff` and
+`converged` becomes zero rather than publishing partial communities. The worst-case work is
+`O(sum(degree²))` per round because counting support for each candidate can rescan a vertex's
+neighborhood; a high-degree hub can therefore be disproportionately expensive. This deterministic
+label-propagation heuristic is not Louvain or Leiden, does not optimize modularity, and does not
+guarantee objectively correct communities or a particular clustering quality.
 
 ## Rank incoming influence with LuGraphPageRank
 
@@ -696,6 +756,7 @@ import {
   LuGraphConnectedComponents,
   LuGraphDegree,
   LuGraphForceLayout,
+  LuGraphLabelPropagation,
   LuGraphPageRank,
   LuGraphSpatialForceLayout,
   LuGraphTopology
@@ -746,6 +807,12 @@ new LuGraphConnectedComponents({
   iterations: 32,
   converged: componentsConverged
 }).addToGraph(workflow);
+new LuGraphLabelPropagation({
+  topology,
+  output: communityIds,
+  iterations: 32,
+  converged: communitiesConverged
+}).addToGraph(workflow);
 new LuGraphPageRank({
   topology,
   output: importanceScores,
@@ -794,16 +861,17 @@ when exact all-pairs repulsion is the better fit.
 - Writable outputs require physically distinct GPU buffer allocations, including when a
   `DynamicBuffer` wrapper exposes the same underlying allocation through different views.
 - Adjacency capacities and overflow statuses are explicit. Breadth-first search fails closed to
-  unreachable distances, weak components publish `0xffffffff`, and PageRank publishes zero scores
-  when a required neighbor list overflowed. Force layout preserves its existing positions and
-  clears velocities on required adjacency overflow.
+  unreachable distances, weak components and community detection publish `0xffffffff`, and
+  PageRank publishes zero scores when a required neighbor list overflowed. Force layout preserves
+  its existing positions and clears velocities on required adjacency overflow.
 - Spatial layout also preserves positions and clears velocities when its accepted count excludes
   any out-of-domain vertex or its explicit vertex-ID capacity overflows.
 - Degree remains exact under neighbor overflow because its input is the complete CSR offset range.
 - Renderable layout positions require both `Buffer.STORAGE` and `Buffer.VERTEX` usage on their
   original caller-owned allocation; position readback or repacking is never implicit.
-- Fixed component and PageRank iteration budgets do not imply convergence. Their optional status
-  and final-change outputs remain GPU-resident until an application explicitly requests readback.
+- Fixed component, community, and PageRank iteration budgets do not imply convergence. Their
+  optional status and final-change outputs remain GPU-resident until an application explicitly
+  requests readback.
 - Work uses bounded WebGPU dispatch and portable storage bindings on one device. Original chunk
   preservation does not imply distributed or multi-GPU execution.
 - The optional graph subpath does not supply automatic Arrow import, rendering, graph persistence,
@@ -818,7 +886,7 @@ luGraph is inspired by [NVIDIA RAPIDS cuGraph](https://github.com/rapidsai/cugra
 and RAPIDS contributors advancing GPU graph analytics. cuGraph is distributed under the
 [Apache License 2.0](https://github.com/rapidsai/cugraph/blob/main/LICENSE).
 
-This is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
-vis.gl implementation for browser-native WebGPU; it does not copy or translate cuGraph source code.
-It does not claim CUDA or cuGraph API compatibility, feature parity, NVIDIA affiliation, or NVIDIA
-endorsement.
+luGraph is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
+vis.gl implementation for browser-native WebGPU. It does not copy or translate cuGraph source code
+or CUDA implementations. It does not claim CUDA or cuGraph API compatibility, feature parity,
+NVIDIA affiliation, or NVIDIA endorsement.
