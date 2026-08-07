@@ -25,6 +25,25 @@ export type {GPURasterBufferToTextureProps} from './gpu-raster-buffer-to-texture
 export {GPURasterBandMath} from './gpu-raster-band-math';
 export type {GPURasterBandMathOperation, GPURasterBandMathProps} from './gpu-raster-band-math';
 
+export {GPURasterNeighborhood} from './gpu-raster-neighborhood';
+export type {
+  GPURasterBorderMode,
+  GPURasterNeighborhoodProps,
+  GPURasterNeighborhoodRadius,
+  GPURasterNoDataPolicy
+} from './gpu-raster-neighborhood';
+
+export {
+  GPURasterBoxBlur,
+  GPURasterConvolution,
+  GPURasterGaussianBlur
+} from './gpu-raster-convolution';
+export type {
+  GPURasterConvolutionProps,
+  GPURasterGaussianBlurProps,
+  GPURasterSmoothingProps
+} from './gpu-raster-convolution';
+
 export {GPURasterContrast} from './gpu-raster-contrast';
 export type {
   GPURasterContrastDomain,

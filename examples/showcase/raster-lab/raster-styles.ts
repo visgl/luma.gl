@@ -267,7 +267,7 @@ export const RASTER_LAB_STYLES = /* css */ `
 .raster-panel {
   min-width: 0;
   overflow: hidden;
-  padding: 13px;
+  padding: 11px;
   border: 1px solid var(--raster-border);
   border-radius: 13px;
   background: var(--raster-panel);
@@ -278,7 +278,7 @@ export const RASTER_LAB_STYLES = /* css */ `
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .raster-panel-title {
@@ -292,8 +292,14 @@ export const RASTER_LAB_STYLES = /* css */ `
   gap: 5px;
 }
 
+.raster-smoothing-buttons {
+  display: grid;
+  grid-template-columns: 0.75fr 1.2fr 0.75fr;
+  gap: 5px;
+}
+
 .raster-mode-button {
-  min-height: 31px;
+  min-height: 28px;
   padding: 0 5px;
   border: 1px solid rgb(179 202 187 / 15%);
   border-radius: 7px;
@@ -312,8 +318,8 @@ export const RASTER_LAB_STYLES = /* css */ `
 
 .raster-control {
   display: grid;
-  gap: 6px;
-  margin-top: 12px;
+  gap: 5px;
+  margin-top: 9px;
 }
 
 .raster-control-label {
@@ -329,11 +335,25 @@ export const RASTER_LAB_STYLES = /* css */ `
   font-variant-numeric: tabular-nums;
 }
 
+.raster-smoothing-control {
+  gap: 6px;
+}
+
+.raster-smoothing-setting {
+  display: grid;
+  gap: 4px;
+}
+
 .raster-slider {
   width: 100%;
   height: 4px;
   accent-color: var(--raster-accent);
   cursor: pointer;
+}
+
+.raster-slider:disabled {
+  cursor: default;
+  opacity: 0.36;
 }
 
 .raster-threshold-toggle {
@@ -351,8 +371,8 @@ export const RASTER_LAB_STYLES = /* css */ `
 }
 
 .raster-otsu-button {
-  min-height: 24px;
-  padding: 4px 7px;
+  min-height: 21px;
+  padding: 3px 7px;
   border: 1px solid rgb(156 233 196 / 22%);
   border-radius: 6px;
   background: rgb(19 34 37 / 78%);
@@ -375,7 +395,7 @@ export const RASTER_LAB_STYLES = /* css */ `
 
 .raster-histogram {
   display: flex;
-  height: clamp(64px, 11vh, 105px);
+  height: clamp(58px, 9vh, 86px);
   align-items: flex-end;
   gap: 2px;
   border-bottom: 1px solid rgb(196 220 205 / 16%);
@@ -405,7 +425,7 @@ export const RASTER_LAB_STYLES = /* css */ `
 }
 
 .raster-histogram-caption {
-  margin-top: 9px;
+  margin-top: 7px;
   color: var(--raster-muted);
   font-size: 10px;
   line-height: 1.45;
@@ -569,6 +589,29 @@ export const RASTER_LAB_STYLES = /* css */ `
 
   .raster-histogram-caption,
   .raster-pipeline-step:nth-last-child(-n + 2) {
+    display: none;
+  }
+}
+
+@media (max-height: 780px) and (min-width: 651px) {
+  .raster-sidebar {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .raster-panel {
+    padding: 9px;
+  }
+
+  .raster-control {
+    gap: 4px;
+    margin-top: 7px;
+  }
+
+  .raster-histogram {
+    height: 50px;
+  }
+
+  .raster-pipeline {
     display: none;
   }
 }

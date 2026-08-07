@@ -7,17 +7,22 @@ submission, and optional readback.
 
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
-scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, and
-adapter-limit planning. They implement `GPUCommandGraphContributor` structurally: calling
-`addToGraph(graph)` only declares work. No contributor submits commands or reads results back.
+scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, mask-aware
+neighborhood stencils, direct convolution, separable Gaussian/box smoothing, and adapter-limit
+planning. They implement `GPUCommandGraphContributor` structurally: calling `addToGraph(graph)`
+only declares work. No contributor submits commands or reads results back.
 
 ```ts
 import {GPUCommandGraph} from '@luma.gl/experimental';
 import {
   GPURasterBandMath,
+  GPURasterBoxBlur,
   GPURasterContrast,
+  GPURasterConvolution,
+  GPURasterGaussianBlur,
   GPURasterHistogram,
   GPURasterNDVI,
+  GPURasterNeighborhood,
   GPURasterOtsuThreshold,
   GPURasterStatistics,
   GPURasterThreshold,
@@ -32,10 +37,11 @@ The `./luraster` subpath is an explicit opt-in. Its runtime symbols are not expo
 
 The [Satellite Raster Lab](/examples/showcase/raster-lab) visualizes deterministic synthetic
 red and near-infrared imagery, GPU-derived NDVI, nodata/cloud masks, and a valid-pixel
-histogram. Layer selection, contrast, gamma, manual or automatic Otsu threshold selection, and
-denominator tolerance rebuild the actual GPU analysis pipeline; the histogram reflects the
-selected, transformed, valid pixels. Only 216 bytes of scalar summaries, histogram bins, and
-the automatic cutoff are read back after graph submission.
+histogram. Layer selection, Gaussian or box smoothing, neighborhood radius, Gaussian sigma,
+contrast, gamma, manual or automatic Otsu threshold selection, and denominator tolerance rebuild
+the actual GPU analysis pipeline; the displayed raster, histogram, and scalar statistics reflect
+the selected, smoothed, transformed, valid pixels. Only 216 bytes of scalar summaries, histogram
+bins, and the automatic cutoff are read back after graph submission.
 
 ## Raster bands and validity
 
@@ -276,17 +282,191 @@ between-class scores deterministically select the lowest threshold; an empty his
 zero. The selected threshold remains GPU-resident when consumed by the downstream
 classification pass.
 
+## Neighborhood stencils and boundary policies
+
+`GPURasterNeighborhood` evaluates an explicit two-dimensional kernel against calibrated,
+buffer-backed raster samples. Use it when an analytical operator needs complete control over
+its radius, individual weights, boundary behavior, normalization, and invalid-neighbor policy;
+use the convolution or smoothing contributors below when their higher-level contracts already
+describe the operation.
+
+```ts
+new GPURasterNeighborhood({
+  id: 'weighted-local-mean',
+  width,
+  height,
+  input: ndviBand,
+  radius: 1,
+  kernel: [1, 2, 1, 2, 4, 2, 1, 2, 1],
+  normalize: true,
+  borderMode: 'reflect',
+  noDataPolicy: 'ignore-renormalize',
+  output: neighborhoodValues,
+  outputValidity: neighborhoodValidity
+}).addToGraph(graph);
+```
+
+The radius is either one number for a square kernel or `[horizontalRadius, verticalRadius]` for
+a rectangular kernel. Each axis is bounded to eight pixels, and the kernel must contain exactly
+`(2 * horizontalRadius + 1) * (2 * verticalRadius + 1)` coefficients representable as finite
+`float32` values. Compute workgroups cooperatively cache neighborhood samples and validity in
+workgroup-local tiles. Output values and canonical `uint32` validity are separate caller-owned
+buffers: in-place updates are forbidden because neighboring invocations would otherwise observe
+partially overwritten source pixels. Radius zero is the single-pixel identity when its sole
+weight is one.
+
+Choose the border mode according to the meaning of samples beyond the known raster:
+
+| Border mode | Out-of-bounds behavior                                                                            | When to use it                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `clamp`     | Repeats the closest edge sample.                                                                  | Continuous fields whose outermost measured value is the best available extension.                    |
+| `reflect`   | Mirrors the interior without duplicating the boundary sample; a single-pixel axis repeats itself. | Smoothing terrain, reflectance, or microscopy without the flat edge plateaus introduced by clamping. |
+| `constant`  | Uses the caller-provided `borderValue`.                                                           | Padding against a known background, such as zero-valued calibrated intensity.                        |
+| `nodata`    | Treats out-of-bounds samples as invalid neighbors.                                                | Keeping missing exterior coverage explicit, especially before tiled halo support is available.       |
+
+The default is `borderMode: 'clamp'`; `constant` defaults to `borderValue: 0` in the calibrated
+sample domain. For samples `[a, b, c]`, reflect-101 maps both the left position `-1` and right
+position `3` to `b` instead of repeating the edge pixel.
+
+Raw-format nodata comparisons precede calibration, source masks remain authoritative, and
+non-finite samples never participate. An invalid center pixel always remains invalid even when
+the surrounding neighborhood contains valid samples, so clouds and source nodata are never
+silently inpainted. Neighbor handling is explicit:
+
+- `noDataPolicy: 'propagate'` invalidates the output when a nonzero-weight neighbor is missing.
+  This is the default. Use it for exact analytical stencils, derivative kernels, or workflows
+  that require complete local coverage.
+- `noDataPolicy: 'ignore-renormalize'` drops invalid neighbors and rescales the surviving
+  smoothing weights. Use it for nonnegative averaging kernels near clouds, image boundaries, or
+  sparse nodata; a neighborhood without usable weight remains invalid. Signed kernels are
+  rejected with this policy because renormalizing positive and negative response weights would
+  change the operator's meaning.
+
+## Direct convolution
+
+`GPURasterConvolution` applies an arbitrary odd-sized two-dimensional kernel in a single GPU
+compute pass:
+
+```ts
+new GPURasterConvolution({
+  id: 'weighted-spatial-filter',
+  width,
+  height,
+  input: ndviBand,
+  kernelWidth: 3,
+  kernelHeight: 3,
+  kernel: [1, 2, 1, 2, 4, 2, 1, 2, 1],
+  normalize: true,
+  borderMode: 'reflect',
+  noDataPolicy: 'ignore-renormalize',
+  output: convolutionValues,
+  outputValidity: convolutionValidity
+}).addToGraph(graph);
+```
+
+Use direct convolution for custom two-dimensional kernels that cannot be factored into
+independent horizontal and vertical filters, including asymmetric and signed response
+operators. Its spatial work grows with the kernel area: a square radius-`r` kernel evaluates
+`(2r + 1)²` taps per pixel. Keep normalization explicit for kernels whose coefficient sum should
+preserve constant-valued imagery; `normalize` defaults to `false`, and normalizing a zero-sum
+kernel is rejected. Signed response operators should retain their intended weights and use the
+strict `propagate` validity policy.
+
+## Separable Gaussian smoothing
+
+`GPURasterGaussianBlur` composes independent horizontal and vertical passes around graph-owned
+intermediate scratch:
+
+```ts
+new GPURasterGaussianBlur({
+  id: 'denoise-vegetation-index',
+  width,
+  height,
+  input: ndviBand,
+  radius: 3,
+  sigma: 1.4,
+  borderMode: 'reflect',
+  noDataPolicy: 'ignore-renormalize',
+  output: smoothedValues,
+  outputValidity: smoothedValidity
+}).addToGraph(graph);
+```
+
+Use Gaussian smoothing to suppress sensor noise or small-scale variation before thresholding,
+segmentation, contour extraction, or scientific visualization. `radius` sets the bounded kernel
+footprint; `sigma` controls how broadly its normalized weights spread within that footprint.
+Increasing radius permits a wider neighborhood, while increasing sigma gives more influence to
+distant neighbors. Omitted sigma defaults to `max(radius / 2, 0.5)`. Gaussian weights are
+normalized and nonnegative, making valid-neighbor renormalization appropriate beside masked
+clouds or nodata.
+
+The horizontal and vertical passes evaluate `2 * (2r + 1)` taps per pixel instead of
+`(2r + 1)²` for an equivalent direct square kernel: `O(r)` rather than `O(r²)` spatial work.
+This is an algorithmic scaling comparison, not a benchmark or a claim that every adapter and
+image size runs faster. Scratch values and intermediate validity occupy two graph-owned transient
+buffers, reused according to the existing graph allocator rather than downloaded to the CPU.
+Radius zero uses one identity/calibration pass without allocating smoothing scratch.
+
+With `ignore-renormalize`, each separable axis independently renormalizes its own valid
+neighbors. Fully valid imagery matches the corresponding separable two-dimensional kernel, but
+irregular nodata holes can produce different weights from a direct full-neighborhood masked
+renormalization. Use `GPURasterConvolution` when that exact two-dimensional masked behavior is
+required.
+
+## Separable box smoothing
+
+`GPURasterBoxBlur` applies the same two-pass graph structure with uniform, normalized weights:
+
+```ts
+new GPURasterBoxBlur({
+  id: 'local-mean-vegetation-index',
+  width,
+  height,
+  input: ndviBand,
+  radius: 2,
+  borderMode: 'reflect',
+  noDataPolicy: 'ignore-renormalize',
+  output: localMeanValues,
+  outputValidity: localMeanValidity
+}).addToGraph(graph);
+```
+
+Use box smoothing when a local arithmetic mean is the intended measurement or when uniformly
+weighted denoising is sufficient. Gaussian smoothing is generally preferable when nearby
+observations should contribute more strongly than distant ones; neither filter should be used
+where preserving sharp boundaries exactly is the primary requirement. As with Gaussian
+smoothing, the separable box kernel performs `O(r)` taps per pixel and publishes GPU-resident
+values and validity for later graph contributors.
+
+## Raster compute versus image effects
+
+Existing luma.gl image-processing effects are useful for presentation: they transform rendered
+color textures or screen-space imagery as part of an effects pipeline. LuRaster neighborhood
+contributors instead process explicit scientific raster bands with raw nodata, source validity,
+calibration, analytical boundary policies, and separately published validity masks. Their output
+can flow directly into GPU histograms, statistics, thresholding, or later raster algorithms
+without copying intermediate pixels to the CPU.
+
+Prefer ordinary image effects when the desired result is only a visual postprocess. Prefer
+LuRaster when filtered values must retain scientific meaning, compose with reusable command
+graphs and transient scratch, or fit a future tiled analytical pipeline. Separable Gaussian and
+box kernels have a documented tap-count advantage over equivalent direct square convolution;
+end-to-end speed and large-raster throughput remain adapter- and workload-dependent until they
+are measured. Automatic halo assembly, transparent oversized-raster partitioning, and
+FFT-backed filtering are not provided by these contributors.
+
 ## Adapter limits and ownership
 
 `getRasterDeviceLimits(device)` reports effective dispatch, allocation, and storage-binding
 ceilings. `planRasterDispatchStripes(device, {width, height})` returns caller-managed,
 whole-row stripes that respect those limits; it does not automatically rewrite large inputs.
 
-Pointwise contributors use bounded two-dimensional dispatch. Histogram and extent primitives
-still use bounded 256-invocation one-dimensional passes. On adapters allowing 65,535 workgroups
-per dimension, a `4096 × 4096` single-view histogram needs 65,536 workgroups and is rejected;
-the application must process smaller tiles or explicitly managed stripes. Transparent
-large-raster partitioning and global tiled histogram merges are not yet implemented.
+Pointwise and neighborhood contributors use bounded two-dimensional dispatch. Histogram and
+extent primitives still use bounded 256-invocation one-dimensional passes. On adapters allowing
+65,535 workgroups per dimension, a `4096 × 4096` single-view histogram needs 65,536 workgroups
+and is rejected; the application must process smaller tiles or explicitly managed stripes.
+Transparent large-raster partitioning, tiled halo assembly, and global tiled histogram merges
+are not yet implemented.
 
 Compiled graph destruction releases graph-owned transient allocations and computations but not
 caller-owned imported buffers or textures. The application controls graph encoding, submission,
@@ -294,7 +474,7 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, neighborhood filters, morphology, tiled GeoTIFF/COG processing,
+Percentile-based contrast, derivative/morphology operators, tiled GeoTIFF/COG processing,
 connected components, contour extraction, and FFT-backed raster convolution are not part of
 the current implementation.
 
