@@ -45,6 +45,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'showcase/tempest-ocean',
   'showcase/packet-spraying',
   'showcase/persistence',
+  'showcase/raster-lab',
   'tutorials/hello-instanced-cubes',
   'tutorials/hello-instancing',
   'tutorials/hello-triangle',
@@ -56,7 +57,8 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'tutorials/transform-feedback'
 ]);
 
-const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set(['showcase/anari']);
+const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab']);
+const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set(['showcase/anari', 'showcase/raster-lab']);
 
 const SHARED_COMPILER_OPTIONS = {
   noEmit: true,
@@ -119,7 +121,8 @@ function getExampleWorkspaces() {
       const workspacePath = join(categoryPath, example.name);
       const packageJsonPath = join(workspacePath, 'package.json');
       const workspaceId = `${category.name}/${example.name}`;
-      if (!existsSync(packageJsonPath)) {
+      const hasPackageManifest = existsSync(packageJsonPath);
+      if (!hasPackageManifest && !PACKAGE_FREE_EXAMPLE_WORKSPACES.has(workspaceId)) {
         continue;
       }
 
@@ -129,7 +132,9 @@ function getExampleWorkspaces() {
         continue;
       }
 
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+      const packageJson = hasPackageManifest
+        ? JSON.parse(readFileSync(packageJsonPath, 'utf8'))
+        : {};
       workspaces.push({
         name: packageJson.name ?? `${category.name}/${example.name}`,
         workspaceId,

@@ -44,7 +44,14 @@ const commonJsExportNames = Object.keys(commonJsRasterModule)
   .sort();
 const requiredRuntimeExportNames = [
   'GPURaster',
+  'GPURasterBandMath',
   'GPURasterBufferToTexture',
+  'GPURasterContrast',
+  'GPURasterHistogram',
+  'GPURasterNDVI',
+  'GPURasterOtsuThreshold',
+  'GPURasterStatistics',
+  'GPURasterThreshold',
   'GPURasterTextureToBuffer',
   'getRasterDeviceLimits',
   'planRasterDispatchStripes'
@@ -82,12 +89,33 @@ try {
     typeTestPath,
     `import {
   GPURaster,
+  GPURasterBandMath,
   GPURasterBufferToTexture,
+  GPURasterContrast,
+  GPURasterHistogram,
+  GPURasterNDVI,
+  GPURasterOtsuThreshold,
+  GPURasterStatistics,
+  GPURasterThreshold,
   GPURasterTextureToBuffer,
   getRasterDeviceLimits,
   planRasterDispatchStripes,
   type GPURasterBand,
+  type GPURasterBandMathOperation,
+  type GPURasterBandMathProps,
+  type GPURasterContrastDomain,
+  type GPURasterContrastMode,
+  type GPURasterContrastProps,
+  type GPURasterHistogramDomain,
+  type GPURasterHistogramProps,
   type GPURasterMetadata,
+  type GPURasterNDVIProps,
+  type GPURasterOtsuDomain,
+  type GPURasterOtsuThresholdProps,
+  type GPURasterStatisticsProps,
+  type GPURasterThresholdOperation,
+  type GPURasterThresholdProps,
+  type GPURasterThresholdValue,
   type RasterDeviceLimits,
   type RasterDispatchStripe
 } from '@luma.gl/experimental/luraster';
@@ -95,29 +123,88 @@ import type {GPUCommandGraphContributor, GPUReductionMask} from '@luma.gl/experi
 
 declare const contributor: GPUCommandGraphContributor;
 declare const rasterBand: GPURasterBand;
+declare const bandMathOperation: GPURasterBandMathOperation;
+declare const bandMathOptions: GPURasterBandMathProps;
+declare const contrastDomain: GPURasterContrastDomain;
+declare const contrastMode: GPURasterContrastMode;
+declare const contrastOptions: GPURasterContrastProps;
+declare const histogramDomain: GPURasterHistogramDomain<'float32'>;
+declare const histogramOptions: GPURasterHistogramProps<'float32'>;
 declare const rasterMetadata: GPURasterMetadata;
+declare const ndviOptions: GPURasterNDVIProps;
+declare const otsuDomain: GPURasterOtsuDomain;
+declare const otsuOptions: GPURasterOtsuThresholdProps;
+declare const statisticsOptions: GPURasterStatisticsProps;
+declare const thresholdOperation: GPURasterThresholdOperation;
+declare const thresholdOptions: GPURasterThresholdProps;
+declare const thresholdValue: GPURasterThresholdValue;
 declare const rasterDeviceLimits: RasterDeviceLimits;
 declare const rasterDispatchStripe: RasterDispatchStripe;
 declare const reductionMask: GPUReductionMask;
+declare const bandMath: GPURasterBandMath;
+declare const contrast: GPURasterContrast;
+declare const ndvi: GPURasterNDVI;
+declare const otsu: GPURasterOtsuThreshold;
+declare const statistics: GPURasterStatistics;
+declare const histogram: GPURasterHistogram<'float32'>;
+declare const threshold: GPURasterThreshold;
 declare const textureToBuffer: GPURasterTextureToBuffer;
+const bandMathContributor: GPUCommandGraphContributor = bandMath;
+const contrastContributor: GPUCommandGraphContributor = contrast;
+const ndviContributor: GPUCommandGraphContributor = ndvi;
+const otsuContributor: GPUCommandGraphContributor = otsu;
+const statisticsContributor: GPUCommandGraphContributor = statistics;
+const histogramContributor: GPUCommandGraphContributor = histogram;
+const thresholdContributor: GPUCommandGraphContributor = threshold;
 const rasterContributor: GPUCommandGraphContributor = textureToBuffer;
 
 void GPURaster;
+void GPURasterBandMath;
 void GPURasterBufferToTexture;
+void GPURasterContrast;
+void GPURasterHistogram;
+void GPURasterNDVI;
+void GPURasterOtsuThreshold;
+void GPURasterStatistics;
+void GPURasterThreshold;
 void GPURasterTextureToBuffer;
 void getRasterDeviceLimits;
 void planRasterDispatchStripes;
 void contributor;
 void rasterBand;
+void bandMathOperation;
+void bandMathOptions;
+void contrastDomain;
+void contrastMode;
+void contrastOptions;
+void histogramDomain;
+void histogramOptions;
 void rasterMetadata;
+void ndviOptions;
+void otsuDomain;
+void otsuOptions;
+void statisticsOptions;
+void thresholdOperation;
+void thresholdOptions;
+void thresholdValue;
 void rasterDeviceLimits;
 void rasterDispatchStripe;
 void reductionMask;
+void bandMathContributor;
+void contrastContributor;
+void ndviContributor;
+void otsuContributor;
+void statisticsContributor;
+void histogramContributor;
+void thresholdContributor;
 void rasterContributor;
 
 // @ts-expect-error Raster algorithms stay isolated from the experimental root.
 import {GPURaster as RootGPURaster} from '@luma.gl/experimental';
 void RootGPURaster;
+// @ts-expect-error Pointwise contributors stay isolated from the experimental root.
+import {GPURasterNDVI as RootGPURasterNDVI} from '@luma.gl/experimental';
+void RootGPURasterNDVI;
 `
   );
   assert.equal(

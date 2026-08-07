@@ -100,6 +100,11 @@
             "id": "showcase/million-row-crossfilter",
             "label": "LuxFilter: Million-Row Crossfilter Explorer"
           },
+          {
+            "type": "doc",
+            "id": "showcase/raster-lab",
+            "label": "LuRaster: Satellite Raster Lab"
+          },
           "showcase/billion-point-spatial-atlas",
           {
             "type": "doc",
