@@ -43,6 +43,10 @@ const tileHaloImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-tile-halo.ts'),
   'utf8'
 );
+const overviewImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-overview.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -90,6 +94,21 @@ assert.doesNotMatch(
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'tile halo assembly leaves command submission, completion fences, and readback explicit'
 );
+assert.doesNotMatch(
+  overviewImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'analytical overview generation does not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  overviewImplementation,
+  /\bfetch\s*\(/,
+  'analytical overview generation does not choose an HTTP transport'
+);
+assert.doesNotMatch(
+  overviewImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'analytical overview generation leaves command submission and readback application-owned'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -104,6 +123,7 @@ const requiredRuntimeExportNames = [
   'GPURasterBandMath',
   'GPURasterBoxBlur',
   'GPURasterBufferToTexture',
+  'GPURasterCategoricalOverview',
   'GPURasterClosing',
   'GPURasterContrast',
   'GPURasterContourClassifier',
@@ -121,6 +141,7 @@ const requiredRuntimeExportNames = [
   'GPURasterNeighborhood',
   'GPURasterOpening',
   'GPURasterOtsuThreshold',
+  'GPURasterOverview',
   'GPURasterScharr',
   'GPURasterSobel',
   'GPURasterStatistics',
@@ -135,6 +156,7 @@ const requiredRuntimeExportNames = [
   'GPURasterTileReader',
   'GPURasterTextureToBuffer',
   'getRasterDeviceLimits',
+  'makeRasterOverviewMetadata',
   'planRasterDispatchStripes'
 ];
 
@@ -158,6 +180,16 @@ assert.equal(
   'CommonJS tile readers expose validated canonical request normalization'
 );
 for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
+  assert.equal(
+    typeof rasterModule.GPURasterOverview.prototype.addToGraph,
+    'function',
+    'continuous analytical overviews expose explicit GPU command-graph work'
+  );
+  assert.equal(
+    typeof rasterModule.GPURasterCategoricalOverview.prototype.addToGraph,
+    'function',
+    'categorical analytical overviews expose explicit GPU command-graph work'
+  );
   assert.equal(
     typeof rasterModule.GPURasterTileHaloAssembler.prototype.plan,
     'function',
@@ -210,6 +242,7 @@ try {
   GPURasterBandMath,
   GPURasterBoxBlur,
   GPURasterBufferToTexture,
+  GPURasterCategoricalOverview,
   GPURasterClosing,
   GPURasterContrast,
   GPURasterContourClassifier,
@@ -227,6 +260,7 @@ try {
   GPURasterNeighborhood,
   GPURasterOpening,
   GPURasterOtsuThreshold,
+  GPURasterOverview,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
@@ -241,12 +275,15 @@ try {
   GPURasterTileReader,
   GPURasterTextureToBuffer,
   getRasterDeviceLimits,
+  makeRasterOverviewMetadata,
   planRasterDispatchStripes,
   type GPURasterBand,
   type GPURasterBandMathOperation,
   type GPURasterBandMathProps,
   type GPURasterBinaryMorphologyProps,
   type GPURasterBorderMode,
+  type GPURasterCategoricalOverviewFormat,
+  type GPURasterCategoricalOverviewProps,
   type GPURasterClosingProps,
   type GPURasterContrastDomain,
   type GPURasterContrastMode,
@@ -284,6 +321,10 @@ try {
   type GPURasterOpeningProps,
   type GPURasterOtsuDomain,
   type GPURasterOtsuThresholdProps,
+  type GPURasterOverviewCategoricalPolicy,
+  type GPURasterOverviewMetadataOptions,
+  type GPURasterOverviewProps,
+  type GPURasterOverviewScale,
   type GPURasterPixelBounds,
   type GPURasterResidentBand,
   type GPURasterResidentTile,
@@ -328,6 +369,9 @@ declare const bandMathOperation: GPURasterBandMathOperation;
 declare const bandMathOptions: GPURasterBandMathProps;
 declare const binaryMorphologyOptions: GPURasterBinaryMorphologyProps;
 declare const borderMode: GPURasterBorderMode;
+declare const categoricalOverviewFormat: GPURasterCategoricalOverviewFormat;
+declare const categoricalOverviewOptions: GPURasterCategoricalOverviewProps<'uint32'>;
+declare const signedCategoricalOverviewOptions: GPURasterCategoricalOverviewProps<'sint32'>;
 declare const closingOptions: GPURasterClosingProps;
 declare const contrastDomain: GPURasterContrastDomain;
 declare const contrastMode: GPURasterContrastMode;
@@ -367,6 +411,10 @@ declare const noDataPolicy: GPURasterNoDataPolicy;
 declare const openingOptions: GPURasterOpeningProps;
 declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
+declare const overviewCategoricalPolicy: GPURasterOverviewCategoricalPolicy;
+declare const overviewMetadataOptions: GPURasterOverviewMetadataOptions;
+declare const overviewOptions: GPURasterOverviewProps;
+declare const overviewScale: GPURasterOverviewScale;
 declare const pixelBounds: GPURasterPixelBounds;
 declare const residentBand: GPURasterResidentBand;
 declare const residentTile: GPURasterResidentTile;
@@ -400,6 +448,7 @@ declare const rasterDispatchStripe: RasterDispatchStripe;
 declare const reductionMask: GPUReductionMask;
 declare const bandMath: GPURasterBandMath;
 declare const boxBlur: GPURasterBoxBlur;
+declare const categoricalOverview: GPURasterCategoricalOverview<'uint32'>;
 declare const closing: GPURasterClosing;
 declare const contrast: GPURasterContrast;
 declare const contourClassifier: GPURasterContourClassifier;
@@ -416,6 +465,7 @@ declare const ndvi: GPURasterNDVI;
 declare const neighborhood: GPURasterNeighborhood;
 declare const opening: GPURasterOpening;
 declare const otsu: GPURasterOtsuThreshold;
+declare const overview: GPURasterOverview;
 declare const scharr: GPURasterScharr;
 declare const sobel: GPURasterSobel;
 declare const statistics: GPURasterStatistics;
@@ -432,6 +482,7 @@ declare const tileReader: GPURasterTileReader;
 declare const textureToBuffer: GPURasterTextureToBuffer;
 const bandMathContributor: GPUCommandGraphContributor = bandMath;
 const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
+const categoricalOverviewContributor: GPUCommandGraphContributor = categoricalOverview;
 const closingContributor: GPUCommandGraphContributor = closing;
 const contrastContributor: GPUCommandGraphContributor = contrast;
 const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
@@ -448,6 +499,7 @@ const ndviContributor: GPUCommandGraphContributor = ndvi;
 const neighborhoodContributor: GPUCommandGraphContributor = neighborhood;
 const openingContributor: GPUCommandGraphContributor = opening;
 const otsuContributor: GPUCommandGraphContributor = otsu;
+const overviewContributor: GPUCommandGraphContributor = overview;
 const scharrContributor: GPUCommandGraphContributor = scharr;
 const sobelContributor: GPUCommandGraphContributor = sobel;
 const statisticsContributor: GPUCommandGraphContributor = statistics;
@@ -472,6 +524,12 @@ const configuredDilation: GPUCommandGraphContributor = new GPURasterDilation(dil
 const configuredErosion: GPUCommandGraphContributor = new GPURasterErosion(erosionOptions);
 const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openingOptions);
 const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
+const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
+const configuredCategoricalOverview: GPUCommandGraphContributor = new GPURasterCategoricalOverview(
+  categoricalOverviewOptions
+);
+const configuredSignedCategoricalOverview: GPUCommandGraphContributor =
+  new GPURasterCategoricalOverview(signedCategoricalOverviewOptions);
 const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
 const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
 const configuredTileCache = new GPURasterTileCache(tileCacheOptions);
@@ -486,6 +544,12 @@ const configuredTileReader = new GPURasterTileReader(tileSource);
 const normalizedTileRequest: GPURasterTileRequest = configuredTileReader.normalizeTileRequest(
   tileRequest
 );
+const generatedOverviewMetadata: GPURasterMetadata = makeRasterOverviewMetadata(
+  rasterMetadata,
+  overviewScale,
+  overviewMetadataOptions
+);
+const defaultOverviewMetadata: GPURasterMetadata = makeRasterOverviewMetadata(rasterMetadata, 2);
 const residentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(tileRequest);
 const cancelledResidentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(
   tileRequest,
@@ -573,6 +637,48 @@ const decodedValidity: Uint32Array | undefined = decodedFloatBand.validity;
 const exactTileDownsample: readonly [number, number] = tileLevel.downsample;
 const decodedTileBounds: GPURasterPixelBounds = decodedTile.pixelBounds;
 const decodedLevelZeroBounds: GPURasterPixelBounds = decodedTile.levelZeroBounds;
+const isotropicOverviewScale: GPURasterOverviewScale = 2;
+const anisotropicOverviewScale: GPURasterOverviewScale = [2, 3];
+const supportedCategoricalOverviewFormats: readonly GPURasterCategoricalOverviewFormat[] = [
+  'uint32',
+  'sint32'
+];
+const supportedCategoricalOverviewPolicies: readonly GPURasterOverviewCategoricalPolicy[] = [
+  'nearest',
+  'mode'
+];
+const floatingOverviewInputFormat: 'float32' = overviewOptions.input.format;
+const floatingOverviewValues: GraphDataView<'float32'> = overviewOptions.output;
+const floatingOverviewSums: GraphDataView<'float32'> = overviewOptions.sum;
+const floatingOverviewValidity: GraphDataView<'uint32'> = overviewOptions.outputValidity;
+const floatingOverviewCounts: GraphDataView<'uint32'> = overviewOptions.validCount;
+const optionalOverviewInputSums: GraphDataView<'float32'> | undefined = overviewOptions.inputSum;
+const optionalOverviewInputCounts: GraphDataView<'uint32'> | undefined =
+  overviewOptions.inputValidCount;
+const optionalMaximumOverviewInputCount: number | undefined =
+  overviewOptions.maximumInputValidCount;
+const unsignedCategoricalInputFormat: 'uint32' = categoricalOverviewOptions.input.format;
+const unsignedCategoricalOverviewValues: GraphDataView<'uint32'> = categoricalOverviewOptions.output;
+const signedCategoricalOverviewValues: GraphDataView<'sint32'> =
+  signedCategoricalOverviewOptions.output;
+const categoricalOverviewValidity: GraphDataView<'uint32'> =
+  categoricalOverviewOptions.outputValidity;
+const optionalCategoricalOverviewCounts: GraphDataView<'uint32'> | undefined =
+  categoricalOverviewOptions.validCount;
+const declaredCategoricalPolicy: GPURasterOverviewCategoricalPolicy =
+  categoricalOverviewOptions.policy;
+const generatedContinuousMetadata: GPURasterMetadata = overview.metadata;
+const generatedCategoricalMetadata: GPURasterMetadata = categoricalOverview.metadata;
+const generatedSourceMetadata: GPURasterMetadata = overview.sourceMetadata;
+const generatedOverviewWidth: number = overview.width;
+const generatedOverviewHeight: number = overview.height;
+const generatedSourceWidth: number = overview.sourceWidth;
+const generatedSourceHeight: number = overview.sourceHeight;
+const generatedHorizontalScale: number = overview.horizontalScale;
+const generatedVerticalScale: number = overview.verticalScale;
+const optionalGeneratedLevel: number | undefined = overviewMetadataOptions.level;
+const optionalSourcePixelOrigin: readonly [number, number] | undefined =
+  overviewMetadataOptions.sourcePixelOrigin;
 const requestedHaloStages: readonly GPURasterHaloStage[] = tileHaloRequest.stages;
 const anisotropicHaloStage: GPURasterHaloStage = {
   requiredHalo: 3,
@@ -671,11 +777,24 @@ const missingHaloStages: GPURasterTileHaloRequest = tileRequest;
 const invalidFloatingHaloOutput: GraphDataView<'uint32'> = tileHaloFillOptions.output;
 // @ts-expect-error Unsigned core extraction preserves uint32 samples without float conversion.
 const invalidUnsignedCoreOutput: GraphDataView<'float32'> = tileCoreExtractOptions.output;
+// @ts-expect-error Floating classifications cannot masquerade as exact categorical labels.
+const unsupportedCategoricalOverviewFormat: GPURasterCategoricalOverviewFormat = 'float32';
+// @ts-expect-error Integer categories support nearest or deterministic mode, never averaging.
+const unsupportedCategoricalOverviewPolicy: GPURasterOverviewCategoricalPolicy = 'mean';
+// @ts-expect-error Continuous overview means preserve calibrated float32 outputs.
+const invalidFloatingOverviewOutput: GraphDataView<'uint32'> = overviewOptions.output;
+// @ts-expect-error Unsigned category labels are never rounded through float32.
+const invalidUnsignedCategoricalOverviewOutput: GraphDataView<'float32'> =
+  categoricalOverviewOptions.output;
+// @ts-expect-error Signed category labels cannot be reinterpreted as unsigned values.
+const invalidSignedCategoricalOverviewOutput: GraphDataView<'uint32'> =
+  signedCategoricalOverviewOptions.output;
 
 void GPURaster;
 void GPURasterBandMath;
 void GPURasterBoxBlur;
 void GPURasterBufferToTexture;
+void GPURasterCategoricalOverview;
 void GPURasterClosing;
 void GPURasterContrast;
 void GPURasterContourClassifier;
@@ -693,6 +812,7 @@ void GPURasterNDVI;
 void GPURasterNeighborhood;
 void GPURasterOpening;
 void GPURasterOtsuThreshold;
+void GPURasterOverview;
 void GPURasterScharr;
 void GPURasterSobel;
 void GPURasterStatistics;
@@ -707,6 +827,7 @@ void GPURasterTileLease;
 void GPURasterTileReader;
 void GPURasterTextureToBuffer;
 void getRasterDeviceLimits;
+void makeRasterOverviewMetadata;
 void planRasterDispatchStripes;
 void contributor;
 void rasterBand;
@@ -714,6 +835,9 @@ void bandMathOperation;
 void bandMathOptions;
 void binaryMorphologyOptions;
 void borderMode;
+void categoricalOverviewFormat;
+void categoricalOverviewOptions;
+void signedCategoricalOverviewOptions;
 void closingOptions;
 void contrastDomain;
 void contrastMode;
@@ -753,6 +877,10 @@ void noDataPolicy;
 void openingOptions;
 void otsuDomain;
 void otsuOptions;
+void overviewCategoricalPolicy;
+void overviewMetadataOptions;
+void overviewOptions;
+void overviewScale;
 void pixelBounds;
 void residentBand;
 void residentTile;
@@ -786,6 +914,7 @@ void rasterDispatchStripe;
 void reductionMask;
 void bandMathContributor;
 void boxBlurContributor;
+void categoricalOverviewContributor;
 void closingContributor;
 void contrastContributor;
 void contourClassifierContributor;
@@ -802,6 +931,7 @@ void ndviContributor;
 void neighborhoodContributor;
 void openingContributor;
 void otsuContributor;
+void overviewContributor;
 void scharrContributor;
 void sobelContributor;
 void statisticsContributor;
@@ -820,6 +950,9 @@ void configuredDilation;
 void configuredErosion;
 void configuredOpening;
 void configuredClosing;
+void configuredOverview;
+void configuredCategoricalOverview;
+void configuredSignedCategoricalOverview;
 void configuredScharr;
 void configuredSobel;
 void configuredTileCache;
@@ -828,6 +961,8 @@ void configuredTileHaloAssembler;
 void configuredTileHaloFill;
 void configuredTileReader;
 void normalizedTileRequest;
+void generatedOverviewMetadata;
+void defaultOverviewMetadata;
 void residentTilePromise;
 void cancelledResidentTilePromise;
 void plannedTileHalo;
@@ -870,6 +1005,35 @@ void decodedValidity;
 void exactTileDownsample;
 void decodedTileBounds;
 void decodedLevelZeroBounds;
+void isotropicOverviewScale;
+void anisotropicOverviewScale;
+void supportedCategoricalOverviewFormats;
+void supportedCategoricalOverviewPolicies;
+void floatingOverviewInputFormat;
+void floatingOverviewValues;
+void floatingOverviewSums;
+void floatingOverviewValidity;
+void floatingOverviewCounts;
+void optionalOverviewInputSums;
+void optionalOverviewInputCounts;
+void optionalMaximumOverviewInputCount;
+void unsignedCategoricalInputFormat;
+void unsignedCategoricalOverviewValues;
+void signedCategoricalOverviewValues;
+void categoricalOverviewValidity;
+void optionalCategoricalOverviewCounts;
+void declaredCategoricalPolicy;
+void generatedContinuousMetadata;
+void generatedCategoricalMetadata;
+void generatedSourceMetadata;
+void generatedOverviewWidth;
+void generatedOverviewHeight;
+void generatedSourceWidth;
+void generatedSourceHeight;
+void generatedHorizontalScale;
+void generatedVerticalScale;
+void optionalGeneratedLevel;
+void optionalSourcePixelOrigin;
 void requestedHaloStages;
 void anisotropicHaloStage;
 void declaredStageHalo;
@@ -937,6 +1101,13 @@ void invalidTileReleaseFence;
 void missingHaloStages;
 void invalidFloatingHaloOutput;
 void invalidUnsignedCoreOutput;
+void unsupportedCategoricalOverviewFormat;
+void unsupportedCategoricalOverviewPolicy;
+void invalidFloatingOverviewOutput;
+void invalidUnsignedCategoricalOverviewOutput;
+void invalidSignedCategoricalOverviewOutput;
+void categoricalOverview;
+void overview;
 void tileCache;
 void tileCoreExtract;
 void tileGraphLease;
@@ -991,6 +1162,15 @@ void RootGPURasterTileHaloFill;
 // @ts-expect-error Core-only extraction stays isolated from the experimental root.
 import {GPURasterTileCoreExtract as RootGPURasterTileCoreExtract} from '@luma.gl/experimental';
 void RootGPURasterTileCoreExtract;
+// @ts-expect-error Generated numerical overviews stay isolated from the experimental root.
+import {GPURasterOverview as RootGPURasterOverview} from '@luma.gl/experimental';
+void RootGPURasterOverview;
+// @ts-expect-error Exact categorical overviews stay isolated from the experimental root.
+import {GPURasterCategoricalOverview as RootGPURasterCategoricalOverview} from '@luma.gl/experimental';
+void RootGPURasterCategoricalOverview;
+// @ts-expect-error Overview spatial metadata helpers stay isolated from the experimental root.
+import {makeRasterOverviewMetadata as makeRootRasterOverviewMetadata} from '@luma.gl/experimental';
+void makeRootRasterOverviewMetadata;
 `
   );
   assert.equal(

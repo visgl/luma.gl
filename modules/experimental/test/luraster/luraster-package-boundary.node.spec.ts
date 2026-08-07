@@ -82,11 +82,28 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
   });
 
-  test('exposes tile-source/cache/halo, neighborhood, morphology, and contour APIs', () => {
+  test('keeps analytical overview decoding, submission, synchronization, and readback explicit', () => {
+    const overviewImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-overview.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(overviewImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(overviewImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(overviewImplementation).not.toMatch(
+      /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/
+    );
+  });
+
+  test('exposes tile-source/cache/halo/overview, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBufferToTexture).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterCategoricalOverview).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterCategoricalOverview.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterClosing).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContrast).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContourClassifier).toBeTypeOf('function');
@@ -104,6 +121,8 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterNeighborhood).toBeTypeOf('function');
     expect(lurasterModule.GPURasterOtsuThreshold).toBeTypeOf('function');
     expect(lurasterModule.GPURasterOpening).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterOverview).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterOverview.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterScharr).toBeTypeOf('function');
     expect(lurasterModule.GPURasterSobel).toBeTypeOf('function');
     expect(lurasterModule.GPURasterStatistics).toBeTypeOf('function');
@@ -126,6 +145,7 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
     expect(lurasterModule.GPURasterTextureToBuffer).toBeTypeOf('function');
     expect(lurasterModule.getRasterDeviceLimits).toBeTypeOf('function');
+    expect(lurasterModule.makeRasterOverviewMetadata).toBeTypeOf('function');
     expect(lurasterModule.planRasterDispatchStripes).toBeTypeOf('function');
   });
 });
