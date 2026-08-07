@@ -18,7 +18,10 @@ import {vi} from 'vitest';
 const BENCHMARK_ALGORITHMS: LuGraphBenchmarkAlgorithm[] = [
   'topology',
   'breadth-first-search',
+  'single-source-shortest-path',
   'connected-components',
+  'label-propagation',
+  'local-clustering-coefficient',
   'page-rank',
   'exact-layout',
   'spatial-layout'
@@ -68,11 +71,11 @@ for (const kind of BENCHMARK_DATASETS) {
         pageRankIterations: 4
       });
       tapeTest.ok(
-        submitSpy.mock.calls.length >= 7,
+        submitSpy.mock.calls.length >= 10,
         'each real graph workload and independent spatial-index phase submits actual GPU work'
       );
       tapeTest.ok(
-        fenceSpy.mock.calls.length >= 7,
+        fenceSpy.mock.calls.length >= 10,
         'GPU operation and standalone spatial-index timers wait on real completion fences'
       );
       if (theta === 0) {
@@ -151,7 +154,7 @@ function assertBenchmarkReport(
   tapeTest.deepEqual(
     report.paths.map(path => path.algorithm),
     BENCHMARK_ALGORITHMS,
-    'six independently compiled CPU and WebGPU algorithms are actually benchmarked'
+    'nine independently compiled CPU and WebGPU algorithms are actually benchmarked'
   );
   for (const path of report.paths) {
     assertDistribution(tapeTest, path.cpuTimeMilliseconds, `${path.algorithm} CPU reference`);
@@ -176,12 +179,14 @@ function assertBenchmarkReport(
     if (
       path.algorithm === 'topology' ||
       path.algorithm === 'breadth-first-search' ||
-      path.algorithm === 'connected-components'
+      path.algorithm === 'single-source-shortest-path' ||
+      path.algorithm === 'connected-components' ||
+      path.algorithm === 'label-propagation'
     ) {
       tapeTest.equal(
         path.maxAbsoluteError,
         0,
-        `${path.algorithm} matches exact integer CPU results`
+        `${path.algorithm} matches its exact CPU reference outputs`
       );
     } else {
       tapeTest.ok(
@@ -199,7 +204,19 @@ function assertBenchmarkReport(
       assertDistribution(tapeTest, path.gpuTimeMilliseconds, `${path.algorithm} GPU timestamps`);
     }
 
-    if (path.algorithm === 'connected-components') {
+    if (path.algorithm === 'single-source-shortest-path') {
+      tapeTest.equal(
+        path.iterations,
+        expected.vertexCount - 1,
+        'weighted shortest paths report their actual bounded GPU relaxation passes'
+      );
+      tapeTest.equal(
+        typeof path.converged,
+        'boolean',
+        'weighted shortest paths expose the actual final GPU fixed-point status'
+      );
+      tapeTest.equal(path.residual, undefined, 'weighted paths never fabricate a residual');
+    } else if (path.algorithm === 'connected-components') {
       tapeTest.equal(path.iterations, 32, 'weak components report their actual bounded GPU passes');
       tapeTest.equal(
         path.converged,
@@ -211,6 +228,14 @@ function assertBenchmarkReport(
         undefined,
         'integer weak components never fabricate a residual'
       );
+    } else if (path.algorithm === 'label-propagation') {
+      tapeTest.equal(path.iterations, 8, 'community labels report their real bounded vote passes');
+      tapeTest.equal(
+        typeof path.converged,
+        'boolean',
+        'community labels expose their actual final GPU fixed-point status'
+      );
+      tapeTest.equal(path.residual, undefined, 'community labels never fabricate a residual');
     } else if (path.algorithm === 'page-rank') {
       tapeTest.equal(
         path.iterations,
