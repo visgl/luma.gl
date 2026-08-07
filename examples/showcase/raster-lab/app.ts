@@ -16,17 +16,24 @@ import {
 import type {RasterLabDataset} from './raster-data';
 import {
   RasterLabEngine,
+  type RasterLabGeneratedOverviewSources,
+  type RasterLabGlobalSources,
   type RasterLabHaloSources,
   type RasterLabResidentSources,
   type RasterLabSummary
 } from './raster-engine';
 import {
   RasterLabInterface,
+  type RasterLabAnalysisScope,
+  type RasterLabCategoryPolicy,
   type RasterLabHaloMode,
   type RasterLabOverviewLevel,
+  type RasterLabOverviewPolicy,
+  type RasterLabReplayOrder,
   type RasterLabSourceTile
 } from './raster-interface';
 import type {
+  RasterLabComponentConnectivity,
   RasterLabDisplayMode,
   RasterLabDisplaySettings,
   RasterLabEdgeDirection,
@@ -38,11 +45,15 @@ import type {
   RasterLabMorphologyShape,
   RasterLabSmoothingMode
 } from './raster-renderer';
-import {makeRasterLabTileDataset, RasterLabTileSource} from './raster-tile-source';
+import {
+  makeRasterLabGeneratedOverviewDataset,
+  makeRasterLabTileDataset,
+  RasterLabTileSource
+} from './raster-tile-source';
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'Seamless resident tile halos, reusable GPU graphs, NDVI, smoothing, edges, morphology, and contours.';
+  'Sparse GPU-connected components, global reductions, scientific overviews, halos, and NDVI.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -55,6 +66,11 @@ type RasterLabDebugController = {
   readonly executionCount: number;
   readonly sourceTile: RasterLabSourceTile;
   readonly overviewLevel: RasterLabOverviewLevel;
+  readonly overviewPolicy: RasterLabOverviewPolicy;
+  readonly categoryPolicy: RasterLabCategoryPolicy;
+  readonly generatedOverview: boolean;
+  readonly overviewSourceDimensions: readonly [number, number];
+  readonly overviewCoverage: number;
   readonly tileOrigin: readonly [number, number];
   readonly coordinateReferenceSystem: string;
   readonly tileLoadCount: number;
@@ -82,6 +98,17 @@ type RasterLabDebugController = {
   readonly haloAvailableBounds: readonly [number, number, number, number];
   readonly haloSourceTileCount: number;
   readonly haloTransferCount: number;
+  readonly analysisScope: RasterLabAnalysisScope;
+  readonly replayOrder: RasterLabReplayOrder;
+  readonly globalTileCount: number;
+  readonly globalReplayPassCount: number;
+  readonly globalPixelCount: number;
+  readonly globalMedian: number | null;
+  readonly componentsEnabled: boolean;
+  readonly componentConnectivity: RasterLabComponentConnectivity;
+  readonly componentMaximumIterations: number;
+  readonly componentIterations: number;
+  readonly componentConverged: boolean;
   readonly mode: RasterLabDisplayMode;
   readonly smoothingMode: RasterLabSmoothingMode;
   readonly smoothingRadius: number;
@@ -111,7 +138,11 @@ type RasterLabDebugController = {
   readonly epsilon: number;
   setSourceTile: (tile: RasterLabSourceTile) => void;
   setSourceOverview: (level: RasterLabOverviewLevel) => void;
+  setOverviewPolicy: (policy: RasterLabOverviewPolicy) => void;
+  setCategoryPolicy: (policy: RasterLabCategoryPolicy) => void;
   setHaloMode: (mode: RasterLabHaloMode) => void;
+  setAnalysisScope: (scope: RasterLabAnalysisScope) => void;
+  setReplayOrder: (order: RasterLabReplayOrder) => void;
   setCacheCapacity: (capacity: number) => void;
   setMode: (mode: RasterLabDisplayMode) => void;
   setSmoothingMode: (mode: RasterLabSmoothingMode) => void;
@@ -126,6 +157,9 @@ type RasterLabDebugController = {
   setMorphologyNoDataPolicy: (policy: RasterLabMorphologyNoDataPolicy) => void;
   setMorphologyBorderMode: (mode: RasterLabMorphologyBorderMode) => void;
   setMorphologyBorderValue: (value: number) => void;
+  setComponentsEnabled: (enabled: boolean) => void;
+  setComponentConnectivity: (connectivity: RasterLabComponentConnectivity) => void;
+  setComponentMaximumIterations: (iterations: number) => void;
   setContrast: (contrast: number) => void;
   setGamma: (gamma: number) => void;
   setThreshold: (threshold: number, enabled?: boolean) => void;
@@ -167,6 +201,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     threshold: 0.35,
     thresholdEnabled: false,
     automaticThreshold: false,
+    componentsEnabled: false,
+    componentConnectivity: 4,
+    componentMaximumIterations: 24,
     contoursEnabled: true,
     contourLevel: 0.35
   };
@@ -174,6 +211,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private engine: RasterLabEngine | null = null;
   private activeTileLease: GPURasterTileLease | null = null;
   private activeHaloLease: GPURasterTileHaloLease | null = null;
+  private activeGlobalLeases: readonly GPURasterTileLease[] = [];
+  private activeGlobal: RasterLabGlobalSources | null = null;
+  private activeOverview: RasterLabGeneratedOverviewSources | null = null;
   private activeGraphLease: GPURasterTileGraphLease<RasterLabEngine> | null = null;
   private activePipelineKey: string | null = null;
   private activeDataset: RasterLabDataset | null = null;
@@ -188,7 +228,12 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private analysisExecutionCount = 0;
   private sourceTile: RasterLabSourceTile = 'full';
   private overviewLevel: RasterLabOverviewLevel = 0;
+  private overviewPolicy: RasterLabOverviewPolicy = 'source';
+  private categoryPolicy: RasterLabCategoryPolicy = 'nearest';
   private haloMode: RasterLabHaloMode = 'off';
+  private analysisScope: RasterLabAnalysisScope = 'tile';
+  private replayOrder: RasterLabReplayOrder = 'forward';
+  private previousComponentContours = true;
   private cacheCapacity = 3;
   private tileLoadCount = 0;
   private abortedTileRequestCount = 0;
@@ -223,7 +268,11 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.interface = new RasterLabInterface(canvas.parentElement ?? document.body, canvas, {
       onSourceTile: tile => this.setSourceTile(tile),
       onSourceOverview: level => this.setSourceOverview(level),
+      onOverviewPolicy: policy => this.setOverviewPolicy(policy),
+      onCategoryPolicy: policy => this.setCategoryPolicy(policy),
       onHaloMode: mode => this.setHaloMode(mode),
+      onAnalysisScope: scope => this.setAnalysisScope(scope),
+      onReplayOrder: order => this.setReplayOrder(order),
       onCacheCapacity: capacity => this.setCacheCapacity(capacity),
       onMode: mode => this.setMode(mode),
       onSmoothingMode: mode => this.setSmoothingMode(mode),
@@ -238,6 +287,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onMorphologyNoDataPolicy: policy => this.setMorphologyNoDataPolicy(policy),
       onMorphologyBorderMode: mode => this.setMorphologyBorderMode(mode),
       onMorphologyBorderValue: value => this.setMorphologyBorderValue(value),
+      onComponentsEnabled: enabled => this.setComponentsEnabled(enabled),
+      onComponentConnectivity: connectivity => this.setComponentConnectivity(connectivity),
+      onComponentMaximumIterations: iterations => this.setComponentMaximumIterations(iterations),
       onContrast: contrast => this.setContrast(contrast),
       onGamma: gamma => this.setGamma(gamma),
       onThreshold: (threshold, enabled) => this.setThreshold(threshold, enabled),
@@ -251,6 +303,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     });
     this.publishResidency();
     this.publishHalo();
+    this.publishGlobal();
+    this.publishOverview();
+    this.publishComponents();
     this.interface.setStatus('Loading decoded red and near-infrared source tile');
 
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
@@ -280,7 +335,14 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
     const viewport = this.interface.getMapViewport(canvasContext.getDrawingBufferSize());
     if (viewport.width <= 0 || viewport.height <= 0 || !this.latestSummary) return;
-    this.engine.render(canvasContext, viewport, this.display);
+    const settings = this.display.componentsEnabled
+      ? {
+          ...this.display,
+          componentsEnabled:
+            this.latestSummary.componentsEnabled && this.latestSummary.componentConverged
+        }
+      : this.display;
+    this.engine.render(canvasContext, viewport, settings);
     this.redrawRequested = false;
     this.frameCount++;
   }
@@ -294,11 +356,15 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.releaseAfterSubmittedWork(
       this.activeTileLease,
       this.activeGraphLease,
-      this.activeHaloLease
+      this.activeHaloLease,
+      this.activeGlobalLeases
     );
     this.activeGraphLease = null;
     this.activeTileLease = null;
     this.activeHaloLease = null;
+    this.activeGlobalLeases = [];
+    this.activeGlobal = null;
+    this.activeOverview = null;
     this.tileCache.destroy();
     this.engine = null;
 
@@ -310,6 +376,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setSourceTile(tile: RasterLabSourceTile): void {
     if (tile === this.sourceTile) return;
+    if (tile === 'full') this.resetGlobalAnalysis();
     this.sourceTile = tile;
     this.interface?.setSourceTile(tile);
     this.requestSourceTile();
@@ -317,13 +384,47 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setSourceOverview(level: RasterLabOverviewLevel): void {
     if (level === this.overviewLevel) return;
+    if (level === 0 && this.overviewPolicy === 'mean') {
+      this.overviewPolicy = 'source';
+      this.publishOverview();
+    }
     this.overviewLevel = level;
     this.interface?.setSourceOverview(level);
     this.requestSourceTile();
   }
 
+  private setOverviewPolicy(policy: RasterLabOverviewPolicy): void {
+    if (policy === this.overviewPolicy) return;
+    if (policy === 'mean') this.resetGlobalAnalysis();
+    if (policy === 'mean' && this.haloMode === 'seamless') {
+      this.haloMode = 'off';
+      this.publishHalo();
+    }
+    this.overviewPolicy = policy;
+    if (policy === 'mean' && this.overviewLevel === 0) {
+      this.overviewLevel = 1;
+      this.interface?.setSourceOverview(1);
+    }
+    this.publishOverview();
+    this.requestSourceTile();
+  }
+
+  private setCategoryPolicy(policy: RasterLabCategoryPolicy): void {
+    if (policy === this.categoryPolicy) return;
+    this.categoryPolicy = policy;
+    this.publishOverview();
+    if (this.overviewPolicy === 'mean' && this.overviewLevel === 1) {
+      this.requestSourceTile();
+    }
+  }
+
   private setHaloMode(mode: RasterLabHaloMode): void {
     if (mode === this.haloMode) return;
+    if (mode === 'seamless') this.resetGlobalAnalysis();
+    if (mode === 'seamless' && this.overviewPolicy === 'mean') {
+      this.overviewPolicy = 'source';
+      this.publishOverview();
+    }
     if (mode === 'seamless' && this.cacheCapacity < 2) {
       this.setCacheCapacity(2);
       if (this.cacheCapacity < 2) return;
@@ -333,11 +434,70 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.requestSourceTile();
   }
 
+  private setAnalysisScope(scope: RasterLabAnalysisScope): void {
+    if (scope === this.analysisScope) return;
+    if (scope === 'global' && this.cacheCapacity < 2) {
+      this.setCacheCapacity(2);
+      if (this.cacheCapacity < 2) return;
+    }
+    if (scope === 'global') {
+      if (this.display.componentsEnabled) this.disableComponents();
+      if (this.overviewPolicy === 'mean') {
+        this.overviewPolicy = 'source';
+        this.publishOverview();
+      }
+      if (this.haloMode === 'seamless') {
+        this.haloMode = 'off';
+        this.publishHalo();
+      }
+      if (this.display.smoothingMode !== 'none') {
+        this.display.smoothingMode = 'none';
+        this.interface?.setSmoothingMode('none');
+      }
+      if (this.display.edgeMode !== 'none') {
+        this.display.edgeMode = 'none';
+        this.interface?.setEdgeMode('none');
+      }
+      if (this.display.morphologyOperation !== 'none') {
+        this.display.morphologyOperation = 'none';
+        this.interface?.setMorphologyOperation('none');
+        this.syncBinaryMorphology();
+      }
+      if (this.sourceTile === 'full') {
+        this.sourceTile = 'west';
+        this.interface?.setSourceTile('west');
+      }
+    }
+    this.analysisScope = scope;
+    this.publishGlobal();
+    this.requestSourceTile();
+  }
+
+  private setReplayOrder(order: RasterLabReplayOrder): void {
+    if (order === this.replayOrder) return;
+    this.replayOrder = order;
+    this.publishGlobal();
+    if (this.analysisScope === 'global') this.requestSourceTile();
+  }
+
+  /** Spatial/generated modes remain fully available by transparently restoring tile scope. */
+  private resetGlobalAnalysis(): boolean {
+    if (this.analysisScope !== 'global') return false;
+    this.analysisScope = 'tile';
+    this.publishGlobal();
+    return true;
+  }
+
   private setCacheCapacity(capacity: number): void {
     const requestedCapacity = Math.max(1, Math.min(4, Math.round(capacity)));
     if (requestedCapacity === this.cacheCapacity) return;
     if (this.haloMode === 'seamless' && requestedCapacity < 2) {
       this.interface?.setStatus('Seamless tile neighborhoods require two resident source tiles');
+      this.publishResidency();
+      return;
+    }
+    if (this.analysisScope === 'global' && requestedCapacity < 2) {
+      this.interface?.setStatus('Global raster replay requires two resident source tiles');
       this.publishResidency();
       return;
     }
@@ -377,15 +537,25 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     const generation = ++this.sourceRequestGeneration;
     const tile = this.sourceTile;
     const level = this.overviewLevel;
+    const global = this.analysisScope === 'global';
+    const generatesOverview = this.overviewPolicy === 'mean' && level === 1;
+    const sourceLevel = generatesOverview ? 0 : level;
     this.sourceAbortController = controller;
     this.sourceLoading = true;
-    this.interface?.setStatus(`Loading L${level} ${tile.toUpperCase()} decoded source tile`);
+    this.interface?.setStatus(
+      global
+        ? `Replaying bounded L${level} WEST and EAST source tiles on the GPU`
+        : generatesOverview
+          ? `Generating L1 ${tile.toUpperCase()} overview from resident L0 samples`
+          : `Loading L${level} ${tile.toUpperCase()} decoded source tile`
+    );
     const request: GPURasterTileRequest = {
-      level,
+      level: sourceLevel,
       ...(tile === 'full' ? {} : {column: tile === 'west' ? 0 : 1, row: 0})
     };
     let replacementTileLease: GPURasterTileLease | undefined;
     let replacementHaloLease: GPURasterTileHaloLease | undefined;
+    let replacementGlobalLeases: GPURasterTileLease[] | undefined;
     let replacementGraphLease: GPURasterTileGraphLease<RasterLabEngine> | undefined;
     let replacement: RasterLabEngine | undefined;
     let previousDataset: RasterLabDataset | null = null;
@@ -396,12 +566,23 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     try {
       await this.waitForSourceHandoff(controller.signal);
       controller.signal.throwIfAborted();
-      const requestedTiles =
-        this.haloMode === 'seamless'
+      const secondaryRequest: GPURasterTileRequest = {
+        level: sourceLevel,
+        column: tile === 'west' ? 1 : 0,
+        row: 0
+      };
+      const requestedTiles = global
+        ? [
+            this.tileReader.normalizeTileRequest(request),
+            this.tileReader.normalizeTileRequest(secondaryRequest)
+          ]
+        : this.haloMode === 'seamless'
           ? this.haloAssembler.plan({...request, stages: this.getHaloStages()}).requests
           : [this.tileReader.normalizeTileRequest(request)];
       const previousTiles =
-        this.activeHaloLease?.tiles ?? (this.activeTileLease ? [this.activeTileLease] : []);
+        this.activeGlobalLeases.length > 0
+          ? this.activeGlobalLeases
+          : (this.activeHaloLease?.tiles ?? (this.activeTileLease ? [this.activeTileLease] : []));
       const requiredTiles = new Set(
         previousTiles.map(previous => makeRasterSourceKey(previous.decoded))
       );
@@ -412,9 +593,17 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       if (requiredTiles.size > this.cacheCapacity) {
         const previousTileLease = this.activeTileLease;
         const previousHaloLease = this.activeHaloLease;
+        const previousGlobalLeases = this.activeGlobalLeases;
         this.activeTileLease = null;
         this.activeHaloLease = null;
-        const handoff = this.releaseAfterSubmittedWork(previousTileLease, null, previousHaloLease);
+        this.activeGlobalLeases = [];
+        this.activeGlobal = null;
+        const handoff = this.releaseAfterSubmittedWork(
+          previousTileLease,
+          null,
+          previousHaloLease,
+          previousGlobalLeases
+        );
         this.sourceHandoff = handoff;
         try {
           await handoff;
@@ -424,7 +613,13 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         controller.signal.throwIfAborted();
       }
 
-      if (this.haloMode === 'seamless') {
+      if (global) {
+        replacementTileLease = await this.tileCache.acquire(request, controller.signal);
+        replacementGlobalLeases = [replacementTileLease];
+        replacementGlobalLeases.push(
+          await this.tileCache.acquire(secondaryRequest, controller.signal)
+        );
+      } else if (this.haloMode === 'seamless') {
         replacementHaloLease = await this.haloAssembler.acquire(
           {...request, stages: this.getHaloStages()},
           controller.signal
@@ -443,14 +638,49 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       controller.signal.throwIfAborted();
       if (generation !== this.sourceRequestGeneration || this.finalized) return;
 
-      const dataset = makeRasterLabTileDataset(replacementTileLease.decoded, tile);
       const sources = getResidentSources(replacementTileLease);
+      const generatedOverview: RasterLabGeneratedOverviewSources | undefined = generatesOverview
+        ? {
+            metadata: replacementTileLease.decoded.metadata,
+            sources,
+            categoryPolicy: this.categoryPolicy
+          }
+        : undefined;
+      const dataset = generatedOverview
+        ? makeRasterLabGeneratedOverviewDataset(replacementTileLease.decoded, tile)
+        : makeRasterLabTileDataset(replacementTileLease.decoded, tile);
       const haloSources = replacementHaloLease
         ? getResidentHaloSources(replacementHaloLease)
         : undefined;
+      const globalSources: RasterLabGlobalSources | undefined = replacementGlobalLeases
+        ? {
+            tiles: replacementGlobalLeases
+              .map(lease => ({
+                name: (lease.decoded.column === 0 ? 'west' : 'east') as 'west' | 'east',
+                width: lease.decoded.metadata.width,
+                height: lease.decoded.metadata.height,
+                sources: getResidentSources(lease)
+              }))
+              .sort(
+                (first, second) => Number(first.name === 'east') - Number(second.name === 'east')
+              ),
+            order: this.replayOrder,
+            pixelCount: replacementGlobalLeases.reduce(
+              (pixelCount, lease) =>
+                pixelCount + lease.decoded.metadata.width * lease.decoded.metadata.height,
+              0
+            )
+          }
+        : undefined;
       const requestedEpsilon = this.requestedEpsilon ?? this.epsilon;
       const settings = {...this.display};
-      const pipelineKey = makeRasterPipelineKey(settings, requestedEpsilon, haloSources);
+      const pipelineKey = makeRasterPipelineKey(
+        settings,
+        requestedEpsilon,
+        haloSources,
+        generatedOverview,
+        globalSources
+      );
       replacementGraphLease = await this.acquireGraphLease(
         replacementTileLease,
         dataset,
@@ -458,7 +688,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         settings,
         requestedEpsilon,
         pipelineKey,
-        haloSources
+        haloSources,
+        generatedOverview,
+        globalSources
       );
       controller.signal.throwIfAborted();
       if (generation !== this.sourceRequestGeneration || this.finalized) return;
@@ -467,7 +699,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         previousDataset = this.activeDataset;
         previousSources = getResidentSources(this.activeTileLease);
       }
-      replacement.setResidentTile(dataset, sources, haloSources);
+      replacement.setResidentTile(dataset, sources, haloSources, generatedOverview, globalSources);
       replacementSubmitted = true;
       const summary = await replacement.update();
       controller.signal.throwIfAborted();
@@ -476,13 +708,18 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       const previousTileLease = this.activeTileLease;
       const previousGraphLease = this.activeGraphLease;
       const previousHaloLease = this.activeHaloLease;
+      const previousGlobalLeases = this.activeGlobalLeases;
       this.engine = replacement;
       this.activeTileLease = replacementTileLease;
       this.activeHaloLease = replacementHaloLease ?? null;
+      this.activeGlobalLeases = replacementGlobalLeases ?? [];
+      this.activeGlobal = globalSources ?? null;
+      this.activeOverview = generatedOverview ?? null;
       this.activeGraphLease = replacementGraphLease;
       this.activePipelineKey = pipelineKey;
       replacementTileLease = undefined;
       replacementHaloLease = undefined;
+      replacementGlobalLeases = undefined;
       replacementGraphLease = undefined;
       committed = true;
       this.activeDataset = dataset;
@@ -496,25 +733,37 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       }
       this.interface?.setSource(dataset);
       this.publishHalo();
+      this.publishGlobal();
+      this.publishOverview();
       this.publishSummary(summary);
-      this.releaseAfterSubmittedWork(previousTileLease, previousGraphLease, previousHaloLease);
+      this.releaseAfterSubmittedWork(
+        previousTileLease,
+        previousGraphLease,
+        previousHaloLease,
+        previousGlobalLeases
+      );
     } finally {
       if (!committed && replacement === this.engine && previousDataset && previousSources) {
         replacement.setResidentTile(
           previousDataset,
           previousSources,
-          this.activeHaloLease ? getResidentHaloSources(this.activeHaloLease) : undefined
+          this.activeHaloLease ? getResidentHaloSources(this.activeHaloLease) : undefined,
+          this.activeOverview ?? undefined,
+          this.activeGlobal ?? undefined
         );
       }
       if (replacementSubmitted) {
         this.releaseAfterSubmittedWork(
           replacementTileLease ?? null,
           replacementGraphLease ?? null,
-          replacementHaloLease ?? null
+          replacementHaloLease ?? null,
+          replacementGlobalLeases ?? []
         );
       } else {
         replacementGraphLease?.release();
-        if (replacementHaloLease) {
+        if (replacementGlobalLeases?.length) {
+          for (const lease of replacementGlobalLeases) lease.release();
+        } else if (replacementHaloLease) {
           replacementHaloLease.release();
         } else {
           replacementTileLease?.release();
@@ -536,18 +785,31 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     settings: RasterLabDisplaySettings,
     epsilon: number,
     pipelineKey: string,
-    halo?: RasterLabHaloSources
+    halo?: RasterLabHaloSources,
+    overview?: RasterLabGeneratedOverviewSources,
+    global?: RasterLabGlobalSources
   ): Promise<GPURasterTileGraphLease<RasterLabEngine>> {
     return await this.tileCache.acquireGraph(tileLease, {
       pipelineKey,
       halo: halo?.plan.requiredHalo ?? 0,
       estimatedByteLength: estimateRasterGraphBytes(
-        halo?.plan.width && halo?.plan.height
-          ? halo.plan.width * halo.plan.height
-          : dataset.pixelCount
+        global
+          ? global.pixelCount
+          : halo?.plan.width && halo?.plan.height
+            ? halo.plan.width * halo.plan.height
+            : dataset.pixelCount
       ),
       create: () => {
-        const engine = new RasterLabEngine(this.device, dataset, sources, settings, epsilon, halo);
+        const engine = new RasterLabEngine(
+          this.device,
+          dataset,
+          sources,
+          settings,
+          epsilon,
+          halo,
+          overview,
+          global
+        );
         return {
           graph: engine.commandGraph,
           value: engine,
@@ -567,9 +829,11 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setSmoothingMode(mode: RasterLabSmoothingMode): void {
     if (mode === this.display.smoothingMode) return;
+    const reloadSources = mode !== 'none' && this.resetGlobalAnalysis();
     this.display.smoothingMode = mode;
     this.interface?.setSmoothingMode(mode);
-    this.requestSpatialUpdate();
+    if (reloadSources) this.requestSourceTile();
+    else this.requestSpatialUpdate();
   }
 
   private setSmoothingRadius(radius: number): void {
@@ -588,9 +852,11 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setEdgeMode(mode: RasterLabEdgeMode): void {
     if (mode === this.display.edgeMode) return;
+    const reloadSources = mode !== 'none' && this.resetGlobalAnalysis();
     this.display.edgeMode = mode;
     this.interface?.setEdgeMode(mode);
-    this.requestSpatialUpdate();
+    if (reloadSources) this.requestSourceTile();
+    else this.requestSpatialUpdate();
   }
 
   private setEdgeDirection(direction: RasterLabEdgeDirection): void {
@@ -604,10 +870,12 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setMorphologyOperation(operation: RasterLabMorphologyOperation): void {
     if (operation === this.display.morphologyOperation) return;
+    const reloadSources = operation !== 'none' && this.resetGlobalAnalysis();
     this.display.morphologyOperation = operation;
     this.interface?.setMorphologyOperation(operation);
     this.syncBinaryMorphology();
-    this.requestSpatialUpdate();
+    if (reloadSources) this.requestSourceTile();
+    else this.requestSpatialUpdate();
   }
 
   private setMorphologyMode(mode: RasterLabMorphologyMode): void {
@@ -658,6 +926,47 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
   }
 
+  private setComponentsEnabled(enabled: boolean): void {
+    if (enabled === this.display.componentsEnabled) return;
+    const reloadSources = enabled && this.resetGlobalAnalysis();
+    if (enabled) {
+      this.previousComponentContours = this.display.contoursEnabled;
+      this.display.componentsEnabled = true;
+      this.display.contoursEnabled = false;
+      this.display.thresholdEnabled = true;
+      this.interface?.setContours(false, this.display.contourLevel);
+      this.interface?.setThreshold(this.display.threshold, true);
+    } else {
+      this.disableComponents();
+    }
+    this.publishComponents();
+    if (reloadSources) this.requestSourceTile();
+    else this.requestUpdate();
+  }
+
+  private disableComponents(): void {
+    if (!this.display.componentsEnabled) return;
+    this.display.componentsEnabled = false;
+    this.display.contoursEnabled = this.previousComponentContours;
+    this.interface?.setContours(this.display.contoursEnabled, this.display.contourLevel);
+    this.publishComponents();
+  }
+
+  private setComponentConnectivity(connectivity: RasterLabComponentConnectivity): void {
+    if (connectivity === this.display.componentConnectivity) return;
+    this.display.componentConnectivity = connectivity;
+    this.publishComponents();
+    if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
+  private setComponentMaximumIterations(iterations: number): void {
+    const maximumIterations = Math.max(1, Math.min(32, Math.round(iterations)));
+    if (maximumIterations === this.display.componentMaximumIterations) return;
+    this.display.componentMaximumIterations = maximumIterations;
+    this.publishComponents();
+    if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
   private syncBinaryMorphology(): void {
     const binaryMorphologyEnabled =
       this.display.morphologyOperation !== 'none' && this.display.morphologyMode === 'binary';
@@ -688,8 +997,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private setThreshold(threshold: number, enabled = true): void {
     if (
       !enabled &&
-      this.display.morphologyOperation !== 'none' &&
-      this.display.morphologyMode === 'binary'
+      (this.display.componentsEnabled ||
+        (this.display.morphologyOperation !== 'none' && this.display.morphologyMode === 'binary'))
     ) {
       enabled = true;
     }
@@ -718,7 +1027,12 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   }
 
   private setContours(enabled = true): void {
-    if (enabled === this.display.contoursEnabled) return;
+    const disabledComponents = enabled && this.display.componentsEnabled;
+    if (disabledComponents) this.disableComponents();
+    if (enabled === this.display.contoursEnabled) {
+      if (disabledComponents) this.requestUpdate();
+      return;
+    }
     this.display.contoursEnabled = enabled;
     this.interface?.setContours(enabled, this.display.contourLevel);
     this.requestUpdate();
@@ -788,7 +1102,15 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         const haloSources = this.activeHaloLease
           ? getResidentHaloSources(this.activeHaloLease)
           : undefined;
-        const pipelineKey = makeRasterPipelineKey(settings, requestedEpsilon, haloSources);
+        const overviewSources = this.activeOverview ?? undefined;
+        const globalSources = this.activeGlobal ?? undefined;
+        const pipelineKey = makeRasterPipelineKey(
+          settings,
+          requestedEpsilon,
+          haloSources,
+          overviewSources,
+          globalSources
+        );
         const activeTileLease = this.activeTileLease;
         const activeDataset = this.activeDataset;
         if (!activeTileLease || !activeDataset || !this.engine) return;
@@ -805,9 +1127,17 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
               settings,
               requestedEpsilon,
               pipelineKey,
-              haloSources
+              haloSources,
+              overviewSources,
+              globalSources
             );
-            replacementGraphLease.value.setResidentTile(activeDataset, sources, haloSources);
+            replacementGraphLease.value.setResidentTile(
+              activeDataset,
+              sources,
+              haloSources,
+              overviewSources,
+              globalSources
+            );
           }
 
           const engine: RasterLabEngine = replacementGraphLease?.value ?? this.engine;
@@ -841,11 +1171,21 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private publishSummary(summary: RasterLabSummary): void {
     const publishedSummary = {...summary, executionCount: ++this.analysisExecutionCount};
     this.latestSummary = publishedSummary;
+    if (this.activeOverview && this.activeDataset) {
+      this.activeDataset.cloudPixelCount = Math.max(
+        this.activeDataset.pixelCount - publishedSummary.validPixelCount,
+        0
+      );
+      this.interface?.setSource(this.activeDataset);
+    }
+    this.publishGlobal();
     this.interface?.setSummary(publishedSummary);
+    this.publishComponents();
     this.interface?.setStatus(
       `${publishedSummary.nodeCount} GPU graph passes · ${this.tileCache.stats.residentTiles} bounded resident tiles`,
       'ready'
     );
+    this.publishOverview();
     this.publishResidency();
     this.redrawRequested = true;
   }
@@ -853,13 +1193,18 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private releaseAfterSubmittedWork(
     tileLease: GPURasterTileLease | null,
     graphLease: GPURasterTileGraphLease<RasterLabEngine> | null,
-    haloLease: GPURasterTileHaloLease | null = null
+    haloLease: GPURasterTileHaloLease | null = null,
+    globalLeases: readonly GPURasterTileLease[] = []
   ): Promise<void> {
-    if (!tileLease && !graphLease && !haloLease) return Promise.resolve();
+    if (!tileLease && !graphLease && !haloLease && globalLeases.length === 0) {
+      return Promise.resolve();
+    }
     const fence = this.device.createFence();
     const releases: Array<Promise<void>> = [];
     if (graphLease) releases.push(graphLease.releaseAfter(fence));
-    if (haloLease) {
+    if (globalLeases.length > 0) {
+      for (const lease of globalLeases) releases.push(lease.releaseAfter(fence));
+    } else if (haloLease) {
       releases.push(haloLease.releaseAfter(fence));
     } else if (tileLease) {
       releases.push(tileLease.releaseAfter(fence));
@@ -887,6 +1232,53 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       coreBounds,
       availableBounds: activePlan?.availablePixelBounds ?? coreBounds,
       sourceTileCount: this.activeHaloLease?.tiles.length ?? Number(Boolean(this.activeTileLease))
+    });
+  }
+
+  private publishGlobal(): void {
+    if (!this.interface || this.finalized) return;
+    const levelWidth = Math.ceil(this.rasterSize[0] / 2 ** this.overviewLevel);
+    const levelHeight = Math.ceil(this.rasterSize[1] / 2 ** this.overviewLevel);
+    this.interface.setGlobalAnalysis({
+      scope: this.analysisScope,
+      order: this.replayOrder,
+      tileCount: this.activeGlobalLeases.length,
+      replayPassCount: this.activeGlobal ? (this.display.automaticThreshold ? 6 : 3) : 0,
+      pixelCount: this.activeGlobal?.pixelCount ?? levelWidth * levelHeight,
+      domain: this.latestSummary?.domain ?? [0, 0],
+      validPixelCount: this.latestSummary?.validPixelCount ?? 0,
+      threshold: this.latestSummary?.threshold ?? this.display.threshold,
+      automaticThreshold: this.display.automaticThreshold,
+      median: this.latestSummary?.globalMedian ?? null
+    });
+  }
+
+  private publishComponents(): void {
+    if (!this.interface || this.finalized) return;
+    const summary = this.latestSummary;
+    this.interface.setComponents({
+      enabled: this.display.componentsEnabled,
+      connectivity: this.display.componentConnectivity,
+      maximumIterations: this.display.componentMaximumIterations,
+      iterations: summary?.componentsEnabled ? summary.componentIterations : 0,
+      converged: summary?.componentsEnabled ? summary.componentConverged : false,
+      foregroundPixelCount: summary?.validPixelCount ?? 0
+    });
+  }
+
+  private publishOverview(): void {
+    if (!this.interface || this.finalized) return;
+    const dataset = this.activeDataset;
+    this.interface.setOverviewProcessing({
+      policy: this.overviewPolicy,
+      categoryPolicy: this.categoryPolicy,
+      level: dataset?.overviewLevel ?? this.overviewLevel,
+      generated: Boolean(this.activeOverview),
+      sourceWidth: this.activeOverview?.metadata.width ?? dataset?.width ?? this.rasterSize[0],
+      sourceHeight: this.activeOverview?.metadata.height ?? dataset?.height ?? this.rasterSize[1],
+      targetWidth: dataset?.width ?? this.rasterSize[0],
+      targetHeight: dataset?.height ?? this.rasterSize[1],
+      validPixelCount: this.latestSummary?.validPixelCount ?? 0
     });
   }
 
@@ -961,6 +1353,29 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       },
       get overviewLevel() {
         return viewer.activeDataset?.overviewLevel ?? viewer.overviewLevel;
+      },
+      get overviewPolicy() {
+        return viewer.overviewPolicy;
+      },
+      get categoryPolicy() {
+        return viewer.categoryPolicy;
+      },
+      get generatedOverview() {
+        return Boolean(viewer.activeOverview);
+      },
+      get overviewSourceDimensions(): readonly [number, number] {
+        return viewer.activeOverview
+          ? [viewer.activeOverview.metadata.width, viewer.activeOverview.metadata.height]
+          : [
+              viewer.activeDataset?.width ?? viewer.rasterSize[0],
+              viewer.activeDataset?.height ?? viewer.rasterSize[1]
+            ];
+      },
+      get overviewCoverage() {
+        return (
+          (viewer.latestSummary?.validPixelCount ?? 0) /
+          Math.max(viewer.activeGlobal?.pixelCount ?? viewer.activeDataset?.pixelCount ?? 1, 1)
+        );
       },
       get tileOrigin() {
         return viewer.activeDataset?.levelZeroOrigin ?? [0, 0];
@@ -1053,6 +1468,39 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
           viewer.display.morphologyMode === 'binary';
         return viewer.activeHaloLease.tiles.length * 2 + 1 + Number(binaryMorphology);
       },
+      get analysisScope() {
+        return viewer.analysisScope;
+      },
+      get replayOrder() {
+        return viewer.replayOrder;
+      },
+      get globalTileCount() {
+        return viewer.activeGlobalLeases.length;
+      },
+      get globalReplayPassCount() {
+        return viewer.activeGlobal ? (viewer.display.automaticThreshold ? 6 : 3) : 0;
+      },
+      get globalPixelCount() {
+        return viewer.activeGlobal?.pixelCount ?? 0;
+      },
+      get globalMedian() {
+        return viewer.latestSummary?.globalMedian ?? null;
+      },
+      get componentsEnabled() {
+        return viewer.display.componentsEnabled;
+      },
+      get componentConnectivity() {
+        return viewer.display.componentConnectivity;
+      },
+      get componentMaximumIterations() {
+        return viewer.display.componentMaximumIterations;
+      },
+      get componentIterations() {
+        return viewer.latestSummary?.componentIterations ?? 0;
+      },
+      get componentConverged() {
+        return viewer.latestSummary?.componentConverged ?? false;
+      },
       get mode() {
         return viewer.display.mode;
       },
@@ -1136,7 +1584,11 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       },
       setSourceTile: tile => viewer.setSourceTile(tile),
       setSourceOverview: level => viewer.setSourceOverview(level),
+      setOverviewPolicy: policy => viewer.setOverviewPolicy(policy),
+      setCategoryPolicy: policy => viewer.setCategoryPolicy(policy),
       setHaloMode: mode => viewer.setHaloMode(mode),
+      setAnalysisScope: scope => viewer.setAnalysisScope(scope),
+      setReplayOrder: order => viewer.setReplayOrder(order),
       setCacheCapacity: capacity => viewer.setCacheCapacity(capacity),
       setMode: mode => viewer.setMode(mode),
       setSmoothingMode: mode => viewer.setSmoothingMode(mode),
@@ -1151,6 +1603,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setMorphologyNoDataPolicy: policy => viewer.setMorphologyNoDataPolicy(policy),
       setMorphologyBorderMode: mode => viewer.setMorphologyBorderMode(mode),
       setMorphologyBorderValue: value => viewer.setMorphologyBorderValue(value),
+      setComponentsEnabled: enabled => viewer.setComponentsEnabled(enabled),
+      setComponentConnectivity: connectivity => viewer.setComponentConnectivity(connectivity),
+      setComponentMaximumIterations: iterations => viewer.setComponentMaximumIterations(iterations),
       setContrast: contrast => viewer.setContrast(contrast),
       setGamma: gamma => viewer.setGamma(gamma),
       setThreshold: (threshold, enabled) => viewer.setThreshold(threshold, enabled),
@@ -1199,7 +1654,9 @@ function makeRasterSourceKey(source: {
 function makeRasterPipelineKey(
   settings: RasterLabDisplaySettings,
   epsilon: number,
-  halo?: RasterLabHaloSources
+  halo?: RasterLabHaloSources,
+  overview?: RasterLabGeneratedOverviewSources,
+  global?: RasterLabGlobalSources
 ): string {
   return JSON.stringify({
     ...settings,
@@ -1210,6 +1667,27 @@ function makeRasterPipelineKey(
             availableBounds: halo.plan.availablePixelBounds,
             coreBounds: halo.plan.corePixelBounds,
             sourceBounds: halo.tiles.map(tile => tile.pixelBounds)
+          }
+        }
+      : {}),
+    ...(overview
+      ? {
+          overview: {
+            categoryPolicy: overview.categoryPolicy,
+            sourceWidth: overview.metadata.width,
+            sourceHeight: overview.metadata.height
+          }
+        }
+      : {}),
+    ...(global
+      ? {
+          global: {
+            order: global.order,
+            tiles: global.tiles.map(tile => ({
+              name: tile.name,
+              width: tile.width,
+              height: tile.height
+            }))
           }
         }
       : {})

@@ -4,6 +4,7 @@
 
 import type {RasterLabSummary} from './raster-engine';
 import type {
+  RasterLabComponentConnectivity,
   RasterLabDisplayMode,
   RasterLabEdgeDirection,
   RasterLabEdgeMode,
@@ -20,7 +21,11 @@ import {RASTER_LAB_STYLES} from './raster-styles';
 export type RasterLabInterfaceCallbacks = {
   onSourceTile?: (tile: RasterLabSourceTile) => void;
   onSourceOverview?: (level: RasterLabOverviewLevel) => void;
+  onOverviewPolicy?: (policy: RasterLabOverviewPolicy) => void;
+  onCategoryPolicy?: (policy: RasterLabCategoryPolicy) => void;
   onHaloMode?: (mode: RasterLabHaloMode) => void;
+  onAnalysisScope?: (scope: RasterLabAnalysisScope) => void;
+  onReplayOrder?: (order: RasterLabReplayOrder) => void;
   onCacheCapacity?: (capacity: number) => void;
   onMode?: (mode: RasterLabDisplayMode) => void;
   onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
@@ -35,6 +40,9 @@ export type RasterLabInterfaceCallbacks = {
   onMorphologyNoDataPolicy?: (policy: RasterLabMorphologyNoDataPolicy) => void;
   onMorphologyBorderMode?: (mode: RasterLabMorphologyBorderMode) => void;
   onMorphologyBorderValue?: (value: number) => void;
+  onComponentsEnabled?: (enabled: boolean) => void;
+  onComponentConnectivity?: (connectivity: RasterLabComponentConnectivity) => void;
+  onComponentMaximumIterations?: (iterations: number) => void;
   onContrast?: (contrast: number) => void;
   onGamma?: (gamma: number) => void;
   onThreshold?: (threshold: number, enabled: boolean) => void;
@@ -47,7 +55,36 @@ export type RasterLabInterfaceCallbacks = {
 
 export type RasterLabSourceTile = 'full' | 'west' | 'east';
 export type RasterLabOverviewLevel = 0 | 1;
+export type RasterLabOverviewPolicy = 'source' | 'mean';
+export type RasterLabCategoryPolicy = 'nearest' | 'mode';
 export type RasterLabHaloMode = 'off' | 'seamless';
+export type RasterLabAnalysisScope = 'tile' | 'global';
+export type RasterLabReplayOrder = 'forward' | 'reverse';
+
+export type RasterLabGlobalSummary = {
+  scope: RasterLabAnalysisScope;
+  order: RasterLabReplayOrder;
+  tileCount: number;
+  replayPassCount: number;
+  pixelCount: number;
+  domain: readonly [number, number];
+  validPixelCount: number;
+  threshold: number;
+  automaticThreshold: boolean;
+  median: number | null;
+};
+
+export type RasterLabOverviewSummary = {
+  policy: RasterLabOverviewPolicy;
+  categoryPolicy: RasterLabCategoryPolicy;
+  level: RasterLabOverviewLevel;
+  generated: boolean;
+  sourceWidth: number;
+  sourceHeight: number;
+  targetWidth: number;
+  targetHeight: number;
+  validPixelCount: number;
+};
 
 export type RasterLabHaloSummary = {
   mode: RasterLabHaloMode;
@@ -87,6 +124,15 @@ export type RasterLabResidencySummary = {
   pinnedGraphs: number;
 };
 
+export type RasterLabComponentSummary = {
+  enabled: boolean;
+  connectivity: RasterLabComponentConnectivity;
+  maximumIterations: number;
+  iterations: number;
+  converged: boolean;
+  foregroundPixelCount: number;
+};
+
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
 
 /** Owns a responsive HTML dashboard above, but never overpaints, the GPU-rendered map surface. */
@@ -101,12 +147,15 @@ export class RasterLabInterface {
   private readonly positionWasUpdated: boolean;
   private readonly minimumHeightWasUpdated: boolean;
   private source: RasterLabSourceSummary | null = null;
+  private analysisScope: RasterLabAnalysisScope = 'tile';
+  private globalPixelCount = 0;
   private mode: RasterLabDisplayMode = 'ndvi';
   private edgeMode: RasterLabEdgeMode = 'none';
   private edgeDirection: RasterLabEdgeDirection = 'magnitude';
   private morphologyOperation: RasterLabMorphologyOperation = 'none';
   private morphologyMode: RasterLabMorphologyMode = 'grayscale';
   private morphologyBorderMode: RasterLabMorphologyBorderMode = 'clamp';
+  private componentsEnabled = false;
   private threshold = 0.35;
   private automaticThreshold = false;
   private contoursEnabled = true;
@@ -178,6 +227,52 @@ export class RasterLabInterface {
     }
   }
 
+  setOverviewProcessing(summary: RasterLabOverviewSummary): void {
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-overview-policy]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterOverviewPolicy'] === summary.policy)
+      );
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-category-policy]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterCategoryPolicy'] === summary.categoryPolicy)
+      );
+      button.disabled = summary.policy !== 'mean';
+    }
+    const targetPixelCount =
+      this.analysisScope === 'global'
+        ? this.globalPixelCount
+        : summary.targetWidth * summary.targetHeight;
+    const validPercentage = (summary.validPixelCount / Math.max(targetPixelCount, 1)) * 100;
+    this.getElement('[data-raster-overview-provenance]').textContent = summary.generated
+      ? 'GPU nodata-aware mean · native resident source'
+      : summary.level === 0
+        ? 'Application-provided native source'
+        : 'Application-provided nearest overview';
+    this.getElement('[data-raster-overview-grid]').textContent = summary.generated
+      ? `${summary.sourceWidth} × ${summary.sourceHeight} → ${summary.targetWidth} × ${summary.targetHeight}`
+      : `${summary.targetWidth} × ${summary.targetHeight}`;
+    this.getElement('[data-raster-overview-coverage]').textContent =
+      `${NUMBER_FORMATTER.format(summary.validPixelCount)} ${this.analysisScope === 'global' ? 'global' : 'displayed'} valid · ${validPercentage.toFixed(1)}%`;
+    this.getElement('[data-raster-cloud-label]').textContent = summary.generated
+      ? 'Excluded observations'
+      : 'Cloud mask';
+    if (summary.generated) {
+      this.getElement('[data-raster-cloud-count]').textContent =
+        `${NUMBER_FORMATTER.format(Math.max(targetPixelCount - summary.validPixelCount, 0))} excluded`;
+    }
+    this.getElement('[data-raster-overview-note]').textContent =
+      summary.policy === 'mean'
+        ? 'GPU mean uses tile-only ownership; seamless mode restores source overviews.'
+        : 'Source overviews preserve seamless neighbor assembly.';
+  }
+
   setHalo(summary: RasterLabHaloSummary): void {
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-raster-halo-mode]')) {
       button.setAttribute(
@@ -202,6 +297,95 @@ export class RasterLabInterface {
       : 'single tile · no halo';
   }
 
+  setGlobalAnalysis(summary: RasterLabGlobalSummary): void {
+    const global = summary.scope === 'global';
+    this.analysisScope = summary.scope;
+    this.globalPixelCount = summary.pixelCount;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-analysis-scope]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterAnalysisScope'] === summary.scope)
+      );
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-replay-order]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterReplayOrder'] === summary.order)
+      );
+      button.disabled = !global;
+    }
+    this.getElement('[data-raster-global-tiles]').textContent = global
+      ? `${summary.tileCount} bounded resident cores`
+      : 'selected core only';
+    this.getElement('[data-raster-global-replays]').textContent = global
+      ? `${summary.replayPassCount} ordered GPU phases`
+      : 'no cross-tile replay';
+    this.getElement('[data-raster-global-domain]').textContent =
+      `${summary.domain[0].toFixed(3)} … ${summary.domain[1].toFixed(3)}`;
+    this.getElement('[data-raster-global-count]').textContent =
+      `${NUMBER_FORMATTER.format(summary.validPixelCount)} ${global ? 'global' : 'tile'} valid`;
+    this.getElement('[data-raster-global-threshold]').textContent = summary.automaticThreshold
+      ? `Otsu ${summary.threshold.toFixed(3)}`
+      : 'manual / disabled';
+    this.getElement('[data-raster-global-median]').textContent = !global
+      ? 'global replay off'
+      : summary.automaticThreshold
+        ? 'Otsu owns compact scalar'
+        : summary.median === null
+          ? 'pending'
+          : summary.median.toFixed(3);
+    this.getElement('[data-raster-global-note]').textContent = global
+      ? 'Source-nearest pointwise bands; selected map core, global statistics.'
+      : 'Global replay excludes generated overviews and neighborhood effects.';
+  }
+
+  setComponents(summary: RasterLabComponentSummary): void {
+    this.componentsEnabled = summary.enabled;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-component-mode]'
+    )) {
+      const enabled = button.dataset['rasterComponentMode'] === 'on';
+      button.setAttribute('aria-pressed', String(enabled === summary.enabled));
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-component-connectivity]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(Number(button.dataset['rasterComponentConnectivity']) === summary.connectivity)
+      );
+      button.disabled = !summary.enabled;
+    }
+    const iterationsControl = this.getInput('component-iterations');
+    iterationsControl.value = String(summary.maximumIterations);
+    iterationsControl.disabled = !summary.enabled;
+    this.getInput('contours-enabled').disabled = summary.enabled;
+    this.getElement('[data-raster-component-budget]').textContent =
+      `${summary.maximumIterations} max`;
+    this.getElement('[data-raster-component-rounds]').textContent = summary.enabled
+      ? `${summary.iterations} / ${summary.maximumIterations}`
+      : 'off';
+    this.getElement('[data-raster-component-state]').textContent = !summary.enabled
+      ? 'off'
+      : summary.converged
+        ? 'verified fixed point'
+        : 'unresolved · labels cleared';
+    this.getElement('[data-raster-component-foreground]').textContent = summary.enabled
+      ? `${NUMBER_FORMATTER.format(summary.foregroundPixelCount)} valid foreground`
+      : 'classification off';
+    this.getElement('[data-raster-component-lineage]').textContent = !summary.enabled
+      ? 'off'
+      : summary.converged
+        ? `${summary.connectivity}-WAY · ${summary.iterations}`
+        : 'NOT CONVERGED';
+    this.updateMorphologyControls();
+    this.updateMapPresentation();
+  }
+
   setResidency(summary: RasterLabResidencySummary): void {
     const capacityControl = this.getInput('cache-capacity');
     capacityControl.value = String(summary.capacity);
@@ -220,15 +404,23 @@ export class RasterLabInterface {
   }
 
   setSummary(summary: RasterLabSummary): void {
-    const totalPixelCount = this.source?.pixelCount ?? summary.validPixelCount;
+    const totalPixelCount =
+      this.analysisScope === 'global'
+        ? this.globalPixelCount
+        : (this.source?.pixelCount ?? summary.validPixelCount);
     const percentage = (summary.validPixelCount / Math.max(totalPixelCount, 1)) * 100;
     const modeLabel =
       summary.edgeMode === 'none'
         ? getModeLabel(summary.mode)
         : `${summary.edgeMode.toUpperCase()} ${summary.edgeMode === 'laplacian' ? 'Δ' : summary.edgeDirection === 'magnitude' ? '|∇|' : summary.edgeDirection.toUpperCase()}`;
-    this.getElement('[data-raster-valid-label]').textContent = summary.thresholdEnabled
-      ? 'Selected observations'
-      : 'Valid observations';
+    this.getElement('[data-raster-valid-label]').textContent =
+      this.analysisScope === 'global'
+        ? summary.thresholdEnabled
+          ? 'Global selected observations'
+          : 'Global valid observations'
+        : summary.thresholdEnabled
+          ? 'Selected observations'
+          : 'Valid observations';
     this.getElement('[data-raster-valid]').textContent = NUMBER_FORMATTER.format(
       summary.validPixelCount
     );
@@ -272,9 +464,13 @@ export class RasterLabInterface {
     this.getElement('[data-raster-contour-state]').textContent = summary.contoursEnabled
       ? `${NUMBER_FORMATTER.format(summary.contourSegmentCount)}${summary.contourOverflow ? '+' : ''}`
       : 'off';
-    this.getElement('[data-raster-contour-count]').textContent = summary.contoursEnabled
-      ? `${NUMBER_FORMATTER.format(summary.contourSegmentCount)} CONTOUR SEGMENTS`
-      : 'SYNTHETIC SCENE';
+    this.getElement('[data-raster-contour-count]').textContent = summary.componentsEnabled
+      ? summary.componentConverged
+        ? `${summary.componentConnectivity}-CONNECTED COMPONENTS`
+        : 'COMPONENT LABELS UNRESOLVED'
+      : summary.contoursEnabled
+        ? `${NUMBER_FORMATTER.format(summary.contourSegmentCount)} CONTOUR SEGMENTS`
+        : 'SYNTHETIC SCENE';
     if (summary.automaticThreshold) {
       this.getElement('[data-raster-threshold-value]').textContent = summary.threshold.toFixed(2);
       this.getInput('threshold').value = String(summary.threshold);
@@ -511,10 +707,53 @@ export class RasterLabInterface {
         this.callbacks.onSourceOverview?.(level);
         return;
       }
+      const overviewPolicyButton = target.closest<HTMLButtonElement>(
+        '[data-raster-overview-policy]'
+      );
+      const overviewPolicy = overviewPolicyButton?.dataset['rasterOverviewPolicy'];
+      if (overviewPolicy === 'source' || overviewPolicy === 'mean') {
+        this.callbacks.onOverviewPolicy?.(overviewPolicy);
+        return;
+      }
+      const categoryPolicyButton = target.closest<HTMLButtonElement>(
+        '[data-raster-category-policy]'
+      );
+      const categoryPolicy = categoryPolicyButton?.dataset['rasterCategoryPolicy'];
+      if (categoryPolicy === 'nearest' || categoryPolicy === 'mode') {
+        this.callbacks.onCategoryPolicy?.(categoryPolicy);
+        return;
+      }
       const haloButton = target.closest<HTMLButtonElement>('[data-raster-halo-mode]');
       const haloMode = haloButton?.dataset['rasterHaloMode'];
       if (haloMode === 'off' || haloMode === 'seamless') {
         this.callbacks.onHaloMode?.(haloMode);
+        return;
+      }
+      const scopeButton = target.closest<HTMLButtonElement>('[data-raster-analysis-scope]');
+      const scope = scopeButton?.dataset['rasterAnalysisScope'];
+      if (scope === 'tile' || scope === 'global') {
+        this.callbacks.onAnalysisScope?.(scope);
+        return;
+      }
+      const replayButton = target.closest<HTMLButtonElement>('[data-raster-replay-order]');
+      const replayOrder = replayButton?.dataset['rasterReplayOrder'];
+      if (replayOrder === 'forward' || replayOrder === 'reverse') {
+        this.callbacks.onReplayOrder?.(replayOrder);
+        return;
+      }
+      const componentModeButton = target.closest<HTMLButtonElement>('[data-raster-component-mode]');
+      const componentMode = componentModeButton?.dataset['rasterComponentMode'];
+      if (componentMode === 'off' || componentMode === 'on') {
+        this.callbacks.onComponentsEnabled?.(componentMode === 'on');
+        return;
+      }
+      const componentConnectivityButton = target.closest<HTMLButtonElement>(
+        '[data-raster-component-connectivity]'
+      );
+      const componentConnectivity =
+        componentConnectivityButton?.dataset['rasterComponentConnectivity'];
+      if (componentConnectivity === '4' || componentConnectivity === '8') {
+        this.callbacks.onComponentConnectivity?.(componentConnectivity === '4' ? 4 : 8);
         return;
       }
       const otsuButton = target.closest<HTMLButtonElement>('[data-raster-control="otsu"]');
@@ -635,6 +874,9 @@ export class RasterLabInterface {
           this.setMorphologyBorderValue(value);
           this.callbacks.onMorphologyBorderValue?.(value);
           break;
+        case 'component-iterations':
+          this.callbacks.onComponentMaximumIterations?.(Math.round(value));
+          break;
         case 'contrast':
           this.setContrast(value);
           this.callbacks.onContrast?.(value);
@@ -730,7 +972,7 @@ export class RasterLabInterface {
     this.getInput('morphology-radius').disabled = !morphologyEnabled;
     this.getInput('morphology-border-value').disabled =
       !morphologyEnabled || this.morphologyBorderMode !== 'constant';
-    this.getInput('threshold-enabled').disabled = binaryMorphologyEnabled;
+    this.getInput('threshold-enabled').disabled = binaryMorphologyEnabled || this.componentsEnabled;
     this.getInput('contour-level').disabled = binaryMorphologyEnabled;
     for (const button of this.root.querySelectorAll<HTMLButtonElement>(
       '[data-raster-morphology-shape], [data-raster-morphology-nodata], [data-raster-morphology-border]'
@@ -759,7 +1001,8 @@ export class RasterLabInterface {
       this.morphologyOperation === 'none'
         ? ''
         : ` · ${this.morphologyMode === 'binary' ? 'binary' : 'gray'} ${this.morphologyOperation}`;
-    this.getElement('[data-raster-map-title]').textContent = `${title}${morphologyLabel}`;
+    this.getElement('[data-raster-map-title]').textContent =
+      `${title}${morphologyLabel}${this.componentsEnabled ? ' · connected components' : ''}`;
     const legend = this.getElement('[data-raster-legend]');
     legend.dataset['mode'] =
       this.edgeMode === 'none' ? this.mode : edgeIsSigned ? 'edge-signed' : 'edge-magnitude';
@@ -826,7 +1069,7 @@ function makeRasterLabMarkup(): string {
           <span class="raster-metric-detail" data-raster-valid-percentage>GPU histogram</span>
         </div>
         <div class="raster-metric">
-          <span class="raster-kicker">Cloud mask</span>
+          <span class="raster-kicker" data-raster-cloud-label>Cloud mask</span>
           <strong class="raster-metric-value" data-raster-cloud>—</strong>
           <span class="raster-metric-detail" data-raster-cloud-count>Source validity</span>
         </div>
@@ -876,6 +1119,20 @@ function makeRasterLabMarkup(): string {
                 <button class="raster-mode-button" data-raster-source-overview="0" aria-pressed="true">1× NATIVE</button>
                 <button class="raster-mode-button" data-raster-source-overview="1" aria-pressed="false">2× OVERVIEW</button>
               </div>
+              <div class="raster-overview-policy-buttons" aria-label="Continuous overview generation policy">
+                <button class="raster-mode-button" data-raster-overview-policy="source" aria-pressed="true">SOURCE NEAREST</button>
+                <button class="raster-mode-button" data-raster-overview-policy="mean" aria-pressed="false">GPU MEAN</button>
+              </div>
+              <div class="raster-category-policy-buttons" aria-label="Categorical cloud-mask overview policy">
+                <button class="raster-mode-button" data-raster-category-policy="nearest" aria-pressed="true" disabled>MASK NEAREST</button>
+                <button class="raster-mode-button" data-raster-category-policy="mode" aria-pressed="false" disabled>MASK MODE</button>
+              </div>
+              <div class="raster-overview-statistics" aria-label="Scientific overview provenance and coverage">
+                <span data-raster-overview-provenance>Application-provided native source</span>
+                <span data-raster-overview-grid>—</span>
+                <span data-raster-overview-coverage>0 displayed valid · 0.0%</span>
+                <span data-raster-overview-note>Source overviews preserve seamless neighbor assembly.</span>
+              </div>
               <div class="raster-halo-buttons" aria-label="Cross-tile neighborhood ownership">
                 <button class="raster-mode-button" data-raster-halo-mode="off" aria-pressed="true">TILE ONLY</button>
                 <button class="raster-mode-button" data-raster-halo-mode="seamless" aria-pressed="false">SEAMLESS HALO</button>
@@ -885,6 +1142,23 @@ function makeRasterLabMarkup(): string {
                 <span>Owned core</span><span data-raster-halo-core>selected tile only</span>
                 <span>Resident sources</span><span data-raster-halo-sources>no neighbor assembly</span>
               </div>
+              <div class="raster-analysis-scope-buttons" aria-label="Histogram and statistics scope">
+                <button class="raster-mode-button" data-raster-analysis-scope="tile" aria-pressed="true">TILE</button>
+                <button class="raster-mode-button" data-raster-analysis-scope="global" aria-pressed="false">FULL GLOBAL</button>
+              </div>
+              <div class="raster-replay-order-buttons" aria-label="Global tile replay order">
+                <button class="raster-mode-button" data-raster-replay-order="forward" aria-pressed="true" disabled>WEST → EAST</button>
+                <button class="raster-mode-button" data-raster-replay-order="reverse" aria-pressed="false" disabled>EAST → WEST</button>
+              </div>
+              <div class="raster-global-statistics" aria-label="Global reduction, histogram, and replay telemetry">
+                <span>Owned tiles</span><span data-raster-global-tiles>selected core only</span>
+                <span>GPU replay</span><span data-raster-global-replays>no cross-tile replay</span>
+                <span>Stable domain</span><span data-raster-global-domain>0.000 … 0.000</span>
+                <span>Population</span><span data-raster-global-count>0 tile valid</span>
+                <span>GPU median</span><span data-raster-global-median>global replay off</span>
+                <span>Global selection</span><span data-raster-global-threshold>manual / disabled</span>
+              </div>
+              <div class="raster-global-note" data-raster-global-note>Global replay excludes generated overviews and neighborhood effects.</div>
               <div class="raster-source-description" data-raster-source-description>L0 · FULL</div>
               <div class="raster-source-origin" data-raster-source-origin>Origin 0, 0 · EPSG:32610</div>
               <label class="raster-cache-control">
@@ -991,6 +1265,27 @@ function makeRasterLabMarkup(): string {
               <input class="raster-slider" data-raster-control="threshold" aria-label="Selection threshold" type="range" min="-0.2" max="0.9" step="0.01" value="0.35" />
               <button class="raster-otsu-button" data-raster-control="otsu" type="button" aria-pressed="false">AUTO OTSU · GPU HISTOGRAM</button>
             </div>
+            <div class="raster-control raster-component-control">
+              <span class="raster-control-label">Connected components <span class="raster-kicker">GPU sparse roots</span></span>
+              <div class="raster-component-buttons" aria-label="Connected-component label overlay">
+                <button class="raster-mode-button" data-raster-component-mode="off" aria-pressed="true">OFF</button>
+                <button class="raster-mode-button" data-raster-component-mode="on" aria-pressed="false">COMPONENTS</button>
+              </div>
+              <div class="raster-component-connectivity-buttons" aria-label="Component-neighborhood connectivity">
+                <button class="raster-mode-button" data-raster-component-connectivity="4" aria-pressed="true" disabled>4-CONNECTED</button>
+                <button class="raster-mode-button" data-raster-component-connectivity="8" aria-pressed="false" disabled>8-CONNECTED</button>
+              </div>
+              <label class="raster-component-setting">
+                <span class="raster-control-label">Propagation budget <span class="raster-control-value" data-raster-component-budget>24 max</span></span>
+                <input class="raster-slider" data-raster-control="component-iterations" aria-label="Maximum component propagation rounds" type="range" min="1" max="32" step="1" value="24" disabled />
+              </label>
+              <div class="raster-component-statistics" aria-label="GPU component convergence and foreground telemetry">
+                <span>Actual rounds</span><span data-raster-component-rounds>off</span>
+                <span>Convergence</span><span data-raster-component-state>off</span>
+                <span>Valid foreground</span><span data-raster-component-foreground>classification off</span>
+              </div>
+              <span class="raster-component-note">Sparse minimum-root labels; contours pause while region diagnostics reuse their 228-byte summary.</span>
+            </div>
             <div class="raster-control">
               <span class="raster-control-label">
                 <label class="raster-threshold-toggle">
@@ -1019,7 +1314,7 @@ function makeRasterLabMarkup(): string {
               <span data-raster-histogram-maximum>—</span>
             </div>
             <div class="raster-histogram-caption">
-              Filters, morphology, and contours share one GPU graph; only 228 summary bytes are read.
+              Filters, morphology, and active overlays share one GPU graph; only 228 summary bytes are read.
             </div>
           </section>
 
@@ -1037,8 +1332,9 @@ function makeRasterLabMarkup(): string {
             <div class="raster-pipeline-step"><span class="raster-step-number">07</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">08</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">09</span><span class="raster-step-name">Binary morphology</span><span class="raster-step-state" data-raster-binary-morphology-state>off</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">10</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">11</span><span class="raster-step-name">Indirect contour lines</span><span class="raster-step-state" data-raster-contour-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">10</span><span class="raster-step-name">Connected foreground roots</span><span class="raster-step-state" data-raster-component-lineage>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">11</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">12</span><span class="raster-step-name">Indirect contour lines</span><span class="raster-step-state" data-raster-contour-state>off</span></div>
             <div class="raster-histogram-caption" data-raster-footprint>Allocating GPU buffers</div>
           </section>
         </aside>
@@ -1047,7 +1343,7 @@ function makeRasterLabMarkup(): string {
       <footer class="raster-footer">
         <div class="raster-roadmap" aria-label="Planned raster capabilities">
           <span class="raster-kicker">Coming next</span>
-          <span class="raster-roadmap-chip">Connected components</span>
+          <span class="raster-roadmap-chip">Dense component IDs</span>
           <span class="raster-roadmap-chip">Segmentation</span>
           <span class="raster-roadmap-chip">Tiled contour seams</span>
         </div>

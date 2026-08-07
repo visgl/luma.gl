@@ -2,17 +2,20 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {
-  GPURasterDecodedBand,
-  GPURasterDecodedTile,
-  GPURasterTileRequest,
-  GPURasterTileSource,
-  GPURasterTileSourceMetadata
+import {
+  makeRasterOverviewMetadata,
+  type GPURasterDecodedBand,
+  type GPURasterDecodedTile,
+  type GPURasterTileRequest,
+  type GPURasterTileSource,
+  type GPURasterTileSourceMetadata
 } from '@luma.gl/experimental/luraster';
 import {makeRasterLabDataset, RASTER_LAB_NO_DATA_VALUE, type RasterLabDataset} from './raster-data';
 import type {RasterLabSourceTile} from './raster-interface';
 
 const RASTER_LAB_COORDINATE_REFERENCE_SYSTEM = 'EPSG:32610';
+const EMPTY_RASTER_FLOAT_VALUES = new Float32Array(0);
+const EMPTY_RASTER_VALIDITY_VALUES = new Uint32Array(0);
 
 /** Deterministic decoded source adapter; loading never allocates GPU buffers or assembles halos. */
 export class RasterLabTileSource implements GPURasterTileSource {
@@ -218,6 +221,45 @@ export function makeRasterLabTileDataset(
     levelZeroOrigin: tile.metadata.levelZeroOrigin,
     coordinateReferenceSystem:
       tile.metadata.coordinateReferenceSystem?.authority ?? RASTER_LAB_COORDINATE_REFERENCE_SYSTEM
+  };
+}
+
+/** Derives bounded target metadata only; actual means and mask categories remain GPU-generated. */
+export function makeRasterLabGeneratedOverviewDataset(
+  tile: GPURasterDecodedTile,
+  selection: RasterLabSourceTile
+): RasterLabDataset {
+  const redBand = tile.bands.find(band => band.id === 'red');
+  const nearInfraredBand = tile.bands.find(band => band.id === 'near-infrared');
+  if (
+    !redBand ||
+    !nearInfraredBand ||
+    redBand.format !== 'float32' ||
+    nearInfraredBand.format !== 'float32' ||
+    !redBand.validity
+  ) {
+    throw new Error('Generated raster overviews require native float bands and categorical masks');
+  }
+
+  const metadata = makeRasterOverviewMetadata(tile.metadata, 2, {level: 1});
+  const pixelCount = metadata.width * metadata.height;
+
+  return {
+    width: metadata.width,
+    height: metadata.height,
+    pixelCount,
+    red: EMPTY_RASTER_FLOAT_VALUES,
+    nearInfrared: EMPTY_RASTER_FLOAT_VALUES,
+    validity: EMPTY_RASTER_VALIDITY_VALUES,
+    cloudPixelCount: 0,
+    noDataPixelCount: 0,
+    waterPixelCount: 0,
+    metadata,
+    tile: selection,
+    overviewLevel: 1,
+    levelZeroOrigin: metadata.levelZeroOrigin,
+    coordinateReferenceSystem:
+      metadata.coordinateReferenceSystem?.authority ?? RASTER_LAB_COORDINATE_REFERENCE_SYSTEM
   };
 }
 

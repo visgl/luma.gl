@@ -60,6 +60,40 @@ export type {
   GPURasterTileHaloSource
 } from './gpu-raster-tile-halo';
 
+export {
+  GPURasterCategoricalOverview,
+  GPURasterOverview,
+  makeRasterOverviewMetadata
+} from './gpu-raster-overview';
+export type {
+  GPURasterCategoricalOverviewFormat,
+  GPURasterCategoricalOverviewProps,
+  GPURasterOverviewCategoricalPolicy,
+  GPURasterOverviewMetadataOptions,
+  GPURasterOverviewProps,
+  GPURasterOverviewScale
+} from './gpu-raster-overview';
+
+export {
+  GPURasterGlobalHistogramMerge,
+  GPURasterGlobalInitialize,
+  GPURasterGlobalPercentile,
+  GPURasterGlobalStatisticsMerge
+} from './gpu-raster-global-statistics';
+export type {
+  GPURasterGlobalAccumulator,
+  GPURasterGlobalHistogramMergeProps,
+  GPURasterGlobalInitializeProps,
+  GPURasterGlobalPercentileProps,
+  GPURasterGlobalStatisticsMergeProps
+} from './gpu-raster-global-statistics';
+
+export {GPURasterConnectedComponents} from './gpu-raster-connected-components';
+export type {
+  GPURasterConnectedComponentsProps,
+  GPURasterConnectivity
+} from './gpu-raster-connected-components';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

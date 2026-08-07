@@ -10,18 +10,26 @@ import {
   type GraphDataView
 } from '@luma.gl/experimental';
 import {
+  GPURasterBandMath,
   GPURasterBoxBlur,
+  GPURasterCategoricalOverview,
   GPURasterClosing,
+  GPURasterConnectedComponents,
   GPURasterContrast,
   GPURasterContours,
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
+  GPURasterGlobalHistogramMerge,
+  GPURasterGlobalInitialize,
+  GPURasterGlobalPercentile,
+  GPURasterGlobalStatisticsMerge,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
   GPURasterLaplacian,
   GPURasterNDVI,
   GPURasterOtsuThreshold,
+  GPURasterOverview,
   GPURasterOpening,
   GPURasterScharr,
   GPURasterSobel,
@@ -30,6 +38,9 @@ import {
   GPURasterTileCoreExtract,
   GPURasterTileHaloFill,
   type GPURasterBufferBand,
+  type GPURasterGlobalAccumulator,
+  type GPURasterMetadata,
+  type GPURasterOverviewCategoricalPolicy,
   type GPURasterPixelBounds,
   type GPURasterTileHaloPlan
 } from '@luma.gl/experimental/luraster';
@@ -77,6 +88,12 @@ export type RasterLabSummary = {
   threshold: number;
   thresholdEnabled: boolean;
   automaticThreshold: boolean;
+  globalMedian: number | null;
+  componentsEnabled: boolean;
+  componentConnectivity: RasterLabDisplaySettings['componentConnectivity'];
+  componentMaximumIterations: number;
+  componentIterations: number;
+  componentConverged: boolean;
   contoursEnabled: boolean;
   contourLevel: number;
   contourSegmentCount: number;
@@ -105,6 +122,8 @@ type RasterLabBuffers = {
   thresholdSeed: Buffer;
   thresholdValidity: Buffer;
   binaryMorphologyValidity: Buffer;
+  componentLabels: Buffer;
+  componentValidity: Buffer;
   automaticThreshold: Buffer;
   baselineHistogram: Buffer;
   baselineDomain: Buffer;
@@ -136,6 +155,32 @@ export type RasterLabHaloSources = {
   }[];
 };
 
+/** Native cache-resident source reduced directly into owned, target-resolution GPU buffers. */
+export type RasterLabGeneratedOverviewSources = {
+  metadata: GPURasterMetadata;
+  sources: RasterLabResidentSources;
+  categoryPolicy: GPURasterOverviewCategoricalPolicy;
+};
+
+/** Two borrowed canonical source cores are replayed without stitching or CPU pixel transfers. */
+export type RasterLabGlobalSources = {
+  tiles: readonly {
+    name: 'west' | 'east';
+    width: number;
+    height: number;
+    sources: RasterLabResidentSources;
+  }[];
+  order: 'forward' | 'reverse';
+  pixelCount: number;
+};
+
+type RasterLabGlobalBand = {
+  name: 'west' | 'east';
+  width: number;
+  height: number;
+  input: GPURasterBufferBand<'float32'>;
+};
+
 /** Runs NDVI, validity-aware extent, and histogram as one explicitly submitted GPU command graph. */
 export class RasterLabEngine {
   readonly device: Device;
@@ -148,6 +193,8 @@ export class RasterLabEngine {
   private readonly contourSegmentCapacity: number;
   private compiledGraph: CompiledGPUCommandGraph;
   private halo: RasterLabHaloSources | undefined;
+  private overview: RasterLabGeneratedOverviewSources | undefined;
+  private global: RasterLabGlobalSources | undefined;
   private settings: RasterLabDisplaySettings = {
     mode: 'ndvi',
     smoothingMode: 'none',
@@ -167,6 +214,9 @@ export class RasterLabEngine {
     threshold: 0.35,
     thresholdEnabled: false,
     automaticThreshold: false,
+    componentsEnabled: false,
+    componentConnectivity: 4,
+    componentMaximumIterations: 24,
     contoursEnabled: true,
     contourLevel: 0.35
   };
@@ -180,35 +230,54 @@ export class RasterLabEngine {
     sources?: RasterLabResidentSources,
     settings?: RasterLabDisplaySettings,
     epsilon = 0.0001,
-    halo?: RasterLabHaloSources
+    halo?: RasterLabHaloSources,
+    overview?: RasterLabGeneratedOverviewSources,
+    global?: RasterLabGlobalSources
   ) {
     this.device = device;
     this.dataset = dataset;
-    this.borrowedSources = Boolean(sources);
+    this.borrowedSources = Boolean(sources) && !overview;
     this.halo = halo;
+    this.overview = overview;
+    this.global = global;
     if (settings) this.settings = {...settings};
     this.epsilon = epsilon;
     this.contourSegmentCapacity = Math.max((dataset.width - 1) * (dataset.height - 1) * 2, 1);
     const sourceUsage = Buffer.STORAGE | Buffer.COPY_DST;
     const outputUsage = Buffer.STORAGE | Buffer.COPY_SRC;
     this.buffers = {
-      red:
-        sources?.red ??
-        device.createBuffer({id: 'raster-lab-red', data: dataset.red, usage: sourceUsage}),
-      nearInfrared:
-        sources?.nearInfrared ??
-        device.createBuffer({
-          id: 'raster-lab-near-infrared',
-          data: dataset.nearInfrared,
-          usage: sourceUsage
-        }),
-      sourceValidity:
-        sources?.validity ??
-        device.createBuffer({
-          id: 'raster-lab-source-validity',
-          data: dataset.validity,
-          usage: sourceUsage
-        }),
+      red: overview
+        ? device.createBuffer({
+            id: 'raster-lab-generated-red',
+            byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
+            usage: outputUsage
+          })
+        : (sources?.red ??
+          device.createBuffer({id: 'raster-lab-red', data: dataset.red, usage: sourceUsage})),
+      nearInfrared: overview
+        ? device.createBuffer({
+            id: 'raster-lab-generated-near-infrared',
+            byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
+            usage: outputUsage
+          })
+        : (sources?.nearInfrared ??
+          device.createBuffer({
+            id: 'raster-lab-near-infrared',
+            data: dataset.nearInfrared,
+            usage: sourceUsage
+          })),
+      sourceValidity: overview
+        ? device.createBuffer({
+            id: 'raster-lab-generated-categorical-validity',
+            byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+            usage: outputUsage
+          })
+        : (sources?.validity ??
+          device.createBuffer({
+            id: 'raster-lab-source-validity',
+            data: dataset.validity,
+            usage: sourceUsage
+          })),
       vegetationIndex: device.createBuffer({
         id: 'raster-lab-vegetation-index',
         byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
@@ -271,6 +340,16 @@ export class RasterLabEngine {
       }),
       binaryMorphologyValidity: device.createBuffer({
         id: 'raster-lab-binary-morphology-validity',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      componentLabels: device.createBuffer({
+        id: 'raster-lab-sparse-component-labels',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      componentValidity: device.createBuffer({
+        id: 'raster-lab-component-observation-validity',
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
@@ -362,6 +441,7 @@ export class RasterLabEngine {
         validity: this.buffers.analyzedValidity,
         thresholdValidity: this.buffers.thresholdValidity,
         morphologyValidity: this.buffers.binaryMorphologyValidity,
+        componentLabels: this.buffers.componentLabels,
         contourVertices: this.buffers.contourVertices,
         contourCommands: initializedContourCommands
       });
@@ -403,21 +483,28 @@ export class RasterLabEngine {
   setResidentTile(
     dataset: RasterLabDataset,
     sources: RasterLabResidentSources,
-    halo?: RasterLabHaloSources
+    halo?: RasterLabHaloSources,
+    overview?: RasterLabGeneratedOverviewSources,
+    global?: RasterLabGlobalSources
   ): void {
     if (
-      !this.borrowedSources ||
+      (!this.borrowedSources && !this.overview) ||
       dataset.width !== this.dataset.width ||
-      dataset.height !== this.dataset.height
+      dataset.height !== this.dataset.height ||
+      Boolean(this.overview) !== Boolean(overview)
     ) {
       throw new Error('Raster tile graph reuse requires matching resident tile dimensions');
     }
     this.dataset = dataset;
     this.halo = halo;
-    this.buffers.red = sources.red;
-    this.buffers.nearInfrared = sources.nearInfrared;
-    this.buffers.sourceValidity = sources.validity;
-    this.renderer.setSourceBuffers(sources.red, sources.nearInfrared);
+    this.overview = overview;
+    this.global = global;
+    if (!overview) {
+      this.buffers.red = sources.red;
+      this.buffers.nearInfrared = sources.nearInfrared;
+      this.buffers.sourceValidity = sources.validity;
+      this.renderer.setSourceBuffers(sources.red, sources.nearInfrared);
+    }
   }
 
   /** Reconfigures specialized graph passes without reallocating resident raster buffers. */
@@ -441,6 +528,9 @@ export class RasterLabEngine {
       Math.abs(settings.threshold - this.settings.threshold) < 0.0000001 &&
       settings.thresholdEnabled === this.settings.thresholdEnabled &&
       settings.automaticThreshold === this.settings.automaticThreshold &&
+      settings.componentsEnabled === this.settings.componentsEnabled &&
+      settings.componentConnectivity === this.settings.componentConnectivity &&
+      settings.componentMaximumIterations === this.settings.componentMaximumIterations &&
       settings.contoursEnabled === this.settings.contoursEnabled &&
       Math.abs(settings.contourLevel - this.settings.contourLevel) < 0.0000001 &&
       Math.abs(epsilon - this.epsilon) < 0.0000001
@@ -480,6 +570,16 @@ export class RasterLabEngine {
       importedBuffers[`halo-near-infrared-${tileIndex}`] = tile.sources.nearInfrared;
       importedBuffers[`halo-validity-${tileIndex}`] = tile.sources.validity;
     }
+    if (this.overview) {
+      importedBuffers['overview-source-red'] = this.overview.sources.red;
+      importedBuffers['overview-source-near-infrared'] = this.overview.sources.nearInfrared;
+      importedBuffers['overview-source-validity'] = this.overview.sources.validity;
+    }
+    for (const tile of this.global?.tiles ?? []) {
+      importedBuffers[`global-${tile.name}-red`] = tile.sources.red;
+      importedBuffers[`global-${tile.name}-near-infrared`] = tile.sources.nearInfrared;
+      importedBuffers[`global-${tile.name}-validity`] = tile.sources.validity;
+    }
     this.compiledGraph.encode(encoder, {parameters: undefined, buffers: importedBuffers});
     encoder.copyBufferToBuffer({
       sourceBuffer: this.buffers.domain,
@@ -510,7 +610,7 @@ export class RasterLabEngine {
       destinationOffset: MEAN_BYTE_OFFSET,
       size: Float32Array.BYTES_PER_ELEMENT
     });
-    if (this.settings.automaticThreshold && this.settings.thresholdEnabled) {
+    if ((this.settings.automaticThreshold && this.settings.thresholdEnabled) || this.global) {
       encoder.copyBufferToBuffer({
         sourceBuffer: this.buffers.automaticThreshold,
         destinationBuffer: this.buffers.summaryReadback,
@@ -580,6 +680,19 @@ export class RasterLabEngine {
         : this.settings.threshold,
       thresholdEnabled: this.settings.thresholdEnabled,
       automaticThreshold: this.settings.automaticThreshold,
+      globalMedian:
+        this.global && !this.settings.automaticThreshold
+          ? aggregateView.getFloat32(THRESHOLD_BYTE_OFFSET, true)
+          : null,
+      componentsEnabled: this.settings.componentsEnabled,
+      componentConnectivity: this.settings.componentConnectivity,
+      componentMaximumIterations: this.settings.componentMaximumIterations,
+      componentIterations: this.settings.componentsEnabled
+        ? aggregateView.getUint32(CONTOUR_REQUIRED_BYTE_OFFSET, true)
+        : 0,
+      componentConverged:
+        this.settings.componentsEnabled &&
+        aggregateView.getUint32(CONTOUR_OVERFLOW_BYTE_OFFSET, true) !== 0,
       contoursEnabled: this.settings.contoursEnabled,
       contourLevel:
         this.settings.morphologyOperation !== 'none' && this.settings.morphologyMode === 'binary'
@@ -656,6 +769,131 @@ export class RasterLabEngine {
       'uint32',
       this.dataset.pixelCount
     );
+
+    if (this.overview) {
+      const sourcePixelCount = this.overview.metadata.width * this.overview.metadata.height;
+      const nativeRed = this.importView(
+        graph,
+        'overview-source-red',
+        this.overview.sources.red,
+        'float32',
+        sourcePixelCount
+      );
+      const nativeNearInfrared = this.importView(
+        graph,
+        'overview-source-near-infrared',
+        this.overview.sources.nearInfrared,
+        'float32',
+        sourcePixelCount
+      );
+      const nativeValidity = this.importView(
+        graph,
+        'overview-source-validity',
+        this.overview.sources.validity,
+        'uint32',
+        sourcePixelCount
+      );
+      const redMeanValidity = this.createTransientView(
+        graph,
+        'overview-red-mean-validity',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const redSum = this.createTransientView(
+        graph,
+        'overview-red-sum',
+        'float32',
+        this.dataset.pixelCount
+      );
+      const redValidCount = this.createTransientView(
+        graph,
+        'overview-red-valid-count',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const nearInfraredMeanValidity = this.createTransientView(
+        graph,
+        'overview-near-infrared-mean-validity',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const nearInfraredSum = this.createTransientView(
+        graph,
+        'overview-near-infrared-sum',
+        'float32',
+        this.dataset.pixelCount
+      );
+      const nearInfraredValidCount = this.createTransientView(
+        graph,
+        'overview-near-infrared-valid-count',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const categoryValidity = this.createTransientView(
+        graph,
+        'overview-category-validity',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const categoryCoverage = this.createTransientView(
+        graph,
+        'overview-category-coverage',
+        'uint32',
+        this.dataset.pixelCount
+      );
+      const nativeRedBand: GPURasterBufferBand<'float32'> = {
+        id: 'native-red-reflectance',
+        format: 'float32',
+        storage: {kind: 'buffer', values: nativeRed},
+        validity: nativeValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+      const nativeNearInfraredBand: GPURasterBufferBand<'float32'> = {
+        id: 'native-near-infrared-reflectance',
+        format: 'float32',
+        storage: {kind: 'buffer', values: nativeNearInfrared},
+        validity: nativeValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+
+      new GPURasterOverview({
+        id: 'raster-lab-generated-red-overview',
+        metadata: this.overview.metadata,
+        scale: 2,
+        input: nativeRedBand,
+        output: redValues,
+        outputValidity: redMeanValidity,
+        sum: redSum,
+        validCount: redValidCount
+      }).addToGraph(graph);
+      new GPURasterOverview({
+        id: 'raster-lab-generated-near-infrared-overview',
+        metadata: this.overview.metadata,
+        scale: 2,
+        input: nativeNearInfraredBand,
+        output: nearInfraredValues,
+        outputValidity: nearInfraredMeanValidity,
+        sum: nearInfraredSum,
+        validCount: nearInfraredValidCount
+      }).addToGraph(graph);
+
+      const nativeCloudCategories: GPURasterBufferBand<'uint32'> = {
+        id: 'native-cloud-category',
+        format: 'uint32',
+        storage: {kind: 'buffer', values: nativeValidity}
+      };
+      new GPURasterCategoricalOverview({
+        id: `raster-lab-generated-cloud-${this.overview.categoryPolicy}`,
+        metadata: this.overview.metadata,
+        scale: 2,
+        input: nativeCloudCategories,
+        policy: this.overview.categoryPolicy,
+        output: sourceValidity,
+        outputValidity: categoryValidity,
+        validCount: categoryCoverage
+      }).addToGraph(graph);
+    }
+
     const vegetationIndex = this.importView(
       graph,
       'vegetation-index',
@@ -744,6 +982,20 @@ export class RasterLabEngine {
       graph,
       'binary-morphology-validity',
       this.buffers.binaryMorphologyValidity,
+      'uint32',
+      this.dataset.pixelCount
+    );
+    const componentLabels = this.importView(
+      graph,
+      'component-labels',
+      this.buffers.componentLabels,
+      'uint32',
+      this.dataset.pixelCount
+    );
+    const componentValidity = this.importView(
+      graph,
+      'component-validity',
+      this.buffers.componentValidity,
       'uint32',
       this.dataset.pixelCount
     );
@@ -1203,15 +1455,27 @@ export class RasterLabEngine {
       storage: {kind: 'buffer', values: analyzedValues},
       validity: analyzedValidity
     };
+    const globalBands = this.global ? this.createGlobalBands(graph, contrastOptions) : [];
 
     if (this.settings.thresholdEnabled || binaryMorphologyEnabled) {
       if (this.settings.automaticThreshold) {
-        new GPURasterHistogram({
-          id: 'raster-lab-baseline-histogram',
-          input: analyzedBand,
-          output: baselineHistogram,
-          domainOutput: baselineDomain
-        }).addToGraph(graph);
+        if (this.global) {
+          const baselineAccumulator: GPURasterGlobalAccumulator = {
+            extent: baselineDomain,
+            count: this.createTransientView(graph, 'global-baseline-count', 'uint32', 1),
+            sum: this.createTransientView(graph, 'global-baseline-sum', 'float32', 1),
+            histogram: baselineHistogram,
+            overflow: this.createTransientView(graph, 'global-baseline-overflow', 'uint32', 1)
+          };
+          this.addGlobalAccumulator(graph, 'baseline', globalBands, baselineAccumulator);
+        } else {
+          new GPURasterHistogram({
+            id: 'raster-lab-baseline-histogram',
+            input: analyzedBand,
+            output: baselineHistogram,
+            domainOutput: baselineDomain
+          }).addToGraph(graph);
+        }
 
         new GPURasterOtsuThreshold({
           id: 'raster-lab-otsu-threshold',
@@ -1341,6 +1605,27 @@ export class RasterLabEngine {
       }
     }
 
+    if (this.settings.componentsEnabled) {
+      const componentInput: GPURasterBufferBand<'uint32'> = {
+        id: 'raster-lab-classified-foreground',
+        format: 'uint32',
+        storage: {kind: 'buffer', values: thresholdValidity},
+        validity: binaryMorphologyEnabled ? binaryMorphologyValidity : analyzedValidity
+      };
+      new GPURasterConnectedComponents({
+        id: 'raster-lab-connected-components',
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: componentInput,
+        output: componentLabels,
+        outputValidity: componentValidity,
+        converged: contourOverflow,
+        iterationCount: contourRequiredSegmentCount,
+        connectivity: this.settings.componentConnectivity,
+        maximumIterations: this.settings.componentMaximumIterations
+      }).addToGraph(graph);
+    }
+
     if (this.settings.contoursEnabled) {
       const contourDraw = this.contourCommands.importToGraph(graph);
       const contourBand: GPURasterBufferBand = binaryMorphologyEnabled
@@ -1374,25 +1659,234 @@ export class RasterLabEngine {
           : analyzedValidity
     };
 
-    new GPURasterStatistics({
-      id: 'raster-lab-valid-statistics',
-      width: this.dataset.width,
-      height: this.dataset.height,
-      input: selectedBand,
-      count: validCount,
-      sum,
-      mean,
-      extent: domain
-    }).addToGraph(graph);
+    if (this.global) {
+      const selectedGlobalBands = globalBands.map(tile => {
+        if (!this.settings.thresholdEnabled) return tile;
+        const selection = this.createTransientView(
+          graph,
+          `global-${tile.name}-threshold-selection`,
+          'uint32',
+          tile.width * tile.height
+        );
+        new GPURasterThreshold({
+          id: `raster-lab-global-${tile.name}-threshold`,
+          width: tile.width,
+          height: tile.height,
+          input: tile.input,
+          output: selection,
+          threshold: this.settings.automaticThreshold
+            ? automaticThreshold
+            : this.settings.threshold,
+          operation: 'above',
+          inclusive: true
+        }).addToGraph(graph);
+        return {...tile, input: {...tile.input, validity: selection}};
+      });
+      const accumulator: GPURasterGlobalAccumulator = {
+        extent: domain,
+        count: validCount,
+        sum,
+        histogram,
+        overflow: this.createTransientView(graph, 'global-output-overflow', 'uint32', 1)
+      };
+      this.addGlobalAccumulator(graph, 'output', selectedGlobalBands, accumulator);
+      if (!this.settings.automaticThreshold) {
+        new GPURasterGlobalPercentile({
+          id: 'raster-lab-global-median',
+          accumulator,
+          percentile: 0.5,
+          output: automaticThreshold
+        }).addToGraph(graph);
+      }
+      new GPURasterBandMath({
+        id: 'raster-lab-global-mean',
+        width: 1,
+        height: 1,
+        left: {
+          id: 'raster-lab-global-sum',
+          format: 'float32',
+          storage: {kind: 'buffer', values: sum}
+        },
+        right: {
+          id: 'raster-lab-global-count',
+          format: 'uint32',
+          storage: {kind: 'buffer', values: validCount}
+        },
+        operation: 'divide',
+        output: mean,
+        outputValidity: this.createTransientView(graph, 'global-mean-validity', 'uint32', 1)
+      }).addToGraph(graph);
+    } else {
+      new GPURasterStatistics({
+        id: 'raster-lab-valid-statistics',
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: selectedBand,
+        count: validCount,
+        sum,
+        mean,
+        extent: domain
+      }).addToGraph(graph);
 
-    new GPURasterHistogram({
-      id: 'raster-lab-valid-histogram',
-      input: selectedBand,
-      output: histogram,
-      domain
-    }).addToGraph(graph);
+      new GPURasterHistogram({
+        id: 'raster-lab-valid-histogram',
+        input: selectedBand,
+        output: histogram,
+        domain
+      }).addToGraph(graph);
+    }
 
     return graph.compile();
+  }
+
+  /** Recompute the exact selected pointwise quantity from each bounded, GPU-resident core. */
+  private createGlobalBands(
+    graph: GPUCommandGraph,
+    contrast: {
+      domain: readonly [number, number];
+      contrast: number;
+      gamma: number;
+      mode: 'linear' | 'gamma';
+    }
+  ): RasterLabGlobalBand[] {
+    const bands: RasterLabGlobalBand[] = [];
+    for (const tile of this.global?.tiles ?? []) {
+      const pixelCount = tile.width * tile.height;
+      const redValues = this.importView(
+        graph,
+        `global-${tile.name}-red`,
+        tile.sources.red,
+        'float32',
+        pixelCount
+      );
+      const nearInfraredValues = this.importView(
+        graph,
+        `global-${tile.name}-near-infrared`,
+        tile.sources.nearInfrared,
+        'float32',
+        pixelCount
+      );
+      const sourceValidity = this.importView(
+        graph,
+        `global-${tile.name}-validity`,
+        tile.sources.validity,
+        'uint32',
+        pixelCount
+      );
+      const vegetation = this.createTransientView(
+        graph,
+        `global-${tile.name}-vegetation`,
+        'float32',
+        pixelCount
+      );
+      const vegetationValidity = this.createTransientView(
+        graph,
+        `global-${tile.name}-vegetation-validity`,
+        'uint32',
+        pixelCount
+      );
+      const red: GPURasterBufferBand<'float32'> = {
+        id: `global-${tile.name}-red-reflectance`,
+        format: 'float32',
+        storage: {kind: 'buffer', values: redValues},
+        validity: sourceValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+      const nearInfrared: GPURasterBufferBand<'float32'> = {
+        id: `global-${tile.name}-near-infrared-reflectance`,
+        format: 'float32',
+        storage: {kind: 'buffer', values: nearInfraredValues},
+        validity: sourceValidity,
+        noDataValue: RASTER_LAB_NO_DATA_VALUE
+      };
+      new GPURasterNDVI({
+        id: `raster-lab-global-${tile.name}-ndvi`,
+        width: tile.width,
+        height: tile.height,
+        nearInfrared,
+        red,
+        output: vegetation,
+        outputValidity: vegetationValidity,
+        epsilon: this.epsilon
+      }).addToGraph(graph);
+
+      const selectedValues =
+        this.settings.mode === 'ndvi'
+          ? vegetation
+          : this.settings.mode === 'red'
+            ? redValues
+            : nearInfraredValues;
+      const input: GPURasterBufferBand<'float32'> = {
+        id: `global-${tile.name}-${this.settings.mode}`,
+        format: 'float32',
+        storage: {kind: 'buffer', values: selectedValues},
+        validity: vegetationValidity
+      };
+      const values = this.createTransientView(
+        graph,
+        `global-${tile.name}-analyzed-values`,
+        'float32',
+        pixelCount
+      );
+      const validity = this.createTransientView(
+        graph,
+        `global-${tile.name}-analyzed-validity`,
+        'uint32',
+        pixelCount
+      );
+      new GPURasterContrast({
+        id: `raster-lab-global-${tile.name}-contrast`,
+        width: tile.width,
+        height: tile.height,
+        input,
+        output: values,
+        outputValidity: validity,
+        ...contrast
+      }).addToGraph(graph);
+      bands.push({
+        name: tile.name,
+        width: tile.width,
+        height: tile.height,
+        input: {
+          id: `global-${tile.name}-contrast-adjusted`,
+          format: 'float32',
+          storage: {kind: 'buffer', values},
+          validity
+        }
+      });
+    }
+    return this.global?.order === 'reverse' ? bands.reverse() : bands;
+  }
+
+  /** Finalize all extrema before replaying each bounded tile against the one stable domain. */
+  private addGlobalAccumulator(
+    graph: GPUCommandGraph,
+    phase: 'baseline' | 'output',
+    tiles: readonly RasterLabGlobalBand[],
+    accumulator: GPURasterGlobalAccumulator
+  ): void {
+    new GPURasterGlobalInitialize({
+      id: `raster-lab-global-${phase}-initialize`,
+      accumulator
+    }).addToGraph(graph);
+    for (const tile of tiles) {
+      new GPURasterGlobalStatisticsMerge({
+        id: `raster-lab-global-${phase}-${tile.name}-statistics`,
+        width: tile.width,
+        height: tile.height,
+        input: tile.input,
+        accumulator
+      }).addToGraph(graph);
+    }
+    for (const tile of tiles) {
+      new GPURasterGlobalHistogramMerge({
+        id: `raster-lab-global-${phase}-${tile.name}-histogram`,
+        width: tile.width,
+        height: tile.height,
+        input: tile.input,
+        accumulator
+      }).addToGraph(graph);
+    }
   }
 
   private importView<Format extends 'float32' | 'uint32'>(

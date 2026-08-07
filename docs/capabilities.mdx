@@ -360,6 +360,13 @@ six standardized workload families.
 | Cancellation-safe raster tile requests | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Deduplicate compatible in-flight source requests without canceling other waiting callers. |
 | Fence-protected raster tile leases | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Pin raster tiles and reusable graphs until an application-owned post-submission completion fence resolves. |
 | Compiled raster graph reuse | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Reuse shape-compatible compiled analysis graphs while rebinding the current tile's borrowed GPU buffers. |
+| Seam-safe cross-tile raster halos | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Assemble real neighboring samples on the GPU, preserve cumulative receptive fields, and publish each half-open tile core exactly once. |
+| Nodata-aware analytical overviews | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Generate calibrated, valid-sample-weighted floating means with explicit sums, counts, masks, and odd-edge coverage. |
+| Exact categorical raster overviews | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Preserve native signed and unsigned class identifiers with deterministic nearest or valid-label mode policies. |
+| Dataset-wide tiled raster statistics | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Merge valid tile counts, calibrated sums, and extrema into explicitly initialized GPU-resident global accumulators. |
+| Stable-domain global histogram replay | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Replay every owned tile core against the finalized dataset-wide value domain before merging compatible bins. |
+| GPU global percentiles and thresholds | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Derive histogram-estimated global percentiles and consistent Otsu thresholds without downloading raster samples. |
+| Overflow-aware global raster reductions | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Saturate global counts and bins, expose sticky overflow flags, and invalidate unsafe percentile results. |
 | Buffer and texture conversion | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Convert supported raster bands between GPU buffers and textures without downloading source pixels. |
 | Calibrated raster band math | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Combine supported numeric bands while applying explicit scale, offset, validity, and nodata contracts. |
 | GPU vegetation index | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Compute normalized-difference vegetation index (NDVI) from compatible red and near-infrared bands. |
@@ -375,11 +382,14 @@ six standardized workload families.
 | Binary and grayscale morphology | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Process supported binary masks or grayscale raster bands with explicit structuring elements, borders, and nodata policies. |
 | Raster dilation and erosion | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Expand or contract compatible raster features through bounded square or Manhattan-diamond neighborhoods. |
 | Raster opening and closing | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Compose supported erosion/dilation sequences to remove small features or close compatible raster gaps. |
+| Deterministic raster connected components | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Assign sparse minimum-root foreground labels with explicit four/eight-neighbor connectivity while preserving valid background and nodata barriers. |
+| Convergence-gated raster component labels | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Publish GPU convergence and optional actual iteration counts; clear all labels and validity when a bounded graph cannot prove convergence. |
 | Marching-squares contours | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Classify bounded raster cells and generate supported vector contour segments directly on the GPU. |
 | Indirect contour overlays | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Draw GPU-generated contour geometry without downloading or rebuilding every segment on the CPU. |
 | Device-aware raster dispatch | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Plan bounded dispatch stripes against the selected device's actual compute limits. |
 
-Read the [LuRaster API reference](/docs/api-reference/experimental/luraster), or experiment
+Start with the [LuRaster concepts and execution guide](/docs/api-reference/experimental/luraster/concepts),
+read the [LuRaster API reference](/docs/api-reference/experimental/luraster), or experiment
 with the [Satellite Raster Lab](/examples/showcase/raster-lab).
 
 ### Applied visualization, geospatial, and interaction
@@ -660,7 +670,7 @@ commitments to release dates.
 | Kernel fusion | Opportunity | WebGPU | `@luma.gl/gpgpu` | Reduce intermediate allocations by fusing compatible columnar compute operations. |
 | Advanced dataframe analytics | Opportunity | WebGPU | `@luma.gl/experimental/ludf` | Extend existing grouped analytics, joins, lookups, sorting, and top-K toward non-unique/outer joins, temporal windows, and incremental updates. |
 | GPU vector similarity search | Opportunity | WebGPU | `@luma.gl/experimental` | Add embedding similarity, nearest-neighbor indexes, top-K distance queries, and compatible metadata filtering. |
-| Seam-safe multi-tile raster analysis | Opportunity | WebGPU | `@luma.gl/experimental/luraster` | Build on existing tile residency and graph reuse with assembled cross-tile halos, stitched contours, global aggregates, and generated analytical overviews. |
+| Cross-tile contour stitching and combined raster pipelines | Opportunity | WebGPU | `@luma.gl/experimental/luraster` | Extend implemented halos, generated overviews, and global replay toward stitched contour topology and combined cross-tile neighborhood/overview analysis. |
 | Advanced GPU graph analytics | Opportunity | WebGPU | `@luma.gl/experimental/lugraph` | Build on existing core numbers, weighted shortest paths, local clustering, community modularity scoring, all six Graphalytics families, and layouts with Louvain/Leiden partition optimization and dynamic graph updates. |
 | Hierarchical spatial indexes | Opportunity | WebGPU | `@luma.gl/experimental/geospatial` | Extend supported spatial queries toward tiled indexing, nearest neighbors, and spatial joins. |
 | High-precision geospatial pipelines | Opportunity | WebGPU | `@luma.gl/experimental/luproj` | Broaden projection, local-origin precision, coordinate systems, and streamed map-scale workflows. |
