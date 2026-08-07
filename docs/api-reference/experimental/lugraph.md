@@ -70,6 +70,39 @@ network, dependency map, fraud investigation, or other relationship visualizatio
 WebGPU-only educational example, not a large-graph performance benchmark: its exact layout costs
 `O(V² + E)` per force iteration and intentionally uses only 128 vertices.
 
+### Use luGraph from deck.gl without copying graph buffers
+
+**Question: How can an existing deck.gl application explore a graph without converting GPU
+relationships, analytics, or moving node positions into JavaScript objects?**
+
+The optional [luGraph + deck.gl network explorer](/examples/deck/lugraph-explorer) answers that
+question with the reusable `LuGraphDeckEffect`, `LuGraphNodeLayer`, and `LuGraphEdgeLayer`
+implementations from the existing private `@deck.gl-community/arrow-layers` adapter package, an
+`OrthographicView`, and deck.gl's existing interaction and asynchronous WebGPU picking systems.
+Use it when a social-network, service-dependency, fraud-investigation, or citation visualization
+already uses deck.gl and needs GPU graph results to become directly drawable attributes.
+
+The effect first encodes forward and reverse adjacency, normalized PageRank, and weak components.
+Later frames encode bounded neighborhood selection and exact force-directed layout into
+deck.gl's own command encoder; deck.gl remains responsible for queue submission. The writable layout
+allocation is also the node layer's `float32x2` instance vertex attribute. PageRank scores,
+component labels, hop distances, and the selection mask remain GPU storage inputs; each nonempty
+original edge partition gets its own edge layer,
+without concatenation, buffer copies, or per-frame graph readback.
+
+The deterministic example fixture is uploaded once. Selecting, pinning, dragging, and changing
+neighborhood depth write only the necessary interaction controls or coordinates; they do not
+download graph columns. An explicitly requested native deck.gl pick returns the selected original
+vertex identifier to JavaScript. Its implementation and transfer size belong to deck.gl; it is
+separate from the native explorer's custom **8-byte** integer-picking path above. The example uses
+exact `O(V² + E)` layout, not the optional spatial approximation, and does not promise large-graph
+throughput.
+
+The reusable graph effect, node and edge layers, and graph integration's deck.gl imports live in
+the existing private `@deck.gl-community/arrow-layers` adapter. The website-only example consumes
+those exported symbols without importing `@deck.gl/core` or adding an example package; neither
+`@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl.
+
 ## Measure real CPU and WebGPU graph workloads
 
 **Question: Does this graph workflow benefit from GPU execution on my actual browser, and what do
