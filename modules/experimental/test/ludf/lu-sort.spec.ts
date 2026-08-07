@@ -3,12 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph} from '@luma.gl/experimental';
 import {
   LuDataFrame,
   column,
   literal,
   parameter,
+  type CompiledLuDataFrameGlobalSort,
   type LuDataFrameQueryParameters
 } from '@luma.gl/experimental/ludf';
 import {GPUData, GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
@@ -392,11 +394,17 @@ test('LuDataFrame sorts nullable derived columns and schema-only source tables',
     id: 'ludf-schema-only-sort'
   });
   const empty = emptyFrame.sortBy('score').compile(emptyGraph);
+  const emptyGlobal = emptyFrame
+    .sortByGlobal('score')
+    .compile(
+      new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-schema-only-global-sort'})
+    );
 
   try {
     const commandEncoder = device.createCommandEncoder({id: 'ludf-derived-and-empty-sort'});
     derived.encode(commandEncoder);
     empty.encode(commandEncoder);
+    emptyGlobal.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
     testContext.deepEqual(
@@ -419,9 +427,13 @@ test('LuDataFrame sorts nullable derived columns and schema-only source tables',
       'empty-sort',
       'schema-only sorted projections retain source metadata'
     );
+    testContext.deepEqual(await readLuSortChunks(emptyGlobal.globalSelectedCount), [[0]]);
+    testContext.equal(emptyGlobal.globalRowIndices.length, 0);
+    testContext.deepEqual(emptyGlobal.table.batches, []);
   } finally {
     derived.destroy();
     empty.destroy();
+    emptyGlobal.destroy();
     emptyFrame.destroy();
     fixture.frame.destroy();
   }
@@ -429,7 +441,271 @@ test('LuDataFrame sorts nullable derived columns and schema-only source tables',
   testContext.end();
 });
 
-function createLuSortFixture(device: Device): LuSortFixture {
+test('LuDataFrame globally sorts stable nullable floating-point keys across preserved batches', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const fixture = createLuSortFixture(device, {sourceOffsets: [100, 400, 900]});
+  const sorted = fixture.frame
+    .sortByGlobal('score')
+    .compile(
+      new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-global-float-sort'})
+    );
+  const nullsFirst = fixture.frame
+    .sortByGlobal('score', {nulls: 'first', nans: 'first'})
+    .compile(
+      new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-global-null-nan-sort'})
+    );
+
+  try {
+    const encoder = device.createCommandEncoder({id: 'ludf-global-float-sort-encode'});
+    sorted.encode(encoder);
+    nullsFirst.encode(encoder);
+    device.submit(encoder.finish());
+
+    testContext.deepEqual(
+      await readLuSortChunks(sorted.globalSelectedCount),
+      [[13]],
+      'global ordering exposes one selected-row count across every preserved batch'
+    );
+    testContext.deepEqual(
+      await readLuSortChunks(sorted.globalRowIndices),
+      [[103, 906, 901, 100, 101, 904, 905, 900, 902, 104, 102, 903, 105]],
+      'global numeric sorting merges batches stably and preserves discontinuous source identities'
+    );
+    testContext.deepEqual(
+      await readLuSortChunks(nullsFirst.globalRowIndices),
+      [[105, 102, 903, 103, 906, 901, 100, 101, 904, 905, 900, 902, 104]],
+      'global null placement is absolute while NaNs remain independently ordered and stable'
+    );
+    testContext.deepEqual(
+      sorted.table.batches.map(batch => batch.numRows),
+      [6, 0, 7],
+      'global permutation never concatenates or reorders original dataframe batches'
+    );
+    testContext.deepEqual(
+      await readLuSortChunks(sorted.selectedCounts),
+      [[6], [0], [7]],
+      'global full sorting preserves the existing batch-aligned selection counts'
+    );
+  } finally {
+    sorted.destroy();
+    nullsFirst.destroy();
+    fixture.frame.destroy();
+  }
+
+  testContext.end();
+});
+
+test('LuDataFrame applies one globally stable top-K and reconciles source-aligned batch masks', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const fixture = createLuSortFixture(device);
+  const highest = fixture.frame
+    .topKGlobal('score', 4)
+    .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-global-top-k'}));
+  const lowest = fixture.frame
+    .sortByGlobal('signed')
+    .topK(3)
+    .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-global-bottom-k'}));
+  const empty = fixture.frame
+    .topKGlobal('category', 0)
+    .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-global-zero-k'}));
+
+  try {
+    const encoder = device.createCommandEncoder({id: 'ludf-global-top-k-encode'});
+    highest.encode(encoder);
+    lowest.encode(encoder);
+    empty.encode(encoder);
+    device.submit(encoder.finish());
+
+    testContext.deepEqual(await readLuSortChunks(highest.globalSelectedCount), [[4]]);
+    testContext.deepEqual(
+      await readLuSortBuffer(getLuSortBuffer(highest.globalRowIndices.data[0]), 4),
+      [44, 46, 48, 40],
+      'one descending global bound selects the four largest rows across all batches'
+    );
+    testContext.deepEqual(
+      await readLuSortChunks(highest.selectionMask),
+      [[1, 0, 0, 0, 1, 0], [], [1, 0, 1, 0, 0, 0, 0]],
+      'global top-K updates every original source-aligned selection mask'
+    );
+    testContext.deepEqual(await readLuSortChunks(highest.selectedCounts), [[2], [0], [2]]);
+    testContext.deepEqual(
+      await readLuSortedSourceRows(highest.rowIndices, highest.selectedCounts),
+      [[40, 44], [], [46, 48]],
+      'inherited batch-local row outputs remain coherent with the global selection'
+    );
+
+    testContext.deepEqual(await readLuSortChunks(lowest.globalSelectedCount), [[3]]);
+    testContext.deepEqual(
+      await readLuSortBuffer(getLuSortBuffer(lowest.globalRowIndices.data[0]), 3),
+      [41, 48, 42],
+      'sorted-plan limiting preserves ascending full-width signed ordering across batches'
+    );
+    testContext.deepEqual(await readLuSortChunks(empty.globalSelectedCount), [[0]]);
+    testContext.deepEqual(await readLuSortChunks(empty.selectedCounts), [[0], [0], [0]]);
+  } finally {
+    highest.destroy();
+    lowest.destroy();
+    empty.destroy();
+    fixture.frame.destroy();
+  }
+
+  testContext.end();
+});
+
+test('LuDataFrame globally orders filtered derived keys and preserves reusable query parameters', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const fixture = createLuSortFixture(device);
+  const compiled = fixture.frame
+    .filter(column('signed').greaterThan(parameter('minimumSigned', -4)))
+    .withColumn('shiftedSigned', column('signed').add(literal(0)), {format: 'sint32'})
+    .topKGlobal('shiftedSigned', 2)
+    .compile(
+      new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-global-parameter'})
+    );
+
+  try {
+    let encoder = device.createCommandEncoder({id: 'ludf-global-parameter-first'});
+    compiled.encode(encoder, {minimumSigned: 6});
+    device.submit(encoder.finish());
+    testContext.deepEqual(await readLuSortChunks(compiled.globalSelectedCount), [[2]]);
+    testContext.deepEqual(
+      await readLuSortBuffer(getLuSortBuffer(compiled.globalRowIndices.data[0]), 2),
+      [40, 44],
+      'global derived top-K retains stable source order among maximum signed-key ties'
+    );
+
+    encoder = device.createCommandEncoder({id: 'ludf-global-parameter-second'});
+    compiled.encode(encoder, {minimumSigned: 0x7fffffff});
+    device.submit(encoder.finish());
+    testContext.deepEqual(await readLuSortChunks(compiled.globalSelectedCount), [[0]]);
+    testContext.deepEqual(await readLuSortChunks(compiled.selectedCounts), [[0], [0], [0]]);
+  } finally {
+    compiled.destroy();
+    fixture.frame.destroy();
+  }
+
+  testContext.end();
+});
+
+test('LuDataFrame globally orders preserved batches through bounded three-dimensional sorting', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const originalLimits = device.limits;
+  Object.defineProperty(device, 'limits', {
+    configurable: true,
+    value: new Proxy(originalLimits, {
+      get(target, property) {
+        return property === 'maxComputeWorkgroupsPerDimension'
+          ? 2
+          : Reflect.get(target, property, target);
+      }
+    })
+  });
+  const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
+  const sourceBuffers: Buffer[] = [];
+  const expected: {score: number; sourceRow: number; ordinal: number}[] = [];
+  const lengths = [513, 0, 512];
+  const offsets = [1_000, 5_000, 9_000];
+  let ordinal = 0;
+  const batches = lengths.map((length, batchIndex) => {
+    const scores = Float32Array.from({length}, (_, index) => {
+      const score = ((ordinal + index) * 37) % 97;
+      expected.push({score, sourceRow: offsets[batchIndex] + index, ordinal: ordinal + index});
+      return score;
+    });
+    const batch = new GPURecordBatch<LuSortSourceSchema>({
+      gpuData: {
+        score: createLuSortData(device, sourceBuffers, scores, 'float32'),
+        signed: createLuSortData(device, sourceBuffers, Int32Array.from(scores), 'sint32'),
+        category: createLuSortData(device, sourceBuffers, Uint32Array.from(scores), 'uint32')
+      },
+      fields: [
+        {name: 'score', format: 'float32', nullable: false},
+        {name: 'signed', format: 'sint32', nullable: false},
+        {name: 'category', format: 'uint32', nullable: false}
+      ],
+      sourceInfo: {
+        sourceBatchIndex: batchIndex,
+        sourceRowIndexOffset: offsets[batchIndex],
+        sourceRowCount: length
+      }
+    });
+    ordinal += length;
+    return batch;
+  });
+  const frame = new LuDataFrame<LuSortSourceSchema>({
+    table: new GPUTable({batches}),
+    ownership: 'owned'
+  });
+  let compiled: CompiledLuDataFrameGlobalSort<LuSortSourceSchema> | undefined;
+
+  try {
+    compiled = frame
+      .topKGlobal('score', 25)
+      .compile(
+        new GPUCommandGraph<LuDataFrameQueryParameters>(device, {id: 'ludf-global-bounded-sort'})
+      );
+    const encoder = device.createCommandEncoder({id: 'ludf-global-bounded-sort-encode'});
+    compiled.encode(encoder);
+    device.submit(encoder.finish());
+
+    const expectedRows = expected
+      .sort((left, right) => right.score - left.score || left.ordinal - right.ordinal)
+      .slice(0, 25)
+      .map(row => row.sourceRow);
+    testContext.deepEqual(await readLuSortChunks(compiled.globalSelectedCount), [[25]]);
+    testContext.deepEqual(
+      await readLuSortBuffer(getLuSortBuffer(compiled.globalRowIndices.data[0]), 25),
+      expectedRows,
+      'stable global top-K merges 1,025 discontiguous source rows without collapsing batches'
+    );
+    testContext.deepEqual(
+      compiled.table.batches.map(batch => batch.numRows),
+      lengths
+    );
+    testContext.ok(
+      dispatch.mock.calls.some(
+        ([, horizontal, vertical, depth]) => horizontal === 2 && vertical === 2 && depth === 2
+      ),
+      'the explicit cross-batch permutation uses bounded 2×2×2 GPU sorting'
+    );
+  } finally {
+    compiled?.destroy();
+    frame.destroy();
+    dispatch.mockRestore();
+    Object.defineProperty(device, 'limits', {configurable: true, value: originalLimits});
+  }
+
+  testContext.end();
+});
+
+function createLuSortFixture(
+  device: Device,
+  options: {sourceOffsets?: readonly number[]} = {}
+): LuSortFixture {
   const sourceBuffers: Buffer[] = [];
   const scores = [
     Float32Array.from([-0, 0, Number.NaN, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, 5]),
@@ -468,7 +744,7 @@ function createLuSortFixture(device: Device): LuSortFixture {
       ],
       sourceInfo: {
         sourceBatchIndex: batchIndex + 4,
-        sourceRowIndexOffset,
+        sourceRowIndexOffset: options.sourceOffsets?.[batchIndex] ?? sourceRowIndexOffset,
         sourceRowCount: values.length
       }
     });

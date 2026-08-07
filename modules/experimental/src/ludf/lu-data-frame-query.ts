@@ -29,7 +29,11 @@ import {
   type CompiledLuDataFrameQuery,
   type LuDataFrameQueryParameters
 } from './lu-query-compiler';
-import {LuDataFrameSortQuery, type LuDataFrameSortOptions} from './lu-sort-query';
+import {
+  LuDataFrameGlobalSortQuery,
+  LuDataFrameSortQuery,
+  type LuDataFrameSortOptions
+} from './lu-sort-query';
 
 /** Portable scalar storage formats supported by computed dataframe columns. */
 export type LuDataFrameDerivedColumnFormat = 'float32' | 'sint32' | 'uint32';
@@ -201,6 +205,23 @@ export class LuDataFrameQuery<
     options: LuDataFrameSortOptions = {}
   ): LuDataFrameSortQuery<Logical, SelectedColumns, Column, Source> {
     return new LuDataFrameSortQuery(this, column, options, limit, 'descending');
+  }
+
+  /** Plans explicit stable ordering across every preserved source record batch. */
+  sortByGlobal<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameGlobalSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameGlobalSortQuery(this, column, options);
+  }
+
+  /** Plans one descending global top-K selection without copying source dataframe columns. */
+  topKGlobal<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    limit: number,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameGlobalSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameGlobalSortQuery(this, column, options, limit, 'descending');
   }
 
   /** Plans a stable, unique-right inner join without allocating, repacking, or retaining rows. */
