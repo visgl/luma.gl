@@ -89,7 +89,22 @@ try {
       tileOrigin: rasterLab.tileOrigin,
       coordinateReferenceSystem: rasterLab.coordinateReferenceSystem,
       tileLoadCount: rasterLab.tileLoadCount,
+      sourceReadCount: rasterLab.sourceReadCount,
       abortedTileRequestCount: rasterLab.abortedTileRequestCount,
+      cacheCapacity: rasterLab.cacheCapacity,
+      residentTileCount: rasterLab.residentTileCount,
+      residentGraphCount: rasterLab.residentGraphCount,
+      residentCpuBytes: rasterLab.residentCpuBytes,
+      residentGpuBytes: rasterLab.residentGpuBytes,
+      maximumCpuBytes: rasterLab.maximumCpuBytes,
+      maximumGpuBytes: rasterLab.maximumGpuBytes,
+      cacheHits: rasterLab.cacheHits,
+      cacheMisses: rasterLab.cacheMisses,
+      cacheEvictions: rasterLab.cacheEvictions,
+      graphCompileCount: rasterLab.graphCompileCount,
+      graphReuseCount: rasterLab.graphReuseCount,
+      pinnedTileCount: rasterLab.pinnedTileCount,
+      pinnedGraphCount: rasterLab.pinnedGraphCount,
       edgeMode: rasterLab.edgeMode,
       edgeDirection: rasterLab.edgeDirection,
       morphologyOperation: rasterLab.morphologyOperation,
@@ -119,6 +134,48 @@ try {
     'source coordinate-reference metadata survives decoding'
   );
   assert.equal(initialState.tileLoadCount, 1, 'initialization uploads exactly one decoded tile');
+  assert.equal(initialState.sourceReadCount, 1, 'initialization decodes the source exactly once');
+  assert.equal(initialState.cacheCapacity, 3, 'the tile cache begins with explicit bounded capacity');
+  assert.equal(initialState.residentTileCount, 1, 'the initial source owns one resident tile');
+  assert.equal(initialState.residentGraphCount, 1, 'the initial analysis compiles one cached graph');
+  assert.equal(
+    initialState.residentCpuBytes,
+    initialState.pixelCount * Uint32Array.BYTES_PER_ELEMENT * 3,
+    'decoded red, near-infrared, and their shared validity mask are counted exactly once'
+  );
+  assert(
+    initialState.residentGpuBytes > initialState.residentCpuBytes,
+    'GPU residency includes uploaded bands, graph transients, and application-owned outputs'
+  );
+  assert(
+    initialState.residentCpuBytes <= initialState.maximumCpuBytes &&
+      initialState.residentGpuBytes <= initialState.maximumGpuBytes,
+    'initial tile and graph allocations stay within independent CPU and GPU budgets'
+  );
+  assert.equal(initialState.cacheHits, 0, 'the initial source cannot be a cache hit');
+  assert.equal(initialState.cacheMisses, 1, 'initialization records exactly one source miss');
+  assert.equal(initialState.cacheEvictions, 0, 'initialization does not evict resident tiles');
+  assert.equal(initialState.graphCompileCount, 1, 'the initial shape compiles exactly one graph');
+  assert.equal(initialState.graphReuseCount, 0, 'the initial shape has no previous graph to reuse');
+  assert.equal(initialState.pinnedTileCount, 1, 'the displayed source retains an active tile lease');
+  assert.equal(initialState.pinnedGraphCount, 1, 'the displayed analysis retains an active graph lease');
+  assert.equal(
+    await page.locator('[data-raster-control="cache-capacity"]').getAttribute('max'),
+    '4',
+    'the residency control exposes an explicit maximum tile count'
+  );
+  assert(
+    (await page.locator('[data-raster-cache-capacity]').textContent()).includes('1 / 3'),
+    'the interface reports actual resident tile occupancy'
+  );
+  assert(
+    (await page.locator('[data-raster-cache-activity]').textContent()).includes('1 miss'),
+    'the interface reports the actual initial cache miss'
+  );
+  assert(
+    (await page.locator('[data-raster-cache-graphs]').textContent()).includes('1 compile'),
+    'the interface reports the actual initial graph compilation'
+  );
   assert(initialState.canvasWidth > 300, 'first-frame canvas uses its real drawing-buffer width');
   assert(initialState.canvasHeight > 150, 'first-frame canvas uses its real drawing-buffer height');
   assert(initialState.validPixelCount > 0, 'valid synthetic reflectance reaches the GPU histogram');
@@ -164,7 +221,7 @@ try {
   );
   assert(
     (await page.locator('.raster-scale').textContent()).includes('single tile · no halo'),
-    'the dashboard does not imply unimplemented halo assembly or multitile residency'
+    'the dashboard distinguishes one actively analyzed tile from unimplemented halo assembly'
   );
 
   const sidebar = page.locator('.raster-sidebar');
@@ -1372,7 +1429,22 @@ try {
         tileOrigin: rasterLab.tileOrigin,
         coordinateReferenceSystem: rasterLab.coordinateReferenceSystem,
         tileLoadCount: rasterLab.tileLoadCount,
+        sourceReadCount: rasterLab.sourceReadCount,
         abortedTileRequestCount: rasterLab.abortedTileRequestCount,
+        cacheCapacity: rasterLab.cacheCapacity,
+        residentTileCount: rasterLab.residentTileCount,
+        residentGraphCount: rasterLab.residentGraphCount,
+        residentCpuBytes: rasterLab.residentCpuBytes,
+        residentGpuBytes: rasterLab.residentGpuBytes,
+        maximumCpuBytes: rasterLab.maximumCpuBytes,
+        maximumGpuBytes: rasterLab.maximumGpuBytes,
+        cacheHits: rasterLab.cacheHits,
+        cacheMisses: rasterLab.cacheMisses,
+        cacheEvictions: rasterLab.cacheEvictions,
+        graphCompileCount: rasterLab.graphCompileCount,
+        graphReuseCount: rasterLab.graphReuseCount,
+        pinnedTileCount: rasterLab.pinnedTileCount,
+        pinnedGraphCount: rasterLab.pinnedGraphCount,
         executionCount: rasterLab.executionCount,
         edgeMode: rasterLab.edgeMode,
         smoothingMode: rasterLab.smoothingMode,
@@ -1386,10 +1458,36 @@ try {
     });
   };
 
+  const previousNativeResidency = await page.evaluate(() => ({
+    sourceReadCount: window.__luRasterLab.sourceReadCount,
+    cacheMisses: window.__luRasterLab.cacheMisses,
+    graphCompileCount: window.__luRasterLab.graphCompileCount
+  }));
   const westernTile = await loadSourceSelection('[data-raster-source-tile="west"]', 'west', 0);
   assert.equal(westernTile.width, 160, 'the explicit western tile clips the source width');
   assert.equal(westernTile.height, 224, 'the western tile retains full native source height');
   assert.equal(westernTile.pixelCount, 160 * 224, 'only the selected tile is uploaded and analyzed');
+  assert.equal(
+    westernTile.sourceReadCount,
+    previousNativeResidency.sourceReadCount + 1,
+    'an uncached western tile performs exactly one application-source decode'
+  );
+  assert.equal(
+    westernTile.cacheMisses,
+    previousNativeResidency.cacheMisses + 1,
+    'the western tile records one actual residency miss'
+  );
+  assert.equal(westernTile.residentTileCount, 2, 'the full and western tiles remain independently resident');
+  assert.equal(
+    westernTile.graphCompileCount,
+    previousNativeResidency.graphCompileCount + 1,
+    'a smaller tile requires one distinct compatible compiled graph shape'
+  );
+  assert(
+    westernTile.residentCpuBytes <= westernTile.maximumCpuBytes &&
+      westernTile.residentGpuBytes <= westernTile.maximumGpuBytes,
+    'the full and western tiles stay within both explicit cache byte budgets'
+  );
   assert.deepEqual(westernTile.tileOrigin, [0, 0]);
   assert.equal(westernTile.smoothingMode, 'gaussian', 'tile swaps retain selected spatial smoothing');
   assert.equal(westernTile.edgeMode, 'scharr', 'tile swaps retain selected gradient analysis');
@@ -1424,6 +1522,27 @@ try {
 
   const easternTile = await loadSourceSelection('[data-raster-source-tile="east"]', 'east', 0);
   assert.equal(easternTile.width, 160);
+  assert.equal(
+    easternTile.sourceReadCount,
+    westernTile.sourceReadCount + 1,
+    'an uncached eastern tile decodes exactly once'
+  );
+  assert.equal(
+    easternTile.graphCompileCount,
+    westernTile.graphCompileCount,
+    'equally sized eastern and western windows reuse the exact compiled graph'
+  );
+  assert.equal(
+    easternTile.graphReuseCount,
+    westernTile.graphReuseCount + 1,
+    'changing tile origin increments actual compatible graph reuse'
+  );
+  assert.equal(easternTile.residentTileCount, 3, 'all visited native windows fit the configured capacity');
+  assert(
+    easternTile.residentCpuBytes <= easternTile.maximumCpuBytes &&
+      easternTile.residentGpuBytes <= easternTile.maximumGpuBytes,
+    'three independently resident source tiles remain within CPU and GPU budgets'
+  );
   assert.deepEqual(
     easternTile.tileOrigin,
     [160, 0],
@@ -1439,6 +1558,58 @@ try {
     'the application exposes its selected tile origin in the dashboard'
   );
 
+  const revisitedWesternTile = await loadSourceSelection(
+    '[data-raster-source-tile="west"]',
+    'west',
+    0
+  );
+  assert.equal(
+    revisitedWesternTile.sourceReadCount,
+    easternTile.sourceReadCount,
+    'revisiting a resident tile does not invoke its source decoder again'
+  );
+  assert.equal(
+    revisitedWesternTile.cacheHits,
+    easternTile.cacheHits + 1,
+    'revisiting a resident tile increments the real cache hit counter'
+  );
+  assert.equal(
+    revisitedWesternTile.graphCompileCount,
+    easternTile.graphCompileCount,
+    'a resident western revisit reuses its existing compatible compiled graph'
+  );
+  assert.equal(
+    revisitedWesternTile.graphReuseCount,
+    easternTile.graphReuseCount + 1,
+    'a resident western revisit records one more genuine graph reuse'
+  );
+  assert.deepEqual(
+    revisitedWesternTile.bins,
+    westernTile.bins,
+    'rebinding the cached western source reproduces its exact scientific histogram'
+  );
+
+  const revisitedEasternTile = await loadSourceSelection(
+    '[data-raster-source-tile="east"]',
+    'east',
+    0
+  );
+  assert.equal(
+    revisitedEasternTile.sourceReadCount,
+    revisitedWesternTile.sourceReadCount,
+    'revisiting the resident eastern tile also avoids a second source read'
+  );
+  assert.equal(
+    revisitedEasternTile.cacheHits,
+    revisitedWesternTile.cacheHits + 1,
+    'the second resident revisit remains an actual tile cache hit'
+  );
+  assert.deepEqual(
+    revisitedEasternTile.bins,
+    easternTile.bins,
+    'replacing compiled-graph imports restores the exact eastern histogram'
+  );
+
   const easternOverview = await loadSourceSelection(
     '[data-raster-source-overview="1"]',
     'east',
@@ -1447,6 +1618,26 @@ try {
   assert.equal(easternOverview.width, 80, 'the source-provided overview halves tile width');
   assert.equal(easternOverview.height, 112, 'the source-provided overview halves tile height');
   assert.equal(easternOverview.pixelCount, 80 * 112);
+  assert.equal(
+    easternOverview.sourceReadCount,
+    revisitedEasternTile.sourceReadCount + 1,
+    'the source-provided overview is decoded exactly once on its first visit'
+  );
+  assert.equal(
+    easternOverview.graphCompileCount,
+    revisitedEasternTile.graphCompileCount + 1,
+    'different dimensions and overview level require a separate compiled graph'
+  );
+  assert.equal(
+    easternOverview.residentTileCount,
+    easternOverview.cacheCapacity,
+    'the new overview stays within the configured resident tile count'
+  );
+  assert.equal(
+    easternOverview.cacheEvictions,
+    revisitedEasternTile.cacheEvictions + 1,
+    'the first additional overview deterministically evicts the oldest unpinned tile'
+  );
   assert.deepEqual(
     easternOverview.tileOrigin,
     [160, 0],
@@ -1461,6 +1652,112 @@ try {
   assert(
     (await page.locator('[data-raster-source-description]').textContent()).includes('L1'),
     'the interface distinguishes the source-provided overview level'
+  );
+
+  const cacheCapacityControl = page.locator('[data-raster-control="cache-capacity"]');
+  await cacheCapacityControl.scrollIntoViewIfNeeded();
+  await cacheCapacityControl.fill('1');
+  await page.waitForFunction(
+    () => window.__luRasterLab.cacheCapacity === 1 && window.__luRasterLab.residentTileCount === 1,
+    undefined,
+    {timeout: timeoutMilliseconds}
+  );
+  const minimumResidency = await page.evaluate(() => ({
+    capacity: window.__luRasterLab.cacheCapacity,
+    residentTiles: window.__luRasterLab.residentTileCount,
+    residentCpuBytes: window.__luRasterLab.residentCpuBytes,
+    residentGpuBytes: window.__luRasterLab.residentGpuBytes,
+    maximumCpuBytes: window.__luRasterLab.maximumCpuBytes,
+    maximumGpuBytes: window.__luRasterLab.maximumGpuBytes,
+    cacheEvictions: window.__luRasterLab.cacheEvictions,
+    sourceReadCount: window.__luRasterLab.sourceReadCount,
+    graphCompileCount: window.__luRasterLab.graphCompileCount,
+    graphReuseCount: window.__luRasterLab.graphReuseCount
+  }));
+  assert.equal(minimumResidency.capacity, 1, 'the capacity control applies its true minimum budget');
+  assert.equal(minimumResidency.residentTiles, 1, 'shrinking capacity evicts every inactive tile');
+  assert(
+    minimumResidency.cacheEvictions >= easternOverview.cacheEvictions + 2,
+    'shrinking the tile budget evicts both older unpinned source windows'
+  );
+  assert.equal(
+    minimumResidency.sourceReadCount,
+    easternOverview.sourceReadCount,
+    'changing an explicit capacity does not decode a new source tile'
+  );
+  assert(
+    minimumResidency.residentCpuBytes <= minimumResidency.maximumCpuBytes &&
+      minimumResidency.residentGpuBytes <= minimumResidency.maximumGpuBytes,
+    'shrinking tile capacity preserves both byte-budget invariants'
+  );
+  assert(
+    (await page.locator('[data-raster-cache-capacity]').textContent()).includes('1 / 1'),
+    'the interface reflects the actual reduced resident-tile capacity'
+  );
+
+  const minimumCapacityWesternOverview = await loadSourceSelection(
+    '[data-raster-source-tile="west"]',
+    'west',
+    1
+  );
+  assert.equal(
+    minimumCapacityWesternOverview.residentTileCount,
+    1,
+    'a capacity-one source replacement never retains a second resident tile'
+  );
+  assert.equal(
+    minimumCapacityWesternOverview.sourceReadCount,
+    minimumResidency.sourceReadCount + 1,
+    'the uncached western overview performs one source read after safe lease release'
+  );
+  assert.equal(
+    minimumCapacityWesternOverview.graphCompileCount,
+    minimumResidency.graphCompileCount,
+    'capacity-one western and eastern overviews still share their compatible graph'
+  );
+  assert.equal(
+    minimumCapacityWesternOverview.graphReuseCount,
+    minimumResidency.graphReuseCount + 1,
+    'capacity-one source replacement continues using per-encoding graph imports'
+  );
+
+  const minimumCapacityEasternOverview = await loadSourceSelection(
+    '[data-raster-source-tile="east"]',
+    'east',
+    1
+  );
+  assert.equal(minimumCapacityEasternOverview.residentTileCount, 1);
+  assert.equal(
+    minimumCapacityEasternOverview.sourceReadCount,
+    minimumCapacityWesternOverview.sourceReadCount + 1,
+    'revisiting an evicted capacity-one tile performs a new real source decode'
+  );
+  assert.equal(
+    minimumCapacityEasternOverview.cacheMisses,
+    minimumCapacityWesternOverview.cacheMisses + 1,
+    'revisiting an evicted tile increments the actual cache miss counter'
+  );
+  assert.equal(
+    minimumCapacityEasternOverview.cacheEvictions,
+    minimumCapacityWesternOverview.cacheEvictions + 1,
+    'each capacity-one source replacement evicts exactly one previous tile'
+  );
+  assert.equal(
+    minimumCapacityEasternOverview.graphCompileCount,
+    minimumCapacityWesternOverview.graphCompileCount,
+    'evicting source imports does not invalidate the compatible compiled graph'
+  );
+  assert.deepEqual(
+    minimumCapacityEasternOverview.bins,
+    easternOverview.bins,
+    'a decoded replacement and rebound graph reproduce the original overview histogram'
+  );
+
+  await cacheCapacityControl.fill('3');
+  await page.waitForFunction(
+    () => window.__luRasterLab.cacheCapacity === 3,
+    undefined,
+    {timeout: timeoutMilliseconds}
   );
 
   const previousRequests = await page.evaluate(() => ({
@@ -1525,7 +1822,7 @@ try {
 
   process.stdout.write(
     `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes)\n`
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, bounded cache and graph reuse verified)\n`
   );
 } finally {
   await browser?.close();

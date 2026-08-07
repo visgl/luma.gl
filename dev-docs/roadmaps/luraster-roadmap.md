@@ -546,9 +546,15 @@ when their tests and rollback boundaries remain understandable.
   half-open windows, selected native-format bands, decoded validity, and `AbortSignal`
   cancellation. Tile metadata preserves the source CRS, affine transform, and level-zero origin.
   The Raster Lab switches among full/west/east windows and source-provided 1×/2× overviews
-  without adding a decoder, HTTP client, tile cache, implicit GPU upload, or pixel readback.
-- **4.2 next:** capacity-bounded residency, explicit eviction/fence ownership, graph-shape reuse,
-  and coordinated multi-request tile scheduling remain a separate tiled-processing tranche.
+  without adding a decoder, HTTP client, implicit reader GPU upload, or pixel readback.
+- **4.2 complete for bounded tile residency and graph reuse:** `GPURasterTileCache` budgets
+  decoded CPU samples, owned GPU band/validity buffers, and cached graph-owned transient bytes.
+  Deterministic LRU eviction skips actively leased tiles/graphs; encoded resources remain pinned
+  through explicit post-submit fences. Concurrent loads are deduplicated, caller cancellation
+  remains independent, compatible graph shapes reuse their compiled graph through per-encoding
+  imported-buffer replacement, and cache diagnostics expose hits, misses, bytes, and evictions.
+- **4.3 next:** explicit cumulative halo assembly, half-open core ownership, ragged-edge handling,
+  and tiled-versus-monolithic seam parity remain separate neighborhood-processing work.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -820,8 +826,8 @@ level-local/level-zero half-open request windows, anisotropic/ragged overview co
 caller-owned decoded samples/validity, coordinate metadata, and pre/post-decode cancellation.
 The Raster Lab's synthetic adapter demonstrates full/west/east windows, 1×/2× source-provided
 overviews, explicit CRS/origin, and stale-request cancellation without bundling a decoder.
-Multi-tile residency, halo assembly, generated analytical overviews, and stitched results remain
-separate later tranches.
+Multi-tile residency is implemented separately in tranche 4.2; halo assembly, generated
+analytical overviews, and stitched results remain later tranches.
 
 **Work:** Define an application-supplied asynchronous tile-source interface with dataset
 metadata, requested level, explicit coordinate reference frame, selected bands, spatial window,
@@ -836,7 +842,14 @@ runtime dependency are verified.
 
 **Entry:** Tranches 4.1 and 1.4.
 
-**Status:** Next planned tranche; no cache, eviction policy, or graph-shape residency exists yet.
+**Status:** Complete for capacity-bounded decoded/GPU tile residency and compiled-graph reuse.
+Separate CPU/GPU budgets include distinct decoded arrays, owned resident values/validity,
+physical graph transient resources, and declared application-owned graph outputs without
+double-counting borrowed imports. Deterministic LRU eviction respects explicit tile/graph leases,
+concurrent reads deduplicate safely, and application-supplied post-submit fences retain encoded
+resources until completion. Compatible shapes reuse compiled graphs with per-encoding
+borrowed-buffer overrides; ragged or otherwise incompatible shapes compile separately. The Raster
+Lab exposes real cache diagnostics, bounded capacity, and same-shape west/east graph reuse.
 
 **Work:** Define an explicit CPU/GPU tile cache budget, LRU or viewport-priority eviction,
 cancellation of stale requests, graph keys by shape/format/halo/overview, and compatible
@@ -854,6 +867,8 @@ GPU-resident raster implicitly.
 ### Tranche 4.3 — Halo assembly and seam correctness
 
 **Entry:** Tranches 4.2 and 3.1.
+
+**Status:** Next planned tranche; residency does not assemble halos or stitch tile seams.
 
 **Work:** Acquire a neighborhood that covers the complete composed pipeline receptive field,
 including cumulative stage radii and any overview/resampling scale factors. For example,
@@ -1153,6 +1168,7 @@ modules/experimental/src/luraster/
   gpu-raster-edges.ts
   gpu-raster-morphology.ts
   gpu-raster-tile-source.ts
+  gpu-raster-tile-cache.ts
   gpu-raster-tiles.ts
   gpu-raster-overview.ts
   gpu-raster-connected-components.ts
@@ -1169,6 +1185,8 @@ modules/experimental/test/luraster/
   gpu-raster-band-math.spec.ts
   gpu-raster-analysis.spec.ts
   gpu-raster-filters.spec.ts
+  gpu-raster-tile-cache.node.spec.ts
+  gpu-raster-tile-cache.spec.ts
   gpu-raster-tiles.spec.ts
   gpu-raster-connected-components.spec.ts
   gpu-raster-region-statistics.spec.ts
@@ -1191,8 +1209,9 @@ later tranches.
 - `docs/api-reference/experimental/luraster/`: public runtime documentation.
 - `docs/table-of-contents.json`: both experimental navigation branches.
 - `docs/api-reference/experimental/README.md` and `docs/whats-new.md`: feature discovery.
-- `examples/showcase/raster-lab/`: initial synthetic satellite/NDVI showcase; microscopy,
-  production imagery, tiled analytics, and overlays remain separate future examples.
+- `examples/showcase/raster-lab/`: synthetic satellite/NDVI, bounded tile residency, reusable
+  graphs, and indirect contour overlays; microscopy, production imagery, and stitched tiled
+  analytics remain separate future examples.
 - `website/content/examples/showcase/`, `website/content/examples/table-of-contents.json`, and
   `website/src/examples.tsx`: website example integration.
 - `.ocularrc.js`: optional scoped Playwright alias if a browser smoke workflow is added.

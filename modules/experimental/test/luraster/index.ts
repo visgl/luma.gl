@@ -14,3 +14,4 @@ import './gpu-raster-pipeline.spec';
 import './gpu-raster-statistics.spec';
 import './gpu-raster-threshold.spec';
 import './gpu-raster-texture-buffer.spec';
+import './gpu-raster-tile-cache.spec';

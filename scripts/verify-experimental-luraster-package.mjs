@@ -35,6 +35,10 @@ const tileSourceImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-tile-source.ts'),
   'utf8'
 );
+const tileCacheImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-tile-cache.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -51,6 +55,21 @@ assert.doesNotMatch(
   tileSourceImplementation,
   /\b(?:createBuffer|createTexture|submit|mapAsync)\s*\(/,
   'application-owned tile sources do not allocate, submit, or map GPU resources'
+);
+assert.doesNotMatch(
+  tileCacheImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'bounded tile residency does not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  tileCacheImplementation,
+  /\bfetch\s*\(/,
+  'bounded tile residency does not choose an HTTP transport'
+);
+assert.doesNotMatch(
+  tileCacheImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'bounded tile residency leaves command submission, completion fences, and readback explicit'
 );
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
@@ -87,6 +106,9 @@ const requiredRuntimeExportNames = [
   'GPURasterSobel',
   'GPURasterStatistics',
   'GPURasterThreshold',
+  'GPURasterTileCache',
+  'GPURasterTileGraphLease',
+  'GPURasterTileLease',
   'GPURasterTileReader',
   'GPURasterTextureToBuffer',
   'getRasterDeviceLimits',
@@ -149,6 +171,9 @@ try {
   GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
+  GPURasterTileCache,
+  GPURasterTileGraphLease,
+  GPURasterTileLease,
   GPURasterTileReader,
   GPURasterTextureToBuffer,
   getRasterDeviceLimits,
@@ -195,6 +220,8 @@ try {
   type GPURasterOtsuDomain,
   type GPURasterOtsuThresholdProps,
   type GPURasterPixelBounds,
+  type GPURasterResidentBand,
+  type GPURasterResidentTile,
   type GPURasterScharrProps,
   type GPURasterSobelProps,
   type GPURasterStatisticsProps,
@@ -204,8 +231,14 @@ try {
   type GPURasterThresholdProps,
   type GPURasterThresholdValue,
   type GPURasterTileBandMetadata,
+  type GPURasterTileCacheBudgets,
+  type GPURasterTileCacheProps,
+  type GPURasterTileCacheStats,
   type GPURasterTileCoordinateSpace,
+  type GPURasterTileGraphEntry,
+  type GPURasterTileGraphRequest,
   type GPURasterTileLevel,
+  type GPURasterTileReleaseFence,
   type GPURasterTileRequest,
   type GPURasterTileSource,
   type GPURasterTileSourceMetadata,
@@ -213,6 +246,7 @@ try {
   type RasterDispatchStripe
 } from '@luma.gl/experimental/luraster';
 import type {
+  CompiledGPUCommandGraph,
   GPUCommandGraphContributor,
   GPUReductionMask,
   GraphDataView
@@ -263,6 +297,8 @@ declare const openingOptions: GPURasterOpeningProps;
 declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
 declare const pixelBounds: GPURasterPixelBounds;
+declare const residentBand: GPURasterResidentBand;
+declare const residentTile: GPURasterResidentTile;
 declare const scharrOptions: GPURasterScharrProps;
 declare const sobelOptions: GPURasterSobelProps;
 declare const statisticsOptions: GPURasterStatisticsProps;
@@ -272,8 +308,14 @@ declare const thresholdOperation: GPURasterThresholdOperation;
 declare const thresholdOptions: GPURasterThresholdProps;
 declare const thresholdValue: GPURasterThresholdValue;
 declare const tileBandMetadata: GPURasterTileBandMetadata<'uint32'>;
+declare const tileCacheBudgets: GPURasterTileCacheBudgets;
+declare const tileCacheOptions: GPURasterTileCacheProps;
+declare const tileCacheStats: GPURasterTileCacheStats;
 declare const tileCoordinateSpace: GPURasterTileCoordinateSpace;
+declare const tileGraphEntry: GPURasterTileGraphEntry<{readonly name: string}>;
+declare const tileGraphRequest: GPURasterTileGraphRequest<{readonly name: string}>;
 declare const tileLevel: GPURasterTileLevel;
+declare const tileReleaseFence: GPURasterTileReleaseFence;
 declare const tileRequest: GPURasterTileRequest;
 declare const tileSource: GPURasterTileSource;
 declare const tileSourceMetadata: GPURasterTileSourceMetadata;
@@ -303,6 +345,9 @@ declare const sobel: GPURasterSobel;
 declare const statistics: GPURasterStatistics;
 declare const histogram: GPURasterHistogram<'float32'>;
 declare const threshold: GPURasterThreshold;
+declare const tileCache: GPURasterTileCache;
+declare const tileGraphLease: GPURasterTileGraphLease<{readonly name: string}>;
+declare const tileLease: GPURasterTileLease;
 declare const tileReader: GPURasterTileReader;
 declare const textureToBuffer: GPURasterTextureToBuffer;
 const bandMathContributor: GPUCommandGraphContributor = bandMath;
@@ -347,7 +392,29 @@ const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openi
 const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
 const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
 const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
+const configuredTileCache = new GPURasterTileCache(tileCacheOptions);
 const configuredTileReader = new GPURasterTileReader(tileSource);
+const residentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(tileRequest);
+const cancelledResidentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(
+  tileRequest,
+  new AbortController().signal
+);
+const graphLeasePromise: Promise<GPURasterTileGraphLease<{readonly name: string}>> =
+  configuredTileCache.acquireGraph(tileLease, tileGraphRequest);
+const leasedResidentTile: GPURasterResidentTile = tileLease.tile;
+const leasedDecodedTile: GPURasterDecodedTile = tileLease.decoded;
+const leasedResidentBands: readonly GPURasterResidentBand[] = tileLease.bands;
+const leasedCompiledGraph: CompiledGPUCommandGraph = tileGraphLease.graph;
+const leasedGraphName: string = tileGraphLease.value.name;
+const explicitPromiseFence: GPURasterTileReleaseFence = Promise.resolve();
+const explicitSignaledFence: GPURasterTileReleaseFence = {signaled: Promise.resolve()};
+const releasedResidentTile: Promise<void> = tileLease.releaseAfter(tileReleaseFence);
+const releasedGraph: Promise<void> = tileGraphLease.releaseAfter(explicitPromiseFence);
+const publishedTileCacheBudgets: GPURasterTileCacheBudgets = configuredTileCache.budgets;
+const publishedTileCacheStats: GPURasterTileCacheStats = configuredTileCache.stats;
+configuredTileCache.setBudgets({maxTiles: 2, maxGpuBytes: 4194304});
+tileLease.release();
+tileGraphLease.release();
 const decodedTilePromise: Promise<GPURasterDecodedTile> = configuredTileReader.readTile(tileRequest);
 const cancelledTilePromise: Promise<GPURasterDecodedTile> = configuredTileReader.readTile(
   tileRequest,
@@ -404,6 +471,26 @@ const decodedValidity: Uint32Array | undefined = decodedFloatBand.validity;
 const exactTileDownsample: readonly [number, number] = tileLevel.downsample;
 const decodedTileBounds: GPURasterPixelBounds = decodedTile.pixelBounds;
 const decodedLevelZeroBounds: GPURasterPixelBounds = decodedTile.levelZeroBounds;
+const boundedTileCapacity: number = tileCacheBudgets.maxTiles;
+const boundedGraphCapacity: number = tileCacheBudgets.maxGraphs;
+const boundedCpuBytes: number = tileCacheBudgets.maxCpuBytes;
+const boundedGpuBytes: number = tileCacheBudgets.maxGpuBytes;
+const observedCacheHits: number = tileCacheStats.tileHits;
+const observedCacheEvictions: number = tileCacheStats.tileEvictions;
+const observedGraphHits: number = tileCacheStats.graphHits;
+const observedGraphCompilations: number = tileCacheStats.graphCompilations;
+const observedPinnedTiles: number = tileCacheStats.pinnedTiles;
+const observedPinnedGraphs: number = tileCacheStats.pinnedGraphs;
+const observedCpuBytes: number = tileCacheStats.cpuBytes;
+const observedGpuBytes: number = tileCacheStats.gpuBytes;
+const residentBandBytes: number = residentBand.buffer.byteLength;
+const residentTileCpuBytes: number = residentTile.cpuByteLength;
+const residentTileGpuBytes: number = residentTile.gpuByteLength;
+const declaredGraphBudget: number = tileGraphRequest.estimatedByteLength;
+const declaredGraphHalo: number | undefined = tileGraphRequest.halo;
+const separatelyOwnedGraphBytes: number = tileGraphEntry.byteLength;
+const physicalGraphTransientBytes: number =
+  tileGraphEntry.graph.stats.physicalTransientResourceBytes;
 // @ts-expect-error Only the independently implemented Sobel and Scharr kernels are public.
 const unsupportedGradientOperator: GPURasterGradientOperator = 'prewitt';
 // @ts-expect-error Two-dimensional rasters expose only horizontal and vertical derivatives.
@@ -430,6 +517,19 @@ const invalidFloatDecodedValues: Uint32Array = decodedFloatBand.values;
 const invalidUnsignedDecodedValues: Float32Array = decodedUnsignedBand.values;
 // @ts-expect-error Signed decoded bands preserve Int32Array storage exactly.
 const invalidSignedDecodedValues: Uint32Array = decodedSignedBand.values;
+// @ts-expect-error Compiled graph admission requires an explicit conservative GPU byte estimate.
+const missingGraphAllocationEstimate: GPURasterTileGraphRequest<{readonly name: string}> = {
+  pipelineKey: 'unsafe-missing-estimate',
+  create: () => tileGraphEntry
+};
+// @ts-expect-error Graph ownership requires a destruction callback for owner-managed resources.
+const missingGraphOwnerCleanup: GPURasterTileGraphEntry<{readonly name: string}> = {
+  graph: tileGraphEntry.graph,
+  value: {name: 'unmanaged-output'},
+  byteLength: 1024
+};
+// @ts-expect-error Fence release accepts completion promises, never an arbitrary numeric delay.
+const invalidTileReleaseFence: GPURasterTileReleaseFence = 100;
 
 void GPURaster;
 void GPURasterBandMath;
@@ -456,6 +556,9 @@ void GPURasterScharr;
 void GPURasterSobel;
 void GPURasterStatistics;
 void GPURasterThreshold;
+void GPURasterTileCache;
+void GPURasterTileGraphLease;
+void GPURasterTileLease;
 void GPURasterTileReader;
 void GPURasterTextureToBuffer;
 void getRasterDeviceLimits;
@@ -505,6 +608,8 @@ void openingOptions;
 void otsuDomain;
 void otsuOptions;
 void pixelBounds;
+void residentBand;
+void residentTile;
 void scharrOptions;
 void sobelOptions;
 void statisticsOptions;
@@ -514,8 +619,14 @@ void thresholdOperation;
 void thresholdOptions;
 void thresholdValue;
 void tileBandMetadata;
+void tileCacheBudgets;
+void tileCacheOptions;
+void tileCacheStats;
 void tileCoordinateSpace;
+void tileGraphEntry;
+void tileGraphRequest;
 void tileLevel;
+void tileReleaseFence;
 void tileRequest;
 void tileSource;
 void tileSourceMetadata;
@@ -558,7 +669,22 @@ void configuredOpening;
 void configuredClosing;
 void configuredScharr;
 void configuredSobel;
+void configuredTileCache;
 void configuredTileReader;
+void residentTilePromise;
+void cancelledResidentTilePromise;
+void graphLeasePromise;
+void leasedResidentTile;
+void leasedDecodedTile;
+void leasedResidentBands;
+void leasedCompiledGraph;
+void leasedGraphName;
+void explicitPromiseFence;
+void explicitSignaledFence;
+void releasedResidentTile;
+void releasedGraph;
+void publishedTileCacheBudgets;
+void publishedTileCacheStats;
 void decodedTilePromise;
 void cancelledTilePromise;
 void syntheticFloatBand;
@@ -583,6 +709,25 @@ void decodedValidity;
 void exactTileDownsample;
 void decodedTileBounds;
 void decodedLevelZeroBounds;
+void boundedTileCapacity;
+void boundedGraphCapacity;
+void boundedCpuBytes;
+void boundedGpuBytes;
+void observedCacheHits;
+void observedCacheEvictions;
+void observedGraphHits;
+void observedGraphCompilations;
+void observedPinnedTiles;
+void observedPinnedGraphs;
+void observedCpuBytes;
+void observedGpuBytes;
+void residentBandBytes;
+void residentTileCpuBytes;
+void residentTileGpuBytes;
+void declaredGraphHalo;
+void separatelyOwnedGraphBytes;
+void physicalGraphTransientBytes;
+void declaredGraphBudget;
 void unsupportedGradientOperator;
 void unsupportedGradientDirection;
 void unsupportedLaplacianConnectivity;
@@ -596,6 +741,12 @@ void unsupportedTileCoordinateSpace;
 void invalidFloatDecodedValues;
 void invalidUnsignedDecodedValues;
 void invalidSignedDecodedValues;
+void missingGraphAllocationEstimate;
+void missingGraphOwnerCleanup;
+void invalidTileReleaseFence;
+void tileCache;
+void tileGraphLease;
+void tileLease;
 void tileReader;
 
 // @ts-expect-error Raster algorithms stay isolated from the experimental root.
@@ -625,6 +776,15 @@ void RootGPURasterClosing;
 // @ts-expect-error External raster tile sources remain isolated from the experimental root.
 import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/experimental';
 void RootGPURasterTileReader;
+// @ts-expect-error Budgeted tile residency stays isolated from the experimental root.
+import {GPURasterTileCache as RootGPURasterTileCache} from '@luma.gl/experimental';
+void RootGPURasterTileCache;
+// @ts-expect-error Fence-safe graph leases stay isolated from the experimental root.
+import {GPURasterTileGraphLease as RootGPURasterTileGraphLease} from '@luma.gl/experimental';
+void RootGPURasterTileGraphLease;
+// @ts-expect-error Fence-safe resident tile leases stay isolated from the experimental root.
+import {GPURasterTileLease as RootGPURasterTileLease} from '@luma.gl/experimental';
+void RootGPURasterTileLease;
 `
   );
   assert.equal(
