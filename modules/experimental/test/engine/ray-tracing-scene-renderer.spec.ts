@@ -218,7 +218,12 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     const initializeBoundsIndex = findNodeIndex(accelerationNodeOrder, 'initialize-scene-bounds');
     const reduceBoundsIndex = findNodeIndex(accelerationNodeOrder, 'reduce-scene-bounds');
     const encodeMortonIndex = findNodeIndex(accelerationNodeOrder, 'build-morton-keys');
-    const sortMortonIndex = findNodeIndex(accelerationNodeOrder, 'sort-primitive-morton-keys');
+    // Sort scratch initialization is dependency-free and may be hoisted before key generation;
+    // only the output-producing final sort stage must precede the sorted-bounds gather.
+    const sortMortonCompletionIndex = findLastNodeIndex(
+      accelerationNodeOrder,
+      'sort-primitive-morton-keys'
+    );
     const gatherBoundsIndex = findNodeIndex(accelerationNodeOrder, 'gather-sorted-bounds');
     const loadLeavesIndex = findNodeIndex(accelerationNodeOrder, 'ray-tracing-bvh-load-leaves');
     const refitIndex = findNodeIndex(accelerationNodeOrder, 'ray-tracing-bvh-refit-depth');
@@ -228,7 +233,7 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         initializeBoundsIndex,
         reduceBoundsIndex,
         encodeMortonIndex,
-        sortMortonIndex,
+        sortMortonCompletionIndex,
         gatherBoundsIndex,
         loadLeavesIndex,
         refitIndex
@@ -236,8 +241,8 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         buildBoundsIndex < reduceBoundsIndex &&
         initializeBoundsIndex < reduceBoundsIndex &&
         reduceBoundsIndex < encodeMortonIndex &&
-        encodeMortonIndex < sortMortonIndex &&
-        sortMortonIndex < gatherBoundsIndex &&
+        encodeMortonIndex < sortMortonCompletionIndex &&
+        sortMortonCompletionIndex < gatherBoundsIndex &&
         gatherBoundsIndex < loadLeavesIndex &&
         loadLeavesIndex < refitIndex,
       'the acceleration graph builds bounds, Morton-sorts leaves, gathers them, then refits the TLAS'
@@ -561,6 +566,15 @@ function getRayTracingFrameResources(
 
 function findNodeIndex(nodeOrder: readonly string[], identifierSubstring: string): number {
   return nodeOrder.findIndex(identifier => identifier.includes(identifierSubstring));
+}
+
+function findLastNodeIndex(nodeOrder: readonly string[], identifierSubstring: string): number {
+  for (let index = nodeOrder.length - 1; index >= 0; index--) {
+    if (nodeOrder[index].includes(identifierSubstring)) {
+      return index;
+    }
+  }
+  return -1;
 }
 
 function getGraphBufferIdentifiers(graph: InspectableCompiledGraph): string[] {
