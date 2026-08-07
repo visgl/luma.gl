@@ -202,17 +202,64 @@ Train scene, the primary renderer buffers use approximately 45.3 MiB and graph s
 approximately 19.8 MiB; packed source columns add approximately 36.8 MiB separately.
 
 The projected-record allocation must fit the device's `maxStorageBufferBindingSize`. A 128 MiB
-storage-binding limit supports at most 2,796,202 splats in one graph. Larger active frontiers or
-constrained adapters require a different rendering strategy. Hierarchy and RAD integrations must
-limit their simultaneously resident frontier to this device-dependent capacity; the complete
-source hierarchy may contain many more rows. The showcase falls back to `SplatRenderer` when graph
-compilation fails synchronously.
+storage-binding limit supports at most 2,796,202 splats in one `GPUSplatGraphRenderer` graph. Use
+`GPUPagedSplatRenderer` when independent source pages or a larger active hierarchy frontier would
+exceed that projected-record limit. The original progressive graph remains useful when one known
+scene fits its single allocation.
 
 Reserving the final scene size avoids repeated graph compilation, but the global radix sort processes
 the entire reserved capacity on every dirty progressive frame, even while most source rows are
 still inactive. Oversized hints therefore trade higher early GPU work and memory for stable graph
 identity. The radix sort intentionally processes 16 significant depth bits; stable equal-key ties
 may be less precise than the CPU renderer's higher-precision depth ordering.
+
+## Segmented paged WebGPU rendering
+
+`GPUPagedSplatRenderer` projects independently owned source pages into bounded GPU segments while
+preserving one globally correct depth order across the entire active frontier:
+
+```ts
+import {GPUPagedSplatRenderer} from '@luma.gl/splats';
+
+const renderer = new GPUPagedSplatRenderer(webgpuDevice, {
+  viewportSize: [width, height],
+  pages: [
+    {id: 'rad:0', data: rootPage, activeRows: new Uint32Array([0, 4, 12])},
+    {id: 'rad:8', data: detailPage, activeRows: new Uint32Array([2, 7])}
+  ]
+});
+
+renderer.setFrontier(cameraSelectedSourcePages);
+const encoding = renderer.encode(commandEncoder);
+if (encoding) webgpuDevice.submit(commandEncoder.finish());
+
+console.log(renderer.stats.segmentCount, renderer.stats.activeRowCount);
+```
+
+`activeRows` contains original batch-local row indices; omit it to render every row in one source
+page. No source page or GPU column is concatenated, rewritten, or transferred to the renderer.
+Each sparse source segment projects only its selected rows, evaluates degree-one through
+degree-three directional harmonics, and applies GPU semantic include/exclude selections. Source
+bindings, including large harmonic columns, are split into legal device-sized ranges while every
+compute shader stays within the standard eight-storage-binding WebGPU guarantee.
+
+A global GPU radix sort orders compact four-byte source-row references across every page. The
+sorted permutation is scattered into separate 48-byte projected output segments, and one shared
+render pass draws those segments in global depth order using GPU-written indirect commands. This
+preserves transparency ordering even when rows from different pages overlap or interleave in
+depth; sorting pages independently would not.
+
+On a device with a 128 MiB storage-binding limit, the previous single-record graph supports at
+most 2,796,202 active rows; the paged renderer instead supports up to 33,554,432 simultaneously
+active four-byte global-sort references. Source datasets may be larger because original pages can
+enter and leave bounded residency. The four-byte global sort still has its own binding limit, and
+this renderer does not yet provide a dedicated segmented GPU picker or mixed-mesh helper.
+
+`maxProjectedSplatsPerSegment` can tighten the per-segment limit explicitly. `renderer.stats`
+reports original versus active rows, source/output segment counts, global sort capacity, exact
+borrowed-source and renderer-owned GPU bytes, and one indirect draw per output segment. The
+caller owns command submission and every source batch; destroy the renderer before releasing
+source pages.
 
 ## Source columns and rendering
 
@@ -449,6 +496,55 @@ or loader-owned. Prepared pages remain caller-owned by default; set `node.ownsDa
 the hierarchy should destroy an asynchronously decoded page on eviction or shutdown. An externally
 supplied residency manager is always borrowed and must be destroyed by its original owner.
 
+### Spark RAD row hierarchies
+
+Spark RAD hierarchy links belong to individual source rows, not whole source pages.
+`SplatRADHierarchyManager` preserves this distinction using the original page-local `childCounts`
+and source-global `childStarts` arrays:
+
+```ts
+import {GPUPagedSplatRenderer, SplatRADHierarchyManager} from '@luma.gl/splats';
+
+const renderer = new GPUPagedSplatRenderer(device, {viewportSize: [width, height]});
+const hierarchy = new SplatRADHierarchyManager({
+  pageSize: 65_536,
+  maximumActiveRows: 1_000_000,
+  residencyBudget: {maxResidentSplats: 1_000_000},
+  maximumScreenSpaceError: 8,
+  onFrontierChange: frontier => renderer.setFrontier(frontier),
+  onPageRequest: request => scheduleSourcePage(request.rowIndex, request.priority),
+  onPageCancel: request => cancelSourcePage(request.rowIndex)
+});
+
+hierarchy.registerPage({
+  id: 'rad:0',
+  data: preparedRootPage,
+  childCounts: rootLoaderData.childCounts,
+  childStarts: rootLoaderData.childStarts,
+  ownsData: true
+});
+
+hierarchy.update({
+  cameraPosition,
+  modelViewProjectionMatrix,
+  viewportSize: [width, height],
+  foveation: {center: [0.5, 0.5], radius: 0.2, strength: 2}
+});
+```
+
+Traversal starts at Spark's single authored root row, retains every unrefined or childless leaf,
+and replaces an individual parent only after all of its selected child rows become resident.
+Mixed parent-and-leaf source pages therefore remain correct. Each frontier entry exposes the
+intact original `data`, batch-local `activeRows`, `activeMask`, bounds, priority, and fallback
+state. Camera frustum changes cancel obsolete page requests, and protected parents remain visible
+when the residency budget cannot admit every required child.
+
+Top-level RAD metadata contains source page ranges, but not spatial page bounds. Bounds are
+derived conservatively after a page is decoded; missing-page requests use authored global child
+row links. Transport, parsing, asynchronous worker bridges, and GPU upload remain application- or
+loader-owned. Supply residency estimates before initiating page fetch and preparation when a hard
+window must prevent both unnecessary requests and transient GPU overcommit.
+
 ## Khronos Gaussian splats, 3D Tiles, and SPZ
 
 Decoded glTF primitives declaring `KHR_gaussian_splatting` can be prepared directly without adding
@@ -525,11 +621,18 @@ same Hugging Face catalog used by the loaders.gl Gaussian splat example. Use
 scenes. If the Hugging Face CDN is unavailable, Train automatically falls back to its two
 GitHub-hosted PLY segments; `scene=train-github` selects those segments directly.
 
-`?scene=coit` selects Spark's 50,937,127-splat Coit Tower RAD source. Its metadata and independent
-pages are fetched with HTTP range requests and bounded to a one-million-splat resident preview by
-default; set `&residentSplats=250000` to choose another whole-page source budget. The overlay keeps
-reporting the complete authored source count, and unneeded RAD pages are never fetched or uploaded.
-This is a bounded page window, not a claim that all 50 million rows fit inside one WebGPU graph.
+`?scene=coit` selects Spark's 50,937,127-splat Coit Tower RAD source. On WebGPU, the showcase
+first range-fetches the root page, then uses the live camera and authored per-row child links to
+request, cancel, and evict only the source pages needed by its current hierarchy frontier.
+`GPUPagedSplatRenderer` projects the selected original rows and sorts them globally across bounded
+GPU segments. The default residency window retains at most one million original source rows; set
+`&residentSplats=250000` to choose another whole-page source budget. The overlay reports the
+complete authored source count, current selected rows, and resident pages.
+
+Page requests are bounded and prioritized, but the published loaders.gl RAD decoder currently
+runs on the main thread. Applications can inject an actual asynchronous or worker-backed decoder
+through the demand-driven source adapter; the showcase does not imply that such a worker ships by
+default. Explicit CPU and non-hierarchical RAD sources retain their bounded whole-page path.
 
 Use `?loaders=local&scene=fixture` for the lightweight 1,000-splat parser fixture, or provide
 `source` to select a custom `.ply`, `.splat`, `.ksplat`, `.spz`, or `.rad` file. Full PLY scenes

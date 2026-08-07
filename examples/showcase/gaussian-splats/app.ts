@@ -8,10 +8,12 @@ import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {GPUCommandGraphInspector, type GPUCommandGraphInspectorGraph} from '@luma.gl/experimental';
 import {
+  GPUPagedSplatRenderer,
   GPUSplatGraphRenderer,
   makeGPUSplatData,
   SplatRenderer,
   type GPUSplatData,
+  type SplatHierarchyView,
   type SplatRendererProps,
   type SplatSortMode
 } from '@luma.gl/splats';
@@ -27,9 +29,11 @@ import {
   GAUSSIAN_SPLAT_SOURCE_CATALOG,
   getLocalGaussianSplatLoadersConfiguration,
   loadLocalGaussianSplatArrowSources,
+  openLocalGaussianSplatRADPageSource,
   type LocalGaussianSplatLoadProgress,
   type LocalGaussianSplatLoadersConfiguration
 } from './local-loaders';
+import {GaussianSplatRADSceneController} from './rad-scene';
 
 export const title = 'Gaussian Splats';
 export const description =
@@ -149,7 +153,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   static props = {useDevicePixels: true};
 
   readonly device: Device;
-  renderer: SplatRenderer | GPUSplatGraphRenderer;
+  renderer: SplatRenderer | GPUSplatGraphRenderer | GPUPagedSplatRenderer;
   readonly batches: GPUSplatData[];
 
   private readonly executionMode: GaussianSplatExecutionMode;
@@ -179,6 +183,8 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private autoOrbit = true;
   private orbitControls: OrbitControls | null = null;
   private loadAbortController: AbortController | null = null;
+  private radSceneController: GaussianSplatRADSceneController | null = null;
+  private hierarchyView: SplatHierarchyView | undefined;
   private loadingProgress: LocalGaussianSplatLoadProgress | undefined;
   private loadingError: string | undefined;
   private isLoading = false;
@@ -253,14 +259,16 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     };
     this.renderer =
       this.executionMode === 'graph'
-        ? new GPUSplatGraphRenderer(device, {
-            ...rendererProps,
-            clearColor: CLEAR_COLOR,
-            expectedSplatCount:
-              this.localLoadersConfiguration?.maxResidentSplatCount ??
-              this.localLoadersConfiguration?.expectedSplatCount,
-            expectedBatchCount: this.localLoadersConfiguration?.expectedBatchCount
-          })
+        ? this.localLoadersConfiguration?.sourceFormat === 'RAD'
+          ? new GPUPagedSplatRenderer(device, {...rendererProps, clearColor: CLEAR_COLOR})
+          : new GPUSplatGraphRenderer(device, {
+              ...rendererProps,
+              clearColor: CLEAR_COLOR,
+              expectedSplatCount:
+                this.localLoadersConfiguration?.maxResidentSplatCount ??
+                this.localLoadersConfiguration?.expectedSplatCount,
+              expectedBatchCount: this.localLoadersConfiguration?.expectedBatchCount
+            })
         : new SplatRenderer(device, rendererProps);
   }
 
@@ -318,7 +326,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       while (this.sourceBatchIndex < requestedBatchCount) {
         const nextBatch = makeGPUSplatData(device, makeGaussianSplatSource(this.sourceBatchIndex));
         this.batches.push(nextBatch);
-        this.renderer.appendData(nextBatch);
+        this.appendRendererBatch(nextBatch);
         this.requestRedraw();
         this.loadedSplatCount += nextBatch.length;
         this.sourceBatchIndex++;
@@ -355,7 +363,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     let graphChanged = false;
     const activeRenderer = this.renderer;
-    if (activeRenderer instanceof GPUSplatGraphRenderer) {
+    if (
+      activeRenderer instanceof GPUSplatGraphRenderer ||
+      activeRenderer instanceof GPUPagedSplatRenderer
+    ) {
       try {
         const encoding = activeRenderer.encode(device.commandEncoder);
         if (!encoding) {
@@ -372,7 +383,15 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
           this.graphInspector.recordEncoding(compiledGraph.id, encoding);
         }
       } catch (error) {
-        this.activateCpuRendererFallback(error);
+        if (activeRenderer instanceof GPUSplatGraphRenderer) {
+          this.activateCpuRendererFallback(error);
+        } else {
+          this.loadingError =
+            error instanceof Error ? error.message : 'The segmented RAD renderer is unavailable.';
+          this.needsRedraw = false;
+          this.updatePanel();
+          return;
+        }
       }
     }
     if (this.renderer instanceof SplatRenderer) {
@@ -411,8 +430,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     // Rendering resources borrow the caller-owned source batches.
     this.renderer.destroy();
+    this.radSceneController?.destroy();
+    this.radSceneController = null;
     for (const batch of this.batches) {
-      batch.destroy();
+      if (!batch.destroyed) {
+        batch.destroy();
+      }
     }
   }
 
@@ -420,6 +443,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     configuration: LocalGaussianSplatLoadersConfiguration
   ): Promise<void> {
     this.loadAbortController = new AbortController();
+    if (configuration.sourceFormat === 'RAD' && this.renderer instanceof GPUPagedSplatRenderer) {
+      if (await this.loadAdaptiveRADScene(configuration)) {
+        return;
+      }
+    }
+
     const source = loadLocalGaussianSplatArrowSources(configuration, {
       signal: this.loadAbortController.signal,
       onProgress: progress => {
@@ -442,7 +471,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.batches.push(batch);
       this.loadedSplatCount += batch.length;
       this.expectedSplatCount = Math.max(this.expectedSplatCount, this.loadedSplatCount);
-      this.renderer.appendData(batch);
+      this.appendRendererBatch(batch);
       this.requestRedraw();
       if (this.batches.length === 1 && !this.hasManualCameraInteraction) {
         this.fitCameraToBatches();
@@ -471,6 +500,100 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     this.expectedBatchCount = configuration.expectedBatchCount ?? this.batches.length;
     this.expectedSplatCount = configuration.expectedSplatCount ?? this.loadedSplatCount;
     this.updatePanel();
+  }
+
+  /** Keeps Spark's authored RAD hierarchy out-of-core and driven by the live camera frontier. */
+  private async loadAdaptiveRADScene(
+    configuration: LocalGaussianSplatLoadersConfiguration
+  ): Promise<boolean> {
+    const loadAbortController = this.loadAbortController;
+    if (!loadAbortController || !(this.renderer instanceof GPUPagedSplatRenderer)) {
+      return false;
+    }
+
+    const pageSource = await openLocalGaussianSplatRADPageSource(configuration, {
+      signal: loadAbortController.signal,
+      maxConcurrentLoads: 4,
+      onProgress: progress => {
+        if (!this.isFinalized) {
+          this.loadingProgress = progress;
+          this.expectedSplatCount = progress.expectedSplatCount ?? this.expectedSplatCount;
+          this.expectedBatchCount = progress.expectedBatchCount ?? this.expectedBatchCount;
+          this.updatePanel();
+        }
+      }
+    });
+    if (this.isFinalized || loadAbortController.signal.aborted) {
+      pageSource.destroy();
+      return true;
+    }
+    if (!pageSource.metadata.lodTree) {
+      pageSource.destroy();
+      return false;
+    }
+
+    this.expectedSplatCount = pageSource.metadata.count;
+    this.expectedBatchCount = pageSource.metadata.chunks.length;
+    this.radSceneController = new GaussianSplatRADSceneController({
+      device: this.device,
+      source: pageSource,
+      maxResidentSplatCount:
+        configuration.maxResidentSplatCount ?? Math.max(pageSource.metadata.count, 1),
+      onFrontierChange: (frontier, stats) => {
+        if (this.isFinalized || !(this.renderer instanceof GPUPagedSplatRenderer)) {
+          return;
+        }
+        this.renderer.setFrontier(frontier);
+        this.batches.splice(0, this.batches.length, ...frontier.map(entry => entry.data));
+        this.loadedSplatCount = stats.activeRowCount;
+        this.requestRedraw();
+        this.updatePanel();
+      },
+      onPageLoad: (page, stats) => {
+        if (this.isFinalized) {
+          return;
+        }
+        if (stats.pageCount === 1 && !this.hasManualCameraInteraction) {
+          this.batches.splice(0, this.batches.length, page.data);
+          this.loadedSplatCount = page.data.length;
+          this.fitCameraToBatches();
+          const frontierBatches = this.radSceneController?.hierarchy.frontierBatches;
+          if (stats.activePageCount > 0 && frontierBatches) {
+            this.batches.splice(0, this.batches.length, ...frontierBatches);
+            this.loadedSplatCount = stats.activeRowCount;
+          }
+        }
+        this.requestRedraw();
+        this.updatePanel();
+      },
+      onError: error => {
+        if (!this.isFinalized && !isAbortError(error)) {
+          this.loadingError = error instanceof Error ? error.message : 'RAD page loading failed.';
+          this.updatePanel();
+        }
+      }
+    });
+
+    await this.radSceneController.start(this.hierarchyView);
+    if (this.isFinalized || loadAbortController.signal.aborted) {
+      return true;
+    }
+    this.isLoading = false;
+    this.requestRedraw();
+    this.updatePanel();
+    return true;
+  }
+
+  /** Retains the source batch unchanged across portable, graph, and segmented GPU pipelines. */
+  private appendRendererBatch(batch: GPUSplatData): void {
+    if (this.renderer instanceof GPUPagedSplatRenderer) {
+      this.renderer.setFrontier([
+        ...this.renderer.pages,
+        {id: `source:${batch.sourceBatchIndex}:${batch.rowIndexBase}`, data: batch}
+      ]);
+      return;
+    }
+    this.renderer.appendData(batch);
   }
 
   /** Keeps a captured scene usable when the selected WebGPU adapter cannot compile its graph. */
@@ -534,6 +657,13 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       viewportSize: [cameraState.viewportWidth, cameraState.viewportHeight]
     };
     this.renderer.setProps({...cameraProps, cameraPosition});
+    this.hierarchyView = {
+      cameraPosition,
+      modelViewProjectionMatrix,
+      viewportSize: [cameraState.viewportWidth, cameraState.viewportHeight],
+      verticalFieldOfView: CAMERA_FIELD_OF_VIEW
+    };
+    this.radSceneController?.update(this.hierarchyView);
   }
 
   private fitCameraToBatches(): void {
@@ -839,13 +969,19 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     )) {
       pipelineElement.textContent = this.graphFallbackReason
         ? 'CPU fallback · graph unavailable'
-        : this.renderer instanceof GPUSplatGraphRenderer
+        : this.renderer instanceof GPUPagedSplatRenderer
           ? this.renderer.compiledGraph
-            ? 'GPU command graph'
-            : 'Compiling GPU graph…'
-          : this.device.type === 'webgpu'
-            ? 'CPU depth ordering'
-            : 'WebGL2 fallback';
+            ? `Segmented GPU · ${this.renderer.stats.segmentCount.toLocaleString()} segment${
+                this.renderer.stats.segmentCount === 1 ? '' : 's'
+              }`
+            : 'Preparing segmented GPU graph…'
+          : this.renderer instanceof GPUSplatGraphRenderer
+            ? this.renderer.compiledGraph
+              ? 'GPU command graph'
+              : 'Compiling GPU graph…'
+            : this.device.type === 'webgpu'
+              ? 'CPU depth ordering'
+              : 'WebGL2 fallback';
     }
     for (const pipelineErrorElement of document.querySelectorAll<HTMLElement>(
       '[data-gaussian-splats-pipeline-error]'
@@ -894,9 +1030,11 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         statusElement.textContent = this.loadingError
           ? 'Unable to load scene'
           : !this.isLoading
-            ? this.loadedSplatCount < this.expectedSplatCount
-              ? 'Resident page window ready'
-              : 'Scene loaded'
+            ? this.radSceneController
+              ? 'Camera-driven RAD paging'
+              : this.loadedSplatCount < this.expectedSplatCount
+                ? 'Resident page window ready'
+                : 'Scene loaded'
             : progress?.fallbackActive
               ? 'Loading GitHub scene fallback…'
               : progress?.phase === 'loaded'
@@ -918,7 +1056,13 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
           );
         }
         if (this.loadedSplatCount > 0) {
-          detailParts.push(`${this.loadedSplatCount.toLocaleString()} splats ready`);
+          detailParts.push(
+            this.radSceneController
+              ? `${this.loadedSplatCount.toLocaleString()} active rows · ${
+                  this.radSceneController.hierarchy.residencyManager.stats.residentChunkCount
+                } resident pages`
+              : `${this.loadedSplatCount.toLocaleString()} splats ready`
+          );
         }
         detailElement.textContent = detailParts.join(' · ');
       }

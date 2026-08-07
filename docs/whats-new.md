@@ -155,8 +155,10 @@ Target Release Date: Q3, 2026
 - **Dynamic splats and mixed scenes** - Update existing GPU source rows in place and composite depth-tested Gaussian splats between opaque and transparent mesh draws.
 - **Bounded splat residency** - Prioritized, pinned, least-recently-used source batches remain within configurable GPU byte, row, and chunk budgets.
 - **Hierarchical source paging** - Frustum-aware, foveated screen-space-error traversal preserves parent fallback, bounds asynchronous page decoding, and reserves GPU capacity before upload.
+- **Row-accurate RAD refinement** - Authored Spark child links select sparse source rows, preserve mixed parent-and-leaf pages, retain coarse fallback, and cancel camera-obsolete demand.
+- **Segmented out-of-core GPU rendering** - Independently bounded source and projected segments preserve exact cross-page global GPU depth ordering beyond the single-storage-buffer limit.
 - **Khronos glTF and 3D Tiles primitives** - Structural `KHR_gaussian_splatting` adapters retain feature IDs, complete spherical harmonics, stable tile identities, and externally decoded SPZ v2 compression.
-- **Progressive RAD sources** - Range-fetch independently owned Spark RAD pages, preserve authored source-global row identities, and cap interactive resident windows for large captures.
+- **Camera-driven RAD sources** - Range-fetch, prioritize, cancel, and evict independently owned Spark RAD pages while retaining authored global row identities and a hard interactive residency window.
 - **Incremental splat streaming** - New prepared batches append without concatenating source data, rebuilding previous batches, or transferring ownership to the renderer.
 - **Layered adapters** - File parsing stays in loaders.gl, Apache Arrow conversion stays in `@luma.gl/arrow`, and deck.gl integration stays in downstream applications.
 
