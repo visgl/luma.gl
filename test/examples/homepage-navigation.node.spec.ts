@@ -62,6 +62,20 @@ describe('homepage navigation', () => {
     expect(projectNameRule![1]).toContain('line-height: 0.96;');
   });
 
+  test('keeps the decorative GPU hero inert while preserving clickable foreground actions', () => {
+    const homepageStyles = readFileSync(HOMEPAGE_STYLES_PATH, 'utf8');
+    const heroExampleRule = homepageStyles.match(/\.heroExampleContainer\s*\{([^}]*)\}/);
+    const bannerContainerRule = homepageStyles.match(/\.bannerContainer\s*\{([^}]*)\}/);
+    const heroActionsRule = homepageStyles.match(/\.heroActions\s*\{([^}]*)\}/);
+
+    expect(heroExampleRule).not.toBeNull();
+    expect(bannerContainerRule).not.toBeNull();
+    expect(heroActionsRule).not.toBeNull();
+    expect(heroExampleRule![1]).toMatch(/\bpointer-events:\s*none\s*;/);
+    expect(bannerContainerRule![1]).toMatch(/\bpointer-events:\s*none\s*;/);
+    expect(heroActionsRule![1]).toMatch(/\bpointer-events:\s*auto\s*;/);
+  });
+
   test('reveals the flagship examples with an accessible, first-fold discovery cue', () => {
     const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
     const homepageStyles = readFileSync(HOMEPAGE_STYLES_PATH, 'utf8');
