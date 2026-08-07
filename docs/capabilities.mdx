@@ -374,6 +374,8 @@ the [interactive luGraph explorer](/examples/experimental/lugraph-explorer), or 
 | Binary and grayscale morphology | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Process supported binary masks or grayscale raster bands with explicit structuring elements, borders, and nodata policies. |
 | Raster dilation and erosion | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Expand or contract compatible raster features through bounded square or Manhattan-diamond neighborhoods. |
 | Raster opening and closing | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Compose supported erosion/dilation sequences to remove small features or close compatible raster gaps. |
+| Deterministic raster connected components | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Assign sparse minimum-root foreground labels with explicit four/eight-neighbor connectivity while preserving valid background and nodata barriers. |
+| Convergence-gated raster component labels | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Publish GPU convergence and optional actual iteration counts; clear all labels and validity when a bounded graph cannot prove convergence. |
 | Marching-squares contours | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Classify bounded raster cells and generate supported vector contour segments directly on the GPU. |
 | Indirect contour overlays | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Draw GPU-generated contour geometry without downloading or rebuilding every segment on the CPU. |
 | Device-aware raster dispatch | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Plan bounded dispatch stripes against the selected device's actual compute limits. |

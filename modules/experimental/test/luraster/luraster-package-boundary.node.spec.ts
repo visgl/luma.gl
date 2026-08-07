@@ -112,7 +112,22 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
   });
 
-  test('exposes tile-source/cache/halo/overview/global, neighborhood, morphology, and contour APIs', () => {
+  test('keeps component convergence, transport, submission, and synchronization graph-native', () => {
+    const connectedComponentsImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-connected-components.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(connectedComponentsImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(connectedComponentsImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(connectedComponentsImplementation).not.toMatch(
+      /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/
+    );
+  });
+
+  test('exposes source, tile, global, component, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
@@ -120,6 +135,8 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterCategoricalOverview).toBeTypeOf('function');
     expect(lurasterModule.GPURasterCategoricalOverview.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterClosing).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterConnectedComponents).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterConnectedComponents.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContrast).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContourClassifier).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContours).toBeTypeOf('function');

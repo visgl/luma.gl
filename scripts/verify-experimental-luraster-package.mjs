@@ -51,6 +51,10 @@ const globalStatisticsImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-global-statistics.ts'),
   'utf8'
 );
+const connectedComponentsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-connected-components.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -128,6 +132,21 @@ assert.doesNotMatch(
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'global raster statistics leave submission, fences, and analytical readback application-owned'
 );
+assert.doesNotMatch(
+  connectedComponentsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'connected raster components do not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  connectedComponentsImplementation,
+  /\bfetch\s*\(/,
+  'connected raster components do not select a source transport'
+);
+assert.doesNotMatch(
+  connectedComponentsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'connected raster components never submit commands, poll convergence, or read back labels'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -144,6 +163,7 @@ const requiredRuntimeExportNames = [
   'GPURasterBufferToTexture',
   'GPURasterCategoricalOverview',
   'GPURasterClosing',
+  'GPURasterConnectedComponents',
   'GPURasterContrast',
   'GPURasterContourClassifier',
   'GPURasterContours',
@@ -204,6 +224,7 @@ assert.equal(
 );
 for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
   for (const exportName of [
+    'GPURasterConnectedComponents',
     'GPURasterGlobalHistogramMerge',
     'GPURasterGlobalInitialize',
     'GPURasterGlobalPercentile',
@@ -279,6 +300,7 @@ try {
   GPURasterBufferToTexture,
   GPURasterCategoricalOverview,
   GPURasterClosing,
+  GPURasterConnectedComponents,
   GPURasterContrast,
   GPURasterContourClassifier,
   GPURasterContours,
@@ -325,6 +347,8 @@ try {
   type GPURasterCategoricalOverviewFormat,
   type GPURasterCategoricalOverviewProps,
   type GPURasterClosingProps,
+  type GPURasterConnectedComponentsProps,
+  type GPURasterConnectivity,
   type GPURasterContrastDomain,
   type GPURasterContrastMode,
   type GPURasterContrastProps,
@@ -418,6 +442,8 @@ declare const categoricalOverviewFormat: GPURasterCategoricalOverviewFormat;
 declare const categoricalOverviewOptions: GPURasterCategoricalOverviewProps<'uint32'>;
 declare const signedCategoricalOverviewOptions: GPURasterCategoricalOverviewProps<'sint32'>;
 declare const closingOptions: GPURasterClosingProps;
+declare const connectedComponentsOptions: GPURasterConnectedComponentsProps;
+declare const rasterConnectivity: GPURasterConnectivity;
 declare const contrastDomain: GPURasterContrastDomain;
 declare const contrastMode: GPURasterContrastMode;
 declare const contrastOptions: GPURasterContrastProps;
@@ -500,6 +526,7 @@ declare const bandMath: GPURasterBandMath;
 declare const boxBlur: GPURasterBoxBlur;
 declare const categoricalOverview: GPURasterCategoricalOverview<'uint32'>;
 declare const closing: GPURasterClosing;
+declare const connectedComponents: GPURasterConnectedComponents;
 declare const contrast: GPURasterContrast;
 declare const contourClassifier: GPURasterContourClassifier;
 declare const contours: GPURasterContours;
@@ -538,6 +565,7 @@ const bandMathContributor: GPUCommandGraphContributor = bandMath;
 const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
 const categoricalOverviewContributor: GPUCommandGraphContributor = categoricalOverview;
 const closingContributor: GPUCommandGraphContributor = closing;
+const connectedComponentsContributor: GPUCommandGraphContributor = connectedComponents;
 const contrastContributor: GPUCommandGraphContributor = contrast;
 const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
 const contoursContributor: GPUCommandGraphContributor = contours;
@@ -582,6 +610,8 @@ const configuredDilation: GPUCommandGraphContributor = new GPURasterDilation(dil
 const configuredErosion: GPUCommandGraphContributor = new GPURasterErosion(erosionOptions);
 const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openingOptions);
 const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
+const configuredConnectedComponents: GPUCommandGraphContributor =
+  new GPURasterConnectedComponents(connectedComponentsOptions);
 const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
 const configuredGlobalInitialize: GPUCommandGraphContributor = new GPURasterGlobalInitialize(
   globalInitializeOptions
@@ -680,6 +710,7 @@ const applicationOwnedTileSource: GPURasterTileSource = {
 };
 const supportedGradientOperators: readonly GPURasterGradientOperator[] = ['sobel', 'scharr'];
 const supportedGradientDirections: readonly GPURasterGradientDirection[] = ['x', 'y'];
+const supportedRasterConnectivities: readonly GPURasterConnectivity[] = [4, 8];
 const supportedLaplacianConnectivities: readonly GPURasterLaplacianConnectivity[] = [4, 8];
 const supportedMorphologyModes: readonly GPURasterMorphologyMode[] = ['binary', 'grayscale'];
 const supportedMorphologyOperations: readonly GPURasterMorphologyOperation[] = [
@@ -705,6 +736,25 @@ const decodedValidity: Uint32Array | undefined = decodedFloatBand.validity;
 const exactTileDownsample: readonly [number, number] = tileLevel.downsample;
 const decodedTileBounds: GPURasterPixelBounds = decodedTile.pixelBounds;
 const decodedLevelZeroBounds: GPURasterPixelBounds = decodedTile.levelZeroBounds;
+const componentForegroundInput: GPURasterBufferBand<'uint32'> = connectedComponentsOptions.input;
+const sparseComponentLabels: GraphDataView<'uint32'> = connectedComponentsOptions.output;
+const componentObservationValidity: GraphDataView<'uint32'> =
+  connectedComponentsOptions.outputValidity;
+const componentConvergence: GraphDataView<'uint32'> = connectedComponentsOptions.converged;
+const optionalComponentIterationCount: GraphDataView<'uint32'> | undefined =
+  connectedComponentsOptions.iterationCount;
+const optionalComponentConnectivity: GPURasterConnectivity | undefined =
+  connectedComponentsOptions.connectivity;
+const optionalMaximumComponentIterations: number | undefined =
+  connectedComponentsOptions.maximumIterations;
+const declaredComponentInput: GPURasterBufferBand<'uint32'> = connectedComponents.input;
+const declaredComponentOutput: GraphDataView<'uint32'> = connectedComponents.output;
+const declaredComponentValidity: GraphDataView<'uint32'> = connectedComponents.outputValidity;
+const declaredComponentConvergence: GraphDataView<'uint32'> = connectedComponents.converged;
+const declaredComponentIterationCount: GraphDataView<'uint32'> | undefined =
+  connectedComponents.iterationCount;
+const declaredComponentConnectivity: GPURasterConnectivity = connectedComponents.connectivity;
+const declaredMaximumComponentIterations: number = connectedComponents.maximumIterations;
 const persistentGlobalExtent: GraphDataView<'float32'> = globalAccumulator.extent;
 const persistentGlobalCount: GraphDataView<'uint32'> = globalAccumulator.count;
 const persistentGlobalSum: GraphDataView<'float32'> = globalAccumulator.sum;
@@ -834,6 +884,18 @@ const unsupportedGradientOperator: GPURasterGradientOperator = 'prewitt';
 const unsupportedGradientDirection: GPURasterGradientDirection = 'z';
 // @ts-expect-error Laplacian neighborhoods support four or eight adjacent raster pixels.
 const unsupportedLaplacianConnectivity: GPURasterLaplacianConnectivity = 6;
+// @ts-expect-error Raster segmentation supports four or eight connected neighbors only.
+const unsupportedRasterConnectivity: GPURasterConnectivity = 6;
+// @ts-expect-error Component foreground is an exact uint32 classification band.
+const invalidComponentForeground: GPURasterBufferBand<'float32'> = connectedComponentsOptions.input;
+// @ts-expect-error Sparse representative labels remain exact unsigned integers.
+const invalidComponentLabelFormat: GraphDataView<'float32'> = connectedComponentsOptions.output;
+// @ts-expect-error Component observation validity cannot masquerade as floating labels.
+const invalidComponentValidityFormat: GraphDataView<'float32'> =
+  connectedComponentsOptions.outputValidity;
+// @ts-expect-error Convergence is a required, caller-owned uint32 scalar.
+const invalidComponentConvergenceFormat: GraphDataView<'float32'> =
+  connectedComponentsOptions.converged;
 // @ts-expect-error Morphology exposes binary and grayscale scalar contracts only.
 const unsupportedMorphologyMode: GPURasterMorphologyMode = 'rgb';
 // @ts-expect-error Opening and closing are explicit composed contributors.
@@ -902,6 +964,7 @@ void GPURasterBoxBlur;
 void GPURasterBufferToTexture;
 void GPURasterCategoricalOverview;
 void GPURasterClosing;
+void GPURasterConnectedComponents;
 void GPURasterContrast;
 void GPURasterContourClassifier;
 void GPURasterContours;
@@ -949,6 +1012,8 @@ void categoricalOverviewFormat;
 void categoricalOverviewOptions;
 void signedCategoricalOverviewOptions;
 void closingOptions;
+void connectedComponentsOptions;
+void rasterConnectivity;
 void contrastDomain;
 void contrastMode;
 void contrastOptions;
@@ -1031,6 +1096,7 @@ void bandMathContributor;
 void boxBlurContributor;
 void categoricalOverviewContributor;
 void closingContributor;
+void connectedComponentsContributor;
 void contrastContributor;
 void contourClassifierContributor;
 void contoursContributor;
@@ -1069,6 +1135,7 @@ void configuredDilation;
 void configuredErosion;
 void configuredOpening;
 void configuredClosing;
+void configuredConnectedComponents;
 void configuredOverview;
 void configuredGlobalInitialize;
 void configuredGlobalStatisticsMerge;
@@ -1112,6 +1179,7 @@ void syntheticSignedBand;
 void applicationOwnedTileSource;
 void supportedGradientOperators;
 void supportedGradientDirections;
+void supportedRasterConnectivities;
 void supportedLaplacianConnectivities;
 void supportedMorphologyModes;
 void supportedMorphologyOperations;
@@ -1128,6 +1196,20 @@ void decodedValidity;
 void exactTileDownsample;
 void decodedTileBounds;
 void decodedLevelZeroBounds;
+void componentForegroundInput;
+void sparseComponentLabels;
+void componentObservationValidity;
+void componentConvergence;
+void optionalComponentIterationCount;
+void optionalComponentConnectivity;
+void optionalMaximumComponentIterations;
+void declaredComponentInput;
+void declaredComponentOutput;
+void declaredComponentValidity;
+void declaredComponentConvergence;
+void declaredComponentIterationCount;
+void declaredComponentConnectivity;
+void declaredMaximumComponentIterations;
 void isotropicOverviewScale;
 void anisotropicOverviewScale;
 void supportedCategoricalOverviewFormats;
@@ -1208,6 +1290,11 @@ void declaredGraphBudget;
 void unsupportedGradientOperator;
 void unsupportedGradientDirection;
 void unsupportedLaplacianConnectivity;
+void unsupportedRasterConnectivity;
+void invalidComponentForeground;
+void invalidComponentLabelFormat;
+void invalidComponentValidityFormat;
+void invalidComponentConvergenceFormat;
 void unsupportedMorphologyMode;
 void unsupportedMorphologyOperation;
 void unsupportedStructuringElement;
@@ -1260,6 +1347,7 @@ void declaredGlobalPercentile;
 void declaredGlobalPercentileOutput;
 void declaredGlobalPercentileValidity;
 void categoricalOverview;
+void connectedComponents;
 void globalHistogramMerge;
 void globalInitialize;
 void globalPercentile;
@@ -1298,6 +1386,9 @@ void RootGPURasterMorphology;
 // @ts-expect-error Composed morphology remains isolated from the experimental root.
 import {GPURasterClosing as RootGPURasterClosing} from '@luma.gl/experimental';
 void RootGPURasterClosing;
+// @ts-expect-error Raster connected-component labeling stays isolated from the experimental root.
+import {GPURasterConnectedComponents as RootGPURasterConnectedComponents} from '@luma.gl/experimental';
+void RootGPURasterConnectedComponents;
 // @ts-expect-error External raster tile sources remain isolated from the experimental root.
 import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/experimental';
 void RootGPURasterTileReader;

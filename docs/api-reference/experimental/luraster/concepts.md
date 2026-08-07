@@ -158,6 +158,84 @@ Neighborhood operations have their own explicit policies. Some reject a result w
 neighbors are missing; others ignore missing neighbors and renormalize their weights. Neither
 policy means “replace missing observations with zero.”
 
+## Connected foreground components
+
+A **connected component** is a maximal group of touching foreground pixels. Thresholding first
+classifies observations: nonzero means foreground, zero can mean valid background, and a separate
+zero validity flag still means the observation is missing. Component labeling answers “which
+foreground pixels belong to the same region?” without confusing these three states.
+
+```text
+Foreground values:       Observation validity:    Interpretation:
+
+1 0 1                    1 1 1                    region, background, region
+0 1 0                    1 0 1                    background, missing, background
+1 0 1                    1 1 1                    region, background, region
+```
+
+The central value is nonzero, but its separate validity is zero, so it must not join any region.
+The other zero values remain legitimate background observations; they are not missing.
+
+### Four neighbors or eight neighbors
+
+**Four-connectivity** considers the north, south, east, and west neighbors. **Eight-connectivity**
+also considers diagonal neighbors:
+
+```text
+Four-connected neighbors:       Eight-connected neighbors:
+
+        N                              NW N NE
+      W X E                             W X E
+        S                              SW S SE
+```
+
+Consider five valid foreground pixels arranged diagonally:
+
+```text
+Foreground:       Four-connected:       Eight-connected:
+
+1 0 1             1 0 3                 1 0 1
+0 1 0             0 5 0                 0 1 0
+1 0 1             7 0 9                 1 0 1
+```
+
+Four-connectivity produces five separate regions. Eight-connectivity joins them through the
+center. If that center is invalid, neither policy can use it as a bridge. The choice depends on
+whether corner contact should represent a real connection in the application's spatial model.
+
+### Why representative labels are sparse
+
+Each foreground region receives the smallest row-major pixel index in that region, plus one.
+The extra one reserves label `0` for background. This makes results deterministic regardless of
+GPU workgroup execution order, but identifiers are not densely renumbered: labels `1`, `3`, and
+`9` identify three regions, not nine.
+
+Do not use the largest representative as a component count or directly index a compact
+per-region array. Dense relabeling, explicit component counts, region measurements, and
+cross-tile identity reconciliation are separate future contracts.
+
+### Convergence must be proven
+
+The GPU repeatedly hooks neighboring foreground representatives toward their minimum and
+compresses parent pointers. The application supplies a fixed maximum number of graph rounds;
+long, thin, or winding regions can require more than a small budget.
+
+`GPURasterConnectedComponents` publishes an explicit GPU-resident `converged` scalar. A value of
+`1` means the bounded computation reached a fixed point. A value of `0` means it did not; in
+that case **every published label and output-validity flag is cleared**. Incomplete region shapes
+therefore cannot appear as trustworthy classifications or feed later measurement.
+
+An optional GPU iteration scalar records how many rounds actually ran, including the final
+unchanged round that proves convergence. Remaining predeclared work can be suppressed on the GPU
+without polling status or downloading source pixels to JavaScript.
+
+The Satellite Raster Lab lets you switch between **OFF** and **COMPONENTS**, select
+**4-CONNECTED** or **8-CONNECTED**, and adjust a bounded iteration budget. Its foreground
+readout counts selected observations, not distinct components. Convergence and actual rounds
+reuse existing contour diagnostic fields while component coloring temporarily replaces the
+contour overlay, so the existing 228-byte analytical summary does not grow. Segmentation is
+local to the selected tile; cross-tile region identity remains separate future work.
+
 ## Tiles and owned pixel cores
 
 A large raster is divided into smaller **tiles** so an application can decode, upload, and
@@ -469,7 +547,7 @@ does not submit commands or create an implicit completion fence.
 | Optional bounded uploads, GPU residency, eviction, and compiled-graph reuse            | `GPURasterTileCache`, when explicitly selected.                       |
 | Neighbor planning, borrowed source tiles, GPU halo assembly, and owned-core extraction | LuRaster halo contributors and explicit leases.                       |
 | Analytical overview values, counts, validity, and exact category policies              | LuRaster GPU overview contributors.                                   |
-| Indices, filters, morphology, distributions, thresholds, and contours                  | LuRaster contributors inside the caller's command graph.              |
+| Indices, filters, morphology, distributions, thresholds, regions, and contours         | LuRaster contributors inside the caller's command graph.              |
 | Command submission, completion fences, renderer integration, and optional readback     | The application.                                                      |
 
 LuRaster is a GPU analytical layer, not a replacement for loaders.gl. A future loaders.gl 5
@@ -489,6 +567,7 @@ transport, format parsing, and worker policy on the loading side of the boundary
 | Downsample continuous measurements without averaging missing pixels             | `GPURasterOverview` with caller-owned sum, count, mean, and validity outputs.                                          |
 | Downsample exact class identifiers                                              | `GPURasterCategoricalOverview` with nearest or mode policy.                                                            |
 | Build one histogram or threshold across many tiles                              | Explicit global initialization, statistics merges, and stable-domain histogram replay.                                 |
+| Identify connected thresholded foreground without inventing missing samples     | `GPURasterConnectedComponents` with four/eight connectivity and explicit convergence.                                  |
 | Look up complete constructors, format constraints, ownership, and code examples | The [LuRaster API reference](/docs/api-reference/experimental/luraster).                                               |
 
 ## A short glossary
@@ -496,6 +575,10 @@ transport, format parsing, and worker policy on the loading side of the boundary
 - **Band:** one aligned grid of measurements, such as red reflectance or temperature.
 - **Calibration:** conversion from a native stored value to a physical value using scale and offset.
 - **Categorical value:** an exact integer label; it is not a continuous quantity to interpolate.
+- **Connected component:** a maximal group of valid foreground pixels reachable under one
+  declared four- or eight-neighbor relationship.
+- **Connectivity:** the pixel-neighbor policy; four excludes diagonals and eight includes them.
+- **Convergence:** GPU proof that bounded component-label propagation reached a stable fixed point.
 - **Core:** the half-open region of a tile that owns analytical outputs.
 - **Domain:** the minimum and maximum values used to interpret histogram bins.
 - **Fence:** proof that previously submitted GPU work has completed.
@@ -509,6 +592,8 @@ transport, format parsing, and worker policy on the loading side of the boundary
 - **Pixel interpretation:** whether a source pixel represents a sampled point or a covered area.
 - **Raster:** a rectangular grid of observations.
 - **Receptive field:** the source neighborhood needed to produce one analytical output.
+- **Representative label:** one plus the smallest row-major foreground pixel index in a
+  connected component; these labels can be sparse.
 - **Replayable:** able to process tiles again after discovering global dataset information.
 - **Sentinel:** a source-defined raw numeric value that means missing.
 - **Tile:** a bounded rectangular subset of a raster.

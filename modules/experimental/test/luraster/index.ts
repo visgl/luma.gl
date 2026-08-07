@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import './gpu-raster-band-math.spec';
+import './gpu-raster-connected-components-pipeline.spec';
+import './gpu-raster-connected-components.spec';
 import './gpu-raster-contrast.spec';
 import './gpu-raster-contours.spec';
 import './gpu-raster-convolution.spec';
