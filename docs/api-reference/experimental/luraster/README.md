@@ -116,9 +116,12 @@ extract only the selected half-open core before displaying its statistics. Cumul
 owned-core bounds, and resident-source counts update with analytical controls and the chosen
 source overview. Choose **SOURCE NEAREST** to use the adapter's existing nearest-sample 2×
 overview, or **GPU MEAN** to generate a validity-aware mean from native source observations;
+selecting **GPU MEAN** automatically switches a native-resolution view to its 2× target.
 **MASK NEAREST** and **MASK MODE** become available in GPU-generated mode and select exact
-categorical coverage policies. Provenance and valid coverage distinguish the resulting
-analytical inputs without increasing the 228-byte readback. The current example deliberately
+categorical coverage policies. Provenance and displayed analytical valid-pixel coverage
+distinguish the resulting inputs without increasing the 228-byte readback. This visible
+coverage is the existing post-filter/threshold valid count, not the unretrieved per-parent
+source contribution count. The current example deliberately
 makes **GPU MEAN** and **SEAMLESS HALO** mutually
 exclusive: selecting either switches the other back to its compatible source/tile mode. All
 analytical filters work on generated means, and source-nearest overviews retain their complete

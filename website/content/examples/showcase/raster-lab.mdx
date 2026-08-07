@@ -21,7 +21,8 @@ overview, and compare **SOURCE NEAREST** source-provided samples with a
 **MASK NEAREST** and **MASK MODE** to compare exact categorical label
 policies, and inspect the resulting provenance, valid coverage, actual tile
 key, pixel dimensions, level-zero origin, and `EPSG:32610` coordinate identity.
-Categorical controls become available when **GPU MEAN** is selected. Adjust
+Selecting **GPU MEAN** automatically switches a native-resolution view to its
+2× target; categorical controls become available in that generated mode. Adjust
 the bounded resident-tile capacity and watch real CPU/GPU occupancy, cache hits, misses,
 evictions, active lease pins, and graph compilation/reuse. An uncached window
 is decoded and uploaded; revisiting a resident window reuses its buffers,
@@ -123,15 +124,18 @@ buffer resident; source pixels are never downloaded. Selecting a source
 window or overview instead selects an existing resident tile or performs one
 explicit CPU-to-GPU upload on a cache miss; neither path increases the 228-byte
 GPU-to-CPU analytical readback. Visible generated-overview coverage derives
-from that same existing scalar summary; source pixels, overview counts, and
-categorical buffers are never downloaded.
+from that same existing scalar summary and reports currently displayed
+analytical valid pixels after any filtering or threshold selection. It is not
+a count of raw observations contributing to each generated parent. Source
+pixels, per-parent overview counts, and categorical buffers are never downloaded.
 
 Use **SOURCE NEAREST** when an existing lower-resolution source level is
 trusted and avoiding native-resolution decoding, upload, or reduction is the
 priority. The synthetic source overview deliberately selects one existing
 nearest observation; it does not average neighboring observations or recover a
 missing selected sample. Use **GPU MEAN** when continuous observations require
-an honest valid-sample-weighted analytical reduction. For example, a `2 × 2`
+an honest valid-sample-weighted analytical reduction; choosing it automatically
+selects the 2× target when the current source view is native. For example, a `2 × 2`
 footprint containing values `[10, invalid, 30, invalid]` yields a generated
 sum of `40`, valid count of `2`, and mean of `20`, rather than diluting the
 result to `10`. An all-invalid parent retains zero sum/count, an invalid mask,
