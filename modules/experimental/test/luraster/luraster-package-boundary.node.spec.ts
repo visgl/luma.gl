@@ -142,6 +142,21 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
   });
 
+  test('keeps region measurements, transport, submission, and synchronization application-owned', () => {
+    const regionMeasurementsImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-region-measurements.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(regionMeasurementsImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(regionMeasurementsImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(regionMeasurementsImplementation).not.toMatch(
+      /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/
+    );
+  });
+
   test('exposes source, tile, global, component, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
@@ -154,6 +169,9 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterConnectedComponents.prototype.addToGraph).toBeTypeOf('function');
     expect(lurasterModule.GPURasterDenseComponents).toBeTypeOf('function');
     expect(lurasterModule.GPURasterDenseComponents.prototype.addToGraph).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterRegionMeasurements).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterRegionMeasurements.prototype.addToGraph).toBeTypeOf('function');
+    expect(lurasterModule.getRasterRegionWorldCentroid).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContrast).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContourClassifier).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContours).toBeTypeOf('function');

@@ -60,6 +60,7 @@ export type RasterLabDisplaySettings = {
   componentLabelMode: RasterLabComponentLabelMode;
   componentCapacity: number;
   componentMaximumIterations: number;
+  regionMetricsEnabled: boolean;
   contoursEnabled: boolean;
   contourLevel: number;
 };

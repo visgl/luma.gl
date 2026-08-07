@@ -32,12 +32,14 @@ import {
   GPURasterOtsuThreshold,
   GPURasterOverview,
   GPURasterOpening,
+  GPURasterRegionMeasurements,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
   GPURasterTileCoreExtract,
   GPURasterTileHaloFill,
+  getRasterRegionWorldCentroid,
   type GPURasterBufferBand,
   type GPURasterGlobalAccumulator,
   type GPURasterMetadata,
@@ -53,8 +55,13 @@ import {
 } from './raster-renderer';
 
 const HISTOGRAM_BIN_COUNT = 48;
+const REGION_MEASUREMENT_SCALAR_COUNT = 8;
+const REGION_HISTOGRAM_BIN_COUNT = HISTOGRAM_BIN_COUNT - REGION_MEASUREMENT_SCALAR_COUNT;
+const REGION_RESULT_CAPACITY = 2048;
 const DOMAIN_BYTE_LENGTH = Float32Array.BYTES_PER_ELEMENT * 2;
 const HISTOGRAM_BYTE_LENGTH = HISTOGRAM_BIN_COUNT * Uint32Array.BYTES_PER_ELEMENT;
+const REGION_MEASUREMENT_BYTE_OFFSET =
+  DOMAIN_BYTE_LENGTH + REGION_HISTOGRAM_BIN_COUNT * Uint32Array.BYTES_PER_ELEMENT;
 const COUNT_BYTE_OFFSET = DOMAIN_BYTE_LENGTH + HISTOGRAM_BYTE_LENGTH;
 const SUM_BYTE_OFFSET = COUNT_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 const MEAN_BYTE_OFFSET = SUM_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT;
@@ -63,6 +70,21 @@ const CONTOUR_COUNT_BYTE_OFFSET = THRESHOLD_BYTE_OFFSET + Float32Array.BYTES_PER
 const CONTOUR_OVERFLOW_BYTE_OFFSET = CONTOUR_COUNT_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 const CONTOUR_REQUIRED_BYTE_OFFSET = CONTOUR_OVERFLOW_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 const SUMMARY_BYTE_LENGTH = CONTOUR_REQUIRED_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
+
+/** One selected GPU-computed dense region; every other region record remains GPU-resident. */
+export type RasterLabRegionMeasurement = {
+  id: number;
+  pixelCount: number;
+  intensitySum: number;
+  intensityMinimum: number;
+  intensityMaximum: number;
+  intensityMean: number;
+  centroidColumn: number;
+  centroidRow: number;
+  worldCentroid: readonly [number, number];
+  area: number;
+  areaUnits: string;
+};
 
 /** Compact post-submit aggregate data; source reflectance and NDVI pixels are never downloaded. */
 export type RasterLabSummary = {
@@ -100,6 +122,8 @@ export type RasterLabSummary = {
   componentMaximumIterations: number;
   componentIterations: number;
   componentConverged: boolean;
+  regionMetricsEnabled: boolean;
+  regionMeasurement: RasterLabRegionMeasurement | null;
   contoursEnabled: boolean;
   contourLevel: number;
   contourSegmentCount: number;
@@ -130,6 +154,17 @@ type RasterLabBuffers = {
   binaryMorphologyValidity: Buffer;
   componentLabels: Buffer;
   componentValidity: Buffer;
+  regionPixelCounts: Buffer;
+  regionIntensityCounts: Buffer;
+  regionIntensitySums: Buffer;
+  regionIntensityMinimums: Buffer;
+  regionIntensityMaximums: Buffer;
+  regionIntensityMeans: Buffer;
+  regionColumnSums: Buffer;
+  regionRowSums: Buffer;
+  regionCentroidColumns: Buffer;
+  regionCentroidRows: Buffer;
+  regionAreas: Buffer;
   automaticThreshold: Buffer;
   baselineHistogram: Buffer;
   baselineDomain: Buffer;
@@ -225,6 +260,7 @@ export class RasterLabEngine {
     componentLabelMode: 'sparse',
     componentCapacity: 1024,
     componentMaximumIterations: 24,
+    regionMetricsEnabled: false,
     contoursEnabled: true,
     contourLevel: 0.35
   };
@@ -359,6 +395,61 @@ export class RasterLabEngine {
       componentValidity: device.createBuffer({
         id: 'raster-lab-component-observation-validity',
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionPixelCounts: device.createBuffer({
+        id: 'raster-lab-region-pixel-counts',
+        byteLength: REGION_RESULT_CAPACITY * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionIntensityCounts: device.createBuffer({
+        id: 'raster-lab-region-intensity-counts',
+        byteLength: REGION_RESULT_CAPACITY * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionIntensitySums: device.createBuffer({
+        id: 'raster-lab-region-intensity-sums',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionIntensityMinimums: device.createBuffer({
+        id: 'raster-lab-region-intensity-minimums',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionIntensityMaximums: device.createBuffer({
+        id: 'raster-lab-region-intensity-maximums',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionIntensityMeans: device.createBuffer({
+        id: 'raster-lab-region-intensity-means',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionColumnSums: device.createBuffer({
+        id: 'raster-lab-region-column-sums',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionRowSums: device.createBuffer({
+        id: 'raster-lab-region-row-sums',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionCentroidColumns: device.createBuffer({
+        id: 'raster-lab-region-centroid-columns',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionCentroidRows: device.createBuffer({
+        id: 'raster-lab-region-centroid-rows',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      regionAreas: device.createBuffer({
+        id: 'raster-lab-region-affine-areas',
+        byteLength: REGION_RESULT_CAPACITY * Float32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
       automaticThreshold: device.createBuffer({
@@ -541,6 +632,7 @@ export class RasterLabEngine {
       settings.componentLabelMode === this.settings.componentLabelMode &&
       settings.componentCapacity === this.settings.componentCapacity &&
       settings.componentMaximumIterations === this.settings.componentMaximumIterations &&
+      settings.regionMetricsEnabled === this.settings.regionMetricsEnabled &&
       settings.contoursEnabled === this.settings.contoursEnabled &&
       Math.abs(settings.contourLevel - this.settings.contourLevel) < 0.0000001 &&
       Math.abs(epsilon - this.epsilon) < 0.0000001
@@ -565,7 +657,7 @@ export class RasterLabEngine {
   }
 
   /** Encodes every dependent compute pass before copying only bins and extent for presentation. */
-  async update(): Promise<RasterLabSummary> {
+  async update(selectedRegionId = 1): Promise<RasterLabSummary> {
     const startedAt = performance.now();
     const encoder = this.device.createCommandEncoder({
       id: `raster-lab-analysis-${this.executionCount}`
@@ -600,8 +692,35 @@ export class RasterLabEngine {
       sourceBuffer: this.buffers.histogram,
       destinationBuffer: this.buffers.summaryReadback,
       destinationOffset: DOMAIN_BYTE_LENGTH,
-      size: this.buffers.histogram.byteLength
+      size:
+        (this.settings.regionMetricsEnabled ? REGION_HISTOGRAM_BIN_COUNT : HISTOGRAM_BIN_COUNT) *
+        Uint32Array.BYTES_PER_ELEMENT
     });
+    if (this.settings.regionMetricsEnabled) {
+      const sourceOffset =
+        Math.max(0, Math.min(selectedRegionId - 1, REGION_RESULT_CAPACITY - 1)) *
+        Uint32Array.BYTES_PER_ELEMENT;
+      const regionSources = [
+        this.buffers.regionPixelCounts,
+        this.buffers.regionIntensitySums,
+        this.buffers.regionIntensityMinimums,
+        this.buffers.regionIntensityMaximums,
+        this.buffers.regionIntensityMeans,
+        this.buffers.regionCentroidColumns,
+        this.buffers.regionCentroidRows,
+        this.buffers.regionAreas
+      ];
+      for (const [scalarIndex, sourceBuffer] of regionSources.entries()) {
+        encoder.copyBufferToBuffer({
+          sourceBuffer,
+          sourceOffset,
+          destinationBuffer: this.buffers.summaryReadback,
+          destinationOffset:
+            REGION_MEASUREMENT_BYTE_OFFSET + scalarIndex * Uint32Array.BYTES_PER_ELEMENT,
+          size: Uint32Array.BYTES_PER_ELEMENT
+        });
+      }
+    }
     encoder.copyBufferToBuffer({
       sourceBuffer: this.buffers.validCount,
       destinationBuffer: this.buffers.summaryReadback,
@@ -654,7 +773,7 @@ export class RasterLabEngine {
     const bins = new Uint32Array(
       summaryBytes.buffer,
       summaryBytes.byteOffset + DOMAIN_BYTE_LENGTH,
-      HISTOGRAM_BIN_COUNT
+      this.settings.regionMetricsEnabled ? REGION_HISTOGRAM_BIN_COUNT : HISTOGRAM_BIN_COUNT
     );
     const copiedBins = new Uint32Array(bins);
     const aggregateView = new DataView(
@@ -669,6 +788,67 @@ export class RasterLabEngine {
     const componentCount = componentConverged
       ? aggregateView.getUint32(CONTOUR_COUNT_BYTE_OFFSET, true)
       : 0;
+    const regionPixelCount = this.settings.regionMetricsEnabled
+      ? aggregateView.getUint32(REGION_MEASUREMENT_BYTE_OFFSET, true)
+      : 0;
+    const regionAvailable =
+      this.settings.regionMetricsEnabled &&
+      componentConverged &&
+      componentCount <= this.settings.componentCapacity &&
+      selectedRegionId >= 1 &&
+      selectedRegionId <= componentCount &&
+      regionPixelCount > 0 &&
+      Boolean(this.dataset.metadata);
+    const centroidColumn = regionAvailable
+      ? aggregateView.getFloat32(
+          REGION_MEASUREMENT_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT * 5,
+          true
+        )
+      : Number.NaN;
+    const centroidRow = regionAvailable
+      ? aggregateView.getFloat32(
+          REGION_MEASUREMENT_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT * 6,
+          true
+        )
+      : Number.NaN;
+    const coordinateReferenceAuthority =
+      this.dataset.metadata?.coordinateReferenceSystem?.authority ?? '';
+    const regionMeasurement: RasterLabRegionMeasurement | null = regionAvailable
+      ? {
+          id: selectedRegionId,
+          pixelCount: regionPixelCount,
+          intensitySum: aggregateView.getFloat32(
+            REGION_MEASUREMENT_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT,
+            true
+          ),
+          intensityMinimum: aggregateView.getFloat32(
+            REGION_MEASUREMENT_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT * 2,
+            true
+          ),
+          intensityMaximum: aggregateView.getFloat32(
+            REGION_MEASUREMENT_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT * 3,
+            true
+          ),
+          intensityMean: aggregateView.getFloat32(
+            REGION_MEASUREMENT_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT * 4,
+            true
+          ),
+          centroidColumn,
+          centroidRow,
+          worldCentroid: getRasterRegionWorldCentroid(
+            this.dataset.metadata!,
+            centroidColumn,
+            centroidRow
+          ),
+          area: aggregateView.getFloat32(
+            REGION_MEASUREMENT_BYTE_OFFSET + Float32Array.BYTES_PER_ELEMENT * 7,
+            true
+          ),
+          areaUnits: /^EPSG:32[67]\d{2}$/.test(coordinateReferenceAuthority)
+            ? 'm²'
+            : 'coordinate units²'
+        }
+      : null;
 
     return {
       bins: copiedBins,
@@ -712,6 +892,8 @@ export class RasterLabEngine {
         ? aggregateView.getUint32(CONTOUR_REQUIRED_BYTE_OFFSET, true)
         : 0,
       componentConverged,
+      regionMetricsEnabled: this.settings.regionMetricsEnabled,
+      regionMeasurement,
       contoursEnabled: this.settings.contoursEnabled,
       contourLevel:
         this.settings.morphologyOperation !== 'none' && this.settings.morphologyMode === 'binary'
@@ -1047,7 +1229,7 @@ export class RasterLabEngine {
       'histogram',
       this.buffers.histogram,
       'uint32',
-      HISTOGRAM_BIN_COUNT
+      this.settings.regionMetricsEnabled ? REGION_HISTOGRAM_BIN_COUNT : HISTOGRAM_BIN_COUNT
     );
     const domain = this.importView(graph, 'domain', this.buffers.domain, 'float32', 2);
     const contourVertexHandle = graph.importBuffer(
@@ -1661,6 +1843,39 @@ export class RasterLabEngine {
         maximumIterations: this.settings.componentMaximumIterations
       }).addToGraph(graph);
 
+      const denseComponentLabels = denseLabelMode
+        ? componentLabels
+        : this.createTransientView(
+            graph,
+            'raster-lab-dense-component-identifiers',
+            'uint32',
+            this.dataset.pixelCount
+          );
+      const denseComponentValidity = denseLabelMode
+        ? componentValidity
+        : this.createTransientView(
+            graph,
+            'raster-lab-dense-component-validity',
+            'uint32',
+            this.dataset.pixelCount
+          );
+      const boundedComponentCount = this.createTransientView(
+        graph,
+        'raster-lab-bounded-component-count',
+        'uint32',
+        1
+      );
+      const componentOverflow = this.createTransientView(
+        graph,
+        'raster-lab-component-overflow',
+        'uint32',
+        1
+      );
+      const componentCapacity = Math.min(
+        this.settings.componentCapacity,
+        this.dataset.pixelCount,
+        REGION_RESULT_CAPACITY
+      );
       new GPURasterDenseComponents({
         id: 'raster-lab-dense-connected-components',
         width: this.dataset.width,
@@ -1668,32 +1883,109 @@ export class RasterLabEngine {
         input: sparseComponentLabels,
         inputValidity: sparseComponentValidity,
         converged: contourOverflow,
-        output: denseLabelMode
-          ? componentLabels
-          : this.createTransientView(
-              graph,
-              'raster-lab-dense-component-identifiers',
-              'uint32',
-              this.dataset.pixelCount
-            ),
-        outputValidity: denseLabelMode
-          ? componentValidity
-          : this.createTransientView(
-              graph,
-              'raster-lab-dense-component-validity',
-              'uint32',
-              this.dataset.pixelCount
-            ),
-        componentCount: this.createTransientView(
-          graph,
-          'raster-lab-bounded-component-count',
-          'uint32',
-          1
-        ),
-        overflow: this.createTransientView(graph, 'raster-lab-component-overflow', 'uint32', 1),
+        output: denseComponentLabels,
+        outputValidity: denseComponentValidity,
+        componentCount: boundedComponentCount,
+        overflow: componentOverflow,
         requiredComponentCount: contourSegmentCount,
-        capacity: Math.min(this.settings.componentCapacity, this.dataset.pixelCount)
+        capacity: componentCapacity
       }).addToGraph(graph);
+
+      if (this.settings.regionMetricsEnabled) {
+        if (!this.dataset.metadata) {
+          throw new Error('Raster region measurements require affine source metadata');
+        }
+        new GPURasterRegionMeasurements({
+          id: 'raster-lab-dense-region-measurements',
+          metadata: this.dataset.metadata,
+          labels: denseComponentLabels,
+          labelValidity: denseComponentValidity,
+          converged: contourOverflow,
+          componentCount: boundedComponentCount,
+          overflow: componentOverflow,
+          intensity: analyzedBand,
+          output: {
+            pixelCounts: this.importView(
+              graph,
+              'region-pixel-counts',
+              this.buffers.regionPixelCounts,
+              'uint32',
+              REGION_RESULT_CAPACITY
+            ),
+            intensityCounts: this.importView(
+              graph,
+              'region-intensity-counts',
+              this.buffers.regionIntensityCounts,
+              'uint32',
+              REGION_RESULT_CAPACITY
+            ),
+            intensitySums: this.importView(
+              graph,
+              'region-intensity-sums',
+              this.buffers.regionIntensitySums,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            intensityMinimums: this.importView(
+              graph,
+              'region-intensity-minimums',
+              this.buffers.regionIntensityMinimums,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            intensityMaximums: this.importView(
+              graph,
+              'region-intensity-maximums',
+              this.buffers.regionIntensityMaximums,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            intensityMeans: this.importView(
+              graph,
+              'region-intensity-means',
+              this.buffers.regionIntensityMeans,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            columnSums: this.importView(
+              graph,
+              'region-column-sums',
+              this.buffers.regionColumnSums,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            rowSums: this.importView(
+              graph,
+              'region-row-sums',
+              this.buffers.regionRowSums,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            centroidColumns: this.importView(
+              graph,
+              'region-centroid-columns',
+              this.buffers.regionCentroidColumns,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            centroidRows: this.importView(
+              graph,
+              'region-centroid-rows',
+              this.buffers.regionCentroidRows,
+              'float32',
+              REGION_RESULT_CAPACITY
+            ),
+            areas: this.importView(
+              graph,
+              'region-affine-areas',
+              this.buffers.regionAreas,
+              'float32',
+              REGION_RESULT_CAPACITY
+            )
+          },
+          capacity: componentCapacity
+        }).addToGraph(graph);
+      }
     }
 
     if (this.settings.contoursEnabled) {

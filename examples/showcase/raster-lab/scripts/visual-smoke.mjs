@@ -129,6 +129,9 @@ try {
       componentMaximumIterations: rasterLab.componentMaximumIterations,
       componentIterations: rasterLab.componentIterations,
       componentConverged: rasterLab.componentConverged,
+      regionMetricsEnabled: rasterLab.regionMetricsEnabled,
+      selectedRegionId: rasterLab.selectedRegionId,
+      regionMeasurement: rasterLab.regionMeasurement,
       edgeMode: rasterLab.edgeMode,
       edgeDirection: rasterLab.edgeDirection,
       morphologyOperation: rasterLab.morphologyOperation,
@@ -166,6 +169,9 @@ try {
   assert.equal(initialState.componentOverflow, false, 'inactive outputs never claim overflow');
   assert.equal(initialState.componentMaximumIterations, 24, 'component propagation has an explicit bounded budget');
   assert.equal(initialState.componentConverged, false, 'inactive component status is not fabricated');
+  assert.equal(initialState.regionMetricsEnabled, false, 'region inspection remains explicitly opt-in');
+  assert.equal(initialState.selectedRegionId, 1, 'dense region selection is one-based');
+  assert.equal(initialState.regionMeasurement, null, 'inactive region metrics cannot reuse stale output');
   assert.deepEqual(initialState.tileOrigin, [0, 0], 'the native tile preserves its level-zero origin');
   assert.equal(
     initialState.coordinateReferenceSystem,
@@ -1520,6 +1526,9 @@ try {
         componentMaximumIterations: rasterLab.componentMaximumIterations,
         componentIterations: rasterLab.componentIterations,
         componentConverged: rasterLab.componentConverged,
+        regionMetricsEnabled: rasterLab.regionMetricsEnabled,
+        selectedRegionId: rasterLab.selectedRegionId,
+        regionMeasurement: rasterLab.regionMeasurement,
         nodeCount: rasterLab.nodeCount,
         executionCount: rasterLab.executionCount,
         sum: rasterLab.sum,
@@ -2765,7 +2774,7 @@ try {
   assert.equal(
     await page.locator('[data-raster-largest-component]').count(),
     0,
-    'per-region measurements remain a separate future tranche'
+    'automatic largest-region ranking remains separate from selected-region measurements'
   );
   assert.equal(
     componentWestern.bins.reduce((total, count) => total + count, 0),
@@ -2779,6 +2788,7 @@ try {
     const width = 80;
     const height = 112;
     const foreground = new Uint8Array(width * height);
+    const intensities = new Float32Array(width * height);
     for (let row = 0; row < height; row++) {
       for (let column = 0; column < width; column++) {
         const sourceIndex = row * 2 * 320 + column * 2;
@@ -2793,21 +2803,34 @@ try {
         }
         const vegetation = (nearInfrared - red) / (nearInfrared + red);
         const adjusted = Math.max(-1, Math.min(1, vegetation * 1.15));
+        intensities[row * width + column] = adjusted;
         foreground[row * width + column] = Number(adjusted >= 0.35);
       }
     }
     const countComponents = connectivity => {
       const visited = new Uint8Array(foreground.length);
       let componentCount = 0;
+      const regions = [];
       for (let pixelIndex = 0; pixelIndex < foreground.length; pixelIndex++) {
         if (foreground[pixelIndex] === 0 || visited[pixelIndex] !== 0) continue;
         componentCount++;
         const queue = [pixelIndex];
         visited[pixelIndex] = 1;
+        let intensitySum = 0;
+        let intensityMinimum = Number.POSITIVE_INFINITY;
+        let intensityMaximum = Number.NEGATIVE_INFINITY;
+        let columnSum = 0;
+        let rowSum = 0;
         for (let queueIndex = 0; queueIndex < queue.length; queueIndex++) {
           const index = queue[queueIndex];
           const column = index % width;
           const row = Math.floor(index / width);
+          const intensity = intensities[index];
+          intensitySum += intensity;
+          intensityMinimum = Math.min(intensityMinimum, intensity);
+          intensityMaximum = Math.max(intensityMaximum, intensity);
+          columnSum += column + 0.5;
+          rowSum += row + 0.5;
           for (let offsetRow = -1; offsetRow <= 1; offsetRow++) {
             for (let offsetColumn = -1; offsetColumn <= 1; offsetColumn++) {
               if (offsetRow === 0 && offsetColumn === 0) continue;
@@ -2832,13 +2855,31 @@ try {
             }
           }
         }
+        const centroidColumn = columnSum / queue.length;
+        const centroidRow = rowSum / queue.length;
+        regions.push({
+          id: componentCount,
+          pixelCount: queue.length,
+          intensitySum,
+          intensityMinimum,
+          intensityMaximum,
+          intensityMean: intensitySum / queue.length,
+          centroidColumn,
+          centroidRow,
+          worldCentroid: [552400 + centroidColumn * 20, 4187600 - centroidRow * 20],
+          area: queue.length * 400
+        });
       }
-      return componentCount;
+      return {count: componentCount, regions};
     };
+    const four = countComponents(4);
+    const eight = countComponents(8);
     return {
       foregroundCount: foreground.reduce((count, value) => count + value, 0),
-      fourCount: countComponents(4),
-      eightCount: countComponents(8)
+      fourCount: four.count,
+      eightCount: eight.count,
+      fourRegions: four.regions,
+      eightRegions: eight.regions
     };
   });
   assert.equal(
@@ -2909,11 +2950,17 @@ try {
         componentMaximumIterations: raster.componentMaximumIterations,
         componentIterations: raster.componentIterations,
         componentConverged: raster.componentConverged,
+        regionMetricsEnabled: raster.regionMetricsEnabled,
+        selectedRegionId: raster.selectedRegionId,
+        regionMeasurement: raster.regionMeasurement,
         thresholdEnabled: raster.thresholdEnabled,
         automaticThreshold: raster.automaticThreshold,
         contoursEnabled: raster.contoursEnabled,
         validPixelCount: raster.validPixelCount,
         nodeCount: raster.nodeCount,
+        graphCompileCount: raster.graphCompileCount,
+        sourceReadCount: raster.sourceReadCount,
+        threshold: raster.threshold,
         executionCount: raster.executionCount,
         bins: raster.bins
       };
@@ -2959,6 +3006,98 @@ try {
     eightConnectedSurface,
     fourDenseSurface,
     'changing diagonal adjacency changes actual GPU dense-identifier colors without changing foreground'
+  );
+
+  const assertRegionMatchesOracle = (actual, expected, label) => {
+    assert(actual, `${label}: region measurement must be present`);
+    assert.equal(actual.id, expected.id, `${label}: dense ID`);
+    assert.equal(actual.pixelCount, expected.pixelCount, `${label}: geometry population`);
+    assert(
+      Math.abs(actual.intensitySum - expected.intensitySum) < Math.max(0.02, expected.pixelCount * 0.00002),
+      `${label}: finite intensity sum`
+    );
+    assert(Math.abs(actual.intensityMinimum - expected.intensityMinimum) < 0.0001, `${label}: intensity minimum`);
+    assert(Math.abs(actual.intensityMaximum - expected.intensityMaximum) < 0.0001, `${label}: intensity maximum`);
+    assert(Math.abs(actual.intensityMean - expected.intensityMean) < 0.0001, `${label}: intensity mean`);
+    assert(Math.abs(actual.centroidColumn - expected.centroidColumn) < 0.001, `${label}: pixel-local column centroid`);
+    assert(Math.abs(actual.centroidRow - expected.centroidRow) < 0.001, `${label}: pixel-local row centroid`);
+    assert(
+      Math.abs(actual.worldCentroid[0] - expected.worldCentroid[0]) < 0.02 &&
+        Math.abs(actual.worldCentroid[1] - expected.worldCentroid[1]) < 0.02,
+      `${label}: affine tile world centroid retains its large double-precision projected translation`
+    );
+    assert.equal(actual.area, expected.area, `${label}: determinant-scaled projected pixel area`);
+    assert.equal(actual.areaUnits, 'm²', `${label}: explicitly projected UTM square meters`);
+  };
+
+  const inspectedRegion = await updateComponentControl(
+    '[data-raster-region-metrics="on"]',
+    undefined,
+    {componentsEnabled: true, componentLabelMode: 'dense', regionMetricsEnabled: true}
+  );
+  assert.equal(inspectedRegion.bins.length, 40, 'the inspector computes an actual 40-bin GPU histogram');
+  assert.equal(
+    inspectedRegion.bins.reduce((total, count) => total + count, 0),
+    componentWestern.validPixelCount,
+    'all reduced-resolution histogram bins still partition the exact selected foreground population'
+  );
+  assert.equal(
+    await page.locator('[data-raster-histogram] > span').count(),
+    40,
+    'the visible distribution honestly renders every actual GPU histogram bin'
+  );
+  assert(
+    (await page.locator('[data-raster-histogram-bin-count]').textContent()).includes(
+      '40 bins · 8 region scalars'
+    ),
+    'the precision/readback tradeoff is explicitly presented instead of claiming the old 48-bin shape'
+  );
+  assertRegionMatchesOracle(
+    inspectedRegion.regionMeasurement,
+    componentOracle.eightRegions[0],
+    'first selected GPU region'
+  );
+  assert(
+    (await page.locator('[data-raster-region-pixels]').textContent()).includes(
+      componentOracle.eightRegions[0].pixelCount.toLocaleString()
+    ),
+    'visible region geometry comes from an actual bounded GPU grouped output'
+  );
+  assert(
+    (await page.locator('[data-raster-region-transfer]').textContent()).includes('228 bytes'),
+    'eight selected region scalars reuse existing histogram words without a second read'
+  );
+
+  const secondRegion = await updateComponentControl('[data-raster-control="region-id"]', 2, {
+    componentsEnabled: true,
+    regionMetricsEnabled: true,
+    selectedRegionId: 2
+  });
+  assertRegionMatchesOracle(
+    secondRegion.regionMeasurement,
+    componentOracle.eightRegions[1],
+    'second selected GPU region'
+  );
+  assert.equal(
+    secondRegion.graphCompileCount,
+    inspectedRegion.graphCompileCount,
+    'changing a selected row changes only GPU copy offsets and never recompiles the analytical graph'
+  );
+  assert.equal(secondRegion.nodeCount, inspectedRegion.nodeCount);
+  assert.equal(secondRegion.sourceReadCount, inspectedRegion.sourceReadCount);
+
+  const inspectionDisabled = await updateComponentControl(
+    '[data-raster-region-metrics="off"]',
+    undefined,
+    {componentsEnabled: true, componentLabelMode: 'dense', regionMetricsEnabled: false}
+  );
+  assert.equal(inspectionDisabled.regionMeasurement, null);
+  assert.equal(inspectionDisabled.bins.length, 48);
+  assert.deepEqual(inspectionDisabled.bins, componentWestern.bins);
+  assert.equal(
+    await page.locator('[data-raster-histogram] > span').count(),
+    48,
+    'leaving region inspection restores the complete original 48-bin GPU histogram'
   );
 
   const insufficientCapacity = Math.max(componentOracle.eightCount - 1, 0);
@@ -3241,6 +3380,153 @@ try {
   assert.equal(restoredLocalComponents.componentOverflow, false);
   assert(restoredLocalComponents.componentCount > 0);
   assert.equal(restoredLocalComponents.globalTileCount, 0);
+
+  const selectedOtsuThreshold = restoredLocalComponents.threshold;
+  const otsuRegionInspection = await updateComponentControl(
+    '[data-raster-region-metrics="on"]',
+    undefined,
+    {
+      componentsEnabled: true,
+      componentLabelMode: 'dense',
+      automaticThreshold: true,
+      regionMetricsEnabled: true
+    }
+  );
+  assert.equal(otsuRegionInspection.threshold, selectedOtsuThreshold);
+  assert.equal(otsuRegionInspection.bins.length, 40);
+  assert.equal(
+    otsuRegionInspection.bins.reduce((total, count) => total + count, 0),
+    otsuRegionInspection.validPixelCount,
+    'a real 40-bin selected histogram partitions the full foreground while the Otsu baseline stays 48 bins'
+  );
+  assert(otsuRegionInspection.regionMeasurement);
+  assert.equal(
+    otsuRegionInspection.regionMeasurement.area,
+    otsuRegionInspection.regionMeasurement.pixelCount * 400,
+    'overview region area uses the scaled 20-by-20-meter affine determinant'
+  );
+
+  const inspectedOverflow = await updateComponentControl(
+    '[data-raster-control="component-capacity"]',
+    0,
+    {
+      componentsEnabled: true,
+      regionMetricsEnabled: true,
+      componentOverflow: true,
+      componentCapacity: 0
+    }
+  );
+  assert.equal(inspectedOverflow.regionMeasurement, null);
+  assert.equal(inspectedOverflow.componentPublishedCount, 0);
+  assert.equal(inspectedOverflow.bins.length, 40);
+  assert(
+    (await page.locator('[data-raster-region-pixels]').textContent()).includes('unavailable'),
+    'overflow globally clears every region result instead of displaying stale grouped measurements'
+  );
+  assert(
+    (await page.locator('[data-raster-region-transfer]').textContent()).includes('overflow'),
+    'the selected-region dashboard explicitly reports its failed capacity precondition'
+  );
+
+  const inspectedUnconverged = await updateComponentControl(
+    '[data-raster-control="component-iterations"]',
+    1,
+    {
+      componentsEnabled: true,
+      regionMetricsEnabled: true,
+      componentConverged: false,
+      componentOverflow: false
+    }
+  );
+  assert.equal(inspectedUnconverged.regionMeasurement, null);
+  assert.equal(inspectedUnconverged.componentCount, 0);
+  assert.equal(inspectedUnconverged.bins.length, 40);
+  assert(
+    (await page.locator('[data-raster-region-transfer]').textContent()).includes('not converged'),
+    'unconverged dense labels invalidate all downstream region geometry and intensity outputs'
+  );
+
+  await updateComponentControl('[data-raster-control="component-iterations"]', 24, {
+    regionMetricsEnabled: true,
+    componentConverged: true,
+    componentOverflow: true
+  });
+  const inspectedRestored = await updateComponentControl(
+    '[data-raster-control="component-capacity"]',
+    1024,
+    {
+      regionMetricsEnabled: true,
+      componentConverged: true,
+      componentOverflow: false,
+      componentCapacity: 1024
+    }
+  );
+  assert(inspectedRestored.regionMeasurement);
+  assert.equal(inspectedRestored.threshold, selectedOtsuThreshold);
+
+  const generatedRegion = await loadSourceSelection(
+    '[data-raster-overview-policy="mean"]',
+    'west',
+    1
+  );
+  assert.equal(generatedRegion.generatedOverview, true);
+  assert.equal(generatedRegion.regionMetricsEnabled, true);
+  assert.equal(generatedRegion.bins.length, 40);
+  assert(generatedRegion.regionMeasurement);
+  assert.equal(
+    generatedRegion.regionMeasurement.area,
+    generatedRegion.regionMeasurement.pixelCount * 400,
+    'a validity-aware GPU-generated overview preserves the actual generated affine pixel area'
+  );
+
+  const nativeRegion = await loadSourceSelection(
+    '[data-raster-source-overview="0"]',
+    'west',
+    0
+  );
+  assert.equal(nativeRegion.generatedOverview, false);
+  assert.equal(nativeRegion.regionMetricsEnabled, true);
+  assert(nativeRegion.regionMeasurement);
+  assert.equal(
+    nativeRegion.regionMeasurement.area,
+    nativeRegion.regionMeasurement.pixelCount * 100,
+    'native-resolution grouped geometry uses 10-by-10-meter pixels instead of overview area'
+  );
+
+  const easternRegion = await loadSourceSelection('[data-raster-source-tile="east"]', 'east', 0);
+  assert.equal(easternRegion.regionMetricsEnabled, true);
+  assert(easternRegion.regionMeasurement);
+  assert(
+    easternRegion.regionMeasurement.worldCentroid[0] >= 554000 &&
+      easternRegion.regionMeasurement.worldCentroid[0] < 556000,
+    'JavaScript-double affine translation preserves the adjacent eastern tile world origin'
+  );
+  assert.equal(easternRegion.regionMeasurement.areaUnits, 'm²');
+
+  const sparseExitsInspection = await updateComponentControl(
+    '[data-raster-component-labels="sparse"]',
+    undefined,
+    {componentsEnabled: true, componentLabelMode: 'sparse', regionMetricsEnabled: false}
+  );
+  assert.equal(sparseExitsInspection.regionMeasurement, null);
+  assert.equal(sparseExitsInspection.bins.length, 48);
+  assert.equal(
+    await page.locator('[data-raster-histogram] > span').count(),
+    48,
+    'returning to sparse representatives restores every genuine histogram bin automatically'
+  );
+  await updateComponentControl('[data-raster-component-labels="dense"]', undefined, {
+    componentsEnabled: true,
+    componentLabelMode: 'dense',
+    regionMetricsEnabled: false
+  });
+  const finalRegionInspection = await updateComponentControl(
+    '[data-raster-region-metrics="on"]',
+    undefined,
+    {componentsEnabled: true, componentLabelMode: 'dense', regionMetricsEnabled: true}
+  );
+  assert(finalRegionInspection.regionMeasurement);
+  assert.equal(finalRegionInspection.bins.length, 40);
   assert(
     (
       await page
@@ -3248,7 +3534,7 @@ try {
         .filter({hasText: 'only 228 summary bytes'})
         .textContent()
     ).includes('only 228 summary bytes'),
-    'dense IDs remain GPU-resident while exact count, convergence, and rounds reuse existing contour words'
+    'dense region arrays remain GPU-resident while eight selected scalars reuse the same 228-byte transfer'
   );
 
   await page.waitForFunction(
@@ -3268,7 +3554,7 @@ try {
 
   process.stdout.write(
     `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, 4/8-connected sparse/dense roots, exact bounded component counts, safe overflow/convergence, and composed resident analysis verified)\n`
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, 4/8-connected dense roots, bounded GPU region measurements, precise affine centroids/areas, exact 228-byte inspection, and safe overflow/convergence verified)\n`
   );
 } finally {
   await browser?.close();

@@ -386,6 +386,8 @@ six standardized workload families.
 | Convergence-gated raster component labels | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Publish GPU convergence and optional actual iteration counts; clear all labels and validity when a bounded graph cannot prove convergence. |
 | Dense raster component identifiers | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Compact converged sparse representatives into deterministic contiguous row-major region IDs without losing valid background. |
 | Bounded raster region counts and overflow | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Publish exact required and capacity-clamped component populations, invalidate truncated foreground, and expose per-execution overflow. |
+| Masked per-region intensity statistics | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Publish separate exact geometric and valid-intensity populations with calibrated floating sums, minima, maxima, and means. |
+| Region centroids and affine areas | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Retain mergeable local pixel moments, preserve double-precision world translation, and report area in square CRS coordinate units. |
 | Marching-squares contours | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Classify bounded raster cells and generate supported vector contour segments directly on the GPU. |
 | Indirect contour overlays | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Draw GPU-generated contour geometry without downloading or rebuilding every segment on the CPU. |
 | Device-aware raster dispatch | Experimental | WebGPU | `@luma.gl/experimental/luraster` | Plan bounded dispatch stripes against the selected device's actual compute limits. |
