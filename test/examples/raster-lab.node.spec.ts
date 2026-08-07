@@ -568,4 +568,59 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(rasterInterface).toContain('this.globalPixelCount');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
   });
+
+  test('renders sparse classified foreground roots with explicit connectivity and convergence', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+    const components = rasterEngine.slice(
+      rasterEngine.indexOf("const componentInput: GPURasterBufferBand<'uint32'>"),
+      rasterEngine.indexOf(
+        'if (this.settings.contoursEnabled)',
+        rasterEngine.indexOf('const componentInput:')
+      )
+    );
+
+    expect(components).toContain("storage: {kind: 'buffer', values: thresholdValidity}");
+    expect(components).toContain(
+      'validity: binaryMorphologyEnabled ? binaryMorphologyValidity : analyzedValidity'
+    );
+    expect(components).toContain('new GPURasterConnectedComponents({');
+    expect(components).toContain('output: componentLabels');
+    expect(components).toContain('outputValidity: componentValidity');
+    expect(components).toContain('converged: contourOverflow');
+    expect(components).toContain('iterationCount: contourRequiredSegmentCount');
+    expect(rasterEngine.match(/\.readAsync\(/g)).toHaveLength(1);
+    expect(rasterApplication).toContain('this.display.contoursEnabled = false');
+    expect(rasterApplication).toContain(
+      'this.display.contoursEnabled = this.previousComponentContours'
+    );
+    expect(rasterApplication).toContain('this.resetGlobalAnalysis()');
+    expect(rasterApplication).toContain(
+      'this.latestSummary.componentsEnabled && this.latestSummary.componentConverged'
+    );
+    expect(rasterRenderer).toContain('componentLabelValues[pixelIndex]');
+    expect(rasterRenderer).toContain('if (label == 0u)');
+    expect(rasterInterface).toContain('data-raster-component-mode="on"');
+    expect(rasterInterface).toContain('data-raster-component-connectivity="4"');
+    expect(rasterInterface).toContain('data-raster-component-connectivity="8"');
+    expect(rasterInterface).toContain('data-raster-control="component-iterations"');
+    expect(rasterInterface).toContain('unresolved · labels cleared');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
+    expect(rasterInterface).not.toContain('data-raster-component-count');
+    expect(rasterInterface).not.toContain('data-raster-largest-component');
+  });
 });

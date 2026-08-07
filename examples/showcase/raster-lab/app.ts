@@ -33,6 +33,7 @@ import {
   type RasterLabSourceTile
 } from './raster-interface';
 import type {
+  RasterLabComponentConnectivity,
   RasterLabDisplayMode,
   RasterLabDisplaySettings,
   RasterLabEdgeDirection,
@@ -52,7 +53,7 @@ import {
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'Global tiled GPU reductions, scientific overviews, seamless halos, NDVI, and image analysis.';
+  'Sparse GPU-connected components, global reductions, scientific overviews, halos, and NDVI.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -103,6 +104,11 @@ type RasterLabDebugController = {
   readonly globalReplayPassCount: number;
   readonly globalPixelCount: number;
   readonly globalMedian: number | null;
+  readonly componentsEnabled: boolean;
+  readonly componentConnectivity: RasterLabComponentConnectivity;
+  readonly componentMaximumIterations: number;
+  readonly componentIterations: number;
+  readonly componentConverged: boolean;
   readonly mode: RasterLabDisplayMode;
   readonly smoothingMode: RasterLabSmoothingMode;
   readonly smoothingRadius: number;
@@ -151,6 +157,9 @@ type RasterLabDebugController = {
   setMorphologyNoDataPolicy: (policy: RasterLabMorphologyNoDataPolicy) => void;
   setMorphologyBorderMode: (mode: RasterLabMorphologyBorderMode) => void;
   setMorphologyBorderValue: (value: number) => void;
+  setComponentsEnabled: (enabled: boolean) => void;
+  setComponentConnectivity: (connectivity: RasterLabComponentConnectivity) => void;
+  setComponentMaximumIterations: (iterations: number) => void;
   setContrast: (contrast: number) => void;
   setGamma: (gamma: number) => void;
   setThreshold: (threshold: number, enabled?: boolean) => void;
@@ -192,6 +201,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     threshold: 0.35,
     thresholdEnabled: false,
     automaticThreshold: false,
+    componentsEnabled: false,
+    componentConnectivity: 4,
+    componentMaximumIterations: 24,
     contoursEnabled: true,
     contourLevel: 0.35
   };
@@ -221,6 +233,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private haloMode: RasterLabHaloMode = 'off';
   private analysisScope: RasterLabAnalysisScope = 'tile';
   private replayOrder: RasterLabReplayOrder = 'forward';
+  private previousComponentContours = true;
   private cacheCapacity = 3;
   private tileLoadCount = 0;
   private abortedTileRequestCount = 0;
@@ -274,6 +287,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onMorphologyNoDataPolicy: policy => this.setMorphologyNoDataPolicy(policy),
       onMorphologyBorderMode: mode => this.setMorphologyBorderMode(mode),
       onMorphologyBorderValue: value => this.setMorphologyBorderValue(value),
+      onComponentsEnabled: enabled => this.setComponentsEnabled(enabled),
+      onComponentConnectivity: connectivity => this.setComponentConnectivity(connectivity),
+      onComponentMaximumIterations: iterations => this.setComponentMaximumIterations(iterations),
       onContrast: contrast => this.setContrast(contrast),
       onGamma: gamma => this.setGamma(gamma),
       onThreshold: (threshold, enabled) => this.setThreshold(threshold, enabled),
@@ -289,6 +305,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.publishHalo();
     this.publishGlobal();
     this.publishOverview();
+    this.publishComponents();
     this.interface.setStatus('Loading decoded red and near-infrared source tile');
 
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
@@ -318,7 +335,14 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
     const viewport = this.interface.getMapViewport(canvasContext.getDrawingBufferSize());
     if (viewport.width <= 0 || viewport.height <= 0 || !this.latestSummary) return;
-    this.engine.render(canvasContext, viewport, this.display);
+    const settings = this.display.componentsEnabled
+      ? {
+          ...this.display,
+          componentsEnabled:
+            this.latestSummary.componentsEnabled && this.latestSummary.componentConverged
+        }
+      : this.display;
+    this.engine.render(canvasContext, viewport, settings);
     this.redrawRequested = false;
     this.frameCount++;
   }
@@ -417,6 +441,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       if (this.cacheCapacity < 2) return;
     }
     if (scope === 'global') {
+      if (this.display.componentsEnabled) this.disableComponents();
       if (this.overviewPolicy === 'mean') {
         this.overviewPolicy = 'source';
         this.publishOverview();
@@ -901,6 +926,47 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
   }
 
+  private setComponentsEnabled(enabled: boolean): void {
+    if (enabled === this.display.componentsEnabled) return;
+    const reloadSources = enabled && this.resetGlobalAnalysis();
+    if (enabled) {
+      this.previousComponentContours = this.display.contoursEnabled;
+      this.display.componentsEnabled = true;
+      this.display.contoursEnabled = false;
+      this.display.thresholdEnabled = true;
+      this.interface?.setContours(false, this.display.contourLevel);
+      this.interface?.setThreshold(this.display.threshold, true);
+    } else {
+      this.disableComponents();
+    }
+    this.publishComponents();
+    if (reloadSources) this.requestSourceTile();
+    else this.requestUpdate();
+  }
+
+  private disableComponents(): void {
+    if (!this.display.componentsEnabled) return;
+    this.display.componentsEnabled = false;
+    this.display.contoursEnabled = this.previousComponentContours;
+    this.interface?.setContours(this.display.contoursEnabled, this.display.contourLevel);
+    this.publishComponents();
+  }
+
+  private setComponentConnectivity(connectivity: RasterLabComponentConnectivity): void {
+    if (connectivity === this.display.componentConnectivity) return;
+    this.display.componentConnectivity = connectivity;
+    this.publishComponents();
+    if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
+  private setComponentMaximumIterations(iterations: number): void {
+    const maximumIterations = Math.max(1, Math.min(32, Math.round(iterations)));
+    if (maximumIterations === this.display.componentMaximumIterations) return;
+    this.display.componentMaximumIterations = maximumIterations;
+    this.publishComponents();
+    if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
   private syncBinaryMorphology(): void {
     const binaryMorphologyEnabled =
       this.display.morphologyOperation !== 'none' && this.display.morphologyMode === 'binary';
@@ -931,8 +997,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private setThreshold(threshold: number, enabled = true): void {
     if (
       !enabled &&
-      this.display.morphologyOperation !== 'none' &&
-      this.display.morphologyMode === 'binary'
+      (this.display.componentsEnabled ||
+        (this.display.morphologyOperation !== 'none' && this.display.morphologyMode === 'binary'))
     ) {
       enabled = true;
     }
@@ -961,7 +1027,12 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   }
 
   private setContours(enabled = true): void {
-    if (enabled === this.display.contoursEnabled) return;
+    const disabledComponents = enabled && this.display.componentsEnabled;
+    if (disabledComponents) this.disableComponents();
+    if (enabled === this.display.contoursEnabled) {
+      if (disabledComponents) this.requestUpdate();
+      return;
+    }
     this.display.contoursEnabled = enabled;
     this.interface?.setContours(enabled, this.display.contourLevel);
     this.requestUpdate();
@@ -1109,6 +1180,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
     this.publishGlobal();
     this.interface?.setSummary(publishedSummary);
+    this.publishComponents();
     this.interface?.setStatus(
       `${publishedSummary.nodeCount} GPU graph passes · ${this.tileCache.stats.residentTiles} bounded resident tiles`,
       'ready'
@@ -1178,6 +1250,19 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       threshold: this.latestSummary?.threshold ?? this.display.threshold,
       automaticThreshold: this.display.automaticThreshold,
       median: this.latestSummary?.globalMedian ?? null
+    });
+  }
+
+  private publishComponents(): void {
+    if (!this.interface || this.finalized) return;
+    const summary = this.latestSummary;
+    this.interface.setComponents({
+      enabled: this.display.componentsEnabled,
+      connectivity: this.display.componentConnectivity,
+      maximumIterations: this.display.componentMaximumIterations,
+      iterations: summary?.componentsEnabled ? summary.componentIterations : 0,
+      converged: summary?.componentsEnabled ? summary.componentConverged : false,
+      foregroundPixelCount: summary?.validPixelCount ?? 0
     });
   }
 
@@ -1401,6 +1486,21 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get globalMedian() {
         return viewer.latestSummary?.globalMedian ?? null;
       },
+      get componentsEnabled() {
+        return viewer.display.componentsEnabled;
+      },
+      get componentConnectivity() {
+        return viewer.display.componentConnectivity;
+      },
+      get componentMaximumIterations() {
+        return viewer.display.componentMaximumIterations;
+      },
+      get componentIterations() {
+        return viewer.latestSummary?.componentIterations ?? 0;
+      },
+      get componentConverged() {
+        return viewer.latestSummary?.componentConverged ?? false;
+      },
       get mode() {
         return viewer.display.mode;
       },
@@ -1503,6 +1603,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setMorphologyNoDataPolicy: policy => viewer.setMorphologyNoDataPolicy(policy),
       setMorphologyBorderMode: mode => viewer.setMorphologyBorderMode(mode),
       setMorphologyBorderValue: value => viewer.setMorphologyBorderValue(value),
+      setComponentsEnabled: enabled => viewer.setComponentsEnabled(enabled),
+      setComponentConnectivity: connectivity => viewer.setComponentConnectivity(connectivity),
+      setComponentMaximumIterations: iterations => viewer.setComponentMaximumIterations(iterations),
       setContrast: contrast => viewer.setContrast(contrast),
       setGamma: gamma => viewer.setGamma(gamma),
       setThreshold: (threshold, enabled) => viewer.setThreshold(threshold, enabled),

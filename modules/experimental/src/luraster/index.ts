@@ -88,6 +88,12 @@ export type {
   GPURasterGlobalStatisticsMergeProps
 } from './gpu-raster-global-statistics';
 
+export {GPURasterConnectedComponents} from './gpu-raster-connected-components';
+export type {
+  GPURasterConnectedComponentsProps,
+  GPURasterConnectivity
+} from './gpu-raster-connected-components';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

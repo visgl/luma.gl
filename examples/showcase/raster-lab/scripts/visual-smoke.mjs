@@ -119,6 +119,11 @@ try {
       globalReplayPassCount: rasterLab.globalReplayPassCount,
       globalPixelCount: rasterLab.globalPixelCount,
       globalMedian: rasterLab.globalMedian,
+      componentsEnabled: rasterLab.componentsEnabled,
+      componentConnectivity: rasterLab.componentConnectivity,
+      componentMaximumIterations: rasterLab.componentMaximumIterations,
+      componentIterations: rasterLab.componentIterations,
+      componentConverged: rasterLab.componentConverged,
       edgeMode: rasterLab.edgeMode,
       edgeDirection: rasterLab.edgeDirection,
       morphologyOperation: rasterLab.morphologyOperation,
@@ -147,6 +152,10 @@ try {
   assert.equal(initialState.analysisScope, 'tile', 'global tiled replay remains explicitly opt-in');
   assert.equal(initialState.globalTileCount, 0, 'tile scope does not secretly pin adjacent cores');
   assert.equal(initialState.globalMedian, null, 'tile scope does not repurpose the threshold slot');
+  assert.equal(initialState.componentsEnabled, false, 'sparse component overlays remain opt-in');
+  assert.equal(initialState.componentConnectivity, 4, 'component labeling defaults to edge adjacency');
+  assert.equal(initialState.componentMaximumIterations, 24, 'component propagation has an explicit bounded budget');
+  assert.equal(initialState.componentConverged, false, 'inactive component status is not fabricated');
   assert.deepEqual(initialState.tileOrigin, [0, 0], 'the native tile preserves its level-zero origin');
   assert.equal(
     initialState.coordinateReferenceSystem,
@@ -1491,6 +1500,11 @@ try {
         globalReplayPassCount: rasterLab.globalReplayPassCount,
         globalPixelCount: rasterLab.globalPixelCount,
         globalMedian: rasterLab.globalMedian,
+        componentsEnabled: rasterLab.componentsEnabled,
+        componentConnectivity: rasterLab.componentConnectivity,
+        componentMaximumIterations: rasterLab.componentMaximumIterations,
+        componentIterations: rasterLab.componentIterations,
+        componentConverged: rasterLab.componentConverged,
         nodeCount: rasterLab.nodeCount,
         executionCount: rasterLab.executionCount,
         sum: rasterLab.sum,
@@ -2684,6 +2698,374 @@ try {
     'merged global extrema, bins, population, mean, and multiplexed median retain one 228-byte read'
   );
 
+  const componentWestern = await loadSourceSelection(
+    '[data-raster-component-mode="on"]',
+    'west',
+    1
+  );
+  assert.equal(componentWestern.analysisScope, 'tile');
+  assert.equal(componentWestern.componentsEnabled, true);
+  assert.equal(componentWestern.componentConnectivity, 4);
+  assert.equal(componentWestern.componentMaximumIterations, 24);
+  assert.equal(componentWestern.componentConverged, true);
+  assert(componentWestern.componentIterations > 0);
+  assert(componentWestern.componentIterations < componentWestern.componentMaximumIterations);
+  assert.equal(componentWestern.thresholdEnabled, true);
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.contoursEnabled),
+    false,
+    'component convergence and actual rounds reuse contour diagnostic slots without growing the summary'
+  );
+  assert.equal(
+    await page.locator('[data-raster-control="contours-enabled"]').isDisabled(),
+    true,
+    'mutually exclusive contours cannot overwrite active component convergence diagnostics'
+  );
+  assert.equal(
+    await page.locator('[data-raster-control="threshold-enabled"]').isDisabled(),
+    true,
+    'component input always retains an explicit classified foreground mask'
+  );
+  assert(
+    (await page.locator('[data-raster-component-state]').textContent()).includes('verified'),
+    'the dashboard publishes only an explicitly proven GPU fixed point'
+  );
+  assert(
+    (await page.locator('[data-raster-component-foreground]').textContent()).includes(
+      componentWestern.validPixelCount.toLocaleString()
+    ),
+    'region telemetry reports classified foreground observations rather than inventing a component count'
+  );
+  assert.equal(
+    await page.locator('[data-raster-component-count]').count(),
+    0,
+    'dense relabeling and component counts remain future tranches'
+  );
+  assert.equal(
+    componentWestern.bins.reduce((total, count) => total + count, 0),
+    componentWestern.validPixelCount,
+    'sparse component analysis preserves the existing thresholded numerical population'
+  );
+
+  const componentOracle = await page.evaluate(async () => {
+    const {makeRasterLabDataset, RASTER_LAB_NO_DATA_VALUE} = await import('/raster-data.ts');
+    const native = makeRasterLabDataset(320, 224);
+    const width = 80;
+    const height = 112;
+    const foreground = new Uint8Array(width * height);
+    for (let row = 0; row < height; row++) {
+      for (let column = 0; column < width; column++) {
+        const sourceIndex = row * 2 * 320 + column * 2;
+        const red = native.red[sourceIndex];
+        const nearInfrared = native.nearInfrared[sourceIndex];
+        if (
+          native.validity[sourceIndex] === 0 ||
+          red === RASTER_LAB_NO_DATA_VALUE ||
+          Math.abs(nearInfrared + red) <= 0.0001
+        ) {
+          continue;
+        }
+        const vegetation = (nearInfrared - red) / (nearInfrared + red);
+        const adjusted = Math.max(-1, Math.min(1, vegetation * 1.15));
+        foreground[row * width + column] = Number(adjusted >= 0.35);
+      }
+    }
+    const countComponents = connectivity => {
+      const visited = new Uint8Array(foreground.length);
+      let componentCount = 0;
+      for (let pixelIndex = 0; pixelIndex < foreground.length; pixelIndex++) {
+        if (foreground[pixelIndex] === 0 || visited[pixelIndex] !== 0) continue;
+        componentCount++;
+        const queue = [pixelIndex];
+        visited[pixelIndex] = 1;
+        for (let queueIndex = 0; queueIndex < queue.length; queueIndex++) {
+          const index = queue[queueIndex];
+          const column = index % width;
+          const row = Math.floor(index / width);
+          for (let offsetRow = -1; offsetRow <= 1; offsetRow++) {
+            for (let offsetColumn = -1; offsetColumn <= 1; offsetColumn++) {
+              if (offsetRow === 0 && offsetColumn === 0) continue;
+              if (connectivity === 4 && Math.abs(offsetRow) + Math.abs(offsetColumn) !== 1) {
+                continue;
+              }
+              const neighborColumn = column + offsetColumn;
+              const neighborRow = row + offsetRow;
+              if (
+                neighborColumn < 0 ||
+                neighborColumn >= width ||
+                neighborRow < 0 ||
+                neighborRow >= height
+              ) {
+                continue;
+              }
+              const neighborIndex = neighborRow * width + neighborColumn;
+              if (foreground[neighborIndex] !== 0 && visited[neighborIndex] === 0) {
+                visited[neighborIndex] = 1;
+                queue.push(neighborIndex);
+              }
+            }
+          }
+        }
+      }
+      return componentCount;
+    };
+    return {
+      foregroundCount: foreground.reduce((count, value) => count + value, 0),
+      fourCount: countComponents(4),
+      eightCount: countComponents(8)
+    };
+  });
+  assert.equal(
+    componentWestern.validPixelCount,
+    componentOracle.foregroundCount,
+    'independent CPU fixture agrees with selected source-nearest foreground without GPU pixel readback'
+  );
+  assert(
+    componentOracle.fourCount > componentOracle.eightCount,
+    'the deterministic synthetic fixture actually contains diagonal-only component connections'
+  );
+
+  const componentSurfaceBounds = await page.locator('[data-raster-surface]').boundingBox();
+  assert(componentSurfaceBounds);
+  const componentClip = {
+    x: Math.ceil(componentSurfaceBounds.x + 2),
+    y: Math.ceil(componentSurfaceBounds.y + 2),
+    width: Math.floor(componentSurfaceBounds.width - 4),
+    height: Math.floor(componentSurfaceBounds.height - 4)
+  };
+  const fourConnectedSurface = await page.screenshot({clip: componentClip});
+
+  const updateComponentControl = async (selector, value, expected) => {
+    const previous = await page.evaluate(() => ({
+      executionCount: window.__luRasterLab.executionCount,
+      frameCount: window.__luRasterLab.frameCount
+    }));
+    const control = page.locator(selector);
+    await control.scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    });
+    if (value === undefined) await control.click();
+    else await control.fill(String(value));
+    await page.waitForFunction(
+      ({executionCount, frameCount, expectations}) => {
+        const raster = window.__luRasterLab;
+        if (
+          !raster ||
+          raster.sourceLoading ||
+          raster.executionCount <= executionCount ||
+          raster.frameCount <= frameCount
+        ) {
+          return false;
+        }
+        return Object.entries(expectations).every(([key, expectedValue]) => {
+          return raster[key] === expectedValue;
+        });
+      },
+      {...previous, expectations: expected},
+      {timeout: timeoutMilliseconds}
+    );
+    return await page.evaluate(() => {
+      const raster = window.__luRasterLab;
+      return {
+        componentsEnabled: raster.componentsEnabled,
+        componentConnectivity: raster.componentConnectivity,
+        componentMaximumIterations: raster.componentMaximumIterations,
+        componentIterations: raster.componentIterations,
+        componentConverged: raster.componentConverged,
+        thresholdEnabled: raster.thresholdEnabled,
+        automaticThreshold: raster.automaticThreshold,
+        contoursEnabled: raster.contoursEnabled,
+        validPixelCount: raster.validPixelCount,
+        nodeCount: raster.nodeCount,
+        executionCount: raster.executionCount,
+        bins: raster.bins
+      };
+    });
+  };
+
+  const eightConnected = await updateComponentControl(
+    '[data-raster-component-connectivity="8"]',
+    undefined,
+    {componentsEnabled: true, componentConnectivity: 8, componentConverged: true}
+  );
+  assert.equal(eightConnected.validPixelCount, componentWestern.validPixelCount);
+  assert.deepEqual(eightConnected.bins, componentWestern.bins);
+  const eightConnectedSurface = await page.screenshot({clip: componentClip});
+  assert.notDeepEqual(
+    eightConnectedSurface,
+    fourConnectedSurface,
+    'changing diagonal adjacency changes actual GPU sparse-root colors without changing foreground'
+  );
+
+  const unconverged = await updateComponentControl(
+    '[data-raster-control="component-iterations"]',
+    1,
+    {componentsEnabled: true, componentMaximumIterations: 1, componentConverged: false}
+  );
+  assert.equal(unconverged.componentIterations, 1);
+  assert.deepEqual(unconverged.bins, componentWestern.bins);
+  assert(
+    (await page.locator('[data-raster-component-state]').textContent()).includes('labels cleared'),
+    'an insufficient fixed budget advertises unresolved status instead of asserting convergence'
+  );
+  assert(
+    (await page.locator('[data-raster-contour-count]').textContent()).includes('UNRESOLVED'),
+    'the map explicitly warns that component identities were globally invalidated'
+  );
+  const unconvergedSurface = await page.screenshot({clip: componentClip});
+  assert.notDeepEqual(
+    unconvergedSurface,
+    eightConnectedSurface,
+    'unconverged GPU-cleared roots cannot produce plausible colored component islands'
+  );
+
+  const disabledComponents = await updateComponentControl(
+    '[data-raster-component-mode="off"]',
+    undefined,
+    {componentsEnabled: false, contoursEnabled: true}
+  );
+  assert.equal(disabledComponents.componentIterations, 0);
+  assert.equal(
+    await page.locator('[data-raster-control="contours-enabled"]').isDisabled(),
+    false,
+    'leaving component mode restores the saved contour presentation and its diagnostic slots'
+  );
+  previousExecutionCount = disabledComponents.executionCount;
+  previousFrameCount = await page.evaluate(() => window.__luRasterLab.frameCount);
+  await page.locator('[data-raster-control="contours-enabled"]').uncheck();
+  await page.waitForFunction(
+    ({executionCount, frameCount}) =>
+      !window.__luRasterLab.contoursEnabled &&
+      window.__luRasterLab.executionCount > executionCount &&
+      window.__luRasterLab.frameCount > frameCount,
+    {executionCount: previousExecutionCount, frameCount: previousFrameCount},
+    {timeout: timeoutMilliseconds}
+  );
+  const noComponentSurface = await page.screenshot({clip: componentClip});
+  assert.deepEqual(
+    unconvergedSurface,
+    noComponentSurface,
+    'failed convergence suppresses the entire overlay and exactly preserves ordinary classified rendering'
+  );
+
+  const stillUnconverged = await updateComponentControl(
+    '[data-raster-component-mode="on"]',
+    undefined,
+    {componentsEnabled: true, componentMaximumIterations: 1, componentConverged: false}
+  );
+  assert.equal(stillUnconverged.contoursEnabled, false);
+  const recoveredComponents = await updateComponentControl(
+    '[data-raster-control="component-iterations"]',
+    24,
+    {componentsEnabled: true, componentMaximumIterations: 24, componentConverged: true}
+  );
+  assert(recoveredComponents.componentIterations > 1);
+  assert(recoveredComponents.componentIterations < recoveredComponents.componentMaximumIterations);
+  const recoveredSurface = await page.screenshot({clip: componentClip});
+  assert.notDeepEqual(
+    recoveredSurface,
+    noComponentSurface,
+    'restoring a sufficient bounded round budget restores only verified sparse component colors'
+  );
+
+  const automaticComponentMask = await updateComponentControl(
+    '[data-raster-control="otsu"]',
+    undefined,
+    {componentsEnabled: true, automaticThreshold: true, componentConverged: true}
+  );
+  assert.notEqual(automaticComponentMask.validPixelCount, recoveredComponents.validPixelCount);
+  assert.equal(
+    automaticComponentMask.bins.reduce((total, count) => total + count, 0),
+    automaticComponentMask.validPixelCount,
+    'local GPU Otsu, known binary background, sparse labels, and exact foreground summary compose'
+  );
+
+  previousExecutionCount = automaticComponentMask.executionCount;
+  await page.evaluate(() => {
+    const raster = window.__luRasterLab;
+    raster.setMorphologyMode('binary');
+    raster.setMorphologyOperation('close');
+    raster.setSmoothingMode('gaussian');
+  });
+  await page.waitForFunction(
+    executionCount => {
+      const raster = window.__luRasterLab;
+      return (
+        raster.componentsEnabled &&
+        raster.componentConverged &&
+        raster.morphologyMode === 'binary' &&
+        raster.morphologyOperation === 'close' &&
+        raster.smoothingMode === 'gaussian' &&
+        raster.automaticThreshold &&
+        raster.executionCount > executionCount
+      );
+    },
+    previousExecutionCount,
+    {timeout: timeoutMilliseconds}
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.contoursEnabled),
+    false,
+    'binary foreground morphology preserves separate observation validity without reactivating contours'
+  );
+
+  const componentHalo = await loadSourceSelection(
+    '[data-raster-halo-mode="seamless"]',
+    'west',
+    1
+  );
+  assert.equal(componentHalo.componentsEnabled, true);
+  assert.equal(componentHalo.componentConverged, true);
+  assert.equal(componentHalo.haloEnabled, true);
+  assert.equal(componentHalo.haloSourceTileCount, 2);
+  assert(componentHalo.haloRadius > 0);
+
+  const generatedComponents = await loadSourceSelection(
+    '[data-raster-overview-policy="mean"]',
+    'west',
+    1
+  );
+  assert.equal(generatedComponents.generatedOverview, true);
+  assert.equal(generatedComponents.componentsEnabled, true);
+  assert.equal(generatedComponents.componentConverged, true);
+  assert.equal(generatedComponents.haloEnabled, false);
+  assert.equal(generatedComponents.morphologyOperation, 'close');
+  assert(generatedComponents.automaticThreshold);
+  assert.equal(
+    generatedComponents.bins.reduce((total, count) => total + count, 0),
+    generatedComponents.validPixelCount,
+    'native mean, exact categorical mask, smoothing, local Otsu, binary closing, and components compose'
+  );
+
+  const globalExcludesComponents = await loadSourceSelection(
+    '[data-raster-analysis-scope="global"]',
+    'west',
+    1
+  );
+  assert.equal(globalExcludesComponents.analysisScope, 'global');
+  assert.equal(globalExcludesComponents.componentsEnabled, false);
+  assert.equal(globalExcludesComponents.generatedOverview, false);
+  assert.equal(globalExcludesComponents.globalTileCount, 2);
+  const restoredLocalComponents = await loadSourceSelection(
+    '[data-raster-component-mode="on"]',
+    'west',
+    1
+  );
+  assert.equal(restoredLocalComponents.analysisScope, 'tile');
+  assert.equal(restoredLocalComponents.componentsEnabled, true);
+  assert.equal(restoredLocalComponents.componentConverged, true);
+  assert.equal(restoredLocalComponents.globalTileCount, 0);
+  assert(
+    (
+      await page
+        .locator('.raster-histogram-caption')
+        .filter({hasText: 'only 228 summary bytes'})
+        .textContent()
+    ).includes('only 228 summary bytes'),
+    'sparse roots remain GPU-resident while convergence and actual rounds reuse existing contour words'
+  );
+
   await page.waitForFunction(
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
     composedSmoothing.frameCount,
@@ -2701,7 +3083,7 @@ try {
 
   process.stdout.write(
     `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, GPU median/Otsu, and composed resident analysis verified)\n`
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, 4/8-connected sparse roots, safe convergence, and composed resident analysis verified)\n`
   );
 } finally {
   await browser?.close();

@@ -14,6 +14,7 @@ import {
   GPURasterBoxBlur,
   GPURasterCategoricalOverview,
   GPURasterClosing,
+  GPURasterConnectedComponents,
   GPURasterContrast,
   GPURasterContours,
   GPURasterDilation,
@@ -88,6 +89,11 @@ export type RasterLabSummary = {
   thresholdEnabled: boolean;
   automaticThreshold: boolean;
   globalMedian: number | null;
+  componentsEnabled: boolean;
+  componentConnectivity: RasterLabDisplaySettings['componentConnectivity'];
+  componentMaximumIterations: number;
+  componentIterations: number;
+  componentConverged: boolean;
   contoursEnabled: boolean;
   contourLevel: number;
   contourSegmentCount: number;
@@ -116,6 +122,8 @@ type RasterLabBuffers = {
   thresholdSeed: Buffer;
   thresholdValidity: Buffer;
   binaryMorphologyValidity: Buffer;
+  componentLabels: Buffer;
+  componentValidity: Buffer;
   automaticThreshold: Buffer;
   baselineHistogram: Buffer;
   baselineDomain: Buffer;
@@ -206,6 +214,9 @@ export class RasterLabEngine {
     threshold: 0.35,
     thresholdEnabled: false,
     automaticThreshold: false,
+    componentsEnabled: false,
+    componentConnectivity: 4,
+    componentMaximumIterations: 24,
     contoursEnabled: true,
     contourLevel: 0.35
   };
@@ -332,6 +343,16 @@ export class RasterLabEngine {
         byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
         usage: outputUsage
       }),
+      componentLabels: device.createBuffer({
+        id: 'raster-lab-sparse-component-labels',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
+      componentValidity: device.createBuffer({
+        id: 'raster-lab-component-observation-validity',
+        byteLength: dataset.pixelCount * Uint32Array.BYTES_PER_ELEMENT,
+        usage: outputUsage
+      }),
       automaticThreshold: device.createBuffer({
         id: 'raster-lab-automatic-threshold',
         byteLength: Float32Array.BYTES_PER_ELEMENT,
@@ -420,6 +441,7 @@ export class RasterLabEngine {
         validity: this.buffers.analyzedValidity,
         thresholdValidity: this.buffers.thresholdValidity,
         morphologyValidity: this.buffers.binaryMorphologyValidity,
+        componentLabels: this.buffers.componentLabels,
         contourVertices: this.buffers.contourVertices,
         contourCommands: initializedContourCommands
       });
@@ -506,6 +528,9 @@ export class RasterLabEngine {
       Math.abs(settings.threshold - this.settings.threshold) < 0.0000001 &&
       settings.thresholdEnabled === this.settings.thresholdEnabled &&
       settings.automaticThreshold === this.settings.automaticThreshold &&
+      settings.componentsEnabled === this.settings.componentsEnabled &&
+      settings.componentConnectivity === this.settings.componentConnectivity &&
+      settings.componentMaximumIterations === this.settings.componentMaximumIterations &&
       settings.contoursEnabled === this.settings.contoursEnabled &&
       Math.abs(settings.contourLevel - this.settings.contourLevel) < 0.0000001 &&
       Math.abs(epsilon - this.epsilon) < 0.0000001
@@ -659,6 +684,15 @@ export class RasterLabEngine {
         this.global && !this.settings.automaticThreshold
           ? aggregateView.getFloat32(THRESHOLD_BYTE_OFFSET, true)
           : null,
+      componentsEnabled: this.settings.componentsEnabled,
+      componentConnectivity: this.settings.componentConnectivity,
+      componentMaximumIterations: this.settings.componentMaximumIterations,
+      componentIterations: this.settings.componentsEnabled
+        ? aggregateView.getUint32(CONTOUR_REQUIRED_BYTE_OFFSET, true)
+        : 0,
+      componentConverged:
+        this.settings.componentsEnabled &&
+        aggregateView.getUint32(CONTOUR_OVERFLOW_BYTE_OFFSET, true) !== 0,
       contoursEnabled: this.settings.contoursEnabled,
       contourLevel:
         this.settings.morphologyOperation !== 'none' && this.settings.morphologyMode === 'binary'
@@ -948,6 +982,20 @@ export class RasterLabEngine {
       graph,
       'binary-morphology-validity',
       this.buffers.binaryMorphologyValidity,
+      'uint32',
+      this.dataset.pixelCount
+    );
+    const componentLabels = this.importView(
+      graph,
+      'component-labels',
+      this.buffers.componentLabels,
+      'uint32',
+      this.dataset.pixelCount
+    );
+    const componentValidity = this.importView(
+      graph,
+      'component-validity',
+      this.buffers.componentValidity,
       'uint32',
       this.dataset.pixelCount
     );
@@ -1555,6 +1603,27 @@ export class RasterLabEngine {
           outputValidity: binaryMorphologyValidity
         }).addToGraph(graph);
       }
+    }
+
+    if (this.settings.componentsEnabled) {
+      const componentInput: GPURasterBufferBand<'uint32'> = {
+        id: 'raster-lab-classified-foreground',
+        format: 'uint32',
+        storage: {kind: 'buffer', values: thresholdValidity},
+        validity: binaryMorphologyEnabled ? binaryMorphologyValidity : analyzedValidity
+      };
+      new GPURasterConnectedComponents({
+        id: 'raster-lab-connected-components',
+        width: this.dataset.width,
+        height: this.dataset.height,
+        input: componentInput,
+        output: componentLabels,
+        outputValidity: componentValidity,
+        converged: contourOverflow,
+        iterationCount: contourRequiredSegmentCount,
+        connectivity: this.settings.componentConnectivity,
+        maximumIterations: this.settings.componentMaximumIterations
+      }).addToGraph(graph);
     }
 
     if (this.settings.contoursEnabled) {

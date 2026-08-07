@@ -1,10 +1,10 @@
 # LuRaster Roadmap
 
-- **Status:** Active; foundation, neighborhood processing, and bounded tiled analysis implemented
+- **Status:** Active; foundation, tiled analysis, and sparse connected components implemented
 - **Experimental API:** `@luma.gl/experimental/luraster`
 - **Execution model:** WebGPU `GPUCommandGraph` contributors
 - **Positioning:** GPU-resident raster analytics complementing `@luma.gl/experimental/geospatial`
-- **Next tranche:** 5.1, deterministic connected-component labeling
+- **Next tranche:** 5.2, dense connected-component relabeling and bounded region outputs
 
 ## Overview
 
@@ -22,8 +22,9 @@ application decisions.
 The implemented two-dimensional toolkit includes validity-aware band math, normalized difference
 vegetation index (NDVI), statistics, histograms, contrast adjustment, thresholding, spatial
 filters, morphology, single-raster contour extraction, bounded tile residency, seam-safe
-neighborhoods, analytical overviews, and dataset-wide replayable summaries. Connected-component
-labeling, region measurements, cross-tile contour ownership, and vector/raster zonal composition
+neighborhoods, analytical overviews, dataset-wide replayable summaries, and convergence-gated
+four/eight-connected sparse component labels. Dense component identifiers/counts, region
+measurements, cross-tile component or contour ownership, and vector/raster zonal composition
 remain planned. Three-dimensional microscopy, sophisticated segmentation, reprojection, and
 frequency-domain algorithms are separate, evidence-gated extensions.
 
@@ -38,9 +39,11 @@ extensions, engineering prerequisites, and explicit decision gates.
 
 Phases 0, 1, 3, and 4 are complete for their stated boundaries. Phase 2's core analytical
 operations are available, with narrower percentile/stretch/presentation follow-ups still open.
+Phase 5 has started with deterministic sparse foreground components and explicit GPU convergence;
+dense identifiers, compact counts, region measurements, and cross-tile identity remain open.
 Phase 6 already includes single-raster contour classification and indirect drawing, but not
 cross-tile contour ownership or zonal statistics. The next dependency-ready implementation is
-Tranche 5.1; Tranche 6.3 is an alternative when contour integration takes priority.
+Tranche 5.2; Tranche 6.3 is an alternative when contour integration takes priority.
 
 Completing a phase means its separately documented contracts exist; it does not imply that every
 feature combination is automatic. In particular, the Raster Lab deliberately separates generated
@@ -68,6 +71,9 @@ commands, retain in-flight resources, and choose whether to inspect results.
 | Replay                              | Processing selected tiles again after all first-pass global extrema are known; histogram replay bins every owned core against one final GPU-resident domain.                 |
 | Global accumulator and tile partial | Accumulators are caller-owned persistent outputs initialized explicitly per dataset; partials are graph-owned bounded scratch cleared for each tile encoding.                |
 | Approximate percentile              | A histogram-bin estimate, not an exact sorted quantile. Minimum/maximum endpoints are exact; interior values use bin centers and reject overflow.                            |
+| Connected component                 | A maximal group of valid nonzero foreground observations reachable through explicitly selected four- or eight-neighbor connectivity.                                        |
+| Sparse representative               | One plus the smallest row-major pixel index in a connected component; zero is background, and representative identifiers are not dense component counts.                    |
+| Convergence                         | Explicit GPU evidence that bounded component hooking/compression reached a fixed point; exhausted budgets clear every published label and validity flag.                     |
 
 Official cuCIM references:
 
@@ -497,7 +503,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | Follow-ups  | High   | Medium |
 | 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Complete    | High   | Large  |
 | 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Complete    | High   | Large  |
-| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
+| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | In progress | High   | Large  |
 | 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | In progress | High   | Large  |
 | 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred    | Medium | Large  |
 | 8 — Productization               | Satellite/microscopy showcases, documentation, benchmarks, and release gates | In progress | High   | Medium |
@@ -645,9 +651,19 @@ when their tests and rollback boundaries remain understandable.
   Reversed/shuffled tile traversal reproduces global analytical domains, Otsu cutoffs, and
   bounded-bin counts while retaining explicit source leases; floating sums retain normal
   order-dependent rounding.
-- **5.1 next:** deterministic GPU-native four/eight-connected component labeling; tranche 6.3
-  seam-safe contour ownership is also independently available when vector integration takes
-  priority.
+- **5.1 complete for sparse connected foreground components:** `GPURasterConnectedComponents`
+  accepts exact `uint32` foreground values, separate observation validity, and exact raw
+  nodata. Explicit four/eight-neighbor connectivity deterministically publishes the smallest
+  row-major foreground representative plus one; valid background stays label zero, while
+  missing samples remain invalid barriers. Fixed graph rounds compose minimum-root hooking,
+  pointer compression, GPU-resident convergence, optional actual iteration counts, and
+  indirect suppression of converged work. An insufficient round budget fails closed by
+  clearing every published label and validity element. Application-owned command submission,
+  decoding, leases, and optional readback remain unchanged. Dense IDs, component counts,
+  region measurements, and cross-tile identities are explicitly not part of this tranche.
+- **5.2 next:** dense root relabeling, unsigned root scan, bounded component counts, and
+  convergence-gated compact outputs; tranche 6.3 seam-safe contour ownership remains
+  independently available when vector integration takes priority.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -1073,6 +1089,18 @@ contracts without CPU result polling.
 ### Tranche 5.1 — Connected-component labeling
 
 **Entry:** Tranches 2.4 and 1.4.
+
+**Status:** Complete through `GPURasterConnectedComponents`, `GPURasterConnectivity`, and
+`GPURasterConnectedComponentsProps`. Exact unsigned classification values distinguish valid
+background from missing observations using a separate mask and raw nodata identity. Explicit
+four/eight-neighbor union-by-minimum-root publishes one plus the lowest row-major foreground
+index, preserving sparse deterministic representatives. A bounded sequence of initialization,
+atomic minimum-root hooking, pointer compression, GPU convergence detection, and gated final
+publication never polls the CPU. A required caller-owned convergence scalar and optional actual
+iteration count make completion explicit; exhausted iteration budgets zero every label and
+output-validity element. The Raster Lab colors sparse labels directly, exposes connectivity and
+bounded convergence, and reuses its existing compact scalar summary. Dense component numbering,
+component counts, region statistics, and cross-tile identity resolution remain later tranches.
 
 **Work:** Implement deterministic `uint32` union-by-minimum-root with explicit 4/8 connectivity,
 separate graph passes for initialization, hooking, path compression, and convergence state.
@@ -1579,9 +1607,9 @@ as a monolithic reference without tile seams or last-tile-only global histograms
 
 ### Milestone C — Segmentation and vector-ready output
 
-**Status:** Started with completed single-raster marching squares and indirect contour draws;
-connected-component labeling, region measurements, contour seam ownership, and zonal statistics
-remain open.
+**Status:** Started with completed sparse, convergence-gated connected-component labeling,
+single-raster marching squares, and indirect contour draws. Dense region identifiers/counts,
+region measurements, cross-tile component/contour ownership, and zonal statistics remain open.
 
 Add tranches 5.1–5.4 and 6.1–6.4. An application can label components, calculate region and
 polygon-zonal statistics, and render stable georeferenced contours through indirect GPU draws
@@ -1599,7 +1627,7 @@ Advanced Phase 7 work is not a prerequisite.
 ## Completed foundation sequence
 
 These already-delivered slices document the original dependency order; they are not proposed
-future pull requests. The next implementation boundary is Tranche 5.1, with Tranche 6.3 available
+future pull requests. The next implementation boundary is Tranche 5.2, with Tranche 6.3 available
 independently when contour seam ownership is more urgent.
 
 ### Foundation slice 1 — Optional package and reproducible fixtures

@@ -28,9 +28,10 @@ pointwise band math, normalized difference vegetation index (NDVI), validity-awa
 scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, mask-aware
 neighborhood stencils, direct convolution, separable Gaussian/box smoothing, signed
 Sobel/Scharr/Laplacian derivatives, gradient magnitude, binary/grayscale dilation, erosion,
-opening, and closing, GPU-resident marching-squares contours, indirect vector overlays, and
-adapter-limit planning. They implement `GPUCommandGraphContributor` structurally: calling
-`addToGraph(graph)` only declares work. No contributor submits commands or reads results back.
+opening, closing, deterministic connected foreground components, GPU-resident marching-squares
+contours, indirect vector overlays, and adapter-limit planning. They implement
+`GPUCommandGraphContributor` structurally: calling `addToGraph(graph)` only declares work. No
+contributor submits commands or reads results back.
 
 ## Start here
 
@@ -47,6 +48,7 @@ computation instead of flattening them into display colors.
 | Filter across a tile boundary without seams | `GPURasterTileHaloAssembler`, `GPURasterTileHaloFill`, and `GPURasterTileCoreExtract` | Real neighboring pixels are processed, but each output pixel has exactly one owner. |
 | Create a meaningful lower-resolution analytical grid | `GPURasterOverview` or `GPURasterCategoricalOverview` | Continuous means preserve valid-sample weights; categorical results preserve exact labels. |
 | Calculate one histogram or threshold across many tiles | `GPURasterGlobalInitialize`, `GPURasterGlobalStatisticsMerge`, and `GPURasterGlobalHistogramMerge` | Every tile contributes against the same final dataset-wide numerical domain. |
+| Identify connected classified foreground regions | `GPURasterConnectedComponents` | Four- or eight-neighbor grouping preserves missing-data barriers and publishes an explicit GPU convergence signal. |
 
 For a guided explanation of missing observations, grid ownership, replay, resource lifetimes,
 and common mistakes, read
@@ -163,6 +165,7 @@ import {
   GPURasterBoxBlur,
   GPURasterCategoricalOverview,
   GPURasterClosing,
+  GPURasterConnectedComponents,
   GPURasterContourClassifier,
   GPURasterContours,
   GPURasterContrast,
@@ -197,6 +200,8 @@ import {
   type GPURasterBufferBand,
   type GPURasterCategoricalOverviewFormat,
   type GPURasterCategoricalOverviewProps,
+  type GPURasterConnectedComponentsProps,
+  type GPURasterConnectivity,
   type GPURasterDecodedBand,
   type GPURasterGlobalAccumulator,
   type GPURasterGlobalHistogramMergeProps,
@@ -332,6 +337,19 @@ contrast, gamma, manual thresholds, and global Otsu. It explicitly resets Gaussi
 smoothing, edge operators, morphology, generated overviews, and seamless halos; enabling any of
 those unsupported combinations returns to **TILE** mode. A generated global median reuses the
 existing four-byte threshold summary slot only when automatic Otsu is inactive.
+
+Choose **COMPONENTS** to color the current thresholded foreground by its actual GPU-resident
+sparse representative labels. **4-CONNECTED** and **8-CONNECTED** determine whether diagonal
+touching joins regions; the bounded iteration control exposes the difference between proven
+convergence and an exhausted graph budget. Missing observations remain visually distinct from
+valid background, and an unconverged result never produces plausible-looking colored regions.
+Region mode operates on the selected local tile, explicitly exits **FULL GLOBAL**, and temporarily
+reuses existing contour overflow/required-count summary slots for convergence and actual GPU
+rounds while contour overlays are disabled; leaving component mode restores the contour policy.
+The foreground readout uses the existing selected-observation count and is not a component count.
+Existing source/analytical overviews, seam-safe local processing, smoothing, derivatives,
+morphology, manual thresholds, and local Otsu remain available; the GPU-to-CPU summary stays
+exactly 228 bytes.
 
 ## Raster bands and validity
 
@@ -2004,6 +2022,109 @@ performance depends on pixel count, radius, GPU limits, memory bandwidth, and wo
 metadata can drive explicit `GPURasterTileHaloAssembler` planning, but does not partition
 oversized rasters or schedule neighborhood assembly automatically.
 
+## Connected-component labeling
+
+A connected component is one maximal group of foreground pixels reachable through a selected
+pixel-neighbor relationship. Use `GPURasterConnectedComponents` after thresholding or binary
+morphology when you need to identify which selected observations form the same contiguous
+field, cloud, water body, microscopy object, or other classified region.
+
+The input is a packed `GPURasterBufferBand<'uint32'>`. Every nonzero valid value is foreground;
+zero with valid observation status is background. A separate zero validity flag or exact raw
+`noDataValue` is missing data, not background, and cannot connect foreground pixels across a
+nodata barrier. Classification has identity calibration only: `scale` must be absent or `1`,
+and `offset` must be absent or `0`.
+
+```ts
+const classifiedForeground: GPURasterBufferBand<'uint32'> = {
+  id: 'classified-vegetation',
+  format: 'uint32',
+  storage: {kind: 'buffer', values: thresholdMask},
+  validity: analyzedObservationValidity
+};
+
+new GPURasterConnectedComponents({
+  id: 'vegetation-components',
+  width,
+  height,
+  input: classifiedForeground,
+  connectivity: 8,
+  maximumIterations: 24,
+  output: representativeLabels,
+  outputValidity: componentValidity,
+  converged: componentConvergence,
+  iterationCount: completedComponentIterations
+}).addToGraph(graph);
+```
+
+`output` and `outputValidity` are separate caller-owned `GraphDataView<'uint32'>` buffers
+containing one element per input pixel. `converged` is a required caller-owned, one-element
+`uint32` result. Optional `iterationCount` is another one-element caller-owned `uint32` output.
+All source and output views must belong to the same graph and must not alias incompatible
+resources. The contributor declares work only; decoding, graph encoding, submission, leases,
+fences, rendering, and any optional result inspection remain application-owned.
+
+### Four-connected versus eight-connected regions
+
+With `connectivity: 4`, pixels connect only through their north, south, east, and west neighbors.
+With `connectivity: 8`, diagonal neighbors also connect. Four-connectivity is the default.
+
+```text
+Foreground classification:     Four-connected labels:       Eight-connected labels:
+
+1 0 1                          1 0 3                        1 0 1
+0 1 0                          0 5 0                        0 1 0
+1 0 1                          7 0 9                        1 0 1
+```
+
+All five foreground pixels remain distinct under four-connectivity. Under eight-connectivity,
+the central pixel connects them into one component. If that center is instead invalid, it
+cannot bridge diagonal neighbors under either policy; valid zero-valued background remains
+separately valid but never joins a component.
+
+Every converged foreground label is the smallest row-major pixel index in its component plus
+one. The `+1` reserves label `0` for background while preserving a deterministic representative
+independent of workgroup execution order. Component identifiers are deliberately **sparse**:
+labels `1`, `3`, `5`, `7`, and `9` do not mean nine components. Dense numbering, component
+counts, bounded compact region tables, per-region statistics, and cross-tile component merging
+are separate future contracts.
+
+### Convergence is required, not assumed
+
+Connected components compose initialization, minimum-root hooking, pointer compression,
+GPU-resident convergence detection, and final publication in one bounded command graph.
+`maximumIterations` fixes the largest number of declared rounds; it is not a promise that a
+long thin region has already converged. GPU-controlled indirect dispatch can skip remaining
+rounds after a fixed point is reached without reading or polling convergence on the CPU.
+
+Explicit iteration budgets must be integers from `1` through `64`. Omitting the option selects
+`max(1, ceil(log2(width * height)) + 2)`. This default is a bounded practical estimate, not a
+proof that every foreground geometry converges. An application requiring stronger certainty
+must inspect the published GPU convergence state or gate its dependent graph work on that state.
+
+When convergence is established, `converged[0]` is `1`; foreground labels hold exact sparse
+representatives, valid background is label `0` with output validity `1`, and missing
+observations are label `0` with output validity `0`. If the round budget is insufficient,
+`converged[0]` remains `0` and **every output label and every output-validity element is
+cleared**. This fail-closed contract prevents a downstream renderer, count, region measurement,
+or another GPU stage from mistaking partial labels for finished segmentation.
+
+Optional `iterationCount` reports the number of rounds that actually performed GPU work,
+including the final unchanged round that proves convergence. Empty-foreground and all-background
+inputs converge without turning valid background into missing data. Increase a visibly
+insufficient iteration budget only by explicitly rebuilding or selecting a graph with the new
+bounded specialization.
+
+One initialization pass, three passes for each declared round, and one final gated publication
+produce exactly `3 * maximumIterations + 2` graph stages. Each stage uses at most eight storage
+bindings. Graph-owned scratch contains `4 * width * height` parent bytes, one four-byte change
+flag, and one twelve-byte indirect dispatch record before allocation alignment; caller-owned
+values, output validity, convergence, and optional iteration counters are additional. Pointer
+compression and GPU-controlled zero-workgroup dispatch reduce active execution after convergence
+but do not remove already declared graph stages. Source masks, labels, output validity, and
+published status remain caller-owned. No full-image partitioning, dense relabeling, cross-tile
+equivalence resolution, or implicit CPU synchronization is introduced by this contributor.
+
 ## Raster compute versus image effects
 
 Existing luma.gl image-processing effects are useful for presentation: they transform rendered
@@ -2138,18 +2259,20 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-driven contrast application, built-in GeoTIFF/COG decoding, connected
-components, tiled contour stitching, automatic whole-image result placement, and FFT-backed
-raster convolution are not part of the current implementation.
+Percentile-driven contrast application, built-in GeoTIFF/COG decoding, dense component
+relabeling/counts, per-region measurements, cross-tile region identity, tiled contour stitching,
+automatic whole-image result placement, and FFT-backed raster convolution are not part of the
+current implementation.
 Application-owned tile ingress, source-provided overviews/windows, independently budgeted
 multi-tile CPU/GPU residency, fence-safe eviction, compatible compiled-graph reuse, explicit
 cumulative neighborhood halo planning and native-format GPU assembly, half-open core
 extraction, nodata-aware calibrated floating-point overview means and weighted pyramids, exact
 integer categorical nearest/mode overviews, generated affine/CRS metadata, Sobel, Scharr,
 Laplacian, gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion,
-opening, closing, replayable global tiled extent/population/sum/histogram merges, explicit
-sticky/saturating overflow diagnostics, bounded histogram-based percentiles, global Otsu input,
-and single-raster contour extraction are implemented.
+opening, closing, deterministic four/eight-connected sparse representative labels with
+fail-closed GPU convergence, replayable global tiled extent/population/sum/histogram merges,
+explicit sticky/saturating overflow diagnostics, bounded histogram-based percentiles, global
+Otsu input, and single-raster contour extraction are implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not
