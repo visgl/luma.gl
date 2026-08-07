@@ -13,7 +13,7 @@ import {
 } from '@luma.gl/engine';
 import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/experimental';
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
-import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';
+import type {Panel, SettingsSchema, SettingsState} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
   ExampleSettingsPanelManager,
@@ -30,11 +30,13 @@ const BLOOM_TECHNIQUES = ['Multiscale HDR', 'FFT Convolution', 'Compact', 'Off']
 const BLOOM_QUALITIES = ['low', 'medium', 'high', 'ultra'] as const;
 const BLOOM_RECONSTRUCTION_MODES = ['tent', 'bicubic'] as const;
 const BLOOM_DOWNSAMPLE_MODES = ['auto', 'render', 'compute'] as const;
+const BLOOM_BLUR_ALGORITHMS = ['dual-kawase', 'gaussian'] as const;
 
 type BloomTechnique = (typeof BLOOM_TECHNIQUES)[number];
 type BloomQuality = (typeof BLOOM_QUALITIES)[number];
 type BloomReconstruction = (typeof BLOOM_RECONSTRUCTION_MODES)[number];
 type BloomDownsample = (typeof BLOOM_DOWNSAMPLE_MODES)[number];
+type BloomBlurAlgorithm = (typeof BLOOM_BLUR_ALGORITHMS)[number];
 type BloomSettings = {
   technique: BloomTechnique;
   quality: BloomQuality;
@@ -50,6 +52,8 @@ type BloomSettings = {
   anamorphicRatio: number;
   reconstruction: BloomReconstruction;
   downsample: BloomDownsample;
+  blurAlgorithm: BloomBlurAlgorithm;
+  energyConserving: boolean;
   reuseRenderTargets: boolean;
   temporalStability: number;
   starburstIntensity: number;
@@ -63,6 +67,8 @@ type BloomSettings = {
   haloRadius: number;
   chromaticAberration: number;
   dirtIntensity: number;
+  guardBand: number;
+  spectralSpread: number;
   animate: boolean;
 };
 type SceneUniforms = {
@@ -86,6 +92,8 @@ const DEFAULT_SETTINGS: BloomSettings = {
   anamorphicRatio: 0.2,
   reconstruction: 'bicubic',
   downsample: 'auto',
+  blurAlgorithm: 'dual-kawase',
+  energyConserving: false,
   reuseRenderTargets: true,
   temporalStability: 0.58,
   starburstIntensity: 0.72,
@@ -99,14 +107,16 @@ const DEFAULT_SETTINGS: BloomSettings = {
   haloRadius: 0.32,
   chromaticAberration: 0.44,
   dirtIntensity: 0.42,
+  guardBand: 0.125,
+  spectralSpread: 0.65,
   animate: true
 };
 
 const BLOOM_BACKGROUND_HTML = `
 <p><b>Multiscale HDR bloom:</b> exposure-aware highlight extraction feeds an adaptive two-to-five-level pyramid. Supported WebGPU devices fuse every downsampling level into one compute dispatch, and expired extraction textures are reused during reconstruction.</p>
-<p><b>FFT convolution:</b> premium WebGPU optics transform each color channel into the frequency domain, multiply it by a cached aperture point-spread function, and reconstruct energy-conserving diffraction. The transform runs at one quarter of the selected processing resolution.</p>
-<p><b>Lens optics:</b> one optional half-resolution pass adds adjustable aperture-diffraction streaks, chromatic lens-element ghosts, and a radial halo. A sampled dirt mask reuses the existing bloom composite without adding a pass.</p>
-<p><b>Stability and cost:</b> neighborhood-clamped glow history reduces highlight shimmer for one extra half-resolution pass. Diffraction cost grows with the number of rays; ghosts scale with their reflection count and spectral separation.</p>
+<p><b>FFT convolution:</b> packed RGB transforms share one dispatch sequence and apply independent wavelength-aware aperture kernels. Zero-padded guard bands prevent opposite-edge wraparound, while area-weighted extraction retains tiny HDR emitters.</p>
+<p><b>Lens optics:</b> adjustable chromatic ghosts, a radial halo, sampled dirt, and optional temporal history are available in both multiscale and FFT modes. FFT optics reuse the existing composite dispatch.</p>
+<p><b>Stability and cost:</b> dual-Kawase reconstruction removes separable blur passes, while Gaussian remains available for wider artistic shaping. Physical mode scatters all light without additively duplicating scene energy.</p>
 <p><b>Compact bloom:</b> the legacy single-pass glow samples one small neighborhood directly from the source image. It is cheaper, but it cannot spread highlights as naturally as the multiscale pyramid.</p>
 <p><b>Scene setup:</b> this page renders animated HDR emitters into an offscreen texture before bloom. The previous static image hid the useful part of the effect by baking most of the lighting into SDR pixels.</p>
 `;
@@ -432,7 +442,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           threshold: this.settings.threshold,
           intensity: this.settings.intensity,
           exposure: this.settings.exposure,
-          exposureCompensation: this.settings.exposureCompensation
+          exposureCompensation: this.settings.exposureCompensation,
+          lensDirtTexture: this.settings.dirtIntensity > 0 ? this.lensDirtTexture : undefined
         });
       }
     }
@@ -482,6 +493,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           anamorphicRatio: this.settings.anamorphicRatio,
           reconstruction: this.settings.reconstruction,
           downsample: this.settings.downsample,
+          blurAlgorithm: this.settings.blurAlgorithm,
+          energyConserving: this.settings.energyConserving,
           reuseRenderTargets: this.settings.reuseRenderTargets,
           temporalStability: this.settings.temporalStability,
           lens: {
@@ -543,9 +556,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       width,
       height,
       resolutionScale: this.settings.resolutionScale * 0.25,
+      guardBand: this.settings.guardBand,
       apertureBlades: this.settings.starburstSpikes,
       diffractionStrength: this.settings.starburstIntensity,
-      anamorphicRatio: this.settings.anamorphicRatio
+      anamorphicRatio: this.settings.anamorphicRatio,
+      spectralSpread: this.settings.spectralSpread,
+      energyConserving: this.settings.energyConserving,
+      temporalStability: this.settings.temporalStability,
+      lens: {
+        ghostIntensity: this.settings.ghostIntensity,
+        ghostCount: this.settings.ghostCount,
+        ghostSpacing: this.settings.ghostSpacing,
+        haloIntensity: this.settings.haloIntensity,
+        haloRadius: this.settings.haloRadius,
+        chromaticAberration: this.settings.chromaticAberration,
+        dirtIntensity: this.settings.dirtIntensity
+      }
     });
     return this.convolutionBloom;
   }
@@ -554,7 +580,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return getGPUConvolutionBloomSupport(this.device, {
       width,
       height,
-      resolutionScale: this.settings.resolutionScale * 0.25
+      resolutionScale: this.settings.resolutionScale * 0.25,
+      guardBand: this.settings.guardBand,
+      temporalStability: this.settings.temporalStability
     });
   }
 
@@ -638,6 +666,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       downsample: isBloomDownsample(settings['downsample'])
         ? settings['downsample']
         : this.settings.downsample,
+      blurAlgorithm: isBloomBlurAlgorithm(settings['blurAlgorithm'])
+        ? settings['blurAlgorithm']
+        : this.settings.blurAlgorithm,
+      energyConserving:
+        typeof settings['energyConserving'] === 'boolean'
+          ? settings['energyConserving']
+          : this.settings.energyConserving,
       reuseRenderTargets:
         typeof settings['reuseRenderTargets'] === 'boolean'
           ? settings['reuseRenderTargets']
@@ -690,6 +725,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         typeof settings['dirtIntensity'] === 'number'
           ? clampNumber(settings['dirtIntensity'], 0, 3)
           : this.settings.dirtIntensity,
+      guardBand:
+        typeof settings['guardBand'] === 'number'
+          ? clampNumber(settings['guardBand'], 0, 0.5)
+          : this.settings.guardBand,
+      spectralSpread:
+        typeof settings['spectralSpread'] === 'number'
+          ? clampNumber(settings['spectralSpread'], 0, 1)
+          : this.settings.spectralSpread,
       animate:
         typeof settings['animate'] === 'boolean' ? settings['animate'] : this.settings.animate
     };
@@ -726,10 +769,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.settings.downsample !== 'render' &&
       this.device.getTextureFormatCapabilities(this.colorFormat).store &&
       this.device.limits.maxStorageTexturesPerShaderStage >= levelCount;
+    const basePassCount =
+      this.settings.blurAlgorithm === 'dual-kawase'
+        ? levelCount * (supportsCompute ? 1 : 2)
+        : levelCount * (supportsCompute ? 3 : 4);
     const passCount =
-      levelCount * (supportsCompute ? 3 : 4) +
-      Number(hasLensArtifacts) +
-      Number(this.settings.temporalStability > 0);
+      basePassCount + Number(hasLensArtifacts) + Number(this.settings.temporalStability > 0);
     const computeDescription = supportsCompute ? ' plus one fused compute dispatch' : '';
     const convolutionSupport = this.getConvolutionSupport(
       this.sceneFramebuffer.width,
@@ -839,6 +884,22 @@ export function makeBloomSettingsSchema(): SettingsSchema {
               {label: 'Portable render passes', value: 'render'},
               {label: 'Fused compute', value: 'compute'}
             ]
+          },
+          {
+            name: 'blurAlgorithm',
+            label: 'Blur Algorithm',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Dual-Kawase (faster)', value: 'dual-kawase'},
+              {label: 'Separable Gaussian', value: 'gaussian'}
+            ]
+          },
+          {
+            name: 'energyConserving',
+            label: 'Physical Energy Conservation',
+            type: 'boolean',
+            persist: 'none'
           },
           {
             name: 'reconstruction',
@@ -1039,6 +1100,24 @@ export function makeBloomSettingsSchema(): SettingsSchema {
             min: 0,
             max: 3,
             step: 0.05
+          },
+          {
+            name: 'guardBand',
+            label: 'FFT Edge Guard Band',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.5,
+            step: 0.025
+          },
+          {
+            name: 'spectralSpread',
+            label: 'FFT Wavelength Spread',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
           }
         ]
       }
@@ -1112,6 +1191,10 @@ function isBloomReconstruction(value: unknown): value is BloomReconstruction {
 
 function isBloomDownsample(value: unknown): value is BloomDownsample {
   return BLOOM_DOWNSAMPLE_MODES.includes(value as BloomDownsample);
+}
+
+function isBloomBlurAlgorithm(value: unknown): value is BloomBlurAlgorithm {
+  return BLOOM_BLUR_ALGORITHMS.includes(value as BloomBlurAlgorithm);
 }
 
 function clampNumber(value: number, minimum: number, maximum: number): number {

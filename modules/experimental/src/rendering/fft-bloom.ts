@@ -18,8 +18,30 @@ import {
   FFT_BLOOM_MULTIPLY_WORKGROUP_SIZE,
   FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW,
   FFT_BLOOM_PARAMETER_BYTE_LENGTH,
-  FFT_BLOOM_WORKGROUP_DIMENSION
+  FFT_BLOOM_WORKGROUP_DIMENSION,
+  makeFFTBloomCompositeShader
 } from './fft-bloom-shaders';
+
+/** Optional lens reflections and dirt composited without another FFT or render pass. */
+export type GPUConvolutionBloomLensOptions = {
+  ghostIntensity?: number;
+  ghostCount?: number;
+  ghostSpacing?: number;
+  haloIntensity?: number;
+  haloRadius?: number;
+  chromaticAberration?: number;
+  dirtIntensity?: number;
+};
+
+/** Independent wavelength responses for measured or generated RGB diffraction. */
+export type BloomSpectralPointSpreadFunction = {
+  red: Float32Array;
+  green: Float32Array;
+  blue: Float32Array;
+};
+
+/** One shared optical response or separate measured responses per wavelength. */
+export type BloomPointSpreadFunction = Float32Array | BloomSpectralPointSpreadFunction;
 
 /** Construction options for frequency-domain photographic bloom. */
 export type GPUConvolutionBloomProps = {
@@ -28,6 +50,8 @@ export type GPUConvolutionBloomProps = {
   height: number;
   /** Fractional source resolution before rounding up to power-of-two FFT dimensions. */
   resolutionScale?: number;
+  /** Zero-padded border around the sampled image, expressed as a fraction of its dimensions. */
+  guardBand?: number;
   /** Scene-referred highlight threshold. Defaults to 0.8. */
   threshold?: number;
   /** Additive intensity applied after energy-normalized optical convolution. */
@@ -42,8 +66,16 @@ export type GPUConvolutionBloomProps = {
   diffractionStrength?: number;
   /** Horizontal or vertical stretching applied to the generated point-spread function. */
   anamorphicRatio?: number;
-  /** Optional custom point-spread kernel containing one scalar per transform pixel. */
-  pointSpreadFunction?: Float32Array;
+  /** Wavelength-dependent aperture spread. Zero keeps all three diffraction kernels identical. */
+  spectralSpread?: number;
+  /** Blend all scene light through the normalized optical kernel instead of adding highlights. */
+  energyConserving?: boolean;
+  /** Optional neighborhood-clamped optical history accumulated during the existing composite. */
+  temporalStability?: number;
+  /** Chromatic ghosts, radial halo, and sampled dirt resolved during the existing composite. */
+  lens?: GPUConvolutionBloomLensOptions;
+  /** Shared or wavelength-specific point-spread kernels containing one scalar per FFT pixel. */
+  pointSpreadFunction?: BloomPointSpreadFunction;
 };
 
 /** Per-frame inputs and optical overrides for {@link GPUConvolutionBloom.encode}. */
@@ -55,18 +87,30 @@ export type GPUConvolutionBloomEncodeOptions = {
   intensity?: number;
   exposure?: number;
   exposureCompensation?: number;
+  /** Previous camera exposure used to correct persistent history between frames. */
+  previousExposure?: number;
+  /** Optional GPU-adapted 1x1 exposure state; no CPU luminance readback is required. */
+  exposureTexture?: Texture;
+  /** Optional sampled dirt texture used when lens.dirtIntensity is positive. */
+  lensDirtTexture?: Texture;
 };
 
 /** Immutable resource and dispatch budget for the premium convolution path. */
 export type GPUConvolutionBloomStats = {
   width: number;
   height: number;
+  contentWidth: number;
+  contentHeight: number;
+  contentOffsetX: number;
+  contentOffsetY: number;
+  guardBand: number;
   transformWidth: number;
   transformHeight: number;
   elementCount: number;
   complexBufferCount: number;
   complexBufferByteLength: number;
   totalComplexBufferByteLength: number;
+  batchCount: number;
   transformDispatchCount: number;
   steadyStateDispatchCount: number;
   kernelInitializationDispatchCount: number;
@@ -86,15 +130,19 @@ export type BloomPointSpreadFunctionOptions = {
   apertureBlades?: number;
   diffractionStrength?: number;
   anamorphicRatio?: number;
+  /** Wavelength in nanometers used to widen or contract the diffraction profile. */
+  wavelength?: number;
+  /** Interpolates between a common green response and independent red/green/blue wavelengths. */
+  spectralSpread?: number;
 };
 
 type GPUConvolutionBloomResources = {
   transform: GPUFFT2D;
   parameters: Buffer;
-  kernelSpatial: Buffer;
   kernelSpectrum: Buffer;
-  spatialChannels: Buffer[];
-  spectralChannels: Buffer[];
+  spatialChannels: Buffer;
+  spectralChannels: Buffer;
+  historyTextures?: [Texture, Texture];
   extract: Computation;
   multiply: Computation;
   composite: Computation;
@@ -118,7 +166,13 @@ export class GPUConvolutionBloom {
   private readonly defaults: Required<
     Pick<GPUConvolutionBloomProps, 'threshold' | 'intensity' | 'exposure' | 'exposureCompensation'>
   >;
+  private readonly energyConserving: boolean;
+  private readonly temporalStability: number;
+  private readonly lens: Required<GPUConvolutionBloomLensOptions>;
   private kernelNeedsTransform = true;
+  private historyValid = false;
+  private historyIndex = 0;
+  private previousExposure?: number;
   private destroyed = false;
 
   constructor(device: Device, props: GPUConvolutionBloomProps) {
@@ -138,29 +192,42 @@ export class GPUConvolutionBloom {
       exposure: props.exposure ?? 1,
       exposureCompensation: props.exposureCompensation ?? 0
     };
+    this.energyConserving = props.energyConserving ?? false;
+    this.temporalStability = Math.min(Math.max(props.temporalStability ?? 0, 0), 0.95);
+    this.lens = {
+      ghostIntensity: Math.max(props.lens?.ghostIntensity ?? 0, 0),
+      ghostCount: Math.min(Math.max(Math.round(props.lens?.ghostCount ?? 3), 1), 6),
+      ghostSpacing: Math.min(Math.max(props.lens?.ghostSpacing ?? 0.32, 0), 1),
+      haloIntensity: Math.max(props.lens?.haloIntensity ?? 0, 0),
+      haloRadius: Math.min(Math.max(props.lens?.haloRadius ?? 0.34, 0), 1),
+      chromaticAberration: Math.min(Math.max(props.lens?.chromaticAberration ?? 0, 0), 1),
+      dirtIntensity: Math.max(props.lens?.dirtIntensity ?? 0, 0)
+    };
 
     const pointSpreadFunction =
       props.pointSpreadFunction ||
-      makeBloomPointSpreadFunction({
+      makeBloomSpectralPointSpreadFunction({
         width: this.stats.transformWidth,
         height: this.stats.transformHeight,
         apertureBlades: props.apertureBlades,
         diffractionStrength: props.diffractionStrength,
-        anamorphicRatio: props.anamorphicRatio
+        anamorphicRatio: props.anamorphicRatio,
+        spectralSpread: props.spectralSpread
       });
     this.resources = createGPUConvolutionBloomResources(device, {
       id: this.id,
       stats: this.stats,
-      pointSpreadFunction
+      pointSpreadFunction,
+      temporalStability: this.temporalStability > 0
     });
   }
 
   /** Replaces and normalizes the cached point-spread kernel without reallocating FFT resources. */
-  setPointSpreadFunction(pointSpreadFunction: Float32Array): void {
+  setPointSpreadFunction(pointSpreadFunction: BloomPointSpreadFunction): void {
     if (this.destroyed) {
       throw new Error('GPUConvolutionBloom has been destroyed.');
     }
-    this.resources.kernelSpatial.write(
+    this.resources.spatialChannels.write(
       makeComplexPointSpreadFunction(pointSpreadFunction, this.stats.elementCount)
     );
     this.kernelNeedsTransform = true;
@@ -176,18 +243,29 @@ export class GPUConvolutionBloom {
     }
     validateGPUConvolutionBloomTextures(this.device, this.stats, options);
 
+    const exposure = Math.max(options.exposure ?? this.defaults.exposure, 0.0001);
+    const previousExposure = Math.max(
+      options.previousExposure ?? this.previousExposure ?? exposure,
+      0.0001
+    );
     this.resources.parameters.write(
       makeGPUConvolutionBloomParameters(this.stats, {
         threshold: options.threshold ?? this.defaults.threshold,
         intensity: options.intensity ?? this.defaults.intensity,
-        exposure: options.exposure ?? this.defaults.exposure,
-        exposureCompensation: options.exposureCompensation ?? this.defaults.exposureCompensation
+        exposure,
+        exposureCompensation: options.exposureCompensation ?? this.defaults.exposureCompensation,
+        energyConserving: this.energyConserving,
+        useExposureTexture: Boolean(options.exposureTexture),
+        temporalStability: this.temporalStability,
+        exposureScale: exposure / previousExposure,
+        lens: this.lens,
+        historyValid: this.historyValid
       })
     );
 
     if (this.kernelNeedsTransform) {
       this.resources.transform.encode(commandEncoder, {
-        inputBuffer: this.resources.kernelSpatial,
+        inputBuffer: this.resources.spatialChannels,
         outputBuffer: this.resources.kernelSpectrum,
         direction: 'forward'
       });
@@ -197,9 +275,8 @@ export class GPUConvolutionBloom {
     this.resources.extract.setBindings({
       parameters: this.resources.parameters,
       sourceTexture: options.sourceTexture.view,
-      redChannel: this.resources.spatialChannels[0],
-      greenChannel: this.resources.spatialChannels[1],
-      blueChannel: this.resources.spatialChannels[2]
+      exposureTexture: (options.exposureTexture || options.sourceTexture).view,
+      spatialChannels: this.resources.spatialChannels
     });
     dispatchConvolutionComputation(
       commandEncoder,
@@ -209,25 +286,19 @@ export class GPUConvolutionBloom {
       Math.ceil(this.stats.transformHeight / FFT_BLOOM_WORKGROUP_DIMENSION)
     );
 
-    for (let channelIndex = 0; channelIndex < 3; channelIndex++) {
-      this.resources.transform.encode(commandEncoder, {
-        inputBuffer: this.resources.spatialChannels[channelIndex],
-        outputBuffer: this.resources.spectralChannels[channelIndex],
-        direction: 'forward'
-      });
-    }
+    this.resources.transform.encode(commandEncoder, {
+      inputBuffer: this.resources.spatialChannels,
+      outputBuffer: this.resources.spectralChannels,
+      direction: 'forward'
+    });
 
     this.resources.multiply.setBindings({
-      redSpectrum: this.resources.spectralChannels[0],
-      greenSpectrum: this.resources.spectralChannels[1],
-      blueSpectrum: this.resources.spectralChannels[2],
+      sourceSpectrum: this.resources.spectralChannels,
       kernelSpectrum: this.resources.kernelSpectrum,
-      filteredRed: this.resources.spatialChannels[0],
-      filteredGreen: this.resources.spatialChannels[1],
-      filteredBlue: this.resources.spatialChannels[2]
+      filteredChannels: this.resources.spatialChannels
     });
     const multiplyWorkgroupCount = Math.ceil(
-      this.stats.elementCount / FFT_BLOOM_MULTIPLY_WORKGROUP_SIZE
+      (this.stats.elementCount * this.stats.batchCount) / FFT_BLOOM_MULTIPLY_WORKGROUP_SIZE
     );
     dispatchConvolutionComputation(
       commandEncoder,
@@ -237,22 +308,26 @@ export class GPUConvolutionBloom {
       Math.ceil(multiplyWorkgroupCount / FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW)
     );
 
-    for (let channelIndex = 0; channelIndex < 3; channelIndex++) {
-      this.resources.transform.encode(commandEncoder, {
-        inputBuffer: this.resources.spatialChannels[channelIndex],
-        outputBuffer: this.resources.spectralChannels[channelIndex],
-        direction: 'inverse'
-      });
-    }
+    this.resources.transform.encode(commandEncoder, {
+      inputBuffer: this.resources.spatialChannels,
+      outputBuffer: this.resources.spectralChannels,
+      direction: 'inverse'
+    });
 
-    this.resources.composite.setBindings({
+    const compositeBindings: Record<string, Buffer | Texture['view']> = {
       parameters: this.resources.parameters,
       sourceTexture: options.sourceTexture.view,
-      redChannel: this.resources.spectralChannels[0],
-      greenChannel: this.resources.spectralChannels[1],
-      blueChannel: this.resources.spectralChannels[2],
-      outputTexture: options.outputTexture.view
-    });
+      convolvedChannels: this.resources.spectralChannels,
+      outputTexture: options.outputTexture.view,
+      lensDirtTexture: (options.lensDirtTexture || options.sourceTexture).view,
+      exposureTexture: (options.exposureTexture || options.sourceTexture).view
+    };
+    if (this.resources.historyTextures) {
+      compositeBindings['historyTexture'] = this.resources.historyTextures[this.historyIndex].view;
+      compositeBindings['historyOutput'] =
+        this.resources.historyTextures[1 - this.historyIndex].view;
+    }
+    this.resources.composite.setBindings(compositeBindings);
     dispatchConvolutionComputation(
       commandEncoder,
       this.resources.composite,
@@ -260,7 +335,18 @@ export class GPUConvolutionBloom {
       Math.ceil(this.width / FFT_BLOOM_WORKGROUP_DIMENSION),
       Math.ceil(this.height / FFT_BLOOM_WORKGROUP_DIMENSION)
     );
+    if (this.resources.historyTextures) {
+      this.historyIndex = 1 - this.historyIndex;
+      this.historyValid = true;
+    }
+    this.previousExposure = exposure;
     return options.outputTexture;
+  }
+
+  /** Drops optical history without reallocating cached FFT buffers or lens resources. */
+  resetHistory(): void {
+    this.historyValid = false;
+    this.previousExposure = undefined;
   }
 
   /** Releases the FFT, cached optical spectrum, compute pipelines, and all owned GPU buffers. */
@@ -276,7 +362,10 @@ export class GPUConvolutionBloom {
 /** Reports the exact transform dimensions, steady-state GPU work, and capability failures. */
 export function getGPUConvolutionBloomSupport(
   device: Device,
-  props: Pick<GPUConvolutionBloomProps, 'width' | 'height' | 'resolutionScale'>
+  props: Pick<
+    GPUConvolutionBloomProps,
+    'width' | 'height' | 'resolutionScale' | 'guardBand' | 'temporalStability'
+  >
 ): GPUConvolutionBloomSupport {
   let stats: GPUConvolutionBloomStats;
   try {
@@ -287,18 +376,26 @@ export function getGPUConvolutionBloomSupport(
 
   const transformSupport = getGPUFFT2DSupport(device, {
     width: stats.transformWidth,
-    height: stats.transformHeight
+    height: stats.transformHeight,
+    batchCount: stats.batchCount
   });
   if (!transformSupport.supported) {
     return {supported: false, reason: transformSupport.reason, stats};
   }
-  if (device.limits.maxStorageBuffersPerShaderStage < 7) {
-    return {supported: false, reason: 'GPUConvolutionBloom requires seven storage buffers.', stats};
+  if (device.limits.maxStorageBuffersPerShaderStage < 3) {
+    return {supported: false, reason: 'GPUConvolutionBloom requires three storage buffers.', stats};
   }
-  if (device.limits.maxStorageTexturesPerShaderStage < 1) {
-    return {supported: false, reason: 'GPUConvolutionBloom requires one storage texture.', stats};
+  const requiredStorageTextures = (props.temporalStability ?? 0) > 0 ? 2 : 1;
+  if (device.limits.maxStorageTexturesPerShaderStage < requiredStorageTextures) {
+    return {
+      supported: false,
+      reason: `GPUConvolutionBloom requires ${requiredStorageTextures} storage textures.`,
+      stats
+    };
   }
-  const multiplyWorkgroupCount = Math.ceil(stats.elementCount / FFT_BLOOM_MULTIPLY_WORKGROUP_SIZE);
+  const multiplyWorkgroupCount = Math.ceil(
+    (stats.elementCount * stats.batchCount) / FFT_BLOOM_MULTIPLY_WORKGROUP_SIZE
+  );
   if (
     Math.min(multiplyWorkgroupCount, FFT_BLOOM_MULTIPLY_WORKGROUPS_PER_ROW) >
       device.limits.maxComputeWorkgroupsPerDimension ||
@@ -323,7 +420,7 @@ export function getGPUConvolutionBloomSupport(
 
 /** Computes the bounded power-of-two transform and its exact steady-state dispatch budget. */
 export function makeGPUConvolutionBloomStats(
-  props: Pick<GPUConvolutionBloomProps, 'width' | 'height' | 'resolutionScale'>
+  props: Pick<GPUConvolutionBloomProps, 'width' | 'height' | 'resolutionScale' | 'guardBand'>
 ): GPUConvolutionBloomStats {
   if (!Number.isInteger(props.width) || props.width <= 0) {
     throw new Error('GPUConvolutionBloom width must be a positive integer.');
@@ -337,22 +434,39 @@ export function makeGPUConvolutionBloomStats(
       'GPUConvolutionBloom resolutionScale must be greater than zero and at most one.'
     );
   }
-  const transformWidth = nextPowerOfTwo(Math.max(Math.ceil(props.width * resolutionScale), 2));
-  const transformHeight = nextPowerOfTwo(Math.max(Math.ceil(props.height * resolutionScale), 2));
-  const transformStats = makeGPUFFT2DStats(transformWidth, transformHeight);
-  const complexBufferCount = 9;
+  const guardBand = props.guardBand ?? 0.125;
+  if (!Number.isFinite(guardBand) || guardBand < 0 || guardBand > 1) {
+    throw new Error('GPUConvolutionBloom guardBand must be between zero and one.');
+  }
+  const contentWidth = Math.max(Math.ceil(props.width * resolutionScale), 1);
+  const contentHeight = Math.max(Math.ceil(props.height * resolutionScale), 1);
+  const transformWidth = nextPowerOfTwo(
+    Math.max(contentWidth + Math.ceil(contentWidth * guardBand) * 2, 2)
+  );
+  const transformHeight = nextPowerOfTwo(
+    Math.max(contentHeight + Math.ceil(contentHeight * guardBand) * 2, 2)
+  );
+  const batchCount = 3;
+  const transformStats = makeGPUFFT2DStats(transformWidth, transformHeight, batchCount);
+  const complexBufferCount = 4;
 
   return Object.freeze({
     width: props.width,
     height: props.height,
+    contentWidth,
+    contentHeight,
+    contentOffsetX: Math.floor((transformWidth - contentWidth) / 2),
+    contentOffsetY: Math.floor((transformHeight - contentHeight) / 2),
+    guardBand,
     transformWidth,
     transformHeight,
     elementCount: transformStats.elementCount,
     complexBufferCount,
     complexBufferByteLength: transformStats.complexBufferByteLength,
     totalComplexBufferByteLength: transformStats.complexBufferByteLength * complexBufferCount,
+    batchCount,
     transformDispatchCount: transformStats.dispatchCountPerEncode,
-    steadyStateDispatchCount: transformStats.dispatchCountPerEncode * 6 + 3,
+    steadyStateDispatchCount: transformStats.dispatchCountPerEncode * 2 + 3,
     kernelInitializationDispatchCount: transformStats.dispatchCountPerEncode
   });
 }
@@ -373,6 +487,8 @@ export function makeBloomPointSpreadFunction(
   const anamorphicRatio = Math.min(Math.max(options.anamorphicRatio ?? 0, -1), 1);
   const horizontalStretch = 1 + Math.max(anamorphicRatio, 0) * 2;
   const verticalStretch = 1 + Math.max(-anamorphicRatio, 0) * 2;
+  const wavelength = Math.min(Math.max(options.wavelength ?? 550, 380), 780);
+  const wavelengthScale = wavelength / 550;
   const kernel = new Float32Array(options.width * options.height);
   let totalEnergy = 0;
 
@@ -383,11 +499,11 @@ export function makeBloomPointSpreadFunction(
       const normalizedX = signedX / horizontalStretch;
       const normalizedY = signedY / verticalStretch;
       const distance = Math.hypot(normalizedX, normalizedY);
-      const radialPhase = distance * 0.95;
+      const radialPhase = (distance * 0.95) / wavelengthScale;
       const airyLobe = radialPhase < 0.00001 ? 1 : (Math.sin(radialPhase) / radialPhase) ** 2;
       const diffractionAngle = Math.atan2(normalizedY, normalizedX);
       const spoke = Math.abs(Math.cos(diffractionAngle * apertureBlades * 0.5)) ** 32;
-      const diffraction = spoke / (1 + distance * distance * 0.065);
+      const diffraction = spoke / (1 + (distance * distance * 0.065) / wavelengthScale);
       const value = airyLobe + diffraction * diffractionStrength;
       kernel[pixelY * options.width + pixelX] = value;
       totalEnergy += value;
@@ -400,13 +516,37 @@ export function makeBloomPointSpreadFunction(
   return kernel;
 }
 
+/** Generates separately normalized red, green, and blue wavelength-dependent optical kernels. */
+export function makeBloomSpectralPointSpreadFunction(
+  options: BloomPointSpreadFunctionOptions
+): BloomSpectralPointSpreadFunction {
+  const spectralSpread = Math.min(Math.max(options.spectralSpread ?? 0, 0), 1);
+  return {
+    red: makeBloomPointSpreadFunction({
+      ...options,
+      wavelength: 550 + (650 - 550) * spectralSpread
+    }),
+    green: makeBloomPointSpreadFunction({...options, wavelength: 550}),
+    blue: makeBloomPointSpreadFunction({
+      ...options,
+      wavelength: 550 + (460 - 550) * spectralSpread
+    })
+  };
+}
+
 function createGPUConvolutionBloomResources(
   device: Device,
-  options: {id: string; stats: GPUConvolutionBloomStats; pointSpreadFunction: Float32Array}
+  options: {
+    id: string;
+    stats: GPUConvolutionBloomStats;
+    pointSpreadFunction: BloomPointSpreadFunction;
+    temporalStability: boolean;
+  }
 ): GPUConvolutionBloomResources {
   let transform: GPUFFT2D | undefined;
   const buffers: Buffer[] = [];
   const computations: Computation[] = [];
+  const textures: Texture[] = [];
   const makeStorageBuffer = (name: string, data?: Float32Array): Buffer => {
     const buffer = device.createBuffer({
       id: `${options.id}-${name}`,
@@ -421,7 +561,8 @@ function createGPUConvolutionBloomResources(
     transform = new GPUFFT2D(device, {
       id: `${options.id}-fft`,
       width: options.stats.transformWidth,
-      height: options.stats.transformHeight
+      height: options.stats.transformHeight,
+      batchCount: options.stats.batchCount
     });
     const parameters = device.createBuffer({
       id: `${options.id}-parameters`,
@@ -429,17 +570,25 @@ function createGPUConvolutionBloomResources(
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
     buffers.push(parameters);
-    const kernelSpatial = makeStorageBuffer(
-      'kernel-spatial',
+    const kernelSpectrum = makeStorageBuffer('kernel-spectrum');
+    const spatialChannels = makeStorageBuffer(
+      'rgb-spatial',
       makeComplexPointSpreadFunction(options.pointSpreadFunction, options.stats.elementCount)
     );
-    const kernelSpectrum = makeStorageBuffer('kernel-spectrum');
-    const spatialChannels = ['red', 'green', 'blue'].map(channel =>
-      makeStorageBuffer(`${channel}-spatial`)
-    );
-    const spectralChannels = ['red', 'green', 'blue'].map(channel =>
-      makeStorageBuffer(`${channel}-spectrum`)
-    );
+    const spectralChannels = makeStorageBuffer('rgb-spectrum');
+    const historyTextures = options.temporalStability
+      ? ([0, 1].map(historyIndex => {
+          const texture = device.createTexture({
+            id: `${options.id}-history-${historyIndex}`,
+            width: options.stats.width,
+            height: options.stats.height,
+            format: 'rgba16float',
+            usage: Texture.SAMPLE | Texture.STORAGE
+          });
+          textures.push(texture);
+          return texture;
+        }) as [Texture, Texture])
+      : undefined;
     const extract = makeConvolutionComputation(
       device,
       `${options.id}-extract`,
@@ -453,9 +602,14 @@ function createGPUConvolutionBloomResources(
           location: 1,
           sampleType: 'unfilterable-float'
         },
-        {name: 'redChannel', type: 'storage', group: 0, location: 2},
-        {name: 'greenChannel', type: 'storage', group: 0, location: 3},
-        {name: 'blueChannel', type: 'storage', group: 0, location: 4}
+        {
+          name: 'exposureTexture',
+          type: 'texture',
+          group: 0,
+          location: 2,
+          sampleType: 'unfilterable-float'
+        },
+        {name: 'spatialChannels', type: 'storage', group: 0, location: 3}
       ]
     );
     computations.push(extract);
@@ -464,20 +618,16 @@ function createGPUConvolutionBloomResources(
       `${options.id}-multiply`,
       FFT_BLOOM_MULTIPLY_SHADER,
       [
-        {name: 'redSpectrum', type: 'read-only-storage', group: 0, location: 0},
-        {name: 'greenSpectrum', type: 'read-only-storage', group: 0, location: 1},
-        {name: 'blueSpectrum', type: 'read-only-storage', group: 0, location: 2},
-        {name: 'kernelSpectrum', type: 'read-only-storage', group: 0, location: 3},
-        {name: 'filteredRed', type: 'storage', group: 0, location: 4},
-        {name: 'filteredGreen', type: 'storage', group: 0, location: 5},
-        {name: 'filteredBlue', type: 'storage', group: 0, location: 6}
+        {name: 'sourceSpectrum', type: 'read-only-storage', group: 0, location: 0},
+        {name: 'kernelSpectrum', type: 'read-only-storage', group: 0, location: 1},
+        {name: 'filteredChannels', type: 'storage', group: 0, location: 2}
       ]
     );
     computations.push(multiply);
     const composite = makeConvolutionComputation(
       device,
       `${options.id}-composite`,
-      FFT_BLOOM_COMPOSITE_SHADER,
+      options.temporalStability ? makeFFTBloomCompositeShader(true) : FFT_BLOOM_COMPOSITE_SHADER,
       [
         {name: 'parameters', type: 'uniform', group: 0, location: 0},
         {
@@ -487,17 +637,48 @@ function createGPUConvolutionBloomResources(
           location: 1,
           sampleType: 'unfilterable-float'
         },
-        {name: 'redChannel', type: 'read-only-storage', group: 0, location: 2},
-        {name: 'greenChannel', type: 'read-only-storage', group: 0, location: 3},
-        {name: 'blueChannel', type: 'read-only-storage', group: 0, location: 4},
+        {name: 'convolvedChannels', type: 'read-only-storage', group: 0, location: 2},
         {
           name: 'outputTexture',
           type: 'storage',
           group: 0,
-          location: 5,
+          location: 3,
           access: 'write-only',
           format: 'rgba16float'
-        }
+        },
+        {
+          name: 'lensDirtTexture',
+          type: 'texture',
+          group: 0,
+          location: 4,
+          sampleType: 'unfilterable-float'
+        },
+        {
+          name: 'exposureTexture',
+          type: 'texture',
+          group: 0,
+          location: 5,
+          sampleType: 'unfilterable-float'
+        },
+        ...(options.temporalStability
+          ? ([
+              {
+                name: 'historyTexture',
+                type: 'texture',
+                group: 0,
+                location: 6,
+                sampleType: 'unfilterable-float'
+              },
+              {
+                name: 'historyOutput',
+                type: 'storage',
+                group: 0,
+                location: 7,
+                access: 'write-only',
+                format: 'rgba16float'
+              }
+            ] satisfies BindingDeclaration[])
+          : [])
       ]
     );
     computations.push(composite);
@@ -505,10 +686,10 @@ function createGPUConvolutionBloomResources(
     return {
       transform,
       parameters,
-      kernelSpatial,
       kernelSpectrum,
       spatialChannels,
       spectralChannels,
+      historyTextures,
       extract,
       multiply,
       composite
@@ -519,6 +700,9 @@ function createGPUConvolutionBloomResources(
     }
     for (const buffer of buffers) {
       buffer.destroy();
+    }
+    for (const texture of textures) {
+      texture.destroy();
     }
     transform?.destroy();
     throw error;
@@ -547,43 +731,81 @@ function dispatchConvolutionComputation(
   computePass.end();
 }
 
-function makeComplexPointSpreadFunction(kernel: Float32Array, elementCount: number): Float32Array {
-  if (kernel.length !== elementCount) {
-    throw new Error('Point-spread function must match the transform dimensions.');
-  }
+function makeComplexPointSpreadFunction(
+  pointSpreadFunction: BloomPointSpreadFunction,
+  elementCount: number
+): Float32Array {
+  const kernels =
+    pointSpreadFunction instanceof Float32Array
+      ? [pointSpreadFunction, pointSpreadFunction, pointSpreadFunction]
+      : [pointSpreadFunction.red, pointSpreadFunction.green, pointSpreadFunction.blue];
+  const complexKernel = new Float32Array(elementCount * 3 * 2);
 
-  let energy = 0;
-  for (const value of kernel) {
-    if (!Number.isFinite(value) || value < 0) {
-      throw new Error('Point-spread samples must be finite and nonnegative.');
+  for (const [channelIndex, kernel] of kernels.entries()) {
+    if (kernel.length !== elementCount) {
+      throw new Error('Point-spread function must match the transform dimensions.');
     }
-    energy += value;
-  }
-  if (energy <= 0) {
-    throw new Error('Point-spread function must contain positive energy.');
+
+    let energy = 0;
+    for (const value of kernel) {
+      if (!Number.isFinite(value) || value < 0) {
+        throw new Error('Point-spread samples must be finite and nonnegative.');
+      }
+      energy += value;
+    }
+    if (energy <= 0) {
+      throw new Error('Point-spread function must contain positive energy.');
+    }
+    const channelOffset = channelIndex * elementCount * 2;
+    for (let index = 0; index < elementCount; index++) {
+      complexKernel[channelOffset + index * 2] = kernel[index] / energy;
+    }
   }
 
-  const complexKernel = new Float32Array(elementCount * 2);
-  for (let index = 0; index < elementCount; index++) {
-    complexKernel[index * 2] = kernel[index] / energy;
-  }
   return complexKernel;
 }
 
 function makeGPUConvolutionBloomParameters(
   stats: GPUConvolutionBloomStats,
-  options: {threshold: number; intensity: number; exposure: number; exposureCompensation: number}
+  options: {
+    threshold: number;
+    intensity: number;
+    exposure: number;
+    exposureCompensation: number;
+    energyConserving: boolean;
+    useExposureTexture: boolean;
+    temporalStability: number;
+    exposureScale: number;
+    lens: Required<GPUConvolutionBloomLensOptions>;
+    historyValid: boolean;
+  }
 ): ArrayBuffer {
   const buffer = new ArrayBuffer(FFT_BLOOM_PARAMETER_BYTE_LENGTH);
   const view = new DataView(buffer);
   view.setUint32(0, stats.width, true);
   view.setUint32(4, stats.height, true);
-  view.setUint32(8, stats.transformWidth, true);
-  view.setUint32(12, stats.transformHeight, true);
-  view.setFloat32(16, options.threshold, true);
-  view.setFloat32(20, options.intensity, true);
-  view.setFloat32(24, options.exposure, true);
-  view.setFloat32(28, options.exposureCompensation, true);
+  view.setUint32(8, stats.contentWidth, true);
+  view.setUint32(12, stats.contentHeight, true);
+  view.setUint32(16, stats.transformWidth, true);
+  view.setUint32(20, stats.transformHeight, true);
+  view.setUint32(24, stats.contentOffsetX, true);
+  view.setUint32(28, stats.contentOffsetY, true);
+  view.setFloat32(32, options.threshold, true);
+  view.setFloat32(36, options.intensity, true);
+  view.setFloat32(40, options.exposure, true);
+  view.setFloat32(44, options.exposureCompensation, true);
+  view.setFloat32(48, Number(options.energyConserving), true);
+  view.setFloat32(52, Number(options.useExposureTexture), true);
+  view.setFloat32(56, options.temporalStability, true);
+  view.setFloat32(60, options.exposureScale, true);
+  view.setFloat32(64, options.lens.ghostIntensity, true);
+  view.setFloat32(68, options.lens.ghostSpacing, true);
+  view.setFloat32(72, options.lens.haloIntensity, true);
+  view.setFloat32(76, options.lens.haloRadius, true);
+  view.setFloat32(80, options.lens.chromaticAberration, true);
+  view.setFloat32(84, options.lens.dirtIntensity, true);
+  view.setFloat32(88, options.lens.ghostCount, true);
+  view.setFloat32(92, Number(options.historyValid), true);
   return buffer;
 }
 
@@ -592,7 +814,12 @@ function validateGPUConvolutionBloomTextures(
   stats: GPUConvolutionBloomStats,
   options: GPUConvolutionBloomEncodeOptions
 ): void {
-  if (options.sourceTexture.device !== device || options.outputTexture.device !== device) {
+  if (
+    options.sourceTexture.device !== device ||
+    options.outputTexture.device !== device ||
+    (options.exposureTexture && options.exposureTexture.device !== device) ||
+    (options.lensDirtTexture && options.lensDirtTexture.device !== device)
+  ) {
     throw new Error('GPUConvolutionBloom textures must belong to the same device.');
   }
   if (
@@ -615,6 +842,15 @@ function validateGPUConvolutionBloomTextures(
   ) {
     throw new Error('GPUConvolutionBloom source and output textures must be separate.');
   }
+  for (const auxiliaryTexture of [options.exposureTexture, options.lensDirtTexture]) {
+    if (
+      auxiliaryTexture &&
+      (auxiliaryTexture === options.outputTexture ||
+        auxiliaryTexture.handle === options.outputTexture.handle)
+    ) {
+      throw new Error('GPUConvolutionBloom auxiliary and output textures must be separate.');
+    }
+  }
 }
 
 function destroyGPUConvolutionBloomResources(resources: GPUConvolutionBloomResources): void {
@@ -623,10 +859,11 @@ function destroyGPUConvolutionBloomResources(resources: GPUConvolutionBloomResou
   resources.composite.destroy();
   resources.transform.destroy();
   resources.parameters.destroy();
-  resources.kernelSpatial.destroy();
   resources.kernelSpectrum.destroy();
-  for (const buffer of [...resources.spatialChannels, ...resources.spectralChannels]) {
-    buffer.destroy();
+  resources.spatialChannels.destroy();
+  resources.spectralChannels.destroy();
+  for (const texture of resources.historyTextures || []) {
+    texture.destroy();
   }
 }
 

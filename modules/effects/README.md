@@ -42,7 +42,11 @@ levels. `exposure` and photographic `exposureCompensation` adjust the scene-refe
 `threshold / (exposure * 2 ** exposureCompensation)`. Choose normalized nine-tap tent filtering or
 four-fetch bicubic B-spline reconstruction with `reconstruction`. `scatter`, `softKnee`,
 `fireflyReduction`, `anamorphicRatio`, and `tint` shape the resulting glow without requiring
-application-owned intermediate textures.
+application-owned intermediate textures. `blurAlgorithm: 'dual-kawase'` removes both separable
+Gaussian passes at every level while retaining normalized pyramid reconstruction; the default
+`'gaussian'` preserves the original wider-radius appearance. `energyConserving: true` forces
+thresholdless extraction and blends normalized scattered light instead of additively duplicating
+the original image.
 
 By default, `downsample: 'auto'` replaces the complete extraction/downsampling chain with one
 workgroup-local compute dispatch on supported WebGPU devices. WebGL and devices without enough
@@ -51,16 +55,19 @@ floating-point storage bindings retain the complete render-pass implementation. 
 compute while retaining the same capability fallback. `reuseRenderTargets` defaults to `true` and
 reuses expired extraction textures during reconstruction.
 
-| Quality | Pyramid levels | Portable render passes | Fused WebGPU work | Physical targets with / without reuse |
-| --- | --- | --- | --- | --- |
-| `low` | 2 | 8 | 6 render + 1 compute | 6 / 7 |
-| `medium` | 3 | 12 | 9 render + 1 compute | 9 / 11 |
-| `high` | 4 | 16 | 12 render + 1 compute | 12 / 15 |
-| `ultra` | 5 | 20 | 15 render + 1 compute | 15 / 19 |
+| Quality | Pyramid levels | Gaussian portable | Gaussian WebGPU | Dual-Kawase portable | Dual-Kawase WebGPU |
+| --- | --- | --- | --- | --- | --- |
+| `low` | 2 | 8 render | 6 render + 1 compute | 4 render | 2 render + 1 compute |
+| `medium` | 3 | 12 render | 9 render + 1 compute | 6 render | 3 render + 1 compute |
+| `high` | 4 | 16 render | 12 render + 1 compute | 8 render | 4 render + 1 compute |
+| `ultra` | 5 | 20 render | 15 render + 1 compute | 10 render | 5 render + 1 compute |
 
 Optional `lens` controls add aperture diffraction, spectral lens-element ghosts, a radial halo,
 and sampled lens dirt. Set `temporalStability` to accumulate neighborhood-clamped glow history.
-Every lens feature and temporal history is disabled by default.
+Add `temporalReprojection: true` when the application supplies `velocityTexture` and `depthTexture`
+bindings: bloom reprojects motion, rejects disocclusions with `temporalDepthThreshold`, and stores
+previous depth in the existing history alpha channel. `previousExposure` rescales history when
+adapted camera exposure changes. Every lens feature and temporal history is disabled by default.
 
 | Feature | Added render passes | Additional targets | Main sampling cost |
 | --- | --- | --- | --- |
@@ -71,6 +78,8 @@ Every lens feature and temporal history is disabled by default.
 | Lens halo | Shares the same lens pass | Shares the same target | One sample, or three with chromatic separation. |
 | Diffraction starburst | Shares the same lens pass | Shares the same target | Eight samples per configured diffraction ray. |
 | Temporal stability | 1 half-resolution history pass | 2 persistent half-resolution textures | Five current-neighborhood samples and one history sample. |
+| Motion reprojection | 0 beyond temporal stability | 0 | One velocity sample and one depth load; previous depth shares history alpha. |
+| Energy conservation | 0 | 0 | Thresholdless extraction and normalized final mixing. |
 
 The lens pass exists only when at least one of `starburstIntensity`, `ghostIntensity`, or
 `haloIntensity` is positive. Dirt-only configurations therefore preserve the base pass count. Reduce
@@ -94,6 +103,7 @@ const renderer = new ShaderPassRenderer(device, {
       exposure: 1,
       exposureCompensation: 0,
       intensity: 1.25,
+      blurAlgorithm: 'dual-kawase',
       reconstruction: 'bicubic',
       downsample: 'auto',
       scatter: 0.55,

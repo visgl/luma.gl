@@ -53,6 +53,18 @@ test('GPUFFT2D validates both transform dimensions before allocation', testCase 
   testCase.throws(() => makeGPUFFT2DStats(1, 4), /width must be from 2 through 2048/);
   testCase.throws(() => makeGPUFFT2DStats(4, 4096), /height must be from 2 through 2048/);
   testCase.throws(() => makeGPUFFT2DStats(4.5, 8), /width must be an integer/);
+  testCase.throws(() => makeGPUFFT2DStats(4, 8, 0), /batchCount must be a positive integer/);
+  testCase.end();
+});
+
+test('GPUFFT2D batches independent packed transforms in the dispatch depth dimension', testCase => {
+  const stats = makeGPUFFT2DStats(8, 4, 3);
+
+  testCase.equal(stats.batchCount, 3, 'the plan exposes the independent transform count');
+  testCase.equal(stats.elementCount, 32, 'each transform retains its own spatial element count');
+  testCase.equal(stats.complexBufferByteLength, 768, 'buffers contain all three packed transforms');
+  testCase.deepEqual(stats.workgroupCount, [1, 1, 3], 'the batch index uses dispatch depth');
+  testCase.equal(stats.dispatchCountPerEncode, 7, 'batching does not add FFT stage dispatches');
   testCase.end();
 });
 

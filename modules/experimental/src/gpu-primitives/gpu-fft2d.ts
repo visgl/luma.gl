@@ -23,6 +23,8 @@ export type GPUFFT2DProps = {
   width: number;
   /** Number of complex values in each column. Must be a power of two from 2 through 2048. */
   height: number;
+  /** Number of independent, tightly packed transforms encoded by each dispatch. Defaults to one. */
+  batchCount?: number;
 };
 
 /** Transform sign and normalization convention. */
@@ -42,6 +44,8 @@ export type GPUFFT2DEncodeOptions = {
 export type GPUFFT2DStats = {
   width: number;
   height: number;
+  /** Present when one dispatch processes multiple independent packed transforms. */
+  batchCount?: number;
   elementCount: number;
   complexBufferByteLength: number;
   horizontalStageCount: number;
@@ -96,6 +100,7 @@ export class GPUFFT2D {
   readonly id: string;
   readonly width: number;
   readonly height: number;
+  readonly batchCount: number;
   readonly stats: GPUFFT2DStats;
 
   private readonly scratchBuffer: Buffer;
@@ -113,6 +118,7 @@ export class GPUFFT2D {
     this.id = props.id ?? 'gpu-fft2d';
     this.width = props.width;
     this.height = props.height;
+    this.batchCount = props.batchCount ?? 1;
     this.stats = support.stats;
     const resources = createGPUFFT2DResources(device, {
       id: this.id,
@@ -191,12 +197,16 @@ export class GPUFFT2D {
 
 /** Reports whether a device can allocate and dispatch the requested bounded radix-2 transform. */
 export function getGPUFFT2DSupport(device: Device, props: GPUFFT2DProps): GPUFFT2DSupport {
-  const dimensionReason = getGPUFFT2DDimensionReason(props.width, props.height);
+  const dimensionReason = getGPUFFT2DDimensionReason(
+    props.width,
+    props.height,
+    props.batchCount ?? 1
+  );
   if (dimensionReason) {
     return {supported: false, reason: dimensionReason};
   }
 
-  const stats = makeGPUFFT2DStats(props.width, props.height);
+  const stats = makeGPUFFT2DStats(props.width, props.height, props.batchCount ?? 1);
   if (device.type !== 'webgpu') {
     return {supported: false, reason: 'GPUFFT2D requires WebGPU.', stats};
   }
@@ -216,7 +226,8 @@ export function getGPUFFT2DSupport(device: Device, props: GPUFFT2DProps): GPUFFT
   }
   if (
     stats.workgroupCount[0] > device.limits.maxComputeWorkgroupsPerDimension ||
-    stats.workgroupCount[1] > device.limits.maxComputeWorkgroupsPerDimension
+    stats.workgroupCount[1] > device.limits.maxComputeWorkgroupsPerDimension ||
+    stats.workgroupCount[2] > device.limits.maxComputeWorkgroupsPerDimension
   ) {
     return {
       supported: false,
@@ -238,8 +249,8 @@ export function getGPUFFT2DSupport(device: Device, props: GPUFFT2DProps): GPUFFT
 }
 
 /** Builds the immutable CPU-side plan exposed by support queries and class instances. */
-export function makeGPUFFT2DStats(width: number, height: number): GPUFFT2DStats {
-  const dimensionReason = getGPUFFT2DDimensionReason(width, height);
+export function makeGPUFFT2DStats(width: number, height: number, batchCount = 1): GPUFFT2DStats {
+  const dimensionReason = getGPUFFT2DDimensionReason(width, height, batchCount);
   if (dimensionReason) {
     throw new Error(dimensionReason);
   }
@@ -247,10 +258,11 @@ export function makeGPUFFT2DStats(width: number, height: number): GPUFFT2DStats 
   const verticalStageCount = Math.log2(height);
   const passCount = horizontalStageCount + verticalStageCount + 2;
   const elementCount = width * height;
-  const complexBufferByteLength = elementCount * 2 * Float32Array.BYTES_PER_ELEMENT;
+  const complexBufferByteLength = elementCount * batchCount * 2 * Float32Array.BYTES_PER_ELEMENT;
   return Object.freeze({
     width,
     height,
+    ...(batchCount > 1 ? {batchCount} : {}),
     elementCount,
     complexBufferByteLength,
     horizontalStageCount,
@@ -265,7 +277,7 @@ export function makeGPUFFT2DStats(width: number, height: number): GPUFFT2DStats 
     workgroupCount: Object.freeze([
       Math.ceil(width / GPU_FFT2D_WORKGROUP_DIMENSION),
       Math.ceil(height / GPU_FFT2D_WORKGROUP_DIMENSION),
-      1
+      batchCount
     ]) as readonly [number, number, number],
     scratchBufferByteLength: complexBufferByteLength,
     parameterBufferCount: passCount * 2,
@@ -382,12 +394,23 @@ function makeGPUFFT2DParameterData(props: {
   return unsignedValues;
 }
 
-function getGPUFFT2DDimensionReason(width: number, height: number): string | undefined {
+function getGPUFFT2DDimensionReason(
+  width: number,
+  height: number,
+  batchCount = 1
+): string | undefined {
   const widthReason = getDimensionReason('width', width);
   if (widthReason) {
     return widthReason;
   }
-  return getDimensionReason('height', height);
+  const heightReason = getDimensionReason('height', height);
+  if (heightReason) {
+    return heightReason;
+  }
+  if (!Number.isSafeInteger(batchCount) || batchCount <= 0) {
+    return 'GPUFFT2D batchCount must be a positive integer.';
+  }
+  return undefined;
 }
 
 function getDimensionReason(name: string, dimension: number): string | undefined {
