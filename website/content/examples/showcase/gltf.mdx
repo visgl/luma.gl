@@ -12,3 +12,53 @@ sidebar_custom_props:
 import {GLTFExample} from '@site/src/examples';
 
 <GLTFExample />
+
+## Animation Studio
+
+The default **Expressive Robot** is a compact, CC0-licensed production asset containing 14 named
+animation clips, two 43-joint skeletons, and three facial-expression morph targets. Use the Animation
+Studio controls to select `Idle`, `Walking`, `Running`, `Dance`, and other clips; adjust playback
+speed; crossfade between actions; scrub through a clip; and choose repeat, ping-pong, or single-shot
+playback.
+
+Increase **Independent Characters** to place several copies of the same asset side by side. Each
+character receives its own authored clip, animation phase, playback speed, skinning palette, and
+mutable scenegraph while continuing to reuse the original decoded glTF document.
+
+The **Facial Expressions** controls directly update the robot's `Angry`, `Surprised`, and `Sad`
+morph targets. These controls use the same public scenegraph, animation, skeletal, and morph-target
+APIs that an application can use directly:
+
+```ts
+import {load} from '@loaders.gl/core';
+import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {createScenegraphsFromGLTF, setGLTFMorphWeights} from '@luma.gl/gltf';
+
+const source = postProcessGLTF(await load('/models/RobotExpressive.glb', GLTFLoader));
+const scenegraphs = createScenegraphsFromGLTF(device, source);
+
+scenegraphs.animator.selectClip('Walking');
+scenegraphs.animator.selectClip('Running', {crossFadeDuration: 0.35});
+scenegraphs.animator.mixer.timeScale = 1.25;
+
+const faceNode = scenegraphs.gltfNodeIndexToNodeMap.get(13);
+if (faceNode) {
+  setGLTFMorphWeights(faceNode, [0.8, 0, 0]);
+}
+```
+
+## Curated, reusable assets
+
+The **Curated Highlights** collection starts with small offline-capable CC0 skeletal and morph
+fixtures, then includes representative GPU instancing, visibility, transmission, sheen,
+iridescence, diffuse-transmission, and experimental scattering samples from Khronos. Larger samples
+are loaded on demand and each selected asset displays its feature tags and license.
+
+Use the materials controls to select authored `KHR_materials_variants` without rebuilding the scene,
+and choose source-authored camera projections when present. The extension inspector distinguishes
+implemented runtime support from release-candidate and experimental specifications, so draft
+materials are not presented as ratified glTF features.
+
+The companion [ANARI Playground](/examples/experimental/anari-playground) exposes the same Expressive
+Robot, Animated Morph Cube, and Simple Skin fixtures. Its retained-scene editor can export both
+textual `.gltf` and binary `.glb` files while preserving compatible animation clips and skin data.

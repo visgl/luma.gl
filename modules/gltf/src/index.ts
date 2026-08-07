@@ -75,6 +75,7 @@ export {
   convertSamplerToGLTF,
   type GLTFSampler
 } from './webgl-to-webgpu/convert-webgl-sampler';
+export {type GLTFMorphTargetState, setGLTFMorphWeights} from './gltf/morph-targets';
 
 // Standards-native glTF extension runtime helpers.
 export {

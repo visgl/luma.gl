@@ -2,13 +2,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
-import {Color, Device, RenderPass, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF, type PBREnvironment} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {Device, log, RenderPass} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
+import {createScenegraphsFromGLTF, type PBREnvironment} from '@luma.gl/gltf';
+import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
+import {GLTFAnimationStudio, type GLTFAnimationStudioState} from './gltf-animation-studio';
+import {
+  GLTF_FEATURED_ASSETS,
+  getBundledGLTFAssetUrl,
+  getFeaturedGLTFAsset
+} from './gltf-featured-assets';
 
 /* eslint-disable camelcase */
 
@@ -19,6 +25,7 @@ const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
 const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
 export const GLTF_MODEL_INFO_ID = 'model-info';
+export const GLTF_ANIMATION_INFO_ID = 'animation-info';
 export const GLTF_CONTROL_PANEL_STYLE = 'display: grid; gap: 8px;';
 export const GLTF_CONTROL_ROW_STYLE =
   'display: grid; grid-template-columns: 7rem minmax(0, 1fr); align-items: center; column-gap: 0.75rem;';
@@ -69,6 +76,7 @@ const INFO_HTML = `\
 <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
 </div>
 <div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
+<div id="${GLTF_ANIMATION_INFO_ID}" style="margin-top: 10px;"></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
@@ -86,8 +94,14 @@ export type GLTFCatalogModel = {
   screenshot?: string;
   tags?: string[];
   variants?: Record<string, string>;
+  features?: readonly string[];
+  license?: string;
 };
 type GLTFModelMetadata = Pick<GLTFCatalogModel, 'summary' | 'description'>;
+type GLTFStudioActor = {
+  scenegraphs: ReturnType<typeof createScenegraphsFromGLTF>;
+  studio: GLTFAnimationStudio;
+};
 
 const GLTF_MODEL_METADATA_OVERRIDES: Record<string, GLTFModelMetadata> = {
   PotOfCoalsAnimationPointer: {
@@ -107,7 +121,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
   availableModels: GLTFCatalogModel[] = [];
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
+  readonly animationStudio = new GLTFAnimationStudio();
+  private readonly animatedActors: GLTFStudioActor[] = [];
+  private activeScenegraphOptions: Parameters<typeof createScenegraphsFromGLTF>[2];
   modelLights: Light[] = [];
+  selectedCameraIndex: number | null = null;
   center = [0, 0, 0];
   cameraHeight = 0;
   cameraOrbitDistance = 1;
@@ -156,6 +174,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         if (this.isFinalized) {
           return;
         }
+        this.availableModels = getBundledFeaturedModels();
+        this.cleanupCallbacks.push(
+          this.initializeModelMenus(this.availableModels, initialModelName)
+        );
         this.loadGLTF(initialModelName);
       });
 
@@ -197,12 +219,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       cleanupCallback();
     }
     this.cleanupCallbacks = [];
+    this.clearAnimatedActors();
+    this.animationStudio.detach();
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
     this.setViewerLoadingState(false);
     updateModelInfoBox();
     updateExtensionSupportTable();
+    updateAnimationStudioInfo();
   }
 
   getDefaultModelName(): string {
@@ -213,7 +238,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return LAST_GLTF_MODEL_STORAGE_KEY;
   }
 
-  getClearColor(): Color {
+  getClearColor(): [number, number, number, number] {
     return [0, 0, 0, 1];
   }
 
@@ -248,6 +273,43 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   drawBackground(_renderPass: RenderPass): void {}
 
+  /** Lets richer showcase surfaces refresh controls after an asset has loaded. */
+  onScenegraphsChanged(_scenegraphs: ReturnType<typeof createScenegraphsFromGLTF>): void {}
+
+  getAnimationInstanceCount(): number {
+    return this.scenegraphsFromGLTF ? this.animatedActors.length + 1 : 1;
+  }
+
+  /** Keeps authored geometry shared by the source document while giving each actor its own pose. */
+  setAnimationInstanceCount(instanceCount: number): void {
+    this.clearAnimatedActors();
+    const sourceScenegraphs = this.scenegraphsFromGLTF;
+    if (!sourceScenegraphs) {
+      return;
+    }
+
+    const clampedCount = Math.max(1, Math.min(6, Math.floor(instanceCount)));
+    const preferredClips = ['Walking', 'Running', 'Dance', 'Wave', 'Idle'];
+    for (let instanceIndex = 1; instanceIndex < clampedCount; instanceIndex++) {
+      const scenegraphs = createScenegraphsFromGLTF(
+        this.device,
+        sourceScenegraphs.gltf,
+        this.activeScenegraphOptions
+      );
+      const studio = new GLTFAnimationStudio();
+      studio.attach(scenegraphs);
+      const availableClip = preferredClips
+        .map((_, index) => preferredClips[(index + instanceIndex) % preferredClips.length])
+        .find(clip => studio.getState().clipNames.includes(clip));
+      if (availableClip) {
+        studio.selectClip(availableClip);
+        studio.seek(instanceIndex * 0.22);
+      }
+      studio.setSpeed(0.78 + instanceIndex * 0.14);
+      this.animatedActors.push({scenegraphs, studio});
+    }
+  }
+
   onRender({aspect, device, time}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
     this.drawBackground(renderPass);
@@ -259,10 +321,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
 
-    const orbitDistance = this.cameraOrbitDistance;
+    const actorCount = this.getAnimationInstanceCount();
+    const orbitDistance = this.cameraOrbitDistance + this.sceneRadius * Math.max(0, actorCount - 1);
     const far = Math.max(orbitDistance + this.sceneRadius * 8, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
-    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
+    const authoredCamera =
+      this.selectedCameraIndex === null
+        ? undefined
+        : this.scenegraphsFromGLTF.cameras?.[this.selectedCameraIndex];
+    const perspective = authoredCamera?.perspective;
+    const orthographic = authoredCamera?.orthographic;
+    const projectionMatrix = orthographic
+      ? new Matrix4().ortho({
+          left: -orthographic.xmag,
+          right: orthographic.xmag,
+          bottom: -orthographic.ymag,
+          top: orthographic.ymag,
+          near: orthographic.znear,
+          far: orthographic.zfar
+        })
+      : new Matrix4().perspective({
+          fovy: perspective?.yfov || Math.PI / 3,
+          aspect: perspective?.aspectRatio || aspect,
+          near: perspective?.znear || near,
+          far: perspective?.zfar || far
+        });
     const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
     const orbitAngle = 0.001 * cameraTime;
     const horizontalOrbitScale = Math.cos(this.mouseCameraTilt);
@@ -274,56 +357,74 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       orbitDistance * horizontalOrbitScale * Math.cos(orbitAngle)
     ];
 
-    if (this.options['gltfAnimation']) {
-      this.scenegraphsFromGLTF.animator?.setTime(time);
+    this.animationStudio.setPlaying(this.options['gltfAnimation']);
+    this.animationStudio.update(time);
+    for (const actor of this.animatedActors) {
+      actor.studio.setPlaying(this.options['gltfAnimation']);
+      actor.studio.update(time);
     }
+    updateAnimationStudioInfo(this.animationStudio.getState(), actorCount);
 
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
 
     const pbrMaterialProps = this.getPBRMaterialProps();
     const hasPBRMaterialProps = Object.keys(pbrMaterialProps).length > 0;
 
-    this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
-      const {model} = node as ModelNode;
-
-      const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
-        .multiplyRight(viewMatrix)
-        .multiplyRight(modelMatrix);
-
-      const sceneShaderInputProps: Record<string, unknown> = {
-        lighting: this.getLightingProps(),
-        pbrProjection: {
-          camera: cameraPos,
-          modelViewProjectionMatrix,
-          modelMatrix,
-          normalMatrix: new Matrix4(modelMatrix).invert().transpose()
-        },
-        skin: {
-          scenegraphsFromGLTF: this.scenegraphsFromGLTF
+    const actors: readonly GLTFStudioActor[] = [
+      {scenegraphs: this.scenegraphsFromGLTF, studio: this.animationStudio},
+      ...this.animatedActors
+    ];
+    const horizontalSpacing = this.sceneRadius * 1.9;
+    for (const [actorIndex, actor] of actors.entries()) {
+      const horizontalOffset = (actorIndex - (actors.length - 1) * 0.5) * horizontalSpacing;
+      actor.scenegraphs.scenes[0].traverse((node, {worldMatrix}) => {
+        if (!(node instanceof ModelNode)) {
+          return;
         }
-      };
+        const {model} = node;
+        const modelMatrix = new Matrix4()
+          .translate([horizontalOffset, 0, 0])
+          .multiplyRight(worldMatrix);
 
-      if (hasPBRMaterialProps) {
-        if (model.material?.ownsModule('pbrMaterial')) {
+        const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
+          .multiplyRight(viewMatrix)
+          .multiplyRight(modelMatrix);
+
+        const sceneShaderInputProps = {
+          lighting: this.getLightingProps(),
+          pbrProjection: {
+            camera: cameraPos,
+            modelViewProjectionMatrix,
+            modelMatrix,
+            normalMatrix: new Matrix4(modelMatrix).invert().transpose()
+          },
+          skin: {
+            scenegraphsFromGLTF: actor.scenegraphs
+          },
+          ...(hasPBRMaterialProps && !model.material?.ownsModule('pbrMaterial')
+            ? {pbrMaterial: pbrMaterialProps}
+            : {})
+        };
+
+        if (hasPBRMaterialProps && model.material?.ownsModule('pbrMaterial')) {
           model.material.setProps({pbrMaterial: pbrMaterialProps});
-        } else {
-          sceneShaderInputProps.pbrMaterial = pbrMaterialProps;
         }
-      }
 
-      model.shaderInputs.setProps(sceneShaderInputProps);
-      model.draw(renderPass);
-    });
+        model.shaderInputs.setProps(sceneShaderInputProps);
+        model.draw(renderPass);
+      });
+    }
     renderPass.end();
   }
 
   async fetchModelList(): Promise<GLTFCatalogModel[]> {
     const response = await fetch(MODEL_LIST_URL);
     const models = (await response.json()) as GLTFCatalogModel[];
-    return models.map(model => ({
+    const catalogModels = models.map(model => ({
       ...model,
       hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
     }));
+    return mergeFeaturedModels(catalogModels);
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {
@@ -354,12 +455,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       )();
       const processedGLTF = postProcessGLTF(gltf);
 
-      const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
+      const scenegraphOptions = {
         lights: true,
         imageBasedLightingEnvironment,
         pbrDebug: false,
         useTangents: true
-      });
+      };
+      const scenegraphsFromGLTF = createScenegraphsFromGLTF(
+        this.device,
+        processedGLTF,
+        scenegraphOptions
+      );
       log.log(0, `Created glTF scenegraphs: ${modelDescription}`)();
 
       if (this.isLoadStale(loadGeneration)) {
@@ -367,11 +473,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         return;
       }
 
+      this.clearAnimatedActors();
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
+      this.activeScenegraphOptions = scenegraphOptions;
+      this.animationStudio.attach(scenegraphsFromGLTF);
+      this.selectedCameraIndex = null;
       this.modelLights = scenegraphsFromGLTF.lights;
       this.updateModelInfo(resolvedModelReference, loadGeneration);
       updateExtensionSupportTable(scenegraphsFromGLTF.extensionSupport);
+      updateAnimationStudioInfo(this.animationStudio.getState());
 
       const activeSceneBounds =
         scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
@@ -391,6 +502,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         -MAX_CAMERA_TILT,
         MAX_CAMERA_TILT
       );
+
+      this.onScenegraphsChanged(scenegraphsFromGLTF);
 
       showError();
     } catch (error) {
@@ -452,6 +565,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     return this.modelMetadataCache.get(modelName)!;
+  }
+
+  private clearAnimatedActors(): void {
+    for (const actor of this.animatedActors) {
+      actor.studio.detach();
+      destroyScenegraphs(actor.scenegraphs);
+    }
+    this.animatedActors.length = 0;
   }
 }
 
@@ -577,7 +698,48 @@ async function loadPreferredGLTF(candidateModelReferences: Required<GLTFModelRef
 }
 
 function getModelUrl(modelReference: Required<GLTFModelReference>): string {
+  const featuredAsset = getFeaturedGLTFAsset(modelReference.name);
+  const localAssetUrl = featuredAsset
+    ? getBundledGLTFAssetUrl(
+        featuredAsset,
+        window.location,
+        Boolean((window as Window & {website?: boolean}).website)
+      )
+    : undefined;
+  if (localAssetUrl) {
+    return localAssetUrl;
+  }
   return `${MODEL_DIRECTORY_URL}/${modelReference.name}/${modelReference.variant}/${modelReference.fileName}`;
+}
+
+function mergeFeaturedModels(catalogModels: GLTFCatalogModel[]): GLTFCatalogModel[] {
+  const modelsByName = new Map(catalogModels.map(model => [model.name, model]));
+  const featuredModels = GLTF_FEATURED_ASSETS.flatMap(asset => {
+    const catalogModel = modelsByName.get(asset.name);
+    if (!catalogModel && !asset.bundledFilename) {
+      return [];
+    }
+
+    return [
+      {
+        ...catalogModel,
+        name: asset.name,
+        label: asset.label,
+        description: asset.description,
+        features: asset.features,
+        license: asset.license,
+        hasGLBVariant:
+          catalogModel?.hasGLBVariant || Boolean(asset.bundledFilename?.endsWith('.glb'))
+      }
+    ];
+  });
+  const featuredNames = new Set(featuredModels.map(model => model.name));
+
+  return [...featuredModels, ...catalogModels.filter(model => !featuredNames.has(model.name))];
+}
+
+function getBundledFeaturedModels(): GLTFCatalogModel[] {
+  return mergeFeaturedModels([]);
 }
 
 function setOptionsUI(options: Record<string, boolean>): Array<() => void> {
@@ -748,7 +910,10 @@ function setLoadingState(isLoading: boolean, message?: string): void {
 }
 
 function updateModelInfoBox(
-  model?: Pick<GLTFCatalogModel, 'label' | 'name' | 'summary' | 'description'>,
+  model?: Pick<
+    GLTFCatalogModel,
+    'label' | 'name' | 'summary' | 'description' | 'features' | 'license'
+  >,
   modelReference?: Required<GLTFModelReference>
 ): void {
   const container = document.getElementById(GLTF_MODEL_INFO_ID) as HTMLDivElement | null;
@@ -795,6 +960,47 @@ function updateModelInfoBox(
     descriptionParagraph.textContent = description;
     container.append(descriptionParagraph);
   }
+
+  if (model?.features?.length) {
+    const featureSummary = document.createElement('div');
+    featureSummary.style.fontSize = '12px';
+    featureSummary.style.marginTop = '8px';
+    featureSummary.style.opacity = '0.78';
+    featureSummary.textContent = model.features.join(' · ');
+    container.append(featureSummary);
+  }
+
+  if (model?.license) {
+    const license = document.createElement('div');
+    license.style.fontSize = '11px';
+    license.style.marginTop = '5px';
+    license.style.opacity = '0.68';
+    license.textContent = `Asset license: ${model.license}`;
+    container.append(license);
+  }
+}
+
+function updateAnimationStudioInfo(state?: GLTFAnimationStudioState, instanceCount = 1): void {
+  const container = document.getElementById(GLTF_ANIMATION_INFO_ID) as HTMLDivElement | null;
+  if (!container) {
+    return;
+  }
+
+  if (!state) {
+    container.textContent = '';
+    return;
+  }
+
+  const capabilities = [
+    instanceCount > 1 ? `${instanceCount} independent character instances` : undefined,
+    state.selectedClip ? `${state.selectedClip} ${state.time.toFixed(2)}s` : undefined,
+    state.clipNames.length ? `${state.clipNames.length} animation clips` : undefined,
+    state.skinCount ? `${state.skinCount} skeletons · ${state.jointCount} joints` : undefined,
+    state.morphTargets.length ? `${state.morphTargets.length} facial morphs` : undefined,
+    state.variants.length ? `${state.variants.length} material variants` : undefined,
+    state.cameraCount ? `${state.cameraCount} cameras` : undefined
+  ].filter(Boolean);
+  container.textContent = capabilities.join(' · ');
 }
 
 function showError(error?: unknown) {
@@ -855,7 +1061,8 @@ function updateExtensionSupportTable(extensionSupport?: GLTFExtensionSupportMap)
   table.append(
     createTableRow([
       {text: 'Extension', header: true},
-      {text: 'Built-in', header: true, align: 'center'},
+      {text: 'Maturity', header: true},
+      {text: 'Runtime', header: true},
       {text: 'Notes', header: true}
     ])
   );
@@ -864,9 +1071,11 @@ function updateExtensionSupportTable(extensionSupport?: GLTFExtensionSupportMap)
     table.append(
       createTableRow([
         {text: supportInfo.extensionName, code: true},
+        {text: getExtensionMaturityLabel(supportInfo.extensionName)},
         {
-          text: supportInfo.supported ? '✓' : '✕',
-          align: 'center',
+          text: supportInfo.supported
+            ? getSupportLevelLabel(supportInfo.supportLevel)
+            : 'Unavailable',
           color: supportInfo.supported ? '#0b8457' : '#b00020',
           title: getSupportLevelLabel(supportInfo.supportLevel)
         },
@@ -876,6 +1085,20 @@ function updateExtensionSupportTable(extensionSupport?: GLTFExtensionSupportMap)
   }
 
   container.append(table);
+}
+
+function getExtensionMaturityLabel(extensionName: string): string {
+  if (extensionName === 'KHR_materials_diffuse_transmission') {
+    return 'Release candidate';
+  }
+  if (
+    extensionName === 'KHR_materials_volume_scatter' ||
+    extensionName === 'KHR_materials_scatter' ||
+    extensionName === 'EXT_materials_bump'
+  ) {
+    return 'Experimental';
+  }
+  return extensionName.startsWith('KHR_') ? 'Khronos' : 'Extension';
 }
 
 function createTableRow(
@@ -952,10 +1175,21 @@ function getModelLightSummary(modelLights: Light[]): string {
 }
 
 function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {
+  const disposableScenegraphs = scenegraphsFromGLTF as
+    | (ReturnType<typeof createScenegraphsFromGLTF> & {destroy?: () => void})
+    | undefined;
+  if (disposableScenegraphs?.destroy) {
+    disposableScenegraphs.destroy();
+    return;
+  }
+
+  const destroyedNodes = new Set<ModelNode>();
   for (const scene of scenegraphsFromGLTF?.scenes || []) {
     scene.traverse(node => {
-      const model = (node as Partial<ModelNode>).model;
-      model?.destroy();
+      if (node instanceof ModelNode && !destroyedNodes.has(node)) {
+        destroyedNodes.add(node);
+        node.destroy();
+      }
     });
   }
 }
