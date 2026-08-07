@@ -39,7 +39,6 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
-  getCandidateDependencyEndpointCountShader,
   getCandidateDependencyEndpointScatterShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
@@ -294,12 +293,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     ]),
     getDependencyBatchVisibilityShader(3),
     getDependencyEndpointRouteClearShader(endpointRouting.spanChunks.length),
-    getCandidateDependencyEndpointCountShader(endpointRouting),
     getDependencyEndpointDispatchShader(endpointRouting.spanChunks.length),
     getCandidateDependencyEndpointScatterShader(endpointRouting),
     getDependencyEndpointResolveShader(endpointRouting, 0),
     getDependencyEndpointResolveShader(endpointRouting, 1),
-    getCandidateDependencyVisibilityShader(11),
+    getCandidateDependencyVisibilityShader(endpointRouting),
     getFocusFrontierSeedShader(11),
     getFocusFrontierClearShader(),
     getFocusFrontierExpansionShader({
