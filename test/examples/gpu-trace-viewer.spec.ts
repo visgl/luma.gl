@@ -89,10 +89,7 @@ describe('GPU hierarchical trace viewer', () => {
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
       expect(state.resources.focusFrontierCapacity).toBe(
-        getTraceFocusFrontierCapacity(
-          state.resources.spanCount,
-          state.resources.dependencyCount
-        )
+        getTraceFocusFrontierCapacity(state.resources.spanCount, state.resources.dependencyCount)
       );
       expect(state.resources.dependencyBatchCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
