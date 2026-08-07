@@ -41,10 +41,15 @@ forward renderer.
 passes derive world-space instance bounds, build and refit the existing
 [`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh), and traverse its complete
 binary hierarchy for nearest-hit rays and early-exit shadows. `RayTracingSceneRenderOptions` add
-analytic sphere metadata, perspective/orthographic camera selection, progressive primary-ray
-accumulation, and HDR presentation. The ray pass uses five storage buffers and the existing BVH
-builder uses eight, fitting default WebGPU CORE limits. Applications retain command-submission
-ownership.
+analytic sphere metadata, perspective/orthographic camera selection, adaptive half-resolution
+rendering, interleaved pixel phases, retained-identity temporal reprojection, bounded rotating
+shadow samples, progressive accumulation, and upsampled HDR presentation. The default `0.5`
+resolution scale can decrease to `0.25` toward a `33.3` millisecond smoothed animation-frame
+budget; GPU timestamp queries are not required. Acceleration passes run only when geometry or
+instance transforms change. Shared scene statistics optionally expose internal dimensions,
+effective scale, sampled-pixel coverage, frame timing, and accumulated samples. The ray pass uses
+five storage buffers and the existing BVH builder uses eight, fitting default WebGPU CORE limits.
+Applications retain command-submission ownership.
 
 The source-order BVH accelerates objects and instances, not individual mesh triangles. Hardware ray
 tracing, spatial sorting, per-mesh BVHs, indirect path tracing, denoising, and volume rendering are

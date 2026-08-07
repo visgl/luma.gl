@@ -40,6 +40,7 @@ import type {ANARIGeometryParameters, ANARIVector3} from './anari-types';
 type SurfacePlacement = {
   surface: ANARISurface;
   transform: readonly number[];
+  instanceId: string;
 };
 
 type CachedGeometry = {
@@ -313,6 +314,7 @@ export class ANARISceneAdapter {
         geometryVersion: cachedGeometry.structuralVersion,
         material: makeSceneMaterial(material),
         transforms: placements.map(placement => placement.transform),
+        instanceIds: placements.map(placement => placement.instanceId),
         ...(surface.getParameter('skin') ? {skin: surface.getParameter('skin')} : {}),
         ...(geometry.getParameter('morphTargets')
           ? {
@@ -453,8 +455,15 @@ export function getFrameSize(frame: ANARIFrame, device: Device): [number, number
 function collectSurfacePlacements(world: ANARIWorld): SurfacePlacement[] {
   const placements: SurfacePlacement[] = [];
   const parameters = world.getParameters();
+  const directSurfaceOccurrences = new Map<string, number>();
   for (const surface of resolveObjectArray(parameters.surface, parameters.surfaces)) {
-    placements.push({surface, transform: IDENTITY_MATRIX});
+    const occurrence = directSurfaceOccurrences.get(surface.id) || 0;
+    directSurfaceOccurrences.set(surface.id, occurrence + 1);
+    placements.push({
+      surface,
+      transform: IDENTITY_MATRIX,
+      instanceId: occurrence === 0 ? surface.id : `${surface.id}:${occurrence}`
+    });
   }
 
   for (const instance of resolveObjectArray(parameters.instance, parameters.instances)) {
@@ -465,6 +474,7 @@ function collectSurfacePlacements(world: ANARIWorld): SurfacePlacement[] {
 
 function collectInstancePlacements(instance: ANARIInstance, placements: SurfacePlacement[]): void {
   const parameters = instance.getParameters();
+  const placementOccurrences = new Map<string, number>();
   const groups =
     parameters.group instanceof ANARIArray
       ? parameters.group.data
@@ -479,7 +489,14 @@ function collectInstancePlacements(instance: ANARIInstance, placements: SurfaceP
     }
     const groupParameters = group.getParameters();
     for (const surface of resolveObjectArray(groupParameters.surface, groupParameters.surfaces)) {
-      placements.push({surface, transform: parameters.transform || IDENTITY_MATRIX});
+      const placementId = `${instance.id}:${group.id}:${surface.id}`;
+      const occurrence = placementOccurrences.get(placementId) || 0;
+      placementOccurrences.set(placementId, occurrence + 1);
+      placements.push({
+        surface,
+        transform: parameters.transform || IDENTITY_MATRIX,
+        instanceId: occurrence === 0 ? placementId : `${placementId}:${occurrence}`
+      });
     }
   }
 }

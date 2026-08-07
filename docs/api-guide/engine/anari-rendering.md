@@ -217,7 +217,13 @@ const renderer = anariDevice.newRenderer('raytrace', {
   samplesPerPixel: 1,
   maxBounces: 1,
   progressive: true,
-  shadows: true
+  shadows: true,
+  resolutionScale: 0.5,
+  minimumResolutionScale: 0.25,
+  adaptiveResolution: true,
+  targetFrameTimeMilliseconds: 33.3,
+  temporalReprojection: true,
+  shadowSamplesPerFrame: 1
 });
 
 frame.setParameter('renderer', renderer).commitParameters();
@@ -230,6 +236,17 @@ hierarchy for nearest-hit primary rays and early-exit shadow rays. The same `GPU
 evaluates direct lights, progressively accumulates unchanged primary-ray samples, and presents HDR
 when the canvas is configured for it. Generated quads, cylinders, and cones use their existing
 triangle geometry.
+
+Ray tracing starts at half the display width and height, reducing its initial pixel workload to one
+quarter of full resolution. Adaptive quality can lower that scale to `0.25`, interleave sampled
+pixels across animation frames, and rotate one shadowed direct light per frame to approach the
+default `33.3` millisecond frame budget. The fullscreen resolve upsamples the retained HDR image.
+Temporal reprojection follows camera and stable instance motion while rejecting incompatible depth,
+normal, and color history; camera cuts, topology changes, light-count changes, and resolution
+changes reset invalid history. Set `shadowSamplesPerFrame: 0` to evaluate every direct light in
+one frame. Adaptive timing uses smoothed animation-frame intervals and does not require GPU timestamp
+queries. The acceleration graph runs only when retained transforms or geometry change, so camera-only
+and lighting-only frames do not rebuild the BVH.
 
 The BVH indexes objects and instances: triangles within a surviving mesh are still tested linearly.
 Its deterministic source-order topology is not Morton-sorted, and no separate per-mesh triangle BVH
@@ -667,11 +684,16 @@ console.log({
   distinctSurfaces: statistics.surfaceCount,
   visiblePlacements: statistics.instanceCount,
   drawCalls: statistics.drawCount,
-  renderedTriangles: statistics.triangleCount
+  renderedTriangles: statistics.triangleCount,
+  rayTracing: statistics.rayTracing
 });
 ```
 
 Use these numbers to verify batching behavior. If `instanceCount` is high but `drawCount` is similarly high, check whether each placement accidentally creates its own surface instead of reusing a retained surface.
+
+Ray-traced frames additionally report their internal resolution and effective scale, sampled-pixel
+coverage, smoothed frame time, and accumulated sample count. Other renderer subtypes omit
+`statistics.rayTracing`.
 
 The renderer also supports capability discovery:
 
@@ -732,8 +754,9 @@ for the runtime contract and ownership details.
 | T0: renderer and graph foundation | Lazy subtype registration, retained-scene adapters, the shared experimental `RayTracingSceneRenderer`, explicit WebGPU command-graph resources, and application-owned submission. | Implemented. |
 | T1: direct rays and shadows | Transformed analytic spheres, mesh triangles, tessellated analytic shapes, perspective/orthographic cameras, direct lights, hard shadow rays, progressive primary-ray sampling, and HDR presentation. | Implemented with WebGPU compute rather than hardware ray tracing. |
 | T2a: GPU object acceleration | World-space instance bounds, graph-owned complete-binary `GPUBVH` construction and refitting, nearest-hit object traversal, early-exit shadow rays, and default-CORE storage limits. | Implemented; surviving mesh triangles remain linear. |
-| T2b: large-scene acceleration | Measured Morton/radix spatial ordering, shared per-mesh triangle BVHs, dirty-only hierarchy updates, and explicit traversal/build diagnostics. | Planned. |
-| T2c: dynamic scene extraction | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration. | Planned. |
+| T2b: interactive frame budgeting | Half-resolution defaults, bounded adaptive quality, interleaved pixel coverage, retained-identity temporal reprojection, rotating shadow samples, and dirty-only object acceleration. | Implemented; frame pacing uses CPU animation intervals. |
+| T2c: large-scene acceleration | Measured Morton/radix spatial ordering, shared per-mesh triangle BVHs, and explicit traversal/build diagnostics. | Planned. |
+| T2d: dynamic scene extraction | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration. | Planned. |
 | T3: indirect transport and denoising | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1. | Planned. |
 | T4: ray marching and volumes | Signed-distance-field ray marching, retained spatial fields, 3D textures, transfer functions, and ANARI volume objects. | Planned. |
 | T5: hybrid composition and diagnostics | Raster/ray composition, reusable graph timings, renderer capability reporting, and debug visualization channels. | Planned. |
@@ -928,7 +951,9 @@ Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `co
 geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot`
 lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`,
 `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept
-`samplesPerPixel`, `maxBounces`, `progressive`, and `shadows`.
+`samplesPerPixel`, `maxBounces`, `progressive`, `shadows`, `resolutionScale`,
+`minimumResolutionScale`, `adaptiveResolution`, `targetFrameTimeMilliseconds`,
+`temporalReprojection`, and `shadowSamplesPerFrame`.
 
 ### Generate compact triangle meshes and starfields
 

@@ -240,6 +240,17 @@ const DEFAULT_RENDERER_DECLARATION: JSONRendererDeclaration = {
   fogDensity: 0.00024
 };
 
+const DEFAULT_RAY_TRACING_PARAMETERS: ANARIRendererParameters = {
+  resolutionScale: 0.5,
+  minimumResolutionScale: 0.25,
+  adaptiveResolution: true,
+  targetFrameTimeMilliseconds: 33.3,
+  temporalReprojection: true,
+  shadowSamplesPerFrame: 1,
+  progressive: true,
+  shadows: true
+};
+
 const MATERIAL_TEXTURE_NAMES: readonly JSONMaterialTextureName[] = [
   'baseColorTexture',
   'normalTexture',
@@ -545,7 +556,10 @@ export function createANARIJSONScene(
     scene.renderer || DEFAULT_RENDERER_DECLARATION;
   const rendererSubtype = options.rendererSubtype || sceneRendererSubtype;
   assertSubtype('renderer', rendererSubtype, RENDERER_SUBTYPES);
-  const renderer = device.newRenderer(rendererSubtype, rendererParameters);
+  const renderer = device.newRenderer(rendererSubtype, {
+    ...(rendererSubtype === 'raytrace' ? DEFAULT_RAY_TRACING_PARAMETERS : {}),
+    ...rendererParameters
+  });
   const frame = device.newFrame({world, camera, renderer});
   const animations =
     scene.clips?.length || skins.size > 0

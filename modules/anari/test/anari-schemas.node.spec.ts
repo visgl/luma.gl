@@ -34,6 +34,12 @@ test('ANARI renderer schemas validate graph-based ray tracing settings', testCon
     maxBounces: 2,
     progressive: true,
     shadows: true,
+    resolutionScale: 0.5,
+    minimumResolutionScale: 0.25,
+    adaptiveResolution: true,
+    targetFrameTimeMilliseconds: 33.3,
+    temporalReprojection: true,
+    shadowSamplesPerFrame: 1,
     exposure: 1.4
   };
 
@@ -58,8 +64,40 @@ test('ANARI renderer schemas validate graph-based ray tracing settings', testCon
     'progressive accumulation must be enabled with a boolean'
   );
   testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, resolutionScale: 0}).success,
+    'the internal ray-tracing resolution must be greater than zero'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, resolutionScale: 1.1}).success,
+    'the internal ray-tracing resolution cannot exceed the output resolution'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, minimumResolutionScale: -0.1}).success,
+    'adaptive resolution requires a positive minimum scale'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, targetFrameTimeMilliseconds: 0}).success,
+    'the target frame-time budget must be positive'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, shadowSamplesPerFrame: 1.5}).success,
+    'per-frame shadow work must be a nonnegative integer'
+  );
+  testContext.ok(
+    ANARIRendererSchema.safeParse({...renderer, shadowSamplesPerFrame: 0}).success,
+    'zero keeps the backwards-compatible all-lights shadow path'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({...renderer, temporalReprojection: 1}).success,
+    'temporal reprojection must be enabled with a boolean'
+  );
+  testContext.notOk(
     ANARIRendererSchema.safeParse({'@@type': 'default', samplesPerPixel: 4}).success,
     'ray tracing controls are not silently accepted by forward renderers'
+  );
+  testContext.notOk(
+    ANARIRendererSchema.safeParse({'@@type': 'deferred', resolutionScale: 0.5}).success,
+    'adaptive ray-tracing controls are not silently accepted by deferred renderers'
   );
   testContext.ok(
     JSON.stringify(ANARI_SCENE_JSON_SCHEMA).includes('raytrace'),
