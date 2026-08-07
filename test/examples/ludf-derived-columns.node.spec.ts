@@ -11,12 +11,24 @@ const EXAMPLE_SOURCE = readFileSync(
   fileURLToPath(new URL('examples/experimental/gpu-data-analysis/src/app.ts', REPOSITORY_ROOT)),
   'utf8'
 );
+const EXAMPLE_SHELL = readFileSync(
+  fileURLToPath(
+    new URL('examples/experimental/gpu-data-analysis/src/app-shell.ts', REPOSITORY_ROOT)
+  ),
+  'utf8'
+);
 
 describe('GPU data-analysis luDF derived-column demo', () => {
   test('offers an explicit interactive derived-column action without changing automatic startup', () => {
-    expect(EXAMPLE_SOURCE).toContain('data-ludf-adjustment');
-    expect(EXAMPLE_SOURCE).toContain('data-ludf-run');
-    expect(EXAMPLE_SOURCE).toContain('data-ludf-result');
+    expect(EXAMPLE_SHELL).toContain('LUDF / DERIVED COLUMN LAB');
+    expect(EXAMPLE_SHELL).toContain('data-ludf-adjustment');
+    expect(EXAMPLE_SHELL).toContain('data-ludf-multiplier');
+    expect(EXAMPLE_SHELL).toContain('data-ludf-threshold');
+    expect(EXAMPLE_SHELL).toContain('data-ludf-run');
+    expect(EXAMPLE_SHELL).toContain('data-ludf-result');
+    expect(EXAMPLE_SHELL).toContain('data-ludf-preview');
+    expect(EXAMPLE_SOURCE).toContain('GPU_DATA_ANALYSIS_TEMPLATE');
+    expect(EXAMPLE_SOURCE).not.toContain('const EXAMPLE_HTML');
     expect(EXAMPLE_SOURCE).toContain("addEventListener('click', this.handleLuDataFrameRun)");
     expect(EXAMPLE_SOURCE).toContain("removeEventListener('click', this.handleLuDataFrameRun)");
     expect(EXAMPLE_SOURCE).not.toContain('await this.runLuDataFrameDemo()');
@@ -30,9 +42,9 @@ describe('GPU data-analysis luDF derived-column demo', () => {
     );
     expect(EXAMPLE_SOURCE).toContain('.withColumn(');
     expect(EXAMPLE_SOURCE).toContain("parameter('adjustment', adjustment)");
-    expect(EXAMPLE_SOURCE).toContain(
-      ".filter(column('adjustedValue').greaterThan(literal(adjustment)))"
-    );
+    expect(EXAMPLE_SOURCE).toContain("parameter('multiplier', multiplier)");
+    expect(EXAMPLE_SOURCE).toContain("parameter('threshold', threshold)");
+    expect(EXAMPLE_SOURCE).toContain(".filter(column('adjustedValue').greaterThan(");
     expect(EXAMPLE_SOURCE).toContain(".select(['category', 'adjustedValue'])");
     expect(EXAMPLE_SOURCE).toContain('compiled.selectedCounts');
     expect(EXAMPLE_SOURCE).toContain('CPU verified');
