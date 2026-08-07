@@ -73,3 +73,53 @@ test('gltf#getGLTFExtensionSupport collects and annotates used extensions', t =>
 
   t.end();
 });
+
+test('gltf#getGLTFExtensionSupport distinguishes actual loader implementations', t => {
+  const extensionNames = [
+    'EXT_mesh_features',
+    'EXT_meshopt_compression',
+    'EXT_structural_metadata',
+    'EXT_texture_avif',
+    'EXT_texture_webp',
+    'KHR_meshopt_compression'
+  ];
+  const gltf = {
+    extensionsUsed: extensionNames,
+    nodes: [],
+    materials: []
+  } as GLTFPostprocessed;
+  const support = getGLTFExtensionSupport(gltf);
+
+  t.equal(
+    support.get('EXT_meshopt_compression')?.supportLevel,
+    'built-in',
+    'the installed loaders.gl decoder handles EXT meshopt buffer views'
+  );
+  t.equal(
+    support.get('KHR_meshopt_compression')?.supportLevel,
+    'none',
+    'the newer KHR meshopt spelling is not silently reported as implemented'
+  );
+  t.equal(
+    support.get('EXT_mesh_features')?.supportLevel,
+    'loader-only',
+    'feature identifiers are decoded but have no automatic luma.gl runtime'
+  );
+  t.equal(
+    support.get('EXT_structural_metadata')?.supportLevel,
+    'loader-only',
+    'structural metadata is decoded but remains application-owned'
+  );
+  t.equal(
+    support.get('EXT_texture_webp')?.supportLevel,
+    'loader-only',
+    'WebP source selection is conditional on browser image support'
+  );
+  t.equal(
+    support.get('EXT_texture_avif')?.supportLevel,
+    'none',
+    'generic AVIF image decoding does not imply glTF extension source selection'
+  );
+
+  t.end();
+});

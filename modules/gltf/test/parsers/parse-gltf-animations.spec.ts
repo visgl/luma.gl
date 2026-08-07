@@ -13,13 +13,16 @@ function makeAccessor(values: number[], type: 'SCALAR' | 'VEC3' | 'VEC4') {
     VEC3: 3,
     VEC4: 4
   };
+  const value = new Float32Array(values);
   return {
     componentType: 5126,
     count: values.length / componentsByType[type],
     type,
+    components: componentsByType[type],
+    value,
     bufferView: {
       data: {
-        buffer: new Float32Array(values).buffer
+        buffer: value.buffer
       }
     }
   };

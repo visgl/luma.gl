@@ -36,7 +36,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/gltf**
 
-- **[Source-faithful physical materials](/docs/api-reference/gltf/gltf-materials)** - One canonical texture-slot registry preserves all 17 supported PBR map slots, extension factors, UV sets, `KHR_texture_transform`, source color spaces, alpha masking, and double-sided materials.
+- **[Source-faithful physical materials](/docs/api-reference/gltf/gltf-materials)** - One canonical texture-slot registry preserves all 21 supported PBR map slots, extension factors, UV sets, `KHR_texture_transform`, source color spaces, alpha masking, and double-sided materials.
 - **Authored samplers and mipmaps** - glTF and postprocessed loaders.gl sampler representations retain their wrapping, filtering, and mipmap settings; shared texture creation generates requested mip chains on both WebGL and WebGPU.
 - **[Skeletal and morph animation](/docs/api-reference/gltf/gltf-animation)** - Existing joint skinning now supports multiple skins, larger joint palettes, optional bind data, and normalized joint weights. Morph samplers correctly group multi-target weight channels, including cubic-spline data, and animate position, normal, and tangent deformation.
 - **[GPU-instanced animated crowds](/docs/api-reference/gltf/gltf-animated-crowd)** - Render independently animated characters with one shared instanced draw per source primitive. Actors retain independent clips, phases, playback speeds, crossfades, transforms, and skin palettes while sharing immutable geometry and materials across WebGPU and WebGL 2.

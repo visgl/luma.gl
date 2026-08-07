@@ -519,11 +519,12 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| glTF and GLB scene loading | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Load supported scene hierarchies, indexed meshes, cameras, materials, and animation data. |
-| Draco mesh compression | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported Draco-compressed meshes through the shared asset loader. |
-| Meshopt compression | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported Meshopt-compressed primitives during asset loading. |
-| Quantized geometry | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Expand supported quantized accessors before GPU geometry creation. |
-| Basis Universal and KTX2 | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported compressed textures when the runtime and selected device permit it. |
+| glTF and GLB scene loading | Available | WebGPU + WebGL2 | `@loaders.gl/gltf` + `@luma.gl/gltf` | Load and postprocess source assets with `GLTFLoader`; instantiate scene hierarchies, meshes, cameras, materials, and animation in luma.gl. |
+| Draco mesh compression | Available | WebGPU + WebGL2 | `@loaders.gl/gltf` | Decode supported `KHR_draco_mesh_compression` primitives before luma.gl creates GPU geometry. |
+| Meshopt compression | Available | WebGPU + WebGL2 | `@loaders.gl/gltf` | Decode supported `EXT_meshopt_compression` buffer views; the newer `KHR_meshopt_compression` release candidate is not implemented. |
+| Quantized geometry | Available | WebGPU + WebGL2 | `@loaders.gl/gltf` + `@luma.gl/gltf` | Preserve loader-materialized quantized accessor values, authored normalization, and compatible GPU attribute formats. |
+| Basis Universal and KTX2 | Evolving | WebGPU + WebGL2 | `@loaders.gl/gltf` + `@luma.gl/gltf` | Select and decode supported compressed textures when browser, transcoder, and GPU format support permit it. |
+| Loader-decoded feature identifiers and metadata | Evolving | WebGPU + WebGL2 | `@loaders.gl/gltf` | Decode supported `EXT_mesh_features` and `EXT_structural_metadata`; application visualization and queries are not automatic. |
 | Metallic-roughness materials | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply supported PBR textures, material factors, normals, and emissive surfaces. |
 | Authored PBR texture slots | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve 21 supported material texture slots, their color spaces, sampler semantics, and authored transforms. |
 | Specular and index of refraction | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply authored glTF specular factors, specular textures, and physical index-of-refraction parameters. |
@@ -548,11 +549,12 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Native material variants | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Select compatible authored `KHR_materials_variants` without replacing retained scene nodes. |
 | Imported GPU instancing | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Render authored `EXT_mesh_gpu_instancing` transforms through one real instanced draw per source primitive. |
 | Imported node visibility | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply authored `KHR_node_visibility` recursively to compatible descendants and punctual lights. |
-| Source-faithful glTF and GLB export | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported hierarchy, geometry, accessors, images, skins, morph targets, animation, and extensions. |
+| Source-faithful glTF and GLB export | Available | WebGPU + WebGL2 | `@luma.gl/gltf` + `@loaders.gl/gltf` | Map supported scene data into glTF descriptors, then delegate binary GLB container encoding to the shared `GLBWriter`. |
 | Screen-space crowd level of detail | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Classify independently animated actors into authored or automatically decimated mesh-detail buckets, cull offscreen/tiny actors, and submit one instanced draw per occupied source-primitive/detail group. GPU-driven indirect selection remains future work. |
 | Global animated-crowd vertex budgets | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Limit submitted index references across all visible actor primitives, deterministically demote farther characters first, and report unsatisfied limits without hiding actors. |
 
-The ownership boundaries are intentional: `@luma.gl/gltf` interprets assets,
+The ownership boundaries are intentional: `@loaders.gl/gltf` owns containers, asset decoding,
+accessor postprocessing, and GLB encoding; `@luma.gl/gltf` interprets the resulting assets,
 `@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,
 `@luma.gl/experimental` explores higher-level rendering, and `@luma.gl/anari` orchestrates
 retained scene objects. Reuse each capability at its existing layer rather than creating

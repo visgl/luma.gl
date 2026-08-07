@@ -25,8 +25,6 @@ import {
   resolveTextureTransformSlot
 } from '../pbr/texture-transform';
 
-import {accessorToTypedArray} from '../webgl-to-webgpu/convert-webgl-attribute';
-
 type UnsupportedAnimationPointerResolution = {
   reason: string;
 };
@@ -727,7 +725,7 @@ function accessorToJsArray1D(
     return accessorCache.get(accessor)!;
   }
 
-  const {typedArray: array, components} = accessorToTypedArray(accessor);
+  const {value: array, components} = resolveAnimationAccessor(accessor);
   assert(components === 1, 'accessorToJsArray1D must have exactly 1 component');
   const result = Array.from(array);
 
@@ -744,7 +742,7 @@ function accessorToJsArray2D(
     return accessorCache.get(accessor)!;
   }
 
-  const {typedArray: array, components} = accessorToTypedArray(accessor);
+  const {value: array, components} = resolveAnimationAccessor(accessor);
   assert(components >= 1, 'accessorToJsArray2D must have at least 1 component');
 
   const result = [];
@@ -756,6 +754,27 @@ function accessorToJsArray2D(
 
   accessorCache.set(accessor, result);
   return result;
+}
+
+/** Preserve manually appended float accessors without duplicating loaders.gl postprocessing. */
+function resolveAnimationAccessor(
+  accessor: GLTFAccessorPostprocessed
+): Pick<GLTFAccessorPostprocessed, 'value' | 'components'> {
+  if (accessor.value) {
+    return {value: accessor.value, components: accessor.components};
+  }
+
+  const bytes = accessor.bufferView?.data;
+  assert(bytes !== undefined);
+  assert(accessor.componentType === 5126);
+
+  const components = accessor.type === 'SCALAR' ? 1 : Number(accessor.type.slice(3));
+  const value = new Float32Array(
+    bytes.buffer,
+    bytes.byteOffset + (accessor.byteOffset || 0),
+    accessor.count * components
+  );
+  return {value, components};
 }
 
 /** Throws when the supplied condition is false. */

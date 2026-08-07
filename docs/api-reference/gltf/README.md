@@ -63,6 +63,38 @@ requestAnimationFrame(renderFrame);
 [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation) before mixing the
 legacy wall-clock API with direct mixer controls.
 
+## What loaders.gl already provides
+
+`@loaders.gl/gltf` is the asset decoder for the complete luma.gl pipeline. Its `GLTFLoader`,
+`postProcessGLTF()`, and `GLBWriter` already own these format-level capabilities:
+
+| Loader capability | Existing behavior |
+| --- | --- |
+| `.gltf` and `.glb` containers | Parse JSON and binary glTF containers, linked binary buffers, embedded data URIs, and referenced images. |
+| Postprocessed accessors | Resolve scene references and materialize typed accessor values, including interleaved buffer views and authored normalization metadata. |
+| `KHR_draco_mesh_compression` | Decompress supported Draco mesh primitives before luma.gl builds GPU geometry. |
+| `EXT_meshopt_compression` | Decode meshopt-compressed buffer views before their accessor values reach the renderer. |
+| `KHR_texture_basisu` | Select Basis Universal/KTX2 texture sources and invoke the available image/texture decoding path. Final GPU format support remains device-dependent. |
+| `EXT_texture_webp` | Select the WebP texture source when the current browser can decode it; otherwise preserve the authored fallback or reject an unsupported required extension. |
+| `EXT_mesh_features` and `EXT_structural_metadata` | Decode supported feature identifiers and structural metadata. Application-specific visualization, picking, and queries are not created automatically. |
+| Loader-normalized lights and unlit materials | Expose authored `KHR_lights_punctual` and `KHR_materials_unlit` data; luma.gl still owns scene lighting and runtime shading. |
+| Legacy `KHR_texture_transform` preprocessing | Optionally bake supported source UV transforms. Runtime per-slot shader transforms and animated texture pointers remain renderer-owned. |
+| Binary GLB output | Encode aligned GLB container headers and JSON/BIN chunks through the existing `GLBWriter`. |
+
+Call `postProcessGLTF()` explicitly: loaders.gl v4 does not apply it automatically. Runtime
+animation and geometry consume the resulting accessor `value` and `components`; luma.gl does not
+need a second buffer-view decoder. `exportGLTF()` still owns scene-to-glTF descriptor mapping,
+while `GLBWriter` owns the binary container envelope.
+
+The installed loader supports `EXT_meshopt_compression`, **not** the newer
+`KHR_meshopt_compression` release candidate. Generic browser AVIF decoding also does not imply
+`EXT_texture_avif` source selection: the installed glTF loader does not implement that extension.
+Both belong in the shared asset loader before the renderer can advertise them.
+
+loaders.gl also has a legacy CPU `KHR_texture_transform` preprocessing path. luma.gl retains
+shader-side per-material transforms because animated pointers and independent texture slots are
+render-time concerns; an authored transform must not be applied twice across those layers.
+
 ## `createScenegraphsFromGLTF()`
 
 ```ts
@@ -134,7 +166,7 @@ resolved only at model boundaries.
 
 ## Materials, textures, and lights
 
-The canonical PBR path preserves all 17 supported core and extension texture slots, authored
+The canonical PBR path preserves all 21 supported core and extension texture slots, authored
 sampler addressing/filtering, generated or supplied mipmaps, per-slot UV transforms, secondary UV
 coordinates, advanced material factors, alpha modes, and punctual lights.
 
@@ -188,7 +220,8 @@ RGBA vertex colors, normalized joint weights, animation pointers, and resource o
 
 ## Package ownership
 
-- `@loaders.gl/gltf` loads and decompresses `.gltf` and `.glb` assets.
+- `@loaders.gl/gltf` owns container parsing, linked resources, codec decoding, accessor
+  postprocessing, loader-supported extension decoding, and binary GLB container encoding.
 - `@luma.gl/gltf` interprets glTF-specific scene, material, sampler, light, and animation data.
 - `@luma.gl/engine` owns generic scenegraph, animation, and morph-target primitives.
 - `@luma.gl/shadertools` owns the shared PBR, lighting, and skinning shader modules.
