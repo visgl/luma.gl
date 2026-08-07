@@ -1,4 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+import {LuvsBenchmark} from '@site/src/components/docs/luvs-benchmark';
 
 # luVS: GPU Vector Similarity and Clustering
 
@@ -213,6 +214,20 @@ luVS is an independently implemented, MIT-licensed luma.gl WebGPU module. No cuV
 kernels, or FAISS implementations are copied into this module. It is not affiliated with or endorsed
 by NVIDIA or the RAPIDS project, and it neither implements a compatible cuVS API nor claims feature
 parity.
+
+## Live CPU versus WebGPU benchmark
+
+Run the benchmark explicitly to compare the same deterministic vectors on your browser's CPU and
+WebGPU adapter. Dataset size, dimensions, query count, K, selection density, IVF list count, and
+probe count are configurable. The exact GPU paths are checked against an independent CPU oracle;
+the approximate IVF-flat path reports recall@K against exact search.
+
+<LuvsBenchmark />
+
+GPU query measurements include command encoding, submission, and an explicit completion fence.
+Initial upload, IVF training/index construction, and correctness readback are reported separately.
+Warmups precede repeated measured runs, and displayed query times are medians. Results depend on
+the current browser, WebGPU adapter, data dimensions, filtering, thermal conditions, and workload.
 
 ## Fixed-size GPU table embedding columns
 
