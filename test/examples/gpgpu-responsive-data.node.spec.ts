@@ -13,9 +13,9 @@ import {
   TAXI_PROJECTION_ORIGIN
 } from '../../examples/deck/luspatial-taxi/taxi-data';
 
-const TAXI_EFFECT_SOURCE_PATH = path.join(
+const GEOGRAPHIC_QUERY_EFFECT_SOURCE_PATH = path.join(
   process.cwd(),
-  'examples/deck/luspatial-taxi/luspatial-query-effect.ts'
+  'modules/deck-luspatial/src/query/luspatial-geographic-point-query-effect.ts'
 );
 const TAXI_APP_SOURCE_PATH = path.join(process.cwd(), 'examples/deck/luspatial-taxi/app.ts');
 const ATLAS_APP_SOURCE_PATH = path.join(
@@ -106,7 +106,7 @@ describe('responsive GPU data examples', () => {
   });
 
   test('composes actual luProj projection with cancellable luSpatial graph execution', () => {
-    const effectSource = readFileSync(TAXI_EFFECT_SOURCE_PATH, 'utf8');
+    const effectSource = readFileSync(GEOGRAPHIC_QUERY_EFFECT_SOURCE_PATH, 'utf8');
     const appSource = readFileSync(TAXI_APP_SOURCE_PATH, 'utf8');
 
     expect(effectSource).toMatch(/from ['"]@luma\.gl\/experimental\/luproj['"]/);
