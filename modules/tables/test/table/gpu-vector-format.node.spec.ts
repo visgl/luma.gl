@@ -495,6 +495,55 @@ test('GPU tables preserve fixed-size-list batches until explicitly packed', t =>
   t.end();
 });
 
+test('GPU tables reject packing incompatible fixed-size-list physical row layouts', t => {
+  const device = new NullDevice({});
+  const incompatibleLayouts = [
+    [
+      {byteStride: 16, rowByteLength: 12},
+      {byteStride: 20, rowByteLength: 12}
+    ],
+    [
+      {byteStride: 20, rowByteLength: 12},
+      {byteStride: 20, rowByteLength: 16}
+    ]
+  ];
+
+  for (const layouts of incompatibleLayouts) {
+    const batches = layouts.map(
+      ({byteStride, rowByteLength}) =>
+        new GPURecordBatch({
+          gpuData: {
+            embeddings: new GPUData({
+              buffer: device.createBuffer({byteLength: byteStride + rowByteLength}),
+              format: 'fixed-size-list<float32,3>',
+              length: 2,
+              byteStride,
+              rowByteLength,
+              ownsBuffer: true
+            })
+          }
+        })
+    );
+    const table = new GPUTable({batches});
+
+    t.deepEqual(table.bufferLayout, [], 'storage-only list layouts remain intentionally empty');
+    t.throws(
+      () => table.packBatches(),
+      /matching fixed-size-list row layouts.*embeddings/,
+      'rejects incompatible physical row layouts before copying source buffers'
+    );
+    t.equal(table.batches.length, 2, 'rejected packing preserves every original batch');
+    t.notOk(
+      batches.some(batch => batch.gpuData.embeddings.buffer.destroyed),
+      'failed packing leaves caller-owned source buffers intact'
+    );
+
+    table.destroy();
+  }
+
+  t.end();
+});
+
 test('GPU tables preserve variable-length packing errors before validating adapter metadata', t => {
   const device = new NullDevice({});
   const batches = [0, 1].map(

@@ -50,7 +50,7 @@ test('GPUTableComputation binds fixed-size-list rows without trailing physical p
   embeddings.destroy();
 });
 
-test('GPUTableComputation preserves explicit value spans and empty fixed-size-list chunks', () => {
+test('GPUTableComputation never truncates padded rows with shorter explicit value spans', () => {
   const device = new NullDevice({});
   const limitedData = new GPUData({
     buffer: device.createBuffer({byteLength: 28}),
@@ -81,7 +81,7 @@ test('GPUTableComputation preserves explicit value spans and empty fixed-size-li
   expect(limitedComputation.bindings.limited).toEqual({
     buffer: limitedData.buffer,
     offset: 0,
-    size: 24
+    size: 28
   });
   expect(emptyComputation.bindings.empty).toEqual({
     buffer: empty.data[0].buffer,
