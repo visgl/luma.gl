@@ -5,6 +5,7 @@
 import {
   Buffer,
   Device,
+  type BufferLayout,
   type ShaderLayout,
   type SignedDataType,
   type VertexFormat
@@ -15,6 +16,8 @@ import {
   GPURecordBatch,
   GPUTable,
   GPUVector,
+  getGPUVectorFormatInfo,
+  type FixedSizeList as GPUFixedSizeList,
   type GPURecordBatchSourceInfo,
   type GPUField,
   type GPUVectorBufferProps,
@@ -40,12 +43,14 @@ import {
   Uint32,
   Uint8,
   Utf8,
-  Vector
+  Vector,
+  makeData
 } from 'apache-arrow';
 import {getArrowFieldByPath, getArrowVectorByPath} from '../arrow-utils/arrow-paths';
 import {getArrowBufferLayout, type ArrowVertexFormatOptions} from '../engine/arrow-shader-layout';
 import {
   getArrowDataBufferSource,
+  getArrowFixedSizeListRowValidity,
   getArrowGPUDataReadbackMetadata,
   getArrowTypeByteStride,
   getArrowTypeStride,
@@ -62,6 +67,7 @@ import {
   isInstanceArrowType,
   isVariableLengthAttributeArrowType,
   type AttributeArrowType,
+  type NumericArrowType,
   type VariableLengthAttributeArrowType
 } from '../arrow-utils/arrow-types';
 import {getArrowMatrixVectorInfo} from '../vectors/arrow-matrix-vector';
@@ -94,6 +100,10 @@ type VertexFormatForArrowType<T extends DataType> =
   T extends FixedSizeList<infer ChildType>
     ? VertexFormatForArrowFixedSizeListType<ChildType>
     : VertexFormatForArrowScalarType<T>;
+type FixedSizeListFormatForArrowScalarType<T extends DataType> =
+  VertexFormatForArrowScalarType<T> extends infer Format extends VertexFormat
+    ? GPUFixedSizeList<Format>
+    : never;
 export type GPUVectorFormatForArrowType<T extends DataType = DataType> = T extends Utf8
   ? ValueList<'uint8'>
   : T extends Dictionary
@@ -102,9 +112,13 @@ export type GPUVectorFormatForArrowType<T extends DataType = DataType> = T exten
       ? VertexFormatForArrowType<ChildType> extends never
         ? GPUVectorFormat
         : VertexList<VertexFormatForArrowType<ChildType>>
-      : VertexFormatForArrowType<T> extends never
-        ? GPUVectorFormat
-        : VertexFormatForArrowType<T>;
+      : T extends FixedSizeList<infer ChildType>
+        ?
+            | VertexFormatForArrowFixedSizeListType<ChildType>
+            | FixedSizeListFormatForArrowScalarType<ChildType>
+        : VertexFormatForArrowType<T> extends never
+          ? GPUVectorFormat
+          : VertexFormatForArrowType<T>;
 
 /** Props for uploading one Arrow vector into GPU storage. */
 export type GPUVectorFromArrowProps<Format extends GPUVectorFormat = GPUVectorFormat> =
@@ -122,6 +136,16 @@ type ArrowGPUDataProps = GPUVectorBufferProps & {
   format?: GPUVectorFormat;
 };
 
+/** Caller-selected row-validity storage sibling for one fixed-size-list Arrow column. */
+export type ArrowGPUValidityColumn =
+  | string
+  | {
+      /** Name of the uint32 GPU table column that receives nonzero-valid row flags. */
+      name: string;
+      /** Meaningful leading child coordinates; nullable trailing padding is ignored. */
+      dimensions?: number;
+    };
+
 /** Props for uploading one Arrow record batch into a generic GPU record batch. */
 export type GPURecordBatchFromArrowRecordBatchProps = ArrowVertexFormatOptions & {
   /** Shader layout that selects which Arrow columns should be uploaded. */
@@ -130,8 +154,12 @@ export type GPURecordBatchFromArrowRecordBatchProps = ArrowVertexFormatOptions &
   arrowPaths?: Record<string, string>;
   /** Buffer props applied to Arrow-backed GPU vectors. */
   bufferProps?: GPUVectorBufferProps;
+  /** Storage-selected columns that should use fixed-size-list format even for short rows. */
+  fixedSizeListColumns?: readonly string[];
   /** Optional source-row identity retained for picking and diagnostics. */
   sourceInfo?: GPURecordBatchSourceInfo;
+  /** Explicitly materialized uint32 row-validity siblings keyed by selected column name. */
+  validityColumns?: Record<string, ArrowGPUValidityColumn>;
 };
 
 /** Props for uploading one Arrow table into a generic GPU table. */
@@ -142,6 +170,10 @@ export type GPUTableFromArrowTableProps = ArrowVertexFormatOptions & {
   arrowPaths?: Record<string, string>;
   /** Buffer props applied to Arrow-backed GPU vectors. */
   bufferProps?: GPUVectorBufferProps;
+  /** Storage-selected columns that should use fixed-size-list format even for short rows. */
+  fixedSizeListColumns?: readonly string[];
+  /** Explicitly materialized uint32 row-validity siblings keyed by selected column name. */
+  validityColumns?: Record<string, ArrowGPUValidityColumn>;
 };
 
 /** Returns the GPUVector memory format implied by an Arrow data type. */
@@ -153,11 +185,14 @@ function getGPUVectorFormatFromArrowDataType(type: DataType): GPUVectorFormat {
     : elementType;
   const size = DataType.isFixedSizeList(elementType) ? elementType.listSize : 1;
 
-  if (!Number.isInteger(size) || size < 1 || size > 4) {
+  if (!Number.isSafeInteger(size) || size < 1 || (size > 4 && isVertexList)) {
     throw new Error(`Cannot synthesize a GPUVector format for Arrow type ${type}`);
   }
 
   const signedDataType = getSignedArrowDataType(scalarType);
+  if (size > 4) {
+    return `fixed-size-list<${signedDataType},${size}>`;
+  }
   if (signedDataType === 'float16' && size === 3) {
     throw new Error('Cannot synthesize a float16x3 GPUVector format');
   }
@@ -219,6 +254,12 @@ export function makeGPUDataFromArrowData<T extends DataType>(
   const arrowType = data.type as T;
   const {format = getGPUVectorFormatForArrowType(arrowType), ...bufferProps} = props;
   const readbackMetadata = getArrowGPUDataReadbackMetadata(data) as GPUDataReadbackMetadata;
+  const variableLengthMetadata =
+    readbackMetadata?.kind === 'utf8' || readbackMetadata?.kind === 'variable-length-attribute'
+      ? readbackMetadata
+      : undefined;
+  const numericNullBitmap =
+    readbackMetadata?.kind === 'numeric' ? readbackMetadata.nullBitmap : undefined;
 
   if (isArrowUtf8DictionaryType(arrowType)) {
     const byteStride = getArrowTypeByteStride(arrowType.indices);
@@ -248,15 +289,15 @@ export function makeGPUDataFromArrowData<T extends DataType>(
       dataType: arrowType,
       format,
       length: data.length,
-      valueLength: readbackMetadata?.valueByteLength ?? 0,
+      valueLength: variableLengthMetadata?.valueByteLength ?? 0,
       stride: 1,
       byteStride: 1,
       rowByteLength: 1,
       ownsBuffer: true,
       readbackMetadata,
-      valueOffsets: readbackMetadata?.valueOffsets,
-      nullBitmap: readbackMetadata?.nullBitmap,
-      valueByteLength: readbackMetadata?.valueByteLength
+      valueOffsets: variableLengthMetadata?.valueOffsets,
+      nullBitmap: variableLengthMetadata?.nullBitmap,
+      valueByteLength: variableLengthMetadata?.valueByteLength
     });
   }
 
@@ -283,9 +324,9 @@ export function makeGPUDataFromArrowData<T extends DataType>(
       rowByteLength: byteStride,
       ownsBuffer: true,
       readbackMetadata,
-      valueOffsets: readbackMetadata?.valueOffsets,
-      nullBitmap: readbackMetadata?.nullBitmap,
-      valueByteLength: readbackMetadata?.valueByteLength
+      valueOffsets: variableLengthMetadata?.valueOffsets,
+      nullBitmap: variableLengthMetadata?.nullBitmap,
+      valueByteLength: variableLengthMetadata?.valueByteLength
     });
   }
 
@@ -303,7 +344,18 @@ export function makeGPUDataFromArrowData<T extends DataType>(
     byteStride,
     rowByteLength: byteStride,
     ownsBuffer: true,
-    readbackMetadata
+    readbackMetadata,
+    ...(readbackMetadata?.kind === 'fixed-size-list'
+      ? {
+          nullBitmap: makeArrowGPUValidityBitmap(
+            getArrowFixedSizeListRowValidity(
+              data as unknown as Data<FixedSizeList<NumericArrowType>>
+            )
+          )
+        }
+      : numericNullBitmap
+        ? {nullBitmap: numericNullBitmap}
+        : {})
   });
 }
 
@@ -330,6 +382,17 @@ export function makeGPUVectorFromArrow<T extends DataType>(
   const arrowType = vector.type as T;
   const matrixInfo = getArrowMatrixVectorInfo(vector);
   const isCanonicalFloat32Matrix = matrixInfo && isCanonicalFloat32ArrowMatrixInfo(matrixInfo);
+  if (
+    !preserveDataChunks &&
+    (DataType.isFixedSizeList(arrowType) ||
+      DataType.isInt(arrowType) ||
+      DataType.isFloat(arrowType)) &&
+    vector.data.some(data => data.nullCount > 0 || (data.children[0]?.nullCount ?? 0) > 0)
+  ) {
+    throw new Error(
+      'Nullable Arrow numeric and FixedSizeList vectors require preserved GPU data chunks'
+    );
+  }
   const requiresChunkedUpload =
     DataType.isUtf8(arrowType) ||
     isArrowUtf8DictionaryType(arrowType) ||
@@ -340,7 +403,12 @@ export function makeGPUVectorFromArrow<T extends DataType>(
     );
   }
 
-  if (!isInstanceArrowType(arrowType) && !isCanonicalFloat32Matrix && !requiresChunkedUpload) {
+  if (
+    !isInstanceArrowType(arrowType) &&
+    !isStorageFixedSizeListArrowType(arrowType) &&
+    !isCanonicalFloat32Matrix &&
+    !requiresChunkedUpload
+  ) {
     throw new Error(`GPUVector does not support Arrow type ${arrowType}`);
   }
 
@@ -387,10 +455,12 @@ export function makeGPUVectorFromArrow<T extends DataType>(
         dataType: arrowType,
         format: vectorFormat,
         length: vector.length,
-        valueLength: vector.data.reduce(
-          (totalValueLength, chunk) => totalValueLength + getArrowDataValueLength(chunk),
-          0
-        ),
+        valueLength: getGPUVectorFormatInfo(vectorFormat).fixedSizeList
+          ? vector.length * (getGPUVectorFormatInfo(vectorFormat).listSize ?? 1)
+          : vector.data.reduce(
+              (totalValueLength, chunk) => totalValueLength + getArrowDataValueLength(chunk),
+              0
+            ),
         stride,
         byteStride,
         rowByteLength: byteStride,
@@ -421,6 +491,9 @@ export function makeGPURecordBatchFromArrowRecordBatch(
   const selectedNames = new Set<string>();
 
   for (const layout of bufferLayout) {
+    if (options.fixedSizeListColumns?.includes(layout.name)) {
+      throw new Error('Arrow fixed-size-list GPU columns require a storage shader binding');
+    }
     const arrowPath = options.arrowPaths?.[layout.name] || layout.name;
     const vector = getArrowVectorByPath(table, arrowPath);
     const sourceField = getArrowFieldByPath(table, arrowPath);
@@ -449,11 +522,12 @@ export function makeGPURecordBatchFromArrowRecordBatch(
     if (!vector || !sourceField) {
       continue;
     }
-    gpuData[storageBinding.name] = makeGPUDataFromArrowRecordBatchVector(
-      device,
-      vector as Vector,
-      options.bufferProps
-    );
+    gpuData[storageBinding.name] = makeGPUDataFromArrowRecordBatchVector(device, vector as Vector, {
+      ...options.bufferProps,
+      ...(options.fixedSizeListColumns?.includes(storageBinding.name)
+        ? {format: getFixedSizeListGPUVectorFormatForArrowType(vector.type)}
+        : {})
+    });
     fields.push({
       name: storageBinding.name,
       format: gpuData[storageBinding.name].format,
@@ -461,6 +535,42 @@ export function makeGPURecordBatchFromArrowRecordBatch(
       metadata: new Map(sourceField.metadata)
     });
     selectedNames.add(storageBinding.name);
+  }
+
+  for (const columnName of options.fixedSizeListColumns ?? []) {
+    if (!selectedNames.has(columnName)) {
+      throw new Error('Arrow fixed-size-list GPU columns require a selected storage binding');
+    }
+  }
+
+  for (const [sourceName, validityColumn] of Object.entries(options.validityColumns ?? {})) {
+    const validityName = typeof validityColumn === 'string' ? validityColumn : validityColumn.name;
+    if (!selectedNames.has(sourceName) || selectedNames.has(validityName)) {
+      throw new Error('Arrow GPU validity columns require a selected source and unique output');
+    }
+    const arrowPath = options.arrowPaths?.[sourceName] || sourceName;
+    const vector = getArrowVectorByPath(table, arrowPath);
+    if (!DataType.isFixedSizeList(vector.type)) {
+      throw new Error('Arrow GPU validity columns require FixedSizeList source data');
+    }
+    const dimensions =
+      typeof validityColumn === 'string'
+        ? vector.type.listSize
+        : (validityColumn.dimensions ?? vector.type.listSize);
+    const [data, ...remainingData] = vector.data;
+    if (!data || remainingData.length > 0) {
+      throw new Error('Arrow RecordBatch columns require exactly one Arrow Data chunk');
+    }
+    const validity =
+      getArrowFixedSizeListRowValidity(data as Data<FixedSizeList<NumericArrowType>>, dimensions) ??
+      new Uint32Array(data.length).fill(1);
+    const validityData = makeData({type: new Uint32(), length: validity.length, data: validity});
+    gpuData[validityName] = makeGPUDataFromArrowData(device, validityData, {
+      ...options.bufferProps,
+      format: 'uint32'
+    });
+    fields.push({name: validityName, format: 'uint32', nullable: false, metadata: new Map()});
+    selectedNames.add(validityName);
   }
 
   return new GPURecordBatch({
@@ -491,7 +601,12 @@ function makeGPUDataFromArrowRecordBatchVector(
       'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use convertArrowMatrixToGPUVector() first'
     );
   }
-  if (!isInstanceArrowType(arrowType) && !isCanonicalFloat32Matrix && !requiresChunkedUpload) {
+  if (
+    !isInstanceArrowType(arrowType) &&
+    !isStorageFixedSizeListArrowType(arrowType) &&
+    !isCanonicalFloat32Matrix &&
+    !requiresChunkedUpload
+  ) {
     throw new Error(`GPUVector does not support Arrow type ${arrowType}`);
   }
 
@@ -527,22 +642,15 @@ export function makeGPUTableFromArrowTable(
   const firstBatch = batches[0];
   const bufferLayout =
     firstBatch?.bufferLayout ??
-    getArrowBufferLayout(options.shaderLayout, {
-      arrowTable: table,
-      arrowPaths: options.arrowPaths,
-      allowWebGLOnlyFormats: options.allowWebGLOnlyFormats
-    });
+    (options.shaderLayout.attributes.length === 0 && table.batches.length === 0
+      ? []
+      : getArrowBufferLayout(options.shaderLayout, {
+          arrowTable: table,
+          arrowPaths: options.arrowPaths,
+          allowWebGLOnlyFormats: options.allowWebGLOnlyFormats
+        }));
   const schema = firstBatch?.schema ?? {
-    fields: bufferLayout.map(layout => {
-      const arrowPath = options.arrowPaths?.[layout.name] || layout.name;
-      const sourceField = getArrowFieldByPath(table, arrowPath);
-      return {
-        name: layout.name,
-        format: layout.format as GPUVectorFormat,
-        nullable: sourceField.nullable,
-        metadata: new Map(sourceField.metadata)
-      };
-    }),
+    fields: getArrowEmptyTableGPUFields(table, options, bufferLayout),
     metadata: new Map(table.schema.metadata)
   };
 
@@ -552,6 +660,79 @@ export function makeGPUTableFromArrowTable(
         schema,
         bufferLayout
       });
+}
+
+function getArrowEmptyTableGPUFields(
+  table: Table,
+  options: GPUTableFromArrowTableProps,
+  bufferLayout: BufferLayout[]
+): GPUField[] {
+  const fields: GPUField[] = bufferLayout.map(layout => {
+    const arrowPath = options.arrowPaths?.[layout.name] || layout.name;
+    const sourceField = getArrowFieldByPath(table, arrowPath);
+    return {
+      name: layout.name,
+      format: layout.format as GPUVectorFormat,
+      nullable: sourceField.nullable,
+      metadata: new Map(sourceField.metadata)
+    };
+  });
+  const selectedNames = new Set(fields.map(field => field.name));
+
+  for (const storageBinding of getArrowStorageBindings(options.shaderLayout)) {
+    if (selectedNames.has(storageBinding.name)) {
+      throw new Error(
+        `GPURecordBatch shader input "${storageBinding.name}" cannot be both an attribute and a storage binding`
+      );
+    }
+    const arrowPath = options.arrowPaths?.[storageBinding.name] || storageBinding.name;
+    const sourceField = tryGetArrowFieldByPath(table, arrowPath);
+    if (!sourceField) {
+      continue;
+    }
+    fields.push({
+      name: storageBinding.name,
+      format: options.fixedSizeListColumns?.includes(storageBinding.name)
+        ? getFixedSizeListGPUVectorFormatForArrowType(sourceField.type)
+        : getGPUVectorFormatForArrowType(sourceField.type),
+      nullable: sourceField.nullable,
+      metadata: new Map(sourceField.metadata)
+    });
+    selectedNames.add(storageBinding.name);
+  }
+
+  for (const columnName of options.fixedSizeListColumns ?? []) {
+    if (!selectedNames.has(columnName) || bufferLayout.some(layout => layout.name === columnName)) {
+      throw new Error('Arrow fixed-size-list GPU columns require a selected storage binding');
+    }
+  }
+
+  for (const [sourceName, validityColumn] of Object.entries(options.validityColumns ?? {})) {
+    const validityName = typeof validityColumn === 'string' ? validityColumn : validityColumn.name;
+    if (!selectedNames.has(sourceName) || selectedNames.has(validityName)) {
+      throw new Error('Arrow GPU validity columns require a selected source and unique output');
+    }
+    const arrowPath = options.arrowPaths?.[sourceName] || sourceName;
+    const sourceField = getArrowFieldByPath(table, arrowPath);
+    if (!DataType.isFixedSizeList(sourceField.type)) {
+      throw new Error('Arrow GPU validity columns require FixedSizeList source data');
+    }
+    const dimensions =
+      typeof validityColumn === 'string'
+        ? sourceField.type.listSize
+        : (validityColumn.dimensions ?? sourceField.type.listSize);
+    if (
+      !Number.isSafeInteger(dimensions) ||
+      dimensions < 1 ||
+      dimensions > sourceField.type.listSize
+    ) {
+      throw new Error('Arrow FixedSizeList validity dimensions must fit within the list width');
+    }
+    fields.push({name: validityName, format: 'uint32', nullable: false, metadata: new Map()});
+    selectedNames.add(validityName);
+  }
+
+  return fields;
 }
 
 /** Reads one generic GPU data range back into Arrow `Data`. */
@@ -602,6 +783,14 @@ function isArrowUtf8DictionaryType(type: DataType): type is ArrowUtf8Dictionary 
   );
 }
 
+function isStorageFixedSizeListArrowType(type: DataType): boolean {
+  return (
+    DataType.isFixedSizeList(type) &&
+    type.listSize > 4 &&
+    (DataType.isFloat(type.children[0]?.type) || DataType.isInt(type.children[0]?.type))
+  );
+}
+
 function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
   const matrixInfo = getArrowMatrixVectorInfo({type});
   if (matrixInfo) {
@@ -619,6 +808,18 @@ function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
     return getGPUVectorFormatFromArrowDataType(type.indices);
   }
   return getGPUVectorFormatFromArrowDataType(type);
+}
+
+function getFixedSizeListGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
+  if (
+    !DataType.isFixedSizeList(type) ||
+    !Number.isSafeInteger(type.listSize) ||
+    type.listSize < 1
+  ) {
+    throw new Error('Arrow fixed-size-list GPU columns require valid FixedSizeList source data');
+  }
+  const signedDataType = getSignedArrowDataType(type.children[0].type);
+  return `fixed-size-list<${signedDataType},${type.listSize}>`;
 }
 
 function isCanonicalFloat32ArrowMatrixInfo(
@@ -644,6 +845,22 @@ function getArrowDataValueLength(data: Data): number {
   const firstValueOffset = valueOffsets[0] ?? 0;
   const lastValueOffset = valueOffsets[data.length] ?? firstValueOffset;
   return Math.max(0, lastValueOffset - firstValueOffset);
+}
+
+function makeArrowGPUValidityBitmap(validity: Uint32Array | undefined): Uint8Array | undefined {
+  if (!validity) {
+    return undefined;
+  }
+  const nullBitmap = new Uint8Array(Math.ceil(validity.length / 8));
+  let hasInvalidRows = false;
+  for (let rowIndex = 0; rowIndex < validity.length; rowIndex++) {
+    if (validity[rowIndex] !== 0) {
+      nullBitmap[rowIndex >> 3] |= 1 << (rowIndex & 7);
+    } else {
+      hasInvalidRows = true;
+    }
+  }
+  return hasInvalidRows ? nullBitmap : undefined;
 }
 
 function getArrowDictionaryIndexBufferSource(data: Data<ArrowUtf8Dictionary>): ArrayBufferView {
