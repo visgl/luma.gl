@@ -39,13 +39,16 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
-  getCandidateDependencyEndpointsShader,
+  getCandidateDependencyEndpointScatterShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
   getDensityClearShader,
   getDependencyBatchVisibilityShader,
+  getDependencyEndpointDispatchShader,
+  getDependencyEndpointResolveShader,
+  getDependencyEndpointRouteClearShader,
   getFocusFrontierClearShader,
   getFocusFrontierDispatchShader,
   getFocusFrontierExpansionShader,
@@ -266,6 +269,13 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     firstBatchIndex: 0,
     batchCount: 3
   };
+  const endpointRouting = {
+    dependencyCount: 7,
+    spanChunks: [
+      {...spanChunk, spanCount: 6, batchCount: 2},
+      {firstSpanIndex: 6, spanCount: 5, firstBatchIndex: 2, batchCount: 1}
+    ]
+  };
   const shaders = [
     TRACE_RENDER_SHADER,
     TRACE_DEPENDENCY_RENDER_SHADER,
@@ -282,8 +292,12 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       {firstBatchIndex: 2, batchCount: 1}
     ]),
     getDependencyBatchVisibilityShader(3),
-    getCandidateDependencyEndpointsShader(spanChunk),
-    getCandidateDependencyVisibilityShader(11),
+    getDependencyEndpointRouteClearShader(endpointRouting.spanChunks.length),
+    getDependencyEndpointDispatchShader(endpointRouting.spanChunks.length),
+    getCandidateDependencyEndpointScatterShader(endpointRouting),
+    getDependencyEndpointResolveShader(endpointRouting, 0),
+    getDependencyEndpointResolveShader(endpointRouting, 1),
+    getCandidateDependencyVisibilityShader(endpointRouting),
     getFocusFrontierSeedShader(11),
     getFocusFrontierClearShader(),
     getFocusFrontierExpansionShader({
@@ -297,8 +311,12 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     }),
     getFocusFrontierDispatchShader()
   ];
-  for (const shader of shaders) {
-    t.ok(new WgslReflect(shader), 'shader parses');
+  for (const [shaderIndex, shader] of shaders.entries()) {
+    try {
+      t.ok(new WgslReflect(shader), 'shader parses');
+    } catch (error) {
+      throw new Error(`shader ${shaderIndex} failed to parse`, {cause: error});
+    }
   }
   t.end();
 });
