@@ -202,6 +202,41 @@ describe('GPURasterTileReader source metadata contracts', () => {
 });
 
 describe('GPURasterTileReader selected bands, tiles, and spatial coordinates', () => {
+  test('exposes canonical tile requests without invoking the application-owned decoder', () => {
+    const source = new SyntheticTileSource();
+    const reader = new GPURasterTileReader(source);
+    const normalized = reader.normalizeTileRequest({
+      level: 1,
+      column: 1,
+      row: 0,
+      pixelBounds: [4, 0, 12, 6],
+      coordinateSpace: 'level-zero'
+    });
+
+    expect(normalized).toEqual({
+      level: 1,
+      column: 1,
+      row: 0,
+      bandIds: ['red', 'near-infrared', 'labels'],
+      pixelBounds: [3, 0, 6, 2],
+      coordinateSpace: 'level'
+    });
+    expect(Object.isFrozen(normalized.bandIds)).toBe(true);
+    expect(reader.normalizeTileRequest(normalized)).toEqual(normalized);
+    expect(source.requests).toHaveLength(0);
+  });
+
+  test('validates canonical request preflight without reading or allocating source data', () => {
+    const source = new SyntheticTileSource();
+    const reader = new GPURasterTileReader(source);
+
+    expect(() => reader.normalizeTileRequest({level: 99})).toThrow(/overview level/);
+    expect(() => reader.normalizeTileRequest({level: 0, bandIds: ['missing']})).toThrow(
+      /requested band/
+    );
+    expect(source.requests).toHaveLength(0);
+  });
+
   test('normalizes full-level requests while retaining exact dataset coordinates and CRS', async () => {
     const source = new SyntheticTileSource();
     const reader = new GPURasterTileReader(source);

@@ -237,6 +237,150 @@ describe('GPURasterOpening and GPURasterClosing graph composition', () => {
     expect('buffer' in intermediateView && intermediateView.buffer.format).toBe('uint32');
   });
 
+  test('snapshots validated grayscale settings and borrowed input metadata before callers mutate props', () => {
+    const graph = makeRecordingGraph('stable-grayscale-opening');
+    const originalValidity = makeView(graph, 'stable-input-validity', 'uint32', 9);
+    const props: GPURasterGrayscaleMorphologyProps = {
+      ...makeGrayscaleProps(graph, 'sint32'),
+      id: 'stable-opening',
+      radius: 2,
+      structuringElement: 'cross',
+      borderMode: 'constant',
+      borderValue: -5,
+      noDataPolicy: 'ignore'
+    };
+    props.input = {
+      ...props.input,
+      scale: 0.5,
+      offset: 3,
+      noDataValue: -2147483648,
+      validity: originalValidity
+    };
+    const originalInput = props.input;
+    const originalSource = originalInput.storage.values;
+    const originalOutput = props.output;
+    const originalOutputValidity = props.outputValidity;
+    const opening = new GPURasterOpening(props);
+
+    originalInput.id = 'mutated-original-input';
+    originalInput.scale = 9;
+    originalInput.offset = 12;
+    originalInput.noDataValue = -3;
+    originalInput.validity = makeView(graph, 'mutated-validity', 'uint32', 9);
+    originalInput.storage.values = makeView(graph, 'mutated-source', 'sint32', 9);
+    Object.assign(props, {
+      id: 'mutated-opening',
+      width: 1,
+      height: 1,
+      radius: 8,
+      mode: 'binary',
+      structuringElement: 'square',
+      borderMode: 'nodata',
+      borderValue: 42,
+      noDataPolicy: 'propagate',
+      input: makeBand(graph, 'replacement-input', 'uint32', 9),
+      output: makeView(graph, 'replacement-output', 'uint32', 9),
+      outputValidity: makeView(graph, 'replacement-output-validity', 'uint32', 9)
+    });
+
+    expect(opening.id).toBe('stable-opening');
+    expect(opening.width).toBe(3);
+    expect(opening.height).toBe(3);
+    expect(opening.mode).toBe('grayscale');
+    expect(opening.radius).toBe(2);
+    expect(opening.requiredHalo).toBe(4);
+    expect(opening.structuringElement).toBe('cross');
+    expect(opening.borderMode).toBe('constant');
+    expect(opening.borderValue).toBe(-5);
+    expect(opening.noDataPolicy).toBe('ignore');
+    expect(opening.input).not.toBe(originalInput);
+    expect(opening.input.storage).not.toBe(originalInput.storage);
+    expect(opening.input.id).toBe('grayscale-input');
+    expect(opening.input.format).toBe('sint32');
+    expect(opening.input.scale).toBe(0.5);
+    expect(opening.input.offset).toBe(3);
+    expect(opening.input.noDataValue).toBe(-2147483648);
+    expect(opening.input.validity).toBe(originalValidity);
+    expect(opening.input.storage.values).toBe(originalSource);
+    expect(opening.output).toBe(originalOutput);
+    expect(opening.outputValidity).toBe(originalOutputValidity);
+
+    opening.addToGraph(graph);
+    expect(graph.passes.map(pass => pass.id)).toEqual([
+      'stable-opening-erode',
+      'stable-opening-dilate'
+    ]);
+    expect(graph.passes[0].resources[0]).toEqual({
+      buffer: originalSource,
+      usage: 'storage-read'
+    });
+    expect(graph.passes[0].resources[3]).toEqual({
+      buffer: originalValidity,
+      usage: 'storage-read'
+    });
+    expect(graph.passes[1].resources[1]).toEqual({
+      buffer: originalOutput,
+      usage: 'storage-write'
+    });
+    expect(graph.passes[1].resources[2]).toEqual({
+      buffer: originalOutputValidity,
+      usage: 'storage-write'
+    });
+    const intermediateValues = graph.passes[0].resources[1];
+    expect('buffer' in intermediateValues && intermediateValues.buffer.format).toBe('float32');
+  });
+
+  test('snapshots binary discrimination and zero-radius identity before caller mutation', () => {
+    const graph = makeRecordingGraph('stable-binary-closing');
+    const props: GPURasterBinaryMorphologyProps = {
+      ...makeBinaryProps(graph),
+      id: 'stable-closing',
+      radius: 0,
+      borderMode: 'constant',
+      borderValue: 7
+    };
+    const originalInput = props.input;
+    const originalSource = originalInput.storage.values;
+    const originalOutput = props.output;
+    const originalOutputValidity = props.outputValidity;
+    const closing = new GPURasterClosing(props);
+
+    originalInput.storage.values = makeView(graph, 'mutated-binary-source', 'uint32', 9);
+    Object.assign(props, {
+      id: 'mutated-closing',
+      radius: 8,
+      mode: 'grayscale',
+      borderMode: 'nodata',
+      borderValue: 0,
+      input: makeBand(graph, 'replacement-grayscale-input', 'float32', 9),
+      output: makeView(graph, 'replacement-grayscale-output', 'float32', 9),
+      outputValidity: makeView(graph, 'replacement-grayscale-validity', 'uint32', 9)
+    });
+
+    expect(closing.id).toBe('stable-closing');
+    expect(closing.mode).toBe('binary');
+    expect(closing.radius).toBe(0);
+    expect(closing.requiredHalo).toBe(0);
+    expect(closing.borderMode).toBe('constant');
+    expect(closing.borderValue).toBe(7);
+    expect(closing.input.format).toBe('uint32');
+    expect(closing.input.storage.values).toBe(originalSource);
+    expect(closing.output).toBe(originalOutput);
+    expect(closing.outputValidity).toBe(originalOutputValidity);
+
+    closing.addToGraph(graph);
+    expect(graph.passes.map(pass => pass.id)).toEqual(['stable-closing']);
+    expect(graph.transientHandles).toHaveLength(0);
+    expect(graph.passes[0].resources[0]).toEqual({
+      buffer: originalSource,
+      usage: 'storage-read'
+    });
+    expect(graph.passes[0].resources[1]).toEqual({
+      buffer: originalOutput,
+      usage: 'storage-write'
+    });
+  });
+
   test('contributes a single scratch-free identity pass for radius-zero opening and closing', () => {
     const openingGraph = makeRecordingGraph('zero-opening');
     new GPURasterOpening({

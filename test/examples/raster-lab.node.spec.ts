@@ -86,6 +86,8 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(decoded.metadata.coordinateReferenceSystem).toEqual({authority: 'EPSG:32610'});
     expect(decoded.metadata.levelZeroOrigin).toEqual([0, 0]);
     expect(decoded.bands.map(band => band.id)).toEqual(['red', 'near-infrared']);
+    expect(decoded.bands[0]?.validity).toBe(decoded.bands[1]?.validity);
+    expect(source.readCount).toBe(1);
     expect(dataset.red).toEqual(expected.red);
     expect(dataset.nearInfrared).toEqual(expected.nearInfrared);
     expect(dataset.validity).toEqual(expected.validity);
@@ -268,12 +270,127 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
 
     expect(rasterApplication).toContain('new GPURasterTileReader(');
     expect(rasterApplication).toContain('this.sourceAbortController.abort()');
-    expect(rasterApplication).toContain('replacement = new RasterLabEngine');
+    expect(rasterApplication).toContain('const engine = new RasterLabEngine(');
+    expect(rasterApplication).toContain('replacement = replacementGraphLease.value');
     expect(rasterEngine).toContain('{metadata: this.dataset.metadata}');
     expect(rasterInterface).toContain('data-raster-source-tile="west"');
     expect(rasterInterface).toContain('data-raster-source-tile="east"');
     expect(rasterInterface).toContain('data-raster-source-overview="1"');
     expect(rasterInterface).toContain('single tile · no halo');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
+  });
+
+  test('enforces explicit decoded/GPU tile budgets and publishes actual cache telemetry', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterSource = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-tile-source.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(rasterApplication).toContain('new GPURasterTileCache({');
+    expect(rasterApplication).toContain('reader: this.tileReader');
+    expect(rasterApplication).toContain('this.tileCache.acquire(request, controller.signal)');
+    expect(rasterApplication).toContain('this.tileCache.setBudgets(');
+    expect(rasterApplication).toContain('maxTiles: capacity');
+    expect(rasterApplication).toContain('maxGraphs: 2');
+    expect(rasterApplication).toContain('maxCpuBytes:');
+    expect(rasterApplication).toContain('maxGpuBytes:');
+    expect(rasterApplication).toContain('const stats = this.tileCache.stats');
+    expect(rasterApplication).toContain('const budgets = this.tileCache.budgets');
+    expect(rasterApplication).toContain('tileHits: stats.tileHits');
+    expect(rasterApplication).toContain('tileMisses: stats.tileMisses');
+    expect(rasterApplication).toContain('tileEvictions: stats.tileEvictions');
+    expect(rasterApplication).toContain('graphHits: stats.graphHits');
+    expect(rasterApplication).toContain('graphCompilations: stats.graphCompilations');
+    expect(rasterApplication).toContain('pinnedTiles: stats.pinnedTiles');
+    expect(rasterApplication).toContain('pinnedGraphs: stats.pinnedGraphs');
+    expect(rasterSource).toContain('this.readCount++');
+    expect(rasterInterface).toContain('data-raster-control="cache-capacity"');
+    expect(rasterInterface).toContain('data-raster-cache-cpu');
+    expect(rasterInterface).toContain('data-raster-cache-gpu');
+    expect(rasterInterface).toContain('data-raster-cache-activity');
+    expect(rasterInterface).toContain('data-raster-cache-graphs');
+    expect(rasterInterface).toContain('data-raster-cache-pins');
+  });
+
+  test('reuses compiled graphs through borrowed tile-buffer replacement and owner accounting', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(rasterApplication).toContain('this.tileCache.acquireGraph(tileLease, {');
+    expect(rasterApplication).toContain('pipelineKey,');
+    expect(rasterApplication).toContain('halo: 0,');
+    expect(rasterApplication).toContain(
+      'estimatedByteLength: estimateRasterGraphBytes(dataset.pixelCount)'
+    );
+    expect(rasterApplication).toContain('graph: engine.commandGraph');
+    expect(rasterApplication).toContain('byteLength: engine.ownedByteLength');
+    expect(rasterApplication).toContain('destroy: () => engine.destroy()');
+    expect(rasterEngine).toContain('this.compiledGraph.encode(encoder, {');
+    expect(rasterEngine).toContain('red: this.buffers.red');
+    expect(rasterEngine).toContain("'near-infrared': this.buffers.nearInfrared");
+    expect(rasterEngine).toContain("'source-validity': this.buffers.sourceValidity");
+    expect(rasterEngine).toContain(
+      'this.renderer.setSourceBuffers(sources.red, sources.nearInfrared)'
+    );
+    expect(rasterEngine).toContain("name === 'sourceValidity'");
+    expect(rasterRenderer).toContain(
+      'this.model.setBindings({redValues: red, nearInfraredValues: nearInfrared})'
+    );
+  });
+
+  test('fences submitted tile/graph leases without expanding analytical readback or claiming halos', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+    const analysisSubmission = rasterEngine.indexOf('this.device.submit(encoder.finish());');
+    const summaryReadback = rasterEngine.indexOf('await this.buffers.summaryReadback.readAsync()');
+    const shutdownStart = rasterApplication.indexOf('override onFinalize(): void {');
+    const shutdownEnd = rasterApplication.indexOf('private setSourceTile(', shutdownStart);
+    const shutdown = rasterApplication.slice(shutdownStart, shutdownEnd);
+
+    expect(analysisSubmission).toBeGreaterThan(0);
+    expect(summaryReadback).toBeGreaterThan(analysisSubmission);
+    expect(rasterRenderer).toContain('this.device.submit(encoder.finish());');
+    expect(rasterApplication).toContain('const fence = this.device.createFence();');
+    expect(rasterApplication).toContain('graphLease.releaseAfter(fence)');
+    expect(rasterApplication).toContain('tileLease.releaseAfter(fence)');
+    expect(shutdown).toMatch(/(?:releaseAfterSubmittedWork\(|\.releaseAfter\()/);
+    expect(shutdown).not.toContain('this.activeGraphLease?.release()');
+    expect(shutdown).not.toContain('this.activeTileLease?.release()');
+    expect(shutdown).toContain('this.tileCache.destroy()');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
+    expect(rasterInterface).toContain('single tile · no halo');
+    expect(rasterApplication).toContain('halo: 0');
   });
 });

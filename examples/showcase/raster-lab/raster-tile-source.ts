@@ -18,6 +18,8 @@ const RASTER_LAB_COORDINATE_REFERENCE_SYSTEM = 'EPSG:32610';
 export class RasterLabTileSource implements GPURasterTileSource {
   readonly metadata: GPURasterTileSourceMetadata;
 
+  readCount = 0;
+
   private readonly dataset: RasterLabDataset;
 
   constructor(width: number, height: number) {
@@ -63,6 +65,7 @@ export class RasterLabTileSource implements GPURasterTileSource {
     signal: AbortSignal
   ): Promise<GPURasterDecodedTile> {
     signal.throwIfAborted();
+    this.readCount++;
     await waitForSourceAdapter(signal);
     signal.throwIfAborted();
 

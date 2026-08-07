@@ -1,13 +1,16 @@
 # LuRaster: GPU-Resident Raster Analytics
 
 `@luma.gl/experimental/luraster` provides optional, graph-native WebGPU operations for
-two-dimensional scientific and geospatial rasters. Applications retain ownership of image
-decoding, coordinate transforms, source buffers and textures, output allocation, command
-submission, and optional readback.
+two-dimensional scientific and geospatial rasters. Applications control image decoding,
+coordinate transforms, source buffers and textures, output allocation, command submission, and
+optional readback; an explicitly selected residency cache can upload and own source buffers on
+their behalf.
 
-`GPURasterTileReader` additionally validates application-owned, asynchronously decoded raster
-sources without choosing a network transport, image codec, GPU uploader, or tile cache. It is an
-explicit CPU-side ingress contract, not a GPU command-graph contributor.
+`GPURasterTileReader` validates application-owned, asynchronously decoded raster sources without
+choosing a network transport, image codec, or GPU uploader. `GPURasterTileCache` optionally adds
+explicitly budgeted CPU/GPU tile residency, cancellation-safe loading, and reusable compiled
+graphs around that reader. Neither object is a GPU command-graph contributor, and command
+submission remains application-owned.
 
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
@@ -44,9 +47,13 @@ import {
   GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
+  GPURasterTileCache,
   GPURasterTileReader,
   type GPURasterBufferBand,
   type GPURasterDecodedBand,
+  type GPURasterTileGraphLease,
+  type GPURasterTileLease,
+  type GPURasterTileRequest,
   type GPURasterTileSource
 } from '@luma.gl/experimental/luraster';
 ```
@@ -75,11 +82,16 @@ drawn directly from GPU buffers. Only 228 bytes of scalar summaries, histogram b
 contour diagnostics are read back after graph submission. The indirect draw consumes its
 GPU-written instance count rather than a CPU-supplied count.
 
-Changing a source window or overview explicitly decodes and uploads a replacement CPU tile;
-rapid changes cancel stale requests. This CPU-to-GPU upload does not increase the unchanged
-228-byte GPU-to-CPU summary. The example retains one source tile at a time and does not provide
-multi-tile caching, halo assembly, stitching, or generated analytical overviews. Its 2× source
-overview selects existing nearest samples; it is not a nodata-aware aggregate.
+Changing to an uncached source window or overview explicitly decodes and uploads its native
+samples; revisiting a resident window reuses its existing CPU arrays and GPU buffers. The
+capacity slider exposes deterministic eviction, separate CPU/GPU occupancy, cache hits and
+misses, active lease pins, and compiled-graph reuse. Equally sized western and eastern windows
+reuse one compiled graph through per-encoding source-buffer replacement; full-resolution,
+overview, or differently specialized pipelines use separate compatible graph entries. Rapid
+changes cancel stale requests without destroying submitted GPU resources. CPU-to-GPU uploads do
+not increase the unchanged 228-byte GPU-to-CPU summary. The example caches multiple tiles while
+analyzing one active tile; it does not assemble halos, stitch boundaries, or generate analytical
+overviews. Its 2× source overview selects existing nearest samples, not a nodata-aware aggregate.
 
 ## Raster bands and validity
 
@@ -159,15 +171,15 @@ const source: GPURasterTileSource = {
 
 const reader = new GPURasterTileReader(source);
 const controller = new AbortController();
-const decoded = await reader.readTile(
-  {
-    level: 1,
-    pixelBounds: [256, 128, 768, 640],
-    coordinateSpace: 'level-zero',
-    bandIds: ['red', 'near-infrared']
-  },
-  controller.signal
-);
+const request = {
+  level: 1,
+  pixelBounds: [256, 128, 768, 640],
+  coordinateSpace: 'level-zero',
+  bandIds: ['red', 'near-infrared']
+} satisfies GPURasterTileRequest;
+const normalizedRequest = reader.normalizeTileRequest(request);
+// normalizedRequest.pixelBounds is [128, 64, 384, 320] in level coordinates.
+const decoded = await reader.readTile(normalizedRequest, controller.signal);
 
 // The application uploads decoded.bands and their separate validity arrays into its own graph.
 ```
@@ -201,6 +213,14 @@ arrays, malformed masks, or mismatched metadata are rejected rather than silentl
 The reader passes the adapter a normalized request with explicit `bandIds`, level-local
 `pixelBounds`, and `coordinateSpace: 'level'`; the adapter returns complete matching bounds,
 translated metadata, and bands in the requested order.
+
+Call `reader.normalizeTileRequest(request)` when application scheduling, deduplication, or cache
+identity needs the same validated request that the source adapter will receive. An omitted band
+list expands to every source band in metadata order; omitted bounds expand to the complete
+selected level or addressed tile; an omitted coordinate space defaults to `'level'`; and
+equivalent level-zero windows project into the same clipped, half-open level-space bounds.
+Explicit tile column/row identity and selected band order remain meaningful and are preserved.
+Invalid requests fail before source decoding or GPU allocation.
 
 ### Native typed arrays and validity
 
@@ -277,12 +297,194 @@ source window or overview. Cancellation does not destroy application-owned array
 or in-flight command submissions; applications remain responsible for their own upload and
 resource-lifetime boundaries.
 
-This contract reads one explicitly requested decoded result. It does not implement an HTTP
-range transport, GeoTIFF/COG decoder, loader package, tile residency budget, eviction,
-graph-shape cache, multi-tile scheduling, neighborhood halo assembly, stitched contours,
-global tiled statistics, or generated nodata-aware analytical overviews. Existing source
-overviews are accepted as source-provided samples; validating their scientific aggregation
-policy remains an application responsibility until analytical overview support is implemented.
+This reader contract returns one explicitly requested decoded result. It does not implement an
+HTTP range transport, GeoTIFF/COG decoder, loader package, GPU upload, or cache by itself.
+Applications that need bounded upload, residency, eviction, deduplicated concurrent requests,
+and graph reuse can explicitly compose it with `GPURasterTileCache`, described below. Neither
+object assembles neighborhood halos, stitches contours, merges global tiled statistics, or
+generates nodata-aware analytical overviews. Existing source overviews are accepted as
+source-provided samples; their scientific aggregation policy remains application-owned.
+
+## Bounded tile residency and compiled-graph reuse
+
+Use `GPURasterTileCache` when repeated viewport changes would otherwise decode and upload the
+same source windows, or when a large dataset must be processed through explicitly bounded GPU
+tiles. Keep `GPURasterTileReader` alone when the application already owns a residency policy or
+only needs a one-off decoded result. The cache owns buffers it uploads; the source, decoder,
+network transport, graph construction, command encoder, submission, and completion fence remain
+application-owned.
+
+```ts
+const cache = new GPURasterTileCache({
+  device,
+  reader,
+  maxTiles: 4,
+  maxGraphs: 2,
+  maxCpuBytes: 64 * 1024 * 1024,
+  maxGpuBytes: 128 * 1024 * 1024
+});
+
+const abortController = new AbortController();
+const tileLease = await cache.acquire(
+  {level: 0, column: 0, row: 0, bandIds: ['red', 'near-infrared']},
+  abortController.signal
+);
+
+const graphLease = await cache.acquireGraph(tileLease, {
+  pipelineKey: 'calibrated-ndvi-histogram',
+  halo: 0,
+  estimatedByteLength: 24 * 1024 * 1024,
+  create: () => {
+    const analysis = createApplicationOwnedAnalysis(tileLease);
+    return {
+      graph: analysis.compiledGraph,
+      value: analysis,
+      byteLength: analysis.ownedOutputByteLength,
+      destroy: () => analysis.destroy()
+    };
+  }
+});
+
+const red = tileLease.bands.find(band => band.id === 'red')!;
+const nearInfrared = tileLease.bands.find(band => band.id === 'near-infrared')!;
+const encoder = device.createCommandEncoder();
+
+graphLease.graph.encode(encoder, {
+  parameters: undefined,
+  buffers: {
+    red: red.buffer,
+    'near-infrared': nearInfrared.buffer,
+    'source-validity': red.validity!
+  }
+});
+
+device.submit(encoder.finish());
+const completionFence = device.createFence();
+await Promise.all([
+  graphLease.releaseAfter(completionFence),
+  tileLease.releaseAfter(completionFence)
+]);
+```
+
+The application must create a completion fence **after** submitting every command buffer that
+uses those leases. A WebGPU fence snapshots work already submitted when the fence is created;
+constructing it before `device.submit()` cannot protect the later submission. Acquire both leases
+before encoding, retain them across any encoded-but-unsubmitted interval, and release them only
+after the relevant post-submit fence resolves. `releaseAfter()` also accepts a completion
+`Promise<void>`. Use immediate `release()` only when no encoded or submitted GPU work can still
+reference that tile or graph. If graph creation or encoding fails before submission, release
+every already acquired lease during application-owned cleanup; if commands were submitted,
+preserve the normal post-submit fence boundary.
+
+### Independent CPU/GPU budgets and eviction
+
+`maxTiles` and `maxGraphs` independently bound the resident entry counts. `maxCpuBytes` counts
+the full `byteLength` of every distinct `ArrayBuffer` or `SharedArrayBuffer` retained by each
+tile's decoded sample and validity views. Several views into one backing allocation, including
+a validity array shared by multiple bands, count that allocation once for the tile. A small
+subarray backed by a large pooled slab retains the entire slab and is therefore charged for its
+full allocation, not merely its visible view range. Use appropriately sized dedicated backing
+allocations or a budget large enough for the retained pool. `maxGpuBytes` bounds three disjoint
+allocation sets:
+
+- Unique cache-owned uploaded native band and validity buffers, counted by their actual
+  `buffer.byteLength`. One shared validity array produces one shared GPU buffer.
+- Each compiled graph's `graph.stats.physicalTransientResourceBytes`, including its real
+  graph-owned transient buffer and texture allocations after physical reuse.
+- Application-owned graph resources declared by `GPURasterTileGraphEntry.byteLength`, such as
+  output buffers, render attachments, indirect records, or other owner-managed GPU allocations.
+
+Imported resident tile buffers are already included in the first category and must not also be
+reported through `byteLength`. Compiled-graph transient allocations are already included in the
+second category and must not be added to the third. `estimatedByteLength` must conservatively
+cover the graph's expected physical transients **plus** separately owned graph resources before
+the factory allocates them. Underestimating that combined footprint breaks safe admission;
+actual bytes are validated again after creation.
+
+When an additional tile or graph would exceed an entry-count or byte budget, the cache evicts
+the least recently used compatible unpinned entries deterministically. Tiles or graphs protected
+by outstanding leases are never destroyed. A resource larger than the configured capacity, or a
+request that cannot fit because every eviction candidate is pinned, is rejected instead of
+silently exceeding the budget or destroying in-flight resources. `cache.setBudgets({...})`
+applies a feasible lower limit through the same deterministic eviction policy; a requested
+budget smaller than the pinned footprint is rejected atomically without changing existing
+budgets or evicting entries. `cache.budgets` exposes current limits; `cache.stats` exposes
+resident counts, CPU/GPU bytes, hits, misses, tile evictions, graph compilations/reuses, and
+active tile/graph pins.
+
+`cache.destroy()` cancels pending source requests and immediately destroys unpinned cache-owned
+tile buffers and graph entries. Resources protected by tile or graph leases remain alive until
+their final immediate or fence-delayed release; the source reader and decoder are never owned or
+destroyed by the cache. Destruction does not create a fence or protect leases the application has
+already released: during application shutdown, call `releaseAfter()` with a fence created after
+the final analysis/render submission before destroying the cache.
+
+Tile residency preserves native `float32`, `uint32`, and `sint32` sample buffers, exact raw
+nodata values, validity, calibration, overview, and spatial metadata. The resident band buffers
+are borrowed by graphs and renderers; neither may destroy them. The cache does not merge tiles,
+repack an entire source raster, download samples, submit commands, or hide synchronization.
+
+### Concurrent requests and cancellation
+
+Concurrent equivalent requests share one application-source read and one upload. Identity uses
+the reader's validated, normalized request rather than the raw caller spelling, so omitted and
+explicit all-band selections, omitted and explicit full windows, default and explicit
+`coordinateSpace: 'level'`, and equivalent level-zero/level-local windows coalesce. Every caller
+receives its own lease and may cancel its own `AbortSignal`; canceling one waiter does not cancel
+other callers waiting for the same tile. The underlying source read can be aborted after its
+last interested waiter goes away. Changing the normalized overview, window, explicit tile
+addressing, or selected-band order creates a separate request identity.
+
+Cancel superseded viewport requests promptly, but do not use request cancellation as a GPU fence.
+An already acquired tile or graph remains alive while its lease is pinned, including while
+commands are encoded, submitted, and executing. Releasing cache ownership is independent from
+canceling a pending source operation.
+
+### Shape compatibility and imported-buffer replacement
+
+Compiled graphs are reusable only when every property baked into their topology or WGSL matches.
+The cache's shape identity includes tile width and height, ordered band identities/formats/
+validity/native nodata/calibration, overview level, pixel interpretation, explicit halo width,
+and the caller's `pipelineKey`. Include analytical options, selected operations, specialized
+constants, kernel parameters, output layouts, and any other application-specific specialization
+in that key. Differently sized edge tiles, source overviews, band layouts, halo widths, or
+pipeline keys compile separate graph entries.
+
+World-space tile origin and affine translation do not affect a shape whose WGSL and resource
+layout are otherwise identical. Accordingly, equally sized western and eastern windows can use
+the exact same compiled graph even though their geospatial origin and source buffers differ.
+Supply the current tile's imported buffer replacements to **every** `compiledGraph.encode()`;
+the buffers captured when the graph was originally compiled may already have been evicted. The
+existing command graph validates replacement device, usage, capacity, and alias compatibility
+for each encoding without mutating an already compiled graph.
+
+`GPURasterTileGraphEntry.value` can retain the application-owned analysis engine associated with
+a compiled graph. Its `destroy()` callback releases that owner's output allocations and compiled
+graph exactly once when an unpinned graph entry is evicted. Cache-owned source buffers remain
+borrowed and must not be destroyed by the callback. Keep a graph lease pinned until any render
+submission consuming its outputs has also completed.
+
+### Analytical tiling versus screen-space image effects
+
+Use bounded residency when source dimensions or interaction frequency make monolithic raster
+allocation, repeated decode/upload, or repeated graph compilation impractical. A resident revisit
+avoids source decoding and buffer upload; a compatible new tile avoids pipeline and graph
+recompilation while still performing its required analysis. Work and memory scale with selected
+tile dimensions, concurrent resident budgets, graph variants, and actual scratch/output sizes,
+rather than requiring allocation proportional to the entire dataset.
+
+Existing luma.gl image effects are appropriate for changing a rendered framebuffer's
+appearance. LuRaster retains native scientific samples, validity, calibration, explicit tile
+ownership, reusable compute graphs, and downstream histograms, morphology, contours, or other
+numerical consumers. Those differences can reduce redundant CPU/GPU work in repeated large-raster
+pipelines, but they do not guarantee a particular speedup: source latency, tile size, cache hit
+rate, memory bandwidth, graph complexity, adapter limits, and measured application workloads
+determine actual performance.
+
+Bounded residency does not yet assemble cumulative neighborhood halos, assign cross-tile core
+ownership, stitch morphology or contour seams, merge dataset-wide statistics, or generate
+analytical overviews. Those capabilities require separate correctness contracts and roadmap
+tranches.
 
 ## Pointwise band math
 
@@ -442,10 +644,12 @@ new GPURasterContrast({
 }).addToGraph(graph);
 ```
 
-`mode: 'linear'` applies midpoint-centered contrast; `mode: 'gamma'` additionally applies a
-normalized gamma transform. Both literal `[minimum, maximum]` domains and caller-owned two-row
-GPU domains are supported. For `mode: 'equalize'`, pass an existing `uint32` histogram in the
-same domain; the contributor computes an inclusive CDF in graph-owned transient storage.
+`mode: 'linear'` applies midpoint-centered contrast and never applies gamma, even when a
+nondefault `gamma` value is supplied. `mode: 'gamma'` additionally applies the normalized gamma
+transform; select it explicitly when nonlinear correction is intended. Both literal
+`[minimum, maximum]` domains and caller-owned two-row GPU domains are supported. For
+`mode: 'equalize'`, pass an existing `uint32` histogram in the same domain; the contributor
+computes an inclusive CDF in graph-owned transient storage.
 Degenerate or all-invalid histograms have explicit behavior, and no source pixels are copied
 back. Percentile-domain estimation and `rgba8unorm` presentation conversion are not yet
 implemented.
@@ -965,6 +1169,10 @@ first pass calibrates the original scalar band; the second pass consumes already
 `float32` scratch without reapplying scale or offset. Binary composition preserves canonical
 `uint32` foreground throughout. Neither operation revives an invalid center.
 
+Both contributors snapshot their normalized options and input-band metadata at construction.
+Later mutations to the caller's props, band description, or storage descriptor cannot change the
+scheduled passes, borrowed source/output views, or reported `requiredHalo`.
+
 ## Structuring elements, borders, and nodata
 
 Every morphology contributor requires an integer `radius` between `0` and `8`, inclusive.
@@ -1084,7 +1292,7 @@ an optional GPU-written indirect draw count without reading the raster or segmen
 const contourCommands = new DrawCommandBuffer(device, {
   id: 'vegetation-contour-draw',
   type: 'draw',
-  commands: [{vertexCount: 2, instanceCount: 0}]
+  commands: [{vertexCount: 2, instanceCount: 0, firstVertex: 0, firstInstance: 0}]
 });
 
 new GPURasterContours({
@@ -1109,8 +1317,10 @@ contourCommands.draw(renderPass, 0);
 Its length must therefore be even. `segmentCount` is clamped to vertex capacity, `overflow`
 signals truncated output, and optional `requiredSegmentCount` reports the original
 unclamped requirement. Cases are emitted in deterministic row-major order. The draw record
-must describe a non-indexed, two-vertex instanced line; only its instance count is rewritten
-on the GPU.
+describes a non-indexed, two-vertex instanced line. Every encoding publishes the complete
+four-word indirect command: `vertexCount: 2`, the capacity-clamped `instanceCount`,
+`firstVertex: 0`, and `firstInstance: 0`. This remains valid when the selected indirect-command
+slot was zero-initialized or reused for a different draw.
 
 Coordinates remain raster-local `float32` pixel positions. Pixel-area rasters use pixel
 centers; point-sampled rasters use integer sample coordinates. Preserve the supplied affine
@@ -1153,12 +1363,13 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, built-in GeoTIFF/COG decoding, multi-tile residency, halo assembly,
-generated analytical overviews, connected components, tiled contour stitching, and FFT-backed
-raster convolution are not part of the current implementation. Application-owned single-tile
-source ingress, source-provided overviews/windows, Sobel, Scharr, Laplacian, gradient magnitude,
-bounded spatial smoothing, binary/grayscale dilation, erosion, opening, closing, and
-single-raster contour extraction are implemented.
+Percentile-based contrast, built-in GeoTIFF/COG decoding, cross-tile halo assembly, generated
+analytical overviews, global merged statistics, connected components, tiled contour stitching,
+and FFT-backed raster convolution are not part of the current implementation. Application-owned
+tile ingress, source-provided overviews/windows, independently budgeted multi-tile CPU/GPU
+residency, fence-safe eviction, compatible compiled-graph reuse, Sobel, Scharr, Laplacian,
+gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion, opening,
+closing, and single-raster contour extraction are implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not

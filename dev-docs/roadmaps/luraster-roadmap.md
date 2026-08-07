@@ -511,7 +511,8 @@ when their tests and rollback boundaries remain understandable.
   domains, and optional published automatic extents are available. Percentiles, wide counters,
   tiled global merges, and transparent 4K-plus reduction/histogram partitioning remain pending.
 - **2.3 substantially complete:** `GPURasterContrast` implements calibrated linear stretching,
-  gamma adjustment, and global histogram equalization through an inclusive GPU CDF scan.
+  explicitly selected gamma adjustment, and global histogram equalization through an inclusive
+  GPU CDF scan. Linear mode remains affine even when a nondefault gamma option is present.
   Percentile-domain estimation and dedicated `rgba8unorm` conversion remain pending.
 - **2.4 complete for bounded histograms:** `GPURasterThreshold` provides inclusive/exclusive
   above, below, and range classification from fixed values or GPU-resident threshold views.
@@ -538,25 +539,34 @@ when their tests and rollback boundaries remain understandable.
   radius-bounded square and Manhattan-diamond footprints, explicit border/nodata policies, and
   center-preserving validity. Binary contributors consume and publish exact `uint32` masks with
   distinct observation validity; grayscale contributors apply source calibration once and publish
-  `float32` extrema. Opening and closing compose graph-owned typed intermediate values and
-  validity, with a cumulative halo of twice the radius. The Raster Lab exposes every operation,
-  both modes, both footprints, radius, nodata policy, and all border policies.
+  `float32` extrema. Opening and closing snapshot normalized options and borrowed input/output
+  identities, then compose graph-owned typed intermediate values and validity with a cumulative
+  halo of twice the radius. The Raster Lab exposes every operation, both modes, both footprints,
+  radius, nodata policy, and all border policies.
 - **4.1 complete for application-owned decoded raster sources:** `GPURasterTileReader` validates
   application-supplied metadata, explicit source overview levels, requested coordinate frames,
   half-open windows, selected native-format bands, decoded validity, and `AbortSignal`
-  cancellation. Tile metadata preserves the source CRS, affine transform, and level-zero origin.
+  cancellation. Public request normalization exposes canonical level-local windows and expanded
+  defaults; tile metadata preserves the source CRS, affine transform, and level-zero origin.
   The Raster Lab switches among full/west/east windows and source-provided 1×/2× overviews
-  without adding a decoder, HTTP client, tile cache, implicit GPU upload, or pixel readback.
-- **4.2 next:** capacity-bounded residency, explicit eviction/fence ownership, graph-shape reuse,
-  and coordinated multi-request tile scheduling remain a separate tiled-processing tranche.
+  without adding a decoder, HTTP client, implicit reader GPU upload, or pixel readback.
+- **4.2 complete for bounded tile residency and graph reuse:** `GPURasterTileCache` budgets
+  full retained decoded backing allocations, owned GPU band/validity buffers, and cached
+  graph-owned transient bytes. Deterministic LRU eviction skips actively leased tiles/graphs;
+  encoded resources remain pinned through explicit post-submit fences. Canonically equivalent
+  concurrent loads are deduplicated, caller cancellation remains independent, compatible graph
+  shapes reuse their compiled graph through per-encoding imported-buffer replacement, and cache
+  diagnostics expose hits, misses, bytes, and evictions.
+- **4.3 next:** explicit cumulative halo assembly, half-open core ownership, ragged-edge handling,
+  and tiled-versus-monolithic seam parity remain separate neighborhood-processing work.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
 - **6.2 complete for bounded single-raster output:** `GPURasterContours` composes GPU
   classification, unsigned prefix scan, stable bounded line scatter, clamped/required counts,
-  overflow publication, and optional GPU-written indirect draw instances. The Raster Lab renders
-  its resulting line overlay without reading a draw count. Tile stitching and external deck.gl
-  integration remain in Tranche 6.3.
+  overflow publication, and optional GPU-written complete four-field indirect draw records.
+  The Raster Lab renders its resulting line overlay without reading a draw count. Tile stitching
+  and external deck.gl integration remain in Tranche 6.3.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
   demonstrate the current source-window/overview/NDVI/smoothing/gradient/morphology/histogram/
   contour workflow. The full
@@ -818,10 +828,12 @@ intermediate ownership.
 `GPURasterTileReader` validates metadata, native-format band descriptors, explicit source levels,
 level-local/level-zero half-open request windows, anisotropic/ragged overview coverage,
 caller-owned decoded samples/validity, coordinate metadata, and pre/post-decode cancellation.
+Its public `normalizeTileRequest()` expands defaults and projects equivalent source windows into
+the same validated level-local request before application scheduling or cache lookup.
 The Raster Lab's synthetic adapter demonstrates full/west/east windows, 1×/2× source-provided
 overviews, explicit CRS/origin, and stale-request cancellation without bundling a decoder.
-Multi-tile residency, halo assembly, generated analytical overviews, and stitched results remain
-separate later tranches.
+Multi-tile residency is implemented separately in tranche 4.2; halo assembly, generated
+analytical overviews, and stitched results remain later tranches.
 
 **Work:** Define an application-supplied asynchronous tile-source interface with dataset
 metadata, requested level, explicit coordinate reference frame, selected bands, spatial window,
@@ -836,7 +848,16 @@ runtime dependency are verified.
 
 **Entry:** Tranches 4.1 and 1.4.
 
-**Status:** Next planned tranche; no cache, eviction policy, or graph-shape residency exists yet.
+**Status:** Complete for capacity-bounded decoded/GPU tile residency and compiled-graph reuse.
+Separate CPU/GPU budgets include each distinct decoded `ArrayBuffer`/`SharedArrayBuffer` backing
+allocation at its full retained size, owned uploaded value/validity buffers, physical graph
+transient resources, and declared application-owned graph outputs without double-counting
+borrowed imports. Pooled subarray slabs are not mistaken for their smaller view ranges.
+Deterministic LRU eviction respects explicit tile/graph leases, canonical equivalent reads
+deduplicate safely, and application-supplied post-submit fences retain encoded resources until
+completion. Compatible shapes reuse compiled graphs with per-encoding borrowed-buffer overrides;
+ragged or otherwise incompatible shapes compile separately. The Raster Lab exposes real cache
+diagnostics, bounded capacity, and same-shape west/east graph reuse.
 
 **Work:** Define an explicit CPU/GPU tile cache budget, LRU or viewport-priority eviction,
 cancellation of stale requests, graph keys by shape/format/halo/overview, and compatible
@@ -854,6 +875,8 @@ GPU-resident raster implicitly.
 ### Tranche 4.3 — Halo assembly and seam correctness
 
 **Entry:** Tranches 4.2 and 3.1.
+
+**Status:** Next planned tranche; residency does not assemble halos or stitch tile seams.
 
 **Work:** Acquire a neighborhood that covers the complete composed pipeline receptive field,
 including cumulative stage radii and any overview/resampling scale factors. For example,
@@ -992,7 +1015,8 @@ caller-owned geometry/counts, optional overflow diagnostics, and GPU-resident in
 **Work:** Write zero, one, or two segments per cell; scan unsigned segment counts; scatter typed
 `float32x2` positions into caller-owned bounded output; publish a clamped count, overflow, and
 optional total count. Configure `DrawCommandBuffer` with two vertices per segment instance and
-write the clamped instance count directly into its borrowed count view.
+publish the complete borrowed non-indexed command record on every encoding: two vertices,
+the clamped segment instance count, zero first vertex, and zero first instance.
 
 **Exit evidence:** Segment order is stable, interpolation agrees with CPU references, every
 capacity boundary is enforced, maximum two-segment cases do not overwrite storage, and an
@@ -1153,6 +1177,7 @@ modules/experimental/src/luraster/
   gpu-raster-edges.ts
   gpu-raster-morphology.ts
   gpu-raster-tile-source.ts
+  gpu-raster-tile-cache.ts
   gpu-raster-tiles.ts
   gpu-raster-overview.ts
   gpu-raster-connected-components.ts
@@ -1169,6 +1194,8 @@ modules/experimental/test/luraster/
   gpu-raster-band-math.spec.ts
   gpu-raster-analysis.spec.ts
   gpu-raster-filters.spec.ts
+  gpu-raster-tile-cache.node.spec.ts
+  gpu-raster-tile-cache.spec.ts
   gpu-raster-tiles.spec.ts
   gpu-raster-connected-components.spec.ts
   gpu-raster-region-statistics.spec.ts
@@ -1191,8 +1218,9 @@ later tranches.
 - `docs/api-reference/experimental/luraster/`: public runtime documentation.
 - `docs/table-of-contents.json`: both experimental navigation branches.
 - `docs/api-reference/experimental/README.md` and `docs/whats-new.md`: feature discovery.
-- `examples/showcase/raster-lab/`: initial synthetic satellite/NDVI showcase; microscopy,
-  production imagery, tiled analytics, and overlays remain separate future examples.
+- `examples/showcase/raster-lab/`: synthetic satellite/NDVI, bounded tile residency, reusable
+  graphs, and indirect contour overlays; microscopy, production imagery, and stitched tiled
+  analytics remain separate future examples.
 - `website/content/examples/showcase/`, `website/content/examples/table-of-contents.json`, and
   `website/src/examples.tsx`: website example integration.
 - `.ocularrc.js`: optional scoped Playwright alias if a browser smoke workflow is added.
@@ -1297,6 +1325,21 @@ The official [loaders.gl GeoTIFF module](https://loaders.gl/docs/modules/geotiff
 reading, selected bands, overviews, workers, and cancellation; its
 [upstream MIT license](https://github.com/geotiffjs/geotiff.js/blob/master/LICENSE) must be
 reviewed independently before adding an example dependency.
+
+### Planned loaders.gl 5 integration pass
+
+Once the consuming application upgrades to loaders.gl 5, validate a separately owned adapter
+between its raster-source API and `GPURasterTileReader`. Keep GeoTIFF/COG parsing, HTTP range
+requests, authentication, overview discovery, worker scheduling, decoder cancellation, and
+source-side CPU caching in loaders.gl or the application. Keep explicit GPU upload/residency,
+GPU memory budgets, eviction-safe leases, compiled-graph reuse, numerical raster operations,
+and rendering in LuRaster and the caller-owned GPU pipeline.
+
+The integration should exercise real raster data in the Raster Lab, translate metadata and
+normalized windows without introducing another transport or decoder, propagate cancellation
+across the adapter, and reconcile source-side and GPU-side cache policies so retained CPU
+allocations are not duplicated or hidden. This is a version-gated follow-up, not a new
+`@luma.gl/experimental` runtime dependency or a prerequisite for halo and seam correctness.
 
 WebGPU and WGSL behavior must follow the current
 [WebGPU specification](https://gpuweb.github.io/gpuweb/) and

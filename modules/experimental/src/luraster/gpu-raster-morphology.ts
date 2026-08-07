@@ -434,10 +434,11 @@ abstract class GPURasterComposedMorphology implements GPUCommandGraphContributor
   ) {
     const id = props.id ?? defaultId;
     const primitive = new GPURasterMorphology(addMorphologyOperation(props, firstOperation, id));
+    this.props = createMorphologyPropsSnapshot(props, primitive);
     this.id = primitive.id;
     this.width = primitive.width;
     this.height = primitive.height;
-    this.input = primitive.input;
+    this.input = this.props.input;
     this.output = primitive.output;
     this.outputValidity = primitive.outputValidity;
     this.mode = primitive.mode;
@@ -447,7 +448,6 @@ abstract class GPURasterComposedMorphology implements GPUCommandGraphContributor
     this.borderMode = primitive.borderMode;
     this.borderValue = primitive.borderValue;
     this.noDataPolicy = primitive.noDataPolicy;
-    this.props = props;
     this.firstOperation = firstOperation;
     this.secondOperation = secondOperation;
   }
@@ -555,6 +555,54 @@ function addMorphologyOperation(
   id: string
 ): GPURasterMorphologyProps {
   return props.mode === 'binary' ? {...props, id, operation} : {...props, id, operation};
+}
+
+function createMorphologyPropsSnapshot(
+  props: GPURasterDilationProps,
+  primitive: GPURasterMorphology
+): GPURasterDilationProps {
+  const normalizedProps = {
+    id: primitive.id,
+    width: primitive.width,
+    height: primitive.height,
+    radius: primitive.radius,
+    structuringElement: primitive.structuringElement,
+    borderMode: primitive.borderMode,
+    borderValue: primitive.borderValue,
+    noDataPolicy: primitive.noDataPolicy,
+    outputValidity: primitive.outputValidity
+  };
+
+  if (props.mode === 'binary') {
+    return {
+      ...normalizedProps,
+      mode: 'binary',
+      input: createMorphologyInputSnapshot(props.input),
+      output: props.output
+    };
+  }
+
+  return {
+    ...normalizedProps,
+    mode: 'grayscale',
+    input: createMorphologyInputSnapshot(props.input),
+    output: props.output
+  };
+}
+
+function createMorphologyInputSnapshot(
+  input: GPURasterBufferBand<'uint32'>
+): GPURasterBufferBand<'uint32'>;
+function createMorphologyInputSnapshot(input: GPURasterBufferBand): GPURasterBufferBand;
+function createMorphologyInputSnapshot(input: GPURasterBufferBand): GPURasterBufferBand {
+  switch (input.format) {
+    case 'float32':
+      return {...input, storage: {...input.storage}};
+    case 'uint32':
+      return {...input, storage: {...input.storage}};
+    case 'sint32':
+      return {...input, storage: {...input.storage}};
+  }
 }
 
 function validateMorphologyGraphResources<Parameters>(

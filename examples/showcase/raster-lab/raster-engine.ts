@@ -116,12 +116,20 @@ type RasterLabBuffers = {
   summaryReadback: Buffer;
 };
 
+/** Tile inputs are borrowed from bounded residency; analysis outputs remain engine-owned. */
+export type RasterLabResidentSources = {
+  red: Buffer;
+  nearInfrared: Buffer;
+  validity: Buffer;
+};
+
 /** Runs NDVI, validity-aware extent, and histogram as one explicitly submitted GPU command graph. */
 export class RasterLabEngine {
   readonly device: Device;
-  readonly dataset: RasterLabDataset;
+  dataset: RasterLabDataset;
 
   private readonly buffers: RasterLabBuffers;
+  private readonly borrowedSources: boolean;
   private readonly renderer: RasterLabRenderer;
   private readonly contourCommands: DrawCommandBuffer;
   private readonly contourSegmentCapacity: number;
@@ -152,24 +160,39 @@ export class RasterLabEngine {
   private executionCount = 0;
   private destroyed = false;
 
-  constructor(device: Device, dataset: RasterLabDataset) {
+  constructor(
+    device: Device,
+    dataset: RasterLabDataset,
+    sources?: RasterLabResidentSources,
+    settings?: RasterLabDisplaySettings,
+    epsilon = 0.0001
+  ) {
     this.device = device;
     this.dataset = dataset;
+    this.borrowedSources = Boolean(sources);
+    if (settings) this.settings = {...settings};
+    this.epsilon = epsilon;
     this.contourSegmentCapacity = Math.max((dataset.width - 1) * (dataset.height - 1) * 2, 1);
     const sourceUsage = Buffer.STORAGE | Buffer.COPY_DST;
     const outputUsage = Buffer.STORAGE | Buffer.COPY_SRC;
     this.buffers = {
-      red: device.createBuffer({id: 'raster-lab-red', data: dataset.red, usage: sourceUsage}),
-      nearInfrared: device.createBuffer({
-        id: 'raster-lab-near-infrared',
-        data: dataset.nearInfrared,
-        usage: sourceUsage
-      }),
-      sourceValidity: device.createBuffer({
-        id: 'raster-lab-source-validity',
-        data: dataset.validity,
-        usage: sourceUsage
-      }),
+      red:
+        sources?.red ??
+        device.createBuffer({id: 'raster-lab-red', data: dataset.red, usage: sourceUsage}),
+      nearInfrared:
+        sources?.nearInfrared ??
+        device.createBuffer({
+          id: 'raster-lab-near-infrared',
+          data: dataset.nearInfrared,
+          usage: sourceUsage
+        }),
+      sourceValidity:
+        sources?.validity ??
+        device.createBuffer({
+          id: 'raster-lab-source-validity',
+          data: dataset.validity,
+          usage: sourceUsage
+        }),
       vegetationIndex: device.createBuffer({
         id: 'raster-lab-vegetation-index',
         byteLength: dataset.pixelCount * Float32Array.BYTES_PER_ELEMENT,
@@ -332,13 +355,48 @@ export class RasterLabEngine {
       initializedRenderer?.destroy();
       initializedGraph?.destroy();
       initializedContourCommands?.destroy();
-      for (const buffer of Object.values(this.buffers)) buffer.destroy();
+      this.destroyOwnedBuffers();
       throw error;
     }
   }
 
   get nodeCount(): number {
     return this.compiledGraph.stats.nodeOrder.length;
+  }
+
+  get commandGraph(): CompiledGPUCommandGraph {
+    return this.compiledGraph;
+  }
+
+  /** Analysis buffers exclude the externally owned, cache-resident source bands. */
+  get ownedByteLength(): number {
+    let byteLength = 0;
+    for (const [name, buffer] of Object.entries(this.buffers)) {
+      if (
+        this.borrowedSources &&
+        (name === 'red' || name === 'nearInfrared' || name === 'sourceValidity')
+      ) {
+        continue;
+      }
+      byteLength += buffer.byteLength;
+    }
+    return byteLength + this.contourCommands.buffer.byteLength + this.renderer.ownedByteLength;
+  }
+
+  /** Rebind a compatible resident tile without rebuilding pipelines or analysis outputs. */
+  setResidentTile(dataset: RasterLabDataset, sources: RasterLabResidentSources): void {
+    if (
+      !this.borrowedSources ||
+      dataset.width !== this.dataset.width ||
+      dataset.height !== this.dataset.height
+    ) {
+      throw new Error('Raster tile graph reuse requires matching resident tile dimensions');
+    }
+    this.dataset = dataset;
+    this.buffers.red = sources.red;
+    this.buffers.nearInfrared = sources.nearInfrared;
+    this.buffers.sourceValidity = sources.validity;
+    this.renderer.setSourceBuffers(sources.red, sources.nearInfrared);
   }
 
   /** Reconfigures specialized graph passes without reallocating resident raster buffers. */
@@ -391,7 +449,14 @@ export class RasterLabEngine {
     const encoder = this.device.createCommandEncoder({
       id: `raster-lab-analysis-${this.executionCount}`
     });
-    this.compiledGraph.encode(encoder, {parameters: undefined});
+    this.compiledGraph.encode(encoder, {
+      parameters: undefined,
+      buffers: {
+        red: this.buffers.red,
+        'near-infrared': this.buffers.nearInfrared,
+        'source-validity': this.buffers.sourceValidity
+      }
+    });
     encoder.copyBufferToBuffer({
       sourceBuffer: this.buffers.domain,
       destinationBuffer: this.buffers.summaryReadback,
@@ -529,7 +594,19 @@ export class RasterLabEngine {
     this.renderer.destroy();
     this.compiledGraph.destroy();
     this.contourCommands.destroy();
-    for (const buffer of Object.values(this.buffers)) buffer.destroy();
+    this.destroyOwnedBuffers();
+  }
+
+  private destroyOwnedBuffers(): void {
+    for (const [name, buffer] of Object.entries(this.buffers)) {
+      if (
+        this.borrowedSources &&
+        (name === 'red' || name === 'nearInfrared' || name === 'sourceValidity')
+      ) {
+        continue;
+      }
+      buffer.destroy();
+    }
   }
 
   private createCompiledGraph(): CompiledGPUCommandGraph {

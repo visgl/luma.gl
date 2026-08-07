@@ -272,6 +272,15 @@ export class RasterLabRenderer {
     }
   }
 
+  get ownedByteLength(): number {
+    return this.uniformBuffer.byteLength;
+  }
+
+  /** Switch borrowed reflectance bands without recreating the presentation pipeline. */
+  setSourceBuffers(red: Buffer, nearInfrared: Buffer): void {
+    this.model.setBindings({redValues: red, nearInfraredValues: nearInfrared});
+  }
+
   /** Clears the shared canvas once, then clips a fullscreen triangle to the map surface. */
   render(
     canvasContext: CanvasContext,

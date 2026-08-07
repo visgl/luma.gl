@@ -29,6 +29,22 @@ export type {
   GPURasterTileSourceMetadata
 } from './gpu-raster-tile-source';
 
+export {
+  GPURasterTileCache,
+  GPURasterTileGraphLease,
+  GPURasterTileLease
+} from './gpu-raster-tile-cache';
+export type {
+  GPURasterResidentBand,
+  GPURasterResidentTile,
+  GPURasterTileCacheBudgets,
+  GPURasterTileCacheProps,
+  GPURasterTileCacheStats,
+  GPURasterTileGraphEntry,
+  GPURasterTileGraphRequest,
+  GPURasterTileReleaseFence
+} from './gpu-raster-tile-cache';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

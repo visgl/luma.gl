@@ -773,9 +773,15 @@ function getSummaryShaderSource(
   const requiredOutput = contours.requiredSegmentCount
     ? `outputRequiredCount[${getViewElementOffset(contours.requiredSegmentCount)}u] = requiredCount;`
     : '';
-  const drawOutput = contours.draw
-    ? `drawCommandWords[${getViewElementOffset(contours.draw.words) + contours.drawCommandIndex * 4 + 1}u] = clampedCount;`
-    : '';
+  let drawOutput = '';
+  if (contours.draw) {
+    const commandWordOffset =
+      getViewElementOffset(contours.draw.words) + contours.drawCommandIndex * 4;
+    drawOutput = `drawCommandWords[${commandWordOffset}u] = 2u;
+  drawCommandWords[${commandWordOffset + 1}u] = clampedCount;
+  drawCommandWords[${commandWordOffset + 2}u] = 0u;
+  drawCommandWords[${commandWordOffset + 3}u] = 0u;`;
+  }
 
   return /* wgsl */ `
 ${declarations}

@@ -20,6 +20,7 @@ import {RASTER_LAB_STYLES} from './raster-styles';
 export type RasterLabInterfaceCallbacks = {
   onSourceTile?: (tile: RasterLabSourceTile) => void;
   onSourceOverview?: (level: RasterLabOverviewLevel) => void;
+  onCacheCapacity?: (capacity: number) => void;
   onMode?: (mode: RasterLabDisplayMode) => void;
   onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
   onSmoothingRadius?: (radius: number) => void;
@@ -56,6 +57,23 @@ export type RasterLabSourceSummary = {
   overviewLevel?: RasterLabOverviewLevel;
   levelZeroOrigin?: readonly [number, number];
   coordinateReferenceSystem?: string;
+};
+
+export type RasterLabResidencySummary = {
+  capacity: number;
+  maximumCpuBytes: number;
+  maximumGpuBytes: number;
+  residentTiles: number;
+  residentGraphs: number;
+  cpuBytes: number;
+  gpuBytes: number;
+  tileHits: number;
+  tileMisses: number;
+  tileEvictions: number;
+  graphHits: number;
+  graphCompilations: number;
+  pinnedTiles: number;
+  pinnedGraphs: number;
 };
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
@@ -147,6 +165,23 @@ export class RasterLabInterface {
         String(Number(button.dataset['rasterSourceOverview']) === level)
       );
     }
+  }
+
+  setResidency(summary: RasterLabResidencySummary): void {
+    const capacityControl = this.getInput('cache-capacity');
+    capacityControl.value = String(summary.capacity);
+    this.getElement('[data-raster-cache-capacity]').textContent =
+      `${summary.residentTiles} / ${summary.capacity} tiles`;
+    this.getElement('[data-raster-cache-cpu]').textContent =
+      `${formatResidencyBytes(summary.cpuBytes)} / ${formatResidencyBytes(summary.maximumCpuBytes)}`;
+    this.getElement('[data-raster-cache-gpu]').textContent =
+      `${formatResidencyBytes(summary.gpuBytes)} / ${formatResidencyBytes(summary.maximumGpuBytes)}`;
+    this.getElement('[data-raster-cache-activity]').textContent =
+      `${summary.tileHits} hit · ${summary.tileMisses} miss · ${summary.tileEvictions} evict`;
+    this.getElement('[data-raster-cache-graphs]').textContent =
+      `${summary.graphCompilations} compile · ${summary.graphHits} reuse`;
+    this.getElement('[data-raster-cache-pins]').textContent =
+      `${summary.pinnedTiles} tile · ${summary.pinnedGraphs} graph pinned`;
   }
 
   setSummary(summary: RasterLabSummary): void {
@@ -540,6 +575,9 @@ export class RasterLabInterface {
       if (!(target instanceof HTMLInputElement)) return;
       const value = Number(target.value);
       switch (target.dataset['rasterControl']) {
+        case 'cache-capacity':
+          this.callbacks.onCacheCapacity?.(value);
+          break;
         case 'smoothing-radius':
           this.setSmoothingRadius(value);
           this.callbacks.onSmoothingRadius?.(value);
@@ -799,6 +837,17 @@ function makeRasterLabMarkup(): string {
               </div>
               <div class="raster-source-description" data-raster-source-description>L0 · FULL</div>
               <div class="raster-source-origin" data-raster-source-origin>Origin 0, 0 · EPSG:32610</div>
+              <label class="raster-cache-control">
+                <span class="raster-control-label">Bounded tile residency <span class="raster-control-value" data-raster-cache-capacity>0 / 3 tiles</span></span>
+                <input class="raster-slider" data-raster-control="cache-capacity" type="range" min="1" max="4" step="1" value="3" aria-label="Resident tile capacity" />
+              </label>
+              <div class="raster-cache-statistics" aria-label="Live bounded CPU and GPU tile residency">
+                <span>CPU decoded</span><span data-raster-cache-cpu>0 B / 0 B</span>
+                <span>GPU resident</span><span data-raster-cache-gpu>0 B / 0 B</span>
+                <span>Tile cache</span><span data-raster-cache-activity>0 hit · 0 miss · 0 evict</span>
+                <span>Graph cache</span><span data-raster-cache-graphs>0 compile · 0 reuse</span>
+                <span>Active leases</span><span data-raster-cache-pins>0 tile · 0 graph pinned</span>
+              </div>
             </div>
             <div class="raster-mode-buttons" aria-label="Display layer">
               <button class="raster-mode-button" data-raster-mode="ndvi" aria-pressed="true">NDVI</button>
@@ -964,4 +1013,10 @@ function clamp(value: number, minimum: number, maximum: number): number {
 
 function getModeLabel(mode: RasterLabDisplayMode): string {
   return mode === 'ndvi' ? 'NDVI' : mode === 'red' ? 'RED' : 'NEAR IR';
+}
+
+function formatResidencyBytes(byteLength: number): string {
+  if (byteLength < 1024) return `${byteLength} B`;
+  if (byteLength < 1_048_576) return `${(byteLength / 1024).toFixed(0)} KB`;
+  return `${(byteLength / 1_048_576).toFixed(1)} MB`;
 }
