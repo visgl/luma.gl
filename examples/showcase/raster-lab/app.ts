@@ -12,12 +12,17 @@ import type {
   RasterLabDisplaySettings,
   RasterLabEdgeDirection,
   RasterLabEdgeMode,
+  RasterLabMorphologyBorderMode,
+  RasterLabMorphologyMode,
+  RasterLabMorphologyNoDataPolicy,
+  RasterLabMorphologyOperation,
+  RasterLabMorphologyShape,
   RasterLabSmoothingMode
 } from './raster-renderer';
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'GPU-resident NDVI, smoothing, signed edge detection, contour overlays, and live histograms.';
+  'GPU-resident NDVI, smoothing, edge detection, morphology, contours, and live histograms.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -34,6 +39,13 @@ type RasterLabDebugController = {
   readonly smoothingSigma: number;
   readonly edgeMode: RasterLabEdgeMode;
   readonly edgeDirection: RasterLabEdgeDirection;
+  readonly morphologyOperation: RasterLabMorphologyOperation;
+  readonly morphologyMode: RasterLabMorphologyMode;
+  readonly morphologyShape: RasterLabMorphologyShape;
+  readonly morphologyRadius: number;
+  readonly morphologyNoDataPolicy: RasterLabMorphologyNoDataPolicy;
+  readonly morphologyBorderMode: RasterLabMorphologyBorderMode;
+  readonly morphologyBorderValue: number;
   readonly contrast: number;
   readonly gamma: number;
   readonly threshold: number;
@@ -54,6 +66,13 @@ type RasterLabDebugController = {
   setSmoothingSigma: (sigma: number) => void;
   setEdgeMode: (mode: RasterLabEdgeMode) => void;
   setEdgeDirection: (direction: RasterLabEdgeDirection) => void;
+  setMorphologyOperation: (operation: RasterLabMorphologyOperation) => void;
+  setMorphologyMode: (mode: RasterLabMorphologyMode) => void;
+  setMorphologyShape: (shape: RasterLabMorphologyShape) => void;
+  setMorphologyRadius: (radius: number) => void;
+  setMorphologyNoDataPolicy: (policy: RasterLabMorphologyNoDataPolicy) => void;
+  setMorphologyBorderMode: (mode: RasterLabMorphologyBorderMode) => void;
+  setMorphologyBorderValue: (value: number) => void;
   setContrast: (contrast: number) => void;
   setGamma: (gamma: number) => void;
   setThreshold: (threshold: number, enabled?: boolean) => void;
@@ -79,6 +98,13 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     smoothingSigma: 1.25,
     edgeMode: 'none',
     edgeDirection: 'magnitude',
+    morphologyOperation: 'none',
+    morphologyMode: 'grayscale',
+    morphologyShape: 'square',
+    morphologyRadius: 2,
+    morphologyNoDataPolicy: 'ignore',
+    morphologyBorderMode: 'clamp',
+    morphologyBorderValue: 0,
     contrast: 1.15,
     gamma: 1,
     threshold: 0.35,
@@ -120,6 +146,13 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onSmoothingSigma: sigma => this.setSmoothingSigma(sigma),
       onEdgeMode: mode => this.setEdgeMode(mode),
       onEdgeDirection: direction => this.setEdgeDirection(direction),
+      onMorphologyOperation: operation => this.setMorphologyOperation(operation),
+      onMorphologyMode: mode => this.setMorphologyMode(mode),
+      onMorphologyShape: shape => this.setMorphologyShape(shape),
+      onMorphologyRadius: radius => this.setMorphologyRadius(radius),
+      onMorphologyNoDataPolicy: policy => this.setMorphologyNoDataPolicy(policy),
+      onMorphologyBorderMode: mode => this.setMorphologyBorderMode(mode),
+      onMorphologyBorderValue: value => this.setMorphologyBorderValue(value),
       onContrast: contrast => this.setContrast(contrast),
       onGamma: gamma => this.setGamma(gamma),
       onThreshold: (threshold, enabled) => this.setThreshold(threshold, enabled),
@@ -220,6 +253,75 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
   }
 
+  private setMorphologyOperation(operation: RasterLabMorphologyOperation): void {
+    if (operation === this.display.morphologyOperation) return;
+    this.display.morphologyOperation = operation;
+    this.interface?.setMorphologyOperation(operation);
+    this.syncBinaryMorphology();
+    this.requestUpdate();
+  }
+
+  private setMorphologyMode(mode: RasterLabMorphologyMode): void {
+    if (mode === this.display.morphologyMode) return;
+    this.display.morphologyMode = mode;
+    this.interface?.setMorphologyMode(mode);
+    this.syncBinaryMorphology();
+    if (this.display.morphologyOperation !== 'none') this.requestUpdate();
+  }
+
+  private setMorphologyShape(shape: RasterLabMorphologyShape): void {
+    if (shape === this.display.morphologyShape) return;
+    this.display.morphologyShape = shape;
+    this.interface?.setMorphologyShape(shape);
+    if (this.display.morphologyOperation !== 'none') this.requestUpdate();
+  }
+
+  private setMorphologyRadius(radius: number): void {
+    if (radius === this.display.morphologyRadius) return;
+    this.display.morphologyRadius = radius;
+    this.interface?.setMorphologyRadius(radius);
+    if (this.display.morphologyOperation !== 'none') this.requestUpdate();
+  }
+
+  private setMorphologyNoDataPolicy(policy: RasterLabMorphologyNoDataPolicy): void {
+    if (policy === this.display.morphologyNoDataPolicy) return;
+    this.display.morphologyNoDataPolicy = policy;
+    this.interface?.setMorphologyNoDataPolicy(policy);
+    if (this.display.morphologyOperation !== 'none') this.requestUpdate();
+  }
+
+  private setMorphologyBorderMode(mode: RasterLabMorphologyBorderMode): void {
+    if (mode === this.display.morphologyBorderMode) return;
+    this.display.morphologyBorderMode = mode;
+    this.interface?.setMorphologyBorderMode(mode);
+    if (this.display.morphologyOperation !== 'none') this.requestUpdate();
+  }
+
+  private setMorphologyBorderValue(value: number): void {
+    if (Math.abs(value - this.display.morphologyBorderValue) < 0.0000001) return;
+    this.display.morphologyBorderValue = value;
+    this.interface?.setMorphologyBorderValue(value);
+    if (
+      this.display.morphologyOperation !== 'none' &&
+      this.display.morphologyBorderMode === 'constant'
+    ) {
+      this.requestUpdate();
+    }
+  }
+
+  private syncBinaryMorphology(): void {
+    const binaryMorphologyEnabled =
+      this.display.morphologyOperation !== 'none' && this.display.morphologyMode === 'binary';
+    if (binaryMorphologyEnabled && !this.display.thresholdEnabled) {
+      this.display.thresholdEnabled = true;
+    }
+    this.interface?.setThreshold(this.display.threshold, this.display.thresholdEnabled);
+    this.interface?.setContours(
+      this.display.contoursEnabled,
+      binaryMorphologyEnabled ? 0.5 : this.display.contourLevel
+    );
+  }
+
   private setContrast(contrast: number): void {
     if (Math.abs(contrast - this.display.contrast) < 0.0000001) return;
     this.display.contrast = contrast;
@@ -235,6 +337,13 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   }
 
   private setThreshold(threshold: number, enabled = true): void {
+    if (
+      !enabled &&
+      this.display.morphologyOperation !== 'none' &&
+      this.display.morphologyMode === 'binary'
+    ) {
+      enabled = true;
+    }
     if (
       Math.abs(threshold - this.display.threshold) < 0.0000001 &&
       enabled === this.display.thresholdEnabled &&
@@ -274,6 +383,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   }
 
   private setEpsilon(epsilon: number): void {
+    if (Math.abs(epsilon - (this.requestedEpsilon ?? this.epsilon)) < 0.0000001) return;
     this.requestedEpsilon = epsilon;
     this.interface?.setEpsilon(epsilon);
     this.requestUpdate();
@@ -365,6 +475,27 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get edgeDirection() {
         return viewer.display.edgeDirection;
       },
+      get morphologyOperation() {
+        return viewer.display.morphologyOperation;
+      },
+      get morphologyMode() {
+        return viewer.display.morphologyMode;
+      },
+      get morphologyShape() {
+        return viewer.display.morphologyShape;
+      },
+      get morphologyRadius() {
+        return viewer.display.morphologyRadius;
+      },
+      get morphologyNoDataPolicy() {
+        return viewer.display.morphologyNoDataPolicy;
+      },
+      get morphologyBorderMode() {
+        return viewer.display.morphologyBorderMode;
+      },
+      get morphologyBorderValue() {
+        return viewer.display.morphologyBorderValue;
+      },
       get contrast() {
         return viewer.display.contrast;
       },
@@ -384,7 +515,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         return viewer.display.contoursEnabled;
       },
       get contourLevel() {
-        return viewer.display.contourLevel;
+        return viewer.latestSummary?.contourLevel ?? viewer.display.contourLevel;
       },
       get contourSegmentCount() {
         return viewer.latestSummary?.contourSegmentCount ?? 0;
@@ -413,6 +544,13 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setSmoothingSigma: sigma => viewer.setSmoothingSigma(sigma),
       setEdgeMode: mode => viewer.setEdgeMode(mode),
       setEdgeDirection: direction => viewer.setEdgeDirection(direction),
+      setMorphologyOperation: operation => viewer.setMorphologyOperation(operation),
+      setMorphologyMode: mode => viewer.setMorphologyMode(mode),
+      setMorphologyShape: shape => viewer.setMorphologyShape(shape),
+      setMorphologyRadius: radius => viewer.setMorphologyRadius(radius),
+      setMorphologyNoDataPolicy: policy => viewer.setMorphologyNoDataPolicy(policy),
+      setMorphologyBorderMode: mode => viewer.setMorphologyBorderMode(mode),
+      setMorphologyBorderValue: value => viewer.setMorphologyBorderValue(value),
       setContrast: contrast => viewer.setContrast(contrast),
       setGamma: gamma => viewer.setGamma(gamma),
       setThreshold: (threshold, enabled) => viewer.setThreshold(threshold, enabled),

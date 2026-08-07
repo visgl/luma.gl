@@ -63,6 +63,28 @@ export type {
   GPURasterSobelProps
 } from './gpu-raster-edges';
 
+export {
+  GPURasterClosing,
+  GPURasterDilation,
+  GPURasterErosion,
+  GPURasterMorphology,
+  GPURasterOpening
+} from './gpu-raster-morphology';
+export type {
+  GPURasterBinaryMorphologyProps,
+  GPURasterClosingProps,
+  GPURasterDilationProps,
+  GPURasterErosionProps,
+  GPURasterGrayscaleMorphologyProps,
+  GPURasterMorphologyBaseProps,
+  GPURasterMorphologyMode,
+  GPURasterMorphologyNoDataPolicy,
+  GPURasterMorphologyOperation,
+  GPURasterMorphologyProps,
+  GPURasterOpeningProps,
+  GPURasterStructuringElement
+} from './gpu-raster-morphology';
+
 export {GPURasterContrast} from './gpu-raster-contrast';
 export type {
   GPURasterContrastDomain,

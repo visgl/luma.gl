@@ -37,23 +37,28 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     }
   });
 
-  test('exposes pointwise, neighborhood, edge, and contour contributors without root leaks', () => {
+  test('exposes pointwise, neighborhood, edge, morphology, and contour contributors', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBufferToTexture).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterClosing).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContrast).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContourClassifier).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContours).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConvolution).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterDilation).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterErosion).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGaussianBlur).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGradient).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGradientMagnitude).toBeTypeOf('function');
     expect(lurasterModule.GPURasterHistogram).toBeTypeOf('function');
     expect(lurasterModule.GPURasterLaplacian).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterMorphology).toBeTypeOf('function');
     expect(lurasterModule.GPURasterNDVI).toBeTypeOf('function');
     expect(lurasterModule.GPURasterNeighborhood).toBeTypeOf('function');
     expect(lurasterModule.GPURasterOtsuThreshold).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterOpening).toBeTypeOf('function');
     expect(lurasterModule.GPURasterScharr).toBeTypeOf('function');
     expect(lurasterModule.GPURasterSobel).toBeTypeOf('function');
     expect(lurasterModule.GPURasterStatistics).toBeTypeOf('function');

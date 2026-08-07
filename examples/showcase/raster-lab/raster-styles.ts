@@ -326,6 +326,30 @@ export const RASTER_LAB_STYLES = /* css */ `
   gap: 4px;
 }
 
+.raster-morphology-buttons {
+  display: grid;
+  grid-template-columns: 0.7fr repeat(4, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.raster-morphology-paired-settings {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 5px;
+}
+
+.raster-morphology-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.raster-morphology-border-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+}
+
 .raster-mode-button {
   min-height: 28px;
   padding: 0 5px;
@@ -350,10 +374,21 @@ export const RASTER_LAB_STYLES = /* css */ `
 }
 
 .raster-edge-buttons .raster-mode-button,
-.raster-edge-direction-buttons .raster-mode-button {
+.raster-edge-direction-buttons .raster-mode-button,
+.raster-morphology-buttons .raster-mode-button,
+.raster-morphology-toggle .raster-mode-button,
+.raster-morphology-border-buttons .raster-mode-button {
   min-height: 24px;
   padding: 0 3px;
   font-size: 9px;
+}
+
+.raster-morphology-buttons .raster-mode-button,
+.raster-morphology-paired-settings .raster-mode-button,
+.raster-morphology-border-buttons .raster-mode-button {
+  min-height: 22px;
+  padding: 0 2px;
+  font-size: 8px;
 }
 
 .raster-control {
@@ -377,6 +412,15 @@ export const RASTER_LAB_STYLES = /* css */ `
 
 .raster-smoothing-control {
   gap: 6px;
+}
+
+.raster-morphology-control {
+  gap: 5px;
+}
+
+.raster-morphology-setting {
+  display: grid;
+  gap: 3px;
 }
 
 .raster-smoothing-setting {

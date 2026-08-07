@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Analyze synthetic reflectance with GPU-native NDVI, smoothing, Sobel/Scharr/Laplacian edges, Otsu thresholds, indirect contours, and live histograms.
+description: Analyze synthetic reflectance with GPU-native NDVI, smoothing, edges, binary/grayscale morphology, Otsu thresholds, indirect contours, and live histograms.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -18,7 +18,11 @@ vegetation, waterways, cloud cover, and out-of-footprint nodata. Switch between
 the derived vegetation index and its source bands, apply Gaussian or box
 smoothing, adjust the kernel radius or Gaussian sigma, choose Sobel, Scharr,
 or Laplacian edge detection, switch between signed horizontal/vertical
-derivatives and nonnegative gradient magnitude, change analytical contrast or
+derivatives and nonnegative gradient magnitude, or select binary/grayscale
+dilation, erosion, opening, and closing. Morphology controls select a
+four-connected Manhattan diamond or eight-connected square, radius zero
+through eight, strict or ignore nodata, and clamp, reflect, constant, or nodata
+borders, including an editable constant value. Change analytical contrast or
 gamma, select pixels above a live classification threshold, or increase the
 denominator epsilon to reject unstable normalized-difference measurements.
 An optional Otsu control derives its threshold directly from a pre-threshold
@@ -41,14 +45,21 @@ masked center pixels. `GPURasterSobel`, `GPURasterScharr`, and
 responses; `GPURasterGradientMagnitude` combines two directional passes into
 nonnegative edge strength with graph-owned scratch. Missing neighbors remain
 invalid, revealing an honest nodata halo around clouds. `GPURasterContrast`
-then transforms that resident band on-device;
-`GPURasterThreshold` writes a genuine per-pixel selection mask; and
-`GPURasterStatistics` calculates masked count, sum, mean, minimum, and maximum.
+transforms that resident band on-device; grayscale `GPURasterDilation`,
+`GPURasterErosion`, `GPURasterOpening`, or `GPURasterClosing` runs after
+optional smoothing/edges and before contrast. `GPURasterThreshold` writes a
+genuine per-pixel selection mask; binary morphology instead runs after manual
+or Otsu thresholding and consumes that `uint32` mask as values while preserving
+the upstream observation validity separately. Threshold background is valid
+zero, not nodata. `GPURasterStatistics` calculates masked count, sum, mean,
+minimum, and maximum.
 `GPURasterOtsuThreshold` can select the threshold from a separate baseline
 histogram without introducing a CPU synchronization point.
 `GPURasterContours` classifies valid four-corner cells, resolves ambiguous
 saddles, scans their segment counts, scatters interpolated line geometry, and
-updates a GPU-resident indirect draw record in that same command graph.
+updates a GPU-resident indirect draw record in that same command graph. Binary
+morphology contours classify the foreground mask at a fixed level of `0.5`;
+grayscale contours retain their adjustable analytical level.
 The histogram consumes that same mask and GPU-resident extent, so excluded
 pixels disappear from both the map selection and distribution. Every dependent
 compute pass is encoded into one explicitly submitted `GPUCommandGraph`.
@@ -59,9 +70,10 @@ buffers. Only the two-value extent, 48 histogram bins, valid count, sum, mean,
 optional automatic threshold, and three contour diagnostics—228 bytes
 total—are copied back after submission to update visible summary statistics.
 Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
-derivative direction, contrast, gamma, thresholding, contour levels, and epsilon
-rebuild their specialized analysis graph while keeping every source and output
-raster buffer resident; source pixels are never downloaded.
+derivative direction, morphological operation/mode/footprint/radius/nodata/
+border, contrast, gamma, thresholding, contour levels, and epsilon rebuild
+their specialized analysis graph while keeping every source and output raster
+buffer resident; source pixels are never downloaded.
 
 Choose Gaussian smoothing to reduce local sensor noise while weighting nearby
 observations most strongly; choose box smoothing when a uniformly weighted
@@ -84,6 +96,26 @@ ridge/valley response; smooth first when sensor noise would dominate. Derivative
 use raster-pixel coordinates, not CRS/world units, and remain genuine analytical
 inputs to the displayed histogram, threshold mask, and contours.
 
+Choose dilation to expand classified foreground, bridge sufficiently narrow
+gaps, or calculate the local grayscale maximum; choose erosion to shrink
+foreground, remove small islands, or calculate the local minimum. Opening is
+erosion followed by dilation, useful for removing isolated small foreground
+regions. Closing is dilation followed by erosion, useful for reducing small
+background holes or reconnecting narrow breaks. Effects depend on the chosen
+footprint, radius, border policy, and valid observations.
+
+The eight-connected square evaluates `(2r + 1)²` positions at radius `r`;
+the four-connected cross is a Manhattan diamond with `2r(r + 1) + 1`
+positions, not merely a plus-shaped set of arms for radii above one. Both
+footprints therefore cost `O(r²)` taps per pixel, with the diamond using fewer
+samples. Strict nodata rejects an output when any included neighbor is invalid;
+ignore skips missing neighbors, but neither mode revives an invalid center.
+Opening and closing use two graph passes and `8 × width × height` logical bytes
+of graph-owned intermediate values/validity; radius zero uses one identity pass
+without scratch. Actual throughput depends on radius, source resolution,
+validity, and the GPU; these operations are numerical raster analysis rather
+than screen-space display effects.
+
 Use contour overlays when a measured scalar boundary should become reusable
 vector geometry, such as vegetation isolines or concentration thresholds.
 Classification and bounded segment scattering scale linearly with raster-cell
@@ -95,5 +127,4 @@ All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Morphology, segmentation, tiled contour seams, and tiled imagery shown in the
-interface remain planned capabilities.
+Segmentation, tiled contour seams, and tiled imagery remain planned capabilities.

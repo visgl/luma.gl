@@ -86,6 +86,11 @@ try {
       frameCount: rasterLab.frameCount,
       edgeMode: rasterLab.edgeMode,
       edgeDirection: rasterLab.edgeDirection,
+      morphologyOperation: rasterLab.morphologyOperation,
+      morphologyMode: rasterLab.morphologyMode,
+      morphologyRadius: rasterLab.morphologyRadius,
+      morphologyNoDataPolicy: rasterLab.morphologyNoDataPolicy,
+      morphologyBorderMode: rasterLab.morphologyBorderMode,
       contoursEnabled: rasterLab.contoursEnabled,
       contourLevel: rasterLab.contourLevel,
       contourSegmentCount: rasterLab.contourSegmentCount,
@@ -122,6 +127,16 @@ try {
   assert.equal(initialState.contoursEnabled, true, 'GPU contour overlays are enabled initially');
   assert.equal(initialState.edgeMode, 'none', 'analytical edge filtering starts disabled');
   assert.equal(initialState.edgeDirection, 'magnitude', 'gradient controls default to magnitude');
+  assert.equal(initialState.morphologyOperation, 'none', 'analytical morphology starts disabled');
+  assert.equal(initialState.morphologyMode, 'grayscale', 'morphology defaults to scalar analysis');
+  assert.equal(initialState.morphologyRadius, 2, 'morphology exposes its initial structure radius');
+  assert.equal(initialState.morphologyNoDataPolicy, 'ignore', 'invalid centers remain masked');
+  assert.equal(initialState.morphologyBorderMode, 'clamp', 'morphology defaults to clamped borders');
+  assert.equal(
+    await page.locator('[data-raster-control="morphology-radius"]').getAttribute('min'),
+    '0',
+    'the zero-radius identity operation is available interactively'
+  );
   assert(initialState.contourSegmentCount > 0, 'marching squares generates visible GPU isolines');
   assert.equal(initialState.contourOverflow, false, 'the bounded contour output fits its capacity');
   assert(
@@ -897,10 +912,13 @@ try {
     'a larger denominator epsilon excludes low-response water pixels'
   );
 
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
   await page.locator('[data-raster-control="epsilon"]').fill('0.0001');
   await page.waitForFunction(
-    initialValidPixelCount => window.__luRasterLab.validPixelCount === initialValidPixelCount,
-    initialState.validPixelCount,
+    ({executionCount, validPixelCount}) =>
+      window.__luRasterLab.executionCount > executionCount &&
+      window.__luRasterLab.validPixelCount === validPixelCount,
+    {executionCount: previousExecutionCount, validPixelCount: initialState.validPixelCount},
     {timeout: timeoutMilliseconds}
   );
   await page.waitForFunction(
@@ -908,41 +926,396 @@ try {
     initialState.frameCount
   );
 
-  const finalUnsmoothedState = await page.evaluate(() => ({
-    executionCount: window.__luRasterLab.executionCount,
-    frameCount: window.__luRasterLab.frameCount
-  }));
-  previousExecutionCount = finalUnsmoothedState.executionCount;
-  await page.locator('[data-raster-smoothing="gaussian"]').click();
-  await page.waitForFunction(
-    previousCount =>
-      window.__luRasterLab.smoothingMode === 'gaussian' &&
-      window.__luRasterLab.executionCount > previousCount,
-    previousExecutionCount
+  const updateMorphologyControl = async (selector, value) => {
+    const control = page.locator(selector);
+    await control.scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    });
+    const previousCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+    if (value === undefined) {
+      await control.click();
+    } else {
+      await control.fill(value);
+    }
+    try {
+      await page.waitForFunction(
+        executionCount => window.__luRasterLab.executionCount > executionCount,
+        previousCount,
+        {timeout: timeoutMilliseconds}
+      );
+    } catch (error) {
+      const state = await page.evaluate(controlSelector => {
+        const element = document.querySelector(controlSelector);
+        const bounds = element?.getBoundingClientRect();
+        return {
+          operation: window.__luRasterLab?.morphologyOperation,
+          executionCount: window.__luRasterLab?.executionCount,
+          status: document.querySelector('[data-raster-status]')?.textContent,
+          state: document.querySelector('[data-raster-lab]')?.getAttribute('data-raster-state'),
+          pressed: element?.getAttribute('aria-pressed'),
+          disabled: element instanceof HTMLButtonElement || element instanceof HTMLInputElement
+            ? element.disabled
+            : false,
+          bounds: bounds
+            ? {x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height}
+            : undefined,
+          sidebarScroll: document.querySelector('.raster-sidebar')?.scrollTop
+        };
+      }, selector);
+      throw new Error(
+        `Raster control ${selector} did not execute: ${JSON.stringify({
+          previousCount,
+          state,
+          pageErrors,
+          consoleErrors
+        })}`,
+        {cause: error}
+      );
+    }
+    return await page.evaluate(() => {
+      const rasterLab = window.__luRasterLab;
+      return {
+        validPixelCount: rasterLab.validPixelCount,
+        bins: rasterLab.bins,
+        mean: rasterLab.mean,
+        nodeCount: rasterLab.nodeCount,
+        executionCount: rasterLab.executionCount,
+        frameCount: rasterLab.frameCount,
+        morphologyOperation: rasterLab.morphologyOperation,
+        morphologyMode: rasterLab.morphologyMode,
+        morphologyShape: rasterLab.morphologyShape,
+        morphologyRadius: rasterLab.morphologyRadius,
+        morphologyNoDataPolicy: rasterLab.morphologyNoDataPolicy,
+        morphologyBorderMode: rasterLab.morphologyBorderMode,
+        morphologyBorderValue: rasterLab.morphologyBorderValue,
+        edgeMode: rasterLab.edgeMode,
+        smoothingMode: rasterLab.smoothingMode,
+        thresholdEnabled: rasterLab.thresholdEnabled,
+        automaticThreshold: rasterLab.automaticThreshold,
+        threshold: rasterLab.threshold,
+        contourLevel: rasterLab.contourLevel,
+        contourSegmentCount: rasterLab.contourSegmentCount
+      };
+    });
+  };
+
+  const grayscaleDilation = await updateMorphologyControl('[data-raster-morphology="dilate"]');
+  assert.equal(grayscaleDilation.morphologyMode, 'grayscale');
+  assert.equal(grayscaleDilation.validPixelCount, initialState.validPixelCount);
+  assert(grayscaleDilation.mean > initialState.mean, 'grayscale dilation expands local maxima');
+  assert.notDeepEqual(
+    grayscaleDilation.bins,
+    initialState.bins,
+    'grayscale dilation recomputes the resident analytical histogram'
+  );
+  assert.notEqual(
+    grayscaleDilation.contourSegmentCount,
+    initialState.contourSegmentCount,
+    'scalar contours follow the dilated scientific raster'
+  );
+  assert(
+    grayscaleDilation.nodeCount >= initialState.nodeCount + 1,
+    'simple grayscale dilation adds a real GPU morphology pass'
+  );
+
+  const grayscaleIdentity = await updateMorphologyControl(
+    '[data-raster-control="morphology-radius"]',
+    '0'
+  );
+  assert.equal(grayscaleIdentity.morphologyRadius, 0);
+  assert.deepEqual(
+    grayscaleIdentity.bins,
+    initialState.bins,
+    'zero-radius grayscale morphology is an exact analytical identity'
+  );
+  assert.equal(
+    grayscaleIdentity.nodeCount,
+    initialState.nodeCount + 1,
+    'zero-radius morphology uses one identity pass without a composite pass'
+  );
+
+  const grayscaleSquare = await updateMorphologyControl(
+    '[data-raster-control="morphology-radius"]',
+    '3'
+  );
+  const grayscaleCross = await updateMorphologyControl(
+    '[data-raster-morphology-shape="cross"]'
+  );
+  assert.equal(grayscaleCross.morphologyShape, 'cross');
+  assert.notDeepEqual(
+    grayscaleCross.bins,
+    grayscaleSquare.bins,
+    'the four-connected Manhattan diamond differs from the eight-connected square'
+  );
+  assert(
+    grayscaleCross.mean <= grayscaleSquare.mean + 0.00001,
+    'the smaller cross footprint cannot dilate above the enclosing square footprint'
+  );
+
+  const grayscaleErosion = await updateMorphologyControl('[data-raster-morphology="erode"]');
+  assert(
+    grayscaleErosion.mean < initialState.mean,
+    'grayscale erosion publishes the local minimum into downstream statistics'
+  );
+  const grayscaleOpening = await updateMorphologyControl('[data-raster-morphology="open"]');
+  assert(
+    grayscaleOpening.mean <= initialState.mean + 0.00001,
+    'grayscale opening removes narrow positive peaks'
+  );
+  assert(
+    grayscaleOpening.nodeCount >= initialState.nodeCount + 2,
+    'opening declares erosion followed by dilation'
+  );
+  const grayscaleClosing = await updateMorphologyControl('[data-raster-morphology="close"]');
+  assert(
+    grayscaleClosing.mean >= initialState.mean - 0.00001,
+    'grayscale closing fills narrow local depressions'
+  );
+  assert(
+    grayscaleClosing.nodeCount >= initialState.nodeCount + 2,
+    'closing declares dilation followed by erosion'
+  );
+
+  const strictGrayscale = await updateMorphologyControl(
+    '[data-raster-morphology-nodata="propagate"]'
+  );
+  assert(
+    strictGrayscale.validPixelCount < initialState.validPixelCount,
+    'strict morphology excludes nodata-adjacent observation halos'
+  );
+  assert.equal(
+    strictGrayscale.bins.reduce((total, count) => total + count, 0),
+    strictGrayscale.validPixelCount,
+    'strict morphology validity, count, and histogram share the same population'
+  );
+  const nodataGrayscale = await updateMorphologyControl(
+    '[data-raster-morphology-border="nodata"]'
+  );
+  assert(
+    nodataGrayscale.validPixelCount < strictGrayscale.validPixelCount,
+    'explicit nodata borders exclude additional edge neighborhoods'
+  );
+  const ignoredGrayscale = await updateMorphologyControl(
+    '[data-raster-morphology-nodata="ignore"]'
+  );
+  assert.equal(
+    ignoredGrayscale.validPixelCount,
+    initialState.validPixelCount,
+    'ignore policy retains every valid center without reviving masked clouds'
+  );
+  const reflectedGrayscale = await updateMorphologyControl(
+    '[data-raster-morphology-border="reflect"]'
+  );
+  assert.equal(reflectedGrayscale.morphologyBorderMode, 'reflect');
+  await updateMorphologyControl('[data-raster-morphology-border="clamp"]');
+  await updateMorphologyControl('[data-raster-morphology="dilate"]');
+  const constantGrayscale = await updateMorphologyControl(
+    '[data-raster-morphology-border="constant"]'
+  );
+  assert.equal(constantGrayscale.morphologyBorderMode, 'constant');
+  assert.equal(
+    await page.locator('[data-raster-control="morphology-border-value"]').isEnabled(),
+    true,
+    'constant borders expose their calibrated scalar value'
+  );
+  const lowBorderGrayscale = await updateMorphologyControl(
+    '[data-raster-control="morphology-border-value"]',
+    '-1'
+  );
+  const highBorderGrayscale = await updateMorphologyControl(
+    '[data-raster-control="morphology-border-value"]',
+    '1'
+  );
+  assert(
+    highBorderGrayscale.mean > lowBorderGrayscale.mean,
+    'constant border values participate in grayscale extrema'
+  );
+  assert.notDeepEqual(
+    highBorderGrayscale.bins,
+    lowBorderGrayscale.bins,
+    'changing the constant border changes measured GPU output pixels'
+  );
+  await updateMorphologyControl('[data-raster-control="morphology-border-value"]', '0');
+  await updateMorphologyControl('[data-raster-morphology-border="clamp"]');
+  assert.equal(
+    await page.locator('[data-raster-control="morphology-border-value"]').isDisabled(),
+    true,
+    'nonconstant borders disable the irrelevant constant-value control'
+  );
+  await updateMorphologyControl('[data-raster-morphology-shape="square"]');
+  await updateMorphologyControl('[data-raster-control="morphology-radius"]', '2');
+  const restoredGrayscale = await updateMorphologyControl('[data-raster-morphology="none"]');
+  assert.deepEqual(
+    restoredGrayscale.bins,
+    initialState.bins,
+    'disabling grayscale morphology restores the original resident raster exactly'
+  );
+
+  await page.locator('[data-raster-morphology-mode="binary"]').click();
+  assert.equal(await page.evaluate(() => window.__luRasterLab.morphologyMode), 'binary');
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.thresholdEnabled),
+    false,
+    'selecting a binary domain alone does not execute an inactive morphology stage'
+  );
+  const binaryDilation = await updateMorphologyControl('[data-raster-morphology="dilate"]');
+  assert(binaryDilation.thresholdEnabled, 'binary morphology automatically enables its seed mask');
+  assert(
+    binaryDilation.validPixelCount > stricterSelectedState.validPixelCount,
+    'binary dilation expands selected values without treating zero-valued pixels as nodata'
+  );
+  assert(
+    binaryDilation.validPixelCount <= initialState.validPixelCount,
+    'binary dilation never selects invalid source centers'
+  );
+  assert.equal(binaryDilation.contourLevel, 0.5, 'binary contours cross the canonical mask at 0.5');
+  assert(binaryDilation.contourSegmentCount > 0, 'binary mask values generate actual isolines');
+  assert.equal(
+    await page.locator('[data-raster-control="threshold-enabled"]').isDisabled(),
+    true,
+    'a binary morphology operation always retains its threshold source'
+  );
+  assert.equal(
+    await page.locator('[data-raster-control="contour-level"]').isDisabled(),
+    true,
+    'binary isolines use a fixed canonical threshold instead of a scalar contour level'
+  );
+
+  const binaryIdentity = await updateMorphologyControl(
+    '[data-raster-control="morphology-radius"]',
+    '0'
+  );
+  assert.equal(
+    binaryIdentity.validPixelCount,
+    stricterSelectedState.validPixelCount,
+    'zero-radius binary morphology preserves every selected and unselected mask value'
+  );
+  const binarySquare = await updateMorphologyControl(
+    '[data-raster-control="morphology-radius"]',
+    '3'
+  );
+  assert(
+    binarySquare.validPixelCount > binaryIdentity.validPixelCount,
+    'a larger binary structure expands the selected foreground'
+  );
+  const binaryCross = await updateMorphologyControl('[data-raster-morphology-shape="cross"]');
+  assert(
+    binaryCross.validPixelCount < binarySquare.validPixelCount,
+    'four-connected binary dilation excludes the square-only diagonal neighborhood'
+  );
+
+  const strictBinary = await updateMorphologyControl(
+    '[data-raster-morphology-nodata="propagate"]'
+  );
+  assert(
+    strictBinary.validPixelCount < binaryCross.validPixelCount,
+    'binary source observation validity remains distinct from false foreground pixels'
+  );
+  const nodataBinary = await updateMorphologyControl(
+    '[data-raster-morphology-border="nodata"]'
+  );
+  assert(
+    nodataBinary.validPixelCount < strictBinary.validPixelCount,
+    'binary nodata borders publish rejected edge observations separately from false mask values'
+  );
+  const recoveredBinary = await updateMorphologyControl(
+    '[data-raster-morphology-nodata="ignore"]'
+  );
+  assert(
+    recoveredBinary.validPixelCount > nodataBinary.validPixelCount,
+    'ignoring invalid neighbors restores eligible binary centers without filling clouds'
+  );
+  await updateMorphologyControl('[data-raster-morphology-border="reflect"]');
+  const constantBinary = await updateMorphologyControl(
+    '[data-raster-morphology-border="constant"]'
+  );
+  assert.equal(constantBinary.morphologyBorderValue, 0);
+  const filledBorderBinary = await updateMorphologyControl(
+    '[data-raster-control="morphology-border-value"]',
+    '1'
+  );
+  assert(
+    filledBorderBinary.validPixelCount > constantBinary.validPixelCount,
+    'nonzero binary constant borders act as true foreground values'
+  );
+  await updateMorphologyControl('[data-raster-control="morphology-border-value"]', '0');
+  await updateMorphologyControl('[data-raster-morphology-border="clamp"]');
+
+  const binaryErosion = await updateMorphologyControl('[data-raster-morphology="erode"]');
+  assert(
+    binaryErosion.validPixelCount < stricterSelectedState.validPixelCount,
+    'binary erosion removes foreground boundary pixels'
+  );
+  const binaryOpening = await updateMorphologyControl('[data-raster-morphology="open"]');
+  assert(
+    binaryOpening.validPixelCount <= stricterSelectedState.validPixelCount,
+    'binary opening removes narrow foreground islands'
+  );
+  assert(
+    binaryOpening.nodeCount >= binaryIdentity.nodeCount + 1,
+    'binary opening composes two resident morphology passes'
+  );
+  const binaryClosing = await updateMorphologyControl('[data-raster-morphology="close"]');
+  assert(
+    binaryClosing.validPixelCount >= stricterSelectedState.validPixelCount,
+    'binary closing fills narrow gaps in the threshold mask'
+  );
+  assert.notDeepEqual(
+    binaryClosing.bins,
+    binaryOpening.bins,
+    'binary topology changes the selected scientific-value histogram'
+  );
+  assert.equal(
+    binaryClosing.bins.reduce((total, count) => total + count, 0),
+    binaryClosing.validPixelCount,
+    'morphed mask, observation validity, histogram, and statistics remain coherent'
+  );
+
+  const binaryOtsu = await updateMorphologyControl('[data-raster-control="otsu"]');
+  assert(binaryOtsu.automaticThreshold, 'GPU Otsu produces a binary morphology seed on device');
+  assert(
+    binaryOtsu.validPixelCount > 0 && binaryOtsu.validPixelCount < initialState.validPixelCount,
+    'automatic thresholding and binary closing produce a bounded nonempty population'
+  );
+
+  const composedSmoothing = await updateMorphologyControl('[data-raster-smoothing="gaussian"]');
+  assert.equal(composedSmoothing.smoothingMode, 'gaussian');
+  const composedEdge = await updateMorphologyControl('[data-raster-edge="scharr"]');
+  assert.equal(composedEdge.edgeMode, 'scharr');
+  assert.equal(composedEdge.morphologyOperation, 'close');
+  assert.equal(composedEdge.morphologyMode, 'binary');
+  assert(composedEdge.automaticThreshold, 'the maximal pipeline retains GPU Otsu thresholding');
+  assert(
+    composedEdge.validPixelCount > 0 && composedEdge.validPixelCount < initialState.validPixelCount,
+    'smoothing, gradient magnitude, Otsu, and morphology compose into a valid population'
+  );
+  assert(composedEdge.contourSegmentCount > 0, 'the complete pipeline presents binary isolines');
+  assert.equal(composedEdge.contourLevel, 0.5, 'the composed topology uses canonical mask contours');
+  assert(
+    composedEdge.nodeCount >= initialState.nodeCount + 8,
+    'smoothing, directional derivatives, GPU Otsu, and closing all contribute real graph passes'
+  );
+  assert.equal(
+    composedEdge.bins.reduce((total, count) => total + count, 0),
+    composedEdge.validPixelCount,
+    'the maximal GPU pipeline reads only the same coherent aggregate histogram'
+  );
+  assert(
+    (await page.locator('[data-raster-binary-morphology-state]').textContent()).includes('CLOSE'),
+    'the scrollable lineage exposes the active binary morphology stage'
   );
   await page.waitForFunction(
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
-    finalUnsmoothedState.frameCount
-  );
-
-  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
-  previousFrameCount = await page.evaluate(() => window.__luRasterLab.frameCount);
-  await page.locator('[data-raster-edge="sobel"]').click();
-  await page.waitForFunction(
-    ({executionCount, frameCount}) =>
-      window.__luRasterLab.edgeMode === 'sobel' &&
-      window.__luRasterLab.smoothingMode === 'gaussian' &&
-      window.__luRasterLab.contoursEnabled &&
-      window.__luRasterLab.executionCount > executionCount &&
-      window.__luRasterLab.frameCount > frameCount,
-    {executionCount: previousExecutionCount, frameCount: previousFrameCount}
-  );
-  assert(
-    await page.evaluate(() => window.__luRasterLab.contourSegmentCount > 0),
-    'the final visual artifact combines smoothing, edge detection, and GPU isolines'
+    composedSmoothing.frameCount,
+    {timeout: timeoutMilliseconds}
   );
   await sidebar.evaluate(element => {
-    element.scrollTop = 0;
+    const morphology = element.querySelector('.raster-morphology-control');
+    if (!morphology) return;
+    const morphologyBounds = morphology.getBoundingClientRect();
+    const sidebarBounds = element.getBoundingClientRect();
+    element.scrollTop += morphologyBounds.top - sidebarBounds.top - 8;
   });
 
   await mkdir(dirname(screenshotPath), {recursive: true});
