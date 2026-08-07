@@ -293,8 +293,41 @@ and negative zero compare equally and retain stable source order; infinities are
 values. Deselected rows never enter the published selected prefix.
 
 Sorting and top-K are performed independently within every original source batch. There is no
-implicit global cross-batch materialization or global top-K. Compiled results expose the original
-table, sorted `rowIndices`, updated `selectionMask`, and one selected count per preserved batch.
+implicit global cross-batch materialization. Compiled results expose the original table, sorted
+`rowIndices`, updated `selectionMask`, and one selected count per preserved batch.
+
+### Explicit global ordering and top-K
+
+Use `sortByGlobal` or `topKGlobal` when ordering must span every source batch. These operations
+explicitly stage numeric sort keys and source identities into GPU scratch; they never concatenate,
+copy, or reorder the original dataframe columns:
+
+```ts
+const globallySorted = dataframe.sortByGlobal('fare', {
+  direction: 'ascending',
+  nulls: 'last',
+  nans: 'last'
+});
+
+const highestOverall = dataframe.topKGlobal('fare', 10);
+const lowestOverall = dataframe.sortByGlobal('fare').topK(10);
+
+const compiled = highestOverall.compile(
+  new GPUCommandGraph<LuDataFrameQueryParameters>(device)
+);
+
+compiled.globalRowIndices;
+compiled.globalSelectedCount;
+compiled.selectionMask;
+compiled.selectedCounts;
+```
+
+`globalRowIndices` contains one globally stable source-row permutation, including discontinuous
+adapter-provided source offsets. `globalSelectedCount` is one GPU-owned scalar describing its
+valid prefix. Equal keys retain their original cross-batch source order; null placement, NaN
+placement, signed zeros, infinities, filtered rows, and derived values follow the same rules as
+per-batch sorting. A global top-K limit is applied once across all batches; the original
+batch-aligned selection masks and counts are updated to match that same global result.
 
 ### Scaling beyond one-dimensional workgroup limits
 
@@ -447,7 +480,7 @@ Always call `destroy()` on compiled queries and owned frames when they are no lo
 are idempotent. Applications without an available WebGPU adapter must offer their own CPU path or
 display an unsupported-device state. luDF does not transparently switch execution backends.
 
-Native GPU `float64` and `int64`, arbitrary GPU strings, distributed or multi-GPU execution, global
-cross-batch sorting, full SQL semantics, and complete cuDF compatibility are outside the supported
-scope. See [GPU Primitives and Command Graphs](/docs/api-reference/experimental/gpu-primitives) for
+Native GPU `float64` and `int64`, arbitrary GPU strings, distributed or multi-GPU execution, full SQL
+semantics, and complete cuDF compatibility are outside the supported scope. See
+[GPU Primitives and Command Graphs](/docs/api-reference/experimental/gpu-primitives) for
 the underlying WebGPU execution infrastructure.

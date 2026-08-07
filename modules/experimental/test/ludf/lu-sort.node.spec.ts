@@ -6,9 +6,11 @@ import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/experimental';
 import {
   column,
+  CompiledLuDataFrameGlobalSort,
   CompiledLuDataFrameSort,
   literal,
   LuDataFrame,
+  LuDataFrameGlobalSortQuery,
   LuDataFrameSortQuery,
   parameter,
   type LuDataFrameQueryParameters,
@@ -224,6 +226,7 @@ describe('LuDataFrame immutable stable scalar sorting', () => {
     expect(score.stride).toBe(1);
     expect(score.data.map(chunk => chunk.byteStride)).toEqual([8, 8, 8]);
     expect(() => source.sortBy('score').compile(graph)).toThrow(/packed|stride|aligned/i);
+    expect(() => source.sortByGlobal('score').compile(graph)).toThrow(/packed|stride|aligned/i);
     expect(createBuffer).not.toHaveBeenCalled();
     expect(addComputePass).not.toHaveBeenCalled();
 
@@ -269,6 +272,74 @@ describe('LuDataFrame immutable stable scalar sorting', () => {
 
     expect(() => source.sortBy('score')).toThrow(/destroyed/i);
     expect(() => source.topK('score', 2)).toThrow(/destroyed/i);
+    expect(() => source.sortByGlobal('score')).toThrow(/destroyed/i);
+    expect(() => source.topKGlobal('score', 2)).toThrow(/destroyed/i);
+    fixture.table.destroy();
+  });
+
+  test('plans immutable global ordering without flattening batches or allocating GPU resources', () => {
+    const fixture = createSortSourceFixture([2, 0, 3]);
+    const source = new LuDataFrame({table: fixture.table, ownership: 'owned'});
+    const createBuffer = vi.spyOn(fixture.device, 'createBuffer');
+    const submit = vi.spyOn(fixture.device, 'submit');
+
+    const sorted = source.sortByGlobal('score', {nulls: 'first', nans: 'first'});
+    const highest = source.topKGlobal('signed', 2);
+    const lowest = source.sortByGlobal('category').topK(3);
+
+    expect(sorted).toBeInstanceOf(LuDataFrameGlobalSortQuery);
+    expect(sorted).toBeInstanceOf(LuDataFrameSortQuery);
+    expect(sorted.options).toEqual({
+      direction: 'ascending',
+      nulls: 'first',
+      nans: 'first',
+      algorithm: 'auto'
+    });
+    expect(highest.options).toEqual({
+      direction: 'descending',
+      nulls: 'last',
+      nans: 'last',
+      algorithm: 'auto',
+      limit: 2
+    });
+    expect(lowest.options.direction).toBe('ascending');
+    expect(lowest.options.limit).toBe(3);
+    expect(Object.isFrozen(sorted)).toBe(true);
+    expect(Object.isFrozen(sorted.options)).toBe(true);
+    expect(source.batches.map(batch => batch.numRows)).toEqual([2, 0, 3]);
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
+
+    createBuffer.mockRestore();
+    submit.mockRestore();
+    source.destroy();
+    expect(fixture.buffers.every(buffer => buffer.destroyed)).toBe(true);
+  });
+
+  test('preserves precise projected and derived global output types and validates global limits', () => {
+    const fixture = createSortSourceFixture([2, 0, 3]);
+    const source = new LuDataFrame({table: fixture.table});
+    const projected = source
+      .filter(column('score').greaterThan(literal(0)))
+      .select(['score', 'signed'])
+      .sortByGlobal('signed');
+    const derived = source
+      .withColumn('adjustedScore', column('score').add(literal(2)))
+      .select(['score', 'adjustedScore'])
+      .topKGlobal('adjustedScore', 1);
+
+    expectTypeOf(projected.compile).returns.toEqualTypeOf<
+      CompiledLuDataFrameGlobalSort<{score: 'float32'; signed: 'sint32'}>
+    >();
+    expectTypeOf(derived.compile).returns.toEqualTypeOf<
+      CompiledLuDataFrameGlobalSort<{score: 'float32'; adjustedScore: 'float32'}>
+    >();
+    for (const limit of [-1, 0.5, Number.NaN, 0x1_0000_0000]) {
+      expect(() => source.topKGlobal('score', limit)).toThrow(/limit|uint32/i);
+      expect(() => source.sortByGlobal('score').topK(limit)).toThrow(/limit|uint32/i);
+    }
+
+    source.destroy();
     fixture.table.destroy();
   });
 });
