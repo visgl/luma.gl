@@ -843,11 +843,52 @@ fn main(
 }`;
 }
 
-/** Resolves dependency endpoint positions from one bounded source span chunk. */
-export function getCandidateDependencyEndpointsShader(props: TraceSpanChunkShaderProps): string {
+export type TraceDependencyEndpointRoutingShaderProps = {
+  dependencyCount: number;
+  spanChunks: readonly TraceSpanChunkShaderProps[];
+};
+
+function getDependencyEndpointRoutingDeclarations(
+  props: TraceDependencyEndpointRoutingShaderProps
+): string {
+  const chunkEnds = props.spanChunks
+    .map(chunk => `${chunk.firstSpanIndex + chunk.spanCount}u`)
+    .join(', ');
+  return `const DEPENDENCY_COUNT: u32 = ${props.dependencyCount}u;
+const CHUNK_COUNT: u32 = ${props.spanChunks.length}u;
+const INVALID_CHUNK_INDEX: u32 = 0xffffffffu;
+const CHUNK_ENDS = array<u32, ${props.spanChunks.length}>(${chunkEnds});
+
+fn getSpanChunkIndex(spanIndex: u32) -> u32 {
+  for (var chunkIndex = 0u; chunkIndex < CHUNK_COUNT; chunkIndex++) {
+    if (spanIndex < CHUNK_ENDS[chunkIndex]) {
+      return chunkIndex;
+    }
+  }
+  return INVALID_CHUNK_INDEX;
+}`;
+}
+
+/** Clears endpoint-route counts before candidate dependency routing. */
+export function getDependencyEndpointRouteClearShader(chunkCount: number): string {
   return /* wgsl */ `
-${TRACE_SHADER_DECLARATIONS}
-${getSpanChunkDeclarations(props)}
+const CHUNK_COUNT: u32 = ${chunkCount}u;
+@group(0) @binding(0) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  if (globalId.x < CHUNK_COUNT) {
+    atomicStore(&endpointChunkState[globalId.x], 0u);
+  }
+}`;
+}
+
+/** Counts visible dependency endpoints per bounded source span chunk. */
+export function getCandidateDependencyEndpointCountShader(
+  props: TraceDependencyEndpointRoutingShaderProps
+): string {
+  return /* wgsl */ `
+${getDependencyEndpointRoutingDeclarations(props)}
 struct DependencyBatch {
   firstIndex: u32,
   count: u32,
@@ -856,15 +897,161 @@ struct DependencyBatch {
   familyMask: u32,
   batchIndex: u32,
 };
+@group(0) @binding(0) var<storage, read> dependencyBatches: array<DependencyBatch>;
+@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(2) var<storage, read> dependencyResults: array<u32>;
+@group(0) @binding(3) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
+var<workgroup> localChunkCounts: array<atomic<u32>, ${props.spanChunks.length}>;
+
+@compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+    atomicStore(&localChunkCounts[chunkIndex], 0u);
+  }
+  workgroupBarrier();
+
+  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
+  if (localId.x < batch.count) {
+    let dependencyIndex = batch.firstIndex + localId.x;
+    if (dependencyResults[dependencyIndex] != 0u) {
+      let endpointResultOffset = DEPENDENCY_COUNT + dependencyIndex * 2u;
+      for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
+        let chunkIndex = getSpanChunkIndex(dependencyResults[endpointResultOffset + endpointIndex]);
+        if (chunkIndex != INVALID_CHUNK_INDEX) {
+          atomicAdd(&localChunkCounts[chunkIndex], 1u);
+        }
+      }
+    }
+  }
+  workgroupBarrier();
+
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+    atomicAdd(&endpointChunkState[chunkIndex], atomicLoad(&localChunkCounts[chunkIndex]));
+  }
+}`;
+}
+
+/** Publishes chunk offsets, scatter cursors, and indirect endpoint dispatches. */
+export function getDependencyEndpointDispatchShader(chunkCount: number): string {
+  return /* wgsl */ `
+const CHUNK_COUNT: u32 = ${chunkCount}u;
+const ENDPOINT_WORKGROUP_SIZE: u32 = ${TRACE_WORKGROUP_SIZE}u;
+const OFFSET_BASE: u32 = ${chunkCount}u;
+const CURSOR_BASE: u32 = ${chunkCount * 2}u;
+@group(0) @binding(0) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
+@group(0) @binding(1) var<storage, read_write> endpointDispatchCommands: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  var offset = 0u;
+  for (var chunkIndex = 0u; chunkIndex < CHUNK_COUNT; chunkIndex++) {
+    let count = atomicLoad(&endpointChunkState[chunkIndex]);
+    atomicStore(&endpointChunkState[OFFSET_BASE + chunkIndex], offset);
+    atomicStore(&endpointChunkState[CURSOR_BASE + chunkIndex], offset);
+    endpointDispatchCommands[chunkIndex * 3u] =
+      (count + ENDPOINT_WORKGROUP_SIZE - 1u) / ENDPOINT_WORKGROUP_SIZE;
+    endpointDispatchCommands[chunkIndex * 3u + 1u] = 1u;
+    endpointDispatchCommands[chunkIndex * 3u + 2u] = 1u;
+    offset += count;
+  }
+}`;
+}
+
+/** Scatters visible endpoint jobs into the chunk ranges published by the count pass. */
+export function getCandidateDependencyEndpointScatterShader(
+  props: TraceDependencyEndpointRoutingShaderProps
+): string {
+  return /* wgsl */ `
+${getDependencyEndpointRoutingDeclarations(props)}
+const CURSOR_BASE: u32 = ${props.spanChunks.length * 2}u;
+struct DependencyBatch {
+  firstIndex: u32,
+  count: u32,
+  timeMin: f32,
+  timeMax: f32,
+  familyMask: u32,
+  batchIndex: u32,
+};
+@group(0) @binding(0) var<storage, read> dependencyBatches: array<DependencyBatch>;
+@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(2) var<storage, read> dependencyResults: array<u32>;
+@group(0) @binding(3) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
+@group(0) @binding(4) var<storage, read_write> endpointJobs: array<u32>;
+var<workgroup> localChunkCounts: array<atomic<u32>, ${props.spanChunks.length}>;
+var<workgroup> chunkOutputBases: array<u32, ${props.spanChunks.length}>;
+
+@compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+    atomicStore(&localChunkCounts[chunkIndex], 0u);
+  }
+  workgroupBarrier();
+
+  var endpointChunks = array<u32, 2>(INVALID_CHUNK_INDEX, INVALID_CHUNK_INDEX);
+  var endpointLocalOffsets = array<u32, 2>(0u, 0u);
+  var dependencyIndex = 0u;
+  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
+  if (localId.x < batch.count) {
+    dependencyIndex = batch.firstIndex + localId.x;
+    if (dependencyResults[dependencyIndex] != 0u) {
+      let endpointResultOffset = DEPENDENCY_COUNT + dependencyIndex * 2u;
+      for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
+        let chunkIndex = getSpanChunkIndex(dependencyResults[endpointResultOffset + endpointIndex]);
+        endpointChunks[endpointIndex] = chunkIndex;
+        if (chunkIndex != INVALID_CHUNK_INDEX) {
+          endpointLocalOffsets[endpointIndex] = atomicAdd(&localChunkCounts[chunkIndex], 1u);
+        }
+      }
+    }
+  }
+  workgroupBarrier();
+
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+    chunkOutputBases[chunkIndex] = atomicAdd(
+      &endpointChunkState[CURSOR_BASE + chunkIndex],
+      atomicLoad(&localChunkCounts[chunkIndex])
+    );
+  }
+  workgroupBarrier();
+
+  for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
+    let chunkIndex = endpointChunks[endpointIndex];
+    if (chunkIndex != INVALID_CHUNK_INDEX) {
+      endpointJobs[chunkOutputBases[chunkIndex] + endpointLocalOffsets[endpointIndex]] =
+        dependencyIndex * 2u + endpointIndex;
+    }
+  }
+}`;
+}
+
+/** Resolves the routed endpoint jobs for one bounded source span chunk. */
+export function getDependencyEndpointResolveShader(
+  props: TraceDependencyEndpointRoutingShaderProps,
+  chunkIndex: number
+): string {
+  const chunk = props.spanChunks[chunkIndex];
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(chunk)}
+const DEPENDENCY_COUNT: u32 = ${props.dependencyCount}u;
+const CHUNK_COUNT: u32 = ${props.spanChunks.length}u;
+const CHUNK_INDEX: u32 = ${chunkIndex}u;
+const OFFSET_BASE: u32 = ${props.spanChunks.length}u;
 @group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
-@group(0) @binding(1) var<storage, read> dependencyBatches: array<DependencyBatch>;
-@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(1) var<storage, read> endpointJobs: array<u32>;
+@group(0) @binding(2) var<storage, read> endpointChunkState: array<u32>;
 @group(0) @binding(3) var<storage, read> dependencyResults: array<u32>;
 @group(0) @binding(4) var<storage, read> processStates: array<u32>;
 @group(0) @binding(5) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(6) var<storage, read> threadOffsets: array<u32>;
-@group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
-@group(0) @binding(8) var<storage, read_write> dependencyEndpointPositions: array<vec2<f32>>;
+@group(0) @binding(7) var<storage, read_write> dependencyEndpointPositions: array<vec2<f32>>;
+@group(0) @binding(8) var<uniform> viewUniforms: ViewUniforms;
 
 fn getEndpointLane(span: TraceSpan) -> u32 {
   if (processStates[span.processIndex] == 0u) {
@@ -874,33 +1061,20 @@ fn getEndpointLane(span: TraceSpan) -> u32 {
   return threadOffsets[span.threadIndex] + localLane;
 }
 
-@compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
-fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
-) {
-  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x >= batch.count) {
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let endpointCount = endpointChunkState[CHUNK_INDEX];
+  if (globalId.x >= endpointCount) {
     return;
   }
-  let dependencyIndex = batch.firstIndex + localId.x;
-  if (dependencyResults[dependencyIndex] == 0u) {
-    return;
-  }
-  let endpointResultOffset = viewUniforms.dependencyEndpointOffset + dependencyIndex * 2u;
-  for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
-    let sourceIndex = dependencyResults[endpointResultOffset + endpointIndex];
-    if (
-      sourceIndex >= CHUNK_FIRST_SPAN_INDEX &&
-      sourceIndex < CHUNK_FIRST_SPAN_INDEX + CHUNK_SPAN_COUNT
-    ) {
-      let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
-      let endpointTime = select(span.start + span.duration, span.start, endpointIndex == 1u);
-      dependencyEndpointPositions[dependencyIndex * 2u + endpointIndex] = vec2<f32>(
-        endpointTime,
-        f32(getEndpointLane(span)) + 0.4
-      );
-    }
-  }
+  let endpointJobIndex = endpointJobs[endpointChunkState[OFFSET_BASE + CHUNK_INDEX] + globalId.x];
+  let endpointIndex = endpointJobIndex & 1u;
+  let sourceIndex = dependencyResults[DEPENDENCY_COUNT + endpointJobIndex];
+  let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
+  let endpointTime = select(span.start + span.duration, span.start, endpointIndex == 1u);
+  dependencyEndpointPositions[endpointJobIndex] = vec2<f32>(
+    endpointTime,
+    f32(getEndpointLane(span)) + 0.4
+  );
 }`;
 }

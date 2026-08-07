@@ -67,13 +67,17 @@ import {
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
-  getCandidateDependencyEndpointsShader,
+  getCandidateDependencyEndpointCountShader,
+  getCandidateDependencyEndpointScatterShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
   getDensityClearShader,
   getDependencyBatchVisibilityShader,
+  getDependencyEndpointDispatchShader,
+  getDependencyEndpointResolveShader,
+  getDependencyEndpointRouteClearShader,
   getFocusFrontierClearShader,
   getFocusFrontierDispatchShader,
   getFocusFrontierExpansionShader,
@@ -1228,6 +1232,25 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     ];
 
     if (resources.dependencyCount > 0) {
+      const endpointRoutingProps = {
+        dependencyCount: resources.dependencyCount,
+        spanChunks: resources.spanChunks
+      };
+      const dependencyEndpointJobs = graph.createTransientBuffer({
+        id: 'trace-dependency-endpoint-jobs',
+        byteLength: resources.dependencyCount * 2 * UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE
+      });
+      const dependencyEndpointChunkState = graph.createTransientBuffer({
+        id: 'trace-dependency-endpoint-chunk-state',
+        byteLength: resources.spanChunks.length * 3 * UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE
+      });
+      const dependencyEndpointDispatchCommands = graph.createTransientBuffer({
+        id: 'trace-dependency-endpoint-dispatch-commands',
+        byteLength: resources.spanChunks.length * 3 * UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE | Buffer.INDIRECT
+      });
       const candidateDependencyBatchFlags = graph.createTransientBuffer({
         id: 'trace-candidate-dependency-batch-flags',
         byteLength: resources.dependencyBatchCount * UINT32_BYTE_LENGTH,
@@ -1279,22 +1302,61 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         ],
         dispatchBuffer: handles.candidateDependencyDispatchCommands
       });
+      addTraceComputePass(graph, {
+        id: 'trace-clear-dependency-endpoint-routes',
+        source: getDependencyEndpointRouteClearShader(resources.spanChunks.length),
+        bindings: [storageWrite('endpointChunkState', dependencyEndpointChunkState)],
+        length: resources.spanChunks.length
+      });
+      addTraceIndirectComputePass(graph, {
+        id: 'trace-count-dependency-endpoint-routes',
+        source: getCandidateDependencyEndpointCountShader(endpointRoutingProps),
+        bindings: [
+          storageRead('dependencyBatches', handles.dependencyBatchIndex),
+          storageRead('candidateBatchIds', handles.candidateDependencyBatchIds),
+          storageRead('dependencyResults', handles.dependencyResults),
+          storageWrite('endpointChunkState', dependencyEndpointChunkState)
+        ],
+        dispatchBuffer: handles.candidateDependencyDispatchCommands
+      });
+      addTraceComputePass(graph, {
+        id: 'trace-publish-dependency-endpoint-routes',
+        source: getDependencyEndpointDispatchShader(resources.spanChunks.length),
+        bindings: [
+          storageWrite('endpointChunkState', dependencyEndpointChunkState),
+          storageWrite('endpointDispatchCommands', dependencyEndpointDispatchCommands)
+        ],
+        length: 1,
+        workgroupSize: 1
+      });
+      addTraceIndirectComputePass(graph, {
+        id: 'trace-scatter-dependency-endpoint-routes',
+        source: getCandidateDependencyEndpointScatterShader(endpointRoutingProps),
+        bindings: [
+          storageRead('dependencyBatches', handles.dependencyBatchIndex),
+          storageRead('candidateBatchIds', handles.candidateDependencyBatchIds),
+          storageRead('dependencyResults', handles.dependencyResults),
+          storageWrite('endpointChunkState', dependencyEndpointChunkState),
+          storageWrite('endpointJobs', dependencyEndpointJobs)
+        ],
+        dispatchBuffer: handles.candidateDependencyDispatchCommands
+      });
       for (const chunk of handles.spanChunks) {
         addTraceIndirectComputePass(graph, {
-          id: `trace-candidate-dependency-endpoints-${chunk.chunkIndex}`,
-          source: getCandidateDependencyEndpointsShader(chunk),
+          id: `trace-resolve-routed-dependency-endpoints-${chunk.chunkIndex}`,
+          source: getDependencyEndpointResolveShader(endpointRoutingProps, chunk.chunkIndex),
           bindings: [
             storageRead('spans', chunk.spans),
-            storageRead('dependencyBatches', handles.dependencyBatchIndex),
-            storageRead('candidateBatchIds', handles.candidateDependencyBatchIds),
+            storageRead('endpointJobs', dependencyEndpointJobs),
+            storageRead('endpointChunkState', dependencyEndpointChunkState),
             storageRead('dependencyResults', handles.dependencyResults),
             storageRead('processStates', handles.processStates),
             storageRead('threadStates', handles.threadStates),
             storageRead('threadOffsets', handles.threadOffsets),
-            uniformBinding('viewUniforms', handles.uniforms),
             storageWrite('dependencyEndpointPositions', handles.dependencyEndpointPositions)
           ],
-          dispatchBuffer: handles.candidateDependencyDispatchCommands
+          dispatchBuffer: dependencyEndpointDispatchCommands,
+          dispatchByteOffset: chunk.chunkIndex * 3 * UINT32_BYTE_LENGTH
         });
       }
       new GPUIndexedRangeCompaction({
@@ -2198,6 +2260,7 @@ function addTraceIndirectComputePass<Parameters>(
     source: string;
     bindings: readonly TraceComputePassBinding[];
     dispatchBuffer: GraphBufferHandle;
+    dispatchByteOffset?: number;
   }
 ): void {
   graph.addComputePass({
@@ -2225,7 +2288,11 @@ function addTraceIndirectComputePass<Parameters>(
             bindings[binding.name] = getBuffer(binding.buffer);
           }
           computation.setBindings(bindings);
-          computation.dispatchIndirect(computePass, getBuffer(props.dispatchBuffer));
+          computation.dispatchIndirect(
+            computePass,
+            getBuffer(props.dispatchBuffer),
+            props.dispatchByteOffset
+          );
         },
         destroy: () => computation.destroy()
       };
