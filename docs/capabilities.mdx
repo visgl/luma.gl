@@ -501,7 +501,7 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | --- | --- | --- | --- | --- |
 | glTF and GLB scene loading | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Load supported scene hierarchies, indexed meshes, cameras, materials, and animation data. |
 | Draco mesh compression | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported Draco-compressed meshes through the shared asset loader. |
-| Meshopt compression | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported Meshopt-compressed primitives during asset loading. |
+| Meshopt compression | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported `EXT_meshopt_compression` primitives during asset loading. |
 | Quantized geometry | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Expand supported quantized accessors before GPU geometry creation. |
 | Basis Universal and KTX2 | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Decode supported compressed textures when the runtime and selected device permit it. |
 | Metallic-roughness materials | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply supported PBR textures, material factors, normals, and emissive surfaces. |
@@ -529,6 +529,21 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Imported GPU instancing | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Render authored `EXT_mesh_gpu_instancing` transforms through one real instanced draw per source primitive. |
 | Imported node visibility | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Apply authored `KHR_node_visibility` recursively to compatible descendants and punctual lights. |
 | Source-faithful glTF and GLB export | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported hierarchy, geometry, accessors, images, skins, morph targets, animation, and extensions. |
+| Khronos Meshopt compression | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Add real `KHR_meshopt_compression` release-candidate decoding; existing support covers the separate ratified `EXT_meshopt_compression` extension. |
+| Portable compressed-texture negotiation | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Negotiate actual Basis/KTX2, AVIF, and WebP decoder and device capabilities without claiming unavailable fallback formats. |
+| Legacy specular-glossiness conversion | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Convert authored `KHR_materials_pbrSpecularGlossiness` materials into a supported physically based rendering path. |
+| Reference-grade material conformance | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` and `@luma.gl/shadertools` | Compare authored material combinations, furnace behavior, environment filtering, and color management against reproducible reference images. |
+| Standalone physical transmission | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` and `@luma.gl/engine` | Extend compatible standalone glTF rendering with scene-color capture, roughness-aware refraction, and documented floating-point fallbacks. |
+| Authored image-based and photometric lights | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Reuse existing environment and lighting resources for compatible authored `EXT_lights_image_based` and `EXT_lights_ies` assets. |
+| High-capacity skeletal palettes | Opportunity | WebGPU + WebGL2 | `@luma.gl/shadertools` and `@luma.gl/engine` | Extend ordinary mesh skinning beyond the current 64-joint uniform palette with explicit storage-buffer and texture fallbacks. |
+| GPU-resident morph-target deformation | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine` and `@luma.gl/shadertools` | Keep authored morph bases, deltas, and actor-specific weights on the GPU instead of rewriting shared vertex data on the CPU. |
+| Layered and additive animation | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine` | Extend the existing shared animation mixer with additive blending, target masks, events, retargeting, and optional reusable state graphs. |
+| GPU-sampled crowd clips | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` and `@luma.gl/shadertools` | Sample compatible per-actor clip, phase, blend, and joint data through GPU buffers or floating-point animation textures. |
+| Per-instance morph and material state | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve independent actor morph weights and compatible material parameters while retaining shared instanced source geometry. |
+| Screen-prioritized crowd LOD | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` and `@luma.gl/engine` | Integrate authored vendor LOD, generated mesh simplification, screen coverage, hysteresis, and explicit global submitted-index budgets. |
+| Progressive node and material LOD | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Stream compatible authored node and material levels with explicit cancellation, lazy GPU allocation, and bounded residency. |
+| glTF-routed Gaussian splats | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` and `@luma.gl/splats` | Delegate authored `KHR_gaussian_splatting` scene primitives to the existing optional splat adapter without introducing a second renderer. |
+| Compressed glTF asset authoring | Opportunity | WebGPU + WebGL2 | `@luma.gl/gltf` | Add opt-in Draco, Meshopt, and Basis/KTX2 encoding only when real external encoder implementations are available. |
 
 The ownership boundaries are intentional: `@luma.gl/gltf` interprets assets,
 `@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,
