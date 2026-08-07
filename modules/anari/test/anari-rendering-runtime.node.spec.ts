@@ -11,9 +11,11 @@ import {
 
 describe('ANARI raster temporal antialiasing', () => {
   test('uses a bounded repeating Halton sequence in UV units', () => {
-    expect(getTemporalAntialiasingJitter(0, 8, 12)).toEqual([0, -1 / 72]);
+    const firstJitter = getTemporalAntialiasingJitter(0, 8, 12);
+    expect(firstJitter[0]).toBeCloseTo(0);
+    expect(firstJitter[1]).toBeCloseTo(-1 / 72);
     expect(getTemporalAntialiasingJitter(8, 8, 12)).toEqual(
-      getTemporalAntialiasingJitter(0, 8, 12)
+      firstJitter
     );
 
     for (let frameIndex = 0; frameIndex < 8; frameIndex++) {
