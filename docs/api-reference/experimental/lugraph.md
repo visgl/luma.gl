@@ -9,9 +9,9 @@ import {LuGraphExplorerExample} from '@site/src/examples';
 ## Overview
 
 A graph answers questions that individual table rows cannot: which accounts share a transaction,
-which services depend on a failed service, which people are two introductions apart, and which
-pages matter because other important pages link to them. Vertices represent those entities; edges
-represent their relationships.
+which services depend on a failed service, which people are two introductions apart, which tightly
+connected groups exist inside a wider network, and which pages matter because other important
+pages link to them. Vertices represent those entities; edges represent their relationships.
 
 `@luma.gl/experimental/lugraph` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
@@ -23,17 +23,6 @@ through a caller-owned uniform grid. Every operation composes with the existing 
 This is an experimental, headless graph analytics API, not a graph database, visualization
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
 GPU, which results they render, when commands are submitted, and whether anything is read back.
-
-## Attribution and licensing
-
-luGraph is inspired by [NVIDIA RAPIDS cuGraph](https://github.com/rapidsai/cugraph) and the NVIDIA
-and RAPIDS contributors advancing GPU graph analytics. cuGraph is distributed under the
-[Apache License 2.0](https://github.com/rapidsai/cugraph/blob/main/LICENSE).
-
-luGraph is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
-vis.gl implementation for browser-native WebGPU. It does not copy or translate cuGraph source code
-or CUDA implementations. It does not claim CUDA or cuGraph API compatibility, feature parity,
-NVIDIA affiliation, or NVIDIA endorsement.
 
 ## Explore a live GPU graph
 
@@ -224,7 +213,7 @@ luGraph keeps the complete intermediate pipeline on one WebGPU device:
 ```text
 Existing GPU edge columns
     -> compressed adjacency
-    -> degree / shortest paths / weak components / PageRank / force layout
+    -> degree / shortest paths / weak components / communities / PageRank / force layout
     -> caller-owned GPU result columns and directly renderable positions
 ```
 
@@ -244,12 +233,14 @@ Use luGraph for browser applications that already own typed GPU relationship col
 combine graph analytics with further GPU work:
 
 - **Social and communication networks:** count contacts, highlight friends within a bounded number
-  of introductions, group disconnected networks, rank influential accounts, and arrange connected
-  people into a readable map.
+  of introductions, distinguish friend circles within connected networks, group disconnected
+  networks, rank influential accounts, and arrange connected people into a readable map.
 - **Software and service dependencies:** follow incoming or outgoing dependency chains, find
-  isolated dependency islands, and identify packages that many important packages depend on.
+  isolated dependency islands, reveal tightly linked ownership groups, and identify packages that
+  many important packages depend on.
 - **Transaction and fraud investigations:** follow transfers around a selected account, identify
-  connected groups of counterparties, and prioritize structurally important entities.
+  coordinated clusters inside a larger connected group of counterparties, and prioritize
+  structurally important entities.
 - **Transport and infrastructure maps:** inspect junction degree, unweighted hop reachability,
   disconnected subnetworks, and relationship-driven importance across a network.
 - **Knowledge and citation graphs:** follow citation links, identify connected collections, and
@@ -278,9 +269,9 @@ provide the other unsupported features above.
 | `LuGraphSpatialForceLayout` | Can distant graph regions be approximated while nearby relationships remain exact? | The existing renderable layout positions plus explicit uniform-grid diagnostics | `Θ(V × G + P + E)` per spatial force iteration |
 
 `V` is the graph's explicit vertex count, `E` is its source-edge count, `G` is the uniform-grid
-cell count, and `P` counts individual interactions in near or insufficiently distant cells.
-Undirected adjacency contains both directions for ordinary edges; an undirected self-loop appears
-once.
+cell count, `P` counts individual interactions in near or insufficiently distant cells, and
+`sum(degree²)` adds the squared weak-neighbor count of every vertex. Undirected adjacency contains
+both directions for ordinary edges; an undirected self-loop appears once.
 
 ## Describe existing relationships with LuGraph
 
@@ -474,8 +465,11 @@ a connected dependency graph, or color locally cohesive regions of a citation ne
 
 A connected component answers whether any path links two vertices. Community detection asks a
 different question: are these vertices more strongly connected to one another than to the rest of
-the same network? Two tightly linked teams connected by one shared service remain in a single weak
-component but can receive different community labels.
+the same network? Imagine two teams whose members interact frequently within their own team but
+share only one relationship across teams. That single bridge makes the whole network one weakly
+connected component, while label propagation can still give each team a different community label.
+Use weak components to find disconnected islands; use community labels to inspect local structure
+within an island.
 
 ```ts
 import {LuGraphLabelPropagation} from '@luma.gl/experimental/lugraph';
@@ -488,18 +482,33 @@ const communities = new LuGraphLabelPropagation({
 });
 ```
 
-Each vertex starts with its stable identifier. Every iteration considers one self vote and every
-incoming or outgoing neighbor occurrence, choosing the most frequent label and breaking ties with
-the lowest identifier. Self-loops add no extra votes; duplicate and reciprocal edges vote
-independently. Directed graphs therefore require both forward and reverse adjacency; undirected
-graphs reuse their symmetric forward adjacency. A narrow bridge can leave two dense communities
-distinct even when they belong to the same weakly connected component.
+Every vertex begins with its stable vertex identifier as its label. Each synchronous round reads
+the preceding round's complete label snapshot and selects the most frequent label among one self
+vote and all incoming or outgoing neighbor occurrences. Equal vote counts choose the numerically
+lowest label, so the result does not depend on unspecified adjacency ordering. Self-loops add no
+extra self votes; duplicate edges and reciprocal directed edges vote independently. Existing edge
+weights are preserved by topology but ignored by this unweighted majority vote.
 
-The optional GPU convergence scalar is one only when the final synchronous iteration changes no
-labels; bounded propagation can oscillate or stop without proving convergence. Required adjacency
-overflow publishes `0xffffffff` labels and zero convergence. This deterministic heuristic is not
-Louvain, Leiden, or modularity optimization, and its worst-case work per iteration is
-`O(sum(degree²))`.
+Directed graphs require both forward and reverse adjacency to include every weak neighbor.
+Undirected graphs reuse symmetric forward adjacency without reverse CSR. `output` is a
+caller-owned, packed `GPUVector<'uint32'>` containing exactly one community label per vertex;
+the optional `converged` output is a separate, caller-owned one-row `GPUVector<'uint32'>`.
+Neither allocation may physically alias graph inputs, adjacency storage, or another writable
+output.
+
+The default is `32` synchronous rounds; applications can explicitly choose an integer from `1`
+through `1024`. Every declared round is encoded without CPU synchronization, automatic readback,
+or early termination. `converged` becomes one only when the final round changes no labels; zero
+means that the chosen budget did not establish a fixed point. Some graphs can oscillate between
+label assignments, so a bounded round count never guarantees convergence. An empty graph reports
+convergence, and an isolated vertex retains its own identifier.
+
+If required forward or reverse adjacency overflows, all output labels become `0xffffffff` and
+`converged` becomes zero rather than publishing partial communities. The worst-case work is
+`O(sum(degree²))` per round because counting support for each candidate can rescan a vertex's
+neighborhood; a high-degree hub can therefore be disproportionately expensive. This deterministic
+label-propagation heuristic is not Louvain or Leiden, does not optimize modularity, and does not
+guarantee objectively correct communities or a particular clustering quality.
 
 ## Rank incoming influence with LuGraphPageRank
 
@@ -852,16 +861,17 @@ when exact all-pairs repulsion is the better fit.
 - Writable outputs require physically distinct GPU buffer allocations, including when a
   `DynamicBuffer` wrapper exposes the same underlying allocation through different views.
 - Adjacency capacities and overflow statuses are explicit. Breadth-first search fails closed to
-  unreachable distances, weak components publish `0xffffffff`, and PageRank publishes zero scores
-  when a required neighbor list overflowed. Force layout preserves its existing positions and
-  clears velocities on required adjacency overflow.
+  unreachable distances, weak components and community detection publish `0xffffffff`, and
+  PageRank publishes zero scores when a required neighbor list overflowed. Force layout preserves
+  its existing positions and clears velocities on required adjacency overflow.
 - Spatial layout also preserves positions and clears velocities when its accepted count excludes
   any out-of-domain vertex or its explicit vertex-ID capacity overflows.
 - Degree remains exact under neighbor overflow because its input is the complete CSR offset range.
 - Renderable layout positions require both `Buffer.STORAGE` and `Buffer.VERTEX` usage on their
   original caller-owned allocation; position readback or repacking is never implicit.
-- Fixed component and PageRank iteration budgets do not imply convergence. Their optional status
-  and final-change outputs remain GPU-resident until an application explicitly requests readback.
+- Fixed component, community, and PageRank iteration budgets do not imply convergence. Their
+  optional status and final-change outputs remain GPU-resident until an application explicitly
+  requests readback.
 - Work uses bounded WebGPU dispatch and portable storage bindings on one device. Original chunk
   preservation does not imply distributed or multi-GPU execution.
 - The optional graph subpath does not supply automatic Arrow import, rendering, graph persistence,
@@ -876,7 +886,7 @@ luGraph is inspired by [NVIDIA RAPIDS cuGraph](https://github.com/rapidsai/cugra
 and RAPIDS contributors advancing GPU graph analytics. cuGraph is distributed under the
 [Apache License 2.0](https://github.com/rapidsai/cugraph/blob/main/LICENSE).
 
-This is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
-vis.gl implementation for browser-native WebGPU; it does not copy or translate cuGraph source code.
-It does not claim CUDA or cuGraph API compatibility, feature parity, NVIDIA affiliation, or NVIDIA
-endorsement.
+luGraph is an independently written, [MIT-licensed](https://github.com/visgl/luma.gl/blob/master/LICENSE)
+vis.gl implementation for browser-native WebGPU. It does not copy or translate cuGraph source code
+or CUDA implementations. It does not claim CUDA or cuGraph API compatibility, feature parity,
+NVIDIA affiliation, or NVIDIA endorsement.

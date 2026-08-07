@@ -7,22 +7,27 @@ optional, headless graph model preserves existing source and target vertex colum
 identifiers, optional properties, and original GPU vector chunks without uploading or copying them.
 
 Reusable compressed adjacency supports vertex-degree queries, bounded breadth-first shortest paths,
-weakly connected components, normalized PageRank with dangling-vertex redistribution, and
-progressive exact force-directed layout with directly renderable GPU positions. An optional
-`LuGraphSpatialForceLayout` can approximate distant uniform-grid cells while keeping nearby forces
-exact; it preserves the same positions, explicit bounds, caller-owned indexing buffers, and
-observable overflow status. These operations contribute work to a caller-owned `GPUCommandGraph`;
-applications retain ownership of their buffers, rendering, command submission, and any explicitly
-requested result readback.
+weakly connected components, deterministic label-propagation communities, normalized PageRank with
+dangling-vertex redistribution, and progressive exact force-directed layout with directly
+renderable GPU positions. An optional `LuGraphSpatialForceLayout` can approximate distant
+uniform-grid cells while keeping nearby forces exact; it preserves the same positions, explicit
+bounds, caller-owned indexing buffers, and observable overflow status. These operations contribute
+work to a caller-owned `GPUCommandGraph`; applications retain ownership of their buffers,
+rendering, command submission, and any explicitly requested result readback.
 
 ## When to use luGraph
 
 Use luGraph to explore relationships that already live on the GPU: inspect social connections,
 trace service dependencies, investigate transaction networks, or rank linked documents without
-copying every intermediate result back to JavaScript. Exact layout suits smaller graphs and
-accuracy-sensitive workflows; the optional flat-grid approximation suits applications that can
-trade some far-field accuracy for fewer individual force calculations. It is not Barnes–Hut,
-ForceAtlas2, or a guaranteed subquadratic layout.
+copying every intermediate result back to JavaScript. Weakly connected components find disconnected
+islands; `LuGraphLabelPropagation` can expose friend circles, related service groups, or coordinated
+accounts inside a connected island. Its deterministic, bounded majority-vote heuristic is not
+Louvain or Leiden, does not optimize modularity, and does not guarantee convergence.
+
+Exact layout suits smaller graphs and accuracy-sensitive workflows; the optional
+flat-grid approximation suits applications that can trade some far-field accuracy for fewer
+individual force calculations. It is not Barnes–Hut, ForceAtlas2, or a guaranteed subquadratic
+layout.
 
 See the [luGraph graph analytics guide](/docs/api-reference/experimental/lugraph) for when to use
 each operation, complete GPU-resident composition examples, and ownership and capacity contracts.

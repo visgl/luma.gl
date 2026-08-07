@@ -37,7 +37,7 @@ describe('luGraph RAPIDS attribution', () => {
   test('documents upstream licensing without claiming copied code or endorsement', () => {
     const documentation = readFileSync(DOCUMENTATION_URL, 'utf8');
 
-    expect(documentation).toContain('## Attribution and licensing');
+    expect(documentation.match(/^## Attribution and licensing$/gmu)).toHaveLength(1);
     expect(documentation).toContain('https://github.com/rapidsai/cugraph');
     expect(documentation).toContain('https://github.com/rapidsai/cugraph/blob/main/LICENSE');
     expect(documentation).toContain('[Apache License 2.0]');

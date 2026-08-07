@@ -153,6 +153,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('**Question: How many direct relationships');
     expect(graphDocumentation).toContain('**Question: Which entities can I reach');
     expect(graphDocumentation).toContain('**Question: Which vertices belong to the same connected');
+    expect(graphDocumentation).toContain('**Question: Which vertices form closely connected');
     expect(graphDocumentation).toContain('**Question: Which vertices receive influence');
     expect(graphDocumentation).toContain('**Question: How can I position connected entities');
   });
@@ -164,6 +165,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
       'LuGraphDegree',
       'LuGraphBreadthFirstSearch',
       'LuGraphConnectedComponents',
+      'LuGraphLabelPropagation',
       'LuGraphPageRank',
       'LuGraphForceLayout',
       'LuGraphSpatialForceLayout'
@@ -175,6 +177,8 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('vertex-degree queries');
     expect(packageDocumentation).toContain('breadth-first shortest paths');
     expect(packageDocumentation).toContain('weakly connected components');
+    expect(packageDocumentation).toContain('deterministic label-propagation communities');
+    expect(packageDocumentation).toContain('LuGraphLabelPropagation');
     expect(packageDocumentation).toContain('normalized PageRank');
     expect(packageDocumentation).toContain('progressive exact force-directed layout');
     expect(packageDocumentation).toContain('LuGraphSpatialForceLayout');
@@ -186,6 +190,49 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('const compiled = workflow.compile();');
     expect(graphDocumentation).toContain('compiled.encode(encoder, {parameters: undefined});');
     expect(graphDocumentation).toContain('device.submit(encoder.finish());');
+  });
+
+  test('explains deterministic GPU communities, practical use cases, and honest limitations', () => {
+    expect(graphDocumentation).toContain(
+      '## Discover densely connected communities with LuGraphLabelPropagation'
+    );
+    expect(graphDocumentation).toContain('circles of friends');
+    expect(graphDocumentation).toContain('transaction accounts');
+    expect(graphDocumentation).toContain('service ownership groups');
+    expect(graphDocumentation).toContain('one weakly\nconnected component');
+    expect(graphDocumentation).toContain('different community label');
+    expect(graphDocumentation).toContain('Use weak components to find disconnected islands');
+    expect(graphDocumentation).toContain('new LuGraphLabelPropagation({');
+    expect(graphDocumentation).toContain('output: communityIds');
+    expect(graphDocumentation).toContain('converged: communitiesConverged');
+    expect(graphDocumentation).toContain('stable vertex identifier');
+    expect(graphDocumentation).toContain("preceding round's complete label snapshot");
+    expect(graphDocumentation).toContain('one self\nvote');
+    expect(graphDocumentation).toContain('numerically\nlowest label');
+    expect(graphDocumentation).toContain('Self-loops add no\nextra self votes');
+    expect(graphDocumentation).toContain('duplicate edges and reciprocal directed edges');
+    expect(graphDocumentation).toContain('ignored by this unweighted majority vote');
+    expect(graphDocumentation).toContain('Directed graphs require both forward and reverse');
+    expect(graphDocumentation).toContain('Undirected graphs reuse symmetric forward adjacency');
+    expect(graphDocumentation).toContain("GPUVector<'uint32'>");
+    expect(graphDocumentation).toContain('default is `32` synchronous rounds');
+    expect(graphDocumentation).toContain('an integer from `1`');
+    expect(graphDocumentation).toContain('through `1024`');
+    expect(graphDocumentation).toContain('or early termination');
+    expect(graphDocumentation).toContain('final round changes no labels');
+    expect(graphDocumentation).toContain('graphs can oscillate');
+    expect(graphDocumentation).toContain('An empty graph reports');
+    expect(graphDocumentation).toContain('an isolated vertex retains its own identifier');
+    expect(graphDocumentation).toContain('all output labels become `0xffffffff`');
+    expect(graphDocumentation).toContain('`converged` becomes zero');
+    expect(graphDocumentation).toContain('`O(sum(degree²))` per round');
+    expect(graphDocumentation).toContain('a high-degree hub');
+    expect(graphDocumentation).toContain('not Louvain or Leiden');
+    expect(graphDocumentation).toContain('does not optimize modularity');
+    expect(graphDocumentation).toContain('does not\nguarantee objectively correct communities');
+    expect(packageDocumentation).toContain('find disconnected\nislands');
+    expect(packageDocumentation).toContain('inside a connected island');
+    expect(packageDocumentation).toContain('does not guarantee convergence');
   });
 
   test('documents overflow, direction, probability, iteration, and ownership boundaries honestly', () => {
