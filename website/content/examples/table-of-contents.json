@@ -112,6 +112,11 @@
             "id": "deck/luspatial-taxi",
             "label": "luProj + luSpatial: Taxi Explorer"
           },
+          {
+            "type": "doc",
+            "id": "deck/lugraph-explorer",
+            "label": "luGraph + deck.gl: Network Explorer"
+          },
           "experimental/gpt-2"
         ]
       }

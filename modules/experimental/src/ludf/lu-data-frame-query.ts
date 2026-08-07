@@ -7,15 +7,28 @@ import type {GPUCommandGraph} from '../gpu-primitives/gpu-command-graph';
 import type {LuDataFrame} from './lu-data-frame';
 import {getLuExpressionColumnNames, LuExpression, type LuExpressionNode} from './lu-expression';
 import {
+  LuDataFrameAggregationQuery,
+  type LuDataFrameGlobalAggregationDefinitions,
+  type LuDataFrameScalarColumnNames
+} from './lu-global-aggregation-query';
+import {
   LuDataFrameGroupByQuery,
   type LuDataFrameColumnNamesOfFormat,
   type LuDataFrameGroupByOptions
 } from './lu-group-by-query';
+import {LuDataFrameHistogramQuery, type LuDataFrameHistogramOptions} from './lu-histogram-query';
+import {
+  LuDataFrameJoinQuery,
+  LuDataFrameLookupQuery,
+  type LuDataFrameJoinOptions,
+  type LuDataFrameLookupOptions
+} from './lu-join-query';
 import {
   compileLuDataFrameQuery,
   type CompiledLuDataFrameQuery,
   type LuDataFrameQueryParameters
 } from './lu-query-compiler';
+import {LuDataFrameSortQuery, type LuDataFrameSortOptions} from './lu-sort-query';
 
 /** Portable scalar storage formats supported by computed dataframe columns. */
 export type LuDataFrameDerivedColumnFormat = 'float32' | 'sint32' | 'uint32';
@@ -155,6 +168,62 @@ export class LuDataFrameQuery<
     options: LuDataFrameGroupByOptions = {}
   ): LuDataFrameGroupByQuery<Logical, SelectedColumns, Key, Source> {
     return new LuDataFrameGroupByQuery(this, key, options);
+  }
+
+  /** Plans globally reduced scalar statistics without allocating or submitting GPU work. */
+  aggregate<Definitions extends LuDataFrameGlobalAggregationDefinitions<Logical, SelectedColumns>>(
+    definitions: Definitions
+  ): LuDataFrameAggregationQuery<Logical, SelectedColumns, Definitions, Source> {
+    return new LuDataFrameAggregationQuery(this, definitions);
+  }
+
+  /** Plans explicit-domain histogram binning without reading or materializing source data. */
+  histogram<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    options: LuDataFrameHistogramOptions
+  ): LuDataFrameHistogramQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameHistogramQuery(this, column, options);
+  }
+
+  /** Plans stable source-batch scalar sorting without allocating GPU resources or reading rows. */
+  sortBy<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameSortQuery(this, column, options);
+  }
+
+  /** Plans descending stable top-K selection independently within every source record batch. */
+  topK<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    limit: number,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameSortQuery(this, column, options, limit, 'descending');
+  }
+
+  /** Plans a stable, unique-right inner join without allocating, repacking, or retaining rows. */
+  innerJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options);
+  }
+
+  /** Plans a bounded, source-aligned unique-right lookup while preserving both batch topologies. */
+  lookup<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameLookupOptions<LeftKey, RightKey>
+  ): LuDataFrameLookupQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameLookupQuery(this, right, options);
   }
 
   /** Materializes reusable GPU graph passes and compiler-owned selection/index/count outputs. */

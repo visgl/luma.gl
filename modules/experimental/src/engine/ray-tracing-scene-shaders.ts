@@ -24,6 +24,7 @@ struct RayPrimitive {
   emissive: vec4<f32>,
   properties: vec4<f32>,
   bounds: vec4<f32>,
+  blas: vec4<f32>,
   previousTransform: mat4x4<f32>,
 };
 `;
@@ -103,6 +104,11 @@ struct RayLight {
   attenuationOuterCone: vec4<f32>,
 };
 
+struct RayBlasNode {
+  minimum: vec4<f32>,
+  maximum: vec4<f32>,
+};
+
 struct Ray {
   origin: vec3<f32>,
   direction: vec3<f32>,
@@ -126,15 +132,19 @@ struct HistoricalRaySample {
 @group(0) @binding(3) var<storage, read> lights: array<RayLight>;
 @group(0) @binding(4) var<storage, read> nodeMinima: array<f32>;
 @group(0) @binding(5) var<storage, read> nodeMaxima: array<f32>;
-@group(0) @binding(6) var historyImage: texture_2d<f32>;
-@group(0) @binding(7) var historyMetadata: texture_2d<f32>;
-@group(0) @binding(8) var outputImage: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(9) var outputMetadata: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(6) var<storage, read> leafPrimitiveIds: array<u32>;
+@group(0) @binding(7) var<storage, read> blasNodes: array<RayBlasNode>;
+@group(0) @binding(8) var<storage, read> blasTriangleIds: array<u32>;
+@group(0) @binding(9) var historyImage: texture_2d<f32>;
+@group(0) @binding(10) var historyMetadata: texture_2d<f32>;
+@group(0) @binding(11) var outputImage: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(12) var outputMetadata: texture_storage_2d<rgba16float, write>;
 
 const RAY_EPSILON = 0.0005;
 const RAY_INFINITY = 1.0e20;
 const PI = 3.141592653589793;
 const BVH_STACK_CAPACITY = 32u;
+const BLAS_STACK_CAPACITY = 32u;
 const MAXIMUM_HISTORY_SAMPLES = 64.0;
 const MINIMUM_HISTORY_NORMAL_ALIGNMENT = 0.75;
 const MAXIMUM_HISTORY_RELATIVE_DEPTH_DIFFERENCE = 0.06;
@@ -272,6 +282,41 @@ fn intersectNodeBounds(ray: Ray, nodeIndex: u32, maximumDistance: f32) -> f32 {
   return nearestDistance;
 }
 
+fn intersectBlasNodeBounds(ray: Ray, nodeIndex: u32, maximumDistance: f32) -> f32 {
+  var nearestDistance = 0.0;
+  var farthestDistance = maximumDistance;
+  let node = blasNodes[nodeIndex];
+
+  for (var axis = 0u; axis < 3u; axis++) {
+    let minimum = node.minimum[axis];
+    let maximum = node.maximum[axis];
+    if (minimum > maximum) {
+      return RAY_INFINITY;
+    }
+
+    let origin = ray.origin[axis];
+    let direction = ray.direction[axis];
+    if (abs(direction) < 0.0000001) {
+      if (origin < minimum || origin > maximum) {
+        return RAY_INFINITY;
+      }
+    } else {
+      let firstDistance = (minimum - origin) / direction;
+      let secondDistance = (maximum - origin) / direction;
+      nearestDistance = max(nearestDistance, min(firstDistance, secondDistance));
+      farthestDistance = min(farthestDistance, max(firstDistance, secondDistance));
+      if (nearestDistance > farthestDistance) {
+        return RAY_INFINITY;
+      }
+    }
+  }
+
+  if (farthestDistance <= RAY_EPSILON || nearestDistance >= maximumDistance) {
+    return RAY_INFINITY;
+  }
+  return nearestDistance;
+}
+
 fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> RayHit {
   var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u);
   let primitive = primitives[primitiveIndex];
@@ -295,21 +340,76 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
   }
 
   let triangleStart = u32(primitive.properties.z);
-  let triangleEnd = triangleStart + u32(primitive.properties.w);
-  for (var triangleIndex = triangleStart; triangleIndex < triangleEnd; triangleIndex++) {
-    let triangle = triangles[triangleIndex];
-    let intersection = intersectTriangle(localRay, triangle, closestHit.distance);
-    if (intersection.x < closestHit.distance) {
-      let normalWeight = 1.0 - intersection.y - intersection.z;
-      var localNormal = normalize(triangle.firstNormal.xyz * normalWeight +
-        triangle.secondNormal.xyz * intersection.y +
-        triangle.thirdNormal.xyz * intersection.z);
-      if (dot(localNormal, localDirection) > 0.0) {
-        localNormal = -localNormal;
+  let triangleCount = u32(primitive.properties.w);
+  let packedNodeStart = u32(primitive.blas.x);
+  let triangleIdStart = u32(primitive.blas.y);
+  let internalNodeCount = u32(primitive.blas.z);
+  let leafCapacity = u32(primitive.blas.w);
+  if (triangleCount == 0u || leafCapacity == 0u) {
+    return closestHit;
+  }
+
+  var pendingBlasNodes: array<u32, BLAS_STACK_CAPACITY>;
+  var pendingBlasCount = 1u;
+  pendingBlasNodes[0] = 0u;
+  while (pendingBlasCount > 0u) {
+    pendingBlasCount--;
+    let localNodeIndex = pendingBlasNodes[pendingBlasCount];
+    let nodeIndex = packedNodeStart + localNodeIndex;
+    if (intersectBlasNodeBounds(localRay, nodeIndex, closestHit.distance) >= closestHit.distance) {
+      continue;
+    }
+
+    if (localNodeIndex >= internalNodeCount) {
+      let leafIndex = localNodeIndex - internalNodeCount;
+      if (leafIndex < leafCapacity) {
+        let localTriangleIndex = blasTriangleIds[triangleIdStart + leafIndex];
+        if (localTriangleIndex < triangleCount) {
+          let triangleIndex = triangleStart + localTriangleIndex;
+          let triangle = triangles[triangleIndex];
+          let intersection = intersectTriangle(localRay, triangle, closestHit.distance);
+          if (intersection.x < closestHit.distance) {
+            let normalWeight = 1.0 - intersection.y - intersection.z;
+            var localNormal = normalize(triangle.firstNormal.xyz * normalWeight +
+              triangle.secondNormal.xyz * intersection.y +
+              triangle.thirdNormal.xyz * intersection.z);
+            if (dot(localNormal, localDirection) > 0.0) {
+              localNormal = -localNormal;
+            }
+            let worldNormal = normalize((transpose(primitive.inverseTransform) *
+              vec4<f32>(localNormal, 0.0)).xyz);
+            closestHit = RayHit(intersection.x, worldNormal, primitiveIndex);
+          }
+        }
       }
-      let worldNormal = normalize((transpose(primitive.inverseTransform) *
-        vec4<f32>(localNormal, 0.0)).xyz);
-      closestHit = RayHit(intersection.x, worldNormal, primitiveIndex);
+      continue;
+    }
+
+    let leftNode = localNodeIndex * 2u + 1u;
+    let rightNode = leftNode + 1u;
+    let leftBlasDistance = intersectBlasNodeBounds(
+      localRay,
+      packedNodeStart + leftNode,
+      closestHit.distance
+    );
+    let rightBlasDistance = intersectBlasNodeBounds(
+      localRay,
+      packedNodeStart + rightNode,
+      closestHit.distance
+    );
+    let leftFirst = leftBlasDistance <= rightBlasDistance;
+    let nearerNode = select(rightNode, leftNode, leftFirst);
+    let fartherNode = select(leftNode, rightNode, leftFirst);
+    let nearerBlasDistance = min(leftBlasDistance, rightBlasDistance);
+    let fartherBlasDistance = max(leftBlasDistance, rightBlasDistance);
+
+    if (fartherBlasDistance < closestHit.distance) {
+      pendingBlasNodes[pendingBlasCount] = fartherNode;
+      pendingBlasCount++;
+    }
+    if (nearerBlasDistance < closestHit.distance) {
+      pendingBlasNodes[pendingBlasCount] = nearerNode;
+      pendingBlasCount++;
     }
   }
   return closestHit;
@@ -330,10 +430,66 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
   }
 
   let triangleStart = u32(primitive.properties.z);
-  let triangleEnd = triangleStart + u32(primitive.properties.w);
-  for (var triangleIndex = triangleStart; triangleIndex < triangleEnd; triangleIndex++) {
-    if (intersectTriangle(localRay, triangles[triangleIndex], maximumDistance).x < maximumDistance) {
-      return true;
+  let triangleCount = u32(primitive.properties.w);
+  let packedNodeStart = u32(primitive.blas.x);
+  let triangleIdStart = u32(primitive.blas.y);
+  let internalNodeCount = u32(primitive.blas.z);
+  let leafCapacity = u32(primitive.blas.w);
+  if (triangleCount == 0u || leafCapacity == 0u) {
+    return false;
+  }
+
+  var pendingBlasNodes: array<u32, BLAS_STACK_CAPACITY>;
+  var pendingBlasCount = 1u;
+  pendingBlasNodes[0] = 0u;
+  while (pendingBlasCount > 0u) {
+    pendingBlasCount--;
+    let localNodeIndex = pendingBlasNodes[pendingBlasCount];
+    let nodeIndex = packedNodeStart + localNodeIndex;
+    if (intersectBlasNodeBounds(localRay, nodeIndex, maximumDistance) >= maximumDistance) {
+      continue;
+    }
+
+    if (localNodeIndex >= internalNodeCount) {
+      let leafIndex = localNodeIndex - internalNodeCount;
+      if (leafIndex < leafCapacity) {
+        let localTriangleIndex = blasTriangleIds[triangleIdStart + leafIndex];
+        if (localTriangleIndex < triangleCount) {
+          let triangleIndex = triangleStart + localTriangleIndex;
+          if (intersectTriangle(localRay, triangles[triangleIndex], maximumDistance).x <
+              maximumDistance) {
+            return true;
+          }
+        }
+      }
+      continue;
+    }
+
+    let leftNode = localNodeIndex * 2u + 1u;
+    let rightNode = leftNode + 1u;
+    let leftBlasDistance = intersectBlasNodeBounds(
+      localRay,
+      packedNodeStart + leftNode,
+      maximumDistance
+    );
+    let rightBlasDistance = intersectBlasNodeBounds(
+      localRay,
+      packedNodeStart + rightNode,
+      maximumDistance
+    );
+    let leftFirst = leftBlasDistance <= rightBlasDistance;
+    let nearerNode = select(rightNode, leftNode, leftFirst);
+    let fartherNode = select(leftNode, rightNode, leftFirst);
+    let nearerBlasDistance = min(leftBlasDistance, rightBlasDistance);
+    let fartherBlasDistance = max(leftBlasDistance, rightBlasDistance);
+
+    if (fartherBlasDistance < maximumDistance) {
+      pendingBlasNodes[pendingBlasCount] = fartherNode;
+      pendingBlasCount++;
+    }
+    if (nearerBlasDistance < maximumDistance) {
+      pendingBlasNodes[pendingBlasCount] = nearerNode;
+      pendingBlasCount++;
     }
   }
   return false;
@@ -357,7 +513,8 @@ fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
     }
 
     if (nodeIndex >= uniforms.acceleration.x) {
-      let primitiveIndex = nodeIndex - uniforms.acceleration.x;
+      let leafIndex = nodeIndex - uniforms.acceleration.x;
+      let primitiveIndex = leafPrimitiveIds[leafIndex];
       if (primitiveIndex < uniforms.dimensions.z) {
         let primitiveHit = intersectPrimitive(ray, primitiveIndex, closestHit.distance);
         if (primitiveHit.distance < closestHit.distance) {
@@ -406,7 +563,8 @@ fn intersectsScene(ray: Ray, maximumDistance: f32) -> bool {
     }
 
     if (nodeIndex >= uniforms.acceleration.x) {
-      let primitiveIndex = nodeIndex - uniforms.acceleration.x;
+      let leafIndex = nodeIndex - uniforms.acceleration.x;
+      let primitiveIndex = leafPrimitiveIds[leafIndex];
       if (primitiveIndex < uniforms.dimensions.z &&
           intersectsPrimitive(ray, primitiveIndex, maximumDistance)) {
         return true;

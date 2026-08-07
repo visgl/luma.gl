@@ -197,12 +197,16 @@ frame.setParameter('renderer', renderer).commitParameters();
 
 `raytrace` requires WebGPU. The ANARI adapter translates committed scene objects into descriptors
 for the shared `RayTracingSceneRenderer` in `@luma.gl/experimental`. Its GPU compute graph derives
-world-space object bounds, builds and refits a graph-owned `GPUBVH`, and traverses that hierarchy
-for nearest-hit rays and early-exit hard shadows. It traces transformed analytic spheres and
+world-space object bounds, Morton-sorts active object/instance leaves into an explicit retained
+permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that hierarchy for
+nearest-hit rays and early-exit hard shadows. Transform-only animation gathers updated bounds
+through the retained permutation and refits without sorting; topology changes and periodic spatial
+refreshes rebuild the Morton order. A topology-only graph Morton-sorts each mesh's triangles into
+GPU-built BLASes, which transform-only updates reuse. It traces transformed analytic spheres and
 triangle meshes, including tessellated quads, cylinders, and cones; evaluates ambient, directional,
 point, and spot lights; and presents the result through a fullscreen pass. An `rgba16float` canvas
-preserves HDR radiance. The trace pass uses five storage buffers and the BVH builder uses eight,
-remaining within default WebGPU CORE limits.
+preserves HDR radiance. The trace pass uses exactly eight storage buffers, and every TLAS or BLAS
+construction pass remains within the default WebGPU CORE limit of eight storage buffers.
 
 The default half-resolution internal target traces one quarter as many pixels as the output canvas.
 When adaptive quality is enabled, the renderer can reduce scale to `0.25`, spread interleaved pixel
@@ -214,14 +218,20 @@ Progressive history is reprojected through previous camera matrices and stable A
 surface identities. Depth and normal validation plus bounded neighborhood color clamping reject
 incompatible history; camera cuts, changed topology/materials, changed light counts, and target
 resizing invalidate it. GPU acceleration updates are encoded only for changed geometry or transforms,
-while camera-only and lighting-only frames reuse the retained BVH.
+while camera-only and lighting-only frames reuse the retained TLAS. Transform-only frames use the
+retained-permutation gather/refit graph; topology changes and periodic refreshes use the full Morton
+build graph.
 
-The source-order BVH accelerates object and instance selection; triangles within an intersected
-mesh are still tested linearly. Hardware ray tracing, Morton-sorted hierarchy construction, and
-per-mesh triangle BVHs are not implemented. Skeletal skinning, morph-target displacement, material
-textures, alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer
-paths. Indirect multi-bounce path tracing, denoising, and volumes are also unsupported.
-`maxBounces` is accepted for forward compatibility but does not enable indirect bounces.
+The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
+GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
+not implemented. Skeletal skinning, morph-target displacement, material textures, alpha/
+transmission, and advanced PBR shading remain on the forward/deferred renderer paths. Indirect
+multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is accepted
+for forward compatibility but does not enable indirect bounces.
+
+For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
+and temporal reconstruction roadmap, see
+[ray-tracing technique background and tradeoffs](/docs/api-guide/engine/anari-rendering#ray-tracing-technique-background-and-tradeoffs).
 
 Applications can also
 [register custom renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes).

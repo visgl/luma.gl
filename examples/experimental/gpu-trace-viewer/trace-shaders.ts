@@ -907,7 +907,10 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }
 
 /** Publishes chunk offsets, scatter cursors, and indirect endpoint dispatches. */
-export function getDependencyEndpointDispatchShader(chunkCount: number): string {
+export function getDependencyEndpointDispatchShader(
+  chunkCount: number,
+  visibleDependencyCountWordOffset: number
+): string {
   return /* wgsl */ `
 const CHUNK_COUNT: u32 = ${chunkCount}u;
 const ENDPOINT_WORKGROUP_SIZE: u32 = ${TRACE_WORKGROUP_SIZE}u;
@@ -915,6 +918,8 @@ const OFFSET_BASE: u32 = ${chunkCount}u;
 const CURSOR_BASE: u32 = ${chunkCount * 2}u;
 @group(0) @binding(0) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
 @group(0) @binding(1) var<storage, read_write> endpointDispatchCommands: array<u32>;
+@group(0) @binding(2) var<storage, read> dependencyDrawCommands: array<u32>;
+@group(0) @binding(3) var<storage, read_write> endpointScatterDispatchCommand: array<u32>;
 
 @compute @workgroup_size(1)
 fn main() {
@@ -929,38 +934,36 @@ fn main() {
     endpointDispatchCommands[chunkIndex * 3u + 2u] = 1u;
     offset += count;
   }
+  let visibleDependencyCount = dependencyDrawCommands[${visibleDependencyCountWordOffset}u];
+  endpointScatterDispatchCommand[0] =
+    (visibleDependencyCount + ENDPOINT_WORKGROUP_SIZE - 1u) / ENDPOINT_WORKGROUP_SIZE;
+  endpointScatterDispatchCommand[1] = 1u;
+  endpointScatterDispatchCommand[2] = 1u;
 }`;
 }
 
 /** Scatters visible endpoint jobs into the chunk ranges published by the count pass. */
-export function getCandidateDependencyEndpointScatterShader(
-  props: TraceDependencyEndpointRoutingShaderProps
+export function getVisibleDependencyEndpointScatterShader(
+  props: TraceDependencyEndpointRoutingShaderProps,
+  visibleDependencyCountWordOffset: number
 ): string {
   return /* wgsl */ `
 ${getDependencyEndpointRoutingDeclarations(props)}
 const CURSOR_BASE: u32 = ${props.spanChunks.length * 2}u;
-struct DependencyBatch {
-  firstIndex: u32,
-  count: u32,
-  timeMin: f32,
-  timeMax: f32,
-  familyMask: u32,
-  batchIndex: u32,
-};
-@group(0) @binding(0) var<storage, read> dependencyBatches: array<DependencyBatch>;
-@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
-@group(0) @binding(2) var<storage, read> dependencyResults: array<u32>;
+@group(0) @binding(0) var<storage, read> visibleDependencyIds: array<u32>;
+@group(0) @binding(1) var<storage, read> dependencyResults: array<u32>;
+@group(0) @binding(2) var<storage, read> dependencyDrawCommands: array<u32>;
 @group(0) @binding(3) var<storage, read_write> endpointChunkState: array<atomic<u32>>;
 @group(0) @binding(4) var<storage, read_write> endpointJobs: array<u32>;
 var<workgroup> localChunkCounts: array<atomic<u32>, ${props.spanChunks.length}>;
 var<workgroup> chunkOutputBases: array<u32, ${props.spanChunks.length}>;
 
-@compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(local_invocation_id) localId: vec3<u32>
 ) {
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_WORKGROUP_SIZE}u) {
     atomicStore(&localChunkCounts[chunkIndex], 0u);
   }
   workgroupBarrier();
@@ -968,23 +971,21 @@ fn main(
   var endpointChunks = array<u32, 2>(INVALID_CHUNK_INDEX, INVALID_CHUNK_INDEX);
   var endpointLocalOffsets = array<u32, 2>(0u, 0u);
   var dependencyIndex = 0u;
-  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
-  if (localId.x < batch.count) {
-    dependencyIndex = batch.firstIndex + localId.x;
-    if (dependencyResults[dependencyIndex] != 0u) {
-      let endpointResultOffset = DEPENDENCY_COUNT + dependencyIndex * 2u;
-      for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
-        let chunkIndex = getSpanChunkIndex(dependencyResults[endpointResultOffset + endpointIndex]);
-        endpointChunks[endpointIndex] = chunkIndex;
-        if (chunkIndex != INVALID_CHUNK_INDEX) {
-          endpointLocalOffsets[endpointIndex] = atomicAdd(&localChunkCounts[chunkIndex], 1u);
-        }
+  let visibleDependencyCount = dependencyDrawCommands[${visibleDependencyCountWordOffset}u];
+  if (globalId.x < visibleDependencyCount) {
+    dependencyIndex = visibleDependencyIds[globalId.x];
+    let endpointResultOffset = DEPENDENCY_COUNT + dependencyIndex * 2u;
+    for (var endpointIndex = 0u; endpointIndex < 2u; endpointIndex++) {
+      let chunkIndex = getSpanChunkIndex(dependencyResults[endpointResultOffset + endpointIndex]);
+      endpointChunks[endpointIndex] = chunkIndex;
+      if (chunkIndex != INVALID_CHUNK_INDEX) {
+        endpointLocalOffsets[endpointIndex] = atomicAdd(&localChunkCounts[chunkIndex], 1u);
       }
     }
   }
   workgroupBarrier();
 
-  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_DEPENDENCY_BATCH_CAPACITY}u) {
+  for (var chunkIndex = localId.x; chunkIndex < CHUNK_COUNT; chunkIndex += ${TRACE_WORKGROUP_SIZE}u) {
     chunkOutputBases[chunkIndex] = atomicAdd(
       &endpointChunkState[CURSOR_BASE + chunkIndex],
       atomicLoad(&localChunkCounts[chunkIndex])

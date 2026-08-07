@@ -5,37 +5,49 @@ two-dimensional scientific and geospatial rasters. Applications retain ownership
 decoding, coordinate transforms, source buffers and textures, output allocation, command
 submission, and optional readback.
 
+`GPURasterTileReader` additionally validates application-owned, asynchronously decoded raster
+sources without choosing a network transport, image codec, GPU uploader, or tile cache. It is an
+explicit CPU-side ingress contract, not a GPU command-graph contributor.
+
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
 scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, mask-aware
 neighborhood stencils, direct convolution, separable Gaussian/box smoothing, signed
-Sobel/Scharr/Laplacian derivatives, gradient magnitude, GPU-resident marching-squares contours,
-indirect vector overlays, and adapter-limit planning. They implement `GPUCommandGraphContributor`
-structurally: calling `addToGraph(graph)` only declares work. No contributor submits commands or
-reads results back.
+Sobel/Scharr/Laplacian derivatives, gradient magnitude, binary/grayscale dilation, erosion,
+opening, and closing, GPU-resident marching-squares contours, indirect vector overlays, and
+adapter-limit planning. They implement `GPUCommandGraphContributor` structurally: calling
+`addToGraph(graph)` only declares work. No contributor submits commands or reads results back.
 
 ```ts
 import {DrawCommandBuffer, GPUCommandGraph} from '@luma.gl/experimental';
 import {
   GPURasterBandMath,
   GPURasterBoxBlur,
+  GPURasterClosing,
   GPURasterContourClassifier,
   GPURasterContours,
   GPURasterContrast,
   GPURasterConvolution,
+  GPURasterDilation,
+  GPURasterErosion,
   GPURasterGaussianBlur,
   GPURasterGradient,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
   GPURasterLaplacian,
+  GPURasterMorphology,
   GPURasterNDVI,
   GPURasterNeighborhood,
+  GPURasterOpening,
   GPURasterOtsuThreshold,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
-  type GPURasterBufferBand
+  GPURasterTileReader,
+  type GPURasterBufferBand,
+  type GPURasterDecodedBand,
+  type GPURasterTileSource
 } from '@luma.gl/experimental/luraster';
 ```
 
@@ -46,14 +58,28 @@ The `./luraster` subpath is an explicit opt-in. Its runtime symbols are not expo
 
 The [Satellite Raster Lab](/examples/showcase/raster-lab) visualizes deterministic synthetic
 red and near-infrared imagery, GPU-derived NDVI, nodata/cloud masks, and a valid-pixel
-histogram. Layer selection, Gaussian or box smoothing, neighborhood radius, Gaussian sigma,
+histogram. Source controls load full, western, or eastern synthetic windows at either the
+original resolution or an application-provided 2× overview; the displayed tile key, dimensions,
+level-zero origin, and `EPSG:32610` identity follow the actual decoded tile. Layer selection,
+Gaussian or box smoothing, neighborhood radius, Gaussian sigma,
 Sobel/Scharr/Laplacian edge operators, signed direction or gradient magnitude, contrast, gamma,
 manual or automatic Otsu threshold selection, denominator tolerance, and contour levels rebuild
-the actual GPU analysis pipeline. The displayed raster, histogram, and scalar statistics reflect
-the selected, smoothed, differentiated, transformed, valid pixels; interpolated contour lines
-are generated and drawn directly from GPU buffers. Only 228 bytes of scalar summaries, histogram
-bins, cutoff, and contour diagnostics are read back after graph submission. The indirect draw
-consumes its GPU-written instance count rather than a CPU-supplied count.
+the actual GPU analysis pipeline. Morphology controls exercise all four dilation, erosion,
+opening, and closing operations; binary and grayscale modes; square and Manhattan-diamond
+footprints; radii zero through eight; strict/ignore nodata; and clamp, reflect, constant, or
+nodata borders, including the constant value. Grayscale morphology runs before contrast; binary
+morphology cleans the manual/Otsu threshold mask and exposes its boundary as a contour at `0.5`.
+The displayed raster, histogram, and scalar statistics reflect selected, smoothed, differentiated,
+morphologically processed, transformed valid pixels; interpolated contour lines are generated and
+drawn directly from GPU buffers. Only 228 bytes of scalar summaries, histogram bins, cutoff, and
+contour diagnostics are read back after graph submission. The indirect draw consumes its
+GPU-written instance count rather than a CPU-supplied count.
+
+Changing a source window or overview explicitly decodes and uploads a replacement CPU tile;
+rapid changes cancel stale requests. This CPU-to-GPU upload does not increase the unchanged
+228-byte GPU-to-CPU summary. The example retains one source tile at a time and does not provide
+multi-tile caching, halo assembly, stitching, or generated analytical overviews. Its 2× source
+overview selects existing nearest samples; it is not a nodata-aware aggregate.
 
 ## Raster bands and validity
 
@@ -77,6 +103,186 @@ are rejected. Integer nodata comparisons occur before float conversion, preservi
 
 Use `GPURasterTextureToBuffer` and `GPURasterBufferToTexture` for explicit representation
 changes. Texture upload, decoding, and readback are application responsibilities.
+
+## Application-owned decoded tile sources
+
+Use `GPURasterTileSource` when an application obtains raster windows from a decoded GeoTIFF,
+cloud-optimized GeoTIFF, microscopy container, offline fixture, service endpoint, or another
+custom image provider. The source implementation, transport, authentication, worker scheduling,
+decoder licensing, CPU arrays, and upload policy remain entirely application-owned.
+
+`GPURasterTileReader` validates this interface and each asynchronous decoded result. Unlike
+`GPURaster`, whose bands already refer to caller-owned GPU graph resources, a
+`GPURasterDecodedTile` holds native CPU typed arrays that the application must upload explicitly.
+The reader does not allocate GPU buffers, add graph passes, submit commands, cache results, or
+take ownership of the source.
+
+```ts
+const source: GPURasterTileSource = {
+  metadata: {
+    id: 'application-reflectance',
+    width: 4096,
+    height: 3072,
+    affine: [30, 0, 500000, 0, -30, 4100000],
+    pixelInterpretation: 'area',
+    coordinateReferenceSystem: {authority: 'EPSG:32610'},
+    bands: [
+      {id: 'red', format: 'uint32', noDataValue: 65535, scale: 0.0001},
+      {id: 'near-infrared', format: 'uint32', noDataValue: 65535, scale: 0.0001}
+    ],
+    levels: [
+      {
+        level: 0,
+        width: 4096,
+        height: 3072,
+        tileWidth: 512,
+        tileHeight: 512,
+        downsample: [1, 1]
+      },
+      {
+        level: 1,
+        width: 2048,
+        height: 1536,
+        tileWidth: 256,
+        tileHeight: 256,
+        downsample: [2, 2]
+      }
+    ]
+  },
+  async readTile(request, signal) {
+    signal.throwIfAborted();
+    const tile = await applicationOwnedDecoder.readTile(request, signal);
+    signal.throwIfAborted();
+    return tile;
+  }
+};
+
+const reader = new GPURasterTileReader(source);
+const controller = new AbortController();
+const decoded = await reader.readTile(
+  {
+    level: 1,
+    pixelBounds: [256, 128, 768, 640],
+    coordinateSpace: 'level-zero',
+    bandIds: ['red', 'near-infrared']
+  },
+  controller.signal
+);
+
+// The application uploads decoded.bands and their separate validity arrays into its own graph.
+```
+
+The source metadata describes the complete level-zero raster: dimensions, pixel interpretation,
+double-precision JavaScript affine coefficients, optional coordinate-reference-system identity,
+optional level-zero origin, native band descriptors, and explicitly provided overview levels.
+Each band preserves its scalar format, exact raw-domain nodata sentinel, and optional calibration
+scale/offset. The source adapter implements `readTile(request, signal)` and must forward the
+provided `AbortSignal` to any application-owned fetch or decoder.
+
+### Source windows, tile addressing, and selected bands
+
+`GPURasterTileRequest.level` selects an explicitly declared source level. Omitting both `column`
+and `row` selects the entire level; providing both addresses one source tile of that level's
+declared `tileWidth` and `tileHeight`. Optional `pixelBounds` intersects that selection with a
+half-open `[minimumColumn, minimumRow, maximumColumn, maximumRow]` window. Ragged right/bottom
+tiles are clipped to actual level dimensions rather than padded implicitly.
+
+`coordinateSpace: 'level'`, the default, expresses the optional window in the selected level's
+own pixel grid. `coordinateSpace: 'level-zero'` expresses it in the dataset's original
+full-resolution grid. `bandIds` explicitly selects a subset of declared source bands; omitting
+it selects every band in source order. Their native formats and metadata are preserved. The
+Raster Lab requests both red and near-infrared bands because NDVI needs both; other applications
+can request only the bands required by their own operation.
+
+Each result includes the selected level, tile column/row, half-open `pixelBounds` in level-local
+pixels, corresponding `levelZeroBounds`, fully translated `GPURasterMetadata`, and the requested
+decoded bands. Missing or duplicate identifiers, inconsistent dimensions, incompatible typed
+arrays, malformed masks, or mismatched metadata are rejected rather than silently converted.
+The reader passes the adapter a normalized request with explicit `bandIds`, level-local
+`pixelBounds`, and `coordinateSpace: 'level'`; the adapter returns complete matching bounds,
+translated metadata, and bands in the requested order.
+
+### Native typed arrays and validity
+
+Decoded source bands retain an exact discriminated scalar representation:
+
+```ts
+const floatingBand: GPURasterDecodedBand<'float32'> = {
+  id: 'reflectance',
+  format: 'float32',
+  values: new Float32Array(pixelCount),
+  validity: new Uint32Array(pixelCount)
+};
+
+const categoricalBand: GPURasterDecodedBand<'uint32'> = {
+  id: 'classification',
+  format: 'uint32',
+  values: new Uint32Array(pixelCount),
+  noDataValue: 4294967295
+};
+
+const signedBand: GPURasterDecodedBand<'sint32'> = {
+  id: 'elevation',
+  format: 'sint32',
+  values: new Int32Array(pixelCount)
+};
+```
+
+Every sample array contains exactly `width * height` packed, row-major elements; an optional
+`Uint32Array` validity mask has the same length. `uint32` samples and nodata values remain exact
+even above `2²⁴`; they are not rounded through an intermediate `float32`. Decoded nodata and
+calibration remain source-domain metadata. Later GPU contributors reject raw nodata before
+applying calibration according to their existing documented contracts.
+
+### Overview scale, odd dimensions, and spatial metadata
+
+Every `GPURasterTileLevel` supplies its own positive, potentially anisotropic
+`downsample: [horizontalFactor, verticalFactor]`. Level zero must declare `[1, 1]`. A source
+overview has exactly `ceil(sourceWidth / horizontalFactor)` by
+`ceil(sourceHeight / verticalFactor)` pixels; odd dimensions retain their ragged final coverage.
+For example, a `5 × 7` source at `[2, 2]` has a `3 × 4` overview, while `[2, 3]` has a
+`3 × 3` overview. Deriving the factor as `5 / 3` would produce an incorrect affine transform.
+
+A level-zero request maps to overview bounds using `floor(start / factor)` and
+`ceil(end / factor)`, then clips them to the requested tile and actual overview dimensions.
+Overview pixels map back to level-zero coverage with `floor(start * factor)` and
+`ceil(end * factor)`, clipped to the source extent. This half-open convention retains partially
+covered edge pixels instead of dropping or duplicating ragged coverage.
+
+For a level-zero affine `[a, b, c, d, e, f]`, explicit overview factors `[sx, sy]`, and tile
+origin `[column, row]` in overview pixels, the decoded tile affine is:
+
+```text
+[
+  a * sx,
+  b * sy,
+  c + a * column * sx + b * row * sy,
+  d * sx,
+  e * sy,
+  f + d * column * sx + e * row * sy
+]
+```
+
+The tile retains source pixel interpretation, coordinate-reference-system identity, declared
+level, and level-zero origin; affine translation and metadata remain JavaScript numbers rather
+than being silently uploaded as low-precision world coordinates. A CRS identifier does not
+reproject pixels or convert derivatives into physical-world distances.
+
+### Cancellation, ownership, and current limits
+
+The optional reader `AbortSignal` is checked before starting a read, supplied to the
+application-owned source, and respected if cancellation occurs while a result is pending or
+before it is published. Cancel superseded application requests when a user quickly changes
+source window or overview. Cancellation does not destroy application-owned arrays, GPU buffers,
+or in-flight command submissions; applications remain responsible for their own upload and
+resource-lifetime boundaries.
+
+This contract reads one explicitly requested decoded result. It does not implement an HTTP
+range transport, GeoTIFF/COG decoder, loader package, tile residency budget, eviction,
+graph-shape cache, multi-tile scheduling, neighborhood halo assembly, stitched contours,
+global tiled statistics, or generated nodata-aware analytical overviews. Existing source
+overviews are accepted as source-provided samples; validating their scientific aggregation
+policy remains an application responsibility until analytical overview support is implemented.
 
 ## Pointwise band math
 
@@ -601,15 +807,231 @@ and memory constants. These structural costs and reusable GPU-resident outputs e
 particular operation is appropriate; they do not establish an unmeasured speedup over another
 implementation or a screen-space image effect.
 
+## Binary and grayscale morphology
+
+Morphology changes a raster according to the minimum or maximum within a selected neighborhood.
+Use it after classification when foreground shapes, small islands, holes, or narrow connections
+matter, or use grayscale morphology when local brightness/intensity extrema are themselves the
+intended analytical result.
+
+`GPURasterMorphology` exposes one explicit `operation: 'dilate' | 'erode'` pass;
+`GPURasterDilation` and `GPURasterErosion` name those operations directly.
+`GPURasterOpening` composes erosion followed by dilation, while `GPURasterClosing` composes
+dilation followed by erosion. Every contributor supports two strictly typed data domains:
+
+- `mode: 'binary'` requires a packed `GPURasterBufferBand<'uint32'>` input and a caller-owned
+  `GraphDataView<'uint32'>` output. Every nonzero input is foreground; valid output values are
+  canonical `0` or `1`. Binary input calibration must be identity: `scale` can only be omitted
+  or `1`, and `offset` can only be omitted or `0`.
+- `mode: 'grayscale'`, or omitted `mode`, accepts any supported scalar input format and publishes
+  caller-owned `GraphDataView<'float32'>` extrema. Raw nodata is checked in the original source
+  format before applying source scale and offset exactly once, including opening/closing.
+
+Both domains require a separate caller-owned `GraphDataView<'uint32'>` `outputValidity`. An invalid
+binary result contains value `0` and validity `0`; a valid background pixel contains the same
+value `0` with validity `1`. Invalid grayscale results contain `NaN` and validity `0`.
+
+### Binary classification and observation validity
+
+`GPURasterThreshold` writes zero for both legitimate below-threshold background and invalid
+observations. Therefore, its output is the binary morphology **value band**, not the binary
+validity mask. Supply the original analyzed observation validity separately:
+
+```ts
+new GPURasterThreshold({
+  id: 'vegetation-foreground',
+  width,
+  height,
+  input: adjustedBand,
+  threshold: 0.35,
+  output: vegetationForeground
+}).addToGraph(graph);
+
+const classifiedBand: GPURasterBufferBand<'uint32'> = {
+  id: 'classified-vegetation',
+  format: 'uint32',
+  storage: {kind: 'buffer', values: vegetationForeground},
+  validity: analyzedObservationValidity
+};
+
+new GPURasterDilation({
+  id: 'expand-vegetation-foreground',
+  width,
+  height,
+  mode: 'binary',
+  input: classifiedBand,
+  radius: 2,
+  structuringElement: 'cross',
+  noDataPolicy: 'ignore',
+  borderMode: 'reflect',
+  output: expandedForeground,
+  outputValidity: expandedObservationValidity
+}).addToGraph(graph);
+```
+
+Setting `validity: vegetationForeground` would incorrectly treat every background pixel as
+missing and prevent dilation from growing foreground into valid background. Likewise, do not
+set `noDataValue: 0` on an ordinary threshold mask: background zero is a meaningful observation.
+Use the morphology output values together with their separately published output validity when
+creating a later histogram selection or contour overlay. A binary boundary crosses level `0.5`.
+
+## Dilation and erosion
+
+Dilation selects the maximum over its valid participating footprint. In binary mode, this is an
+OR of foreground flags: it expands foreground, can connect sufficiently close valid regions, and
+can fill gaps smaller than the chosen footprint. In grayscale mode, it computes a local maximum
+and enlarges bright features.
+
+```ts
+new GPURasterMorphology({
+  id: 'bright-feature-maximum',
+  width,
+  height,
+  operation: 'dilate',
+  input: vegetationBand,
+  radius: 2,
+  structuringElement: 'square',
+  output: localMaximum,
+  outputValidity: localMaximumValidity
+}).addToGraph(graph);
+```
+
+Erosion selects the footprint minimum. In binary mode, this is an AND of participating foreground
+flags: it shrinks foreground, can remove sufficiently small islands, and can separate thin
+connections. In grayscale mode, it computes a local minimum and enlarges dark features.
+
+```ts
+new GPURasterErosion({
+  id: 'local-vegetation-minimum',
+  width,
+  height,
+  mode: 'grayscale',
+  input: vegetationBand,
+  radius: 2,
+  structuringElement: 'square',
+  output: localMinimum,
+  outputValidity: localMinimumValidity
+}).addToGraph(graph);
+```
+
+Choose single-pass dilation or erosion when the actual expansion, contraction, local maximum, or
+local minimum is the desired product. These are analytical operations on stored samples and
+validity, not temporary outlines painted over a rendered image. The exact result depends on
+footprint, radius, border policy, and missing observations; no operation guarantees preservation
+of source topology.
+
+## Opening and closing
+
+Opening applies erosion first and dilation second. Use it to remove isolated foreground islands,
+suppress small bright speckles, or break thin foreground connections while allowing surviving
+features to recover their footprint-dependent extent:
+
+```ts
+new GPURasterOpening({
+  id: 'remove-small-vegetation-islands',
+  width,
+  height,
+  mode: 'binary',
+  input: classifiedBand,
+  radius: 1,
+  structuringElement: 'cross',
+  noDataPolicy: 'ignore',
+  output: openedForeground,
+  outputValidity: openedObservationValidity
+}).addToGraph(graph);
+```
+
+Closing applies dilation first and erosion second. Use it to reduce small background holes,
+suppress dark speckles, or reconnect sufficiently narrow breaks while approximately restoring the
+surviving foreground's outside extent:
+
+```ts
+new GPURasterClosing({
+  id: 'repair-small-vegetation-holes',
+  width,
+  height,
+  mode: 'binary',
+  input: classifiedBand,
+  radius: 1,
+  structuringElement: 'square',
+  noDataPolicy: 'ignore',
+  output: closedForeground,
+  outputValidity: closedObservationValidity
+}).addToGraph(graph);
+```
+
+Opening and closing operate on either binary or grayscale rasters. For grayscale composition, the
+first pass calibrates the original scalar band; the second pass consumes already-calibrated
+`float32` scratch without reapplying scale or offset. Binary composition preserves canonical
+`uint32` foreground throughout. Neither operation revives an invalid center.
+
+## Structuring elements, borders, and nodata
+
+Every morphology contributor requires an integer `radius` between `0` and `8`, inclusive.
+`structuringElement: 'square'` is the default; it includes offsets whose Chebyshev distance is
+at most the radius. `structuringElement: 'cross'` includes offsets whose Manhattan distance is
+at most the radius. At radius one, these correspond to eight-connected and four-connected
+neighborhoods:
+
+```text
+radius 1 square:  ###    radius 1 cross:   .#.
+                  ###                      ###
+                  ###                      .#.
+
+radius 2 cross:   ..#..
+                  .###.
+                  #####
+                  .###.
+                  ..#..
+```
+
+For radii greater than one, `cross` is a Manhattan **diamond**, not merely one horizontal and
+one vertical arm. A square includes `(2r + 1)²` positions; a diamond includes
+`2r(r + 1) + 1`. At radius two that is 25 versus 13 samples; at radius eight, 289 versus 145.
+Both footprints scale as `O(r²)` per pixel, although the diamond visits fewer positions.
+
+The default `borderMode: 'clamp'` repeats the nearest edge observation. `reflect` mirrors
+without repeating the nearest edge sample, `constant` supplies the explicit calibrated
+`borderValue` (default `0`), and `nodata` treats exterior positions as missing. For binary
+constant borders, zero becomes background `0` and every nonzero finite representable value,
+including negative or fractional values, becomes foreground `1`.
+
+`noDataPolicy: 'propagate'` is the default: any invalid included footprint sample invalidates
+the output. `noDataPolicy: 'ignore'` skips invalid participating neighbors instead. Under either
+policy, an invalid center always remains invalid; an all-invalid footprint cannot produce a valid
+output. Ignoring missing positions is not a geodesic barrier: with radius greater than one,
+another valid sample can still influence a center across an intervening nodata gap.
+
+## Morphology graph costs and ownership
+
+Dilation, erosion, and `GPURasterMorphology` register one bounded two-dimensional compute pass;
+their `requiredHalo` equals `radius`. For positive radii, opening and closing register two
+ordered passes and expose `requiredHalo = 2 * radius`. They allocate exactly two graph-owned
+intermediate buffers: a domain-typed `uint32` or `float32` value band and a separate `uint32`
+validity band. Their combined logical scratch footprint is `8 * width * height` bytes, excluding
+the caller-owned inputs/outputs, implementation allocation alignment, and graph bookkeeping.
+
+At `radius: 0`, every operation performs one identity pass that still canonicalizes binary flags,
+applies grayscale calibration, and publishes source validity; opening/closing allocate no
+intermediate scratch. Compatible nonoverlapping transient lifetimes can share graph-managed
+allocations. Contributors declare resource hazards explicitly and never read back pixels, submit
+commands, or silently replace caller-owned buffers.
+
+The square and diamond both perform `O(r²)` neighborhood work per pixel; opening/closing repeat
+that footprint across two passes. These explicit pass counts, buffer formats, and residency
+properties describe scalability and composability, not a measured throughput claim. Actual
+performance depends on pixel count, radius, GPU limits, memory bandwidth, and workload. Halo
+metadata does not assemble tiled halos or partition oversized rasters automatically.
+
 ## Raster compute versus image effects
 
 Existing luma.gl image-processing effects are useful for presentation: they transform rendered
 color textures or screen-space imagery as part of an effects pipeline. LuRaster neighborhood and
-edge contributors instead process explicit scientific raster bands with raw nodata, source
-validity, calibration, signed derivative conventions, analytical boundary policies, and
-separately published validity masks. Their output can flow directly into GPU histograms,
-statistics, thresholding, contour extraction, or later raster algorithms without copying
-intermediate pixels to the CPU.
+edge, and morphology contributors instead process explicit scientific raster bands with raw
+nodata, source validity, calibration, signed derivative conventions, analytical boundary
+policies, foreground/background topology, and separately published validity masks. Their output
+can flow directly into GPU histograms, statistics, thresholding, contour extraction, or later
+raster algorithms without copying intermediate pixels to the CPU.
 
 Prefer ordinary image effects when the desired result is only a visual postprocess. Prefer
 LuRaster when filtered values must retain scientific meaning, compose with reusable command
@@ -731,10 +1153,12 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, morphological dilation/erosion/opening/closing, tiled GeoTIFF/COG
-processing, connected components, tiled contour stitching, and FFT-backed raster convolution are
-not part of the current implementation. Sobel, Scharr, Laplacian, gradient magnitude, bounded
-spatial smoothing, and single-raster contour extraction are implemented.
+Percentile-based contrast, built-in GeoTIFF/COG decoding, multi-tile residency, halo assembly,
+generated analytical overviews, connected components, tiled contour stitching, and FFT-backed
+raster convolution are not part of the current implementation. Application-owned single-tile
+source ingress, source-provided overviews/windows, Sobel, Scharr, Laplacian, gradient magnitude,
+bounded spatial smoothing, binary/grayscale dilation, erosion, opening, closing, and
+single-raster contour extraction are implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not

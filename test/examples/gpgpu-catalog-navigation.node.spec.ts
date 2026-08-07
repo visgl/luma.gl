@@ -219,6 +219,7 @@ describe('GPGPU example catalog navigation', () => {
       'showcase/raster-lab',
       'showcase/billion-point-spatial-atlas',
       'deck/luspatial-taxi',
+      'deck/lugraph-explorer',
       'experimental/gpt-2'
     ]);
   });

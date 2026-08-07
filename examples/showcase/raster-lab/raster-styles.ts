@@ -302,6 +302,40 @@ export const RASTER_LAB_STYLES = /* css */ `
   font-weight: 590;
 }
 
+.raster-source-control {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 9px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--raster-border);
+}
+
+.raster-source-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.raster-source-overview-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.raster-source-description,
+.raster-source-origin {
+  overflow: hidden;
+  color: var(--raster-muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raster-source-description {
+  color: var(--raster-accent);
+}
+
 .raster-mode-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr 1.15fr;
@@ -324,6 +358,30 @@ export const RASTER_LAB_STYLES = /* css */ `
   display: grid;
   grid-template-columns: 1.4fr 0.8fr 0.8fr;
   gap: 4px;
+}
+
+.raster-morphology-buttons {
+  display: grid;
+  grid-template-columns: 0.7fr repeat(4, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.raster-morphology-paired-settings {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 5px;
+}
+
+.raster-morphology-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.raster-morphology-border-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
 }
 
 .raster-mode-button {
@@ -350,10 +408,23 @@ export const RASTER_LAB_STYLES = /* css */ `
 }
 
 .raster-edge-buttons .raster-mode-button,
-.raster-edge-direction-buttons .raster-mode-button {
+.raster-edge-direction-buttons .raster-mode-button,
+.raster-source-buttons .raster-mode-button,
+.raster-source-overview-buttons .raster-mode-button,
+.raster-morphology-buttons .raster-mode-button,
+.raster-morphology-toggle .raster-mode-button,
+.raster-morphology-border-buttons .raster-mode-button {
   min-height: 24px;
   padding: 0 3px;
   font-size: 9px;
+}
+
+.raster-morphology-buttons .raster-mode-button,
+.raster-morphology-paired-settings .raster-mode-button,
+.raster-morphology-border-buttons .raster-mode-button {
+  min-height: 22px;
+  padding: 0 2px;
+  font-size: 8px;
 }
 
 .raster-control {
@@ -377,6 +448,15 @@ export const RASTER_LAB_STYLES = /* css */ `
 
 .raster-smoothing-control {
   gap: 6px;
+}
+
+.raster-morphology-control {
+  gap: 5px;
+}
+
+.raster-morphology-setting {
+  display: grid;
+  gap: 3px;
 }
 
 .raster-smoothing-setting {

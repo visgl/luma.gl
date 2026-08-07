@@ -37,27 +37,48 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     }
   });
 
-  test('exposes pointwise, neighborhood, edge, and contour contributors without root leaks', () => {
+  test('keeps external tile decoding, transport, and GPU ownership in the application', () => {
+    const tileSourceImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-tile-source.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(tileSourceImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(tileSourceImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(tileSourceImplementation).not.toMatch(
+      /\b(?:createBuffer|createTexture|submit|mapAsync)\s*\(/
+    );
+  });
+
+  test('exposes tile-source, pointwise, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBufferToTexture).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterClosing).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContrast).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContourClassifier).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContours).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConvolution).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterDilation).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterErosion).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGaussianBlur).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGradient).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGradientMagnitude).toBeTypeOf('function');
     expect(lurasterModule.GPURasterHistogram).toBeTypeOf('function');
     expect(lurasterModule.GPURasterLaplacian).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterMorphology).toBeTypeOf('function');
     expect(lurasterModule.GPURasterNDVI).toBeTypeOf('function');
     expect(lurasterModule.GPURasterNeighborhood).toBeTypeOf('function');
     expect(lurasterModule.GPURasterOtsuThreshold).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterOpening).toBeTypeOf('function');
     expect(lurasterModule.GPURasterScharr).toBeTypeOf('function');
     expect(lurasterModule.GPURasterSobel).toBeTypeOf('function');
     expect(lurasterModule.GPURasterStatistics).toBeTypeOf('function');
     expect(lurasterModule.GPURasterThreshold).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileReader).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTextureToBuffer).toBeTypeOf('function');
     expect(lurasterModule.getRasterDeviceLimits).toBeTypeOf('function');
     expect(lurasterModule.planRasterDispatchStripes).toBeTypeOf('function');

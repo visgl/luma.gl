@@ -23,10 +23,23 @@ import {
 } from './lu-data-frame-query';
 import type {LuExpression} from './lu-expression';
 import type {
+  LuDataFrameAggregationQuery,
+  LuDataFrameGlobalAggregationDefinitions,
+  LuDataFrameScalarColumnNames
+} from './lu-global-aggregation-query';
+import type {
   LuDataFrameColumnNamesOfFormat,
   LuDataFrameGroupByOptions,
   LuDataFrameGroupByQuery
 } from './lu-group-by-query';
+import type {LuDataFrameHistogramOptions, LuDataFrameHistogramQuery} from './lu-histogram-query';
+import type {
+  LuDataFrameJoinOptions,
+  LuDataFrameJoinQuery,
+  LuDataFrameLookupOptions,
+  LuDataFrameLookupQuery
+} from './lu-join-query';
+import type {LuDataFrameSortOptions, LuDataFrameSortQuery} from './lu-sort-query';
 
 /** Whether a dataframe borrows its source resources or releases them after its final view. */
 export type LuDataFrameOwnership = 'borrowed' | 'owned';
@@ -204,6 +217,86 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     this.assertAvailable();
     return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).groupBy(
       key,
+      options
+    );
+  }
+
+  /** Plans global numeric reductions without allocating or retaining any GPU resources. */
+  aggregate<Definitions extends LuDataFrameGlobalAggregationDefinitions<T>>(
+    definitions: Definitions
+  ): LuDataFrameAggregationQuery<T, keyof T & string, Definitions, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).aggregate(
+      definitions
+    );
+  }
+
+  /** Plans fixed-domain or irregular-edge histogram binning entirely on the CPU. */
+  histogram<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    options: LuDataFrameHistogramOptions
+  ): LuDataFrameHistogramQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).histogram(
+      column,
+      options
+    );
+  }
+
+  /** Plans stable scalar ordering independently within every existing source record batch. */
+  sortBy<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).sortBy(
+      column,
+      options
+    );
+  }
+
+  /** Plans descending stable top-K selection without concatenating source record batches. */
+  topK<Column extends LuDataFrameScalarColumnNames<T, keyof T & string>>(
+    column: Column,
+    limit: number,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameSortQuery<T, keyof T & string, Column, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).topK(
+      column,
+      limit,
+      options
+    );
+  }
+
+  /** Plans a stable unique-right unsigned inner join without materializing either dataframe. */
+  innerJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<T, keyof T & string, Right, LeftKey, RightKey, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).innerJoin(
+      right,
+      options
+    );
+  }
+
+  /** Plans bounded, source-aligned unique-right lookups without flattening source batches. */
+  lookup<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameLookupOptions<LeftKey, RightKey>
+  ): LuDataFrameLookupQuery<T, keyof T & string, Right, LeftKey, RightKey, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).lookup(
+      right,
       options
     );
   }

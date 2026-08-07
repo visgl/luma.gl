@@ -11,6 +11,7 @@
     {"path": "../arrow"},
     {"path": "../core"},
     {"path": "../engine"},
+    {"path": "../experimental"},
     {"path": "../tables"}
   ]
 }

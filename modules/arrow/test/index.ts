@@ -10,6 +10,7 @@ import './arrow/arrow-path-model.spec';
 import './arrow/arrow-splats.spec';
 import './arrow/dggs-gpu-polygons.spec';
 import './arrow/arrow-geometry.spec';
+import './arrow/arrow-gpu-analytics-adapters.spec';
 import './arrow/plain-gpu-table.spec';
 import './arrow/arrow-model.spec';
 import './arrow/arrow-shader-layout.spec';

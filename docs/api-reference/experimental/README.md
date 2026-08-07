@@ -38,23 +38,28 @@ forward renderer.
 
 `RayTracingSceneRenderer` consumes the same scene descriptors on WebGPU through a
 [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph). Compute
-passes derive world-space instance bounds, build and refit the existing
-[`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh), and traverse its complete
-binary hierarchy for nearest-hit rays and early-exit shadows. `RayTracingSceneRenderOptions` add
-analytic sphere metadata, perspective/orthographic camera selection, adaptive half-resolution
-rendering, interleaved pixel phases, retained-identity temporal reprojection, bounded rotating
-shadow samples, progressive accumulation, and upsampled HDR presentation. The default `0.5`
-resolution scale can decrease to `0.25` toward a `33.3` millisecond smoothed animation-frame
-budget; GPU timestamp queries are not required. Acceleration passes run only when geometry or
-instance transforms change. Shared scene statistics optionally expose internal dimensions,
-effective scale, sampled-pixel coverage, frame timing, and accumulated samples. The ray pass uses
-five storage buffers and the existing BVH builder uses eight, fitting default WebGPU CORE limits.
-Applications retain command-submission ownership.
+passes derive world-space instance bounds, Morton-sort active object/instance leaves into an
+explicit retained permutation, build and refit a complete-binary TLAS through
+[`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh), and traverse it for nearest-hit
+rays and early-exit shadows. Transform-only animation gathers updated bounds through the retained
+permutation and refits without sorting; topology changes and periodic spatial refreshes rebuild the
+Morton order. A topology-only graph Morton-sorts each mesh's triangles into GPU-built BLASes, which
+transform-only updates reuse. `RayTracingSceneRenderOptions` add analytic sphere metadata,
+perspective/orthographic camera selection, adaptive half-resolution rendering, interleaved pixel
+phases, retained-identity temporal reprojection, bounded rotating shadow samples, progressive
+accumulation, and upsampled HDR presentation. The default `0.5` resolution scale can decrease to
+`0.25` toward a `33.3` millisecond smoothed animation-frame budget; GPU timestamp queries are not
+required. Acceleration passes run only when geometry or instance transforms change. Shared scene
+statistics optionally expose internal dimensions, effective scale, sampled-pixel coverage, frame
+timing, and accumulated samples. The ray pass uses exactly eight storage buffers, and every TLAS or
+BLAS construction pass fits the default WebGPU CORE limit of eight storage buffers. Applications
+retain command-submission ownership.
 
-The source-order BVH accelerates objects and instances, not individual mesh triangles. Hardware ray
-tracing, spatial sorting, per-mesh BVHs, indirect path tracing, denoising, and volume rendering are
-not implemented. Skeletal/morph deformation, material textures, alpha/transmission, and advanced
-PBR shading remain on the forward/deferred renderer paths.
+The Morton-sorted TLAS accelerates objects and instances, while GPU-built Morton-sorted BLASes
+accelerate each mesh's triangles. Hardware ray tracing, SAH/Karras hierarchy topology, indirect path
+tracing, denoising, and volume rendering are not implemented. Skeletal/morph deformation, material
+textures, alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer
+paths.
 
 `createPBRMaterialFactory`, `createPBRMaterial`, and `createPBRModel` are also available when an
 application needs lower-level composition with the same canonical material and shader contracts.
