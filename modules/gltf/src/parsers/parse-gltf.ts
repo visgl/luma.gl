@@ -8,7 +8,7 @@ import {
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
 } from '@loaders.gl/gltf';
-import {Device, type PrimitiveTopology} from '@luma.gl/core';
+import {Device, type PrimitiveTopology, type Texture} from '@luma.gl/core';
 import {
   Geometry,
   GeometryAttribute,
@@ -48,6 +48,10 @@ export type ParseGLTFOptions = {
   strictExtensions?: boolean;
 };
 
+type ParseGLTFInternalOptions = Required<ParseGLTFOptions> & {
+  generatedTextures: Set<Texture>;
+};
+
 const defaultOptions: Required<ParseGLTFOptions> = {
   modelOptions: {},
   pbrDebug: false,
@@ -77,13 +81,20 @@ export function parseGLTF(
   gltfNodeIndexToNodeMap: Map<number, GroupNode>;
   /** Map from glTF node ids to generated scenegraph nodes. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
+  /** Textures generated while parsing source materials, primitives, and variants. */
+  generatedTextures: Set<Texture>;
 } {
-  const combinedOptions = {...defaultOptions, ...options};
+  const generatedTextures = new Set<Texture>();
+  const combinedOptions: ParseGLTFInternalOptions = {
+    ...defaultOptions,
+    ...options,
+    generatedTextures
+  };
   const materialFactory = new MaterialFactory(device, {modules: [pbrMaterial]});
   const materials = (gltf.materials || []).map((gltfMaterial, materialIndex) =>
     createGLTFMaterial(device, {
       id: getGLTFMaterialId(gltfMaterial, materialIndex),
-      parsedPPBRMaterial: parsePBRMaterial(
+      parsedPPBRMaterial: parseOwnedPBRMaterial(
         device,
         gltfMaterial as any,
         {},
@@ -203,14 +214,35 @@ export function parseGLTF(
     });
   });
 
-  return {scenes, materials, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap};
+  return {
+    scenes,
+    materials,
+    gltfMeshIdToNodeMap,
+    gltfNodeIdToNodeMap,
+    gltfNodeIndexToNodeMap,
+    generatedTextures
+  };
+}
+
+/** Records every uploaded source texture without taking ownership of borrowed IBL textures. */
+function parseOwnedPBRMaterial(
+  device: Device,
+  material: Parameters<typeof parsePBRMaterial>[1],
+  attributes: Record<string, any>,
+  options: ParseGLTFInternalOptions & {gltf: GLTFPostprocessed; validateAttributes?: boolean}
+): ReturnType<typeof parsePBRMaterial> {
+  const parsedMaterial = parsePBRMaterial(device, material, attributes, options);
+  for (const texture of parsedMaterial.generatedTextures) {
+    options.generatedTextures.add(texture);
+  }
+  return parsedMaterial;
 }
 
 /** Creates a `GroupNode` for one glTF node transform. */
 function createNodeForGLTFNode(
   device: Device,
   gltfNode: GLTFNodePostprocessed,
-  options: Required<ParseGLTFOptions>
+  options: ParseGLTFInternalOptions
 ): GroupNode {
   return new GroupNode({
     id: gltfNode.name || gltfNode.id,
@@ -229,7 +261,7 @@ function createNodeForGLTFMesh(
   gltfMesh: GLTFMeshPostprocessed,
   gltf: GLTFPostprocessed,
   gltfMaterialIdToMaterialMap: Map<string, Material>,
-  options: Required<ParseGLTFOptions>,
+  options: ParseGLTFInternalOptions,
   instancing?: GLTFGPUInstancing
 ): GroupNode {
   const gltfPrimitives = gltfMesh.primitives || [];
@@ -261,7 +293,7 @@ type CreateNodeForGLTFPrimitiveOptions = {
   gltfMesh: GLTFMeshPostprocessed;
   gltf: GLTFPostprocessed;
   gltfMaterialIdToMaterialMap: Map<string, Material>;
-  options: Required<ParseGLTFOptions>;
+  options: ParseGLTFInternalOptions;
   instancing?: GLTFGPUInstancing;
 };
 
@@ -284,10 +316,12 @@ function createNodeForGLTFPrimitive({
 
   const geometry = createGeometry(id, gltfPrimitive, topology);
 
-  const parsedPPBRMaterial = parsePBRMaterial(device, gltfPrimitive.material, geometry.attributes, {
-    ...options,
-    gltf
-  });
+  const parsedPPBRMaterial = parseOwnedPBRMaterial(
+    device,
+    gltfPrimitive.material,
+    geometry.attributes,
+    {...options, gltf}
+  );
 
   const modelNode = createGLTFModel(device, {
     id,
@@ -320,10 +354,12 @@ function createNodeForGLTFPrimitive({
       if (!material) {
         continue;
       }
-      const variantMaterial = parsePBRMaterial(device, sourceMaterial as any, geometry.attributes, {
-        ...options,
-        gltf
-      });
+      const variantMaterial = parseOwnedPBRMaterial(
+        device,
+        sourceMaterial as any,
+        geometry.attributes,
+        {...options, gltf}
+      );
       for (const variantIndex of mapping.variants || []) {
         mappings.set(variantIndex, {
           material,

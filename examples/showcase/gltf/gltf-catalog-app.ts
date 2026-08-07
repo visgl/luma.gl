@@ -952,10 +952,5 @@ function getModelLightSummary(modelLights: Light[]): string {
 }
 
 function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {
-  for (const scene of scenegraphsFromGLTF?.scenes || []) {
-    scene.traverse(node => {
-      const model = (node as Partial<ModelNode>).model;
-      model?.destroy();
-    });
-  }
+  scenegraphsFromGLTF?.destroy();
 }

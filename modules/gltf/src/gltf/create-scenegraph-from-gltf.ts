@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device} from '@luma.gl/core';
-import {GroupNode, Material} from '@luma.gl/engine';
+import {GroupNode, Material, ModelNode} from '@luma.gl/engine';
 import {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
@@ -67,6 +67,9 @@ export type GLTFScenegraphs = {
 
   /** Original post-processed glTF document. */
   gltf: GLTFPostprocessed;
+
+  /** Releases every asset-owned model, material, buffer, and source-image texture exactly once. */
+  destroy(): void;
 };
 
 /** Converts a post-processed glTF asset into luma.gl scenegraph nodes and animation helpers. */
@@ -79,8 +82,14 @@ export function createScenegraphsFromGLTF(
     assertSupportedGLTFExtensions(gltf);
   }
 
-  const {scenes, materials, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap} =
-    parseGLTF(device, gltf, options);
+  const {
+    scenes,
+    materials,
+    gltfMeshIdToNodeMap,
+    gltfNodeIdToNodeMap,
+    gltfNodeIndexToNodeMap,
+    generatedTextures
+  } = parseGLTF(device, gltf, options);
 
   const animations = parseGLTFAnimations(gltf);
   const sourceLights =
@@ -127,6 +136,46 @@ export function createScenegraphsFromGLTF(
   const skins = new GLTFSkinController({gltf, scenes, gltfNodeIndexToNodeMap});
   animator.setUpdateHandler(() => skins.update());
 
+  let destroyed = false;
+  const destroy = (): void => {
+    if (destroyed) {
+      return;
+    }
+    destroyed = true;
+
+    const groups = new Set<GroupNode>([
+      ...scenes,
+      ...gltfMeshIdToNodeMap.values(),
+      ...gltfNodeIdToNodeMap.values()
+    ]);
+    const modelNodes = new Set<ModelNode>();
+    const ownedMaterials = new Set<Material>(materials);
+    for (const group of groups) {
+      group.preorderTraversal(node => {
+        if (node instanceof ModelNode) {
+          modelNodes.add(node);
+          if (node.model?.material) {
+            ownedMaterials.add(node.model.material);
+          }
+        }
+      });
+    }
+
+    for (const modelNode of modelNodes) {
+      modelNode.destroy();
+    }
+    for (const group of groups) {
+      group.destroy();
+    }
+    for (const material of ownedMaterials) {
+      material.destroy();
+    }
+    for (const texture of generatedTextures) {
+      texture.destroy();
+    }
+    generatedTextures.clear();
+  };
+
   return {
     scenes,
     materials,
@@ -142,7 +191,8 @@ export function createScenegraphsFromGLTF(
     gltfNodeIdToNodeMap,
     gltfNodeIndexToNodeMap,
     skins,
-    gltf
+    gltf,
+    destroy
   };
 }
 
