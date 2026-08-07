@@ -12,18 +12,18 @@ A graph answers questions that individual table rows cannot: which accounts shar
 which services depend on a failed service, which people are two introductions apart, which tightly
 connected groups exist inside a wider network, which route has the lowest actual travel cost, how
 closely somebody's friends know one another, which network members form a durable structural
-backbone, whether a proposed community grouping is actually meaningful, and which pages matter
-because other important pages link to them. Vertices represent those entities; edges represent
-their relationships.
+backbone, whether a proposed community grouping is actually meaningful, how to improve that
+grouping, and which pages matter because other important pages link to them. Vertices represent
+those entities; edges represent their relationships.
 
 `@luma.gl/experimental/lugraph` answers these questions directly on a browser WebGPU device. It
 describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex
 degrees, unweighted shortest-path neighborhoods, weighted least-cost routes, weakly connected
 groups, densely connected communities, per-vertex local clustering, structural core numbers,
-community modularity scores, PageRank importance, and progressive two-dimensional graph layouts
-into caller-owned GPU buffers. Layout can evaluate every repulsive interaction exactly or
-explicitly approximate distant groups through a caller-owned uniform grid. Every operation
-composes with the existing `GPUCommandGraph`.
+community modularity scores, explicitly improved community assignments, PageRank importance, and
+progressive two-dimensional graph layouts into caller-owned GPU buffers. Layout can evaluate every
+repulsive interaction exactly or explicitly approximate distant groups through a caller-owned
+uniform grid. Every operation composes with the existing `GPUCommandGraph`.
 
 This is an experimental, headless graph analytics API, not a graph database, visualization
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
@@ -74,8 +74,9 @@ buffer, which is simultaneously writable storage and a render vertex attribute. 
 shaders consume the actual community, component, PageRank, and degree buffers. Original source
 edge batches, including the intentionally empty middle batch, are never concatenated or repacked.
 Weighted shortest paths and local clustering are separate reusable graph operations and benchmark
-workloads. Core decomposition and modularity scoring are additional reusable operations beyond
-the benchmark; the existing example does not claim to expose any of them as explorer controls.
+workloads. Core decomposition, modularity scoring, and modularity optimization are additional
+reusable operations beyond the benchmark; the existing example does not claim to expose any of
+them as explorer controls.
 
 Automatic layout selects distinct, honestly bounded GPU workloads:
 
@@ -184,9 +185,9 @@ local clustering coefficients, PageRank, exact force layout, and explicitly appr
 uniform-grid force layout. The six Graphalytics workload families are represented, alongside
 adjacency construction and two visualization-oriented layouts. These bounded demonstrations are not
 million-vertex benchmarks; dense graphs, local triangle counting, and exact force layout can
-require much more work than sparse traversal. Structural core decomposition and partition
-modularity extend the reusable graph API beyond these six standardized families and nine measured
-paths; they are not silently counted as additional benchmark results.
+require much more work than sparse traversal. Structural core decomposition, partition modularity,
+and modularity optimization extend the reusable graph API beyond these six standardized families
+and nine measured paths; they are not silently counted as additional benchmark results.
 
 ### Read each timing without hiding its costs
 
@@ -265,7 +266,7 @@ luGraph keeps the complete intermediate pipeline on one WebGPU device:
 Existing GPU edge columns
     -> compressed adjacency
     -> degree / core numbers / weighted paths / local clustering / communities / PageRank
-    -> partition modularity / directly renderable force-layout positions
+    -> partition modularity / improved communities / renderable force-layout positions
     -> caller-owned GPU result columns and directly renderable positions
 ```
 
@@ -286,9 +287,9 @@ combine graph analytics with further GPU work:
 
 - **Social and communication networks:** count contacts, highlight friends within a bounded number
   of introductions, distinguish friend circles within connected networks, measure whether each
-  person's friends also know one another, identify mutually supported network cores, compare
-  proposed community partitions, group disconnected networks, rank influential accounts, and
-  arrange connected people into a readable map.
+  person's friends also know one another, identify mutually supported network cores, compare and
+  explicitly improve proposed community partitions, group disconnected networks, rank influential
+  accounts, and arrange connected people into a readable map.
 - **Software and service dependencies:** follow incoming or outgoing dependency chains, find
   isolated dependency islands, reveal tightly linked ownership groups, identify unusually closed
   service clusters, and compare dependency paths by latency, risk, or recovery cost.
@@ -328,8 +329,8 @@ cover **breadth-first search (BFS)**, **single-source shortest paths (SSSP)**,
 browser-GPU contributor for each. This is useful because the same resident adjacency can answer
 reachability, least-cost routing, connectivity, community, neighborhood-density, and influence
 questions without a CPU round trip between operations. Its core decomposition and modularity scoring
-add useful graph analysis **beyond** those six standardized workload families; they are not
-additional Graphalytics workloads.
+add useful graph analysis **beyond** those six standardized workload families; bounded modularity
+optimization also belongs outside the standard. None is an additional Graphalytics workload.
 
 To understand what a formal comparison additionally requires, consult the council's
 [real and synthetic reference datasets](https://ldbcouncil.org/benchmarks/graphalytics/datasets/),
@@ -365,6 +366,7 @@ published Graphalytics score. Use it to inspect real bounded CPU/GPU runs on you
 | `LuGraphSingleSourceShortestPath` | Which routes have the lowest nonnegative total edge cost from a selected source? | One `float32` distance and deterministic predecessor per vertex | At most `O(K × (V + E))` for `K` bounded relaxations |
 | `LuGraphConnectedComponents` | Which vertices belong to the same weakly connected group? | One `uint32` component identifier per vertex | At most `O(K × (V + E))` for `K` bounded iterations |
 | `LuGraphLabelPropagation` | Which densely connected communities exist inside a connected network? | One deterministic `uint32` community label per vertex | At most `O(K × sum(degree²))` for `K` bounded iterations |
+| `LuGraphModularityOptimization` | Which single-vertex community moves can improve a weighted partition? | Improved `uint32` labels, a real `float32` modularity score, and optional statuses | At most `O(K × (V + E + sum(degree²)))` for `K` bounded rounds |
 | `LuGraphModularity` | Does an existing partition contain more internal relationship weight than chance predicts? | One `float32` partition-quality score and optional per-community contributions | `O(V + E)` |
 | `LuGraphPageRank` | Which vertices receive influence from other important vertices? | One normalized `float32` score per vertex | `O(K × (V + E))` for `K` iterations |
 | `LuGraphForceLayout` | How can related vertices be positioned as a readable network? | Directly renderable `float32x2` positions and persistent velocities | `O(V² + E)` per exact force iteration |
@@ -801,6 +803,91 @@ neighborhood; a high-degree hub can therefore be disproportionately expensive. T
 label-propagation heuristic is not Louvain or Leiden, does not optimize modularity, and does not
 guarantee objectively correct communities or a particular clustering quality.
 
+## Improve weighted community partitions with LuGraphModularityOptimization
+
+**Question: Which actual community reassignment improves a network's measurable partition quality,
+rather than merely winning a neighborhood vote?**
+
+`LuGraphModularityOptimization` improves an existing or automatically initialized community
+partition by accepting the best strictly beneficial single-vertex move in each bounded round.
+Use it when a social grouping should reflect actual interaction strength, a proposed fraud ring
+should concentrate transaction weight, ownership boundaries should better match weighted service
+dependencies, or a knowledge-graph partition needs an objective comparison before and after
+refinement.
+
+Three community questions are related but distinct. `LuGraphLabelPropagation` cheaply proposes
+groups from unweighted neighborhood votes without optimizing their quality;
+`LuGraphModularity` scores any caller-provided partition without changing it; and
+`LuGraphModularityOptimization` actually changes group assignments when the same weighted
+modularity objective improves. Start from separate communities when discovering structure, or
+provide `initialCommunities` to refine labels supplied by a heuristic, application, or prior
+analysis. The caller receives both the improved labels and the score of that exact final
+partition.
+
+```ts
+import {LuGraphModularityOptimization} from '@luma.gl/experimental/lugraph';
+
+const optimizedCommunities = new LuGraphModularityOptimization({
+  topology,
+  output: improvedCommunityIds,
+  modularity: optimizedModularity,
+  initialCommunities: proposedCommunityIds,
+  resolution: 1,
+  iterations: 32,
+  minimumGain: 0,
+  converged: optimizationConverged,
+  valid: optimizationValid
+});
+
+optimizedCommunities.addToGraph(workflow);
+```
+
+`output` is a caller-owned, packed `GPUVector<'uint32'>` with exactly one community identifier per
+vertex. The optional `initialCommunities` is a separate caller-owned, packed `uint32` vector with
+the same number of rows; without it, every vertex initially belongs to its own stable-identifier
+community. `modularity` is a separate caller-owned one-row `GPUVector<'float32'>` containing the
+real final weighted partition score. The optional `converged` and `valid` results are physically
+distinct caller-owned one-row `GPUVector<'uint32'>` status vectors.
+
+The objective is the same Newman modularity used by `LuGraphModularity`. Directed graphs use
+`Q = Σc [Lc / W - γ × Kout,c × Kin,c / W²]`; undirected graphs use
+`Q = Σc [Lc / W - γ × (Kc / (2W))²]`. For every eligible vertex and neighboring candidate
+community, the contributor evaluates
+`ΔQ = Q(partition after moving the vertex) - Q(current partition)`. It accepts exactly **one**
+globally best move per round, and only when `ΔQ` is strictly positive and strictly greater than
+`minimumGain`. Tied gains choose the lowest stable vertex identifier, followed by the lowest
+candidate community identifier. Evaluating an immutable prior partition and applying only one move
+avoids simultaneous conflicting moves and never intentionally accepts a modularity regression.
+
+`iterations` defaults to `32` and may be any integer from `0` through `1024`.
+`minimumGain` defaults to zero and must be a finite, nonnegative value representable as `float32`.
+`resolution` defaults to one and follows the same finite, nonnegative `float32` contract as the
+standalone modularity scorer. Zero rounds preserve the caller's initial partition or the identity
+assignment, publish its real modularity, and report convergence zero for a valid nonempty graph.
+If a completed round finds no admissible positive-gain move, `converged` becomes one. If the
+iteration budget ends immediately after an improving move, convergence remains zero: a bounded
+improvement is not evidence that a local optimum has been reached.
+A local fixed point is not necessarily the globally best partition.
+
+Directed graphs require both forward and reverse CSR; undirected graphs reuse symmetric forward
+CSR. Original nonnegative `float32` edge weights are preserved, and missing weights mean one.
+Parallel source edges, reciprocal directed edges, and self-loops retain exactly the same weighted
+multiplicity and degree-volume conventions as `LuGraphModularity`. Out-of-domain source endpoints
+are ignored together with their weights; an invalid warm-start label, negative or nonfinite
+accepted edge weight, zero valid total edge weight, floating-point accumulation overflow, or
+overflow in required adjacency fails closed. Every output label then becomes `0xffffffff`, the
+modularity score becomes zero, and optional validity and convergence become zero. An empty graph
+has no label rows, score zero, validity zero, and convergence one if adjacency did not overflow.
+
+The contributor encodes all bounded candidate evaluation, deterministic winner selection, label
+updates, and final `LuGraphModularity` scoring into the caller-owned GPU command graph. It does
+not submit work, read results back, or synchronize with the CPU. Worst-case work for `K` rounds is
+`O(K × (V + E + sum(degree²)))`, with separate `O(V + E)` initialization and final scoring and
+`O(V + E)` graph-owned packed scratch; high-degree hubs and large round budgets require explicit
+measurement. This is **single-level Louvain-style local moving**, not the complete multilevel
+Louvain algorithm, Leiden refinement, community coarsening, hierarchical aggregation, a global
+optimality guarantee, or a seventh Graphalytics workload.
+
 ## Evaluate community quality with LuGraphModularity
 
 **Question: Does an existing community grouping keep more relationship weight inside its groups
@@ -810,8 +897,8 @@ than a degree-matched random network would predict?**
 improve that partition. Use it to compare rival social-network groupings, check whether a detected
 fraud ring concentrates transaction weight, evaluate whether service ownership labels follow real
 dependency structure, or monitor whether an evolving document grouping is more meaningful than
-chance. Feed it labels from `LuGraphLabelPropagation`, an external clustering method, or any other
-caller-owned assignment.
+chance. Feed it labels from `LuGraphLabelPropagation`, `LuGraphModularityOptimization`, an
+external clustering method, or any other caller-owned assignment.
 
 A high positive score means the specified partition keeps more relationship weight within its
 groups than the corresponding degree-preserving random baseline predicts; a score near zero
@@ -1119,6 +1206,7 @@ import {
   LuGraphLabelPropagation,
   LuGraphLocalClusteringCoefficient,
   LuGraphModularity,
+  LuGraphModularityOptimization,
   LuGraphPageRank,
   LuGraphSingleSourceShortestPath,
   LuGraphSpatialForceLayout,
@@ -1200,9 +1288,20 @@ new LuGraphLabelPropagation({
   iterations: 32,
   converged: communitiesConverged
 }).addToGraph(workflow);
+new LuGraphModularityOptimization({
+  topology,
+  output: improvedCommunityIds,
+  modularity: optimizedModularity,
+  initialCommunities: communityIds,
+  resolution: 1,
+  iterations: 32,
+  minimumGain: 0,
+  converged: optimizationConverged,
+  valid: optimizationValid
+}).addToGraph(workflow);
 new LuGraphModularity({
   graph,
-  communities: communityIds,
+  communities: improvedCommunityIds,
   output: modularityScore,
   resolution: 1,
   communityContributions,
@@ -1257,22 +1356,25 @@ when exact all-pairs repulsion is the better fit.
   `DynamicBuffer` wrapper exposes the same underlying allocation through different views.
 - Adjacency capacities and overflow statuses are explicit. Breadth-first search fails closed to
   unreachable distances, weighted routing publishes `+Infinity` and `0xffffffff` predecessors,
-  weak components, community detection, and core numbers publish `0xffffffff`, local clustering
-  publishes zero coefficients and optional `0xffffffff` triangle statuses, and PageRank publishes
-  zero scores when a required neighbor list overflowed. Force layout preserves its existing
-  positions and clears velocities on required adjacency overflow.
+  weak components, community detection, modularity optimization, and core numbers publish
+  `0xffffffff`, local clustering publishes zero coefficients and optional `0xffffffff` triangle
+  statuses, and PageRank publishes zero scores when a required neighbor list overflowed. Force
+  layout preserves its existing positions and clears velocities on required adjacency overflow.
 - Invalid negative or nonfinite edge weights also fail weighted routing closed; optional
   `invalidWeightCount` reports invalid original source edges without double-counting reverse CSR.
 - Partition modularity reads original source edges independently of adjacency overflow; invalid
   labels, invalid accepted edge weights, or zero total weight publish zero score and validity.
+- Modularity optimization additionally requires complete selected adjacency; invalid initial
+  labels, accepted weights, or selected neighbor overflow publish invalid-label sentinels and
+  clear its score, validity, and convergence.
 - Spatial layout also preserves positions and clears velocities when its accepted count excludes
   any out-of-domain vertex or its explicit vertex-ID capacity overflows.
 - Degree remains exact under neighbor overflow because its input is the complete CSR offset range.
 - Renderable layout positions require both `Buffer.STORAGE` and `Buffer.VERTEX` usage on their
   original caller-owned allocation; position readback or repacking is never implicit.
-- Fixed weighted-routing, component, community, core-number, and PageRank iteration budgets do
-  not imply convergence. Their optional status, degeneracy, and final-change outputs remain
-  GPU-resident until an application explicitly requests readback.
+- Fixed weighted-routing, component, community, modularity-optimization, core-number, and PageRank
+  iteration budgets do not imply convergence. Their optional status, degeneracy, and final-change
+  outputs remain GPU-resident until an application explicitly requests readback.
 - Work uses bounded WebGPU dispatch and portable storage bindings on one device. Original chunk
   preservation does not imply distributed or multi-GPU execution.
 - The optional graph subpath does not supply automatic Arrow import, rendering, graph persistence,

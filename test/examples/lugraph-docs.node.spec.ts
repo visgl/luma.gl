@@ -219,6 +219,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('**Question: Which route from my starting vertex costs');
     expect(graphDocumentation).toContain('**Question: Which vertices belong to the same connected');
     expect(graphDocumentation).toContain('**Question: Which vertices form closely connected');
+    expect(graphDocumentation).toContain('**Question: Which actual community reassignment');
     expect(graphDocumentation).toContain('**Question: Does an existing community grouping');
     expect(graphDocumentation).toContain('**Question: Which vertices receive influence');
     expect(graphDocumentation).toContain('**Question: How can I position connected entities');
@@ -235,6 +236,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
       'LuGraphSingleSourceShortestPath',
       'LuGraphConnectedComponents',
       'LuGraphLabelPropagation',
+      'LuGraphModularityOptimization',
       'LuGraphModularity',
       'LuGraphPageRank',
       'LuGraphForceLayout',
@@ -254,6 +256,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('weakly connected components');
     expect(packageDocumentation).toContain('deterministic label-propagation communities');
     expect(packageDocumentation).toContain('LuGraphLabelPropagation');
+    expect(packageDocumentation).toContain('LuGraphModularityOptimization');
     expect(packageDocumentation).toContain('LuGraphModularity');
     expect(packageDocumentation).toContain('normalized PageRank');
     expect(packageDocumentation).toContain('progressive exact force-directed layout');
@@ -319,6 +322,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('core decomposition and modularity scoring');
     expect(graphDocumentation).toContain('**beyond** those six standardized workload families');
     expect(packageDocumentation).toContain('**beyond** the six Graphalytics workload families');
+    expect(packageDocumentation).toContain('does not become a seventh official workload');
     expect(experimentalOverview).toContain(councilHomepage);
     expect(experimentalOverview).toContain(graphalyticsAlgorithms);
     expect(experimentalOverview).toContain('formerly the Linked');
@@ -327,6 +331,74 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(capabilitiesDocumentation).toContain(graphalyticsAlgorithms);
     expect(capabilitiesDocumentation).toContain('beyond its');
     expect(capabilitiesDocumentation).toContain('six standardized workload families');
+  });
+
+  test('explains deterministic weighted single-level modularity optimization and truthful bounds', () => {
+    expect(graphDocumentation).toContain(
+      '## Improve weighted community partitions with LuGraphModularityOptimization'
+    );
+    expect(graphDocumentation).toContain(
+      'social grouping should reflect actual interaction strength'
+    );
+    expect(graphDocumentation).toContain('fraud ring');
+    expect(graphDocumentation).toContain('weighted service');
+    expect(graphDocumentation).toContain('Three community questions are related but distinct');
+    expect(graphDocumentation).toContain('new LuGraphModularityOptimization({');
+    expect(graphDocumentation).toContain('output: improvedCommunityIds');
+    expect(graphDocumentation).toContain('modularity: optimizedModularity');
+    expect(graphDocumentation).toContain('initialCommunities: proposedCommunityIds');
+    expect(graphDocumentation).toContain('resolution: 1');
+    expect(graphDocumentation).toContain('iterations: 32');
+    expect(graphDocumentation).toContain('minimumGain: 0');
+    expect(graphDocumentation).toContain('converged: optimizationConverged');
+    expect(graphDocumentation).toContain('valid: optimizationValid');
+    expect(graphDocumentation).toContain(
+      'every vertex initially belongs to its own stable-identifier'
+    );
+    expect(graphDocumentation).toContain('`Q = Σc [Lc / W - γ × Kout,c × Kin,c / W²]`');
+    expect(graphDocumentation).toContain('`Q = Σc [Lc / W - γ × (Kc / (2W))²]`');
+    expect(graphDocumentation).toContain(
+      '`ΔQ = Q(partition after moving the vertex) - Q(current partition)`'
+    );
+    expect(graphDocumentation).toContain('exactly **one**');
+    expect(graphDocumentation).toContain('globally best move per round');
+    expect(graphDocumentation).toContain('strictly positive and strictly greater than');
+    expect(graphDocumentation).toContain('lowest stable vertex identifier');
+    expect(graphDocumentation).toContain('lowest\ncandidate community identifier');
+    expect(graphDocumentation).toContain('never intentionally accepts a modularity regression');
+    expect(graphDocumentation).toContain('`iterations` defaults to `32`');
+    expect(graphDocumentation).toContain('integer from `0` through `1024`');
+    expect(graphDocumentation).toContain('finite, nonnegative value representable as `float32`');
+    expect(graphDocumentation).toContain('Zero rounds preserve');
+    expect(graphDocumentation).toContain('convergence zero for a valid nonempty graph');
+    expect(graphDocumentation).toContain('convergence remains zero: a bounded');
+    expect(graphDocumentation).toContain('not necessarily the globally best partition');
+    expect(graphDocumentation).toContain('Directed graphs require both forward and reverse CSR');
+    expect(graphDocumentation).toContain('Parallel source edges, reciprocal directed edges');
+    expect(graphDocumentation).toContain('same weighted');
+    expect(graphDocumentation).toContain('an invalid warm-start label');
+    expect(graphDocumentation).toContain('Every output label then becomes `0xffffffff`');
+    expect(graphDocumentation).toContain('validity zero, and convergence one');
+    expect(graphDocumentation).toContain('final `LuGraphModularity` scoring');
+    expect(graphDocumentation).toContain('`O(K × (V + E + sum(degree²)))`');
+    expect(graphDocumentation).toContain('`O(V + E)` graph-owned packed scratch');
+    expect(graphDocumentation).toContain('**single-level Louvain-style local moving**');
+    expect(graphDocumentation).toContain('not the complete multilevel');
+    expect(graphDocumentation).toContain('Leiden refinement');
+    expect(graphDocumentation).toContain('community coarsening');
+    expect(graphDocumentation).toContain('a seventh Graphalytics workload');
+    expect(packageDocumentation).toContain(
+      'single globally largest strictly positive modularity gain'
+    );
+    expect(packageDocumentation).toContain('single-level Louvain-style local moving');
+    expect(packageDocumentation).toContain('not full');
+    expect(experimentalOverview).toContain('bounded weighted');
+    expect(experimentalOverview).toContain('not full multilevel Louvain or Leiden');
+    expect(capabilitiesDocumentation).toContain(
+      '| Single-level modularity optimization | Experimental |'
+    );
+    expect(capabilitiesDocumentation).toContain('full multilevel Louvain coarsening');
+    expect(capabilitiesDocumentation).toContain('Leiden refinement, and dynamic graph updates');
   });
 
   test('explains bounded simple-weak core decomposition, useful backbones, and exactness limits', () => {
