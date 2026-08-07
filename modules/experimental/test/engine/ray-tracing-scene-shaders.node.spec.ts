@@ -7,6 +7,7 @@ import {WgslReflect} from 'wgsl_reflect';
 import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,
+  RAY_TRACING_HISTORY_CARRY_SHADER,
   RAY_TRACING_SCENE_SHADER
 } from '../../src/engine/ray-tracing-scene-shaders';
 
@@ -53,6 +54,61 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_BOUNDS_SHADER).toContain(
       'primitiveMaxima[componentIndex + axis] = -INVALID_BOUND'
     );
+  });
+
+  test('carries only untouched sparse-phase history through CORE-compatible texture bindings', () => {
+    const reflection = new WgslReflect(RAY_TRACING_HISTORY_CARRY_SHADER);
+
+    expect(reflection.entry.compute.map(entry => entry.name)).toEqual(['main']);
+    expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
+      {name: 'uniforms', binding: 0}
+    ]);
+    expect(reflection.uniforms[0].size).toBe(272);
+    expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
+      {name: 'historyImage', binding: 1},
+      {name: 'historyMetadata', binding: 2}
+    ]);
+    expect(reflection.storage.map(({name, binding}) => ({name, binding}))).toEqual([
+      {name: 'outputImage', binding: 3},
+      {name: 'outputMetadata', binding: 4}
+    ]);
+    expect(RAY_TRACING_HISTORY_CARRY_SHADER).toContain('@workgroup_size(8, 8, 1)');
+    expect(RAY_TRACING_HISTORY_CARRY_SHADER).toContain('phaseCount <= 1u');
+    expect(RAY_TRACING_HISTORY_CARRY_SHADER).toContain(
+      '(uniforms.displayPhase.z + invocation.y) % phaseCount'
+    );
+    expect(RAY_TRACING_HISTORY_CARRY_SHADER).toContain(
+      'blockIndex * phaseCount + laneIndex + select(0u, 1u, laneIndex >= selectedPhase)'
+    );
+    expect(RAY_TRACING_HISTORY_CARRY_SHADER).toContain(
+      'textureStore(outputImage, pixel, textureLoad(historyImage, pixel, 0))'
+    );
+    expect(RAY_TRACING_HISTORY_CARRY_SHADER).toContain(
+      'textureStore(outputMetadata, pixel, textureLoad(historyMetadata, pixel, 0))'
+    );
+  });
+
+  test('compacts every untouched phase for odd widths and row-varying selected pixels', () => {
+    for (const width of [1, 2, 3, 5, 7, 8, 9, 15, 17, 31]) {
+      for (const phaseCount of [2, 3, 4, 5]) {
+        const compactWidth = Math.ceil((width * (phaseCount - 1)) / phaseCount);
+        for (let phaseIndex = 0; phaseIndex < phaseCount; phaseIndex++) {
+          for (let row = 0; row < 8; row++) {
+            const selectedPhase = (phaseIndex + row) % phaseCount;
+            const actualPixels = Array.from({length: compactWidth}, (_, invocation) => {
+              const blockIndex = Math.floor(invocation / (phaseCount - 1));
+              const laneIndex = invocation % (phaseCount - 1);
+              return blockIndex * phaseCount + laneIndex + Number(laneIndex >= selectedPhase);
+            }).filter(pixel => pixel < width);
+            const expectedPixels = Array.from({length: width}, (_, pixel) => pixel).filter(
+              pixel => pixel % phaseCount !== selectedPhase
+            );
+
+            expect(actualPixels).toEqual(expectedPixels);
+          }
+        }
+      }
+    }
   });
 
   test('uses the WebGPU core storage-buffer budget exactly', () => {
@@ -121,6 +177,152 @@ describe('graph-accelerated ray tracing shaders', () => {
     );
   });
 
+  test('caches guarded inverse ray directions and pending BVH child-entry distances', () => {
+    expect(RAY_TRACING_SCENE_SHADER).toContain('struct PendingRayNode');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('entryDistance: f32');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn makeInverseRayDirection');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let parallelAxes = abs(direction) < vec3<f32>(0.0000001)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let safeDirection = select(direction, vec3<f32>(1.0), parallelAxes)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain('vec3<f32>(1.0) / safeDirection');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('(minimum - origin) * inverseDirection[axis]');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('(maximum - origin) * inverseDirection[axis]');
+    expect(RAY_TRACING_SCENE_SHADER).not.toContain('(minimum - origin) / direction');
+    expect(RAY_TRACING_SCENE_SHADER).not.toContain('(maximum - origin) / direction');
+    expect(
+      RAY_TRACING_SCENE_SHADER.match(
+        /let inverseDirection = makeInverseRayDirection\(ray\.direction\);/g
+      )
+    ).toHaveLength(2);
+    expect(
+      RAY_TRACING_SCENE_SHADER.match(
+        /let inverseLocalDirection = makeInverseRayDirection\(localDirection\);/g
+      )
+    ).toHaveLength(2);
+    expect(
+      RAY_TRACING_SCENE_SHADER.match(
+        /var pendingNodes: array<PendingRayNode, BVH_STACK_CAPACITY>;/g
+      )
+    ).toHaveLength(2);
+    expect(
+      RAY_TRACING_SCENE_SHADER.match(
+        /var pendingBlasNodes: array<PendingRayNode, BLAS_STACK_CAPACITY>;/g
+      )
+    ).toHaveLength(2);
+    expect(RAY_TRACING_SCENE_SHADER).toContain('PendingRayNode(fartherNode, fartherDistance)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('PendingRayNode(nearerNode, nearerDistance)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('PendingRayNode(fartherNode, fartherBlasDistance)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('PendingRayNode(nearerNode, nearerBlasDistance)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'if (pendingNode.entryDistance >= closestHit.distance)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'if (pendingBlasNode.entryDistance >= closestHit.distance)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER.match(/if \(pendingNode\.entryDistance >= /g)).toHaveLength(2);
+    expect(RAY_TRACING_SCENE_SHADER.match(/if \(pendingBlasNode\.entryDistance >= /g)).toHaveLength(
+      2
+    );
+    expect(
+      RAY_TRACING_SCENE_SHADER.match(/pendingNodes\[0\] = PendingRayNode\(0u, rootDistance\);/g)
+    ).toHaveLength(2);
+    expect(
+      RAY_TRACING_SCENE_SHADER.match(
+        /pendingBlasNodes\[0\] = PendingRayNode\(0u, rootBlasDistance\);/g
+      )
+    ).toHaveLength(2);
+  });
+
+  test('preserves slab intersections for zero, parallel, reversed, and clipped ray directions', () => {
+    const infinity = 1e20;
+    const epsilon = 0.0005;
+    const minimumDirectionMagnitude = 0.0000001;
+    const minimum = [-1, -1, -1];
+    const maximum = [1, 1, 1];
+
+    function getEntryDistance(
+      origin: number[],
+      direction: number[],
+      minimumBounds: number[],
+      maximumBounds: number[],
+      maximumDistance: number,
+      useCachedInverse: boolean
+    ): number {
+      const inverseDirection = direction.map(component =>
+        Math.abs(component) < minimumDirectionMagnitude ? 1 : 1 / component
+      );
+      expect(inverseDirection.every(Number.isFinite)).toBe(true);
+
+      let nearestDistance = 0;
+      let farthestDistance = maximumDistance;
+      for (let axis = 0; axis < 3; axis++) {
+        if (minimumBounds[axis] > maximumBounds[axis]) {
+          return infinity;
+        }
+        if (Math.abs(direction[axis]) < minimumDirectionMagnitude) {
+          if (origin[axis] < minimumBounds[axis] || origin[axis] > maximumBounds[axis]) {
+            return infinity;
+          }
+          continue;
+        }
+
+        const firstDistance = useCachedInverse
+          ? (minimumBounds[axis] - origin[axis]) * inverseDirection[axis]
+          : (minimumBounds[axis] - origin[axis]) / direction[axis];
+        const secondDistance = useCachedInverse
+          ? (maximumBounds[axis] - origin[axis]) * inverseDirection[axis]
+          : (maximumBounds[axis] - origin[axis]) / direction[axis];
+        nearestDistance = Math.max(nearestDistance, Math.min(firstDistance, secondDistance));
+        farthestDistance = Math.min(farthestDistance, Math.max(firstDistance, secondDistance));
+        if (nearestDistance > farthestDistance) {
+          return infinity;
+        }
+      }
+
+      return farthestDistance <= epsilon || nearestDistance >= maximumDistance
+        ? infinity
+        : nearestDistance;
+    }
+
+    const rays = [
+      {origin: [0, 0, -2], direction: [0, -0, 1], maximumDistance: 10},
+      {origin: [1, -1, -2], direction: [0, 0, 1], maximumDistance: 10},
+      {origin: [1.01, 0, -2], direction: [0, 0, 1], maximumDistance: 10},
+      {origin: [1.01, 0, -2], direction: [0.00000001, 0, 1], maximumDistance: 10},
+      {origin: [0, 0, -2], direction: [0.0000001, -0.0000001, 1], maximumDistance: 10},
+      {origin: [0, 0, 2], direction: [-0, 0.00000001, -1], maximumDistance: 10},
+      {origin: [0, 0, -2], direction: [0, 0, 1], maximumDistance: 0.5},
+      {origin: [0, 0, 1], direction: [0, 0, 1], maximumDistance: 10},
+      {origin: [0, 0, 0], direction: [0, 0, 1], maximumDistance: 0.0001}
+    ];
+
+    for (const ray of rays) {
+      const originalDistance = getEntryDistance(
+        ray.origin,
+        ray.direction,
+        minimum,
+        maximum,
+        ray.maximumDistance,
+        false
+      );
+      const cachedDistance = getEntryDistance(
+        ray.origin,
+        ray.direction,
+        minimum,
+        maximum,
+        ray.maximumDistance,
+        true
+      );
+
+      expect(cachedDistance).toBeCloseTo(originalDistance, 10);
+    }
+
+    expect(getEntryDistance([0, 0, -2], [0, 0, 1], [2, -1, -1], maximum, 10, true)).toBe(infinity);
+  });
+
   test('traverses packed per-mesh BLAS nodes near-first for closest and shadow hits', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('struct RayBlasNode');
     expect(RAY_TRACING_SCENE_SHADER).toContain('const BLAS_STACK_CAPACITY = 32u');
@@ -145,6 +347,109 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).not.toContain(
       'for (var triangleIndex = triangleStart; triangleIndex < triangleEnd; triangleIndex++)'
     );
+
+    expect(RAY_TRACING_SCENE_SHADER).not.toContain('fn intersectsBounds(');
+    expect(RAY_TRACING_SCENE_SHADER).not.toContain('intersectsBounds(');
+    expect(
+      RAY_TRACING_SCENE_SHADER.match(/intersectSphere\(localRay, sphereRadius, /g)
+    ).toHaveLength(2);
+
+    for (const functionName of ['intersectPrimitive', 'intersectsPrimitive']) {
+      const functionStart = RAY_TRACING_SCENE_SHADER.indexOf(`fn ${functionName}(`);
+      const functionEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', functionStart + 1);
+      const functionSource = RAY_TRACING_SCENE_SHADER.slice(functionStart, functionEnd);
+      const sphereBranch = functionSource.indexOf('if (sphereRadius > 0.0)');
+      const sphereIntersection = functionSource.indexOf('intersectSphere(localRay, sphereRadius, ');
+      const meshBounds = functionSource.indexOf('let rootBlasDistance =');
+
+      expect(sphereBranch).toBeGreaterThan(0);
+      expect(sphereIntersection).toBeGreaterThan(sphereBranch);
+      expect(meshBounds).toBeGreaterThan(sphereIntersection);
+      expect(functionSource.match(/intersectSphere\(localRay, sphereRadius, /g)).toHaveLength(1);
+    }
+  });
+
+  test('preserves analytic sphere hits without repeating the same bounding-sphere quadratic', () => {
+    const epsilon = 0.0005;
+    const infinity = 1e20;
+
+    function intersectSphere(
+      origin: readonly number[],
+      direction: readonly number[],
+      radius: number,
+      maximumDistance: number
+    ): number {
+      const directionLength = direction.reduce((sum, component) => sum + component ** 2, 0);
+      const halfProjection = origin.reduce(
+        (sum, component, index) => sum + component * direction[index],
+        0
+      );
+      const originLength = origin.reduce((sum, component) => sum + component ** 2, 0);
+      const discriminant = halfProjection ** 2 - directionLength * (originLength - radius ** 2);
+      if (discriminant < 0) {
+        return infinity;
+      }
+
+      const root = Math.sqrt(discriminant);
+      const firstDistance = (-halfProjection - root) / directionLength;
+      const secondDistance = (-halfProjection + root) / directionLength;
+      const distance = firstDistance > epsilon ? firstDistance : secondDistance;
+      return distance > epsilon && distance < maximumDistance ? distance : infinity;
+    }
+
+    function intersectsCoarseBounds(
+      origin: readonly number[],
+      direction: readonly number[],
+      radius: number,
+      maximumDistance: number
+    ): boolean {
+      const directionLength = direction.reduce((sum, component) => sum + component ** 2, 0);
+      const halfProjection = origin.reduce(
+        (sum, component, index) => sum + component * direction[index],
+        0
+      );
+      const originLength = origin.reduce((sum, component) => sum + component ** 2, 0);
+      const discriminant = halfProjection ** 2 - directionLength * (originLength - radius ** 2);
+      if (discriminant < 0) {
+        return false;
+      }
+
+      const root = Math.sqrt(discriminant);
+      return (
+        (-halfProjection + root) / directionLength > epsilon &&
+        (-halfProjection - root) / directionLength < maximumDistance
+      );
+    }
+
+    const rays = [
+      {origin: [0, 0, -3], direction: [0, 0, 1], radius: 1, maximumDistance: 10},
+      {origin: [0, 0, 0], direction: [0, 0, 2], radius: 1, maximumDistance: 10},
+      {origin: [1, 0, -3], direction: [0, 0, 1], radius: 1, maximumDistance: 10},
+      {origin: [1.001, 0, -3], direction: [0, 0, 1], radius: 1, maximumDistance: 10},
+      {origin: [0, 0, -3], direction: [0, 0, -1], radius: 1, maximumDistance: 10},
+      {origin: [0, 0, -3], direction: [0, 0, 1], radius: 1, maximumDistance: 1.5},
+      {origin: [0, 0, 1], direction: [0, 0, 1], radius: 1, maximumDistance: 10},
+      {origin: [0.25, -0.1, 2], direction: [0.1, 0.05, -2], radius: 0.75, maximumDistance: 5}
+    ];
+
+    for (const ray of rays) {
+      const directDistance = intersectSphere(
+        ray.origin,
+        ray.direction,
+        ray.radius,
+        ray.maximumDistance
+      );
+      const guardedDistance = intersectsCoarseBounds(
+        ray.origin,
+        ray.direction,
+        ray.radius,
+        ray.maximumDistance
+      )
+        ? intersectSphere(ray.origin, ray.direction, ray.radius, ray.maximumDistance)
+        : infinity;
+
+      expect(directDistance).toBe(guardedDistance);
+    }
   });
 
   test('traces rotating sparse phases and bounds shadow-light sampling', () => {
@@ -157,6 +462,41 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('let rotatingLightOffset = uniforms.acceleration.w');
     expect(RAY_TRACING_SCENE_SHADER).toContain('rotatingLightIndex >= shadowSampleCount');
     expect(RAY_TRACING_SCENE_SHADER).toContain('let lightSampleWeight');
+  });
+
+  test('uses CPU-counted direct lights and hoists invariant shading outside the light loop', () => {
+    const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn evaluateDirectLighting(');
+    const functionEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', functionStart + 1);
+    const functionSource = RAY_TRACING_SCENE_SHADER.slice(functionStart, functionEnd);
+    const loopStart = functionSource.indexOf(
+      'for (var lightIndex = 0u; lightIndex < uniforms.dimensions.w; lightIndex++)'
+    );
+
+    expect(functionSource).toContain('let directLightCount = u32(max(uniforms.temporal.y, 0.0))');
+    expect(functionSource).not.toContain('var directLightCount = 0u');
+    expect(
+      functionSource.match(
+        /for \(var lightIndex = 0u; lightIndex < uniforms\.dimensions\.w; lightIndex\+\+\)/g
+      )
+    ).toHaveLength(1);
+    for (const invariant of [
+      'let diffuse = baseColor * (1.0 - metallic) / PI',
+      'let specularPower = mix(128.0, 4.0, roughness)',
+      'let lightSampleWeight = f32(directLightCount) / f32(max(shadowSampleCount, 1u))'
+    ]) {
+      const invariantIndex = functionSource.indexOf(invariant);
+      expect(invariantIndex).toBeGreaterThan(0);
+      expect(invariantIndex).toBeLessThan(loopStart);
+    }
+
+    const pointLightBranch = functionSource.indexOf('if (lightType >= 2u)');
+    const directionalNormalization = functionSource.indexOf(
+      'lightDirection = normalize(-light.directionType.xyz)'
+    );
+    expect(functionSource).toContain('var lightDirection = vec3<f32>(0.0)');
+    expect(pointLightBranch).toBeGreaterThan(loopStart);
+    expect(directionalNormalization).toBeGreaterThan(pointLightBranch);
+    expect(functionSource.match(/normalize\(-light\.directionType\.xyz\)/g)).toHaveLength(1);
   });
 
   test('uses a stable guide ray and low-discrepancy radiance samples', () => {
@@ -172,6 +512,19 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain(
       'let historicalSample = getHistoricalRaySample(pixel, guideRay, guideHit, color)'
     );
+
+    const functionStart = RAY_TRACING_SCENE_SHADER.indexOf('fn makeCameraRayAtOffset(');
+    const functionEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', functionStart + 1);
+    const cameraRaySource = RAY_TRACING_SCENE_SHADER.slice(functionStart, functionEnd);
+    const orthographicBranch = cameraRaySource.indexOf('if (uniforms.cameraPosition.w > 0.5)');
+    const farPoint = cameraRaySource.indexOf('let farPoint =');
+    const nearPoint = cameraRaySource.indexOf('let nearPoint =');
+
+    expect(cameraRaySource).toContain('var origin = uniforms.cameraPosition.xyz');
+    expect(farPoint).toBeGreaterThan(0);
+    expect(orthographicBranch).toBeGreaterThan(farPoint);
+    expect(nearPoint).toBeGreaterThan(orthographicBranch);
+    expect(cameraRaySource).not.toContain('let nearPosition =');
   });
 
   test('reprojects bilinear per-instance radiance and rejects invalid history', () => {
@@ -200,6 +553,66 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('historicalColor.a');
     expect(RAY_TRACING_SCENE_SHADER).toContain('vec4<f32>(color, totalSampleCount)');
     expect(RAY_TRACING_SCENE_SHADER).toContain('textureStore(outputMetadata');
+  });
+
+  test('avoids loading bilinear temporal taps whose weights cannot affect the result', () => {
+    for (const tapName of ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']) {
+      const weightGuard = `if (${tapName}Weight > 0.0)`;
+      const sampleLoad = `let ${tapName}Sample = loadHistoricalRaySample(`;
+      const guardIndex = RAY_TRACING_SCENE_SHADER.indexOf(weightGuard);
+      const sampleIndex = RAY_TRACING_SCENE_SHADER.indexOf(sampleLoad);
+
+      expect(guardIndex).toBeGreaterThan(0);
+      expect(sampleIndex).toBeGreaterThan(guardIndex);
+    }
+
+    const cases = [
+      {fraction: [0, 0], expectedLoads: 1},
+      {fraction: [0.25, 0], expectedLoads: 2},
+      {fraction: [0, 0.75], expectedLoads: 2},
+      {fraction: [0.25, 0.75], expectedLoads: 4}
+    ];
+    const samples = [
+      {color: [0.2, 0.4, 0.6], count: 2},
+      {color: [0.3, 0.5, 0.7], count: 5},
+      {color: [0.4, 0.6, 0.8], count: 9},
+      {color: [0.5, 0.7, 0.9], count: 12}
+    ];
+
+    for (const {fraction, expectedLoads} of cases) {
+      const weights = [
+        (1 - fraction[0]) * (1 - fraction[1]),
+        fraction[0] * (1 - fraction[1]),
+        (1 - fraction[0]) * fraction[1],
+        fraction[0] * fraction[1]
+      ];
+      const originalColor = [0, 0, 0];
+      const optimizedColor = [0, 0, 0];
+      let originalCount = 0;
+      let optimizedCount = 0;
+      let optimizedLoads = 0;
+
+      for (let sampleIndex = 0; sampleIndex < samples.length; sampleIndex++) {
+        const sample = samples[sampleIndex];
+        const weight = weights[sampleIndex];
+        for (let colorIndex = 0; colorIndex < 3; colorIndex++) {
+          originalColor[colorIndex] += sample.color[colorIndex] * weight;
+        }
+        originalCount += sample.count * weight;
+
+        if (weight > 0) {
+          optimizedLoads++;
+          for (let colorIndex = 0; colorIndex < 3; colorIndex++) {
+            optimizedColor[colorIndex] += sample.color[colorIndex] * weight;
+          }
+          optimizedCount += sample.count * weight;
+        }
+      }
+
+      expect(optimizedLoads).toBe(expectedLoads);
+      expect(optimizedColor).toEqual(originalColor);
+      expect(optimizedCount).toBe(originalCount);
+    }
   });
 
   test('manually reconstructs full-resolution HDR and SDR presentation without a sampler', () => {

@@ -82,8 +82,13 @@ export class ANARIObject<Parameters extends object = Record<string, unknown>> {
   }
 
   commitParameters(): this {
+    const previousParameters = this.committedParameters;
     this.committedParameters = {...this.pendingParameters};
     this.version++;
+    const instanceGroupChanged =
+      this.type === 'instance' &&
+      Reflect.get(previousParameters, 'group') !== Reflect.get(this.committedParameters, 'group');
+    this.device.recordSceneObjectCommit(this.type, this.id, instanceGroupChanged);
     return this;
   }
 }

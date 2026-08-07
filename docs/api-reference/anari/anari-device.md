@@ -297,3 +297,37 @@ Methods return `this` for chaining. Every `commitParameters()` increments `versi
 :::important
 Changing a child object, such as a light or material, requires committing that object. Replacing a reference in a parent, such as `frame.setParameter('world', nextWorld)`, also requires committing the parent. Objects are retained independently; committing one object does not recursively commit others.
 :::
+
+### Retained scene extraction and committed revisions
+
+The rendering adapter retains normalized scene surfaces, placement matrices, materials, lights, and
+analytic-sphere descriptors per committed world. An unchanged render or camera-only update reuses
+the same surface and light arrays instead of traversing the world hierarchy, rebuilding material
+uniforms, or rediscovering analytic primitives. Pending object edits remain invisible until their
+own `commitParameters()` call.
+
+Committed changes are classified by the work they actually affect:
+
+| Committed change | Reused data | Invalidated data |
+| --- | --- | --- |
+| Camera, frame size, or ordinary renderer settings | Surfaces, placements, materials, and lights. | Camera or frame state only. |
+| Instance transform | Surface grouping, geometry, materials, and lights. | Only the affected stable placement matrices. |
+| Material or shared image sampler | Surface grouping, placements, and lights. | Materials that depend on the committed object. |
+| Light or renderer ambient radiance | Surface grouping, placements, and materials. | The normalized light array. |
+| World/group membership, object arrays, surface identity, or geometry | Unaffected cached geometry/material allocations when compatible. | World topology, placement identities, analytic descriptors, and dependent lights. |
+
+The shared renderer receives optional grouped scene revisions containing world identity, topology,
+transforms, materials, lights, and the stable IDs of changed placements. World replacement always
+changes its identity. One ANARI instance contributing to several surfaces publishes every affected
+placement identity, including the distinct suffixes used for duplicate placements.
+
+Revision tracking is device-local and bounded. If a world is not rendered before older commit
+records expire, its adapter safely rebuilds the retained scene rather than guessing which objects
+changed. This remains CPU-side scene bookkeeping: command graphs still borrow application-owned
+resources, and GPU command submission remains under application control.
+
+Committed morph weights and skin-joint palettes currently invalidate retained topology
+conservatively. The forward raster renderer applies their updated deformation data, but the
+deferred renderer does not yet apply skin-joint palettes, and the software ray tracer does not yet
+deform mesh vertices or refit deformation-aware BLASes. Efficient animated mesh deformation remains
+future work.

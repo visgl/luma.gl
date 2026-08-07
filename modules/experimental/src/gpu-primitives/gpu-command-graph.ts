@@ -16,7 +16,7 @@ import type {
 } from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
 import {
-  GPUData,
+  type GPUData,
   type GPUVector,
   type GPUVectorFormat,
   getGPUVectorFormatInfo,
@@ -740,6 +740,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private readonly compiledNodes: CompiledNode<Parameters>[];
   private readonly activeImportedBufferHandles = new Set<GraphBufferHandle>();
   private readonly writableImportedBufferHandles = new Set<GraphBufferHandle>();
+  private readonly activeImportedTextureHandles = new Set<GraphTextureHandle>();
+  private readonly writableImportedTextureHandles = new Set<GraphTextureHandle>();
   private readonly transientBuffers: Map<GraphBufferHandle, Buffer>;
   private readonly transientTextures: Map<GraphTextureHandle, Texture>;
   private readonly bufferTransientAllocations: BufferTransientAllocation[];
@@ -773,6 +775,19 @@ export class CompiledGPUCommandGraph<Parameters = void> {
               this.writableImportedBufferHandles.add(handle);
             }
           }
+        } else if (isGraphTextureUse(resource)) {
+          const handle = getTextureHandle(resource.texture);
+          if (!handle.transient) {
+            this.activeImportedTextureHandles.add(handle);
+            if (
+              resource.usage === 'storage-write' ||
+              resource.usage === 'storage-read-write' ||
+              resource.usage === 'render-attachment' ||
+              resource.usage === 'copy-destination'
+            ) {
+              this.writableImportedTextureHandles.add(handle);
+            }
+          }
         }
       }
     }
@@ -788,8 +803,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
    * Records every graph node into a caller-owned command encoder.
    *
    * Imported resources are resolved from per-encoding overrides first, then from defaults supplied
-   * at graph construction. Buffer overrides for distinct handles must not alias the same physical
-   * buffer when either handle is written. This method records only; it does not finish or submit
+   * at graph construction. Distinct active buffer or texture handles must not alias one physical
+   * resource when either handle is written. This method records only; it does not finish or submit
    * the encoder.
    *
    * @param commandEncoder Encoder that receives all graph commands.
@@ -1129,6 +1144,31 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       const handle = this.textures.get(id);
       if (!handle?.frameScoped) {
         throw new Error(`GPUCommandGraph has no frame texture named "${id}"`);
+      }
+    }
+    const activePhysicalTextures = new Map<object, GraphTextureHandle>();
+    for (const [handle, texture] of resolved) {
+      if (!this.activeImportedTextureHandles.has(handle)) {
+        continue;
+      }
+      const physicalHandle = texture.handle;
+      const physicalTexture =
+        (typeof physicalHandle === 'object' && physicalHandle !== null) ||
+        typeof physicalHandle === 'function'
+          ? physicalHandle
+          : texture;
+      const previousHandle = activePhysicalTextures.get(physicalTexture);
+      if (
+        previousHandle &&
+        (this.writableImportedTextureHandles.has(previousHandle) ||
+          this.writableImportedTextureHandles.has(handle))
+      ) {
+        throw new Error(
+          `GPUCommandGraph imported textures "${previousHandle.id}" and "${handle.id}" resolve to the same physical texture`
+        );
+      }
+      if (!previousHandle) {
+        activePhysicalTextures.set(physicalTexture, handle);
       }
     }
     return {textures: resolved, frameIds: nextFrameIds};

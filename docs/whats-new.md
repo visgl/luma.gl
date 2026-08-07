@@ -11,6 +11,7 @@ Target Release Date: Q3, 2026
 - **TypeScript 6.0** - luma.gl package builds, website tooling, and supported example typechecks now use TypeScript 6.0.
 - **Precise raw binary64 coordinate deltas** - The WGSL `fp64arithmetic` module can split a binary64-rounded subtraction into normalized double-single limbs, normalize and compare those limbs with integer-controlled behavior in either arithmetic mode, and explicitly classify non-finite values. The existing direct-to-`f32` helper retains its single-round exact-delta contract.
 - **Faster graph-native GPU acceleration** - Consecutive compute nodes can share one command-encoder pass; reusable stable GPU sorting fuses small inputs and uses four-bit radix passes for larger workloads, while small bounding-volume hierarchies build and refit inside one workgroup. The shared WebGPU ray tracer automatically composes these primitives and derives tight mesh-instance bounds from retained triangle BLAS roots without requesting elevated CORE limits.
+- **Lower-overhead retained GPU ray tracing** - Reusable segmented GPU sorting and BVH construction group packed mesh permutations and hierarchies into width-bucketed dispatches, retained texture-history pairs eliminate full-frame color/metadata copies, categorized ANARI scene revisions avoid repeated hierarchy extraction, and software ray traversal reuses inverse directions and queued bounding-box entry distances while preserving standard CORE WebGPU compatibility.
 
 **AI-Assisted Development**
 

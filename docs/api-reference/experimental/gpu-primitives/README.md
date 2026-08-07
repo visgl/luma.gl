@@ -61,15 +61,16 @@ These layers deliberately preserve GPU-resident identity and dataflow. Source ro
 variable-size results publish a count alongside fixed-capacity storage, and indirect commands let a
 later render pass consume that count without a CPU synchronization point.
 
-The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
-`GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUVirtualGeometrySelection`,
+The implementation consists of `GPUCommandGraph`, `GPUTextureHistory`, typed graph data views,
+`GPUScan`, `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUVirtualGeometrySelection`,
 `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`,
-`GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, `GPUGroupAggregation`,
-`GPUFFT2D`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
-process and thread collapse, source and topology filtering, dependency focusing, visible-parent
-projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
-four million spans. The sort and data-analysis examples demonstrate independent composable
-buffer-native algorithms.
+`GPUSegmentedSort`, `GPUBVH`, `GPUSegmentedBVH`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
+`GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT2D`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and
+`DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to process
+and thread collapse, source and topology filtering, dependency focusing, visible-parent projection,
+GPU picking, activity histograms, and indirect span and edge rendering over up to four million
+spans. The sort and data-analysis examples demonstrate independent composable buffer-native
+algorithms.
 The implementation is intentionally experimental: it is concrete enough to measure and use, but
 small enough that its API can still respond to experience.
 
@@ -197,12 +198,14 @@ composition over source-aligned masks. `GPUGraphTraversal` promises bounded, cyc
 reachability over stable compressed sparse adjacency. `GPUAncestorProjection` promises bounded
 nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
 parent/child row offsets. `GPUSort` promises stable paired `uint32` ordering for one packed domain,
-while `GPUBatchSort` preserves vector chunks as independent sort domains. Both choose bitonic sort
-for smaller work units and radix sort for larger ones: domains of up to 256 rows are sorted inside
-one workgroup, while larger domains use stable four-bit histogram, prefix-scan, and scatter stages.
-`GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, and
-`GPUGroupAggregation` promise aggregate and binning results while selecting hierarchical and
-atomic implementations internally.
+while `GPUBatchSort` preserves independently allocated vector chunks as separate sort domains.
+Both choose bitonic sort for smaller work units and radix sort for larger ones: domains of up to
+256 rows are sorted inside one workgroup, while larger domains use stable four-bit histogram,
+prefix-scan, and scatter stages. `GPUSegmentedSort` instead batches independent small domains
+already resident in shared packed buffers, dispatching equal-width segments together without
+repacking or crossing their boundaries. `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
+`GPUGridAggregation`, and `GPUGroupAggregation` promise aggregate and binning results while
+selecting hierarchical and atomic implementations internally.
 
 The first algorithms are deliberately typed and curated. Arbitrary WGSL callbacks for compare,
 combine, and predicate functions are attractive, but they significantly expand validation,
@@ -977,7 +980,7 @@ The intended v10 layering is:
 ```text
 @luma.gl/engine
   table-independent command-graph scheduling core
-  buffer, texture, pass, and generic graph views
+  buffer, texture, retained texture history, pass, and generic graph views
   compute/render kernel integration without a tables dependency
 
 @luma.gl/tables
@@ -987,7 +990,9 @@ The intended v10 layering is:
 @luma.gl/gpgpu
   GPUScan, GPUCompaction, and reusable visibility workflows
   GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
-  GPUReduction, GPUSort, GPUBatchSort, GPUHistogram, GPUGridBinning, GPUGridAggregation
+  GPUReduction, GPUSort, GPUBatchSort, GPUSegmentedSort
+  GPUBVH, GPUSegmentedBVH
+  GPUHistogram, GPUGridBinning, GPUGridAggregation
   GPUGroupAggregation
   GPUHashIndex, GPUHashIndexQuery, GPUHashJoin, and GPUBatchHashJoin
   higher-level table algorithms
@@ -1226,6 +1231,13 @@ record batches, per-tile ordering, and incremental ingestion where partition bou
 of the storage and lifetime contract. The GPU sort example contrasts that behavior with one
 explicit packed global sort and validates independently sorted batches against a CPU oracle.
 
+`GPUSegmentedSort` addresses a different partition contract: many small domains already occupy
+shared parent key and payload buffers. Explicit per-domain offsets and lengths retain segment
+boundaries while equally sized workgroups share one dispatch. Segments of up to 256 rows require
+at most eight width-bucket graph nodes regardless of segment count; gaps remain untouched and no
+hidden packing or physical allocation occurs. This is useful for independent mesh-local Morton
+orders, while separately allocated streaming chunks remain the domain of `GPUBatchSort`.
+
 More batch-aware operations remain consumer-driven rather than being required to complete this
 phase. Custom associative scans, sparse histograms, and multidimensional histograms should be added
 only with a concrete consumer and an explicit numerical or memory contract.
@@ -1444,6 +1456,13 @@ caller-supplied source identifiers are published without exceeding the default e
 CORE limit. Count, overflow, topology, update policy, level count, and caller-owned output bytes
 remain explicit.
 
+`GPUSegmentedBVH` applies that same complete-binary contract to many independent hierarchies
+already packed into shared source and destination buffers. It groups trees containing up to 128
+leaves by leaf capacity and dispatches one workgroup per tree, so arbitrarily many same-sized mesh
+BLASes need one graph node and mixed sizes need at most eight nodes. Packed offsets, invalid leaves,
+overflow reporting, two- or three-dimensional bounds, and the eight-storage-buffer CORE limit stay
+explicit.
+
 The complete source-order topology is a correctness and refit baseline, not a promised spatial
 quality heuristic. Tiled, Morton-ordered, or producer-sorted inputs may already have locality;
 arbitrary order may create overlapping parents and poor traversal. The 5.3b decision gate uses
@@ -1652,6 +1671,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 ## Related reference pages
 
 - [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph)
+- [`GPUTextureHistory`](/docs/api-reference/experimental/gpu-primitives/gpu-texture-history)
 - [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan)
 - [`GPUCompaction`](/docs/api-reference/experimental/gpu-primitives/gpu-compaction)
 - [`GPUMask`](/docs/api-reference/experimental/gpu-primitives/gpu-mask)
@@ -1660,6 +1680,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal)
 - [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection)
 - [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
+- [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort)
 - [`GPUFFT2D`](/docs/api-reference/experimental/gpu-primitives/gpu-fft2d)
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
@@ -1669,6 +1690,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUGridIndexQuery`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query)
 - [`GPUPointSpatialFilter`](/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter)
 - [`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh)
+- [`GPUSegmentedBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-bvh)
 - [`GPUBVHQuery`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query)
 - [GPU spatial query benchmark](/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark)
 - [`GPUScene`](/docs/api-reference/experimental/gpu-primitives/gpu-scene)
