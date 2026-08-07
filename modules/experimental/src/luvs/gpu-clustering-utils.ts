@@ -28,6 +28,7 @@ import type {GraphEmbeddingMatrix, GraphEmbeddingMatrixChunk} from './types';
 export const GPU_CLUSTERING_WORKGROUP_SIZE = 64;
 
 const MAXIMUM_UINT32 = 0xffffffff;
+const STORAGE_BINDING_ALIGNMENT = 256;
 
 /** One ordered, binding-size-safe slice of an original embedding chunk. @internal */
 export type GPUClusteringMatrixTile = {
@@ -250,6 +251,14 @@ export function getGPUClusteringMatrixTiles<Parameters>(
   }
   const maximumBindingSize = graph.device.limits.maxStorageBufferBindingSize;
   const dimensionByteLength = matrix.dimensions * Float32Array.BYTES_PER_ELEMENT;
+  // Labels, validity, source IDs, and filters may each start at a different aligned prefix.
+  const maximumScalarRows = Math.floor(
+    (maximumBindingSize - (STORAGE_BINDING_ALIGNMENT - Uint32Array.BYTES_PER_ELEMENT)) /
+      Uint32Array.BYTES_PER_ELEMENT
+  );
+  if (maximumScalarRows < 1) {
+    throw new Error('GPU embedding row metadata exceeds maxStorageBufferBindingSize');
+  }
   const tiles: GPUClusteringMatrixTile[] = [];
   let logicalRowOffset = 0;
 
@@ -271,7 +280,8 @@ export function getGPUClusteringMatrixTiles<Parameters>(
       const rowCount = Math.min(
         chunk.rowCount - chunkRowOffset,
         maximumRowsPerTile,
-        maximumBindingRows
+        maximumBindingRows,
+        maximumScalarRows
       );
       const values = graph.createDataView<'float32'>(chunk.values.buffer, {
         format: 'float32',

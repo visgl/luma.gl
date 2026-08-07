@@ -220,6 +220,57 @@ test('GPUKMeans preserves empty clusters and rejects overlapping writable output
   t.end();
 });
 
+test('GPUKMeans keeps large finite same-sign centroid coordinates finite', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const graph = new GPUCommandGraph(device, {id: 'luvs-k-means-finite-centroids'});
+  const buffers: Buffer[] = [];
+  const dataset = createEmbeddingView(graph, buffers, [
+    {
+      values: Float32Array.from([3e38, -3e38, 3e38, -3e38]),
+      rowCount: 2,
+      rowStride: 2
+    }
+  ]);
+  const centroids = createView(graph, buffers, 'finite-centroids', 'float32', 2);
+  const labels = createView(graph, buffers, 'finite-labels', 'uint32', 2);
+  const counts = createView(graph, buffers, 'finite-counts', 'uint32', 1);
+  const status = createView(graph, buffers, 'finite-status', 'uint32', 3);
+  new GPUKMeans({
+    id: 'finite-k-means',
+    dataset,
+    clusterCount: 1,
+    centroids,
+    labels,
+    counts,
+    status,
+    maxIterations: 3
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+
+  try {
+    const encoder = device.createCommandEncoder({id: 'finite-centroids-encoder'});
+    compiled.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+
+    const centroidValues = await readFloating(buffers[1], 2);
+    t.ok(centroidValues.every(Number.isFinite), 'finite rows never create infinite centroids');
+    t.ok(Math.abs(centroidValues[0] / 3e38 - 1) < 1e-6, 'positive mean remains near 3e38');
+    t.ok(Math.abs(centroidValues[1] / -3e38 - 1) < 1e-6, 'negative mean remains near -3e38');
+    t.deepEqual(await readUnsigned(buffers[2], 2), [0, 0], 'both finite rows retain their labels');
+    t.deepEqual(await readUnsigned(buffers[3], 1), [2], 'both finite rows remain in the cluster');
+  } finally {
+    compiled.destroy();
+    for (const buffer of buffers) buffer.destroy();
+  }
+  t.end();
+});
+
 type EmbeddingChunkFixture = {
   values: Float32Array;
   rowCount: number;

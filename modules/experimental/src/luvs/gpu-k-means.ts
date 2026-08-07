@@ -63,7 +63,7 @@ export type GPUKMeansProps = {
  * Trains source-preserving high-dimensional k-means clusters entirely on WebGPU.
  *
  * Seeds are deterministic, evenly spaced valid rows. Invalid or non-finite rows receive the
- * sentinel label `0xffffffff`. Empty clusters retain their preceding centroid. Cluster sums are
+ * sentinel label `0xffffffff`. Empty clusters retain their preceding centroid. Cluster means are
  * accumulated by one invocation per centroid component in original chunk and row order: this uses
  * neither unsupported float32 atomics nor order-dependent compare-and-swap accumulation.
  *
@@ -656,7 +656,7 @@ function addClearSumsPass<Parameters>(
   });
 }
 
-/** Accumulates one ordered tile serially per centroid component, with no float atomics. */
+/** Accumulates overflow-resistant mean contributions in deterministic source-row order. */
 function addAccumulateCentroidsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   clustering: GPUKMeans,
@@ -677,6 +677,7 @@ function addAccumulateCentroidsPass<Parameters>(
 @group(0) @binding(1) var<storage, read> clusterLabels: array<u32>;
 @group(0) @binding(2) var<storage, read_write> centroidSums: array<f32>;
 @group(0) @binding(3) var<storage, read> convergenceState: array<u32>;
+@group(0) @binding(4) var<storage, read> clusterCounts: array<u32>;
 @compute @workgroup_size(${GPU_CLUSTERING_WORKGROUP_SIZE}) fn main(
   @builtin(workgroup_id) workgroupId: vec3<u32>,
   @builtin(local_invocation_index) localInvocationIndex: u32
@@ -686,12 +687,13 @@ function addAccumulateCentroidsPass<Parameters>(
       convergenceState[${getViewElementOffset(status)}u + 2u] != 0u) { return; }
   let clusterIndex = index / ${clustering.dataset.dimensions}u;
   let dimension = index % ${clustering.dataset.dimensions}u;
+  let clusterCount = clusterCounts[${getViewElementOffset(clustering.counts)}u + clusterIndex];
   var total = centroidSums[${getViewElementOffset(sums)}u + index];
   for (var row = 0u; row < ${tile.rowCount}u; row++) {
     if (clusterLabels[${getViewElementOffset(labels)}u + row] == clusterIndex) {
       total += embeddingValues[
         ${getViewElementOffset(tile.values)}u + row * ${tile.chunk.rowStride}u + dimension
-      ];
+      ] / f32(clusterCount);
     }
   }
   centroidSums[${getViewElementOffset(sums)}u + index] = total;
@@ -703,19 +705,21 @@ function addAccumulateCentroidsPass<Parameters>(
       {buffer: tile.values, usage: 'storage-read'},
       {buffer: labels, usage: 'storage-read'},
       {buffer: sums, usage: 'storage-read-write'},
-      {buffer: status, usage: 'storage-read'}
+      {buffer: status, usage: 'storage-read'},
+      {buffer: clustering.counts, usage: 'storage-read'}
     ],
     bindings: {
       embeddingValues: tile.values,
       clusterLabels: labels,
       centroidSums: sums,
-      convergenceState: status
+      convergenceState: status,
+      clusterCounts: clustering.counts
     },
     elementCount: componentCount
   });
 }
 
-/** Divides serial component sums by group counts while retaining empty-cluster centroids. */
+/** Stores serial component means while retaining deterministic empty-cluster centroids. */
 function addFinalizeCentroidsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   clustering: GPUKMeans,
@@ -745,7 +749,7 @@ function addFinalizeCentroidsPass<Parameters>(
   let count = clusterCounts[${getViewElementOffset(clustering.counts)}u + clusterIndex];
   if (count != 0u) {
     centroidValues[${getViewElementOffset(clustering.centroids)}u + index] =
-      centroidSums[${getViewElementOffset(sums)}u + index] / f32(count);
+      centroidSums[${getViewElementOffset(sums)}u + index];
   }
 }`;
   addGPUClusteringComputationPass(graph, {
