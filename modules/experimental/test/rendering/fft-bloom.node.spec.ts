@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
+import {Texture, type CommandEncoder, type Device} from '@luma.gl/core';
 import {
   getGPUConvolutionBloomSupport,
+  GPUConvolutionBloom,
   makeBloomPointSpreadFunction,
   makeBloomSpectralPointSpreadFunction,
   makeGPUConvolutionBloomStats
@@ -169,6 +170,53 @@ test('getGPUConvolutionBloomSupport reports WebGPU and storage requirements', te
     /rgba16float storage textures/,
     'HDR storage support is mandatory for the final composite'
   );
+  testCase.end();
+});
+
+test('GPUConvolutionBloom rejects auxiliary textures aliasing its output', testCase => {
+  const device = makeSupportDevice();
+  const renderer = Object.create(GPUConvolutionBloom.prototype) as GPUConvolutionBloom;
+  Object.assign(renderer, {
+    device,
+    stats: makeGPUConvolutionBloomStats({width: 16, height: 16})
+  });
+  const makeTexture = (handle: object = {}): Texture =>
+    ({
+      device,
+      width: 16,
+      height: 16,
+      format: 'rgba16float',
+      props: {usage: Texture.STORAGE},
+      handle
+    }) as Texture;
+  const sourceTexture = makeTexture();
+  const outputTexture = makeTexture();
+  const outputAlias = makeTexture(outputTexture.handle as object);
+  const commandEncoder = {device} as CommandEncoder;
+
+  for (const auxiliaryName of ['exposureTexture', 'lensDirtTexture'] as const) {
+    testCase.throws(
+      () =>
+        renderer.encode(commandEncoder, {
+          sourceTexture,
+          outputTexture,
+          [auxiliaryName]: outputTexture
+        }),
+      /auxiliary and output textures must be separate/,
+      `${auxiliaryName} cannot directly alias the writable output`
+    );
+    testCase.throws(
+      () =>
+        renderer.encode(commandEncoder, {
+          sourceTexture,
+          outputTexture,
+          [auxiliaryName]: outputAlias
+        }),
+      /auxiliary and output textures must be separate/,
+      `${auxiliaryName} cannot share the output handle through a separate wrapper`
+    );
+  }
+
   testCase.end();
 });
 

@@ -842,6 +842,15 @@ function validateGPUConvolutionBloomTextures(
   ) {
     throw new Error('GPUConvolutionBloom source and output textures must be separate.');
   }
+  for (const auxiliaryTexture of [options.exposureTexture, options.lensDirtTexture]) {
+    if (
+      auxiliaryTexture &&
+      (auxiliaryTexture === options.outputTexture ||
+        auxiliaryTexture.handle === options.outputTexture.handle)
+    ) {
+      throw new Error('GPUConvolutionBloom auxiliary and output textures must be separate.');
+    }
+  }
 }
 
 function destroyGPUConvolutionBloomResources(resources: GPUConvolutionBloomResources): void {
