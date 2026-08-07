@@ -81,6 +81,7 @@ import {
   getFocusFrontierDispatchShader,
   getFocusFrontierExpansionShader,
   getFocusFrontierSeedShader,
+  getFocusReachabilityClearShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -383,7 +384,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
     const pick = this.pendingPick;
     const visibilityGeneration = (this.frameIndex % 0xfffffffe) + 1;
-    resources.focusTraversalState.write(Uint32Array.of(this.focusDepth, visibilityGeneration));
+    resources.focusTraversalState.write(Uint32Array.of(this.focusDepth));
     this.writeViewUniforms(width, height, pick, visibilityGeneration, resources.dependencyCount);
     const encoding = this.graphObservation?.encode(device.commandEncoder, {
       parameters: this.view
@@ -580,6 +581,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       firstSpanIndex: group.firstSpanIndex
     }));
     const spanMaskByteLength = Math.max(dataset.spanCount, 1) * UINT32_BYTE_LENGTH;
+    const focusMaskWordCount = Math.max(Math.ceil(dataset.spanCount / 32), 1);
     const dependencyMaskByteLength = Math.max(dataset.dependencyCount, 1) * UINT32_BYTE_LENGTH;
     const densityBinCount = TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT;
     const topologyChunkLengths = getTopologyChunkLengths(dataset.spanCount);
@@ -742,11 +744,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       selectedSeedCount: this.createDataBuffer('gpu-trace-selected-seed-count', new Uint32Array(1)),
       focusTraversalState: this.createDataBuffer(
         'gpu-trace-focus-traversal-state',
-        Uint32Array.of(this.focusDepth, 1)
+        Uint32Array.of(this.focusDepth)
       ),
       reachedSpans: this.createStorageBuffer(
         'gpu-trace-reached-spans',
-        spanMaskByteLength,
+        focusMaskWordCount * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
       ),
       dependencyResults: this.createStorageBuffer(
@@ -1060,6 +1062,14 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         usage: Buffer.STORAGE | Buffer.INDIRECT
       })
     );
+    const focusMaskWordCount = Math.max(Math.ceil(resources.spanCount / 32), 1);
+    addTraceComputePass(graph, {
+      id: 'trace-focus-reachability-clear',
+      source: getFocusReachabilityClearShader(focusMaskWordCount),
+      bindings: [storageWrite('reachedSpans', handles.reachedSpans)],
+      length: focusMaskWordCount,
+      workgroupSize: TRACE_WORKGROUP_SIZE
+    });
     addTraceComputePass(graph, {
       id: 'trace-focus-frontier-seed',
       source: getFocusFrontierSeedShader(resources.spanCount),

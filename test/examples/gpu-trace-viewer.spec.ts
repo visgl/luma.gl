@@ -55,6 +55,7 @@ describe('GPU hierarchical trace viewer', () => {
           dependencyResults: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
+            byteLength: number;
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
           };
           dependencyCount: number;
@@ -321,13 +322,15 @@ describe('GPU hierarchical trace viewer', () => {
       expect(focusedCounts[1] + focusedCounts[5] + focusedCounts[9]).toBeLessThanOrEqual(
         firstCounts[1] + firstCounts[5] + firstCounts[9]
       );
+      expect(state.resources.reachedSpans.byteLength).toBe(
+        Math.ceil(state.resources.spanCount / 32) * Uint32Array.BYTES_PER_ELEMENT
+      );
       const reachedBytes = await state.resources.reachedSpans.readAsync(
-        29 * Uint32Array.BYTES_PER_ELEMENT,
+        0,
         Uint32Array.BYTES_PER_ELEMENT
       );
-      expect(new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0]).toBe(
-        state.frameIndex
-      );
+      const reachedWord = new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0];
+      expect(reachedWord & (1 << 29)).not.toBe(0);
       focusOnly!.checked = false;
       focusOnly!.dispatchEvent(new Event('change', {bubbles: true}));
       expect(state.focusOnly).toBe(false);

@@ -182,7 +182,8 @@ struct VertexOutput {
   let laneY = 1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0;
   let pulse = 0.84 + 0.16 * sin(span.start * 0.13 + f32(lane) * 0.31);
   let isSelected = sourceIndex == viewUniforms.selectedSpanIndex;
-  let isReached = reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+  let isReached =
+    (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   let hasSelection = viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusOpacity = select(1.0, select(0.22, 1.0, isReached), hasSelection);
   let baseColor = getGroupColor(span.group) * pulse;
@@ -365,7 +366,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Seeds a generation-tagged compact focus frontier and its first indirect dispatch. */
+/** Seeds a bit-packed compact focus frontier and its first indirect dispatch. */
 export function getFocusFrontierSeedShader(spanCount: number): string {
   return /* wgsl */ `
 const SPAN_COUNT: u32 = ${spanCount}u;
@@ -383,7 +384,7 @@ fn main() {
   var count = 0u;
   let seed = selectedSeeds[0];
   if (activeSeedCount[0] != 0u && seed < SPAN_COUNT) {
-    atomicStore(&reachedSpans[seed], focusTraversalState[1]);
+    atomicOr(&reachedSpans[seed >> 5u], 1u << (seed & 31u));
     frontier[0] = seed;
     count = 1u;
   }
@@ -391,6 +392,20 @@ fn main() {
   dispatchCommand[0] = (count + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
   dispatchCommand[1] = 1u;
   dispatchCommand[2] = 1u;
+}`;
+}
+
+/** Clears the compact focus-reachability bitset before the next traversal. */
+export function getFocusReachabilityClearShader(wordCount: number): string {
+  return /* wgsl */ `
+const WORD_COUNT: u32 = ${wordCount}u;
+@group(0) @binding(0) var<storage, read_write> reachedSpans: array<u32>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  if (globalId.x < WORD_COUNT) {
+    reachedSpans[globalId.x] = 0u;
+  }
 }`;
 }
 
@@ -409,7 +424,7 @@ fn main() {
 }`;
 }
 
-/** Expands one CSR partition from a compact frontier into a generation-tagged next frontier. */
+/** Expands one CSR partition from a compact frontier into a bit-packed next frontier. */
 export function getFocusFrontierExpansionShader(options: {
   spanCount: number;
   sourceNodeBase: number;
@@ -451,9 +466,9 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let lastNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex + 1u], NEIGHBOR_COUNT);
   for (var neighborIndex = firstNeighbor; neighborIndex < lastNeighbor; neighborIndex++) {
     let neighbor = neighbors[NEIGHBOR_WORD_BASE + neighborIndex];
+    let reachedMask = 1u << (neighbor & 31u);
     if (neighbor < SPAN_COUNT &&
-      atomicExchange(&reachedSpans[neighbor], focusTraversalState[1]) !=
-        focusTraversalState[1]) {
+      (atomicOr(&reachedSpans[neighbor >> 5u], reachedMask) & reachedMask) == 0u) {
       let nextIndex = atomicAdd(&nextFrontierCount[0], 1u);
       if (nextIndex < SPAN_COUNT) {
         nextFrontier[nextIndex] = neighbor;
@@ -579,7 +594,7 @@ fn main(
   let focusEnabled =
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
-    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+    (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   let densityVisible = sourceVisible && (isDensityMode() || !processExpanded);
   if (densityVisible && focusVisible) {
     let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
@@ -677,7 +692,7 @@ fn main(
   let focusEnabled =
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
-    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+    (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   visibilityFlags[sourceIndex - CHUNK_FIRST_SPAN_INDEX] = select(
     0u,
     viewUniforms.visibilityGeneration,

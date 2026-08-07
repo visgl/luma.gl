@@ -50,6 +50,7 @@ import {
   getFocusFrontierDispatchShader,
   getFocusFrontierExpansionShader,
   getFocusFrontierSeedShader,
+  getFocusReachabilityClearShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -292,6 +293,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getDependencyEndpointResolveShader(endpointRouting, 0),
     getDependencyEndpointResolveShader(endpointRouting, 1),
     getCandidateDependencyVisibilityShader(endpointRouting),
+    getFocusReachabilityClearShader(1),
     getFocusFrontierSeedShader(11),
     getFocusFrontierClearShader(),
     getFocusFrontierExpansionShader({
