@@ -350,10 +350,10 @@ the CPU.
 
 ## Join or look up unique right-side keys
 
-luDF supports bounded, unique-right-key `uint32` inner joins and source-aligned left lookups. Left
-and right tables may have different batch topologies, empty chunks, nullable keys, and explicit
-original source-row offsets. The right-side hash index is built directly from its original batches;
-neither side is concatenated or repacked.
+luDF supports bounded, unique-right-key `uint32` inner, left outer, semi, and anti joins, together
+with source-aligned lookups. Left and right tables may have different batch topologies, empty
+chunks, nullable keys, and explicit original source-row offsets. The right-side hash index is built
+directly from its original batches; neither side is concatenated or repacked.
 
 ```ts
 const joined = customers
@@ -369,6 +369,8 @@ const joined = customers
 
 joined.rowIndices;
 joined.rightRowIndices;
+joined.rightValidity;
+joined.joinType;
 joined.requiredCounts;
 joined.selectedCounts;
 joined.overflows;
@@ -376,6 +378,18 @@ joined.indexStatistics;
 joined.lookupStatistics;
 joined.contractViolation;
 joined.rightTable;
+
+const leftOuter = customers
+  .leftJoin(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
+  .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device));
+
+const matchedCustomers = customers
+  .semiJoin(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
+  .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device));
+
+const unmatchedCustomers = customers
+  .antiJoin(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
+  .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device));
 
 const lookups = customers
   .lookup(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
@@ -389,21 +403,36 @@ lookups.indexStatistics;
 lookups.contractViolation;
 ```
 
-For an inner join, `rowIndices` and `rightRowIndices` contain paired stable source identifiers;
-`selectedCounts` gives the published prefix while `requiredCounts` reports all matches before
-capacity truncation. `overflows` flags insufficient output capacity per original left batch.
-Lookups instead preserve source-aligned right identifiers and expose a match flag and probe count
-for every left row.
+For every join, `rowIndices` and `rightRowIndices` contain paired stable source identifiers;
+`selectedCounts` gives the published prefix while `requiredCounts` reports all selected result rows
+before capacity truncation. `overflows` flags insufficient output capacity per original left batch.
+`rightValidity` is a compacted, GPU-resident `uint32` sidecar: `1` means a right partner exists;
+`0` means the published left row is unmatched and its right identifier is the reserved
+`0xffffffff` marker.
+
+- `innerJoin` publishes only matching left rows and their right partners.
+- `leftJoin` publishes every selected left row, including missing and nullable left keys, and
+  explicitly marks unmatched right partners through `rightValidity`.
+- `semiJoin` publishes only selected left rows with an existing right partner.
+- `antiJoin` publishes only selected unmatched left rows, including nullable left keys; every
+  published `rightValidity` entry is zero.
+- `lookup` preserves source-aligned right identifiers and exposes a match flag and probe count for
+  every left row without compacting the original batches.
+
+All four join modes support the same `capacity`, `indexCapacity`, and `maxProbeCount` options and
+compose with filtered, projected, or derived left plans. Publication remains stable within each
+original left batch; no implicit global row ordering or source-column materialization occurs.
 
 The six GPU-resident index statistic words are, in order, unique entries, duplicate keys, index
 overflow, invalid keys, total probe count, and maximum probe count. A valid key equal to
 `0xffffffff` is reserved and therefore invalid; nullable right rows are ignored. Duplicate right
 keys, reserved valid keys, or incomplete hash-index construction set `contractViolation` and
-suppress all published matches instead of returning ambiguous results. Dictionary-encoded keys
-must have identical labels and ordering on both sides.
+suppress all published rows in every join mode instead of returning ambiguous results or treating
+an incomplete index as missing matches. Dictionary-encoded keys must have identical labels and
+ordering on both sides.
 
-Many-to-many joins, outer joins, multi-key joins, string-key hashing, and CPU-side result
-materialization are intentionally unsupported.
+Many-to-many joins, right/full outer joins, multi-key joins, string-key hashing, and CPU-side result
+materialization remain intentionally unsupported.
 
 ## Share GPU outputs with rendering and LuxFilter
 

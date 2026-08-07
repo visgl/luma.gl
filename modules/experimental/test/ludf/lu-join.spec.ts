@@ -177,6 +177,174 @@ test('LuDataFrame bounded lookups keep source-aligned matches, nullable keys, an
   testContext.end();
 });
 
+test('LuDataFrame left outer joins retain nullable and unmatched left rows with explicit right validity', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const fixture = createLuJoinFixture(device);
+  const compiled = fixture.left
+    .leftJoin(fixture.right, {leftOn: 'key', rightOn: 'lookupKey'})
+    .compile(new GPUCommandGraph(device, {id: 'ludf-left-outer-join'}));
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'ludf-left-outer-encode'});
+    compiled.encode(commandEncoder);
+    device.submit(commandEncoder.finish());
+
+    testContext.equal(compiled.joinType, 'left');
+    testContext.deepEqual(await readLuJoinChunks(compiled.requiredCounts), [[3], [0], [5]]);
+    testContext.deepEqual(await readLuJoinChunks(compiled.selectedCounts), [[3], [0], [5]]);
+    testContext.deepEqual(
+      await readLuJoinPublishedRows(compiled.rowIndices, compiled.selectedCounts),
+      [[100, 101, 102], [], [800, 801, 802, 803, 804]],
+      'selected unmatched and nullable left keys retain their stable source identities'
+    );
+    testContext.deepEqual(
+      await readLuJoinPublishedRows(compiled.rightRowIndices, compiled.selectedCounts),
+      [[501, MISSING_JOIN_ROW, 500], [], [900, MISSING_JOIN_ROW, 901, 500, MISSING_JOIN_ROW]],
+      'outer joins publish an explicit missing marker without inventing a right row'
+    );
+    testContext.deepEqual(
+      await readLuJoinPublishedRows(compiled.rightValidity, compiled.selectedCounts),
+      [[1, 0, 1], [], [1, 0, 1, 1, 0]],
+      'right-side nullability remains explicit and aligned with compacted output pairs'
+    );
+  } finally {
+    compiled.destroy();
+    fixture.left.destroy();
+    fixture.right.destroy();
+  }
+
+  testContext.end();
+});
+
+test('LuDataFrame semi and anti joins stably partition selected matches and nullable nonmatches', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const fixture = createLuJoinFixture(device);
+  const semi = fixture.left
+    .semiJoin(fixture.right, {leftOn: 'key', rightOn: 'lookupKey'})
+    .compile(new GPUCommandGraph(device, {id: 'ludf-semi-join'}));
+  const anti = fixture.left
+    .antiJoin(fixture.right, {leftOn: 'key', rightOn: 'lookupKey'})
+    .compile(new GPUCommandGraph(device, {id: 'ludf-anti-join'}));
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'ludf-semi-and-anti'});
+    semi.encode(commandEncoder);
+    anti.encode(commandEncoder);
+    device.submit(commandEncoder.finish());
+
+    testContext.equal(semi.joinType, 'semi');
+    testContext.equal(anti.joinType, 'anti');
+    testContext.deepEqual(await readLuJoinChunks(semi.selectedCounts), [[2], [0], [3]]);
+    testContext.deepEqual(await readLuJoinPublishedRows(semi.rowIndices, semi.selectedCounts), [
+      [100, 102],
+      [],
+      [800, 802, 803]
+    ]);
+    testContext.deepEqual(await readLuJoinPublishedRows(semi.rightValidity, semi.selectedCounts), [
+      [1, 1],
+      [],
+      [1, 1, 1]
+    ]);
+    testContext.deepEqual(await readLuJoinChunks(anti.requiredCounts), [[1], [0], [2]]);
+    testContext.deepEqual(
+      await readLuJoinPublishedRows(anti.rowIndices, anti.selectedCounts),
+      [[101], [], [801, 804]],
+      'anti joins include selected nullable left keys as unmatched rows'
+    );
+    testContext.deepEqual(
+      await readLuJoinPublishedRows(anti.rightRowIndices, anti.selectedCounts),
+      [[MISSING_JOIN_ROW], [], [MISSING_JOIN_ROW, MISSING_JOIN_ROW]]
+    );
+    testContext.deepEqual(await readLuJoinPublishedRows(anti.rightValidity, anti.selectedCounts), [
+      [0],
+      [],
+      [0, 0]
+    ]);
+  } finally {
+    semi.destroy();
+    anti.destroy();
+    fixture.left.destroy();
+    fixture.right.destroy();
+  }
+
+  testContext.end();
+});
+
+test('LuDataFrame outer and anti joins respect filters, bounded capacity, and invalid-index suppression', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const fixture = createLuJoinFixture(device);
+  const duplicateFixture = createLuJoinFixture(device, {duplicateRight: true});
+  const bounded = fixture.left
+    .filter(column('fare').greaterThan(parameter('minimumFare', 10)))
+    .leftJoin(fixture.right, {leftOn: 'key', rightOn: 'lookupKey', capacity: 2})
+    .compile(new GPUCommandGraph(device, {id: 'ludf-filtered-bounded-left-join'}));
+  const invalidOuter = duplicateFixture.left
+    .leftJoin(duplicateFixture.right, {leftOn: 'key', rightOn: 'lookupKey'})
+    .compile(new GPUCommandGraph(device, {id: 'ludf-invalid-left-join'}));
+  const invalidAnti = duplicateFixture.left
+    .antiJoin(duplicateFixture.right, {leftOn: 'key', rightOn: 'lookupKey'})
+    .compile(new GPUCommandGraph(device, {id: 'ludf-invalid-anti-join'}));
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'ludf-richer-join-contracts'});
+    bounded.encode(commandEncoder, {minimumFare: 10});
+    invalidOuter.encode(commandEncoder);
+    invalidAnti.encode(commandEncoder);
+    device.submit(commandEncoder.finish());
+
+    testContext.deepEqual(await readLuJoinChunks(bounded.requiredCounts), [[2], [0], [4]]);
+    testContext.deepEqual(await readLuJoinChunks(bounded.selectedCounts), [[2], [0], [2]]);
+    testContext.deepEqual(await readLuJoinChunks(bounded.overflows), [[0], [0], [1]]);
+    testContext.deepEqual(
+      await readLuJoinPublishedRows(bounded.rowIndices, bounded.selectedCounts),
+      [[100, 102], [], [801, 802]],
+      'capacity truncates the stable filtered left prefix independently per source batch'
+    );
+    testContext.deepEqual(
+      await readLuJoinPublishedRows(bounded.rightValidity, bounded.selectedCounts),
+      [[1, 1], [], [0, 1]],
+      'nullable unmatched rows remain distinguishable after bounded publication'
+    );
+
+    for (const compiled of [invalidOuter, invalidAnti]) {
+      testContext.deepEqual(await readLuJoinChunks(compiled.contractViolation), [[1]]);
+      testContext.deepEqual(
+        await readLuJoinChunks(compiled.selectedCounts),
+        [[0], [0], [0]],
+        'invalid unique-right indexes never turn into fabricated outer or anti matches'
+      );
+    }
+  } finally {
+    bounded.destroy();
+    invalidOuter.destroy();
+    invalidAnti.destroy();
+    fixture.left.destroy();
+    fixture.right.destroy();
+    duplicateFixture.left.destroy();
+    duplicateFixture.right.destroy();
+  }
+
+  testContext.end();
+});
+
 test('LuDataFrame reuses filtered joins across two ordered encodings without reading source rows', async testContext => {
   const device = await getWebGPUTestDevice();
   if (!device) {

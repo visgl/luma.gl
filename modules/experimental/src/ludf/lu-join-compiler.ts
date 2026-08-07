@@ -18,7 +18,6 @@ import {
   GPU_HASH_INDEX_STATISTICS_LENGTH,
   GPU_HASH_QUERY_STATISTICS_LENGTH
 } from '../gpu-primitives/gpu-hash-index';
-import {GPUHashJoin} from '../gpu-primitives/gpu-hash-join';
 import {GPUScan} from '../gpu-primitives/gpu-scan';
 import {
   createTransientVectorView,
@@ -35,7 +34,7 @@ import {
 import type {LuDataFrame} from './lu-data-frame';
 import type {LuDataFrameDerivedColumn} from './lu-data-frame-query';
 import type {LuExpression} from './lu-expression';
-import type {LuDataFrameNormalizedJoinOptions} from './lu-join-query';
+import type {LuDataFrameJoinType, LuDataFrameNormalizedJoinOptions} from './lu-join-query';
 import {
   CompiledLuDataFrameQuery,
   compileLuDataFrameQuery,
@@ -65,6 +64,8 @@ type LuJoinCommonResources<Right extends GPUTypeMap> = {
 };
 
 type LuJoinResources<Right extends GPUTypeMap> = LuJoinCommonResources<Right> & {
+  joinType: LuDataFrameJoinType;
+  rightValidity: GPUVector<'uint32'>;
   requiredCounts: GPUVector<'uint32'>;
   overflows: GPUVector<'uint32'>;
 };
@@ -110,11 +111,15 @@ abstract class CompiledLuDataFrameHashQuery<
   }
 }
 
-/** Stable, source-batch-preserving unique-right inner join with explicit bounded diagnostics. */
+/** Stable, source-batch-preserving unique-right join with explicit bounded diagnostics. */
 export class CompiledLuDataFrameJoin<
   Left extends GPUTypeMap = GPUTypeMap,
   Right extends GPUTypeMap = GPUTypeMap
 > extends CompiledLuDataFrameHashQuery<Left, Right> {
+  /** Matching semantics used to select the compacted left-row prefix. */
+  readonly joinType: LuDataFrameJoinType;
+  /** Compacted right-side validity; unmatched outer/anti rows contain zero. */
+  readonly rightValidity: GPUVector<'uint32'>;
   /** Exact required pair count for each source batch, independent of publication capacity. */
   readonly requiredCounts: GPUVector<'uint32'>;
   /** One source-index or per-batch publication overflow flag for each original left batch. */
@@ -123,6 +128,8 @@ export class CompiledLuDataFrameJoin<
   /** @internal */
   constructor(props: CompiledLuDataFrameQueryProps<Left>, resources: LuJoinResources<Right>) {
     super(props, resources);
+    this.joinType = resources.joinType;
+    this.rightValidity = resources.rightValidity;
     this.requiredCounts = resources.requiredCounts;
     this.overflows = resources.overflows;
   }
@@ -146,7 +153,7 @@ export class CompiledLuDataFrameLookup<
   }
 }
 
-/** Compiles a nullable, filtered, bounded inner join against an independently batched right side. */
+/** Compiles a nullable, filtered, bounded join against an independently batched right side. */
 export function compileLuDataFrameJoin<
   Source extends GPUTypeMap,
   Selection extends GPUTypeMap,
@@ -158,6 +165,7 @@ export function compileLuDataFrameJoin<
   derivedColumns: readonly LuDataFrameDerivedColumn[],
   right: LuDataFrame<Right>,
   options: LuDataFrameNormalizedJoinOptions,
+  joinType: LuDataFrameJoinType,
   graph: GPUCommandGraph<LuDataFrameQueryParameters>
 ): CompiledLuDataFrameJoin<Selection, Right> {
   validateLuJoinSources(source, right, options, graph);
@@ -170,7 +178,7 @@ export function compileLuDataFrameJoin<
       CompiledLuDataFrameJoin<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
       allowEmptyPredicates: true,
-      prepare: context => addLuInnerJoinToGraph(context, retainedRight, options)
+      prepare: context => addLuJoinToGraph(context, retainedRight, options, joinType)
     });
   } catch (error) {
     retainedRight.destroy();
@@ -247,18 +255,25 @@ function validateLuJoinSources<Source extends GPUTypeMap, Right extends GPUTypeM
 }
 
 /** Materializes owned pair diagnostics while sharing one chunk-preserving right index. */
-function addLuInnerJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
+function addLuJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
   context: LuDataFrameQueryExtensionContext<Left>,
   right: LuDataFrame<Right>,
-  options: LuDataFrameNormalizedJoinOptions
+  options: LuDataFrameNormalizedJoinOptions,
+  joinType: LuDataFrameJoinType
 ): LuDataFrameQueryExtensionResult<Left, CompiledLuDataFrameJoin<Left, Right>> {
   const ownedVectors: GPUVector[] = [];
-  const id = `${context.queryId}-inner-join`;
+  const id = `${context.queryId}-${joinType}-join`;
   try {
     const indexState = buildLuJoinIndex(context, right, options, ownedVectors, id);
     const lengths = context.table.batches.map(batch => batch.numRows);
     const rightRowIndices = createLuJoinOutputVector(context.graph.device, `${id}-right`, lengths);
     ownedVectors.push(rightRowIndices);
+    const rightValidity = createLuJoinOutputVector(
+      context.graph.device,
+      `${id}-right-validity`,
+      lengths
+    );
+    ownedVectors.push(rightValidity);
     const requiredCounts = createLuJoinOutputVector(
       context.graph.device,
       `${id}-required`,
@@ -279,6 +294,7 @@ function addLuInnerJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap
     ownedVectors.push(lookupStatistics);
 
     const rightRows = context.graph.importGPUVector(`${id}-right-rows`, rightRowIndices);
+    const rightValid = context.graph.importGPUVector(`${id}-right-validity-rows`, rightValidity);
     const required = context.graph.importGPUVector(`${id}-required-counts`, requiredCounts);
     const overflow = context.graph.importGPUVector(`${id}-overflows`, overflows);
     const statistics = context.graph.importGPUVector(`${id}-statistics`, lookupStatistics);
@@ -287,36 +303,52 @@ function addLuInnerJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap
       `${id}-matches`,
       context.selectionMask
     );
+    const included = createTransientVectorView(
+      context.graph,
+      `${id}-included-rows`,
+      context.selectionMask
+    );
+    const matchedRightRows = createTransientVectorView(
+      context.graph,
+      `${id}-matched-right-rows`,
+      context.selectionMask
+    );
+    const probeCounts = createTransientVectorView(
+      context.graph,
+      `${id}-probe-counts`,
+      context.selectionMask
+    );
+    const violation = context.graph.importGPUVector(
+      `${id}-contract-flag`,
+      indexState.contractViolation
+    ).data[0];
+    const indexStatistics = context.graph.importGPUVector(
+      `${id}-index-statistics-view`,
+      indexState.indexStatistics
+    ).data[0];
 
     let firstLeftRow = 0;
     for (const [batchIndex, batch] of context.table.batches.entries()) {
       const batchId = `${id}-batch-${batchIndex}`;
       const capacity = Math.min(options.capacity ?? batch.numRows, batch.numRows);
-      const outputLeftRows = getLuJoinCapacityView(
-        context.graph,
-        context.rowIndices.data[batchIndex],
-        capacity
-      );
-      const outputRightRows = getLuJoinCapacityView(
-        context.graph,
-        rightRows.data[batchIndex],
-        capacity
-      );
-
-      new GPUHashJoin({
+      new GPUHashIndexQuery({
         id: batchId,
         index: indexState.index,
         keys: indexState.maskedLeftKeys.data[batchIndex],
-        firstLeftRow: batch.sourceInfo?.sourceRowIndexOffset ?? firstLeftRow,
-        outputLeftRows,
-        outputRightRows,
-        count: required.data[batchIndex],
-        overflow: overflow.data[batchIndex],
-        statistics: statistics.data[batchIndex],
+        values: matchedRightRows.data[batchIndex],
         found: matches.data[batchIndex],
+        probes: probeCounts.data[batchIndex],
+        statistics: statistics.data[batchIndex],
         maxProbeCount: options.maxProbeCount
       }).addToGraph(context.graph);
 
+      addLuJoinClassifyPass(context.graph, `${batchId}-classify`, {
+        matches: matches.data[batchIndex],
+        selection: context.selectionMask.data[batchIndex],
+        violation,
+        included: included.data[batchIndex],
+        joinType
+      });
       const offsets = createTransientView(
         context.graph,
         `${batchId}-match-offsets`,
@@ -325,17 +357,28 @@ function addLuInnerJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap
       );
       new GPUScan({
         id: `${batchId}-published-offsets`,
-        input: matches.data[batchIndex],
+        input: included.data[batchIndex],
         output: offsets
       }).addToGraph(context.graph);
-      addLuJoinPublishPass(context.graph, `${batchId}-publish`, {
-        matches: matches.data[batchIndex],
+      addLuJoinCountPass(context.graph, `${batchId}-count`, {
+        included: included.data[batchIndex],
         offsets,
         selection: context.selectionMask.data[batchIndex],
-        leftRows: context.rowIndices.data[batchIndex],
-        rightRows: rightRows.data[batchIndex],
         required: required.data[batchIndex],
         published: context.selectedCounts.data[batchIndex],
+        overflow: overflow.data[batchIndex],
+        indexStatistics,
+        capacity
+      });
+      addLuJoinScatterPass(context.graph, `${batchId}-publish`, {
+        included: included.data[batchIndex],
+        matches: matches.data[batchIndex],
+        offsets,
+        matchedRightRows: matchedRightRows.data[batchIndex],
+        leftRows: context.rowIndices.data[batchIndex],
+        rightRows: rightRows.data[batchIndex],
+        rightValidity: rightValid.data[batchIndex],
+        firstLeftRow: batch.sourceInfo?.sourceRowIndexOffset ?? firstLeftRow,
         capacity
       });
       firstLeftRow += batch.numRows;
@@ -343,7 +386,9 @@ function addLuInnerJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap
 
     const resources: LuJoinResources<Right> = {
       right,
+      joinType,
       rightRowIndices,
+      rightValidity,
       requiredCounts,
       overflows,
       lookupStatistics,
@@ -565,19 +610,6 @@ function createLuJoinOutputVector(
   }
 }
 
-/** Uses the canonical imported graph handle while exposing a bounded logical pair-output prefix. */
-function getLuJoinCapacityView(
-  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
-  view: GraphDataView<'uint32'>,
-  capacity: number
-): GraphDataView<'uint32'> {
-  return graph.createDataView(view.buffer, {
-    format: 'uint32',
-    length: capacity,
-    byteOffset: view.byteOffset
-  });
-}
-
 /** Publishes one strict GPU contract flag for duplicates, bounded index overflow, or reserved keys. */
 function addLuJoinContractPass(
   graph: GPUCommandGraph<LuDataFrameQueryParameters>,
@@ -686,38 +718,34 @@ fn main(
   });
 }
 
-/** Keeps inherited masks/counts and stable left/right row prefixes coherent after bounded joins. */
-function addLuJoinPublishPass(
+/** Separates join semantics from nullable key lookup and suppresses invalid right indexes. */
+function addLuJoinClassifyPass(
   graph: GPUCommandGraph<LuDataFrameQueryParameters>,
   id: string,
   props: {
     matches: GraphDataView<'uint32'>;
-    offsets: GraphDataView<'uint32'>;
     selection: GraphDataView<'uint32'>;
-    leftRows: GraphDataView<'uint32'>;
-    rightRows: GraphDataView<'uint32'>;
-    required: GraphDataView<'uint32'>;
-    published: GraphDataView<'uint32'>;
-    capacity: number;
+    violation: GraphDataView<'uint32'>;
+    included: GraphDataView<'uint32'>;
+    joinType: LuDataFrameJoinType;
   }
 ): void {
+  const inclusion =
+    props.joinType === 'left'
+      ? 'selected'
+      : props.joinType === 'anti'
+        ? 'selected && !matched'
+        : 'selected && matched';
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.matches.length}u;
 const MATCH_OFFSET: u32 = ${getViewElementOffset(props.matches)}u;
-const OFFSET_OFFSET: u32 = ${getViewElementOffset(props.offsets)}u;
 const SELECTION_OFFSET: u32 = ${getViewElementOffset(props.selection)}u;
-const LEFT_OFFSET: u32 = ${getViewElementOffset(props.leftRows)}u;
-const RIGHT_OFFSET: u32 = ${getViewElementOffset(props.rightRows)}u;
-const REQUIRED_OFFSET: u32 = ${getViewElementOffset(props.required)}u;
-const PUBLISHED_OFFSET: u32 = ${getViewElementOffset(props.published)}u;
-const OUTPUT_CAPACITY: u32 = ${props.capacity}u;
+const CONTRACT_OFFSET: u32 = ${getViewElementOffset(props.violation)}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.included)}u;
 @group(0) @binding(0) var<storage, read> matchedRows: array<u32>;
-@group(0) @binding(1) var<storage, read> matchedOffsets: array<u32>;
-@group(0) @binding(2) var<storage, read_write> selectionMask: array<u32>;
-@group(0) @binding(3) var<storage, read_write> outputLeftRows: array<u32>;
-@group(0) @binding(4) var<storage, read_write> outputRightRows: array<u32>;
-@group(0) @binding(5) var<storage, read> requiredCounts: array<u32>;
-@group(0) @binding(6) var<storage, read_write> selectedCounts: array<u32>;
+@group(0) @binding(1) var<storage, read> selectionMask: array<u32>;
+@group(0) @binding(2) var<storage, read> contractViolation: array<u32>;
+@group(0) @binding(3) var<storage, read_write> includedRows: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
 fn main(
@@ -725,18 +753,11 @@ fn main(
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
   ${getLuAnalyticsInvocationIndexSource(graph, props.matches.length)}
-  let published = min(requiredCounts[REQUIRED_OFFSET], OUTPUT_CAPACITY);
-  if (index == 0u) {
-    selectedCounts[PUBLISHED_OFFSET] = published;
-  }
   if (index < ELEMENT_COUNT) {
-    let selected = matchedRows[MATCH_OFFSET + index] != 0u &&
-      matchedOffsets[OFFSET_OFFSET + index] < OUTPUT_CAPACITY;
-    selectionMask[SELECTION_OFFSET + index] = select(0u, 1u, selected);
-    if (index >= published) {
-      outputLeftRows[LEFT_OFFSET + index] = 0u;
-      outputRightRows[RIGHT_OFFSET + index] = 0u;
-    }
+    let selected = selectionMask[SELECTION_OFFSET + index] != 0u;
+    let matched = matchedRows[MATCH_OFFSET + index] != 0u;
+    let included = (${inclusion}) && contractViolation[CONTRACT_OFFSET] == 0u;
+    includedRows[OUTPUT_OFFSET + index] = select(0u, 1u, included);
   }
 }`;
   addLuAnalyticsComputePass(graph, {
@@ -744,22 +765,186 @@ fn main(
     source,
     resources: [
       {buffer: props.matches, usage: 'storage-read'},
-      {buffer: props.offsets, usage: 'storage-read'},
-      {buffer: props.selection, usage: 'storage-write'},
-      {buffer: props.leftRows, usage: 'storage-read-write'},
-      {buffer: props.rightRows, usage: 'storage-read-write'},
-      {buffer: props.required, usage: 'storage-read'},
-      {buffer: props.published, usage: 'storage-write'}
+      {buffer: props.selection, usage: 'storage-read'},
+      {buffer: props.violation, usage: 'storage-read'},
+      {buffer: props.included, usage: 'storage-write'}
     ],
     bindings: {
       matchedRows: props.matches,
-      matchedOffsets: props.offsets,
       selectionMask: props.selection,
-      outputLeftRows: props.leftRows,
-      outputRightRows: props.rightRows,
-      requiredCounts: props.required,
-      selectedCounts: props.published
+      contractViolation: props.violation,
+      includedRows: props.included
     },
     length: Math.max(props.matches.length, 1)
+  });
+}
+
+/** Publishes required/bounded counts and source-aligned selected masks for one left batch. */
+function addLuJoinCountPass(
+  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
+  id: string,
+  props: {
+    included: GraphDataView<'uint32'>;
+    offsets: GraphDataView<'uint32'>;
+    selection: GraphDataView<'uint32'>;
+    required: GraphDataView<'uint32'>;
+    published: GraphDataView<'uint32'>;
+    overflow: GraphDataView<'uint32'>;
+    indexStatistics: GraphDataView<'uint32'>;
+    capacity: number;
+  }
+): void {
+  const source = /* wgsl */ `
+const ELEMENT_COUNT: u32 = ${props.included.length}u;
+const INCLUDED_OFFSET: u32 = ${getViewElementOffset(props.included)}u;
+const OFFSET_OFFSET: u32 = ${getViewElementOffset(props.offsets)}u;
+const SELECTION_OFFSET: u32 = ${getViewElementOffset(props.selection)}u;
+const REQUIRED_OFFSET: u32 = ${getViewElementOffset(props.required)}u;
+const PUBLISHED_OFFSET: u32 = ${getViewElementOffset(props.published)}u;
+const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(props.overflow)}u;
+const STATISTICS_OFFSET: u32 = ${getViewElementOffset(props.indexStatistics)}u;
+const OUTPUT_CAPACITY: u32 = ${props.capacity}u;
+@group(0) @binding(0) var<storage, read> includedRows: array<u32>;
+@group(0) @binding(1) var<storage, read> includedOffsets: array<u32>;
+@group(0) @binding(2) var<storage, read_write> selectionMask: array<u32>;
+@group(0) @binding(3) var<storage, read_write> requiredCounts: array<u32>;
+@group(0) @binding(4) var<storage, read_write> selectedCounts: array<u32>;
+@group(0) @binding(5) var<storage, read_write> overflowFlags: array<u32>;
+@group(0) @binding(6) var<storage, read> indexStatistics: array<u32>;
+
+@compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, Math.max(props.included.length, 1))}
+  if (index == 0u) {
+    var required = 0u;
+    if (ELEMENT_COUNT > 0u) {
+      let last = ELEMENT_COUNT - 1u;
+      required = includedOffsets[OFFSET_OFFSET + last] + includedRows[INCLUDED_OFFSET + last];
+    }
+    requiredCounts[REQUIRED_OFFSET] = required;
+    selectedCounts[PUBLISHED_OFFSET] = min(required, OUTPUT_CAPACITY);
+    let overflow = required > OUTPUT_CAPACITY || indexStatistics[STATISTICS_OFFSET + 2u] != 0u;
+    overflowFlags[OVERFLOW_OFFSET] = select(0u, 1u, overflow);
+  }
+  if (index < ELEMENT_COUNT) {
+    let selected = includedRows[INCLUDED_OFFSET + index] != 0u &&
+      includedOffsets[OFFSET_OFFSET + index] < OUTPUT_CAPACITY;
+    selectionMask[SELECTION_OFFSET + index] = select(0u, 1u, selected);
+  }
+}`;
+  addLuAnalyticsComputePass(graph, {
+    id,
+    source,
+    resources: [
+      {buffer: props.included, usage: 'storage-read'},
+      {buffer: props.offsets, usage: 'storage-read'},
+      {buffer: props.selection, usage: 'storage-write'},
+      {buffer: props.required, usage: 'storage-write'},
+      {buffer: props.published, usage: 'storage-write'},
+      {buffer: props.overflow, usage: 'storage-write'},
+      {buffer: props.indexStatistics, usage: 'storage-read'}
+    ],
+    bindings: {
+      includedRows: props.included,
+      includedOffsets: props.offsets,
+      selectionMask: props.selection,
+      requiredCounts: props.required,
+      selectedCounts: props.published,
+      overflowFlags: props.overflow,
+      indexStatistics: props.indexStatistics
+    },
+    length: Math.max(props.included.length, 1)
+  });
+}
+
+/** Writes stable bounded source IDs and explicit compacted right validity without aliasing. */
+function addLuJoinScatterPass(
+  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
+  id: string,
+  props: {
+    included: GraphDataView<'uint32'>;
+    matches: GraphDataView<'uint32'>;
+    offsets: GraphDataView<'uint32'>;
+    matchedRightRows: GraphDataView<'uint32'>;
+    leftRows: GraphDataView<'uint32'>;
+    rightRows: GraphDataView<'uint32'>;
+    rightValidity: GraphDataView<'uint32'>;
+    firstLeftRow: number;
+    capacity: number;
+  }
+): void {
+  const source = /* wgsl */ `
+const ELEMENT_COUNT: u32 = ${props.included.length}u;
+const INCLUDED_OFFSET: u32 = ${getViewElementOffset(props.included)}u;
+const MATCH_OFFSET: u32 = ${getViewElementOffset(props.matches)}u;
+const OFFSET_OFFSET: u32 = ${getViewElementOffset(props.offsets)}u;
+const MATCHED_RIGHT_OFFSET: u32 = ${getViewElementOffset(props.matchedRightRows)}u;
+const LEFT_OFFSET: u32 = ${getViewElementOffset(props.leftRows)}u;
+const RIGHT_OFFSET: u32 = ${getViewElementOffset(props.rightRows)}u;
+const VALIDITY_OFFSET: u32 = ${getViewElementOffset(props.rightValidity)}u;
+const FIRST_LEFT_ROW: u32 = ${props.firstLeftRow}u;
+const OUTPUT_CAPACITY: u32 = ${props.capacity}u;
+@group(0) @binding(0) var<storage, read> includedRows: array<u32>;
+@group(0) @binding(1) var<storage, read> matchedRows: array<u32>;
+@group(0) @binding(2) var<storage, read> includedOffsets: array<u32>;
+@group(0) @binding(3) var<storage, read> matchedRightRows: array<u32>;
+@group(0) @binding(4) var<storage, read_write> outputLeftRows: array<u32>;
+@group(0) @binding(5) var<storage, read_write> outputRightRows: array<u32>;
+@group(0) @binding(6) var<storage, read_write> rightValidity: array<u32>;
+
+@compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, props.included.length)}
+  if (index < ELEMENT_COUNT) {
+    let outputIndex = includedOffsets[OFFSET_OFFSET + index];
+    let included = includedRows[INCLUDED_OFFSET + index] != 0u;
+    if (included && outputIndex < OUTPUT_CAPACITY) {
+      let matched = matchedRows[MATCH_OFFSET + index] != 0u;
+      outputLeftRows[LEFT_OFFSET + outputIndex] = FIRST_LEFT_ROW + index;
+      outputRightRows[RIGHT_OFFSET + outputIndex] = select(
+        ${GPU_HASH_INDEX_EMPTY_KEY}u,
+        matchedRightRows[MATCHED_RIGHT_OFFSET + index],
+        matched
+      );
+      rightValidity[VALIDITY_OFFSET + outputIndex] = select(0u, 1u, matched);
+    }
+    let required = includedOffsets[OFFSET_OFFSET + ELEMENT_COUNT - 1u] +
+      includedRows[INCLUDED_OFFSET + ELEMENT_COUNT - 1u];
+    let published = min(required, OUTPUT_CAPACITY);
+    if (index >= published) {
+      outputLeftRows[LEFT_OFFSET + index] = 0u;
+      outputRightRows[RIGHT_OFFSET + index] = 0u;
+      rightValidity[VALIDITY_OFFSET + index] = 0u;
+    }
+  }
+}`;
+  addLuAnalyticsComputePass(graph, {
+    id,
+    source,
+    resources: [
+      {buffer: props.included, usage: 'storage-read'},
+      {buffer: props.matches, usage: 'storage-read'},
+      {buffer: props.offsets, usage: 'storage-read'},
+      {buffer: props.matchedRightRows, usage: 'storage-read'},
+      {buffer: props.leftRows, usage: 'storage-write'},
+      {buffer: props.rightRows, usage: 'storage-write'},
+      {buffer: props.rightValidity, usage: 'storage-write'}
+    ],
+    bindings: {
+      includedRows: props.included,
+      matchedRows: props.matches,
+      includedOffsets: props.offsets,
+      matchedRightRows: props.matchedRightRows,
+      outputLeftRows: props.leftRows,
+      outputRightRows: props.rightRows,
+      rightValidity: props.rightValidity
+    },
+    length: Math.max(props.included.length, 1)
   });
 }

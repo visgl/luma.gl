@@ -236,6 +236,42 @@ export class LuDataFrameQuery<
     return new LuDataFrameJoinQuery(this, right, options);
   }
 
+  /** Preserves every selected left row and explicitly marks missing right-side partners. */
+  leftJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options, 'left');
+  }
+
+  /** Preserves only selected left rows whose key exists in the unique-right index. */
+  semiJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options, 'semi');
+  }
+
+  /** Preserves selected unmatched left rows, including rows with nullable left keys. */
+  antiJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options, 'anti');
+  }
+
   /** Plans a bounded, source-aligned unique-right lookup while preserving both batch topologies. */
   lookup<
     Right extends GPUTypeMap,

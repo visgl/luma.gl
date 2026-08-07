@@ -316,6 +316,54 @@ export class LuDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     );
   }
 
+  /** Preserves selected left rows and publishes explicit validity for unmatched right partners. */
+  leftJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<T, keyof T & string, Right, LeftKey, RightKey, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).leftJoin(
+      right,
+      options
+    );
+  }
+
+  /** Preserves selected left rows that match one unique right key. */
+  semiJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<T, keyof T & string, Right, LeftKey, RightKey, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).semiJoin(
+      right,
+      options
+    );
+  }
+
+  /** Preserves selected unmatched left rows, including nullable left keys. */
+  antiJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<T, keyof T & string, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<T, keyof T & string, Right, LeftKey, RightKey, T> {
+    this.assertAvailable();
+    return new LuDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames).antiJoin(
+      right,
+      options
+    );
+  }
+
   /** Plans bounded, source-aligned unique-right lookups without flattening source batches. */
   lookup<
     Right extends GPUTypeMap,

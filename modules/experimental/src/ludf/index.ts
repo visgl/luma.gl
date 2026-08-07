@@ -43,7 +43,11 @@ export type {LuDataFrameHistogramOptions} from './lu-histogram-query';
 export {LuDataFrameGlobalSortQuery, LuDataFrameSortQuery} from './lu-sort-query';
 export type {LuDataFrameSortOptions} from './lu-sort-query';
 export {LuDataFrameJoinQuery, LuDataFrameLookupQuery} from './lu-join-query';
-export type {LuDataFrameJoinOptions, LuDataFrameLookupOptions} from './lu-join-query';
+export type {
+  LuDataFrameJoinOptions,
+  LuDataFrameJoinType,
+  LuDataFrameLookupOptions
+} from './lu-join-query';
 export {and, column, literal, LuExpression, not, or, parameter} from './lu-expression';
 export type {
   LuExpressionBinaryOperator,
