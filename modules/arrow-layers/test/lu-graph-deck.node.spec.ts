@@ -16,7 +16,15 @@ import * as luGraphModule from '@luma.gl/experimental/lugraph';
 import {describe, expect, test} from 'vitest';
 
 import {createLuGraphExplorerDeck} from '../../../examples/deck/lugraph-explorer/app';
-import {makeGraphExplorerDataset} from '../../../examples/experimental/lugraph-explorer/graph-data';
+import {
+  GRAPH_EXPLORER_LINEAR_LAYOUT_VERTEX_COUNT,
+  GRAPH_EXPLORER_MAXIMUM_EXACT_VERTEX_COUNT,
+  GRAPH_EXPLORER_MAX_VISIBLE_EDGES,
+  GRAPH_EXPLORER_POINT_VERTEX_COUNT,
+  GRAPH_EXPLORER_SHOWCASE_DEFAULT_VERTEX_COUNT,
+  GRAPH_EXPLORER_VERTEX_COUNTS,
+  makeGraphExplorerDataset
+} from '../../../examples/experimental/lugraph-explorer/graph-data';
 import {getExampleThumbnailPath} from '../../../website/src/example-thumbnails';
 
 type ExampleContentsEntry = {
@@ -100,11 +108,116 @@ describe('luGraph native deck.gl resident layers', () => {
     expect(LUGRAPH_DECK_NODE_SHADER).toContain('@location(0) nodePosition: vec2<f32>');
     expect(LUGRAPH_DECK_NODE_SHADER).toContain('importance: array<f32>');
     expect(LUGRAPH_DECK_NODE_SHADER).toContain('components: array<u32>');
+    expect(LUGRAPH_DECK_NODE_SHADER).toContain('communities: array<u32>');
+    expect(LUGRAPH_DECK_NODE_SHADER).toContain('let label = communities[index]');
+    expect(LUGRAPH_DECK_NODE_SHADER).toContain('u32(nodeStyle.vertexCount) / 4u');
+    expect(LUGRAPH_DECK_NODE_SHADER).toContain('min(label / communitySpan, 3u)');
+    expect(LUGRAPH_DECK_NODE_SHADER).toContain('0.78');
+    expect(LUGRAPH_DECK_NODE_SHADER).toContain('degrees: array<u32>');
     expect(LUGRAPH_DECK_NODE_SHADER).toContain('distances: array<u32>');
     expect(LUGRAPH_DECK_NODE_SHADER).toContain('selectionMask: array<u32>');
     expect(LUGRAPH_DECK_NODE_SHADER).toContain('vertex + 1u');
     expect(LUGRAPH_DECK_NODE_SHADER).toContain('geometry.pickingColor');
     expect(LUGRAPH_DECK_NODE_SHADER).not.toMatch(/atomic\s*<\s*f32\s*>/);
+  });
+
+  test('shares fourteen genuine graph scales while bounding only work and visible edges', () => {
+    expect(GRAPH_EXPLORER_VERTEX_COUNTS).toEqual([
+      128, 256, 512, 1024, 2048, 4096, 8192, 16_384, 32_768, 65_536, 131_072, 262_144, 524_288,
+      1_048_576
+    ]);
+    expect(GRAPH_EXPLORER_SHOWCASE_DEFAULT_VERTEX_COUNT).toBe(1024);
+    expect(GRAPH_EXPLORER_MAXIMUM_EXACT_VERTEX_COUNT).toBe(512);
+    expect(GRAPH_EXPLORER_LINEAR_LAYOUT_VERTEX_COUNT).toBe(16_384);
+    expect(GRAPH_EXPLORER_POINT_VERTEX_COUNT).toBe(65_536);
+    expect(GRAPH_EXPLORER_MAX_VISIBLE_EDGES).toBe(65_536);
+
+    const effectSource = readFileSync(
+      new URL('../src/lugraph/lugraph-effect.ts', import.meta.url),
+      'utf8'
+    );
+    expect(effectSource).toContain('LuGraphDegree');
+    expect(effectSource).toContain('LuGraphLabelPropagation');
+    expect(effectSource).toContain('LuGraphSpatialForceLayout');
+    expect(effectSource).toContain('addSampledLayoutToGraph');
+    expect(effectSource).toContain('this.renderedVertexCount = dataset.vertexCount');
+    expect(effectSource).toContain('this.renderedEdgeCount = Math.min');
+    expect(effectSource).toMatch(
+      /repulsion:\s*this\.activeLayoutMode\s*===\s*'sampled'\s*\?\s*0\.0015\s*:/
+    );
+    expect(effectSource).toMatch(
+      /gravity:\s*this\.activeLayoutMode\s*===\s*'sampled'\s*\?\s*0\.005/
+    );
+    expect(effectSource).not.toContain('graph-scale-layout');
+    expect(effectSource).not.toMatch(/from\s+['"][^'"]*examples\//u);
+    expect(effectSource).not.toMatch(/\.readAsync\s*\(/);
+  });
+
+  test('creates an actual million-vertex graph without multiplying a representative sample', () => {
+    const dataset = makeGraphExplorerDataset(1_048_576);
+
+    expect(dataset.vertexCount).toBe(1_048_576);
+    expect(dataset.positions).toHaveLength(2_097_152);
+    expect(dataset.velocities).toHaveLength(2_097_152);
+    expect(dataset.sourceChunks.map(chunk => chunk.length)).toEqual(
+      dataset.targetChunks.map(chunk => chunk.length)
+    );
+    expect(dataset.sourceChunks[1]).toHaveLength(0);
+    expect(dataset.sourceChunks.reduce((count, chunk) => count + chunk.length, 0)).toBe(2_097_343);
+  });
+
+  test('rebinds same-ID Deck node and edge models after replacing graph allocations', () => {
+    for (const path of [
+      '../src/lugraph/lugraph-node-layer.ts',
+      '../src/lugraph/lugraph-edge-layer.ts'
+    ]) {
+      const source = readFileSync(new URL(path, import.meta.url), 'utf8');
+
+      expect(source).toMatch(/updateState\s*\(/);
+      expect(source).toMatch(/setBindings\s*\(/);
+    }
+  });
+
+  test('renders accessible graph scale, truthful GPU diagnostics, and real analytic controls', () => {
+    const source = readFileSync(
+      new URL('../../../examples/deck/lugraph-explorer/app.ts', import.meta.url),
+      'utf8'
+    );
+
+    for (const attribute of [
+      'data-lugraph-size',
+      'data-lugraph-size-value',
+      'data-lugraph-size-decrease',
+      'data-lugraph-size-increase',
+      'data-lugraph-layout',
+      'data-lugraph-color',
+      'data-lugraph-node-size',
+      'data-lugraph-edges',
+      'data-lugraph-depth',
+      'data-lugraph-pause',
+      'data-lugraph-legend',
+      'data-lugraph-fps',
+      'data-lugraph-encode',
+      'data-lugraph-memory',
+      'data-lugraph-index',
+      'data-lugraph-pipeline'
+    ]) {
+      expect(source).toContain(attribute);
+    }
+
+    for (const mode of ['community', 'component', 'degree', 'pagerank', 'distance']) {
+      expect(source).toContain(`value="${mode}"`);
+    }
+
+    expect(source).toContain('aria-label="Graph vertex count"');
+    expect(source).toContain('role="status"');
+    expect(source).toContain('aria-live="polite"');
+    expect(source).toContain('CPU encode');
+    expect(source).toContain('maxVisibleEdges');
+    expect(source).toContain('renderedEdgeCount');
+    expect(source).toContain('value="sampled"');
+    expect(source).not.toContain('@deck.gl/core');
+    expect(source).not.toMatch(/GPU\s+(?:frame|execution|duration)\s*[:=]\s*\$\{/i);
   });
 
   test('reads source and target edge chunks directly without concatenation or CPU staging', () => {
@@ -176,6 +289,16 @@ describe('optional luGraph deck.gl gallery and API guide', () => {
     expect(apiGuide).toContain('/examples/deck/lugraph-explorer');
     expect(apiGuide).toContain("deck.gl's own command");
     expect(apiGuide).toContain('without concatenation, buffer copies, or per-frame graph readback');
+    expect(examplePage).toContain('1,024');
+    expect(examplePage).toContain('1,048,576');
+    expect(examplePage).toContain('2,097,343');
+    expect(examplePage).toContain('65,536');
+    expect(examplePage).toContain('16,384');
+    expect(examplePage).toContain('512 vertices');
+    expect(examplePage).toContain('O(E + 4V)');
+    expect(examplePage).toMatch(/label.propagation/u);
+    expect(examplePage).toContain('CPU encoding');
+    expect(examplePage).toContain('does not invent convergence, timestamps');
   });
 
   test('explains when deck.gl graph integration is useful and how to explore it', () => {
@@ -208,6 +331,12 @@ describe('optional luGraph deck.gl gallery and API guide', () => {
     for (const control of [
       '**Hover a node**',
       '**Click a node**',
+      '**Change the graph size**',
+      '**Choose a layout mode**',
+      '**Choose a node color mode**',
+      '**Choose a node size mode**',
+      '**Toggle original edges**',
+      '**Pause or resume the layout**',
       '**Adjust neighborhood depth**',
       '**Drag a node**',
       '**Release pins**',
@@ -217,10 +346,11 @@ describe('optional luGraph deck.gl gallery and API guide', () => {
       expect(examplePage, control).toContain(control);
     }
 
-    expect(examplePage).toContain('128-vertex');
+    expect(examplePage).toContain('1,024');
+    expect(examplePage).toContain('1,048,576');
     expect(examplePage).toContain('`O(V² + E)`');
-    expect(examplePage).toContain('not a large-graph');
-    expect(examplePage).toContain('does not enable the optional spatial approximation');
+    expect(examplePage).toContain('`O(E + 4V)`');
+    expect(examplePage).toContain('flat-grid spatial approximation');
     expect(examplePage).toContain('/docs/api-reference/experimental/lugraph');
     expect(examplePage).toContain('/examples/experimental/lugraph-explorer');
   });
@@ -240,7 +370,7 @@ describe('optional luGraph deck.gl gallery and API guide', () => {
     expect(examplePage).toContain('LuGraphDeckEffect');
     expect(examplePage).toContain('LuGraphNodeLayer');
     expect(examplePage).toContain('LuGraphEdgeLayer');
-    expect(examplePage).toContain('not\n   community-detection results');
+    expect(examplePage).toContain('label-propagation community labels');
     expect(examplePage).toContain('deck.gl owns queue');
     expect(examplePage).toContain('`Buffer.STORAGE` and `Buffer.VERTEX`');
     expect(examplePage).toContain('returns a requested selected-vertex result to JavaScript');
