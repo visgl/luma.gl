@@ -70,6 +70,68 @@ export type LocalGaussianSplatLoadOptions = {
   onProgress?: (progress: LocalGaussianSplatLoadProgress) => void;
 };
 
+/** One independently addressable RAD source page, retaining its source-global row interval. */
+export type LocalGaussianSplatRADChunkMetadata = {
+  chunkIndex: number;
+  base: number;
+  count: number;
+  bytes: number;
+  offset?: number;
+  filename?: string;
+};
+
+/** One intact loader-owned Arrow page with exact source-global identity and row hierarchy. */
+export type LocalGaussianSplatRADPage = {
+  readonly data: GPUSplatArrowRecordBatchLike;
+  readonly shape?: string;
+  readonly loaderData: {
+    readonly base: number;
+    readonly chunkIndex: number;
+    readonly childCounts?: Uint16Array;
+    readonly childStarts?: Uint32Array;
+    readonly [metadataName: string]: unknown;
+  };
+};
+
+/** Source metadata needed to demand, estimate, and traverse independent RAD pages. */
+export type LocalGaussianSplatRADMetadata = {
+  count: number;
+  chunks: readonly LocalGaussianSplatRADChunkMetadata[];
+  allChunkBytes?: number;
+  chunkSize?: number;
+  maxSh?: number;
+  lodTree?: boolean;
+};
+
+/** Current camera-driven interest in one RAD page; larger priorities are serviced first. */
+export type LocalGaussianSplatRADPageDemand = {
+  chunkIndex: number;
+  priority?: number;
+};
+
+/** Input for an injected asynchronous or worker-backed RAD page decoder. */
+export type LocalGaussianSplatRADPageDecodeContext = {
+  chunkIndex: number;
+  sourceUrl: string;
+  metadata: LocalGaussianSplatRADMetadata;
+  signal: AbortSignal;
+  /** Published RADSourceLoader performs this decoder synchronously after the range fetch. */
+  decodeDefault: () => Promise<unknown>;
+};
+
+/** Cancellation, bounded demand, and optional real worker bridge for RAD page loading. */
+export type LocalGaussianSplatRADPageSourceOptions = LocalGaussianSplatLoadOptions & {
+  maxConcurrentLoads?: number;
+  /** Override with an actual worker bridge; the published RAD source has no worker parser. */
+  decodePage?: (context: LocalGaussianSplatRADPageDecodeContext) => Promise<unknown>;
+};
+
+/** Optional request-local cancellation and camera priority for one RAD page. */
+export type LocalGaussianSplatRADPageLoadOptions = {
+  priority?: number;
+  signal?: AbortSignal;
+};
+
 type LocalGaussianSplatLoaderModules = {
   coreModule: Record<string, any>;
   loader: unknown;
@@ -85,8 +147,17 @@ type LocalGaussianSplatLoadState = {
 type LocalGaussianSplatRADSource = {
   getMetadata(): Promise<{
     count: number;
-    chunks: readonly {base?: number; count?: number; bytes?: number}[];
+    chunks: readonly {
+      base?: number;
+      count?: number;
+      bytes?: number;
+      offset?: number;
+      filename?: string;
+    }[];
     allChunkBytes?: number;
+    chunkSize?: number;
+    maxSh?: number;
+    lodTree?: boolean;
   }>;
   getChunkTable(
     chunkIndex: number,
@@ -97,9 +168,29 @@ type LocalGaussianSplatRADSource = {
   ): Promise<unknown>;
 };
 
+type LocalGaussianSplatRADPageRequest = {
+  chunkIndex: number;
+  priority: number;
+  sequence: number;
+  controller: AbortController;
+  promise: Promise<LocalGaussianSplatRADPage>;
+  resolve: (page: LocalGaussianSplatRADPage) => void;
+  reject: (error: unknown) => void;
+  removeAbortListener?: () => void;
+  started: boolean;
+  settled: boolean;
+};
+
+type LocalGaussianSplatRADProgressState = {
+  loadedBytes: number;
+  loadedSplatCount: number;
+  totalBytes?: number;
+};
+
 const DEFAULT_GAUSSIAN_PLY_PATH = 'modules/ply/test/data/gaussian/train-1000.ply';
 const GAUSSIAN_SPLAT_ARROW_BATCH_SIZE = 65_536;
 const DEFAULT_RAD_RESIDENT_SPLAT_COUNT = 1_000_000;
+const DEFAULT_RAD_MAX_CONCURRENT_PAGE_LOADS = 4;
 const DOWNLOAD_PROGRESS_INTERVAL_MILLISECONDS = 125;
 const HUGGING_FACE_GAUSSIAN_SPLAT_BASE_URL =
   'https://huggingface.co/datasets/Voxel51/gaussian_splatting/resolve/main/FO_dataset';
@@ -260,6 +351,446 @@ export function getLocalGaussianSplatLoadersConfiguration():
     up: scene.up,
     camera: scene.camera
   };
+}
+
+/**
+ * Demand-driven RAD source whose decoded pages remain separate and caller-owned.
+ *
+ * Setting demand only updates priorities and cancels stale requests. Pages are never fetched until
+ * `loadPage` is explicitly called, and completed Arrow pages are not cached or repacked.
+ */
+export class LocalGaussianSplatRADPageSource {
+  readonly metadata: LocalGaussianSplatRADMetadata;
+
+  private readonly source: LocalGaussianSplatRADSource;
+  private readonly configuration: LocalGaussianSplatLoadersConfiguration;
+  private readonly options: LocalGaussianSplatRADPageSourceOptions;
+  private readonly sourceAbortController: AbortController;
+  private readonly progressState: LocalGaussianSplatRADProgressState;
+  private readonly requests = new Map<number, LocalGaussianSplatRADPageRequest>();
+  private readonly queue: LocalGaussianSplatRADPageRequest[] = [];
+  private readonly demand = new Map<number, number>();
+  private readonly maxConcurrentLoads: number;
+  private readonly handleSourceAbort = (): void => this.destroy();
+  private activeLoadCount = 0;
+  private nextRequestSequence = 0;
+  private destroyed = false;
+
+  constructor(
+    source: LocalGaussianSplatRADSource,
+    metadata: LocalGaussianSplatRADMetadata,
+    configuration: LocalGaussianSplatLoadersConfiguration,
+    options: LocalGaussianSplatRADPageSourceOptions,
+    sourceAbortController: AbortController,
+    progressState: LocalGaussianSplatRADProgressState
+  ) {
+    this.source = source;
+    this.metadata = metadata;
+    this.configuration = configuration;
+    this.options = options;
+    this.sourceAbortController = sourceAbortController;
+    this.progressState = progressState;
+    this.maxConcurrentLoads = Math.max(
+      1,
+      Math.floor(options.maxConcurrentLoads ?? DEFAULT_RAD_MAX_CONCURRENT_PAGE_LOADS)
+    );
+    sourceAbortController.signal.addEventListener('abort', this.handleSourceAbort, {once: true});
+  }
+
+  /** Returns already-fetched top-level metadata without issuing another range request. */
+  getMetadata(): LocalGaussianSplatRADMetadata {
+    return this.metadata;
+  }
+
+  /** Resolves a source-global LoD child row to its original, independently fetchable page. */
+  getChunkForRow(rowIndex: number): number | undefined {
+    if (!Number.isSafeInteger(rowIndex) || rowIndex < 0) {
+      return undefined;
+    }
+
+    const nominalChunkSize = this.metadata.chunkSize;
+    if (nominalChunkSize && nominalChunkSize > 0) {
+      const nominalChunk = this.metadata.chunks[Math.floor(rowIndex / nominalChunkSize)];
+      if (
+        nominalChunk &&
+        rowIndex >= nominalChunk.base &&
+        rowIndex < nominalChunk.base + nominalChunk.count
+      ) {
+        return nominalChunk.chunkIndex;
+      }
+    }
+
+    let firstChunkIndex = 0;
+    let lastChunkIndex = this.metadata.chunks.length - 1;
+    while (firstChunkIndex <= lastChunkIndex) {
+      const chunk = this.metadata.chunks[Math.floor((firstChunkIndex + lastChunkIndex) / 2)]!;
+      if (rowIndex >= chunk.base && rowIndex < chunk.base + chunk.count) {
+        return chunk.chunkIndex;
+      }
+      if (rowIndex < chunk.base) {
+        lastChunkIndex = chunk.chunkIndex - 1;
+      } else {
+        firstChunkIndex = chunk.chunkIndex + 1;
+      }
+    }
+    return undefined;
+  }
+
+  /** Updates camera demand without implicitly starting requests or retaining decoded pages. */
+  setPageDemand(
+    demands: readonly LocalGaussianSplatRADPageDemand[],
+    options: {cancelUndemanded?: boolean} = {}
+  ): void {
+    this.demand.clear();
+    for (const pageDemand of demands) {
+      this.demand.set(pageDemand.chunkIndex, pageDemand.priority ?? 0);
+    }
+    for (const request of [...this.requests.values()]) {
+      const priority = this.demand.get(request.chunkIndex);
+      if (priority === undefined && options.cancelUndemanded !== false) {
+        this.cancelPage(request.chunkIndex);
+      } else if (priority !== undefined) {
+        request.priority = priority;
+      }
+    }
+    this.sortQueue();
+  }
+
+  /** Fetches only the requested original source page with deduplication and bounded concurrency. */
+  loadPage(
+    chunkIndex: number,
+    options: LocalGaussianSplatRADPageLoadOptions = {}
+  ): Promise<LocalGaussianSplatRADPage> {
+    if (this.destroyed || this.sourceAbortController.signal.aborted) {
+      return Promise.reject(getGaussianSplatRADAbortReason(this.sourceAbortController.signal));
+    }
+    if (options.signal?.aborted) {
+      return Promise.reject(getGaussianSplatRADAbortReason(options.signal));
+    }
+
+    const chunk = this.metadata.chunks[chunkIndex];
+    if (!chunk || chunk.chunkIndex !== chunkIndex) {
+      return Promise.reject(new RangeError('The requested RAD page does not exist.'));
+    }
+    if (
+      this.configuration.maxResidentSplatCount !== undefined &&
+      chunk.count > this.configuration.maxResidentSplatCount
+    ) {
+      return Promise.reject(
+        new RangeError('The RAD page exceeds residentSplats; increase the budget.')
+      );
+    }
+
+    const existingRequest = this.requests.get(chunkIndex);
+    if (existingRequest) {
+      if (options.priority !== undefined) {
+        existingRequest.priority = options.priority;
+        this.sortQueue();
+      }
+      return existingRequest.promise;
+    }
+
+    let resolvePage!: (page: LocalGaussianSplatRADPage) => void;
+    let rejectPage!: (error: unknown) => void;
+    const promise = new Promise<LocalGaussianSplatRADPage>((resolve, reject) => {
+      resolvePage = resolve;
+      rejectPage = reject;
+    });
+    const request: LocalGaussianSplatRADPageRequest = {
+      chunkIndex,
+      priority: options.priority ?? this.demand.get(chunkIndex) ?? 0,
+      sequence: this.nextRequestSequence++,
+      controller: new AbortController(),
+      promise,
+      resolve: resolvePage,
+      reject: rejectPage,
+      started: false,
+      settled: false
+    };
+
+    if (options.signal) {
+      const handleAbort = (): void => {
+        this.cancelPage(chunkIndex, options.signal?.reason);
+      };
+      options.signal.addEventListener('abort', handleAbort, {once: true});
+      request.removeAbortListener = () => options.signal?.removeEventListener('abort', handleAbort);
+    }
+
+    this.requests.set(chunkIndex, request);
+    this.queue.push(request);
+    this.sortQueue();
+    this.startQueuedPages();
+    return promise;
+  }
+
+  /** Aborts a queued or in-flight request without destroying any caller-owned decoded page. */
+  cancelPage(chunkIndex: number, reason?: unknown): boolean {
+    const request = this.requests.get(chunkIndex);
+    if (!request) {
+      return false;
+    }
+    request.controller.abort(reason);
+    if (!request.started) {
+      const queueIndex = this.queue.indexOf(request);
+      if (queueIndex >= 0) {
+        this.queue.splice(queueIndex, 1);
+      }
+    }
+    this.finishRequest(request, getGaussianSplatRADAbortReason(request.controller.signal));
+    return true;
+  }
+
+  /** Cancels queued and in-flight work; already returned Arrow pages remain caller-owned. */
+  destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    this.sourceAbortController.signal.removeEventListener('abort', this.handleSourceAbort);
+    if (!this.sourceAbortController.signal.aborted) {
+      this.sourceAbortController.abort();
+    }
+    for (const request of [...this.requests.values()]) {
+      this.cancelPage(request.chunkIndex, this.sourceAbortController.signal.reason);
+    }
+    this.demand.clear();
+  }
+
+  private sortQueue(): void {
+    this.queue.sort(
+      (left, right) => right.priority - left.priority || left.sequence - right.sequence
+    );
+  }
+
+  private startQueuedPages(): void {
+    while (!this.destroyed && this.activeLoadCount < this.maxConcurrentLoads && this.queue.length) {
+      const request = this.queue.shift()!;
+      request.started = true;
+      this.activeLoadCount++;
+      void this.decodeRequestedPage(request);
+    }
+  }
+
+  private async decodeRequestedPage(request: LocalGaussianSplatRADPageRequest): Promise<void> {
+    try {
+      const signal = request.controller.signal;
+      signal.throwIfAborted();
+      const decodeDefault = async (): Promise<unknown> =>
+        await this.source.getChunkTable(request.chunkIndex, {
+          signal,
+          radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
+        });
+      const arrowSource = this.options.decodePage
+        ? await this.options.decodePage({
+            chunkIndex: request.chunkIndex,
+            sourceUrl: this.configuration.sourceUrl,
+            metadata: this.metadata,
+            signal,
+            decodeDefault
+          })
+        : await decodeDefault();
+      signal.throwIfAborted();
+
+      if (!isGaussianSplatArrowSource(arrowSource)) {
+        throw new Error('RADSourceLoader did not return a Gaussian Arrow page.');
+      }
+      if (
+        this.configuration.maxResidentSplatCount !== undefined &&
+        arrowSource.data.numRows > this.configuration.maxResidentSplatCount
+      ) {
+        throw new RangeError('The RAD page exceeds residentSplats; increase the budget.');
+      }
+
+      const sourceLoaderData =
+        'loaderData' in arrowSource &&
+        typeof arrowSource.loaderData === 'object' &&
+        arrowSource.loaderData !== null
+          ? arrowSource.loaderData
+          : {};
+      const chunk = this.metadata.chunks[request.chunkIndex]!;
+      const base = typeof sourceLoaderData.base === 'number' ? sourceLoaderData.base : chunk.base;
+      chunk.base = base;
+      chunk.count = arrowSource.data.numRows;
+      const page: LocalGaussianSplatRADPage = {
+        data: arrowSource.data,
+        ...(arrowSource.shape ? {shape: arrowSource.shape} : {}),
+        loaderData: {...sourceLoaderData, base, chunkIndex: request.chunkIndex}
+      };
+      this.progressState.loadedSplatCount += arrowSource.data.numRows;
+      reportGaussianSplatRADProgress(
+        this.configuration,
+        this.options,
+        this.progressState,
+        'loaded'
+      );
+      this.finishRequest(request, undefined, page);
+    } catch (error) {
+      this.finishRequest(request, error);
+    } finally {
+      this.activeLoadCount--;
+      this.startQueuedPages();
+    }
+  }
+
+  private finishRequest(
+    request: LocalGaussianSplatRADPageRequest,
+    error?: unknown,
+    page?: LocalGaussianSplatRADPage
+  ): void {
+    if (request.settled) {
+      return;
+    }
+    request.settled = true;
+    request.removeAbortListener?.();
+    if (this.requests.get(request.chunkIndex) === request) {
+      this.requests.delete(request.chunkIndex);
+    }
+    if (page) {
+      request.resolve(page);
+    } else {
+      request.reject(error);
+    }
+  }
+}
+
+/** Opens only RAD metadata; source pages are fetched later in explicit camera-demand order. */
+export async function openLocalGaussianSplatRADPageSource(
+  configuration: LocalGaussianSplatLoadersConfiguration,
+  options: LocalGaussianSplatRADPageSourceOptions = {}
+): Promise<LocalGaussianSplatRADPageSource> {
+  if (configuration.sourceFormat !== 'RAD') {
+    throw new Error('A demand-driven RAD page source requires a RAD scene.');
+  }
+  options.signal?.throwIfAborted();
+  const loaderModules = await loadLocalGaussianSplatLoaderModules(configuration);
+  const sourceAbortController = new AbortController();
+  const handleExternalAbort = (): void => sourceAbortController.abort(options.signal?.reason);
+  options.signal?.addEventListener('abort', handleExternalAbort, {once: true});
+  if (options.signal?.aborted) {
+    handleExternalAbort();
+  }
+  sourceAbortController.signal.addEventListener(
+    'abort',
+    () => options.signal?.removeEventListener('abort', handleExternalAbort),
+    {once: true}
+  );
+
+  const progressState: LocalGaussianSplatRADProgressState = {
+    loadedBytes: 0,
+    loadedSplatCount: 0
+  };
+  reportGaussianSplatRADProgress(configuration, options, progressState, 'loading');
+
+  try {
+    const fetchSource = async (url: string, requestOptions?: RequestInit): Promise<Response> => {
+      const {signal, cleanup} = combineGaussianSplatRADAbortSignals(
+        sourceAbortController.signal,
+        requestOptions?.signal ?? undefined
+      );
+      let response: Response;
+      try {
+        response = await fetch(url, {...requestOptions, signal});
+      } catch (error) {
+        cleanup();
+        throw error;
+      }
+      if (!response.ok) {
+        cleanup();
+        throw new Error(`Unable to load Gaussian splat source (${response.status}).`);
+      }
+      if (!response.body) {
+        cleanup();
+        return response;
+      }
+
+      const reader = response.body.getReader();
+      const progressStream = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          try {
+            const {done, value} = await reader.read();
+            if (done) {
+              cleanup();
+              controller.close();
+              return;
+            }
+            progressState.loadedBytes += value.byteLength;
+            reportGaussianSplatRADProgress(configuration, options, progressState, 'loading');
+            controller.enqueue(value);
+          } catch (error) {
+            cleanup();
+            controller.error(error);
+          }
+        },
+        async cancel(reason) {
+          cleanup();
+          await reader.cancel(reason);
+        }
+      });
+
+      return new Response(progressStream, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      });
+    };
+    const source: unknown = await loaderModules.coreModule.load(
+      configuration.sourceUrl,
+      loaderModules.loader,
+      {
+        worker: false,
+        fetch: fetchSource,
+        core: {batchSize: GAUSSIAN_SPLAT_ARROW_BATCH_SIZE},
+        splats: {shape: 'arrow-table'}
+      }
+    );
+    if (!isGaussianSplatRADSource(source)) {
+      throw new Error('RADSourceLoader did not return a paged Gaussian source.');
+    }
+
+    const sourceMetadata = await source.getMetadata();
+    sourceAbortController.signal.throwIfAborted();
+    const nominalChunkSize = sourceMetadata.chunkSize ?? GAUSSIAN_SPLAT_ARROW_BATCH_SIZE;
+    const metadata: LocalGaussianSplatRADMetadata = {
+      count: sourceMetadata.count,
+      chunks: sourceMetadata.chunks.map((chunk, chunkIndex) => ({
+        chunkIndex,
+        base: chunk.base ?? chunkIndex * nominalChunkSize,
+        count:
+          chunk.count ??
+          Math.min(
+            nominalChunkSize,
+            Math.max(0, sourceMetadata.count - chunkIndex * nominalChunkSize)
+          ),
+        bytes: chunk.bytes ?? 0,
+        ...(chunk.offset === undefined ? {} : {offset: chunk.offset}),
+        ...(chunk.filename === undefined ? {} : {filename: chunk.filename})
+      })),
+      ...(sourceMetadata.allChunkBytes === undefined
+        ? {}
+        : {allChunkBytes: sourceMetadata.allChunkBytes}),
+      ...(sourceMetadata.chunkSize === undefined ? {} : {chunkSize: sourceMetadata.chunkSize}),
+      ...(sourceMetadata.maxSh === undefined ? {} : {maxSh: sourceMetadata.maxSh}),
+      ...(sourceMetadata.lodTree === undefined ? {} : {lodTree: sourceMetadata.lodTree})
+    };
+    configuration.expectedSplatCount = metadata.count;
+    configuration.expectedBatchCount = metadata.chunks.length;
+    progressState.totalBytes =
+      metadata.allChunkBytes ||
+      metadata.chunks.reduce((totalByteLength, chunk) => totalByteLength + chunk.bytes, 0) ||
+      undefined;
+    reportGaussianSplatRADProgress(configuration, options, progressState, 'loading');
+    return new LocalGaussianSplatRADPageSource(
+      source,
+      metadata,
+      configuration,
+      options,
+      sourceAbortController,
+      progressState
+    );
+  } catch (error) {
+    sourceAbortController.abort();
+    throw error;
+  }
 }
 
 /** Progressively loads Arrow batches through an isolated loaders.gl 5 bundle or checkout. */
@@ -655,9 +1186,11 @@ function makeLocalLoadersFileUrl(loadersRoot: string, relativePath: string): str
   return `/@fs${loadersRoot}/${relativePath}`;
 }
 
-function isGaussianSplatArrowSource(
-  value: unknown
-): value is {readonly data: GPUSplatArrowRecordBatchLike; readonly shape?: string} {
+function isGaussianSplatArrowSource(value: unknown): value is {
+  readonly data: GPUSplatArrowRecordBatchLike;
+  readonly shape?: string;
+  readonly loaderData?: Record<string, unknown>;
+} {
   if (typeof value !== 'object' || value === null || !('data' in value)) {
     return false;
   }
@@ -681,5 +1214,59 @@ function isGaussianSplatRADSource(value: unknown): value is LocalGaussianSplatRA
     typeof value.getMetadata === 'function' &&
     'getChunkTable' in value &&
     typeof value.getChunkTable === 'function'
+  );
+}
+
+function reportGaussianSplatRADProgress(
+  configuration: LocalGaussianSplatLoadersConfiguration,
+  options: LocalGaussianSplatRADPageSourceOptions,
+  state: LocalGaussianSplatRADProgressState,
+  phase: LocalGaussianSplatLoadProgress['phase']
+): void {
+  options.onProgress?.({
+    phase,
+    loadedBytes: state.loadedBytes,
+    totalBytes: state.totalBytes,
+    sourceIndex: 0,
+    sourceCount: 1,
+    sourceLabel: configuration.sourceLabel,
+    fallbackActive: false,
+    loadedSplatCount: state.loadedSplatCount,
+    expectedSplatCount: configuration.expectedSplatCount,
+    expectedBatchCount: configuration.expectedBatchCount
+  });
+}
+
+function combineGaussianSplatRADAbortSignals(
+  sourceSignal: AbortSignal,
+  requestSignal?: AbortSignal
+): {signal: AbortSignal; cleanup: () => void} {
+  if (!requestSignal || sourceSignal === requestSignal) {
+    return {signal: sourceSignal, cleanup: () => {}};
+  }
+
+  const controller = new AbortController();
+  const abortFromSource = (): void => controller.abort(sourceSignal.reason);
+  const abortFromRequest = (): void => controller.abort(requestSignal.reason);
+  const cleanup = (): void => {
+    sourceSignal.removeEventListener('abort', abortFromSource);
+    requestSignal.removeEventListener('abort', abortFromRequest);
+  };
+  if (sourceSignal.aborted) {
+    abortFromSource();
+  } else if (requestSignal.aborted) {
+    abortFromRequest();
+  } else {
+    sourceSignal.addEventListener('abort', abortFromSource, {once: true});
+    requestSignal.addEventListener('abort', abortFromRequest, {once: true});
+    controller.signal.addEventListener('abort', cleanup, {once: true});
+  }
+  return {signal: controller.signal, cleanup};
+}
+
+function getGaussianSplatRADAbortReason(signal: AbortSignal): unknown {
+  return (
+    signal.reason ??
+    new DOMException('The Gaussian splat RAD page request was aborted.', 'AbortError')
   );
 }

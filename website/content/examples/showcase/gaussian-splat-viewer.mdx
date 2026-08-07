@@ -31,15 +31,21 @@ On WebGPU, every streamed batch renders through a compiled **GPU command graph**
 arrives. Projection, visibility, depth ordering, and rendering remain GPU work from the first
 visible splats rather than reprojecting source rows on the main thread while the scene loads.
 Directional spherical harmonics remain GPU-native and update as the camera moves.
+Large RAD captures use bounded projected segments and one shared global GPU depth order, keeping
+overlapping source pages correctly blended beyond a single storage-buffer limit.
 Expand **GPU graph inspector** to see the real graph nodes, encoding timings, and transient-memory
 reuse. Choose **CPU depth ordering** in the execution selector, or append `?renderer=cpu`, to
 compare against the original renderer. WebGL2 always retains its compatible CPU-ordered fallback.
 
 Append `?scene=truck`, `?scene=drjohnson`, `?scene=playroom`, or `?scene=train-github` to select a
 capture directly. `?scene=coit` selects the **50,937,127-splat Coit Tower RAD source** and retains
-a bounded one-million-splat page window; use `&residentSplats=250000` to choose a different
-whole-page residency limit. Provide `?source=https://example.com/scene.ply` for another compatible public
-file. Choose **Synthetic chromatic showcase** in the scene selector or visit the separate
+a camera-driven, one-million-splat source-page window. The viewer starts at Spark's authored root
+row, keeps coarse parents visible until their children arrive, and range-fetches, cancels, or
+evicts independent pages as the camera changes; use `&residentSplats=250000` to choose a different
+whole-page residency limit. Published loaders.gl currently decodes RAD pages on the main thread;
+applications can supply their own worker-backed decoder bridge. Provide
+`?source=https://example.com/scene.ply` for another compatible public file.
+Choose **Synthetic chromatic showcase** in the scene selector or visit the separate
 [Gaussian Splats showcase](/examples/showcase/gaussian-splats) for the deterministic generated
 scene.
 

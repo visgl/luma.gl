@@ -70,6 +70,15 @@ export {
   type SplatHierarchyView
 } from './splat-hierarchy';
 export {
+  SplatRADHierarchyManager,
+  getSplatRADPageBounds,
+  type SplatRADHierarchyFrontierEntry,
+  type SplatRADHierarchyManagerProps,
+  type SplatRADHierarchyPage,
+  type SplatRADHierarchyRequest,
+  type SplatRADHierarchyStats
+} from './splat-rad-hierarchy';
+export {
   getCovarianceEllipseAxes,
   getQuaternionScaledAxes,
   projectSplatCovarianceToScreen,
@@ -100,6 +109,12 @@ export {
   GPUSplatGraphRenderer,
   type GPUSplatGraphRendererProps
 } from './gpu-splat-graph-renderer';
+export {
+  GPUPagedSplatRenderer,
+  type GPUPagedSplatPage,
+  type GPUPagedSplatRendererProps,
+  type GPUPagedSplatRendererStats
+} from './gpu-paged-splat-renderer';
 export {
   GPUSplatGraphMixedRenderer,
   GPUSplatGraphPicker,
