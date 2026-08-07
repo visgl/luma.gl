@@ -13,6 +13,10 @@ export type ShaderPassRenderTarget = {
   format?: TextureFormat;
   /** Optional sampling behavior when later passes read this target. */
   sampler?: SamplerProps;
+  /** Reuse an earlier transient target with an identical size, format, and sampler. */
+  aliasFor?: string;
+  /** Allow WebGPU compute shaders to write this target as a storage texture. */
+  storage?: boolean;
   /** Resource lifetime. History targets retain their last successfully rendered value. */
   lifetime?: 'transient' | 'history';
   /** Initial value used after construction, resize, or an explicit history reset. */

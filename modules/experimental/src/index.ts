@@ -153,6 +153,19 @@ export type {
   GBufferShaderPassBindings
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
+export type {
+  BloomPointSpreadFunctionOptions,
+  GPUConvolutionBloomEncodeOptions,
+  GPUConvolutionBloomProps,
+  GPUConvolutionBloomStats,
+  GPUConvolutionBloomSupport
+} from './rendering/fft-bloom';
+export {
+  getGPUConvolutionBloomSupport,
+  GPUConvolutionBloom,
+  makeBloomPointSpreadFunction,
+  makeGPUConvolutionBloomStats
+} from './rendering/fft-bloom';
 export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';
 export {
   createDeferredAmbientLightingShaderPassPipeline,

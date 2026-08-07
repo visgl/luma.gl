@@ -10,6 +10,7 @@ import type {
   ShaderPassRenderTarget
 } from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
+import {createBloomComputePyramid} from './bloom-compute-pyramid';
 import {
   bloomLensArtifactsPass,
   bloomTemporalPass,
@@ -51,6 +52,10 @@ export type BloomShaderPassPipelineOptions = BloomProps & {
   scatter?: number;
   /** Width of the soft highlight threshold relative to the threshold. Defaults to 0.5. */
   softKnee?: number;
+  /** Camera exposure used to move the scene-referred highlight threshold. Defaults to one. */
+  exposure?: number;
+  /** Additional exposure compensation, measured in photographic stops. Defaults to zero. */
+  exposureCompensation?: number;
   /** Luminance-weighted suppression of isolated bright samples. Defaults to 0. */
   fireflyReduction?: number;
   /** Negative values stretch vertically; positive values stretch horizontally. */
@@ -61,6 +66,12 @@ export type BloomShaderPassPipelineOptions = BloomProps & {
   lens?: BloomLensEffectsOptions;
   /** Neighborhood-clamped history contribution for stable highlights. Defaults to zero. */
   temporalStability?: number;
+  /** Normalized tent reconstruction or four-fetch bicubic B-spline filtering. */
+  reconstruction?: 'tent' | 'bicubic';
+  /** Select fragment downsampling or the fused WebGPU compute pyramid when available. */
+  downsample?: 'auto' | 'render' | 'compute';
+  /** Reuse expired extraction textures during reconstruction. Defaults to true. */
+  reuseRenderTargets?: boolean;
   /**
    * Positive fractional size multiplier applied to every pyramid level. The extraction filter
    * adapts its source footprint to the resulting target size.
@@ -77,16 +88,20 @@ struct bloomExtractUniforms {
   threshold: f32,
   softKnee: f32,
   fireflyReduction: f32,
+  exposure: f32,
+  exposureCompensation: f32,
 };
 
 @group(0) @binding(auto) var<uniform> bloomExtract: bloomExtractUniforms;
 
 fn bloomExtract_applyThreshold(sourceColor: vec4f) -> vec4f {
   let luminance = dot(sourceColor.rgb, vec3f(0.2126, 0.7152, 0.0722));
-  let knee = max(bloomExtract.threshold * bloomExtract.softKnee, 0.00001);
-  let soft = clamp((luminance - bloomExtract.threshold + knee) / (2.0 * knee), 0.0, 1.0);
+  let exposure = max(bloomExtract.exposure * exp2(bloomExtract.exposureCompensation), 0.0001);
+  let threshold = bloomExtract.threshold / exposure;
+  let knee = max(threshold * bloomExtract.softKnee, 0.00001);
+  let soft = clamp((luminance - threshold + knee) / (2.0 * knee), 0.0, 1.0);
   let softContribution = soft * soft * knee;
-  let hardContribution = max(luminance - bloomExtract.threshold, 0.0);
+  let hardContribution = max(luminance - threshold, 0.0);
   let bloomContribution = max(hardContribution, softContribution) / max(luminance, 0.00001);
   return vec4f(sourceColor.rgb * bloomContribution, sourceColor.a * bloomContribution);
 }
@@ -144,14 +159,18 @@ layout(std140) uniform bloomExtractUniforms {
   float threshold;
   float softKnee;
   float fireflyReduction;
+  float exposure;
+  float exposureCompensation;
 } bloomExtract;
 
 vec4 bloomExtract_applyThreshold(vec4 sourceColor) {
   float luminance = dot(sourceColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-  float knee = max(bloomExtract.threshold * bloomExtract.softKnee, 0.00001);
-  float soft = clamp((luminance - bloomExtract.threshold + knee) / (2.0 * knee), 0.0, 1.0);
+  float exposure = max(bloomExtract.exposure * exp2(bloomExtract.exposureCompensation), 0.0001);
+  float threshold = bloomExtract.threshold / exposure;
+  float knee = max(threshold * bloomExtract.softKnee, 0.00001);
+  float soft = clamp((luminance - threshold + knee) / (2.0 * knee), 0.0, 1.0);
   float softContribution = soft * soft * knee;
-  float hardContribution = max(luminance - bloomExtract.threshold, 0.0);
+  float hardContribution = max(luminance - threshold, 0.0);
   float bloomContribution = max(hardContribution, softContribution) / max(luminance, 0.00001);
   return vec4(sourceColor.rgb * bloomContribution, sourceColor.a * bloomContribution);
 }
@@ -201,22 +220,36 @@ vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   uniformTypes: {
     threshold: 'f32',
     softKnee: 'f32',
-    fireflyReduction: 'f32'
+    fireflyReduction: 'f32',
+    exposure: 'f32',
+    exposureCompensation: 'f32'
   },
   defaultUniforms: {
     threshold: 0.8,
     softKnee: 0.5,
-    fireflyReduction: 0
+    fireflyReduction: 0,
+    exposure: 1,
+    exposureCompensation: 0
   },
   propTypes: {
     threshold: {value: 0.8, min: 0, max: 1},
     softKnee: {value: 0.5, min: 0, max: 1},
-    fireflyReduction: {value: 0, min: 0, max: 1}
+    fireflyReduction: {value: 0, min: 0, max: 1},
+    exposure: {value: 1, min: 0.0001, softMax: 8},
+    exposureCompensation: {value: 0, min: -8, max: 8}
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
-  Pick<BloomShaderPassPipelineOptions, 'threshold' | 'softKnee' | 'fireflyReduction'>,
-  Pick<BloomUniforms, 'threshold'> & {softKnee?: number; fireflyReduction?: number}
+  Pick<
+    BloomShaderPassPipelineOptions,
+    'threshold' | 'softKnee' | 'fireflyReduction' | 'exposure' | 'exposureCompensation'
+  >,
+  Pick<BloomUniforms, 'threshold'> & {
+    softKnee?: number;
+    fireflyReduction?: number;
+    exposure?: number;
+    exposureCompensation?: number;
+  }
 >;
 
 const bloomDownsamplePass = {
@@ -468,6 +501,7 @@ const bloomUpsamplePass = {
   source: /* wgsl */ `
 struct bloomUpsampleUniforms {
   scatter: f32,
+  reconstruction: f32,
 };
 
 @group(0) @binding(auto) var<uniform> bloomUpsample: bloomUpsampleUniforms;
@@ -497,13 +531,71 @@ fn bloomUpsample_sampleLowerGlow(
   return (center + edges + corners) / 16.0;
 }
 
+fn bloomUpsample_sampleBicubicGlow(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texCoord: vec2f
+) -> vec4f {
+  let dimensions = vec2f(textureDimensions(sourceTexture));
+  let texelPosition = texCoord * dimensions - vec2f(0.5);
+  let basePosition = floor(texelPosition);
+  let fraction = fract(texelPosition);
+  let complement = vec2f(1.0) - fraction;
+  let firstWeight = complement * complement * complement / 6.0;
+  let secondWeight =
+    (fraction * fraction * fraction * 3.0 - fraction * fraction * 6.0 + vec2f(4.0)) / 6.0;
+  let thirdWeight =
+    (-fraction * fraction * fraction * 3.0 + fraction * fraction * 3.0 + fraction * 3.0 +
+      vec2f(1.0)) / 6.0;
+  let fourthWeight = fraction * fraction * fraction / 6.0;
+  let firstPairWeight = firstWeight + secondWeight;
+  let secondPairWeight = thirdWeight + fourthWeight;
+  let firstPosition =
+    (basePosition - vec2f(1.0) + secondWeight / firstPairWeight + vec2f(0.5)) / dimensions;
+  let secondPosition =
+    (basePosition + vec2f(1.0) + fourthWeight / secondPairWeight + vec2f(0.5)) / dimensions;
+  let topLeft = textureSampleLevel(
+    sourceTexture,
+    sourceTextureSampler,
+    vec2f(firstPosition.x, firstPosition.y),
+    0.0
+  );
+  let topRight = textureSampleLevel(
+    sourceTexture,
+    sourceTextureSampler,
+    vec2f(secondPosition.x, firstPosition.y),
+    0.0
+  );
+  let bottomLeft = textureSampleLevel(
+    sourceTexture,
+    sourceTextureSampler,
+    vec2f(firstPosition.x, secondPosition.y),
+    0.0
+  );
+  let bottomRight = textureSampleLevel(
+    sourceTexture,
+    sourceTextureSampler,
+    vec2f(secondPosition.x, secondPosition.y),
+    0.0
+  );
+  return topLeft * firstPairWeight.x * firstPairWeight.y +
+    topRight * secondPairWeight.x * firstPairWeight.y +
+    bottomLeft * firstPairWeight.x * secondPairWeight.y +
+    bottomRight * secondPairWeight.x * secondPairWeight.y;
+}
+
 fn bloomUpsample_sampleColor(
   sourceTexture: texture_2d<f32>,
   sourceTextureSampler: sampler,
   texSize: vec2f,
   texCoord: vec2f
 ) -> vec4f {
-  let lowerGlow = bloomUpsample_sampleLowerGlow(sourceTexture, sourceTextureSampler, texCoord);
+  var lowerGlow: vec4f;
+  if (bloomUpsample.reconstruction > 0.5) {
+    lowerGlow = bloomUpsample_sampleBicubicGlow(sourceTexture, sourceTextureSampler, texCoord);
+  } else {
+    lowerGlow = bloomUpsample_sampleLowerGlow(sourceTexture, sourceTextureSampler, texCoord);
+  }
   let higherGlow = textureSample(higherResolutionGlow, higherResolutionGlowSampler, texCoord);
   return mix(higherGlow, lowerGlow, clamp(bloomUpsample.scatter, 0.0, 1.0));
 }
@@ -511,6 +603,7 @@ fn bloomUpsample_sampleColor(
   fs: /* glsl */ `
 layout(std140) uniform bloomUpsampleUniforms {
   float scatter;
+  float reconstruction;
 } bloomUpsample;
 
 uniform sampler2D higherResolutionGlow;
@@ -534,21 +627,59 @@ vec4 bloomUpsample_sampleLowerGlow(sampler2D sourceTexture, vec2 texCoord) {
   return (center + edges + corners) / 16.0;
 }
 
+vec4 bloomUpsample_sampleBicubicGlow(sampler2D sourceTexture, vec2 texCoord) {
+  vec2 dimensions = vec2(textureSize(sourceTexture, 0));
+  vec2 texelPosition = texCoord * dimensions - vec2(0.5);
+  vec2 basePosition = floor(texelPosition);
+  vec2 fraction = fract(texelPosition);
+  vec2 complement = vec2(1.0) - fraction;
+  vec2 firstWeight = complement * complement * complement / 6.0;
+  vec2 secondWeight =
+    (fraction * fraction * fraction * 3.0 - fraction * fraction * 6.0 + vec2(4.0)) / 6.0;
+  vec2 thirdWeight =
+    (-fraction * fraction * fraction * 3.0 + fraction * fraction * 3.0 + fraction * 3.0 +
+      vec2(1.0)) / 6.0;
+  vec2 fourthWeight = fraction * fraction * fraction / 6.0;
+  vec2 firstPairWeight = firstWeight + secondWeight;
+  vec2 secondPairWeight = thirdWeight + fourthWeight;
+  vec2 firstPosition =
+    (basePosition - vec2(1.0) + secondWeight / firstPairWeight + vec2(0.5)) / dimensions;
+  vec2 secondPosition =
+    (basePosition + vec2(1.0) + fourthWeight / secondPairWeight + vec2(0.5)) / dimensions;
+  vec4 topLeft = textureLod(sourceTexture, vec2(firstPosition.x, firstPosition.y), 0.0);
+  vec4 topRight = textureLod(sourceTexture, vec2(secondPosition.x, firstPosition.y), 0.0);
+  vec4 bottomLeft = textureLod(sourceTexture, vec2(firstPosition.x, secondPosition.y), 0.0);
+  vec4 bottomRight = textureLod(sourceTexture, vec2(secondPosition.x, secondPosition.y), 0.0);
+  return topLeft * firstPairWeight.x * firstPairWeight.y +
+    topRight * secondPairWeight.x * firstPairWeight.y +
+    bottomLeft * firstPairWeight.x * secondPairWeight.y +
+    bottomRight * secondPairWeight.x * secondPairWeight.y;
+}
+
 vec4 bloomUpsample_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
-  vec4 lowerGlow = bloomUpsample_sampleLowerGlow(sourceTexture, texCoord);
+  vec4 lowerGlow;
+  if (bloomUpsample.reconstruction > 0.5) {
+    lowerGlow = bloomUpsample_sampleBicubicGlow(sourceTexture, texCoord);
+  } else {
+    lowerGlow = bloomUpsample_sampleLowerGlow(sourceTexture, texCoord);
+  }
   vec4 higherGlow = texture(higherResolutionGlow, texCoord);
   return mix(higherGlow, lowerGlow, clamp(bloomUpsample.scatter, 0.0, 1.0));
 }
 `,
   bindingLayout: [{name: 'higherResolutionGlow', group: 0}],
-  uniforms: {} as {scatter?: number},
+  uniforms: {} as {scatter?: number; reconstruction?: number},
   bindings: {} as BloomUpsampleBindings,
-  uniformTypes: {scatter: 'f32'},
-  propTypes: {scatter: {value: 0.55, min: 0, max: 1}},
+  uniformTypes: {scatter: 'f32', reconstruction: 'f32'},
+  defaultUniforms: {scatter: 0.55, reconstruction: 0},
+  propTypes: {
+    scatter: {value: 0.55, min: 0, max: 1},
+    reconstruction: {value: 0, min: 0, max: 1, private: true}
+  },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
-  {scatter?: number} & BloomUpsampleBindings,
-  {scatter?: number},
+  {scatter?: number; reconstruction?: number} & BloomUpsampleBindings,
+  {scatter?: number; reconstruction?: number},
   BloomUpsampleBindings
 >;
 
@@ -793,6 +924,11 @@ export function createBloomShaderPassPipeline(
   const scatter = options.scatter ?? 0.55;
   const softKnee = options.softKnee ?? 0.5;
   const fireflyReduction = options.fireflyReduction ?? 0;
+  const exposure = Math.max(options.exposure ?? 1, 0.0001);
+  const exposureCompensation = options.exposureCompensation ?? 0;
+  const reconstruction = options.reconstruction === 'bicubic' ? 1 : 0;
+  const downsample = options.downsample ?? 'auto';
+  const reuseRenderTargets = options.reuseRenderTargets ?? true;
   const anamorphicRatio = Math.min(Math.max(options.anamorphicRatio ?? 0, -1), 1);
   const tint = options.tint ?? [1, 1, 1];
   const temporalStability = Math.min(Math.max(options.temporalStability ?? 0, 0), 0.95);
@@ -835,7 +971,10 @@ export function createBloomShaderPassPipeline(
     const extractionTarget = `extract${level.name}`;
     const blurScratchTarget = `blur${level.name}Scratch`;
     const blurTarget = `blur${level.name}`;
-    renderTargets[extractionTarget] = makeRenderTarget(level.scale);
+    renderTargets[extractionTarget] = {
+      ...makeRenderTarget(level.scale),
+      ...(downsample !== 'render' ? {storage: true} : {})
+    };
     renderTargets[blurScratchTarget] = makeRenderTarget(level.scale);
     renderTargets[blurTarget] = makeRenderTarget(level.scale);
 
@@ -844,7 +983,7 @@ export function createBloomShaderPassPipeline(
         shaderPass: bloomExtractPass,
         inputs: {sourceTexture: 'previous'},
         output: extractionTarget,
-        uniforms: {threshold, softKnee, fireflyReduction}
+        uniforms: {threshold, softKnee, fireflyReduction, exposure, exposureCompensation}
       });
     } else {
       const previousLevel = levels[levelIndex - 1];
@@ -875,7 +1014,12 @@ export function createBloomShaderPassPipeline(
   for (let levelIndex = levels.length - 2; levelIndex >= 0; levelIndex--) {
     const level = levels[levelIndex];
     const upsampleTarget = `upsample${level.name}`;
-    renderTargets[upsampleTarget] = makeRenderTarget(level.scale);
+    renderTargets[upsampleTarget] = {
+      ...makeRenderTarget(level.scale),
+      ...(reuseRenderTargets && (!hasLensArtifacts || level.name !== 'Half')
+        ? {aliasFor: `extract${level.name}`}
+        : {})
+    };
     steps.push({
       shaderPass: bloomUpsamplePass,
       inputs: {
@@ -883,7 +1027,7 @@ export function createBloomShaderPassPipeline(
         higherResolutionGlow: `blur${level.name}`
       },
       output: upsampleTarget,
-      uniforms: {scatter}
+      uniforms: {scatter, reconstruction}
     });
     reconstructedGlow = upsampleTarget;
   }
@@ -947,6 +1091,19 @@ export function createBloomShaderPassPipeline(
   return {
     name: bloomShaderPassPipeline.name,
     renderTargets,
-    steps
+    steps,
+    ...(downsample !== 'render'
+      ? {
+          compute: createBloomComputePyramid({
+            levelNames: levels.map(level => level.name),
+            colorFormat,
+            threshold,
+            softKnee,
+            fireflyReduction,
+            exposure,
+            exposureCompensation
+          })
+        }
+      : {})
   };
 }

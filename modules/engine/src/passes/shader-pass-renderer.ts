@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Binding, CommandEncoder, TextureFormatColor} from '@luma.gl/core';
-import {Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
+import type {Binding, BindingDeclaration, CommandEncoder, TextureFormatColor} from '@luma.gl/core';
+import {Buffer, Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
 import type {
   ShaderPass,
+  ShaderPassComputeOptimization,
   ShaderPassInputSource,
   ShaderPassPipeline,
   ShaderPassRenderTarget
@@ -16,6 +17,7 @@ import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 import type {TextureBindingSource} from '../dynamic-texture/texture-binding-source';
 import {ClipSpace} from '../models/clip-space';
 import {SwapFramebuffers} from '../compute/swap';
+import {Computation} from '../compute/computation';
 import {BackgroundTextureModel} from '../models/billboard-texture-model';
 
 import {getFragmentShaderForRenderPass} from './get-fragment-shader';
@@ -237,6 +239,12 @@ export class ShaderPassRenderer {
     try {
       for (const passRenderer of this.passRenderers) {
         passRenderer.initializeHistoryTargets(originalTexture, this.textureModel, commandEncoder);
+        passRenderer.runComputeOptimization({
+          commandEncoder,
+          originalTexture,
+          previousTexture,
+          runtimeUniforms: options.uniforms || {}
+        });
         for (const execution of passRenderer.subPassExecutions) {
           const outputName = execution.output || 'previous';
           const outputFramebuffer: Framebuffer =
@@ -305,6 +313,7 @@ class PassRenderer {
   passDefinition: ShaderPassLike;
   renderTargets: Record<string, ManagedRenderTarget>;
   subPassExecutions: EffectiveSubPass[];
+  computeRenderer?: PipelineComputeRenderer;
 
   constructor(
     device: Device,
@@ -319,7 +328,20 @@ class PassRenderer {
     if (isShaderPassPipeline(passDefinition)) {
       validateRenderTargetNames(passDefinition.name, passDefinition.renderTargets || {});
       this.renderTargets = createManagedRenderTargets(device, passDefinition.renderTargets || {});
-      this.subPassExecutions = passDefinition.steps.flatMap(step =>
+      if (supportsComputeOptimization(device, passDefinition)) {
+        this.computeRenderer = new PipelineComputeRenderer(
+          device,
+          passDefinition.compute!,
+          this.renderTargets,
+          shaderInputs
+        );
+      }
+      const executableSteps = this.computeRenderer
+        ? passDefinition.steps.filter(
+            step => !passDefinition.compute!.replacedPasses.includes(step.shaderPass.name)
+          )
+        : passDefinition.steps;
+      this.subPassExecutions = executableSteps.flatMap(step =>
         this.createStepExecutions(passDefinition, step, flipY)
       );
       return;
@@ -334,6 +356,7 @@ class PassRenderer {
   }
 
   destroy() {
+    this.computeRenderer?.destroy();
     for (const execution of this.subPassExecutions) {
       execution.subPassRenderer.destroy();
     }
@@ -342,6 +365,26 @@ class PassRenderer {
 
   resize(size: [width: number, height: number]) {
     resizeManagedRenderTargets(this.device, this.renderTargets, size);
+  }
+
+  runComputeOptimization(options: {
+    commandEncoder: CommandEncoder;
+    originalTexture: Texture;
+    previousTexture: Texture;
+    runtimeUniforms: Record<string, Record<string, unknown>>;
+  }): void {
+    if (!this.computeRenderer) {
+      return;
+    }
+    const sourceTexture = this.resolveInputTexture(
+      this.computeRenderer.optimization.input,
+      options.originalTexture,
+      options.previousTexture
+    );
+    this.computeRenderer.encode(options.commandEncoder, sourceTexture, options.runtimeUniforms);
+    for (const targetName of Object.values(this.computeRenderer.optimization.outputs)) {
+      this.markTargetWritten(targetName);
+    }
   }
 
   resetHistory(): void {
@@ -458,7 +501,7 @@ class PassRenderer {
           `${execution.ownerName}: subpass cannot read and write render target "${outputName}" in the same draw`
         );
       }
-      if (bindingName === 'sourceTexture' && texture === outputTexture) {
+      if (texture === outputTexture) {
         throw new Error(
           `${execution.ownerName}: subpass cannot sample from the render target it is writing to`
         );
@@ -548,6 +591,109 @@ class PassRenderer {
   }
 }
 
+/** Executes one optional WebGPU compute replacement before the remaining fragment passes. */
+class PipelineComputeRenderer {
+  readonly optimization: ShaderPassComputeOptimization;
+
+  private readonly renderTargets: Record<string, ManagedRenderTarget>;
+  private readonly shaderInputs: ShaderInputs;
+  private readonly computation: Computation;
+  private readonly parameterBuffer: Buffer;
+
+  constructor(
+    device: Device,
+    optimization: ShaderPassComputeOptimization,
+    renderTargets: Record<string, ManagedRenderTarget>,
+    shaderInputs: ShaderInputs
+  ) {
+    this.optimization = optimization;
+    this.renderTargets = renderTargets;
+    this.shaderInputs = shaderInputs;
+    this.parameterBuffer = device.createBuffer({
+      id: `${optimization.name}-parameters`,
+      byteLength: Math.max(Math.ceil(optimization.uniformNames.length / 4) * 16, 16),
+      usage: Buffer.UNIFORM | Buffer.COPY_DST
+    });
+    const outputBindings: BindingDeclaration[] = Object.entries(optimization.outputs).map(
+      ([bindingName, targetName], outputIndex) => ({
+        name: bindingName,
+        type: 'storage',
+        group: 0,
+        location: outputIndex + 2,
+        access: 'write-only',
+        format: renderTargets[targetName].texture.format
+      })
+    );
+    try {
+      this.computation = new Computation(device, {
+        id: optimization.name,
+        source: optimization.source,
+        shaderLayout: {
+          bindings: [
+            {name: optimization.uniformBinding, type: 'uniform', group: 0, location: 0},
+            {
+              name: 'sourceTexture',
+              type: 'texture',
+              group: 0,
+              location: 1,
+              sampleType: 'unfilterable-float'
+            },
+            ...outputBindings
+          ]
+        }
+      });
+    } catch (error) {
+      this.parameterBuffer.destroy();
+      throw error;
+    }
+  }
+
+  encode(
+    commandEncoder: CommandEncoder,
+    sourceTexture: Texture,
+    runtimeUniforms: Record<string, Record<string, unknown>>
+  ): void {
+    const effectiveUniforms = {
+      ...(this.shaderInputs.getUniformValues()[this.optimization.uniformModule] || {}),
+      ...this.optimization.uniforms,
+      ...(runtimeUniforms[this.optimization.uniformModule] || {})
+    };
+    const uniformValues = new Float32Array(
+      Math.max(Math.ceil(this.optimization.uniformNames.length / 4) * 4, 4)
+    );
+    for (const [uniformIndex, uniformName] of this.optimization.uniformNames.entries()) {
+      const value = effectiveUniforms[uniformName];
+      uniformValues[uniformIndex] = typeof value === 'number' ? value : 0;
+    }
+    this.parameterBuffer.write(uniformValues);
+
+    const outputEntries = Object.entries(this.optimization.outputs);
+    const bindings: Record<string, Binding> = {
+      [this.optimization.uniformBinding]: this.parameterBuffer,
+      sourceTexture: sourceTexture.view
+    };
+    for (const [bindingName, targetName] of outputEntries) {
+      bindings[bindingName] = this.renderTargets[targetName].texture.view;
+    }
+    this.computation.setBindings(bindings);
+    this.computation.predraw(commandEncoder);
+    const dispatchTarget = this.renderTargets[outputEntries[0][1]].texture;
+    const computePass = commandEncoder.beginComputePass({id: this.optimization.name});
+    this.computation.dispatch(
+      computePass,
+      Math.ceil(dispatchTarget.width / this.optimization.workgroupSize[0]),
+      Math.ceil(dispatchTarget.height / this.optimization.workgroupSize[1]),
+      1
+    );
+    computePass.end();
+  }
+
+  destroy(): void {
+    this.computation.destroy();
+    this.parameterBuffer.destroy();
+  }
+}
+
 /** Renders a single subpass of a `ShaderPass`. */
 class SubPassRenderer {
   model: ClipSpace;
@@ -616,6 +762,34 @@ function getExecutableShaderPasses(shaderPasses: ShaderPassLike[]): ShaderPass[]
 
 function isShaderPassPipeline(shaderPass: ShaderPassLike): shaderPass is ShaderPassPipeline {
   return 'steps' in shaderPass;
+}
+
+function supportsComputeOptimization(device: Device, pipeline: ShaderPassPipeline): boolean {
+  const optimization = pipeline.compute;
+  if (!optimization || device.type !== 'webgpu') {
+    return false;
+  }
+
+  const outputNames = Object.values(optimization.outputs);
+  if (
+    outputNames.length === 0 ||
+    outputNames.length > device.limits.maxStorageTexturesPerShaderStage ||
+    optimization.workgroupSize[0] > device.limits.maxComputeWorkgroupSizeX ||
+    optimization.workgroupSize[1] > device.limits.maxComputeWorkgroupSizeY ||
+    optimization.workgroupSize[0] * optimization.workgroupSize[1] >
+      device.limits.maxComputeInvocationsPerWorkgroup
+  ) {
+    return false;
+  }
+
+  return outputNames.every(targetName => {
+    const target = pipeline.renderTargets?.[targetName];
+    if (!target?.storage) {
+      return false;
+    }
+    const format = target.format || device.preferredColorFormat;
+    return device.getTextureFormatCapabilities(format).store;
+  });
 }
 
 function validateShaderPassDoesNotOwnRenderTargets(
@@ -706,17 +880,66 @@ function createManagedRenderTargets(
   renderTargets: Record<string, ShaderPassRenderTarget>
 ): Record<string, ManagedRenderTarget> {
   const size = device.getCanvasContext().getDrawingBufferSize();
-  return Object.entries(renderTargets).reduce(
-    (managedRenderTargets, [name, spec]) => ({
-      ...managedRenderTargets,
-      [name]: createManagedRenderTarget(device, name, spec, size)
-    }),
-    {} as Record<string, ManagedRenderTarget>
+  const managedRenderTargets: Record<string, ManagedRenderTarget> = {};
+
+  for (const [name, spec] of Object.entries(renderTargets)) {
+    if (spec.aliasFor) {
+      const aliasedTarget = managedRenderTargets[spec.aliasFor];
+      if (!aliasedTarget) {
+        throw new Error(`${name}: target alias references an unknown earlier target`);
+      }
+      const targetSize = getRenderTargetSize(size, spec.scale);
+      const targetFormat = spec.format || device.preferredColorFormat;
+      if (
+        spec.lifetime === 'history' ||
+        aliasedTarget.spec.lifetime === 'history' ||
+        !hasMatchingRenderTargetScale(spec, aliasedTarget.spec) ||
+        aliasedTarget.texture.width !== targetSize[0] ||
+        aliasedTarget.texture.height !== targetSize[1] ||
+        aliasedTarget.texture.format !== targetFormat ||
+        (spec.storage && !aliasedTarget.spec.storage) ||
+        !hasMatchingRenderTargetSampler(spec, aliasedTarget.spec)
+      ) {
+        throw new Error(
+          `${name}: target alias must match a transient target's size, format, and sampler`
+        );
+      }
+      managedRenderTargets[name] = aliasedTarget;
+      continue;
+    }
+
+    managedRenderTargets[name] = createManagedRenderTarget(device, name, spec, size);
+  }
+
+  return managedRenderTargets;
+}
+
+function hasMatchingRenderTargetScale(
+  firstTarget: ShaderPassRenderTarget,
+  secondTarget: ShaderPassRenderTarget
+): boolean {
+  const firstScale = firstTarget.scale || [1, 1];
+  const secondScale = secondTarget.scale || [1, 1];
+  return firstScale[0] === secondScale[0] && firstScale[1] === secondScale[1];
+}
+
+function hasMatchingRenderTargetSampler(
+  firstTarget: ShaderPassRenderTarget,
+  secondTarget: ShaderPassRenderTarget
+): boolean {
+  const firstSampler = firstTarget.sampler || {};
+  const secondSampler = secondTarget.sampler || {};
+  const firstEntries = Object.entries(firstSampler);
+  return (
+    firstEntries.length === Object.keys(secondSampler).length &&
+    firstEntries.every(
+      ([name, value]) => secondSampler[name as keyof typeof secondSampler] === value
+    )
   );
 }
 
 function destroyManagedRenderTargets(renderTargets: Record<string, ManagedRenderTarget>): void {
-  for (const renderTarget of Object.values(renderTargets)) {
+  for (const renderTarget of new Set(Object.values(renderTargets))) {
     renderTarget.framebuffer.destroy();
     renderTarget.texture.destroy();
     renderTarget.historyFramebuffer?.destroy();
@@ -729,7 +952,7 @@ function resizeManagedRenderTargets(
   renderTargets: Record<string, ManagedRenderTarget>,
   size: [width: number, height: number]
 ): void {
-  for (const renderTarget of Object.values(renderTargets)) {
+  for (const renderTarget of new Set(Object.values(renderTargets))) {
     const targetSize = getRenderTargetSize(size, renderTarget.spec.scale);
     if (
       renderTarget.texture.width === targetSize[0] &&
@@ -796,7 +1019,16 @@ function createTargetResources(
     width: targetSize[0],
     height: targetSize[1],
     format: spec.format || device.preferredColorFormat,
-    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+    usage:
+      Texture.SAMPLE |
+      Texture.RENDER |
+      Texture.COPY_SRC |
+      Texture.COPY_DST |
+      (spec.storage &&
+      device.type === 'webgpu' &&
+      device.getTextureFormatCapabilities(spec.format || device.preferredColorFormat).store
+        ? Texture.STORAGE
+        : 0),
     ...(spec.sampler ? {sampler: spec.sampler} : {})
   });
   const framebuffer = device.createFramebuffer({

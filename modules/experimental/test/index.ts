@@ -13,6 +13,7 @@ import './engine/scene-next-pbr-materials.spec';
 import './engine/scene-deformation.spec';
 import './engine/deferred-scene-renderer.spec';
 import './rendering/deferred-lighting.spec';
+import './rendering/fft-bloom.spec';
 import './rendering/g-buffer.spec';
 import './rendering/volumetric-fire-simulation.spec';
 

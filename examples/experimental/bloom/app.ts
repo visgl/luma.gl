@@ -11,6 +11,7 @@ import {
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
+import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/experimental';
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';
 import {
@@ -25,21 +26,31 @@ export const title = 'Bloom';
 export const description =
   'Explore HDR bloom, spectral lens flares, diffraction streaks, and textured lens dirt.';
 
-const BLOOM_TECHNIQUES = ['Multiscale HDR', 'Compact', 'Off'] as const;
+const BLOOM_TECHNIQUES = ['Multiscale HDR', 'FFT Convolution', 'Compact', 'Off'] as const;
 const BLOOM_QUALITIES = ['low', 'medium', 'high', 'ultra'] as const;
+const BLOOM_RECONSTRUCTION_MODES = ['tent', 'bicubic'] as const;
+const BLOOM_DOWNSAMPLE_MODES = ['auto', 'render', 'compute'] as const;
 
 type BloomTechnique = (typeof BLOOM_TECHNIQUES)[number];
 type BloomQuality = (typeof BLOOM_QUALITIES)[number];
+type BloomReconstruction = (typeof BLOOM_RECONSTRUCTION_MODES)[number];
+type BloomDownsample = (typeof BLOOM_DOWNSAMPLE_MODES)[number];
 type BloomSettings = {
   technique: BloomTechnique;
   quality: BloomQuality;
   threshold: number;
+  exposure: number;
+  exposureCompensation: number;
   intensity: number;
   radius: number;
+  resolutionScale: number;
   scatter: number;
   softKnee: number;
   fireflyReduction: number;
   anamorphicRatio: number;
+  reconstruction: BloomReconstruction;
+  downsample: BloomDownsample;
+  reuseRenderTargets: boolean;
   temporalStability: number;
   starburstIntensity: number;
   starburstSpikes: number;
@@ -64,12 +75,18 @@ const DEFAULT_SETTINGS: BloomSettings = {
   technique: 'Multiscale HDR',
   quality: 'high',
   threshold: 0.8,
+  exposure: 1,
+  exposureCompensation: 0,
   intensity: 1.35,
   radius: 12,
+  resolutionScale: 1,
   scatter: 0.55,
   softKnee: 0.5,
   fireflyReduction: 0.15,
   anamorphicRatio: 0.2,
+  reconstruction: 'bicubic',
+  downsample: 'auto',
+  reuseRenderTargets: true,
   temporalStability: 0.58,
   starburstIntensity: 0.72,
   starburstSpikes: 4,
@@ -86,7 +103,8 @@ const DEFAULT_SETTINGS: BloomSettings = {
 };
 
 const BLOOM_BACKGROUND_HTML = `
-<p><b>Multiscale HDR bloom:</b> bright scene radiance is extracted once, filtered across an adaptive two-to-five-level pyramid, then progressively reconstructed before presentation. Normalized upsampling keeps the glow stable as wider levels are combined.</p>
+<p><b>Multiscale HDR bloom:</b> exposure-aware highlight extraction feeds an adaptive two-to-five-level pyramid. Supported WebGPU devices fuse every downsampling level into one compute dispatch, and expired extraction textures are reused during reconstruction.</p>
+<p><b>FFT convolution:</b> premium WebGPU optics transform each color channel into the frequency domain, multiply it by a cached aperture point-spread function, and reconstruct energy-conserving diffraction. The transform runs at one quarter of the selected processing resolution.</p>
 <p><b>Lens optics:</b> one optional half-resolution pass adds adjustable aperture-diffraction streaks, chromatic lens-element ghosts, and a radial halo. A sampled dirt mask reuses the existing bloom composite without adding a pass.</p>
 <p><b>Stability and cost:</b> neighborhood-clamped glow history reduces highlight shimmer for one extra half-resolution pass. Diffraction cost grows with the number of rays; ghosts scale with their reflection count and spectral separation.</p>
 <p><b>Compact bloom:</b> the legacy single-pass glow samples one small neighborhood directly from the source image. It is cheaper, but it cannot spread highlights as naturally as the multiscale pyramid.</p>
@@ -333,6 +351,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly panels: ExamplePanelManager;
   settings: BloomSettings = {...DEFAULT_SETTINGS};
   shaderPassRenderer!: ShaderPassRenderer;
+  convolutionBloom?: GPUConvolutionBloom;
+  convolutionOutputTexture?: Texture;
 
   constructor({device, width, height}: AnimationProps) {
     super();
@@ -380,6 +400,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.sceneModel.destroy();
     this.sceneShaderInputs.destroy();
     this.shaderPassRenderer?.destroy();
+    this.destroyConvolutionBloom();
   }
 
   onRender({device, width, height, time}: AnimationProps): void {
@@ -401,11 +422,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.sceneModel.draw(sceneRenderPass);
     sceneRenderPass.end();
 
+    let sourceTexture = this.sceneFramebuffer.colorAttachments[0].texture;
+    if (this.settings.technique === 'FFT Convolution') {
+      const convolutionBloom = this.getConvolutionBloom(width, height);
+      if (convolutionBloom && this.convolutionOutputTexture) {
+        sourceTexture = convolutionBloom.encode(device.commandEncoder, {
+          sourceTexture,
+          outputTexture: this.convolutionOutputTexture,
+          threshold: this.settings.threshold,
+          intensity: this.settings.intensity,
+          exposure: this.settings.exposure,
+          exposureCompensation: this.settings.exposureCompensation
+        });
+      }
+    }
+
     this.shaderPassRenderer.renderToScreen({
-      sourceTexture: this.sceneFramebuffer.colorAttachments[0].texture,
+      sourceTexture,
       uniforms: this.getRenderUniforms(),
       bindings:
-        this.settings.technique === 'Multiscale HDR' && this.settings.dirtIntensity > 0
+        (this.settings.technique === 'Multiscale HDR' ||
+          (this.settings.technique === 'FFT Convolution' && !this.convolutionBloom)) &&
+        this.settings.dirtIntensity > 0
           ? {lensDirtTexture: this.lensDirtTexture}
           : undefined
     });
@@ -413,6 +451,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   setShaderPasses(shaderPasses: ShaderPassLike[]): void {
     this.shaderPassRenderer?.destroy();
+    this.destroyConvolutionBloom();
     this.shaderPassRenderer = new ShaderPassRenderer(this.device, {
       shaderPasses,
       colorFormat: this.colorFormat
@@ -421,18 +460,29 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   getShaderPasses(): ShaderPassLike[] {
     const shaderPasses: ShaderPassLike[] = [];
-    if (this.settings.technique === 'Multiscale HDR') {
+    if (
+      this.settings.technique === 'Multiscale HDR' ||
+      (this.settings.technique === 'FFT Convolution' &&
+        !this.getConvolutionSupport(this.sceneFramebuffer.width, this.sceneFramebuffer.height)
+          .supported)
+    ) {
       shaderPasses.push(
         createBloomShaderPassPipeline({
           colorFormat: this.colorFormat,
           threshold: this.settings.threshold,
+          exposure: this.settings.exposure,
+          exposureCompensation: this.settings.exposureCompensation,
           intensity: this.settings.intensity,
           radius: this.settings.radius,
+          resolutionScale: this.settings.resolutionScale,
           quality: this.settings.quality,
           scatter: this.settings.scatter,
           softKnee: this.settings.softKnee,
           fireflyReduction: this.settings.fireflyReduction,
           anamorphicRatio: this.settings.anamorphicRatio,
+          reconstruction: this.settings.reconstruction,
+          downsample: this.settings.downsample,
+          reuseRenderTargets: this.settings.reuseRenderTargets,
           temporalStability: this.settings.temporalStability,
           lens: {
             starburstIntensity: this.settings.starburstIntensity,
@@ -471,6 +521,50 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     };
   }
 
+  private getConvolutionBloom(width: number, height: number): GPUConvolutionBloom | undefined {
+    const support = this.getConvolutionSupport(width, height);
+    if (!support.supported || this.colorFormat !== 'rgba16float') {
+      return undefined;
+    }
+    if (this.convolutionBloom?.width === width && this.convolutionBloom.height === height) {
+      return this.convolutionBloom;
+    }
+
+    this.destroyConvolutionBloom();
+    this.convolutionOutputTexture = this.device.createTexture({
+      id: 'bloom-fft-convolution-output',
+      width,
+      height,
+      format: 'rgba16float',
+      usage: Texture.STORAGE | Texture.SAMPLE
+    });
+    this.convolutionBloom = new GPUConvolutionBloom(this.device, {
+      id: 'bloom-fft-convolution',
+      width,
+      height,
+      resolutionScale: this.settings.resolutionScale * 0.25,
+      apertureBlades: this.settings.starburstSpikes,
+      diffractionStrength: this.settings.starburstIntensity,
+      anamorphicRatio: this.settings.anamorphicRatio
+    });
+    return this.convolutionBloom;
+  }
+
+  private getConvolutionSupport(width: number, height: number) {
+    return getGPUConvolutionBloomSupport(this.device, {
+      width,
+      height,
+      resolutionScale: this.settings.resolutionScale * 0.25
+    });
+  }
+
+  private destroyConvolutionBloom(): void {
+    this.convolutionBloom?.destroy();
+    this.convolutionBloom = undefined;
+    this.convolutionOutputTexture?.destroy();
+    this.convolutionOutputTexture = undefined;
+  }
+
   private makePanel(): Panel {
     return makeExampleTabbedPanel({
       id: 'bloom-tabs',
@@ -502,6 +596,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         typeof settings['threshold'] === 'number'
           ? clampNumber(settings['threshold'], 0, 4)
           : this.settings.threshold,
+      exposure:
+        typeof settings['exposure'] === 'number'
+          ? clampNumber(settings['exposure'], 0.05, 8)
+          : this.settings.exposure,
+      exposureCompensation:
+        typeof settings['exposureCompensation'] === 'number'
+          ? clampNumber(settings['exposureCompensation'], -4, 4)
+          : this.settings.exposureCompensation,
       intensity:
         typeof settings['intensity'] === 'number'
           ? clampNumber(settings['intensity'], 0, 4)
@@ -510,6 +612,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         typeof settings['radius'] === 'number'
           ? clampNumber(settings['radius'], 0, 24)
           : this.settings.radius,
+      resolutionScale:
+        typeof settings['resolutionScale'] === 'number'
+          ? clampNumber(settings['resolutionScale'], 0.25, 1)
+          : this.settings.resolutionScale,
       scatter:
         typeof settings['scatter'] === 'number'
           ? clampNumber(settings['scatter'], 0, 1)
@@ -526,6 +632,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         typeof settings['anamorphicRatio'] === 'number'
           ? clampNumber(settings['anamorphicRatio'], -1, 1)
           : this.settings.anamorphicRatio,
+      reconstruction: isBloomReconstruction(settings['reconstruction'])
+        ? settings['reconstruction']
+        : this.settings.reconstruction,
+      downsample: isBloomDownsample(settings['downsample'])
+        ? settings['downsample']
+        : this.settings.downsample,
+      reuseRenderTargets:
+        typeof settings['reuseRenderTargets'] === 'boolean'
+          ? settings['reuseRenderTargets']
+          : this.settings.reuseRenderTargets,
       temporalStability:
         typeof settings['temporalStability'] === 'number'
           ? clampNumber(settings['temporalStability'], 0, 0.95)
@@ -595,20 +711,39 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const techniqueDescription =
       this.settings.technique === 'Multiscale HDR'
         ? 'Multiscale HDR combines reusable wide-radius glow with optional photographic lens optics.'
-        : this.settings.technique === 'Compact'
-          ? 'Compact mode shows the older single-pass effect for direct comparison.'
-          : 'Bloom is off so the underlying HDR emitters stay visible without postprocessing.';
+        : this.settings.technique === 'FFT Convolution'
+          ? 'FFT convolution applies a physically motivated, energy-normalized aperture point-spread function independently to red, green, and blue highlights.'
+          : this.settings.technique === 'Compact'
+            ? 'Compact mode shows the older single-pass effect for direct comparison.'
+            : 'Bloom is off so the underlying HDR emitters stay visible without postprocessing.';
     const levelCount = BLOOM_QUALITIES.indexOf(this.settings.quality) + 2;
     const hasLensArtifacts =
       this.settings.starburstIntensity > 0 ||
       this.settings.ghostIntensity > 0 ||
       this.settings.haloIntensity > 0;
+    const supportsCompute =
+      this.device.type === 'webgpu' &&
+      this.settings.downsample !== 'render' &&
+      this.device.getTextureFormatCapabilities(this.colorFormat).store &&
+      this.device.limits.maxStorageTexturesPerShaderStage >= levelCount;
     const passCount =
-      levelCount * 4 + Number(hasLensArtifacts) + Number(this.settings.temporalStability > 0);
+      levelCount * (supportsCompute ? 3 : 4) +
+      Number(hasLensArtifacts) +
+      Number(this.settings.temporalStability > 0);
+    const computeDescription = supportsCompute ? ' plus one fused compute dispatch' : '';
+    const convolutionSupport = this.getConvolutionSupport(
+      this.sceneFramebuffer.width,
+      this.sceneFramebuffer.height
+    );
+    const convolutionStats = convolutionSupport.stats;
     const performanceDescription =
       this.settings.technique === 'Multiscale HDR'
-        ? `Current budget: ${passCount} passes across ${levelCount} pyramid levels. Lens optics share ${hasLensArtifacts ? 'one half-resolution pass' : 'no extra pass'}; lens dirt adds no pass.`
-        : 'Switch to Multiscale HDR to inspect the live optical-pass budget.';
+        ? `Current budget: ${passCount} render passes${computeDescription} across ${levelCount} pyramid levels. Lens optics share ${hasLensArtifacts ? 'one half-resolution pass' : 'no extra pass'}; lens dirt adds no pass.`
+        : this.settings.technique === 'FFT Convolution'
+          ? convolutionSupport.supported && convolutionStats
+            ? `Premium budget: ${convolutionStats.steadyStateDispatchCount} steady-state compute dispatches at ${convolutionStats.transformWidth} x ${convolutionStats.transformHeight}, with ${(convolutionStats.totalComplexBufferByteLength / (1024 * 1024)).toFixed(1)} MiB of reusable complex buffers. Changing the aperture adds ${convolutionStats.kernelInitializationDispatchCount} one-time kernel dispatches.`
+            : `FFT convolution is unavailable: ${convolutionSupport.reason || 'floating-point storage is unsupported'}. The portable multiscale pipeline remains active.`
+          : 'Switch to Multiscale HDR or FFT Convolution to inspect the live optical budget.';
     return `<p>${techniqueDescription}</p><p>${processingDescription}</p><p>${performanceDescription}</p><p>${presentationDescription}</p>`;
   }
 }
@@ -639,6 +774,11 @@ export function makeBloomSettingsSchema(): SettingsSchema {
                 description: 'Recommended reusable pipeline for broad, smooth glow.'
               },
               {
+                label: 'FFT Convolution',
+                value: 'FFT Convolution',
+                description: 'Premium WebGPU aperture diffraction with exact FFT cost reporting.'
+              },
+              {
                 label: 'Compact',
                 value: 'Compact',
                 description: 'Legacy single-pass highlight glow for comparison.'
@@ -660,6 +800,24 @@ export function makeBloomSettingsSchema(): SettingsSchema {
             step: 0.05
           },
           {
+            name: 'exposure',
+            label: 'Camera Exposure',
+            type: 'number',
+            persist: 'none',
+            min: 0.05,
+            max: 8,
+            step: 0.05
+          },
+          {
+            name: 'exposureCompensation',
+            label: 'Exposure Stops',
+            type: 'number',
+            persist: 'none',
+            min: -4,
+            max: 4,
+            step: 0.25
+          },
+          {
             name: 'quality',
             label: 'Pyramid Quality',
             type: 'select',
@@ -669,6 +827,27 @@ export function makeBloomSettingsSchema(): SettingsSchema {
               {label: 'Medium (3 levels)', value: 'medium'},
               {label: 'High (4 levels)', value: 'high'},
               {label: 'Ultra (5 levels)', value: 'ultra'}
+            ]
+          },
+          {
+            name: 'downsample',
+            label: 'Pyramid Execution',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Auto (WebGPU compute)', value: 'auto'},
+              {label: 'Portable render passes', value: 'render'},
+              {label: 'Fused compute', value: 'compute'}
+            ]
+          },
+          {
+            name: 'reconstruction',
+            label: 'Reconstruction',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Normalized tent', value: 'tent'},
+              {label: 'Bicubic B-spline', value: 'bicubic'}
             ]
           },
           {
@@ -688,6 +867,21 @@ export function makeBloomSettingsSchema(): SettingsSchema {
             min: 0,
             max: 24,
             step: 1
+          },
+          {
+            name: 'resolutionScale',
+            label: 'Processing Resolution',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'reuseRenderTargets',
+            label: 'Reuse Intermediates',
+            type: 'boolean',
+            persist: 'none'
           },
           {
             name: 'scatter',
@@ -910,6 +1104,14 @@ function isBloomTechnique(value: unknown): value is BloomTechnique {
 
 function isBloomQuality(value: unknown): value is BloomQuality {
   return BLOOM_QUALITIES.includes(value as BloomQuality);
+}
+
+function isBloomReconstruction(value: unknown): value is BloomReconstruction {
+  return BLOOM_RECONSTRUCTION_MODES.includes(value as BloomReconstruction);
+}
+
+function isBloomDownsample(value: unknown): value is BloomDownsample {
+  return BLOOM_DOWNSAMPLE_MODES.includes(value as BloomDownsample);
 }
 
 function clampNumber(value: number, minimum: number, maximum: number): number {

@@ -479,9 +479,7 @@ export function createBloomLensCompositePass(
   const lensBindingsGLSL = includeLensArtifacts ? '\nuniform sampler2D lensTexture;' : '';
   const dirtBindingsGLSL = includeLensDirt ? '\nuniform sampler2D lensDirtTexture;' : '';
   const lensSampleGLSL = includeLensArtifacts ? 'texture(lensTexture, texCoord).rgb' : 'vec3(0.0)';
-  const dirtSampleGLSL = includeLensDirt
-    ? 'texture(lensDirtTexture, texCoord).rgb'
-    : 'vec3(0.0)';
+  const dirtSampleGLSL = includeLensDirt ? 'texture(lensDirtTexture, texCoord).rgb' : 'vec3(0.0)';
 
   return {
     name: 'bloomComposite',
