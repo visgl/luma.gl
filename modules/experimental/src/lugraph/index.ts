@@ -16,3 +16,5 @@ export type {
 } from './lu-graph-breadth-first-search';
 export {LuGraphConnectedComponents} from './lu-graph-connected-components';
 export type {LuGraphConnectedComponentsProps} from './lu-graph-connected-components';
+export {LuGraphPageRank} from './lu-graph-page-rank';
+export type {LuGraphPageRankProps} from './lu-graph-page-rank';
