@@ -1,0 +1,54 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Denoise
+
+Reduce visible image grain while preserving local color boundaries. `denoise` applies a
+color-weighted 9-by-9 neighborhood filter in two fullscreen sampling passes.
+
+<PostprocessingExample embedded showStats={false} effect="denoise" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `denoise` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | Two fullscreen bilateral-style sampling passes |
+| Samples | 81 source-color candidates per pass |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {denoise} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [denoise]});
+
+renderer.renderToScreen({
+  sourceTexture: noisySceneTexture,
+  uniforms: {denoise: {strength: 0.55}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Range | Description |
+| --- | --- | --- | --- |
+| `strength` | `0.5` | `0` to `1` | Controls the color-difference weighting applied to the 9-by-9 neighborhood. |
+
+The implementation derives an internal exponent from `strength`. Samples whose color differs
+substantially from the center contribute less than nearby colors with similar intensity.
+
+## Performance and Composition
+
+Denoise is considerably more sample-intensive than a simple color adjustment: both configured
+passes evaluate an 81-pixel neighborhood. Apply it only where source cleanup is necessary, and
+consider lower-resolution processing for large render targets. For depth-buffer-aware lighting
+data, [Depth-Aware Blur](./depth-aware-blur) preserves explicit scene boundaries more directly.
+
+## Related Effects
+
+- [Noise](./noise) adds intentional grain instead of removing it.
+- [Depth-Aware Blur](./depth-aware-blur) preserves geometry boundaries using a scene depth texture.
+- [Gaussian Blur](./gaussian-blur) smooths uniformly without color-similarity rejection.

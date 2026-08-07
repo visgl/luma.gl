@@ -1,0 +1,72 @@
+import {AdvancedEffectsExample} from '@site/src/examples';
+
+# Volumetric Fog
+
+Add depth-aware height fog, directional atmospheric scattering, and temporally stabilized haze.
+`createVolumetricFogShaderPassPipeline` provides a compact participating-media treatment when a
+full scene-lighting integration is unnecessary.
+
+<AdvancedEffectsExample embedded showStats={false} />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `createVolumetricFogShaderPassPipeline` |
+| Shader uniform namespace | `volumetricFog` |
+| Backend | WebGPU |
+| Render passes | Two: fog/history resolve and composed-color copy |
+| Required binding | `depthTexture` |
+| Persistent state | One renderer-owned fog-history texture |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {createVolumetricFogShaderPassPipeline} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {
+  colorFormat: 'rgba16float',
+  shaderPasses: [createVolumetricFogShaderPassPipeline()]
+});
+
+renderer.renderToScreen({
+  sourceTexture: gBuffer.colorTexture,
+  bindings: {depthTexture: gBuffer.depthTexture},
+  uniforms: {
+    volumetricFog: {
+      fogColor: [0.18, 0.34, 0.48, 0.6],
+      density: 0.22,
+      heightFalloff: 3,
+      scattering: 0.35,
+      historyWeight: 0.82,
+      time: elapsedSeconds
+    }
+  }
+});
+```
+
+## Parameters
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `fogColor` | `[0.18, 0.34, 0.48, 0.6]` | Atmospheric RGB color and directional-scattering influence. |
+| `density` | `0.22` | Overall participating-media density. |
+| `heightFalloff` | `3` | Rate at which the simulated fog density decreases with height. |
+| `scattering` | `0.35` | Strength of the built-in directional light contribution. |
+| `historyWeight` | `0.82` | Contribution from the preceding temporally accumulated fog result. |
+| `time` | `0` | Application-owned animation value used to vary the sampling pattern. |
+
+## Performance and Limitations
+
+The main stage takes 20 depth-dependent integration samples and blends against one persistent
+history texture; the second stage copies the stabilized result back into the shared pass chain.
+This compact model does not inspect application point-light buffers or clustered light lists.
+Choose [Clustered Volumetric Lighting](./clustered-volumetric-lighting) when the atmosphere must
+react to actual scene lights, physically oriented anisotropy, or depth-occluded light shafts.
+
+## Related Effects
+
+- [Clustered Volumetric Lighting](./clustered-volumetric-lighting) integrates real directional and clustered point lights.
+- [Temporal Antialiasing](./temporal-antialiasing) explains scene-history reset and reprojection.
+- [Bloom](./bloom) can soften intense atmospheric highlights before tone mapping.
