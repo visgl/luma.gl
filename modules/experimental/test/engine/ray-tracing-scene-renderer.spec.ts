@@ -462,6 +462,16 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       0,
       'topology-changing shrink rebuilds the Morton order before removing inactive leaves'
     );
+    testCase.ok(
+      getRayTracingFrameResources(renderer, options.id).previousTransformsNeedCommit,
+      'topology rebuilds preserve the pending transform-history commit for retained instances'
+    );
+    renderer.render({...options, temporalReprojection: false});
+    device.submit();
+    testCase.notOk(
+      getRayTracingFrameResources(renderer, options.id).previousTransformsNeedCommit,
+      'the unchanged frame after a topology rebuild commits current instance transforms'
+    );
 
     sphereSurface.transforms = [
       ...sphereSurface.transforms,
@@ -549,6 +559,7 @@ type InspectableRayTracingFrameResources = {
   refitGraph: InspectableCompiledGraph;
   traceGraph: InspectableCompiledGraph;
   topologyNeedsUpdate: boolean;
+  previousTransformsNeedCommit: boolean;
   refitsSinceMortonRebuild: number;
 };
 

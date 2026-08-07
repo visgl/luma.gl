@@ -714,6 +714,8 @@ export class RayTracingSceneRenderer {
           resources.previousTransforms
         );
         const scene = makeRayTracingScene(primitiveData, topology.triangles, lights);
+        const previousTransformsNeedCommit =
+          resources.previousTransformsNeedCommit || transformChanged;
         this.destroyFrame(options.id);
         resources = this.createFrameResources({
           frameIdentifier: options.id,
@@ -726,6 +728,7 @@ export class RayTracingSceneRenderer {
           viewProjection,
           cameraPosition: options.camera.position
         });
+        resources.previousTransformsNeedCommit = previousTransformsNeedCommit;
         resources.topologyRevision = topologyRevision;
         resources.primitiveRevision = primitiveRevision;
         resources.transformRevision = transformRevision;
