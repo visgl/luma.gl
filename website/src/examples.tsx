@@ -116,6 +116,7 @@ const loadBillionPointSpatialAtlasExample = () =>
   import('../../examples/showcase/billion-point-spatial-atlas/app');
 const loadMillionRowCrossfilterExample = () =>
   import('../../examples/showcase/million-row-crossfilter/app');
+const loadRasterLabExample = () => import('../../examples/showcase/raster-lab/app');
 const loadLuSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
 const loadFP64Example = () => import('../../examples/experimental/fp64/app');
 
@@ -861,6 +862,34 @@ export const MillionRowCrossfilterExample: React.FC<WebsiteExampleProps> = props
       id="million-row-crossfilter"
       title="Million-Row Crossfilter Explorer"
       subtitle="One million points · one GPU-resident linked dashboard"
+      directory="showcase"
+      devices={['webgpu']}
+      template={module.default}
+      config={exampleConfig}
+      {...props}
+    />
+  );
+};
+
+export const RasterLabExample: React.FC<WebsiteExampleProps> = props => {
+  const {module, errorMessage} = useDeferredExampleModule(loadRasterLabExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="LuRaster: Satellite Raster Lab"
+        description="Loading synthetic satellite bands and the GPU-native raster-analysis graph."
+        errorMessage={errorMessage}
+      />
+    );
+  }
+
+  return (
+    <LumaExample
+      id="raster-lab"
+      title="Satellite Raster Lab"
+      subtitle="GPU-resident reflectance · masked NDVI · valid-pixel histograms"
       directory="showcase"
       devices={['webgpu']}
       template={module.default}

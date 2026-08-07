@@ -1,6 +1,6 @@
 # LuRaster Roadmap
 
-- **Status:** Draft
+- **Status:** Active; foundational contracts complete and pointwise analytics in progress
 - **Target API:** `@luma.gl/experimental/luraster`
 - **Execution model:** WebGPU `GPUCommandGraph` contributors
 - **Positioning:** GPU-resident raster analytics complementing `@luma.gl/experimental/geospatial`
@@ -442,17 +442,17 @@ scratch, halos, labels, and output geometry.
 
 Impact and cost are relative engineering estimates, not staffing or calendar commitments.
 
-| Phase                            | Outcome                                                                      | Status   | Impact | Cost   |
-| -------------------------------- | ---------------------------------------------------------------------------- | -------- | ------ | ------ |
-| 0 — Package foundation           | Approved scope, clean-room boundary, isolated imports, and CPU fixtures      | Complete | High   | Small  |
-| 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete | High   | Large  |
-| 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | Planned  | High   | Medium |
-| 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Planned  | High   | Large  |
-| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Planned  | High   | Large  |
-| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned  | High   | Large  |
-| 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | Planned  | High   | Large  |
-| 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred | Medium | Large  |
-| 8 — Productization               | Satellite/microscopy showcases, documentation, benchmarks, and release gates | Planned  | High   | Medium |
+| Phase                            | Outcome                                                                      | Status      | Impact | Cost   |
+| -------------------------------- | ---------------------------------------------------------------------------- | ----------- | ------ | ------ |
+| 0 — Package foundation           | Approved scope, clean-room boundary, isolated imports, and CPU fixtures      | Complete    | High   | Small  |
+| 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete    | High   | Large  |
+| 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | In progress | High   | Medium |
+| 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | In progress | High   | Large  |
+| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Planned     | High   | Large  |
+| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
+| 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | Planned     | High   | Large  |
+| 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred    | Medium | Large  |
+| 8 — Productization               | Satellite/microscopy showcases, documentation, benchmarks, and release gates | Early slice | High   | Medium |
 
 ## Dependency-ordered tranche map
 
@@ -497,6 +497,40 @@ when their tests and rollback boundaries remain understandable.
 | 8.2     | Runtime guides, API references, both sidebars, and release notes              | Applicable feature tranche                  | Medium |
 | 8.3     | Correctness matrix, adapter benchmarks, memory/ownership hardening            | 4.5, 5.4, 6.3, 6.4                          | Large  |
 | 8.4     | Final formatting, full builds/tests, website builds, and package verification | 8.1, 8.2, 8.3                               | Medium |
+
+### Current tranche status
+
+- **2.1 complete:** `GPURasterBandMath` implements calibrated addition, subtraction,
+  multiplication, division, normalized difference, optional explicit output clamping, and
+  source-validity propagation. `GPURasterNDVI` specializes normalized difference without imposing
+  an implicit output range. Both contributors preserve exact raw-domain nodata comparisons,
+  reject non-finite operands and unstable denominators, and use bounded two-dimensional dispatch.
+- **2.2 substantially complete:** `GPURasterHistogram` composes a nodata-aware validity mask, an
+  explicit masked GPU extent, and caller-owned bins. `GPURasterStatistics` adds GPU-resident
+  floating-band count, sum, mean, minimum, and maximum outputs. Caller-owned literal domains, GPU
+  domains, and optional published automatic extents are available. Percentiles, wide counters,
+  tiled global merges, and transparent 4K-plus reduction/histogram partitioning remain pending.
+- **2.3 substantially complete:** `GPURasterContrast` implements calibrated linear stretching,
+  gamma adjustment, and global histogram equalization through an inclusive GPU CDF scan.
+  Percentile-domain estimation and dedicated `rgba8unorm` conversion remain pending.
+- **2.4 complete for bounded histograms:** `GPURasterThreshold` provides inclusive/exclusive
+  above, below, and range classification from fixed values or GPU-resident threshold views.
+  `GPURasterOtsuThreshold` computes deterministic Otsu cutoffs entirely on the GPU; threshold
+  masks alter real downstream histograms and scalar summaries.
+- **3.1 complete for bounded packed-buffer neighborhoods:** `GPURasterNeighborhood` defines
+  bounded rectangular stencils, `clamp`/`reflect`/`constant`/`nodata` borders, strict invalid
+  propagation and valid-neighbor renormalization, calibrated raw-format nodata comparisons, and
+  separate caller-owned output/value masks. Invalid center pixels never become valid. Tiled halo
+  assembly remains a distinct Phase 4 contract.
+- **3.2 complete for bounded spatial kernels:** `GPURasterConvolution` supports direct signed or
+  nonnegative kernels, while `GPURasterGaussianBlur` and `GPURasterBoxBlur` compose normalized,
+  separable horizontal/vertical passes with graph-owned intermediate scratch. The Raster Lab
+  changes its rendered values, histogram, and scalar statistics when filter, radius, or sigma
+  controls change. FFT-backed convolution remains explicitly deferred.
+- **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
+  demonstrate the current NDVI/smoothing/histogram workflow. The full satellite/microscopy/tiled/
+  vector showcase matrix, broader documentation set, benchmarks, and final release gates remain
+  pending.
 
 ## Detailed tranche definitions
 
@@ -602,8 +636,12 @@ adds a cross-package-safe materialization path.
 
 **Entry:** Tranches 1.1 and 0.3.
 
-**Work:** Add independently composable unary/binary arithmetic, calibrated band selection,
-clamping, conditional masks, and `GPURasterNDVI`. Compute
+**Status:** Complete for the bounded two-input operation contract; richer unary expressions are
+independently deferred.
+
+**Work:** Add independently composable calibrated binary addition, subtraction, multiplication,
+division, normalized difference, explicit optional clamping, source-validity intersection, and
+`GPURasterNDVI`. Compute
 `(nearInfrared - red) / (nearInfrared + red)` after independently applying each band's
 calibration. Intersect validity and reject denominators whose absolute value is at most the
 configured epsilon.
@@ -616,6 +654,10 @@ required nonnegative-reflectance assumptions.
 ### Tranche 2.2 — Histograms and scalar summaries
 
 **Entry:** Tranches 1.3 and 1.4.
+
+**Status:** Substantially complete. Validity-aware fixed-size histograms, masked GPU extents,
+and floating-band count/sum/mean summaries are implemented; percentile, overflow, and automatic
+large-raster partitioning contracts remain pending.
 
 **Work:** Compose explicit valid-pixel extent, masked histogram, valid count, sum, minimum,
 maximum, and mean. Exact integer min/max/extents and histograms remain in the raw integer domain;
@@ -637,6 +679,10 @@ any explicit float conversion are disclosed; repeated encoding clears output cor
 
 **Entry:** Tranches 2.1 and 2.2.
 
+**Status:** Substantially complete. Reusable linear, gamma, and global CDF equalization
+contributors are implemented; percentile-domain estimation and dedicated display conversion
+remain pending.
+
 **Work:** Add linear/percentile stretches, gamma adjustment, histogram equalization using an
 inclusive unsigned CDF scan, and an optional `rgba8unorm` display conversion. Keep analytical
 values and validity separate from presentation colors.
@@ -648,6 +694,9 @@ CPU references. Any percentile approximation is labeled rather than presented as
 ### Tranche 2.4 — Thresholding and Otsu
 
 **Entry:** Tranches 2.1 and 2.2.
+
+**Status:** Complete for fixed-size, at-most-256-bin histograms. Inclusive/exclusive fixed and
+GPU-resident thresholds and deterministic GPU-resident Otsu selection are implemented.
 
 **Work:** Add explicit above/below/range threshold contributors and Otsu selection from a
 bounded valid-pixel histogram. Keep threshold values on the GPU when consumed by a later pass.
@@ -661,6 +710,11 @@ fixtures, all-invalid input, signed data, and repeated encoding are stable and C
 
 **Entry:** Tranches 1.1 and 1.4.
 
+**Status:** Complete for bounded packed-buffer stencils. All four border modes, strict and
+renormalized nodata policies, rectangular radii, exact source-format nodata, calibrated samples,
+center-validity preservation, and separate output/value masks are implemented. Tile halos and
+automatic large-raster partitioning remain separate Phase 4 work.
+
 **Work:** Define operator radius, workgroup-local neighborhood tiles, separate input/output
 resources, and border modes `clamp`, `reflect`, `constant`, and `nodata`. Define strict nodata
 propagation and valid-neighbor renormalization for appropriate nonnegative smoothing kernels.
@@ -673,6 +727,11 @@ select one mip.
 ### Tranche 3.2 — Convolution and smoothing
 
 **Entry:** Tranche 3.1.
+
+**Status:** Complete for bounded spatial kernels. Direct signed/nonnegative convolution and
+separable normalized Gaussian/box smoothing produce caller-owned values and validity; the two
+smoothing passes reuse graph-owned intermediate scratch. Interactive Raster Lab controls drive
+the analytical GPU graph, not a display-only image effect.
 
 **Work:** Implement bounded direct convolution, separable box/Gaussian filters, reusable
 intermediate scratch, kernel normalization, and explicit smoothing validity policy. Select direct
@@ -1067,7 +1126,8 @@ later tranches.
 - `docs/api-reference/experimental/luraster/`: public runtime documentation.
 - `docs/table-of-contents.json`: both experimental navigation branches.
 - `docs/api-reference/experimental/README.md` and `docs/whats-new.md`: feature discovery.
-- `examples/showcase/raster-analytics/`: satellite/microscopy or separate focused showcase apps.
+- `examples/showcase/raster-lab/`: initial synthetic satellite/NDVI showcase; microscopy,
+  production imagery, tiled analytics, and overlays remain separate future examples.
 - `website/content/examples/showcase/`, `website/content/examples/table-of-contents.json`, and
   `website/src/examples.tsx`: website example integration.
 - `.ocularrc.js`: optional scoped Playwright alias if a browser smoke workflow is added.

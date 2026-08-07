@@ -2,4 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import './gpu-raster-band-math.spec';
+import './gpu-raster-contrast.spec';
+import './gpu-raster-convolution.spec';
+import './gpu-raster-histogram.spec';
+import './gpu-raster-neighborhood.spec';
+import './gpu-raster-pipeline.spec';
+import './gpu-raster-statistics.spec';
+import './gpu-raster-threshold.spec';
 import './gpu-raster-texture-buffer.spec';

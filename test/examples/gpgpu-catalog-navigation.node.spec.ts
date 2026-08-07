@@ -18,6 +18,7 @@ const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const DOCUMENTATION_DIRECTORY = path.join(process.cwd(), 'docs');
 const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'showcase/million-row-crossfilter',
+  'showcase/raster-lab',
   'showcase/billion-point-spatial-atlas',
   'deck/luspatial-taxi',
   'experimental/gpt-2',
@@ -50,7 +51,7 @@ describe('GPGPU example catalog navigation', () => {
     );
   });
 
-  test('keeps LuxFilter, luProj, and luSpatial discoverable through their real integrations', () => {
+  test('keeps LuxFilter, LuRaster, luProj, and luSpatial discoverable through their real integrations', () => {
     const category = getCategory('GPGPU');
     const graphModulesCategory = category.items.find(
       (entry): entry is ExampleCategory =>
@@ -58,11 +59,22 @@ describe('GPGPU example catalog navigation', () => {
         entry.type === 'category' &&
         entry.label === 'GPGPU Graph Modules'
     );
-    const crossfilterExample = graphModulesCategory?.items[0];
-    const spatialAtlasExample = graphModulesCategory?.items[1];
-    const taxiExample = graphModulesCategory?.items[2];
+    const getGraphModuleExample = (identifier: string): ExampleSidebarEntry | undefined =>
+      graphModulesCategory?.items.find(entry =>
+        typeof entry === 'string'
+          ? entry === identifier
+          : entry.type === 'doc' && entry.id === identifier
+      );
+    const crossfilterExample = getGraphModuleExample('showcase/million-row-crossfilter');
+    const rasterLabExample = getGraphModuleExample('showcase/raster-lab');
+    const spatialAtlasExample = getGraphModuleExample('showcase/billion-point-spatial-atlas');
+    const taxiExample = getGraphModuleExample('deck/luspatial-taxi');
     const crossfilterExampleSource = readFileSync(
       path.join(EXAMPLES_DIRECTORY, 'showcase/million-row-crossfilter.mdx'),
+      'utf8'
+    );
+    const rasterLabExampleSource = readFileSync(
+      path.join(EXAMPLES_DIRECTORY, 'showcase/raster-lab.mdx'),
       'utf8'
     );
     const spatialAtlasSource = readFileSync(
@@ -89,6 +101,13 @@ describe('GPGPU example catalog navigation', () => {
         )
       )
     ).toBe(true);
+    expect(rasterLabExample).toEqual({
+      type: 'doc',
+      id: 'showcase/raster-lab',
+      label: 'LuRaster: Satellite Raster Lab'
+    });
+    expect(rasterLabExampleSource).toContain('<RasterLabExample />');
+    expect(rasterLabExampleSource).toContain('@luma.gl/experimental/luraster');
     expect(spatialAtlasExample).toBe('showcase/billion-point-spatial-atlas');
     expect(taxiExample).toEqual({
       type: 'doc',
@@ -197,6 +216,7 @@ describe('GPGPU example catalog navigation', () => {
     ]);
     expect(readCategoryIdentifiers(nestedCategories[1])).toEqual([
       'showcase/million-row-crossfilter',
+      'showcase/raster-lab',
       'showcase/billion-point-spatial-atlas',
       'deck/luspatial-taxi',
       'experimental/gpt-2'

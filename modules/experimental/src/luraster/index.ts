@@ -22,6 +22,53 @@ export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer
 export {GPURasterBufferToTexture} from './gpu-raster-buffer-to-texture';
 export type {GPURasterBufferToTextureProps} from './gpu-raster-buffer-to-texture';
 
+export {GPURasterBandMath} from './gpu-raster-band-math';
+export type {GPURasterBandMathOperation, GPURasterBandMathProps} from './gpu-raster-band-math';
+
+export {GPURasterNeighborhood} from './gpu-raster-neighborhood';
+export type {
+  GPURasterBorderMode,
+  GPURasterNeighborhoodProps,
+  GPURasterNeighborhoodRadius,
+  GPURasterNoDataPolicy
+} from './gpu-raster-neighborhood';
+
+export {
+  GPURasterBoxBlur,
+  GPURasterConvolution,
+  GPURasterGaussianBlur
+} from './gpu-raster-convolution';
+export type {
+  GPURasterConvolutionProps,
+  GPURasterGaussianBlurProps,
+  GPURasterSmoothingProps
+} from './gpu-raster-convolution';
+
+export {GPURasterContrast} from './gpu-raster-contrast';
+export type {
+  GPURasterContrastDomain,
+  GPURasterContrastMode,
+  GPURasterContrastProps
+} from './gpu-raster-contrast';
+
+export {GPURasterNDVI} from './gpu-raster-ndvi';
+export type {GPURasterNDVIProps} from './gpu-raster-ndvi';
+
+export {GPURasterStatistics} from './gpu-raster-statistics';
+export type {GPURasterStatisticsProps} from './gpu-raster-statistics';
+
+export {GPURasterHistogram} from './gpu-raster-histogram';
+export type {GPURasterHistogramDomain, GPURasterHistogramProps} from './gpu-raster-histogram';
+
+export {GPURasterOtsuThreshold, GPURasterThreshold} from './gpu-raster-threshold';
+export type {
+  GPURasterOtsuDomain,
+  GPURasterOtsuThresholdProps,
+  GPURasterThresholdOperation,
+  GPURasterThresholdProps,
+  GPURasterThresholdValue
+} from './gpu-raster-threshold';
+
 export {getRasterDeviceLimits, planRasterDispatchStripes} from './raster-device-limits';
 export type {
   RasterDeviceLimits,

@@ -1,0 +1,66 @@
+---
+title: "LuRaster: Satellite Raster Lab"
+description: Analyze synthetic reflectance with GPU-native NDVI, Gaussian/box smoothing, contrast, Otsu thresholding, exact raster statistics, and live histograms.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, geospatial, gpgpu, raster, rendering]
+---
+
+import { RasterLabExample } from "@site/src/examples";
+
+<RasterLabExample />
+
+The Satellite Raster Lab generates a deterministic, entirely synthetic
+earth-observation scene with red and near-infrared reflectance bands, farmland,
+vegetation, waterways, cloud cover, and out-of-footprint nodata. Switch between
+the derived vegetation index and its source bands, apply Gaussian or box
+smoothing, adjust the kernel radius or Gaussian sigma, change analytical
+contrast or gamma, select pixels above a live classification threshold, or
+increase the denominator epsilon to reject unstable normalized-difference
+measurements. An optional Otsu control derives its threshold directly from a
+pre-threshold GPU histogram before classifying the same resident pixels.
+Every control changes the GPU-computed distribution, selected-pixel count,
+observed extent, and mean when its underlying values or selection change.
+
+The demonstration uses the optional `@luma.gl/experimental/luraster` entry point.
+`GPURasterNDVI` computes `(nearInfrared - red) / (nearInfrared + red)` directly
+from GPU-resident source bands while intersecting source validity and exact raw
+nodata. `GPURasterHistogram` composes a masked reduction with a GPU-domain
+histogram. `GPURasterGaussianBlur` and `GPURasterBoxBlur` smooth the active
+spectral band through separate horizontal and vertical GPU passes, reflecting
+raster borders and renormalizing valid neighboring samples without filling
+masked center pixels. `GPURasterContrast` then transforms that resident band
+on-device;
+`GPURasterThreshold` writes a genuine per-pixel selection mask; and
+`GPURasterStatistics` calculates masked count, sum, mean, minimum, and maximum.
+`GPURasterOtsuThreshold` can select the threshold from a separate baseline
+histogram without introducing a CPU synchronization point.
+The histogram consumes that same mask and GPU-resident extent, so excluded
+pixels disappear from both the map selection and distribution. Every dependent
+compute pass is encoded into one explicitly submitted `GPUCommandGraph`.
+
+The map renderer consumes the original reflectance bands, derived vegetation
+index, contrast-adjusted active band, and validity flags directly from their GPU
+buffers. Only the two-value extent, 48 histogram bins, valid count, sum, and
+mean, and optional automatic threshold—216 bytes total—are copied back after
+submission to update visible summary
+statistics. Layer switching, smoothing mode, kernel radius, Gaussian sigma,
+contrast, gamma, thresholding, and epsilon rebuild their specialized analysis
+graph while keeping every source and output raster buffer resident; source
+pixels are never downloaded.
+
+Choose Gaussian smoothing to reduce local sensor noise while weighting nearby
+observations most strongly; choose box smoothing when a uniformly weighted
+local mean is the intended measurement. Unlike a display-only image effect,
+these mask-aware compute stages change the values consumed by histograms,
+statistics, and Otsu classification. Their separable kernels evaluate `O(r)`
+taps per pixel for radius `r`, compared with `O(r²)` for direct square
+convolution; actual elapsed time depends on the workload and GPU.
+
+All imagery, coordinates, and terrain are synthetic. The visualization is a
+false-color illustration, not a real satellite acquisition, true-color image,
+georeferenced location, or scientifically calibrated product. Derivative
+filters, morphology, segmentation, contour extraction, and tiled imagery shown
+in the interface remain planned capabilities.
