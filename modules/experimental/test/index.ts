@@ -45,6 +45,7 @@ import './ludf/lu-derived-columns.spec';
 import './ludf/lu-group-aggregation.spec';
 import './ludf/lu-global-aggregation.spec';
 import './ludf/lu-sort.spec';
+import './ludf/lu-join.spec';
 import './luraster';
 import './luxfilter';
 import './luproj/luproj.spec';
