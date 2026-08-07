@@ -30,11 +30,16 @@ import {
   type LocalGaussianSplatLoadersConfiguration
 } from '../../examples/showcase/gaussian-splats/local-loaders';
 import {GaussianSplatRADSceneController} from '../../examples/showcase/gaussian-splats/rad-scene';
+import {
+  GAUSSIAN_SPLAT_RAD_DECODER_WORKER_SOURCE,
+  createGaussianSplatRADWorkerDecoder
+} from '../../examples/showcase/gaussian-splats/rad-worker-decoder';
 import {getExampleThumbnailPath} from '../../website/src/example-thumbnails';
 
 const WEBSITE_VIEWER_ROUTE = '/examples/showcase/gaussian-splat-viewer';
 const SYNTHETIC_SHOWCASE_ROUTE = '/examples/showcase/gaussian-splats';
 const DEPLOYED_LOADER_BUNDLE_URL = '/luma.gl/standalone-examples/gaussian-splats/loaders-gl.mjs';
+const GAUSSIAN_RAD_WORKER_WAIT_OPTIONS = {timeout: 10_000, interval: 25};
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -122,6 +127,63 @@ describe('published Gaussian splat viewer', () => {
     webglAnimation.renderer.destroy();
     webglDevice.destroy();
   });
+
+  test('keeps the authored close-range Coit camera after orbit initialization and page fitting', async () => {
+    const source = makeGaussianRADFixture(1, {
+      chunkCount: 1,
+      includeLoDTree: true,
+      splatEncoding: {lodOpacity: true},
+      alphaValues: [128]
+    });
+    const {configuration} = installGaussianRADPageSourceFixture(source);
+    installGaussianRADWorkerFixture();
+    vi.stubGlobal('window', {
+      location: {
+        search: '?scene=coit',
+        href: 'file:///gaussian-splat-viewer.html',
+        origin: 'null'
+      },
+      __lumaGaussianSplatsLoaderBundleUrl: configuration.loaderBundleUrl
+    });
+    vi.stubGlobal('document', {querySelectorAll: () => []});
+
+    class GaussianSplatViewerCanvas extends EventTarget {
+      readonly style = {cursor: '', touchAction: ''};
+
+      setAttribute(_name: string, _value: string): void {}
+    }
+    vi.stubGlobal('HTMLCanvasElement', GaussianSplatViewerCanvas);
+    const device = makeViewerWebGPUDevice();
+    const animation = new GaussianSplatsAnimationLoopTemplate({
+      device,
+      width: 640,
+      height: 480
+    } as AnimationProps);
+    const authoredTarget = [0.0226670563, -0.1886351632, 0.0141479052];
+
+    expect(animation['cameraHomeDistance']).toBeCloseTo(0.15, 5);
+    expect(animation['cameraTarget']).toEqual(authoredTarget);
+
+    await animation.onInitialize({
+      device,
+      width: 640,
+      height: 480,
+      canvas: new GaussianSplatViewerCanvas()
+    } as AnimationProps);
+    expect(animation['orbitControls']?.distance).toBeCloseTo(0.15, 5);
+    expect(animation['orbitControls']?.props.minDistance).toBeLessThan(0.15);
+
+    await vi.waitFor(
+      () => expect(animation['radWorkerDecoder']?.completedDecodeCount).toBe(1),
+      GAUSSIAN_RAD_WORKER_WAIT_OPTIONS
+    );
+    expect(animation['cameraHomeDistance']).toBeCloseTo(0.15, 5);
+    expect(animation['orbitControls']?.distance).toBeCloseTo(0.15, 5);
+    expect(animation['cameraTarget']).toEqual(authoredTarget);
+
+    animation.onFinalize();
+    device.destroy();
+  }, 15_000);
 
   test('exposes the execution selector and graph diagnostics in the shared viewer panel', () => {
     const viewerPanel = makeGaussianSplatInfoHtml();
@@ -252,7 +314,13 @@ describe('published Gaussian splat viewer', () => {
       sourceFormat: 'RAD',
       expectedSplatCount: 50_937_127,
       expectedBatchCount: 16,
-      maxResidentSplatCount: 1_000_000
+      maxResidentSplatCount: 1_000_000,
+      upAxis: 'y',
+      up: [0, -1, 0],
+      camera: {
+        position: [-0.0858, -0.2203, 0.1128],
+        target: [0.0226670563, -0.1886351632, 0.0141479052]
+      }
     });
 
     installViewerWindow('?scene=coit&residentSplats=250000');
@@ -446,6 +514,218 @@ describe('published Gaussian splat viewer', () => {
     expect(requestedRanges).toHaveLength(4);
 
     pageSource.destroy();
+  });
+
+  test('exposes the official RAD chunk parser and transferable Arrow helpers to browser workers', async () => {
+    const bundleUrl = pathToFileURL(
+      path.join(process.cwd(), 'website/static/standalone-examples/gaussian-splats/loaders-gl.mjs')
+    ).href;
+    const bundle = await import(/* @vite-ignore */ bundleUrl);
+
+    expect(typeof bundle.parseRADChunk).toBe('function');
+    expect(typeof bundle.tableToIPC).toBe('function');
+    expect(typeof bundle.tableFromIPC).toBe('function');
+    expect(GAUSSIAN_SPLAT_RAD_DECODER_WORKER_SOURCE).toContain('loaderBundle.parseRADChunk');
+    expect(GAUSSIAN_SPLAT_RAD_DECODER_WORKER_SOURCE).toContain('loaderBundle.tableToIPC');
+  });
+
+  test('safely retains main-thread RAD parsing when browser workers are unavailable', async () => {
+    const source = makeGaussianRADFixture(1, {
+      includeLoDTree: true,
+      splatEncoding: {lodOpacity: true},
+      alphaValues: [128]
+    });
+    const {configuration} = installGaussianRADPageSourceFixture(source);
+    vi.stubGlobal('Worker', undefined);
+
+    expect(createGaussianSplatRADWorkerDecoder(configuration)).toBeUndefined();
+    expect(
+      createGaussianSplatRADWorkerDecoder({...configuration, loaderMode: 'local'})
+    ).toBeUndefined();
+
+    const pageSource = await openLocalGaussianSplatRADPageSource(configuration);
+    expect(pageSource.metadata.splatEncoding).toEqual({lodOpacity: true});
+    const page = await pageSource.loadPage(0);
+    expect(page.data.getChild('opacity')?.get(0)).toBeCloseTo((128 / 255) * 2);
+    expect(page.loaderData.splatEncoding).toEqual({lodOpacity: true});
+    pageSource.destroy();
+  });
+
+  test('transfers original RAD bytes to bounded workers and preserves Spark hierarchy and opacity', async () => {
+    const source = makeGaussianRADFixture(1, {
+      includeLoDTree: true,
+      splatEncoding: {lodOpacity: true},
+      alphaValues: [128]
+    });
+    const {configuration, requestedRanges} = installGaussianRADPageSourceFixture(source);
+    const workers = installGaussianRADWorkerFixture();
+    const decoder = createGaussianSplatRADWorkerDecoder(configuration, {maxWorkers: 2});
+    if (!decoder) {
+      throw new Error('The injectable browser worker fixture was not created.');
+    }
+    const handleDestroy = vi.fn(() => decoder.destroy());
+    const progress: LocalGaussianSplatLoadProgress[] = [];
+    const pageSource = await openLocalGaussianSplatRADPageSource(configuration, {
+      decodePage: context => decoder.decodePage(context),
+      onDestroy: handleDestroy,
+      onProgress: update => progress.push(update)
+    });
+
+    expect(decoder.mode).toBe('worker');
+    expect(decoder.workerCount).toBe(1);
+    expect(pageSource.metadata.splatEncoding?.lodOpacity).toBe(true);
+    const page = await pageSource.loadPage(0);
+
+    expect(requestedRanges).toHaveLength(2);
+    expect(workers.requests).toHaveLength(1);
+    expect(workers.requests[0]).toMatchObject({
+      chunkIndex: 0,
+      splatEncoding: {lodOpacity: true}
+    });
+    expect(workers.transfers[0]).toHaveLength(1);
+    expect(workers.transfers[0][0]).toBeInstanceOf(ArrayBuffer);
+    expect(decoder.completedDecodeCount).toBe(1);
+    expect(page.loaderData).toMatchObject({
+      base: 0,
+      chunkIndex: 0,
+      splatEncoding: {lodOpacity: true}
+    });
+    expect(Array.from(page.loaderData.childCounts!)).toEqual([1]);
+    expect(Array.from(page.loaderData.childStarts!)).toEqual([10]);
+    expect(page.data.getChild('opacity')?.get(0)).toBeCloseTo((128 / 255) * 2);
+    expect(page.data.schema.metadata?.get('loaders_gl.gaussian_splats.source_format')).toBe('rad');
+    expect(progress).toEqual(
+      expect.arrayContaining([expect.objectContaining({phase: 'loaded', loadedSplatCount: 1})])
+    );
+
+    pageSource.destroy();
+    pageSource.destroy();
+    expect(handleDestroy).toHaveBeenCalledTimes(1);
+    expect(workers.instances[0].terminated).toBe(true);
+    expect(decoder.workerCount).toBe(0);
+  });
+
+  test('caps simultaneous RAD workers, cancels stale parsing, and recycles workers for camera demand', async () => {
+    const source = makeGaussianRADFixture(1, {chunkCount: 4, includeLoDTree: true});
+    const {configuration, requestedRanges} = installGaussianRADPageSourceFixture(source);
+    const workers = installGaussianRADWorkerFixture({deferResponses: true});
+    const decoder = createGaussianSplatRADWorkerDecoder(configuration, {maxWorkers: 2});
+    if (!decoder) {
+      throw new Error('The bounded RAD worker fixture was not created.');
+    }
+    const pageSource = await openLocalGaussianSplatRADPageSource(configuration, {
+      maxConcurrentLoads: 4,
+      decodePage: context => decoder.decodePage(context),
+      onDestroy: () => decoder.destroy()
+    });
+
+    const stalePage = pageSource.loadPage(0).catch(error => error);
+    const currentPage = pageSource.loadPage(1);
+    const queuedPage = pageSource.loadPage(2);
+    const canceledQueuedPage = pageSource.loadPage(3).catch(error => error);
+    await vi.waitFor(
+      () => expect(workers.requests).toHaveLength(2),
+      GAUSSIAN_RAD_WORKER_WAIT_OPTIONS
+    );
+    expect(decoder.workerCount).toBe(2);
+    expect(workers.requests.map(request => request.chunkIndex)).toEqual([0, 1]);
+
+    expect(pageSource.cancelPage(3)).toBe(true);
+    expect(await canceledQueuedPage).toMatchObject({name: 'AbortError'});
+    expect(pageSource.cancelPage(0)).toBe(true);
+    expect(await stalePage).toMatchObject({name: 'AbortError'});
+    await vi.waitFor(
+      () => expect(workers.requests).toHaveLength(3),
+      GAUSSIAN_RAD_WORKER_WAIT_OPTIONS
+    );
+
+    expect(workers.requests.map(request => request.chunkIndex)).toEqual([0, 1, 2]);
+    expect(workers.instances).toHaveLength(3);
+    expect(workers.instances[0].terminated).toBe(true);
+    expect(decoder.workerCount).toBe(2);
+    workers.release(1);
+    workers.release(2);
+    await expect(currentPage).resolves.toMatchObject({loaderData: {base: 10, chunkIndex: 1}});
+    await expect(queuedPage).resolves.toMatchObject({loaderData: {base: 20, chunkIndex: 2}});
+    expect(decoder.completedDecodeCount).toBe(2);
+    expect(requestedRanges.length).toBeGreaterThanOrEqual(4);
+
+    pageSource.destroy();
+    expect(workers.instances.every(worker => worker.terminated)).toBe(true);
+  });
+
+  test('connects worker-backed RAD pages and authored LoD opacity to the live WebGPU viewer', async () => {
+    const source = makeGaussianRADFixture(1, {
+      chunkCount: 1,
+      includeLoDTree: true,
+      splatEncoding: {lodOpacity: true},
+      alphaValues: [128]
+    });
+    const {configuration, requestedRanges} = installGaussianRADPageSourceFixture(source);
+    const workers = installGaussianRADWorkerFixture();
+    vi.stubGlobal('window', {
+      location: {
+        search: '?source=https%3A%2F%2Fexample.test%2Fscene.rad',
+        href: 'file:///gaussian-splat-viewer.html',
+        origin: 'null'
+      },
+      __lumaGaussianSplatsLoaderBundleUrl: configuration.loaderBundleUrl
+    });
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback): number => {
+      queueMicrotask(() => callback(0));
+      return 1;
+    });
+    const device = makeViewerWebGPUDevice();
+    const animation = new GaussianSplatsAnimationLoopTemplate({
+      device,
+      width: 640,
+      height: 480
+    } as AnimationProps);
+
+    await animation['loadLocalSplatData'](configuration);
+
+    expect(animation.renderer).toBeInstanceOf(GPUPagedSplatRenderer);
+    if (animation.renderer instanceof GPUPagedSplatRenderer) {
+      expect(animation.renderer.props.lodOpacity).toBe(true);
+    }
+    expect(animation['radWorkerDecoder']?.mode).toBe('worker');
+    expect(animation['radWorkerDecoder']?.completedDecodeCount).toBe(1);
+    expect(animation['radSceneController']?.source.metadata.splatEncoding?.lodOpacity).toBe(true);
+    expect(workers.requests.map(request => request.chunkIndex)).toEqual([0]);
+    expect(requestedRanges).toHaveLength(2);
+    expect(animation.batches).toHaveLength(1);
+    expect(animation.batches[0].rowIndexBase).toBe(0);
+
+    animation.onFinalize();
+    expect(workers.instances.every(worker => worker.terminated)).toBe(true);
+    device.destroy();
+  });
+
+  test('releases worker decoders if opening fails after RAD metadata is loaded', async () => {
+    const source = makeGaussianRADFixture();
+    const {configuration} = installGaussianRADPageSourceFixture(source);
+    const workers = installGaussianRADWorkerFixture();
+    const decoder = createGaussianSplatRADWorkerDecoder(configuration);
+    if (!decoder) {
+      throw new Error('The RAD worker fixture was not created.');
+    }
+    const handleDestroy = vi.fn(() => decoder.destroy());
+    let progressUpdates = 0;
+
+    await expect(
+      openLocalGaussianSplatRADPageSource(configuration, {
+        decodePage: context => decoder.decodePage(context),
+        onDestroy: handleDestroy,
+        onProgress: () => {
+          progressUpdates++;
+          if (progressUpdates === 2) {
+            throw new Error('The source metadata was rejected.');
+          }
+        }
+      })
+    ).rejects.toThrow('source metadata was rejected');
+    expect(handleDestroy).toHaveBeenCalledTimes(1);
+    expect(workers.instances[0].terminated).toBe(true);
   });
 
   test('bounds concurrent RAD decodes, deduplicates demand, and prioritizes queued pages', async () => {
@@ -1122,6 +1402,103 @@ function installGaussianRADPageSourceFixture(
   return {configuration, requestedRanges, pendingPageResponses, requestedPageSignals};
 }
 
+function installGaussianRADWorkerFixture(options: {deferResponses?: boolean} = {}): {
+  instances: Array<{terminated: boolean}>;
+  requests: Array<{
+    id: number;
+    chunkIndex: number;
+    bundleUrl: string;
+    bytes: ArrayBuffer;
+    splatEncoding?: {lodOpacity?: boolean};
+  }>;
+  transfers: Transferable[][];
+  release: (chunkIndex: number) => void;
+} {
+  type FixtureWorkerRequest = {
+    id: number;
+    chunkIndex: number;
+    bundleUrl: string;
+    bytes: ArrayBuffer;
+    splatEncoding?: {lodOpacity?: boolean};
+  };
+  const instances: Array<{terminated: boolean}> = [];
+  const requests: FixtureWorkerRequest[] = [];
+  const transfers: Transferable[][] = [];
+  const pendingResponses = new Map<number, () => void>();
+
+  class FixtureGaussianRADWorker extends EventTarget {
+    terminated = false;
+
+    constructor(_url: string | URL, _options?: WorkerOptions) {
+      super();
+      instances.push(this);
+    }
+
+    postMessage(request: FixtureWorkerRequest, transfer: Transferable[]): void {
+      requests.push(request);
+      transfers.push(transfer);
+      const respond = async (): Promise<void> => {
+        if (this.terminated) {
+          return;
+        }
+        try {
+          const bundle = await import(/* @vite-ignore */ request.bundleUrl);
+          const page = bundle.parseRADChunk(request.bytes, {
+            radChunk: {
+              splatEncoding: request.splatEncoding,
+              includeLoDTree: true,
+              includeSphericalHarmonics: true
+            }
+          });
+          if (!this.terminated) {
+            this.dispatchEvent(
+              new MessageEvent('message', {
+                data: {
+                  id: request.id,
+                  status: 'success',
+                  ipc: bundle.tableToIPC(page.data),
+                  shape: page.shape,
+                  loaderData: {...page.loaderData, chunkIndex: request.chunkIndex}
+                }
+              })
+            );
+          }
+        } catch (error) {
+          if (!this.terminated) {
+            this.dispatchEvent(
+              new MessageEvent('message', {
+                data: {
+                  id: request.id,
+                  status: 'error',
+                  message: error instanceof Error ? error.message : String(error)
+                }
+              })
+            );
+          }
+        }
+      };
+
+      if (options.deferResponses) {
+        pendingResponses.set(request.chunkIndex, () => void respond());
+      } else {
+        queueMicrotask(() => void respond());
+      }
+    }
+
+    terminate(): void {
+      this.terminated = true;
+    }
+  }
+
+  vi.stubGlobal('Worker', FixtureGaussianRADWorker);
+  return {
+    instances,
+    requests,
+    transfers,
+    release: chunkIndex => pendingResponses.get(chunkIndex)?.()
+  };
+}
+
 function makeGaussianSplatPLYFixture(): string {
   return [
     'ply',
@@ -1156,6 +1533,8 @@ function makeGaussianRADFixture(
     hierarchyRows?: readonly (readonly {childCount: number; childStart: number}[])[];
     includeLoDTree?: boolean;
     omitChunkRowRanges?: boolean;
+    splatEncoding?: {lodOpacity?: boolean};
+    alphaValues?: readonly number[];
   } = {}
 ): ArrayBuffer {
   const chunkCount = options.chunkCount ?? 2;
@@ -1173,7 +1552,8 @@ function makeGaussianRADFixture(
               ? {rows: options.hierarchyRows[chunkIndex]}
               : {})
           }
-        : undefined
+        : undefined,
+      options.alphaValues
     )
   );
   const metadata = {
@@ -1183,6 +1563,7 @@ function makeGaussianRADFixture(
     maxSh: 0,
     chunkSize: options.chunkSize ?? 1,
     ...(options.includeLoDTree ? {lodTree: true} : {}),
+    ...(options.splatEncoding ? {splatEncoding: options.splatEncoding} : {}),
     allChunkBytes: chunks.reduce((byteLength, chunk) => byteLength + chunk.byteLength, 0),
     chunks: chunks.map((chunk, index) => ({
       offset: chunks
@@ -1218,7 +1599,8 @@ function makeGaussianRADChunkFixture(
     childCount: number;
     childStart: number;
     rows?: readonly {childCount: number; childStart: number}[];
-  }
+  },
+  alphaValues?: readonly number[]
 ): ArrayBuffer {
   const position = Float32Array.from(
     {length: rowCount * 3},
@@ -1226,6 +1608,9 @@ function makeGaussianRADChunkFixture(
   );
   const childCounts = new Uint16Array(rowCount);
   const childStarts = new Uint32Array(rowCount);
+  const opacities = alphaValues
+    ? Uint8Array.from({length: rowCount}, (_, rowIndex) => alphaValues[rowIndex] ?? 255)
+    : undefined;
   if (hierarchy) {
     for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
       const rowHierarchy = hierarchy.rows?.[rowIndex];
@@ -1235,11 +1620,13 @@ function makeGaussianRADChunkFixture(
         rowHierarchy?.childStart ?? (rowIndex === 0 ? hierarchy.childStart : 0);
     }
   }
-  const childCountByteOffset = alignGaussianRADBytes(position.byteLength);
+  const opacityByteOffset = alignGaussianRADBytes(position.byteLength);
+  const childCountByteOffset =
+    opacityByteOffset + (opacities ? alignGaussianRADBytes(opacities.byteLength) : 0);
   const childStartByteOffset = childCountByteOffset + alignGaussianRADBytes(childCounts.byteLength);
   const payloadByteLength = hierarchy
     ? childStartByteOffset + alignGaussianRADBytes(childStarts.byteLength)
-    : alignGaussianRADBytes(position.byteLength);
+    : childCountByteOffset;
   const metadataBytes = new TextEncoder().encode(
     JSON.stringify({
       version: 1,
@@ -1250,6 +1637,18 @@ function makeGaussianRADChunkFixture(
       lodTree: Boolean(hierarchy),
       properties: [
         {offset: 0, bytes: position.byteLength, property: 'center', encoding: 'f32'},
+        ...(opacities
+          ? [
+              {
+                offset: opacityByteOffset,
+                bytes: opacities.byteLength,
+                property: 'alpha',
+                encoding: 'r8',
+                min: 0,
+                max: 1
+              }
+            ]
+          : []),
         ...(hierarchy
           ? [
               {
@@ -1279,6 +1678,9 @@ function makeGaussianRADChunkFixture(
   bytes.set(metadataBytes, 8);
   view.setBigUint64(payloadByteLengthOffset, BigInt(payloadByteLength), true);
   bytes.set(new Uint8Array(position.buffer), payloadByteOffset);
+  if (opacities) {
+    bytes.set(opacities, payloadByteOffset + opacityByteOffset);
+  }
   if (hierarchy) {
     bytes.set(new Uint8Array(childCounts.buffer), payloadByteOffset + childCountByteOffset);
     bytes.set(new Uint8Array(childStarts.buffer), payloadByteOffset + childStartByteOffset);

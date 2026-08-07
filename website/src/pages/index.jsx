@@ -23,6 +23,21 @@ const FEATURED_EXAMPLES = [
     topics: ['gltf', 'materials', 'animation']
   },
   {
+    title: 'Coit Tower · 50M Gaussian Splats',
+    route: 'showcase/gaussian-splat-viewer?scene=coit',
+    image: 'showcase/coit-tower.png',
+    imagePosition: 'left center',
+    imageScale: 1.17,
+    description:
+      'Explore a 50.9-million-splat San Francisco capture with background RAD decoding, camera-driven detail, and globally ordered WebGPU rendering.',
+    category: 'WebGPU',
+    backends: ['webgpu'],
+    highDynamicRange: true,
+    difficulty: 'advanced',
+    maturity: 'experimental',
+    topics: ['gaussian-splats', 'streaming', 'compute']
+  },
+  {
     title: 'Lightstorm Megacity',
     route: 'showcase/lightstorm-megacity',
     image: 'showcase/lightstorm-megacity.jpg',
@@ -278,6 +293,8 @@ export default function IndexPage() {
                   key={example.route}
                   href={`${examplesUrl}/${example.route}`}
                   imageUrl={`${baseUrl}images/examples/${example.image}`}
+                  imagePosition={example.imagePosition}
+                  imageScale={example.imageScale}
                   title={example.title}
                   description={example.description}
                   category={example.category}

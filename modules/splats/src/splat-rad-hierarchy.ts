@@ -5,7 +5,6 @@
 import type {GPUSplatData} from './splat-data';
 import {
   getSplatHierarchyFoveatedPriority,
-  getSplatHierarchyScreenSpaceError,
   isSplatHierarchyNodeVisible,
   type SplatHierarchyFoveation,
   type SplatHierarchyNode,
@@ -20,6 +19,11 @@ import {
 
 const DEFAULT_RAD_PAGE_SIZE = 65_536;
 const GAUSSIAN_SUPPORT_RADIUS = 3;
+const DEFAULT_RAD_CONE_FOV0_DEGREES = 90;
+const DEFAULT_RAD_CONE_FOV_DEGREES = 120;
+const DEFAULT_RAD_CONE_FOVEATION = 0.4;
+const DEFAULT_RAD_BEHIND_FOVEATION = 0.2;
+const DEFAULT_RAD_REFINEMENT_HYSTERESIS = 0.15;
 
 /** One independently prepared source page and its untouched per-row hierarchy metadata. */
 export type SplatRADHierarchyPage = {
@@ -107,6 +111,24 @@ export type SplatRADHierarchyManagerProps = {
   maximumScreenSpaceError?: number;
   /** Maximum simultaneously selected original source rows across every active page. */
   maximumActiveRows?: number;
+  /** Whether source opacity uses Spark's already-decoded zero-through-two LoD domain. */
+  lodOpacity?: boolean;
+  /** Spark-compatible multiplier applied to authored source-row refinement importance. */
+  lodSplatScale?: number;
+  /** Minimum projected source-row size in pixels; explicit legacy error limits take precedence. */
+  lodRenderScale?: number;
+  /** Full-width view cone, in degrees, retaining complete source-row detail. */
+  coneFov0?: number;
+  /** Full-width outer view cone, in degrees, retaining `coneFoveate` detail. */
+  coneFov?: number;
+  /** Relative source-row refinement retained at the outer view cone. */
+  coneFoveate?: number;
+  /** Relative source-row refinement retained behind the camera. */
+  behindFoveate?: number;
+  /** Relative deadband keeping an existing row frontier stable near its refinement threshold. */
+  refinementHysteresis?: number;
+  /** Optional hard bound on source rows evaluated during one synchronous camera update. */
+  maxTraversalRows?: number;
   /** Default gaze-aware priority controls for views without an explicit override. */
   foveation?: SplatHierarchyFoveation;
   /** Receives intact source pages plus original batch-local active-row indirection. */
@@ -124,6 +146,7 @@ type RegisteredSplatRADPage = {
   page: SplatRADHierarchyPage;
   bounds: SplatResidencyBounds;
   endRowIndex: number;
+  lastDataRevision: number;
 };
 
 type SelectedSplatRADPage = {
@@ -139,8 +162,18 @@ type SplatRADTraversalState = {
   selectedPages: Map<string, SelectedSplatRADPage>;
   protectedPageIds: Set<string>;
   requestedPages: Map<number, SplatRADHierarchyRequest>;
-  ancestorRows: Set<number>;
   allocatedRowCount: number;
+  refinedRows: Set<number>;
+};
+
+type SplatRADFrontierCandidate = {
+  registeredPage: RegisteredSplatRADPage;
+  globalRowIndex: number;
+  localRowIndex: number;
+  node: SplatHierarchyNode;
+  priority: number;
+  isFallback: boolean;
+  parent?: SplatRADFrontierCandidate;
 };
 
 /**
@@ -164,16 +197,26 @@ export class SplatRADHierarchyManager {
   private readonly ownsResidencyManager: boolean;
   private readonly maximumScreenSpaceError: number;
   private readonly maximumActiveRows: number;
+  private maxTraversalRows: number;
   private readonly pageSize: number;
   private readonly foveation?: SplatHierarchyFoveation;
+  private readonly lodOpacity: boolean;
+  private readonly lodSplatScale: number;
+  private readonly coneDot0: number;
+  private readonly coneDot: number;
+  private readonly coneFoveate: number;
+  private readonly behindFoveate: number;
+  private readonly refinementHysteresis: number;
 
   private sortedPages: RegisteredSplatRADPage[] = [];
   private rootRows: readonly number[];
   private currentView?: SplatHierarchyView;
   private currentFrontier: SplatRADHierarchyFrontierEntry[] = [];
+  private previouslyRefinedRows = new Set<number>();
   private visibleRowCount = 0;
   private culledRowCount = 0;
   private fallbackRowCount = 0;
+  private requiresRefresh = true;
   private isDestroyed = false;
 
   /** Creates a loader-neutral global-row hierarchy without fetching or decoding source pages. */
@@ -183,9 +226,34 @@ export class SplatRADHierarchyManager {
     this.ownsResidencyManager = !props.residencyManager;
     this.rootRows = [...(props.rootRows ?? [0])];
     this.pageSize = props.pageSize ?? DEFAULT_RAD_PAGE_SIZE;
-    this.maximumScreenSpaceError = Math.max(props.maximumScreenSpaceError ?? 8, 0);
+    this.maximumScreenSpaceError = Math.max(
+      props.maximumScreenSpaceError ?? props.lodRenderScale ?? 8,
+      0
+    );
     this.maximumActiveRows = props.maximumActiveRows ?? Number.POSITIVE_INFINITY;
+    this.maxTraversalRows = props.maxTraversalRows ?? Number.POSITIVE_INFINITY;
     this.foveation = props.foveation;
+    this.lodOpacity = props.lodOpacity ?? false;
+    this.lodSplatScale = Math.max(props.lodSplatScale ?? 1, 0);
+    const innerConeDegrees = Math.min(
+      Math.max(props.coneFov0 ?? DEFAULT_RAD_CONE_FOV0_DEGREES, 0),
+      180
+    );
+    const outerConeDegrees = Math.min(
+      Math.max(props.coneFov ?? DEFAULT_RAD_CONE_FOV_DEGREES, innerConeDegrees),
+      180
+    );
+    this.coneDot0 = Math.cos((innerConeDegrees * Math.PI) / 360);
+    this.coneDot = Math.cos((outerConeDegrees * Math.PI) / 360);
+    this.coneFoveate = Math.min(Math.max(props.coneFoveate ?? DEFAULT_RAD_CONE_FOVEATION, 0), 1);
+    this.behindFoveate = Math.min(
+      Math.max(props.behindFoveate ?? DEFAULT_RAD_BEHIND_FOVEATION, 0),
+      1
+    );
+    this.refinementHysteresis = Math.min(
+      Math.max(props.refinementHysteresis ?? DEFAULT_RAD_REFINEMENT_HYSTERESIS, 0),
+      0.99
+    );
     this.onFrontierChange = props.onFrontierChange;
     this.onPageRequest = props.onPageRequest;
     this.onPageCancel = props.onPageCancel;
@@ -198,6 +266,12 @@ export class SplatRADHierarchyManager {
       (!Number.isSafeInteger(this.maximumActiveRows) || this.maximumActiveRows <= 0)
     ) {
       throw new RangeError('Gaussian active-row capacity must be a positive safe integer');
+    }
+    if (
+      this.maxTraversalRows !== Number.POSITIVE_INFINITY &&
+      (!Number.isSafeInteger(this.maxTraversalRows) || this.maxTraversalRows <= 0)
+    ) {
+      throw new RangeError('Gaussian traversal capacity must be a positive safe integer');
     }
     this.validateRootRows(this.rootRows);
     for (const page of props.pages ?? []) {
@@ -262,6 +336,25 @@ export class SplatRADHierarchyManager {
     this.assertLive();
     this.validateRootRows(rootRows);
     this.rootRows = [...rootRows];
+    this.requiresRefresh = true;
+    this.refresh();
+  }
+
+  /** Changes synchronous camera work without replacing any original source page or GPU buffer. */
+  setTraversalBudget(maxTraversalRows?: number): void {
+    this.assertLive();
+    const nextBudget = maxTraversalRows ?? Number.POSITIVE_INFINITY;
+    if (
+      nextBudget !== Number.POSITIVE_INFINITY &&
+      (!Number.isSafeInteger(nextBudget) || nextBudget <= 0)
+    ) {
+      throw new RangeError('Gaussian traversal capacity must be a positive safe integer');
+    }
+    if (this.maxTraversalRows === nextBudget) {
+      return;
+    }
+    this.maxTraversalRows = nextBudget;
+    this.requiresRefresh = true;
     this.refresh();
   }
 
@@ -297,7 +390,8 @@ export class SplatRADHierarchyManager {
     const registeredPage: RegisteredSplatRADPage = {
       page,
       bounds,
-      endRowIndex: page.data.rowIndexBase + page.data.length
+      endRowIndex: page.data.rowIndexBase + page.data.length,
+      lastDataRevision: page.data.revision
     };
     this.pagesById.set(page.id, registeredPage);
     this.sortedPages.push(registeredPage);
@@ -307,6 +401,7 @@ export class SplatRADHierarchyManager {
     );
     this.pruneEvictedPages();
     this.pendingRequests.delete(Math.floor(page.data.rowIndexBase / this.pageSize));
+    this.requiresRefresh = true;
     this.refresh();
     return true;
   }
@@ -324,6 +419,7 @@ export class SplatRADHierarchyManager {
     this.pagesById.delete(id);
     this.sortedPages = this.sortedPages.filter(candidate => candidate !== page);
     this.residencyManager.remove(id);
+    this.requiresRefresh = true;
     this.refresh();
     return true;
   }
@@ -331,11 +427,20 @@ export class SplatRADHierarchyManager {
   /** Allows an externally cancelled or failed source-page request to be retried by the view. */
   clearRequestedPage(pageIndex: number): void {
     this.pendingRequests.delete(pageIndex);
+    this.requiresRefresh = true;
   }
 
   /** Computes coherent camera-selected original source rows without copying source page buffers. */
   update(view: SplatHierarchyView): readonly SplatRADHierarchyFrontierEntry[] {
     this.assertLive();
+    if (
+      this.currentView &&
+      !this.requiresRefresh &&
+      areSplatRADViewsEqual(this.currentView, view) &&
+      this.sortedPages.every(page => page.lastDataRevision === page.page.data.revision)
+    ) {
+      return this.currentFrontier;
+    }
     this.currentView = view;
     this.refresh();
     return this.currentFrontier;
@@ -374,9 +479,11 @@ export class SplatRADHierarchyManager {
       selectedPages: new Map(),
       protectedPageIds: new Set(),
       requestedPages: new Map(),
-      ancestorRows: new Set(),
-      allocatedRowCount: rootRows.length
+      allocatedRowCount: rootRows.length,
+      refinedRows: new Set()
     };
+    const selectedRows = new Map<number, SplatRADFrontierCandidate>();
+    const refinementQueue = new SplatRADPriorityQueue();
 
     for (const rootRow of rootRows) {
       const rootPage = this.getRegisteredPageForRow(rootRow);
@@ -384,9 +491,29 @@ export class SplatRADHierarchyManager {
         this.requestRow(state, rootRow, Number.MAX_SAFE_INTEGER);
         continue;
       }
-      this.traverseRow(rootPage, rootRow, state);
+      const candidate = this.makeFrontierCandidate(rootPage, rootRow);
+      if (candidate) {
+        this.addFrontierCandidate(candidate, selectedRows, refinementQueue);
+      }
     }
 
+    while (refinementQueue.length > 0) {
+      const candidate = refinementQueue.pop()!;
+      this.refineFrontierCandidate(candidate, selectedRows, refinementQueue, state);
+    }
+
+    for (const candidate of selectedRows.values()) {
+      this.selectRow(
+        candidate.registeredPage,
+        candidate.localRowIndex,
+        candidate.node.geometricError,
+        candidate.priority,
+        candidate.isFallback,
+        state
+      );
+    }
+
+    this.previouslyRefinedRows = state.refinedRows;
     const selectedFrontier = this.makeFrontier(state);
     const activePageIds = new Set([
       ...state.protectedPageIds,
@@ -402,53 +529,90 @@ export class SplatRADHierarchyManager {
     this.releaseInactivePins(activePageIds);
     this.updateFrontier(selectedFrontier);
     this.synchronizeRequests(state.requestedPages);
+    for (const page of this.sortedPages) {
+      page.lastDataRevision = page.page.data.revision;
+    }
+    this.requiresRefresh = false;
   }
 
-  private traverseRow(
+  private makeFrontierCandidate(
     registeredPage: RegisteredSplatRADPage,
     globalRowIndex: number,
-    state: SplatRADTraversalState
-  ): boolean {
+    parent?: SplatRADFrontierCandidate
+  ): SplatRADFrontierCandidate | undefined {
     const page = registeredPage.page;
     const localRowIndex = globalRowIndex - page.data.rowIndexBase;
     const node = this.makeRowNode(registeredPage, localRowIndex);
     if (!isSplatHierarchyNodeVisible(node, this.currentView?.modelViewProjectionMatrix)) {
       this.culledRowCount++;
-      return false;
+      return undefined;
     }
     this.visibleRowCount++;
 
     const view = this.currentView;
     if (!view) {
-      return false;
+      return undefined;
     }
-    const screenSpaceError = getSplatHierarchyScreenSpaceError(node, view);
-    const priority = getSplatHierarchyFoveatedPriority(
+    const screenSpaceError = getSplatRADScreenSpaceError(node, view);
+    const priority =
+      getSplatHierarchyFoveatedPriority(
+        node,
+        view,
+        view.foveation ?? this.foveation,
+        screenSpaceError
+      ) *
+      this.getSparkFoveation(node, view) *
+      this.lodSplatScale;
+    return {
+      registeredPage,
+      globalRowIndex,
+      localRowIndex,
       node,
-      view,
-      view.foveation ?? this.foveation,
-      screenSpaceError
-    );
+      priority,
+      isFallback: false,
+      ...(parent ? {parent} : {})
+    };
+  }
+
+  private addFrontierCandidate(
+    candidate: SplatRADFrontierCandidate,
+    selectedRows: Map<number, SplatRADFrontierCandidate>,
+    refinementQueue: SplatRADPriorityQueue
+  ): void {
+    selectedRows.set(candidate.globalRowIndex, candidate);
+    const childCount = candidate.registeredPage.page.childCounts?.[candidate.localRowIndex] ?? 0;
+    if (childCount > 0 && candidate.priority > this.getRefinementThreshold(candidate)) {
+      refinementQueue.push(candidate);
+    }
+  }
+
+  private refineFrontierCandidate(
+    candidate: SplatRADFrontierCandidate,
+    selectedRows: Map<number, SplatRADFrontierCandidate>,
+    refinementQueue: SplatRADPriorityQueue,
+    state: SplatRADTraversalState
+  ): void {
+    const {registeredPage, globalRowIndex, localRowIndex, priority} = candidate;
+    const page = registeredPage.page;
     const childCount = page.childCounts?.[localRowIndex] ?? 0;
     const childStart = page.childStarts?.[localRowIndex] ?? 0;
     if (
       childCount === 0 ||
-      priority <= this.maximumScreenSpaceError ||
+      priority <= this.getRefinementThreshold(candidate) ||
       state.allocatedRowCount + childCount - 1 > this.maximumActiveRows ||
+      this.visibleRowCount + this.culledRowCount + childCount > this.maxTraversalRows ||
       !Number.isSafeInteger(childStart + childCount) ||
       childStart + childCount > 0x8000_0000
     ) {
-      this.selectRow(registeredPage, localRowIndex, node.geometricError, priority, false, state);
-      return true;
+      return;
     }
 
-    state.ancestorRows.add(globalRowIndex);
     const childPages: RegisteredSplatRADPage[] = [];
     let allChildrenResident = true;
     for (let childOffset = 0; childOffset < childCount; childOffset++) {
       const childRowIndex = childStart + childOffset;
       const childPage = this.getRegisteredPageForRow(childRowIndex);
-      if (state.ancestorRows.has(childRowIndex)) {
+      if (hasSplatRADAncestor(candidate, childRowIndex)) {
         allChildrenResident = false;
         continue;
       }
@@ -468,24 +632,39 @@ export class SplatRADHierarchyManager {
     }
 
     if (!allChildrenResident || childPages.length !== childCount) {
-      this.selectRow(registeredPage, localRowIndex, node.geometricError, priority, true, state);
-      state.ancestorRows.delete(globalRowIndex);
-      return true;
+      candidate.isFallback = true;
+      return;
     }
 
-    state.allocatedRowCount += childCount - 1;
-    let hasVisibleChild = false;
+    const childCandidates: SplatRADFrontierCandidate[] = [];
     for (let childOffset = 0; childOffset < childCount; childOffset++) {
-      hasVisibleChild =
-        this.traverseRow(childPages[childOffset], childStart + childOffset, state) ||
-        hasVisibleChild;
+      const child = this.makeFrontierCandidate(
+        childPages[childOffset],
+        childStart + childOffset,
+        candidate
+      );
+      if (child) {
+        childCandidates.push(child);
+      }
     }
-    state.ancestorRows.delete(globalRowIndex);
-    if (!hasVisibleChild) {
-      state.allocatedRowCount -= childCount - 1;
-      this.selectRow(registeredPage, localRowIndex, node.geometricError, priority, false, state);
+    if (childCandidates.length === 0) {
+      return;
     }
-    return true;
+
+    selectedRows.delete(globalRowIndex);
+    state.allocatedRowCount += childCount - 1;
+    state.refinedRows.add(globalRowIndex);
+    for (const child of childCandidates) {
+      this.addFrontierCandidate(child, selectedRows, refinementQueue);
+    }
+  }
+
+  private getRefinementThreshold(candidate: SplatRADFrontierCandidate): number {
+    const wasRefined = this.previouslyRefinedRows.has(candidate.globalRowIndex);
+    const hysteresisFactor = wasRefined
+      ? 1 - this.refinementHysteresis
+      : 1 + this.refinementHysteresis;
+    return this.maximumScreenSpaceError * hysteresisFactor;
   }
 
   private selectRow(
@@ -620,11 +799,65 @@ export class SplatRADHierarchyManager {
       Math.abs(data.source.scales[componentOffset + 1]),
       Math.abs(data.source.scales[componentOffset + 2])
     );
+    const averageScale =
+      (Math.abs(data.source.scales[componentOffset]) +
+        Math.abs(data.source.scales[componentOffset + 1]) +
+        Math.abs(data.source.scales[componentOffset + 2])) /
+      3;
+    const opacity = data.source.opacities[localRowIndex];
+    const expandedOpacity = this.lodOpacity && opacity > 1 ? Math.min(opacity * 4 - 3, 5) : 1;
+    const opacityExpansion = expandedOpacity > 1 ? 1 + 0.7 * (expandedOpacity - 1) : 1;
     return {
       id: `${registeredPage.page.id}:${localRowIndex}`,
-      bounds: {center, radius: maximumScale * GAUSSIAN_SUPPORT_RADIUS},
-      geometricError: geometricError ?? maximumScale
+      bounds: {
+        center,
+        radius: maximumScale * GAUSSIAN_SUPPORT_RADIUS * opacityExpansion
+      },
+      geometricError: geometricError ?? 2 * averageScale * opacityExpansion
     };
+  }
+
+  private getSparkFoveation(node: SplatHierarchyNode, view: SplatHierarchyView): number {
+    const matrix = view.modelViewProjectionMatrix;
+    if (!matrix) {
+      return 1;
+    }
+    const forwardLength = Math.hypot(matrix[3], matrix[7], matrix[11]);
+    if (!Number.isFinite(forwardLength) || forwardLength <= Number.EPSILON) {
+      return 1;
+    }
+
+    const directionX = node.bounds.center[0] - view.cameraPosition[0];
+    const directionY = node.bounds.center[1] - view.cameraPosition[1];
+    const directionZ = node.bounds.center[2] - view.cameraPosition[2];
+    const distance = Math.hypot(directionX, directionY, directionZ);
+    if (distance <= Number.EPSILON) {
+      return 1;
+    }
+
+    const forwardDot =
+      (directionX * matrix[3] + directionY * matrix[7] + directionZ * matrix[11]) /
+      (distance * forwardLength);
+    if (forwardDot <= 0) {
+      return this.behindFoveate;
+    }
+    if (forwardDot >= this.coneDot0) {
+      return 1;
+    }
+    if (forwardDot >= this.coneDot) {
+      const coneWidth = this.coneDot0 - this.coneDot;
+      if (coneWidth <= Number.EPSILON) {
+        return this.coneFoveate;
+      }
+      const interpolation = (forwardDot - this.coneDot) / coneWidth;
+      return this.coneFoveate + (1 - this.coneFoveate) * interpolation;
+    }
+    if (this.coneDot <= Number.EPSILON) {
+      return this.behindFoveate;
+    }
+    return (
+      this.behindFoveate + (this.coneFoveate - this.behindFoveate) * (forwardDot / this.coneDot)
+    );
   }
 
   private getPagePriority(page: SplatRADHierarchyPage, bounds: SplatResidencyBounds): number {
@@ -730,6 +963,128 @@ export class SplatRADHierarchyManager {
       throw new Error('Gaussian row hierarchy or its residency manager has been destroyed');
     }
   }
+}
+
+/** Keeps the highest-value original source row at the frontier without sorting every update. */
+class SplatRADPriorityQueue {
+  private readonly candidates: SplatRADFrontierCandidate[] = [];
+
+  get length(): number {
+    return this.candidates.length;
+  }
+
+  push(candidate: SplatRADFrontierCandidate): void {
+    let index = this.candidates.push(candidate) - 1;
+    while (index > 0) {
+      const parentIndex = Math.floor((index - 1) / 2);
+      if (compareSplatRADCandidates(this.candidates[parentIndex], candidate) >= 0) {
+        break;
+      }
+      this.candidates[index] = this.candidates[parentIndex];
+      index = parentIndex;
+    }
+    this.candidates[index] = candidate;
+  }
+
+  pop(): SplatRADFrontierCandidate | undefined {
+    const first = this.candidates[0];
+    const last = this.candidates.pop();
+    if (!first || !last || this.candidates.length === 0) {
+      return first;
+    }
+
+    let index = 0;
+    while (true) {
+      const firstChildIndex = index * 2 + 1;
+      if (firstChildIndex >= this.candidates.length) {
+        break;
+      }
+      const secondChildIndex = firstChildIndex + 1;
+      const largestChildIndex =
+        secondChildIndex < this.candidates.length &&
+        compareSplatRADCandidates(
+          this.candidates[secondChildIndex],
+          this.candidates[firstChildIndex]
+        ) > 0
+          ? secondChildIndex
+          : firstChildIndex;
+      if (compareSplatRADCandidates(last, this.candidates[largestChildIndex]) >= 0) {
+        break;
+      }
+      this.candidates[index] = this.candidates[largestChildIndex];
+      index = largestChildIndex;
+    }
+    this.candidates[index] = last;
+    return first;
+  }
+}
+
+function compareSplatRADCandidates(
+  first: SplatRADFrontierCandidate,
+  second: SplatRADFrontierCandidate
+): number {
+  return first.priority - second.priority || second.globalRowIndex - first.globalRowIndex;
+}
+
+function hasSplatRADAncestor(candidate: SplatRADFrontierCandidate, rowIndex: number): boolean {
+  let current: SplatRADFrontierCandidate | undefined = candidate;
+  while (current) {
+    if (current.globalRowIndex === rowIndex) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+function getSplatRADScreenSpaceError(node: SplatHierarchyNode, view: SplatHierarchyView): number {
+  const distance = Math.max(
+    Math.hypot(
+      node.bounds.center[0] - view.cameraPosition[0],
+      node.bounds.center[1] - view.cameraPosition[1],
+      node.bounds.center[2] - view.cameraPosition[2]
+    ),
+    1e-6
+  );
+  const verticalFieldOfView = Math.min(
+    Math.max(view.verticalFieldOfView ?? Math.PI / 3, 1e-6),
+    Math.PI - 1e-6
+  );
+  const focalLengthPixels =
+    Math.max(view.viewportSize[1], 0) / (2 * Math.tan(verticalFieldOfView / 2));
+  return (Math.max(node.geometricError, 0) * focalLengthPixels) / distance;
+}
+
+function areSplatRADViewsEqual(first: SplatHierarchyView, second: SplatHierarchyView): boolean {
+  if (
+    first.verticalFieldOfView !== second.verticalFieldOfView ||
+    !areSplatRADValuesEqual(first.cameraPosition, second.cameraPosition) ||
+    !areSplatRADValuesEqual(first.viewportSize, second.viewportSize) ||
+    !areSplatRADValuesEqual(first.modelViewProjectionMatrix, second.modelViewProjectionMatrix)
+  ) {
+    return false;
+  }
+  if (!first.foveation || !second.foveation) {
+    return first.foveation === second.foveation;
+  }
+  return (
+    first.foveation.radius === second.foveation.radius &&
+    first.foveation.strength === second.foveation.strength &&
+    areSplatRADValuesEqual(first.foveation.center, second.foveation.center)
+  );
+}
+
+function areSplatRADValuesEqual(
+  first: readonly number[] | undefined,
+  second: readonly number[] | undefined
+): boolean {
+  return (
+    first === second ||
+    (first !== undefined &&
+      second !== undefined &&
+      first.length === second.length &&
+      first.every((value, index) => value === second[index]))
+  );
 }
 
 /** Derives a conservative sphere from original decoded page positions and Gaussian source scales. */

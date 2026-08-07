@@ -812,7 +812,7 @@ export const GaussianSplatViewerExample: React.FC<WebsiteExampleProps> = props =
     <LumaExample
       id="gaussian-splat-viewer"
       title="Gaussian Splat Viewer"
-      subtitle="Complete captured scenes streamed from Hugging Face"
+      subtitle="Captured scenes and camera-driven, worker-decoded RAD landscapes"
       directory="showcase"
       sourcePath="examples/showcase/gaussian-splats/app.ts"
       devices={['webgpu', 'webgl2']}

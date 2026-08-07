@@ -56,7 +56,9 @@ const entrypoint = [
   `export {KSPLATLoaderWithParser as KSPLATLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/ksplat-loader'))};`,
   `export {SPZLoaderWithParser as SPZLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/spz-loader'))};`,
   `export {RADLoaderWithParser as RADLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/rad-loader'))};`,
-  `export {RADSourceLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/rad-source-loader'))};`
+  `export {RADSourceLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/rad-source-loader'))};`,
+  `export {parseRADChunk} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/rad-loader'))};`,
+  'export {tableFromIPC, tableToIPC} from "apache-arrow";'
 ].join('\n');
 
 const buildResult = await esbuild.build({

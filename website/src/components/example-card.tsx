@@ -10,6 +10,8 @@ export type ExampleCardProps = {
   difficulty: string;
   highDynamicRange?: boolean;
   href?: string;
+  imagePosition?: string;
+  imageScale?: number;
   imageUrl: string;
   maturity?: string;
   title: string;
@@ -29,6 +31,8 @@ export function ExampleCard({
   difficulty,
   highDynamicRange = false,
   href,
+  imagePosition,
+  imageScale = 1,
   imageUrl,
   maturity,
   title,
@@ -40,7 +44,16 @@ export function ExampleCard({
   const hasConstrainedImage = constrainedImageUrl === imageUrl;
   const capabilities = getCapabilityBadges(backends, highDynamicRange);
   const accentColor = getCardAccent(category, topics);
-  const cardStyle = {'--luma-example-card-accent': accentColor} as CSSProperties;
+  const cardStyle = {
+    '--luma-example-card-accent': accentColor,
+    ...(imagePosition ? {'--luma-example-card-image-position': imagePosition} : {}),
+    ...(imageScale === 1
+      ? {}
+      : {
+          '--luma-example-card-image-scale': imageScale,
+          '--luma-example-card-image-hover-scale': imageScale * 1.035
+        })
+  } as CSSProperties;
   const visibleTopics = [...new Set(topics)].slice(0, 2);
 
   return (
