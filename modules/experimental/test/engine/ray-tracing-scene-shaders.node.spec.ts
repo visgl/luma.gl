@@ -37,7 +37,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'primitiveMinima', binding: 2},
       {name: 'primitiveMaxima', binding: 3}
     ]);
-    expect(reflection.storage[0].format?.size).toBe(256);
+    expect(reflection.storage[0].format?.size).toBe(272);
     expect(reflection.uniforms.length + reflection.storage.length).toBe(4);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('length(firstRow)');
@@ -48,7 +48,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     );
   });
 
-  test('keeps ray traversal below the WebGPU core storage-binding limit', () => {
+  test('uses the WebGPU core storage-buffer budget exactly', () => {
     const reflection = new WgslReflect(RAY_TRACING_SCENE_SHADER);
     const storageBuffers = reflection.storage.filter(
       ({name}) => name !== 'outputImage' && name !== 'outputMetadata'
@@ -64,30 +64,43 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'triangles', binding: 2},
       {name: 'lights', binding: 3},
       {name: 'nodeMinima', binding: 4},
-      {name: 'nodeMaxima', binding: 5}
+      {name: 'nodeMaxima', binding: 5},
+      {name: 'leafPrimitiveIds', binding: 6},
+      {name: 'blasNodes', binding: 7},
+      {name: 'blasTriangleIds', binding: 8}
     ]);
-    expect(storageBuffers).toHaveLength(5);
-    expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(8);
-    expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(9);
+    expect(storageBuffers).toHaveLength(8);
+    expect(storageBuffers[0].format?.size).toBe(272);
+    expect(storageBuffers.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
+    expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(11);
+    expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(12);
     expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
-      {name: 'historyImage', binding: 6},
-      {name: 'historyMetadata', binding: 7}
+      {name: 'historyImage', binding: 9},
+      {name: 'historyMetadata', binding: 10}
     ]);
     expect(
       reflection.uniforms.length + reflection.storage.length + reflection.textures.length
-    ).toBe(10);
+    ).toBe(13);
     expect(RAY_TRACING_SCENE_SHADER).toContain('@workgroup_size(8, 8, 1)');
-    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(6) var historyImage');
-    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(7) var historyMetadata');
-    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(8) var outputImage');
-    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(9) var outputMetadata');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(6) var<storage, read> leafPrimitiveIds');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(7) var<storage, read> blasNodes');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(8) var<storage, read> blasTriangleIds');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(9) var historyImage');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(10) var historyMetadata');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(11) var outputImage');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('@binding(12) var outputMetadata');
     expect(RAY_TRACING_SCENE_SHADER).toContain('acceleration: vec4<u32>');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('blas: vec4<f32>');
     expect(RAY_TRACING_SCENE_SHADER).toContain('previousTransform: mat4x4<f32>');
   });
 
   test('traverses implicit BVH children and terminates shadow rays on the first hit', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('let leftNode = nodeIndex * 2u + 1u');
-    expect(RAY_TRACING_SCENE_SHADER).toContain('nodeIndex - uniforms.acceleration.x');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let leafIndex = nodeIndex - uniforms.acceleration.x'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let primitiveIndex = leafPrimitiveIds[leafIndex]');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('primitiveIndex < uniforms.dimensions.z');
     expect(RAY_TRACING_SCENE_SHADER).toContain('abs(direction) < 0.0000001');
     expect(RAY_TRACING_SCENE_SHADER).toContain(
       'let nearerDistance = min(leftDistance, rightDistance)'
@@ -98,6 +111,32 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(RAY_TRACING_SCENE_SHADER).toContain('if (intersectsScene(shadowRay, shadowDistance))');
     expect(RAY_TRACING_SCENE_SHADER).not.toContain(
       'for (var primitiveIndex = 0u; primitiveIndex < uniforms.dimensions.z; primitiveIndex++)'
+    );
+  });
+
+  test('traverses packed per-mesh BLAS nodes near-first for closest and shadow hits', () => {
+    expect(RAY_TRACING_SCENE_SHADER).toContain('struct RayBlasNode');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('const BLAS_STACK_CAPACITY = 32u');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('fn intersectBlasNodeBounds');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let packedNodeStart = u32(primitive.blas.x)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let triangleIdStart = u32(primitive.blas.y)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let internalNodeCount = u32(primitive.blas.z)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain('let leafCapacity = u32(primitive.blas.w)');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let localTriangleIndex = blasTriangleIds[triangleIdStart + leafIndex]'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain('localTriangleIndex < triangleCount');
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let triangleIndex = triangleStart + localTriangleIndex'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let nearerBlasDistance = min(leftBlasDistance, rightBlasDistance)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).toContain(
+      'let fartherBlasDistance = max(leftBlasDistance, rightBlasDistance)'
+    );
+    expect(RAY_TRACING_SCENE_SHADER).not.toContain(
+      'for (var triangleIndex = triangleStart; triangleIndex < triangleEnd; triangleIndex++)'
     );
   });
 
