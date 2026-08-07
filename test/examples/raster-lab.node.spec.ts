@@ -116,4 +116,31 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(rasterInterface).toContain('data-raster-control="contours-enabled"');
     expect(rasterInterface).toContain('data-raster-control="contour-level"');
   });
+
+  test('keeps spatial derivatives, masks, and contour composition GPU-resident', () => {
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(rasterEngine).toContain('new GPURasterGradientMagnitude(');
+    expect(rasterEngine).toContain('new GPURasterSobel(');
+    expect(rasterEngine).toContain('new GPURasterScharr(');
+    expect(rasterEngine).toContain('new GPURasterLaplacian(');
+    expect(rasterEngine).toContain('validity: this.buffers.analyzedValidity');
+    expect(rasterRenderer).toContain('uniforms.presentation.z > 0.5');
+    expect(rasterInterface).toContain('data-raster-edge="sobel"');
+    expect(rasterInterface).toContain('data-raster-edge="scharr"');
+    expect(rasterInterface).toContain('data-raster-edge="laplacian"');
+    expect(rasterInterface).toContain('data-raster-edge-direction="magnitude"');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
+  });
 });

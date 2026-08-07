@@ -84,6 +84,8 @@ try {
       nodeCount: rasterLab.nodeCount,
       executionCount: rasterLab.executionCount,
       frameCount: rasterLab.frameCount,
+      edgeMode: rasterLab.edgeMode,
+      edgeDirection: rasterLab.edgeDirection,
       contoursEnabled: rasterLab.contoursEnabled,
       contourLevel: rasterLab.contourLevel,
       contourSegmentCount: rasterLab.contourSegmentCount,
@@ -118,11 +120,36 @@ try {
     'the GPU computes the exact masked mean from its sum and count'
   );
   assert.equal(initialState.contoursEnabled, true, 'GPU contour overlays are enabled initially');
+  assert.equal(initialState.edgeMode, 'none', 'analytical edge filtering starts disabled');
+  assert.equal(initialState.edgeDirection, 'magnitude', 'gradient controls default to magnitude');
   assert(initialState.contourSegmentCount > 0, 'marching squares generates visible GPU isolines');
   assert.equal(initialState.contourOverflow, false, 'the bounded contour output fits its capacity');
   assert(
     (await page.locator('[data-raster-contour-count]').textContent()).includes('CONTOUR SEGMENTS'),
     'the map exposes the GPU-computed contour segment count'
+  );
+
+  const sidebar = page.locator('.raster-sidebar');
+  const sidebarLayout = await sidebar.evaluate(element => ({
+    height: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    overflowY: getComputedStyle(element).overflowY
+  }));
+  assert.equal(sidebarLayout.overflowY, 'auto', 'the analytical sidebar scrolls independently');
+  assert(
+    sidebarLayout.scrollHeight > sidebarLayout.height,
+    'every analytical control and lineage row remains reachable within the viewport'
+  );
+  const lineageEdge = page.locator('[data-raster-edge-state]');
+  await lineageEdge.scrollIntoViewIfNeeded();
+  const sidebarBounds = await sidebar.boundingBox();
+  const lineageBounds = await lineageEdge.boundingBox();
+  assert(
+    sidebarBounds &&
+      lineageBounds &&
+      lineageBounds.y >= sidebarBounds.y - 1 &&
+      lineageBounds.y + lineageBounds.height <= sidebarBounds.y + sidebarBounds.height + 1,
+    'GPU compute lineage can scroll into the bounded sidebar'
   );
 
   const surfaceBounds = await page.locator('[data-raster-surface]').boundingBox();
@@ -267,6 +294,243 @@ try {
     await page.evaluate(() => window.__luRasterLab.bins),
     initialState.bins,
     'switching back restores the original NDVI distribution'
+  );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  previousFrameCount = await page.evaluate(() => window.__luRasterLab.frameCount);
+  await page.locator('[data-raster-edge="sobel"]').click();
+  await page.waitForFunction(
+    ({executionCount, frameCount}) =>
+      window.__luRasterLab.edgeMode === 'sobel' &&
+      window.__luRasterLab.edgeDirection === 'magnitude' &&
+      window.__luRasterLab.executionCount > executionCount &&
+      window.__luRasterLab.frameCount > frameCount,
+    {executionCount: previousExecutionCount, frameCount: previousFrameCount}
+  );
+  const sobelMagnitudeState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    validPixelCount: window.__luRasterLab.validPixelCount,
+    bins: window.__luRasterLab.bins,
+    domain: window.__luRasterLab.domain,
+    nodeCount: window.__luRasterLab.nodeCount,
+    contourSegmentCount: window.__luRasterLab.contourSegmentCount
+  }));
+  assert.notDeepEqual(
+    sobelMagnitudeState.bins,
+    initialState.bins,
+    'Sobel magnitude recomputes the GPU analytical distribution'
+  );
+  assert(
+    sobelMagnitudeState.validPixelCount > 0 &&
+      sobelMagnitudeState.validPixelCount < initialState.validPixelCount,
+    'strict derivatives exclude invalid cloud and nodata neighborhood halos'
+  );
+  assert(sobelMagnitudeState.domain[0] >= 0, 'gradient magnitude is nonnegative');
+  assert(
+    sobelMagnitudeState.nodeCount >= initialState.nodeCount + 3,
+    'gradient magnitude composes horizontal, vertical, and magnitude GPU passes'
+  );
+  assert.equal(
+    sobelMagnitudeState.bins.reduce((total, count) => total + count, 0),
+    sobelMagnitudeState.validPixelCount,
+    'derivative histogram excludes every strictly invalid neighborhood'
+  );
+  assert(
+    sobelMagnitudeState.contourSegmentCount > 0 &&
+      sobelMagnitudeState.contourSegmentCount !== initialState.contourSegmentCount,
+    'indirect contour geometry follows the derived Sobel gradient'
+  );
+  assert.equal(
+    await page.locator('[data-raster-histogram-axis]').textContent(),
+    'SOBEL |∇|',
+    'the live histogram identifies its derivative quantity'
+  );
+  const sobelSurface = await page.screenshot({
+    clip: {
+      x: Math.ceil(surfaceBounds.x),
+      y: Math.ceil(surfaceBounds.y),
+      width: Math.floor(surfaceBounds.width) - 1,
+      height: Math.floor(surfaceBounds.height) - 1
+    }
+  });
+  assert.notDeepEqual(
+    sobelSurface,
+    contourSurface,
+    'GPU edge magnitude changes the actually presented map pixels and overlays'
+  );
+
+  previousExecutionCount = sobelMagnitudeState.executionCount;
+  await page.locator('[data-raster-edge-direction="x"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.edgeDirection === 'x' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const sobelHorizontalState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins,
+    domain: window.__luRasterLab.domain,
+    nodeCount: window.__luRasterLab.nodeCount
+  }));
+  assert(
+    sobelHorizontalState.domain[0] < 0 && sobelHorizontalState.domain[1] > 0,
+    'horizontal Sobel preserves both signed derivative directions'
+  );
+  assert.notDeepEqual(
+    sobelHorizontalState.bins,
+    sobelMagnitudeState.bins,
+    'switching to the signed X derivative changes GPU histogram values'
+  );
+  assert.equal(
+    sobelHorizontalState.nodeCount,
+    initialState.nodeCount + 1,
+    'a directional gradient contributes exactly one GPU stencil pass'
+  );
+
+  previousExecutionCount = sobelHorizontalState.executionCount;
+  await page.locator('[data-raster-edge-direction="y"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.edgeDirection === 'y' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const sobelVerticalState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins
+  }));
+  assert.notDeepEqual(
+    sobelVerticalState.bins,
+    sobelHorizontalState.bins,
+    'vertical Sobel measures a genuinely different terrain direction'
+  );
+
+  previousExecutionCount = sobelVerticalState.executionCount;
+  await page.locator('[data-raster-edge="scharr"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.edgeMode === 'scharr' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const scharrDirectionalState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins
+  }));
+  assert.notDeepEqual(
+    scharrDirectionalState.bins,
+    sobelVerticalState.bins,
+    'Scharr coefficients produce a distinct signed directional response'
+  );
+
+  previousExecutionCount = scharrDirectionalState.executionCount;
+  await page.locator('[data-raster-edge-direction="magnitude"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.edgeDirection === 'magnitude' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const scharrMagnitudeState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins,
+    contourSegmentCount: window.__luRasterLab.contourSegmentCount
+  }));
+  assert.notDeepEqual(
+    scharrMagnitudeState.bins,
+    sobelMagnitudeState.bins,
+    'Scharr magnitude retains its independently weighted analytical distribution'
+  );
+
+  previousExecutionCount = scharrMagnitudeState.executionCount;
+  await page.locator('[data-raster-smoothing="gaussian"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingMode === 'gaussian' &&
+      window.__luRasterLab.edgeMode === 'scharr' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const smoothedScharrState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins,
+    nodeCount: window.__luRasterLab.nodeCount,
+    contourSegmentCount: window.__luRasterLab.contourSegmentCount
+  }));
+  assert.notDeepEqual(
+    smoothedScharrState.bins,
+    scharrMagnitudeState.bins,
+    'Gaussian smoothing composes before Scharr magnitude in the analytical graph'
+  );
+  assert(
+    smoothedScharrState.nodeCount >= initialState.nodeCount + 5,
+    'smoothing and directional magnitude contribute all five dependent GPU passes'
+  );
+  assert.notEqual(
+    smoothedScharrState.contourSegmentCount,
+    scharrMagnitudeState.contourSegmentCount,
+    'GPU isolines follow the smoothed gradient field without host geometry readback'
+  );
+
+  previousExecutionCount = smoothedScharrState.executionCount;
+  await page.locator('[data-raster-edge="laplacian"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.edgeMode === 'laplacian' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  const laplacianState = await page.evaluate(() => ({
+    executionCount: window.__luRasterLab.executionCount,
+    bins: window.__luRasterLab.bins,
+    domain: window.__luRasterLab.domain,
+    validPixelCount: window.__luRasterLab.validPixelCount
+  }));
+  assert(
+    laplacianState.domain[0] < 0 && laplacianState.domain[1] > 0,
+    'the Laplacian preserves signed positive and negative curvature'
+  );
+  assert.notDeepEqual(
+    laplacianState.bins,
+    smoothedScharrState.bins,
+    'second-derivative curvature differs from first-derivative magnitude'
+  );
+  assert(
+    laplacianState.validPixelCount < initialState.validPixelCount,
+    'Laplacian output also rejects nodata-adjacent neighborhoods'
+  );
+  assert.equal(
+    await page.locator('[data-raster-edge-direction="x"]').isDisabled(),
+    true,
+    'the isotropic Laplacian disables directional derivative controls'
+  );
+
+  previousExecutionCount = laplacianState.executionCount;
+  await page.locator('[data-raster-edge="none"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.edgeMode === 'none' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.validPixelCount),
+    initialState.validPixelCount,
+    'disabling edge detection restores every valid smoothed source observation'
+  );
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.locator('[data-raster-smoothing="none"]').click();
+  await page.waitForFunction(
+    previousCount =>
+      window.__luRasterLab.smoothingMode === 'none' &&
+      window.__luRasterLab.executionCount > previousCount,
+    previousExecutionCount
+  );
+  assert.deepEqual(
+    await page.evaluate(() => window.__luRasterLab.bins),
+    initialState.bins,
+    'disabling smoothing and edge detection restores the original raster exactly'
   );
 
   previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
@@ -660,6 +924,26 @@ try {
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
     finalUnsmoothedState.frameCount
   );
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  previousFrameCount = await page.evaluate(() => window.__luRasterLab.frameCount);
+  await page.locator('[data-raster-edge="sobel"]').click();
+  await page.waitForFunction(
+    ({executionCount, frameCount}) =>
+      window.__luRasterLab.edgeMode === 'sobel' &&
+      window.__luRasterLab.smoothingMode === 'gaussian' &&
+      window.__luRasterLab.contoursEnabled &&
+      window.__luRasterLab.executionCount > executionCount &&
+      window.__luRasterLab.frameCount > frameCount,
+    {executionCount: previousExecutionCount, frameCount: previousFrameCount}
+  );
+  assert(
+    await page.evaluate(() => window.__luRasterLab.contourSegmentCount > 0),
+    'the final visual artifact combines smoothing, edge detection, and GPU isolines'
+  );
+  await sidebar.evaluate(element => {
+    element.scrollTop = 0;
+  });
 
   await mkdir(dirname(screenshotPath), {recursive: true});
   await page.screenshot({path: screenshotPath, fullPage: true, timeout: timeoutMilliseconds});

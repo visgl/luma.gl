@@ -37,7 +37,7 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     }
   });
 
-  test('exposes pointwise and neighborhood graph contributors without leaking root exports', () => {
+  test('exposes pointwise, neighborhood, edge, and contour contributors without root leaks', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
@@ -47,10 +47,15 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterContours).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConvolution).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGaussianBlur).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGradient).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGradientMagnitude).toBeTypeOf('function');
     expect(lurasterModule.GPURasterHistogram).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterLaplacian).toBeTypeOf('function');
     expect(lurasterModule.GPURasterNDVI).toBeTypeOf('function');
     expect(lurasterModule.GPURasterNeighborhood).toBeTypeOf('function');
     expect(lurasterModule.GPURasterOtsuThreshold).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterScharr).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterSobel).toBeTypeOf('function');
     expect(lurasterModule.GPURasterStatistics).toBeTypeOf('function');
     expect(lurasterModule.GPURasterThreshold).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTextureToBuffer).toBeTypeOf('function');

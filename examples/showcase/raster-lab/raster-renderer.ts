@@ -8,6 +8,8 @@ import type {DrawCommandBuffer} from '@luma.gl/experimental';
 
 export type RasterLabDisplayMode = 'ndvi' | 'red' | 'near-infrared';
 export type RasterLabSmoothingMode = 'none' | 'gaussian' | 'box';
+export type RasterLabEdgeMode = 'none' | 'sobel' | 'scharr' | 'laplacian';
+export type RasterLabEdgeDirection = 'magnitude' | 'x' | 'y';
 
 /** Canvas-backed rectangle in physical pixels, measured from the upper-left corner. */
 export type RasterLabViewport = {x: number; y: number; width: number; height: number};
@@ -30,6 +32,8 @@ export type RasterLabDisplaySettings = {
   smoothingMode: RasterLabSmoothingMode;
   smoothingRadius: number;
   smoothingSigma: number;
+  edgeMode: RasterLabEdgeMode;
+  edgeDirection: RasterLabEdgeDirection;
   contrast: number;
   gamma: number;
   threshold: number;
@@ -99,7 +103,21 @@ fn getVegetationColor(value: f32) -> vec3f {
   let analyzedValue = analyzedValues[pixelIndex];
   var color: vec3f;
 
-  if (displayMode < 0.5) {
+  if (uniforms.presentation.z > 0.5) {
+    let edgeStrength = clamp(abs(analyzedValue) * 2.6, 0.0, 1.0);
+    let background = vec3f(0.025, 0.042, 0.072);
+    if (uniforms.presentation.w < 0.5) {
+      let cyan = vec3f(0.09, 0.81, 0.87);
+      let amber = vec3f(1.0, 0.7, 0.22);
+      color = mix(background, cyan, smoothstep(0.0, 0.56, edgeStrength));
+      color = mix(color, amber, smoothstep(0.48, 1.0, edgeStrength));
+    } else {
+      let negative = vec3f(0.1, 0.75, 0.93);
+      let positive = vec3f(1.0, 0.66, 0.22);
+      let directionColor = select(negative, positive, analyzedValue >= 0.0);
+      color = mix(background, directionColor, smoothstep(0.0, 0.8, edgeStrength));
+    }
+  } else if (displayMode < 0.5) {
     color = getVegetationColor(analyzedValue);
     let shading = clamp(0.84 + (red + nearInfrared) * 0.18, 0.78, 1.08);
     color *= shading;
@@ -262,8 +280,8 @@ export class RasterLabRenderer {
         settings.contrast,
         settings.threshold,
         Number(settings.thresholdEnabled),
-        0,
-        0
+        Number(settings.edgeMode !== 'none'),
+        Number(settings.edgeDirection !== 'magnitude' || settings.edgeMode === 'laplacian')
       ])
     );
 

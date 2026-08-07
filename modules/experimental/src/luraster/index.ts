@@ -44,6 +44,25 @@ export type {
   GPURasterSmoothingProps
 } from './gpu-raster-convolution';
 
+export {
+  GPURasterGradient,
+  GPURasterGradientMagnitude,
+  GPURasterLaplacian,
+  GPURasterScharr,
+  GPURasterSobel
+} from './gpu-raster-edges';
+export type {
+  GPURasterEdgeProps,
+  GPURasterGradientDirection,
+  GPURasterGradientMagnitudeProps,
+  GPURasterGradientOperator,
+  GPURasterGradientProps,
+  GPURasterLaplacianConnectivity,
+  GPURasterLaplacianProps,
+  GPURasterScharrProps,
+  GPURasterSobelProps
+} from './gpu-raster-edges';
+
 export {GPURasterContrast} from './gpu-raster-contrast';
 export type {
   GPURasterContrastDomain,

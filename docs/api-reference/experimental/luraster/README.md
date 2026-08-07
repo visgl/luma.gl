@@ -8,10 +8,11 @@ submission, and optional readback.
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
 scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, mask-aware
-neighborhood stencils, direct convolution, separable Gaussian/box smoothing, GPU-resident
-marching-squares contours, indirect vector overlays, and adapter-limit planning. They implement
-`GPUCommandGraphContributor` structurally: calling `addToGraph(graph)` only declares work. No
-contributor submits commands or reads results back.
+neighborhood stencils, direct convolution, separable Gaussian/box smoothing, signed
+Sobel/Scharr/Laplacian derivatives, gradient magnitude, GPU-resident marching-squares contours,
+indirect vector overlays, and adapter-limit planning. They implement `GPUCommandGraphContributor`
+structurally: calling `addToGraph(graph)` only declares work. No contributor submits commands or
+reads results back.
 
 ```ts
 import {DrawCommandBuffer, GPUCommandGraph} from '@luma.gl/experimental';
@@ -23,10 +24,15 @@ import {
   GPURasterContrast,
   GPURasterConvolution,
   GPURasterGaussianBlur,
+  GPURasterGradient,
+  GPURasterGradientMagnitude,
   GPURasterHistogram,
+  GPURasterLaplacian,
   GPURasterNDVI,
   GPURasterNeighborhood,
   GPURasterOtsuThreshold,
+  GPURasterScharr,
+  GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
   type GPURasterBufferBand
@@ -41,9 +47,10 @@ The `./luraster` subpath is an explicit opt-in. Its runtime symbols are not expo
 The [Satellite Raster Lab](/examples/showcase/raster-lab) visualizes deterministic synthetic
 red and near-infrared imagery, GPU-derived NDVI, nodata/cloud masks, and a valid-pixel
 histogram. Layer selection, Gaussian or box smoothing, neighborhood radius, Gaussian sigma,
-contrast, gamma, manual or automatic Otsu threshold selection, denominator tolerance, and contour
-levels rebuild the actual GPU analysis pipeline. The displayed raster, histogram, and scalar
-statistics reflect the selected, smoothed, transformed, valid pixels; interpolated contour lines
+Sobel/Scharr/Laplacian edge operators, signed direction or gradient magnitude, contrast, gamma,
+manual or automatic Otsu threshold selection, denominator tolerance, and contour levels rebuild
+the actual GPU analysis pipeline. The displayed raster, histogram, and scalar statistics reflect
+the selected, smoothed, differentiated, transformed, valid pixels; interpolated contour lines
 are generated and drawn directly from GPU buffers. Only 228 bytes of scalar summaries, histogram
 bins, cutoff, and contour diagnostics are read back after graph submission. The indirect draw
 consumes its GPU-written instance count rather than a CPU-supplied count.
@@ -443,14 +450,166 @@ where preserving sharp boundaries exactly is the primary requirement. As with Ga
 smoothing, the separable box kernel performs `O(r)` taps per pixel and publishes GPU-resident
 values and validity for later graph contributors.
 
+## Directional Sobel and Scharr gradients
+
+`GPURasterSobel`, `GPURasterScharr`, and the configurable `GPURasterGradient` apply signed
+first-derivative operators to calibrated raster samples. Use a directional gradient when the
+orientation and sign of a boundary matter, such as locating transitions between water and
+vegetation or measuring horizontal versus vertical microscopy intensity changes.
+
+```ts
+new GPURasterSobel({
+  id: 'vegetation-horizontal-gradient',
+  width,
+  height,
+  input: ndviBand,
+  direction: 'x',
+  scale: 1 / 8,
+  borderMode: 'reflect',
+  output: horizontalGradientValues,
+  outputValidity: horizontalGradientValidity
+}).addToGraph(graph);
+
+new GPURasterGradient({
+  id: 'vegetation-vertical-scharr-gradient',
+  width,
+  height,
+  input: ndviBand,
+  operator: 'scharr',
+  direction: 'y',
+  scale: 1 / 32,
+  output: verticalGradientValues,
+  outputValidity: verticalGradientValidity
+}).addToGraph(graph);
+```
+
+`GPURasterSobel` is equivalent to `GPURasterGradient` with `operator: 'sobel'`;
+`GPURasterScharr` selects `operator: 'scharr'`. All three contributors use a single bounded
+`3 × 3` neighborhood pass with radius one. Their raw, row-major coefficients are:
+
+```text
+Sobel x:  [-1, 0, 1]    Sobel y:  [-1, -2, -1]
+          [-2, 0, 2]              [ 0,  0,  0]
+          [-1, 0, 1]              [ 1,  2,  1]
+
+Scharr x: [ -3, 0,  3]  Scharr y: [ -3, -10, -3]
+          [-10, 0, 10]            [  0,   0,  0]
+          [ -3, 0,  3]            [  3,  10,  3]
+```
+
+A value increasing with raster column produces a positive `x` derivative; a value increasing
+with raster row produces a positive `y` derivative. Raster rows increase downward, so `y` does
+not automatically mean north or positive projected-world Y. A unit-per-pixel ramp produces raw
+interior responses of `8` for Sobel and `32` for Scharr. The optional positive, finite `scale`
+multiplies every response and defaults to `1`: use `1 / 8` or `1 / 32` when a unit ramp should
+return approximately `1`. Signed direction and magnitude remain meaningful rather than being
+clamped to display colors.
+
+Choose Sobel for a familiar, compact first derivative with moderate perpendicular smoothing.
+Choose Scharr when improved angular symmetry makes diagonal or orientation-sensitive edges more
+useful; its stronger perpendicular weights do not imply a larger source footprint. Both operators
+evaluate the same `3 × 3` neighborhood, so Scharr does not have an algorithmic tap-count
+advantage or disadvantage here. Actual GPU cost depends on the adapter, dispatch, memory traffic,
+and measured workload.
+
+All derivatives are expressed per raster pixel, not in projected meters, geographic degrees, or
+other CRS/world units. Non-square pixel spacing, rotation, shear, orientation, or geographic
+distance requires an explicit application-side conversion using the raster affine transform and
+appropriate coordinate-reference-system semantics.
+
+The default `borderMode` is `clamp`; `reflect`, `constant`, and `nodata` reuse the same explicit
+neighborhood boundary contract described above. Raw nodata and source masks are checked before
+calibration. An invalid center or an invalid nonzero-coefficient neighbor invalidates the output;
+signed derivative coefficients cannot use smoothing-style missing-neighbor renormalization. A
+zero-coefficient position does not participate and therefore does not invalidate the response.
+Each derivative publishes separate caller-owned `float32` values and canonical `uint32`
+validity; invalid outputs remain `NaN`.
+
+## Laplacian response and second-order edges
+
+`GPURasterLaplacian` measures the signed second derivative across either four cardinal neighbors
+or all eight neighboring pixels:
+
+```ts
+new GPURasterLaplacian({
+  id: 'vegetation-second-derivative',
+  width,
+  height,
+  input: ndviBand,
+  connectivity: 4,
+  borderMode: 'reflect',
+  output: laplacianValues,
+  outputValidity: laplacianValidity
+}).addToGraph(graph);
+```
+
+`connectivity: 4` is the default and uses `[0, 1, 0, 1, -4, 1, 0, 1, 0]`; `connectivity: 8`
+uses `[1, 1, 1, 1, -8, 1, 1, 1, 1]`. Both compute neighboring samples minus the center-weighted
+sample, so an isolated bright impulse has a negative response at its center, while an isolated
+dark depression has a positive response. A constant field has zero interior response. The same
+optional positive `scale`, border policy, raw nodata, and strict validity rules apply; missing
+diagonal neighbors do not affect four-connected output because their coefficients are zero.
+
+Use the Laplacian when curvature, signed ridge/valley response, isotropic-looking boundary
+emphasis, or subsequent zero-crossing detection matters more than first-derivative orientation.
+Choose four connectivity for cardinal-only neighborhoods and eight connectivity when diagonal
+samples should participate explicitly. Second derivatives amplify local sensor noise, so apply
+`GPURasterGaussianBlur` first when the source is noisy; smoothing and Laplacian remain separate,
+declared graph stages with separately defined validity behavior. The Laplacian is not a
+replacement for directional Sobel/Scharr response when edge orientation is required.
+
+## Gradient magnitude and graph-owned scratch
+
+`GPURasterGradientMagnitude` combines horizontal and vertical first derivatives into the
+nonnegative response `sqrt(x * x + y * y)`:
+
+```ts
+new GPURasterGradientMagnitude({
+  id: 'vegetation-edge-strength',
+  width,
+  height,
+  input: ndviBand,
+  operator: 'scharr',
+  scale: 1 / 32,
+  borderMode: 'reflect',
+  output: edgeMagnitudeValues,
+  outputValidity: edgeMagnitudeValidity
+}).addToGraph(graph);
+```
+
+Use magnitude when total boundary strength matters regardless of direction: threshold candidate
+field boundaries, prepare a segmentation mask, compare edge contrast, or colorize transitions
+without treating opposite edge orientations differently. `operator` defaults to `sobel`; select
+`scharr` for the same improved angular response described above. The positive `scale` applies to
+both directional derivatives before their magnitude is combined, so `1 / 8` or `1 / 32`
+normalizes a unit horizontal or vertical ramp for its selected operator.
+
+One contributor declares three ordered GPU graph passes: the horizontal derivative, vertical
+derivative, and magnitude combination. It allocates four graph-owned transient buffers: one
+`float32` response and one `uint32` validity mask for each direction. Their logical scratch cost
+is `16 * width * height` bytes in addition to caller-owned output values and validity. The
+combination intersects both directional masks; missing samples cannot be revived or silently
+renormalized. Its magnitude pass uses a ratio-scaled hypot calculation to avoid unnecessarily
+overflowing intermediate squares and requires six available storage-buffer bindings; an
+unrepresentable final response remains invalid. Graph compilation owns and eventually releases
+scratch and compute allocations, while inputs and final outputs remain caller-owned.
+
+Directional Sobel, Scharr, and Laplacian each need one fixed-footprint `3 × 3` pass without
+additional global scratch; full gradient magnitude adds the two intermediate derivative pairs
+and a third pass. Every option scales linearly with bounded pixel count, with different dispatch
+and memory constants. These structural costs and reusable GPU-resident outputs explain when a
+particular operation is appropriate; they do not establish an unmeasured speedup over another
+implementation or a screen-space image effect.
+
 ## Raster compute versus image effects
 
 Existing luma.gl image-processing effects are useful for presentation: they transform rendered
-color textures or screen-space imagery as part of an effects pipeline. LuRaster neighborhood
-contributors instead process explicit scientific raster bands with raw nodata, source validity,
-calibration, analytical boundary policies, and separately published validity masks. Their output
-can flow directly into GPU histograms, statistics, thresholding, or later raster algorithms
-without copying intermediate pixels to the CPU.
+color textures or screen-space imagery as part of an effects pipeline. LuRaster neighborhood and
+edge contributors instead process explicit scientific raster bands with raw nodata, source
+validity, calibration, signed derivative conventions, analytical boundary policies, and
+separately published validity masks. Their output can flow directly into GPU histograms,
+statistics, thresholding, contour extraction, or later raster algorithms without copying
+intermediate pixels to the CPU.
 
 Prefer ordinary image effects when the desired result is only a visual postprocess. Prefer
 LuRaster when filtered values must retain scientific meaning, compose with reusable command
@@ -572,9 +731,10 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, derivative/morphology operators, tiled GeoTIFF/COG processing,
-connected components, tiled contour stitching, and FFT-backed raster convolution are not part of
-the current implementation.
+Percentile-based contrast, morphological dilation/erosion/opening/closing, tiled GeoTIFF/COG
+processing, connected components, tiled contour stitching, and FFT-backed raster convolution are
+not part of the current implementation. Sobel, Scharr, Laplacian, gradient magnitude, bounded
+spatial smoothing, and single-raster contour extraction are implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not

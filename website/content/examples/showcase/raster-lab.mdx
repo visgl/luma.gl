@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Analyze synthetic reflectance with GPU-native NDVI, Gaussian/box smoothing, Otsu thresholding, indirect contour overlays, exact statistics, and live histograms.
+description: Analyze synthetic reflectance with GPU-native NDVI, smoothing, Sobel/Scharr/Laplacian edges, Otsu thresholds, indirect contours, and live histograms.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -16,11 +16,13 @@ The Satellite Raster Lab generates a deterministic, entirely synthetic
 earth-observation scene with red and near-infrared reflectance bands, farmland,
 vegetation, waterways, cloud cover, and out-of-footprint nodata. Switch between
 the derived vegetation index and its source bands, apply Gaussian or box
-smoothing, adjust the kernel radius or Gaussian sigma, change analytical
-contrast or gamma, select pixels above a live classification threshold, or
-increase the denominator epsilon to reject unstable normalized-difference
-measurements. An optional Otsu control derives its threshold directly from a
-pre-threshold GPU histogram before classifying the same resident pixels.
+smoothing, adjust the kernel radius or Gaussian sigma, choose Sobel, Scharr,
+or Laplacian edge detection, switch between signed horizontal/vertical
+derivatives and nonnegative gradient magnitude, change analytical contrast or
+gamma, select pixels above a live classification threshold, or increase the
+denominator epsilon to reject unstable normalized-difference measurements.
+An optional Otsu control derives its threshold directly from a pre-threshold
+GPU histogram before classifying the same resident pixels.
 An interactive contour slider extracts real marching-squares isolines and draws
 their GPU-generated line segments through an indirect draw record; no contour
 vertices or draw counts are downloaded for rendering.
@@ -34,8 +36,12 @@ nodata. `GPURasterHistogram` composes a masked reduction with a GPU-domain
 histogram. `GPURasterGaussianBlur` and `GPURasterBoxBlur` smooth the active
 spectral band through separate horizontal and vertical GPU passes, reflecting
 raster borders and renormalizing valid neighboring samples without filling
-masked center pixels. `GPURasterContrast` then transforms that resident band
-on-device;
+masked center pixels. `GPURasterSobel`, `GPURasterScharr`, and
+`GPURasterLaplacian` optionally calculate signed directional or second-order
+responses; `GPURasterGradientMagnitude` combines two directional passes into
+nonnegative edge strength with graph-owned scratch. Missing neighbors remain
+invalid, revealing an honest nodata halo around clouds. `GPURasterContrast`
+then transforms that resident band on-device;
 `GPURasterThreshold` writes a genuine per-pixel selection mask; and
 `GPURasterStatistics` calculates masked count, sum, mean, minimum, and maximum.
 `GPURasterOtsuThreshold` can select the threshold from a separate baseline
@@ -52,10 +58,10 @@ index, contrast-adjusted active band, and validity flags directly from their GPU
 buffers. Only the two-value extent, 48 histogram bins, valid count, sum, mean,
 optional automatic threshold, and three contour diagnostics—228 bytes
 total—are copied back after submission to update visible summary statistics.
-Layer switching, smoothing mode, kernel radius, Gaussian sigma, contrast,
-gamma, thresholding, contour levels, and epsilon rebuild their specialized
-analysis graph while keeping every source and output raster buffer resident;
-source pixels are never downloaded.
+Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
+derivative direction, contrast, gamma, thresholding, contour levels, and epsilon
+rebuild their specialized analysis graph while keeping every source and output
+raster buffer resident; source pixels are never downloaded.
 
 Choose Gaussian smoothing to reduce local sensor noise while weighting nearby
 observations most strongly; choose box smoothing when a uniformly weighted
@@ -64,6 +70,19 @@ these mask-aware compute stages change the values consumed by histograms,
 statistics, and Otsu classification. Their separable kernels evaluate `O(r)`
 taps per pixel for radius `r`, compared with `O(r²)` for direct square
 convolution; actual elapsed time depends on the workload and GPU.
+
+Choose Sobel for familiar signed horizontal or vertical boundaries and Scharr
+when orientation-sensitive or diagonal edges benefit from improved angular
+response. Both use the same `3 × 3` source neighborhood; a unit-per-pixel ramp
+produces a raw response of `8` or `32`, respectively, unless an explicit
+positive output scale normalizes the result. Choose nonnegative gradient
+magnitude when overall edge strength matters more than orientation. Its three
+GPU passes allocate four graph-owned intermediate sample/validity buffers, so
+it has higher dispatch and scratch costs than a single directional pass.
+Choose the signed four-connected Laplacian for second-order boundary or
+ridge/valley response; smooth first when sensor noise would dominate. Derivatives
+use raster-pixel coordinates, not CRS/world units, and remain genuine analytical
+inputs to the displayed histogram, threshold mask, and contours.
 
 Use contour overlays when a measured scalar boundary should become reusable
 vector geometry, such as vegetation isolines or concentration thresholds.
@@ -75,5 +94,6 @@ actual performance depends on the workload, segment density, and GPU.
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
-filters, morphology, segmentation, tiled contour seams, and tiled imagery shown
-in the interface remain planned capabilities.
+measurements are not automatically projected into physical-world distances.
+Morphology, segmentation, tiled contour seams, and tiled imagery shown in the
+interface remain planned capabilities.

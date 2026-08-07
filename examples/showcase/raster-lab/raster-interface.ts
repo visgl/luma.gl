@@ -5,6 +5,8 @@
 import type {RasterLabSummary} from './raster-engine';
 import type {
   RasterLabDisplayMode,
+  RasterLabEdgeDirection,
+  RasterLabEdgeMode,
   RasterLabSmoothingMode,
   RasterLabViewport
 } from './raster-renderer';
@@ -15,6 +17,8 @@ export type RasterLabInterfaceCallbacks = {
   onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
   onSmoothingRadius?: (radius: number) => void;
   onSmoothingSigma?: (sigma: number) => void;
+  onEdgeMode?: (mode: RasterLabEdgeMode) => void;
+  onEdgeDirection?: (direction: RasterLabEdgeDirection) => void;
   onContrast?: (contrast: number) => void;
   onGamma?: (gamma: number) => void;
   onThreshold?: (threshold: number, enabled: boolean) => void;
@@ -47,6 +51,9 @@ export class RasterLabInterface {
   private readonly positionWasUpdated: boolean;
   private readonly minimumHeightWasUpdated: boolean;
   private source: RasterLabSourceSummary | null = null;
+  private mode: RasterLabDisplayMode = 'ndvi';
+  private edgeMode: RasterLabEdgeMode = 'none';
+  private edgeDirection: RasterLabEdgeDirection = 'magnitude';
   private threshold = 0.35;
   private automaticThreshold = false;
   private contoursEnabled = true;
@@ -92,7 +99,10 @@ export class RasterLabInterface {
   setSummary(summary: RasterLabSummary): void {
     const totalPixelCount = this.source?.pixelCount ?? summary.validPixelCount;
     const percentage = (summary.validPixelCount / Math.max(totalPixelCount, 1)) * 100;
-    const modeLabel = getModeLabel(summary.mode);
+    const modeLabel =
+      summary.edgeMode === 'none'
+        ? getModeLabel(summary.mode)
+        : `${summary.edgeMode.toUpperCase()} ${summary.edgeMode === 'laplacian' ? 'Δ' : summary.edgeDirection === 'magnitude' ? '|∇|' : summary.edgeDirection.toUpperCase()}`;
     this.getElement('[data-raster-valid-label]').textContent = summary.thresholdEnabled
       ? 'Selected observations'
       : 'Valid observations';
@@ -117,6 +127,10 @@ export class RasterLabInterface {
       summary.smoothingMode === 'none'
         ? 'off'
         : `${summary.smoothingMode === 'gaussian' ? 'GAUSS' : 'BOX'} r${summary.smoothingRadius}`;
+    this.getElement('[data-raster-edge-state]').textContent =
+      summary.edgeMode === 'none'
+        ? 'off'
+        : `${summary.edgeMode.toUpperCase()} ${summary.edgeMode === 'laplacian' ? 'Δ' : summary.edgeDirection.toUpperCase()}`;
     this.getElement('[data-raster-threshold-state]').textContent = summary.thresholdEnabled
       ? `${summary.automaticThreshold ? 'AUTO ' : ''}≥ ${summary.threshold.toFixed(2)}`
       : 'off';
@@ -134,22 +148,11 @@ export class RasterLabInterface {
   }
 
   setMode(mode: RasterLabDisplayMode): void {
+    this.mode = mode;
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-raster-mode]')) {
       button.setAttribute('aria-pressed', String(button.dataset['rasterMode'] === mode));
     }
-    const title =
-      mode === 'ndvi'
-        ? 'Vegetation index · false color'
-        : mode === 'red'
-          ? 'Red reflectance · false color'
-          : 'Near-infrared reflectance · false color';
-    this.getElement('[data-raster-map-title]').textContent = title;
-    const legend = this.getElement('[data-raster-legend]');
-    legend.dataset['mode'] = mode;
-    this.getElement('[data-raster-legend-minimum]').textContent =
-      mode === 'ndvi' ? 'Water / bare' : 'Low response';
-    this.getElement('[data-raster-legend-maximum]').textContent =
-      mode === 'ndvi' ? 'Dense canopy' : 'High response';
+    this.updateMapPresentation();
   }
 
   setSmoothingMode(mode: RasterLabSmoothingMode): void {
@@ -168,6 +171,32 @@ export class RasterLabInterface {
   setSmoothingSigma(sigma: number): void {
     this.getElement('[data-raster-smoothing-sigma-value]').textContent = sigma.toFixed(2);
     this.getInput('smoothing-sigma').value = String(sigma);
+  }
+
+  setEdgeMode(mode: RasterLabEdgeMode): void {
+    this.edgeMode = mode;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-raster-edge]')) {
+      button.setAttribute('aria-pressed', String(button.dataset['rasterEdge'] === mode));
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-edge-direction]'
+    )) {
+      button.disabled = mode === 'none' || mode === 'laplacian';
+    }
+    this.updateMapPresentation();
+  }
+
+  setEdgeDirection(direction: RasterLabEdgeDirection): void {
+    this.edgeDirection = direction;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-edge-direction]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterEdgeDirection'] === direction)
+      );
+    }
+    this.updateMapPresentation();
   }
 
   setContrast(contrast: number): void {
@@ -277,6 +306,25 @@ export class RasterLabInterface {
         this.callbacks.onSmoothingMode?.(smoothingMode);
         return;
       }
+      const edgeButton = target.closest<HTMLButtonElement>('[data-raster-edge]');
+      const edgeMode = edgeButton?.dataset['rasterEdge'];
+      if (
+        edgeMode === 'none' ||
+        edgeMode === 'sobel' ||
+        edgeMode === 'scharr' ||
+        edgeMode === 'laplacian'
+      ) {
+        this.setEdgeMode(edgeMode);
+        this.callbacks.onEdgeMode?.(edgeMode);
+        return;
+      }
+      const directionButton = target.closest<HTMLButtonElement>('[data-raster-edge-direction]');
+      const direction = directionButton?.dataset['rasterEdgeDirection'];
+      if (direction === 'magnitude' || direction === 'x' || direction === 'y') {
+        this.setEdgeDirection(direction);
+        this.callbacks.onEdgeDirection?.(direction);
+        return;
+      }
       const button = target.closest<HTMLButtonElement>('[data-raster-mode]');
       const mode = button?.dataset['rasterMode'];
       if (mode === 'ndvi' || mode === 'red' || mode === 'near-infrared') {
@@ -360,10 +408,20 @@ export class RasterLabInterface {
     const [minimum, maximum] = summary.domain;
     const bars = Array.from(summary.bins, (count, index) => {
       const value = minimum + ((index + 0.5) / summary.bins.length) * (maximum - minimum);
-      const normalizedValue =
-        summary.mode === 'ndvi' ? clamp((value + 0.2) / 1.1, 0, 1) : clamp(value, 0, 1);
-      const hue =
-        summary.mode === 'red'
+      const edgeResponse = summary.edgeMode !== 'none';
+      const signedEdge = summary.edgeMode === 'laplacian' || summary.edgeDirection !== 'magnitude';
+      const normalizedValue = edgeResponse
+        ? clamp((value - minimum) / Math.max(maximum - minimum, 0.000001), 0, 1)
+        : summary.mode === 'ndvi'
+          ? clamp((value + 0.2) / 1.1, 0, 1)
+          : clamp(value, 0, 1);
+      const hue = edgeResponse
+        ? signedEdge
+          ? value < 0
+            ? 194
+            : 36
+          : Math.round(193 - normalizedValue * 150)
+        : summary.mode === 'red'
           ? Math.round(10 + normalizedValue * 30)
           : summary.mode === 'near-infrared'
             ? Math.round(205 - normalizedValue * 55)
@@ -374,6 +432,44 @@ export class RasterLabInterface {
       return `<span class="raster-histogram-bar" data-raster-count="${count}" data-raster-value="${value}" style="--raster-height:${height}%;--raster-color:${color}" title="${value.toFixed(2)} · ${NUMBER_FORMATTER.format(count)} pixels"></span>`;
     });
     this.getElement('[data-raster-histogram]').innerHTML = bars.join('');
+  }
+
+  private updateMapPresentation(): void {
+    const edgeIsSigned = this.edgeDirection !== 'magnitude' || this.edgeMode === 'laplacian';
+    const title =
+      this.edgeMode === 'none'
+        ? this.mode === 'ndvi'
+          ? 'Vegetation index · false color'
+          : this.mode === 'red'
+            ? 'Red reflectance · false color'
+            : 'Near-infrared reflectance · false color'
+        : this.edgeMode === 'laplacian'
+          ? 'Laplacian curvature · signed response'
+          : `${this.edgeMode === 'sobel' ? 'Sobel' : 'Scharr'} ${
+              this.edgeDirection === 'magnitude'
+                ? 'gradient magnitude'
+                : `${this.edgeDirection.toUpperCase()} directional gradient`
+            } · boundary response`;
+    this.getElement('[data-raster-map-title]').textContent = title;
+    const legend = this.getElement('[data-raster-legend]');
+    legend.dataset['mode'] =
+      this.edgeMode === 'none' ? this.mode : edgeIsSigned ? 'edge-signed' : 'edge-magnitude';
+    this.getElement('[data-raster-legend-minimum]').textContent =
+      this.edgeMode === 'none'
+        ? this.mode === 'ndvi'
+          ? 'Water / bare'
+          : 'Low response'
+        : edgeIsSigned
+          ? 'Negative slope'
+          : 'Low gradient';
+    this.getElement('[data-raster-legend-maximum]').textContent =
+      this.edgeMode === 'none'
+        ? this.mode === 'ndvi'
+          ? 'Dense canopy'
+          : 'High response'
+        : edgeIsSigned
+          ? 'Positive slope'
+          : 'Strong boundary';
   }
 
   private getInput(control: string): HTMLInputElement {
@@ -450,7 +546,7 @@ function makeRasterLabMarkup(): string {
                 <span data-raster-legend-maximum>Dense canopy</span>
               </div>
             </div>
-            <span class="raster-map-note">Hatching = cloud / nodata</span>
+            <span class="raster-map-note">Hatching = cloud / invalid halo</span>
           </div>
         </section>
 
@@ -480,6 +576,20 @@ function makeRasterLabMarkup(): string {
                 <span class="raster-control-label">Gaussian sigma <span class="raster-control-value" data-raster-smoothing-sigma-value>1.25</span></span>
                 <input class="raster-slider" data-raster-control="smoothing-sigma" type="range" min="0.35" max="4" step="0.05" value="1.25" disabled />
               </label>
+            </div>
+            <div class="raster-control raster-edge-control">
+              <span class="raster-control-label">Boundary detection <span class="raster-kicker">GPU stencil</span></span>
+              <div class="raster-edge-buttons" aria-label="Edge detection operator">
+                <button class="raster-mode-button" data-raster-edge="none" aria-pressed="true">OFF</button>
+                <button class="raster-mode-button" data-raster-edge="sobel" aria-pressed="false">SOBEL</button>
+                <button class="raster-mode-button" data-raster-edge="scharr" aria-pressed="false">SCHARR</button>
+                <button class="raster-mode-button" data-raster-edge="laplacian" aria-pressed="false">LAPLACIAN</button>
+              </div>
+              <div class="raster-edge-direction-buttons" aria-label="Gradient direction">
+                <button class="raster-mode-button" data-raster-edge-direction="magnitude" aria-pressed="true" disabled>MAGNITUDE</button>
+                <button class="raster-mode-button" data-raster-edge-direction="x" aria-pressed="false" disabled>∂X</button>
+                <button class="raster-mode-button" data-raster-edge-direction="y" aria-pressed="false" disabled>∂Y</button>
+              </div>
             </div>
             <label class="raster-control">
               <span class="raster-control-label">Analysis contrast <span class="raster-control-value" data-raster-contrast-value>1.15×</span></span>
@@ -528,7 +638,7 @@ function makeRasterLabMarkup(): string {
               <span data-raster-histogram-maximum>—</span>
             </div>
             <div class="raster-histogram-caption">
-              Smoothing, contours, and histograms share one GPU graph; only 228 summary bytes are read.
+              Smoothing, gradients, and contours share one GPU graph; only 228 summary bytes are read.
             </div>
           </section>
 
@@ -541,10 +651,11 @@ function makeRasterLabMarkup(): string {
             <div class="raster-pipeline-step"><span class="raster-step-number">02</span><span class="raster-step-name">Validity + nodata</span><span class="raster-step-state">mask</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">03</span><span class="raster-step-name">Normalized difference</span><span class="raster-step-state">NDVI</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">04</span><span class="raster-step-name">Separable smoothing</span><span class="raster-step-state" data-raster-smoothing-state>off</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">05</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">06</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">07</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
-            <div class="raster-pipeline-step"><span class="raster-step-number">08</span><span class="raster-step-name">Indirect contour lines</span><span class="raster-step-state" data-raster-contour-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">05</span><span class="raster-step-name">Analytical gradient</span><span class="raster-step-state" data-raster-edge-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">06</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">07</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">08</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">09</span><span class="raster-step-name">Indirect contour lines</span><span class="raster-step-state" data-raster-contour-state>off</span></div>
             <div class="raster-histogram-caption" data-raster-footprint>Allocating GPU buffers</div>
           </section>
         </aside>
@@ -553,7 +664,6 @@ function makeRasterLabMarkup(): string {
       <footer class="raster-footer">
         <div class="raster-roadmap" aria-label="Planned raster capabilities">
           <span class="raster-kicker">Coming next</span>
-          <span class="raster-roadmap-chip">Gradients</span>
           <span class="raster-roadmap-chip">Morphology</span>
           <span class="raster-roadmap-chip">Segmentation</span>
           <span class="raster-roadmap-chip">Tiled contour seams</span>
