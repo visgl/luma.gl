@@ -12,7 +12,10 @@ explicitly budgeted CPU/GPU tile residency, cancellation-safe loading, and reusa
 graphs around that reader. `GPURasterTileHaloAssembler` coordinates cumulative receptive-field
 planning and fence-safe neighboring tile leases; `GPURasterTileHaloFill` and
 `GPURasterTileCoreExtract` explicitly assemble native samples and publish seam-safe owned cores
-through the caller's command graph. The reader, cache, and assembler never submit commands.
+through the caller's command graph. `GPURasterOverview` and
+`GPURasterCategoricalOverview` separately generate nodata-aware analytical overview values and
+coverage without mistaking source-selected samples or presentation mipmaps for scientific
+reductions. The reader, cache, and assembler never submit commands.
 
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
@@ -28,6 +31,7 @@ import {DrawCommandBuffer, GPUCommandGraph} from '@luma.gl/experimental';
 import {
   GPURasterBandMath,
   GPURasterBoxBlur,
+  GPURasterCategoricalOverview,
   GPURasterClosing,
   GPURasterContourClassifier,
   GPURasterContours,
@@ -45,6 +49,7 @@ import {
   GPURasterNeighborhood,
   GPURasterOpening,
   GPURasterOtsuThreshold,
+  GPURasterOverview,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
@@ -54,8 +59,15 @@ import {
   GPURasterTileHaloAssembler,
   GPURasterTileHaloFill,
   GPURasterTileReader,
+  makeRasterOverviewMetadata,
   type GPURasterBufferBand,
+  type GPURasterCategoricalOverviewFormat,
+  type GPURasterCategoricalOverviewProps,
   type GPURasterDecodedBand,
+  type GPURasterOverviewCategoricalPolicy,
+  type GPURasterOverviewMetadataOptions,
+  type GPURasterOverviewProps,
+  type GPURasterOverviewScale,
   type GPURasterTileGraphLease,
   type GPURasterTileHaloLease,
   type GPURasterTileHaloRequest,
@@ -102,8 +114,16 @@ source tile independently or **SEAMLESS HALO** to gather real neighboring reside
 run smoothing, derivatives, and grayscale morphology over the cumulative padded region, and
 extract only the selected half-open core before displaying its statistics. Cumulative halo,
 owned-core bounds, and resident-source counts update with analytical controls and the chosen
-overview. Its 2× source overview still selects existing nearest samples, not a nodata-aware
-aggregate; generated analytical overviews and global tiled reductions remain separate work.
+source overview. Choose **SOURCE NEAREST** to use the adapter's existing nearest-sample 2×
+overview, or **GPU MEAN** to generate a validity-aware mean from native source observations;
+**MASK NEAREST** and **MASK MODE** become available in GPU-generated mode and select exact
+categorical coverage policies. Provenance and valid coverage distinguish the resulting
+analytical inputs without increasing the 228-byte readback. The current example deliberately
+makes **GPU MEAN** and **SEAMLESS HALO** mutually
+exclusive: selecting either switches the other back to its compatible source/tile mode. All
+analytical filters work on generated means, and source-nearest overviews retain their complete
+seam-safe path; composing native halo assembly before generated overviews remains future demo
+work. Global tiled reductions remain separate work.
 
 ## Raster bands and validity
 
@@ -314,10 +334,159 @@ HTTP range transport, GeoTIFF/COG decoder, loader package, GPU upload, or cache 
 Applications that need bounded upload, residency, eviction, deduplicated concurrent requests,
 and graph reuse can explicitly compose it with `GPURasterTileCache`, described below.
 `GPURasterTileHaloAssembler` can then acquire the complete neighboring coverage required by an
-explicitly declared analytical pipeline. None of these objects stitches contour geometry,
-merges global tiled statistics, or generates nodata-aware analytical overviews. Existing source
-overviews are accepted as source-provided samples; their scientific aggregation policy remains
-application-owned.
+explicitly declared analytical pipeline. None of these reader, cache, or halo objects stitches
+contour geometry, merges global tiled statistics, or implicitly generates analytical overviews.
+Existing source overviews are accepted as source-provided samples; their scientific aggregation
+policy remains application-owned. Applications explicitly compose `GPURasterOverview` or
+`GPURasterCategoricalOverview` when a verified GPU-generated policy is required.
+
+## GPU-generated analytical overviews
+
+Use an existing source-provided overview when its source-side sampling or reduction policy is
+known, its lower resolution avoids unnecessary decoding or upload, and its analytical meaning
+is appropriate for the task. Use `GPURasterOverview` when continuous floating-point observations
+must be reduced on the GPU without treating nodata as zero, discarding valid-sample weights, or
+averaging intermediate averages. Use `GPURasterCategoricalOverview` when classification labels
+need an explicit nearest-sample or most-frequent-label policy without fractional interpolation.
+
+Generated overviews are distinct from source-provided `GPURasterTileReader` levels. They do not
+register new source levels, replace a decoder, select a transport, discover a GeoTIFF pyramid,
+or move source samples between CPU and GPU. Each contributor adds one explicit compute pass to
+the caller's command graph and writes only caller-owned output views.
+
+### Floating means, nodata, and valid coverage
+
+`GPURasterOverview` consumes a `float32` source band and publishes four separate packed output
+views: the analytical mean, canonical `uint32` validity, calibrated `float32` sum, and `uint32`
+valid-sample count.
+
+```ts
+const generatedMetadata = makeRasterOverviewMetadata(sourceMetadata, [2, 3]);
+
+new GPURasterOverview({
+  id: 'nodata-aware-reflectance-overview',
+  metadata: sourceMetadata,
+  scale: [2, 3],
+  input: reflectanceBand,
+  output: overviewValues,
+  outputValidity: overviewValidity,
+  sum: overviewSums,
+  validCount: overviewValidCounts
+}).addToGraph(graph);
+```
+
+The reducer first intersects the explicit source validity mask, raw nodata sentinel, and
+finite raw observation. Source calibration is applied exactly once as
+`rawValue * input.scale + input.offset`; non-finite calibrated results are excluded. The parent
+value is the sum of remaining calibrated observations divided by their valid count, not by the
+nominal footprint area. A `2 × 2` footprint containing `[10, invalid, 30, invalid]` therefore
+publishes sum `40`, count `2`, mean `20`, and validity `1`. An entirely invalid footprint
+publishes sum `0`, count `0`, validity `0`, and a canonical quiet `NaN` mean.
+
+Odd right and bottom edges use only existing source observations; missing coverage is not
+zero-padded. Retaining the sum and count separately makes population coverage and correctly
+weighted downstream pyramid levels available without downloading samples.
+
+### Weighted multilevel pyramids
+
+Forward both sum and valid count when reducing an already generated mean. Supply an explicit
+maximum number of raw observations that any input parent can represent:
+
+```ts
+new GPURasterOverview({
+  id: 'weighted-coarser-overview',
+  metadata: generatedMetadata,
+  scale: 2,
+  input: firstOverviewBand,
+  inputSum: overviewSums,
+  inputValidCount: overviewValidCounts,
+  maximumInputValidCount: 6,
+  output: coarserValues,
+  outputValidity: coarserValidity,
+  sum: coarserSums,
+  validCount: coarserValidCounts
+}).addToGraph(graph);
+```
+
+For parent inputs with `(sum, count)` of `(10, 1)` and `(60, 3)`, the correct next-level mean
+is `(10 + 60) / (1 + 3) = 17.5`; averaging their intermediate means `(10 + 20) / 2 = 15`
+would bias the smaller population. Weighted levels consume the already calibrated sums directly
+and never apply source calibration a second time.
+
+`inputSum` and `inputValidCount` must be supplied together, and weighted mode requires
+`maximumInputValidCount`. Construction rejects any configuration whose maximum
+`horizontalScale * verticalScale * maximumInputValidCount` could exceed the `uint32` count
+range. An observed child count above its declared bound invalidates the parent instead of
+wrapping or silently publishing incorrect coverage.
+
+### Exact categorical nearest and mode
+
+`GPURasterCategoricalOverview` preserves either `uint32` or `sint32` source identities and
+requires an explicit categorical policy:
+
+```ts
+new GPURasterCategoricalOverview({
+  id: 'land-cover-majority-overview',
+  metadata: sourceMetadata,
+  scale: [2, 2],
+  input: landCoverLabels,
+  policy: 'mode',
+  output: overviewLabels,
+  outputValidity: overviewLabelValidity,
+  validCount: overviewLabelCoverage
+}).addToGraph(graph);
+```
+
+Choose `'nearest'` when a representative existing sample is required. Even-sized footprints
+select the upper-left of their central candidates. If that selected observation is masked or
+matches raw nodata, the result is invalid; it does not silently substitute a different valid
+label. Choose `'mode'` when the most frequent valid label better represents a region. Invalid
+samples are ignored, and equal frequencies deterministically select the numerically smallest
+exact label. Negative signed categories and unsigned identifiers above `2²⁴` remain native
+integers rather than passing through `float32`.
+
+`outputValidity` is always explicit. An invalid categorical parent publishes value `0` with
+validity `0`; a valid category whose identity is actually zero remains distinguishable through
+validity `1`. Optional `validCount` reports the number of valid observations in the complete
+footprint for either policy, including valid alternatives when a nearest-selected center is
+itself invalid.
+
+### Spatial metadata, grid alignment, and cost
+
+`GPURasterOverviewScale` accepts an integer or `[horizontalScale, verticalScale]`; each axis
+must be between `1` and `8`. Output dimensions use independent ceiling division, so a `5 × 7`
+source at `[2, 3]` produces `3 × 3` parents. `makeRasterOverviewMetadata` derives the same
+target metadata as either contributor without allocating GPU resources:
+
+```ts
+const metadata = makeRasterOverviewMetadata(sourceMetadata, [2, 3], {
+  level: 2,
+  sourcePixelOrigin: [4, 6]
+});
+```
+
+For an already positioned source affine `[a, b, c, d, e, f]`, the generated affine is
+`[a * sx, b * sy, c, d * sx, e * sy, f]`. Existing source translations `c` and `f` stay
+unchanged, including rotated or sheared grids; source coordinate-reference-system identity,
+pixel interpretation, and level-zero origin are preserved. The target level defaults to the
+source level plus one, and an explicitly supplied level must be greater than its source level.
+
+The source origin must align with both reduction axes. When a level-zero source omits
+`sourcePixelOrigin`, LuRaster infers its `levelZeroOrigin` or `[0, 0]` and rejects globally
+misaligned translated tiles. A higher-level source with a nonzero `levelZeroOrigin` must supply
+`sourcePixelOrigin` explicitly in its current-level pixel coordinates; its level-zero origin
+alone cannot safely recover that current-level grid position. An explicit origin verifies
+alignment only: source metadata already contains the correct affine translation and preserved
+level-zero origin, so the helper never translates either value a second time.
+
+The floating reduction evaluates up to `horizontalScale * verticalScale` observations per
+output pixel. Categorical mode additionally compares bounded candidate frequencies and can
+cost quadratically more within that footprint. Lower-resolution GPU-resident outputs may
+reduce work in later histograms, filters, and rendering, but reductions also allocate explicit
+output/sum/count/mask buffers and add a graph pass. Throughput depends on scale, nodata density,
+categorical policy, source residency, memory bandwidth, adapter limits, and the measured GPU;
+neither display-oriented image effects nor ordinary texture mipmaps preserve these analytical
+validity, weighting, categorical, or affine contracts.
 
 ## Bounded tile residency and compiled-graph reuse
 
@@ -623,9 +792,11 @@ downstream analytical values and bounded residency, unlike a framebuffer-only im
 but it does not guarantee a universal performance improvement.
 
 Halo planning and graph contributors do not automatically write one global stitched image,
-deduplicate contour segments across tiles, merge dataset-wide histograms, generate analytical
-overviews, or integrate a GeoTIFF/COG transport. Applications own result placement and command
-submission; those additional feature contracts remain separate roadmap tranches.
+deduplicate contour segments across tiles, merge dataset-wide histograms, or integrate a
+GeoTIFF/COG transport. Applications explicitly add `GPURasterOverview` or
+`GPURasterCategoricalOverview` when generated overviews are needed; halo contributors do not
+add them implicitly. Applications own result placement and command submission; automatic
+full-image stitching, contour seam ownership, and global statistics remain separate work.
 
 ### Analytical tiling versus screen-space image effects
 
@@ -646,9 +817,10 @@ determine actual performance.
 
 Bounded residency alone does not assemble neighborhoods or decide output ownership; applications
 explicitly compose `GPURasterTileHaloAssembler`, `GPURasterTileHaloFill`, and
-`GPURasterTileCoreExtract` when those contracts are required. Automatic full-image output
-stitching, contour seam ownership, dataset-wide statistic merges, and generated analytical
-overviews remain separate roadmap tranches.
+`GPURasterTileCoreExtract` when those contracts are required, or the separate analytical
+overview contributors when a verified GPU-generated reduction is needed. Automatic full-image
+output stitching, contour seam ownership, and dataset-wide statistic merges remain separate
+roadmap tranches.
 
 ## Pointwise band math
 
@@ -1529,15 +1701,16 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, built-in GeoTIFF/COG decoding, generated analytical overviews,
-global merged statistics, connected components, tiled contour stitching, automatic whole-image
-result placement, and FFT-backed raster convolution are not part of the current implementation.
+Percentile-based contrast, built-in GeoTIFF/COG decoding, global merged statistics, connected
+components, tiled contour stitching, automatic whole-image result placement, and FFT-backed
+raster convolution are not part of the current implementation.
 Application-owned tile ingress, source-provided overviews/windows, independently budgeted
 multi-tile CPU/GPU residency, fence-safe eviction, compatible compiled-graph reuse, explicit
 cumulative neighborhood halo planning and native-format GPU assembly, half-open core
-extraction, Sobel, Scharr, Laplacian, gradient magnitude, bounded spatial smoothing,
-binary/grayscale dilation, erosion, opening, closing, and single-raster contour extraction are
-implemented.
+extraction, nodata-aware calibrated floating-point overview means and weighted pyramids, exact
+integer categorical nearest/mode overviews, generated affine/CRS metadata, Sobel, Scharr,
+Laplacian, gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion,
+opening, closing, and single-raster contour extraction are implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not
