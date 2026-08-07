@@ -53,6 +53,7 @@ import {
   type GPURasterDecodedBand,
   type GPURasterTileGraphLease,
   type GPURasterTileLease,
+  type GPURasterTileRequest,
   type GPURasterTileSource
 } from '@luma.gl/experimental/luraster';
 ```
@@ -170,15 +171,15 @@ const source: GPURasterTileSource = {
 
 const reader = new GPURasterTileReader(source);
 const controller = new AbortController();
-const decoded = await reader.readTile(
-  {
-    level: 1,
-    pixelBounds: [256, 128, 768, 640],
-    coordinateSpace: 'level-zero',
-    bandIds: ['red', 'near-infrared']
-  },
-  controller.signal
-);
+const request = {
+  level: 1,
+  pixelBounds: [256, 128, 768, 640],
+  coordinateSpace: 'level-zero',
+  bandIds: ['red', 'near-infrared']
+} satisfies GPURasterTileRequest;
+const normalizedRequest = reader.normalizeTileRequest(request);
+// normalizedRequest.pixelBounds is [128, 64, 384, 320] in level coordinates.
+const decoded = await reader.readTile(normalizedRequest, controller.signal);
 
 // The application uploads decoded.bands and their separate validity arrays into its own graph.
 ```
@@ -212,6 +213,14 @@ arrays, malformed masks, or mismatched metadata are rejected rather than silentl
 The reader passes the adapter a normalized request with explicit `bandIds`, level-local
 `pixelBounds`, and `coordinateSpace: 'level'`; the adapter returns complete matching bounds,
 translated metadata, and bands in the requested order.
+
+Call `reader.normalizeTileRequest(request)` when application scheduling, deduplication, or cache
+identity needs the same validated request that the source adapter will receive. An omitted band
+list expands to every source band in metadata order; omitted bounds expand to the complete
+selected level or addressed tile; an omitted coordinate space defaults to `'level'`; and
+equivalent level-zero windows project into the same clipped, half-open level-space bounds.
+Explicit tile column/row identity and selected band order remain meaningful and are preserved.
+Invalid requests fail before source decoding or GPU allocation.
 
 ### Native typed arrays and validity
 
@@ -369,9 +378,14 @@ preserve the normal post-submit fence boundary.
 
 ### Independent CPU/GPU budgets and eviction
 
-`maxTiles` and `maxGraphs` independently bound the resident entry counts. `maxCpuBytes` bounds
-decoded native-format values and unique decoded validity arrays; the same `Uint32Array` validity
-object shared by two bands is counted once. `maxGpuBytes` bounds three disjoint allocation sets:
+`maxTiles` and `maxGraphs` independently bound the resident entry counts. `maxCpuBytes` counts
+the full `byteLength` of every distinct `ArrayBuffer` or `SharedArrayBuffer` retained by each
+tile's decoded sample and validity views. Several views into one backing allocation, including
+a validity array shared by multiple bands, count that allocation once for the tile. A small
+subarray backed by a large pooled slab retains the entire slab and is therefore charged for its
+full allocation, not merely its visible view range. Use appropriately sized dedicated backing
+allocations or a budget large enough for the retained pool. `maxGpuBytes` bounds three disjoint
+allocation sets:
 
 - Unique cache-owned uploaded native band and validity buffers, counted by their actual
   `buffer.byteLength`. One shared validity array produces one shared GPU buffer.
@@ -412,11 +426,14 @@ repack an entire source raster, download samples, submit commands, or hide synch
 
 ### Concurrent requests and cancellation
 
-Concurrent equivalent requests share one application-source read and one upload. Every caller
+Concurrent equivalent requests share one application-source read and one upload. Identity uses
+the reader's validated, normalized request rather than the raw caller spelling, so omitted and
+explicit all-band selections, omitted and explicit full windows, default and explicit
+`coordinateSpace: 'level'`, and equivalent level-zero/level-local windows coalesce. Every caller
 receives its own lease and may cancel its own `AbortSignal`; canceling one waiter does not cancel
 other callers waiting for the same tile. The underlying source read can be aborted after its
-last interested waiter goes away. Changing the requested overview, window, addressing, or
-selected-band order creates a separate request identity.
+last interested waiter goes away. Changing the normalized overview, window, explicit tile
+addressing, or selected-band order creates a separate request identity.
 
 Cancel superseded viewport requests promptly, but do not use request cancellation as a GPU fence.
 An already acquired tile or graph remains alive while its lease is pinned, including while
@@ -627,10 +644,12 @@ new GPURasterContrast({
 }).addToGraph(graph);
 ```
 
-`mode: 'linear'` applies midpoint-centered contrast; `mode: 'gamma'` additionally applies a
-normalized gamma transform. Both literal `[minimum, maximum]` domains and caller-owned two-row
-GPU domains are supported. For `mode: 'equalize'`, pass an existing `uint32` histogram in the
-same domain; the contributor computes an inclusive CDF in graph-owned transient storage.
+`mode: 'linear'` applies midpoint-centered contrast and never applies gamma, even when a
+nondefault `gamma` value is supplied. `mode: 'gamma'` additionally applies the normalized gamma
+transform; select it explicitly when nonlinear correction is intended. Both literal
+`[minimum, maximum]` domains and caller-owned two-row GPU domains are supported. For
+`mode: 'equalize'`, pass an existing `uint32` histogram in the same domain; the contributor
+computes an inclusive CDF in graph-owned transient storage.
 Degenerate or all-invalid histograms have explicit behavior, and no source pixels are copied
 back. Percentile-domain estimation and `rgba8unorm` presentation conversion are not yet
 implemented.
@@ -1150,6 +1169,10 @@ first pass calibrates the original scalar band; the second pass consumes already
 `float32` scratch without reapplying scale or offset. Binary composition preserves canonical
 `uint32` foreground throughout. Neither operation revives an invalid center.
 
+Both contributors snapshot their normalized options and input-band metadata at construction.
+Later mutations to the caller's props, band description, or storage descriptor cannot change the
+scheduled passes, borrowed source/output views, or reported `requiredHalo`.
+
 ## Structuring elements, borders, and nodata
 
 Every morphology contributor requires an integer `radius` between `0` and `8`, inclusive.
@@ -1269,7 +1292,7 @@ an optional GPU-written indirect draw count without reading the raster or segmen
 const contourCommands = new DrawCommandBuffer(device, {
   id: 'vegetation-contour-draw',
   type: 'draw',
-  commands: [{vertexCount: 2, instanceCount: 0}]
+  commands: [{vertexCount: 2, instanceCount: 0, firstVertex: 0, firstInstance: 0}]
 });
 
 new GPURasterContours({
@@ -1294,8 +1317,10 @@ contourCommands.draw(renderPass, 0);
 Its length must therefore be even. `segmentCount` is clamped to vertex capacity, `overflow`
 signals truncated output, and optional `requiredSegmentCount` reports the original
 unclamped requirement. Cases are emitted in deterministic row-major order. The draw record
-must describe a non-indexed, two-vertex instanced line; only its instance count is rewritten
-on the GPU.
+describes a non-indexed, two-vertex instanced line. Every encoding publishes the complete
+four-word indirect command: `vertexCount: 2`, the capacity-clamped `instanceCount`,
+`firstVertex: 0`, and `firstInstance: 0`. This remains valid when the selected indirect-command
+slot was zero-initialized or reused for a different draw.
 
 Coordinates remain raster-local `float32` pixel positions. Pixel-area rasters use pixel
 centers; point-sampled rasters use integer sample coordinates. Preserve the supplied affine

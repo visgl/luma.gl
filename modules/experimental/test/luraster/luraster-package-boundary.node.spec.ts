@@ -97,6 +97,9 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterTileGraphLease).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTileLease).toBeTypeOf('function');
     expect(lurasterModule.GPURasterTileReader).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterTileReader.prototype.normalizeTileRequest).toBeTypeOf(
+      'function'
+    );
     expect(lurasterModule.GPURasterTextureToBuffer).toBeTypeOf('function');
     expect(lurasterModule.getRasterDeviceLimits).toBeTypeOf('function');
     expect(lurasterModule.planRasterDispatchStripes).toBeTypeOf('function');

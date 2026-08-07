@@ -136,6 +136,11 @@ export class GPURasterTileReader {
     this.validateMetadata();
   }
 
+  /** Canonicalizes defaults, selected bands, clipped windows, and overview coordinates. */
+  normalizeTileRequest(request: GPURasterTileRequest): GPURasterTileRequest {
+    return this.normalizeRequest(request).request;
+  }
+
   /** Reads one normalized CPU tile and rejects promptly on preflight, in-flight, or final abort. */
   async readTile(
     request: GPURasterTileRequest,

@@ -124,6 +124,16 @@ for (const exportName of requiredRuntimeExportNames) {
   assert.equal(typeof ecmaScriptRasterModule[exportName], 'function');
   assert.equal(typeof commonJsRasterModule[exportName], 'function');
 }
+assert.equal(
+  typeof ecmaScriptRasterModule.GPURasterTileReader.prototype.normalizeTileRequest,
+  'function',
+  'ESM tile readers expose validated canonical request normalization'
+);
+assert.equal(
+  typeof commonJsRasterModule.GPURasterTileReader.prototype.normalizeTileRequest,
+  'function',
+  'CommonJS tile readers expose validated canonical request normalization'
+);
 for (const exportName of ecmaScriptExportNames) {
   assert.equal(
     exportName in ecmaScriptRootModule,
@@ -394,6 +404,9 @@ const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrO
 const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
 const configuredTileCache = new GPURasterTileCache(tileCacheOptions);
 const configuredTileReader = new GPURasterTileReader(tileSource);
+const normalizedTileRequest: GPURasterTileRequest = configuredTileReader.normalizeTileRequest(
+  tileRequest
+);
 const residentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(tileRequest);
 const cancelledResidentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(
   tileRequest,
@@ -671,6 +684,7 @@ void configuredScharr;
 void configuredSobel;
 void configuredTileCache;
 void configuredTileReader;
+void normalizedTileRequest;
 void residentTilePromise;
 void cancelledResidentTilePromise;
 void graphLeasePromise;

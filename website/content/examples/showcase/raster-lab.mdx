@@ -52,6 +52,9 @@ browser application still owns source generation, cancellation policy, graph
 construction, command submission, and completion fences; one tile is analyzed
 at a time while multiple previously visited tiles can remain resident. It does
 not install a GeoTIFF decoder or download real satellite imagery.
+Normalized source requests expand omitted bands and full windows, default to
+level-local coordinates, and map equivalent level-zero windows to the same
+cache identity before any duplicate decoding or upload.
 `GPURasterNDVI` computes `(nearInfrared - red) / (nearInfrared + red)` directly
 from GPU-resident source bands while intersecting source validity and exact raw
 nodata. `GPURasterHistogram` composes a masked reduction with a GPU-domain
@@ -75,7 +78,8 @@ minimum, and maximum.
 histogram without introducing a CPU synchronization point.
 `GPURasterContours` classifies valid four-corner cells, resolves ambiguous
 saddles, scans their segment counts, scatters interpolated line geometry, and
-updates a GPU-resident indirect draw record in that same command graph. Binary
+publishes all four fields of a GPU-resident non-indexed indirect draw record in
+that same command graph. Binary
 morphology contours classify the foreground mask at a fixed level of `0.5`;
 grayscale contours retain their adjustable analytical level.
 The histogram consumes that same mask and GPU-resident extent, so excluded
@@ -109,10 +113,13 @@ resources still referenced by submitted commands. Shutdown must preserve that
 same fence boundary; immediately releasing active leases provides no GPU
 completion guarantee.
 
-The CPU budget counts decoded native sample arrays and unique validity masks.
-The GPU budget counts uploaded native bands/masks, actual compiled-graph
-physical transient allocations, and separately declared application-owned
-analysis/output resources without double-counting imported tile buffers.
+The CPU budget counts the full allocation of each distinct `ArrayBuffer` or
+`SharedArrayBuffer` retained by a tile's decoded sample and validity views.
+Several views sharing one backing allocation count it once; a small view into a
+large pooled slab still retains and is charged for the entire slab. The GPU
+budget counts uploaded native bands/masks, actual compiled-graph physical
+transient allocations, and separately declared application-owned analysis/output
+resources without double-counting imported tile buffers.
 These limits bound allocation by selected tile shapes and graph variants rather
 than full source dimensions. Cache and graph hits can avoid repeated decoder,
 upload, and compilation work, but actual performance still depends on source

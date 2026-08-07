@@ -106,6 +106,38 @@ describe('GPURasterTileCache budgets and exact ownership', () => {
     cache.destroy();
   });
 
+  test.each([
+    ['ArrayBuffer', () => new ArrayBuffer(4096)],
+    ['SharedArrayBuffer', () => new SharedArrayBuffer(4096)]
+  ])('accounts for the entire retained %s allocation exactly once', async (_name, createBacking) => {
+    const source = new SyntheticTileSource();
+    source.retainedBacking = createBacking();
+    source.retainedBackingOffset = 128;
+    const {cache, device} = makeFixture({maxCpuBytes: 4096}, source);
+    const lease = await cache.acquire({level: 0, column: 0, row: 0});
+
+    expect(lease.tile.cpuByteLength).toBe(4096);
+    expect(lease.tile.gpuByteLength).toBe(TILE_BYTES);
+    expect(cache.stats).toMatchObject({cpuBytes: 4096, gpuBytes: TILE_BYTES});
+    expect(device.createBuffer).toHaveBeenCalledTimes(4);
+    lease.release();
+    cache.destroy();
+  });
+
+  test('rejects oversized pooled backing allocations before creating any GPU buffer', async () => {
+    const source = new SyntheticTileSource();
+    source.retainedBacking = new ArrayBuffer(8192);
+    source.retainedBackingOffset = 256;
+    const {cache, device} = makeFixture({maxCpuBytes: 4096}, source);
+
+    await expect(cache.acquire({level: 0, column: 0, row: 0})).rejects.toThrow(/budget/);
+
+    expect(source.requests).toHaveLength(1);
+    expect(device.createBuffer).not.toHaveBeenCalled();
+    expect(cache.stats).toMatchObject({residentTiles: 0, cpuBytes: 0, gpuBytes: 0});
+    cache.destroy();
+  });
+
   test('reuses identical resident tiles without reading or uploading them again', async () => {
     const {source, cache, buffers} = makeFixture();
     const first = await cache.acquire({level: 0, column: 0, row: 0});
@@ -122,7 +154,99 @@ describe('GPURasterTileCache budgets and exact ownership', () => {
     cache.destroy();
   });
 
-  test('keeps full-level identity, ordered bands, windows, and coordinate spaces distinct', async () => {
+  test('reuses canonical default and full-window variants while the sole tile is pinned', async () => {
+    const {source, cache, buffers} = makeFixture({maxTiles: 1});
+    const initial = await cache.acquire({level: 0, column: 0, row: 0});
+    const equivalent = await Promise.all([
+      cache.acquire({
+        level: 0,
+        column: 0,
+        row: 0,
+        bandIds: ['red', 'labels', 'signed'],
+        pixelBounds: [0, 0, 4, 4],
+        coordinateSpace: 'level'
+      }),
+      cache.acquire({
+        level: 0,
+        column: 0,
+        row: 0,
+        pixelBounds: [0, 0, 40, 40],
+        coordinateSpace: 'level-zero'
+      })
+    ]);
+
+    expect(equivalent.every(lease => lease.tile === initial.tile)).toBe(true);
+    expect(source.requests).toHaveLength(1);
+    expect(buffers).toHaveLength(4);
+    expect(cache.stats).toMatchObject({
+      residentTiles: 1,
+      pinnedTiles: 1,
+      tileHits: 2,
+      tileMisses: 1
+    });
+    for (const lease of equivalent) lease.release();
+    initial.release();
+    cache.destroy();
+  });
+
+  test('coalesces omitted and explicit full-level defaults with a pinned one-tile budget', async () => {
+    const {source, cache, device} = makeFixture({maxTiles: 1});
+    const defaultRequest = await cache.acquire({level: 0});
+    const explicitRequest = await cache.acquire({
+      level: 0,
+      bandIds: ['red', 'labels', 'signed'],
+      pixelBounds: [0, 0, source.metadata.width, source.metadata.height],
+      coordinateSpace: 'level'
+    });
+
+    expect(explicitRequest.tile).toBe(defaultRequest.tile);
+    expect(source.requests).toHaveLength(1);
+    expect(device.createBuffer).toHaveBeenCalledTimes(4);
+    expect(cache.stats).toMatchObject({residentTiles: 1, tileHits: 1, tileMisses: 1});
+    explicitRequest.release();
+    defaultRequest.release();
+    cache.destroy();
+  });
+
+  test('coalesces equivalent overview windows before a max-one tile admission', async () => {
+    const source = new SyntheticTileSource();
+    const gate = makeDeferred<void>();
+    source.readGate = gate.promise;
+    const {cache, device} = makeFixture({maxTiles: 1}, source);
+    const levelCoordinates = cache.acquire({
+      level: 1,
+      column: 1,
+      row: 0,
+      pixelBounds: [2, 0, 4, 2]
+    });
+    const levelZeroCoordinates = cache.acquire({
+      level: 1,
+      column: 1,
+      row: 0,
+      pixelBounds: [4, 0, 8, 4],
+      coordinateSpace: 'level-zero'
+    });
+    const defaultWindow = cache.acquire({level: 1, column: 1, row: 0});
+
+    expect(source.requests).toHaveLength(1);
+    gate.resolve();
+    const leases = await Promise.all([levelCoordinates, levelZeroCoordinates, defaultWindow]);
+
+    expect(leases.every(lease => lease.tile === leases[0].tile)).toBe(true);
+    expect(source.requests[0]).toMatchObject({
+      level: 1,
+      column: 1,
+      row: 0,
+      pixelBounds: [2, 0, 4, 2],
+      coordinateSpace: 'level'
+    });
+    expect(device.createBuffer).toHaveBeenCalledTimes(4);
+    expect(cache.stats).toMatchObject({residentTiles: 1, tileHits: 2, tileMisses: 1});
+    for (const lease of leases) lease.release();
+    cache.destroy();
+  });
+
+  test('keeps full-level identity, ordered bands, and effective windows distinct', async () => {
     const {source, cache} = makeFixture({maxTiles: 8});
     const leases = await Promise.all([
       cache.acquire({level: 0}),
@@ -139,8 +263,8 @@ describe('GPURasterTileCache budgets and exact ownership', () => {
       })
     ]);
 
-    expect(source.requests).toHaveLength(6);
-    expect(cache.stats.residentTiles).toBe(6);
+    expect(source.requests).toHaveLength(5);
+    expect(cache.stats).toMatchObject({residentTiles: 5, tileHits: 1, tileMisses: 5});
     for (const lease of leases) lease.release();
     cache.destroy();
   });
@@ -576,6 +700,8 @@ class SyntheticTileSource implements GPURasterTileSource {
   readonly signals: AbortSignal[] = [];
   readGate?: Promise<void>;
   shareSampleBacking = false;
+  retainedBacking?: ArrayBufferLike;
+  retainedBackingOffset = 0;
 
   async readTile(
     request: GPURasterTileRequest,
@@ -585,7 +711,13 @@ class SyntheticTileSource implements GPURasterTileSource {
     this.signals.push(signal);
     if (this.readGate) await this.readGate;
     signal.throwIfAborted();
-    return makeDecodedTile(this.metadata, request, this.shareSampleBacking);
+    return makeDecodedTile(
+      this.metadata,
+      request,
+      this.shareSampleBacking,
+      this.retainedBacking,
+      this.retainedBackingOffset
+    );
   }
 }
 
@@ -625,7 +757,9 @@ function makeBudgets(): GPURasterTileCacheBudgets {
 function makeDecodedTile(
   metadata: GPURasterTileSourceMetadata,
   request: GPURasterTileRequest,
-  shareSampleBacking: boolean
+  shareSampleBacking: boolean,
+  retainedBacking?: ArrayBufferLike,
+  retainedBackingOffset = 0
 ): GPURasterDecodedTile {
   const level = metadata.levels.find(candidate => candidate.level === request.level)!;
   const bounds = request.pixelBounds as GPURasterPixelBounds;
@@ -634,9 +768,11 @@ function makeDecodedTile(
   const pixelCount = width * height;
   const originColumn = bounds[0] * level.downsample[0];
   const originRow = bounds[1] * level.downsample[1];
-  const sharedValidity = Uint32Array.from({length: pixelCount}, (_unused, index) =>
-    index === 1 ? 0 : 1
-  );
+  const sharedValidity = retainedBacking
+    ? new Uint32Array(retainedBacking, retainedBackingOffset + pixelCount * 3 * 4, pixelCount)
+    : new Uint32Array(pixelCount);
+  sharedValidity.fill(1);
+  if (pixelCount > 1) sharedValidity[1] = 0;
   const sharedSamples = shareSampleBacking ? new ArrayBuffer(pixelCount * 4) : undefined;
   const bands = (request.bandIds ?? metadata.bands.map(band => band.id)).map(identifier => {
     const band = metadata.bands.find(candidate => candidate.id === identifier)!;
@@ -644,17 +780,35 @@ function makeDecodedTile(
       case 'float32':
         return {
           ...band,
-          values: sharedSamples ? new Float32Array(sharedSamples) : new Float32Array(pixelCount),
+          values: retainedBacking
+            ? new Float32Array(retainedBacking, retainedBackingOffset, pixelCount)
+            : sharedSamples
+              ? new Float32Array(sharedSamples)
+              : new Float32Array(pixelCount),
           validity: sharedValidity
         } as GPURasterDecodedBand;
       case 'uint32':
         return {
           ...band,
-          values: sharedSamples ? new Uint32Array(sharedSamples) : new Uint32Array(pixelCount),
+          values: retainedBacking
+            ? new Uint32Array(retainedBacking, retainedBackingOffset + pixelCount * 4, pixelCount)
+            : sharedSamples
+              ? new Uint32Array(sharedSamples)
+              : new Uint32Array(pixelCount),
           validity: sharedValidity
         } as GPURasterDecodedBand;
       case 'sint32':
-        return {...band, values: new Int32Array(pixelCount), validity: sharedValidity};
+        return {
+          ...band,
+          values: retainedBacking
+            ? new Int32Array(
+                retainedBacking,
+                retainedBackingOffset + pixelCount * 2 * 4,
+                pixelCount
+              )
+            : new Int32Array(pixelCount),
+          validity: sharedValidity
+        };
     }
   });
   const [

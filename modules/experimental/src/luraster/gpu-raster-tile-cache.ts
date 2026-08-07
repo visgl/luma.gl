@@ -285,7 +285,8 @@ export class GPURasterTileCache {
   ): Promise<GPURasterTileLease> {
     this.assertAvailable();
     throwIfAborted(signal);
-    const key = makeTileRequestKey(this.reader, request);
+    const normalizedRequest = this.reader.normalizeTileRequest(request);
+    const key = makeTileRequestKey(this.reader, normalizedRequest);
     const resident = this.tiles.get(key);
     if (resident) {
       this.totalTileHits++;
@@ -309,7 +310,7 @@ export class GPURasterTileCache {
         settled: false
       };
       this.inFlightTiles.set(key, pending);
-      pending.promise = this.loadTile(key, request, controller.signal)
+      pending.promise = this.loadTile(key, normalizedRequest, controller.signal)
         .then(record => {
           pending!.deliveryRecord = record;
           return record;
@@ -410,7 +411,7 @@ export class GPURasterTileCache {
     throwIfAborted(signal);
     this.assertAvailable();
     const uploadViews = collectUploadViews(decoded);
-    const cpuByteLength = countUniqueViewBytes(uploadViews);
+    const cpuByteLength = countUniqueBackingBytes(uploadViews);
     const estimatedGpuByteLength = uploadViews.reduce((total, view) => total + view.byteLength, 0);
     this.reserve({tiles: 1, graphs: 0, cpuBytes: cpuByteLength, gpuBytes: estimatedGpuByteLength});
     throwIfAborted(signal);
@@ -762,29 +763,11 @@ function collectUploadViews(decoded: GPURasterDecodedTile): ArrayBufferView[] {
   return Array.from(views);
 }
 
-function countUniqueViewBytes(views: readonly ArrayBufferView[]): number {
-  const rangesByBuffer = new Map<ArrayBufferLike, Array<[number, number]>>();
-  for (const view of views) {
-    const ranges = rangesByBuffer.get(view.buffer) ?? [];
-    ranges.push([view.byteOffset, view.byteOffset + view.byteLength]);
-    rangesByBuffer.set(view.buffer, ranges);
-  }
+function countUniqueBackingBytes(views: readonly ArrayBufferView[]): number {
+  const backingBuffers = new Set<ArrayBufferLike>();
+  for (const view of views) backingBuffers.add(view.buffer);
   let total = 0;
-  for (const ranges of rangesByBuffer.values()) {
-    ranges.sort((first, second) => first[0] - second[0]);
-    let minimum = ranges[0][0];
-    let maximum = ranges[0][1];
-    for (const [start, end] of ranges.slice(1)) {
-      if (start > maximum) {
-        total += maximum - minimum;
-        minimum = start;
-        maximum = end;
-      } else {
-        maximum = Math.max(maximum, end);
-      }
-    }
-    total += maximum - minimum;
-  }
+  for (const backingBuffer of backingBuffers) total += backingBuffer.byteLength;
   return total;
 }
 

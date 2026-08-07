@@ -93,8 +93,8 @@ test('LuRaster contours scatter stable affine-local geometry and update a GPU-on
     id: 'contour-indirect',
     type: 'draw',
     commands: [
-      {vertexCount: 2, instanceCount: 7},
-      {vertexCount: 2, instanceCount: 0}
+      {vertexCount: 5, instanceCount: 7, firstVertex: 3, firstInstance: 9},
+      {vertexCount: 19, instanceCount: 123, firstVertex: 11, firstInstance: 17}
     ]
   });
   const draw = drawCommands.importToGraph(graph);
@@ -137,8 +137,8 @@ test('LuRaster contours scatter stable affine-local geometry and update a GPU-on
   );
   testCase.deepEqual(
     await readUint32(drawCommands.buffer, 8),
-    [2, 7, 0, 0, 2, 4, 0, 0],
-    'GPU writes only the selected indirect record instance count'
+    [5, 7, 3, 9, 2, 4, 0, 0],
+    'GPU resets the entire selected indirect record while preserving adjacent commands'
   );
 
   levelBuffer.write(Float32Array.from([99, 2]));
@@ -150,8 +150,8 @@ test('LuRaster contours scatter stable affine-local geometry and update a GPU-on
   );
   testCase.deepEqual(
     await readUint32(drawCommands.buffer, 8),
-    [2, 7, 0, 0, 2, 0, 0, 0],
-    'empty contours clear the indirect draw count without CPU polling'
+    [5, 7, 3, 9, 2, 0, 0, 0],
+    'empty contours reset the entire selected indirect command without CPU polling'
   );
 
   compiled.destroy();
@@ -245,7 +245,7 @@ test('LuRaster empty cell grids publish zero counts and clear indirect instances
   const drawCommands = new DrawCommandBuffer(device, {
     id: 'empty-contour-indirect',
     type: 'draw',
-    commands: [{vertexCount: 2, instanceCount: 17}]
+    commands: [{vertexCount: 13, instanceCount: 17, firstVertex: 19, firstInstance: 23}]
   });
 
   new GPURasterContours({

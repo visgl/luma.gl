@@ -456,7 +456,7 @@ fn main() {
     }`
       : '';
     const resultExpression =
-      this.mode !== 'equalize' && this.gamma === 1
+      this.mode === 'linear' || (this.mode === 'gamma' && this.gamma === 1)
         ? this.contrast === 1
           ? 'clamp(calibratedSample, domainMinimum, domainMaximum)'
           : `clamp((calibratedSample - (domainMinimum + domainWidth * 0.5)) * ${getRasterFloatLiteral(this.contrast)} + domainMinimum + domainWidth * 0.5, domainMinimum, domainMaximum)`

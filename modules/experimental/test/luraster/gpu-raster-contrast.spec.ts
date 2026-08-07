@@ -156,6 +156,82 @@ test('LuRasterContrast preserves calibrated domains, validity, and offset-aligne
   testCase.end();
 });
 
+test('LuRasterContrast applies gamma only when gamma mode is explicitly selected', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU is not available');
+    testCase.end();
+    return;
+  }
+
+  const graph = new GPUCommandGraph(device, {id: 'raster-explicit-gamma-mode'});
+  const sourceBuffer = makeInputBuffer(
+    device,
+    Float32Array.from([-1, -0.5, 0, 0.5, 1, Number.NaN])
+  );
+  const linearOutput = makeOutputBuffer(device, 6);
+  const linearValidity = makeOutputBuffer(device, 6);
+  const gammaOutput = makeOutputBuffer(device, 6);
+  const gammaValidity = makeOutputBuffer(device, 6);
+  const input: GPURasterBufferBand<'float32'> = {
+    id: 'source',
+    format: 'float32',
+    storage: {kind: 'buffer', values: importView(graph, 'source', sourceBuffer, 'float32', 6)}
+  };
+
+  new GPURasterContrast({
+    id: 'linear-ignores-gamma',
+    width: 3,
+    height: 2,
+    input,
+    output: importView(graph, 'linear-output', linearOutput, 'float32', 6),
+    outputValidity: importView(graph, 'linear-validity', linearValidity, 'uint32', 6),
+    domain: [-1, 1],
+    contrast: 1.5,
+    gamma: 2,
+    mode: 'linear'
+  }).addToGraph(graph);
+  new GPURasterContrast({
+    id: 'gamma-applies-correction',
+    width: 3,
+    height: 2,
+    input,
+    output: importView(graph, 'gamma-output', gammaOutput, 'float32', 6),
+    outputValidity: importView(graph, 'gamma-validity', gammaValidity, 'uint32', 6),
+    domain: [-1, 1],
+    contrast: 1.5,
+    gamma: 2,
+    mode: 'gamma'
+  }).addToGraph(graph);
+
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'explicit-gamma-mode');
+  assertApproximateValues(testCase, await readFloat32(linearOutput, 6), [
+    -1,
+    -0.75,
+    0,
+    0.75,
+    1,
+    Number.NaN
+  ]);
+  assertApproximateValues(testCase, await readFloat32(gammaOutput, 6), [
+    -1,
+    2 * Math.sqrt(0.125) - 1,
+    Math.SQRT2 - 1,
+    2 * Math.sqrt(0.875) - 1,
+    1,
+    Number.NaN
+  ]);
+  testCase.deepEqual(await readUint32(linearValidity, 6), [1, 1, 1, 1, 1, 0]);
+  testCase.deepEqual(await readUint32(gammaValidity, 6), [1, 1, 1, 1, 1, 0]);
+
+  compiled.destroy();
+  for (const buffer of [sourceBuffer, linearOutput, linearValidity, gammaOutput, gammaValidity]) {
+    buffer.destroy();
+  }
+  testCase.end();
+});
+
 test('LuRasterContrast compares native signed and unsigned nodata before float32 calibration', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
