@@ -7,6 +7,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {describe, expect, test} from 'vitest';
 import GPUTraceViewerAnimationLoopTemplate from '../../examples/experimental/gpu-trace-viewer/app';
 import {
+  getTraceFocusFrontierCapacity,
   TRACE_COLLAPSED_STATE,
   TRACE_DENSITY_BIN_COUNT,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
@@ -55,9 +56,11 @@ describe('GPU hierarchical trace viewer', () => {
           dependencyResults: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
+            byteLength: number;
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
           };
           dependencyCount: number;
+          focusFrontierCapacity: number;
           spanCount: number;
           spanBatchCount: number;
           dependencyBatchCount: number;
@@ -85,6 +88,9 @@ describe('GPU hierarchical trace viewer', () => {
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
+      expect(state.resources.focusFrontierCapacity).toBe(
+        getTraceFocusFrontierCapacity(state.resources.spanCount, state.resources.dependencyCount)
+      );
       expect(state.resources.dependencyBatchCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
@@ -321,13 +327,15 @@ describe('GPU hierarchical trace viewer', () => {
       expect(focusedCounts[1] + focusedCounts[5] + focusedCounts[9]).toBeLessThanOrEqual(
         firstCounts[1] + firstCounts[5] + firstCounts[9]
       );
+      expect(state.resources.reachedSpans.byteLength).toBe(
+        Math.ceil(state.resources.spanCount / 32) * Uint32Array.BYTES_PER_ELEMENT
+      );
       const reachedBytes = await state.resources.reachedSpans.readAsync(
-        29 * Uint32Array.BYTES_PER_ELEMENT,
+        0,
         Uint32Array.BYTES_PER_ELEMENT
       );
-      expect(new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0]).toBe(
-        state.frameIndex
-      );
+      const reachedWord = new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0];
+      expect(reachedWord & (1 << 29)).not.toBe(0);
       focusOnly!.checked = false;
       focusOnly!.dispatchEvent(new Event('change', {bubbles: true}));
       expect(state.focusOnly).toBe(false);

@@ -182,7 +182,8 @@ struct VertexOutput {
   let laneY = 1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0;
   let pulse = 0.84 + 0.16 * sin(span.start * 0.13 + f32(lane) * 0.31);
   let isSelected = sourceIndex == viewUniforms.selectedSpanIndex;
-  let isReached = reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+  let isReached =
+    (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   let hasSelection = viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusOpacity = select(1.0, select(0.22, 1.0, isReached), hasSelection);
   let baseColor = getGroupColor(span.group) * pulse;
@@ -365,7 +366,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Seeds a generation-tagged compact focus frontier and its first indirect dispatch. */
+/** Seeds a bit-packed compact focus frontier and its first indirect dispatch. */
 export function getFocusFrontierSeedShader(spanCount: number): string {
   return /* wgsl */ `
 const SPAN_COUNT: u32 = ${spanCount}u;
@@ -383,7 +384,7 @@ fn main() {
   var count = 0u;
   let seed = selectedSeeds[0];
   if (activeSeedCount[0] != 0u && seed < SPAN_COUNT) {
-    atomicStore(&reachedSpans[seed], focusTraversalState[1]);
+    atomicOr(&reachedSpans[seed >> 5u], 1u << (seed & 31u));
     frontier[0] = seed;
     count = 1u;
   }
@@ -391,6 +392,20 @@ fn main() {
   dispatchCommand[0] = (count + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
   dispatchCommand[1] = 1u;
   dispatchCommand[2] = 1u;
+}`;
+}
+
+/** Clears the compact focus-reachability bitset before the next traversal. */
+export function getFocusReachabilityClearShader(wordCount: number): string {
+  return /* wgsl */ `
+const WORD_COUNT: u32 = ${wordCount}u;
+@group(0) @binding(0) var<storage, read_write> reachedSpans: array<u32>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  if (globalId.x < WORD_COUNT) {
+    reachedSpans[globalId.x] = 0u;
+  }
 }`;
 }
 
@@ -409,10 +424,11 @@ fn main() {
 }`;
 }
 
-/** Expands one CSR partition from a compact frontier into a generation-tagged next frontier. */
+/** Expands one CSR partition from a compact frontier into a bit-packed next frontier. */
 export function getFocusFrontierExpansionShader(options: {
   spanCount: number;
-  sourceNodeBase: number;
+  frontierCapacity: number;
+  nodeWordBase: number;
   sourceNodeCount: number;
   offsetWordBase: number;
   neighborWordBase: number;
@@ -421,13 +437,14 @@ export function getFocusFrontierExpansionShader(options: {
 }): string {
   return /* wgsl */ `
 const SPAN_COUNT: u32 = ${options.spanCount}u;
-const SOURCE_NODE_BASE: u32 = ${options.sourceNodeBase}u;
+const FRONTIER_CAPACITY: u32 = ${options.frontierCapacity}u;
+const NODE_WORD_BASE: u32 = ${options.nodeWordBase}u;
 const SOURCE_NODE_COUNT: u32 = ${options.sourceNodeCount}u;
 const OFFSET_WORD_BASE: u32 = ${options.offsetWordBase}u;
 const NEIGHBOR_WORD_BASE: u32 = ${options.neighborWordBase}u;
 const NEIGHBOR_COUNT: u32 = ${options.neighborCount}u;
 const DEPTH: u32 = ${options.depth}u;
-@group(0) @binding(0) var<storage, read> offsets: array<u32>;
+@group(0) @binding(0) var<storage, read> topology: array<u32>;
 @group(0) @binding(1) var<storage, read> neighbors: array<u32>;
 @group(0) @binding(2) var<storage, read> frontier: array<u32>;
 @group(0) @binding(3) var<storage, read> frontierCount: array<u32>;
@@ -436,6 +453,24 @@ const DEPTH: u32 = ${options.depth}u;
 @group(0) @binding(6) var<storage, read_write> reachedSpans: array<atomic<u32>>;
 @group(0) @binding(7) var<storage, read> focusTraversalState: array<u32>;
 
+fn findSparseRow(sourceIndex: u32) -> u32 {
+  var low = 0u;
+  var high = SOURCE_NODE_COUNT;
+  while (low < high) {
+    let middle = low + (high - low) / 2u;
+    let node = topology[NODE_WORD_BASE + middle];
+    if (node < sourceIndex) {
+      low = middle + 1u;
+    } else {
+      high = middle;
+    }
+  }
+  if (low < SOURCE_NODE_COUNT && topology[NODE_WORD_BASE + low] == sourceIndex) {
+    return low;
+  }
+  return 0xffffffffu;
+}
+
 @compute @workgroup_size(${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let frontierIndex = globalId.x;
@@ -443,19 +478,19 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     return;
   }
   let sourceIndex = frontier[frontierIndex];
-  if (sourceIndex < SOURCE_NODE_BASE || sourceIndex - SOURCE_NODE_BASE >= SOURCE_NODE_COUNT) {
+  let localSourceIndex = findSparseRow(sourceIndex);
+  if (localSourceIndex == 0xffffffffu) {
     return;
   }
-  let localSourceIndex = sourceIndex - SOURCE_NODE_BASE;
-  let firstNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex], NEIGHBOR_COUNT);
-  let lastNeighbor = min(offsets[OFFSET_WORD_BASE + localSourceIndex + 1u], NEIGHBOR_COUNT);
+  let firstNeighbor = min(topology[OFFSET_WORD_BASE + localSourceIndex], NEIGHBOR_COUNT);
+  let lastNeighbor = min(topology[OFFSET_WORD_BASE + localSourceIndex + 1u], NEIGHBOR_COUNT);
   for (var neighborIndex = firstNeighbor; neighborIndex < lastNeighbor; neighborIndex++) {
     let neighbor = neighbors[NEIGHBOR_WORD_BASE + neighborIndex];
+    let reachedMask = 1u << (neighbor & 31u);
     if (neighbor < SPAN_COUNT &&
-      atomicExchange(&reachedSpans[neighbor], focusTraversalState[1]) !=
-        focusTraversalState[1]) {
+      (atomicOr(&reachedSpans[neighbor >> 5u], reachedMask) & reachedMask) == 0u) {
       let nextIndex = atomicAdd(&nextFrontierCount[0], 1u);
-      if (nextIndex < SPAN_COUNT) {
+      if (nextIndex < FRONTIER_CAPACITY) {
         nextFrontier[nextIndex] = neighbor;
       }
     }
@@ -579,7 +614,7 @@ fn main(
   let focusEnabled =
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
-    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+    (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   let densityVisible = sourceVisible && (isDensityMode() || !processExpanded);
   if (densityVisible && focusVisible) {
     let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
@@ -677,7 +712,7 @@ fn main(
   let focusEnabled =
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
-    reachedSpans[sourceIndex] == viewUniforms.visibilityGeneration;
+    (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   visibilityFlags[sourceIndex - CHUNK_FIRST_SPAN_INDEX] = select(
     0u,
     viewUniforms.visibilityGeneration,
