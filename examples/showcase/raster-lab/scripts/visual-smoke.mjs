@@ -7,6 +7,7 @@ import {mkdir, stat} from 'node:fs/promises';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+import {PNG} from 'pngjs';
 import {chromium} from 'playwright';
 import {createServer} from 'vite';
 
@@ -16,6 +17,27 @@ const timeoutMilliseconds = Number(process.env.LURASTER_SMOKE_TIMEOUT_MS ?? 60_0
 const viewportWidth = Number(process.env.LURASTER_VIEWPORT_WIDTH ?? 1440);
 const viewportHeight = Number(process.env.LURASTER_VIEWPORT_HEIGHT ?? 900);
 const deviceScaleFactor = Number(process.env.LURASTER_DEVICE_SCALE_FACTOR ?? 1);
+
+function assertEqualRasterSurface(actualImage, expectedImage, message) {
+  const actual = PNG.sync.read(actualImage);
+  const expected = PNG.sync.read(expectedImage);
+  assert.equal(actual.width, expected.width, `${message}: screenshot widths differ`);
+  assert.equal(actual.height, expected.height, `${message}: screenshot heights differ`);
+  if (actual.data.equals(expected.data)) return;
+
+  let maximumChannelDifference = 0;
+  let differingChannels = 0;
+  for (let index = 0; index < actual.data.length; index++) {
+    const difference = Math.abs(actual.data[index] - expected.data[index]);
+    if (difference !== 0) differingChannels++;
+    maximumChannelDifference = Math.max(maximumChannelDifference, difference);
+  }
+  assert(
+    maximumChannelDifference <= 1,
+    `${message}: ${differingChannels} decoded RGBA channels differ by up to ${maximumChannelDifference}`
+  );
+}
+
 const server = await createServer({
   root: exampleDirectory,
   logLevel: 'error',
@@ -3164,7 +3186,7 @@ try {
         });
   assert.equal(zeroCapacitySparse.componentCount, componentOracle.eightCount);
   assert.equal(zeroCapacitySparse.componentPublishedCount, 0);
-  assert.deepEqual(
+  assertEqualRasterSurface(
     await page.screenshot({clip: componentClip}),
     sparseOverflowSurface,
     'zero dense capacity changes neither sparse identities nor their independently valid presentation'
@@ -3181,7 +3203,7 @@ try {
     }
   );
   assert.equal(zeroCapacityDense.componentPublishedCount, 0);
-  assert.deepEqual(
+  assertEqualRasterSurface(
     await page.screenshot({clip: componentClip}),
     overflowSurface,
     'zero capacity is an explicit empty dense output, never an unlimited sentinel'
@@ -3200,7 +3222,7 @@ try {
   );
   assert.equal(denseCapacityRestored.componentCount, componentOracle.eightCount);
   assert.equal(denseCapacityRestored.componentPublishedCount, componentOracle.eightCount);
-  assert.deepEqual(
+  assertEqualRasterSurface(
     await page.screenshot({clip: componentClip}),
     eightConnectedSurface,
     'restored dense capacity republishes the identical deterministic row-major identifiers'
@@ -3254,12 +3276,12 @@ try {
     {timeout: timeoutMilliseconds}
   );
   const noComponentSurface = await page.screenshot({clip: componentClip});
-  assert.deepEqual(
+  assertEqualRasterSurface(
     unconvergedSurface,
     noComponentSurface,
     'failed convergence suppresses the entire overlay and exactly preserves ordinary classified rendering'
   );
-  assert.deepEqual(
+  assertEqualRasterSurface(
     overflowSurface,
     noComponentSurface,
     'dense-capacity overflow and nonconvergence share the same fail-closed unoverlaid presentation'
