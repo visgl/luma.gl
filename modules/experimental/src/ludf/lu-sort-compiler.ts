@@ -18,6 +18,7 @@ import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addLuAnalyticsComputePass,
   getLuAnalyticsShaderType,
+  getLuAnalyticsInvocationIndexSource,
   getLuAnalyticsVector,
   validateLuAnalyticsSource,
   type LuAnalyticsScalarFormat
@@ -264,8 +265,11 @@ ${validityBinding}
 @group(0) @binding(${keyBindingIndex + 1}) var<storage, read_write> outputIndices: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, chunk.input.length)}
   if (index < ELEMENT_COUNT) {
     let value = inputValues[INPUT_OFFSET + index];
     let isNull = ${isNull};
@@ -357,8 +361,11 @@ ${validityBinding}
 @group(0) @binding(${outputBindingIndex}) var<storage, read_write> outputClasses: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, chunk.input.length)}
   if (index < ELEMENT_COUNT) {
     let localIndex = sortedIndices[INDEX_OFFSET + index];
     let value = inputValues[INPUT_OFFSET + localIndex];
@@ -426,8 +433,11 @@ const ROW_LIMIT: u32 = ${props.limit}u;
 @group(0) @binding(4) var<storage, read_write> selectedCounts: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, props.sortedIndices.length)}
   if (index < ELEMENT_COUNT) {
     let localIndex = sortedIndices[LOCAL_INDEX_OFFSET + index];
     let selected = sortedClasses[CLASS_OFFSET + index] != 3u && index < ROW_LIMIT;

@@ -13,6 +13,7 @@ import {
   createLuAnalyticsOutputVector,
   createLuAnalyticsResultTable,
   getLuAnalyticsSelectionMask,
+  getLuAnalyticsInvocationIndexSource,
   getLuAnalyticsVector,
   validateLuAnalyticsOutputLength,
   validateLuAnalyticsSource,
@@ -175,9 +176,13 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputBins: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x < ELEMENT_COUNT) {
-    outputBins[OUTPUT_OFFSET + globalId.x] = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, output.length)}
+  if (index < ELEMENT_COUNT) {
+    outputBins[OUTPUT_OFFSET + index] = index;
   }
 }`;
   addLuAnalyticsComputePass(graph, {

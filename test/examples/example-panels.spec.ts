@@ -25,6 +25,7 @@ import {isAnimatedGLTFCatalogModel} from '../../examples/showcase/gltf/gltf-cata
 import {
   flattenEffectSettings,
   getEffectResolutionScale,
+  getInitialPostprocessingPassNames,
   makePostprocessingUniforms,
   reorderEffectPassNames,
   unflattenEffectSettings,
@@ -649,6 +650,18 @@ describe('text 3D crawl color compatibility', () => {
 });
 
 describe('postprocessing effect settings', () => {
+  test('opens effect documentation on the requested shader pass only', () => {
+    expect(getInitialPostprocessingPassNames('brightnessContrast')).toEqual(['brightnessContrast']);
+    expect(getInitialPostprocessingPassNames('gaussianBlur')).toEqual(['gaussianBlur']);
+    expect(getInitialPostprocessingPassNames('magnify')).toEqual(['magnify']);
+  });
+
+  test('preserves the gallery preset when no valid documentation effect is requested', () => {
+    expect(getInitialPostprocessingPassNames()).toEqual(['bloom', 'vignette']);
+    expect(getInitialPostprocessingPassNames('missingEffect')).toEqual(['bloom', 'vignette']);
+    expect(getInitialPostprocessingPassNames('toString')).toEqual(['bloom', 'vignette']);
+  });
+
   test('renders empty and inexpensive effect stacks at native resolution', () => {
     expect(getEffectResolutionScale([])).toBe(1);
     expect(getEffectResolutionScale(['bloom', 'vignette'])).toBe(1);

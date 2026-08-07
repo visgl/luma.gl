@@ -11,6 +11,11 @@ import {
   type GraphDataView
 } from './gpu-command-graph';
 import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource,
+  type GPUBoundedDispatchLayout
+} from './gpu-dispatch-utils';
+import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
@@ -265,21 +270,24 @@ function addClearHistogramPass<Parameters>(
   output: GraphDataView<'uint32'>
 ): void {
   const passId = `${id}-clear`;
+  const dispatchLayout = getHistogramDispatchLayout(graph, output.length);
   const source = /* wgsl */ `
 const BIN_COUNT: u32 = ${output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputCounts: array<atomic<u32>>;
 @compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  if (globalId.x < BIN_COUNT) { atomicStore(&outputCounts[OUTPUT_OFFSET + globalId.x], 0u); }
+  ${getBoundedInvocationIndexSource(dispatchLayout, HISTOGRAM_WORKGROUP_SIZE)}
+  if (index < BIN_COUNT) { atomicStore(&outputCounts[OUTPUT_OFFSET + index], 0u); }
 }`;
   addComputationPass(graph, {
     id: passId,
     source,
     resources: [{buffer: output, usage: 'storage-write'}],
     bindings: {outputCounts: output},
-    dispatchCount: Math.ceil(output.length / HISTOGRAM_WORKGROUP_SIZE)
+    dispatchLayout
   });
 }
 
@@ -342,6 +350,7 @@ function addIrregularHistogramPass<Parameters, T extends GPUScalarFormat>(
     edgeValidity?: GraphDataView<'uint32'>;
   }
 ): void {
+  const dispatchLayout = getHistogramDispatchLayout(graph, props.input.length);
   const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
   const shaderType = getShaderType(props.input.format);
   const gpuEdges = isGPUHistogramEdgesView(props.edges);
@@ -393,11 +402,11 @@ ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}
 ${edgeAccessor}
 
 @compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
-  let lane = localId.x;
+  ${getBoundedInvocationIndexSource(dispatchLayout, HISTOGRAM_WORKGROUP_SIZE)}
+  let lane = localInvocationIndex;
   ${local ? 'if (lane < BIN_COUNT) { atomicStore(&localCounts[lane], 0u); }\n  workgroupBarrier();' : ''}
   var accepted = false;
   var binIndex = 0u;
@@ -447,7 +456,7 @@ ${edgeAccessor}
       ...(props.mask ? {selectionMask: props.mask} : {}),
       outputCounts: props.output
     },
-    dispatchCount: Math.ceil(props.input.length / HISTOGRAM_WORKGROUP_SIZE)
+    dispatchLayout
   });
 }
 
@@ -462,6 +471,7 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
     domain: readonly [number, number] | GraphDataView<T>;
   }
 ): void {
+  const dispatchLayout = getHistogramDispatchLayout(graph, props.input.length);
   const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
   const shaderType = getShaderType(props.input.format);
   const gpuDomain = isGPUHistogramDomainView(props.domain);
@@ -549,11 +559,11 @@ ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}
 ${integerBinningFunction}
 
 @compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
-  let lane = localId.x;
+  ${getBoundedInvocationIndexSource(dispatchLayout, HISTOGRAM_WORKGROUP_SIZE)}
+  let lane = localInvocationIndex;
   ${domainInitialization}
   ${local ? 'if (lane < BIN_COUNT) { atomicStore(&localCounts[lane], 0u); }\n  workgroupBarrier();' : ''}
   var accepted = false;
@@ -595,7 +605,7 @@ ${integerBinningFunction}
       ...(props.mask ? {selectionMask: props.mask} : {}),
       outputCounts: props.output
     },
-    dispatchCount: Math.ceil(props.input.length / HISTOGRAM_WORKGROUP_SIZE)
+    dispatchLayout
   });
 }
 
@@ -607,7 +617,8 @@ function addComputationPass<Parameters>(
     source: string;
     resources: GraphBufferUse[];
     bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
+    dispatchCount?: number;
+    dispatchLayout?: GPUBoundedDispatchLayout;
   }
 ): void {
   graph.addComputePass({
@@ -633,12 +644,34 @@ function addComputationPass<Parameters>(
             bindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
+          if (props.dispatchLayout) {
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          } else {
+            computation.dispatch(computePass, props.dispatchCount ?? 1);
+          }
         },
         destroy: () => computation.destroy()
       };
     }
   });
+}
+
+/** Plans histogram accumulation and output clearing across bounded workgroup dimensions. */
+function getHistogramDispatchLayout<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  elementCount: number
+): GPUBoundedDispatchLayout {
+  return getBoundedDispatchLayout(
+    'GPUHistogram',
+    elementCount,
+    HISTOGRAM_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
 }
 
 /** Validates literal or GPU-resident irregular histogram boundaries. */

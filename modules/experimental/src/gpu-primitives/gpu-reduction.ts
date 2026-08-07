@@ -11,6 +11,11 @@ import {
   type GraphDataView
 } from './gpu-command-graph';
 import {
+  getBoundedDispatchLayout,
+  getBoundedInvocationIndexSource,
+  type GPUBoundedDispatchLayout
+} from './gpu-dispatch-utils';
+import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
@@ -370,6 +375,12 @@ function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
     firstLevel: boolean;
   }
 ): void {
+  const dispatchLayout = getBoundedDispatchLayout(
+    'GPUReduction',
+    props.inputLength,
+    REDUCTION_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const shaderType = getShaderType(props.format);
   const zero = getZeroLiteral(props.format);
   const isSum = props.operation === 'sum';
@@ -426,12 +437,14 @@ var<workgroup> secondScratch: array<${shaderType}, ${REDUCTION_WORKGROUP_SIZE}>;
 var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
 
 @compute @workgroup_size(${REDUCTION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let index = globalId.x;
-  let lane = localId.x;
+  ${getBoundedInvocationIndexSource(dispatchLayout, REDUCTION_WORKGROUP_SIZE)}
+  if (workgroupIndex >= ${Math.ceil(props.inputLength / REDUCTION_WORKGROUP_SIZE)}u) {
+    return;
+  }
+  let lane = localInvocationIndex;
   var value = ${zero};
   var secondValue = ${zero};
   var valid = 0u;
@@ -452,9 +465,9 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
     stride = stride / 2u;
   }
   if (lane == 0u) {
-    outputValues[OUTPUT_OFFSET + workgroupId.x * VALUES_PER_ROW] = firstScratch[0];
-    ${isExtent ? 'outputValues[OUTPUT_OFFSET + workgroupId.x * VALUES_PER_ROW + 1u] = secondScratch[0];' : ''}
-    ${props.outputValidity ? 'outputValidity[OUTPUT_VALIDITY_OFFSET + workgroupId.x] = validityScratch[0];' : ''}
+    outputValues[OUTPUT_OFFSET + workgroupIndex * VALUES_PER_ROW] = firstScratch[0];
+    ${isExtent ? 'outputValues[OUTPUT_OFFSET + workgroupIndex * VALUES_PER_ROW + 1u] = secondScratch[0];' : ''}
+    ${props.outputValidity ? 'outputValidity[OUTPUT_VALIDITY_OFFSET + workgroupIndex] = validityScratch[0];' : ''}
   }
 }`;
 
@@ -477,7 +490,7 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
     source,
     resources,
     bindings,
-    dispatchCount: Math.ceil(props.inputLength / REDUCTION_WORKGROUP_SIZE)
+    dispatchLayout
   });
 }
 
@@ -559,7 +572,8 @@ function addComputationPass<Parameters>(
     source: string;
     resources: GraphBufferUse[];
     bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
+    dispatchCount?: number;
+    dispatchLayout?: GPUBoundedDispatchLayout;
   }
 ): void {
   graph.addComputePass({
@@ -586,7 +600,16 @@ function addComputationPass<Parameters>(
             bindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
+          if (props.dispatchLayout) {
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          } else {
+            computation.dispatch(computePass, props.dispatchCount ?? 1);
+          }
         },
         destroy: () => computation.destroy()
       };

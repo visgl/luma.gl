@@ -1,0 +1,55 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Dot Screen
+
+Convert source-image luminance into a rotated monochrome dot pattern. `dotScreen` produces a
+graphic halftone treatment whose orientation, origin, and cell size remain fully adjustable.
+
+<PostprocessingExample embedded showStats={false} effect="dotScreen" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `dotScreen` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | One fullscreen color-filter pass |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {dotScreen} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [dotScreen]});
+
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  uniforms: {dotScreen: {center: [0.5, 0.5], angle: 0.42, size: 5}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `center` | `[0.5, 0.5]` | Normalized origin of the rotated screen pattern. |
+| `angle` | `1.1` | Dot-screen rotation in radians. |
+| `size` | `3` | Dot-cell size in image pixels; minimum is `1`. |
+
+Fine cells preserve more source detail, while larger cells make the underlying print structure
+more prominent.
+
+## Composition and Cost
+
+The effect runs in one fullscreen pass and derives its pattern from current color and image
+coordinates. Raising [Brightness and Contrast](./brightness-contrast) before the dot screen can
+sharpen tonal separation; [Color Halftone](./color-halftone) preserves multiple color channels
+when a monochrome treatment is not desired.
+
+## Related Effects
+
+- [Color Halftone](./color-halftone) creates independent full-color print patterns.
+- [Brightness and Contrast](./brightness-contrast) controls the luminance entering the screen.
+- [Ink](./ink) produces a complementary contour-oriented illustrated style.

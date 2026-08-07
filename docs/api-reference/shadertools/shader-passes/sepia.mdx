@@ -1,0 +1,53 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Sepia
+
+Blend a warm, reddish-brown photographic treatment into the source image. `sepia` provides an
+adjustable archival look while retaining the underlying composition and brightness structure.
+
+<PostprocessingExample embedded showStats={false} effect="sepia" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `sepia` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | One fullscreen color-filter pass |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {sepia} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [sepia]});
+
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  uniforms: {sepia: {amount: 0.7}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Range | Description |
+| --- | --- | --- | --- |
+| `amount` | `0.5` | `0` to `1` | Interpolates from the untouched image to the complete sepia color transform. |
+
+Lower values retain more of the source palette. Higher values make the warm monochromatic color
+bias increasingly prominent.
+
+## Composition and Cost
+
+The effect is one source-color filter with no extra textures or temporal state. Combining it with
+[Vignette](./vignette) and a small amount of [Noise](./noise) produces a photographic finishing
+stack. Run the sepia transform before those finishing effects when the grain and edge darkening
+should remain neutral.
+
+## Related Effects
+
+- [Hue and Saturation](./hue-saturation) offers freeform hue rotation and desaturation.
+- [Noise](./noise) adds controllable monochrome grain.
+- [Vignette](./vignette) concentrates attention toward the image center.

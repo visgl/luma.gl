@@ -28,6 +28,7 @@ import {
 import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addLuAnalyticsComputePass,
+  getLuAnalyticsInvocationIndexSource,
   getLuAnalyticsVector,
   validateLuAnalyticsSource
 } from './lu-analytics-compiler-utils';
@@ -642,8 +643,11 @@ ${validityBinding}
 @group(0) @binding(${firstTailBinding + 1}) var<storage, read_write> preparedKeys: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, props.input.length)}
   if (index < ELEMENT_COUNT) {
     let selected = selectionMask[SELECTION_OFFSET + index] != 0u;
     let valid = ${isValid};
@@ -716,8 +720,11 @@ const OUTPUT_CAPACITY: u32 = ${props.capacity}u;
 @group(0) @binding(6) var<storage, read_write> selectedCounts: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, props.matches.length)}
   let published = min(requiredCounts[REQUIRED_OFFSET], OUTPUT_CAPACITY);
   if (index == 0u) {
     selectedCounts[PUBLISHED_OFFSET] = published;

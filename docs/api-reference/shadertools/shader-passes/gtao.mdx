@@ -1,0 +1,77 @@
+import {DeferredRenderingExample} from '@site/src/examples';
+
+# Ground-Truth Ambient Occlusion
+
+Estimate horizon-based ambient visibility with temporally reprojected history and edge-aware
+spatial denoising. `createGTAOShaderPassPipeline` can attenuate either the complete lit image or
+only a separately supplied ambient-light contribution.
+
+<DeferredRenderingExample embedded showStats={false} />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `createGTAOShaderPassPipeline` |
+| Backend | WebGPU |
+| Render passes | Six: evaluation, temporal resolve, depth history, two bilateral blurs, and composite |
+| Required bindings | `depthTexture`, `normalTexture`, and `velocityTexture` |
+| Optional binding | `ambientLightingTexture` when `composition: 'ambient-only'` |
+| Persistent state | Occlusion and depth history textures |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {createGTAOShaderPassPipeline} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {
+  colorFormat: 'rgba16float',
+  shaderPasses: [
+    createGTAOShaderPassPipeline({resolutionScale: 0.5, composition: 'ambient-only'})
+  ]
+});
+
+renderer.renderToScreen({
+  sourceTexture: litSceneTexture,
+  bindings: {...gBuffer.getShaderPassBindings(), ambientLightingTexture},
+  uniforms: {
+    gtaoEvaluate: {projectionMatrix, inverseProjectionMatrix, radius: 2.2, intensity: 3.2},
+    gtaoTemporal: {inverseProjectionMatrix, historyWeight: 0.88, depthThreshold: 0.015},
+    gtaoAmbientComposite: {strength: 0.68}
+  }
+});
+```
+
+## Parameters
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `resolutionScale` | `1` | Resolution multiplier for visibility, temporal history, and bilateral denoising. |
+| `composition` | `'color'` | Apply visibility to full scene color, or use `'ambient-only'` with an explicit ambient-light texture. |
+| `radius` | `2.2` | View-space sampling distance for the horizon evaluation. |
+| `bias` | `0.04` | Depth tolerance used to reduce self-occlusion. |
+| `intensity` | `3.2` | Strength of the evaluated horizon occlusion. |
+| `historyWeight` | `0.88` | Contribution from reprojected, depth-validated occlusion history. |
+| `depthThreshold` | `0.015` | Maximum accepted temporal depth disagreement. |
+| `strength` | `0.68` | Final composite strength in `gtaoComposite` or `gtaoAmbientComposite`. |
+
+## Ambient-Only Composition
+
+With `composition: 'ambient-only'`, the final stage subtracts only the occluded portion of the
+separate `ambientLightingTexture`. Direct lighting, emissive materials, and source alpha remain
+unchanged. The application owns that ambient texture and must provide it as an explicit binding;
+the effect does not reach across other pipelines to discover hidden render targets.
+
+## Performance and Placement
+
+GTAO creates five intermediate targets, including persistent occlusion and depth history.
+Half-resolution evaluation reduces intermediate pixel count substantially but can soften narrow
+contact edges. Reset history after camera cuts or attachment-size changes. Compose after deferred
+lighting and before diffuse global illumination or reflective postprocessing.
+
+## Related Effects
+
+- [SSAO](./ssao) provides a four-pass, non-temporal ambient-occlusion path.
+- [Screen-Space Global Illumination](./screen-space-global-illumination) adds diffuse bounced light instead of removing ambient energy.
+- [Screen-Space Reflections](./screen-space-reflections) resolves directional specular response.

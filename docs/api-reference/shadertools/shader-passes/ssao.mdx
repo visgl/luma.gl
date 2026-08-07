@@ -1,0 +1,78 @@
+import {AdvancedEffectsExample} from '@site/src/examples';
+
+# Screen-Space Ambient Occlusion
+
+Darken tight creases and nearby surface contacts using the current scene depth buffer.
+`createSSAOShaderPassPipeline` evaluates screen-space ambient visibility, smooths it with a
+depth-aware bilateral blur, and composites the result into scene color.
+
+<AdvancedEffectsExample embedded showStats={false} />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `createSSAOShaderPassPipeline` |
+| Backend | WebGPU |
+| Render passes | Four: evaluate, horizontal blur, vertical blur, and composite |
+| Required binding | `depthTexture` |
+| Optional binding | `normalTexture` when `normalSource: 'normal-texture'` |
+| History | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {createSSAOShaderPassPipeline} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {
+  shaderPasses: [
+    createSSAOShaderPassPipeline({
+      normalSource: 'normal-texture',
+      resolutionScale: 0.5
+    })
+  ]
+});
+
+renderer.renderToScreen({
+  sourceTexture: gBuffer.colorTexture,
+  bindings: gBuffer.getShaderPassBindings(),
+  uniforms: {
+    ssaoEvaluate: {
+      nearPlane: 0.1,
+      farPlane: 200,
+      radius: 7,
+      bias: 0.03,
+      intensity: 1.35
+    }
+  }
+});
+```
+
+## Parameters
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `normalSource` | `'reconstruct-from-depth'` | Reconstruct normals from depth or consume an explicit `normalTexture`. |
+| `resolutionScale` | `1` | Relative resolution of all three occlusion intermediates. |
+| `nearPlane` | `0.1` | Camera near plane used to linearize hardware depth. |
+| `farPlane` | `200` | Camera far plane used to linearize hardware depth. |
+| `radius` | `7` | Screen-space sampling radius around the current pixel. |
+| `bias` | `0.03` | Depth tolerance that reduces self-occlusion. |
+| `intensity` | `1.35` | Strength of the accumulated occlusion estimate. |
+
+## Performance and Composition
+
+The evaluation stage visits 12 nearby depth samples; two subsequent
+[Depth-Aware Blur](./depth-aware-blur) passes preserve foreground/background boundaries.
+`resolutionScale: 0.5` reduces intermediate pixel count to approximately one quarter. SSAO does
+not maintain temporal history and composites onto the complete source color.
+
+Choose [GTAO](./gtao) when horizon integration, temporal stabilization, or ambient-only
+composition is required.
+
+## Related Effects
+
+- [GTAO](./gtao) adds horizon-based visibility, temporal history, and ambient-only composition.
+- [Depth-Aware Blur](./depth-aware-blur) explains the bilateral denoising stages.
+- [Outlines](./outlines) can consume the same depth and normal attachments.

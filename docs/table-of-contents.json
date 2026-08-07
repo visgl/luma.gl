@@ -166,7 +166,7 @@
           "api-reference/engine/orbit-controls",
           "api-reference/engine/dynamic-texture",
           "api-reference/engine/video-texture",
-          "api-reference/engine/load-image-bitmap",          
+          "api-reference/engine/load-image-bitmap",
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",
           "api-reference/engine/geometry/gpu-geometry",
@@ -449,7 +449,87 @@
           {
             "type": "category",
             "label": "Shader Pass Catalog",
-            "items": ["api-reference/shadertools/shader-passes/image-processing"]
+            "items": [
+              "api-reference/shadertools/shader-passes/image-processing",
+              {
+                "type": "category",
+                "label": "Color and Tone",
+                "items": [
+                  "api-reference/shadertools/shader-passes/brightness-contrast",
+                  "api-reference/shadertools/shader-passes/hue-saturation",
+                  "api-reference/shadertools/shader-passes/sepia",
+                  "api-reference/shadertools/shader-passes/vibrance",
+                  "api-reference/shadertools/shader-passes/tone-mapping",
+                  "api-reference/shadertools/shader-passes/hdr-auto-exposure"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Blur, Bloom and Focus",
+                "items": [
+                  "api-reference/shadertools/shader-passes/bloom",
+                  "api-reference/shadertools/shader-passes/gaussian-blur",
+                  "api-reference/shadertools/shader-passes/triangle-blur",
+                  "api-reference/shadertools/shader-passes/tilt-shift",
+                  "api-reference/shadertools/shader-passes/zoom-blur",
+                  "api-reference/shadertools/shader-passes/depth-of-field",
+                  "api-reference/shadertools/shader-passes/depth-aware-blur"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Temporal and Antialiasing",
+                "items": [
+                  "api-reference/shadertools/shader-passes/persistence",
+                  "api-reference/shadertools/shader-passes/fxaa",
+                  "api-reference/shadertools/shader-passes/temporal-antialiasing",
+                  "api-reference/shadertools/shader-passes/camera-reprojection-antialiasing",
+                  "api-reference/shadertools/shader-passes/motion-blur"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Lighting and Visibility",
+                "items": [
+                  "api-reference/shadertools/shader-passes/ssao",
+                  "api-reference/shadertools/shader-passes/gtao",
+                  "api-reference/shadertools/shader-passes/screen-space-global-illumination",
+                  "api-reference/shadertools/shader-passes/screen-space-reflections",
+                  "api-reference/shadertools/shader-passes/outlines"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Atmosphere",
+                "items": [
+                  "api-reference/shadertools/shader-passes/volumetric-fog",
+                  "api-reference/shadertools/shader-passes/clustered-volumetric-lighting"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Stylization and Detail",
+                "items": [
+                  "api-reference/shadertools/shader-passes/color-halftone",
+                  "api-reference/shadertools/shader-passes/dot-screen",
+                  "api-reference/shadertools/shader-passes/edge-work",
+                  "api-reference/shadertools/shader-passes/hexagonal-pixelate",
+                  "api-reference/shadertools/shader-passes/ink",
+                  "api-reference/shadertools/shader-passes/noise",
+                  "api-reference/shadertools/shader-passes/vignette",
+                  "api-reference/shadertools/shader-passes/denoise"
+                ]
+              },
+              {
+                "type": "category",
+                "label": "Warp and Lens",
+                "items": [
+                  "api-reference/shadertools/shader-passes/bulge-pinch",
+                  "api-reference/shadertools/shader-passes/magnify",
+                  "api-reference/shadertools/shader-passes/swirl"
+                ]
+              }
+            ]
           }
         ]
       },

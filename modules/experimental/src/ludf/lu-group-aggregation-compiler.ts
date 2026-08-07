@@ -3,8 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUData,
   GPURecordBatch,
@@ -16,16 +15,20 @@ import {
 import {
   GraphVectorView,
   type GPUCommandGraph,
-  type GraphBufferUse,
   type GraphDataView
 } from '../gpu-primitives/gpu-command-graph';
 import {GPUGroupAggregation} from '../gpu-primitives/gpu-group-aggregation';
 import {GPUMask} from '../gpu-primitives/gpu-mask';
 import {
   createTransientVectorView,
-  getViewBinding,
   getViewElementOffset
 } from '../gpu-primitives/graph-data-view-utils';
+import {
+  LU_ANALYTICS_WORKGROUP_SIZE,
+  addLuAnalyticsComputePass,
+  getLuAnalyticsInvocationIndexSource,
+  validateLuAnalyticsOutputLength
+} from './lu-analytics-compiler-utils';
 import type {LuDataFrame, LuDataFrameDictionaries, LuDataFrameValidity} from './lu-data-frame';
 import type {LuDataFrameDerivedColumn} from './lu-data-frame-query';
 import type {LuExpression} from './lu-expression';
@@ -39,7 +42,6 @@ import {
   type LuDataFrameQueryParameters
 } from './lu-query-compiler';
 
-const LU_GROUP_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const MAXIMUM_UINT32 = 0xffffffff;
 
@@ -125,9 +127,7 @@ function validateLuGroupingCapacity<Source extends GPUTypeMap>(
   if (source.numRows > MAXIMUM_UINT32) {
     throw new Error('LuDataFrame group counts cannot represent more than uint32 source rows');
   }
-  if (groupCount > graph.device.limits.maxComputeWorkgroupsPerDimension * LU_GROUP_WORKGROUP_SIZE) {
-    throw new Error('LuDataFrame group count exceeds the supported dispatch capacity');
-  }
+  validateLuAnalyticsOutputLength(graph, groupCount);
   const byteLength = groupCount * UINT32_BYTE_LENGTH;
   if (
     byteLength > graph.device.limits.maxStorageBufferBindingSize ||
@@ -430,13 +430,17 @@ const ELEMENT_COUNT: u32 = ${output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<u32>;
 
-@compute @workgroup_size(${LU_GROUP_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x < ELEMENT_COUNT) {
-    outputValues[OUTPUT_OFFSET + globalId.x] = globalId.x;
+@compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, output.length)}
+  if (index < ELEMENT_COUNT) {
+    outputValues[OUTPUT_OFFSET + index] = index;
   }
 }`;
-  addLuGroupingComputePass(graph, {
+  addLuAnalyticsComputePass(graph, {
     id,
     source,
     resources: [{buffer: output, usage: 'storage-write'}],
@@ -468,19 +472,23 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(mask)}u;
 @group(0) @binding(1) var<storage, read> inputMask: array<u32>;
 @group(0) @binding(2) var<storage, read_write> outputMask: array<u32>;
 
-@compute @workgroup_size(${LU_GROUP_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x < ELEMENT_COUNT) {
-    let value = inputValues[VALUE_OFFSET + globalId.x];
+@compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, mask.length)}
+  if (index < ELEMENT_COUNT) {
+    let value = inputValues[VALUE_OFFSET + index];
     let finite = value == value && abs(value) <= 3.402823466e+38;
-    outputMask[OUTPUT_OFFSET + globalId.x] = select(
+    outputMask[OUTPUT_OFFSET + index] = select(
       0u,
       1u,
-      inputMask[INPUT_OFFSET + globalId.x] != 0u && finite
+      inputMask[INPUT_OFFSET + index] != 0u && finite
     );
   }
 }`;
-    addLuGroupingComputePass(graph, {
+    addLuAnalyticsComputePass(graph, {
       id: `${id}-chunk-${chunkIndex}`,
       source,
       resources: [
@@ -505,60 +513,22 @@ const ELEMENT_COUNT: u32 = ${validity.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(validity)}u;
 @group(0) @binding(0) var<storage, read_write> outputValidity: array<u32>;
 
-@compute @workgroup_size(${LU_GROUP_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x < ELEMENT_COUNT) {
-    let offset = OUTPUT_OFFSET + globalId.x;
+@compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, validity.length)}
+  if (index < ELEMENT_COUNT) {
+    let offset = OUTPUT_OFFSET + index;
     outputValidity[offset] = select(0u, 1u, outputValidity[offset] != 0u);
   }
 }`;
-  addLuGroupingComputePass(graph, {
+  addLuAnalyticsComputePass(graph, {
     id,
     source,
     resources: [{buffer: validity, usage: 'storage-read-write'}],
     bindings: {outputValidity: validity},
     length: validity.length
-  });
-}
-
-/** Owns one small grouping computation while preserving typed graph buffer hazard declarations. */
-function addLuGroupingComputePass(
-  graph: GPUCommandGraph<LuDataFrameQueryParameters>,
-  props: {
-    id: string;
-    source: string;
-    resources: readonly GraphBufferUse[];
-    bindings: Readonly<Record<string, GraphDataView>>;
-    length: number;
-  }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: [...props.resources],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const resolvedBindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            resolvedBindings[name] = getViewBinding(view, getBuffer);
-          }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, Math.ceil(props.length / LU_GROUP_WORKGROUP_SIZE));
-        },
-        destroy: () => computation.destroy()
-      };
-    }
   });
 }

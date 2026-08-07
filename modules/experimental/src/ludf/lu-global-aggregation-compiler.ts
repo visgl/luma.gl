@@ -19,6 +19,7 @@ import {
   createLuAnalyticsResultTable,
   createLuAnalyticsTransientVector,
   getLuAnalyticsSelectionMask,
+  getLuAnalyticsInvocationIndexSource,
   getLuAnalyticsShaderType,
   getLuAnalyticsVector,
   validateLuAnalyticsSource,
@@ -241,8 +242,11 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(mask)}u;
 @group(0) @binding(2) var<storage, read_write> outputMask: array<u32>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(graph, mask.length)}
   if (index < ELEMENT_COUNT) {
     let value = inputValues[INPUT_OFFSET + index];
     let finite = value == value && abs(value) <= 3.402823466e+38;
@@ -307,8 +311,11 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(destination)}u;
 @group(0) @binding(2) var<storage, read_write> outputValues: array<${outputType}>;
 
 @compute @workgroup_size(${LU_ANALYTICS_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
+fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getLuAnalyticsInvocationIndexSource(context.graph, destination.length)}
   if (index < ELEMENT_COUNT) {
     let value = ${outputType}(inputValues[INPUT_OFFSET + index]);
     outputValues[OUTPUT_OFFSET + index] = select(
