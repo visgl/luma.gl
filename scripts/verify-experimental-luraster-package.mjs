@@ -31,8 +31,27 @@ const commonJsEntry = path.resolve(packageRoot, lurasterExport.require);
 const declarationEntry = path.resolve(packageRoot, lurasterExport.types);
 const ecmaScriptRootEntry = path.resolve(packageRoot, packageJson.exports['.'].import);
 const commonJsRootEntry = path.resolve(packageRoot, packageJson.exports['.'].require);
+const tileSourceImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-tile-source.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
+assert.doesNotMatch(
+  tileSourceImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'application-owned tile sources do not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  tileSourceImplementation,
+  /\bfetch\s*\(/,
+  'application-owned tile sources do not choose an HTTP transport'
+);
+assert.doesNotMatch(
+  tileSourceImplementation,
+  /\b(?:createBuffer|createTexture|submit|mapAsync)\s*\(/,
+  'application-owned tile sources do not allocate, submit, or map GPU resources'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -68,6 +87,7 @@ const requiredRuntimeExportNames = [
   'GPURasterSobel',
   'GPURasterStatistics',
   'GPURasterThreshold',
+  'GPURasterTileReader',
   'GPURasterTextureToBuffer',
   'getRasterDeviceLimits',
   'planRasterDispatchStripes'
@@ -129,6 +149,7 @@ try {
   GPURasterSobel,
   GPURasterStatistics,
   GPURasterThreshold,
+  GPURasterTileReader,
   GPURasterTextureToBuffer,
   getRasterDeviceLimits,
   planRasterDispatchStripes,
@@ -145,6 +166,8 @@ try {
   type GPURasterContourLevel,
   type GPURasterContoursProps,
   type GPURasterConvolutionProps,
+  type GPURasterDecodedBand,
+  type GPURasterDecodedTile,
   type GPURasterDilationProps,
   type GPURasterEdgeProps,
   type GPURasterErosionProps,
@@ -171,6 +194,7 @@ try {
   type GPURasterOpeningProps,
   type GPURasterOtsuDomain,
   type GPURasterOtsuThresholdProps,
+  type GPURasterPixelBounds,
   type GPURasterScharrProps,
   type GPURasterSobelProps,
   type GPURasterStatisticsProps,
@@ -179,6 +203,12 @@ try {
   type GPURasterThresholdOperation,
   type GPURasterThresholdProps,
   type GPURasterThresholdValue,
+  type GPURasterTileBandMetadata,
+  type GPURasterTileCoordinateSpace,
+  type GPURasterTileLevel,
+  type GPURasterTileRequest,
+  type GPURasterTileSource,
+  type GPURasterTileSourceMetadata,
   type RasterDeviceLimits,
   type RasterDispatchStripe
 } from '@luma.gl/experimental/luraster';
@@ -202,6 +232,10 @@ declare const contourClassifierOptions: GPURasterContourClassifierProps;
 declare const contourLevel: GPURasterContourLevel;
 declare const contourOptions: GPURasterContoursProps;
 declare const convolutionOptions: GPURasterConvolutionProps;
+declare const decodedFloatBand: GPURasterDecodedBand<'float32'>;
+declare const decodedSignedBand: GPURasterDecodedBand<'sint32'>;
+declare const decodedTile: GPURasterDecodedTile;
+declare const decodedUnsignedBand: GPURasterDecodedBand<'uint32'>;
 declare const dilationOptions: GPURasterDilationProps;
 declare const edgeOptions: GPURasterEdgeProps;
 declare const erosionOptions: GPURasterErosionProps;
@@ -228,6 +262,7 @@ declare const noDataPolicy: GPURasterNoDataPolicy;
 declare const openingOptions: GPURasterOpeningProps;
 declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
+declare const pixelBounds: GPURasterPixelBounds;
 declare const scharrOptions: GPURasterScharrProps;
 declare const sobelOptions: GPURasterSobelProps;
 declare const statisticsOptions: GPURasterStatisticsProps;
@@ -236,6 +271,12 @@ declare const structuringElement: GPURasterStructuringElement;
 declare const thresholdOperation: GPURasterThresholdOperation;
 declare const thresholdOptions: GPURasterThresholdProps;
 declare const thresholdValue: GPURasterThresholdValue;
+declare const tileBandMetadata: GPURasterTileBandMetadata<'uint32'>;
+declare const tileCoordinateSpace: GPURasterTileCoordinateSpace;
+declare const tileLevel: GPURasterTileLevel;
+declare const tileRequest: GPURasterTileRequest;
+declare const tileSource: GPURasterTileSource;
+declare const tileSourceMetadata: GPURasterTileSourceMetadata;
 declare const rasterDeviceLimits: RasterDeviceLimits;
 declare const rasterDispatchStripe: RasterDispatchStripe;
 declare const reductionMask: GPUReductionMask;
@@ -262,6 +303,7 @@ declare const sobel: GPURasterSobel;
 declare const statistics: GPURasterStatistics;
 declare const histogram: GPURasterHistogram<'float32'>;
 declare const threshold: GPURasterThreshold;
+declare const tileReader: GPURasterTileReader;
 declare const textureToBuffer: GPURasterTextureToBuffer;
 const bandMathContributor: GPUCommandGraphContributor = bandMath;
 const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
@@ -305,6 +347,36 @@ const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openi
 const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
 const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
 const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
+const configuredTileReader = new GPURasterTileReader(tileSource);
+const decodedTilePromise: Promise<GPURasterDecodedTile> = configuredTileReader.readTile(tileRequest);
+const cancelledTilePromise: Promise<GPURasterDecodedTile> = configuredTileReader.readTile(
+  tileRequest,
+  new AbortController().signal
+);
+const syntheticFloatBand: GPURasterDecodedBand<'float32'> = {
+  id: 'red',
+  format: 'float32',
+  values: new Float32Array(4),
+  validity: new Uint32Array(4)
+};
+const syntheticUnsignedBand: GPURasterDecodedBand<'uint32'> = {
+  id: 'classification',
+  format: 'uint32',
+  values: new Uint32Array(4)
+};
+const syntheticSignedBand: GPURasterDecodedBand<'sint32'> = {
+  id: 'elevation',
+  format: 'sint32',
+  values: new Int32Array(4)
+};
+const applicationOwnedTileSource: GPURasterTileSource = {
+  metadata: tileSourceMetadata,
+  async readTile(request, signal) {
+    signal.throwIfAborted();
+    void request;
+    return decodedTile;
+  }
+};
 const supportedGradientOperators: readonly GPURasterGradientOperator[] = ['sobel', 'scharr'];
 const supportedGradientDirections: readonly GPURasterGradientDirection[] = ['x', 'y'];
 const supportedLaplacianConnectivities: readonly GPURasterLaplacianConnectivity[] = [4, 8];
@@ -321,6 +393,17 @@ const supportedMorphologyNoDataPolicies: readonly GPURasterMorphologyNoDataPolic
 const binaryMorphologyOutput: GraphDataView<'uint32'> = binaryMorphologyOptions.output;
 const grayscaleMorphologyOutput: GraphDataView<'float32'> = grayscaleMorphologyOptions.output;
 const binaryMorphologyInputFormat: 'uint32' = binaryMorphologyOptions.input.format;
+const supportedTileCoordinateSpaces: readonly GPURasterTileCoordinateSpace[] = [
+  'level',
+  'level-zero'
+];
+const decodedFloatValues: Float32Array = decodedFloatBand.values;
+const decodedSignedValues: Int32Array = decodedSignedBand.values;
+const decodedUnsignedValues: Uint32Array = decodedUnsignedBand.values;
+const decodedValidity: Uint32Array | undefined = decodedFloatBand.validity;
+const exactTileDownsample: readonly [number, number] = tileLevel.downsample;
+const decodedTileBounds: GPURasterPixelBounds = decodedTile.pixelBounds;
+const decodedLevelZeroBounds: GPURasterPixelBounds = decodedTile.levelZeroBounds;
 // @ts-expect-error Only the independently implemented Sobel and Scharr kernels are public.
 const unsupportedGradientOperator: GPURasterGradientOperator = 'prewitt';
 // @ts-expect-error Two-dimensional rasters expose only horizontal and vertical derivatives.
@@ -339,6 +422,14 @@ const unsupportedMorphologyNoDataPolicy: GPURasterMorphologyNoDataPolicy = 'igno
 const invalidBinaryMorphologyOutput: GraphDataView<'float32'> = binaryMorphologyOptions.output;
 // @ts-expect-error Grayscale morphology publishes calibrated float32 values, not uint32.
 const invalidGrayscaleMorphologyOutput: GraphDataView<'uint32'> = grayscaleMorphologyOptions.output;
+// @ts-expect-error Source windows are expressed in level-local or level-zero pixels only.
+const unsupportedTileCoordinateSpace: GPURasterTileCoordinateSpace = 'projected-world';
+// @ts-expect-error Floating decoded bands preserve Float32Array storage.
+const invalidFloatDecodedValues: Uint32Array = decodedFloatBand.values;
+// @ts-expect-error Unsigned decoded bands preserve Uint32Array storage exactly.
+const invalidUnsignedDecodedValues: Float32Array = decodedUnsignedBand.values;
+// @ts-expect-error Signed decoded bands preserve Int32Array storage exactly.
+const invalidSignedDecodedValues: Uint32Array = decodedSignedBand.values;
 
 void GPURaster;
 void GPURasterBandMath;
@@ -365,6 +456,7 @@ void GPURasterScharr;
 void GPURasterSobel;
 void GPURasterStatistics;
 void GPURasterThreshold;
+void GPURasterTileReader;
 void GPURasterTextureToBuffer;
 void getRasterDeviceLimits;
 void planRasterDispatchStripes;
@@ -382,6 +474,10 @@ void contourClassifierOptions;
 void contourLevel;
 void contourOptions;
 void convolutionOptions;
+void decodedFloatBand;
+void decodedSignedBand;
+void decodedTile;
+void decodedUnsignedBand;
 void dilationOptions;
 void edgeOptions;
 void erosionOptions;
@@ -408,6 +504,7 @@ void noDataPolicy;
 void openingOptions;
 void otsuDomain;
 void otsuOptions;
+void pixelBounds;
 void scharrOptions;
 void sobelOptions;
 void statisticsOptions;
@@ -416,6 +513,12 @@ void structuringElement;
 void thresholdOperation;
 void thresholdOptions;
 void thresholdValue;
+void tileBandMetadata;
+void tileCoordinateSpace;
+void tileLevel;
+void tileRequest;
+void tileSource;
+void tileSourceMetadata;
 void rasterDeviceLimits;
 void rasterDispatchStripe;
 void reductionMask;
@@ -455,6 +558,13 @@ void configuredOpening;
 void configuredClosing;
 void configuredScharr;
 void configuredSobel;
+void configuredTileReader;
+void decodedTilePromise;
+void cancelledTilePromise;
+void syntheticFloatBand;
+void syntheticUnsignedBand;
+void syntheticSignedBand;
+void applicationOwnedTileSource;
 void supportedGradientOperators;
 void supportedGradientDirections;
 void supportedLaplacianConnectivities;
@@ -465,6 +575,14 @@ void supportedMorphologyNoDataPolicies;
 void binaryMorphologyOutput;
 void grayscaleMorphologyOutput;
 void binaryMorphologyInputFormat;
+void supportedTileCoordinateSpaces;
+void decodedFloatValues;
+void decodedSignedValues;
+void decodedUnsignedValues;
+void decodedValidity;
+void exactTileDownsample;
+void decodedTileBounds;
+void decodedLevelZeroBounds;
 void unsupportedGradientOperator;
 void unsupportedGradientDirection;
 void unsupportedLaplacianConnectivity;
@@ -474,6 +592,11 @@ void unsupportedStructuringElement;
 void unsupportedMorphologyNoDataPolicy;
 void invalidBinaryMorphologyOutput;
 void invalidGrayscaleMorphologyOutput;
+void unsupportedTileCoordinateSpace;
+void invalidFloatDecodedValues;
+void invalidUnsignedDecodedValues;
+void invalidSignedDecodedValues;
+void tileReader;
 
 // @ts-expect-error Raster algorithms stay isolated from the experimental root.
 import {GPURaster as RootGPURaster} from '@luma.gl/experimental';
@@ -499,6 +622,9 @@ void RootGPURasterMorphology;
 // @ts-expect-error Composed morphology remains isolated from the experimental root.
 import {GPURasterClosing as RootGPURasterClosing} from '@luma.gl/experimental';
 void RootGPURasterClosing;
+// @ts-expect-error External raster tile sources remain isolated from the experimental root.
+import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/experimental';
+void RootGPURasterTileReader;
 `
   );
   assert.equal(

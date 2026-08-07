@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Analyze synthetic reflectance with GPU-native NDVI, smoothing, edges, binary/grayscale morphology, Otsu thresholds, indirect contours, and live histograms.
+description: Explore cancellable synthetic raster windows and source overviews with GPU-native NDVI, smoothing, edges, morphology, contours, and live histograms.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -15,6 +15,11 @@ import { RasterLabExample } from "@site/src/examples";
 The Satellite Raster Lab generates a deterministic, entirely synthetic
 earth-observation scene with red and near-infrared reflectance bands, farmland,
 vegetation, waterways, cloud cover, and out-of-footprint nodata. Switch between
+full, western, and eastern source windows, select a full-resolution or
+source-provided 2× overview, and inspect the actual tile key, pixel dimensions,
+level-zero origin, and `EPSG:32610` coordinate identity. Each change decodes
+and uploads one replacement tile; superseded source requests are canceled.
+Switch between
 the derived vegetation index and its source bands, apply Gaussian or box
 smoothing, adjust the kernel radius or Gaussian sigma, choose Sobel, Scharr,
 or Laplacian edge detection, switch between signed horizontal/vertical
@@ -34,6 +39,12 @@ Every control changes the GPU-computed distribution, selected-pixel count,
 observed extent, and mean when its underlying values or selection change.
 
 The demonstration uses the optional `@luma.gl/experimental/luraster` entry point.
+`GPURasterTileReader` validates an application-owned synthetic source, its
+selected red/near-infrared bands, explicit overview level, half-open source
+window, affine/CRS metadata, native decoded samples, validity masks, and
+`AbortSignal`. The browser application owns source generation, cancellation,
+decoded CPU arrays, GPU upload, and atomic replacement of one resident tile.
+It does not install a GeoTIFF decoder or download real satellite imagery.
 `GPURasterNDVI` computes `(nearInfrared - red) / (nearInfrared + red)` directly
 from GPU-resident source bands while intersecting source validity and exact raw
 nodata. `GPURasterHistogram` composes a masked reduction with a GPU-domain
@@ -73,7 +84,9 @@ Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
 derivative direction, morphological operation/mode/footprint/radius/nodata/
 border, contrast, gamma, thresholding, contour levels, and epsilon rebuild
 their specialized analysis graph while keeping every source and output raster
-buffer resident; source pixels are never downloaded.
+buffer resident; source pixels are never downloaded. Selecting a source
+window or overview instead replaces the source tile through an explicit CPU-to-
+GPU upload; it does not increase the 228-byte GPU-to-CPU analytical readback.
 
 Choose Gaussian smoothing to reduce local sensor noise while weighting nearby
 observations most strongly; choose box smoothing when a uniformly weighted
@@ -123,8 +136,20 @@ count, while a GPU-generated indirect draw avoids waiting for a CPU segment
 count. Prefix scans require additional graph passes and scratch storage, so
 actual performance depends on the workload, segment density, and GPU.
 
+Choose a source window when a smaller area of a decoded dataset is the desired
+analytical input; choose an existing source overview when its lower native
+resolution is appropriate and the source describes its pixel origin and affine
+transform explicitly. The synthetic 2× source overview chooses nearest samples;
+it is not a nodata-aware analytical reduction. The example processes exactly
+one independently decoded
+tile at a time. It does not cache multiple tiles, assemble neighborhood halos,
+stitch boundaries, generate nodata-aware analytical overviews, or provide a
+GeoTIFF/COG transport or decoder. Those capabilities have separate ownership
+and correctness requirements.
+
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Segmentation, tiled contour seams, and tiled imagery remain planned capabilities.
+Segmentation, multi-tile residency, stitched contour seams, and analytical
+overview generation remain planned capabilities.

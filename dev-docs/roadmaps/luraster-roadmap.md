@@ -448,7 +448,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete    | High   | Large  |
 | 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | In progress | High   | Medium |
 | 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Complete    | High   | Large  |
-| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Planned     | High   | Large  |
+| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | In progress | High   | Large  |
 | 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
 | 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | In progress | High   | Large  |
 | 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred    | Medium | Large  |
@@ -541,8 +541,14 @@ when their tests and rollback boundaries remain understandable.
   `float32` extrema. Opening and closing compose graph-owned typed intermediate values and
   validity, with a cumulative halo of twice the radius. The Raster Lab exposes every operation,
   both modes, both footprints, radius, nodata policy, and all border policies.
-- **4.1 next:** define an application-owned raster tile-source interface without importing
-  GeoTIFF/COG decoders, network clients, codec choices, or tile residency into the runtime.
+- **4.1 complete for application-owned decoded raster sources:** `GPURasterTileReader` validates
+  application-supplied metadata, explicit source overview levels, requested coordinate frames,
+  half-open windows, selected native-format bands, decoded validity, and `AbortSignal`
+  cancellation. Tile metadata preserves the source CRS, affine transform, and level-zero origin.
+  The Raster Lab switches among full/west/east windows and source-provided 1×/2× overviews
+  without adding a decoder, HTTP client, tile cache, implicit GPU upload, or pixel readback.
+- **4.2 next:** capacity-bounded residency, explicit eviction/fence ownership, graph-shape reuse,
+  and coordinated multi-request tile scheduling remain a separate tiled-processing tranche.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -552,7 +558,8 @@ when their tests and rollback boundaries remain understandable.
   its resulting line overlay without reading a draw count. Tile stitching and external deck.gl
   integration remain in Tranche 6.3.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
-  demonstrate the current NDVI/smoothing/gradient/morphology/histogram/contour workflow. The full
+  demonstrate the current source-window/overview/NDVI/smoothing/gradient/morphology/histogram/
+  contour workflow. The full
   satellite/microscopy/tiled/vector showcase matrix, broader documentation set, benchmarks, and
   final release gates remain pending.
 
@@ -807,7 +814,14 @@ intermediate ownership.
 
 **Entry:** Tranche 1.1.
 
-**Status:** Next planned tranche; no tile-source implementation is provided by Phase 3.
+**Status:** Complete for one application-owned asynchronous decoded raster tile at a time.
+`GPURasterTileReader` validates metadata, native-format band descriptors, explicit source levels,
+level-local/level-zero half-open request windows, anisotropic/ragged overview coverage,
+caller-owned decoded samples/validity, coordinate metadata, and pre/post-decode cancellation.
+The Raster Lab's synthetic adapter demonstrates full/west/east windows, 1×/2× source-provided
+overviews, explicit CRS/origin, and stale-request cancellation without bundling a decoder.
+Multi-tile residency, halo assembly, generated analytical overviews, and stitched results remain
+separate later tranches.
 
 **Work:** Define an application-supplied asynchronous tile-source interface with dataset
 metadata, requested level, explicit coordinate reference frame, selected bands, spatial window,
@@ -821,6 +835,8 @@ runtime dependency are verified.
 ### Tranche 4.2 — Bounded residency and graph reuse
 
 **Entry:** Tranches 4.1 and 1.4.
+
+**Status:** Next planned tranche; no cache, eviction policy, or graph-shape residency exists yet.
 
 **Work:** Define an explicit CPU/GPU tile cache budget, LRU or viewport-priority eviction,
 cancellation of stale requests, graph keys by shape/format/halo/overview, and compatible
@@ -1136,6 +1152,7 @@ modules/experimental/src/luraster/
   gpu-raster-convolution.ts
   gpu-raster-edges.ts
   gpu-raster-morphology.ts
+  gpu-raster-tile-source.ts
   gpu-raster-tiles.ts
   gpu-raster-overview.ts
   gpu-raster-connected-components.ts

@@ -4,9 +4,14 @@
 
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
-import {makeRasterLabDataset} from './raster-data';
+import {GPURasterTileReader, type GPURasterTileRequest} from '@luma.gl/experimental/luraster';
+import type {RasterLabDataset} from './raster-data';
 import {RasterLabEngine, type RasterLabSummary} from './raster-engine';
-import {RasterLabInterface} from './raster-interface';
+import {
+  RasterLabInterface,
+  type RasterLabOverviewLevel,
+  type RasterLabSourceTile
+} from './raster-interface';
 import type {
   RasterLabDisplayMode,
   RasterLabDisplaySettings,
@@ -19,10 +24,11 @@ import type {
   RasterLabMorphologyShape,
   RasterLabSmoothingMode
 } from './raster-renderer';
+import {makeRasterLabTileDataset, RasterLabTileSource} from './raster-tile-source';
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'GPU-resident NDVI, smoothing, edge detection, morphology, contours, and live histograms.';
+  'External raster tiles, GPU-resident NDVI, smoothing, edges, morphology, contours, and histograms.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -33,6 +39,13 @@ type RasterLabDebugController = {
   readonly nodeCount: number;
   readonly frameCount: number;
   readonly executionCount: number;
+  readonly sourceTile: RasterLabSourceTile;
+  readonly overviewLevel: RasterLabOverviewLevel;
+  readonly tileOrigin: readonly [number, number];
+  readonly coordinateReferenceSystem: string;
+  readonly tileLoadCount: number;
+  readonly abortedTileRequestCount: number;
+  readonly sourceLoading: boolean;
   readonly mode: RasterLabDisplayMode;
   readonly smoothingMode: RasterLabSmoothingMode;
   readonly smoothingRadius: number;
@@ -60,6 +73,8 @@ type RasterLabDebugController = {
   readonly sum: number;
   readonly mean: number;
   readonly epsilon: number;
+  setSourceTile: (tile: RasterLabSourceTile) => void;
+  setSourceOverview: (level: RasterLabOverviewLevel) => void;
   setMode: (mode: RasterLabDisplayMode) => void;
   setSmoothingMode: (mode: RasterLabSmoothingMode) => void;
   setSmoothingRadius: (radius: number) => void;
@@ -91,6 +106,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   readonly device: Device;
 
   private readonly rasterSize: readonly [number, number];
+  private readonly tileReader: GPURasterTileReader;
   private readonly display: RasterLabDisplaySettings = {
     mode: 'ndvi',
     smoothingMode: 'none',
@@ -115,6 +131,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   };
   private interface: RasterLabInterface | null = null;
   private engine: RasterLabEngine | null = null;
+  private activeDataset: RasterLabDataset | null = null;
   private latestSummary: RasterLabSummary | null = null;
   private debugController: RasterLabDebugController | null = null;
   private requestedEpsilon: number | null = null;
@@ -123,6 +140,14 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private updateInFlight = false;
   private redrawRequested = true;
   private frameCount = 0;
+  private analysisExecutionCount = 0;
+  private sourceTile: RasterLabSourceTile = 'full';
+  private overviewLevel: RasterLabOverviewLevel = 0;
+  private tileLoadCount = 0;
+  private abortedTileRequestCount = 0;
+  private sourceRequestGeneration = 0;
+  private sourceAbortController: AbortController | null = null;
+  private sourceLoading = false;
   private finalized = false;
 
   constructor(animationProps: AnimationProps) {
@@ -132,6 +157,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
     this.device = animationProps.device;
     this.rasterSize = getInitialRasterSize();
+    this.tileReader = new GPURasterTileReader(
+      new RasterLabTileSource(this.rasterSize[0], this.rasterSize[1])
+    );
   }
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
@@ -140,6 +168,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     canvas.setAttribute('aria-label', 'GPU-rendered false-color synthetic vegetation raster');
 
     this.interface = new RasterLabInterface(canvas.parentElement ?? document.body, canvas, {
+      onSourceTile: tile => this.setSourceTile(tile),
+      onSourceOverview: level => this.setSourceOverview(level),
       onMode: mode => this.setMode(mode),
       onSmoothingMode: mode => this.setSmoothingMode(mode),
       onSmoothingRadius: radius => this.setSmoothingRadius(radius),
@@ -164,22 +194,14 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         this.redrawRequested = true;
       }
     });
-    this.interface.setStatus('Generating synthetic red and near-infrared reflectance');
+    this.interface.setStatus('Loading decoded red and near-infrared source tile');
 
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     if (this.finalized) return;
 
     try {
-      const dataset = makeRasterLabDataset(this.rasterSize[0], this.rasterSize[1]);
-      this.interface.setSource(dataset);
-      this.interface.setStatus('Compiling masked NDVI, spatial filters, and histogram GPU passes');
-      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-      if (this.finalized) return;
-
-      this.engine = new RasterLabEngine(this.device, dataset);
       this.installDebugController();
-      this.updateRequested = true;
-      await this.flushUpdates();
+      await this.loadSelectedSourceTile();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.interface?.setStatus(`WebGPU raster analysis unavailable: ${message}`, 'error');
@@ -198,6 +220,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   override onFinalize(): void {
     this.finalized = true;
+    this.sourceAbortController?.abort();
+    this.sourceAbortController = null;
     this.interface?.destroy();
     this.interface = null;
     this.engine?.destroy();
@@ -206,6 +230,93 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     if (typeof window !== 'undefined') {
       const debugWindow = window as RasterLabDebugWindow;
       if (debugWindow.__luRasterLab === this.debugController) delete debugWindow.__luRasterLab;
+    }
+  }
+
+  private setSourceTile(tile: RasterLabSourceTile): void {
+    if (tile === this.sourceTile) return;
+    this.sourceTile = tile;
+    this.interface?.setSourceTile(tile);
+    this.requestSourceTile();
+  }
+
+  private setSourceOverview(level: RasterLabOverviewLevel): void {
+    if (level === this.overviewLevel) return;
+    this.overviewLevel = level;
+    this.interface?.setSourceOverview(level);
+    this.requestSourceTile();
+  }
+
+  private requestSourceTile(): void {
+    if (this.finalized) return;
+    void this.loadSelectedSourceTile().catch(error => {
+      if (this.finalized || isAbortError(error)) return;
+      const message = error instanceof Error ? error.message : String(error);
+      this.interface?.setStatus(`External raster tile unavailable: ${message}`, 'error');
+    });
+  }
+
+  private async loadSelectedSourceTile(): Promise<void> {
+    if (this.finalized) return;
+    if (this.sourceAbortController && !this.sourceAbortController.signal.aborted) {
+      this.sourceAbortController.abort();
+      this.abortedTileRequestCount++;
+    }
+
+    const controller = new AbortController();
+    const generation = ++this.sourceRequestGeneration;
+    const tile = this.sourceTile;
+    const level = this.overviewLevel;
+    this.sourceAbortController = controller;
+    this.sourceLoading = true;
+    this.interface?.setStatus(`Loading L${level} ${tile.toUpperCase()} decoded source tile`);
+    const request: GPURasterTileRequest = {
+      level,
+      ...(tile === 'full' ? {} : {column: tile === 'west' ? 0 : 1, row: 0})
+    };
+    let replacement: RasterLabEngine | undefined;
+
+    try {
+      const decoded = await this.tileReader.readTile(request, controller.signal);
+      controller.signal.throwIfAborted();
+      if (generation !== this.sourceRequestGeneration || this.finalized) return;
+
+      while (this.updateInFlight && !controller.signal.aborted && !this.finalized) {
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      }
+      controller.signal.throwIfAborted();
+      if (generation !== this.sourceRequestGeneration || this.finalized) return;
+
+      const dataset = makeRasterLabTileDataset(decoded, tile);
+      replacement = new RasterLabEngine(this.device, dataset);
+      const requestedEpsilon = this.requestedEpsilon ?? this.epsilon;
+      replacement.configure(this.display, requestedEpsilon);
+      const summary = await replacement.update();
+      controller.signal.throwIfAborted();
+      if (generation !== this.sourceRequestGeneration || this.finalized) return;
+
+      const previousEngine = this.engine;
+      this.engine = replacement;
+      replacement = undefined;
+      this.activeDataset = dataset;
+      this.tileLoadCount++;
+      this.epsilon = requestedEpsilon;
+      if (
+        this.requestedEpsilon !== null &&
+        Math.abs(this.requestedEpsilon - requestedEpsilon) < 0.0000001
+      ) {
+        this.requestedEpsilon = null;
+      }
+      this.interface?.setSource(dataset);
+      this.publishSummary(summary);
+      previousEngine?.destroy();
+    } finally {
+      replacement?.destroy();
+      if (this.sourceAbortController === controller) {
+        this.sourceAbortController = null;
+        this.sourceLoading = false;
+        if (this.updateRequested && !this.finalized) this.requestUpdate();
+      }
     }
   }
 
@@ -392,7 +503,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private requestUpdate(): void {
     if (this.finalized) return;
     this.updateRequested = true;
-    if (!this.updateInFlight) {
+    if (!this.updateInFlight && !this.sourceLoading) {
       void this.flushUpdates().catch(error => {
         if (this.finalized) return;
         const message = error instanceof Error ? error.message : String(error);
@@ -407,7 +518,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.updateInFlight = true;
 
     try {
-      while (this.updateRequested && !this.finalized) {
+      while (this.updateRequested && !this.finalized && !this.sourceLoading) {
         this.updateRequested = false;
         const requestedEpsilon = this.requestedEpsilon ?? this.epsilon;
         this.requestedEpsilon = null;
@@ -416,17 +527,22 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         const summary = await engine.update();
         if (this.finalized) return;
 
-        this.latestSummary = summary;
-        this.interface?.setSummary(summary);
-        this.interface?.setStatus(
-          `${summary.nodeCount} GPU graph passes · raster pixels stay on device`,
-          'ready'
-        );
-        this.redrawRequested = true;
+        this.publishSummary(summary);
       }
     } finally {
       this.updateInFlight = false;
     }
+  }
+
+  private publishSummary(summary: RasterLabSummary): void {
+    const publishedSummary = {...summary, executionCount: ++this.analysisExecutionCount};
+    this.latestSummary = publishedSummary;
+    this.interface?.setSummary(publishedSummary);
+    this.interface?.setStatus(
+      `${publishedSummary.nodeCount} GPU graph passes · one decoded tile on device`,
+      'ready'
+    );
+    this.redrawRequested = true;
   }
 
   private installDebugController(): void {
@@ -437,13 +553,13 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         return viewer.latestSummary !== null;
       },
       get width() {
-        return viewer.rasterSize[0];
+        return viewer.activeDataset?.width ?? viewer.rasterSize[0];
       },
       get height() {
-        return viewer.rasterSize[1];
+        return viewer.activeDataset?.height ?? viewer.rasterSize[1];
       },
       get pixelCount() {
-        return viewer.rasterSize[0] * viewer.rasterSize[1];
+        return viewer.activeDataset?.pixelCount ?? viewer.rasterSize[0] * viewer.rasterSize[1];
       },
       get validPixelCount() {
         return viewer.latestSummary?.validPixelCount ?? 0;
@@ -455,7 +571,28 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         return viewer.frameCount;
       },
       get executionCount() {
-        return viewer.latestSummary?.executionCount ?? 0;
+        return viewer.analysisExecutionCount;
+      },
+      get sourceTile() {
+        return viewer.activeDataset?.tile ?? viewer.sourceTile;
+      },
+      get overviewLevel() {
+        return viewer.activeDataset?.overviewLevel ?? viewer.overviewLevel;
+      },
+      get tileOrigin() {
+        return viewer.activeDataset?.levelZeroOrigin ?? [0, 0];
+      },
+      get coordinateReferenceSystem() {
+        return viewer.activeDataset?.coordinateReferenceSystem ?? 'EPSG:32610';
+      },
+      get tileLoadCount() {
+        return viewer.tileLoadCount;
+      },
+      get abortedTileRequestCount() {
+        return viewer.abortedTileRequestCount;
+      },
+      get sourceLoading() {
+        return viewer.sourceLoading;
       },
       get mode() {
         return viewer.display.mode;
@@ -538,6 +675,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get epsilon() {
         return viewer.epsilon;
       },
+      setSourceTile: tile => viewer.setSourceTile(tile),
+      setSourceOverview: level => viewer.setSourceOverview(level),
       setMode: mode => viewer.setMode(mode),
       setSmoothingMode: mode => viewer.setSmoothingMode(mode),
       setSmoothingRadius: radius => viewer.setSmoothingRadius(radius),
@@ -566,4 +705,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 function getInitialRasterSize(): readonly [number, number] {
   if (typeof window === 'undefined') return [768, 512];
   return new URLSearchParams(window.location.search).has('visual-smoke') ? [320, 224] : [768, 512];
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
 }

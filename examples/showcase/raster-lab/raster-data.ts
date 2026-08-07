@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPURasterMetadata} from '@luma.gl/experimental/luraster';
+
 /** Explicit reflectance bands and a source-aligned cloud validity mask. */
 export type RasterLabDataset = {
   width: number;
@@ -13,6 +15,11 @@ export type RasterLabDataset = {
   cloudPixelCount: number;
   noDataPixelCount: number;
   waterPixelCount: number;
+  metadata?: GPURasterMetadata;
+  tile?: 'full' | 'west' | 'east';
+  overviewLevel?: 0 | 1;
+  levelZeroOrigin?: readonly [number, number];
+  coordinateReferenceSystem?: string;
 };
 
 /** Sentinel remains in the raw source domain and is never confused with calibrated reflectance. */
