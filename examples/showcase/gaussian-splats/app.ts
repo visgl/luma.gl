@@ -30,6 +30,7 @@ import {
   getLocalGaussianSplatLoadersConfiguration,
   loadLocalGaussianSplatArrowSources,
   openLocalGaussianSplatRADPageSource,
+  type GaussianSplatSourceCatalogEntry,
   type LocalGaussianSplatLoadProgress,
   type LocalGaussianSplatLoadersConfiguration
 } from './local-loaders';
@@ -208,7 +209,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private isLoading = false;
   private isFinalized = false;
 
-  constructor({device, width, height}: AnimationProps) {
+  constructor({
+    device,
+    width,
+    height,
+    defaultScene
+  }: AnimationProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}) {
     super();
     this.device = device;
     this.executionMode = getGaussianSplatExecutionMode(
@@ -226,7 +232,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
             }
           })
         : undefined;
-    this.localLoadersConfiguration = getLocalGaussianSplatLoadersConfiguration();
+    this.localLoadersConfiguration = getLocalGaussianSplatLoadersConfiguration(defaultScene);
     const isRADScene = this.localLoadersConfiguration?.sourceFormat === 'RAD';
     this.clearColor =
       this.localLoadersConfiguration?.sceneId === 'coit' ? COIT_CLEAR_COLOR : CLEAR_COLOR;
@@ -1145,7 +1151,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
           ? 'Unable to load scene'
           : !this.isLoading
             ? this.radSceneController
-              ? this.radWorkerDecoder
+              ? this.radWorkerDecoder?.mode === 'worker'
                 ? 'Worker-decoded RAD paging'
                 : 'RAD paging · main-thread fallback'
               : this.loadedSplatCount < this.expectedSplatCount
@@ -1180,7 +1186,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
               : `${this.loadedSplatCount.toLocaleString()} splats ready`
           );
         }
-        if (this.radSceneController && this.radWorkerDecoder) {
+        if (this.radSceneController && this.radWorkerDecoder?.mode === 'worker') {
           const {workerCount, completedDecodeCount} = this.radWorkerDecoder;
           detailParts.push(
             `${workerCount} background worker${workerCount === 1 ? '' : 's'} · ${completedDecodeCount.toLocaleString()} decoded page${completedDecodeCount === 1 ? '' : 's'}`

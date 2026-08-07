@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import type {
   LocalGaussianSplatLoadersConfiguration,
   LocalGaussianSplatRADMetadata
@@ -85,6 +85,200 @@ describe('Gaussian splat RAD browser worker', () => {
     decoder.destroy();
     expect(decoder.workerCount).toBe(0);
     decoder.destroy();
+  });
+
+  test('retries the root page when an accepted module worker fails asynchronously', async () => {
+    const loaderBundleUrl = new URL(
+      '/website/static/standalone-examples/gaussian-splats/loaders-gl.mjs',
+      window.location.href
+    ).href;
+    const loaderBundle = await import(/* @vite-ignore */ loaderBundleUrl);
+    const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockImplementation(() =>
+      originalCreateObjectURL(
+        new Blob(['throw new Error("Module workers are blocked by the content security policy")'], {
+          type: 'text/javascript'
+        })
+      )
+    );
+    const configuration: LocalGaussianSplatLoadersConfiguration = {
+      loaderMode: 'bundled',
+      loadersRoot: '',
+      loaderBundleUrl,
+      sourceUrl: 'https://example.test/coit.rad',
+      sourceUrls: ['https://example.test/coit.rad'],
+      fallbackSourceUrls: [],
+      sourceFormat: 'RAD',
+      sceneId: 'coit',
+      sourceLabel: 'Worker startup fallback fixture',
+      upAxis: 'z',
+      up: [0, 0, 1]
+    };
+    const metadata: LocalGaussianSplatRADMetadata = {
+      count: 2,
+      chunks: [{chunkIndex: 0, base: 65_536, count: 2, bytes: 0}],
+      maxSh: 1,
+      lodTree: true,
+      splatEncoding: {lodOpacity: true}
+    };
+    const decoder = createGaussianSplatRADWorkerDecoder(configuration, {maxWorkers: 1});
+
+    try {
+      expect(decoder?.mode).toBe('worker');
+      expect(decoder?.workerCount).toBe(1);
+      if (!decoder) {
+        throw new Error('The browser did not accept the intentionally failing module worker.');
+      }
+
+      let fallbackCalls = 0;
+      const page = await decoder.decodePage({
+        chunkIndex: 0,
+        sourceUrl: configuration.sourceUrl,
+        metadata,
+        signal: new AbortController().signal,
+        fetchChunkBytes: async () => makeGaussianBrowserRADChunk(),
+        decodeDefault: async () => {
+          fallbackCalls++;
+          return loaderBundle.parseRADChunk(makeGaussianBrowserRADChunk(), {
+            radChunk: {
+              splatEncoding: metadata.splatEncoding,
+              includeLoDTree: true,
+              includeSphericalHarmonics: true
+            }
+          });
+        }
+      });
+
+      expect(decoder.mode).toBe('main-thread');
+      expect(decoder.workerCount).toBe(0);
+      expect(decoder.completedDecodeCount).toBe(1);
+      expect(fallbackCalls).toBe(1);
+      expect(page.data.numRows).toBe(2);
+      expect(page.loaderData).toMatchObject({
+        base: 65_536,
+        maxSh: 1,
+        lodTree: true,
+        splatEncoding: {lodOpacity: true}
+      });
+      expect(Array.from(page.loaderData.childCounts!)).toEqual([1, 0]);
+      expect(Array.from(page.loaderData.childStarts!)).toEqual([131_072, 0]);
+
+      let fallbackByteFetches = 0;
+      const nextPage = await decoder.decodePage({
+        chunkIndex: 0,
+        sourceUrl: configuration.sourceUrl,
+        metadata,
+        signal: new AbortController().signal,
+        fetchChunkBytes: async () => {
+          fallbackByteFetches++;
+          return makeGaussianBrowserRADChunk();
+        },
+        decodeDefault: async () => {
+          fallbackCalls++;
+          return loaderBundle.parseRADChunk(makeGaussianBrowserRADChunk(), {
+            radChunk: {splatEncoding: metadata.splatEncoding, includeLoDTree: true}
+          });
+        }
+      });
+
+      expect(nextPage.data.numRows).toBe(2);
+      expect(fallbackByteFetches).toBe(0);
+      expect(fallbackCalls).toBe(2);
+      expect(decoder.completedDecodeCount).toBe(2);
+      expect(decoder.workerCount).toBe(0);
+    } finally {
+      decoder?.destroy();
+      createObjectURL.mockRestore();
+    }
+  });
+
+  test('drains queued pages and preserves cancellation when the worker import fails', async () => {
+    const validBundleUrl = new URL(
+      '/website/static/standalone-examples/gaussian-splats/loaders-gl.mjs',
+      window.location.href
+    ).href;
+    const loaderBundle = await import(/* @vite-ignore */ validBundleUrl);
+    const failingBundleUrl = URL.createObjectURL(
+      new Blob(['throw new Error("Dynamic module imports are unavailable in workers")'], {
+        type: 'text/javascript'
+      })
+    );
+    const configuration: LocalGaussianSplatLoadersConfiguration = {
+      loaderMode: 'bundled',
+      loadersRoot: '',
+      loaderBundleUrl: failingBundleUrl,
+      sourceUrl: 'https://example.test/coit.rad',
+      sourceUrls: ['https://example.test/coit.rad'],
+      fallbackSourceUrls: [],
+      sourceFormat: 'RAD',
+      sceneId: 'coit',
+      sourceLabel: 'Worker import fallback fixture',
+      upAxis: 'z',
+      up: [0, 0, 1]
+    };
+    const metadata: LocalGaussianSplatRADMetadata = {
+      count: 6,
+      chunks: [
+        {chunkIndex: 0, base: 65_536, count: 2, bytes: 0},
+        {chunkIndex: 1, base: 65_538, count: 2, bytes: 0},
+        {chunkIndex: 2, base: 65_540, count: 2, bytes: 0}
+      ],
+      maxSh: 1,
+      lodTree: true,
+      splatEncoding: {lodOpacity: true}
+    };
+    const decoder = createGaussianSplatRADWorkerDecoder(configuration, {maxWorkers: 1});
+
+    try {
+      expect(decoder?.mode).toBe('worker');
+      if (!decoder) {
+        throw new Error('The browser did not create its failing-import module worker.');
+      }
+
+      const canceledController = new AbortController();
+      const fallbackChunkIndices: number[] = [];
+      let activeFallbacks = 0;
+      let maximumActiveFallbacks = 0;
+      const decodePage = (chunkIndex: number, signal = new AbortController().signal) =>
+        decoder.decodePage({
+          chunkIndex,
+          sourceUrl: configuration.sourceUrl,
+          metadata,
+          signal,
+          fetchChunkBytes: async () => makeGaussianBrowserRADChunk(),
+          decodeDefault: async () => {
+            fallbackChunkIndices.push(chunkIndex);
+            activeFallbacks++;
+            maximumActiveFallbacks = Math.max(maximumActiveFallbacks, activeFallbacks);
+            try {
+              await Promise.resolve();
+              signal.throwIfAborted();
+              return loaderBundle.parseRADChunk(makeGaussianBrowserRADChunk(), {
+                radChunk: {splatEncoding: metadata.splatEncoding, includeLoDTree: true}
+              });
+            } finally {
+              activeFallbacks--;
+            }
+          }
+        });
+      const rootPage = decodePage(0);
+      const queuedPage = decodePage(1);
+      const canceledPage = decodePage(2, canceledController.signal).catch(error => error);
+      await Promise.resolve();
+      canceledController.abort();
+
+      await expect(rootPage).resolves.toMatchObject({data: {numRows: 2}});
+      await expect(queuedPage).resolves.toMatchObject({data: {numRows: 2}});
+      await expect(canceledPage).resolves.toMatchObject({name: 'AbortError'});
+      expect(fallbackChunkIndices).toEqual([0, 1]);
+      expect(maximumActiveFallbacks).toBe(1);
+      expect(decoder.mode).toBe('main-thread');
+      expect(decoder.workerCount).toBe(0);
+      expect(decoder.completedDecodeCount).toBe(2);
+    } finally {
+      decoder?.destroy();
+      URL.revokeObjectURL(failingBundleUrl);
+    }
   });
 
   test('cancels an actual in-flight worker and recreates it for fresh camera demand', async () => {

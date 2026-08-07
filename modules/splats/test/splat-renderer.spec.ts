@@ -8,6 +8,10 @@ import {Model} from '@luma.gl/engine';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
 import {getTestDevices} from '@luma.gl/test-utils';
 
+// Keep renderer ownership, sorting, tone mapping, and SH fallback covered on software-only CI.
+import './splat-renderer.node.spec';
+import './splat-spherical-harmonics.node.spec';
+
 test('SplatRenderer renders Gaussian source batches on WebGPU and WebGL2', async t => {
   const devices = await getTestDevices(['webgpu', 'webgl']);
   t.ok(devices.length > 0, 'at least one browser graphics backend is available');
@@ -248,6 +252,162 @@ test('SplatRenderer evaluates higher-order directional radiance on WebGPU and We
     colorTexture.destroy();
   }
 
+  t.end();
+});
+
+test('SplatRenderer WebGL preserves HDR directional radiance from byte-backed source colors', async t => {
+  const [device] = await getTestDevices(['webgl']);
+  if (!device || isSoftwareBackedDevice(device)) {
+    t.comment('Skipping byte-backed spherical-harmonic WebGL readback without hardware support');
+    t.end();
+    return;
+  }
+
+  const textureSize = 16;
+  const colorTexture = device.createTexture({
+    width: textureSize,
+    height: textureSize,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: textureSize,
+    height: textureSize,
+    colorAttachments: [colorTexture],
+    depthStencilAttachment: 'depth24plus'
+  });
+  const source = makeBrowserSplatSource(0.5, 0);
+  source.colors = new Uint8Array([128, 64, 32, 255]);
+  source.scales.set([0.8, 0.8, 0.05]);
+  source.sphericalHarmonics = new Float32Array(9);
+  source.sphericalHarmonics[2 * 3] = -4;
+  source.sphericalHarmonics[2 * 3 + 1] = 2;
+  source.sphericalHarmonicsDegree = 1;
+  const prepared = makeGPUSplatData(device, source);
+  const renderer = new SplatRenderer(device, {
+    data: prepared,
+    cameraPosition: [-1, 0, 0.5],
+    sphericalHarmonicsDegree: 1,
+    viewportSize: [textureSize, textureSize],
+    exposure: 0.25,
+    toneMapping: 'none',
+    alphaCutoff: 0
+  });
+  renderer.predraw(device.commandEncoder);
+  const renderPass = device.beginRenderPass({
+    framebuffer,
+    clearColor: [0, 0, 0, 0],
+    clearDepth: 1
+  });
+  t.ok(renderer.draw(renderPass), 'renders unclamped spherical-harmonic WebGL radiance');
+  renderPass.end();
+  device.submit();
+
+  const layout = colorTexture.computeMemoryLayout({width: textureSize, height: textureSize});
+  const readback = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
+  const pixels = await readback.readAsync(0, layout.byteLength);
+  const centerPixelOffset = 8 * layout.bytesPerRow + 8 * 4;
+  t.ok(
+    pixels[centerPixelOffset] > 120,
+    'applies exposure after preserving a directional red highlight above one'
+  );
+  t.ok(
+    pixels[centerPixelOffset + 1] < 10,
+    'preserves negative directional green radiance until display output'
+  );
+  t.equal(
+    renderer.model?.bufferLayout.find(bufferLayout => bufferLayout.name === 'colors')?.format,
+    'float32x4',
+    'uses floating-point attributes for evaluated byte-backed spherical harmonics'
+  );
+  t.deepEqual(Array.from(source.colors), [128, 64, 32, 255], 'preserves original source bytes');
+
+  readback.destroy();
+  renderer.destroy();
+  prepared.destroy();
+  framebuffer.destroy();
+  colorTexture.destroy();
+  t.end();
+});
+
+test('SplatRenderer WebGL composites unsorted rows across interleaved source batches', async t => {
+  const [device] = await getTestDevices(['webgl']);
+  if (!device || isSoftwareBackedDevice(device)) {
+    t.comment('Skipping globally sorted Gaussian WebGL readback without hardware support');
+    t.end();
+    return;
+  }
+
+  const textureSize = 16;
+  const colorTexture = device.createTexture({
+    width: textureSize,
+    height: textureSize,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: textureSize,
+    height: textureSize,
+    colorAttachments: [colorTexture],
+    depthStencilAttachment: 'depth24plus'
+  });
+  const firstSource: SplatSource = {
+    positions: new Float32Array([0, 0, 0.2, 0, 0, 0.8]),
+    scales: new Float32Array([0.8, 0.8, 0.05, 0.8, 0.8, 0.05]),
+    rotations: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0]),
+    colors: new Uint8Array([255, 0, 0, 255, 0, 0, 255, 255]),
+    opacities: new Float32Array([0.6, 0.6]),
+    sourceBatchIndex: 0,
+    rowIndexBase: 0
+  };
+  const secondSource = makeBrowserSplatSource(0.5, 2);
+  secondSource.colors = new Uint8Array([0, 255, 0, 255]);
+  secondSource.scales.set([0.8, 0.8, 0.05]);
+  secondSource.opacities[0] = 0.6;
+  const firstBatch = makeGPUSplatData(device, firstSource);
+  const secondBatch = makeGPUSplatData(device, secondSource);
+  const renderer = new SplatRenderer(device, {
+    data: [firstBatch, secondBatch],
+    viewportSize: [textureSize, textureSize],
+    sortMode: 'global',
+    alphaCutoff: 0
+  });
+  renderer.predraw(device.commandEncoder);
+  const renderPass = device.beginRenderPass({
+    framebuffer,
+    clearColor: [0, 0, 0, 0],
+    clearDepth: 1
+  });
+  t.ok(renderer.draw(renderPass), 'draws all three globally ordered source rows');
+  renderPass.end();
+  device.submit();
+
+  const layout = colorTexture.computeMemoryLayout({width: textureSize, height: textureSize});
+  const readback = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
+  const pixels = await readback.readAsync(0, layout.byteLength);
+  const centerPixelOffset = 8 * layout.bytesPerRow + 8 * 4;
+  const red = pixels[centerPixelOffset];
+  const green = pixels[centerPixelOffset + 1];
+  const blue = pixels[centerPixelOffset + 2];
+  t.deepEqual(Array.from(renderer.getSortedIndices()), [1, 2, 0], 'retains exact global row order');
+  t.ok(red > green + 25, 'blends the nearest red row after the middle green source batch');
+  t.ok(green > blue + 10, 'blends the middle green source batch after the furthest blue row');
+  t.deepEqual(Array.from(firstSource.colors), [255, 0, 0, 255, 0, 0, 255, 255], 'preserves source');
+
+  readback.destroy();
+  renderer.destroy();
+  firstBatch.destroy();
+  secondBatch.destroy();
+  framebuffer.destroy();
+  colorTexture.destroy();
   t.end();
 });
 

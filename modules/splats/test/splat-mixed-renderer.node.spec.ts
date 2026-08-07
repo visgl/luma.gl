@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
+import {Buffer} from '@luma.gl/core';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 
@@ -64,6 +65,7 @@ test('SplatRenderer composites opaque meshes, sorted splats, and transparent mes
 test('SplatRenderer enforces semantic filtering on WebGL without changing source opacity', async t => {
   const device = new NullDevice({});
   const source = makeMixedSplatSource();
+  source.opacities.set([0.25, 0.5, 0.75]);
   const prepared = makeGPUSplatData(device, source);
   const renderer = new SplatRenderer(device, {
     data: prepared,
@@ -80,16 +82,50 @@ test('SplatRenderer enforces semantic filtering on WebGL without changing source
   const bytes = await opacityBuffer.readAsync();
   t.deepEqual(
     Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4)),
-    [1, 0, 1],
+    [0.25, 0, 0.75],
     'masks rejected WebGL rows in a renderer-owned opacity allocation'
   );
-  t.deepEqual(Array.from(source.opacities), [1, 1, 1], 'preserves caller-owned source opacity');
+  t.deepEqual(
+    Array.from(source.opacities),
+    [0.25, 0.5, 0.75],
+    'preserves caller-owned source opacity'
+  );
 
   renderer.draw(device.getDefaultRenderPass());
-  t.equal(
-    renderer.model?.vertexArray.attributes[4],
+  const sortedOpacityBuffer = renderer.model?.vertexArray.attributes[4];
+  if (!(sortedOpacityBuffer instanceof Buffer)) {
+    t.fail('binds renderer-owned, semantically filtered opacity in sorted source-row order');
+    renderer.destroy();
+    prepared.destroy();
+    t.end();
+    return;
+  }
+  t.notEqual(
+    sortedOpacityBuffer,
     opacityBuffer,
-    'binds semantic masking to the fallback instanced shader'
+    'keeps batch-order semantic masks separate from sorted instanced attributes'
+  );
+  t.equal(
+    sortedOpacityBuffer,
+    renderer.getDrawRuns()[0]?.attributeBuffers?.opacities,
+    'binds the run-owned reordered opacity allocation'
+  );
+  const sortedOpacityBytes = await sortedOpacityBuffer.readAsync();
+  t.deepEqual(
+    Array.from(
+      new Float32Array(
+        sortedOpacityBytes.buffer,
+        sortedOpacityBytes.byteOffset,
+        sortedOpacityBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+      )
+    ),
+    [0.75, 0.25],
+    'preserves the accepted source opacities in exact back-to-front draw order'
+  );
+  t.deepEqual(
+    Array.from(source.opacities),
+    [0.25, 0.5, 0.75],
+    'does not reorder or mask caller-owned source opacity'
   );
   renderer.setProps({semanticFilter: undefined});
   t.equal(renderer.stats.visibleSplatCount, 3, 'restores every source row when the filter clears');
@@ -99,8 +135,17 @@ test('SplatRenderer enforces semantic filtering on WebGL without changing source
     'restores caller-owned opacity when semantic masking is disabled'
   );
 
+  renderer.setProps({sortMode: 'none', semanticFilter: {include: [7, 9]}});
+  renderer.draw(device.getDefaultRenderPass());
+  t.equal(
+    renderer.model?.vertexArray.attributes[4],
+    renderer.getBatchOpacityBuffer(0),
+    'binds the original semantic mask directly when all source rows retain their original order'
+  );
+
   renderer.destroy();
   t.ok(opacityBuffer.destroyed, 'releases only the renderer-owned semantic opacity mask');
+  t.ok(sortedOpacityBuffer.destroyed, 'releases the renderer-owned sorted opacity allocation');
   t.notOk(prepared.opacities.data[0].buffer.destroyed, 'preserves caller-owned opacity');
   prepared.destroy();
   t.end();

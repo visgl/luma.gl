@@ -1,3 +1,5 @@
+import {GaussianSplatViewerExample} from '@site/src/examples';
+
 # @luma.gl/splats
 
 `@luma.gl/splats` provides experimental GPU-native Gaussian splat rendering. It owns prepared
@@ -8,6 +10,47 @@ render models without depending on Apache Arrow, loaders.gl, glTF packages, or d
 The module is currently a private, unpublished luma.gl workspace. Install dependencies from the
 repository root and add `"@luma.gl/splats": "workspace:*"` to another workspace package when
 developing against it locally.
+
+## Interactive Coit Tower showcase
+
+Explore the 50,937,127-splat Coit Tower capture directly. WebGPU streams camera-selected RAD pages,
+decodes them in background workers, and keeps GPU residency bounded while the viewpoint changes.
+
+<GaussianSplatViewerExample embedded embeddedHeight={640} defaultScene="coit" showStats={false} />
+
+[Open the full Coit Tower viewer](/examples/showcase/gaussian-splat-viewer?scene=coit).
+
+## Gaussian splat implementation roadmap
+
+The completed tranches establish portable rendering, interaction, bounded out-of-core scenes, and
+a live 50,937,127-source-row Coit Tower viewer. Planned tranches describe remaining work; the
+current viewer does not retain all source rows simultaneously or claim measured Spark parity.
+
+### Current supremacy-track status
+
+| Track | Current status | Remaining work |
+| --- | --- | --- |
+| GPU graph feature parity | Implemented for the portable renderer and contiguous WebGPU command graph: directional harmonics, semantic filtering, stable GPU picking, and mixed mesh composition. | Extend picking and single-pass mixed composition to the segmented out-of-core renderer. |
+| Out-of-core RAD rendering | Implemented: authored row hierarchies, camera-selected pages, bounded module-worker decoding, foveated refinement, parent fallback, cancellation, and active-frontier residency. | Move hierarchy traversal and demand scheduling off the main thread; coordinate with the related [RAD renderer draft #3431](https://github.com/visgl/loaders.gl/pull/3431). |
+| 50-million-splat Spark parity | In progress: the 50,937,127-source-row Coit capture streams through a bounded one-million-row resident window with calibrated camera, covariance, antialiasing, and coarse-level opacity. | Establish reproducible Spark visual/performance benchmarks, larger active sort domains, and near-linear cross-segment routing. |
+| 3D Tiles integration | Partial: decoded Gaussian glTF primitives, feature identifiers, and caller-decoded SPZ v2 handoff work; loaders.gl already provides `Tileset3D` and `Tiles3DSource` traversal, transport, computed transforms, caching, and feature metadata. | Connect selected tiles to prepared splat batches or the existing `SplatLayer`, applying loader-computed transforms per tile/page in the renderer; add Gaussian glTF extension handlers and SPZ v2 decoding in loaders.gl, whose `SPZLoader` currently supports v4 only; see [tracking issue #1245](https://github.com/visgl/loaders.gl/issues/1245). |
+
+### Delivery tranches
+
+| Tranche | Scope | Status |
+| --- | --- | --- |
+| T0: portable rendering foundation | Caller-owned typed batches, anisotropic WebGPU/WebGL2 rendering, Arrow adapters, HDR source radiance, and the initial Gaussian showcase. | Implemented in [#2929](https://github.com/visgl/luma.gl/pull/2929). |
+| T0a: progressive GPU graphs | Captured-scene website viewer, reusable WebGPU command graphs, preserved-batch streaming, global GPU sorting, and indirect draws. | Implemented in [#2932](https://github.com/visgl/luma.gl/pull/2932), [#2938](https://github.com/visgl/luma.gl/pull/2938), and [#2966](https://github.com/visgl/luma.gl/pull/2966). |
+| T1: interaction and residency | Degree-one through degree-three harmonics, semantic filtering, GPU picking, dynamic source updates, mixed mesh composition, and bounded residency. | Implemented in [#3035](https://github.com/visgl/luma.gl/pull/3035). |
+| T2: graph and hierarchy parity | Graph-native harmonics, filtering, picking, and mixed rendering; parent-preserving hierarchical paging; decoded glTF splats, feature IDs, and external SPZ handoff. | Implemented in [#3041](https://github.com/visgl/luma.gl/pull/3041). |
+| T3: out-of-core RAD scenes | Authored row hierarchies, camera-prioritized cancellable page requests, bounded resident windows, and globally sorted segmented WebGPU rendering. | Implemented in [#3051](https://github.com/visgl/luma.gl/pull/3051). |
+| T4: Spark-calibrated Coit showcase | Analytic covariance, area-preserving antialiasing, nonlinear coarse opacity, angular refinement, a 75-degree camera, and bounded module-worker page decoding. | Implemented in [#3057](https://github.com/visgl/luma.gl/pull/3057). |
+| T5: documentation and correctness hardening | Embedded Coit documentation, asynchronous module-worker fallback, exact sorted WebGL compositing, unclamped WebGL harmonics, constructor-only graph allocation options, and validated Arrow source metadata. | Implemented in this follow-up. |
+| T6: incremental hierarchy scheduling | Move camera-driven hierarchy traversal, row selection, and page-demand scheduling into incremental worker/GPU workflows with bounded per-frame work. | Planned; authored row traversal currently runs on the CPU. |
+| T7: segmented picking and mixed composition | Resolve stable picking identities across paged GPU segments and composite paged splats with caller-owned meshes in one depth-aware render pass. | Planned; picking and mesh helpers currently target non-paged renderers. |
+| T8: partitioned global sorting | Sort beyond 33,554,432 active four-byte references on a 128 MiB storage-binding limit and replace segment-pair scatter with near-linear routing. | Planned; projected segments already exist, but global sorting still uses one binding. |
+| T9: streamed 3D Tiles and glTF transport | Reuse existing loaders.gl tileset traversal, fetching, computed transforms, caching, and feature metadata; add Gaussian glTF extension handlers and SPZ v2 decoding in loaders.gl; connect selected content to prepared splats or the existing `SplatLayer` with per-tile/page renderer transforms. | Planned; loaders.gl has SPZ v4 decoding, but not SPZ v2 or end-to-end transformed Gaussian tile integration. |
+| T10: reproducible Spark visual and performance evidence | Measure comparable scene imagery, frame times, startup, bandwidth, cancellation, and bounded residency against Spark's complete Coit source. | Planned; no measured visual or performance parity is claimed. |
 
 ## Rendering prepared splats
 
@@ -88,6 +131,9 @@ tone-mapping options from `SplatRenderer`, plus the following graph-specific pro
 | `cameraPosition` | `[number, number, number]` | World-space camera position used to evaluate directional source radiance directly on the GPU. |
 | `sphericalHarmonicsDegree` | `0 \| 1 \| 2 \| 3` | Highest fully prepared spherical-harmonic band evaluated by graph projection. |
 | `semanticFilter` | `SplatSemanticFilter` | GPU-resident include/exclude class selection and unlabeled-source visibility. |
+
+`clearColor`, `expectedSplatCount`, and `expectedBatchCount` are constructor-only options.
+`setProps(...)` accepts mutable camera, styling, semantic-filter, and borrowed-source updates.
 
 Provide both expected counts when source metadata is available. For example, a 741,883-row Train
 capture streamed in twelve Arrow record batches can reuse one compiled graph throughout its entire
@@ -326,8 +372,9 @@ colors. Changing `cameraPosition` refreshes directional colors independently fro
 
 Provide `semanticIds: Uint32Array` with one compact class identifier per source row. Configure
 `semanticFilter` with included or excluded IDs, an `includeUnlabeled` policy, or a predicate that
-receives the stable global row and source-batch identity. Arrow semantic columns must not contain
-null values; omit the column entirely for an unlabeled source batch.
+receives the stable global row and source-batch identity. Arrow semantic columns must contain
+finite unsigned 32-bit integer identifiers; nulls, string labels, fractions, and out-of-range
+values are rejected. Omit the column entirely for an unlabeled source batch.
 
 ```ts
 renderer.setProps({
@@ -591,6 +638,18 @@ DC radiance, and packs complete degree-one through degree-three RGB coefficient 
 `KHR_gaussian_splatting_compression_spz_2` payloads are handed to an explicitly caller-owned
 decoder; this renderer does not claim to parse SPZ or fetch 3D Tiles itself.
 
+loaders.gl already provides `Tileset3D` and `Tiles3DSource` for 3D Tiles traversal, content
+fetching, tile transforms, cache management, and request scheduling. Its glTF loader already
+decodes `EXT_mesh_features` and `EXT_structural_metadata`. The existing `SPZLoader` currently
+supports SPZ version 4, not SPZ version 2. End-to-end Gaussian 3D Tiles require loader-owned
+`KHR_gaussian_splatting` and `KHR_gaussian_splatting_compression_spz_2` runtime handlers, SPZ v2
+decoding, and an application bridge from selected tiles into prepared splat batches or the existing
+`SplatLayer`. loaders.gl already computes `Tile3D.computedTransform`, but the paged splat renderer
+currently exposes one global model-view-projection transform and no per-page model transform. The
+remaining renderer-side integration must therefore apply loader-computed transforms per tile/page.
+The tileset traversal and layer already exist; follow
+[tracking issue #1245](https://github.com/visgl/loaders.gl/issues/1245) for the missing integration.
+
 ## Apache Arrow conversion
 
 ```ts
@@ -670,6 +729,9 @@ during streaming, and idle redraw suppression keep large scenes easier to inspec
 ## Package boundaries
 
 - `@loaders.gl/splats` parses Gaussian splat file formats and produces application-level data.
+- `@loaders.gl/tiles` and `@loaders.gl/3d-tiles` own tileset traversal, content transport,
+  transforms, request scheduling, and caching.
+- `@loaders.gl/gltf` owns glTF parsing, extension decoding, and feature metadata.
 - `@luma.gl/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
 - `@luma.gl/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
 - Applications or deck.gl layers own viewport integration, file selection, and interactive UI.

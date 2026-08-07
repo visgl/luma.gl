@@ -118,6 +118,183 @@ test('SplatRenderer evaluates view-dependent spherical harmonics without mutatin
   t.end();
 });
 
+test('SplatRenderer preserves unclamped spherical-harmonic radiance for byte-backed WebGL colors', async t => {
+  const device = new NullDevice({});
+  const source = makeSphericalHarmonicSource();
+  source.colors = new Uint8Array([128, 64, 32, 255]);
+  source.sphericalHarmonics![2 * 3] = -4;
+  source.sphericalHarmonics![2 * 3 + 1] = 2;
+  const prepared = makeGPUSplatData(device, source);
+  const renderer = new SplatRenderer(device, {
+    data: prepared,
+    cameraPosition: [0, 0, 0],
+    sphericalHarmonicsDegree: 1,
+    viewportSize: [32, 32],
+    exposure: 0.25,
+    toneMapping: 'none'
+  });
+  const renderPass = device.getDefaultRenderPass();
+  renderer.draw(renderPass);
+  const evaluatedColorBuffer = renderer.model?.vertexArray.attributes[3];
+  if (!(evaluatedColorBuffer instanceof Buffer)) {
+    t.fail('creates independently owned Float32 evaluated WebGL colors');
+    renderer.destroy();
+    prepared.destroy();
+    t.end();
+    return;
+  }
+
+  const evaluatedColors = await readFloat32Buffer(evaluatedColorBuffer);
+  t.ok(evaluatedColors[0] > 2, 'retains HDR directional red radiance before exposure');
+  t.ok(
+    evaluatedColors[1] < 0,
+    'retains negative directional green radiance before display mapping'
+  );
+  t.equal(evaluatedColors[3], 1, 'normalizes the byte-backed source alpha exactly once');
+  t.equal(
+    renderer.model?.bufferLayout.find(layout => layout.name === 'colors')?.format,
+    'float32x4',
+    'binds evaluated HDR radiance through a Float32 WebGL vertex attribute'
+  );
+  t.deepEqual(
+    Array.from(source.colors),
+    [128, 64, 32, 255],
+    'does not clamp or mutate caller-owned byte source colors'
+  );
+
+  renderer.setProps({sphericalHarmonicsDegree: 0});
+  renderer.draw(renderPass);
+  t.equal(
+    renderer.model?.bufferLayout.find(layout => layout.name === 'colors')?.format,
+    'unorm8x4',
+    'restores the original normalized-byte vertex layout when higher bands are disabled'
+  );
+  t.equal(
+    renderer.model?.vertexArray.attributes[3],
+    prepared.colors.data[0].buffer,
+    'restores the caller-owned byte color buffer when higher bands are disabled'
+  );
+
+  renderer.destroy();
+  t.ok(evaluatedColorBuffer.destroyed, 'releases only renderer-owned Float32 evaluated colors');
+  t.notOk(prepared.colors.data[0].buffer.destroyed, 'preserves caller-owned byte source colors');
+  prepared.destroy();
+  t.end();
+});
+
+test('SplatRenderer uses one stable Float32 WebGL layout for mixed spherical-harmonic batches', async t => {
+  const device = new NullDevice({});
+  const directionalSource: SplatSource = {
+    positions: new Float32Array([1, 0, 0.2, 1, 0, 0.8]),
+    scales: new Float32Array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]),
+    rotations: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0]),
+    colors: new Uint8Array([128, 64, 32, 255, 128, 64, 32, 255]),
+    opacities: new Float32Array([1, 1]),
+    sphericalHarmonics: new Float32Array(18),
+    sphericalHarmonicsDegree: 1,
+    sourceBatchIndex: 0,
+    rowIndexBase: 0
+  };
+  directionalSource.sphericalHarmonics![2 * 3] = -4;
+  directionalSource.sphericalHarmonics![9 + 2 * 3] = -4;
+  const standardSource: SplatSource = {
+    positions: new Float32Array([1, 0, 0.5]),
+    scales: new Float32Array([0.1, 0.1, 0.1]),
+    rotations: new Float32Array([1, 0, 0, 0]),
+    colors: new Uint8Array([64, 128, 255, 255]),
+    opacities: new Float32Array([1]),
+    sourceBatchIndex: 1,
+    rowIndexBase: 2
+  };
+  const directionalBatch = makeGPUSplatData(device, directionalSource);
+  const standardBatch = makeGPUSplatData(device, standardSource);
+  const renderer = new SplatRenderer(device, {
+    data: [directionalBatch, standardBatch],
+    sphericalHarmonicsDegree: 1,
+    viewportSize: [32, 32]
+  });
+  const model = renderer.model;
+  if (!model) {
+    t.fail('creates a shared Gaussian splat WebGL model');
+    renderer.destroy();
+    directionalBatch.destroy();
+    standardBatch.destroy();
+    t.end();
+    return;
+  }
+
+  const originalDraw = model.draw.bind(model);
+  const firstVertexArray = model.vertexArray;
+  const firstPipeline = model.pipeline;
+  const drawnColorBuffers: Buffer[] = [];
+  model.draw = renderPass => {
+    t.equal(
+      model.vertexArray,
+      firstVertexArray,
+      'reuses one vertex array for every interleaved run'
+    );
+    t.equal(model.pipeline, firstPipeline, 'reuses one render pipeline for every interleaved run');
+    const colorBuffer = model.vertexArray.attributes[3];
+    if (colorBuffer instanceof Buffer) {
+      drawnColorBuffers.push(colorBuffer);
+    }
+    return originalDraw(renderPass);
+  };
+  const renderPass = device.getDefaultRenderPass();
+  renderer.draw(renderPass);
+  t.deepEqual(
+    Array.from(renderer.getSortedIndices()),
+    [1, 2, 0],
+    'interleaves both source batches'
+  );
+  t.equal(
+    model.bufferLayout.find(bufferLayout => bufferLayout.name === 'colors')?.format,
+    'float32x4',
+    'uses one Float32 color layout for directional and ordinary byte-backed batches'
+  );
+  const ordinaryColorBuffer = drawnColorBuffers[1];
+  if (!ordinaryColorBuffer) {
+    t.fail('binds renderer-owned normalized colors for the ordinary interleaved batch');
+    renderer.destroy();
+    directionalBatch.destroy();
+    standardBatch.destroy();
+    t.end();
+    return;
+  }
+  const normalizedOrdinaryColors = await readFloat32Buffer(ordinaryColorBuffer);
+  t.ok(
+    Math.abs(normalizedOrdinaryColors[0] - 64 / 255) < 1e-6 &&
+      Math.abs(normalizedOrdinaryColors[1] - 128 / 255) < 1e-6,
+    'normalizes ordinary source bytes into compatible renderer-owned Float32 colors'
+  );
+
+  drawnColorBuffers.length = 0;
+  renderer.setProps({cameraPosition: [2, 0, 0]});
+  renderer.draw(renderPass);
+  t.equal(model.vertexArray, firstVertexArray, 'retains the vertex array across animated frames');
+  t.equal(model.pipeline, firstPipeline, 'retains the pipeline across animated frames');
+  t.deepEqual(
+    Array.from(standardSource.colors),
+    [64, 128, 255, 255],
+    'preserves ordinary caller-owned byte colors'
+  );
+
+  model.draw = originalDraw;
+  renderer.setProps({sphericalHarmonicsDegree: 0});
+  renderer.draw(renderPass);
+  t.equal(
+    model.bufferLayout.find(bufferLayout => bufferLayout.name === 'colors')?.format,
+    'unorm8x4',
+    'switches once to the original byte layout when directional rendering is disabled'
+  );
+  t.ok(firstVertexArray.destroyed, 'releases the superseded Float32 vertex array');
+
+  renderer.destroy();
+  directionalBatch.destroy();
+  standardBatch.destroy();
+  t.end();
+});
+
 test('SplatRenderer binds batch-local spherical harmonics to the WebGPU storage pipeline', t => {
   const device = new NullDevice({});
   Object.defineProperties(device, {

@@ -479,7 +479,7 @@ export class SplatRADHierarchyManager {
       selectedPages: new Map(),
       protectedPageIds: new Set(),
       requestedPages: new Map(),
-      allocatedRowCount: rootRows.length,
+      allocatedRowCount: 0,
       refinedRows: new Set()
     };
     const selectedRows = new Map<number, SplatRADFrontierCandidate>();
@@ -493,6 +493,7 @@ export class SplatRADHierarchyManager {
       }
       const candidate = this.makeFrontierCandidate(rootPage, rootRow);
       if (candidate) {
+        state.allocatedRowCount++;
         this.addFrontierCandidate(candidate, selectedRows, refinementQueue);
       }
     }
@@ -599,7 +600,6 @@ export class SplatRADHierarchyManager {
     if (
       childCount === 0 ||
       priority <= this.getRefinementThreshold(candidate) ||
-      state.allocatedRowCount + childCount - 1 > this.maximumActiveRows ||
       this.visibleRowCount + this.culledRowCount + childCount > this.maxTraversalRows ||
       !Number.isSafeInteger(childStart + childCount) ||
       childStart + childCount > 0x8000_0000
@@ -647,12 +647,15 @@ export class SplatRADHierarchyManager {
         childCandidates.push(child);
       }
     }
-    if (childCandidates.length === 0) {
+    if (
+      childCandidates.length === 0 ||
+      state.allocatedRowCount + childCandidates.length - 1 > this.maximumActiveRows
+    ) {
       return;
     }
 
     selectedRows.delete(globalRowIndex);
-    state.allocatedRowCount += childCount - 1;
+    state.allocatedRowCount += childCandidates.length - 1;
     state.refinedRows.add(globalRowIndex);
     for (const child of childCandidates) {
       this.addFrontierCandidate(child, selectedRows, refinementQueue);

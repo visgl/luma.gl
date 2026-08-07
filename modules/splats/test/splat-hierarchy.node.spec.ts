@@ -874,6 +874,127 @@ test('SplatHierarchyManager prunes large source hierarchies before loading invis
   t.end();
 });
 
+test('SplatHierarchyManager replaces same-identity roots without losing externally owned pins', t => {
+  const device = new NullDevice({});
+  const originalBatch = makeSplatHierarchyBatch(device, 17, 800);
+  const replacementBatch = makeSplatHierarchyBatch(device, 18, 900);
+  const originalNode = {
+    ...makeSplatHierarchyNode('shared-root', [0, 0, 0], 0),
+    data: originalBatch,
+    ownsData: false
+  };
+  const replacementNode = {
+    ...makeSplatHierarchyNode('shared-root', [0.4, 0, 0], 0, 0.2),
+    data: replacementBatch,
+    ownsData: true
+  };
+  const evictionEvents: Array<{data: GPUSplatData; reason: string}> = [];
+  const frontierEvents: number[][] = [];
+  const residencyManager = new SplatResidencyManager({
+    maxResidentChunks: 1,
+    onEvict: (chunk, reason) => evictionEvents.push({data: chunk.data, reason})
+  });
+  residencyManager.add(originalBatch, {
+    id: originalNode.id,
+    pinned: true,
+    ownsData: false,
+    bounds: originalNode.bounds
+  });
+  const manager = new SplatHierarchyManager({
+    roots: [originalNode],
+    residencyManager,
+    onFrontierChange: batches => {
+      frontierEvents.push(batches.map(batch => batch.sourceBatchIndex));
+    }
+  });
+
+  manager.update(makeSplatHierarchyView());
+  manager.setRoots([replacementNode]);
+
+  t.deepEqual(manager.frontierBatches, [replacementBatch], 'renders the replacement source batch');
+  t.equal(manager.frontier[0].node, replacementNode, 'publishes replacement source metadata');
+  t.equal(
+    manager.frontier[0].chunk.data.sourceInfo,
+    replacementBatch.sourceInfo,
+    'preserves the replacement source-batch and global-row identity'
+  );
+  t.deepEqual(
+    residencyManager.getChunk(originalNode.id)?.bounds,
+    replacementNode.bounds,
+    'updates the retained spatial metadata for the replacement source node'
+  );
+  t.equal(
+    residencyManager.getChunk(originalNode.id)?.ownsData,
+    true,
+    'honors explicitly transferred ownership for the replacement source batch'
+  );
+  t.ok(residencyManager.getChunk(originalNode.id)?.pinned, 'preserves the caller-owned source pin');
+  t.equal(residencyManager.stats.residentChunkCount, 1, 'reuses the existing bounded chunk slot');
+  t.deepEqual(
+    evictionEvents,
+    [{data: originalBatch, reason: 'replace'}],
+    'reports exact replacement ownership before updating the rendered frontier'
+  );
+  t.deepEqual(frontierEvents, [[17], [18]], 'notifies renderers when stable IDs gain new data');
+  t.notOk(originalBatch.destroyed, 'never destroys the original caller-owned source batch');
+
+  manager.destroy();
+  t.ok(
+    residencyManager.getChunk(originalNode.id)?.pinned,
+    'never releases externally owned pins after a same-identity replacement'
+  );
+  residencyManager.destroy();
+  t.ok(replacementBatch.destroyed, 'destroys the explicitly manager-owned replacement batch');
+  originalBatch.destroy();
+  t.end();
+});
+
+test('SplatHierarchyManager transfers hierarchy-owned pins and honors prior source ownership', t => {
+  const device = new NullDevice({});
+  const originalBatch = makeSplatHierarchyBatch(device, 19, 950);
+  const replacementBatch = makeSplatHierarchyBatch(device, 20, 1_000);
+  const residencyManager = new SplatResidencyManager({maxResidentChunks: 1});
+  const manager = new SplatHierarchyManager({
+    roots: [
+      {
+        ...makeSplatHierarchyNode('owned-root', [0, 0, 0], 0),
+        data: originalBatch,
+        ownsData: true
+      }
+    ],
+    residencyManager
+  });
+
+  manager.update(makeSplatHierarchyView());
+  t.ok(residencyManager.getChunk('owned-root')?.pinned, 'protects the original visible root');
+  manager.setRoots([
+    {
+      ...makeSplatHierarchyNode('owned-root', [0.2, 0, 0], 0),
+      data: replacementBatch,
+      ownsData: false
+    }
+  ]);
+
+  t.ok(originalBatch.destroyed, 'destroys the replaced source batch when its ownership was held');
+  t.deepEqual(manager.frontierBatches, [replacementBatch], 'publishes the intact borrowed source');
+  t.ok(residencyManager.getChunk('owned-root')?.pinned, 'transfers hierarchy-owned pin protection');
+  t.equal(
+    residencyManager.stats.pinnedChunkCount,
+    1,
+    'keeps pin accounting balanced across transactional replacement'
+  );
+
+  manager.destroy();
+  t.notOk(
+    residencyManager.getChunk('owned-root')?.pinned,
+    'releases transferred pins owned only by this hierarchy'
+  );
+  residencyManager.destroy();
+  t.notOk(replacementBatch.destroyed, 'preserves the explicitly borrowed replacement source');
+  replacementBatch.destroy();
+  t.end();
+});
+
 test('SplatHierarchyManager replaces source roots and rejects duplicate source identities', t => {
   const device = new NullDevice({});
   const firstBatch = makeSplatHierarchyBatch(device, 17, 800);

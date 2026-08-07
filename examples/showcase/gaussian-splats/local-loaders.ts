@@ -286,10 +286,10 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
   }
 ];
 
-/** Keeps standalone synthetic by default while enabling real scenes in the published viewer. */
-export function getLocalGaussianSplatLoadersConfiguration():
-  | LocalGaussianSplatLoadersConfiguration
-  | undefined {
+/** Keeps scene defaults local to each viewer while preserving explicit URL selections. */
+export function getLocalGaussianSplatLoadersConfiguration(
+  defaultScene?: GaussianSplatSourceCatalogEntry['id']
+): LocalGaussianSplatLoadersConfiguration | undefined {
   if (typeof window === 'undefined') {
     return undefined;
   }
@@ -333,7 +333,7 @@ export function getLocalGaussianSplatLoadersConfiguration():
     };
   }
 
-  const sceneId = parameters.get('scene') || 'train';
+  const sceneId = parameters.get('scene') || defaultScene || 'train';
   const scene = GAUSSIAN_SPLAT_SOURCE_CATALOG.find(candidate => candidate.id === sceneId);
   if (!scene) {
     throw new Error(`Unknown Gaussian splat scene: ${sceneId}.`);
