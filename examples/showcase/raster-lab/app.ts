@@ -15,7 +15,7 @@ import type {
 
 export const title = 'LuRaster: Satellite Raster Lab';
 export const description =
-  'GPU-resident reflectance, masked NDVI, separable smoothing, thresholds, and live histograms.';
+  'GPU-resident NDVI, separable smoothing, indirect contour overlays, and live histograms.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -35,6 +35,10 @@ type RasterLabDebugController = {
   readonly threshold: number;
   readonly thresholdEnabled: boolean;
   readonly automaticThreshold: boolean;
+  readonly contoursEnabled: boolean;
+  readonly contourLevel: number;
+  readonly contourSegmentCount: number;
+  readonly contourOverflow: boolean;
   readonly domain: readonly [number, number];
   readonly bins: readonly number[];
   readonly sum: number;
@@ -48,6 +52,8 @@ type RasterLabDebugController = {
   setGamma: (gamma: number) => void;
   setThreshold: (threshold: number, enabled?: boolean) => void;
   setAutomaticThreshold: (enabled?: boolean) => void;
+  setContours: (enabled?: boolean) => void;
+  setContourLevel: (level: number) => void;
   setEpsilon: (epsilon: number) => void;
 };
 
@@ -69,7 +75,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     gamma: 1,
     threshold: 0.35,
     thresholdEnabled: false,
-    automaticThreshold: false
+    automaticThreshold: false,
+    contoursEnabled: true,
+    contourLevel: 0.35
   };
   private interface: RasterLabInterface | null = null;
   private engine: RasterLabEngine | null = null;
@@ -106,6 +114,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onGamma: gamma => this.setGamma(gamma),
       onThreshold: (threshold, enabled) => this.setThreshold(threshold, enabled),
       onAutomaticThreshold: enabled => this.setAutomaticThreshold(enabled),
+      onContoursEnabled: enabled => this.setContours(enabled),
+      onContourLevel: level => this.setContourLevel(level),
       onEpsilon: epsilon => this.setEpsilon(epsilon),
       onResize: () => {
         this.redrawRequested = true;
@@ -223,6 +233,20 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.requestUpdate();
   }
 
+  private setContours(enabled = true): void {
+    if (enabled === this.display.contoursEnabled) return;
+    this.display.contoursEnabled = enabled;
+    this.interface?.setContours(enabled, this.display.contourLevel);
+    this.requestUpdate();
+  }
+
+  private setContourLevel(level: number): void {
+    if (Math.abs(level - this.display.contourLevel) < 0.0000001) return;
+    this.display.contourLevel = level;
+    this.interface?.setContours(this.display.contoursEnabled, level);
+    this.requestUpdate();
+  }
+
   private setEpsilon(epsilon: number): void {
     this.requestedEpsilon = epsilon;
     this.interface?.setEpsilon(epsilon);
@@ -324,6 +348,18 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get automaticThreshold() {
         return viewer.display.automaticThreshold;
       },
+      get contoursEnabled() {
+        return viewer.display.contoursEnabled;
+      },
+      get contourLevel() {
+        return viewer.display.contourLevel;
+      },
+      get contourSegmentCount() {
+        return viewer.latestSummary?.contourSegmentCount ?? 0;
+      },
+      get contourOverflow() {
+        return viewer.latestSummary?.contourOverflow ?? false;
+      },
       get domain() {
         return viewer.latestSummary?.domain ?? [0, 0];
       },
@@ -347,6 +383,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setGamma: gamma => viewer.setGamma(gamma),
       setThreshold: (threshold, enabled) => viewer.setThreshold(threshold, enabled),
       setAutomaticThreshold: enabled => viewer.setAutomaticThreshold(enabled),
+      setContours: enabled => viewer.setContours(enabled),
+      setContourLevel: level => viewer.setContourLevel(level),
       setEpsilon: epsilon => viewer.setEpsilon(epsilon)
     };
     (window as RasterLabDebugWindow).__luRasterLab = this.debugController;

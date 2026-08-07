@@ -450,7 +450,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | In progress | High   | Large  |
 | 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Planned     | High   | Large  |
 | 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
-| 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | Planned     | High   | Large  |
+| 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | In progress | High   | Large  |
 | 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred    | Medium | Large  |
 | 8 — Productization               | Satellite/microscopy showcases, documentation, benchmarks, and release gates | Early slice | High   | Medium |
 
@@ -527,10 +527,18 @@ when their tests and rollback boundaries remain understandable.
   separable horizontal/vertical passes with graph-owned intermediate scratch. The Raster Lab
   changes its rendered values, histogram, and scalar statistics when filter, radius, or sigma
   controls change. FFT-backed convolution remains explicitly deferred.
+- **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
+  marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
+  diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
+- **6.2 complete for bounded single-raster output:** `GPURasterContours` composes GPU
+  classification, unsigned prefix scan, stable bounded line scatter, clamped/required counts,
+  overflow publication, and optional GPU-written indirect draw instances. The Raster Lab renders
+  its resulting line overlay without reading a draw count. Tile stitching and external deck.gl
+  integration remain in Tranche 6.3.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
-  demonstrate the current NDVI/smoothing/histogram workflow. The full satellite/microscopy/tiled/
-  vector showcase matrix, broader documentation set, benchmarks, and final release gates remain
-  pending.
+  demonstrate the current NDVI/smoothing/histogram/contour workflow. The full
+  satellite/microscopy/tiled/vector showcase matrix, broader documentation set, benchmarks, and
+  final release gates remain pending.
 
 ## Detailed tranche definitions
 
@@ -913,6 +921,10 @@ oracle and overflow behavior.
 
 **Entry:** Tranches 2.1 and 0.3.
 
+**Status:** Complete for one literal or GPU-resident contour level per contributor. Independent
+contributors may classify multiple levels in the same graph; batched multilevel specialization
+remains a possible future optimization.
+
 **Work:** Classify `(width - 1) * (height - 1)` raster cells at one or more contour levels.
 Define exact-threshold comparison, flat-cell handling, edge interpolation, and a consistent
 bilinear/asymptotic decider for ambiguous cases 5 and 10. Exclude cells with invalid corners.
@@ -924,6 +936,9 @@ documented classifications.
 ### Tranche 6.2 — GPU contour geometry and indirect drawing
 
 **Entry:** Tranches 6.1 and 1.4.
+
+**Status:** Complete for bounded single-raster output with deterministic segment order,
+caller-owned geometry/counts, optional overflow diagnostics, and GPU-resident indirect drawing.
 
 **Work:** Write zero, one, or two segments per cell; scan unsigned segment counts; scatter typed
 `float32x2` positions into caller-owned bounded output; publish a clamped count, overflow, and

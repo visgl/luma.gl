@@ -43,6 +43,8 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBufferToTexture).toBeTypeOf('function');
     expect(lurasterModule.GPURasterContrast).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterContourClassifier).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterContours).toBeTypeOf('function');
     expect(lurasterModule.GPURasterConvolution).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGaussianBlur).toBeTypeOf('function');
     expect(lurasterModule.GPURasterHistogram).toBeTypeOf('function');

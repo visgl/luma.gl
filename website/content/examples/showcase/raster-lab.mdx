@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Analyze synthetic reflectance with GPU-native NDVI, Gaussian/box smoothing, contrast, Otsu thresholding, exact raster statistics, and live histograms.
+description: Analyze synthetic reflectance with GPU-native NDVI, Gaussian/box smoothing, Otsu thresholding, indirect contour overlays, exact statistics, and live histograms.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -21,6 +21,9 @@ contrast or gamma, select pixels above a live classification threshold, or
 increase the denominator epsilon to reject unstable normalized-difference
 measurements. An optional Otsu control derives its threshold directly from a
 pre-threshold GPU histogram before classifying the same resident pixels.
+An interactive contour slider extracts real marching-squares isolines and draws
+their GPU-generated line segments through an indirect draw record; no contour
+vertices or draw counts are downloaded for rendering.
 Every control changes the GPU-computed distribution, selected-pixel count,
 observed extent, and mean when its underlying values or selection change.
 
@@ -37,19 +40,22 @@ on-device;
 `GPURasterStatistics` calculates masked count, sum, mean, minimum, and maximum.
 `GPURasterOtsuThreshold` can select the threshold from a separate baseline
 histogram without introducing a CPU synchronization point.
+`GPURasterContours` classifies valid four-corner cells, resolves ambiguous
+saddles, scans their segment counts, scatters interpolated line geometry, and
+updates a GPU-resident indirect draw record in that same command graph.
 The histogram consumes that same mask and GPU-resident extent, so excluded
 pixels disappear from both the map selection and distribution. Every dependent
 compute pass is encoded into one explicitly submitted `GPUCommandGraph`.
 
 The map renderer consumes the original reflectance bands, derived vegetation
 index, contrast-adjusted active band, and validity flags directly from their GPU
-buffers. Only the two-value extent, 48 histogram bins, valid count, sum, and
-mean, and optional automatic threshold—216 bytes total—are copied back after
-submission to update visible summary
-statistics. Layer switching, smoothing mode, kernel radius, Gaussian sigma,
-contrast, gamma, thresholding, and epsilon rebuild their specialized analysis
-graph while keeping every source and output raster buffer resident; source
-pixels are never downloaded.
+buffers. Only the two-value extent, 48 histogram bins, valid count, sum, mean,
+optional automatic threshold, and three contour diagnostics—228 bytes
+total—are copied back after submission to update visible summary statistics.
+Layer switching, smoothing mode, kernel radius, Gaussian sigma, contrast,
+gamma, thresholding, contour levels, and epsilon rebuild their specialized
+analysis graph while keeping every source and output raster buffer resident;
+source pixels are never downloaded.
 
 Choose Gaussian smoothing to reduce local sensor noise while weighting nearby
 observations most strongly; choose box smoothing when a uniformly weighted
@@ -59,8 +65,15 @@ statistics, and Otsu classification. Their separable kernels evaluate `O(r)`
 taps per pixel for radius `r`, compared with `O(r²)` for direct square
 convolution; actual elapsed time depends on the workload and GPU.
 
+Use contour overlays when a measured scalar boundary should become reusable
+vector geometry, such as vegetation isolines or concentration thresholds.
+Classification and bounded segment scattering scale linearly with raster-cell
+count, while a GPU-generated indirect draw avoids waiting for a CPU segment
+count. Prefix scans require additional graph passes and scratch storage, so
+actual performance depends on the workload, segment density, and GPU.
+
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
-filters, morphology, segmentation, contour extraction, and tiled imagery shown
+filters, morphology, segmentation, tiled contour seams, and tiled imagery shown
 in the interface remain planned capabilities.

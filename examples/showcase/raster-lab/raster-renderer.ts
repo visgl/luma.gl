@@ -4,6 +4,7 @@
 
 import {Buffer, type CanvasContext, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import type {DrawCommandBuffer} from '@luma.gl/experimental';
 
 export type RasterLabDisplayMode = 'ndvi' | 'red' | 'near-infrared';
 export type RasterLabSmoothingMode = 'none' | 'gaussian' | 'box';
@@ -20,6 +21,8 @@ export type RasterLabRendererSources = {
   analyzedValues: Buffer;
   validity: Buffer;
   thresholdValidity: Buffer;
+  contourVertices: Buffer;
+  contourCommands: DrawCommandBuffer;
 };
 
 export type RasterLabDisplaySettings = {
@@ -32,6 +35,8 @@ export type RasterLabDisplaySettings = {
   threshold: number;
   thresholdEnabled: boolean;
   automaticThreshold: boolean;
+  contoursEnabled: boolean;
+  contourLevel: number;
 };
 
 const RASTER_LAB_SHADER = /* wgsl */ `
@@ -114,11 +119,42 @@ fn getVegetationColor(value: f32) -> vec3f {
 }
 `;
 
+const RASTER_CONTOUR_SHADER = /* wgsl */ `
+struct DisplayUniforms {
+  raster: vec4f,
+  presentation: vec4f,
+};
+
+@group(0) @binding(0) var<storage, read> contourVertices: array<vec2f>;
+@group(0) @binding(1) var<uniform> uniforms: DisplayUniforms;
+
+struct VertexOutput {
+  @builtin(position) position: vec4f,
+};
+
+@vertex fn vertexMain(
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32
+) -> VertexOutput {
+  let pixel = contourVertices[instanceIndex * 2u + vertexIndex];
+  let normalized = pixel / uniforms.raster.xy;
+  var output: VertexOutput;
+  output.position = vec4f(normalized.x * 2.0 - 1.0, 1.0 - normalized.y * 2.0, 0.0, 1.0);
+  return output;
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4f {
+  return vec4f(0.9, 1.0, 0.72, 0.91);
+}
+`;
+
 /** Presents resident source bands and NDVI results without copying any raster pixels to the CPU. */
 export class RasterLabRenderer {
   private readonly device: Device;
   private readonly uniformBuffer: Buffer;
   private readonly model: Model;
+  private readonly contourModel: Model;
+  private readonly contourCommands: DrawCommandBuffer;
   private readonly rasterWidth: number;
   private readonly rasterHeight: number;
   private destroyed = false;
@@ -127,13 +163,16 @@ export class RasterLabRenderer {
     this.device = device;
     this.rasterWidth = sources.width;
     this.rasterHeight = sources.height;
+    this.contourCommands = sources.contourCommands;
     this.uniformBuffer = device.createBuffer({
       id: 'raster-lab-display-uniforms',
       data: new Float32Array(8),
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
+    let initializedModel: Model | undefined;
+    let initializedContourModel: Model | undefined;
     try {
-      this.model = new Model(device, {
+      initializedModel = new Model(device, {
         id: 'raster-lab-false-color-model',
         source: RASTER_LAB_SHADER,
         topology: 'triangle-list',
@@ -161,7 +200,38 @@ export class RasterLabRenderer {
         },
         parameters: {depthCompare: 'always', depthWriteEnabled: false}
       });
+      initializedContourModel = new Model(device, {
+        id: 'raster-lab-contour-model',
+        source: RASTER_CONTOUR_SHADER,
+        topology: 'line-list',
+        isInstanced: true,
+        vertexCount: 2,
+        instanceCount: 0,
+        shaderLayout: {
+          attributes: [],
+          bindings: [
+            {name: 'contourVertices', type: 'read-only-storage', group: 0, location: 0},
+            {name: 'uniforms', type: 'uniform', group: 0, location: 1}
+          ]
+        },
+        bindings: {contourVertices: sources.contourVertices, uniforms: this.uniformBuffer},
+        parameters: {
+          blend: true,
+          blendColorOperation: 'add',
+          blendAlphaOperation: 'add',
+          blendColorSrcFactor: 'src-alpha',
+          blendColorDstFactor: 'one-minus-src-alpha',
+          blendAlphaSrcFactor: 'one',
+          blendAlphaDstFactor: 'one-minus-src-alpha',
+          depthCompare: 'always',
+          depthWriteEnabled: false
+        }
+      });
+      this.model = initializedModel;
+      this.contourModel = initializedContourModel;
     } catch (error) {
+      initializedContourModel?.destroy();
+      initializedModel?.destroy();
       this.uniformBuffer.destroy();
       throw error;
     }
@@ -199,6 +269,7 @@ export class RasterLabRenderer {
 
     const encoder = this.device.createCommandEncoder({id: 'raster-lab-presentation'});
     this.model.predraw(encoder);
+    if (settings.contoursEnabled) this.contourModel.predraw(encoder);
     const renderPass = encoder.beginRenderPass({
       id: 'raster-lab-false-color-pass',
       framebuffer,
@@ -209,6 +280,10 @@ export class RasterLabRenderer {
     const rectangle: [number, number, number, number] = [minimumX, minimumY, width, height];
     renderPass.setParameters({viewport: rectangle, scissorRect: rectangle});
     this.model.draw(renderPass);
+    if (settings.contoursEnabled) {
+      this.contourModel.draw(renderPass);
+      this.contourCommands.draw(renderPass, 0);
+    }
     renderPass.end();
     this.device.submit(encoder.finish());
   }
@@ -216,6 +291,7 @@ export class RasterLabRenderer {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.contourModel.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
   }

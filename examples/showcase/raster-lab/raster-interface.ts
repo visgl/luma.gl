@@ -19,6 +19,8 @@ export type RasterLabInterfaceCallbacks = {
   onGamma?: (gamma: number) => void;
   onThreshold?: (threshold: number, enabled: boolean) => void;
   onAutomaticThreshold?: (enabled: boolean) => void;
+  onContoursEnabled?: (enabled: boolean) => void;
+  onContourLevel?: (level: number) => void;
   onEpsilon?: (epsilon: number) => void;
   onResize?: () => void;
 };
@@ -47,6 +49,8 @@ export class RasterLabInterface {
   private source: RasterLabSourceSummary | null = null;
   private threshold = 0.35;
   private automaticThreshold = false;
+  private contoursEnabled = true;
+  private contourLevel = 0.35;
   private resizeObserver: ResizeObserver | null = null;
   private resizeAnimationFrame: number | null = null;
 
@@ -116,6 +120,12 @@ export class RasterLabInterface {
     this.getElement('[data-raster-threshold-state]').textContent = summary.thresholdEnabled
       ? `${summary.automaticThreshold ? 'AUTO ' : ''}≥ ${summary.threshold.toFixed(2)}`
       : 'off';
+    this.getElement('[data-raster-contour-state]').textContent = summary.contoursEnabled
+      ? `${NUMBER_FORMATTER.format(summary.contourSegmentCount)}${summary.contourOverflow ? '+' : ''}`
+      : 'off';
+    this.getElement('[data-raster-contour-count]').textContent = summary.contoursEnabled
+      ? `${NUMBER_FORMATTER.format(summary.contourSegmentCount)} CONTOUR SEGMENTS`
+      : 'SYNTHETIC SCENE';
     if (summary.automaticThreshold) {
       this.getElement('[data-raster-threshold-value]').textContent = summary.threshold.toFixed(2);
       this.getInput('threshold').value = String(summary.threshold);
@@ -181,6 +191,14 @@ export class RasterLabInterface {
     this.automaticThreshold = enabled;
     this.getElement('[data-raster-control="otsu"]').setAttribute('aria-pressed', String(enabled));
     if (enabled) this.getInput('threshold-enabled').checked = true;
+  }
+
+  setContours(enabled: boolean, level: number): void {
+    this.contoursEnabled = enabled;
+    this.contourLevel = level;
+    this.getInput('contours-enabled').checked = enabled;
+    this.getInput('contour-level').value = String(level);
+    this.getElement('[data-raster-contour-level]').textContent = level.toFixed(2);
   }
 
   setEpsilon(epsilon: number): void {
@@ -296,6 +314,14 @@ export class RasterLabInterface {
           this.setEpsilon(value);
           this.callbacks.onEpsilon?.(value);
           break;
+        case 'contour-level':
+          this.setContours(this.contoursEnabled, value);
+          this.callbacks.onContourLevel?.(value);
+          break;
+        case 'contours-enabled':
+          this.setContours(target.checked, this.contourLevel);
+          this.callbacks.onContoursEnabled?.(target.checked);
+          break;
         case 'threshold-enabled':
           if (!target.checked) this.setAutomaticThreshold(false);
           this.setThreshold(this.threshold, target.checked);
@@ -410,7 +436,7 @@ function makeRasterLabMarkup(): string {
         <section class="raster-map-card" aria-label="GPU-rendered false-color raster">
           <div class="raster-map-header">
             <span class="raster-map-title" data-raster-map-title>Vegetation index · false color</span>
-            <span class="raster-chip">SYNTHETIC SCENE</span>
+            <span class="raster-chip" data-raster-contour-count>SYNTHETIC SCENE</span>
           </div>
           <div class="raster-map-surface" data-raster-surface>
             <span class="raster-coordinate">SCENE / 041 · ANALYTIC TERRAIN</span>
@@ -474,6 +500,16 @@ function makeRasterLabMarkup(): string {
               <input class="raster-slider" data-raster-control="threshold" aria-label="Selection threshold" type="range" min="-0.2" max="0.9" step="0.01" value="0.35" />
               <button class="raster-otsu-button" data-raster-control="otsu" type="button" aria-pressed="false">AUTO OTSU · GPU HISTOGRAM</button>
             </div>
+            <div class="raster-control">
+              <span class="raster-control-label">
+                <label class="raster-threshold-toggle">
+                  <input data-raster-control="contours-enabled" type="checkbox" checked />
+                  Contour isolines
+                </label>
+                <span class="raster-control-value" data-raster-contour-level>0.35</span>
+              </span>
+              <input class="raster-slider" data-raster-control="contour-level" aria-label="Contour level" type="range" min="-0.5" max="1" step="0.01" value="0.35" />
+            </div>
             <label class="raster-control">
               <span class="raster-control-label">Denominator epsilon <span class="raster-control-value" data-raster-epsilon-value>0.0001</span></span>
               <input class="raster-slider" data-raster-control="epsilon" type="range" min="0" max="0.3" step="0.0001" value="0.0001" />
@@ -492,7 +528,7 @@ function makeRasterLabMarkup(): string {
               <span data-raster-histogram-maximum>—</span>
             </div>
             <div class="raster-histogram-caption">
-              Smoothing, threshold, and histogram share one GPU graph; only 216 summary bytes are read.
+              Smoothing, contours, and histograms share one GPU graph; only 228 summary bytes are read.
             </div>
           </section>
 
@@ -508,6 +544,7 @@ function makeRasterLabMarkup(): string {
             <div class="raster-pipeline-step"><span class="raster-step-number">05</span><span class="raster-step-name">Contrast + gamma</span><span class="raster-step-state">adjust</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">06</span><span class="raster-step-name">Selection threshold</span><span class="raster-step-state" data-raster-threshold-state>off</span></div>
             <div class="raster-pipeline-step"><span class="raster-step-number">07</span><span class="raster-step-name">Count, mean + histogram</span><span class="raster-step-state">stats</span></div>
+            <div class="raster-pipeline-step"><span class="raster-step-number">08</span><span class="raster-step-name">Indirect contour lines</span><span class="raster-step-state" data-raster-contour-state>off</span></div>
             <div class="raster-histogram-caption" data-raster-footprint>Allocating GPU buffers</div>
           </section>
         </aside>
@@ -519,7 +556,7 @@ function makeRasterLabMarkup(): string {
           <span class="raster-roadmap-chip">Gradients</span>
           <span class="raster-roadmap-chip">Morphology</span>
           <span class="raster-roadmap-chip">Segmentation</span>
-          <span class="raster-roadmap-chip">Contours + tiles</span>
+          <span class="raster-roadmap-chip">Tiled contour seams</span>
         </div>
         <span class="raster-provenance">Synthetic reflectance · false-color visualization</span>
       </footer>
