@@ -241,6 +241,7 @@ export {
   makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
+  type ArrowGPUValidityColumn,
   type GPURecordBatchFromArrowRecordBatchProps,
   type GPUTableFromArrowTableProps,
   type GPUVectorFromArrowProps,
