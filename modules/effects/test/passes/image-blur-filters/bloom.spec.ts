@@ -310,6 +310,124 @@ test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kern
   testCase.end();
 });
 
+test('createBloomShaderPassPipeline#optional cinematic lens effects', testCase => {
+  const defaultPipeline = createBloomShaderPassPipeline();
+  const dirtOnlyPipeline = createBloomShaderPassPipeline({lens: {dirtIntensity: 0.8}});
+  const cinematicPipeline = createBloomShaderPassPipeline({
+    quality: 'high',
+    temporalStability: 0.7,
+    lens: {
+      starburstIntensity: 1.1,
+      starburstSpikes: 7,
+      starburstLength: 64,
+      starburstRotation: 0.35,
+      ghostIntensity: 0.65,
+      ghostCount: 12,
+      ghostSpacing: 0.4,
+      haloIntensity: 0.45,
+      haloRadius: 0.28,
+      chromaticAberration: 0.6,
+      dirtIntensity: 0.35
+    }
+  });
+  const lensStep = cinematicPipeline.steps.find(step => step.shaderPass.name === 'bloomLens');
+  const temporalStep = cinematicPipeline.steps.find(
+    step => step.shaderPass.name === 'bloomTemporal'
+  );
+  const compositeStep = cinematicPipeline.steps.find(
+    step => step.shaderPass.name === 'bloomComposite'
+  );
+  const dirtOnlyComposite = dirtOnlyPipeline.steps.find(
+    step => step.shaderPass.name === 'bloomComposite'
+  );
+
+  testCase.equal(defaultPipeline.steps.length, 16, 'default high-quality bloom keeps its 16 passes');
+  testCase.equal(
+    dirtOnlyPipeline.steps.length,
+    defaultPipeline.steps.length,
+    'lens dirt reuses the existing composite without adding a render pass'
+  );
+  testCase.equal(
+    Object.keys(dirtOnlyPipeline.renderTargets || {}).length,
+    Object.keys(defaultPipeline.renderTargets || {}).length,
+    'lens dirt does not allocate another intermediate texture'
+  );
+  testCase.deepEqual(
+    dirtOnlyComposite?.shaderPass.bindingLayout?.map(binding => binding.name),
+    ['glowTexture', 'lensDirtTexture'],
+    'dirt-only composition requires only the glow and external dirt mask'
+  );
+  testCase.equal(
+    cinematicPipeline.steps.length,
+    defaultPipeline.steps.length + 2,
+    'all lens artifacts share one half-resolution pass and stabilization adds one history pass'
+  );
+  testCase.deepEqual(
+    cinematicPipeline.renderTargets?.['bloomLensArtifacts'].scale,
+    [0.5, 0.5],
+    'photographic artifacts render at half resolution'
+  );
+  testCase.equal(
+    cinematicPipeline.renderTargets?.['bloomGlowHistory'].lifetime,
+    'history',
+    'temporal stabilization owns persistent glow history'
+  );
+  testCase.deepEqual(
+    cinematicPipeline.renderTargets?.['bloomGlowHistory'].initialize,
+    {clearColor: [0, 0, 0, 0]},
+    'an invalid history marker prevents first-frame darkening'
+  );
+  testCase.deepEqual(
+    temporalStep?.inputs,
+    {sourceTexture: 'upsampleHalf', historyTexture: 'bloomGlowHistory'},
+    'temporal stabilization clamps reconstructed glow against its previous frame'
+  );
+  testCase.equal(temporalStep?.uniforms?.stability, 0.7, 'configures temporal history blending');
+  testCase.deepEqual(
+    lensStep?.inputs,
+    {sourceTexture: 'extractHalf', glowTexture: 'bloomGlowHistory'},
+    'lens artifacts combine sharp HDR highlights with stabilized glow'
+  );
+  testCase.equal(lensStep?.uniforms?.starburstSpikes, 8, 'rounds diffraction rays to an even count');
+  testCase.equal(lensStep?.uniforms?.ghostCount, 6, 'caps ghost reflections at their shader budget');
+  testCase.equal(
+    lensStep?.uniforms?.chromaticAberration,
+    0.6,
+    'configures spectral lens separation'
+  );
+  testCase.match(
+    lensStep?.shaderPass.source || '',
+    /textureSampleLevel\(sourceTexture/,
+    'WGSL lens reflections use explicit levels inside nonuniform screen-space branches'
+  );
+  testCase.match(
+    lensStep?.shaderPass.fs || '',
+    /textureLod\(sourceTexture/,
+    'GLSL lens reflections match the explicit sampling behavior'
+  );
+  testCase.deepEqual(
+    compositeStep?.shaderPass.bindingLayout?.map(binding => binding.name),
+    ['glowTexture', 'lensTexture', 'lensDirtTexture'],
+    'composition binds dirt and lens artifacts only when they are enabled'
+  );
+  testCase.equal(compositeStep?.uniforms?.dirtIntensity, 0.35, 'configures the dirt-mask strength');
+
+  const clampedPipeline = createBloomShaderPassPipeline({
+    temporalStability: 4,
+    lens: {starburstIntensity: 1, starburstSpikes: 1, starburstLength: 500}
+  });
+  const clampedLensStep = clampedPipeline.steps.find(step => step.shaderPass.name === 'bloomLens');
+  testCase.equal(
+    clampedPipeline.steps.find(step => step.shaderPass.name === 'bloomTemporal')?.uniforms
+      ?.stability,
+    0.95,
+    'limits history contribution to preserve responsiveness'
+  );
+  testCase.equal(clampedLensStep?.uniforms?.starburstSpikes, 2, 'keeps at least two diffraction rays');
+  testCase.equal(clampedLensStep?.uniforms?.starburstLength, 256, 'limits the diffraction radius');
+  testCase.end();
+});
+
 test('HDR bloom covers source texels at quarter pyramid resolution', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {

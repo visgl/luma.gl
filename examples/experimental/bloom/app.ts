@@ -22,7 +22,8 @@ import {
 } from '../../example-panels';
 
 export const title = 'Bloom';
-export const description = 'Compare compact and HDR multiscale bloom on an animated HDR scene.';
+export const description =
+  'Explore HDR bloom, spectral lens flares, diffraction streaks, and textured lens dirt.';
 
 const BLOOM_TECHNIQUES = ['Multiscale HDR', 'Compact', 'Off'] as const;
 const BLOOM_QUALITIES = ['low', 'medium', 'high', 'ultra'] as const;
@@ -39,6 +40,18 @@ type BloomSettings = {
   softKnee: number;
   fireflyReduction: number;
   anamorphicRatio: number;
+  temporalStability: number;
+  starburstIntensity: number;
+  starburstSpikes: number;
+  starburstLength: number;
+  starburstRotation: number;
+  ghostIntensity: number;
+  ghostCount: number;
+  ghostSpacing: number;
+  haloIntensity: number;
+  haloRadius: number;
+  chromaticAberration: number;
+  dirtIntensity: number;
   animate: boolean;
 };
 type SceneUniforms = {
@@ -56,13 +69,26 @@ const DEFAULT_SETTINGS: BloomSettings = {
   scatter: 0.55,
   softKnee: 0.5,
   fireflyReduction: 0.15,
-  anamorphicRatio: 0,
+  anamorphicRatio: 0.2,
+  temporalStability: 0.58,
+  starburstIntensity: 0.72,
+  starburstSpikes: 4,
+  starburstLength: 52,
+  starburstRotation: 0.16,
+  ghostIntensity: 0.34,
+  ghostCount: 3,
+  ghostSpacing: 0.32,
+  haloIntensity: 0.24,
+  haloRadius: 0.32,
+  chromaticAberration: 0.44,
+  dirtIntensity: 0.42,
   animate: true
 };
 
 const BLOOM_BACKGROUND_HTML = `
 <p><b>Multiscale HDR bloom:</b> bright scene radiance is extracted once, filtered across an adaptive two-to-five-level pyramid, then progressively reconstructed before presentation. Normalized upsampling keeps the glow stable as wider levels are combined.</p>
-<p><b>Cinematic controls:</b> scatter balances tight highlights against broad glow, a soft knee smooths threshold transitions, firefly reduction stabilizes isolated HDR samples, and anamorphic ratio stretches the bloom horizontally or vertically.</p>
+<p><b>Lens optics:</b> one optional half-resolution pass adds adjustable aperture-diffraction streaks, chromatic lens-element ghosts, and a radial halo. A sampled dirt mask reuses the existing bloom composite without adding a pass.</p>
+<p><b>Stability and cost:</b> neighborhood-clamped glow history reduces highlight shimmer for one extra half-resolution pass. Diffraction cost grows with the number of rays; ghosts scale with their reflection count and spectral separation.</p>
 <p><b>Compact bloom:</b> the legacy single-pass glow samples one small neighborhood directly from the source image. It is cheaper, but it cannot spread highlights as naturally as the multiscale pyramid.</p>
 <p><b>Scene setup:</b> this page renders animated HDR emitters into an offscreen texture before bloom. The previous static image hid the useful part of the effect by baking most of the lighting into SDR pixels.</p>
 `;
@@ -301,6 +327,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   });
   readonly sceneModel: ClipSpace;
   readonly sceneColorTexture: Texture;
+  readonly lensDirtTexture: Texture;
   readonly sceneFramebuffer: Framebuffer;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
@@ -326,6 +353,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       format: this.colorFormat,
       usage: Texture.RENDER | Texture.SAMPLE
     });
+    this.lensDirtTexture = makeLensDirtTexture(device);
     this.sceneFramebuffer = device.createFramebuffer({
       id: 'bloom-hdr-scene-framebuffer',
       width,
@@ -348,6 +376,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.panels.finalize();
     this.sceneFramebuffer.destroy();
     this.sceneColorTexture.destroy();
+    this.lensDirtTexture.destroy();
     this.sceneModel.destroy();
     this.sceneShaderInputs.destroy();
     this.shaderPassRenderer?.destroy();
@@ -374,7 +403,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.shaderPassRenderer.renderToScreen({
       sourceTexture: this.sceneFramebuffer.colorAttachments[0].texture,
-      uniforms: this.getRenderUniforms()
+      uniforms: this.getRenderUniforms(),
+      bindings:
+        this.settings.technique === 'Multiscale HDR' && this.settings.dirtIntensity > 0
+          ? {lensDirtTexture: this.lensDirtTexture}
+          : undefined
     });
   }
 
@@ -399,7 +432,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           scatter: this.settings.scatter,
           softKnee: this.settings.softKnee,
           fireflyReduction: this.settings.fireflyReduction,
-          anamorphicRatio: this.settings.anamorphicRatio
+          anamorphicRatio: this.settings.anamorphicRatio,
+          temporalStability: this.settings.temporalStability,
+          lens: {
+            starburstIntensity: this.settings.starburstIntensity,
+            starburstSpikes: this.settings.starburstSpikes,
+            starburstLength: this.settings.starburstLength,
+            starburstRotation: this.settings.starburstRotation,
+            ghostIntensity: this.settings.ghostIntensity,
+            ghostCount: this.settings.ghostCount,
+            ghostSpacing: this.settings.ghostSpacing,
+            haloIntensity: this.settings.haloIntensity,
+            haloRadius: this.settings.haloRadius,
+            chromaticAberration: this.settings.chromaticAberration,
+            dirtIntensity: this.settings.dirtIntensity
+          }
         })
       );
     } else if (this.settings.technique === 'Compact') {
@@ -479,6 +526,54 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         typeof settings['anamorphicRatio'] === 'number'
           ? clampNumber(settings['anamorphicRatio'], -1, 1)
           : this.settings.anamorphicRatio,
+      temporalStability:
+        typeof settings['temporalStability'] === 'number'
+          ? clampNumber(settings['temporalStability'], 0, 0.95)
+          : this.settings.temporalStability,
+      starburstIntensity:
+        typeof settings['starburstIntensity'] === 'number'
+          ? clampNumber(settings['starburstIntensity'], 0, 3)
+          : this.settings.starburstIntensity,
+      starburstSpikes:
+        typeof settings['starburstSpikes'] === 'number'
+          ? clampNumber(settings['starburstSpikes'], 2, 8)
+          : this.settings.starburstSpikes,
+      starburstLength:
+        typeof settings['starburstLength'] === 'number'
+          ? clampNumber(settings['starburstLength'], 0, 128)
+          : this.settings.starburstLength,
+      starburstRotation:
+        typeof settings['starburstRotation'] === 'number'
+          ? clampNumber(settings['starburstRotation'], 0, Math.PI)
+          : this.settings.starburstRotation,
+      ghostIntensity:
+        typeof settings['ghostIntensity'] === 'number'
+          ? clampNumber(settings['ghostIntensity'], 0, 3)
+          : this.settings.ghostIntensity,
+      ghostCount:
+        typeof settings['ghostCount'] === 'number'
+          ? clampNumber(settings['ghostCount'], 1, 6)
+          : this.settings.ghostCount,
+      ghostSpacing:
+        typeof settings['ghostSpacing'] === 'number'
+          ? clampNumber(settings['ghostSpacing'], 0, 1)
+          : this.settings.ghostSpacing,
+      haloIntensity:
+        typeof settings['haloIntensity'] === 'number'
+          ? clampNumber(settings['haloIntensity'], 0, 3)
+          : this.settings.haloIntensity,
+      haloRadius:
+        typeof settings['haloRadius'] === 'number'
+          ? clampNumber(settings['haloRadius'], 0, 1)
+          : this.settings.haloRadius,
+      chromaticAberration:
+        typeof settings['chromaticAberration'] === 'number'
+          ? clampNumber(settings['chromaticAberration'], 0, 1)
+          : this.settings.chromaticAberration,
+      dirtIntensity:
+        typeof settings['dirtIntensity'] === 'number'
+          ? clampNumber(settings['dirtIntensity'], 0, 3)
+          : this.settings.dirtIntensity,
       animate:
         typeof settings['animate'] === 'boolean' ? settings['animate'] : this.settings.animate
     };
@@ -499,11 +594,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           : 'The final result uses standard dynamic-range presentation.';
     const techniqueDescription =
       this.settings.technique === 'Multiscale HDR'
-        ? 'Multiscale HDR is the default because it is the reusable public pipeline with smoother wide-radius glow.'
+        ? 'Multiscale HDR combines reusable wide-radius glow with optional photographic lens optics.'
         : this.settings.technique === 'Compact'
           ? 'Compact mode shows the older single-pass effect for direct comparison.'
           : 'Bloom is off so the underlying HDR emitters stay visible without postprocessing.';
-    return `<p>${techniqueDescription}</p><p>${processingDescription}</p><p>${presentationDescription}</p>`;
+    const levelCount = BLOOM_QUALITIES.indexOf(this.settings.quality) + 2;
+    const hasLensArtifacts =
+      this.settings.starburstIntensity > 0 ||
+      this.settings.ghostIntensity > 0 ||
+      this.settings.haloIntensity > 0;
+    const passCount =
+      levelCount * 4 + Number(hasLensArtifacts) + Number(this.settings.temporalStability > 0);
+    const performanceDescription =
+      this.settings.technique === 'Multiscale HDR'
+        ? `Current budget: ${passCount} passes across ${levelCount} pyramid levels. Lens optics share ${hasLensArtifacts ? 'one half-resolution pass' : 'no extra pass'}; lens dirt adds no pass.`
+        : 'Switch to Multiscale HDR to inspect the live optical-pass budget.';
+    return `<p>${techniqueDescription}</p><p>${processingDescription}</p><p>${performanceDescription}</p><p>${presentationDescription}</p>`;
   }
 }
 
@@ -620,15 +726,178 @@ export function makeBloomSettingsSchema(): SettingsSchema {
             step: 0.05
           },
           {
+            name: 'temporalStability',
+            label: 'Temporal Stability',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.95,
+            step: 0.05
+          },
+          {
             name: 'animate',
             label: 'Animate Scene',
             type: 'boolean',
             persist: 'none'
           }
         ]
+      },
+      {
+        id: 'lens-optics',
+        name: 'Lens Optics',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'starburstIntensity',
+            label: 'Starburst Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 3,
+            step: 0.05
+          },
+          {
+            name: 'starburstSpikes',
+            label: 'Diffraction Rays',
+            type: 'number',
+            persist: 'none',
+            min: 2,
+            max: 8,
+            step: 2
+          },
+          {
+            name: 'starburstLength',
+            label: 'Diffraction Length',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 128,
+            step: 2
+          },
+          {
+            name: 'starburstRotation',
+            label: 'Diffraction Rotation',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: Math.PI,
+            step: 0.05
+          },
+          {
+            name: 'ghostIntensity',
+            label: 'Spectral Ghosts',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 3,
+            step: 0.05
+          },
+          {
+            name: 'ghostCount',
+            label: 'Ghost Reflections',
+            type: 'number',
+            persist: 'none',
+            min: 1,
+            max: 6,
+            step: 1
+          },
+          {
+            name: 'ghostSpacing',
+            label: 'Ghost Spacing',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'haloIntensity',
+            label: 'Lens Halo',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 3,
+            step: 0.05
+          },
+          {
+            name: 'haloRadius',
+            label: 'Halo Radius',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'chromaticAberration',
+            label: 'Spectral Separation',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'dirtIntensity',
+            label: 'Lens Dirt',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 3,
+            step: 0.05
+          }
+        ]
       }
     ]
   };
+}
+
+function makeLensDirtTexture(device: Device): Texture {
+  const width = 192;
+  const height = 192;
+  const pixels = new Uint8Array(width * height * 4);
+  const smudges = [
+    {position: [0.18, 0.29], radius: 0.11, intensity: 0.48},
+    {position: [0.34, 0.74], radius: 0.16, intensity: 0.38},
+    {position: [0.69, 0.18], radius: 0.13, intensity: 0.58},
+    {position: [0.77, 0.64], radius: 0.19, intensity: 0.42},
+    {position: [0.49, 0.44], radius: 0.085, intensity: 0.32}
+  ];
+
+  for (let pixelY = 0; pixelY < height; pixelY++) {
+    for (let pixelX = 0; pixelX < width; pixelX++) {
+      const coordinateX = (pixelX + 0.5) / width;
+      const coordinateY = (pixelY + 0.5) / height;
+      let dirt = 0;
+      for (const smudge of smudges) {
+        const distanceX = coordinateX - smudge.position[0];
+        const distanceY = coordinateY - smudge.position[1];
+        const distanceSquared = distanceX * distanceX + distanceY * distanceY;
+        dirt += smudge.intensity * Math.exp(-distanceSquared / (smudge.radius * smudge.radius));
+      }
+
+      const grain = (((pixelX * 73856093) ^ (pixelY * 19349663)) >>> 0) / 4294967295;
+      const scratch =
+        Math.exp(-Math.abs(coordinateY - (0.15 + coordinateX * 0.085)) * 150) *
+        (0.25 + grain * 0.4);
+      dirt = Math.min(dirt + scratch + Math.max(grain - 0.985, 0) * 9, 1);
+      const pixelOffset = (pixelY * width + pixelX) * 4;
+      pixels[pixelOffset] = Math.round(dirt * 255);
+      pixels[pixelOffset + 1] = Math.round(dirt * 232);
+      pixels[pixelOffset + 2] = Math.round(dirt * 208);
+      pixels[pixelOffset + 3] = 255;
+    }
+  }
+
+  return device.createTexture({
+    id: 'bloom-lens-dirt-mask',
+    width,
+    height,
+    data: pixels,
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.COPY_DST,
+    sampler: {minFilter: 'linear', magFilter: 'linear'}
+  });
 }
 
 function makeBloomSettingsState(settings: BloomSettings): SettingsState {

@@ -40,8 +40,25 @@ in both scenes.
 `createBloomShaderPassPipeline` builds an HDR bloom pyramid with quality presets from two to five
 levels. The pyramid progressively reconstructs its levels with normalized tent filtering; `scatter`,
 `softKnee`, `fireflyReduction`, `anamorphicRatio`, and `tint` control the resulting glow without
-requiring application-owned intermediate textures. The source texture must allow both sampling and,
-when it is produced by an offscreen scene pass, rendering.
+requiring application-owned intermediate textures. Optional `lens` controls add aperture
+diffraction, spectral lens-element ghosts, a radial halo, and sampled lens dirt. Set
+`temporalStability` to accumulate neighborhood-clamped glow history. Every lens feature and temporal
+history is disabled by default. The source texture must allow both sampling and, when it is produced
+by an offscreen scene pass, rendering.
+
+| Feature | Added render passes | Additional targets | Main sampling cost |
+| --- | --- | --- | --- |
+| Base bloom: low / medium / high / ultra | 8 / 12 / 16 / 20 total | 7 / 11 / 15 / 19 | Separable blur and normalized pyramid reconstruction. |
+| Lens dirt | 0 | 0 | One full-resolution mask sample in the existing composite. |
+| Spectral ghosts | 1 shared half-resolution lens pass | 1 half-resolution target | One sample per ghost, or three with chromatic separation. |
+| Lens halo | Shares the same lens pass | Shares the same target | One sample, or three with chromatic separation. |
+| Diffraction starburst | Shares the same lens pass | Shares the same target | Eight samples per configured diffraction ray. |
+| Temporal stability | 1 half-resolution history pass | 2 persistent half-resolution textures | Five current-neighborhood samples and one history sample. |
+
+The lens pass exists only when at least one of `starburstIntensity`, `ghostIntensity`, or
+`haloIntensity` is positive. Dirt-only configurations therefore preserve the base pass count. Reduce
+`quality`, `resolutionScale`, `starburstSpikes`, or `ghostCount` to trade optical detail for
+throughput.
 
 `toneMapping` applies an ACES filmic curve after exposure and preserves the source alpha channel.
 Place it after bloom or other HDR effects so bright highlights roll off before presentation:
@@ -58,7 +75,17 @@ const renderer = new ShaderPassRenderer(device, {
       intensity: 1.25,
       scatter: 0.55,
       softKnee: 0.5,
-      fireflyReduction: 0.15
+      fireflyReduction: 0.15,
+      temporalStability: 0.55,
+      lens: {
+        starburstIntensity: 0.65,
+        starburstSpikes: 4,
+        ghostIntensity: 0.3,
+        ghostCount: 3,
+        haloIntensity: 0.2,
+        chromaticAberration: 0.35,
+        dirtIntensity: 0.4
+      }
     }),
     toneMapping
   ]
@@ -66,11 +93,16 @@ const renderer = new ShaderPassRenderer(device, {
 
 renderer.renderToScreen({
   sourceTexture,
+  bindings: {lensDirtTexture},
   uniforms: {
     toneMapping: {exposure: 1}
   }
 });
 ```
+
+`lensDirtTexture` is an application-owned, sampled color texture. Omit the binding when
+`lens.dirtIntensity` is zero. Like other persistent effects, temporal bloom history is reset by
+`renderer.resetHistory()`, `resetHistory: true`, or resizing the renderer.
 
 See [Rendering Techniques and Tradeoffs](https://luma.gl/docs/api-guide/shaders/rendering-techniques)
 for comparisons between related effects, their GPU inputs, backend support, and composition order.

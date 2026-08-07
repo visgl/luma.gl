@@ -276,10 +276,22 @@ to explicitly trade edge quality for fewer shaded pixels and smaller history tex
 4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
 
 Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at half resolution,
-then successively filters and blurs them at quarter and eighth resolution using `rgba16float`
-intermediate targets. Its optional `resolutionScale` controls the entire pyramid without clamping
-highlight radiance to 8-bit normalized color. Use the exact HDR order: temporal effects, auto
-exposure, bloom, then tone mapping.
+then progressively filters, blurs, and reconstructs two to five `rgba16float` pyramid levels.
+`quality: 'ultra'` reaches one-thirty-second resolution. `resolutionScale` controls the entire
+pyramid without clamping highlight radiance to 8-bit normalized color.
+
+Enable optional photographic optics through `lens`: aperture-diffraction starbursts, mirrored
+chromatic ghosts, and radial halos share one extra half-resolution pass. `lens.dirtIntensity`
+samples an application-provided `lensDirtTexture` during the existing composite and therefore adds
+no pass or intermediate render target. Pass that mask through
+`renderer.renderToScreen({sourceTexture, bindings: {lensDirtTexture}})`.
+
+`temporalStability` enables neighborhood-clamped, persistent half-resolution glow history for one
+additional pass. The default configuration allocates neither history nor lens artifacts. Baseline
+quality presets use 8, 12, 16, and 20 passes for low, medium, high, and ultra respectively;
+diffraction costs eight samples per ray, while each ghost costs one sample or three when chromatic
+aberration is enabled. Use the exact HDR order: temporal effects, auto exposure, bloom, then tone
+mapping.
 
 ### Recommended ordering
 

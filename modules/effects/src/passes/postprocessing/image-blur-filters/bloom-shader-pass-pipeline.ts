@@ -10,6 +10,16 @@ import type {
   ShaderPassRenderTarget
 } from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
+import {
+  bloomLensArtifactsPass,
+  bloomTemporalPass,
+  createBloomLensCompositePass,
+  MAX_BLOOM_LENS_GHOSTS,
+  MAX_BLOOM_LENS_SPIKES,
+  type BloomLensEffectsOptions
+} from './bloom-lens-effects';
+
+export type {BloomLensEffectsOptions} from './bloom-lens-effects';
 
 const MAX_BLOOM_BLUR_RADIUS = 24;
 const BLOOM_TARGET_SAMPLER = {minFilter: 'linear', magFilter: 'linear'} as const;
@@ -47,6 +57,10 @@ export type BloomShaderPassPipelineOptions = BloomProps & {
   anamorphicRatio?: number;
   /** RGB multiplier applied to the reconstructed bloom before composition. */
   tint?: [number, number, number];
+  /** Optional photographic diffraction, spectral ghosts, lens halo, and sampled dirt mask. */
+  lens?: BloomLensEffectsOptions;
+  /** Neighborhood-clamped history contribution for stable highlights. Defaults to zero. */
+  temporalStability?: number;
   /**
    * Positive fractional size multiplier applied to every pyramid level. The extraction filter
    * adapts its source footprint to the resulting target size.
@@ -781,6 +795,27 @@ export function createBloomShaderPassPipeline(
   const fireflyReduction = options.fireflyReduction ?? 0;
   const anamorphicRatio = Math.min(Math.max(options.anamorphicRatio ?? 0, -1), 1);
   const tint = options.tint ?? [1, 1, 1];
+  const temporalStability = Math.min(Math.max(options.temporalStability ?? 0, 0), 0.95);
+  const lens = options.lens;
+  const starburstIntensity = Math.max(lens?.starburstIntensity ?? 0, 0);
+  const starburstSpikes = Math.min(
+    Math.max(Math.round((lens?.starburstSpikes ?? 4) / 2) * 2, 2),
+    MAX_BLOOM_LENS_SPIKES
+  );
+  const starburstLength = Math.min(Math.max(lens?.starburstLength ?? 48, 0), 256);
+  const starburstRotation = lens?.starburstRotation ?? 0;
+  const ghostIntensity = Math.max(lens?.ghostIntensity ?? 0, 0);
+  const ghostCount = Math.min(
+    Math.max(Math.round(lens?.ghostCount ?? 3), 1),
+    MAX_BLOOM_LENS_GHOSTS
+  );
+  const ghostSpacing = Math.min(Math.max(lens?.ghostSpacing ?? 0.32, 0), 1);
+  const haloIntensity = Math.max(lens?.haloIntensity ?? 0, 0);
+  const haloRadius = Math.min(Math.max(lens?.haloRadius ?? 0.34, 0), 1);
+  const chromaticAberration = Math.min(Math.max(lens?.chromaticAberration ?? 0, 0), 1);
+  const dirtIntensity = Math.max(lens?.dirtIntensity ?? 0, 0);
+  const hasLensArtifacts = starburstIntensity > 0 || ghostIntensity > 0 || haloIntensity > 0;
+  const hasLensDirt = dirtIntensity > 0;
   const anamorphicRadius = Math.min(
     radius,
     MAX_BLOOM_BLUR_RADIUS / (1 + Math.abs(anamorphicRatio))
@@ -853,12 +888,61 @@ export function createBloomShaderPassPipeline(
     reconstructedGlow = upsampleTarget;
   }
 
-  steps.push({
-    shaderPass: bloomAdaptiveCompositePass,
-    inputs: {sourceTexture: 'previous', glowTexture: reconstructedGlow},
-    output: 'previous',
-    uniforms: {tint, intensity}
-  });
+  if (temporalStability > 0) {
+    renderTargets['bloomGlowHistory'] = {
+      ...makeRenderTarget(0.5),
+      lifetime: 'history',
+      initialize: {clearColor: [0, 0, 0, 0]}
+    };
+    steps.push({
+      shaderPass: bloomTemporalPass,
+      inputs: {sourceTexture: reconstructedGlow, historyTexture: 'bloomGlowHistory'},
+      output: 'bloomGlowHistory',
+      uniforms: {stability: temporalStability}
+    });
+    reconstructedGlow = 'bloomGlowHistory';
+  }
+
+  if (hasLensArtifacts) {
+    renderTargets['bloomLensArtifacts'] = makeRenderTarget(0.5);
+    steps.push({
+      shaderPass: bloomLensArtifactsPass,
+      inputs: {sourceTexture: 'extractHalf', glowTexture: reconstructedGlow},
+      output: 'bloomLensArtifacts',
+      uniforms: {
+        starburstIntensity,
+        starburstSpikes,
+        starburstLength,
+        starburstRotation,
+        ghostIntensity,
+        ghostCount,
+        ghostSpacing,
+        haloIntensity,
+        haloRadius,
+        chromaticAberration
+      }
+    });
+  }
+
+  if (hasLensArtifacts || hasLensDirt) {
+    steps.push({
+      shaderPass: createBloomLensCompositePass(hasLensArtifacts, hasLensDirt),
+      inputs: {
+        sourceTexture: 'previous',
+        glowTexture: reconstructedGlow,
+        ...(hasLensArtifacts ? {lensTexture: 'bloomLensArtifacts'} : {})
+      },
+      output: 'previous',
+      uniforms: {tint, intensity, dirtIntensity}
+    });
+  } else {
+    steps.push({
+      shaderPass: bloomAdaptiveCompositePass,
+      inputs: {sourceTexture: 'previous', glowTexture: reconstructedGlow},
+      output: 'previous',
+      uniforms: {tint, intensity}
+    });
+  }
 
   return {
     name: bloomShaderPassPipeline.name,
