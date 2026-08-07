@@ -14,7 +14,15 @@ import {
   GPUScan,
   type CompiledGPUCommandGraph
 } from '@luma.gl/experimental';
-import type {GPUVector} from '@luma.gl/tables';
+import {
+  column,
+  literal,
+  LuDataFrame,
+  parameter,
+  type CompiledLuDataFrameQuery,
+  type LuDataFrameQueryParameters
+} from '@luma.gl/experimental/ludf';
+import {GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 
@@ -30,6 +38,7 @@ type ExampleResources = {
   selection: GPUVector<'uint32'>;
   values: GPUVector<'float32'>;
   positions: GPUVector<'float32x2'>;
+  sourceValues: Float32Array;
   outputs: Buffer[];
 };
 
@@ -42,6 +51,9 @@ type ExampleElements = {
   groups: HTMLElement;
   heatmap: HTMLElement;
   histogram: HTMLElement;
+  luDataFrameAdjustment: HTMLInputElement;
+  luDataFrameResult: HTMLElement;
+  luDataFrameRun: HTMLButtonElement;
   nodes: HTMLElement;
   reuse: HTMLElement;
   run: HTMLButtonElement;
@@ -71,6 +83,7 @@ class GPUDataAnalysisExample {
   private runVersion = 0;
 
   private readonly handleRun = (): void => void this.run();
+  private readonly handleLuDataFrameRun = (): void => void this.runLuDataFrameDemo();
 
   constructor(root: HTMLElement) {
     this.elements = getElements(root);
@@ -84,6 +97,7 @@ class GPUDataAnalysisExample {
       element.addEventListener('change', this.handleRun);
     }
     this.elements.run.addEventListener('click', this.handleRun);
+    this.elements.luDataFrameRun.addEventListener('click', this.handleLuDataFrameRun);
   }
 
   async initialize(): Promise<void> {
@@ -108,6 +122,7 @@ class GPUDataAnalysisExample {
     if (this.destroyed) return;
     this.destroyed = true;
     this.elements.run.removeEventListener('click', this.handleRun);
+    this.elements.luDataFrameRun.removeEventListener('click', this.handleLuDataFrameRun);
     for (const element of [
       this.elements.dataset,
       this.elements.bins,
@@ -385,6 +400,7 @@ class GPUDataAnalysisExample {
         positions: gpuPositions,
         groupKeys: gpuGroupKeys,
         selection: gpuSelection,
+        sourceValues: values,
         outputs
       };
 
@@ -555,6 +571,93 @@ class GPUDataAnalysisExample {
   private releaseResources(): void {
     destroyResources(this.resources);
     this.resources = null;
+  }
+
+  /** Runs an opt-in dataframe derivation directly over the existing Arrow-uploaded GPU columns. */
+  private async runLuDataFrameDemo(): Promise<void> {
+    const device = this.device;
+    const resources = this.resources;
+    if (!device || !resources || this.destroyed) {
+      this.elements.luDataFrameResult.textContent = 'Run the analysis graph first.';
+      return;
+    }
+
+    const adjustment = Number(this.elements.luDataFrameAdjustment.value);
+    if (!Number.isFinite(adjustment)) {
+      this.elements.luDataFrameResult.textContent = 'Enter a finite adjustment.';
+      return;
+    }
+
+    this.elements.luDataFrameRun.disabled = true;
+    this.elements.luDataFrameResult.textContent = 'Compiling GPU-resident derived columns...';
+    let frame: LuDataFrame<{value: 'float32'; category: 'uint32'}> | undefined;
+    let compiled:
+      | CompiledLuDataFrameQuery<{category: 'uint32'; adjustedValue: 'float32'}>
+      | undefined;
+
+    try {
+      const batches = resources.values.data.map(
+        (valueData, batchIndex) =>
+          new GPURecordBatch<{value: 'float32'; category: 'uint32'}>({
+            gpuData: {value: valueData, category: resources.groupKeys.data[batchIndex]}
+          })
+      );
+      frame = new LuDataFrame({table: new GPUTable({batches})});
+      const query = frame
+        .withColumn(
+          'adjustedValue',
+          column('value').multiply(literal(2)).add(parameter('adjustment', adjustment))
+        )
+        .filter(column('adjustedValue').greaterThan(literal(adjustment)))
+        .select(['category', 'adjustedValue']);
+      const graph = new GPUCommandGraph<LuDataFrameQueryParameters>(device, {
+        id: 'gpu-data-analysis-ludf-derived-demo'
+      });
+      compiled = query.compile(graph);
+
+      const commandEncoder = device.createCommandEncoder({id: 'ludf-derived-demo'});
+      compiled.encode(commandEncoder, {adjustment});
+      device.submit(commandEncoder.finish());
+
+      const countData = compiled.selectedCounts.data[0];
+      const derivedData = compiled.table.gpuVectors.adjustedValue.data[0];
+      const countBuffer =
+        countData.buffer instanceof Buffer ? countData.buffer : countData.buffer.buffer;
+      const derivedBuffer =
+        derivedData.buffer instanceof Buffer ? derivedData.buffer : derivedData.buffer.buffer;
+      const sampleLength = Math.min(derivedData.length, 4);
+      const [countBytes, sampleBytes] = await Promise.all([
+        countBuffer.readAsync(countData.byteOffset, Uint32Array.BYTES_PER_ELEMENT),
+        derivedBuffer.readAsync(
+          derivedData.byteOffset,
+          sampleLength * Float32Array.BYTES_PER_ELEMENT
+        )
+      ]);
+      const selectedCount = new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0];
+      const expectedCount = resources.sourceValues.reduce(
+        (count, value) => count + Number(value * 2 + adjustment > adjustment),
+        0
+      );
+      const sample = Array.from(
+        new Float32Array(sampleBytes.buffer, sampleBytes.byteOffset, sampleLength),
+        value => value.toFixed(2)
+      );
+
+      if (!this.destroyed && this.resources === resources) {
+        const validation = selectedCount === expectedCount ? 'CPU verified' : 'GPU/CPU mismatch';
+        this.elements.luDataFrameResult.textContent =
+          `${selectedCount.toLocaleString()} selected rows · adjusted = value × 2 + ${adjustment} · ` +
+          `first GPU values [${sample.join(', ')}] · ${validation}`;
+      }
+    } catch (error) {
+      if (!this.destroyed) {
+        this.elements.luDataFrameResult.textContent = getErrorMessage(error);
+      }
+    } finally {
+      compiled?.destroy();
+      frame?.destroy();
+      if (!this.destroyed) this.elements.luDataFrameRun.disabled = false;
+    }
   }
 
   private setStatus(message: string, error = false): void {
@@ -834,6 +937,9 @@ function getElements(root: HTMLElement): ExampleElements {
     groups: get('[data-groups]'),
     heatmap: get('[data-heatmap]'),
     histogram: get('[data-histogram]'),
+    luDataFrameAdjustment: get('[data-ludf-adjustment]'),
+    luDataFrameResult: get('[data-ludf-result]'),
+    luDataFrameRun: get('[data-ludf-run]'),
     nodes: get('[data-nodes]'),
     reuse: get('[data-reuse]'),
     run: get('[data-run]'),
@@ -854,6 +960,6 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with filtered group counts and means, spatial statistics, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram<select data-bins><option value="16">16 uniform bins</option><option value="64" selected>64 uniform bins</option><option value="300">300 uniform bins</option><option value="thresholds">8 threshold bins</option></select></label><label>Group filter<select data-group-filter><option value="all">All values</option><option value="positive" selected>Positive values</option><option value="negative">Negative values</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Filtered groups</h2><div class="groups" data-groups></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
+const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with filtered group counts and means, spatial statistics, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram<select data-bins><option value="16">16 uniform bins</option><option value="64" selected>64 uniform bins</option><option value="300">300 uniform bins</option><option value="thresholds">8 threshold bins</option></select></label><label>Group filter<select data-group-filter><option value="all">All values</option><option value="positive" selected>Positive values</option><option value="negative">Negative values</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="controls"><label>luDF adjustment<input data-ludf-adjustment type="number" value="1" step="0.25"></label><button data-ludf-run>Run luDF derived-column demo</button><p data-ludf-result>Derive and filter existing Arrow-backed GPU columns without copying rows.</p></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Filtered groups</h2><div class="groups" data-groups></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
 
 const STYLES = `.analysis-example{min-height:100%;box-sizing:border-box;padding:30px;color:#172033;background:radial-gradient(circle at 90% 0,#d9f4ea,transparent 35%),#f6f8fb;font-family:Inter,ui-sans-serif,system-ui}.analysis-example *{box-sizing:border-box}.analysis-example>header,.analysis-example>section,.analysis-example>.status{max-width:1120px;margin-left:auto;margin-right:auto}.analysis-example header p{margin:0;color:#08745b;font-size:12px;font-weight:800;letter-spacing:.13em}.analysis-example h1{margin:5px 0;font-size:clamp(30px,5vw,52px);letter-spacing:-.04em}.analysis-example header span{color:#5d687b}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:24px;padding:16px;border:1px solid #ccd6df;border-radius:15px;background:#fff}.controls label{display:grid;gap:5px;color:#596579;font-size:12px;font-weight:700}.controls select,.controls button{height:40px;padding:0 12px;border:1px solid #aebdcc;border-radius:8px;background:#fff;color:#172033}.controls button{background:#08745b;color:#fff;border-color:#08745b;font-weight:700}.status{padding:10px 2px;color:#596579}.status[data-state=error],[data-validation][data-state=error]{color:#b42318}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metrics article,.visuals article{padding:16px;border:1px solid #d5dde6;border-radius:14px;background:#fff;box-shadow:0 10px 30px #25324a0a}.metrics span{display:block;color:#667085;font-size:12px}.metrics strong{display:block;margin-top:7px;font-size:18px}.visuals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.visuals h2{margin:0 0 12px;font-size:16px}.histogram{height:250px;display:flex;align-items:end;gap:2px;border-bottom:1px solid #b8c3cf}.histogram i{display:block;flex:1;min-width:1px;background:#2da98a;border-radius:2px 2px 0 0}.groups{height:250px;display:grid;align-content:center;gap:14px}.groups div{display:grid;grid-template-columns:76px 1fr minmax(110px,auto);align-items:center;gap:8px;color:#596579;font-size:12px}.groups i{display:block;height:14px;background:#875bc7;border-radius:2px}.groups strong{text-align:right;color:#172033}.heatmap{height:250px;aspect-ratio:1;display:grid;gap:1px;margin:auto;background:#e8edf1}.heatmap i{display:block;background:#315cc5}@media(max-width:900px){.visuals{grid-template-columns:1fr 1fr}.visuals article:last-child{grid-column:1/-1}}@media(max-width:760px){.analysis-example{padding:18px}.metrics{grid-template-columns:1fr 1fr}.visuals{grid-template-columns:1fr}.visuals article:last-child{grid-column:auto}}`;
