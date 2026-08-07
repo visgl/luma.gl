@@ -85,6 +85,61 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     }
   });
 
+  test('documents opt-in CPU and actual WebGPU benchmarks with reproducible graph workloads', () => {
+    expect(graphDocumentation).toContain(
+      "import {LuGraphBenchmark} from '@site/src/components/docs/lugraph-benchmark';"
+    );
+    expect(graphDocumentation).toContain('## Measure real CPU and WebGPU graph workloads');
+    expect(graphDocumentation).toContain('<LuGraphBenchmark />');
+    expect(graphDocumentation).toContain('32, 64, 128, or 256 vertices');
+    expect(graphDocumentation).toContain(
+      'No benchmark GPU work runs during page rendering or hydration'
+    );
+    expect(graphDocumentation).toContain('### Choose a graph that resembles your application');
+
+    for (const graphFamily of [
+      '**Sparse:**',
+      '**Dense:**',
+      '**Scale-free:**',
+      '**Disconnected:**',
+      '**High-degree hub:**'
+    ]) {
+      expect(graphDocumentation, graphFamily).toContain(graphFamily);
+    }
+
+    expect(graphDocumentation).toContain('`V × (V - 1)` edges');
+    expect(graphDocumentation).toContain('including an intentionally empty');
+    expect(graphDocumentation).toContain('six genuine GPU algorithms');
+    expect(graphDocumentation).toContain('not\nmillion-vertex benchmarks');
+    expect(graphDocumentation).toContain("from '@luma.gl/experimental/lugraph/benchmarks';");
+    expect(graphDocumentation).toContain('makeLuGraphBenchmarkDataset');
+    expect(graphDocumentation).toContain('await runLuGraphBenchmark(device, {');
+    expect(experimentalOverview).toContain('opt-in live benchmark');
+  });
+
+  test('distinguishes GPU submission, encoding, validation, approximation, and real convergence', () => {
+    expect(graphDocumentation).toContain('### Read each timing without hiding its costs');
+    expect(graphDocumentation).toContain('**CPU median**');
+    expect(graphDocumentation).toContain('**CPU encode**');
+    expect(graphDocumentation).toContain('**Fenced GPU median**');
+    expect(graphDocumentation).toContain('explicit completion fence');
+    expect(graphDocumentation).toContain('does not include the separately reported CPU encoding');
+    expect(graphDocumentation).toContain('one warmup and three measured iterations');
+    expect(graphDocumentation).toContain('95th-percentile');
+    expect(graphDocumentation).toContain('genuinely exposes timestamp queries');
+    expect(graphDocumentation).toContain('Source upload, initial command-graph compilation');
+    expect(graphDocumentation).toContain('explicit correctness readback');
+    expect(graphDocumentation).toContain('independently fenced spatial-grid rebuild');
+    expect(graphDocumentation).toContain('measurement still includes the grid rebuild');
+    expect(graphDocumentation).toContain('independently computed CPU reference');
+    expect(graphDocumentation).toContain('same approximation');
+    expect(graphDocumentation).toContain('exact force reference');
+    expect(graphDocumentation).toContain('actual\nGPU convergence flag');
+    expect(graphDocumentation).toContain('final GPU L1 residual');
+    expect(graphDocumentation).toContain('does\nnot imply convergence or early termination');
+    expect(graphDocumentation).toContain('they never promise a speedup');
+  });
+
   test('explains graph motivation, appropriate workloads, and concrete application use cases', () => {
     expect(graphDocumentation).toContain('## Overview');
     expect(graphDocumentation).toContain('## Why keep a graph on the GPU?');

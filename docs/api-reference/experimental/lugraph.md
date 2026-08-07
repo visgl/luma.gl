@@ -1,4 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+import {LuGraphBenchmark} from '@site/src/components/docs/lugraph-benchmark';
 import {LuGraphExplorerExample} from '@site/src/examples';
 
 # luGraph: GPU-Resident Graph Analytics
@@ -68,6 +69,105 @@ Use this demonstration to understand how GPU-resident graph outputs can directly
 network, dependency map, fraud investigation, or other relationship visualization. It is a
 WebGPU-only educational example, not a large-graph performance benchmark: its exact layout costs
 `O(V² + E)` per force iteration and intentionally uses only 128 vertices.
+
+## Measure real CPU and WebGPU graph workloads
+
+**Question: Does this graph workflow benefit from GPU execution on my actual browser, and what do
+setup, command submission, and approximate layout really cost?**
+
+A network diagram can demonstrate an algorithm without explaining its cost. This opt-in benchmark
+runs independent CPU implementations and the actual WebGPU graph operations against identical,
+deterministic source edges, stable vertex identifiers, and initial coordinates. Use it to compare
+different graph structures, understand why a small CPU-resident task may be faster on the CPU, and
+decide whether reusing GPU-resident adjacency or approximating distant layout forces suits a real
+application.
+
+<LuGraphBenchmark />
+
+Select a graph family and 32, 64, 128, or 256 vertices, then explicitly start the benchmark.
+No benchmark GPU work runs during page rendering or hydration. A WebGPU-capable browser, supported
+adapter, and secure origin are required; unavailable hardware never produces simulated measurements.
+
+### Choose a graph that resembles your application
+
+- **Sparse:** a mostly connected ring with occasional shortcuts, similar to infrastructure routes
+  or simple dependency chains.
+- **Dense:** every distinct pair has a directed edge, producing `V × (V - 1)` edges and exposing
+  workloads dominated by adjacency and relationship count.
+- **Scale-free:** preferential attachment creates a few influential hubs, resembling citation,
+  social, and package-dependency networks.
+- **Disconnected:** multiple independent groups plus an isolated vertex exercise unreachable
+  searches and weak-component labeling.
+- **High-degree hub:** one central vertex connects to many neighbors, testing uneven relationship
+  distributions such as a heavily depended-on service.
+
+The original source and target edges retain three ordered batches, including an intentionally empty
+middle batch. Each family runs six genuine GPU algorithms and independent CPU references:
+compressed adjacency, breadth-first neighborhood search, weak components, PageRank, exact force
+layout, and explicitly approximate uniform-grid force layout. These bounded demonstrations are not
+million-vertex benchmarks; dense graphs and exact force layout can require quadratic work.
+
+### Read each timing without hiding its costs
+
+The **CPU median** measures the independent CPU algorithm. **CPU encode** measures the separate CPU
+work of recording the GPU command graph. **Fenced GPU median** begins at command submission and
+stops only after an explicit completion fence confirms that the real GPU workload completed; it
+does not include the separately reported CPU encoding. The displayed GPU-versus-CPU ratio compares
+only those two algorithm medians and therefore excludes encoding, initial upload, graph
+compilation, and correctness readback. Include those phases when judging one-off or end-to-end
+workflows.
+
+The panel performs one warmup and three measured iterations. Its median is an observed sample, not
+a statistically robust cross-device result; the programmatic API additionally reports observed
+minimum, median, 95th-percentile, and maximum values. Hardware GPU timestamps appear only when the
+active adapter genuinely exposes timestamp queries. Queue synchronization, browser overhead, and
+hardware execution describe different costs, so a timestamp is not a substitute for fenced
+end-to-end submission time.
+
+Source upload, initial command-graph compilation, explicit correctness readback, and an
+independently fenced spatial-grid rebuild are reported as separate phases. The accelerated layout
+measurement still includes the grid rebuild required by each actual iteration; the standalone
+grid result merely makes that cost visible. Working-memory columns distinguish imported buffers
+from transient graph storage, while caller-owned spatial-index bytes are reported independently.
+
+Every GPU result must match its independently computed CPU reference before timings are published.
+The spatial path is checked against a CPU implementation of the same approximation; its additional
+coordinate error is measured against the exact force reference. Weak components report their actual
+GPU convergence flag, and PageRank reports its final GPU L1 residual. A fixed iteration budget does
+not imply convergence or early termination. Results apply only to this graph, browser, and
+adapter; they never promise a speedup, generalize across devices, or describe the approximation
+as Barnes–Hut or ForceAtlas2.
+
+### Run the same benchmark programmatically
+
+Benchmark helpers live behind an optional nested entry point so ordinary graph applications do not
+import benchmark-only datasets, CPU references, or measurement code:
+
+```ts
+import {
+  makeLuGraphBenchmarkDataset,
+  runLuGraphBenchmark
+} from '@luma.gl/experimental/lugraph/benchmarks';
+
+const dataset = makeLuGraphBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
+const report = await runLuGraphBenchmark(device, {
+  kind: dataset.kind,
+  vertexCount: dataset.vertexCount,
+  seed: 42,
+  warmupIterations: 1,
+  measuredIterations: 3,
+  pageRankIterations: 20,
+  forceIterations: 1,
+  maxDepth: 6,
+  theta: 0.6,
+  gridSize: [8, 8]
+});
+```
+
+The dataset helper returns fresh, caller-owned CPU arrays; the benchmark independently generates
+its identical seeded input, explicitly uploads and validates real GPU results, and releases its
+own temporary allocations after reporting. Neither helper changes production graph ownership or
+adds an automatic CPU execution fallback to the graph API.
 
 ## Why keep a graph on the GPU?
 
