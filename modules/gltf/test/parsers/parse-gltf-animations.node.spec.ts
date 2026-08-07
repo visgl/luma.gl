@@ -77,4 +77,40 @@ describe('loader-owned animation accessor processing', () => {
       ]
     });
   });
+
+  test('accepts float animation accessors appended after loader postprocessing', () => {
+    const keyframeTimes = new Float32Array([0, 2]);
+    const keyframeValues = new Float32Array([1, 2, 3, 4, 5, 6]);
+    const gltf = {
+      accessors: [
+        {
+          componentType: 5126,
+          count: 2,
+          type: 'SCALAR',
+          bufferView: {data: new Uint8Array(keyframeTimes.buffer)}
+        },
+        {
+          componentType: 5126,
+          count: 2,
+          type: 'VEC3',
+          bufferView: {data: new Uint8Array(keyframeValues.buffer)}
+        }
+      ],
+      animations: [
+        {
+          samplers: [{input: 0, output: 1, interpolation: 'LINEAR'}],
+          channels: [{sampler: 0, target: {node: 0, path: 'translation'}}]
+        }
+      ],
+      nodes: [{id: 'appended-node'}]
+    } as GLTFPostprocessed;
+
+    expect(parseGLTFAnimations(gltf)[0].channels[0].sampler).toMatchObject({
+      input: [0, 2],
+      output: [
+        [1, 2, 3],
+        [4, 5, 6]
+      ]
+    });
+  });
 });

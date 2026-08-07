@@ -473,7 +473,8 @@ class GLTFBinaryBuilder {
   }
 
   finish(): Uint8Array {
-    const bytes = new Uint8Array(this.byteLength);
+    const padding = (4 - (this.byteLength % 4)) % 4;
+    const bytes = new Uint8Array(this.byteLength + padding);
     let offset = 0;
     for (const chunk of this.chunks) {
       bytes.set(chunk, offset);

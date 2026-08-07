@@ -131,6 +131,25 @@ describe('source-faithful glTF asset export', () => {
     expect(postProcessGLTF(source).scenes[0].nodes[0].name).toBe('Root');
   });
 
+  test('zero-pads the final embedded image before shared GLB encoding', () => {
+    const binary = exportGLTF(
+      {images: [{data: new Uint8Array([137]), mimeType: 'image/png'}]},
+      {binary: true}
+    );
+    const header = new DataView(binary);
+    const binaryChunkHeaderOffset = 20 + header.getUint32(12, true);
+    const binaryChunkByteLength = header.getUint32(binaryChunkHeaderOffset, true);
+    const binaryChunk = new Uint8Array(binary, binaryChunkHeaderOffset + 8, binaryChunkByteLength);
+
+    expect(header.getUint32(binaryChunkHeaderOffset + 4, true)).toBe(0x004e4942);
+    expect(Array.from(binaryChunk)).toEqual([137, 0, 0, 0]);
+
+    const document = JSON.parse(
+      new TextDecoder().decode(new Uint8Array(binary, 20, header.getUint32(12, true)))
+    );
+    expect(document.bufferViews[document.images[0].bufferView].byteLength).toBe(1);
+  });
+
   test('keeps all caller-owned source arrays and scene descriptors unchanged', () => {
     const scene = makeAnimatedScene();
     const sourcePosition = scene.meshes?.[0].primitives[0].attributes['POSITION'].data;
