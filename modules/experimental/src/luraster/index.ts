@@ -60,6 +60,20 @@ export type {
   GPURasterTileHaloSource
 } from './gpu-raster-tile-halo';
 
+export {
+  GPURasterCategoricalOverview,
+  GPURasterOverview,
+  makeRasterOverviewMetadata
+} from './gpu-raster-overview';
+export type {
+  GPURasterCategoricalOverviewFormat,
+  GPURasterCategoricalOverviewProps,
+  GPURasterOverviewCategoricalPolicy,
+  GPURasterOverviewMetadataOptions,
+  GPURasterOverviewProps,
+  GPURasterOverviewScale
+} from './gpu-raster-overview';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 

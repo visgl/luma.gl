@@ -567,8 +567,20 @@ when their tests and rollback boundaries remain understandable.
   resolves. Real WebGPU fixtures compare tiled and monolithic analytical output across seams,
   ragged edges, nodata, and composed neighborhood pipelines; the Raster Lab exercises explicit
   tile-only versus seamless-halo processing without downloading raster pixels.
-- **4.4 next:** generated nodata-aware analytical overviews, category-preserving policies, and
-  consistent coverage/affine metadata remain separate from already supported source overviews.
+- **4.4 complete for generated nodata-aware analytical overviews:** `GPURasterOverview`
+  publishes calibrated floating-point means together with explicit valid-sample sums, counts,
+  and observation masks; weighted pyramid levels carry prior sums and counts without averaging
+  averages. `GPURasterCategoricalOverview` preserves exact `uint32`/`sint32` labels through
+  explicit nearest or deterministic lowest-label-tie mode policies. Independent integer
+  horizontal/vertical factors retain ragged edges, bounded contribution counts, and
+  caller-owned GPU outputs. `makeRasterOverviewMetadata` preserves CRS, pixel interpretation,
+  aligned level-zero origin, and rotated/sheared affine scaling without registering generated data as
+  a source-provided overview. The Raster Lab distinguishes source-nearest samples from GPU
+  means and selectable categorical policies while retaining its fixed compact readback;
+  generated means and seamless source-nearest halos are explicitly mutually exclusive until
+  native-halo-to-generated-overview composition receives a separate integration pass.
+- **4.5 next:** replayable global tiled extrema, histogram merges, stable cross-tile analytical
+  domains, and overflow-aware population totals remain separate multi-pass work.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -578,8 +590,8 @@ when their tests and rollback boundaries remain understandable.
   The Raster Lab renders its resulting line overlay without reading a draw count. Tile stitching
   and external deck.gl integration remain in Tranche 6.3.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
-  demonstrate the current source-window/overview/cumulative-halo/NDVI/smoothing/gradient/
-  morphology/histogram/contour workflow. The full
+  demonstrate the current source-window/source-or-generated-overview/cumulative-halo/NDVI/
+  smoothing/gradient/morphology/histogram/contour workflow. The full
   satellite/microscopy/tiled/vector showcase matrix, broader documentation set, benchmarks, and
   final release gates remain pending.
 
@@ -843,8 +855,8 @@ Its public `normalizeTileRequest()` expands defaults and projects equivalent sou
 the same validated level-local request before application scheduling or cache lookup.
 The Raster Lab's synthetic adapter demonstrates full/west/east windows, 1×/2× source-provided
 overviews, explicit CRS/origin, and stale-request cancellation without bundling a decoder.
-Multi-tile residency and explicit halo assembly are implemented separately in tranches 4.2 and
-4.3; generated analytical overviews and stitched full-image results remain later work.
+Multi-tile residency, explicit halo assembly, and generated analytical overviews are implemented
+separately in tranches 4.2, 4.3, and 4.4; stitched full-image results remain later work.
 
 **Work:** Define an application-supplied asynchronous tile-source interface with dataset
 metadata, requested level, explicit coordinate reference frame, selected bands, spatial window,
@@ -899,9 +911,9 @@ post-submit completion fence. `GPURasterTileHaloFill` contributes one exact-form
 preserving GPU gather pass per source; `GPURasterTileCoreExtract` contributes one packed,
 core-only publication pass. The Raster Lab exposes tile-only and seamless modes, cumulative
 radius, source/core bounds, neighbor counts, full-resolution/source-overview behavior, and
-tiled-versus-monolithic scalar parity without increasing analytical GPU readback. Automatic
-full-image result placement, contour seam ownership, global tiled merges, and generated
-analytical overviews remain separate tranches.
+tiled-versus-monolithic scalar parity without increasing analytical GPU readback. Generated
+analytical overviews are implemented separately in tranche 4.4; automatic full-image result
+placement, contour seam ownership, and global tiled merges remain separate tranches.
 
 **Work:** Acquire a neighborhood that covers the complete composed pipeline receptive field,
 including cumulative stage radii and any overview/resampling scale factors. For example,
@@ -918,6 +930,27 @@ distinguishes disjoint XY rectangles of one texture.
 ### Tranche 4.4 — Analytical overviews
 
 **Entry:** Tranche 4.2.
+
+**Status:** Complete for explicit bounded GPU-native floating and categorical overviews.
+`GPURasterOverview` consumes source validity and exact raw nodata before applying calibration,
+then publishes caller-owned `float32` sums/means, `uint32` valid counts, and separate validity.
+All-invalid parents retain zero sum/count, invalid masks, and canonical quiet-NaN values.
+Chained reductions consume prior sums and counts together, preserving ragged/partially masked
+weighting rather than averaging intermediate means; explicit maximum input counts reject
+potential `uint32` overflow before graph construction.
+`GPURasterCategoricalOverview` preserves exact unsigned/signed integer labels without float
+conversion and exposes explicit nearest or deterministic mode, including lowest-label tie
+resolution and optional valid contribution counts. Both contributors use bounded independent
+integer factors, clipped odd extents, caller-owned buffers, and explicit graph dispatch without
+GPU submission or readback. `makeRasterOverviewMetadata` scales rotated/sheared affine axes,
+retains CRS/pixel interpretation/level-zero origins, and distinguishes generated outputs from
+source-discovered levels; translated source tiles prove global reduction-grid alignment, and
+translated higher-level tiles require explicit current-level pixel origins. The Raster Lab
+compares source-nearest versus GPU-mean observations
+and categorical nearest/mode while preserving source-nearest cumulative halo assembly, cache
+admission, post-submit fences, and its existing compact scalar-only readback. Generated means
+and seamless halos are explicitly mutually exclusive in the example; native-halo-to-generated-
+overview composition remains separate integration work.
 
 **Work:** Support source-provided overviews plus explicit graph-generated numerical reductions.
 Floating overview pixels carry `sum` and `validCount` before division. Integer categorical and
@@ -1224,6 +1257,9 @@ modules/experimental/test/luraster/
   gpu-raster-tile-halo.node.spec.ts
   gpu-raster-tile-halo.spec.ts
   gpu-raster-tile-halo-parity.spec.ts
+  gpu-raster-overview.node.spec.ts
+  gpu-raster-overview-pyramid.spec.ts
+  gpu-raster-overview.spec.ts
   gpu-raster-connected-components.spec.ts
   gpu-raster-region-statistics.spec.ts
   gpu-raster-contours.spec.ts
@@ -1246,9 +1282,10 @@ later tranches.
 - `docs/table-of-contents.json`: both experimental navigation branches.
 - `docs/api-reference/experimental/README.md` and `docs/whats-new.md`: feature discovery.
 - `examples/showcase/raster-lab/`: synthetic satellite/NDVI, bounded tile residency, reusable
-  graphs, explicit seam-safe cumulative halos and owned cores, and indirect contour overlays;
-  microscopy, production imagery, stitched full-image result placement, and global tiled
-  statistics remain separate future examples.
+  graphs, explicit seam-safe cumulative halos and owned cores, source-nearest versus GPU-mean
+  overviews, exact categorical policies, and indirect contour overlays; microscopy, production
+  imagery, stitched full-image result placement, and global tiled statistics remain separate
+  future examples.
 - `website/content/examples/showcase/`, `website/content/examples/table-of-contents.json`, and
   `website/src/examples.tsx`: website example integration.
 - `.ocularrc.js`: optional scoped Playwright alias if a browser smoke workflow is added.

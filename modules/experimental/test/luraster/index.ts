@@ -10,6 +10,8 @@ import './gpu-raster-edges.spec';
 import './gpu-raster-histogram.spec';
 import './gpu-raster-morphology.spec';
 import './gpu-raster-neighborhood.spec';
+import './gpu-raster-overview-pyramid.spec';
+import './gpu-raster-overview.spec';
 import './gpu-raster-pipeline.spec';
 import './gpu-raster-statistics.spec';
 import './gpu-raster-threshold.spec';

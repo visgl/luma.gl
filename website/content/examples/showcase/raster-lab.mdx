@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Explore seam-safe raster tile halos, budgeted GPU residency, NDVI, smoothing, edges, morphology, contours, and live histograms.
+description: Explore nodata-aware GPU overviews, exact categorical policies, seam-safe raster halos, bounded residency, NDVI, morphology, and contours.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -15,17 +15,26 @@ import { RasterLabExample } from "@site/src/examples";
 The Satellite Raster Lab generates a deterministic, entirely synthetic
 earth-observation scene with red and near-infrared reflectance bands, farmland,
 vegetation, waterways, cloud cover, and out-of-footprint nodata. Switch between
-full, western, and eastern source windows, select a full-resolution or
-source-provided 2× overview, and inspect the actual tile key, pixel dimensions,
-level-zero origin, and `EPSG:32610` coordinate identity. Adjust the bounded
-resident-tile capacity and watch real CPU/GPU occupancy, cache hits, misses,
+full, western, and eastern source windows, select a full-resolution or 2×
+overview, and compare **SOURCE NEAREST** source-provided samples with a
+**GPU MEAN** generated nodata-aware analytical overview. Switch between
+**MASK NEAREST** and **MASK MODE** to compare exact categorical label
+policies, and inspect the resulting provenance, valid coverage, actual tile
+key, pixel dimensions, level-zero origin, and `EPSG:32610` coordinate identity.
+Categorical controls become available when **GPU MEAN** is selected. Adjust
+the bounded resident-tile capacity and watch real CPU/GPU occupancy, cache hits, misses,
 evictions, active lease pins, and graph compilation/reuse. An uncached window
 is decoded and uploaded; revisiting a resident window reuses its buffers,
 equally sized western/eastern windows reuse their compiled graph, and
 superseded source requests are canceled. Switch between **TILE ONLY** and
 **SEAMLESS HALO** to compare an independently processed window with an
 explicitly assembled, fence-pinned neighborhood; inspect its cumulative radius,
-owned half-open core, and resident source count. Switch between the derived
+owned half-open core, and resident source count. **GPU MEAN** and
+**SEAMLESS HALO** are intentionally mutually exclusive in this example:
+selecting GPU generation returns processing to **TILE ONLY**, while selecting
+seam-safe processing restores **SOURCE NEAREST**. All analytical operators
+remain available for generated means, and source-provided overviews retain
+their existing seam-safe path. Switch between the derived
 vegetation index and its source bands, apply Gaussian or box
 smoothing, adjust the kernel radius or Gaussian sigma, choose Sobel, Scharr,
 or Laplacian edge detection, switch between signed horizontal/vertical
@@ -60,6 +69,12 @@ source-neighborhood planning and composite neighbor leases.
 its validity directly on the GPU; `GPURasterTileCoreExtract` later publishes
 only the selected core. The example does not install a GeoTIFF decoder or
 download real satellite imagery.
+`GPURasterOverview` can instead reduce native floating-point observations into
+explicit calibrated sums, valid-sample counts, analytical means, and separate
+validity; `GPURasterCategoricalOverview` preserves exact source labels under
+the selected nearest or mode policy. `makeRasterOverviewMetadata` carries the
+generated grid's affine transform, CRS, level, pixel interpretation, and
+level-zero origin without registering it as a source-provided level.
 Normalized source requests expand omitted bands and full windows, default to
 level-local coordinates, and map equivalent level-zero windows to the same
 cache identity before any duplicate decoding or upload.
@@ -101,13 +116,49 @@ optional automatic threshold, and three contour diagnostics—228 bytes
 total—are copied back after submission to update visible summary statistics.
 Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
 derivative direction, morphological operation/mode/footprint/radius/nodata/
-border, contrast, gamma, thresholding, contour levels, epsilon, and explicit
-seam-safe halo selection rebuild
+border, contrast, gamma, thresholding, contour levels, epsilon, generated
+overview policy, categorical policy, and explicit seam-safe halo selection rebuild
 their specialized analysis graph while keeping every source and output raster
 buffer resident; source pixels are never downloaded. Selecting a source
 window or overview instead selects an existing resident tile or performs one
 explicit CPU-to-GPU upload on a cache miss; neither path increases the 228-byte
-GPU-to-CPU analytical readback.
+GPU-to-CPU analytical readback. Visible generated-overview coverage derives
+from that same existing scalar summary; source pixels, overview counts, and
+categorical buffers are never downloaded.
+
+Use **SOURCE NEAREST** when an existing lower-resolution source level is
+trusted and avoiding native-resolution decoding, upload, or reduction is the
+priority. The synthetic source overview deliberately selects one existing
+nearest observation; it does not average neighboring observations or recover a
+missing selected sample. Use **GPU MEAN** when continuous observations require
+an honest valid-sample-weighted analytical reduction. For example, a `2 × 2`
+footprint containing values `[10, invalid, 30, invalid]` yields a generated
+sum of `40`, valid count of `2`, and mean of `20`, rather than diluting the
+result to `10`. An all-invalid parent retains zero sum/count, an invalid mask,
+and a `NaN` floating value. Odd right/bottom edges retain their real remaining
+coverage instead of being padded.
+
+Choose **MASK NEAREST** when a categorical parent must retain one actual
+representative label. Even-sized footprints choose the upper-left of their
+central candidates; an invalid selected sample remains invalid even if
+another sample was valid. Choose **MASK MODE** when the most frequent valid
+label better represents the footprint; equal frequencies choose the smallest
+exact native label. Signed identifiers and unsigned categories larger than
+`2²⁴` remain integer values, and `0` can still be a valid category when its
+separate validity mask is set. The example uses an unsigned cloud-coverage
+mask; the underlying categorical contributor also supports those exact signed
+and wide unsigned label identities. Category reduction never interpolates
+labels.
+
+The floating reducer visits each valid source footprint sample once and adds
+explicit GPU-resident output, sum, count, and validity buffers. Mode additionally
+compares bounded category frequencies, so it costs more than representative
+nearest selection. Smaller generated grids can reduce later filtering,
+histogram, and rendering work, but generating them first incurs a reduction
+pass and native-source residency. The useful tradeoff depends on source
+sampling quality, nodata, scale, category policy, memory bandwidth, cache hits,
+and the measured GPU; a framebuffer effect or texture mipmap cannot replace
+the same scientific validity and categorical contracts.
 
 Use the resident-tile capacity slider to compare revisits with constrained
 eviction. Visit WEST and EAST at the same overview level to reuse one compiled
@@ -138,10 +189,17 @@ then extracts exactly the selected half-open core before contrast, histogram,
 scalar summaries, rendering, or contour generation. West and east core ownership
 therefore never overlaps; ragged source edges clip against the true overview
 dimensions, and a neighborhood's border mode applies only at a genuine dataset
-edge. Combining separately measured west/east core counts and sums matches the
-corresponding full-raster analytical reference, including selected source
+edge. For **SOURCE NEAREST** processing, combining separately measured
+west/east core counts and sums matches the corresponding full-raster
+analytical reference, including selected source
 overviews and missing observations, without downloading raster pixels or
 increasing the existing 228-byte per-analysis summary.
+
+This example does not yet compose native-resolution halo assembly with a
+subsequent generated overview. **GPU MEAN** therefore selects **TILE ONLY**;
+requesting **SEAMLESS HALO** switches back to **SOURCE NEAREST** rather than
+claiming seam parity for an unimplemented generated-overview path. Explicit
+native-halo → generated-overview composition remains future integration work.
 
 One assembled band adds a graph-declared GPU gather pass for each intersecting
 source tile; publication adds an explicit core-copy pass. A nominal `w × h` core
@@ -216,22 +274,23 @@ actual performance depends on the workload, segment density, and GPU.
 
 Choose a source window when a smaller area of a decoded dataset is the desired
 analytical input; choose an existing source overview when its lower native
-resolution is appropriate and the source describes its pixel origin and affine
-transform explicitly. The synthetic 2× source overview chooses nearest samples;
-it is not a nodata-aware analytical reduction. The example analyzes one active
+resolution and nearest-sample policy are appropriate, or explicitly generate a
+nodata-aware analytical overview when valid weighted means or categorical
+policies matter. Both paths retain source pixel origin and affine metadata.
+The example analyzes one active
 output core at a time while retaining its selected real source neighbors and
 previously visited tiles within explicit CPU/GPU budgets. The optional
 seam-safe mode assembles cumulative neighborhoods and publishes nonoverlapping
 owned cores; it does not automatically construct one global stitched output,
 merge dataset-wide histograms, deduplicate contour segments across tiles,
-generate nodata-aware analytical overviews, or provide a GeoTIFF/COG transport
-or decoder. Those capabilities have separate ownership and correctness
-requirements.
+compose seamless native halos with generated overviews, or provide a
+GeoTIFF/COG transport or decoder. Those capabilities have separate ownership
+and correctness requirements.
 
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
 Segmentation, stitched contour seams, globally merged tiled statistics,
-automatic full-image output placement, and analytical overview generation
-remain planned capabilities.
+automatic full-image output placement, and seamless native-halo-to-generated-
+overview composition remain planned capabilities.
