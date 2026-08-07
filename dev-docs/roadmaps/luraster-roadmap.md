@@ -1627,7 +1627,7 @@ Advanced Phase 7 work is not a prerequisite.
 ## Completed foundation sequence
 
 These already-delivered slices document the original dependency order; they are not proposed
-future pull requests. The next implementation boundary is Tranche 5.1, with Tranche 6.3 available
+future pull requests. The next implementation boundary is Tranche 5.2, with Tranche 6.3 available
 independently when contour seam ownership is more urgent.
 
 ### Foundation slice 1 — Optional package and reproducible fixtures
