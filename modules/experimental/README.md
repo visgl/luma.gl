@@ -16,12 +16,19 @@ and frame helpers, with WebGL-only raw camera textures. See the
 
 ## FFT Convolution Bloom
 
-`GPUConvolutionBloom` performs physically motivated optical convolution on WebGPU. It extracts
-exposure-aware HDR highlights, transforms red, green, and blue into frequency space, multiplies
-them by one cached aperture point-spread spectrum, applies inverse transforms, and composites the
-result into a caller-owned `rgba16float` storage texture. Generated aperture kernels support blade
-count, diffraction strength, and anamorphic stretch; applications can provide any nonnegative
-`Float32Array` point-spread function and replace it with `setPointSpreadFunction()`.
+`GPUConvolutionBloom` performs physically motivated optical convolution on WebGPU. Area-weighted
+HDR extraction preserves subpixel emitters and centers the sampled image inside zero-padded guard
+bands, preventing diffraction from wrapping onto the opposite edge. Packed RGB fields share one
+forward and one inverse FFT schedule instead of six independent transforms. Each wavelength uses
+its own cached aperture spectrum, with configurable blade count, diffraction strength, anamorphic
+stretch, and spectral spread. Applications can provide either one nonnegative `Float32Array`
+kernel or independently measured `{red, green, blue}` kernels and replace them with
+`setPointSpreadFunction()`.
+
+Set `energyConserving: true` for thresholdless normalized scattering. Optional chromatic ghosts,
+radial halo, sampled dirt, and neighborhood-clamped temporal stabilization execute inside the
+existing final compute dispatch. Supplying `exposureTexture` to `encode()` consumes GPU-resident
+adapted exposure directly and automatically compensates temporal history without CPU readback.
 
 ```ts
 import {Texture} from '@luma.gl/core';
@@ -42,8 +49,12 @@ const bloom = new GPUConvolutionBloom(device, {
   width,
   height,
   resolutionScale: 0.25,
+  guardBand: 0.125,
   apertureBlades: 6,
-  diffractionStrength: 0.3
+  diffractionStrength: 0.3,
+  spectralSpread: 0.65,
+  temporalStability: 0.55,
+  lens: {ghostIntensity: 0.25, haloIntensity: 0.15}
 });
 
 const encoder = device.createCommandEncoder();
@@ -52,13 +63,15 @@ device.submit(encoder.finish());
 ```
 
 The caller owns source/output textures and command submission; the renderer owns reusable FFT
-buffers and its cached optical spectrum. `bloom.stats` publishes exact transform dimensions,
-complex-buffer allocation, steady-state dispatch count, and one-time kernel initialization work.
-At 1920 x 1080 with quarter-resolution sampling, the power-of-two transform is 512 x 512 and
-requires nine reusable complex buffers totaling 18 MiB, 123 steady-state dispatches, and 20
-additional dispatches whenever the point-spread function changes. Prefer the fused multiscale
-pipeline in `@luma.gl/effects` for routine real-time bloom; reserve FFT convolution for premium
-optical fidelity or applications with measured compute headroom.
+buffers, its cached RGB optical spectrum, and optional history. `bloom.stats` publishes exact
+sampled content bounds, transform dimensions, packed complex-buffer allocation, steady-state
+dispatch count, and one-time kernel initialization work. At 1920 x 1080 with quarter-resolution
+sampling and the default 12.5% guard band, the transform is 1024 x 512 and requires four packed RGB
+buffers totaling 48 MiB, 45 steady-state dispatches, and 21 dispatches when the aperture changes.
+Setting `guardBand: 0` reduces that to a 512 x 512 transform, 24 MiB, and 43 dispatches, while
+trading away explicit wraparound protection. The previous independent-channel path required 123
+steady-state dispatches. On devices with `timestamp-query`, create the command encoder with a
+`timeProfilingQuerySet` to collect actual GPU timings for every FFT and optical compute pass.
 
 Optional algorithm entry points keep specialized workflows out of the default experimental bundle:
 

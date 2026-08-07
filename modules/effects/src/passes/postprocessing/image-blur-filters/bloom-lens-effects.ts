@@ -375,18 +375,76 @@ vec4 bloomLens_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord)
 
 type BloomTemporalBindings = {
   historyTexture?: Texture;
+  velocityTexture?: Texture;
+  depthTexture?: Texture;
 };
 
-export const bloomTemporalPass = {
-  name: 'bloomTemporal',
-  source: /* wgsl */ `
+type BloomTemporalUniforms = {
+  stability: number;
+  depthThreshold: number;
+  exposureScale: number;
+};
+
+/** Builds optional motion-aware history without requiring scene textures in the portable mode. */
+export function createBloomTemporalPass(
+  motionReprojection: boolean
+): ShaderPass<
+  Partial<BloomTemporalUniforms> & BloomTemporalBindings,
+  BloomTemporalUniforms,
+  BloomTemporalBindings
+> {
+  const motionBindingsWGSL = motionReprojection
+    ? `
+@group(0) @binding(auto) var velocityTexture: texture_2d<f32>;
+@group(0) @binding(auto) var velocityTextureSampler: sampler;
+@group(0) @binding(auto) var depthTexture: texture_depth_2d;`
+    : '';
+  const motionBindingsGLSL = motionReprojection
+    ? '\nuniform sampler2D velocityTexture;\nuniform sampler2D depthTexture;'
+    : '';
+  const historyCoordinateWGSL = motionReprojection
+    ? 'texCoord - textureSampleLevel(velocityTexture, velocityTextureSampler, texCoord, 0.0).xy'
+    : 'texCoord';
+  const historyCoordinateGLSL = motionReprojection
+    ? 'texCoord - textureLod(velocityTexture, texCoord, 0.0).xy'
+    : 'texCoord';
+  const historyValidationWGSL = motionReprojection
+    ? `
+  let depthDimensions = textureDimensions(depthTexture);
+  let depthCoordinate = min(vec2u(texCoord * vec2f(depthDimensions)), depthDimensions - vec2u(1));
+  let currentDepth = textureLoad(depthTexture, vec2i(depthCoordinate), 0);
+  let validHistory = history.a > 0.5 && all(historyCoord >= vec2f(0.0)) &&
+    all(historyCoord <= vec2f(1.0)) &&
+    abs((history.a - 1.0) - currentDepth) <= bloomTemporal.depthThreshold;
+  let historyAlpha = currentDepth + 1.0;`
+    : `
+  let validHistory = history.a > 0.5;
+  let historyAlpha = 1.0;`;
+  const historyValidationGLSL = motionReprojection
+    ? `
+  ivec2 depthDimensions = textureSize(depthTexture, 0);
+  ivec2 depthCoordinate = min(ivec2(texCoord * vec2(depthDimensions)), depthDimensions - ivec2(1));
+  float currentDepth = texelFetch(depthTexture, depthCoordinate, 0).r;
+  bool validHistory = history.a > 0.5 && all(greaterThanEqual(historyCoord, vec2(0.0))) &&
+    all(lessThanEqual(historyCoord, vec2(1.0))) &&
+    abs((history.a - 1.0) - currentDepth) <= bloomTemporal.depthThreshold;
+  float historyAlpha = currentDepth + 1.0;`
+    : `
+  bool validHistory = history.a > 0.5;
+  float historyAlpha = 1.0;`;
+
+  return {
+    name: 'bloomTemporal',
+    source: /* wgsl */ `
 struct bloomTemporalUniforms {
   stability: f32,
+  depthThreshold: f32,
+  exposureScale: f32,
 };
 
 @group(0) @binding(auto) var<uniform> bloomTemporal: bloomTemporalUniforms;
 @group(0) @binding(auto) var historyTexture: texture_2d<f32>;
-@group(0) @binding(auto) var historyTextureSampler: sampler;
+@group(0) @binding(auto) var historyTextureSampler: sampler;${motionBindingsWGSL}
 
 fn bloomTemporal_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -402,18 +460,26 @@ fn bloomTemporal_sampleColor(
   let bottom = textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord + vec2f(0.0, texel.y), 0.0).rgb;
   let minimumColor = min(current, min(min(left, right), min(top, bottom)));
   let maximumColor = max(current, max(max(left, right), max(top, bottom)));
-  let history = textureSampleLevel(historyTexture, historyTextureSampler, texCoord, 0.0);
-  let clampedHistory = clamp(history.rgb, minimumColor, maximumColor);
-  let historyWeight = select(0.0, clamp(bloomTemporal.stability, 0.0, 0.95), history.a > 0.5);
-  return vec4f(mix(current, clampedHistory, historyWeight), 1.0);
+  let historyCoord = ${historyCoordinateWGSL};
+  let history = textureSampleLevel(
+    historyTexture,
+    historyTextureSampler,
+    clamp(historyCoord, vec2f(0.0), vec2f(1.0)),
+    0.0
+  );${historyValidationWGSL}
+  let clampedHistory = clamp(history.rgb * bloomTemporal.exposureScale, minimumColor, maximumColor);
+  let historyWeight = select(0.0, clamp(bloomTemporal.stability, 0.0, 0.95), validHistory);
+  return vec4f(mix(current, clampedHistory, historyWeight), historyAlpha);
 }
 `,
-  fs: /* glsl */ `
+    fs: /* glsl */ `
 layout(std140) uniform bloomTemporalUniforms {
   float stability;
+  float depthThreshold;
+  float exposureScale;
 } bloomTemporal;
 
-uniform sampler2D historyTexture;
+uniform sampler2D historyTexture;${motionBindingsGLSL}
 
 vec4 bloomTemporal_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   vec2 texel = 1.0 / vec2(textureSize(sourceTexture, 0));
@@ -424,28 +490,38 @@ vec4 bloomTemporal_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCo
   vec3 bottom = textureLod(sourceTexture, texCoord + vec2(0.0, texel.y), 0.0).rgb;
   vec3 minimumColor = min(current, min(min(left, right), min(top, bottom)));
   vec3 maximumColor = max(current, max(max(left, right), max(top, bottom)));
-  vec4 history = textureLod(historyTexture, texCoord, 0.0);
-  vec3 clampedHistory = clamp(history.rgb, minimumColor, maximumColor);
-  float historyWeight = history.a > 0.5 ? clamp(bloomTemporal.stability, 0.0, 0.95) : 0.0;
-  return vec4(mix(current, clampedHistory, historyWeight), 1.0);
+  vec2 historyCoord = ${historyCoordinateGLSL};
+  vec4 history = textureLod(historyTexture, clamp(historyCoord, vec2(0.0), vec2(1.0)), 0.0);
+  ${historyValidationGLSL}
+  vec3 clampedHistory = clamp(history.rgb * bloomTemporal.exposureScale, minimumColor, maximumColor);
+  float historyWeight = validHistory ? clamp(bloomTemporal.stability, 0.0, 0.95) : 0.0;
+  return vec4(mix(current, clampedHistory, historyWeight), historyAlpha);
 }
 `,
-  bindingLayout: [{name: 'historyTexture', group: 0}],
-  uniforms: {} as {stability: number},
-  bindings: {} as BloomTemporalBindings,
-  uniformTypes: {stability: 'f32'},
-  defaultUniforms: {stability: 0},
-  passes: [{sampler: true}]
-} as const satisfies ShaderPass<
-  {stability?: number} & BloomTemporalBindings,
-  {stability: number},
-  BloomTemporalBindings
->;
+    bindingLayout: [
+      {name: 'historyTexture', group: 0},
+      ...(motionReprojection
+        ? [
+            {name: 'velocityTexture', group: 0},
+            {name: 'depthTexture', group: 0}
+          ]
+        : [])
+    ],
+    uniforms: {} as BloomTemporalUniforms,
+    bindings: {} as BloomTemporalBindings,
+    uniformTypes: {stability: 'f32', depthThreshold: 'f32', exposureScale: 'f32'},
+    defaultUniforms: {stability: 0, depthThreshold: 0.01, exposureScale: 1},
+    passes: [{sampler: true}]
+  };
+}
+
+export const bloomTemporalPass = createBloomTemporalPass(false);
 
 type BloomLensCompositeUniforms = {
   tint: [number, number, number];
   intensity: number;
   dirtIntensity: number;
+  energyConserving: number;
 };
 
 type BloomLensCompositeBindings = {
@@ -488,6 +564,7 @@ struct bloomCompositeUniforms {
   tint: vec3f,
   intensity: f32,
   dirtIntensity: f32,
+  energyConserving: f32,
 };
 
 @group(0) @binding(auto) var<uniform> bloomComposite: bloomCompositeUniforms;
@@ -505,8 +582,14 @@ fn bloomComposite_sampleColor(
   let lensColor = ${lensSampleWGSL};
   let dirtMask = ${dirtSampleWGSL};
   let cinematicGlow = (glowColor + lensColor) * (vec3f(1.0) + dirtMask * bloomComposite.dirtIntensity);
+  let additiveColor = sourceColor.rgb + cinematicGlow * bloomComposite.tint * bloomComposite.intensity;
+  let physicalColor = mix(
+    sourceColor.rgb,
+    cinematicGlow * bloomComposite.tint,
+    clamp(bloomComposite.intensity, 0.0, 1.0)
+  );
   return vec4f(
-    sourceColor.rgb + cinematicGlow * bloomComposite.tint * bloomComposite.intensity,
+    select(additiveColor, physicalColor, bloomComposite.energyConserving > 0.5),
     sourceColor.a
   );
 }
@@ -516,6 +599,7 @@ layout(std140) uniform bloomCompositeUniforms {
   vec3 tint;
   float intensity;
   float dirtIntensity;
+  float energyConserving;
 } bloomComposite;
 
 uniform sampler2D glowTexture;${lensBindingsGLSL}${dirtBindingsGLSL}
@@ -526,8 +610,14 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
   vec3 lensColor = ${lensSampleGLSL};
   vec3 dirtMask = ${dirtSampleGLSL};
   vec3 cinematicGlow = (glowColor + lensColor) * (vec3(1.0) + dirtMask * bloomComposite.dirtIntensity);
+  vec3 additiveColor = sourceColor.rgb + cinematicGlow * bloomComposite.tint * bloomComposite.intensity;
+  vec3 physicalColor = mix(
+    sourceColor.rgb,
+    cinematicGlow * bloomComposite.tint,
+    clamp(bloomComposite.intensity, 0.0, 1.0)
+  );
   return vec4(
-    sourceColor.rgb + cinematicGlow * bloomComposite.tint * bloomComposite.intensity,
+    bloomComposite.energyConserving > 0.5 ? physicalColor : additiveColor,
     sourceColor.a
   );
 }
@@ -542,12 +632,14 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
     uniformTypes: {
       tint: 'vec3<f32>',
       intensity: 'f32',
-      dirtIntensity: 'f32'
+      dirtIntensity: 'f32',
+      energyConserving: 'f32'
     },
     defaultUniforms: {
       tint: [1, 1, 1],
       intensity: 1,
-      dirtIntensity: 0
+      dirtIntensity: 0,
+      energyConserving: 0
     },
     passes: [{sampler: true}]
   };

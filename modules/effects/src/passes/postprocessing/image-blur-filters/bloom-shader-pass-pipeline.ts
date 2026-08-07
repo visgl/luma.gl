@@ -13,8 +13,8 @@ import type {BloomProps, BloomUniforms} from './bloom';
 import {createBloomComputePyramid} from './bloom-compute-pyramid';
 import {
   bloomLensArtifactsPass,
-  bloomTemporalPass,
   createBloomLensCompositePass,
+  createBloomTemporalPass,
   MAX_BLOOM_LENS_GHOSTS,
   MAX_BLOOM_LENS_SPIKES,
   type BloomLensEffectsOptions
@@ -66,6 +66,16 @@ export type BloomShaderPassPipelineOptions = BloomProps & {
   lens?: BloomLensEffectsOptions;
   /** Neighborhood-clamped history contribution for stable highlights. Defaults to zero. */
   temporalStability?: number;
+  /** Reproject temporal history with externally supplied velocityTexture and depthTexture. */
+  temporalReprojection?: boolean;
+  /** Maximum encoded scene-depth change accepted by motion-aware temporal history. */
+  temporalDepthThreshold?: number;
+  /** Previous adapted exposure used to rescale glow history when camera exposure changes. */
+  previousExposure?: number;
+  /** Separable Gaussian filtering or a lower-cost downsample/reconstruction-only pyramid. */
+  blurAlgorithm?: 'gaussian' | 'dual-kawase';
+  /** Scatter every source pixel and blend normalized glow without duplicating scene energy. */
+  energyConserving?: boolean;
   /** Normalized tent reconstruction or four-fetch bicubic B-spline filtering. */
   reconstruction?: 'tent' | 'bicubic';
   /** Select fragment downsampling or the fused WebGPU compute pyramid when available. */
@@ -763,6 +773,7 @@ type BloomAdaptiveCompositeBindings = {
 type BloomAdaptiveCompositeUniforms = {
   tint?: [number, number, number];
   intensity?: number;
+  energyConserving?: number;
 };
 
 const bloomAdaptiveCompositePass = {
@@ -771,6 +782,7 @@ const bloomAdaptiveCompositePass = {
 struct bloomCompositeUniforms {
   tint: vec3f,
   intensity: f32,
+  energyConserving: f32,
 };
 
 @group(0) @binding(auto) var<uniform> bloomComposite: bloomCompositeUniforms;
@@ -786,13 +798,23 @@ fn bloomComposite_sampleColor(
   let sourceColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
   let glowColor = textureSample(glowTexture, glowTextureSampler, texCoord).rgb;
   let tintedGlow = glowColor * bloomComposite.tint * bloomComposite.intensity;
-  return vec4f(sourceColor.rgb + tintedGlow, sourceColor.a);
+  let additiveColor = sourceColor.rgb + tintedGlow;
+  let physicalColor = mix(
+    sourceColor.rgb,
+    glowColor * bloomComposite.tint,
+    clamp(bloomComposite.intensity, 0.0, 1.0)
+  );
+  return vec4f(
+    select(additiveColor, physicalColor, bloomComposite.energyConserving > 0.5),
+    sourceColor.a
+  );
 }
 `,
   fs: /* glsl */ `
 layout(std140) uniform bloomCompositeUniforms {
   vec3 tint;
   float intensity;
+  float energyConserving;
 } bloomComposite;
 
 uniform sampler2D glowTexture;
@@ -801,7 +823,16 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
   vec4 sourceColor = texture(sourceTexture, texCoord);
   vec3 glowColor = texture(glowTexture, texCoord).rgb;
   vec3 tintedGlow = glowColor * bloomComposite.tint * bloomComposite.intensity;
-  return vec4(sourceColor.rgb + tintedGlow, sourceColor.a);
+  vec3 additiveColor = sourceColor.rgb + tintedGlow;
+  vec3 physicalColor = mix(
+    sourceColor.rgb,
+    glowColor * bloomComposite.tint,
+    clamp(bloomComposite.intensity, 0.0, 1.0)
+  );
+  return vec4(
+    bloomComposite.energyConserving > 0.5 ? physicalColor : additiveColor,
+    sourceColor.a
+  );
 }
 `,
   bindingLayout: [{name: 'glowTexture', group: 0}],
@@ -809,15 +840,18 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
   bindings: {} as BloomAdaptiveCompositeBindings,
   uniformTypes: {
     tint: 'vec3<f32>',
-    intensity: 'f32'
+    intensity: 'f32',
+    energyConserving: 'f32'
   },
   defaultUniforms: {
     tint: [1, 1, 1] as [number, number, number],
-    intensity: 1
+    intensity: 1,
+    energyConserving: 0
   },
   propTypes: {
     tint: {value: [1, 1, 1] as [number, number, number]},
-    intensity: {value: 1, min: 0, softMax: 3}
+    intensity: {value: 1, min: 0, softMax: 3},
+    energyConserving: {value: 0, min: 0, max: 1, private: true}
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
@@ -917,7 +951,8 @@ export function createBloomShaderPassPipeline(
 ): ShaderPassPipeline {
   const resolutionScale = options.resolutionScale ?? 1;
   const colorFormat = options.colorFormat ?? 'rgba16float';
-  const threshold = options.threshold ?? 0.8;
+  const energyConserving = options.energyConserving ?? false;
+  const threshold = energyConserving ? 0 : (options.threshold ?? 0.8);
   const radius = options.radius ?? 8;
   const intensity = options.intensity ?? 1;
   const quality = options.quality ?? 'high';
@@ -929,9 +964,13 @@ export function createBloomShaderPassPipeline(
   const reconstruction = options.reconstruction === 'bicubic' ? 1 : 0;
   const downsample = options.downsample ?? 'auto';
   const reuseRenderTargets = options.reuseRenderTargets ?? true;
+  const blurAlgorithm = options.blurAlgorithm ?? 'gaussian';
   const anamorphicRatio = Math.min(Math.max(options.anamorphicRatio ?? 0, -1), 1);
   const tint = options.tint ?? [1, 1, 1];
   const temporalStability = Math.min(Math.max(options.temporalStability ?? 0, 0), 0.95);
+  const temporalReprojection = options.temporalReprojection ?? false;
+  const temporalDepthThreshold = Math.max(options.temporalDepthThreshold ?? 0.01, 0.0001);
+  const previousExposure = Math.max(options.previousExposure ?? exposure, 0.0001);
   const lens = options.lens;
   const starburstIntensity = Math.max(lens?.starburstIntensity ?? 0, 0);
   const starburstSpikes = Math.min(
@@ -975,8 +1014,10 @@ export function createBloomShaderPassPipeline(
       ...makeRenderTarget(level.scale),
       ...(downsample !== 'render' ? {storage: true} : {})
     };
-    renderTargets[blurScratchTarget] = makeRenderTarget(level.scale);
-    renderTargets[blurTarget] = makeRenderTarget(level.scale);
+    if (blurAlgorithm === 'gaussian') {
+      renderTargets[blurScratchTarget] = makeRenderTarget(level.scale);
+      renderTargets[blurTarget] = makeRenderTarget(level.scale);
+    }
 
     if (levelIndex === 0) {
       steps.push({
@@ -994,29 +1035,35 @@ export function createBloomShaderPassPipeline(
       });
     }
 
-    steps.push(
-      {
-        shaderPass: bloomBlurPass,
-        inputs: {sourceTexture: extractionTarget},
-        output: blurScratchTarget,
-        uniforms: {radius: horizontalRadius, delta: [1, 0]}
-      },
-      {
-        shaderPass: bloomBlurPass,
-        inputs: {sourceTexture: blurScratchTarget},
-        output: blurTarget,
-        uniforms: {radius: verticalRadius, delta: [0, 1]}
-      }
-    );
+    if (blurAlgorithm === 'gaussian') {
+      steps.push(
+        {
+          shaderPass: bloomBlurPass,
+          inputs: {sourceTexture: extractionTarget},
+          output: blurScratchTarget,
+          uniforms: {radius: horizontalRadius, delta: [1, 0]}
+        },
+        {
+          shaderPass: bloomBlurPass,
+          inputs: {sourceTexture: blurScratchTarget},
+          output: blurTarget,
+          uniforms: {radius: verticalRadius, delta: [0, 1]}
+        }
+      );
+    }
   }
 
-  let reconstructedGlow = `blur${levels[levels.length - 1].name}`;
+  const getLevelGlow = (levelName: string): string =>
+    `${blurAlgorithm === 'gaussian' ? 'blur' : 'extract'}${levelName}`;
+  let reconstructedGlow = getLevelGlow(levels[levels.length - 1].name);
   for (let levelIndex = levels.length - 2; levelIndex >= 0; levelIndex--) {
     const level = levels[levelIndex];
     const upsampleTarget = `upsample${level.name}`;
     renderTargets[upsampleTarget] = {
       ...makeRenderTarget(level.scale),
-      ...(reuseRenderTargets && (!hasLensArtifacts || level.name !== 'Half')
+      ...(reuseRenderTargets &&
+      blurAlgorithm === 'gaussian' &&
+      (!hasLensArtifacts || level.name !== 'Half')
         ? {aliasFor: `extract${level.name}`}
         : {})
     };
@@ -1024,7 +1071,7 @@ export function createBloomShaderPassPipeline(
       shaderPass: bloomUpsamplePass,
       inputs: {
         sourceTexture: reconstructedGlow,
-        higherResolutionGlow: `blur${level.name}`
+        higherResolutionGlow: getLevelGlow(level.name)
       },
       output: upsampleTarget,
       uniforms: {scatter, reconstruction}
@@ -1039,10 +1086,14 @@ export function createBloomShaderPassPipeline(
       initialize: {clearColor: [0, 0, 0, 0]}
     };
     steps.push({
-      shaderPass: bloomTemporalPass,
+      shaderPass: createBloomTemporalPass(temporalReprojection),
       inputs: {sourceTexture: reconstructedGlow, historyTexture: 'bloomGlowHistory'},
       output: 'bloomGlowHistory',
-      uniforms: {stability: temporalStability}
+      uniforms: {
+        stability: temporalStability,
+        depthThreshold: temporalDepthThreshold,
+        exposureScale: exposure / previousExposure
+      }
     });
     reconstructedGlow = 'bloomGlowHistory';
   }
@@ -1077,14 +1128,14 @@ export function createBloomShaderPassPipeline(
         ...(hasLensArtifacts ? {lensTexture: 'bloomLensArtifacts'} : {})
       },
       output: 'previous',
-      uniforms: {tint, intensity, dirtIntensity}
+      uniforms: {tint, intensity, dirtIntensity, energyConserving: Number(energyConserving)}
     });
   } else {
     steps.push({
       shaderPass: bloomAdaptiveCompositePass,
       inputs: {sourceTexture: 'previous', glowTexture: reconstructedGlow},
       output: 'previous',
-      uniforms: {tint, intensity}
+      uniforms: {tint, intensity, energyConserving: Number(energyConserving)}
     });
   }
 

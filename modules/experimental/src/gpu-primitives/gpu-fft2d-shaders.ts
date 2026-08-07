@@ -37,8 +37,9 @@ fn reverseLowBits(value: u32, bitCount: u32) -> u32 {
   return reversed;
 }
 
-fn getLinearIndex(xCoordinate: u32, yCoordinate: u32) -> u32 {
-  return yCoordinate * parameters.width + xCoordinate;
+fn getLinearIndex(xCoordinate: u32, yCoordinate: u32, batchIndex: u32) -> u32 {
+  return batchIndex * parameters.width * parameters.height +
+    yCoordinate * parameters.width + xCoordinate;
 }
 
 fn multiplyComplex(left: vec2f, right: vec2f) -> vec2f {
@@ -73,8 +74,8 @@ fn main(@builtin(global_invocation_id) globalIdentifier: vec3u) {
     let firstY = select(firstCoordinate, globalIdentifier.y, horizontal);
     let secondX = select(globalIdentifier.x, secondCoordinate, horizontal);
     let secondY = select(secondCoordinate, globalIdentifier.y, horizontal);
-    let firstValue = inputValues[getLinearIndex(firstX, firstY)];
-    let secondValue = inputValues[getLinearIndex(secondX, secondY)];
+    let firstValue = inputValues[getLinearIndex(firstX, firstY, globalIdentifier.z)];
+    let secondValue = inputValues[getLinearIndex(secondX, secondY, globalIdentifier.z)];
     let angle = parameters.directionSign * 2.0 * GPU_FFT2D_PI *
       f32(twiddleIndex) / f32(butterflySpan);
     let twiddle = vec2f(cos(angle), sin(angle));
@@ -84,14 +85,15 @@ fn main(@builtin(global_invocation_id) globalIdentifier: vec3u) {
       firstValue - rotatedSecondValue,
       butterflyOffset >= butterflyHalfSpan
     );
-    outputValues[getLinearIndex(globalIdentifier.x, globalIdentifier.y)] =
+    outputValues[getLinearIndex(globalIdentifier.x, globalIdentifier.y, globalIdentifier.z)] =
       butterflyValue * parameters.normalizationScale;
     return;
   }
 
   let sourceX = select(globalIdentifier.x, sourceCoordinate, horizontal);
   let sourceY = select(sourceCoordinate, globalIdentifier.y, horizontal);
-  outputValues[getLinearIndex(globalIdentifier.x, globalIdentifier.y)] =
-    inputValues[getLinearIndex(sourceX, sourceY)] * parameters.normalizationScale;
+  outputValues[getLinearIndex(globalIdentifier.x, globalIdentifier.y, globalIdentifier.z)] =
+    inputValues[getLinearIndex(sourceX, sourceY, globalIdentifier.z)] *
+      parameters.normalizationScale;
 }
 `;

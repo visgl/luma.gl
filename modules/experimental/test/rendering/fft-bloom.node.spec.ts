@@ -6,6 +6,7 @@ import type {Device} from '@luma.gl/core';
 import {
   getGPUConvolutionBloomSupport,
   makeBloomPointSpreadFunction,
+  makeBloomSpectralPointSpreadFunction,
   makeGPUConvolutionBloomStats
 } from '@luma.gl/experimental';
 import {WgslReflect} from 'wgsl_reflect';
@@ -25,17 +26,23 @@ test('GPUConvolutionBloom publishes bounded FFT memory and dispatch costs', test
     {
       width: 1920,
       height: 1080,
-      transformWidth: 512,
+      contentWidth: 480,
+      contentHeight: 270,
+      contentOffsetX: 272,
+      contentOffsetY: 121,
+      guardBand: 0.125,
+      transformWidth: 1024,
       transformHeight: 512,
-      elementCount: 262144,
-      complexBufferCount: 9,
-      complexBufferByteLength: 2097152,
-      totalComplexBufferByteLength: 18874368,
-      transformDispatchCount: 20,
-      steadyStateDispatchCount: 123,
-      kernelInitializationDispatchCount: 20
+      elementCount: 524288,
+      complexBufferCount: 4,
+      complexBufferByteLength: 12582912,
+      totalComplexBufferByteLength: 50331648,
+      batchCount: 3,
+      transformDispatchCount: 21,
+      steadyStateDispatchCount: 45,
+      kernelInitializationDispatchCount: 21
     },
-    'a quarter-resolution 1080p kernel reports every RGB transform, buffer, and dispatch'
+    'a padded quarter-resolution 1080p kernel reports every batched RGB buffer and dispatch'
   );
   testCase.ok(Object.isFrozen(stats), 'the performance contract cannot be mutated');
   testCase.throws(
@@ -47,6 +54,40 @@ test('GPUConvolutionBloom publishes bounded FFT memory and dispatch costs', test
     () => makeGPUConvolutionBloomStats({width: 8192, height: 1080, resolutionScale: 1}),
     /width must be from 2 through 2048/,
     'oversized FFT plans fail before allocating GPU resources'
+  );
+  testCase.throws(
+    () => makeGPUConvolutionBloomStats({width: 64, height: 64, guardBand: -0.1}),
+    /guardBand/,
+    'negative convolution guard bands are rejected'
+  );
+  const unpadded = makeGPUConvolutionBloomStats({width: 1920, height: 1080, guardBand: 0});
+  testCase.equal(unpadded.transformWidth, 512, 'applications can opt out of the padded FFT size');
+  testCase.equal(
+    unpadded.steadyStateDispatchCount,
+    43,
+    'packed RGB reduces the old 123 dispatches'
+  );
+  testCase.end();
+});
+
+test('makeBloomSpectralPointSpreadFunction normalizes each physical wavelength', testCase => {
+  const kernels = makeBloomSpectralPointSpreadFunction({
+    width: 32,
+    height: 32,
+    diffractionStrength: 0.6,
+    spectralSpread: 1
+  });
+
+  for (const [channel, kernel] of Object.entries(kernels)) {
+    testCase.ok(
+      Math.abs(kernel.reduce((energy, sample) => energy + sample, 0) - 1) < 0.000001,
+      `${channel} independently preserves optical energy`
+    );
+  }
+  testCase.notEqual(
+    kernels.red[2],
+    kernels.blue[2],
+    'red and blue use different diffraction widths'
   );
   testCase.end();
 });
@@ -97,12 +138,13 @@ test('getGPUConvolutionBloomSupport reports WebGPU and storage requirements', te
   const supported = getGPUConvolutionBloomSupport(supportedDevice, {width: 256, height: 128});
 
   testCase.equal(supported.supported, true, 'representative WebGPU limits support RGB convolution');
-  testCase.equal(supported.stats?.transformWidth, 64, 'support queries include the transform plan');
+  testCase.equal(supported.stats?.transformWidth, 128, 'support queries include the padded plan');
   testCase.equal(
     getGPUConvolutionBloomSupport(supportedDevice, {
       width: 2048,
       height: 2048,
-      resolutionScale: 1
+      resolutionScale: 1,
+      guardBand: 0
     }).supported,
     true,
     'two-dimensional frequency dispatch supports the largest bounded FFT without exceeding WebGPU limits'
@@ -114,12 +156,12 @@ test('getGPUConvolutionBloomSupport reports WebGPU and storage requirements', te
     'WebGL devices fall back before allocating premium resources'
   );
   testCase.match(
-    getGPUConvolutionBloomSupport(makeSupportDevice({maxStorageBuffersPerShaderStage: 6}), {
+    getGPUConvolutionBloomSupport(makeSupportDevice({maxStorageBuffersPerShaderStage: 2}), {
       width: 64,
       height: 64
     }).reason || '',
-    /seven storage buffers/,
-    'RGB spectrum multiplication checks its seven simultaneous storage bindings'
+    /three storage buffers/,
+    'packed RGB multiplication checks only three simultaneous storage bindings'
   );
   testCase.match(
     getGPUConvolutionBloomSupport(makeSupportDevice({store: false}), {width: 64, height: 64})
@@ -138,10 +180,10 @@ test('GPUConvolutionBloom WGSL exposes extraction, multiplication, and HDR outpu
   testCase.equal(extract.entry.compute.length, 1, 'extraction exposes one bounded compute stage');
   testCase.equal(multiply.entry.compute.length, 1, 'all RGB spectra share one multiply dispatch');
   testCase.equal(composite.entry.compute.length, 1, 'HDR composition exposes one compute stage');
-  testCase.equal(multiply.storage.length, 7, 'frequency multiplication binds exactly seven fields');
+  testCase.equal(multiply.storage.length, 3, 'packed RGB multiplication binds only three fields');
   testCase.match(
     FFT_BLOOM_EXTRACT_SHADER,
-    /parameters\.exposure \* exp2\(parameters\.exposureCompensation\)/,
+    /adaptedExposure \* exp2\(parameters\.exposureCompensation\)/,
     'highlight extraction applies exposure compensation in photographic stops'
   );
   testCase.match(
@@ -154,7 +196,12 @@ test('GPUConvolutionBloom WGSL exposes extraction, multiplication, and HDR outpu
     /globalInvocation\.y \*\s+65536u/,
     'frequency multiplication tiles across both dispatch dimensions for maximum-sized transforms'
   );
-  testCase.equal(FFT_BLOOM_PARAMETER_BYTE_LENGTH, 32, 'uniform packing remains explicitly bounded');
+  testCase.match(
+    FFT_BLOOM_EXTRACT_SHADER,
+    /coordinate < parameters\.contentOffset \+ parameters\.contentDimensions/,
+    'the extraction shader leaves guard-band pixels zero instead of stretching the image'
+  );
+  testCase.equal(FFT_BLOOM_PARAMETER_BYTE_LENGTH, 96, 'uniform packing remains explicitly bounded');
   testCase.end();
 });
 

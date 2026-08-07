@@ -67,6 +67,58 @@ test('GPUFFT2D matches a CPU DFT and composes forward/inverse passes in one enco
   t.end();
 });
 
+test('GPUFFT2D transforms packed RGB fields in one batched dispatch sequence', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU is not available');
+    testCase.end();
+    return;
+  }
+
+  const width = 4;
+  const height = 4;
+  const batchCount = 3;
+  const channelLength = width * height * 2;
+  const inputValues = new Float32Array(channelLength * batchCount);
+  const expectedValues: number[] = [];
+  for (let channelIndex = 0; channelIndex < batchCount; channelIndex++) {
+    const channelValues = makeComplexInput(width, height).map(value => value * (channelIndex + 1));
+    inputValues.set(channelValues, channelIndex * channelLength);
+    expectedValues.push(...makeCPUDFT2D(channelValues, width, height, 'forward'));
+  }
+
+  const transform = new GPUFFT2D(device, {width, height, batchCount});
+  const inputBuffer = device.createBuffer({
+    data: inputValues,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const outputBuffer = makeOutputBuffer(device, 'gpu-fft2d-batched-output', inputValues.byteLength);
+
+  try {
+    const commandEncoder = device.createCommandEncoder();
+    transform.encode(commandEncoder, {inputBuffer, outputBuffer});
+    device.submit(commandEncoder.finish());
+    const actualValues = await readFloat32(outputBuffer, inputValues.length);
+    assertClose(
+      testCase,
+      actualValues,
+      expectedValues,
+      0.002,
+      'independent batched RGB transforms'
+    );
+    testCase.equal(
+      transform.stats.dispatchCountPerEncode,
+      6,
+      'batching preserves one FFT schedule'
+    );
+  } finally {
+    transform.destroy();
+    inputBuffer.destroy();
+    outputBuffer.destroy();
+  }
+  testCase.end();
+});
+
 test('GPUFFT2D rejects aliased and incompatible caller buffers', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {

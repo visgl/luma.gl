@@ -154,8 +154,11 @@ export type {
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
 export type {
+  BloomPointSpreadFunction,
   BloomPointSpreadFunctionOptions,
+  BloomSpectralPointSpreadFunction,
   GPUConvolutionBloomEncodeOptions,
+  GPUConvolutionBloomLensOptions,
   GPUConvolutionBloomProps,
   GPUConvolutionBloomStats,
   GPUConvolutionBloomSupport
@@ -164,6 +167,7 @@ export {
   getGPUConvolutionBloomSupport,
   GPUConvolutionBloom,
   makeBloomPointSpreadFunction,
+  makeBloomSpectralPointSpreadFunction,
   makeGPUConvolutionBloomStats
 } from './rendering/fft-bloom';
 export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';

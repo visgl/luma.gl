@@ -135,3 +135,88 @@ test('HDR bloom supports exposure-aware extraction and four-fetch bicubic recons
   );
   testCase.end();
 });
+
+test('HDR bloom can remove separable passes with a normalized dual-Kawase pyramid', testCase => {
+  const gaussian = createBloomShaderPassPipeline({quality: 'ultra'});
+  const dualKawase = createBloomShaderPassPipeline({
+    quality: 'ultra',
+    blurAlgorithm: 'dual-kawase'
+  });
+
+  testCase.equal(gaussian.steps.length, 20, 'the compatible Gaussian path keeps its original cost');
+  testCase.equal(dualKawase.steps.length, 10, 'portable dual-Kawase removes ten separable passes');
+  testCase.equal(
+    dualKawase.steps.filter(step => step.shaderPass.name === 'bloomBlur').length,
+    0,
+    'the reconstruction-only path does not allocate or execute Gaussian kernels'
+  );
+  testCase.ok(
+    Object.keys(dualKawase.renderTargets || {}).every(name => !name.startsWith('blur')),
+    'dual-Kawase avoids all separable intermediate textures'
+  );
+  testCase.equal(
+    dualKawase.steps.length - (dualKawase.compute?.replacedPasses ? 5 : 0),
+    5,
+    'WebGPU needs five render passes and one compute dispatch at ultra quality'
+  );
+  testCase.end();
+});
+
+test('HDR bloom reprojects depth-validated history without another history target', testCase => {
+  const pipeline = createBloomShaderPassPipeline({
+    temporalStability: 0.8,
+    temporalReprojection: true,
+    temporalDepthThreshold: 0.025,
+    exposure: 2,
+    previousExposure: 0.5
+  });
+  const temporal = pipeline.steps.find(step => step.shaderPass.name === 'bloomTemporal');
+  const reflection = new WgslReflect(temporal?.shaderPass.source || '');
+
+  testCase.deepEqual(
+    temporal?.shaderPass.bindingLayout?.map(binding => binding.name),
+    ['historyTexture', 'velocityTexture', 'depthTexture'],
+    'motion-aware history consumes existing scene velocity and depth bindings'
+  );
+  testCase.deepEqual(
+    temporal?.uniforms,
+    {stability: 0.8, depthThreshold: 0.025, exposureScale: 4},
+    'history combines exposure correction with a configurable disocclusion threshold'
+  );
+  testCase.equal(reflection.textures.length, 3, 'WGSL exposes history, velocity, and scene depth');
+  testCase.match(
+    temporal?.shaderPass.source || '',
+    /history\.a - 1\.0\) - currentDepth/,
+    'the glow history alpha carries previous scene depth without another target'
+  );
+  testCase.match(
+    temporal?.shaderPass.fs || '',
+    /texCoord - textureLod\(velocityTexture/,
+    'the WebGL fallback uses the same motion-vector reprojection'
+  );
+  testCase.end();
+});
+
+test('HDR bloom can scatter every source pixel without additive energy duplication', testCase => {
+  const pipeline = createBloomShaderPassPipeline({
+    threshold: 3,
+    intensity: 0.4,
+    energyConserving: true
+  });
+  const extraction = pipeline.steps.find(step => step.shaderPass.name === 'bloomExtract');
+  const composite = pipeline.steps.find(step => step.shaderPass.name === 'bloomComposite');
+
+  testCase.equal(
+    extraction?.uniforms?.threshold,
+    0,
+    'physical bloom cannot discard dim scene light'
+  );
+  testCase.equal(pipeline.compute?.uniforms.threshold, 0, 'fused extraction remains thresholdless');
+  testCase.equal(composite?.uniforms?.energyConserving, 1, 'composition selects normalized mixing');
+  testCase.match(
+    composite?.shaderPass.source || '',
+    /mix\(\s*sourceColor\.rgb,\s*glowColor \* bloomComposite\.tint/,
+    'physical composition redistributes source energy instead of adding another copy'
+  );
+  testCase.end();
+});
