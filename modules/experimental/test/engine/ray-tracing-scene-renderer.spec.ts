@@ -263,7 +263,7 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     );
     const reduceBlasBoundsIndex = findNodeIndex(topologyNodeOrder, 'blas-0-reduce-scene-bounds');
     const encodeBlasMortonIndex = findNodeIndex(topologyNodeOrder, 'blas-0-build-morton-keys');
-    const sortBlasMortonIndex = findNodeIndex(
+    const sortBlasMortonCompletionIndex = findLastNodeIndex(
       topologyNodeOrder,
       'blas-0-sort-triangle-morton-keys'
     );
@@ -277,7 +277,7 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         initializeBlasBoundsIndex,
         reduceBlasBoundsIndex,
         encodeBlasMortonIndex,
-        sortBlasMortonIndex,
+        sortBlasMortonCompletionIndex,
         gatherBlasBoundsIndex,
         loadBlasLeavesIndex,
         refitBlasIndex,
@@ -286,8 +286,8 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         triangleBoundsIndex < reduceBlasBoundsIndex &&
         initializeBlasBoundsIndex < reduceBlasBoundsIndex &&
         reduceBlasBoundsIndex < encodeBlasMortonIndex &&
-        encodeBlasMortonIndex < sortBlasMortonIndex &&
-        sortBlasMortonIndex < gatherBlasBoundsIndex &&
+        encodeBlasMortonIndex < sortBlasMortonCompletionIndex &&
+        sortBlasMortonCompletionIndex < gatherBlasBoundsIndex &&
         gatherBlasBoundsIndex < loadBlasLeavesIndex &&
         loadBlasLeavesIndex < refitBlasIndex &&
         refitBlasIndex < packBlasIndex,
