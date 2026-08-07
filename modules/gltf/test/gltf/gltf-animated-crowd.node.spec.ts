@@ -5,7 +5,7 @@
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
-import {Texture} from '@luma.gl/core';
+import {Texture, type RenderPass} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
 import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -174,6 +174,38 @@ describe('GPU-instanced glTF animation crowds', () => {
     expect(Array.from(await geometryBuffer.readAsync())).toEqual(initialGeometry);
     expect(group.model.instanceCount).toBe(2);
 
+    crowd.destroy();
+    device.destroy();
+  });
+
+  test('plays different named actions through the same shared instanced draw', async () => {
+    const source = await loadCrowdFixture('SimpleSkin.gltf');
+    const sourceAnimation = source.animations?.[0];
+    expect(sourceAnimation).toBeDefined();
+    if (!sourceAnimation) {
+      throw new Error('Missing source animation');
+    }
+    source.animations = [
+      {...sourceAnimation, name: 'Walking'},
+      {...sourceAnimation, name: 'Wave'}
+    ];
+
+    const device = new NullDevice({});
+    const crowd = createGLTFAnimatedCrowd(device, source, {capacity: 2});
+    const [walker, waver] = crowd.addActors([
+      {id: 'walker', clip: 'Walking', phase: 0},
+      {id: 'waver', clip: 'Wave', phase: 0.25}
+    ]);
+    const draw = vi.spyOn(crowd.models[0], 'draw').mockReturnValue(true);
+
+    expect(walker.activeClip).toBe('Walking');
+    expect(waver.activeClip).toBe('Wave');
+    expect(crowd.models).toHaveLength(1);
+    expect(crowd.models[0].instanceCount).toBe(2);
+    expect(crowd.draw({} as RenderPass)).toBe(1);
+    expect(draw).toHaveBeenCalledOnce();
+
+    draw.mockRestore();
     crowd.destroy();
     device.destroy();
   });

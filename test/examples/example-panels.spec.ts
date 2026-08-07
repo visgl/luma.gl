@@ -21,6 +21,7 @@ import {
   setTextSpaceCrawlColorKind
 } from '../../examples/text-space-crawl-color';
 import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
+import {isAnimatedGLTFCatalogModel} from '../../examples/showcase/gltf/gltf-catalog-app';
 import {
   flattenEffectSettings,
   getEffectResolutionScale,
@@ -758,6 +759,39 @@ describe('postprocessing effect settings', () => {
 });
 
 describe('glTF controls', () => {
+  test('only offers source models with authored animation', () => {
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'RobotExpressive',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'CesiumMan',
+        screenshot: 'screenshot/screenshot.gif'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'Fox',
+        screenshot: 'screenshot/screenshot.jpg'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'DamagedHelmet',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(false);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'MorphPrimitivesTest',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(false);
+  });
+
   test('keeps the model selector in the settings schema', () => {
     expect(getSettingDefinitions(makeGltfSettingsSchema()).get('modelValue')).toEqual(
       expect.objectContaining({

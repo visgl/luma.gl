@@ -90,7 +90,7 @@ void main(void) {
 `;
 
 const GLTF_DESCRIPTION_HTML = `\
-<p>Browse production-quality glTF sample assets with interactive camera and animation controls.</p>
+<p>Explore animated glTF characters, skeletal rigs, and expressive motion.</p>
 <div id="loading-state" class="gltf-loading-indicator" hidden>
   <span class="gltf-loading-spinner" aria-hidden="true"></span>
 </div>
@@ -140,11 +140,11 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   getDefaultModelName(): string {
-    return 'DamagedHelmet';
+    return 'RobotExpressive';
   }
 
   getModelStorageKey(): string {
-    return 'showcase-last-gltf-model-v2';
+    return 'showcase-last-gltf-model-v3';
   }
 
   getClearColor(): [number, number, number, number] {

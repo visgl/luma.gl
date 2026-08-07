@@ -21,6 +21,8 @@ import {Matrix4} from '@math.gl/core';
 const MODEL_DIRECTORY_URL =
   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
 const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
+const ROBOT_EXPRESSIVE_MODEL_URL =
+  'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
 const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
@@ -33,6 +35,12 @@ export const GLTF_SELECT_STYLE = 'width: 100%; min-width: 0;';
 const MAX_CAMERA_TILT = 0.7;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
 const MAXIMUM_GLTF_CROWD_ACTORS = 100;
+const ADDITIONAL_ANIMATED_GLTF_MODELS = new Set([
+  'Fox',
+  'MorphStressTest',
+  'RobotExpressive',
+  'SimpleMorph'
+]);
 
 const lightSources = {
   ambientLight: {
@@ -96,13 +104,35 @@ export type GLTFCatalogModel = {
   tags?: string[];
   variants?: Record<string, string>;
 };
+
+/** Identifies animated Khronos samples without fetching every model document. */
+export function isAnimatedGLTFCatalogModel(
+  model: Pick<GLTFCatalogModel, 'name' | 'screenshot'>
+): boolean {
+  return (
+    ADDITIONAL_ANIMATED_GLTF_MODELS.has(model.name) ||
+    /animat/i.test(model.name) ||
+    /(?:\.gif(?:[?#]|$)|(?:^|[/._-])animated(?:[._-]|$))/i.test(model.screenshot || '')
+  );
+}
+
 type GLTFModelMetadata = Pick<GLTFCatalogModel, 'summary' | 'description'>;
 
 const GLTF_MODEL_METADATA_OVERRIDES: Record<string, GLTFModelMetadata> = {
   PotOfCoalsAnimationPointer: {
     description:
       'A non-reflective bumpy glass-like surface distorts the hot coals underneath, using KHR_animation_pointer to animate the heat refraction effect.'
+  },
+  RobotExpressive: {
+    summary:
+      'An expressive skinned robot with 14 named actions, facial expressions, and independently animated crowd playback.'
   }
+};
+const ROBOT_EXPRESSIVE_CATALOG_MODEL: GLTFCatalogModel = {
+  label: 'Robot Expressive',
+  name: 'RobotExpressive',
+  ...GLTF_MODEL_METADATA_OVERRIDES['RobotExpressive'],
+  variants: {'glTF-Binary': 'RobotExpressive.glb'}
 };
 export type GLTFModelReference = {
   name: string;
@@ -120,6 +150,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   activeScenegraphOptions: Parameters<typeof createScenegraphsFromGLTF>[2] = {};
   loadedGLTF?: GLTFPostprocessed;
   previousCrowdFrameTime?: number;
+  crowdActionNames: string[] = [];
   modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraHeight = 0;
@@ -157,9 +188,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           return;
         }
         this.availableModels = models;
-        const cleanupModelMenu = this.initializeModelMenus(models, initialModelName);
+        const currentModelName = models.some(model => model.name === initialModelName)
+          ? initialModelName
+          : models.find(model => model.name === this.getDefaultModelName())?.name ||
+            models[0]?.name ||
+            initialModelName;
+        window.localStorage[modelStorageKey] = currentModelName;
+        const cleanupModelMenu = this.initializeModelMenus(models, currentModelName);
         this.cleanupCallbacks.push(cleanupModelMenu);
-        this.loadGLTF(initialModelName);
+        this.loadGLTF(currentModelName);
       })
       .catch(error => {
         log.error(
@@ -212,6 +249,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cleanupCallbacks = [];
     this.animatedCrowd?.destroy();
     this.animatedCrowd = undefined;
+    this.crowdActionNames = [];
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
     this.loadedGLTF = undefined;
@@ -300,9 +338,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       showError();
     }
 
-    const clipNames = this.animatedCrowd.scenegraphs.animations
-      .map(animation => animation.name)
-      .filter((name): name is string => Boolean(name));
+    const clipNames = getAnimationClipNames(this.animatedCrowd.scenegraphs);
     const preferredClips = ['Walking', 'Running', 'Dance', 'Wave', 'Idle'];
     const availableClips = preferredClips.filter(name => clipNames.includes(name));
     const playableClips = availableClips.length ? availableClips : clipNames;
@@ -333,7 +369,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
     }
 
-    updateCrowdInfo(actorCount, this.animatedCrowd.models.length);
+    this.crowdActionNames = Array.from(
+      new Set(
+        this.animatedCrowd.actors
+          .map(actor => actor.activeClip)
+          .filter((name): name is string => Boolean(name))
+      )
+    );
+    updateCrowdInfo(actorCount, this.animatedCrowd.models.length, this.crowdActionNames);
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
@@ -411,7 +454,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
 
       const drawCount = this.animatedCrowd.draw(renderPass);
-      updateCrowdInfo(this.animatedCrowd.actorCount, drawCount);
+      updateCrowdInfo(this.animatedCrowd.actorCount, drawCount, this.crowdActionNames);
       renderPass.end();
       return;
     }
@@ -453,10 +496,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   async fetchModelList(): Promise<GLTFCatalogModel[]> {
     const response = await fetch(MODEL_LIST_URL);
     const models = (await response.json()) as GLTFCatalogModel[];
-    return models.map(model => ({
-      ...model,
-      hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
-    }));
+    return [ROBOT_EXPRESSIVE_CATALOG_MODEL, ...models.filter(isAnimatedGLTFCatalogModel)].map(
+      model => ({
+        ...model,
+        hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
+      })
+    );
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {
@@ -507,6 +552,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       this.animatedCrowd?.destroy();
       this.animatedCrowd = undefined;
+      this.crowdActionNames = [];
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.loadedGLTF = processedGLTF;
@@ -514,7 +560,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.previousCrowdFrameTime = undefined;
       this.modelLights = scenegraphsFromGLTF.lights;
       updateCrowdInfo();
-      this.updateModelInfo(resolvedModelReference, loadGeneration);
+      this.updateModelInfo(
+        resolvedModelReference,
+        loadGeneration,
+        getAnimationClipNames(scenegraphsFromGLTF)
+      );
       updateExtensionSupportTable(scenegraphsFromGLTF.extensionSupport);
 
       const activeSceneBounds =
@@ -560,10 +610,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private updateModelInfo(
     modelReference: Required<GLTFModelReference>,
-    loadGeneration: number
+    loadGeneration: number,
+    actionNames: readonly string[] = []
   ): void {
     const catalogModel = this.availableModels.find(model => model.name === modelReference.name);
-    updateModelInfoBox(catalogModel, modelReference);
+    updateModelInfoBox(catalogModel, modelReference, actionNames);
 
     void this.fetchModelMetadata(modelReference.name).then(modelMetadata => {
       if (this.isLoadStale(loadGeneration)) {
@@ -575,7 +626,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
       if (mutableCatalogModel) {
         Object.assign(mutableCatalogModel, modelMetadata);
-        updateModelInfoBox(mutableCatalogModel, modelReference);
+        updateModelInfoBox(mutableCatalogModel, modelReference, actionNames);
         return;
       }
 
@@ -585,7 +636,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           name: modelReference.name,
           ...modelMetadata
         },
-        modelReference
+        modelReference,
+        actionNames
       );
     });
   }
@@ -721,6 +773,10 @@ async function loadPreferredGLTF(candidateModelReferences: Required<GLTFModelRef
 }
 
 function getModelUrl(modelReference: Required<GLTFModelReference>): string {
+  if (modelReference.name === 'RobotExpressive') {
+    return ROBOT_EXPRESSIVE_MODEL_URL;
+  }
+
   return `${MODEL_DIRECTORY_URL}/${modelReference.name}/${modelReference.variant}/${modelReference.fileName}`;
 }
 
@@ -815,6 +871,10 @@ function getModelLoadingLabel(modelDescription: string): string {
 }
 
 async function loadModelMetadata(modelName: string): Promise<GLTFModelMetadata> {
+  if (modelName === 'RobotExpressive') {
+    return GLTF_MODEL_METADATA_OVERRIDES[modelName] || {};
+  }
+
   const readmeUrl = `${MODEL_DIRECTORY_URL}/${modelName}/README.md`;
 
   try {
@@ -893,7 +953,8 @@ function setLoadingState(isLoading: boolean, message?: string): void {
 
 function updateModelInfoBox(
   model?: Pick<GLTFCatalogModel, 'label' | 'name' | 'summary' | 'description'>,
-  modelReference?: Required<GLTFModelReference>
+  modelReference?: Required<GLTFModelReference>,
+  actionNames: readonly string[] = []
 ): void {
   const container = document.getElementById(GLTF_MODEL_INFO_ID) as HTMLDivElement | null;
   if (!container) {
@@ -924,6 +985,14 @@ function updateModelInfoBox(
     variant.style.marginBottom = '6px';
     variant.textContent = modelReference.variant;
     container.append(variant);
+  }
+
+  if (actionNames.length) {
+    const actions = document.createElement('div');
+    actions.style.fontSize = '12px';
+    actions.style.marginBottom = '6px';
+    actions.textContent = `Actions: ${actionNames.join(' · ')}`;
+    container.append(actions);
   }
 
   if (summary) {
@@ -971,17 +1040,39 @@ function updateModelLightIndicator(modelLights: Light[], useModelLights: boolean
   indicator.textContent = `Model lights: ${summary}; ${activeSource}.`;
 }
 
-function updateCrowdInfo(actorCount: number = 1, drawCount: number = 0): void {
+function getAnimationClipNames(
+  scenegraphs: Pick<ReturnType<typeof createScenegraphsFromGLTF>, 'animations'>
+): string[] {
+  return Array.from(
+    new Set(
+      scenegraphs.animations
+        .map(animation => animation.name)
+        .filter((name): name is string => Boolean(name))
+    )
+  );
+}
+
+function updateCrowdInfo(
+  actorCount: number = 1,
+  drawCount: number = 0,
+  actionNames: readonly string[] = []
+): void {
   const container = document.getElementById(GLTF_CROWD_INFO_ID) as HTMLDivElement | null;
   if (!container) {
     return;
   }
 
   container.hidden = actorCount <= 1;
-  container.textContent =
+  const actionSummary = actionNames.length
+    ? ` · ${actionNames.length > 1 ? 'Mixed actions' : 'Action'}: ${actionNames.join(', ')}`
+    : '';
+  const summary =
     actorCount > 1
-      ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws`
+      ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws${actionSummary}`
       : '';
+  if (container.textContent !== summary) {
+    container.textContent = summary;
+  }
 }
 
 function updateExtensionSupportTable(extensionSupport?: GLTFExtensionSupportMap) {

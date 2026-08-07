@@ -81,6 +81,9 @@ remain stable; creating more actors than the configured capacity is rejected.
 
 The glTF Asset Studio exposes this path through its **GPU Crowd Actors** control, supporting
 1–100 actors and reporting the actual number of shared GPU draws.
+Its default CC0 Robot Expressive model provides 14 named actions, including walking, running,
+dancing, waving, and idling. Neighboring actors can play different actions without splitting a
+shared primitive into separate draw calls.
 
 ## Independent playback
 
