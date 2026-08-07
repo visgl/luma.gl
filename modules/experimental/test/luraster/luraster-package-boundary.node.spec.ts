@@ -97,7 +97,22 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     );
   });
 
-  test('exposes tile-source/cache/halo/overview, neighborhood, morphology, and contour APIs', () => {
+  test('keeps global tile replay, command submission, and analytical readback application-owned', () => {
+    const globalStatisticsImplementation = readFileSync(
+      new URL('../../src/luraster/gpu-raster-global-statistics.ts', import.meta.url),
+      'utf8'
+    );
+
+    expect(globalStatisticsImplementation).not.toMatch(
+      /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/
+    );
+    expect(globalStatisticsImplementation).not.toMatch(/\bfetch\s*\(/);
+    expect(globalStatisticsImplementation).not.toMatch(
+      /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/
+    );
+  });
+
+  test('exposes tile-source/cache/halo/overview/global, neighborhood, morphology, and contour APIs', () => {
     expect(lurasterModule.GPURaster).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBandMath).toBeTypeOf('function');
     expect(lurasterModule.GPURasterBoxBlur).toBeTypeOf('function');
@@ -112,6 +127,18 @@ describe('@luma.gl/experimental/luraster package boundary', () => {
     expect(lurasterModule.GPURasterDilation).toBeTypeOf('function');
     expect(lurasterModule.GPURasterErosion).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGaussianBlur).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGlobalHistogramMerge).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGlobalHistogramMerge.prototype.addToGraph).toBeTypeOf(
+      'function'
+    );
+    expect(lurasterModule.GPURasterGlobalInitialize).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGlobalInitialize.prototype.addToGraph).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGlobalPercentile).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGlobalPercentile.prototype.addToGraph).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGlobalStatisticsMerge).toBeTypeOf('function');
+    expect(lurasterModule.GPURasterGlobalStatisticsMerge.prototype.addToGraph).toBeTypeOf(
+      'function'
+    );
     expect(lurasterModule.GPURasterGradient).toBeTypeOf('function');
     expect(lurasterModule.GPURasterGradientMagnitude).toBeTypeOf('function');
     expect(lurasterModule.GPURasterHistogram).toBeTypeOf('function');

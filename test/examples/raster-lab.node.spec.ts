@@ -517,4 +517,55 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(rasterInterface).toContain('displayed valid');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
   });
+
+  test('globally replays fenced bounded source cores without expanding the fixed aggregate transfer', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+    const accumulation = rasterEngine.slice(
+      rasterEngine.indexOf('private addGlobalAccumulator('),
+      rasterEngine.indexOf(
+        'private importView<',
+        rasterEngine.indexOf('private addGlobalAccumulator(')
+      )
+    );
+
+    expect(rasterApplication).toContain(
+      'this.tileCache.acquire(secondaryRequest, controller.signal)'
+    );
+    expect(rasterApplication).toContain('this.activeGlobalLeases = replacementGlobalLeases ?? []');
+    expect(rasterApplication).toContain('lease.releaseAfter(fence)');
+    expect(rasterApplication).toContain("this.analysisScope === 'global' && requestedCapacity < 2");
+    expect(rasterApplication).toContain('this.resetGlobalAnalysis()');
+    expect(rasterEngine).toContain('this.createGlobalBands(graph, contrastOptions)');
+    expect(rasterEngine).toContain('new GPURasterGlobalInitialize({');
+    expect(rasterEngine).toContain('new GPURasterGlobalStatisticsMerge({');
+    expect(rasterEngine).toContain('new GPURasterGlobalHistogramMerge({');
+    expect(rasterEngine).toContain('new GPURasterGlobalPercentile({');
+    expect(rasterEngine).toContain("this.addGlobalAccumulator(graph, 'baseline'");
+    expect(rasterEngine).toContain("this.addGlobalAccumulator(graph, 'output'");
+    expect(accumulation.indexOf('new GPURasterGlobalInitialize({')).toBeLessThan(
+      accumulation.indexOf('new GPURasterGlobalStatisticsMerge({')
+    );
+    expect(accumulation.indexOf('new GPURasterGlobalStatisticsMerge({')).toBeLessThan(
+      accumulation.indexOf('new GPURasterGlobalHistogramMerge({')
+    );
+    expect(rasterEngine.match(/\.readAsync\(/g)).toHaveLength(1);
+    expect(rasterEngine).toContain('destinationOffset: THRESHOLD_BYTE_OFFSET');
+    expect(rasterEngine).toContain('globalMedian:');
+    expect(rasterInterface).toContain('data-raster-analysis-scope="global"');
+    expect(rasterInterface).toContain('data-raster-replay-order="reverse"');
+    expect(rasterInterface).toContain('data-raster-global-median');
+    expect(rasterInterface).toContain('this.globalPixelCount');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
+  });
 });
