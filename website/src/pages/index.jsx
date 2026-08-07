@@ -49,6 +49,19 @@ const FEATURED_EXAMPLES = [
     topics: ['simulation', 'compute']
   },
   {
+    title: 'Cinematic Bloom',
+    route: 'experimental/bloom',
+    image: 'experimental/bloom.jpg',
+    description:
+      'Shape HDR highlights with physically based glow, spectral diffraction, chromatic lens ghosts, and temporal stabilization.',
+    category: 'Showcase',
+    backends: ['webgpu', 'webgl2'],
+    highDynamicRange: true,
+    difficulty: 'advanced',
+    maturity: 'experimental',
+    topics: ['effects', 'bloom']
+  },
+  {
     title: 'Volumetric Fire Forge',
     route: 'experimental/volumetric-fire-forge',
     image: 'experimental/volumetric-fire-forge.jpg',

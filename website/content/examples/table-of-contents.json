@@ -26,6 +26,11 @@
       },
       {
         "type": "doc",
+        "id": "experimental/bloom",
+        "label": "Effects: Bloom"
+      },
+      {
+        "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
       }
@@ -182,11 +187,6 @@
         "type": "doc",
         "id": "experimental/antialiasing",
         "label": "Antialiasing Techniques"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/bloom",
-        "label": "Effects: Bloom"
       },
       "experimental/fp64",
       "experimental/text-space-crawl",

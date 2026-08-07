@@ -173,6 +173,36 @@ describe('homepage navigation', () => {
     }
   });
 
+  test('features cinematic bloom in the showcase catalog and homepage gallery', () => {
+    const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
+    const tableOfContents = JSON.parse(
+      readFileSync(path.join(EXAMPLE_CONTENT_DIRECTORY, 'table-of-contents.json'), 'utf8')
+    ) as ExampleSidebarEntry[];
+    const showcaseCategory = tableOfContents.find(
+      entry => typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Showcase'
+    );
+
+    expect(showcaseCategory).toBeDefined();
+    if (
+      showcaseCategory &&
+      typeof showcaseCategory !== 'string' &&
+      showcaseCategory.type === 'category'
+    ) {
+      expect(showcaseCategory.items).toContainEqual({
+        type: 'doc',
+        id: 'experimental/bloom',
+        label: 'Effects: Bloom'
+      });
+    }
+
+    expect(homepageSource).toMatch(
+      /title:\s*['"]Cinematic Bloom['"][\s\S]*?route:\s*['"]experimental\/bloom['"]/
+    );
+    expect(
+      existsSync(path.join(process.cwd(), 'website/static/images/examples/experimental/bloom.jpg'))
+    ).toBe(true);
+  });
+
   test('maintains WCAG AAA foreground contrast for normal and highlighted primary actions', () => {
     const homepageStyles = readFileSync(HOMEPAGE_STYLES_PATH, 'utf8');
     const normalActionRule = homepageStyles.match(/\.primaryAction\s*\{([^}]*)\}/);
