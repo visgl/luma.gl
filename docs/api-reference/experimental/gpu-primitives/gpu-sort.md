@@ -49,8 +49,8 @@ for a large batch. `resolvedAlgorithms` reports those choices in source-chunk or
 Scratch remains graph-owned and batch-local. Empty chunks add no nodes, single-row chunks use the
 copy fast path, and later chunk sorts can reuse transient allocations from earlier chunks.
 
-The live example switches between one packed Arrow column and preserved Arrow chunks. Its large
-streaming case intentionally exercises bitonic and radix sorting in the same graph:
+The live example switches between one packed Arrow column and preserved Arrow chunks. Its streaming
+case preserves batch boundaries and reports the algorithm selected independently for each chunk:
 
 <GPUSortExample embedded />
 
@@ -117,6 +117,7 @@ type GPUSortProps = {
   outputValues: GraphDataView<'uint32'>;
   algorithm?: 'auto' | 'bitonic' | 'radix';
   direction?: 'ascending' | 'descending';
+  keyBits?: number;
 };
 ```
 
@@ -125,9 +126,20 @@ type GPUSortProps = {
 - Equal keys retain their input order in both directions.
 - Inputs are not modified. The caller owns all four views and their imported buffers.
 
-`algorithm` defaults to `auto`, which selects bitonic sort through 65,536 rows and stable binary
-LSD radix sort for larger inputs. Explicit selection is useful for measurement and testing.
-`resolvedAlgorithm` reports the concrete selection.
+`algorithm` defaults to `auto`. Inputs containing at most 256 rows use a complete, stable bitonic
+sorting network in workgroup memory, requiring only one graph node and one dispatch. Its workgroup
+contains only the padded power-of-two row count, and each source key is loaded into shared memory
+once before sorting. Larger inputs use a stable four-bit least-significant-digit radix sort: each
+digit contributes a workgroup-local histogram, a reusable `GPUScan`, and an order-preserving
+scatter. The radix implementation supports both sort directions, partial final digits, and the
+eight-storage-buffer CORE WebGPU limit without requiring subgroup features. Explicit algorithm
+selection remains available for measurement and testing; `resolvedAlgorithm` reports the concrete
+selection.
+
+`keyBits` defaults to `32` and controls how many least-significant bits the radix implementation
+processes. A 32-bit sort therefore needs eight radix digits instead of 32 binary partitions. Radix
+destinations alternate between graph-owned scratch and caller-owned outputs so the final digit
+always writes directly into the requested destination.
 
 ### `new GPUBatchSort(props)`
 
@@ -161,7 +173,10 @@ The method does not compile the graph, create an encoder, submit work, or map ou
 
 - Empty inputs and empty batches add no graph nodes.
 - A single pair or single-row batch adds one copy node.
-- Bitonic sort internally pads irregular lengths without exposing sentinels in the output.
+- Bitonic sort internally pads irregular lengths without exposing sentinels in the output; inputs
+  up to 256 rows complete entirely within one workgroup.
+- Four-bit radix sorting preserves the relative input order of equal significant key bits in both
+  ascending and descending order.
 - At most `0x80000000` rows are accepted; practical limits are normally lower device buffer and
   dispatch limits.
 

@@ -396,6 +396,8 @@ function makeEncoding(
   const stats: GPUCommandGraphEncodingStats = {
     cpuEncodeTimeMilliseconds: cpuTimeMilliseconds,
     nodeCount: 2,
+    computePassCount: 1,
+    coalescedComputeNodeCount: 0,
     timestampedNodeCount: gpuTimeMilliseconds === undefined ? 0 : 2,
     nodes: [
       {

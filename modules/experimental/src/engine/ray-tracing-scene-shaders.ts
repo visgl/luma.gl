@@ -27,6 +27,11 @@ struct RayPrimitive {
   blas: vec4<f32>,
   previousTransform: mat4x4<f32>,
 };
+
+struct RayBlasNode {
+  minimum: vec4<f32>,
+  maximum: vec4<f32>,
+};
 `;
 
 /** Publishes conservative world-space instance bounds for the graph-owned GPU BVH. */
@@ -37,6 +42,7 @@ ${RAY_TRACING_SCENE_TYPES}
 @group(0) @binding(1) var<storage, read> primitives: array<RayPrimitive>;
 @group(0) @binding(2) var<storage, read_write> primitiveMinima: array<f32>;
 @group(0) @binding(3) var<storage, read_write> primitiveMaxima: array<f32>;
+@group(0) @binding(4) var<storage, read> blasNodes: array<RayBlasNode>;
 
 const INVALID_BOUND = 3.402823466e+38;
 
@@ -57,7 +63,15 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   }
 
   let primitive = primitives[primitiveIndex];
-  let center = (primitive.transform * vec4<f32>(primitive.bounds.xyz, 1.0)).xyz;
+  var localCenter = primitive.bounds.xyz;
+  var localExtent = vec3<f32>(max(primitive.bounds.w, 0.0));
+  let usesMeshBounds = primitive.properties.y <= 0.0 && primitive.properties.w > 0.0;
+  if (usesMeshBounds) {
+    let rootNode = blasNodes[u32(primitive.blas.x)];
+    localCenter = (rootNode.minimum.xyz + rootNode.maximum.xyz) * 0.5;
+    localExtent = max((rootNode.maximum.xyz - rootNode.minimum.xyz) * 0.5, vec3<f32>(0.0));
+  }
+  let center = (primitive.transform * vec4<f32>(localCenter, 1.0)).xyz;
   let firstRow = vec3<f32>(
     primitive.transform[0].x,
     primitive.transform[1].x,
@@ -73,8 +87,14 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     primitive.transform[1].z,
     primitive.transform[2].z
   );
-  let extent = vec3<f32>(length(firstRow), length(secondRow), length(thirdRow)) *
+  let sphereExtent = vec3<f32>(length(firstRow), length(secondRow), length(thirdRow)) *
     max(primitive.bounds.w, 0.0);
+  let meshExtent = vec3<f32>(
+    dot(abs(firstRow), localExtent),
+    dot(abs(secondRow), localExtent),
+    dot(abs(thirdRow), localExtent)
+  );
+  let extent = select(sphereExtent, meshExtent, usesMeshBounds);
   let minimum = center - extent;
   let maximum = center + extent;
   for (var axis = 0u; axis < 3u; axis++) {
@@ -102,11 +122,6 @@ struct RayLight {
   positionInnerCone: vec4<f32>,
   directionType: vec4<f32>,
   attenuationOuterCone: vec4<f32>,
-};
-
-struct RayBlasNode {
-  minimum: vec4<f32>,
-  maximum: vec4<f32>,
 };
 
 struct Ray {

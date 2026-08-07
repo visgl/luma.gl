@@ -20,9 +20,11 @@ import {
 
 const BITONIC_WORKGROUP_SIZE = 256;
 const RADIX_WORKGROUP_SIZE = 256;
+const RADIX_DIGIT_BITS = 4;
+const RADIX_MASK_WORD_COUNT = RADIX_WORKGROUP_SIZE / 32;
 const INVALID_INDEX = 0xffffffff;
 const MAXIMUM_LOGICAL_LENGTH = 0x80000000;
-const AUTO_BITONIC_MAXIMUM_LENGTH = 65_536;
+const AUTO_BITONIC_MAXIMUM_LENGTH = BITONIC_WORKGROUP_SIZE;
 
 /** Sort implementation requested by {@link GPUSort}. */
 export type GPUSortAlgorithm = 'auto' | 'bitonic' | 'radix';
@@ -254,6 +256,10 @@ function addBitonicSort<Parameters>(
   maxComputeWorkgroupsPerDimension: number
 ): void {
   const paddedLength = getNextPowerOfTwo(sort.keys.length);
+  if (paddedLength <= BITONIC_WORKGROUP_SIZE) {
+    addLocalBitonicSortPass(graph, sort, paddedLength);
+    return;
+  }
   const paddedDispatchLayout = getBoundedDispatchLayout(
     'GPUSort bitonic',
     paddedLength,
@@ -289,6 +295,100 @@ function addBitonicSort<Parameters>(
     [currentIndices, nextIndices] = [nextIndices, currentIndices];
   }
   addBitonicGatherPass(graph, sort, currentIndices, dispatchLayout);
+}
+
+/** Sorts one complete stable bitonic network in workgroup memory with one graph dispatch. */
+function addLocalBitonicSortPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  sort: GPUSort,
+  paddedLength: number
+): void {
+  const descending = sort.direction === 'descending';
+  const source = /* wgsl */ `
+const INVALID_INDEX: u32 = ${INVALID_INDEX}u;
+const LOGICAL_LENGTH: u32 = ${sort.keys.length}u;
+const PADDED_LENGTH: u32 = ${paddedLength}u;
+const KEYS_OFFSET: u32 = ${getViewElementOffset(sort.keys)}u;
+const VALUES_OFFSET: u32 = ${getViewElementOffset(sort.values)}u;
+const OUTPUT_KEYS_OFFSET: u32 = ${getViewElementOffset(sort.outputKeys)}u;
+const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
+@group(0) @binding(0) var<storage, read> keys: array<u32>;
+@group(0) @binding(1) var<storage, read> values: array<u32>;
+@group(0) @binding(2) var<storage, read_write> outputKeys: array<u32>;
+@group(0) @binding(3) var<storage, read_write> outputValues: array<u32>;
+var<workgroup> indices: array<u32, ${paddedLength}>;
+var<workgroup> cachedKeys: array<u32, ${paddedLength}>;
+
+fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
+  let leftValid = leftIndex != INVALID_INDEX && leftIndex < LOGICAL_LENGTH;
+  let rightValid = rightIndex != INVALID_INDEX && rightIndex < LOGICAL_LENGTH;
+  if (leftValid != rightValid) { return leftValid; }
+  if (!leftValid) { return false; }
+  let leftKey = cachedKeys[leftIndex];
+  let rightKey = cachedKeys[rightIndex];
+  if (leftKey == rightKey) { return leftIndex < rightIndex; }
+  return ${descending ? 'leftKey > rightKey' : 'leftKey < rightKey'};
+}
+
+@compute @workgroup_size(${paddedLength}) fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  if (localInvocationIndex < PADDED_LENGTH) {
+    indices[localInvocationIndex] = select(
+      INVALID_INDEX,
+      localInvocationIndex,
+      localInvocationIndex < LOGICAL_LENGTH
+    );
+    if (localInvocationIndex < LOGICAL_LENGTH) {
+      cachedKeys[localInvocationIndex] = keys[KEYS_OFFSET + localInvocationIndex];
+    } else {
+      cachedKeys[localInvocationIndex] = 0u;
+    }
+  }
+  workgroupBarrier();
+
+  for (var blockWidth = 2u; blockWidth <= PADDED_LENGTH; blockWidth <<= 1u) {
+    for (var compareStride = blockWidth >> 1u; compareStride > 0u; compareStride >>= 1u) {
+      let partnerIndex = localInvocationIndex ^ compareStride;
+      if (localInvocationIndex < PADDED_LENGTH && partnerIndex > localInvocationIndex) {
+        let leftIndex = indices[localInvocationIndex];
+        let rightIndex = indices[partnerIndex];
+        let ascending = (localInvocationIndex & blockWidth) == 0u;
+        let shouldSwap = select(
+          comes_before(leftIndex, rightIndex),
+          comes_before(rightIndex, leftIndex),
+          ascending
+        );
+        indices[localInvocationIndex] = select(leftIndex, rightIndex, shouldSwap);
+        indices[partnerIndex] = select(rightIndex, leftIndex, shouldSwap);
+      }
+      workgroupBarrier();
+    }
+  }
+
+  if (localInvocationIndex < LOGICAL_LENGTH) {
+    let sourceIndex = indices[localInvocationIndex];
+    outputKeys[OUTPUT_KEYS_OFFSET + localInvocationIndex] = cachedKeys[sourceIndex];
+    outputValues[OUTPUT_VALUES_OFFSET + localInvocationIndex] = values[VALUES_OFFSET + sourceIndex];
+  }
+}`;
+  addComputationPass(graph, {
+    id: `${sort.id}-bitonic-local`,
+    source,
+    resources: [
+      {buffer: sort.keys, usage: 'storage-read'},
+      {buffer: sort.values, usage: 'storage-read'},
+      {buffer: sort.outputKeys, usage: 'storage-write'},
+      {buffer: sort.outputValues, usage: 'storage-write'}
+    ],
+    bindings: {
+      keys: sort.keys,
+      values: sort.values,
+      outputKeys: sort.outputKeys,
+      outputValues: sort.outputValues
+    },
+    dispatchLayout: {x: 1, y: 1, z: 1}
+  });
 }
 
 /** Initializes logical indices and invalid padding for a power-of-two bitonic network. */
@@ -446,47 +546,61 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
   });
 }
 
-/** Adds stable least-significant-bit radix partitions and the final output copy if needed. */
+/** Adds stable four-bit least-significant-digit histogram, scan, and scatter partitions. */
 function addRadixSort<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
   dispatchLayout: GPUBoundedDispatchLayout,
   maxComputeWorkgroupsPerDimension: number
 ): void {
-  const scratchKeys = createTransientView(
-    graph,
-    `${sort.id}-radix-scratch-keys`,
-    'uint32',
-    sort.keys.length
-  );
-  const scratchValues = createTransientView(
-    graph,
-    `${sort.id}-radix-scratch-values`,
-    'uint32',
-    sort.keys.length
-  );
+  const digitCount = Math.ceil(sort.keyBits / RADIX_DIGIT_BITS);
+  const workgroupCount = Math.ceil(sort.keys.length / RADIX_WORKGROUP_SIZE);
+  const scratchKeys =
+    digitCount > 1
+      ? createTransientView(graph, `${sort.id}-radix-scratch-keys`, 'uint32', sort.keys.length)
+      : undefined;
+  const scratchValues =
+    digitCount > 1
+      ? createTransientView(graph, `${sort.id}-radix-scratch-values`, 'uint32', sort.keys.length)
+      : undefined;
   let currentKeys = sort.keys;
   let currentValues = sort.values;
 
-  for (let bit = 0; bit < sort.keyBits; bit++) {
-    const flags = createTransientView(
+  for (let digitIndex = 0; digitIndex < digitCount; digitIndex++) {
+    const bitOffset = digitIndex * RADIX_DIGIT_BITS;
+    const digitBits = Math.min(RADIX_DIGIT_BITS, sort.keyBits - bitOffset);
+    const bucketCount = 2 ** digitBits;
+    const histogram = createTransientView(
       graph,
-      `${sort.id}-radix-bit-${bit}-flags`,
+      `${sort.id}-radix-digit-${bitOffset}-histogram`,
       'uint32',
-      sort.keys.length
+      bucketCount * workgroupCount
     );
     const offsets = createTransientView(
       graph,
-      `${sort.id}-radix-bit-${bit}-offsets`,
+      `${sort.id}-radix-digit-${bitOffset}-offsets`,
       'uint32',
-      sort.keys.length
+      bucketCount * workgroupCount
     );
-    const nextKeys = bit % 2 === 0 ? scratchKeys : sort.outputKeys;
-    const nextValues = bit % 2 === 0 ? scratchValues : sort.outputValues;
-    addRadixClassifyPass(graph, sort, currentKeys, flags, bit, dispatchLayout);
+    const writesFinalOutput = (digitCount - digitIndex) % 2 === 1;
+    const nextKeys = writesFinalOutput ? sort.outputKeys : scratchKeys;
+    const nextValues = writesFinalOutput ? sort.outputValues : scratchValues;
+    if (!nextKeys || !nextValues) {
+      throw new Error(`${sort.id} radix scratch is missing`);
+    }
+    addRadixHistogramPass(
+      graph,
+      sort,
+      currentKeys,
+      histogram,
+      bitOffset,
+      digitBits,
+      workgroupCount,
+      dispatchLayout
+    );
     const scan = new GPUScan({
-      id: `${sort.id}-radix-bit-${bit}-scan`,
-      input: flags,
+      id: `${sort.id}-radix-digit-${bitOffset}-scan`,
+      input: histogram,
       output: offsets
     });
     addGPUScanToGraphWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension);
@@ -495,117 +609,168 @@ function addRadixSort<Parameters>(
       sort,
       currentKeys,
       currentValues,
-      flags,
       offsets,
       nextKeys,
       nextValues,
-      bit,
+      bitOffset,
+      digitBits,
+      workgroupCount,
       dispatchLayout
     );
     currentKeys = nextKeys;
     currentValues = nextValues;
   }
-
-  if (sort.keyBits % 2 !== 0) {
-    addCopyPairPass(graph, sort, currentKeys, currentValues, 'radix-final-copy', dispatchLayout);
-  }
 }
 
-/** Classifies one key bit into packed zero/one flags for the radix prefix scan. */
-function addRadixClassifyPass<Parameters>(
+/** Counts one radix digit per workgroup into a digit-major histogram suitable for global scan. */
+function addRadixHistogramPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
   keys: GraphDataView<'uint32'>,
-  flags: GraphDataView<'uint32'>,
-  bit: number,
+  histogram: GraphDataView<'uint32'>,
+  bitOffset: number,
+  digitBits: number,
+  workgroupCount: number,
   dispatchLayout: GPUBoundedDispatchLayout
 ): void {
-  const firstBit = sort.direction === 'ascending' ? 0 : 1;
+  const bucketCount = 2 ** digitBits;
+  const descending = sort.direction === 'descending';
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${sort.keys.length}u;
-const BIT_INDEX: u32 = ${bit}u;
-const FIRST_BIT: u32 = ${firstBit}u;
+const BIT_OFFSET: u32 = ${bitOffset}u;
+const BUCKET_COUNT: u32 = ${bucketCount}u;
+const DIGIT_MASK: u32 = ${bucketCount - 1}u;
+const WORKGROUP_COUNT: u32 = ${workgroupCount}u;
 const KEYS_OFFSET: u32 = ${getViewElementOffset(keys)}u;
-const FLAGS_OFFSET: u32 = ${getViewElementOffset(flags)}u;
+const HISTOGRAM_OFFSET: u32 = ${getViewElementOffset(histogram)}u;
 @group(0) @binding(0) var<storage, read> keys: array<u32>;
-@group(0) @binding(1) var<storage, read_write> flags: array<u32>;
+@group(0) @binding(1) var<storage, read_write> histogram: array<u32>;
+var<workgroup> digitCounts: array<atomic<u32>, ${bucketCount}>;
 
 @compute @workgroup_size(${RADIX_WORKGROUP_SIZE}) fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  ${getBoundedInvocationIndexSource(dispatchLayout, RADIX_WORKGROUP_SIZE)}
-  if (index >= ELEMENT_COUNT) { return; }
-  let bitValue = (keys[KEYS_OFFSET + index] >> BIT_INDEX) & 1u;
-  flags[FLAGS_OFFSET + index] = select(0u, 1u, bitValue == FIRST_BIT);
+  let workgroupIndex =
+    (workgroupId.z * ${dispatchLayout.y}u + workgroupId.y) * ${dispatchLayout.x}u + workgroupId.x;
+  if (workgroupIndex >= WORKGROUP_COUNT) { return; }
+  if (localInvocationIndex < BUCKET_COUNT) {
+    atomicStore(&digitCounts[localInvocationIndex], 0u);
+  }
+  workgroupBarrier();
+
+  let index = workgroupIndex * ${RADIX_WORKGROUP_SIZE}u + localInvocationIndex;
+  if (index < ELEMENT_COUNT) {
+    let key = keys[KEYS_OFFSET + index];
+    let digit = (key >> BIT_OFFSET) & DIGIT_MASK;
+    let bucket = ${descending ? 'DIGIT_MASK - digit' : 'digit'};
+    atomicAdd(&digitCounts[bucket], 1u);
+  }
+  workgroupBarrier();
+
+  if (localInvocationIndex < BUCKET_COUNT) {
+    histogram[HISTOGRAM_OFFSET + localInvocationIndex * WORKGROUP_COUNT + workgroupIndex] =
+      atomicLoad(&digitCounts[localInvocationIndex]);
+  }
 }`;
   addComputationPass(graph, {
-    id: `${sort.id}-radix-bit-${bit}-classify`,
+    id: `${sort.id}-radix-digit-${bitOffset}-histogram`,
     source,
     resources: [
       {buffer: keys, usage: 'storage-read'},
-      {buffer: flags, usage: 'storage-write'}
+      {buffer: histogram, usage: 'storage-write'}
     ],
-    bindings: {keys, flags},
+    bindings: {keys, histogram},
     dispatchLayout
   });
 }
 
-/** Stably scatters key/value pairs according to one scanned radix bit. */
+/** Stably scatters one digit using workgroup ballot masks and digit-major global offsets. */
 function addRadixScatterPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
   keys: GraphDataView<'uint32'>,
   values: GraphDataView<'uint32'>,
-  flags: GraphDataView<'uint32'>,
   offsets: GraphDataView<'uint32'>,
   outputKeys: GraphDataView<'uint32'>,
   outputValues: GraphDataView<'uint32'>,
-  bit: number,
+  bitOffset: number,
+  digitBits: number,
+  workgroupCount: number,
   dispatchLayout: GPUBoundedDispatchLayout
 ): void {
-  const lastIndex = sort.keys.length - 1;
+  const bucketCount = 2 ** digitBits;
+  const descending = sort.direction === 'descending';
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${sort.keys.length}u;
-const LAST_INDEX: u32 = ${lastIndex}u;
+const BIT_OFFSET: u32 = ${bitOffset}u;
+const DIGIT_MASK: u32 = ${bucketCount - 1}u;
+const WORKGROUP_COUNT: u32 = ${workgroupCount}u;
+const MASK_WORD_COUNT: u32 = ${RADIX_MASK_WORD_COUNT}u;
+const MASK_COUNT: u32 = ${bucketCount * RADIX_MASK_WORD_COUNT}u;
 const KEYS_OFFSET: u32 = ${getViewElementOffset(keys)}u;
 const VALUES_OFFSET: u32 = ${getViewElementOffset(values)}u;
-const FLAGS_OFFSET: u32 = ${getViewElementOffset(flags)}u;
 const OFFSETS_OFFSET: u32 = ${getViewElementOffset(offsets)}u;
 const OUTPUT_KEYS_OFFSET: u32 = ${getViewElementOffset(outputKeys)}u;
 const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(outputValues)}u;
 @group(0) @binding(0) var<storage, read> keys: array<u32>;
 @group(0) @binding(1) var<storage, read> values: array<u32>;
-@group(0) @binding(2) var<storage, read> flags: array<u32>;
-@group(0) @binding(3) var<storage, read> offsets: array<u32>;
-@group(0) @binding(4) var<storage, read_write> outputKeys: array<u32>;
-@group(0) @binding(5) var<storage, read_write> outputValues: array<u32>;
+@group(0) @binding(2) var<storage, read> offsets: array<u32>;
+@group(0) @binding(3) var<storage, read_write> outputKeys: array<u32>;
+@group(0) @binding(4) var<storage, read_write> outputValues: array<u32>;
+var<workgroup> digitMasks: array<atomic<u32>, ${bucketCount * RADIX_MASK_WORD_COUNT}>;
 
 @compute @workgroup_size(${RADIX_WORKGROUP_SIZE}) fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  ${getBoundedInvocationIndexSource(dispatchLayout, RADIX_WORKGROUP_SIZE)}
+  let workgroupIndex =
+    (workgroupId.z * ${dispatchLayout.y}u + workgroupId.y) * ${dispatchLayout.x}u + workgroupId.x;
+  if (workgroupIndex >= WORKGROUP_COUNT) { return; }
+  if (localInvocationIndex < MASK_COUNT) {
+    atomicStore(&digitMasks[localInvocationIndex], 0u);
+  }
+  workgroupBarrier();
+
+  let index = workgroupIndex * ${RADIX_WORKGROUP_SIZE}u + localInvocationIndex;
+  let valid = index < ELEMENT_COUNT;
+  var key = 0u;
+  var bucket = 0u;
+  if (valid) {
+    key = keys[KEYS_OFFSET + index];
+    let digit = (key >> BIT_OFFSET) & DIGIT_MASK;
+    bucket = ${descending ? 'DIGIT_MASK - digit' : 'digit'};
+    let wordIndex = localInvocationIndex >> 5u;
+    let bitIndex = localInvocationIndex & 31u;
+    atomicOr(&digitMasks[bucket * MASK_WORD_COUNT + wordIndex], 1u << bitIndex);
+  }
+  workgroupBarrier();
+
   if (index >= ELEMENT_COUNT) { return; }
-  let firstOffset = offsets[OFFSETS_OFFSET + index];
-  let firstCount = offsets[OFFSETS_OFFSET + LAST_INDEX] + flags[FLAGS_OFFSET + LAST_INDEX];
-  let isFirst = flags[FLAGS_OFFSET + index] != 0u;
-  let outputIndex = select(firstCount + index - firstOffset, firstOffset, isFirst);
-  outputKeys[OUTPUT_KEYS_OFFSET + outputIndex] = keys[KEYS_OFFSET + index];
+  let maskBase = bucket * MASK_WORD_COUNT;
+  let currentWord = localInvocationIndex >> 5u;
+  var localRank = 0u;
+  for (var word = 0u; word < currentWord; word++) {
+    localRank += countOneBits(atomicLoad(&digitMasks[maskBase + word]));
+  }
+  let precedingBits = (1u << (localInvocationIndex & 31u)) - 1u;
+  localRank += countOneBits(atomicLoad(&digitMasks[maskBase + currentWord]) & precedingBits);
+  let bucketOffset = offsets[OFFSETS_OFFSET + bucket * WORKGROUP_COUNT + workgroupIndex];
+  let outputIndex = bucketOffset + localRank;
+  outputKeys[OUTPUT_KEYS_OFFSET + outputIndex] = key;
   outputValues[OUTPUT_VALUES_OFFSET + outputIndex] = values[VALUES_OFFSET + index];
 }`;
   addComputationPass(graph, {
-    id: `${sort.id}-radix-bit-${bit}-scatter`,
+    id: `${sort.id}-radix-digit-${bitOffset}-scatter`,
     source,
     resources: [
       {buffer: keys, usage: 'storage-read'},
       {buffer: values, usage: 'storage-read'},
-      {buffer: flags, usage: 'storage-read'},
       {buffer: offsets, usage: 'storage-read'},
       {buffer: outputKeys, usage: 'storage-write'},
       {buffer: outputValues, usage: 'storage-write'}
     ],
-    bindings: {keys, values, flags, offsets, outputKeys, outputValues},
+    bindings: {keys, values, offsets, outputKeys, outputValues},
     dispatchLayout
   });
 }

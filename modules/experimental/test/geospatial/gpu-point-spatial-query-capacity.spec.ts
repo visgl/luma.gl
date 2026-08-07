@@ -721,7 +721,7 @@ function encodeWithDispatchProbe(
     }
     return computePass;
   };
-  compiled.encode(commandEncoder, {parameters: undefined});
+  compiled.encode(commandEncoder, {parameters: undefined, coalesceComputePasses: false});
   device.submit(commandEncoder.finish());
   return dispatches;
 }

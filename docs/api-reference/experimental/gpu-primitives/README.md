@@ -51,6 +51,12 @@ semantic such as scan, compaction, reduction, or sorting. A **workflow** combine
 an application-level outcome such as visibility or picking. `GPUCommandGraph` schedules all of
 them by declared resource uses without owning submission or the application's frame loop.
 
+Consecutive compute nodes share a physical compute pass by default, while resource dependencies,
+copy/render boundaries, debug labels, and individual node statistics remain explicit. Timestamp
+profiling automatically restores separate passes when per-node GPU timings are required. The graph
+also aliases compatible transient buffers and textures with disjoint lifetimes, so improvements to
+generic sorting or hierarchy construction benefit every graph-based workflow.
+
 These layers deliberately preserve GPU-resident identity and dataflow. Source rows keep stable IDs,
 variable-size results publish a count alongside fixed-capacity storage, and indirect commands let a
 later render pass consume that count without a CPU synchronization point.
@@ -192,7 +198,8 @@ reachability over stable compressed sparse adjacency. `GPUAncestorProjection` pr
 nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
 parent/child row offsets. `GPUSort` promises stable paired `uint32` ordering for one packed domain,
 while `GPUBatchSort` preserves vector chunks as independent sort domains. Both choose bitonic sort
-for smaller work units and radix sort for larger ones.
+for smaller work units and radix sort for larger ones: domains of up to 256 rows are sorted inside
+one workgroup, while larger domains use stable four-bit histogram, prefix-scan, and scatter stages.
 `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, and
 `GPUGroupAggregation` promise aggregate and binning results while selecting hierarchical and
 atomic implementations internally.
@@ -1210,7 +1217,7 @@ It preserves the number, order, and length of source batches, never allocates a 
 copy, and selects bitonic or radix sorting independently for each chunk. This supports streaming
 record batches, per-tile ordering, and incremental ingestion where partition boundaries are part
 of the storage and lifetime contract. The GPU sort example contrasts that behavior with one
-explicit packed global sort and validates mixed bitonic/radix batches against a CPU oracle.
+explicit packed global sort and validates independently sorted batches against a CPU oracle.
 
 More batch-aware operations remain consumer-driven rather than being required to complete this
 phase. Custom associative scans, sparse histograms, and multidimensional histograms should be added
@@ -1423,9 +1430,12 @@ allowing BVH-specific topology.
 
 `GPUBVH` reserves a power-of-two leaf capacity and publishes `2 * leafCapacity - 1` row-major node
 bounds and child pairs plus stable leaf IDs. Source order defines leaf slots. Each encoding reloads
-the bounded source prefix and reduces parent bounds in explicit bottom-up level passes, so changing
-bounds refits without graph recompilation or identity changes. Count, overflow, topology, update
-policy, level count, and caller-owned output bytes are explicit.
+the bounded source prefix and reduces parent bounds bottom-up, so changing bounds refits without
+graph recompilation or identity changes. Hierarchies of up to 128 leaves fuse the complete build
+into one workgroup; larger hierarchies retain explicit, safely ordered level passes. Optional
+caller-supplied source identifiers are published without exceeding the default eight-buffer WebGPU
+CORE limit. Count, overflow, topology, update policy, level count, and caller-owned output bytes
+remain explicit.
 
 The complete source-order topology is a correctness and refit baseline, not a promised spatial
 quality heuristic. Tiled, Morton-ordered, or producer-sorted inputs may already have locality;

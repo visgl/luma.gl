@@ -35,14 +35,21 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.storage.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
       {name: 'primitiveMinima', binding: 2},
-      {name: 'primitiveMaxima', binding: 3}
+      {name: 'primitiveMaxima', binding: 3},
+      {name: 'blasNodes', binding: 4}
     ]);
     expect(reflection.storage[0].format?.size).toBe(272);
-    expect(reflection.uniforms.length + reflection.storage.length).toBe(4);
+    expect(reflection.storage.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
+    expect(reflection.uniforms.length + reflection.storage.length).toBe(5);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('length(firstRow)');
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('length(secondRow)');
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('length(thirdRow)');
+    expect(RAY_TRACING_BOUNDS_SHADER).toContain('let rootNode = blasNodes[u32(primitive.blas.x)]');
+    expect(RAY_TRACING_BOUNDS_SHADER).toContain('dot(abs(firstRow), localExtent)');
+    expect(RAY_TRACING_BOUNDS_SHADER).toContain('dot(abs(secondRow), localExtent)');
+    expect(RAY_TRACING_BOUNDS_SHADER).toContain('dot(abs(thirdRow), localExtent)');
+    expect(RAY_TRACING_BOUNDS_SHADER).toContain('select(sphereExtent, meshExtent, usesMeshBounds)');
     expect(RAY_TRACING_BOUNDS_SHADER).toContain(
       'primitiveMaxima[componentIndex + axis] = -INVALID_BOUND'
     );

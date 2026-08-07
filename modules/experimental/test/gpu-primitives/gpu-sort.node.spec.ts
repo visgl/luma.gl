@@ -53,7 +53,7 @@ describe('bounded GPU sort dispatch', () => {
     );
   });
 
-  test('propagates one synthetic limit through every bitonic and radix scan stage', () => {
+  test('propagates one synthetic limit through every bitonic and four-bit radix stage', () => {
     for (const algorithm of ['bitonic', 'radix'] as const) {
       const fixture = createSortGraphFixture(4 * WORKGROUP_SIZE + 1, algorithm);
       const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
@@ -68,17 +68,92 @@ describe('bounded GPU sort dispatch', () => {
           expect(identifiers).toContain('node-sort-bitonic-2048-1');
           expect(identifiers).toContain('node-sort-bitonic-gather');
         } else {
-          expect(identifiers).toContain('node-sort-radix-bit-0-classify');
-          expect(identifiers).toContain('node-sort-radix-bit-0-scan-level-0-scan');
-          expect(identifiers).toContain('node-sort-radix-bit-0-scan-level-0-add-offsets');
-          expect(identifiers).toContain('node-sort-radix-bit-0-scatter');
-          expect(identifiers).toContain('node-sort-radix-bit-31-classify');
-          expect(identifiers).toContain('node-sort-radix-bit-31-scatter');
+          expect(identifiers).toContain('node-sort-radix-digit-0-histogram');
+          expect(identifiers).toContain('node-sort-radix-digit-0-scan-level-0-scan');
+          expect(identifiers).toContain('node-sort-radix-digit-0-scatter');
+          expect(identifiers).toContain('node-sort-radix-digit-28-histogram');
+          expect(identifiers).toContain('node-sort-radix-digit-28-scatter');
+          expect(identifiers).toHaveLength(24);
         }
         expect(createBuffer).not.toHaveBeenCalled();
       } finally {
         addComputePass.mockRestore();
         createBuffer.mockRestore();
+        fixture.device.destroy();
+      }
+    }
+  });
+
+  test('fuses a complete stable workgroup-local bitonic network into one dispatch', () => {
+    for (const length of [2, 3, 255, 256]) {
+      const fixture = createSortGraphFixture(length, 'auto');
+      const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
+      const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
+
+      try {
+        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 65_535);
+
+        expect(fixture.sort.resolvedAlgorithm).toBe('bitonic');
+        expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
+          'node-sort-bitonic-local'
+        ]);
+        expect(createTransientBuffer).not.toHaveBeenCalled();
+      } finally {
+        addComputePass.mockRestore();
+        createTransientBuffer.mockRestore();
+        fixture.device.destroy();
+      }
+    }
+  });
+
+  test('switches automatic sorts to four-bit radix beyond one workgroup', () => {
+    for (const [length, expectedPassCount] of [
+      [257, 24],
+      [1_024, 24],
+      [4_096, 24],
+      [65_536, 40]
+    ] as const) {
+      const fixture = createSortGraphFixture(length, 'auto');
+      const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
+
+      try {
+        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 65_535);
+
+        expect(fixture.sort.resolvedAlgorithm).toBe('radix');
+        expect(addComputePass).toHaveBeenCalledTimes(expectedPassCount);
+      } finally {
+        addComputePass.mockRestore();
+        fixture.device.destroy();
+      }
+    }
+  });
+
+  test('processes only significant radix digits and writes the last digit directly', () => {
+    for (const [keyBits, digitCount, finalBitOffset] of [
+      [1, 1, 0],
+      [3, 1, 0],
+      [4, 1, 0],
+      [5, 2, 4],
+      [15, 4, 12],
+      [31, 8, 28],
+      [32, 8, 28]
+    ] as const) {
+      const fixture = createSortGraphFixture(513, 'radix', keyBits);
+      const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
+
+      try {
+        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 65_535);
+
+        const passes = addComputePass.mock.calls.map(([pass]) => pass);
+        const identifiers = passes.map(pass => pass.id);
+        expect(identifiers.filter(identifier => identifier?.endsWith('-histogram'))).toHaveLength(
+          digitCount
+        );
+        expect(identifiers.at(-1)).toBe(`node-sort-radix-digit-${finalBitOffset}-scatter`);
+        expect(identifiers).not.toContain('node-sort-radix-final-copy');
+        expect(passes.every(pass => (pass.resources?.length ?? 0) <= 8)).toBe(true);
+      } finally {
+        addComputePass.mockRestore();
         fixture.device.destroy();
       }
     }
@@ -153,12 +228,10 @@ describe('bounded GPU sort dispatch', () => {
       sort.addToGraph(graph);
 
       const identifiers = addComputePass.mock.calls.map(([pass]) => pass.id);
-      expect(identifiers).toContain('bounded-batch-sort-chunk-0-bitonic-initialize');
-      expect(identifiers).toContain('bounded-batch-sort-chunk-0-bitonic-2048-1');
-      expect(identifiers).toContain('bounded-batch-sort-chunk-0-bitonic-gather');
-      expect(identifiers).toContain('bounded-batch-sort-chunk-2-bitonic-initialize');
-      expect(identifiers).toContain('bounded-batch-sort-chunk-2-bitonic-1024-1');
-      expect(identifiers).toContain('bounded-batch-sort-chunk-2-bitonic-gather');
+      expect(identifiers).toContain('bounded-batch-sort-chunk-0-radix-digit-0-histogram');
+      expect(identifiers).toContain('bounded-batch-sort-chunk-0-radix-digit-28-scatter');
+      expect(identifiers).toContain('bounded-batch-sort-chunk-2-radix-digit-0-histogram');
+      expect(identifiers).toContain('bounded-batch-sort-chunk-2-radix-digit-28-scatter');
       expect(identifiers.some(identifier => identifier?.includes('chunk-1'))).toBe(false);
     } finally {
       addComputePass.mockRestore();
@@ -169,7 +242,8 @@ describe('bounded GPU sort dispatch', () => {
 
 function createSortGraphFixture(
   length: number,
-  algorithm: GPUSortAlgorithm
+  algorithm: GPUSortAlgorithm,
+  keyBits?: number
 ): {device: NullDevice; graph: GPUCommandGraph; sort: GPUSort} {
   const device = new NullDevice({id: 'bounded-sort-node-device'});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
@@ -180,7 +254,8 @@ function createSortGraphFixture(
     values: createSortView(graph, 'values', length),
     outputKeys: createSortView(graph, 'output-keys', length),
     outputValues: createSortView(graph, 'output-values', length),
-    algorithm
+    algorithm,
+    keyBits
   });
   return {device, graph, sort};
 }

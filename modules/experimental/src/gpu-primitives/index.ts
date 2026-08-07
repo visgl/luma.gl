@@ -190,7 +190,7 @@ export type {
 } from './gpu-point-spatial-filter';
 
 export {GPUBVH} from './gpu-bvh';
-export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats} from './gpu-bvh';
+export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats, GPUBVHStrategy} from './gpu-bvh';
 
 export {GPUBVHQuery} from './gpu-bvh-query';
 export type {GPUBVHQueryKind, GPUBVHQueryProps, GPUBVHView} from './gpu-bvh-query';

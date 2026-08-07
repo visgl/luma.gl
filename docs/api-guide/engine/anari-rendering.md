@@ -237,6 +237,10 @@ hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-onl
 updated bounds through the retained permutation and refits the TLAS without sorting; topology
 changes and periodic spatial refreshes rebuild the Morton order. A topology-only graph also
 Morton-sorts each mesh's triangles into GPU-built BLASes, which transform-only animation reuses.
+The instance-bounds pass reads each mesh BLAS root directly, producing a tight transformed local
+AABB instead of expanding elongated meshes to their enclosing sphere. Small sorts and hierarchy
+builds execute inside one workgroup; larger sorts use stable four-bit radix passes, and consecutive
+compute nodes share a command-encoder compute pass when per-node GPU timestamps are not requested.
 The same `GPUCommandGraph` evaluates direct lights, progressively accumulates unchanged primary-ray
 samples, and presents HDR when the canvas is configured for it. Generated quads, cylinders, and
 cones use their existing triangle geometry.
@@ -805,7 +809,11 @@ the software tracer the same coarse/fine reuse boundary that hardware APIs expos
 encodes Morton keys, sorts keys and explicit leaf identifiers, gathers sorted bounds, and refits a
 complete-binary hierarchy. Morton order is cheap and parallel because nearby centroids tend to
 become nearby leaves. It is an LBVH-style spatial ordering strategy, used for both object/instance
-TLAS leaves and per-mesh triangle BLAS leaves.
+TLAS leaves and per-mesh triangle BLAS leaves. The reusable graph-native sorter resolves inputs of
+up to 256 elements with a single-workgroup stable bitonic dispatch and larger inputs with a stable
+four-bit radix histogram, prefix scan, and scatter pipeline. `GPUBVH` similarly fuses hierarchies
+of up to 128 leaves into a single workgroup while retaining its level-by-level fallback for larger
+trees. These are general graph contributors, not ANARI-specific acceleration implementations.
 
 Morton sorting is not the same as a full high-quality BVH builder. In particular, the current code
 does not implement the binary-radix-tree topology from
@@ -813,8 +821,9 @@ does not implement the binary-radix-tree topology from
 and it does not choose splits with the surface-area heuristic (SAH), as described by
 [Wald, “On fast Construction of SAH-based Bounding Volume Hierarchies”](https://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf).
 The implemented sorted complete-binary tree is cheaper to build and easy to express in the existing
-`GPUBVH` graph, but its traversal quality can be worse for clustered, elongated, or highly
-overlapping geometry. Karras-style topology, SAH refinement, wider nodes, and measured traversal
+`GPUBVH` graph, but its traversal quality can be worse for clustered or highly overlapping
+geometry. Exact transformed BLAS-root bounds avoid the unnecessary enclosing-sphere overlap of
+elongated instances, but Karras-style topology, SAH refinement, wider nodes, and measured traversal
 diagnostics remain planned rather than implied by the word “Morton.”
 
 #### Refit versus rebuild

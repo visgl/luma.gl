@@ -83,6 +83,11 @@ test('GPUCommandGraph compiles dependencies and reuses transient buffers', async
     128,
     'reports total owned transient bytes'
   );
+  const commandEncoder = device.createCommandEncoder({id: 'graph-scheduling-encoding'});
+  const encoding = compiled.encode(commandEncoder, {parameters: undefined});
+  t.equal(encoding.stats.computePassCount, 1, 'coalesces consecutive graph compute nodes');
+  t.equal(encoding.stats.coalescedComputeNodeCount, 2, 'reports nodes sharing the physical pass');
+  commandEncoder.destroy();
   compiled.destroy();
   t.end();
 });
@@ -134,6 +139,8 @@ test('GPUCommandGraph reports adapter capabilities and explicit encoding timings
   const commandEncoder = device.createCommandEncoder({id: 'graph-diagnostics-encoding'});
   const encoding = compiled.encode(commandEncoder, {parameters: undefined});
   t.equal(encoding.stats.nodeCount, 2, 'reports every encoded node');
+  t.equal(encoding.stats.computePassCount, 1, 'reports the number of physical compute passes');
+  t.equal(encoding.stats.coalescedComputeNodeCount, 0, 'reports no merged standalone node');
   t.equal(encoding.stats.timestampedNodeCount, 0, 'does not invent GPU timestamps');
   t.notOk(encoding.canReadGPUTimings, 'plain encoders do not expose GPU timing readback');
   t.ok(encoding.stats.cpuEncodeTimeMilliseconds >= 0, 'reports total CPU encoding time');
