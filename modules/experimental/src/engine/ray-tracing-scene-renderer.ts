@@ -1046,6 +1046,7 @@ export class RayTracingSceneRenderer {
       frameIdentifier,
       uniformBuffer,
       primitiveBuffer,
+      blasNodesBuffer,
       primitiveCapacity,
       leafCapacity,
       nodeMinimaBuffer,
@@ -1060,6 +1061,7 @@ export class RayTracingSceneRenderer {
       frameIdentifier,
       uniformBuffer,
       primitiveBuffer,
+      blasNodesBuffer,
       primitiveCapacity,
       leafCapacity,
       nodeMinimaBuffer,
@@ -1682,6 +1684,7 @@ export class RayTracingSceneRenderer {
     frameIdentifier: string;
     uniformBuffer: Buffer;
     primitiveBuffer: Buffer;
+    blasNodesBuffer: Buffer;
     primitiveCapacity: number;
     leafCapacity: number;
     nodeMinimaBuffer: Buffer;
@@ -1710,6 +1713,14 @@ export class RayTracingSceneRenderer {
         usage: props.primitiveBuffer.usage
       },
       props.primitiveBuffer
+    );
+    const blasNodes = graph.importBuffer(
+      {
+        id: 'blas-nodes',
+        byteLength: props.blasNodesBuffer.byteLength,
+        usage: props.blasNodesBuffer.usage
+      },
+      props.blasNodesBuffer
     );
     const primitiveMinima: GraphDataView<'float32x3'> = createTransientView(
       graph,
@@ -1814,7 +1825,8 @@ export class RayTracingSceneRenderer {
         {buffer: uniforms, usage: 'uniform'},
         {buffer: primitives, usage: 'storage-read'},
         {buffer: primitiveMinima, usage: 'storage-write'},
-        {buffer: primitiveMaxima, usage: 'storage-write'}
+        {buffer: primitiveMaxima, usage: 'storage-write'},
+        {buffer: blasNodes, usage: 'storage-read'}
       ],
       compile: ({device}) => {
         const computation = new Computation(device, {
@@ -1825,7 +1837,8 @@ export class RayTracingSceneRenderer {
               {name: 'uniforms', type: 'uniform', group: 0, location: 0},
               {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
               {name: 'primitiveMinima', type: 'storage', group: 0, location: 2},
-              {name: 'primitiveMaxima', type: 'storage', group: 0, location: 3}
+              {name: 'primitiveMaxima', type: 'storage', group: 0, location: 3},
+              {name: 'blasNodes', type: 'read-only-storage', group: 0, location: 4}
             ]
           }
         });
@@ -1835,7 +1848,8 @@ export class RayTracingSceneRenderer {
               uniforms: getBuffer(uniforms),
               primitives: getBuffer(primitives),
               primitiveMinima: getViewBinding(primitiveMinima, getBuffer),
-              primitiveMaxima: getViewBinding(primitiveMaxima, getBuffer)
+              primitiveMaxima: getViewBinding(primitiveMaxima, getBuffer),
+              blasNodes: getBuffer(blasNodes)
             });
             computation.dispatch(computePass, Math.ceil(props.primitiveCapacity / 128));
           },
@@ -2004,6 +2018,7 @@ export class RayTracingSceneRenderer {
     frameIdentifier: string;
     uniformBuffer: Buffer;
     primitiveBuffer: Buffer;
+    blasNodesBuffer: Buffer;
     primitiveCapacity: number;
     leafCapacity: number;
     nodeMinimaBuffer: Buffer;
@@ -2032,6 +2047,14 @@ export class RayTracingSceneRenderer {
         usage: props.primitiveBuffer.usage
       },
       props.primitiveBuffer
+    );
+    const blasNodes = graph.importBuffer(
+      {
+        id: 'blas-nodes',
+        byteLength: props.blasNodesBuffer.byteLength,
+        usage: props.blasNodesBuffer.usage
+      },
+      props.blasNodesBuffer
     );
     const primitiveMinima: GraphDataView<'float32x3'> = createTransientView(
       graph,
@@ -2112,7 +2135,8 @@ export class RayTracingSceneRenderer {
         {buffer: uniforms, usage: 'uniform'},
         {buffer: primitives, usage: 'storage-read'},
         {buffer: primitiveMinima, usage: 'storage-write'},
-        {buffer: primitiveMaxima, usage: 'storage-write'}
+        {buffer: primitiveMaxima, usage: 'storage-write'},
+        {buffer: blasNodes, usage: 'storage-read'}
       ],
       compile: ({device}) => {
         const computation = new Computation(device, {
@@ -2123,7 +2147,8 @@ export class RayTracingSceneRenderer {
               {name: 'uniforms', type: 'uniform', group: 0, location: 0},
               {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
               {name: 'primitiveMinima', type: 'storage', group: 0, location: 2},
-              {name: 'primitiveMaxima', type: 'storage', group: 0, location: 3}
+              {name: 'primitiveMaxima', type: 'storage', group: 0, location: 3},
+              {name: 'blasNodes', type: 'read-only-storage', group: 0, location: 4}
             ]
           }
         });
@@ -2133,7 +2158,8 @@ export class RayTracingSceneRenderer {
               uniforms: getBuffer(uniforms),
               primitives: getBuffer(primitives),
               primitiveMinima: getViewBinding(primitiveMinima, getBuffer),
-              primitiveMaxima: getViewBinding(primitiveMaxima, getBuffer)
+              primitiveMaxima: getViewBinding(primitiveMaxima, getBuffer),
+              blasNodes: getBuffer(blasNodes)
             });
             computation.dispatch(computePass, Math.ceil(props.primitiveCapacity / 128));
           },

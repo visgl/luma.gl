@@ -140,17 +140,18 @@ frame.render();
 ```
 
 The ANARI adapter translates committed objects for the shared `RayTracingSceneRenderer` in
-`@luma.gl/experimental`. A WebGPU compute graph builds and refits a `GPUBVH` over transformed
-analytic spheres and mesh instances, traverses it for nearest-hit rays and early-exit shadows,
-evaluates direct lights, progressively accumulates primary-ray samples, and presents HDR when
-configured. The graph uses default WebGPU CORE storage-buffer limits and leaves submission under
+`@luma.gl/experimental`. Its retained WebGPU command graphs build Morton-sorted object/instance
+TLAS and per-mesh triangle BLAS hierarchies, derive tight transformed mesh bounds from BLAS roots,
+and reuse existing hierarchy topology while instances animate. General-purpose `GPUSort` and
+`GPUBVH` graph contributors fuse small work into single workgroups; larger sorts use stable
+multi-bit radix passes. The tracer evaluates direct lighting and shadows, progressively
+accumulates compatible history, adapts its internal resolution, and presents HDR when configured.
+Every pass remains within default WebGPU CORE storage-buffer limits and leaves submission under
 application control.
 
-The hierarchy accelerates objects and instances; triangles within each surviving mesh are still
-tested linearly. Hardware ray tracing, Morton-sorted construction, per-mesh triangle BVHs, indirect
-multi-bounce transport, denoising, and volume rendering are not implemented. Skeletal/morph
-deformation, material textures, alpha/transmission, and advanced PBR shading remain on the
-forward/deferred renderer paths.
+Hardware ray tracing, SAH/Karras hierarchy topology, indirect multi-bounce transport, denoising,
+and volume rendering are not implemented. Skeletal/morph deformation, material textures,
+alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer paths.
 
 Applications can register additional lazy renderer runtimes with
 `anari.registerRenderer(subtype, runtimeFactory)`.

@@ -225,8 +225,10 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       'sort-primitive-morton-keys'
     );
     const gatherBoundsIndex = findNodeIndex(accelerationNodeOrder, 'gather-sorted-bounds');
-    const loadLeavesIndex = findNodeIndex(accelerationNodeOrder, 'ray-tracing-bvh-load-leaves');
-    const refitIndex = findNodeIndex(accelerationNodeOrder, 'ray-tracing-bvh-refit-depth');
+    const fusedAccelerationIndex = findNodeIndex(
+      accelerationNodeOrder,
+      'ray-tracing-bvh-fused-refit'
+    );
     testCase.ok(
       [
         buildBoundsIndex,
@@ -235,21 +237,35 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         encodeMortonIndex,
         sortMortonCompletionIndex,
         gatherBoundsIndex,
-        loadLeavesIndex,
-        refitIndex
+        fusedAccelerationIndex
       ].every(index => index >= 0) &&
         buildBoundsIndex < reduceBoundsIndex &&
         initializeBoundsIndex < reduceBoundsIndex &&
         reduceBoundsIndex < encodeMortonIndex &&
         encodeMortonIndex < sortMortonCompletionIndex &&
         sortMortonCompletionIndex < gatherBoundsIndex &&
-        gatherBoundsIndex < loadLeavesIndex &&
-        loadLeavesIndex < refitIndex,
-      'the acceleration graph builds bounds, Morton-sorts leaves, gathers them, then refits the TLAS'
+        gatherBoundsIndex < fusedAccelerationIndex,
+      'the acceleration graph tightly bounds meshes, sorts leaves, and builds the TLAS in one fused workgroup'
+    );
+    testCase.ok(
+      accelerationNodeOrder.some(identifier =>
+        identifier.includes('sort-primitive-morton-keys-bitonic-local')
+      ),
+      'small instance permutations reuse the general single-dispatch GPU sort primitive'
+    );
+    testCase.notOk(
+      accelerationNodeOrder.some(identifier =>
+        identifier.includes('sort-primitive-morton-keys-bitonic-initialize')
+      ),
+      'small instance permutations avoid the legacy per-stage bitonic sorting network'
     );
     testCase.ok(
       getGraphBufferIdentifiers(frameResources.accelerationGraph).includes('sorted-primitive-ids'),
       'the acceleration graph publishes an explicit sorted primitive permutation'
+    );
+    testCase.ok(
+      getGraphBufferIdentifiers(frameResources.accelerationGraph).includes('blas-nodes'),
+      'the acceleration graph reads exact local mesh bounds from retained BLAS roots'
     );
     testCase.ok(
       getGraphBufferIdentifiers(frameResources.traceGraph).includes('leaf-primitive-ids'),
@@ -268,8 +284,7 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       'blas-0-sort-triangle-morton-keys'
     );
     const gatherBlasBoundsIndex = findNodeIndex(topologyNodeOrder, 'blas-0-gather-sorted-bounds');
-    const loadBlasLeavesIndex = findNodeIndex(topologyNodeOrder, 'blas-0-bvh-load-leaves');
-    const refitBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-0-bvh-refit-depth');
+    const fusedBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-0-bvh-fused-refit');
     const packBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-0-pack-nodes');
     testCase.ok(
       [
@@ -279,8 +294,7 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         encodeBlasMortonIndex,
         sortBlasMortonCompletionIndex,
         gatherBlasBoundsIndex,
-        loadBlasLeavesIndex,
-        refitBlasIndex,
+        fusedBlasIndex,
         packBlasIndex
       ].every(index => index >= 0) &&
         triangleBoundsIndex < reduceBlasBoundsIndex &&
@@ -288,10 +302,15 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
         reduceBlasBoundsIndex < encodeBlasMortonIndex &&
         encodeBlasMortonIndex < sortBlasMortonCompletionIndex &&
         sortBlasMortonCompletionIndex < gatherBlasBoundsIndex &&
-        gatherBlasBoundsIndex < loadBlasLeavesIndex &&
-        loadBlasLeavesIndex < refitBlasIndex &&
-        refitBlasIndex < packBlasIndex,
-      'the topology graph Morton-sorts mesh triangles, builds the BLAS, and packs trace nodes'
+        gatherBlasBoundsIndex < fusedBlasIndex &&
+        fusedBlasIndex < packBlasIndex,
+      'the topology graph Morton-sorts mesh triangles, fuses the BLAS hierarchy, and packs trace nodes'
+    );
+    testCase.ok(
+      topologyNodeOrder.some(identifier =>
+        identifier.includes('blas-0-sort-triangle-morton-keys-bitonic-local')
+      ),
+      'small mesh triangle permutations reuse the general single-dispatch GPU sort primitive'
     );
     testCase.ok(
       getGraphBufferIdentifiers(frameResources.topologyGraph).includes('blas-nodes') &&
@@ -306,16 +325,12 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     const refitNodeOrder = frameResources.refitGraph.stats.nodeOrder;
     const refitBoundsIndex = findNodeIndex(refitNodeOrder, 'refit-primitive-bounds');
     const refitGatherIndex = findNodeIndex(refitNodeOrder, 'refit-gather-sorted-bounds');
-    const refitLoadLeavesIndex = findNodeIndex(refitNodeOrder, 'ray-tracing-refit-bvh-load-leaves');
-    const refitDepthIndex = findNodeIndex(refitNodeOrder, 'ray-tracing-refit-bvh-refit-depth');
+    const fusedRefitIndex = findNodeIndex(refitNodeOrder, 'ray-tracing-refit-bvh-fused-refit');
     testCase.ok(
-      [refitBoundsIndex, refitGatherIndex, refitLoadLeavesIndex, refitDepthIndex].every(
-        index => index >= 0
-      ) &&
+      [refitBoundsIndex, refitGatherIndex, fusedRefitIndex].every(index => index >= 0) &&
         refitBoundsIndex < refitGatherIndex &&
-        refitGatherIndex < refitLoadLeavesIndex &&
-        refitLoadLeavesIndex < refitDepthIndex,
-      'the transform-only graph gathers the retained permutation and refits without rebuilding Morton keys'
+        refitGatherIndex < fusedRefitIndex,
+      'the transform-only graph tightly bounds meshes and refits the retained TLAS in one fused workgroup'
     );
     testCase.notOk(
       refitNodeOrder.some(
@@ -333,6 +348,10 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     testCase.ok(
       getGraphBufferIdentifiers(frameResources.refitGraph).includes('sorted-primitive-ids'),
       'the refit graph reuses the retained sorted primitive permutation'
+    );
+    testCase.ok(
+      getGraphBufferIdentifiers(frameResources.refitGraph).includes('blas-nodes'),
+      'the refit graph reuses exact retained BLAS root bounds during instance animation'
     );
     testCase.equal(
       frameResources.traceGraph.stats.importedBufferCount,

@@ -162,12 +162,19 @@ export class GPUCommandGraphEncoding {
   private readonly nodes: EncodedGPUCommandGraphNode[];
 
   /** @internal */
-  constructor(nodes: EncodedGPUCommandGraphNode[], cpuEncodeTimeMilliseconds: number) {
+  constructor(
+    nodes: EncodedGPUCommandGraphNode[],
+    cpuEncodeTimeMilliseconds: number,
+    computePassCount: number
+  ) {
     this.nodes = nodes;
     this.canReadGPUTimings = nodes.some(node => node.timestamp !== undefined);
+    const computeNodeCount = nodes.filter(node => node.stats.type === 'compute').length;
     this.stats = {
       cpuEncodeTimeMilliseconds,
       nodeCount: nodes.length,
+      computePassCount,
+      coalescedComputeNodeCount: computeNodeCount - computePassCount,
       timestampedNodeCount: nodes.filter(node => node.timestamp !== undefined).length,
       nodes: nodes.map(node => node.stats)
     };
@@ -901,78 +908,104 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     };
 
     const encodedNodes: EncodedGPUCommandGraphNode[] = [];
-    for (const {node, executable} of this.compiledNodes) {
-      const nodeStartTime = getTimestampMilliseconds();
-      let timestamp: GPUCommandGraphNodeTimestamp | undefined;
-      switch (node.type) {
-        case 'compute': {
-          const computePass = commandEncoder.beginComputePass({id: node.id});
-          timestamp = getPassTimestamp(computePass);
-          computePass.pushDebugGroup(node.id);
-          try {
-            (executable as GPUCommandGraphComputeExecutable<Parameters>).encode({
-              ...baseContext,
-              computePass
+    let activeComputePass: ComputePass | undefined;
+    let computePassCount = 0;
+    let coalesceComputePasses =
+      options.coalesceComputePasses !== false && commandEncoder.getTimeProfilingQuerySet() === null;
+    const endActiveComputePass = (): void => {
+      const computePass = activeComputePass;
+      activeComputePass = undefined;
+      computePass?.end();
+    };
+
+    try {
+      for (const {node, executable} of this.compiledNodes) {
+        const nodeStartTime = getTimestampMilliseconds();
+        let timestamp: GPUCommandGraphNodeTimestamp | undefined;
+        switch (node.type) {
+          case 'compute': {
+            if (!activeComputePass) {
+              activeComputePass = commandEncoder.beginComputePass({id: node.id});
+              computePassCount++;
+            }
+            const computePass = activeComputePass;
+            timestamp = getPassTimestamp(computePass);
+            if (timestamp) {
+              coalesceComputePasses = false;
+            }
+            computePass.pushDebugGroup(node.id);
+            try {
+              (executable as GPUCommandGraphComputeExecutable<Parameters>).encode({
+                ...baseContext,
+                computePass
+              });
+            } finally {
+              computePass.popDebugGroup();
+            }
+            if (!coalesceComputePasses) {
+              endActiveComputePass();
+            }
+            break;
+          }
+          case 'render': {
+            endActiveComputePass();
+            const renderExecutable = executable as GPUCommandGraphRenderExecutable<Parameters>;
+            const renderPassProps = renderExecutable.getRenderPassProps?.(baseContext) ?? {
+              id: node.id
+            };
+            if (node.attachments && renderPassProps.framebuffer !== undefined) {
+              throw new Error(
+                `GPUCommandGraph render node "${node.id}" cannot supply framebuffer with graph attachments`
+              );
+            }
+            if (node.attachments?.resolveTargets && renderPassProps.resolveTargets !== undefined) {
+              throw new Error(
+                `GPUCommandGraph render node "${node.id}" cannot supply resolveTargets with graph attachments`
+              );
+            }
+            const framebuffer = node.attachments
+              ? this.getFramebuffer(node.id, node.attachments, getTextureView)
+              : undefined;
+            const resolveTargets = node.attachments?.resolveTargets?.map(target =>
+              target ? getTextureView(target) : null
+            );
+            const renderPass = commandEncoder.beginRenderPass({
+              ...renderPassProps,
+              ...(framebuffer ? {framebuffer} : {}),
+              ...(resolveTargets ? {resolveTargets} : {})
             });
-          } finally {
-            computePass.popDebugGroup();
-            computePass.end();
+            timestamp = getPassTimestamp(renderPass);
+            renderPass.pushDebugGroup(node.id);
+            try {
+              renderExecutable.encode({...baseContext, renderPass});
+            } finally {
+              renderPass.popDebugGroup();
+              renderPass.end();
+            }
+            break;
           }
-          break;
+          case 'copy':
+            endActiveComputePass();
+            (executable as GPUCommandGraphCopyExecutable<Parameters>).encode(baseContext);
+            break;
         }
-        case 'render': {
-          const renderExecutable = executable as GPUCommandGraphRenderExecutable<Parameters>;
-          const renderPassProps = renderExecutable.getRenderPassProps?.(baseContext) ?? {
-            id: node.id
-          };
-          if (node.attachments && renderPassProps.framebuffer !== undefined) {
-            throw new Error(
-              `GPUCommandGraph render node "${node.id}" cannot supply framebuffer with graph attachments`
-            );
-          }
-          if (node.attachments?.resolveTargets && renderPassProps.resolveTargets !== undefined) {
-            throw new Error(
-              `GPUCommandGraph render node "${node.id}" cannot supply resolveTargets with graph attachments`
-            );
-          }
-          const framebuffer = node.attachments
-            ? this.getFramebuffer(node.id, node.attachments, getTextureView)
-            : undefined;
-          const resolveTargets = node.attachments?.resolveTargets?.map(target =>
-            target ? getTextureView(target) : null
-          );
-          const renderPass = commandEncoder.beginRenderPass({
-            ...renderPassProps,
-            ...(framebuffer ? {framebuffer} : {}),
-            ...(resolveTargets ? {resolveTargets} : {})
-          });
-          timestamp = getPassTimestamp(renderPass);
-          renderPass.pushDebugGroup(node.id);
-          try {
-            renderExecutable.encode({...baseContext, renderPass});
-          } finally {
-            renderPass.popDebugGroup();
-            renderPass.end();
-          }
-          break;
-        }
-        case 'copy':
-          (executable as GPUCommandGraphCopyExecutable<Parameters>).encode(baseContext);
-          break;
+        encodedNodes.push({
+          stats: {
+            id: node.id,
+            type: node.type,
+            cpuEncodeTimeMilliseconds: getTimestampMilliseconds() - nodeStartTime,
+            hasGPUTimestamps: timestamp !== undefined
+          },
+          timestamp
+        });
       }
-      encodedNodes.push({
-        stats: {
-          id: node.id,
-          type: node.type,
-          cpuEncodeTimeMilliseconds: getTimestampMilliseconds() - nodeStartTime,
-          hasGPUTimestamps: timestamp !== undefined
-        },
-        timestamp
-      });
+    } finally {
+      endActiveComputePass();
     }
     return new GPUCommandGraphEncoding(
       encodedNodes,
-      getTimestampMilliseconds() - encodingStartTime
+      getTimestampMilliseconds() - encodingStartTime,
+      computePassCount
     );
   }
 

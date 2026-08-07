@@ -9,7 +9,10 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 `GPUBVH` builds and refits a flat, complete-binary bounding-volume hierarchy over packed 2D or 3D
 axis-aligned bounds. Source order defines stable leaf slots, every node has caller-visible bounds
 and child indices, and each graph encoding reloads the bounded leaf prefix before reducing parent
-bounds bottom-up.
+bounds bottom-up. Small hierarchies fuse that complete operation into one portable workgroup and one
+command-graph node; larger hierarchies retain separate, safely ordered passes for each tree level.
+Optional explicit source identities add one inexpensive, two-buffer remapping node to either
+strategy while keeping every pass within standard WebGPU CORE limits.
 
 This first BVH contract emphasizes storage, identity, update behavior, and measurable cost. It does
 not claim that source order is a high-quality spatial topology. Query and spatial-rebuild policies
@@ -43,12 +46,32 @@ the leaf storage, but sparse capacities can still waste meaningful memory.
 
 1. reloads current source bounds into the reserved leaf prefix;
 2. republishes stable leaf IDs and fixed child topology;
-3. reduces one internal level per compute pass until the root is current.
+3. reduces internal levels bottom-up until the root is current.
 
 Changing bounds therefore needs no graph recompilation and preserves leaf identity. Changing
 capacity, source ordering, or topology requires constructing a new BVH and recompiling the graph.
 That distinction matters: refit is predictable and cheap, but repeatedly moving objects far from
 their source-order neighbors can leave a poor hierarchy poor.
+
+### Fused and per-level execution
+
+`strategy: 'auto'` is the default. When `leafCapacity` is at most 128 and the adapter can fit the
+required invocations and workgroup memory, construction and refit run in a single `fused-refit`
+compute node. The workgroup keeps two copies of each reduction level in shared memory and uses
+portable `workgroupBarrier()` synchronization; it never waits for another workgroup or assumes a
+particular scheduler. The pass uses the eight storage-buffer bindings available in default WebGPU
+CORE. Explicit source IDs are published by a separate two-buffer `remap-source-ids` node after
+implicit leaf indices are initialized, so stable identities do not require an elevated adapter
+limit.
+
+Larger trees automatically select the existing `level` strategy: one `load-leaves` node followed by
+one `refit-depth-*` node for each internal tree level. Set `strategy: 'level'` to force that path for
+a small tree, or `strategy: 'fused'` to require the one-workgroup path. An unsupported forced fused
+configuration throws during construction. Inspect `strategy` for the requested policy and
+`resolvedStrategy` for the concrete graph shape. Both strategies publish exactly the same bounds,
+children, source IDs, count, overflow, and query-compatible storage. Without explicit source IDs,
+fused graphs contain one node and per-level graphs contain one node per tree level; providing
+`sourceIds` adds exactly one remapping node to either graph.
 
 ### Why source-order topology exists
 
@@ -89,6 +112,7 @@ rebuild on every query.
 const bvh = new GPUBVH({
   minima: objectMinima,
   maxima: objectMaxima,
+  strategy: 'auto',
   sourceIds: stableObjectIds,
   leafCapacity: 1 << 16,
   nodeMinima,

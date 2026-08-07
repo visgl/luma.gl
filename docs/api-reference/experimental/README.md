@@ -38,13 +38,17 @@ forward renderer.
 
 `RayTracingSceneRenderer` consumes the same scene descriptors on WebGPU through a
 [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph). Compute
-passes derive world-space instance bounds, Morton-sort active object/instance leaves into an
-explicit retained permutation, build and refit a complete-binary TLAS through
+passes derive tight world-space instance bounds directly from retained mesh BLAS roots,
+Morton-sort active object/instance leaves into an explicit retained permutation, build and refit a
+complete-binary TLAS through
 [`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh), and traverse it for nearest-hit
 rays and early-exit shadows. Transform-only animation gathers updated bounds through the retained
 permutation and refits without sorting; topology changes and periodic spatial refreshes rebuild the
 Morton order. A topology-only graph Morton-sorts each mesh's triangles into GPU-built BLASes, which
-transform-only updates reuse. `RayTracingSceneRenderOptions` add analytic sphere metadata,
+transform-only updates reuse. The general-purpose graph sorter fuses inputs of up to 256 rows into
+one workgroup and uses stable four-bit radix passes for larger inputs; small BVHs likewise build
+and refit in one workgroup. Consecutive compute nodes automatically share a compute pass when
+per-node GPU timestamp profiling is inactive. `RayTracingSceneRenderOptions` add analytic sphere metadata,
 perspective/orthographic camera selection, adaptive half-resolution rendering, interleaved pixel
 phases, retained-identity temporal reprojection, bounded rotating shadow samples, progressive
 accumulation, and upsampled HDR presentation. The default `0.5` resolution scale can decrease to

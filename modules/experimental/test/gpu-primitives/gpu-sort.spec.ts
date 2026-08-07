@@ -33,11 +33,66 @@ test('GPUSort bitonic stably sorts paired uint32 values in both directions', asy
     t.deepEqual(result.keys, expected.keys, `${direction} bitonic keys match`);
     t.deepEqual(result.values, expected.values, `${direction} bitonic values remain stable`);
     t.equal(result.resolvedAlgorithm, 'bitonic', 'forced bitonic is reported');
-    t.ok(
-      result.nodeOrder.some(id => id.includes('bitonic-gather')),
-      'bitonic graph contains final gather'
+    t.deepEqual(
+      result.nodeOrder,
+      ['sort-bitonic-local'],
+      'one workgroup executes the complete stable bitonic network in a single pass'
     );
   }
+  t.end();
+});
+
+test('GPUSort fuses irregular workgroup-local networks on CORE WebGPU devices', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  try {
+    for (const length of [2, 3, 4, 5, 9, 17, 33, 65, 255, 256]) {
+      const keys = Uint32Array.from({length}, (_, index) =>
+        index % 13 === 0 ? 0xffffffff : (length - index) % 17
+      );
+      const values = Uint32Array.from({length}, (_, index) => 700 + index);
+      for (const direction of ['ascending', 'descending'] as const) {
+        const result = await runSort(device, keys, values, 'auto', direction);
+        const expected = getStableSortedPairs(keys, values, direction);
+        const paddedLength = 2 ** Math.ceil(Math.log2(length));
+        const source = dispatchSpy.mock.instances.at(-1)?.source ?? '';
+
+        t.deepEqual(result.keys, expected.keys, `${length}-row ${direction} local keys match`);
+        t.deepEqual(
+          result.values,
+          expected.values,
+          `${length}-row ${direction} local sort is stable`
+        );
+        t.deepEqual(
+          result.nodeOrder,
+          ['sort-bitonic-local'],
+          'one workgroup uses exactly one pass'
+        );
+        t.ok(
+          source.includes(`@workgroup_size(${paddedLength})`),
+          `${length}-row workgroups contain only their ${paddedLength} padded lanes`
+        );
+        t.ok(
+          source.includes(`var<workgroup> cachedKeys: array<u32, ${paddedLength}>`),
+          'each source key is cached in workgroup storage'
+        );
+        t.equal(
+          (source.match(/keys\[KEYS_OFFSET \+ localInvocationIndex\]/g) ?? []).length,
+          1,
+          'the complete sorting network reads each source key from global storage only once'
+        );
+      }
+    }
+  } finally {
+    dispatchSpy.mockRestore();
+  }
+
   t.end();
 });
 
@@ -65,6 +120,70 @@ test('GPUSort radix stably sorts paired uint32 values in both directions', async
   t.end();
 });
 
+test('GPUSort four-bit radix preserves cross-workgroup stability on CORE WebGPU', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keys = Uint32Array.from({length: 769}, (_, index) => {
+    if (index % 31 === 0) return 0xffffffff;
+    if (index % 7 === 0) return 0;
+    return Math.imul(index % 19, 0x1010101) >>> 0;
+  });
+  const values = Uint32Array.from({length: keys.length}, (_, index) => index);
+  for (const direction of ['ascending', 'descending'] as const) {
+    const result = await runSort(device, keys, values, 'auto', direction);
+    const expected = getStableSortedPairs(keys, values, direction);
+    t.deepEqual(result.keys, expected.keys, `${direction} four-bit radix keys match`);
+    t.deepEqual(
+      result.values,
+      expected.values,
+      `${direction} equal keys retain global input order`
+    );
+    t.equal(result.resolvedAlgorithm, 'radix', 'multi-workgroup inputs choose four-bit radix');
+    t.equal(result.nodeOrder.length, 24, 'eight digits each require histogram, scan, and scatter');
+  }
+
+  t.end();
+});
+
+test('GPUSort radix scans digit histograms across multiple workgroups on CORE WebGPU', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keys = Uint32Array.from({length: 8_193}, (_, index) => {
+    if (index % 37 === 0) return 0xffffffff;
+    if (index % 11 === 0) return 0;
+    return (Math.imul(index, 2_654_435_761) >>> 0) & 0xffff;
+  });
+  const values = Uint32Array.from({length: keys.length}, (_, index) => index);
+  for (const direction of ['ascending', 'descending'] as const) {
+    const result = await runSort(device, keys, values, 'auto', direction);
+    const expected = getStableSortedPairs(keys, values, direction);
+
+    t.deepEqual(result.keys, expected.keys, `${direction} multi-workgroup histogram keys match`);
+    t.deepEqual(
+      result.values,
+      expected.values,
+      `${direction} equal keys retain stable order across histogram scan carries`
+    );
+    t.ok(
+      result.nodeOrder.includes('sort-radix-digit-0-scan-level-0-add-offsets'),
+      'digit histograms larger than one scan workgroup propagate scanned block offsets'
+    );
+    t.equal(result.nodeOrder.length, 40, 'eight digits use five graph nodes each');
+  }
+
+  t.end();
+});
+
 test('GPUSort radix processes only the requested significant key bits', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -81,15 +200,59 @@ test('GPUSort radix processes only the requested significant key bits', async t 
     t.deepEqual(result.keys, expected.keys, `${keyBits}-bit radix sorts every key`);
     t.deepEqual(result.values, expected.values, `${keyBits}-bit radix remains stable`);
     t.equal(
-      result.nodeOrder.filter(identifier => identifier.endsWith('-classify')).length,
-      keyBits,
-      `${keyBits}-bit radix emits only the required classify passes`
+      result.nodeOrder.filter(identifier => identifier.endsWith('-histogram')).length,
+      Math.ceil(keyBits / 4),
+      `${keyBits}-bit radix emits only the required four-bit histogram passes`
     );
-    t.equal(
-      result.nodeOrder.includes('sort-radix-final-copy'),
-      keyBits % 2 !== 0,
-      'odd key widths copy their final scratch result into the caller-owned outputs'
-    );
+    t.notOk(result.nodeOrder.includes('sort-radix-final-copy'), 'final digits write directly');
+  }
+
+  t.end();
+});
+
+test('GPUSort radix ignores insignificant bits and stably handles partial final digits', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keys = Uint32Array.from([
+    0xfffffff0, 1, 0xfffffff1, 0, 7, 0x80000007, 0xffffffff, 15, 0x1000000f
+  ]);
+  const values = Uint32Array.from(keys, (_, index) => 200 + index);
+  for (const keyBits of [1, 3, 5, 15, 31]) {
+    const keyMask = 2 ** keyBits - 1;
+    for (const direction of ['ascending', 'descending'] as const) {
+      const result = await runSort(device, keys, values, 'radix', direction, keyBits);
+      const expected = Array.from(keys, (key, index) => ({key, value: values[index], index})).sort(
+        (left, right) => {
+          const leftSignificantKey = left.key & keyMask;
+          const rightSignificantKey = right.key & keyMask;
+          const comparison =
+            direction === 'ascending'
+              ? leftSignificantKey - rightSignificantKey
+              : rightSignificantKey - leftSignificantKey;
+          return comparison || left.index - right.index;
+        }
+      );
+      t.deepEqual(
+        result.keys,
+        expected.map(pair => pair.key),
+        `${keyBits}-bit ${direction} radix ignores insignificant high bits`
+      );
+      t.deepEqual(
+        result.values,
+        expected.map(pair => pair.value),
+        `${keyBits}-bit ${direction} radix preserves equal-significant-key order`
+      );
+      t.equal(
+        result.nodeOrder.filter(identifier => identifier.endsWith('-histogram')).length,
+        Math.ceil(keyBits / 4),
+        'only significant four-bit digits contribute graph work'
+      );
+    }
   }
 
   t.end();
@@ -131,20 +294,23 @@ test('GPUSort bounds bitonic and radix stages across all three dispatch dimensio
       }));
       const expectedPasses =
         algorithm === 'bitonic'
-          ? ['sort-bitonic-initialize', 'sort-bitonic-2048-1', 'sort-bitonic-gather']
+          ? [
+              ['sort-bitonic-initialize', [2, 2, 2]],
+              ['sort-bitonic-2048-1', [2, 2, 2]],
+              ['sort-bitonic-gather', [2, 2, 2]]
+            ]
           : [
-              'sort-radix-bit-0-classify',
-              'sort-radix-bit-0-scan-level-0-scan',
-              'sort-radix-bit-0-scan-level-0-add-offsets',
-              'sort-radix-bit-0-scatter',
-              'sort-radix-bit-31-classify',
-              'sort-radix-bit-31-scatter'
+              ['sort-radix-digit-0-histogram', [2, 2, 2]],
+              ['sort-radix-digit-0-scan-level-0-scan', [1, 1, 1]],
+              ['sort-radix-digit-0-scatter', [2, 2, 2]],
+              ['sort-radix-digit-28-histogram', [2, 2, 2]],
+              ['sort-radix-digit-28-scatter', [2, 2, 2]]
             ];
 
-      for (const identifier of expectedPasses) {
+      for (const [identifier, expectedDimensions] of expectedPasses) {
         t.deepEqual(
           dispatches.find(dispatch => dispatch.id === identifier)?.dimensions,
-          [2, 2, 2],
+          expectedDimensions,
           `${identifier} respects the synthetic per-dimension dispatch limit`
         );
       }
@@ -161,16 +327,104 @@ test('GPUSort bounds bitonic and radix stages across all three dispatch dimensio
     t.deepEqual(result.keys, expected.keys, 'odd-width multidimensional radix keys match');
     t.deepEqual(result.values, expected.values, 'odd-width multidimensional radix remains stable');
 
-    const finalCopyDispatchIndex = dispatchSpy.mock.instances.findIndex(
-      computation => (computation as Computation).id === 'sort-radix-final-copy'
+    const finalScatterDispatchIndex = dispatchSpy.mock.instances.findIndex(
+      computation => (computation as Computation).id === 'sort-radix-digit-12-scatter'
     );
     t.deepEqual(
-      dispatchSpy.mock.calls[finalCopyDispatchIndex]?.slice(1),
+      dispatchSpy.mock.calls[finalScatterDispatchIndex]?.slice(1),
       [2, 2, 2],
-      'odd-width radix final copy respects the synthetic per-dimension dispatch limit'
+      'partial final radix digits respect the synthetic per-dimension dispatch limit'
     );
   } finally {
     dispatchSpy.mockRestore();
+  }
+
+  t.end();
+});
+
+test('GPUSort honors offset storage views for local bitonic and multi-workgroup radix', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const paddingValue = 0xdecafbad;
+  for (const [algorithm, length] of [
+    ['bitonic', 33],
+    ['radix', 513]
+  ] as const) {
+    const keys = Uint32Array.from({length}, (_, index) => (Math.imul(index, 97) % 29) >>> 0);
+    const values = Uint32Array.from({length}, (_, index) => 3_000 + index);
+    const graph = new GPUCommandGraph(device, {id: `offset-${algorithm}-graph`});
+    const createPaddedView = (id: string, data: Uint32Array, paddingLength: number) => {
+      const paddedData = new Uint32Array(paddingLength + length + 1).fill(paddingValue);
+      paddedData.set(data, paddingLength);
+      const buffer = device.createBuffer({
+        id: `offset-${algorithm}-${id}`,
+        data: paddedData,
+        usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+      });
+      const handle = graph.importBuffer(
+        {id, byteLength: buffer.byteLength, usage: buffer.usage},
+        buffer
+      );
+      return {
+        buffer,
+        paddingLength,
+        view: graph.createDataView(handle, {
+          format: 'uint32',
+          length,
+          byteOffset: paddingLength * Uint32Array.BYTES_PER_ELEMENT
+        })
+      };
+    };
+    const inputKeys = createPaddedView('keys', keys, 1);
+    const inputValues = createPaddedView('values', values, 2);
+    const outputKeys = createPaddedView('output-keys', new Uint32Array(length), 3);
+    const outputValues = createPaddedView('output-values', new Uint32Array(length), 4);
+    new GPUSort({
+      id: `offset-${algorithm}`,
+      keys: inputKeys.view,
+      values: inputValues.view,
+      outputKeys: outputKeys.view,
+      outputValues: outputValues.view,
+      algorithm,
+      direction: 'descending'
+    }).addToGraph(graph);
+
+    const compiled = graph.compile();
+    const commandEncoder = device.createCommandEncoder({id: `offset-${algorithm}-encoder`});
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+
+    const expected = getStableSortedPairs(keys, values, 'descending');
+    for (const [output, expectedValues, label] of [
+      [outputKeys, expected.keys, 'keys'],
+      [outputValues, expected.values, 'values']
+    ] as const) {
+      const bytes = await output.buffer.readAsync();
+      const words = Array.from(
+        new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4)
+      );
+      t.deepEqual(
+        words.slice(0, output.paddingLength),
+        Array.from({length: output.paddingLength}, () => paddingValue),
+        `${algorithm} preserves ${label} prefix padding`
+      );
+      t.deepEqual(
+        words.slice(output.paddingLength, output.paddingLength + length),
+        expectedValues,
+        `${algorithm} sorts ${label} through its offset view`
+      );
+      t.equal(words.at(-1), paddingValue, `${algorithm} preserves ${label} suffix padding`);
+    }
+
+    compiled.destroy();
+    for (const {buffer} of [inputKeys, inputValues, outputKeys, outputValues]) {
+      buffer.destroy();
+    }
   }
 
   t.end();
@@ -261,10 +515,10 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
     return;
   }
   const graph = new GPUCommandGraph(device, {id: 'batch-sort-validation'});
-  const keys = makeGraphVector(graph, 'keys', [65_536, 65_537]);
-  const values = makeGraphVector(graph, 'values', [65_536, 65_537]);
-  const outputKeys = makeGraphVector(graph, 'output-keys', [65_536, 65_537]);
-  const outputValues = makeGraphVector(graph, 'output-values', [65_536, 65_537]);
+  const keys = makeGraphVector(graph, 'keys', [256, 257]);
+  const values = makeGraphVector(graph, 'values', [256, 257]);
+  const outputKeys = makeGraphVector(graph, 'output-keys', [256, 257]);
+  const outputValues = makeGraphVector(graph, 'output-values', [256, 257]);
   const sort = new GPUBatchSort({keys, values, outputKeys, outputValues});
   t.deepEqual(
     sort.resolvedAlgorithms,
@@ -276,7 +530,7 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
     () =>
       new GPUBatchSort({
         keys,
-        values: makeGraphVector(graph, 'short-values', [65_536, 65_536]),
+        values: makeGraphVector(graph, 'short-values', [256, 256]),
         outputKeys,
         outputValues
       }),
@@ -351,19 +605,15 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
   t.end();
 });
 
-test('GPUSort auto selection switches above 65,536 rows', async t => {
+test('GPUSort auto selection switches beyond one 256-row workgroup', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
     t.end();
     return;
   }
-  t.equal(makeUncompiledSort(device, 65_536).resolvedAlgorithm, 'bitonic', 'threshold is bitonic');
-  t.equal(
-    makeUncompiledSort(device, 65_537).resolvedAlgorithm,
-    'radix',
-    'above threshold is radix'
-  );
+  t.equal(makeUncompiledSort(device, 256).resolvedAlgorithm, 'bitonic', 'one workgroup is bitonic');
+  t.equal(makeUncompiledSort(device, 257).resolvedAlgorithm, 'radix', 'above threshold is radix');
   t.equal(
     makeUncompiledSort(device, 3, 'radix').resolvedAlgorithm,
     'radix',

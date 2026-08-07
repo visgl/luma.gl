@@ -619,6 +619,10 @@ export type GPUCommandGraphEncodingStats = {
   cpuEncodeTimeMilliseconds: number;
   /** Number of nodes encoded. */
   nodeCount: number;
+  /** Number of physical compute passes opened for the encoded compute nodes. */
+  computePassCount: number;
+  /** Number of compute nodes that reused an already-open compute pass. */
+  coalescedComputeNodeCount: number;
   /** Number of compute or render nodes with a GPU timestamp pair. */
   timestampedNodeCount: number;
   /** Per-node CPU encoding statistics in scheduled order. */
@@ -645,6 +649,11 @@ export type GPUCommandGraphTimingReport = {
 export type GPUCommandGraphEncodeOptions<Parameters> = {
   /** Application data forwarded to every node encode callback. */
   parameters: Parameters;
+  /**
+   * Whether consecutive compute nodes may share a physical compute pass. Defaults to true.
+   * Automatic encoder timestamp profiling always preserves a separate pass for each node.
+   */
+  coalesceComputePasses?: boolean;
   /** Per-encoding imported-buffer replacements keyed by graph resource ID. */
   buffers?: Record<string, GraphImportedBuffer>;
   /** Per-encoding imported-texture replacements keyed by graph resource ID. */

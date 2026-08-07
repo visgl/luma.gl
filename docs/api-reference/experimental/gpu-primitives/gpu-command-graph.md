@@ -380,9 +380,12 @@ readback share one dependency-ordered execution without taking ownership of the 
 ### `addComputePass(node)`
 
 Use a compute node whenever a shader reads or writes resources that other graph features consume.
-The graph opens and closes its own `ComputePass`; the executable only records dispatch commands.
-Declaring every input as `storage-read` and every output as `storage-write` lets later compute,
-render, or copy nodes automatically wait for the produced data.
+The graph manages the `ComputePass`; the executable only records dispatch commands. Consecutive
+compute nodes normally share one physical pass, preserving their individual execution order and
+debug groups without paying repeated pass-management overhead. A render or copy node always closes
+the active compute pass before recording its own commands. Declaring every input as `storage-read`
+and every output as `storage-write` lets later compute, render, or copy nodes automatically wait
+for the produced data.
 
 ```ts
 graph.addComputePass({
@@ -504,15 +507,23 @@ whole-graph and per-node CPU encoding statistics.
 
 `encode()` never submits, maps, reads, or grows resources.
 
+Consecutive compute nodes share one physical compute pass by default. Node order, resource hazards,
+debug groups, and individual CPU measurements remain unchanged; render and copy nodes form strict
+pass boundaries. Set `options.coalesceComputePasses` to `false` when separate passes are required.
+`encoding.stats.computePassCount` reports the actual number of physical compute passes, and
+`encoding.stats.coalescedComputeNodeCount` reports how many nodes reused an already-open pass.
+
 `options.frameTextures` and `options.externalTextures` form one coherent frame transaction. The
 graph validates every binding before advancing its remembered frame IDs, so a rejected replacement
 can be corrected and retried without partially consuming a frame.
 
 If the caller's encoder has a timestamp query set, compute and render passes record timestamp pairs
-without changing graph code. `encoding.canReadGPUTimings` reports whether any pairs were captured.
-After submitting the command buffer, `await encoding.readTimings()` explicitly reads per-node and
-total GPU durations. The read is never automatic, and copy nodes remain CPU-timed until the portable
-command-encoder API exposes standalone timestamp writes.
+without changing graph code. Compute-pass coalescing is automatically disabled for that encoding
+so every compute node retains its own GPU timestamp pair. `encoding.canReadGPUTimings` reports
+whether any pairs were captured. After submitting the command buffer, `await
+encoding.readTimings()` explicitly reads per-node and total GPU durations. The read is never
+automatic, and copy nodes remain CPU-timed until the portable command-encoder API exposes
+standalone timestamp writes.
 
 ### `capabilities`
 
