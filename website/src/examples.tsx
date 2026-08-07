@@ -1270,7 +1270,7 @@ export const TextSpaceCrawlExample: React.FC = props => (
   />
 );
 
-export const PersistenceExample: React.FC = props => (
+export const PersistenceExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="persistence"
     directory="showcase"
@@ -1280,16 +1280,31 @@ export const PersistenceExample: React.FC = props => (
   />
 );
 
-export const PostprocessingExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="postprocessing"
-    title="Effects: Image Processing"
-    directory="showcase"
-    template={PostprocessingApp}
-    config={exampleConfig}
-    {...props}
-  />
-);
+export const PostprocessingExample: React.FC<WebsiteExampleProps & {effect?: string}> = ({
+  effect,
+  ...props
+}) => {
+  const template = useMemo(() => {
+    if (!effect) {
+      return PostprocessingApp;
+    }
+
+    return class FocusedPostprocessingApp extends PostprocessingApp {
+      static override initialEffectName = effect;
+    };
+  }, [effect]);
+
+  return (
+    <LumaExample
+      id="postprocessing"
+      title="Effects: Image Processing"
+      directory="showcase"
+      template={template}
+      config={exampleConfig}
+      {...props}
+    />
+  );
+};
 
 export const AntialiasingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample

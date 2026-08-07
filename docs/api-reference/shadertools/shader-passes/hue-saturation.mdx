@@ -1,0 +1,55 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Hue and Saturation
+
+Rotate the image palette and control overall color intensity without changing the basic image
+geometry. `hueSaturation` is useful for color grading, thematic recoloring, and reducing a scene
+to monochrome.
+
+<PostprocessingExample embedded showStats={false} effect="hueSaturation" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `hueSaturation` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | One fullscreen color-filter pass |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {hueSaturation} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [hueSaturation]});
+
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  uniforms: {hueSaturation: {hue: -0.08, saturation: 0.32}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Range | Description |
+| --- | --- | --- | --- |
+| `hue` | `0` | `-1` to `1` | Rotates RGB around the grayscale axis; the endpoints represent a half-turn in either direction. |
+| `saturation` | `0` | `-1` to `1` | Pulls colors toward gray or pushes them farther from their channel average. |
+
+A saturation value of `-1` produces a grayscale treatment. Hue rotation leaves perfectly neutral
+colors on the grayscale axis unchanged.
+
+## Composition and Cost
+
+The implementation operates directly on the current pixel and requires no neighboring samples,
+depth attachments, or history. Place it before color-dependent stylization when the rotated
+palette should affect printed channels, or after bloom when the entire composed image should be
+graded together.
+
+## Related Effects
+
+- [Vibrance](./vibrance) selectively boosts less saturated colors.
+- [Sepia](./sepia) applies a specific warm photographic color transform.
+- [Color Halftone](./color-halftone) converts a graded image into separated print channels.

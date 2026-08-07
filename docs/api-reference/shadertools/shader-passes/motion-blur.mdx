@@ -1,0 +1,58 @@
+import {AdvancedEffectsExample} from '@site/src/examples';
+
+# Motion Blur
+
+Integrate scene color along per-pixel motion vectors while reducing bleed across depth
+discontinuities. `createMotionBlurShaderPassPipeline` produces directional shutter blur from the
+same depth and velocity attachments used by temporal reconstruction.
+
+<AdvancedEffectsExample embedded showStats={false} />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `createMotionBlurShaderPassPipeline` |
+| Backend | WebGPU |
+| Render passes | One depth-aware directional sampling pass |
+| Required bindings | `depthTexture` and `velocityTexture` |
+| Sample limit | At most 16 samples per pixel |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {createMotionBlurShaderPassPipeline} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {
+  shaderPasses: [createMotionBlurShaderPassPipeline()]
+});
+
+renderer.renderToScreen({
+  sourceTexture: gBuffer.colorTexture,
+  bindings: gBuffer.getShaderPassBindings(),
+  uniforms: {motionBlur: {strength: 1, sampleCount: 10}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Range | Description |
+| --- | --- | --- | --- |
+| `strength` | `1` | Minimum `0` | Multiplier applied to the encoded per-pixel screen-space velocity. |
+| `sampleCount` | `10` | `2` to `16` | Number of source/depth samples distributed along the motion path. |
+
+Each candidate sample is exponentially down-weighted when its depth differs from the current
+pixel, reducing foreground/background mixing across object silhouettes.
+
+## Performance and Composition
+
+Motion blur performs one fullscreen pass, but its cost rises directly with `sampleCount`. Both the
+source color and depth attachment are sampled at each step. Place it after temporal antialiasing
+and before exposure, bloom, or tone mapping when it should operate on stabilized HDR scene color.
+
+## Related Effects
+
+- [Temporal Antialiasing](./temporal-antialiasing) consumes the same depth and velocity attachments.
+- [Zoom Blur](./zoom-blur) creates an image-only radial effect without scene-authored velocity.
+- [Persistence](./persistence) accumulates fading trails across complete frames.
