@@ -113,6 +113,12 @@ try {
       haloEnabled: rasterLab.haloEnabled,
       haloRadius: rasterLab.haloRadius,
       haloSourceTileCount: rasterLab.haloSourceTileCount,
+      analysisScope: rasterLab.analysisScope,
+      replayOrder: rasterLab.replayOrder,
+      globalTileCount: rasterLab.globalTileCount,
+      globalReplayPassCount: rasterLab.globalReplayPassCount,
+      globalPixelCount: rasterLab.globalPixelCount,
+      globalMedian: rasterLab.globalMedian,
       edgeMode: rasterLab.edgeMode,
       edgeDirection: rasterLab.edgeDirection,
       morphologyOperation: rasterLab.morphologyOperation,
@@ -138,6 +144,9 @@ try {
   assert.equal(initialState.overviewPolicy, 'source', 'source-owned samples remain the default');
   assert.equal(initialState.categoryPolicy, 'nearest', 'categorical overviews default to nearest');
   assert.equal(initialState.generatedOverview, false, 'native source samples are not relabeled');
+  assert.equal(initialState.analysisScope, 'tile', 'global tiled replay remains explicitly opt-in');
+  assert.equal(initialState.globalTileCount, 0, 'tile scope does not secretly pin adjacent cores');
+  assert.equal(initialState.globalMedian, null, 'tile scope does not repurpose the threshold slot');
   assert.deepEqual(initialState.tileOrigin, [0, 0], 'the native tile preserves its level-zero origin');
   assert.equal(
     initialState.coordinateReferenceSystem,
@@ -1476,9 +1485,20 @@ try {
         haloAvailableBounds: rasterLab.haloAvailableBounds,
         haloSourceTileCount: rasterLab.haloSourceTileCount,
         haloTransferCount: rasterLab.haloTransferCount,
+        analysisScope: rasterLab.analysisScope,
+        replayOrder: rasterLab.replayOrder,
+        globalTileCount: rasterLab.globalTileCount,
+        globalReplayPassCount: rasterLab.globalReplayPassCount,
+        globalPixelCount: rasterLab.globalPixelCount,
+        globalMedian: rasterLab.globalMedian,
         nodeCount: rasterLab.nodeCount,
         executionCount: rasterLab.executionCount,
         sum: rasterLab.sum,
+        mean: rasterLab.mean,
+        domain: rasterLab.domain,
+        mode: rasterLab.mode,
+        threshold: rasterLab.threshold,
+        thresholdEnabled: rasterLab.thresholdEnabled,
         edgeMode: rasterLab.edgeMode,
         smoothingMode: rasterLab.smoothingMode,
         morphologyOperation: rasterLab.morphologyOperation,
@@ -2326,6 +2346,344 @@ try {
   );
   assert.equal(generatedFromNativeControl.overviewLevel, 1);
 
+  const globalFromGenerated = await loadSourceSelection(
+    '[data-raster-analysis-scope="global"]',
+    'east',
+    1
+  );
+  assert.equal(globalFromGenerated.analysisScope, 'global');
+  assert.equal(globalFromGenerated.overviewPolicy, 'source');
+  assert.equal(globalFromGenerated.generatedOverview, false);
+  assert.equal(globalFromGenerated.haloEnabled, false);
+  assert.equal(globalFromGenerated.smoothingMode, 'none');
+  assert.equal(globalFromGenerated.edgeMode, 'none');
+  assert.equal(globalFromGenerated.morphologyOperation, 'none');
+  assert.equal(globalFromGenerated.globalTileCount, 2);
+  assert.equal(globalFromGenerated.pinnedTileCount, 2);
+  assert.equal(globalFromGenerated.globalPixelCount, 160 * 112);
+  assert.equal(globalFromGenerated.globalReplayPassCount, 6);
+  assert.equal(globalFromGenerated.globalMedian, null);
+  assert(
+    (await page.locator('[data-raster-global-note]').textContent()).includes('pointwise'),
+    'full-dataset mode explicitly discloses its source-nearest, pointwise compatibility boundary'
+  );
+  assert(
+    (await page.locator('[data-raster-global-median]').textContent()).includes('Otsu'),
+    'global Otsu truthfully owns the single existing compact percentile/threshold scalar'
+  );
+
+  await loadSourceSelection('[data-raster-analysis-scope="tile"]', 'east', 1);
+  await loadSourceSelection('[data-raster-source-overview="0"]', 'east', 0);
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.evaluate(() => window.__luRasterLab.setThreshold(0.35, false));
+  await page.waitForFunction(
+    executionCount =>
+      !window.__luRasterLab.thresholdEnabled &&
+      !window.__luRasterLab.automaticThreshold &&
+      window.__luRasterLab.executionCount > executionCount,
+    previousExecutionCount,
+    {timeout: timeoutMilliseconds}
+  );
+  const monolithicGlobalReference = await loadSourceSelection(
+    '[data-raster-source-tile="full"]',
+    'full',
+    0
+  );
+  assert.equal(monolithicGlobalReference.analysisScope, 'tile');
+  assert.equal(monolithicGlobalReference.globalTileCount, 0);
+
+  const globalWestern = await loadSourceSelection(
+    '[data-raster-analysis-scope="global"]',
+    'west',
+    0
+  );
+  assert.equal(globalWestern.globalTileCount, 2);
+  assert.equal(globalWestern.pinnedTileCount, 2);
+  assert.equal(globalWestern.globalReplayPassCount, 3);
+  assert.equal(globalWestern.globalPixelCount, monolithicGlobalReference.pixelCount);
+  assert.equal(
+    globalWestern.validPixelCount,
+    monolithicGlobalReference.validPixelCount,
+    'both separately resident owned cores reproduce the complete monolithic valid population'
+  );
+  assert.deepEqual(
+    globalWestern.domain,
+    monolithicGlobalReference.domain,
+    'all tile extrema finish before the one globally stable histogram domain is consumed'
+  );
+  assert.deepEqual(
+    globalWestern.bins,
+    monolithicGlobalReference.bins,
+    'bounded replay against the final global domain reproduces every monolithic histogram bin'
+  );
+  assert(
+    Math.abs(globalWestern.sum - monolithicGlobalReference.sum) < 0.05,
+    'independent tile partial sums reproduce the full-scene scalar within floating reduction tolerance'
+  );
+  assert(
+    Math.abs(globalWestern.mean - monolithicGlobalReference.mean) < 0.00001,
+    'the merged GPU sum and exact global population drive the published global GPU mean'
+  );
+  assert(
+    globalWestern.validPixelCount > globalWestern.pixelCount,
+    'the selected map retains its half-sized owned core while published analytics cover the dataset'
+  );
+  assert(
+    globalWestern.overviewCoverage <= 1 &&
+      (await page.locator('[data-raster-valid-percentage]').textContent()).startsWith('97.'),
+    'global percentages use both owned cores instead of exceeding one hundred percent'
+  );
+  assert.equal(
+    await page.locator('[data-raster-valid-label]').textContent(),
+    'Global valid observations',
+    'the aggregate card distinguishes its full-dataset population from the selected map tile'
+  );
+  assert(
+    (await page.locator('[data-raster-overview-coverage]').textContent()).includes('global valid'),
+    'source coverage never mislabels full-dataset counts as displayed-core observations'
+  );
+  assert(
+    Number.isFinite(globalWestern.globalMedian) &&
+      globalWestern.globalMedian >= globalWestern.domain[0] &&
+      globalWestern.globalMedian <= globalWestern.domain[1],
+    'GPU histogram percentile is visibly transferred through the existing four-byte threshold slot'
+  );
+  assert.equal(
+    await page.locator('[data-raster-global-median]').textContent(),
+    globalWestern.globalMedian.toFixed(3)
+  );
+
+  await cacheCapacityControl.fill('1');
+  await page.waitForFunction(
+    () =>
+      window.__luRasterLab.cacheCapacity === 2 &&
+      document.querySelector('[data-raster-control="cache-capacity"]').value === '2',
+    undefined,
+    {timeout: timeoutMilliseconds}
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.pinnedTileCount),
+    2,
+    'transactional capacity-one rejection preserves both pinned global source buffers'
+  );
+
+  const globalEastern = await loadSourceSelection(
+    '[data-raster-source-tile="east"]',
+    'east',
+    0
+  );
+  assert.deepEqual(globalEastern.bins, globalWestern.bins);
+  assert.deepEqual(globalEastern.domain, globalWestern.domain);
+  assert.equal(globalEastern.validPixelCount, globalWestern.validPixelCount);
+  assert.equal(globalEastern.globalMedian, globalWestern.globalMedian);
+  assert.equal(
+    globalEastern.sourceReadCount,
+    globalWestern.sourceReadCount,
+    'changing the displayed owned core reuses both existing canonical resident tile buffers'
+  );
+  assert.equal(globalEastern.pinnedTileCount, 2);
+
+  const reversedGlobal = await loadSourceSelection(
+    '[data-raster-replay-order="reverse"]',
+    'east',
+    0
+  );
+  assert.equal(reversedGlobal.replayOrder, 'reverse');
+  assert.deepEqual(reversedGlobal.bins, globalWestern.bins);
+  assert.deepEqual(reversedGlobal.domain, globalWestern.domain);
+  assert.equal(reversedGlobal.validPixelCount, globalWestern.validPixelCount);
+  assert.equal(reversedGlobal.globalMedian, globalWestern.globalMedian);
+  assert.equal(
+    await page.locator('[data-raster-replay-order="reverse"]').getAttribute('aria-pressed'),
+    'true',
+    'real reversed tile contribution order remains an explicitly visible user policy'
+  );
+
+  const selectGlobalMode = async mode => {
+    const previous = await page.evaluate(() => window.__luRasterLab.executionCount);
+    const control = page.locator(`[data-raster-mode="${mode}"]`);
+    await control.scrollIntoViewIfNeeded();
+    await control.click();
+    await page.waitForFunction(
+      ({executionCount, expectedMode}) =>
+        window.__luRasterLab.analysisScope === 'global' &&
+        window.__luRasterLab.mode === expectedMode &&
+        window.__luRasterLab.executionCount > executionCount,
+      {executionCount: previous, expectedMode: mode},
+      {timeout: timeoutMilliseconds}
+    );
+    return await page.evaluate(() => ({
+      bins: window.__luRasterLab.bins,
+      domain: window.__luRasterLab.domain,
+      validPixelCount: window.__luRasterLab.validPixelCount
+    }));
+  };
+  const globalRed = await selectGlobalMode('red');
+  assert.deepEqual(
+    globalRed.bins,
+    redState.bins,
+    'global red analytics replay the same selected reflectance quantity as monolithic rendering'
+  );
+  assert.deepEqual(globalRed.domain, redState.domain);
+  assert.equal(globalRed.validPixelCount, monolithicGlobalReference.validPixelCount);
+  const globalNearInfrared = await selectGlobalMode('near-infrared');
+  assert.deepEqual(
+    globalNearInfrared.bins,
+    nearInfraredState.bins,
+    'global near-infrared analysis reuses identical source masks and analytical calibration'
+  );
+  const globalRestoredVegetation = await selectGlobalMode('ndvi');
+  assert.deepEqual(globalRestoredVegetation.bins, monolithicGlobalReference.bins);
+
+  previousExecutionCount = await page.evaluate(() => window.__luRasterLab.executionCount);
+  await page.evaluate(() => window.__luRasterLab.setAutomaticThreshold(true));
+  await page.waitForFunction(
+    executionCount =>
+      window.__luRasterLab.analysisScope === 'global' &&
+      window.__luRasterLab.automaticThreshold &&
+      window.__luRasterLab.globalMedian === null &&
+      window.__luRasterLab.executionCount > executionCount,
+    previousExecutionCount,
+    {timeout: timeoutMilliseconds}
+  );
+  const globalEasternOtsu = await page.evaluate(() => ({
+    threshold: window.__luRasterLab.threshold,
+    count: window.__luRasterLab.validPixelCount,
+    bins: window.__luRasterLab.bins,
+    replayPassCount: window.__luRasterLab.globalReplayPassCount,
+    pixelCount: window.__luRasterLab.globalPixelCount
+  }));
+  assert(globalEasternOtsu.threshold >= globalWestern.domain[0]);
+  assert(globalEasternOtsu.threshold <= globalWestern.domain[1]);
+  assert(globalEasternOtsu.count < globalWestern.validPixelCount);
+  assert.equal(globalEasternOtsu.replayPassCount, 6);
+  assert.equal(
+    globalEasternOtsu.bins.reduce((total, count) => total + count, 0),
+    globalEasternOtsu.count,
+    'global baseline Otsu and final threshold-filtered replay publish one coherent full-image mask'
+  );
+  assert.equal(
+    await page.locator('[data-raster-valid-label]').textContent(),
+    'Global selected observations'
+  );
+
+  const globalWesternOtsu = await loadSourceSelection(
+    '[data-raster-source-tile="west"]',
+    'west',
+    0
+  );
+  assert.equal(
+    globalWesternOtsu.threshold,
+    globalEasternOtsu.threshold,
+    'one global GPU Otsu threshold remains stable when the independently rendered map core changes'
+  );
+  assert.deepEqual(globalWesternOtsu.bins, globalEasternOtsu.bins);
+  assert.equal(globalWesternOtsu.validPixelCount, globalEasternOtsu.count);
+
+  previousExecutionCount = globalWesternOtsu.executionCount;
+  await page.evaluate(() => window.__luRasterLab.setThreshold(0.35, false));
+  await page.waitForFunction(
+    executionCount =>
+      !window.__luRasterLab.automaticThreshold &&
+      !window.__luRasterLab.thresholdEnabled &&
+      Number.isFinite(window.__luRasterLab.globalMedian) &&
+      window.__luRasterLab.executionCount > executionCount,
+    previousExecutionCount,
+    {timeout: timeoutMilliseconds}
+  );
+
+  const globalSourceOverview = await loadSourceSelection(
+    '[data-raster-source-overview="1"]',
+    'west',
+    1
+  );
+  assert.equal(globalSourceOverview.analysisScope, 'global');
+  assert.equal(globalSourceOverview.globalPixelCount, 160 * 112);
+  assert.equal(globalSourceOverview.pinnedTileCount, 2);
+  assert(globalSourceOverview.overviewCoverage <= 1);
+  const monolithicSourceOverview = await loadSourceSelection(
+    '[data-raster-source-tile="full"]',
+    'full',
+    1
+  );
+  assert.equal(monolithicSourceOverview.analysisScope, 'tile');
+  assert.deepEqual(
+    globalSourceOverview.bins,
+    monolithicSourceOverview.bins,
+    'source-nearest overview tiles reproduce the complete overview histogram with no generated upload'
+  );
+  assert.deepEqual(globalSourceOverview.domain, monolithicSourceOverview.domain);
+  assert.equal(globalSourceOverview.validPixelCount, monolithicSourceOverview.validPixelCount);
+
+  const restoredOverviewGlobal = await loadSourceSelection(
+    '[data-raster-analysis-scope="global"]',
+    'west',
+    1
+  );
+  const globallyExcludedGaussian = await loadSourceSelection(
+    '[data-raster-smoothing="gaussian"]',
+    'west',
+    1
+  );
+  assert.equal(globallyExcludedGaussian.analysisScope, 'tile');
+  assert.equal(globallyExcludedGaussian.smoothingMode, 'gaussian');
+  assert.equal(globallyExcludedGaussian.globalTileCount, 0);
+  const restoredPointwiseGlobal = await loadSourceSelection(
+    '[data-raster-analysis-scope="global"]',
+    'west',
+    1
+  );
+  assert.equal(restoredPointwiseGlobal.smoothingMode, 'none');
+  assert.deepEqual(restoredPointwiseGlobal.bins, restoredOverviewGlobal.bins);
+
+  const globallyExcludedHalo = await loadSourceSelection(
+    '[data-raster-halo-mode="seamless"]',
+    'west',
+    1
+  );
+  assert.equal(globallyExcludedHalo.analysisScope, 'tile');
+  assert.equal(globallyExcludedHalo.haloEnabled, true);
+  assert.equal(globallyExcludedHalo.haloRadius, 0);
+  assert.equal(
+    globallyExcludedHalo.haloSourceTileCount,
+    1,
+    'a pointwise seamless pipeline truthfully avoids pinning a neighbor without a required halo'
+  );
+  const globalAfterHalo = await loadSourceSelection(
+    '[data-raster-analysis-scope="global"]',
+    'west',
+    1
+  );
+  assert.equal(globalAfterHalo.haloEnabled, false);
+  assert.equal(globalAfterHalo.pinnedTileCount, 2);
+  assert.deepEqual(globalAfterHalo.bins, monolithicSourceOverview.bins);
+
+  const globallyExcludedGenerated = await loadSourceSelection(
+    '[data-raster-overview-policy="mean"]',
+    'west',
+    1
+  );
+  assert.equal(globallyExcludedGenerated.analysisScope, 'tile');
+  assert.equal(globallyExcludedGenerated.generatedOverview, true);
+  const finalGlobalOverview = await loadSourceSelection(
+    '[data-raster-analysis-scope="global"]',
+    'west',
+    1
+  );
+  assert.equal(finalGlobalOverview.overviewPolicy, 'source');
+  assert.equal(finalGlobalOverview.generatedOverview, false);
+  assert.equal(finalGlobalOverview.globalTileCount, 2);
+  assert.deepEqual(finalGlobalOverview.bins, monolithicSourceOverview.bins);
+  assert(
+    (
+      await page
+        .locator('.raster-histogram-caption')
+        .filter({hasText: 'only 228 summary bytes'})
+        .textContent()
+    ).includes('only 228 summary bytes'),
+    'merged global extrema, bins, population, mean, and multiplexed median retain one 228-byte read'
+  );
+
   await page.waitForFunction(
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
     composedSmoothing.frameCount,
@@ -2343,7 +2701,7 @@ try {
 
   process.stdout.write(
     `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, and composed resident analysis verified)\n`
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, GPU median/Otsu, and composed resident analysis verified)\n`
   );
 } finally {
   await browser?.close();

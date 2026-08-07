@@ -23,6 +23,8 @@ export type RasterLabInterfaceCallbacks = {
   onOverviewPolicy?: (policy: RasterLabOverviewPolicy) => void;
   onCategoryPolicy?: (policy: RasterLabCategoryPolicy) => void;
   onHaloMode?: (mode: RasterLabHaloMode) => void;
+  onAnalysisScope?: (scope: RasterLabAnalysisScope) => void;
+  onReplayOrder?: (order: RasterLabReplayOrder) => void;
   onCacheCapacity?: (capacity: number) => void;
   onMode?: (mode: RasterLabDisplayMode) => void;
   onSmoothingMode?: (mode: RasterLabSmoothingMode) => void;
@@ -52,6 +54,21 @@ export type RasterLabOverviewLevel = 0 | 1;
 export type RasterLabOverviewPolicy = 'source' | 'mean';
 export type RasterLabCategoryPolicy = 'nearest' | 'mode';
 export type RasterLabHaloMode = 'off' | 'seamless';
+export type RasterLabAnalysisScope = 'tile' | 'global';
+export type RasterLabReplayOrder = 'forward' | 'reverse';
+
+export type RasterLabGlobalSummary = {
+  scope: RasterLabAnalysisScope;
+  order: RasterLabReplayOrder;
+  tileCount: number;
+  replayPassCount: number;
+  pixelCount: number;
+  domain: readonly [number, number];
+  validPixelCount: number;
+  threshold: number;
+  automaticThreshold: boolean;
+  median: number | null;
+};
 
 export type RasterLabOverviewSummary = {
   policy: RasterLabOverviewPolicy;
@@ -117,6 +134,8 @@ export class RasterLabInterface {
   private readonly positionWasUpdated: boolean;
   private readonly minimumHeightWasUpdated: boolean;
   private source: RasterLabSourceSummary | null = null;
+  private analysisScope: RasterLabAnalysisScope = 'tile';
+  private globalPixelCount = 0;
   private mode: RasterLabDisplayMode = 'ndvi';
   private edgeMode: RasterLabEdgeMode = 'none';
   private edgeDirection: RasterLabEdgeDirection = 'magnitude';
@@ -212,7 +231,10 @@ export class RasterLabInterface {
       );
       button.disabled = summary.policy !== 'mean';
     }
-    const targetPixelCount = summary.targetWidth * summary.targetHeight;
+    const targetPixelCount =
+      this.analysisScope === 'global'
+        ? this.globalPixelCount
+        : summary.targetWidth * summary.targetHeight;
     const validPercentage = (summary.validPixelCount / Math.max(targetPixelCount, 1)) * 100;
     this.getElement('[data-raster-overview-provenance]').textContent = summary.generated
       ? 'GPU nodata-aware mean · native resident source'
@@ -223,7 +245,7 @@ export class RasterLabInterface {
       ? `${summary.sourceWidth} × ${summary.sourceHeight} → ${summary.targetWidth} × ${summary.targetHeight}`
       : `${summary.targetWidth} × ${summary.targetHeight}`;
     this.getElement('[data-raster-overview-coverage]').textContent =
-      `${NUMBER_FORMATTER.format(summary.validPixelCount)} displayed valid · ${validPercentage.toFixed(1)}%`;
+      `${NUMBER_FORMATTER.format(summary.validPixelCount)} ${this.analysisScope === 'global' ? 'global' : 'displayed'} valid · ${validPercentage.toFixed(1)}%`;
     this.getElement('[data-raster-cloud-label]').textContent = summary.generated
       ? 'Excluded observations'
       : 'Cloud mask';
@@ -261,6 +283,52 @@ export class RasterLabInterface {
       : 'single tile · no halo';
   }
 
+  setGlobalAnalysis(summary: RasterLabGlobalSummary): void {
+    const global = summary.scope === 'global';
+    this.analysisScope = summary.scope;
+    this.globalPixelCount = summary.pixelCount;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-analysis-scope]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterAnalysisScope'] === summary.scope)
+      );
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-replay-order]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterReplayOrder'] === summary.order)
+      );
+      button.disabled = !global;
+    }
+    this.getElement('[data-raster-global-tiles]').textContent = global
+      ? `${summary.tileCount} bounded resident cores`
+      : 'selected core only';
+    this.getElement('[data-raster-global-replays]').textContent = global
+      ? `${summary.replayPassCount} ordered GPU phases`
+      : 'no cross-tile replay';
+    this.getElement('[data-raster-global-domain]').textContent =
+      `${summary.domain[0].toFixed(3)} … ${summary.domain[1].toFixed(3)}`;
+    this.getElement('[data-raster-global-count]').textContent =
+      `${NUMBER_FORMATTER.format(summary.validPixelCount)} ${global ? 'global' : 'tile'} valid`;
+    this.getElement('[data-raster-global-threshold]').textContent = summary.automaticThreshold
+      ? `Otsu ${summary.threshold.toFixed(3)}`
+      : 'manual / disabled';
+    this.getElement('[data-raster-global-median]').textContent = !global
+      ? 'global replay off'
+      : summary.automaticThreshold
+        ? 'Otsu owns compact scalar'
+        : summary.median === null
+          ? 'pending'
+          : summary.median.toFixed(3);
+    this.getElement('[data-raster-global-note]').textContent = global
+      ? 'Source-nearest pointwise bands; selected map core, global statistics.'
+      : 'Global replay excludes generated overviews and neighborhood effects.';
+  }
+
   setResidency(summary: RasterLabResidencySummary): void {
     const capacityControl = this.getInput('cache-capacity');
     capacityControl.value = String(summary.capacity);
@@ -279,15 +347,23 @@ export class RasterLabInterface {
   }
 
   setSummary(summary: RasterLabSummary): void {
-    const totalPixelCount = this.source?.pixelCount ?? summary.validPixelCount;
+    const totalPixelCount =
+      this.analysisScope === 'global'
+        ? this.globalPixelCount
+        : (this.source?.pixelCount ?? summary.validPixelCount);
     const percentage = (summary.validPixelCount / Math.max(totalPixelCount, 1)) * 100;
     const modeLabel =
       summary.edgeMode === 'none'
         ? getModeLabel(summary.mode)
         : `${summary.edgeMode.toUpperCase()} ${summary.edgeMode === 'laplacian' ? 'Δ' : summary.edgeDirection === 'magnitude' ? '|∇|' : summary.edgeDirection.toUpperCase()}`;
-    this.getElement('[data-raster-valid-label]').textContent = summary.thresholdEnabled
-      ? 'Selected observations'
-      : 'Valid observations';
+    this.getElement('[data-raster-valid-label]').textContent =
+      this.analysisScope === 'global'
+        ? summary.thresholdEnabled
+          ? 'Global selected observations'
+          : 'Global valid observations'
+        : summary.thresholdEnabled
+          ? 'Selected observations'
+          : 'Valid observations';
     this.getElement('[data-raster-valid]').textContent = NUMBER_FORMATTER.format(
       summary.validPixelCount
     );
@@ -590,6 +666,18 @@ export class RasterLabInterface {
       const haloMode = haloButton?.dataset['rasterHaloMode'];
       if (haloMode === 'off' || haloMode === 'seamless') {
         this.callbacks.onHaloMode?.(haloMode);
+        return;
+      }
+      const scopeButton = target.closest<HTMLButtonElement>('[data-raster-analysis-scope]');
+      const scope = scopeButton?.dataset['rasterAnalysisScope'];
+      if (scope === 'tile' || scope === 'global') {
+        this.callbacks.onAnalysisScope?.(scope);
+        return;
+      }
+      const replayButton = target.closest<HTMLButtonElement>('[data-raster-replay-order]');
+      const replayOrder = replayButton?.dataset['rasterReplayOrder'];
+      if (replayOrder === 'forward' || replayOrder === 'reverse') {
+        this.callbacks.onReplayOrder?.(replayOrder);
         return;
       }
       const otsuButton = target.closest<HTMLButtonElement>('[data-raster-control="otsu"]');
@@ -974,6 +1062,23 @@ function makeRasterLabMarkup(): string {
                 <span>Owned core</span><span data-raster-halo-core>selected tile only</span>
                 <span>Resident sources</span><span data-raster-halo-sources>no neighbor assembly</span>
               </div>
+              <div class="raster-analysis-scope-buttons" aria-label="Histogram and statistics scope">
+                <button class="raster-mode-button" data-raster-analysis-scope="tile" aria-pressed="true">TILE</button>
+                <button class="raster-mode-button" data-raster-analysis-scope="global" aria-pressed="false">FULL GLOBAL</button>
+              </div>
+              <div class="raster-replay-order-buttons" aria-label="Global tile replay order">
+                <button class="raster-mode-button" data-raster-replay-order="forward" aria-pressed="true" disabled>WEST → EAST</button>
+                <button class="raster-mode-button" data-raster-replay-order="reverse" aria-pressed="false" disabled>EAST → WEST</button>
+              </div>
+              <div class="raster-global-statistics" aria-label="Global reduction, histogram, and replay telemetry">
+                <span>Owned tiles</span><span data-raster-global-tiles>selected core only</span>
+                <span>GPU replay</span><span data-raster-global-replays>no cross-tile replay</span>
+                <span>Stable domain</span><span data-raster-global-domain>0.000 … 0.000</span>
+                <span>Population</span><span data-raster-global-count>0 tile valid</span>
+                <span>GPU median</span><span data-raster-global-median>global replay off</span>
+                <span>Global selection</span><span data-raster-global-threshold>manual / disabled</span>
+              </div>
+              <div class="raster-global-note" data-raster-global-note>Global replay excludes generated overviews and neighborhood effects.</div>
               <div class="raster-source-description" data-raster-source-description>L0 · FULL</div>
               <div class="raster-source-origin" data-raster-source-origin>Origin 0, 0 · EPSG:32610</div>
               <label class="raster-cache-control">

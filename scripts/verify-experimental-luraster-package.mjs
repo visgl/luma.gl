@@ -47,6 +47,10 @@ const overviewImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-overview.ts'),
   'utf8'
 );
+const globalStatisticsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-global-statistics.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -109,6 +113,21 @@ assert.doesNotMatch(
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'analytical overview generation leaves command submission and readback application-owned'
 );
+assert.doesNotMatch(
+  globalStatisticsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'global raster statistics do not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  globalStatisticsImplementation,
+  /\bfetch\s*\(/,
+  'global raster statistics do not choose source transport or replay decoding'
+);
+assert.doesNotMatch(
+  globalStatisticsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'global raster statistics leave submission, fences, and analytical readback application-owned'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -132,6 +151,10 @@ const requiredRuntimeExportNames = [
   'GPURasterDilation',
   'GPURasterErosion',
   'GPURasterGaussianBlur',
+  'GPURasterGlobalHistogramMerge',
+  'GPURasterGlobalInitialize',
+  'GPURasterGlobalPercentile',
+  'GPURasterGlobalStatisticsMerge',
   'GPURasterGradient',
   'GPURasterGradientMagnitude',
   'GPURasterHistogram',
@@ -180,6 +203,18 @@ assert.equal(
   'CommonJS tile readers expose validated canonical request normalization'
 );
 for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
+  for (const exportName of [
+    'GPURasterGlobalHistogramMerge',
+    'GPURasterGlobalInitialize',
+    'GPURasterGlobalPercentile',
+    'GPURasterGlobalStatisticsMerge'
+  ]) {
+    assert.equal(
+      typeof rasterModule[exportName].prototype.addToGraph,
+      'function',
+      `${exportName} declares explicit GPU command-graph work`
+    );
+  }
   assert.equal(
     typeof rasterModule.GPURasterOverview.prototype.addToGraph,
     'function',
@@ -251,6 +286,10 @@ try {
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
+  GPURasterGlobalHistogramMerge,
+  GPURasterGlobalInitialize,
+  GPURasterGlobalPercentile,
+  GPURasterGlobalStatisticsMerge,
   GPURasterGradient,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
@@ -282,6 +321,7 @@ try {
   type GPURasterBandMathProps,
   type GPURasterBinaryMorphologyProps,
   type GPURasterBorderMode,
+  type GPURasterBufferBand,
   type GPURasterCategoricalOverviewFormat,
   type GPURasterCategoricalOverviewProps,
   type GPURasterClosingProps,
@@ -298,6 +338,11 @@ try {
   type GPURasterEdgeProps,
   type GPURasterErosionProps,
   type GPURasterGaussianBlurProps,
+  type GPURasterGlobalAccumulator,
+  type GPURasterGlobalHistogramMergeProps,
+  type GPURasterGlobalInitializeProps,
+  type GPURasterGlobalPercentileProps,
+  type GPURasterGlobalStatisticsMergeProps,
   type GPURasterGrayscaleMorphologyProps,
   type GPURasterGradientDirection,
   type GPURasterGradientMagnitudeProps,
@@ -388,6 +433,11 @@ declare const dilationOptions: GPURasterDilationProps;
 declare const edgeOptions: GPURasterEdgeProps;
 declare const erosionOptions: GPURasterErosionProps;
 declare const gaussianOptions: GPURasterGaussianBlurProps;
+declare const globalAccumulator: GPURasterGlobalAccumulator;
+declare const globalHistogramMergeOptions: GPURasterGlobalHistogramMergeProps;
+declare const globalInitializeOptions: GPURasterGlobalInitializeProps;
+declare const globalPercentileOptions: GPURasterGlobalPercentileProps;
+declare const globalStatisticsMergeOptions: GPURasterGlobalStatisticsMergeProps;
 declare const grayscaleMorphologyOptions: GPURasterGrayscaleMorphologyProps;
 declare const gradientDirection: GPURasterGradientDirection;
 declare const gradientMagnitudeOptions: GPURasterGradientMagnitudeProps;
@@ -457,6 +507,10 @@ declare const convolution: GPURasterConvolution;
 declare const dilation: GPURasterDilation;
 declare const erosion: GPURasterErosion;
 declare const gaussianBlur: GPURasterGaussianBlur;
+declare const globalHistogramMerge: GPURasterGlobalHistogramMerge;
+declare const globalInitialize: GPURasterGlobalInitialize;
+declare const globalPercentile: GPURasterGlobalPercentile;
+declare const globalStatisticsMerge: GPURasterGlobalStatisticsMerge;
 declare const gradient: GPURasterGradient;
 declare const gradientMagnitude: GPURasterGradientMagnitude;
 declare const laplacian: GPURasterLaplacian;
@@ -491,6 +545,10 @@ const convolutionContributor: GPUCommandGraphContributor = convolution;
 const dilationContributor: GPUCommandGraphContributor = dilation;
 const erosionContributor: GPUCommandGraphContributor = erosion;
 const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
+const globalHistogramMergeContributor: GPUCommandGraphContributor = globalHistogramMerge;
+const globalInitializeContributor: GPUCommandGraphContributor = globalInitialize;
+const globalPercentileContributor: GPUCommandGraphContributor = globalPercentile;
+const globalStatisticsMergeContributor: GPUCommandGraphContributor = globalStatisticsMerge;
 const gradientContributor: GPUCommandGraphContributor = gradient;
 const gradientMagnitudeContributor: GPUCommandGraphContributor = gradientMagnitude;
 const laplacianContributor: GPUCommandGraphContributor = laplacian;
@@ -525,6 +583,16 @@ const configuredErosion: GPUCommandGraphContributor = new GPURasterErosion(erosi
 const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openingOptions);
 const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
 const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
+const configuredGlobalInitialize: GPUCommandGraphContributor = new GPURasterGlobalInitialize(
+  globalInitializeOptions
+);
+const configuredGlobalStatisticsMerge: GPUCommandGraphContributor =
+  new GPURasterGlobalStatisticsMerge(globalStatisticsMergeOptions);
+const configuredGlobalHistogramMerge: GPUCommandGraphContributor =
+  new GPURasterGlobalHistogramMerge(globalHistogramMergeOptions);
+const configuredGlobalPercentile: GPUCommandGraphContributor = new GPURasterGlobalPercentile(
+  globalPercentileOptions
+);
 const configuredCategoricalOverview: GPUCommandGraphContributor = new GPURasterCategoricalOverview(
   categoricalOverviewOptions
 );
@@ -637,6 +705,34 @@ const decodedValidity: Uint32Array | undefined = decodedFloatBand.validity;
 const exactTileDownsample: readonly [number, number] = tileLevel.downsample;
 const decodedTileBounds: GPURasterPixelBounds = decodedTile.pixelBounds;
 const decodedLevelZeroBounds: GPURasterPixelBounds = decodedTile.levelZeroBounds;
+const persistentGlobalExtent: GraphDataView<'float32'> = globalAccumulator.extent;
+const persistentGlobalCount: GraphDataView<'uint32'> = globalAccumulator.count;
+const persistentGlobalSum: GraphDataView<'float32'> = globalAccumulator.sum;
+const persistentGlobalHistogram: GraphDataView<'uint32'> = globalAccumulator.histogram;
+const persistentGlobalOverflow: GraphDataView<'uint32'> = globalAccumulator.overflow;
+const initializedAccumulator: GPURasterGlobalAccumulator = globalInitializeOptions.accumulator;
+const statisticsAccumulator: GPURasterGlobalAccumulator =
+  globalStatisticsMergeOptions.accumulator;
+const histogramAccumulator: GPURasterGlobalAccumulator = globalHistogramMergeOptions.accumulator;
+const percentileAccumulator: GPURasterGlobalAccumulator = globalPercentileOptions.accumulator;
+const mergedStatisticsInput: GPURasterBufferBand<'float32'> = globalStatisticsMergeOptions.input;
+const replayedHistogramInput: GPURasterBufferBand<'float32'> = globalHistogramMergeOptions.input;
+const mergedStatisticsWidth: number = globalStatisticsMergeOptions.width;
+const mergedStatisticsHeight: number = globalStatisticsMergeOptions.height;
+const replayedHistogramWidth: number = globalHistogramMergeOptions.width;
+const replayedHistogramHeight: number = globalHistogramMergeOptions.height;
+const requestedGlobalPercentile: number = globalPercentileOptions.percentile;
+const publishedGlobalPercentile: GraphDataView<'float32'> = globalPercentileOptions.output;
+const optionalGlobalPercentileValidity: GraphDataView<'uint32'> | undefined =
+  globalPercentileOptions.outputValidity;
+const declaredGlobalAccumulator: GPURasterGlobalAccumulator = globalStatisticsMerge.accumulator;
+const declaredGlobalMergeWidth: number = globalStatisticsMerge.width;
+const declaredGlobalMergeHeight: number = globalStatisticsMerge.height;
+const declaredGlobalMergeInput: GPURasterBufferBand<'float32'> = globalStatisticsMerge.input;
+const declaredGlobalPercentile: number = globalPercentile.percentile;
+const declaredGlobalPercentileOutput: GraphDataView<'float32'> = globalPercentile.output;
+const declaredGlobalPercentileValidity: GraphDataView<'uint32'> | undefined =
+  globalPercentile.outputValidity;
 const isotropicOverviewScale: GPURasterOverviewScale = 2;
 const anisotropicOverviewScale: GPURasterOverviewScale = [2, 3];
 const supportedCategoricalOverviewFormats: readonly GPURasterCategoricalOverviewFormat[] = [
@@ -789,6 +885,16 @@ const invalidUnsignedCategoricalOverviewOutput: GraphDataView<'float32'> =
 // @ts-expect-error Signed category labels cannot be reinterpreted as unsigned values.
 const invalidSignedCategoricalOverviewOutput: GraphDataView<'uint32'> =
   signedCategoricalOverviewOptions.output;
+// @ts-expect-error Persistent global extrema always retain calibrated float32 scalar samples.
+const invalidGlobalExtentFormat: GraphDataView<'uint32'> = globalAccumulator.extent;
+// @ts-expect-error Persistent global population counters never masquerade as floating values.
+const invalidGlobalCountFormat: GraphDataView<'float32'> = globalAccumulator.count;
+// @ts-expect-error Persistent global histogram bins retain exact uint32 counts.
+const invalidGlobalHistogramFormat: GraphDataView<'float32'> = globalAccumulator.histogram;
+// @ts-expect-error Sticky overflow diagnostics use an explicit uint32 bit mask.
+const invalidGlobalOverflowFormat: GraphDataView<'float32'> = globalAccumulator.overflow;
+// @ts-expect-error Percentile outputs preserve calibrated float32 values.
+const invalidGlobalPercentileFormat: GraphDataView<'uint32'> = globalPercentileOptions.output;
 
 void GPURaster;
 void GPURasterBandMath;
@@ -803,6 +909,10 @@ void GPURasterConvolution;
 void GPURasterDilation;
 void GPURasterErosion;
 void GPURasterGaussianBlur;
+void GPURasterGlobalHistogramMerge;
+void GPURasterGlobalInitialize;
+void GPURasterGlobalPercentile;
+void GPURasterGlobalStatisticsMerge;
 void GPURasterGradient;
 void GPURasterGradientMagnitude;
 void GPURasterHistogram;
@@ -854,6 +964,11 @@ void dilationOptions;
 void edgeOptions;
 void erosionOptions;
 void gaussianOptions;
+void globalAccumulator;
+void globalHistogramMergeOptions;
+void globalInitializeOptions;
+void globalPercentileOptions;
+void globalStatisticsMergeOptions;
 void grayscaleMorphologyOptions;
 void gradientDirection;
 void gradientMagnitudeOptions;
@@ -923,6 +1038,10 @@ void convolutionContributor;
 void dilationContributor;
 void erosionContributor;
 void gaussianBlurContributor;
+void globalHistogramMergeContributor;
+void globalInitializeContributor;
+void globalPercentileContributor;
+void globalStatisticsMergeContributor;
 void gradientContributor;
 void gradientMagnitudeContributor;
 void laplacianContributor;
@@ -951,6 +1070,10 @@ void configuredErosion;
 void configuredOpening;
 void configuredClosing;
 void configuredOverview;
+void configuredGlobalInitialize;
+void configuredGlobalStatisticsMerge;
+void configuredGlobalHistogramMerge;
+void configuredGlobalPercentile;
 void configuredCategoricalOverview;
 void configuredSignedCategoricalOverview;
 void configuredScharr;
@@ -1106,7 +1229,41 @@ void unsupportedCategoricalOverviewPolicy;
 void invalidFloatingOverviewOutput;
 void invalidUnsignedCategoricalOverviewOutput;
 void invalidSignedCategoricalOverviewOutput;
+void invalidGlobalExtentFormat;
+void invalidGlobalCountFormat;
+void invalidGlobalHistogramFormat;
+void invalidGlobalOverflowFormat;
+void invalidGlobalPercentileFormat;
+void persistentGlobalExtent;
+void persistentGlobalCount;
+void persistentGlobalSum;
+void persistentGlobalHistogram;
+void persistentGlobalOverflow;
+void initializedAccumulator;
+void statisticsAccumulator;
+void histogramAccumulator;
+void percentileAccumulator;
+void mergedStatisticsInput;
+void replayedHistogramInput;
+void mergedStatisticsWidth;
+void mergedStatisticsHeight;
+void replayedHistogramWidth;
+void replayedHistogramHeight;
+void requestedGlobalPercentile;
+void publishedGlobalPercentile;
+void optionalGlobalPercentileValidity;
+void declaredGlobalAccumulator;
+void declaredGlobalMergeWidth;
+void declaredGlobalMergeHeight;
+void declaredGlobalMergeInput;
+void declaredGlobalPercentile;
+void declaredGlobalPercentileOutput;
+void declaredGlobalPercentileValidity;
 void categoricalOverview;
+void globalHistogramMerge;
+void globalInitialize;
+void globalPercentile;
+void globalStatisticsMerge;
 void overview;
 void tileCache;
 void tileCoreExtract;
@@ -1171,6 +1328,15 @@ void RootGPURasterCategoricalOverview;
 // @ts-expect-error Overview spatial metadata helpers stay isolated from the experimental root.
 import {makeRasterOverviewMetadata as makeRootRasterOverviewMetadata} from '@luma.gl/experimental';
 void makeRootRasterOverviewMetadata;
+// @ts-expect-error Global accumulator initialization stays isolated from the experimental root.
+import {GPURasterGlobalInitialize as RootGPURasterGlobalInitialize} from '@luma.gl/experimental';
+void RootGPURasterGlobalInitialize;
+// @ts-expect-error Replayable global histogram merge stays isolated from the experimental root.
+import {GPURasterGlobalHistogramMerge as RootGPURasterGlobalHistogramMerge} from '@luma.gl/experimental';
+void RootGPURasterGlobalHistogramMerge;
+// @ts-expect-error Overflow-aware global percentile stays isolated from the experimental root.
+import {GPURasterGlobalPercentile as RootGPURasterGlobalPercentile} from '@luma.gl/experimental';
+void RootGPURasterGlobalPercentile;
 `
   );
   assert.equal(

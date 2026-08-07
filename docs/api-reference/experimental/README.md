@@ -131,6 +131,25 @@ introduces explicit command scheduling, typed table-backed graph views, hierarch
 compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written
 indirect draw commands.
 
+## GPU-resident Raster Analytics
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`@luma.gl/experimental/luraster`](/docs/api-reference/experimental/luraster) analyzes scientific
+and geospatial raster bands directly inside caller-owned WebGPU command graphs. It distinguishes
+missing observations from valid zeroes, preserves source calibration and spatial metadata, and
+composes vegetation indices, distributions, thresholds, neighborhood filters, morphology, and
+contour geometry without downloading raster pixels.
+
+Applications can optionally add bounded tile residency, seam-safe neighboring samples,
+validity-aware analytical overviews, and dataset-wide histogram replay. The
+[raster concepts and execution guide](/docs/api-reference/experimental/luraster/concepts)
+explains nodata, validity masks, owned tile cores, halos, overviews, and replay before introducing
+the API. The [Satellite Raster Lab](/examples/showcase/raster-lab) demonstrates every completed
+capability with real GPU computation and a fixed-size analytical summary.
+
 ## GPU-native Trace Exploration
 
 <p class="badges">
