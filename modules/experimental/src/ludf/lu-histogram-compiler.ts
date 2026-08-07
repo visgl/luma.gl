@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GPUVector, type GPUField, type GPUTypeMap} from '@luma.gl/tables';
 import {type GPUCommandGraph, type GraphDataView} from '../gpu-primitives/gpu-command-graph';
