@@ -30,45 +30,75 @@ GPU, which results they render, when commands are submitted, and whether anythin
 like when they feed a real interactive application?**
 
 The [interactive luGraph explorer](/examples/experimental/lugraph-explorer) answers that question
-with a deterministic 128-vertex network. Four intentionally generated source groups contain
-important hubs, a bridge between the first two groups, and one completely isolated vertex. This
-small, deliberately interpretable network makes it possible to see how adjacency, degree,
-PageRank, weak components, bounded shortest paths, and exact force-directed layout work together.
+with a deterministic, genuinely resizable network. It opens with **1,024 vertices**, then lets you
+choose any of fourteen actual graph populations from **128 to 1,048,576 vertices**. The largest
+setting contains **1,048,576 real GPU-resident vertices and 2,097,343 original directed edges**;
+these are complete source relationships, not a small graph duplicated or multiplied for display.
+Four intentionally generated source groups contain important hubs, a bridge between the first two
+groups, and one isolated vertex, making both small and large versions interpretable.
 
 <LuGraphExplorerExample embedded embeddedHeight={680} />
 
-The graph inspector opens automatically and lets you compare four real GPU-backed color modes:
+The graph inspector opens automatically and lets you compare five real GPU-backed color modes:
 
+- **Label-propagation communities** distinguish tightly connected local groups using deterministic,
+  bounded majority votes. A narrow bridge can preserve two different communities even when both
+  groups belong to the same connected component; a fixed iteration budget does not prove
+  convergence.
 - **Weak components** identify entities that can reach each other when edge direction is ignored.
   The two source groups joined by a bridge have the same color; disconnected groups and the
-  isolated vertex remain separate. These are weak components, not community-detection output.
+  isolated vertex remain separate. This mode describes connectivity, not the separate
+  community-detection labels.
 - **Vertex degree** exposes direct relationship counts and identifies immediately connected hubs.
 - **PageRank importance** identifies influence received from other important vertices, which can
   differ substantially from raw relationship count.
 - **Neighborhood distance** shows how many bounded, unweighted hops separate each reachable vertex
   from the current selection.
 
-Node size can independently reflect normalized PageRank, vertex degree, or a uniform radius. Click
-a node to inspect its stable source identifier and highlighted neighborhood; adjust neighborhood
-depth to follow more unweighted hops. Toggle the original edge batches, pause or resume the exact
-layout, drag a node to pin it, release pins, or reset deterministic initial positions. Hold Shift
-while dragging to pan and scroll to zoom. An accessible legend and live status explain the current
-graph; adapter, frame-rate, and GPU-allocation details report actual available runtime information,
-not invented GPU execution times.
+Node size can independently reflect normalized PageRank, vertex degree, or a uniform radius. Use
+the graph-size slider to rebuild actual resident graph data, and select automatic, exact,
+flat-grid spatial, or sampled layout. Click a node to inspect its stable source identifier and
+highlighted neighborhood; adjust neighborhood depth to follow more unweighted hops. Toggle visible
+edges, pause or resume the selected layout, drag a node to pin it, release pins, or reset
+deterministic initial positions. Hold Shift while dragging to pan and scroll to zoom.
 
-The example builds forward and reverse compressed adjacency, vertex degree, weak components, and
-normalized PageRank on the GPU. Each frame updates bounded breadth-first selection and progresses
-the exact force layout. The same caller-owned position buffer is simultaneously writable storage
-and a render vertex attribute. Node and picking shaders consume the actual PageRank and degree
-buffers, while edge models draw their original aligned source batches without concatenating the
-intentionally empty middle batch. Analytics, simulation, and ordinary rendering do not read graph
-data back to JavaScript; explicitly requested integer picking reads only one compact **8-byte**
-selected-vertex result.
+The example builds forward and reverse compressed adjacency, vertex degree, weak components,
+label-propagation communities, and normalized PageRank on the GPU. Breadth-first selection updates
+when its root or depth changes; progressive layout advances the existing caller-owned position
+buffer, which is simultaneously writable storage and a render vertex attribute. Node and picking
+shaders consume the actual community, component, PageRank, and degree buffers. Original source
+edge batches, including the intentionally empty middle batch, are never concatenated or repacked.
+
+Automatic layout selects distinct, honestly bounded GPU workloads:
+
+- **Exact layout through 512 vertices:** every pairwise repulsive interaction is evaluated,
+  costing `O(V² + E)` per iteration.
+- **Flat-grid spatial layout from 1,024 to 8,192 vertices:** nearby interactions remain exact while
+  sufficiently distant cells use the optional uniform-grid approximation and its explicit,
+  caller-owned GPU index.
+- **Sampled layout from 16,384 vertices:** every actual vertex evaluates all incident edges plus
+  four deterministically selected repulsion samples, costing `O(E + 4V)` per iteration. It is a
+  separate, explicitly approximate application helper, not exact all-pairs layout, flat-grid
+  layout, Barnes–Hut, or ForceAtlas2.
+
+At **65,536 vertices** and above, every original vertex remains visible as one real GPU point.
+Only rendered edge detail is limited to **65,536 edges**; all **2,097,343 original edges** at the
+largest setting remain resident in their source batches and adjacency. The inspector distinguishes
+the complete graph population from displayed edge detail, reports the actual adapter, frame rate,
+measured CPU command-encoding time, and GPU resource ownership, and does not invent GPU execution
+times or convergence. CPU encoding is never mislabeled as a GPU measurement.
+
+Adjacency construction, degree, and one breadth-first traversal use `O(V + E)` work; bounded
+PageRank and weak components use `O(K × (V + E))`, while label propagation uses
+`O(K × sum(degree²))`. The quadratic workload avoided at scale is exact all-pairs force layout,
+not an unavoidable property of graph analytics. Large-graph iteration budgets are deliberately
+bounded and do not certify convergence or clustering quality.
 
 Use this demonstration to understand how GPU-resident graph outputs can directly support a social
-network, dependency map, fraud investigation, or other relationship visualization. It is a
-WebGPU-only educational example, not a large-graph performance benchmark: its exact layout costs
-`O(V² + E)` per force iteration and intentionally uses only 128 vertices.
+network, dependency map, fraud investigation, or other relationship visualization while making
+real rendering and approximation tradeoffs explicit. Analytics, simulation, and ordinary rendering
+never read graph columns back to JavaScript; explicitly requested integer picking reads only one
+compact **8-byte** selected-vertex result.
 
 ### Use luGraph from deck.gl without copying graph buffers
 
@@ -82,26 +112,30 @@ implementations from the existing private `@deck.gl-community/arrow-layers` adap
 Use it when a social-network, service-dependency, fraud-investigation, or citation visualization
 already uses deck.gl and needs GPU graph results to become directly drawable attributes.
 
-The effect first encodes forward and reverse adjacency, normalized PageRank, and weak components.
-Later frames encode bounded neighborhood selection and exact force-directed layout into
-deck.gl's own command encoder; deck.gl remains responsible for queue submission. The writable layout
-allocation is also the node layer's `float32x2` instance vertex attribute. PageRank scores,
-component labels, hop distances, and the selection mask remain GPU storage inputs; each nonempty
-original edge partition gets its own edge layer,
-without concatenation, buffer copies, or per-frame graph readback.
+The effect first encodes forward and reverse adjacency, vertex degree, normalized PageRank, weak
+components, and deterministic label-propagation communities. Later frames encode actual exact,
+flat-grid spatial, or sampled force layout into deck.gl's own command encoder; bounded
+neighborhood selection reruns only when interaction changes it. deck.gl remains responsible for
+queue submission. The writable layout allocation is also the node layer's `float32x2` instance
+vertex attribute. PageRank scores, degree counts, component and community labels, hop distances,
+and the selection mask remain GPU storage inputs; each nonempty original edge partition gets its
+own edge layer, without concatenation, buffer copies, or per-frame graph readback.
 
-The deterministic example fixture is uploaded once. Selecting, pinning, dragging, and changing
-neighborhood depth write only the necessary interaction controls or coordinates; they do not
-download graph columns. An explicitly requested native deck.gl pick returns the selected original
-vertex identifier to JavaScript. Its implementation and transfer size belong to deck.gl; it is
-separate from the native explorer's custom **8-byte** integer-picking path above. The example uses
-exact `O(V² + E)` layout, not the optional spatial approximation, and does not promise large-graph
-throughput.
+The deterministic example fixture is uploaded once for each selected graph size. Resizing replaces
+its resident allocations and rebinds stable node and edge layers to their new buffers. Selecting,
+pinning, dragging, and changing neighborhood depth write only the necessary interaction controls or
+coordinates; they do not download graph columns. Every actual vertex remains rendered, including
+all **1,048,576 vertices** in point mode; only displayed original edges are capped. An explicitly
+requested native deck.gl pick returns the selected original vertex identifier to JavaScript. Its
+implementation and transfer size belong to deck.gl; it is
+separate from the native explorer's custom **8-byte** integer-picking path above.
 
 The reusable graph effect, node and edge layers, and graph integration's deck.gl imports live in
 the existing private `@deck.gl-community/arrow-layers` adapter. The website-only example consumes
 those exported symbols without importing `@deck.gl/core` or adding an example package; neither
-`@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl.
+`@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl. The
+example supplies its sampled-layout helper to the private effect as an injected callback, so the
+package never imports example code or claims that the helper is a new production graph operation.
 
 ## Measure real CPU and WebGPU graph workloads
 
