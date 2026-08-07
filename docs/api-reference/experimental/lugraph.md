@@ -1,4 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+import {LuGraphExplorerExample} from '@site/src/examples';
 
 # luGraph: GPU-Resident Graph Analytics
 
@@ -20,6 +21,52 @@ existing `GPUCommandGraph`.
 This is an experimental, headless graph analytics API, not a graph database, visualization
 framework, file importer, or general-purpose dataframe. Applications decide how data reaches the
 GPU, which results they render, when commands are submitted, and whether anything is read back.
+
+## Explore a live GPU graph
+
+**What do graph relationships, vertex influence, connected groups, and neighborhood searches look
+like when they feed a real interactive application?**
+
+The [interactive luGraph explorer](/examples/experimental/lugraph-explorer) answers that question
+with a deterministic 128-vertex network. Four intentionally generated source groups contain
+important hubs, a bridge between the first two groups, and one completely isolated vertex. This
+small, deliberately interpretable network makes it possible to see how adjacency, degree,
+PageRank, weak components, bounded shortest paths, and exact force-directed layout work together.
+
+<LuGraphExplorerExample embedded embeddedHeight={680} />
+
+The graph inspector opens automatically and lets you compare four real GPU-backed color modes:
+
+- **Weak components** identify entities that can reach each other when edge direction is ignored.
+  The two source groups joined by a bridge have the same color; disconnected groups and the
+  isolated vertex remain separate. These are weak components, not community-detection output.
+- **Vertex degree** exposes direct relationship counts and identifies immediately connected hubs.
+- **PageRank importance** identifies influence received from other important vertices, which can
+  differ substantially from raw relationship count.
+- **Neighborhood distance** shows how many bounded, unweighted hops separate each reachable vertex
+  from the current selection.
+
+Node size can independently reflect normalized PageRank, vertex degree, or a uniform radius. Click
+a node to inspect its stable source identifier and highlighted neighborhood; adjust neighborhood
+depth to follow more unweighted hops. Toggle the original edge batches, pause or resume the exact
+layout, drag a node to pin it, release pins, or reset deterministic initial positions. Hold Shift
+while dragging to pan and scroll to zoom. An accessible legend and live status explain the current
+graph; adapter, frame-rate, and GPU-allocation details report actual available runtime information,
+not invented GPU execution times.
+
+The example builds forward and reverse compressed adjacency, vertex degree, weak components, and
+normalized PageRank on the GPU. Each frame updates bounded breadth-first selection and progresses
+the exact force layout. The same caller-owned position buffer is simultaneously writable storage
+and a render vertex attribute. Node and picking shaders consume the actual PageRank and degree
+buffers, while edge models draw their original aligned source batches without concatenating the
+intentionally empty middle batch. Analytics, simulation, and ordinary rendering do not read graph
+data back to JavaScript; explicitly requested integer picking reads only one compact **8-byte**
+selected-vertex result.
+
+Use this demonstration to understand how GPU-resident graph outputs can directly support a social
+network, dependency map, fraud investigation, or other relationship visualization. It is a
+WebGPU-only educational example, not a large-graph performance benchmark: its exact layout costs
+`O(V² + E)` per force iteration and intentionally uses only 128 vertices.
 
 ## Why keep a graph on the GPU?
 

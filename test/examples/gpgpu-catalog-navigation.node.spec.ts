@@ -189,6 +189,7 @@ describe('GPGPU example catalog navigation', () => {
       'v10/gpgpu',
       'experimental/gpu-frustum-culling',
       'experimental/gpu-trace-viewer',
+      'experimental/lugraph-explorer',
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
       'experimental/gpu-sort',

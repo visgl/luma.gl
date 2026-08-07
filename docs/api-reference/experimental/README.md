@@ -137,6 +137,8 @@ edge columns into reusable compressed adjacency, vertex degrees, bounded shortes
 weakly connected components, and dangling-aware PageRank scores. Social networks, dependency graphs,
 transaction investigations, and infrastructure maps can compose those operations into one WebGPU
 command graph without copying source batches or reading complete results back to JavaScript.
+The [interactive graph explorer](/examples/experimental/lugraph-explorer) adds directly renderable
+exact force-layout coordinates, neighborhood highlighting, stable GPU picking, dragging, and pinning.
 
 ## GPU-resident Linked Crossfiltering
 
