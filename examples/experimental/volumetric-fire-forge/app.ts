@@ -4,8 +4,8 @@
 
 import {Texture, type Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {OrbitControls, VolumetricFireSimulation} from '@luma.gl/experimental';
+import {AnimationLoopTemplate, OrbitControls} from '@luma.gl/engine';
+import {VolumetricFireSimulation} from '@luma.gl/experimental';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import type {Panel, SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import {

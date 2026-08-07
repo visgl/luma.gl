@@ -8,6 +8,7 @@ import {
   CubeGeometry,
   IcoSphereGeometry,
   Model,
+  OrbitControls,
   ShaderInputs,
   ShaderPassRenderer,
   TruncatedConeGeometry,
@@ -15,7 +16,6 @@ import {
 } from '@luma.gl/engine';
 import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import {
-  OrbitControls,
   spectralCaustics,
   SpectralCausticsRenderer,
   type SpectralCausticsProps

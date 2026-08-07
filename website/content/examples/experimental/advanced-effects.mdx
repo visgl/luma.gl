@@ -14,7 +14,8 @@ import {AdvancedEffectsExample} from '@site/src/examples';
   <div>
     A procedural city lit by cascaded sun, moving spot, local point, and contact shadows, then
     composed through SSAO, screen-space reflections, volumetric fog, outlines, temporal AA, and
-    motion blur. Use the split and debug controls to inspect every shadow source.
+    motion blur. Drag the comparison divider and use the debug controls to inspect every shadow
+    source.
   </div>
 </AdvancedEffectsExample>
 
@@ -27,6 +28,10 @@ motion blur, and depth-aware blur. Each section explains its role before exposin
 Visualization City is the breadth-first hybrid rendering showcase: light-space directional,
 spot, point, and contact shadows combine with SSAO, height fog, outlines, temporal AA, and motion
 blur. Its split view makes those shadow and postprocessing choices easy to compare.
+
+Drag the divider directly across the city to compare the original lighting with the complete
+effect stack. The divider is also keyboard accessible: focus it, use the arrow keys for precise
+adjustments, or press Home and End to reveal either side completely.
 
 [Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering) focuses on
 physically based deferred materials, hundreds of compute-clustered lights, higher-quality GTAO,

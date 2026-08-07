@@ -29,6 +29,9 @@ import './animation/animator.spec';
 import './animation/animation-mixer.spec';
 import './animation/morph-targets.spec';
 
+// Camera controls
+import './controls/orbit-controls.spec';
+
 // Scenegraph
 import './scenegraph/group-node.spec';
 import './scenegraph/scenegraph-node.spec';

@@ -5,9 +5,8 @@
 import type {Device, Framebuffer, NumberArray, Texture, VariableShaderType} from '@luma.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Geometry, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Geometry, Model, OrbitControls} from '@luma.gl/engine';
 import {
-  OrbitControls,
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
   WebXRManager,

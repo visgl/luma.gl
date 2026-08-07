@@ -3,7 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
+import {OrbitControls as EngineOrbitControls} from '@luma.gl/engine';
 import {OrbitControls} from '../../src/controls/orbit-controls';
+
+test('OrbitControls preserves the experimental compatibility re-export', t => {
+  t.equal(OrbitControls, EngineOrbitControls, 'both packages expose the same engine-owned class');
+  t.end();
+});
 
 test('OrbitControls advances auto-rotation from elapsed milliseconds', t => {
   const controls = new OrbitControls(makeTestCanvas(), {

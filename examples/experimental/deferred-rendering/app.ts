@@ -8,6 +8,7 @@ import {
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
+  OrbitControls,
   ShaderInputs,
   ShaderPassRenderer,
   SphereGeometry
@@ -27,7 +28,6 @@ import {
   GBuffer,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
-  OrbitControls,
   type DeferredPointLight
 } from '@luma.gl/experimental';
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';

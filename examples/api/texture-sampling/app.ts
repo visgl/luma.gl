@@ -8,10 +8,12 @@ import {
   type CompareFunction,
   type Device,
   type Framebuffer,
+  type RenderPass,
   type Sampler,
   type SamplerProps
 } from '@luma.gl/core';
 import {AnimationLoopTemplate, DynamicTexture, type AnimationProps, Model} from '@luma.gl/engine';
+import {ComparisonSplitter} from '@luma.gl/experimental';
 import {
   ColumnPanel,
   type Panel,
@@ -34,6 +36,8 @@ export const description = 'Experiment with mipmaps, filtering, wrapping, and co
 type Vec4 = [number, number, number, number];
 type SampleMode = 'color-texture' | 'depth-comparison';
 type TexturePreset = 'nearest-pixels' | 'bilinear' | 'trilinear' | 'anisotropic' | 'custom';
+type ComparisonSamplerPreset = Exclude<TexturePreset, 'custom'>;
+type ComparisonSide = 'left' | 'right';
 type MipChain = 'generated' | 'single-level';
 type AddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 type FilterMode = 'nearest' | 'linear';
@@ -41,6 +45,7 @@ type MipmapFilter = 'none' | 'nearest' | 'linear';
 
 type TextureSamplingSettings = {
   sampleMode: SampleMode;
+  leftSamplerPreset: ComparisonSamplerPreset;
   preset: TexturePreset;
   mipChain: MipChain;
   addressModeU: AddressMode;
@@ -88,6 +93,7 @@ const COMPARE_FUNCTIONS: CompareFunction[] = [
 
 const DEFAULT_SETTINGS: TextureSamplingSettings = {
   sampleMode: 'color-texture',
+  leftSamplerPreset: 'nearest-pixels',
   preset: 'trilinear',
   mipChain: 'generated',
   addressModeU: 'repeat',
@@ -107,7 +113,7 @@ const DEFAULT_SETTINGS: TextureSamplingSettings = {
   reference: 0.5
 };
 
-const PRESETS: Record<Exclude<TexturePreset, 'custom'>, Partial<TextureSamplingSettings>> = {
+const PRESETS: Record<ComparisonSamplerPreset, Partial<TextureSamplingSettings>> = {
   'nearest-pixels': {
     magFilter: 'nearest',
     minFilter: 'nearest',
@@ -125,6 +131,8 @@ const PRESETS: Record<Exclude<TexturePreset, 'custom'>, Partial<TextureSamplingS
     magFilter: 'linear',
     minFilter: 'linear',
     mipmapFilter: 'linear',
+    lodMinClamp: 0,
+    lodMaxClamp: MAX_MIP_LEVEL,
     maxAnisotropy: 1
   },
   anisotropic: {
@@ -132,9 +140,23 @@ const PRESETS: Record<Exclude<TexturePreset, 'custom'>, Partial<TextureSamplingS
     magFilter: 'linear',
     minFilter: 'linear',
     mipmapFilter: 'linear',
+    lodMinClamp: 0,
+    lodMaxClamp: MAX_MIP_LEVEL,
     maxAnisotropy: 8
   }
 };
+
+const RIGHT_SAMPLER_SETTINGS = new Set([
+  'mipChain',
+  'addressModeU',
+  'addressModeV',
+  'magFilter',
+  'minFilter',
+  'mipmapFilter',
+  'lodMinClamp',
+  'lodMaxClamp',
+  'maxAnisotropy'
+]);
 
 const SAMPLE_MODULE = {
   uniformTypes: {
@@ -395,11 +417,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly depthFramebuffer: Framebuffer;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
+  private readonly comparisonSplitter: ComparisonSplitter | null;
   colorTexture: DynamicTexture;
   settings: TextureSamplingSettings = cloneSettings(DEFAULT_SETTINGS);
-  private activeColorSampler: Sampler | null = null;
-  private activeComparisonSampler: Sampler | null = null;
+  private activeLeftColorSampler: Sampler | null = null;
+  private activeRightColorSampler: Sampler | null = null;
+  private activeLeftComparisonSampler: Sampler | null = null;
+  private activeRightComparisonSampler: Sampler | null = null;
+  private comparisonSplit = 0.5;
   private depthTextureInitialized = false;
+  private destroyed = false;
 
   constructor({device}: AnimationProps) {
     super();
@@ -471,11 +498,26 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.panels.mount();
-    void this.applyColorSampler();
-    this.applyComparisonSampler();
+    const canvas = device.getDefaultCanvasContext().canvas;
+    this.comparisonSplitter =
+      canvas instanceof HTMLCanvasElement
+        ? new ComparisonSplitter({
+            canvas,
+            id: 'texture-sampling-comparison-splitter',
+            label: 'Compare left and right texture samplers',
+            value: this.comparisonSplit,
+            onChange: value => {
+              this.comparisonSplit = value;
+            }
+          })
+        : null;
+    void this.applyColorSamplers();
+    this.applyComparisonSamplers();
   }
 
   onFinalize(): void {
+    this.destroyed = true;
+    this.comparisonSplitter?.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.colorMagnifiedModel.destroy();
@@ -487,8 +529,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.recedingUniformStore.destroy();
     this.comparisonMagnifiedUniformStore.destroy();
     this.comparisonRecedingUniformStore.destroy();
-    this.activeColorSampler?.destroy();
-    this.activeComparisonSampler?.destroy();
+    this.activeLeftColorSampler?.destroy();
+    this.activeRightColorSampler?.destroy();
+    this.activeLeftComparisonSampler?.destroy();
+    this.activeRightComparisonSampler?.destroy();
     this.colorTexture.destroy();
     this.depthFramebuffer.destroy();
     this.depthColorTexture.destroy();
@@ -496,6 +540,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device}: AnimationProps): void {
+    this.comparisonSplitter?.updateLayout();
     this.updateUniforms();
     if (!this.depthTextureInitialized) {
       this.renderDepthTexture(device);
@@ -503,14 +548,45 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const renderPass = device.beginRenderPass({clearColor: [0.025, 0.03, 0.05, 1]});
+    const [width, height] = device.getDefaultCanvasContext().getDrawingBufferSize();
+    this.renderComparisonView(renderPass, 'left', width, height);
+    this.renderComparisonView(renderPass, 'right', width, height);
+    renderPass.end();
+  }
+
+  private renderComparisonView(
+    renderPass: RenderPass,
+    side: ComparisonSide,
+    width: number,
+    height: number
+  ): void {
+    const split = Math.min(width, Math.max(0, Math.round(width * this.comparisonSplit)));
+    const viewX = side === 'left' ? 0 : split;
+    const viewWidth = side === 'left' ? split : width - split;
+    if (viewWidth <= 0 || height <= 0) {
+      return;
+    }
+
+    renderPass.setParameters({scissorRect: [viewX, 0, viewWidth, height]});
     if (this.settings.sampleMode === 'depth-comparison') {
+      const sampler =
+        side === 'left' ? this.activeLeftComparisonSampler : this.activeRightComparisonSampler;
+      if (!sampler) {
+        return;
+      }
+      this.depthTexture.setSampler(sampler);
       this.comparisonMagnifiedModel.draw(renderPass);
       this.comparisonRecedingModel.draw(renderPass);
-    } else {
-      this.colorMagnifiedModel.draw(renderPass);
-      this.colorRecedingModel.draw(renderPass);
+      return;
     }
-    renderPass.end();
+
+    const sampler = side === 'left' ? this.activeLeftColorSampler : this.activeRightColorSampler;
+    if (!sampler || !this.colorTexture.isReady) {
+      return;
+    }
+    this.colorTexture.setSampler(sampler);
+    this.colorMagnifiedModel.draw(renderPass);
+    this.colorRecedingModel.draw(renderPass);
   }
 
   private makeColorTexture(mipChain: MipChain): DynamicTexture {
@@ -605,49 +681,64 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  private async applyColorSampler(): Promise<void> {
+  private async applyColorSamplers(): Promise<void> {
     const texture = this.colorTexture;
     await texture.ready;
-    if (texture !== this.colorTexture) {
+    if (this.destroyed || texture !== this.colorTexture) {
       return;
     }
-    const nextSampler = this.device.createSampler(
+    const leftSettings = makeLeftSamplerSettings(this.settings, this.device);
+    const nextLeftSampler = this.device.createSampler(
+      makeColorSamplerProps(leftSettings, this.device)
+    );
+    const nextRightSampler = this.device.createSampler(
       makeColorSamplerProps(this.settings, this.device)
     );
-    texture.setSampler(nextSampler);
+    texture.setSampler(nextRightSampler);
     this.colorMagnifiedModel.setBindings({uTexture: texture});
     this.colorRecedingModel.setBindings({uTexture: texture});
-    const previousSampler = this.activeColorSampler;
-    this.activeColorSampler = nextSampler;
-    previousSampler?.destroy();
+    const previousLeftSampler = this.activeLeftColorSampler;
+    const previousRightSampler = this.activeRightColorSampler;
+    this.activeLeftColorSampler = nextLeftSampler;
+    this.activeRightColorSampler = nextRightSampler;
+    previousLeftSampler?.destroy();
+    previousRightSampler?.destroy();
   }
 
-  private applyComparisonSampler(): void {
-    const nextSampler = this.device.createSampler(makeComparisonSamplerProps(this.settings));
-    this.depthTexture.setSampler(nextSampler);
+  private applyComparisonSamplers(): void {
+    const leftSettings = makeLeftSamplerSettings(this.settings, this.device);
+    const nextLeftSampler = this.device.createSampler(makeComparisonSamplerProps(leftSettings));
+    const nextRightSampler = this.device.createSampler(makeComparisonSamplerProps(this.settings));
+    this.depthTexture.setSampler(nextRightSampler);
     this.comparisonMagnifiedModel.setBindings({uDepthTexture: this.depthTexture});
     this.comparisonRecedingModel.setBindings({uDepthTexture: this.depthTexture});
-    const previousSampler = this.activeComparisonSampler;
-    this.activeComparisonSampler = nextSampler;
-    previousSampler?.destroy();
+    const previousLeftSampler = this.activeLeftComparisonSampler;
+    const previousRightSampler = this.activeRightComparisonSampler;
+    this.activeLeftComparisonSampler = nextLeftSampler;
+    this.activeRightComparisonSampler = nextRightSampler;
+    previousLeftSampler?.destroy();
+    previousRightSampler?.destroy();
   }
 
   private recreateColorTexture(): void {
     const previousTexture = this.colorTexture;
-    const previousSampler = this.activeColorSampler;
-    this.activeColorSampler = null;
+    const previousLeftSampler = this.activeLeftColorSampler;
+    const previousRightSampler = this.activeRightColorSampler;
+    this.activeLeftColorSampler = null;
+    this.activeRightColorSampler = null;
     const nextTexture = this.makeColorTexture(this.settings.mipChain);
     this.colorTexture = nextTexture;
     this.colorMagnifiedModel.setBindings({uTexture: nextTexture});
     this.colorRecedingModel.setBindings({uTexture: nextTexture});
     void nextTexture.ready.then(() => {
-      if (nextTexture !== this.colorTexture) {
+      if (this.destroyed || nextTexture !== this.colorTexture) {
         nextTexture.destroy();
         return;
       }
-      previousSampler?.destroy();
+      previousLeftSampler?.destroy();
+      previousRightSampler?.destroy();
       previousTexture.destroy();
-      void this.applyColorSampler();
+      void this.applyColorSamplers();
     });
   }
 
@@ -691,7 +782,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
     } else {
       this.settings = readSettings(nextSettings, this.settings, this.device);
-      if (changedSettings?.some(change => change.name !== 'preset')) {
+      if (changedSettings?.some(change => RIGHT_SAMPLER_SETTINGS.has(change.name))) {
         this.settings.preset = 'custom';
       }
     }
@@ -699,9 +790,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (this.settings.mipChain !== previousMipChain) {
       this.recreateColorTexture();
     } else {
-      void this.applyColorSampler();
+      void this.applyColorSamplers();
     }
-    this.applyComparisonSampler();
+    this.applyComparisonSamplers();
     this.syncPanel();
   };
 }
@@ -721,6 +812,19 @@ function makeSettingsSchema(device: Device, settings: TextureSamplingSettings): 
       ],
       defaultValue: DEFAULT_SETTINGS.sampleMode
     },
+    {
+      name: 'leftSamplerPreset',
+      label: 'Left sampler',
+      group: 'Comparison',
+      type: 'select' as const,
+      options: [
+        {label: 'Nearest pixels', value: 'nearest-pixels'},
+        {label: 'Bilinear', value: 'bilinear'},
+        {label: 'Trilinear mipmaps', value: 'trilinear'},
+        {label: 'Anisotropic', value: 'anisotropic'}
+      ],
+      defaultValue: DEFAULT_SETTINGS.leftSamplerPreset
+    },
     makeRangeSetting('uvScale', 'UV scale', 'Scene', 0.25, 16, 0.25, DEFAULT_SETTINGS.uvScale),
     makeRangeSetting('uvOffsetU', 'UV offset U', 'Scene', -2, 2, 0.05, 0),
     makeRangeSetting('uvOffsetV', 'UV offset V', 'Scene', -2, 2, 0.05, 0),
@@ -731,28 +835,28 @@ function makeSettingsSchema(device: Device, settings: TextureSamplingSettings): 
     makeSelectSetting(
       'addressModeU',
       'Address U',
-      'Sampler',
+      'Right sampler',
       ADDRESS_MODES,
       DEFAULT_SETTINGS.addressModeU
     ),
     makeSelectSetting(
       'addressModeV',
       'Address V',
-      'Sampler',
+      'Right sampler',
       ADDRESS_MODES,
       DEFAULT_SETTINGS.addressModeV
     ),
     makeSelectSetting(
       'magFilter',
       'Mag filter',
-      'Sampler',
+      'Right sampler',
       FILTER_MODES,
       DEFAULT_SETTINGS.magFilter
     ),
     makeSelectSetting(
       'minFilter',
       'Min filter',
-      'Sampler',
+      'Right sampler',
       FILTER_MODES,
       DEFAULT_SETTINGS.minFilter
     )
@@ -761,8 +865,8 @@ function makeSettingsSchema(device: Device, settings: TextureSamplingSettings): 
     ? [
         {
           name: 'preset',
-          label: 'Preset',
-          group: 'Color texture',
+          label: 'Right sampler',
+          group: 'Comparison',
           type: 'select' as const,
           options: [
             {label: 'Nearest pixels', value: 'nearest-pixels'},
@@ -789,15 +893,23 @@ function makeSettingsSchema(device: Device, settings: TextureSamplingSettings): 
               makeSelectSetting(
                 'mipmapFilter',
                 'Mipmap filter',
-                'Sampler',
+                'Right sampler',
                 MIPMAP_FILTERS,
                 DEFAULT_SETTINGS.mipmapFilter
               ),
-              makeRangeSetting('lodMinClamp', 'Minimum LOD', 'Sampler', 0, MAX_MIP_LEVEL, 0.25, 0),
+              makeRangeSetting(
+                'lodMinClamp',
+                'Minimum LOD',
+                'Right sampler',
+                0,
+                MAX_MIP_LEVEL,
+                0.25,
+                0
+              ),
               makeRangeSetting(
                 'lodMaxClamp',
                 'Maximum LOD',
-                'Sampler',
+                'Right sampler',
                 0,
                 MAX_MIP_LEVEL,
                 0.25,
@@ -808,7 +920,7 @@ function makeSettingsSchema(device: Device, settings: TextureSamplingSettings): 
         {
           name: 'maxAnisotropy',
           label: 'Max anisotropy',
-          group: 'Sampler',
+          group: 'Right sampler',
           type: 'select' as const,
           options: getAnisotropyOptions(device, hasMipmaps),
           defaultValue: 1
@@ -899,6 +1011,20 @@ function getSupportedAnisotropyValues(device: Device): number[] {
   return values.length > 0 ? values : [1];
 }
 
+function makeLeftSamplerSettings(
+  settings: TextureSamplingSettings,
+  device: Device
+): TextureSamplingSettings {
+  return normalizeSettings(
+    {
+      ...settings,
+      ...PRESETS[settings.leftSamplerPreset],
+      mipChain: settings.mipChain
+    },
+    device
+  );
+}
+
 function makeColorSamplerProps(settings: TextureSamplingSettings, device: Device): SamplerProps {
   const normalized = normalizeSettings(settings, device);
   return {
@@ -935,6 +1061,10 @@ function readSettings(
     {
       ...previous,
       sampleMode: readSampleMode(state.sampleMode, previous.sampleMode),
+      leftSamplerPreset: readComparisonSamplerPreset(
+        state.leftSamplerPreset,
+        previous.leftSamplerPreset
+      ),
       preset: readTexturePreset(state.preset, previous.preset),
       mipChain: readMipChain(state.mipChain, previous.mipChain),
       addressModeU: readAddressMode(state.addressModeU, previous.addressModeU),
@@ -999,6 +1129,13 @@ function readSampleMode(value: unknown, fallback: SampleMode): SampleMode {
 
 function readTexturePreset(value: unknown, fallback: TexturePreset): TexturePreset {
   return isTexturePreset(value) ? value : fallback;
+}
+
+function readComparisonSamplerPreset(
+  value: unknown,
+  fallback: ComparisonSamplerPreset
+): ComparisonSamplerPreset {
+  return isTexturePreset(value) && value !== 'custom' ? value : fallback;
 }
 
 function isTexturePreset(value: unknown): value is TexturePreset {
@@ -1081,11 +1218,18 @@ function makeDiagnosticTextureData(size: number): {
 
 function makeStatusHtml(device: Device, settings: TextureSamplingSettings): string {
   const isColor = settings.sampleMode === 'color-texture';
-  const sampler = isColor
+  const leftSettings = makeLeftSamplerSettings(settings, device);
+  const leftSampler = isColor
+    ? makeColorSamplerProps(leftSettings, device)
+    : makeComparisonSamplerProps(leftSettings);
+  const rightSampler = isColor
     ? makeColorSamplerProps(settings, device)
     : makeComparisonSamplerProps(settings);
   const notes = [
-    '<b>Left:</b> magnified flat quad. <b>Right:</b> receding minified plane.',
+    `<b>Left:</b> ${escapeHtml(settings.leftSamplerPreset)} sampler. <b>Right:</b> ${escapeHtml(
+      settings.preset
+    )} sampler.`,
+    'Drag the divider to compare both samplers on the magnified quad and receding plane.',
     `Backend: <code>${escapeHtml(device.type)}${device.info.featureLevel ? ` (${device.info.featureLevel})` : ''}</code>.`,
     'addressModeW is not applicable because this example samples 2D textures.'
   ];
@@ -1105,7 +1249,7 @@ function makeStatusHtml(device: Device, settings: TextureSamplingSettings): stri
     <p style="margin:0 0 8px"><b>Texture sampling playground</b></p>
     <p style="margin:0 0 8px">${notes.join('<br/>')}</p>
     <pre style="margin:0;max-height:180px;overflow:auto;font-size:11px;white-space:pre-wrap">${escapeHtml(
-      JSON.stringify(sampler, null, 2)
+      JSON.stringify({left: leftSampler, right: rightSampler}, null, 2)
     )}</pre>
   `;
 }
