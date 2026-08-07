@@ -15,7 +15,9 @@ planning and fence-safe neighboring tile leases; `GPURasterTileHaloFill` and
 through the caller's command graph. `GPURasterOverview` and
 `GPURasterCategoricalOverview` separately generate nodata-aware analytical overview values and
 coverage without mistaking source-selected samples or presentation mipmaps for scientific
-reductions. The reader, cache, and assembler never submit commands.
+reductions. Explicit global initialization, tiled statistic merges, stable-domain histogram
+replay, and bounded percentile selection preserve caller-owned dataset-wide results across
+separately processed tiles. The reader, cache, and assembler never submit commands.
 
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
@@ -40,6 +42,10 @@ import {
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
+  GPURasterGlobalHistogramMerge,
+  GPURasterGlobalInitialize,
+  GPURasterGlobalPercentile,
+  GPURasterGlobalStatisticsMerge,
   GPURasterGradient,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
@@ -64,6 +70,11 @@ import {
   type GPURasterCategoricalOverviewFormat,
   type GPURasterCategoricalOverviewProps,
   type GPURasterDecodedBand,
+  type GPURasterGlobalAccumulator,
+  type GPURasterGlobalHistogramMergeProps,
+  type GPURasterGlobalInitializeProps,
+  type GPURasterGlobalPercentileProps,
+  type GPURasterGlobalStatisticsMergeProps,
   type GPURasterOverviewCategoricalPolicy,
   type GPURasterOverviewMetadataOptions,
   type GPURasterOverviewProps,
@@ -126,7 +137,16 @@ makes **GPU MEAN** and **SEAMLESS HALO** mutually
 exclusive: selecting either switches the other back to its compatible source/tile mode. All
 analytical filters work on generated means, and source-nearest overviews retain their complete
 seam-safe path; composing native halo assembly before generated overviews remains future demo
-work. Global tiled reductions remain separate work.
+work. Choose **TILE** to keep the current window's local analytical domain or **FULL GLOBAL**
+to merge both owned synthetic windows into one stable dataset-wide extent, histogram, and GPU
+Otsu threshold. **WEST → EAST** and **EAST → WEST** change the explicit traversal order while
+preserving the global distribution; tile count, replay count, domain, population, and threshold
+diagnostics expose real graph work without increasing the existing 228-byte scalar readback.
+The **FULL GLOBAL** example supports native or source-nearest overview NDVI/red/near-infrared,
+contrast, gamma, manual thresholds, and global Otsu. It explicitly resets Gaussian/box
+smoothing, edge operators, morphology, generated overviews, and seamless halos; enabling any of
+those unsupported combinations returns to **TILE** mode. A generated global median reuses the
+existing four-byte threshold summary slot only when automatic Otsu is inactive.
 
 ## Raster bands and validity
 
@@ -338,10 +358,12 @@ Applications that need bounded upload, residency, eviction, deduplicated concurr
 and graph reuse can explicitly compose it with `GPURasterTileCache`, described below.
 `GPURasterTileHaloAssembler` can then acquire the complete neighboring coverage required by an
 explicitly declared analytical pipeline. None of these reader, cache, or halo objects stitches
-contour geometry, merges global tiled statistics, or implicitly generates analytical overviews.
+contour geometry, implicitly merges global tiled statistics, or implicitly generates analytical
+overviews.
 Existing source overviews are accepted as source-provided samples; their scientific aggregation
 policy remains application-owned. Applications explicitly compose `GPURasterOverview` or
-`GPURasterCategoricalOverview` when a verified GPU-generated policy is required.
+`GPURasterCategoricalOverview` when a verified GPU-generated policy is required, and add the
+global accumulator contributors explicitly for stable cross-tile statistics.
 
 ## GPU-generated analytical overviews
 
@@ -795,11 +817,12 @@ downstream analytical values and bounded residency, unlike a framebuffer-only im
 but it does not guarantee a universal performance improvement.
 
 Halo planning and graph contributors do not automatically write one global stitched image,
-deduplicate contour segments across tiles, merge dataset-wide histograms, or integrate a
+deduplicate contour segments across tiles, implicitly merge dataset-wide histograms, or integrate a
 GeoTIFF/COG transport. Applications explicitly add `GPURasterOverview` or
 `GPURasterCategoricalOverview` when generated overviews are needed; halo contributors do not
-add them implicitly. Applications own result placement and command submission; automatic
-full-image stitching, contour seam ownership, and global statistics remain separate work.
+add them implicitly. They separately compose global statistic/histogram merge contributors when
+dataset-wide results are needed. Applications own result placement and command submission;
+automatic full-image stitching and contour seam ownership remain separate work.
 
 ### Analytical tiling versus screen-space image effects
 
@@ -821,9 +844,158 @@ determine actual performance.
 Bounded residency alone does not assemble neighborhoods or decide output ownership; applications
 explicitly compose `GPURasterTileHaloAssembler`, `GPURasterTileHaloFill`, and
 `GPURasterTileCoreExtract` when those contracts are required, or the separate analytical
-overview contributors when a verified GPU-generated reduction is needed. Automatic full-image
-output stitching, contour seam ownership, and dataset-wide statistic merges remain separate
-roadmap tranches.
+overview and global merge contributors when verified GPU-generated reductions or cross-tile
+statistics are needed. Automatic full-image output stitching and contour seam ownership remain
+separate roadmap tranches.
+
+## Replayable global tiled statistics
+
+Use tile-local statistics when a displayed window intentionally defines its own numerical
+extent, histogram, and classification threshold. Use explicit global accumulators when
+independently resident windows must share one dataset-wide contrast domain, histogram,
+percentile, or Otsu threshold. Computing a separate automatic domain per tile and adding those
+bin arrays is incorrect: equivalent bin indexes then refer to different numerical ranges.
+
+`GPURasterGlobalAccumulator` groups five caller-owned graph views:
+
+```ts
+const accumulator: GPURasterGlobalAccumulator = {
+  extent: globalExtent,       // float32[2]: minimum, maximum
+  count: globalValidCount,    // uint32[1]: saturating valid population
+  sum: globalValueSum,        // float32[1]: calibrated population sum
+  histogram: globalHistogram, // uint32[1..256]: saturating persistent bins
+  overflow: globalOverflow    // uint32[1]: sticky population/bin/sum flags
+};
+```
+
+All five buffers remain caller-owned. Extent and sum retain calibrated scientific values, while
+population and histogram bins use `uint32`. Initialization, statistics, histogram replay, and
+percentile publication are separate `GPUCommandGraphContributor` operations. None of them
+decodes tiles, loads an adapter, acquires residency, submits commands, creates completion
+fences, downloads pixels, or polls a GPU result.
+
+### Explicit initialization and first-pass global domain
+
+Initialize one accumulator exactly once for each intended dataset-wide run:
+
+```ts
+new GPURasterGlobalInitialize({
+  id: 'begin-global-vegetation-analysis',
+  accumulator
+}).addToGraph(graph);
+
+for (const tile of applicationOwnedTiles) {
+  new GPURasterGlobalStatisticsMerge({
+    id: `global-statistics-${tile.id}`,
+    width: tile.width,
+    height: tile.height,
+    input: tile.observedBand,
+    accumulator
+  }).addToGraph(graph);
+}
+```
+
+Initialization explicitly writes extent `[0, 0]`, count `0`, sum `0`, every histogram bin `0`,
+and overflow `0`. Each first-pass merge excludes masked observations, exact raw nodata, and
+non-finite values before source calibration. A tile with no valid observations is a strict
+no-op, so an all-invalid dataset retains its initialized zero extent/count/sum. Valid tiles
+expand the persistent minimum/maximum and accumulate their calibrated count and sum.
+
+Do not put `GPURasterGlobalInitialize` inside a compiled tile graph that will be encoded once
+per tile. Doing so resets the global results on every replay and leaves only the final tile.
+Keep initialization in an explicitly encoded one-time graph or register it once before every
+tile merge in a single graph.
+
+### Stable-domain second-pass histogram replay
+
+After **every** first-pass tile has contributed to the final domain, replay those same
+half-open owned cores against the persistent extent:
+
+```ts
+for (const tile of applicationOwnedTiles) {
+  new GPURasterGlobalHistogramMerge({
+    id: `global-histogram-${tile.id}`,
+    width: tile.width,
+    height: tile.height,
+    input: tile.observedBand,
+    accumulator
+  }).addToGraph(graph);
+}
+
+new GPURasterOtsuThreshold({
+  id: 'global-vegetation-cutoff',
+  histogram: accumulator.histogram,
+  domain: accumulator.extent,
+  output: globalThreshold
+}).addToGraph(graph);
+```
+
+Each histogram contributor clears only its bounded graph-owned **tile partial**, fills that
+partial using the already finalized GPU-resident global extent, and explicitly adds it into
+the separate persistent global bins. Re-encoding a compatible tile graph therefore clears stale
+local counts without erasing previously merged tiles. Binning retains the existing inclusive
+upper endpoint. Merge only disjoint owned cores; including padded source halos as separate
+population observations would double-count tile seams.
+
+The application may declare all first-pass and second-pass work in one command graph when all
+participating tiles can remain pinned together. For larger bounded-residency datasets, import
+the same caller-owned accumulator buffers into independently compiled initialization,
+first-pass tile, second-pass tile, and finalization graphs. Replay source tiles through the
+application-owned decoder or explicit residency cache, preserve imported-buffer replacement,
+and retain every source/graph lease until its caller-created post-submit fence resolves.
+Never start histogram replay before global extent merging finishes.
+
+### Quantile approximation and overflow policy
+
+`GPURasterGlobalPercentile` consumes the finalized global histogram, extent, count, and sticky
+overflow flags without synchronizing with the CPU:
+
+```ts
+new GPURasterGlobalPercentile({
+  id: 'global-median',
+  accumulator,
+  percentile: 0.5,
+  output: globalMedian,
+  outputValidity: globalMedianValidity
+}).addToGraph(graph);
+```
+
+`percentile` is a number from `0` through `1`. Rank selection uses
+`floor(percentile * (globalCount - 1))`; the `0` and `1` endpoints are the exact global
+minimum and maximum. Intermediate values are the center of their selected histogram bin, not
+exact sample-order statistics. Their quantization error is bounded by half the bin width;
+choosing more bins improves resolution at the cost of persistent storage and merge work.
+Histogram length is explicitly limited to `1` through `256` bins.
+
+Population and individual histogram-bin counters saturate at `4,294,967,295` rather than
+wrapping. `accumulator.overflow` accumulates sticky bit flags:
+
+- Bit `1`: the global valid population exceeded `uint32` capacity.
+- Bit `2`: at least one global histogram bin exceeded `uint32` capacity.
+- Bit `4`: an accumulated global `float32` sum became non-finite.
+
+Only explicit reinitialization clears these flags. Empty populations or **any** overflow flag
+make percentile output an invalid quiet `NaN`, with optional validity `0`. Existing
+`GPURasterOtsuThreshold` does not inspect this separate overflow buffer automatically; use its
+result only when the application establishes that overflow is absent. Global extrema, exact
+unsaturated population/bin counts, and histogram-derived thresholds do not depend on tile
+arrival order. Floating sums can differ by ordinary `float32` addition-order rounding.
+
+### Replay cost and explicit ownership
+
+A complete global histogram reads each selected analytical tile twice: once to establish its
+valid global domain and once to bin against that stable domain. One-time initialization and
+optional percentile/Otsu selection add bounded graph passes. Persistent accumulator memory
+scales with histogram-bin count; temporary validity, calibrated samples, reduction scratch,
+and per-tile bin partials scale with selected tile size, never with full dataset dimensions.
+
+Resident replay can avoid repeat decoding and GPU upload when cache budgets retain a tile;
+bounded applications may instead reacquire or re-decode it between phases. Command submission,
+source transport, loaders.gl 5 integration, decoder cancellation, residency policy, leases,
+fences, threshold application, and optional readback remain caller-controlled. Throughput
+depends on tile size, histogram bins, cache hits, source latency, dispatch count, bandwidth,
+and GPU; global analytical replay provides consistent scientific domains rather than a
+universal speedup over display-only image effects.
 
 ## Pointwise band math
 
@@ -1694,7 +1866,8 @@ Pointwise and neighborhood contributors use bounded two-dimensional dispatch. Hi
 extent primitives still use bounded 256-invocation one-dimensional passes. On adapters allowing
 65,535 workgroups per dimension, a `4096 × 4096` single-view histogram needs 65,536 workgroups
 and is rejected; the application must process smaller tiles or explicitly managed stripes.
-Transparent large-raster partitioning and global tiled histogram merges are not yet implemented.
+Replayable global histogram merges combine those explicit bounded tiles; transparent automatic
+large-raster partitioning remains unimplemented.
 Halo planning, neighbor assembly, and core extraction are explicit caller-composed operations;
 they do not automatically partition an oversized source or bypass adapter limits.
 
@@ -1704,7 +1877,7 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, built-in GeoTIFF/COG decoding, global merged statistics, connected
+Percentile-driven contrast application, built-in GeoTIFF/COG decoding, connected
 components, tiled contour stitching, automatic whole-image result placement, and FFT-backed
 raster convolution are not part of the current implementation.
 Application-owned tile ingress, source-provided overviews/windows, independently budgeted
@@ -1713,7 +1886,9 @@ cumulative neighborhood halo planning and native-format GPU assembly, half-open 
 extraction, nodata-aware calibrated floating-point overview means and weighted pyramids, exact
 integer categorical nearest/mode overviews, generated affine/CRS metadata, Sobel, Scharr,
 Laplacian, gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion,
-opening, closing, and single-raster contour extraction are implemented.
+opening, closing, replayable global tiled extent/population/sum/histogram merges, explicit
+sticky/saturating overflow diagnostics, bounded histogram-based percentiles, global Otsu input,
+and single-raster contour extraction are implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not

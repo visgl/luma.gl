@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Explore nodata-aware GPU overviews, exact categorical policies, seam-safe raster halos, bounded residency, NDVI, morphology, and contours.
+description: Explore replayable global GPU raster histograms, nodata-aware overviews, exact categories, seam-safe halos, bounded residency, NDVI, and contours.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -51,6 +51,11 @@ GPU histogram before classifying the same resident pixels.
 An interactive contour slider extracts real marching-squares isolines and draws
 their GPU-generated line segments through an indirect draw record; no contour
 vertices or draw counts are downloaded for rendering.
+Select **TILE** for the current window's local statistics, or **FULL GLOBAL**
+to replay the two bounded western/eastern cores through one stable dataset-wide
+extent, histogram, population, sum, median, and optional global Otsu threshold.
+Choose **WEST → EAST** or **EAST → WEST** to verify that reversing arrival
+order preserves the global scientific domain, distribution, and cutoff.
 Every control changes the GPU-computed distribution, selected-pixel count,
 observed extent, and mean when its underlying values or selection change.
 
@@ -76,6 +81,11 @@ validity; `GPURasterCategoricalOverview` preserves exact source labels under
 the selected nearest or mode policy. `makeRasterOverviewMetadata` carries the
 generated grid's affine transform, CRS, level, pixel interpretation, and
 level-zero origin without registering it as a source-provided level.
+`GPURasterGlobalInitialize` explicitly clears caller-owned dataset-wide
+accumulators, `GPURasterGlobalStatisticsMerge` combines valid tile extrema,
+count, and calibrated sum, and `GPURasterGlobalHistogramMerge` replays each
+owned core against the finalized global domain. `GPURasterGlobalPercentile`
+then publishes a bounded histogram-derived median without CPU sample polling.
 Normalized source requests expand omitted bands and full windows, default to
 level-local coordinates, and map equivalent level-zero windows to the same
 cache identity before any duplicate decoding or upload.
@@ -118,7 +128,8 @@ total—are copied back after submission to update visible summary statistics.
 Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
 derivative direction, morphological operation/mode/footprint/radius/nodata/
 border, contrast, gamma, thresholding, contour levels, epsilon, generated
-overview policy, categorical policy, and explicit seam-safe halo selection rebuild
+overview policy, categorical policy, explicit seam-safe halo selection, and
+tile/global replay scope rebuild
 their specialized analysis graph while keeping every source and output raster
 buffer resident; source pixels are never downloaded. Selecting a source
 window or overview instead selects an existing resident tile or performs one
@@ -128,6 +139,50 @@ from that same existing scalar summary and reports currently displayed
 analytical valid pixels after any filtering or threshold selection. It is not
 a count of raw observations contributing to each generated parent. Source
 pixels, per-parent overview counts, and categorical buffers are never downloaded.
+Global median reuses the existing four-byte automatic-threshold summary slot
+when Otsu is inactive; enabling global Otsu publishes its cutoff through that
+same slot instead. Either global result therefore preserves the original
+228-byte total, and global coverage divides by both owned cores rather than
+only the visible tile. The median readout explicitly reports that Otsu owns
+the compact scalar whenever automatic global thresholding is active.
+
+Use **TILE** when each selected west/east window should choose its own
+valid-pixel domain and distribution, or when generated analytical overviews,
+seam-safe neighborhood assembly, smoothing, derivatives, or morphology are
+required. Choose **FULL GLOBAL** when every window must use the same
+dataset-wide numerical extent, histogram, contrast reference, percentile, or
+Otsu threshold. Two tiles with disjoint ranges cannot be merged by simply
+adding histograms that were computed against different local domains.
+
+Global processing explicitly clears one caller-owned persistent accumulator,
+merges both selected western/eastern cores' valid extrema, calibrated sums,
+and populations, then replays both cores against the resulting stable GPU
+domain. Each replay clears only its graph-owned tile histogram partial before
+merging it into the separately persistent global bins; previously merged
+counts survive. The optional GPU Otsu stage consumes that stable global
+histogram and extent directly. Forward/reverse controls change the real source
+traversal while preserving exact unsaturated count/bin results, domain,
+threshold, and owned-core identity. Floating sums can differ by ordinary
+floating-point addition-order rounding.
+
+**FULL GLOBAL** accepts either native resolution or an existing source-nearest
+overview and preserves pointwise NDVI, red, near-infrared, contrast, gamma,
+manual thresholds, and global Otsu. Selecting it switches generated GPU means
+back to **SOURCE NEAREST**, changes **SEAMLESS HALO** to **TILE ONLY**, and
+resets smoothing, edges, and morphology. Enabling any of those unsupported
+combinations returns to **TILE**; the example does not claim globally stitched
+neighborhood processing or generated-overview replay.
+
+Persistent global populations and individual histogram bins saturate at
+`4,294,967,295` rather than wrapping. Sticky overflow bits distinguish total
+count (`1`), any histogram bin (`2`), and a nonfinite floating sum (`4`). A
+global percentile rejects empty or overflowed data; its endpoints are exact,
+while intermediate estimates use histogram-bin centers. Normal applications
+must respect the overflow signal before trusting global thresholds. Per-tile
+scratch scales with one core, persistent memory scales with bin count, and a
+correct stable-domain histogram reads each resident core twice. Actual
+performance depends on source replay, cache hits, tile size, bins, bandwidth,
+and GPU rather than promising an automatic speedup over framebuffer effects.
 
 Use **SOURCE NEAREST** when an existing lower-resolution source level is
 trusted and avoiding native-resolution decoding, upload, or reduction is the
@@ -286,15 +341,16 @@ output core at a time while retaining its selected real source neighbors and
 previously visited tiles within explicit CPU/GPU budgets. The optional
 seam-safe mode assembles cumulative neighborhoods and publishes nonoverlapping
 owned cores; it does not automatically construct one global stitched output,
-merge dataset-wide histograms, deduplicate contour segments across tiles,
-compose seamless native halos with generated overviews, or provide a
-GeoTIFF/COG transport or decoder. Those capabilities have separate ownership
-and correctness requirements.
+deduplicate contour segments across tiles, compose global replay with seamless
+native halos or generated overviews, or provide a GeoTIFF/COG transport or
+decoder. Global statistic/histogram merging is separately and explicitly
+available in **FULL GLOBAL** mode; remaining capabilities have separate
+ownership and correctness requirements.
 
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Segmentation, stitched contour seams, globally merged tiled statistics,
-automatic full-image output placement, and seamless native-halo-to-generated-
-overview composition remain planned capabilities.
+Segmentation, stitched contour seams, automatic full-image output placement,
+global neighborhood/overview composition, and seamless native-halo-to-generated-
+overview processing remain planned capabilities.

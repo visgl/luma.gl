@@ -448,7 +448,7 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete    | High   | Large  |
 | 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | In progress | High   | Medium |
 | 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Complete    | High   | Large  |
-| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | In progress | High   | Large  |
+| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Complete    | High   | Large  |
 | 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
 | 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | In progress | High   | Large  |
 | 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred    | Medium | Large  |
@@ -509,7 +509,8 @@ when their tests and rollback boundaries remain understandable.
   explicit masked GPU extent, and caller-owned bins. `GPURasterStatistics` adds GPU-resident
   floating-band count, sum, mean, minimum, and maximum outputs. Caller-owned literal domains, GPU
   domains, and optional published automatic extents are available. Percentiles, wide counters,
-  tiled global merges, and transparent 4K-plus reduction/histogram partitioning remain pending.
+  wide histogram counters and transparent 4K-plus reduction/histogram partitioning remain
+  pending; explicit replayable global tiled extent/statistic/histogram merges are available.
 - **2.3 substantially complete:** `GPURasterContrast` implements calibrated linear stretching,
   explicitly selected gamma adjustment, and global histogram equalization through an inclusive
   GPU CDF scan. Linear mode remains affine even when a nondefault gamma option is present.
@@ -579,8 +580,19 @@ when their tests and rollback boundaries remain understandable.
   means and selectable categorical policies while retaining its fixed compact readback;
   generated means and seamless source-nearest halos are explicitly mutually exclusive until
   native-halo-to-generated-overview composition receives a separate integration pass.
-- **4.5 next:** replayable global tiled extrema, histogram merges, stable cross-tile analytical
-  domains, and overflow-aware population totals remain separate multi-pass work.
+- **4.5 complete for replayable global tiled analysis:** `GPURasterGlobalInitialize`,
+  `GPURasterGlobalStatisticsMerge`, `GPURasterGlobalHistogramMerge`, and
+  `GPURasterGlobalPercentile` explicitly compose caller-owned persistent valid counts/extrema,
+  calibrated sums, stable-domain histogram replay, per-tile partial merging, bounded
+  histogram-derived quantiles, and sticky/saturating overflow diagnostics without CPU polling.
+  Half-open owned cores remain application-selected; sources, cache admission, command
+  submission, completion fences, and optional compact readback remain caller-owned.
+  Reversed/shuffled tile traversal reproduces global analytical domains, Otsu cutoffs, and
+  bounded-bin counts while retaining explicit source leases; floating sums retain normal
+  order-dependent rounding.
+- **5.1 next:** deterministic GPU-native four/eight-connected component labeling; tranche 6.3
+  seam-safe contour ownership is also independently available when vector integration takes
+  priority.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -912,8 +924,8 @@ preserving GPU gather pass per source; `GPURasterTileCoreExtract` contributes on
 core-only publication pass. The Raster Lab exposes tile-only and seamless modes, cumulative
 radius, source/core bounds, neighbor counts, full-resolution/source-overview behavior, and
 tiled-versus-monolithic scalar parity without increasing analytical GPU readback. Generated
-analytical overviews are implemented separately in tranche 4.4; automatic full-image result
-placement, contour seam ownership, and global tiled merges remain separate tranches.
+analytical overviews and replayable global tiled merges are implemented separately in tranches
+4.4 and 4.5; automatic full-image result placement and contour seam ownership remain future work.
 
 **Work:** Acquire a neighborhood that covers the complete composed pipeline receptive field,
 including cumulative stage radii and any overview/resampling scale factors. For example,
@@ -965,6 +977,26 @@ analytical substitutes.
 ### Tranche 4.5 — Global tiled statistics and replay
 
 **Entry:** Tranches 4.2, 2.3, and 2.4.
+
+**Status:** Complete through `GPURasterGlobalAccumulator`, `GPURasterGlobalInitialize`,
+`GPURasterGlobalStatisticsMerge`, `GPURasterGlobalHistogramMerge`, and
+`GPURasterGlobalPercentile`. Explicitly initialized caller-owned GPU outputs retain first-pass
+calibrated extent/population/sum, followed by stable-domain second-pass histogram replay with
+cleared bounded tile partials. Unsigned population/bin counts saturate at `2^32 - 1`; sticky
+overflow bits distinguish total-count (`1`), histogram-bin (`2`), and nonfinite-sum (`4`)
+failures. Bounded `1..256`-bin percentile estimates publish exact minimum/maximum endpoints or
+selected-bin centers and become invalid when population is empty or any overflow bit is set.
+Global state survives tile-graph re-encoding until an application explicitly initializes another
+run. Tile traversal order does not change analytical extent, integer histogram, or Otsu cutoff;
+all-invalid partials never contribute, while floating sums retain normal order-dependent
+rounding. Command graph construction never chooses source decoding, network transport,
+submission, completion, or readback policy. Raster Lab exposes TILE versus FULL GLOBAL
+processing, forward/reverse west/east replay, global domain/count/replay diagnostics, and
+GPU-resident global Otsu selection through its unchanged compact analytical readback. The
+example's FULL GLOBAL mode supports native/source-nearest pointwise inputs; generated
+overviews, seamless halos, smoothing, derivatives, and morphology return explicitly to TILE.
+A histogram-derived global median reuses the existing four-byte threshold field only while
+automatic Otsu is inactive.
 
 **Work:** Define a multi-pass, replayable tile contract. First merge valid per-tile extrema and
 counts into caller-owned global extrema; then process every tile again with the resulting stable
@@ -1238,6 +1270,7 @@ modules/experimental/src/luraster/
   gpu-raster-tile-cache.ts
   gpu-raster-tile-halo.ts
   gpu-raster-overview.ts
+  gpu-raster-global-statistics.ts
   gpu-raster-connected-components.ts
   gpu-raster-region-statistics.ts
   gpu-raster-contours.ts
@@ -1260,6 +1293,9 @@ modules/experimental/test/luraster/
   gpu-raster-overview.node.spec.ts
   gpu-raster-overview-pyramid.spec.ts
   gpu-raster-overview.spec.ts
+  gpu-raster-global-statistics.node.spec.ts
+  gpu-raster-global-statistics.spec.ts
+  gpu-raster-global-pipeline.spec.ts
   gpu-raster-connected-components.spec.ts
   gpu-raster-region-statistics.spec.ts
   gpu-raster-contours.spec.ts
@@ -1283,9 +1319,9 @@ later tranches.
 - `docs/api-reference/experimental/README.md` and `docs/whats-new.md`: feature discovery.
 - `examples/showcase/raster-lab/`: synthetic satellite/NDVI, bounded tile residency, reusable
   graphs, explicit seam-safe cumulative halos and owned cores, source-nearest versus GPU-mean
-  overviews, exact categorical policies, and indirect contour overlays; microscopy, production
-  imagery, stitched full-image result placement, and global tiled statistics remain separate
-  future examples.
+  overviews, exact categorical policies, replayable full-dataset extrema/histograms/Otsu, and
+  indirect contour overlays; microscopy, production imagery, and stitched full-image result
+  placement remain separate future examples.
 - `website/content/examples/showcase/`, `website/content/examples/table-of-contents.json`, and
   `website/src/examples.tsx`: website example integration.
 - `.ocularrc.js`: optional scoped Playwright alias if a browser smoke workflow is added.
