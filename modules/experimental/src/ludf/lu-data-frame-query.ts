@@ -7,6 +7,11 @@ import type {GPUCommandGraph} from '../gpu-primitives/gpu-command-graph';
 import type {LuDataFrame} from './lu-data-frame';
 import {getLuExpressionColumnNames, LuExpression, type LuExpressionNode} from './lu-expression';
 import {
+  LuDataFrameGroupByQuery,
+  type LuDataFrameColumnNamesOfFormat,
+  type LuDataFrameGroupByOptions
+} from './lu-group-by-query';
+import {
   compileLuDataFrameQuery,
   type CompiledLuDataFrameQuery,
   type LuDataFrameQueryParameters
@@ -142,6 +147,14 @@ export class LuDataFrameQuery<
       [...this.selectedColumns, name],
       [...this.derivedColumns, definition]
     );
+  }
+
+  /** Plans dense categorical grouping without allocating GPU resources or reading source values. */
+  groupBy<Key extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>>(
+    key: Key,
+    options: LuDataFrameGroupByOptions = {}
+  ): LuDataFrameGroupByQuery<Logical, SelectedColumns, Key, Source> {
+    return new LuDataFrameGroupByQuery(this, key, options);
   }
 
   /** Materializes reusable GPU graph passes and compiler-owned selection/index/count outputs. */
