@@ -35,6 +35,7 @@ export type {
   ShaderSubPass
 } from './lib/shader-module/shader-pass';
 export type {
+  ShaderPassComputeOptimization,
   ShaderPassPipeline,
   ShaderPassPipelineStep
 } from './lib/shader-module/shader-pass-pipeline';

@@ -40,7 +40,11 @@ It always exposes two logical texture sources:
 
 Pipelines may add named render targets. The renderer validates routing, manages
 their size, and prevents a subpass from reading and writing the same named
-target in one draw.
+target in one draw. Transient targets with non-overlapping lifetimes can set
+`aliasFor` to reuse an earlier allocation with identical dimensions, format, and sampler;
+persistent history targets cannot be aliased. Pipelines can also declare an optional WebGPU
+compute replacement while retaining equivalent fragment steps as the WebGL or unsupported-device
+fallback.
 
 Built-in effects consume `previous`, so the `shaderPasses` array has strict
 ordered-composition semantics even when it mixes plain `ShaderPass` objects and
@@ -276,10 +280,39 @@ to explicitly trade edge quality for fewer shaded pixels and smaller history tex
 4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
 
 Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at half resolution,
-then successively filters and blurs them at quarter and eighth resolution using `rgba16float`
-intermediate targets. Its optional `resolutionScale` controls the entire pyramid without clamping
-highlight radiance to 8-bit normalized color. Use the exact HDR order: temporal effects, auto
-exposure, bloom, then tone mapping.
+then progressively filters, blurs, and reconstructs two to five `rgba16float` pyramid levels.
+`quality: 'ultra'` reaches one-thirty-second resolution. `resolutionScale` controls the entire
+pyramid without clamping highlight radiance to 8-bit normalized color. `exposure` and
+`exposureCompensation` keep highlight thresholds aligned with camera adaptation, while
+`reconstruction: 'bicubic'` selects a normalized four-fetch B-spline instead of the default
+nine-tap tent.
+
+`downsample: 'auto'` fuses extraction and the complete downsampling pyramid into one WebGPU
+compute dispatch when the chosen format supports storage writes and the device has enough storage
+bindings. `downsample: 'render'` forces the portable fragment implementation. Expired extraction
+textures are reused for reconstruction by default; set `reuseRenderTargets: false` to retain
+separate allocations for inspection.
+
+| Quality | Portable render passes | WebGPU fused work | Physical targets with reuse |
+| --- | --- | --- | --- |
+| `low` | 8 | 6 render + 1 compute | 6 |
+| `medium` | 12 | 9 render + 1 compute | 9 |
+| `high` | 16 | 12 render + 1 compute | 12 |
+| `ultra` | 20 | 15 render + 1 compute | 15 |
+
+Enable optional photographic optics through `lens`: aperture-diffraction starbursts, mirrored
+chromatic ghosts, and radial halos share one extra half-resolution pass. `lens.dirtIntensity`
+samples an application-provided `lensDirtTexture` during the existing composite and therefore adds
+no pass or intermediate render target. Pass that mask through
+`renderer.renderToScreen({sourceTexture, bindings: {lensDirtTexture}})`.
+
+`temporalStability` enables neighborhood-clamped, persistent half-resolution glow history for one
+additional pass. The default configuration allocates neither history nor lens artifacts. Screen-space
+diffraction costs eight samples per ray, while each ghost costs one sample or three when chromatic
+aberration is enabled. Applications that require true aperture convolution can instead use
+`GPUConvolutionBloom` from `@luma.gl/experimental`, which performs independent RGB FFT transforms,
+caches an energy-normalized point-spread spectrum, and exposes exact memory/dispatch costs through
+`stats`. Use the HDR order: temporal effects, auto exposure, bloom, then tone mapping.
 
 ### Recommended ordering
 

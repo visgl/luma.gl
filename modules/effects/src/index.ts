@@ -57,7 +57,10 @@ export type {
   BloomUniforms
 } from './passes/postprocessing/image-blur-filters/bloom';
 export {bloom} from './passes/postprocessing/image-blur-filters/bloom';
-export type {BloomShaderPassPipelineOptions} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
+export type {
+  BloomLensEffectsOptions,
+  BloomShaderPassPipelineOptions
+} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
 export {
   bloomShaderPassPipeline,
   createBloomShaderPassPipeline
