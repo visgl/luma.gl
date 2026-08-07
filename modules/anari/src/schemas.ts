@@ -299,7 +299,13 @@ const raytraceRendererProperties = {
   samplesPerPixel: z.number().int().positive().optional(),
   maxBounces: z.number().int().nonnegative().optional(),
   progressive: z.boolean().optional(),
-  shadows: z.boolean().optional()
+  shadows: z.boolean().optional(),
+  resolutionScale: positiveNumberSchema.max(1).optional(),
+  minimumResolutionScale: positiveNumberSchema.max(1).optional(),
+  adaptiveResolution: z.boolean().optional(),
+  targetFrameTimeMilliseconds: positiveNumberSchema.optional(),
+  temporalReprojection: z.boolean().optional(),
+  shadowSamplesPerFrame: z.number().int().nonnegative().optional()
 };
 
 export const ANARIRendererSchema = z

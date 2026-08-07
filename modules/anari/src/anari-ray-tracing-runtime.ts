@@ -41,7 +41,13 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       samplesPerPixel: renderer.getParameter('samplesPerPixel'),
       maxBounces: renderer.getParameter('maxBounces'),
       progressive: renderer.getParameter('progressive'),
-      shadows: renderer.getParameter('shadows')
+      shadows: renderer.getParameter('shadows'),
+      resolutionScale: renderer.getParameter('resolutionScale'),
+      minimumResolutionScale: renderer.getParameter('minimumResolutionScale'),
+      adaptiveResolution: renderer.getParameter('adaptiveResolution'),
+      targetFrameTimeMilliseconds: renderer.getParameter('targetFrameTimeMilliseconds'),
+      temporalReprojection: renderer.getParameter('temporalReprojection'),
+      shadowSamplesPerFrame: renderer.getParameter('shadowSamplesPerFrame')
     });
   }
 

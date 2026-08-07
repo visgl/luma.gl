@@ -5,9 +5,10 @@ optional, headless graph model preserves existing source and target vertex colum
 identifiers, optional properties, and original GPU vector chunks without uploading or copying them.
 
 Reusable compressed adjacency supports vertex-degree queries, bounded breadth-first shortest paths,
-weakly connected components, and normalized PageRank with dangling-vertex redistribution. Those
-operations contribute work to a caller-owned `GPUCommandGraph`; applications retain ownership of
-their buffers, rendering, command submission, and any explicitly requested result readback.
+weakly connected components, normalized PageRank with dangling-vertex redistribution, and
+progressive exact force-directed layout with directly renderable GPU positions. Those operations
+contribute work to a caller-owned `GPUCommandGraph`; applications retain ownership of their buffers,
+rendering, command submission, and any explicitly requested result readback.
 
 See the [luGraph graph analytics guide](/docs/api-reference/experimental/lugraph) for when to use
 each operation, complete GPU-resident composition examples, and ownership and capacity contracts.

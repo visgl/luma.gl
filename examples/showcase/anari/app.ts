@@ -56,6 +56,16 @@ const DEFAULT_RENDERER_PARAMETERS: ANARIRendererParameters = {
   fogColor: [0.018, 0.025, 0.065],
   fogDensity: 0.00024
 };
+const DEFAULT_RAY_TRACING_PARAMETERS: ANARIRendererParameters = {
+  resolutionScale: 0.5,
+  minimumResolutionScale: 0.25,
+  adaptiveResolution: true,
+  targetFrameTimeMilliseconds: 33.3,
+  temporalReprojection: true,
+  shadowSamplesPerFrame: 1,
+  progressive: true,
+  shadows: true
+};
 
 export default class ANARIShowcase extends AnimationLoopTemplate {
   static info = '';
@@ -94,7 +104,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
       raytrace: this.anari.newRenderer('raytrace', {
         ...DEFAULT_RENDERER_PARAMETERS,
         bloomIntensity: 0,
-        shadows: true
+        ...DEFAULT_RAY_TRACING_PARAMETERS
       }),
       debugNormals: this.anari.newRenderer('debugNormals', {
         background: [0.027, 0.033, 0.06, 1]
@@ -167,6 +177,25 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     if (elapsedSeconds - this.lastStatisticsUpdate > 0.3) {
       setElementText('instance-count', statistics.instanceCount.toLocaleString());
       setElementText('draw-count', statistics.drawCount.toLocaleString());
+      const rayTracing = statistics.rayTracing;
+      const resolutionTelemetry = document.getElementById('ray-tracing-resolution-telemetry');
+      const frameTelemetry = document.getElementById('ray-tracing-frame-telemetry');
+      if (resolutionTelemetry) {
+        resolutionTelemetry.hidden = !rayTracing;
+      }
+      if (frameTelemetry) {
+        frameTelemetry.hidden = !rayTracing;
+      }
+      if (rayTracing) {
+        setElementText(
+          'ray-tracing-resolution',
+          `${rayTracing.internalWidth} × ${rayTracing.internalHeight} · ${Math.round(rayTracing.resolutionScale * 100)}%`
+        );
+        setElementText(
+          'ray-tracing-frame',
+          `${rayTracing.frameTimeMilliseconds.toFixed(1)} ms · ${Math.round(rayTracing.sampledPixelCoverage * 100)}% · ${rayTracing.accumulatedSamples} spp`
+        );
+      }
       this.lastStatisticsUpdate = elapsedSeconds;
     }
   }
@@ -291,7 +320,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         ...DEFAULT_RENDERER_PARAMETERS,
         ...rendererParameters,
         bloomIntensity: 0,
-        shadows: true
+        ...DEFAULT_RAY_TRACING_PARAMETERS
       })
       .commitParameters();
     this.frame.setParameter('world', scene.world).commitParameters();

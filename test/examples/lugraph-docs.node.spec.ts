@@ -49,6 +49,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('**Question: Which entities can I reach');
     expect(graphDocumentation).toContain('**Question: Which vertices belong to the same connected');
     expect(graphDocumentation).toContain('**Question: Which vertices receive influence');
+    expect(graphDocumentation).toContain('**Question: How can I position connected entities');
   });
 
   test('introduces every available operation and composes its actual optional entry point', () => {
@@ -58,7 +59,8 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
       'LuGraphDegree',
       'LuGraphBreadthFirstSearch',
       'LuGraphConnectedComponents',
-      'LuGraphPageRank'
+      'LuGraphPageRank',
+      'LuGraphForceLayout'
     ]) {
       expect(graphDocumentation, graphOperation).toContain(graphOperation);
     }
@@ -68,6 +70,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(packageDocumentation).toContain('breadth-first shortest paths');
     expect(packageDocumentation).toContain('weakly connected components');
     expect(packageDocumentation).toContain('normalized PageRank');
+    expect(packageDocumentation).toContain('progressive exact force-directed layout');
     expect(graphDocumentation).toContain("from '@luma.gl/experimental/lugraph';");
     expect(graphDocumentation).toContain('topology.addToGraph(workflow);');
     expect(graphDocumentation).toContain('const compiled = workflow.compile();');
@@ -93,6 +96,35 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('not an automatic convergence threshold');
     expect(graphDocumentation).toContain('physically distinct GPU buffer allocations');
     expect(graphDocumentation).toContain('does not imply distributed or multi-GPU execution');
+  });
+
+  test('explains exact render-ready force layout, interaction controls, and scalability limits', () => {
+    expect(graphDocumentation).toContain('## Reveal relationships with LuGraphForceLayout');
+    expect(graphDocumentation).toContain('a social graph');
+    expect(graphDocumentation).toContain('service dependencies');
+    expect(graphDocumentation).toContain('transaction investigation');
+    expect(graphDocumentation).toContain("GPUVector<'float32x2'>");
+    expect(graphDocumentation).toContain('`Buffer.STORAGE` and\n`Buffer.VERTEX`');
+    expect(graphDocumentation).toContain('an application can bind as a');
+    expect(graphDocumentation).toContain('render vertex attribute');
+    expect(graphDocumentation).toContain('requires both forward and reverse adjacency');
+    expect(graphDocumentation).toContain('intentionally ignored by this unweighted');
+    expect(graphDocumentation).toContain('`pinned` row to any nonzero value');
+    expect(graphDocumentation).toContain('one-row `uint32` `reset` vector');
+    expect(graphDocumentation).toContain('clearing it');
+    expect(graphDocumentation).toContain('warm-start from the');
+    expect(graphDocumentation).toContain('`seed: 0`, `iterationsPerFrame: 4`');
+    expect(graphDocumentation).toContain('`repulsion: 1`, `attraction: 0.1`');
+    expect(graphDocumentation).toContain('`gravity: 0.01`, `damping: 0.9`');
+    expect(graphDocumentation).toContain('`maxVelocity: 1`, and `timeStep: 1`');
+    expect(graphDocumentation).toContain('`O(V² + E)`');
+    expect(graphDocumentation).toContain('doubling the vertex count roughly quadruples');
+    expect(graphDocumentation).toContain(
+      'preserves\nevery existing position and clears all velocities'
+    );
+    expect(graphDocumentation).toContain('does not approximate pairwise interactions');
+    expect(graphDocumentation).toContain('ForceAtlas2 or Barnes–Hut');
+    expect(graphDocumentation).toContain('new LuGraphForceLayout({');
   });
 
   test('preserves independent MIT ownership and accurate NVIDIA RAPIDS inspiration', () => {
