@@ -55,7 +55,7 @@ When the input starts as Apache Arrow, prefer
 | `type` | `unknown` | Deprecated adapter-owned logical metadata. |
 | `dataType` | `unknown` | Deprecated adapter-owned logical metadata. |
 | `length` | `number` | Aggregate logical row count. |
-| `valueLength` | `number` | Aggregate fixed-row or flattened vertex-list element count. |
+| `valueLength` | `number` | Aggregate scalar-row count, flattened variable-list count, or fixed-size-list element count. |
 | `stride` | `number` | Number of scalar values represented by one fixed row or flattened element. |
 | `byteOffset` | `number` | Compatibility metadata for the first row when this vector has one chunk. |
 | `byteStride` | `number` | Bytes between adjacent fixed rows or flattened elements. |
@@ -101,3 +101,29 @@ For `vertex-list<...>` vectors, `length` remains the source row count and
 `valueLength` is the flattened element count. `byteStride` and `rowByteLength`
 describe one flattened element, not one source row. Offsets and other
 variable-length metadata are adapter-owned.
+
+For `fixed-size-list<float32,768>` vectors, `length` remains the number of table
+rows while `valueLength` is `length * 768`. Each `GPUData` chunk stores one
+complete fixed-size-list row per `byteStride`; `rowByteLength` describes its
+meaningful payload and may be smaller than a padded physical stride. These
+columns are storage-only unless an application explicitly expands them into
+shader-compatible attributes. When binding a packed column through generic
+WebGPU table shader/computation helpers, its `byteOffset` must satisfy the
+device's `minStorageBufferOffsetAlignment`; consumers that align bindings
+internally may support additional suballocation offsets.
+
+```ts
+import {GPUVector, type FixedSizeList} from '@luma.gl/tables';
+
+const embeddings = new GPUVector<FixedSizeList<'float32', 768>>({
+  type: 'buffer',
+  name: 'embedding',
+  buffer: embeddingBuffer,
+  format: 'fixed-size-list<float32,768>',
+  length: rowCount
+});
+
+embeddings.length; // Logical source rows.
+embeddings.valueLength; // Flattened Float32 embedding coordinates.
+embeddings.data; // Original caller-owned GPUData batch chunks.
+```
