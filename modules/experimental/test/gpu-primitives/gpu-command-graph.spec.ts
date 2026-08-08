@@ -293,6 +293,243 @@ test('GPUCommandGraph preserves fixed-width GPUVector chunks and borrowed owners
   t.end();
 });
 
+test('GPUCommandGraph reuses one imported handle for every physical buffer', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const sharedBuffer = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
+  const graph = new GPUCommandGraph(device, {id: 'physical-import-deduplication'});
+  const importedHandle = graph.importBuffer(
+    {id: 'explicit', byteLength: sharedBuffer.byteLength, usage: Buffer.STORAGE},
+    sharedBuffer
+  );
+  const duplicateHandle = graph.importBuffer(
+    {id: 'duplicate', byteLength: sharedBuffer.byteLength, usage: Buffer.STORAGE},
+    sharedBuffer
+  );
+  t.notEqual(
+    duplicateHandle,
+    importedHandle,
+    'explicit imports preserve distinct handles for contributor-specific alias validation'
+  );
+
+  const sharedData = new GPUData({
+    buffer: sharedBuffer,
+    format: 'uint32',
+    length: 2,
+    byteOffset: 8,
+    ownsBuffer: false
+  });
+  const importedData = graph.importGPUData('table-data', sharedData);
+  t.equal(importedData.buffer, importedHandle, 'table imports reuse an earlier explicit handle');
+  t.equal(importedData.byteOffset, 8, 'reused handles preserve the source view offset');
+
+  const tableFirstGraph = new GPUCommandGraph(device, {id: 'table-first-deduplication'});
+  const firstTableView = tableFirstGraph.importGPUData('table-first', sharedData);
+  const explicitTableAlias = tableFirstGraph.importBuffer(
+    {id: 'explicit-second', byteLength: sharedBuffer.byteLength, usage: Buffer.STORAGE},
+    sharedBuffer
+  );
+  t.notEqual(
+    explicitTableAlias,
+    firstTableView.buffer,
+    'explicit imports can preserve handles distinct from earlier table imports'
+  );
+  t.equal(
+    tableFirstGraph.importGPUData('table-after-explicit-alias', sharedData).buffer,
+    firstTableView.buffer,
+    'table imports retain their first canonical handle after explicit aliases'
+  );
+
+  const dynamicBuffer = new DynamicBuffer(device, {
+    id: 'dynamic-deduplication',
+    byteLength: 16,
+    usage: Buffer.STORAGE
+  });
+  const dynamicGraph = new GPUCommandGraph(device, {id: 'dynamic-import-deduplication'});
+  const dynamicHandle = dynamicGraph.importBuffer(
+    {id: 'dynamic', byteLength: 16, usage: Buffer.STORAGE},
+    dynamicBuffer
+  );
+  dynamicBuffer.resize({byteLength: 32});
+  const dynamicData = new GPUData({
+    buffer: dynamicBuffer.buffer,
+    format: 'uint32',
+    length: 4,
+    ownsBuffer: false
+  });
+  t.equal(
+    dynamicGraph.importGPUData('resized-table-data', dynamicData).buffer,
+    dynamicHandle,
+    'table imports reuse a resized dynamic buffer handle'
+  );
+  const dynamicAlias = dynamicGraph.importBuffer(
+    {id: 'dynamic-duplicate', byteLength: 16, usage: Buffer.STORAGE},
+    dynamicBuffer.buffer
+  );
+  t.notEqual(
+    dynamicAlias,
+    dynamicHandle,
+    'dynamic backing buffers allow explicit validation aliases'
+  );
+  t.equal(
+    dynamicGraph.importGPUData('dynamic-after-explicit-alias', dynamicData).buffer,
+    dynamicHandle,
+    'resized dynamic buffers remain canonical after explicit aliases'
+  );
+
+  const preservedBacking = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
+  const borrowedDynamic = new DynamicBuffer(device, {
+    id: 'borrowed-dynamic-canonical',
+    buffer: preservedBacking,
+    ownsBuffer: false
+  });
+  const staleCanonicalGraph = new GPUCommandGraph(device, {id: 'replaced-dynamic-canonical'});
+  const borrowedDynamicHandle = staleCanonicalGraph.importBuffer(
+    {id: 'borrowed-dynamic', byteLength: 16, usage: Buffer.STORAGE},
+    borrowedDynamic
+  );
+  const preservedAlias = staleCanonicalGraph.importBuffer(
+    {id: 'preserved-backing', byteLength: 16, usage: Buffer.STORAGE},
+    preservedBacking
+  );
+  borrowedDynamic.resize({byteLength: 32});
+  const preservedData = new GPUData({
+    buffer: preservedBacking,
+    format: 'uint32',
+    length: 4,
+    ownsBuffer: false
+  });
+  const replacementData = new GPUData({
+    buffer: borrowedDynamic.buffer,
+    format: 'uint32',
+    length: 4,
+    ownsBuffer: false
+  });
+  t.equal(
+    staleCanonicalGraph.importGPUData('preserved-table-data', preservedData).buffer,
+    preservedAlias,
+    'a replaced dynamic canonical resolves its surviving raw-buffer alias'
+  );
+  t.equal(
+    staleCanonicalGraph.importGPUData('replacement-table-data', replacementData).buffer,
+    borrowedDynamicHandle,
+    'a resized borrowed dynamic remains canonical for its replacement backing'
+  );
+
+  sharedData.destroy();
+  dynamicData.destroy();
+  preservedData.destroy();
+  replacementData.destroy();
+  t.notOk(sharedBuffer.destroyed, 'destroying borrowed table data preserves the imported buffer');
+  t.notOk(preservedBacking.destroyed, 'resizing an unowned dynamic preserves its old raw buffer');
+  sharedBuffer.destroy();
+  preservedBacking.destroy();
+  dynamicBuffer.destroy();
+  borrowedDynamic.destroy();
+  t.end();
+});
+
+test('GPUCommandGraph preserves GPUData DynamicBuffer wrappers after raw backing imports', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const originalBacking = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
+  const dynamicBuffer = new DynamicBuffer(device, {
+    id: 'dynamic-table-wrapper',
+    buffer: originalBacking,
+    ownsBuffer: false
+  });
+  const graph = new GPUCommandGraph(device, {id: 'raw-before-dynamic-table'});
+  const rawHandle = graph.importBuffer(
+    {id: 'raw-backing', byteLength: 16, usage: Buffer.STORAGE},
+    originalBacking
+  );
+  const dynamicData = new GPUData({
+    buffer: dynamicBuffer,
+    format: 'uint32',
+    length: 4,
+    ownsBuffer: false
+  });
+  const rawData = new GPUData({
+    buffer: originalBacking,
+    format: 'uint32',
+    length: 4,
+    ownsBuffer: false
+  });
+  const dynamicView = graph.importGPUData('dynamic-table', dynamicData);
+  const repeatedDynamicView = graph.importGPUData('repeated-dynamic-table', dynamicData);
+
+  t.notEqual(
+    dynamicView.buffer,
+    rawHandle,
+    'a dynamic table import retains its wrapper instead of reusing an earlier raw backing handle'
+  );
+  t.equal(
+    dynamicView.buffer.defaultBuffer,
+    dynamicBuffer,
+    'the table handle resolves through its original DynamicBuffer wrapper'
+  );
+  t.equal(
+    repeatedDynamicView.buffer,
+    dynamicView.buffer,
+    'repeated imports of the same DynamicBuffer reuse one wrapper-backed handle'
+  );
+  t.equal(
+    graph.importGPUData('raw-table', rawData).buffer,
+    rawHandle,
+    'raw table imports preserve their first physical backing handle'
+  );
+
+  const resolvedBuffers: Buffer[] = [];
+  graph.addCopyPass({
+    id: 'observe-dynamic-table',
+    resources: [{buffer: dynamicView, usage: 'storage-read'}],
+    compile: () => ({
+      encode: ({getBuffer}) => {
+        resolvedBuffers.push(getBuffer(dynamicView));
+      }
+    })
+  });
+  const compiled = graph.compile();
+  const originalEncoder = device.createCommandEncoder({id: 'dynamic-table-original'});
+  compiled.encode(originalEncoder, {parameters: undefined});
+  originalEncoder.destroy();
+  dynamicBuffer.resize({byteLength: 32});
+  const replacementBacking = dynamicBuffer.buffer;
+  const replacementEncoder = device.createCommandEncoder({id: 'dynamic-table-replacement'});
+  compiled.encode(replacementEncoder, {parameters: undefined});
+  replacementEncoder.destroy();
+
+  t.equal(
+    resolvedBuffers[0],
+    originalBacking,
+    'the first encoding uses the original GPUData backing'
+  );
+  t.equal(
+    resolvedBuffers[1],
+    replacementBacking,
+    'reencoding follows the resized GPUData DynamicBuffer replacement'
+  );
+
+  compiled.destroy();
+  dynamicData.destroy();
+  rawData.destroy();
+  t.notOk(originalBacking.destroyed, 'borrowed original backing remains caller-owned');
+  t.notOk(replacementBacking.destroyed, 'borrowed DynamicBuffer remains caller-owned');
+  originalBacking.destroy();
+  dynamicBuffer.destroy();
+  t.end();
+});
+
 test('GPUCommandGraph rejects interleaved and variable-length GPUVector imports', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -665,6 +902,186 @@ test('CompiledGPUCommandGraph resolves DynamicBuffer replacements and preserves 
   );
   missingCompiled.destroy();
   undersized.destroy();
+  t.end();
+});
+
+test('CompiledGPUCommandGraph rejects aliased imports before recording commands', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const firstBuffer = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
+  const secondBuffer = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
+  const dynamicBuffer = new DynamicBuffer(device, {
+    id: 'dynamic-encoding-alias',
+    byteLength: 16,
+    usage: Buffer.STORAGE
+  });
+  const graph = new GPUCommandGraph(device, {id: 'physical-encoding-alias'});
+  const firstHandle = graph.importBuffer(
+    {id: 'first', byteLength: firstBuffer.byteLength, usage: Buffer.STORAGE},
+    firstBuffer
+  );
+  const secondHandle = graph.importBuffer(
+    {id: 'second', byteLength: secondBuffer.byteLength, usage: Buffer.STORAGE},
+    secondBuffer
+  );
+  const unusedAlias = graph.importBuffer(
+    {id: 'unused-first-alias', byteLength: firstBuffer.byteLength, usage: Buffer.STORAGE},
+    firstBuffer
+  );
+  t.notEqual(
+    unusedAlias,
+    firstHandle,
+    'unused contributor-validation aliases retain their handles'
+  );
+  let encodedNodeCount = 0;
+  graph.addCopyPass({
+    id: 'observe-encoding',
+    resources: [
+      {buffer: firstHandle, usage: 'storage-read'},
+      {buffer: secondHandle, usage: 'storage-write'}
+    ],
+    compile: () => ({
+      encode: () => {
+        encodedNodeCount++;
+      }
+    })
+  });
+  const compiled = graph.compile();
+
+  const rejectAliasedEncoding = (
+    id: string,
+    buffers: Record<string, Buffer | DynamicBuffer>,
+    message: string
+  ) => {
+    const commandEncoder = device.createCommandEncoder({id});
+    t.throws(
+      () => compiled.encode(commandEncoder, {parameters: undefined, buffers}),
+      /same physical buffer/,
+      message
+    );
+    commandEncoder.destroy();
+  };
+
+  rejectAliasedEncoding(
+    'default-override-alias',
+    {second: firstBuffer},
+    'an override cannot alias another imported default'
+  );
+  rejectAliasedEncoding(
+    'override-default-alias',
+    {first: secondBuffer},
+    'an earlier override cannot alias a later imported default'
+  );
+  rejectAliasedEncoding(
+    'override-override-alias',
+    {first: dynamicBuffer, second: dynamicBuffer.buffer},
+    'dynamic wrappers and raw overrides cannot alias the same physical buffer'
+  );
+  t.equal(encodedNodeCount, 0, 'alias failures occur before any graph node records commands');
+
+  const commandEncoder = device.createCommandEncoder({id: 'distinct-swapped-overrides'});
+  compiled.encode(commandEncoder, {
+    parameters: undefined,
+    buffers: {first: secondBuffer, second: firstBuffer}
+  });
+  t.equal(
+    encodedNodeCount,
+    1,
+    'distinct active overrides can be swapped while an unused default aliases an active buffer'
+  );
+  commandEncoder.destroy();
+
+  const readAliasGraph = new GPUCommandGraph(device, {id: 'physical-read-only-alias'});
+  const firstReader = readAliasGraph.importBuffer(
+    {id: 'first-reader', byteLength: firstBuffer.byteLength, usage: Buffer.STORAGE},
+    firstBuffer
+  );
+  const secondReader = readAliasGraph.importBuffer(
+    {id: 'second-reader', byteLength: firstBuffer.byteLength, usage: Buffer.STORAGE},
+    firstBuffer
+  );
+  const thirdReader = readAliasGraph.importBuffer(
+    {id: 'third-reader', byteLength: secondBuffer.byteLength, usage: Buffer.STORAGE},
+    secondBuffer
+  );
+  let readAliasEncodings = 0;
+  readAliasGraph.addCopyPass({
+    id: 'observe-read-only-alias',
+    resources: [
+      {buffer: firstReader, usage: 'storage-read'},
+      {buffer: secondReader, usage: 'storage-read'},
+      {buffer: thirdReader, usage: 'storage-read'}
+    ],
+    compile: () => ({
+      encode: () => {
+        readAliasEncodings++;
+      }
+    })
+  });
+  const readAliasCompiled = readAliasGraph.compile();
+  const readAliasEncoder = device.createCommandEncoder({id: 'read-only-default-alias'});
+  readAliasCompiled.encode(readAliasEncoder, {parameters: undefined});
+  readAliasEncoder.destroy();
+  const readOverrideEncoder = device.createCommandEncoder({id: 'read-only-override-alias'});
+  readAliasCompiled.encode(readOverrideEncoder, {
+    parameters: undefined,
+    buffers: {'third-reader': firstBuffer}
+  });
+  readOverrideEncoder.destroy();
+  t.equal(
+    readAliasEncodings,
+    2,
+    'read-only default and override aliases can safely share physical input storage'
+  );
+  readAliasCompiled.destroy();
+
+  const defaultAliasGraph = new GPUCommandGraph(device, {id: 'physical-default-alias'});
+  const originalDefault = defaultAliasGraph.importBuffer(
+    {id: 'original-default', byteLength: firstBuffer.byteLength, usage: Buffer.STORAGE},
+    firstBuffer
+  );
+  const duplicateDefault = defaultAliasGraph.importBuffer(
+    {id: 'duplicate-default', byteLength: firstBuffer.byteLength, usage: Buffer.STORAGE},
+    firstBuffer
+  );
+  let defaultAliasEncoded = false;
+  defaultAliasGraph.addCopyPass({
+    id: 'observe-default-alias',
+    resources: [
+      {buffer: originalDefault, usage: 'storage-read'},
+      {buffer: duplicateDefault, usage: 'storage-write'}
+    ],
+    compile: () => ({
+      encode: () => {
+        defaultAliasEncoded = true;
+      }
+    })
+  });
+  const defaultAliasCompiled = defaultAliasGraph.compile();
+  const defaultAliasEncoder = device.createCommandEncoder({id: 'reject-default-alias'});
+  t.throws(
+    () => defaultAliasCompiled.encode(defaultAliasEncoder, {parameters: undefined}),
+    /same physical buffer/,
+    'two actively referenced default handles cannot alias physical storage'
+  );
+  t.notOk(
+    defaultAliasEncoded,
+    'default alias rejection occurs before any graph command is recorded'
+  );
+  defaultAliasEncoder.destroy();
+  defaultAliasCompiled.destroy();
+
+  compiled.destroy();
+  t.notOk(firstBuffer.destroyed, 'the graph preserves the first borrowed import');
+  t.notOk(secondBuffer.destroyed, 'the graph preserves the second borrowed import');
+  firstBuffer.destroy();
+  secondBuffer.destroy();
+  dynamicBuffer.destroy();
   t.end();
 });
 
