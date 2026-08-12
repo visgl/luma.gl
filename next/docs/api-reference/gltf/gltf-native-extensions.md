@@ -486,7 +486,7 @@ if (unsupportedRequired.length > 0) {
 | `loader-only`      | Loader data survives, but device/application support is not guaranteed. | No                      |
 | `none`             | No complete built-in runtime behavior is available.                     | No                      |
 
-For example, required `KHR_node_visibility`, `EXT_mesh_gpu_instancing`, material variants, and physically implemented `KHR_materials_dispersion` pass strict checks. A required unknown vendor extension fails. Required WebP or AVIF texture extensions remain conservative because image decode support depends on the browser/device combination.
+For example, required `KHR_node_visibility`, `EXT_mesh_gpu_instancing`, material variants, and physically implemented `KHR_materials_dispersion` pass strict checks. A required unknown vendor extension fails. Required WebP remains conservative because image decoding depends on the browser; required AVIF fails because the installed glTF loader does not implement `EXT_texture_avif` source selection.
 
 Capability collection includes declared used/required extensions, source root extension entries, extensions moved during loaders.gl postprocessing, and detected punctual lights.
 
@@ -538,14 +538,14 @@ The fixture attribution and pinned source revision are recorded in `modules/gltf
 
 ## Architecture and ownership[​](#architecture-and-ownership "Direct link to Architecture and ownership")
 
-| Package                 | Responsibility                                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `@loaders.gl/gltf`      | Container decoding, accessor/image decoding, and explicit glTF postprocessing.                                |
-| `@luma.gl/gltf`         | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
-| `@luma.gl/engine`       | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities.     |
-| `@luma.gl/shadertools`  | Canonical PBR material uniforms, physical shading, and reusable skinning.                                     |
-| `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission.                         |
-| `@luma.gl/anari`        | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership.       |
+| Package                 | Responsibility                                                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@loaders.gl/gltf`      | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
+| `@luma.gl/gltf`         | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting.                                  |
+| `@luma.gl/engine`       | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities.                                      |
+| `@luma.gl/shadertools`  | Canonical PBR material uniforms, physical shading, and reusable skinning.                                                                      |
+| `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission.                                                          |
+| `@luma.gl/anari`        | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership.                                        |
 
 The core ANARI package does not import glTF. Its optional glTF adapter imports the existing glTF parsers and engine animation primitives. Camera, punctual-light, and visibility pointer playback currently belongs to the canonical glTF scenegraph; the thin ANARI animation adapter safely ignores unsupported target families instead of creating an independent extension runtime.
 

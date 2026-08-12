@@ -116,7 +116,7 @@ To share GPU models across independently posed actors, see [GPU-animated glTF cr
 | Node `weights`                              | Node-local mesh morph-target weights and existing GPU vertex buffers.   |
 | `KHR_node_visibility.visible`               | Recursive scenegraph visibility and an in-place punctual-light refresh. |
 | Supported material-factor pointers          | Shared canonical PBR material uniforms.                                 |
-| Supported texture-transform pointers        | Per-slot UV offset, rotation, or scale across all 17 map slots.         |
+| Supported texture-transform pointers        | Per-slot UV offset, rotation, or scale across all 21 map slots.         |
 | Perspective or orthographic camera pointers | Independent runtime projection definitions.                             |
 | Punctual-light pointers                     | Authored linear color, intensity, range, and spotlight cone angles.     |
 
@@ -177,7 +177,7 @@ Supported source pointers include:
 * `/extensions/KHR_lights_punctual/lights/0/intensity` and individual `color/0` components.
 * `/extensions/KHR_lights_punctual/lights/0/spot/innerConeAngle` and `outerConeAngle`.
 * `/materials/0/extensions/KHR_materials_dispersion/dispersion` and supported physical factors.
-* `KHR_texture_transform` offset, rotation, and scale across all 17 supported material map slots.
+* `KHR_texture_transform` offset, rotation, and scale across all 21 supported material map slots.
 
 Camera channels update `scenegraphs.cameras`, which contains independent copies of source projection definitions. Light and visibility channels refresh the existing `scenegraphs.lights` array in place. Original postprocessed camera and light source data remains unchanged.
 

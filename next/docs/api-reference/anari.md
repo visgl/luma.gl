@@ -18,7 +18,7 @@ This package is inspired by the ANARI object model, but it is not an official AN
 
 * [Device and object lifecycle](https://luma.gl/next/docs/api-reference/anari/anari-device.md): `ANARIDevice`, object creation, renderer registration, discovery, staged parameters, commits, and destruction.
 * [Arrays and geometry](https://luma.gl/next/docs/api-reference/anari/anari-geometry.md): triangle meshes, RGB/RGBA colors, secondary UVs, joint palettes, morph targets, and analytic primitives.
-* [Materials and lighting](https://luma.gl/next/docs/api-reference/anari/anari-materials-and-lights.md): all 17 canonical PBR maps, alpha masking/blending, UV samplers, punctual lights, and existing image-based lighting.
+* [Materials and lighting](https://luma.gl/next/docs/api-reference/anari/anari-materials-and-lights.md): all 21 canonical PBR maps, alpha masking/blending, UV samplers, punctual lights, and existing image-based lighting.
 * [Animation and glTF integration](https://luma.gl/next/docs/api-reference/anari/anari-animation.md): retained node hierarchies, optional glTF adaptation, automatic skeletal and morph playback, mixer controls, and batched object commits.
 * [Scene hierarchy](https://luma.gl/next/docs/api-reference/anari/anari-scene.md): surfaces, groups, transform instances, worlds, and instancing behavior.
 * [Cameras, renderers, and frames](https://luma.gl/next/docs/api-reference/anari/anari-rendering.md): camera projections, forward/deferred/ray-tracing renderer controls, bloom, fog, frame rendering, and statistics.
@@ -138,7 +138,7 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | --------------------------------------------------------------- | --------------------------------------------------------- | --------------------------- |
 | Retained scene objects and instanced surfaces                   | Supported                                                 | Supported                   |
 | Matte and physically based materials                            | Supported                                                 | Supported                   |
-| All 17 canonical PBR image maps and slot-specific UV transforms | Supported                                                 | Supported                   |
+| All 21 canonical PBR image maps and slot-specific UV transforms | Supported                                                 | Supported                   |
 | Secondary UVs and RGB/RGBA vertex colors                        | Supported                                                 | Supported                   |
 | Alpha masking, blending, and double-sided materials             | Supported                                                 | Supported                   |
 | Retained node/material/UV animation and morph targets           | Supported                                                 | Supported                   |

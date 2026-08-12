@@ -604,7 +604,7 @@ const maskedLeaves = anariDevice.newMaterial('physicallyBased', {
 });
 ```
 
-All 17 supported glTF PBR texture slots map to retained image samplers. Base-color, emissive, specular-color, and sheen-color maps use sRGB inputs; normal, metallic/roughness, occlusion, and other data maps remain linear. Samplers preserve authored wrapping, filtering, mipmap selection, UV set, and texture transforms.
+All 21 supported glTF PBR texture slots map to retained image samplers. Base-color, emissive, specular-color, and sheen-color maps use sRGB inputs; normal, metallic/roughness, occlusion, and other data maps remain linear. Samplers preserve authored wrapping, filtering, mipmap selection, UV set, and texture transforms.
 
 Transmissive physical materials retain their authored `opaque` alpha mode. When a surface has a nonzero transmission factor, the shared forward renderer automatically captures the opaque background and refracts that scene color using its index of refraction, thickness, roughness, Fresnel response, and volume attenuation:
 
@@ -1561,7 +1561,7 @@ The editor applies valid changes automatically after a short debounce. Toggle **
 
 Both the Observatory and the JSON playground expose an experimental 3D scene selector supporting OpenUSD and glTF. Production-quality glTF samples include an Antique Camera, Brass Lantern, and Vintage Toy Car from Khronos Group's CC0 glTF Sample Assets. OpenUSD samples include a detailed Utah/Fancy teapot atelier, a cinematic Open Chess Set knight triptych, a composed vehicle gallery, a formula racer, a crimson sedan, a reusable wheel assembly, and a material laboratory. The teapot and vehicle models are selected from public-domain CC0 USD Working Group assets. The knight is attributed to the Academy Software Foundation's Open Chess Set under CC BY 4.0; complete credits accompany the bundled assets.
 
-The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes, reuses retained surfaces for repeated nodes, translates physically based materials, and retains all 17 canonical PBR texture slots as fragment-sampled ANARI image samplers. Source wrapping, filter and mipmap settings, color spaces, both UV sets, `KHR_texture_transform`, alpha masking, sidedness, and authored punctual lights are preserved. Joint attributes are imported, while animated joint deformation additionally requires an application-provided retained `surface.skin.jointMatrices` palette. POSITION, NORMAL, and TANGENT morph targets and animated morph weights play through the retained scene automatically.
+The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes, reuses retained surfaces for repeated nodes, translates physically based materials, and retains all 21 canonical PBR texture slots as fragment-sampled ANARI image samplers. Source wrapping, filter and mipmap settings, color spaces, both UV sets, `KHR_texture_transform`, alpha masking, sidedness, and authored punctual lights are preserved. Joint attributes are imported, while animated joint deformation additionally requires an application-provided retained `surface.skin.jointMatrices` palette. POSITION, NORMAL, and TANGENT morph targets and animated morph weights play through the retained scene automatically.
 
 The optional `@luma.gl/anari/gltf` entry point translates parsed glTF clips and binds their node, material, sampler, and morph channels to existing retained objects:
 

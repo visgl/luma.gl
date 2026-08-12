@@ -221,7 +221,7 @@ Four-connectivity produces five separate regions. Eight-connectivity joins them 
 
 Each foreground region receives the smallest row-major pixel index in that region, plus one. The extra one reserves label `0` for background. This makes results deterministic regardless of GPU workgroup execution order, but identifiers are not densely renumbered: labels `1`, `3`, and `9` identify three regions, not nine.
 
-Do not use the largest representative as a component count or directly index a compact per-region array. Compose `GPURasterDenseComponents` when contiguous IDs, an actual region count, or an explicit capacity bound are required. Region measurements and cross-tile identity reconciliation remain separate future contracts.
+Do not use the largest representative as a component count or directly index a compact per-region array. Compose `GPURasterDenseComponents` when contiguous IDs, an actual region count, or an explicit capacity bound are required, then `GPURasterRegionMeasurements` for bounded geometry and scientific intensity records. Cross-tile identity reconciliation remains a separate future contract.
 
 ### Convergence must be proven[​](#convergence-must-be-proven "Direct link to Convergence must be proven")
 
@@ -281,7 +281,51 @@ The required and published populations are different, honest measurements:
 
 Overflow is recomputed on each graph execution; it is not a sticky historical flag. If upstream labeling does not converge, dense labels, their validity, both counts, and overflow are cleared. An overflow value of zero is therefore meaningful only together with a proven convergence flag. Malformed sparse roots fail closed without indexing outside their valid raster.
 
-The Satellite Raster Lab lets you switch between **OFF** and **COMPONENTS**, select **4-CONNECTED** or **8-CONNECTED**, compare **SPARSE ROOTS** with **DENSE 1..N**, and adjust separate propagation and region-capacity budgets. Its foreground readout counts selected pixels; the component readout reports actual regions. Exact required count, convergence, and actual rounds reuse three existing contour diagnostic words; the displayed bounded count and overflow derive from that exact GPU count and visible capacity. Dense coloring is hidden entirely when capacity is exceeded or convergence fails, while correctly converged sparse roots remain visible even if the separate dense capacity is too small. The existing 228-byte analytical readback does not grow, and cross-tile region identity remains separate future work.
+### Region geometry and intensity use different masks[​](#region-geometry-and-intensity-use-different-masks "Direct link to Region geometry and intensity use different masks")
+
+A connected region can contain a real geometric pixel even when an independently measured intensity is missing at that position. For example:
+
+```
+Region pixels:         A     B     C
+
+Region validity:       1     1     1
+
+Intensity values:     10    --    20
+
+Intensity validity:    1     0     1
+
+
+
+Geometric pixel count:    3
+
+Valid intensity count:    2
+
+Intensity sum:           30
+
+Intensity mean:          15
+```
+
+The three pixels all contribute to region shape, centroid, and area. Only the two valid observations contribute to intensity count, sum, minimum, maximum, and mean. Dividing by the geometric pixel count would invent a missing measurement. LuRaster therefore publishes separate exact `pixelCounts` and `intensityCounts` alongside floating intensity summaries.
+
+Intensity bands are explicitly `float32`; integer measurements are never silently converted. Calibration is applied once after validity and raw nodata checks. Large integer values require an explicit application-side promotion and a documented precision tradeoff.
+
+### Centroids stay local; area keeps its real units[​](#centroids-stay-local-area-keeps-its-real-units "Direct link to Centroids stay local; area keeps its real units")
+
+The GPU accumulates local column and row moments, then divides by geometric pixel count. Pixels representing covered **areas** contribute their centers at `(column + 0.5, row + 0.5)`; pixels representing sampled **points** use `(column, row)`.
+
+World translations can be very large: a projected east/north origin might be `552400` and `4187600`. Adding a small fractional centroid directly to those numbers in `float32` can erase the fraction. LuRaster keeps the centroid local on the GPU and applies the retained raster affine in JavaScript double precision with `getRasterRegionWorldCentroid`. A tile's affine already includes its spatial origin, so `levelZeroOrigin` must not be added a second time.
+
+For affine `[a, b, c, d, e, f]`, one pixel covers `abs(a * e - b * d)` square coordinate units. Region area multiplies that determinant by its geometric pixel count. If the coordinate reference system uses meters, the result can be labeled square meters; if it uses geographic degrees, it is square degrees, not a geodesic area. No implicit reprojection or unit conversion is performed.
+
+### Empty intensity and failed segmentation are explicit[​](#empty-intensity-and-failed-segmentation-are-explicit "Direct link to Empty intensity and failed segmentation are explicit")
+
+A real region with no accepted intensity samples retains its geometry: pixel count, centroid, and area remain meaningful, while intensity count and sum are zero and intensity minimum, maximum, and mean are `NaN`. An unused region row has zero counts, sums, moments, and area; its intensity extrema/mean and centroid are `NaN`.
+
+Nonconverged labels, dense capacity overflow, or an out-of-range published component count invalidate **every** region measurement row. Individual missing/truncated labels cannot enter a region. This fail-closed contract prevents a partial or stale measurement table from looking like a completed segmentation. Cross-tile component identity is not inferred.
+
+The Satellite Raster Lab lets you switch between **OFF** and **COMPONENTS**, select **4-CONNECTED** or **8-CONNECTED**, compare **SPARSE ROOTS** with **DENSE 1..N**, and adjust separate propagation and region-capacity budgets. Its foreground readout counts selected pixels; the component readout reports actual regions. Exact required count, convergence, and actual rounds reuse three existing contour diagnostic words; the displayed bounded count and overflow derive from that exact GPU count and visible capacity. Dense coloring is hidden entirely when capacity is exceeded or convergence fails, while correctly converged sparse roots remain visible even if the separate dense capacity is too small.
+
+Its optional **INSPECT REGION** control publishes exactly one selected dense region record, not the complete GPU measurement table. Inspection explicitly changes the real displayed histogram from 48 bins to 40 bins; the eight freed four-byte positions contain geometric count, intensity sum/minimum/maximum/mean, local column/row centroid, and affine area. World coordinates are reconstructed after that same read using the double-precision affine. Leaving inspection restores the full 48-bin histogram. Both modes transfer exactly 228 bytes; the separate Otsu baseline, global population, component count, convergence, and iteration slots remain intact.
 
 ## Tiles and owned pixel cores[​](#tiles-and-owned-pixel-cores "Direct link to Tiles and owned pixel cores")
 
@@ -606,6 +650,7 @@ LuRaster is a GPU analytical layer, not a replacement for loaders.gl. A future l
 | Build one histogram or threshold across many tiles                              | Explicit global initialization, statistics merges, and stable-domain histogram replay.                                                             |
 | Identify connected thresholded foreground without inventing missing samples     | `GPURasterConnectedComponents` with four/eight connectivity and explicit convergence.                                                              |
 | Count regions or obtain bounded contiguous region identifiers                   | `GPURasterDenseComponents` after converged sparse labeling, with explicit capacity and overflow.                                                   |
+| Measure each region's valid intensity, geometry, centroid, and affine area      | `GPURasterRegionMeasurements`; use `getRasterRegionWorldCentroid` for precise world coordinates.                                                   |
 | Look up complete constructors, format constraints, ownership, and code examples | The [LuRaster API reference](https://luma.gl/next/docs/api-reference/experimental/luraster.md).                                               |
 
 ## A short glossary[​](#a-short-glossary "Direct link to A short glossary")
@@ -613,6 +658,7 @@ LuRaster is a GPU analytical layer, not a replacement for loaders.gl. A future l
 * **Band:** one aligned grid of measurements, such as red reflectance or temperature.
 * **Calibration:** conversion from a native stored value to a physical value using scale and offset.
 * **Categorical value:** an exact integer label; it is not a continuous quantity to interpolate.
+* **Centroid:** a region's geometric mean local pixel center; its world position uses retained double-precision affine metadata.
 * **Connected component:** a maximal group of valid foreground pixels reachable under one declared four- or eight-neighbor relationship.
 * **Connectivity:** the pixel-neighbor policy; four excludes diagonals and eight includes them.
 * **Convergence:** GPU proof that bounded component-label propagation reached a stable fixed point.
@@ -622,6 +668,7 @@ LuRaster is a GPU analytical layer, not a replacement for loaders.gl. A future l
 * **Fence:** proof that previously submitted GPU work has completed.
 * **Halo:** borrowed neighboring samples surrounding an owned tile core.
 * **Histogram replay:** a second tile pass against a previously discovered global value domain.
+* **Intensity population:** valid finite calibrated observations inside a region; it can be smaller than the region's geometric pixel population.
 * **Lease:** a temporary pin preventing resident GPU resources from being evicted too early.
 * **Nodata:** an absent or unusable observation, distinct from a valid numeric zero.
 * **Nodata-aware:** excludes missing observations while preserving genuine zero values.
@@ -629,9 +676,11 @@ LuRaster is a GPU analytical layer, not a replacement for loaders.gl. A future l
 * **Overview:** a lower-resolution representation of the same spatial raster.
 * **Overflow:** an explicit signal that the current converged population exceeded caller capacity.
 * **Pixel interpretation:** whether a source pixel represents a sampled point or a covered area.
+* **Pixel population:** all valid labeled geometry pixels in a region, independent of intensity measurement availability.
 * **Raster:** a rectangular grid of observations.
 * **Receptive field:** the source neighborhood needed to produce one analytical output.
 * **Representative label:** one plus the smallest row-major foreground pixel index in a connected component; these labels can be sparse.
+* **Region area:** geometric pixel population times the absolute affine determinant, in square CRS coordinate units rather than implicitly square meters.
 * **Required component count:** the exact converged region population before capacity clamping.
 * **Replayable:** able to process tiles again after discovering global dataset information.
 * **Sentinel:** a source-defined raw numeric value that means missing.

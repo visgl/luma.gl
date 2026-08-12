@@ -72,7 +72,7 @@ import {
 | `ANARIGeometryGeneratorSchema` | Procedural `torus`, `crystal`, and `prism` generators.                                                                    |
 | `ANARIGeometrySchema`          | Analytic primitives and triangle meshes, including RGBA colors, two UV sets, joint attributes, and morph targets/weights. |
 | `ANARITextureSchema`           | Retained image source, color space, sampler addressing/filtering, coordinate set, and UV transform.                       |
-| `ANARIMaterialSchema`          | `matte`/`physicallyBased` factors, alpha/culling options, and all 17 retained texture references.                         |
+| `ANARIMaterialSchema`          | `matte`/`physicallyBased` factors, alpha/culling options, and all 21 retained texture references.                         |
 | `ANARIAnimationSchema`         | `orbit`, `bob`, `spin`, `wobble`, `pulse`, and `follow` animations.                                                       |
 | `ANARIAnimationNodeSchema`     | Source-node parent, local transform, initial morph weights, and retained instance/geometry identifiers.                   |
 | `ANARIAnimationTargetSchema`   | Stable retained node, instance, material, sampler, light, or camera targets.                                              |
