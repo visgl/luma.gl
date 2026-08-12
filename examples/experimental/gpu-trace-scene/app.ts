@@ -211,6 +211,8 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
 
   private createResources(capacity: number): SceneTraceResources {
     const dataset = makeTraceDataset(capacity);
+    // GPUTraceScene owns dense span-indexed adjacency. The viewer dataset's adjacency is sparse
+    // and carries an explicit node table for much larger traces, so it is not interchangeable.
     const trace = new GPUTraceScene(this.device, {
       id: 'scene-trace',
       spans: dataset.spans,
@@ -223,9 +225,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
       })),
       processCount: dataset.processCount,
       threadCount: dataset.threadCount,
-      geometryId: 0,
-      outgoing: dataset.outgoing,
-      incoming: dataset.incoming
+      geometryId: 0
     });
     const graph = new GPUCommandGraph<void>(this.device, {id: 'scene-trace-command-graph'});
     const source = trace.importToGraph(graph);
