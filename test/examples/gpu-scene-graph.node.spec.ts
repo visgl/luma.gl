@@ -39,6 +39,8 @@ describe('GPU scene graph application model', () => {
     expect(visibility).toContain('(header.y & 1u) != 0u');
     expect(visibility).toContain('(view.options.y & (1u << header.z)) != 0u');
     expect(picking).toContain('visibility[sceneIndex] == 0u');
+    expect(picking).toContain('request.enabled == 0u');
+    expect(picking).not.toContain('active: u32');
     expect(picking).toContain('atomicMin(&result, sceneIndex)');
   });
 });

@@ -7,7 +7,9 @@ import {
   GPU_TRACE_SPAN_RECORD_WORD_LENGTH
 } from '@luma.gl/experimental/lutrace';
 
+/** Reference duration for the smallest interactive demonstration. */
 export const TRACE_DURATION = 1000;
+export const TRACE_BASE_SPAN_CAPACITY = 250_000;
 export const TRACE_GROUPS = ['compute', 'network', 'storage'] as const;
 export const TRACE_PROCESS_COUNT = 16;
 export const TRACE_THREADS_PER_PROCESS = 4;
@@ -51,6 +53,24 @@ export const TRACE_MAXIMUM_RELATIVE_PARENT_DURATION_DELTA = 0.25;
 export const TRACE_COLLAPSED_STATE = 0;
 export const TRACE_EXPANDED_STATE = 1;
 export const TRACE_INVALID_SPAN_INDEX = 0xffffffff;
+
+const TRACE_BASE_SLOT_COUNT = Math.ceil(TRACE_BASE_SPAN_CAPACITY / TRACE_LANE_COUNT);
+const TRACE_SLOT_DURATION = TRACE_DURATION / TRACE_BASE_SLOT_COUNT;
+const TRACE_LANE_ROTATION = 73;
+const TRACE_GROUP_DURATION_SCALES = [0.62, 0.72, 0.82] as const;
+/** Largest useful minimum-duration filter value for the generated span distribution. */
+export const TRACE_DURATION_FILTER_MAXIMUM =
+  Math.floor(
+    TRACE_GROUP_DURATION_SCALES[TRACE_GROUP_DURATION_SCALES.length - 1] * TRACE_SLOT_DURATION * 100
+  ) / 100;
+
+/** Scales the timeline so larger datasets add time instead of adding pixel overdraw. */
+export function getTraceDuration(spanCount: number): number {
+  if (!Number.isSafeInteger(spanCount) || spanCount < 0 || spanCount > 0xffffffff) {
+    throw new RangeError('Trace span count must be a nonnegative uint32');
+  }
+  return Math.max(Math.ceil(spanCount / TRACE_LANE_COUNT), 1) * TRACE_SLOT_DURATION;
+}
 
 /** Returns useful demonstration sizes when one portable span batch fits in a storage chunk. */
 export function getTraceCapacityOptions(
@@ -188,6 +208,8 @@ export type TraceDatasetData = {
   outgoing: TraceAdjacencyData;
   /** Reverse destination-to-source CSR adjacency. */
   incoming: TraceAdjacencyData;
+  /** Total generated timeline extent. */
+  duration: number;
   spanCount: number;
   dependencyCount: number;
   processCount: number;
@@ -218,14 +240,12 @@ export function makeTraceDataset(
   const spans = new Uint32Array(totalSpanCount * TRACE_SPAN_RECORD_WORD_LENGTH);
   const spanFloats = new Float32Array(spans.buffer);
   const groups: TraceGroupData[] = [];
-  let remainingSpanCount = totalSpanCount;
+  const baseGroupSpanCount = Math.floor(totalSpanCount / TRACE_GROUPS.length);
+  const extraGroupSpanCount = totalSpanCount % TRACE_GROUPS.length;
   let firstSpanIndex = 0;
 
   for (const [groupIndex, name] of TRACE_GROUPS.entries()) {
-    const count =
-      groupIndex === TRACE_GROUPS.length - 1
-        ? remainingSpanCount
-        : Math.floor(totalSpanCount / TRACE_GROUPS.length);
+    const count = baseGroupSpanCount + Number(groupIndex < extraGroupSpanCount);
     fillTraceGroup({
       spans,
       spanFloats,
@@ -244,7 +264,6 @@ export function makeTraceDataset(
       )
     });
     firstSpanIndex += count;
-    remainingSpanCount -= count;
   }
 
   const topology = makeTraceDependencies(spans, totalSpanCount, maximumDependencyCount);
@@ -266,6 +285,7 @@ export function makeTraceDataset(
     parentSpans: topology.parentSpans,
     outgoing: buildTraceAdjacency(topology.dependencies, 'outgoing'),
     incoming: buildTraceAdjacency(topology.dependencies, 'incoming'),
+    duration: getTraceDuration(totalSpanCount),
     spanCount: totalSpanCount,
     dependencyCount,
     processCount: TRACE_PROCESS_COUNT,
@@ -494,14 +514,14 @@ function fillTraceGroup(params: {
   for (let groupRowIndex = 0; groupRowIndex < params.spanCount; groupRowIndex++) {
     const spanIndex = params.firstSpanIndex + groupRowIndex;
     const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
-    const laneIndex = Math.floor(random() * TRACE_LANE_COUNT);
+    const timelineIndex = groupRowIndex * TRACE_GROUPS.length + params.groupIndex;
+    const slotIndex = Math.floor(timelineIndex / TRACE_LANE_COUNT);
+    const laneIndex = (timelineIndex + slotIndex * TRACE_LANE_ROTATION) % TRACE_LANE_COUNT;
     const threadIndex = Math.floor(laneIndex / TRACE_LANES_PER_THREAD);
     const processIndex = Math.floor(threadIndex / TRACE_THREADS_PER_PROCESS);
-    const temporalFraction = groupRowIndex / Math.max(params.spanCount, 1);
-    const cluster = Math.floor(temporalFraction * 20) * (TRACE_DURATION / 20);
-    const start = Math.min(TRACE_DURATION - 0.05, cluster + random() * 55);
-    const durationScale = params.groupIndex === 0 ? 5 : params.groupIndex === 1 ? 14 : 28;
-    const duration = Math.max(0.08, Math.pow(random(), 2.6) * durationScale);
+    const start = (slotIndex + random() * 0.06) * TRACE_SLOT_DURATION;
+    const durationScale = TRACE_GROUP_DURATION_SCALES[params.groupIndex];
+    const duration = durationScale * (0.82 + random() * 0.18) * TRACE_SLOT_DURATION;
     const status = Math.floor(random() * TRACE_STATUS_COUNT);
     const runtimeFlag = spanIndex % 11 === 0 ? TRACE_RUNTIME_SPAN_FLAG : 0;
     const errorFlag = spanIndex % 37 === 0 ? TRACE_ERROR_SPAN_FLAG : 0;

@@ -6,6 +6,7 @@ import {describe, expect, test} from 'vitest';
 import type {AnimationProps} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import GPUTraceSceneAnimationLoopTemplate from '../../examples/experimental/gpu-trace-scene/app';
+import {TRACE_DURATION_FILTER_MAXIMUM} from '../../examples/experimental/gpu-trace-viewer/trace-data';
 
 describe('GPU scene-backed trace explorer', () => {
   test('composes one scene graph and updates hierarchy, classification, and focus controls', async () => {
@@ -40,6 +41,9 @@ describe('GPU scene-backed trace explorer', () => {
         threadExpansion: Uint32Array;
         errorsOnly: boolean;
         focusEnabled: boolean;
+        traceDuration: number;
+        timeMinimum: number;
+        timeMaximum: number;
       };
       expect(state.resources.trace.stats.spanCount).toBe(96);
       expect(state.resources.trace.stats.partitionCount).toBe(3);
@@ -49,6 +53,11 @@ describe('GPU scene-backed trace explorer', () => {
       expect(state.resources.compiled.stats.nodeOrder).toContain(
         'scene-trace-resource-groups-classify'
       );
+      expect(state.timeMinimum).toBe(0);
+      expect(state.timeMaximum).toBeLessThan(state.traceDuration);
+      const durationFilter = host.querySelector<HTMLInputElement>('[data-minimum-duration]');
+      expect(durationFilter?.max).toBe(String(TRACE_DURATION_FILTER_MAXIMUM));
+      expect(durationFilter?.step).toBe('0.01');
 
       const process = host.querySelector<HTMLInputElement>('[data-process="0"]');
       expect(process).not.toBeNull();

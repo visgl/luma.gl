@@ -50,6 +50,7 @@ import {
   TRACE_DEPENDENCY_BATCH_CAPACITY,
   TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_DURATION,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_EXPANDED_STATE,
   TRACE_FILTER_ERRORS_ONLY,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
@@ -90,6 +91,11 @@ import {
   TRACE_DEPENDENCY_RENDER_SHADER,
   TRACE_RENDER_SHADER
 } from './trace-shaders';
+import {
+  getTracePanelStyleMarkup,
+  getTracePipelineMarkup,
+  getTraceScanScatterMarkup
+} from './trace-panel';
 
 export const title = 'GPU Hierarchical Trace Viewer';
 export const description =
@@ -287,6 +293,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   };
   private spanCapacity = DEFAULT_CAPACITY;
   private dependencyCapacity = DEFAULT_DEPENDENCY_CAPACITY;
+  private traceDuration = TRACE_DURATION;
   private enabledMask = 0b111;
   private statusMask = (1 << TRACE_STATUS_COUNT) - 1;
   private dependencyMask = 0b11;
@@ -382,8 +389,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.viewportWidth = width;
     if (this.autoScroll) {
       const windowSize = this.view.timeMax - this.view.timeMin;
-      this.view.timeMin = (time * 0.025) % Math.max(TRACE_DURATION - windowSize, 1);
-      this.view.timeMax = this.view.timeMin + windowSize;
+      if (windowSize >= this.traceDuration) {
+        this.setViewTimeRange(0, this.traceDuration);
+      } else {
+        const timeMin = (time * 0.025) % Math.max(this.traceDuration - windowSize, 1);
+        this.setViewTimeRange(timeMin, timeMin + windowSize);
+      }
     }
     const pick = this.pendingPick;
     const visibilityGeneration = (this.frameIndex % 0xfffffffe) + 1;
@@ -557,6 +568,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.dependencyCapacity = dependencyCapacity;
     this.selectedSpanIndex = INVALID_SPAN_INDEX;
     const dataset = makeTraceDataset(spanCapacity, this.dependencyCapacity);
+    this.traceDuration = dataset.duration;
+    this.setViewTimeRange(this.view.timeMin, this.view.timeMax);
     const resources = this.createResources(dataset);
     resources.renderBundle = this.createRenderBundle(resources);
     resources.compiled = this.createGraph(resources, dataset);
@@ -1702,7 +1715,16 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         makeHtmlCustomPanel({
           id: 'gpu-trace-overview',
           title: '',
-          html: '<p style="margin:0;line-height:1.5">A fixed WebGPU command graph owns hierarchical layout, composed filters, dependency traversal, picking, adaptive exact-or-density rendering, and indirect draws.</p>'
+          html: `<section data-trace-dashboard>
+            ${getTracePanelStyleMarkup()}
+            <div class="trace-hero">
+              <span class="trace-eyebrow">GPU-resident execution</span>
+              <strong>One compiled graph, live trace policies</strong>
+              <p>Hierarchy layout, batch culling, dependency focus, stable compaction, picking, adaptive density, and indirect draws stay on the GPU.</p>
+            </div>
+            ${getTracePipelineMarkup()}
+            ${getTraceScanScatterMarkup()}
+          </section>`
         }),
         makeHtmlCustomPanel({
           id: 'gpu-trace-controls',
@@ -1719,7 +1741,19 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         makeHtmlCustomPanel({
           id: 'gpu-trace-stats',
           title: 'Live GPU graph',
-          html: '<div data-capacity></div><div data-selection style="margin-top:8px"></div><div data-stats></div><div data-command-graph-inspector style="margin-top:10px"></div>',
+          html: `<section data-trace-dashboard>
+            ${getTracePanelStyleMarkup()}
+            <div class="trace-metric-grid" data-capacity></div>
+            <div class="trace-selection" data-selection></div>
+            <section class="trace-section">
+              <div class="trace-section-header"><span class="trace-section-title">Live workload</span><span class="trace-section-note">sampled GPU output</span></div>
+              <div data-stats></div>
+            </section>
+            <section class="trace-section">
+              <div class="trace-section-header"><span class="trace-section-title">Command graph</span><span class="trace-section-note">CPU / GPU p50 and p95</span></div>
+              <div data-command-graph-inspector></div>
+            </section>
+          </section>`,
           onRender: root => {
             this.capacityElement = root.querySelector('[data-capacity]');
             this.selectionElement = root.querySelector('[data-selection]');
@@ -1754,39 +1788,61 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       (name, index) =>
         `<label><input type="checkbox" data-status="${index}" checked> ${name}</label>`
     ).join('');
-    return `<div style="display:grid;gap:10px">
-      <label>Spans <select data-span-capacity>${this.capacityOptions
-        .map(
-          value =>
-            `<option value="${value}"${value === this.spanCapacity ? ' selected' : ''}>${formatCount(value)}</option>`
-        )
-        .join('')}</select></label>
-      <label>Dependencies <select data-dependency-capacity>${this.dependencyCapacityOptions
-        .map(
-          value =>
-            `<option value="${value}"${value === this.dependencyCapacity ? ' selected' : ''}>${formatCount(value)}</option>`
-        )
-        .join('')}</select></label>
-      <small>Span and dependency capacity are independent; endpoint positions resolve across bounded GPU chunks.</small>
-      <fieldset style="display:grid;gap:4px"><legend>Span groups</legend>${groupControls}</fieldset>
-      <fieldset style="display:grid;gap:4px"><legend>Status</legend>${statusControls}</fieldset>
-      <label>Minimum duration <input type="range" min="0" max="20" step="0.25" value="0" data-duration> <span data-duration-value>0.00 ms</span></label>
-      <label><input type="checkbox" data-hide-runtime> Hide runtime spans</label>
-      <label><input type="checkbox" data-errors-only> Errors only</label>
-      <label><input type="checkbox" data-hide-overlapping> Hide short overlapping children</label>
-      <label><input type="checkbox" data-hide-similar-parents> Collapse similar parent chains</label>
-      <fieldset style="display:grid;gap:4px"><legend>Dependencies</legend>
-        <label><input type="checkbox" data-same-dependencies checked> Same-process edges</label>
-        <label><input type="checkbox" data-cross-dependencies checked> Cross-process edges</label>
-        <label>Focus depth <input type="range" min="0" max="${MAXIMUM_FOCUS_DEPTH}" step="1" value="${this.focusDepth}" data-focus-depth> <span data-focus-depth-value>${this.focusDepth}</span></label>
-        <label><input type="checkbox" data-focus-only> Show focused subgraph only</label>
-      </fieldset>
-      <label>Source span <input type="number" min="0" value="0" data-source-span style="width:100px"></label>
-      <div style="display:flex;gap:6px"><button type="button" data-select-span>Focus span</button><button type="button" data-clear-selection>Clear selection</button></div>
-      <label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label>
-      <button type="button" data-reset>Reset view</button>
-      <small>Click a span to pick it on the GPU. Drag to pan; use the wheel to zoom.</small>
-    </div>`;
+    return `<section data-trace-dashboard>
+      ${getTracePanelStyleMarkup()}
+      <section class="trace-section">
+        <div class="trace-section-header"><span class="trace-section-title">Dataset</span><span class="trace-section-note">rebuilds GPU resources</span></div>
+        <div class="trace-control-grid">
+          <label>Spans <select data-span-capacity>${this.capacityOptions
+            .map(
+              value =>
+                `<option value="${value}"${value === this.spanCapacity ? ' selected' : ''}>${formatCount(value)}</option>`
+            )
+            .join('')}</select></label>
+          <label>Dependencies <select data-dependency-capacity>${this.dependencyCapacityOptions
+            .map(
+              value =>
+                `<option value="${value}"${value === this.dependencyCapacity ? ' selected' : ''}>${formatCount(value)}</option>`
+            )
+            .join('')}</select></label>
+        </div>
+        <div class="trace-context-line"><span>Independent capacities</span><span>bounded GPU chunks</span><span>stable source IDs</span></div>
+      </section>
+      <section class="trace-section">
+        <div class="trace-section-header"><span class="trace-section-title">Span policy</span><span class="trace-section-note">composed on GPU</span></div>
+        <div class="trace-check-grid">${groupControls}</div>
+        <div class="trace-check-grid" style="margin-top:5px">${statusControls}</div>
+        <div class="trace-control-stack" style="margin-top:7px">
+          <label>Minimum duration <span data-duration-value>0.00 ms</span><input type="range" min="0" max="${TRACE_DURATION_FILTER_MAXIMUM}" step="0.01" value="0" data-duration></label>
+        </div>
+        <div class="trace-check-grid" style="margin-top:6px">
+          <label><input type="checkbox" data-hide-runtime> Hide runtime spans</label>
+          <label><input type="checkbox" data-errors-only> Errors only</label>
+          <label><input type="checkbox" data-hide-overlapping> Hide short overlaps</label>
+          <label><input type="checkbox" data-hide-similar-parents> Collapse parent chains</label>
+        </div>
+      </section>
+      <section class="trace-section">
+        <div class="trace-section-header"><span class="trace-section-title">Dependency focus</span><span class="trace-section-note">bounded CSR traversal</span></div>
+        <div class="trace-check-grid">
+          <label><input type="checkbox" data-same-dependencies checked> Same-process edges</label>
+          <label><input type="checkbox" data-cross-dependencies checked> Cross-process edges</label>
+          <label><input type="checkbox" data-focus-only> Focused subgraph only</label>
+        </div>
+        <div class="trace-control-stack" style="margin-top:6px">
+          <label>Focus depth <span data-focus-depth-value>${this.focusDepth}</span><input type="range" min="0" max="${MAXIMUM_FOCUS_DEPTH}" step="1" value="${this.focusDepth}" data-focus-depth></label>
+        </div>
+        <div class="trace-control-grid" style="margin-top:7px">
+          <label>Source span <input type="number" min="0" value="0" data-source-span></label>
+          <div class="trace-actions" style="align-items:end"><button type="button" data-select-span>Focus</button><button type="button" data-clear-selection>Clear</button></div>
+        </div>
+      </section>
+      <section class="trace-section">
+        <div class="trace-section-header"><span class="trace-section-title">Timeline</span><span class="trace-section-note">drag to pan · wheel to zoom</span></div>
+        <div class="trace-check-row"><label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label></div>
+        <div class="trace-actions" style="margin-top:6px"><button type="button" data-reset>Reset detail</button><button type="button" data-fit-trace>Fit trace</button></div>
+      </section>
+    </section>`;
   }
 
   private getHierarchyHtml(): string {
@@ -1797,15 +1853,19 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         const threadExpanded = this.threadStates[threadIndex] !== TRACE_COLLAPSED_STATE;
         return `<label style="font-size:11px"><input type="checkbox" data-thread="${threadIndex}"${threadExpanded ? ' checked' : ''}> T${localThreadIndex}</label>`;
       }).join('');
-      return `<div style="display:grid;gap:3px;padding:5px 0;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)">
+      return `<div class="trace-hierarchy-row">
         <label><input type="checkbox" data-process="${processIndex}"${expanded ? ' checked' : ''}> Process ${String(processIndex).padStart(2, '0')}</label>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding-left:16px">${threads}</div>
+        <div class="trace-hierarchy-threads">${threads}</div>
       </div>`;
     }).join('');
-    return `<div style="display:grid;gap:6px">
-      <div style="display:flex;gap:6px"><button type="button" data-expand-all>Expand all</button><button type="button" data-collapse-all>Collapse all</button></div>
-      <div style="max-height:270px;overflow:auto">${processes}</div>
-    </div>`;
+    return `<section data-trace-dashboard>
+      ${getTracePanelStyleMarkup()}
+      <section class="trace-section">
+        <div class="trace-section-header"><span class="trace-section-title">Hierarchy layout</span><span class="trace-section-note">process → thread → lane</span></div>
+        <div class="trace-actions"><button type="button" data-expand-all>Expand all</button><button type="button" data-collapse-all>Collapse all</button></div>
+        <div style="max-height:270px;overflow:auto;margin-top:5px">${processes}</div>
+      </section>
+    </section>`;
   }
 
   private bindPanelControls(root: HTMLElement): () => void {
@@ -1898,7 +1958,24 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       } else if (target.closest('[data-clear-selection]')) {
         this.clearSelectedSpan();
       } else if (target.closest('[data-reset]')) {
-        this.view = {timeMin: 0, timeMax: 150, laneMin: 0, laneMax: 72};
+        this.view = {
+          timeMin: 0,
+          timeMax: Math.min(150, this.traceDuration),
+          laneMin: 0,
+          laneMax: 72
+        };
+        this.autoScroll = false;
+        const autoScroll = root.querySelector<HTMLInputElement>('[data-auto-scroll]');
+        if (autoScroll) {
+          autoScroll.checked = false;
+        }
+      } else if (target.closest('[data-fit-trace]')) {
+        this.view = {
+          timeMin: 0,
+          timeMax: this.traceDuration,
+          laneMin: 0,
+          laneMax: TRACE_LANE_COUNT
+        };
         this.autoScroll = false;
         const autoScroll = root.querySelector<HTMLInputElement>('[data-auto-scroll]');
         if (autoScroll) {
@@ -1981,7 +2058,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.dependencyCapacity,
         this.device.limits
       );
-      this.capacityElement.innerHTML = `<strong>${formatCount(this.spanCapacity)}</strong> spans · <strong>${formatCount(resources.spanBatchCount)}</strong> batches · <strong>${formatCount(resources.dependencyCount)}/${formatCount(this.dependencyCapacity)}</strong> dependencies · graph compile #${this.compileCount} (${this.compileTimeMilliseconds.toFixed(1)} ms)<br><small>${resources.spanChunks.length} span chunk${resources.spanChunks.length === 1 ? '' : 's'} · ${formatBytes(this.allocationStats.persistentByteLength)} persistent in ${formatCount(this.allocationStats.bufferCount)} buffers · largest ${formatBytes(this.allocationStats.largestBufferByteLength)} · chunked contract ${capacityContract.fitsChunkedDeviceLimits ? 'fits device' : 'exceeds device'}</small>`;
+      this.capacityElement.innerHTML = `
+        ${makeMetricCard('Trace spans', formatCount(this.spanCapacity), formatTraceDuration(this.traceDuration))}
+        ${makeMetricCard('Dependencies', formatCount(resources.dependencyCount), `${formatCount(this.dependencyCapacity)} capacity`)}
+        ${makeMetricCard('Persistent GPU', formatBytes(this.allocationStats.persistentByteLength), `${formatCount(this.allocationStats.bufferCount)} buffers`)}
+        ${makeMetricCard('Graph compile', `#${this.compileCount}`, `${this.compileTimeMilliseconds.toFixed(1)} ms`)}
+        ${makeMetricCard('Span chunks', formatCount(resources.spanChunks.length), `largest ${formatBytes(this.allocationStats.largestBufferByteLength)}`)}
+        ${makeMetricCard('Device contract', capacityContract.fitsChunkedDeviceLimits ? 'Fits' : 'Exceeds', formatBytes(this.device.limits.maxStorageBufferBindingSize))}`;
     }
     if (this.selectionElement) {
       this.selectionElement.textContent =
@@ -1991,28 +2074,32 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
     if (this.statsElement) {
       const visible = this.sampledVisibleCounts.reduce((sum, count) => sum + count, 0);
-      this.statsElement.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:8px">
-        <span>Sampled exact spans</span><strong>${formatCount(visible)}</strong>
-        <span>Sampled visible edges</span><strong>${formatCount(this.sampledDependencyCount)}</strong>
-        <span>Candidate span batches</span><strong>${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}</strong>
-        <span>Candidate dependency batches</span><strong>${formatCount(this.sampledCandidateDependencyBatchCount)}/${formatCount(resources.dependencyBatchCount)}</strong>
-        <span>Visible layout lanes</span><strong>${formatCount(this.getVisibleLaneCount())}</strong>
-        <span>Collapsed processes</span><strong>${formatCount(this.processStates.filter(state => state === TRACE_COLLAPSED_STATE).length)}</strong>
-        <span>CPU graph encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>
-        <span>Trace LOD</span><strong>${isTraceDensityMode(this.view.timeMin, this.view.timeMax, this.viewportWidth) ? 'density bins' : 'exact spans'}</strong>
+      const densityMode = isTraceDensityMode(
+        this.view.timeMin,
+        this.view.timeMax,
+        this.viewportWidth
+      );
+      const collapsedProcessCount = this.processStates.filter(
+        state => state === TRACE_COLLAPSED_STATE
+      ).length;
+      this.statsElement.innerHTML = `<div class="trace-metric-grid">
+        ${makeMetricCard('Exact spans', formatCount(visible), 'sampled visible')}
+        ${makeMetricCard('Visible edges', formatCount(this.sampledDependencyCount), 'sampled dependencies')}
+        ${makeMetricCard('Span batches', `${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}`, 'candidate / total')}
+        ${makeMetricCard('Edge batches', `${formatCount(this.sampledCandidateDependencyBatchCount)}/${formatCount(resources.dependencyBatchCount)}`, 'candidate / total')}
+        ${makeMetricCard('CPU encode', `${this.encodeTimeMilliseconds.toFixed(2)} ms`, 'compiled graph')}
+        ${makeMetricCard('Trace LOD', densityMode ? 'Density' : 'Exact', densityMode ? 'adaptive bins' : 'individual spans')}
+        ${makeMetricCard('Layout lanes', formatCount(this.getVisibleLaneCount()), `${formatCount(collapsedProcessCount)} collapsed processes`)}
+        ${makeMetricCard('Transient reuse', `${stats.reusePercentage.toFixed(0)}%`, `${stats.physicalTransientBufferCount}/${stats.logicalTransientBufferCount} allocations`)}
+      </div>
+      <div class="trace-detail-grid">
         <span>Readback slots</span><strong>${resources.readbackRing.availableSlotCount}/${resources.readbackRing.slotCount}</strong>
-        <span>Dropped telemetry samples</span><strong>${formatCount(this.droppedTelemetrySampleCount)}</strong>
+        <span>Dropped telemetry</span><strong>${formatCount(this.droppedTelemetrySampleCount)}</strong>
         <span>Deferred pick frames</span><strong>${formatCount(this.deferredPickFrameCount)}</strong>
-        <span>Adapter</span><strong>${resources.compiled.capabilities.softwareAdapter ? 'software' : 'hardware'}</strong>
-        <span>Maximum storage binding</span><strong>${formatBytes(this.device.limits.maxStorageBufferBindingSize)}</strong>
-        <span>Maximum buffer</span><strong>${formatBytes(this.device.limits.maxBufferSize)}</strong>
-        <span>Timestamp queries</span><strong>${resources.compiled.capabilities.timestampQueries ? 'available' : 'unavailable'}</strong>
-        <span>Logical resources</span><strong>${formatBytes(stats.logicalResourceBytes)}</strong>
-        <span>Owned transients</span><strong>${formatBytes(stats.physicalTransientResourceBytes)}</strong>
-        <span>Logical scratch</span><strong>${formatBytes(stats.logicalTransientBytes)}</strong>
-        <span>Physical scratch</span><strong>${formatBytes(stats.physicalTransientBytes)}</strong>
-        <span>Transient reuse</span><strong>${stats.reusePercentage.toFixed(0)}%</strong>
-        <span>Physical allocations</span><strong>${stats.physicalTransientBufferCount}/${stats.logicalTransientBufferCount}</strong>
+        <span>Adapter / timestamp queries</span><strong>${resources.compiled.capabilities.softwareAdapter ? 'software' : 'hardware'} · ${resources.compiled.capabilities.timestampQueries ? 'available' : 'unavailable'}</strong>
+        <span>Logical / owned resources</span><strong>${formatBytes(stats.logicalResourceBytes)} / ${formatBytes(stats.physicalTransientResourceBytes)}</strong>
+        <span>Logical / physical scratch</span><strong>${formatBytes(stats.logicalTransientBytes)} / ${formatBytes(stats.physicalTransientBytes)}</strong>
+        <span>Storage binding / max buffer</span><strong>${formatBytes(this.device.limits.maxStorageBufferBindingSize)} / ${formatBytes(this.device.limits.maxBufferSize)}</strong>
       </div>`;
     }
     this.inspectorPanel?.update(this.graphInspector.getSnapshot(), resources.compiled.id);
@@ -2111,8 +2198,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const rectangle = this.canvas.getBoundingClientRect();
     const timeRange = this.view.timeMax - this.view.timeMin;
     const laneRange = this.view.laneMax - this.view.laneMin;
-    this.view.timeMin -= (horizontalMovement / rectangle.width) * timeRange;
-    this.view.timeMax -= (horizontalMovement / rectangle.width) * timeRange;
+    const nextTimeMin = this.view.timeMin - (horizontalMovement / rectangle.width) * timeRange;
+    this.setViewTimeRange(nextTimeMin, nextTimeMin + timeRange);
     const maximumLaneStart = Math.max(0, TRACE_LANE_COUNT - laneRange);
     this.view.laneMin = clamp(
       this.view.laneMin + (verticalMovement / rectangle.height) * laneRange,
@@ -2164,12 +2251,19 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const nextRange = clamp(
       previousRange * Math.exp(event.deltaY * 0.0015),
       0.5,
-      TRACE_DURATION * 1.5
+      this.traceDuration
     );
     const anchor = this.view.timeMin + previousRange * fraction;
-    this.view.timeMin = anchor - nextRange * fraction;
-    this.view.timeMax = this.view.timeMin + nextRange;
+    const timeMin = anchor - nextRange * fraction;
+    this.setViewTimeRange(timeMin, timeMin + nextRange);
   };
+
+  private setViewTimeRange(timeMin: number, timeMax: number): void {
+    const range = clamp(timeMax - timeMin, 0.5, this.traceDuration);
+    const maximumTimeMin = Math.max(0, this.traceDuration - range);
+    this.view.timeMin = clamp(timeMin, 0, maximumTimeMin);
+    this.view.timeMax = this.view.timeMin + range;
+  }
 }
 
 /** Splits sparse adjacency rows into two stable global-ID partitions. */
@@ -2410,6 +2504,14 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
+function makeMetricCard(label: string, value: string, detail: string): string {
+  return `<article class="trace-metric-card">
+    <span class="trace-metric-label">${label}</span>
+    <strong class="trace-metric-value">${value}</strong>
+    <span class="trace-metric-detail">${detail}</span>
+  </article>`;
+}
+
 function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
@@ -2418,4 +2520,10 @@ function formatBytes(value: number): string {
   return value >= 1024 * 1024
     ? `${(value / (1024 * 1024)).toFixed(1)} MiB`
     : `${(value / 1024).toFixed(1)} KiB`;
+}
+
+function formatTraceDuration(value: number): string {
+  return value >= 1000
+    ? `${(value / 1000).toFixed(value >= 10_000 ? 0 : 1)} s`
+    : `${value.toFixed(1)} ms`;
 }

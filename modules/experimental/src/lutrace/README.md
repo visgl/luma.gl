@@ -49,7 +49,7 @@ This helper is trace-specific; general-purpose picking targets, readback ownersh
 encoding, and command submission remain outside the `lutrace` module.
 
 The generated shader uses five group-zero storage bindings: packed canonical spans, scanned
-thread offsets, the final visibility mask, a `{time, lane, active, padding}` request, and an atomic
+thread offsets, the final visibility mask, a `{time, lane, enabled, padding}` request, and an atomic
 result initialized to `0xffffffff`. Matching visible spans atomically publish their lowest
 canonical source-row index, which can feed dependency selection without translating through a
 compacted display position.

@@ -73,7 +73,7 @@ struct SceneView { bounds: vec4<f32>, options: vec4<u32> };
 /** Picks only currently visible scene rows and preserves deterministic stable source ordering. */
 export function getSceneGraphPickingShader(capacity: number): string {
   return /* wgsl */ `
-struct PickRequest { point: vec2<f32>, active: u32, padding: u32 };
+struct PickRequest { point: vec2<f32>, enabled: u32, padding: u32 };
 @group(0) @binding(0) var<storage, read> records: array<vec4<u32>>;
 @group(0) @binding(1) var<storage, read> visibility: array<u32>;
 @group(0) @binding(2) var<storage, read> request: PickRequest;
@@ -81,7 +81,7 @@ struct PickRequest { point: vec2<f32>, active: u32, padding: u32 };
 
 @compute @workgroup_size(256) fn main(@builtin(global_invocation_id) globalId: vec3u) {
   let sceneIndex = globalId.x;
-  if (sceneIndex >= ${capacity}u || request.active == 0u || visibility[sceneIndex] == 0u) {
+  if (sceneIndex >= ${capacity}u || request.enabled == 0u || visibility[sceneIndex] == 0u) {
     return;
   }
   let base = sceneIndex * 8u;

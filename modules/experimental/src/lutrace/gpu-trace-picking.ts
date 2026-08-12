@@ -12,7 +12,7 @@ import {assert} from '@luma.gl/core';
  * - Binding 0: packed eight-word canonical trace span records.
  * - Binding 1: exclusive-scanned effective thread offsets from `GPUTraceInteraction`.
  * - Binding 2: source-aligned final visibility mask from the same interaction state.
- * - Binding 3: `{time: f32, lane: f32, active: u32, padding: u32}` pick request.
+ * - Binding 3: `{time: f32, lane: f32, enabled: u32, padding: u32}` pick request.
  * - Binding 4: one `atomic<u32>` result initialized by the caller to `0xffffffff`.
  *
  * A matching visible span atomically minimizes the result to its canonical source-row index. The
@@ -42,7 +42,7 @@ export function getGPUTracePickingShader(spanCount: number, lanesPerThread: numb
 struct PickRequest {
   time: f32,
   lane: f32,
-  active: u32,
+  enabled: u32,
   padding: u32,
 };
 
@@ -54,7 +54,7 @@ struct PickRequest {
 
 @compute @workgroup_size(256) fn main(@builtin(global_invocation_id) globalId: vec3u) {
   let sourceIndex = globalId.x;
-  if (sourceIndex >= ${spanCount}u || request.active == 0u || visibleMask[sourceIndex] == 0u) {
+  if (sourceIndex >= ${spanCount}u || request.enabled == 0u || visibleMask[sourceIndex] == 0u) {
     return;
   }
   let timing = spans[sourceIndex * 2u];
