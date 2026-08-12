@@ -27,7 +27,7 @@ import {
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
 import {
   makeTraceDataset,
-  TRACE_DURATION,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_ERROR_SPAN_FLAG,
   TRACE_EXPANDED_STATE,
   TRACE_GROUPS,
@@ -39,6 +39,11 @@ import {
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS
 } from '../gpu-trace-viewer/trace-data';
+import {
+  getTracePanelStyleMarkup,
+  getTracePipelineMarkup,
+  getTraceScanScatterMarkup
+} from '../gpu-trace-viewer/trace-panel';
 import {TRACE_SCENE_RENDER_SHADER} from './trace-scene-shaders';
 
 export const title = 'GPU Scene Trace Explorer';
@@ -49,6 +54,8 @@ const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const DEFAULT_SPAN_COUNT = 768;
 const MAXIMUM_FOCUS_DEPTH = 4;
+const MAXIMUM_INITIAL_TIME_WINDOW = 150;
+const INITIAL_TIME_WINDOW_FRACTION = 0.5;
 
 type OwnedView<Format extends 'uint32' | 'float32'> = {
   buffer: Buffer;
@@ -94,6 +101,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   private inspectorPanel: GPUCommandGraphInspectorPanel | null = null;
   private controls: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private traceDuration = 240;
   private timeMinimum = 0;
   private timeMaximum = 240;
   private minimumDuration = 0;
@@ -146,7 +154,11 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
       panel: makeHtmlCustomPanel({
         id: 'scene-trace-controls',
         title: 'GPU Scene Trace Explorer',
-        html: makeControlMarkup(),
+        html: makeControlMarkup({
+          traceStats: this.resources.trace.stats,
+          graphNodeCount: this.resources.compiled.stats.nodeOrder.length,
+          traceDuration: this.traceDuration
+        }),
         onRender: root => this.attachControls(root)
       })
     });
@@ -213,6 +225,12 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     const dataset = makeTraceDataset(capacity);
     // GPUTraceScene owns dense span-indexed adjacency. The viewer dataset's adjacency is sparse
     // and carries an explicit node table for much larger traces, so it is not interchangeable.
+    this.traceDuration = dataset.duration;
+    this.timeMinimum = 0;
+    this.timeMaximum = Math.min(
+      MAXIMUM_INITIAL_TIME_WINDOW,
+      dataset.duration * INITIAL_TIME_WINDOW_FRACTION
+    );
     const trace = new GPUTraceScene(this.device, {
       id: 'scene-trace',
       spans: dataset.spans,
@@ -476,8 +494,12 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
       this.focusEnabled = target.checked;
     } else if (target.dataset.depth !== undefined) {
       this.resources.focusDepth.write(Uint32Array.of(Number(target.value)));
+      const value = this.controls?.querySelector<HTMLElement>('[data-scene-trace-depth-value]');
+      if (value) value.textContent = target.value;
     } else if (target.dataset.minimumDuration !== undefined) {
       this.minimumDuration = Number(target.value);
+      const value = this.controls?.querySelector<HTMLElement>('[data-scene-trace-duration-value]');
+      if (value) value.textContent = `${target.value} ms`;
     }
   };
 
@@ -496,7 +518,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     event.preventDefault();
     const range = this.timeMaximum - this.timeMinimum;
     const delta = event.deltaY * range * 0.001;
-    this.timeMinimum = Math.max(0, Math.min(TRACE_DURATION - range, this.timeMinimum + delta));
+    this.timeMinimum = Math.max(0, Math.min(this.traceDuration - range, this.timeMinimum + delta));
     this.timeMaximum = this.timeMinimum + range;
   };
 
@@ -521,11 +543,11 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     try {
       const bytes = await ticket.read();
       const counts = new Uint32Array(bytes.buffer, bytes.byteOffset, TRACE_GROUPS.length);
-      const summary = this.controls?.querySelector<HTMLElement>('[data-scene-trace-groups]');
-      if (summary) {
-        summary.textContent = TRACE_GROUPS.map((group, index) => `${group}: ${counts[index]}`).join(
-          ' · '
+      for (let index = 0; index < TRACE_GROUPS.length; index++) {
+        const value = this.controls?.querySelector<HTMLElement>(
+          `[data-scene-trace-group="${index}"]`
         );
+        if (value) value.textContent = formatSceneCount(counts[index]);
       }
     } catch {
       // Optional diagnostics must not disrupt rendering on cancellation or device loss.
@@ -554,7 +576,15 @@ function makeOwnedView<Format extends 'uint32' | 'float32'>(
   return {buffer, view: graph.createDataView(handle, {format, length: values.length})};
 }
 
-function makeControlMarkup(): string {
+function makeControlMarkup({
+  traceStats,
+  graphNodeCount,
+  traceDuration
+}: {
+  traceStats: GPUTraceScene['stats'];
+  graphNodeCount: number;
+  traceDuration: number;
+}): string {
   const processes = Array.from(
     {length: TRACE_PROCESS_COUNT},
     (_, index) =>
@@ -565,17 +595,72 @@ function makeControlMarkup(): string {
     (_, index) =>
       `<label><input type="checkbox" data-thread="${index}" checked /> T${index}</label>`
   ).join(' ');
-  return `<section data-scene-trace-panel style="display:grid;gap:10px;font-size:12px">
-    <p>Scroll to pan. Click a span to select it, then enable dependency focus.</p>
-    <label><input type="checkbox" data-errors-only /> Errors only</label>
-    <label><input type="checkbox" data-hide-runtime /> Hide runtime spans</label>
-    <label><input type="checkbox" data-focus /> Focus linked spans</label>
-    <label>Dependency hops <input type="range" min="0" max="${MAXIMUM_FOCUS_DEPTH}" value="2" data-depth /></label>
-    <label>Minimum duration <input type="range" min="0" max="20" value="0" data-minimum-duration /></label>
-    <div><strong>Processes</strong><div style="display:flex;flex-wrap:wrap;gap:6px">${processes}</div></div>
-    <div><strong>Process 0 threads</strong><div style="display:flex;gap:8px">${threads}</div></div>
-    <div>Selection: <span data-scene-trace-selection>None</span></div>
-    <div data-scene-trace-groups>Waiting for GPU group counts…</div>
-    <div data-scene-trace-inspector></div>
+  const groupCards = TRACE_GROUPS.map(
+    (group, index) => `<article class="trace-metric-card">
+      <span class="trace-metric-label">${group}</span>
+      <strong class="trace-metric-value" data-scene-trace-group="${index}">—</strong>
+      <span class="trace-metric-detail">visible spans</span>
+    </article>`
+  ).join('');
+  return `<section data-scene-trace-panel data-trace-dashboard>
+    ${getTracePanelStyleMarkup()}
+    <div class="trace-hero">
+      <span class="trace-eyebrow">Canonical GPU trace scene</span>
+      <strong>Reusable interaction graph + stable indirect draws</strong>
+      <p>Scroll to pan. Click a span to select it, then enable dependency focus.</p>
+    </div>
+    <div class="trace-metric-grid">
+      ${makeSceneMetricCard('Trace spans', formatSceneCount(traceStats.spanCount), `${traceDuration.toFixed(0)} ms timeline`)}
+      ${makeSceneMetricCard('Dependencies', formatSceneCount(traceStats.linkCount), `${traceStats.partitionCount} resource groups`)}
+      ${makeSceneMetricCard('Graph passes', formatSceneCount(graphNodeCount), 'compiled once')}
+      ${makeSceneMetricCard('GPU footprint', formatSceneBytes(traceStats.totalByteLength), 'canonical + topology + scene')}
+    </div>
+    <section class="trace-section">
+      <div class="trace-section-header"><span class="trace-section-title">Interaction policy</span><span class="trace-section-note">GPU-resident controls</span></div>
+      <div class="trace-check-grid">
+        <label><input type="checkbox" data-errors-only /> Errors only</label>
+        <label><input type="checkbox" data-hide-runtime /> Hide runtime</label>
+        <label><input type="checkbox" data-focus /> Focus linked spans</label>
+      </div>
+      <div class="trace-control-grid" style="margin-top:7px">
+        <label>Dependency hops <span class="trace-section-note" data-scene-trace-depth-value>2</span><input type="range" min="0" max="${MAXIMUM_FOCUS_DEPTH}" value="2" data-depth /></label>
+        <label>Minimum duration <span class="trace-section-note" data-scene-trace-duration-value>0.00 ms</span><input type="range" min="0" max="${TRACE_DURATION_FILTER_MAXIMUM}" step="0.01" value="0" data-minimum-duration /></label>
+      </div>
+    </section>
+    <section class="trace-section">
+      <div class="trace-section-header"><span class="trace-section-title">Hierarchy layout</span><span class="trace-section-note">expand / collapse</span></div>
+      <div class="trace-check-row">${processes}</div>
+      <div class="trace-context-line"><span>Process 0 threads</span></div>
+      <div class="trace-check-row">${threads}</div>
+    </section>
+    <div class="trace-selection">Selection: <strong data-scene-trace-selection>None</strong></div>
+    <section class="trace-section" data-scene-trace-groups>
+      <div class="trace-section-header"><span class="trace-section-title">Visible resource groups</span><span class="trace-section-note">sampled GPU output</span></div>
+      <div class="trace-metric-grid">${groupCards}</div>
+    </section>
+    ${getTracePipelineMarkup()}
+    ${getTraceScanScatterMarkup()}
+    <section class="trace-section">
+      <div class="trace-section-header"><span class="trace-section-title">Command graph</span><span class="trace-section-note">CPU / GPU telemetry</span></div>
+      <div data-scene-trace-inspector></div>
+    </section>
   </section>`;
+}
+
+function makeSceneMetricCard(label: string, value: string, detail: string): string {
+  return `<article class="trace-metric-card">
+    <span class="trace-metric-label">${label}</span>
+    <strong class="trace-metric-value">${value}</strong>
+    <span class="trace-metric-detail">${detail}</span>
+  </article>`;
+}
+
+function formatSceneCount(value: number): string {
+  return value.toLocaleString('en-US');
+}
+
+function formatSceneBytes(value: number): string {
+  return value >= 1024 * 1024
+    ? `${(value / (1024 * 1024)).toFixed(1)} MiB`
+    : `${(value / 1024).toFixed(1)} KiB`;
 }
