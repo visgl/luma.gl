@@ -367,8 +367,9 @@ document-specific capability model.
 
 For example, required `KHR_node_visibility`, `EXT_mesh_gpu_instancing`, material variants, and
 physically implemented `KHR_materials_dispersion` pass strict checks. A required unknown vendor
-extension fails. Required WebP or AVIF texture extensions remain conservative because image decode
-support depends on the browser/device combination.
+extension fails. Required WebP remains conservative because image decoding depends on the browser;
+required AVIF fails because the installed glTF loader does not implement `EXT_texture_avif` source
+selection.
 
 Capability collection includes declared used/required extensions, source root extension entries,
 extensions moved during loaders.gl postprocessing, and detected punctual lights.
@@ -420,7 +421,7 @@ The fixture attribution and pinned source revision are recorded in
 
 | Package | Responsibility |
 | --- | --- |
-| `@loaders.gl/gltf` | Container decoding, accessor/image decoding, and explicit glTF postprocessing. |
+| `@loaders.gl/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
 | `@luma.gl/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
 | `@luma.gl/engine` | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities. |
 | `@luma.gl/shadertools` | Canonical PBR material uniforms, physical shading, and reusable skinning. |

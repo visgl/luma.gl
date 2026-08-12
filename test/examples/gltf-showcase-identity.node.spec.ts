@@ -51,4 +51,47 @@ describe('glTF module and showcase identity', () => {
     expect(interchangeDocumentation).toContain('EXT_mesh_gpu_instancing');
     expect(tabs).toContain('/docs/api-reference/gltf/gltf-interchange');
   });
+
+  test('documents existing loader-owned capabilities without claiming unsupported extensions', () => {
+    const overview = readFileSync(
+      path.join(process.cwd(), 'docs/api-reference/gltf/README.md'),
+      'utf8'
+    );
+    const extensionSupport = readFileSync(
+      path.join(process.cwd(), 'docs/api-reference/gltf/gltf-extensions.mdx'),
+      'utf8'
+    );
+    const packageOverview = readFileSync(
+      path.join(process.cwd(), 'modules/gltf/README.md'),
+      'utf8'
+    );
+    const capabilities = readFileSync(path.join(process.cwd(), 'docs/capabilities.mdx'), 'utf8');
+
+    expect(overview).toMatch(/^## What loaders\.gl already provides$/m);
+    for (const capability of [
+      'GLTFLoader',
+      'postProcessGLTF()',
+      'GLBWriter',
+      'KHR_draco_mesh_compression',
+      'EXT_meshopt_compression',
+      'KHR_texture_basisu',
+      'EXT_texture_webp',
+      'EXT_mesh_features',
+      'EXT_structural_metadata'
+    ]) {
+      expect(overview).toContain(capability);
+    }
+
+    expect(overview).toMatch(/EXT_meshopt_compression[\s\S]*not[\s\S]*KHR_meshopt_compression/);
+    expect(extensionSupport).toMatch(/<SupportRow name="KHR_meshopt_compression" support="❌">/);
+    expect(extensionSupport).toMatch(/<SupportRow name="EXT_texture_avif" support="❌">/);
+    expect(extensionSupport).toMatch(/<SupportRow name="EXT_mesh_features" support="\*️⃣">/);
+    expect(extensionSupport).toMatch(/<SupportRow name="EXT_structural_metadata" support="\*️⃣">/);
+    expect(capabilities).toMatch(/Meshopt compression[^\n]*@loaders\.gl\/gltf[^\n]*EXT_meshopt/);
+
+    for (const documentation of [overview, extensionSupport, packageOverview]) {
+      expect(documentation).not.toMatch(/(?:all|across)\s+17\s+(?:supported|canonical|map)/i);
+    }
+    expect(packageOverview).toMatch(/all\s+21\s+supported/i);
+  });
 });
