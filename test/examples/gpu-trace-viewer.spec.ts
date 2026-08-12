@@ -10,6 +10,7 @@ import {
   getTraceFocusFrontierCapacity,
   TRACE_COLLAPSED_STATE,
   TRACE_DENSITY_BIN_COUNT,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_LANE_COUNT,
@@ -110,6 +111,9 @@ describe('GPU hierarchical trace viewer', () => {
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
       expect(host.querySelectorAll('[data-span-capacity]')).toHaveLength(1);
       expect(host.querySelectorAll('[data-dependency-capacity]')).toHaveLength(1);
+      const durationFilter = host.querySelector<HTMLInputElement>('[data-duration]');
+      expect(durationFilter?.max).toBe(String(TRACE_DURATION_FILTER_MAXIMUM));
+      expect(durationFilter?.step).toBe('0.01');
       expect(state.spanCapacity).toBe(4096);
       expect(state.dependencyCapacity).toBe(250_000);
       const dependencyCapacity = host.querySelector<HTMLSelectElement>(

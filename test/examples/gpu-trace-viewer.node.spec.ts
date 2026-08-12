@@ -27,6 +27,7 @@ import {
   TRACE_CROSS_PROCESS_DEPENDENCY,
   TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_GROUPS,
   TRACE_INVALID_SPAN_INDEX,
   TRACE_LANE_COUNT,
@@ -425,6 +426,7 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
   const spanFloats = new Float32Array(dataset.spans.buffer);
   const laneSpans = Array.from({length: TRACE_LANE_COUNT}, () => [] as Array<[number, number]>);
   let occupiedDuration = 0;
+  let maximumDuration = 0;
   for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
     const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
     const start = spanFloats[wordOffset];
@@ -432,6 +434,7 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
     const lane = dataset.spans[wordOffset + 2];
     laneSpans[lane].push([start, start + duration]);
     occupiedDuration += duration;
+    maximumDuration = Math.max(maximumDuration, duration);
   }
   for (const spans of laneSpans) {
     spans.sort((left, right) => left[0] - right[0]);
@@ -444,6 +447,10 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
   }
   const occupancy = occupiedDuration / (dataset.duration * TRACE_LANE_COUNT);
   t.ok(occupancy > 0.6 && occupancy < 0.8, 'lane packing stays dense without saturating pixels');
+  t.ok(
+    maximumDuration > TRACE_DURATION_FILTER_MAXIMUM,
+    'duration filter maximum retains spans from the generated upper tail'
+  );
   t.ok(
     dataset.groups.every(group => {
       const groupFloats = new Float32Array(

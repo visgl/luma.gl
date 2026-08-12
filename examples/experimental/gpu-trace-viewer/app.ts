@@ -50,6 +50,7 @@ import {
   TRACE_DEPENDENCY_BATCH_CAPACITY,
   TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_DURATION,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_EXPANDED_STATE,
   TRACE_FILTER_ERRORS_ONLY,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
@@ -1812,7 +1813,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         <div class="trace-check-grid">${groupControls}</div>
         <div class="trace-check-grid" style="margin-top:5px">${statusControls}</div>
         <div class="trace-control-stack" style="margin-top:7px">
-          <label>Minimum duration <span data-duration-value>0.00 ms</span><input type="range" min="0" max="20" step="0.25" value="0" data-duration></label>
+          <label>Minimum duration <span data-duration-value>0.00 ms</span><input type="range" min="0" max="${TRACE_DURATION_FILTER_MAXIMUM}" step="0.01" value="0" data-duration></label>
         </div>
         <div class="trace-check-grid" style="margin-top:6px">
           <label><input type="checkbox" data-hide-runtime> Hide runtime spans</label>

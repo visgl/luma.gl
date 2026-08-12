@@ -57,6 +57,12 @@ export const TRACE_INVALID_SPAN_INDEX = 0xffffffff;
 const TRACE_BASE_SLOT_COUNT = Math.ceil(TRACE_BASE_SPAN_CAPACITY / TRACE_LANE_COUNT);
 const TRACE_SLOT_DURATION = TRACE_DURATION / TRACE_BASE_SLOT_COUNT;
 const TRACE_LANE_ROTATION = 73;
+const TRACE_GROUP_DURATION_SCALES = [0.62, 0.72, 0.82] as const;
+/** Largest useful minimum-duration filter value for the generated span distribution. */
+export const TRACE_DURATION_FILTER_MAXIMUM =
+  Math.floor(
+    TRACE_GROUP_DURATION_SCALES[TRACE_GROUP_DURATION_SCALES.length - 1] * TRACE_SLOT_DURATION * 100
+  ) / 100;
 
 /** Scales the timeline so larger datasets add time instead of adding pixel overdraw. */
 export function getTraceDuration(spanCount: number): number {
@@ -514,7 +520,7 @@ function fillTraceGroup(params: {
     const threadIndex = Math.floor(laneIndex / TRACE_LANES_PER_THREAD);
     const processIndex = Math.floor(threadIndex / TRACE_THREADS_PER_PROCESS);
     const start = (slotIndex + random() * 0.06) * TRACE_SLOT_DURATION;
-    const durationScale = params.groupIndex === 0 ? 0.62 : params.groupIndex === 1 ? 0.72 : 0.82;
+    const durationScale = TRACE_GROUP_DURATION_SCALES[params.groupIndex];
     const duration = durationScale * (0.82 + random() * 0.18) * TRACE_SLOT_DURATION;
     const status = Math.floor(random() * TRACE_STATUS_COUNT);
     const runtimeFlag = spanIndex % 11 === 0 ? TRACE_RUNTIME_SPAN_FLAG : 0;

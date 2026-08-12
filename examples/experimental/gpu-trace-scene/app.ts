@@ -27,6 +27,7 @@ import {
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
 import {
   makeTraceDataset,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_ERROR_SPAN_FLAG,
   TRACE_EXPANDED_STATE,
   TRACE_GROUPS,
@@ -53,6 +54,8 @@ const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const DEFAULT_SPAN_COUNT = 768;
 const MAXIMUM_FOCUS_DEPTH = 4;
+const MAXIMUM_INITIAL_TIME_WINDOW = 150;
+const INITIAL_TIME_WINDOW_FRACTION = 0.5;
 
 type OwnedView<Format extends 'uint32' | 'float32'> = {
   buffer: Buffer;
@@ -224,7 +227,10 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     // and carries an explicit node table for much larger traces, so it is not interchangeable.
     this.traceDuration = dataset.duration;
     this.timeMinimum = 0;
-    this.timeMaximum = dataset.duration;
+    this.timeMaximum = Math.min(
+      MAXIMUM_INITIAL_TIME_WINDOW,
+      dataset.duration * INITIAL_TIME_WINDOW_FRACTION
+    );
     const trace = new GPUTraceScene(this.device, {
       id: 'scene-trace',
       spans: dataset.spans,
@@ -618,7 +624,7 @@ function makeControlMarkup({
       </div>
       <div class="trace-control-grid" style="margin-top:7px">
         <label>Dependency hops <span class="trace-section-note" data-scene-trace-depth-value>2</span><input type="range" min="0" max="${MAXIMUM_FOCUS_DEPTH}" value="2" data-depth /></label>
-        <label>Minimum duration <span class="trace-section-note" data-scene-trace-duration-value>0 ms</span><input type="range" min="0" max="20" value="0" data-minimum-duration /></label>
+        <label>Minimum duration <span class="trace-section-note" data-scene-trace-duration-value>0.00 ms</span><input type="range" min="0" max="${TRACE_DURATION_FILTER_MAXIMUM}" step="0.01" value="0" data-minimum-duration /></label>
       </div>
     </section>
     <section class="trace-section">
