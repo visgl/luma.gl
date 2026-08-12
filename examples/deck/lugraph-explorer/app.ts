@@ -10,14 +10,13 @@ import {
   type LuGraphDeckEffectStats,
   type PickingInfo
 } from '@deck.gl-community/arrow-layers';
-import {Buffer, type Device} from '@luma.gl/core';
-import {
-  ShaderAssembler,
-  type GLSLShaderAssembler,
-  type WGSLShaderAssembler
-} from '@luma.gl/shadertools';
+import {Buffer} from '@luma.gl/core';
 import {ArrowDeck} from '../arrow-deck';
-import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {
+  getDeckExampleProps,
+  installLegacyDeckShaderAssemblerCompatibility,
+  type DeckExampleDeviceOptions
+} from '../deck-example-device';
 import {
   GRAPH_EXPLORER_LINEAR_LAYOUT_VERTEX_COUNT,
   GRAPH_EXPLORER_MAXIMUM_EXACT_VERTEX_COUNT,
@@ -345,44 +344,6 @@ export function createLuGraphExplorerDeck(
     });
     return [...edgeLayers, nodeLayer];
   }
-}
-
-/** Bridges exactly one legacy Deck assembler call while preserving strict language separation. */
-function installLegacyDeckShaderAssemblerCompatibility(device: Device): () => void {
-  const original = ShaderAssembler.getDefaultShaderAssembler;
-  let restored = false;
-
-  function restore(): void {
-    if (restored) return;
-    if (ShaderAssembler.getDefaultShaderAssembler === getLegacyDeckShaderAssembler) {
-      ShaderAssembler.getDefaultShaderAssembler = original;
-    }
-    restored = true;
-  }
-
-  function getLegacyDeckShaderAssembler(shaderLanguage: 'glsl'): GLSLShaderAssembler;
-  function getLegacyDeckShaderAssembler(shaderLanguage: 'wgsl'): WGSLShaderAssembler;
-  function getLegacyDeckShaderAssembler(
-    shaderLanguage: 'glsl' | 'wgsl'
-  ): GLSLShaderAssembler | WGSLShaderAssembler;
-  function getLegacyDeckShaderAssembler(
-    shaderLanguage?: 'glsl' | 'wgsl'
-  ): GLSLShaderAssembler | WGSLShaderAssembler {
-    if (shaderLanguage === undefined) {
-      // TODO: Remove after deck.gl forwards its known shading language to luma.gl.
-      // Restore before forwarding so later user calls retain strict explicit-language behavior.
-      restore();
-      return device.info.shadingLanguage === 'wgsl'
-        ? original.call(ShaderAssembler, 'wgsl')
-        : original.call(ShaderAssembler, 'glsl');
-    }
-    return shaderLanguage === 'wgsl'
-      ? original.call(ShaderAssembler, 'wgsl')
-      : original.call(ShaderAssembler, 'glsl');
-  }
-
-  ShaderAssembler.getDefaultShaderAssembler = getLegacyDeckShaderAssembler;
-  return restore;
 }
 
 /** Updates the same float32x2 allocation bound directly by the node layer's instance attribute. */

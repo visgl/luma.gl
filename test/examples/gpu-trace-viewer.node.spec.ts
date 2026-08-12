@@ -342,6 +342,24 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
   t.end();
 });
 
+test('GPU trace focus seed exposes only resources consumed by its compute entry point', t => {
+  const reflection = new WgslReflect(getFocusFrontierSeedShader(11));
+  t.deepEqual(
+    reflection.storage.map(resource => ({name: resource.name, location: resource.binding})),
+    [
+      {name: 'selectedSeeds', location: 0},
+      {name: 'activeSeedCount', location: 1},
+      {name: 'focusTraversalState', location: 2},
+      {name: 'reachedSpans', location: 3},
+      {name: 'frontier', location: 4},
+      {name: 'frontierCount', location: 5},
+      {name: 'dispatchCommand', location: 6}
+    ],
+    'seed bindings match the native WebGPU pipeline layout without an optimized-out slot'
+  );
+  t.end();
+});
+
 test('GPU trace data preserves deterministic canonical group and hierarchy identities', t => {
   const dataset = makeTraceDataset(257);
   const repeated = makeTraceDataset(257);

@@ -389,7 +389,11 @@ fn main() {
     count = 1u;
   }
   frontierCount[0] = count;
-  dispatchCommand[0] = (count + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
+  dispatchCommand[0] = select(
+    0u,
+    (count + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE,
+    focusTraversalState[0] > 0u
+  );
   dispatchCommand[1] = 1u;
   dispatchCommand[2] = 1u;
 }`;
