@@ -29,8 +29,8 @@ scalar summaries, contrast/gamma/equalization transforms, analytical thresholds,
 neighborhood stencils, direct convolution, separable Gaussian/box smoothing, signed
 Sobel/Scharr/Laplacian derivatives, gradient magnitude, binary/grayscale dilation, erosion,
 opening, closing, deterministic connected foreground components, bounded dense region labels and
-counts, GPU-resident marching-squares contours, indirect vector overlays, and adapter-limit
-planning. They implement
+counts, grouped intensity and spatial region measurements, GPU-resident marching-squares
+contours, indirect vector overlays, and adapter-limit planning. They implement
 `GPUCommandGraphContributor` structurally: calling `addToGraph(graph)` only declares work. No
 contributor submits commands or reads results back.
 
@@ -51,6 +51,7 @@ computation instead of flattening them into display colors.
 | Calculate one histogram or threshold across many tiles | `GPURasterGlobalInitialize`, `GPURasterGlobalStatisticsMerge`, and `GPURasterGlobalHistogramMerge` | Every tile contributes against the same final dataset-wide numerical domain. |
 | Identify connected classified foreground regions | `GPURasterConnectedComponents` | Four- or eight-neighbor grouping preserves missing-data barriers and publishes an explicit GPU convergence signal. |
 | Obtain contiguous region IDs and a bounded exact component count | `GPURasterDenseComponents` | Converged representative roots become compact deterministic IDs with explicit capacity and overflow. |
+| Measure intensity, population, centroid, and area for each region | `GPURasterRegionMeasurements` | Independent geometry and intensity masks produce bounded GPU records while preserving high-precision spatial metadata. |
 
 For a guided explanation of missing observations, grid ownership, replay, resource lifetimes,
 and common mistakes, read
@@ -190,6 +191,7 @@ import {
   GPURasterOpening,
   GPURasterOtsuThreshold,
   GPURasterOverview,
+  GPURasterRegionMeasurements,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
@@ -199,6 +201,7 @@ import {
   GPURasterTileHaloAssembler,
   GPURasterTileHaloFill,
   GPURasterTileReader,
+  getRasterRegionWorldCentroid,
   makeRasterOverviewMetadata,
   type GPURasterBufferBand,
   type GPURasterCategoricalOverviewFormat,
@@ -216,6 +219,8 @@ import {
   type GPURasterOverviewMetadataOptions,
   type GPURasterOverviewProps,
   type GPURasterOverviewScale,
+  type GPURasterRegionMeasurementOutputs,
+  type GPURasterRegionMeasurementsProps,
   type GPURasterTileGraphLease,
   type GPURasterTileHaloLease,
   type GPURasterTileHaloRequest,
@@ -360,6 +365,15 @@ selected pixels rather than regions. Existing source/analytical overviews, seam-
 processing, smoothing, derivatives, morphology, manual thresholds, and local Otsu remain
 available; leaving component mode restores the previous contour policy and the summary remains
 exactly 228 bytes.
+
+The optional **REGION METRICS** inspector selects one converged dense region and displays its
+real GPU pixel count, intensity sum/minimum/maximum/mean, local centroid transformed by the
+original double-precision affine, and coordinate-aware area. In this explicitly selected mode,
+the analytical histogram truly uses **40 bins** instead of its ordinary **48 bins**; the eight
+freed four-byte positions contain exactly one selected region record. The existing population,
+domain, component count, convergence, iteration count, and automatic threshold retain their
+previous slots. Turning the inspector off restores the genuine 48-bin histogram. Both paths use
+one 228-byte GPU-to-CPU readback; no complete region table or label raster is copied.
 
 ## Raster bands and validity
 
@@ -2097,7 +2111,8 @@ one. The `+1` reserves label `0` for background while preserving a deterministic
 independent of workgroup execution order. Component identifiers are deliberately **sparse**:
 labels `1`, `3`, `5`, `7`, and `9` do not mean nine components. Compose the separate
 `GPURasterDenseComponents` contributor when contiguous IDs or an actual component count are
-required. Per-region measurements and cross-tile component merging remain separate contracts.
+required. Compose `GPURasterRegionMeasurements` after dense relabeling for bounded per-region
+geometry and intensity; cross-tile component merging remains a separate contract.
 
 ### Convergence is required, not assumed
 
@@ -2217,10 +2232,142 @@ prove a usable result: consumers must also require `converged = 1`. Out-of-range
 sparse representatives are rejected at the affected pixels without out-of-bounds root access.
 
 Capacity is a bound on published component IDs, not a count of foreground pixels and not a
-global multi-tile region limit. Ordering is deterministic within the current raster/core;
-per-region measurements, centroid/area tables, and cross-tile region identity reconciliation
-remain future contributors. Source decoding, graph submission, fences, and any optional compact
-readback remain application-owned.
+global multi-tile region limit. Ordering is deterministic within the current raster/core.
+`GPURasterRegionMeasurements` can consume those converged dense IDs directly; cross-tile region
+identity reconciliation remains a separate future contributor. Source decoding, graph
+submission, fences, and any optional compact readback remain application-owned.
+
+## Per-region intensity and spatial measurements
+
+Use `GPURasterRegionMeasurements` when contiguous classified regions need actual measurements:
+the number of region pixels, the population and distribution of a scientific intensity band,
+their raster-local centroid, or affine region area. The contributor consumes converged,
+nonoverflowing dense region IDs and writes 11 independently allocated caller-owned GPU columns.
+
+```ts
+new GPURasterRegionMeasurements({
+  id: 'vegetation-region-measurements',
+  metadata: rasterMetadata,
+  labels: denseRegionLabels,
+  labelValidity: denseRegionValidity,
+  converged: componentConvergence,
+  componentCount: publishedRegionCount,
+  overflow: regionCapacityOverflow,
+  intensity: vegetationIndexBand,
+  capacity: 256,
+  output: {
+    pixelCounts: regionPixelCounts,
+    intensityCounts: regionIntensityCounts,
+    intensitySums: regionIntensitySums,
+    intensityMinimums: regionIntensityMinimums,
+    intensityMaximums: regionIntensityMaximums,
+    intensityMeans: regionIntensityMeans,
+    columnSums: regionColumnSums,
+    rowSums: regionRowSums,
+    centroidColumns: regionCentroidColumns,
+    centroidRows: regionCentroidRows,
+    areas: regionAreas
+  }
+}).addToGraph(graph);
+```
+
+The first two result columns are exact `GraphDataView<'uint32'>`; the remaining nine are
+`GraphDataView<'float32'>`. Every column has the same caller-allocated length; row zero
+describes dense region ID `1`. `capacity` defaults to that length and may be explicitly reduced
+to any integer from zero through the allocated length. Zero-length columns are valid and add
+no grouped passes. Nonempty columns with `capacity: 0` are cleared into their empty-row state.
+Every input/output belongs to the same graph, and all 11 output buffers must remain distinct.
+
+### Region geometry and measured intensity are different populations
+
+The region mask and intensity mask answer different questions. Consider a valid three-pixel
+region whose intensity sensor missed its middle sample:
+
+```text
+Dense region IDs:       [  1,   1,   1]
+Region validity:        [  1,   1,   1]
+Intensity values:       [ 10, 999,  20]
+Intensity validity:     [  1,   0,   1]
+
+pixelCounts[0]       = 3
+intensityCounts[0]   = 2
+intensitySums[0]     = 30
+intensityMeans[0]    = 15
+intensityMinimums[0] = 10
+intensityMaximums[0] = 20
+```
+
+The region still has three geometric pixels; its centroid and area include all three. Only the
+two valid, finite, non-nodata intensity observations contribute to intensity count, sum,
+minimum, maximum, or mean. Dividing `30` by the geometric count `3` would incorrectly report
+`10`; the correct mean is `30 / intensityCounts[0] = 15`.
+
+Intensity accepts `GPURasterBufferBand<'float32'>` only. Raw-domain validity and exact nodata
+are checked before applying `raw * scale + offset` exactly once; nonfinite raw or calibrated
+values are rejected. Integer source intensities require an explicit caller-controlled float
+conversion with its precision tradeoff; `uint32` values above `2^24` are not all exactly
+representable as `float32`. Floating atomic accumulation order can vary, so sums, means, and
+centroid moments should be compared with an appropriate numerical tolerance.
+
+### Pixel centroids, affine translation, and coordinate units
+
+`columnSums` and `rowSums` are mergeable moments of every valid geometric region pixel.
+Area-interpreted pixels contribute their centers `(column + 0.5, row + 0.5)`; point-interpreted
+pixels contribute `(column, row)`. The local centroid is:
+
+```text
+centroidColumns[region] = columnSums[region] / pixelCounts[region]
+centroidRows[region]    = rowSums[region] / pixelCounts[region]
+```
+
+Keeping these GPU outputs in local pixel coordinates avoids adding a large projected world
+origin in `float32`. Once an application explicitly inspects a selected centroid, use the
+retained JavaScript-double affine metadata:
+
+```ts
+const worldCentroid = getRasterRegionWorldCentroid(
+  rasterMetadata,
+  selectedCentroidColumn,
+  selectedCentroidRow
+);
+```
+
+For `affine = [a, b, c, d, e, f]`:
+
+```text
+worldX = a * centroidColumn + b * centroidRow + c
+worldY = d * centroidColumn + e * centroidRow + f
+pixelArea = abs(a * e - b * d)
+regionArea = pixelCounts[region] * pixelArea
+```
+
+The centroid already includes the appropriate area/point center offset; do not add another
+half-pixel. Source/tile affine metadata also already contains its origin; do not add
+`levelZeroOrigin` again. Rotation, shear, negative scale, and non-square pixels are included in
+the affine determinant. Area is always expressed in **squared CRS coordinate units**: a
+projected meter-based CRS yields square meters, while a geographic degree-based CRS yields
+square degrees. LuRaster does not perform geodesic area conversion or reproject coordinates.
+
+### Empty rows, capacity failure, and execution ownership
+
+Valid topology with no accepted intensity observations publishes a real nonzero `pixelCounts`
+entry, zero `intensityCounts` and sum, and `NaN` intensity minimum/maximum/mean; geometric
+centroid and area remain valid. Completely unused rows publish zero counts, sums, moments, and
+area, with `NaN` intensity extrema/mean and `NaN` centroid coordinates.
+
+If the upstream dense stage did not converge, its overflow flag is nonzero, its published count
+exceeds region capacity, or a dense label is invalid/out of range, region grouping refuses the
+unsafe rows. Global convergence/overflow/count failures reset **every** output row to the empty
+contract on each encoding; partially valid-looking tables never survive a failed execution.
+Group keys are zero-based scratch derived from bounded 1-based labels, never unbounded sparse
+representatives. Existing `GPUGroupAggregation` contributors perform the typed grouped work;
+intermediate keys, masks, calibrated values, and moments are graph-owned transient resources.
+
+All result columns, metadata, source samples, submission, completion fences, optional inspection,
+and coordinate policy remain application-owned. No full label array, region table, source
+imagery, or CPU result is read by the contributor. Cross-tile region identity reconciliation,
+global region merges, polygon-zonal metrics, and exact integer intensity aggregation remain
+separate future integrations.
 
 ## Raster compute versus image effects
 
@@ -2356,9 +2503,9 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-driven contrast application, built-in GeoTIFF/COG decoding, per-region measurements,
-cross-tile region identity, tiled contour stitching, automatic whole-image result placement, and
-FFT-backed raster convolution are not part of the current implementation.
+Percentile-driven contrast application, built-in GeoTIFF/COG decoding, cross-tile region
+identity, tiled contour stitching, automatic whole-image result placement, and FFT-backed
+raster convolution are not part of the current implementation.
 Application-owned tile ingress, source-provided overviews/windows, independently budgeted
 multi-tile CPU/GPU residency, fence-safe eviction, compatible compiled-graph reuse, explicit
 cumulative neighborhood halo planning and native-format GPU assembly, half-open core
@@ -2367,7 +2514,9 @@ integer categorical nearest/mode overviews, generated affine/CRS metadata, Sobel
 Laplacian, gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion,
 opening, closing, deterministic four/eight-connected sparse representative labels with
 fail-closed GPU convergence, deterministic dense root ranks, exact/bounded component counts and
-per-execution capacity overflow, replayable global tiled extent/population/sum/histogram merges,
+per-execution capacity overflow, grouped geometric and valid-intensity populations,
+float-only intensity sum/min/max/mean, mergeable local centroid moments and affine area,
+replayable global tiled extent/population/sum/histogram merges,
 explicit sticky/saturating overflow diagnostics, bounded histogram-based percentiles, global
 Otsu input, and single-raster contour extraction are implemented.
 

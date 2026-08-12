@@ -333,14 +333,16 @@ export const RASTER_LAB_STYLES = /* css */ `
 .raster-replay-order-buttons,
 .raster-component-buttons,
 .raster-component-connectivity-buttons,
-.raster-component-label-buttons {
+.raster-component-label-buttons,
+.raster-region-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
 }
 
 .raster-global-statistics,
-.raster-component-statistics {
+.raster-component-statistics,
+.raster-region-statistics {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 3px 6px;
@@ -351,7 +353,8 @@ export const RASTER_LAB_STYLES = /* css */ `
 }
 
 .raster-global-statistics > :nth-child(even),
-.raster-component-statistics > :nth-child(even) {
+.raster-component-statistics > :nth-child(even),
+.raster-region-statistics > :nth-child(even) {
   overflow: hidden;
   color: var(--raster-accent);
   text-align: right;
@@ -374,6 +377,13 @@ export const RASTER_LAB_STYLES = /* css */ `
 .raster-component-setting {
   display: grid;
   gap: 4px;
+}
+
+.raster-region-control {
+  display: grid;
+  gap: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--raster-border);
 }
 
 .raster-overview-statistics {

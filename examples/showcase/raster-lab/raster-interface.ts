@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {RasterLabSummary} from './raster-engine';
+import type {RasterLabRegionMeasurement, RasterLabSummary} from './raster-engine';
 import type {
   RasterLabComponentConnectivity,
   RasterLabComponentLabelMode,
@@ -46,6 +46,8 @@ export type RasterLabInterfaceCallbacks = {
   onComponentLabelMode?: (mode: RasterLabComponentLabelMode) => void;
   onComponentCapacity?: (capacity: number) => void;
   onComponentMaximumIterations?: (iterations: number) => void;
+  onRegionMetricsEnabled?: (enabled: boolean) => void;
+  onSelectedRegionId?: (id: number) => void;
   onContrast?: (contrast: number) => void;
   onGamma?: (gamma: number) => void;
   onThreshold?: (threshold: number, enabled: boolean) => void;
@@ -135,6 +137,9 @@ export type RasterLabComponentSummary = {
   componentCount: number;
   publishedCount: number;
   overflow: boolean;
+  regionMetricsEnabled: boolean;
+  selectedRegionId: number;
+  regionMeasurement: RasterLabRegionMeasurement | null;
   maximumIterations: number;
   iterations: number;
   converged: boolean;
@@ -416,6 +421,51 @@ export class RasterLabInterface {
         : summary.overflow && summary.labelMode === 'dense'
           ? 'CAPACITY EXCEEDED'
           : `${summary.labelMode === 'dense' ? 'DENSE' : 'ROOTS'} · ${summary.componentCount}`;
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-region-metrics]'
+    )) {
+      const enabled = button.dataset['rasterRegionMetrics'] === 'on';
+      button.setAttribute('aria-pressed', String(enabled === summary.regionMetricsEnabled));
+      button.disabled = !summary.enabled || summary.labelMode !== 'dense';
+    }
+    const selection = this.getInput('region-id');
+    selection.max = String(Math.max(summary.publishedCount, 1));
+    selection.value = String(
+      Math.min(summary.selectedRegionId, Math.max(summary.publishedCount, 1))
+    );
+    selection.disabled =
+      !summary.regionMetricsEnabled ||
+      !summary.converged ||
+      summary.overflow ||
+      summary.publishedCount === 0;
+    this.getElement('[data-raster-region-id-value]').textContent =
+      `#${NUMBER_FORMATTER.format(summary.selectedRegionId)}`;
+    const region = summary.regionMeasurement;
+    this.getElement('[data-raster-region-pixels]').textContent = region
+      ? NUMBER_FORMATTER.format(region.pixelCount)
+      : 'unavailable';
+    this.getElement('[data-raster-region-intensity-sum]').textContent = region
+      ? region.intensitySum.toFixed(4)
+      : '—';
+    this.getElement('[data-raster-region-intensity-range]').textContent = region
+      ? `${region.intensityMinimum.toFixed(4)} … ${region.intensityMaximum.toFixed(4)}`
+      : '—';
+    this.getElement('[data-raster-region-intensity-mean]').textContent = region
+      ? region.intensityMean.toFixed(4)
+      : '—';
+    this.getElement('[data-raster-region-centroid]').textContent = region
+      ? `${region.worldCentroid[0].toFixed(2)}, ${region.worldCentroid[1].toFixed(2)}`
+      : '—';
+    this.getElement('[data-raster-region-area]').textContent = region
+      ? `${NUMBER_FORMATTER.format(region.area)} ${region.areaUnits}`
+      : '—';
+    this.getElement('[data-raster-region-transfer]').textContent = !summary.regionMetricsEnabled
+      ? '48 bins · region inspection off'
+      : summary.overflow
+        ? '40 bins · capacity overflow · metrics cleared'
+        : !summary.converged
+          ? '40 bins · not converged · metrics cleared'
+          : '40 bins · 8 region scalars · 228 bytes';
     this.updateMorphologyControls();
     this.updateMapPresentation();
   }
@@ -472,6 +522,9 @@ export class RasterLabInterface {
     this.getElement('[data-raster-histogram-maximum]').textContent = summary.domain[1].toFixed(2);
     this.getElement('[data-raster-histogram-axis]').textContent = modeLabel;
     this.getElement('[data-raster-histogram]').setAttribute('aria-label', `${modeLabel} histogram`);
+    this.getElement('[data-raster-histogram-bin-count]').textContent = summary.regionMetricsEnabled
+      ? `${summary.bins.length} bins · 8 region scalars`
+      : `${summary.bins.length} bins`;
     this.getElement('[data-raster-smoothing-state]').textContent =
       summary.smoothingMode === 'none'
         ? 'off'
@@ -800,6 +853,12 @@ export class RasterLabInterface {
         this.callbacks.onComponentLabelMode?.(componentLabelMode);
         return;
       }
+      const regionMetricsButton = target.closest<HTMLButtonElement>('[data-raster-region-metrics]');
+      const regionMetrics = regionMetricsButton?.dataset['rasterRegionMetrics'];
+      if (regionMetrics === 'off' || regionMetrics === 'on') {
+        this.callbacks.onRegionMetricsEnabled?.(regionMetrics === 'on');
+        return;
+      }
       const otsuButton = target.closest<HTMLButtonElement>('[data-raster-control="otsu"]');
       if (otsuButton) {
         const enabled = !this.automaticThreshold;
@@ -923,6 +982,9 @@ export class RasterLabInterface {
           break;
         case 'component-capacity':
           this.callbacks.onComponentCapacity?.(Math.round(value));
+          break;
+        case 'region-id':
+          this.callbacks.onSelectedRegionId?.(Math.round(value));
           break;
         case 'contrast':
           this.setContrast(value);
@@ -1341,6 +1403,26 @@ function makeRasterLabMarkup(): string {
                 <span>Convergence</span><span data-raster-component-state>off</span>
                 <span>Valid foreground</span><span data-raster-component-foreground>classification off</span>
               </div>
+              <div class="raster-region-control" aria-label="Selected GPU dense-region measurements">
+                <span class="raster-control-label">Region metrics <span class="raster-kicker">selected GPU record</span></span>
+                <div class="raster-region-buttons" aria-label="Selected dense component measurement inspection">
+                  <button class="raster-mode-button" data-raster-region-metrics="off" aria-pressed="true" disabled>OFF</button>
+                  <button class="raster-mode-button" data-raster-region-metrics="on" aria-pressed="false" disabled>INSPECT REGION</button>
+                </div>
+                <label class="raster-component-setting">
+                  <span class="raster-control-label">Dense region <span class="raster-control-value" data-raster-region-id-value>#1</span></span>
+                  <input class="raster-slider" data-raster-control="region-id" aria-label="Selected dense component identifier" type="range" min="1" max="1" step="1" value="1" disabled />
+                </label>
+                <div class="raster-region-statistics" aria-label="Selected region geometry and intensity measurements">
+                  <span>Region pixels</span><span data-raster-region-pixels>unavailable</span>
+                  <span>Intensity sum</span><span data-raster-region-intensity-sum>—</span>
+                  <span>Intensity range</span><span data-raster-region-intensity-range>—</span>
+                  <span>Intensity mean</span><span data-raster-region-intensity-mean>—</span>
+                  <span>World centroid</span><span data-raster-region-centroid>—</span>
+                  <span>Affine area</span><span data-raster-region-area>—</span>
+                </div>
+                <span class="raster-component-note" data-raster-region-transfer>48 bins · region inspection off</span>
+              </div>
               <span class="raster-component-note">GPU scan compacts sparse roots into bounded dense IDs; exact count and diagnostics reuse the same 228-byte summary.</span>
             </div>
             <div class="raster-control">
@@ -1362,7 +1444,7 @@ function makeRasterLabMarkup(): string {
           <section class="raster-panel raster-histogram-panel">
             <div class="raster-panel-heading">
               <span class="raster-panel-title">Live pixel distribution</span>
-              <span class="raster-kicker">48 bins</span>
+              <span class="raster-kicker" data-raster-histogram-bin-count>48 bins</span>
             </div>
             <div class="raster-histogram" data-raster-histogram aria-label="NDVI histogram"></div>
             <div class="raster-histogram-axis">
@@ -1400,7 +1482,7 @@ function makeRasterLabMarkup(): string {
       <footer class="raster-footer">
         <div class="raster-roadmap" aria-label="Planned raster capabilities">
           <span class="raster-kicker">Coming next</span>
-          <span class="raster-roadmap-chip">Region measurements</span>
+          <span class="raster-roadmap-chip">Cross-tile regions</span>
           <span class="raster-roadmap-chip">Segmentation</span>
           <span class="raster-roadmap-chip">Tiled contour seams</span>
         </div>

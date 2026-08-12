@@ -97,6 +97,15 @@ export type {
 export {GPURasterDenseComponents} from './gpu-raster-dense-components';
 export type {GPURasterDenseComponentsProps} from './gpu-raster-dense-components';
 
+export {
+  getRasterRegionWorldCentroid,
+  GPURasterRegionMeasurements
+} from './gpu-raster-region-measurements';
+export type {
+  GPURasterRegionMeasurementOutputs,
+  GPURasterRegionMeasurementsProps
+} from './gpu-raster-region-measurements';
+
 export {GPURasterTextureToBuffer} from './gpu-raster-texture-to-buffer';
 export type {GPURasterTextureToBufferProps} from './gpu-raster-texture-to-buffer';
 
