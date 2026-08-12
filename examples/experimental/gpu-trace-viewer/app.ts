@@ -35,6 +35,7 @@ import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-p
 import {
   getTraceAllocationStats,
   getTraceCapacityContract,
+  getTraceScanTimingSummary,
   getTraceWorkloadCounters,
   type TraceAllocationStats
 } from './trace-benchmark';
@@ -2069,6 +2070,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
     if (this.statsElement) {
       const visible = this.sampledVisibleCounts.reduce((sum, count) => sum + count, 0);
+      const scanTiming = getTraceScanTimingSummary(
+        this.graphInspector.getSnapshot(),
+        resources.compiled.id
+      );
       const densityMode = isTraceDensityMode(
         this.view.timeMin,
         this.view.timeMax,
@@ -2092,6 +2097,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         <span>Dropped telemetry</span><strong>${formatCount(this.droppedTelemetrySampleCount)}</strong>
         <span>Deferred pick frames</span><strong>${formatCount(this.deferredPickFrameCount)}</strong>
         <span>Adapter / timestamp queries</span><strong>${resources.compiled.capabilities.softwareAdapter ? 'software' : 'hardware'} · ${resources.compiled.capabilities.timestampQueries ? 'available' : 'unavailable'}</strong>
+        <span>Prefix scans</span><strong>${resources.compiled.capabilities.subgroups && resources.compiled.capabilities.subgroupId ? 'subgroup accelerated' : 'portable workgroup'}</strong>
+        <span>Scan GPU p50 / p95</span><strong>${scanTiming ? `${scanTiming.p50Milliseconds.toFixed(3)} / ${scanTiming.p95Milliseconds.toFixed(3)} ms · ${scanTiming.sampleCount} samples` : 'collecting'}</strong>
         <span>Logical / owned resources</span><strong>${formatBytes(stats.logicalResourceBytes)} / ${formatBytes(stats.physicalTransientResourceBytes)}</strong>
         <span>Logical / physical scratch</span><strong>${formatBytes(stats.logicalTransientBytes)} / ${formatBytes(stats.physicalTransientBytes)}</strong>
         <span>Storage binding / max buffer</span><strong>${formatBytes(this.device.limits.maxStorageBufferBindingSize)} / ${formatBytes(this.device.limits.maxBufferSize)}</strong>

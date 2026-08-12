@@ -13,6 +13,7 @@ export type {
   DeviceProps,
   DeviceInfo,
   DeviceFeature,
+  WebGPUDeviceFeature,
   BrowserDeviceFeature,
   DeviceTextureFormatCapabilities,
   WebGPUFeatureLevel,

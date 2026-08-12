@@ -544,6 +544,14 @@ export type GPUCommandGraphNodeType = GPUCommandGraphNode<unknown>['type'];
 export type GPUCommandGraphCapabilities = {
   /** Whether the device can collect GPU timestamp queries. */
   timestampQueries: boolean;
+  /** Whether the created WebGPU device exposes subgroup operations. */
+  subgroups: boolean;
+  /** Whether the browser's WGSL implementation exposes stable subgroup identifiers. */
+  subgroupId: boolean;
+  /** Minimum subgroup size reported by the adapter, when available. */
+  subgroupMinSize?: number;
+  /** Maximum subgroup size reported by the adapter, when available. */
+  subgroupMaxSize?: number;
   /** Whether adapter metadata identifies a CPU or fallback implementation. */
   softwareAdapter: boolean;
   /** Maximum size of one GPU buffer allocation. */

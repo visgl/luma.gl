@@ -8,6 +8,7 @@ import {getTraceRow, makeDeckTraceData} from '../../examples/deck/gpu-culled-tra
 import {
   getTraceAllocationStats,
   getTraceCapacityContract,
+  getTraceScanTimingSummary,
   getTraceWorkloadCounters,
   TRACE_BENCHMARK_CAPACITIES,
   TRACE_BENCHMARK_SCENARIOS
@@ -277,6 +278,40 @@ test('GPU trace workload counters report persistent memory and proportional work
   t.equal(counters['persistent-bytes'], 520, 'persistent memory uses exact buffer accounting');
   t.equal(counters['filter-active'], 1, 'interaction modes are exposed as numeric counters');
   t.equal(counters['pick-active'], 0, 'inactive interaction modes remain explicit');
+  t.end();
+});
+
+test('GPU trace scan timing summary isolates and aggregates scan nodes', t => {
+  const summary = getTraceScanTimingSummary(
+    {
+      graphs: [
+        {
+          id: 'trace',
+          nodes: [
+            {
+              id: 'visibility-scan-level-0-scan',
+              gpu: {sampleCount: 8, p50Milliseconds: 0.5, p95Milliseconds: 0.75}
+            },
+            {
+              id: 'hierarchy-scan-level-0-add-offsets',
+              gpu: {sampleCount: 7, p50Milliseconds: 0.25, p95Milliseconds: 0.25}
+            },
+            {
+              id: 'draw-spans',
+              gpu: {sampleCount: 8, p50Milliseconds: 1.5, p95Milliseconds: 2}
+            }
+          ]
+        }
+      ]
+    },
+    'trace'
+  );
+  t.deepEqual(
+    summary,
+    {nodeCount: 2, sampleCount: 7, p50Milliseconds: 0.75, p95Milliseconds: 1},
+    'only scan stages contribute and the minimum common sample count is reported'
+  );
+  t.equal(getTraceScanTimingSummary({graphs: []}, 'trace'), null, 'missing samples return null');
   t.end();
 });
 

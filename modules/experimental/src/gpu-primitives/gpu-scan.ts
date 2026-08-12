@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type Binding} from '@luma.gl/core';
+import {type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {
@@ -19,6 +19,19 @@ import {
 } from './graph-data-view-utils';
 
 const SCAN_WORKGROUP_SIZE = 256;
+const MAXIMUM_SCAN_SUBGROUP_COUNT = 64;
+
+/** Compute strategy selected for an unsegmented scan block. @internal */
+export type GPUScanStrategy = 'portable' | 'subgroups';
+
+/** Selects the subgroup path only when both device and WGSL language capabilities are present. */
+export function getGPUScanStrategy(device: Device, segmented: boolean = false): GPUScanStrategy {
+  return !segmented &&
+    device.features?.has('subgroups') &&
+    device.wgslLanguageFeatures?.has('subgroup_id')
+    ? 'subgroups'
+    : 'portable';
+}
 
 /** Packed uint32 graph data accepted by {@link GPUScan}. */
 export type GPUScanInput = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
@@ -472,7 +485,7 @@ function addBlockScanPass<Parameters>(
     segmentPrefixes[SEGMENT_PREFIXES_OFFSET + index] = segmentPrefix;`
       : 'segmentPrefixes[SEGMENT_PREFIXES_OFFSET + index] = segmentScratch[lane];'
     : '';
-  const source = /* wgsl */ `
+  const portableSource = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.length}u;
 const BLOCK_COUNT: u32 = ${props.blockCount}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
@@ -528,6 +541,10 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
     ${segmentPrefixWrite}
   }
 }`;
+  const source =
+    getGPUScanStrategy(graph.device, Boolean(props.segmentFlags)) === 'subgroups'
+      ? getSubgroupBlockScanSource(props, sumOutput, sumBinding)
+      : portableSource;
 
   graph.addComputePass({
     id: props.id,
@@ -601,6 +618,85 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
       };
     }
   });
+}
+
+/** Builds an ordered scan over virtual lanes derived from subgroup ID and invocation ID. */
+function getSubgroupBlockScanSource(
+  props: {
+    input: GraphDataView<'uint32'>;
+    output: GraphDataView<'uint32'>;
+    mode: 'exclusive' | 'inclusive';
+    blockSums?: GraphDataView<'uint32'>;
+    finalSum?: GraphDataView<'uint32'>;
+    length: number;
+    blockCount: number;
+    dispatchLayout: GPUScanDispatchLayout;
+  },
+  sumOutput: GraphDataView<'uint32'> | undefined,
+  sumBinding: string
+): string {
+  const outputValue = props.mode === 'inclusive' ? 'blockPrefix' : 'blockPrefix - inputValue';
+  const sumWrite = props.blockSums
+    ? 'sumValues[SUM_OFFSET + workgroupIndex] = blockPrefix;'
+    : props.finalSum
+      ? 'sumValues[SUM_OFFSET] = blockPrefix;'
+      : '';
+  const maximumLinearWorkgroupCount = Math.floor(0xffffffff / SCAN_WORKGROUP_SIZE) + 1;
+
+  return /* wgsl */ `
+enable subgroups;
+requires subgroup_id;
+
+const ELEMENT_COUNT: u32 = ${props.length}u;
+const BLOCK_COUNT: u32 = ${props.blockCount}u;
+const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
+${sumOutput ? `const SUM_OFFSET: u32 = ${getViewElementOffset(sumOutput)}u;` : ''}
+@group(0) @binding(0) var<storage, read> inputValues: array<u32>;
+@group(0) @binding(1) var<storage, read_write> outputValues: array<u32>;
+${sumBinding}
+var<workgroup> subgroupOffsets: array<u32, ${MAXIMUM_SCAN_SUBGROUP_COUNT}>;
+
+@compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
+  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,
+  @builtin(subgroup_size) subgroupSize: u32,
+  @builtin(subgroup_id) subgroupId: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let workgroupIndex = (workgroupId.z * ${props.dispatchLayout.y}u + workgroupId.y) * ${props.dispatchLayout.x}u + workgroupId.x;
+  if (workgroupIndex >= ${maximumLinearWorkgroupCount}u || workgroupIndex >= BLOCK_COUNT) { return; }
+  let lane = subgroupId * subgroupSize + subgroupInvocationId;
+  let index = workgroupIndex * ${SCAN_WORKGROUP_SIZE}u + lane;
+  var inputValue = 0u;
+  if (index < ELEMENT_COUNT) {
+    inputValue = inputValues[INPUT_OFFSET + index];
+  }
+
+  let subgroupPrefix = subgroupInclusiveAdd(inputValue);
+  if (subgroupInvocationId == subgroupSize - 1u) {
+    subgroupOffsets[subgroupId] = subgroupPrefix;
+  }
+  workgroupBarrier();
+
+  let subgroupCount = ${SCAN_WORKGROUP_SIZE}u / subgroupSize;
+  if (lane == 0u) {
+    var runningOffset = 0u;
+    for (var subgroupIndex = 0u; subgroupIndex < subgroupCount; subgroupIndex++) {
+      let subgroupSum = subgroupOffsets[subgroupIndex];
+      subgroupOffsets[subgroupIndex] = runningOffset;
+      runningOffset = runningOffset + subgroupSum;
+    }
+  }
+  workgroupBarrier();
+
+  let blockPrefix = subgroupOffsets[subgroupId] + subgroupPrefix;
+  if (lane == ${SCAN_WORKGROUP_SIZE - 1}u) {
+    ${sumWrite}
+  }
+  if (index < ELEMENT_COUNT) {
+    outputValues[OUTPUT_OFFSET + index] = ${outputValue};
+  }
+}`;
 }
 
 /** Adds a scanned block offset or one vector carry into an output view. */

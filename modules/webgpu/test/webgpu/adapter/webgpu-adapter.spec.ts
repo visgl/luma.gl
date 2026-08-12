@@ -93,6 +93,15 @@ test('WebGPUAdapter feature helpers keep requested profiles separate', t => {
     'core does not request optional features'
   );
   t.deepEqual(
+    getRequiredWebGPUFeatures(coreFeatures, 'core', [
+      'subgroups',
+      'texture-compression-bc',
+      'subgroups'
+    ]),
+    ['texture-compression-bc'],
+    'core requests supported targeted features and ignores unsupported or duplicate entries'
+  );
+  t.deepEqual(
     getRequiredWebGPUFeatures(coreFeatures, 'max'),
     ['core-features-and-limits', 'texture-compression-bc'],
     'max requests all adapter features'

@@ -50,6 +50,10 @@ const GRAPH_STATS: GPUCommandGraphStats = {
 
 const GRAPH_CAPABILITIES: GPUCommandGraphCapabilities = {
   timestampQueries: true,
+  subgroups: true,
+  subgroupId: true,
+  subgroupMinSize: 4,
+  subgroupMaxSize: 128,
   softwareAdapter: false,
   maxBufferByteLength: 1_000_000,
   maxStorageBufferBindingByteLength: 500_000,

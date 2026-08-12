@@ -2,6 +2,34 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 # GPUScan
 
+Unsegmented scans automatically use WebGPU subgroup operations when the created device exposes the
+`subgroups` feature and the browser exposes the `subgroup_id` WGSL language extension. The portable
+workgroup implementation remains the fallback, and segmented scans always use it. Subgroup lanes
+are mapped to explicit logical indices so prefix order does not depend on implementation-defined
+invocation layout.
+
+This path is especially relevant to GPU-resident trace visualization: hierarchy layout and stable
+visibility compaction both scan large flag arrays on interactive updates. The GPU Trace Viewer uses
+`featureLevel: 'max'`, so recent Chrome releases opt into the fast path automatically when the
+adapter supports it and report the selected path in the inspector.
+
+## Performance expectations
+
+The subgroup block kernel uses two workgroup barriers instead of the portable kernel's initial
+barrier plus two barriers for each of eight scan strides. A reasonable starting expectation for
+large unsegmented scans is a 15–40% scan-stage reduction and a 5–15% improvement for scan-heavy
+trace updates, but the result depends on adapter, subgroup size, input capacity, and the surrounding
+passes. These figures are targets for measurement rather than guaranteed performance.
+
+Append `?scan=portable` to the GPU Trace Viewer URL to disable the subgroup path while retaining the
+same maximum-feature device request. This provides an A/B benchmark control without adding a
+strategy option to the public `GPUScan` API. For a useful comparison, select the same capacity and
+interaction scenario, wait for at least ten timestamp samples, and compare both the displayed
+`Scan GPU p50 / p95` aggregate and whole-graph GPU p50/p95. Reload once normally and once with
+`?scan=portable`; the inspector confirms the active path. Treat a consistent improvement across
+multiple reloads as signal, since individual GPU timestamp samples remain sensitive to browser and
+system load.
+
 <GPUPrimitivesDocsTabs active="scan" />
 
 ## Overview

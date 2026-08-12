@@ -8,6 +8,7 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Optional WebGPU subgroup acceleration** - Targeted `optionalFeatures` requests complement the portable and maximum device profiles, while `device.wgslLanguageFeatures` distinguishes dynamically exposed WGSL extensions from pre-requested device features. `GPUScan` automatically replaces its barrier-heavy unsegmented workgroup scan with an ordered subgroup path when both `subgroups` and `subgroup_id` are available. GPU trace hierarchy layout and visibility compaction are the key initial use case, with the trace viewer reporting the active path.
 - **TypeScript 6.0** - luma.gl package builds, website tooling, and supported example typechecks now use TypeScript 6.0.
 - **Precise raw binary64 coordinate deltas** - The WGSL `fp64arithmetic` module can split a binary64-rounded subtraction into normalized double-single limbs, normalize and compare those limbs with integer-controlled behavior in either arithmetic mode, and explicitly classify non-finite values. The existing direct-to-`f32` helper retains its single-round exact-delta contract.
 - **Faster graph-native GPU acceleration** - Consecutive compute nodes can share one command-encoder pass; reusable stable GPU sorting fuses small inputs and uses four-bit radix passes for larger workloads, while small bounding-volume hierarchies build and refit inside one workgroup. The shared WebGPU ray tracer automatically composes these primitives and derives tight mesh-instance bounds from retained triangle BLAS roots without requesting elevated CORE limits.

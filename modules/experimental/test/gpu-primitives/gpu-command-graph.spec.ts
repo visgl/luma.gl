@@ -26,7 +26,8 @@ import {
 import {
   addGPUScanToGraphWithDispatchLimit,
   getGPUScanDispatchLayout,
-  getGPUScanInvocationIndexSource
+  getGPUScanInvocationIndexSource,
+  getGPUScanStrategy
 } from '../../src/gpu-primitives/gpu-scan';
 
 test('GPUCommandGraph compiles dependencies and reuses transient buffers', async t => {
@@ -129,6 +130,16 @@ test('GPUCommandGraph reports adapter capabilities and explicit encoding timings
     compiled.capabilities.timestampQueries,
     device.features.has('timestamp-query'),
     'reports timestamp-query support'
+  );
+  t.equal(
+    compiled.capabilities.subgroups,
+    device.features.has('subgroups'),
+    'reports subgroup device support'
+  );
+  t.equal(
+    compiled.capabilities.subgroupId,
+    device.wgslLanguageFeatures.has('subgroup_id'),
+    'reports subgroup_id WGSL language support'
   );
   t.equal(
     compiled.capabilities.maxBufferByteLength,
@@ -712,6 +723,32 @@ test('GPUScan plans bounded multidimensional direct dispatches', t => {
     source.indexOf('workgroupIndex >= 16777216u') <
       source.indexOf('workgroupIndex * 256u + localInvocationIndex'),
     'the uint32 guard executes before invocation-index multiplication'
+  );
+  t.end();
+});
+
+test('GPUScan selects subgroups only when device and WGSL capabilities are both available', t => {
+  const makeDevice = (subgroups: boolean, subgroupId: boolean) =>
+    ({
+      features: {has: (feature: string) => feature === 'subgroups' && subgroups},
+      wgslLanguageFeatures: new Set(subgroupId ? ['subgroup_id'] : [])
+    }) as Device;
+
+  t.equal(getGPUScanStrategy(makeDevice(true, true)), 'subgroups', 'selects the fast path');
+  t.equal(
+    getGPUScanStrategy(makeDevice(true, false)),
+    'portable',
+    'requires the subgroup_id language extension'
+  );
+  t.equal(
+    getGPUScanStrategy(makeDevice(false, true)),
+    'portable',
+    'requires the subgroup device feature'
+  );
+  t.equal(
+    getGPUScanStrategy(makeDevice(true, true), true),
+    'portable',
+    'keeps segmented scans on the portable path'
   );
   t.end();
 });
