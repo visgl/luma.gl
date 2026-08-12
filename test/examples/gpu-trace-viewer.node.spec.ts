@@ -16,6 +16,7 @@ import {
   getMaximumTraceAdjacencyByteLength,
   getTraceCapacityOptions,
   getTraceDependencyCapacityOptions,
+  getTraceDuration,
   getTraceFocusFrontierCapacity,
   isTraceDensityMode,
   makeTraceDataset,
@@ -28,6 +29,7 @@ import {
   TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
   TRACE_GROUPS,
   TRACE_INVALID_SPAN_INDEX,
+  TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_PARENT_DEPENDENCY_FLAG,
   TRACE_PROCESS_COUNT,
@@ -367,9 +369,9 @@ test('GPU trace data preserves deterministic canonical group and hierarchy ident
   t.deepEqual(
     dataset.groups.map(group => [group.firstSpanIndex, group.count]),
     [
-      [0, 85],
-      [85, 85],
-      [170, 87]
+      [0, 86],
+      [86, 86],
+      [172, 85]
     ],
     'group ranges completely cover canonical source rows'
   );
@@ -402,8 +404,56 @@ test('GPU trace data preserves deterministic canonical group and hierarchy ident
   }
   t.deepEqual(
     makeTraceGroups(7).map(group => group.count),
-    [2, 2, 3],
+    [3, 2, 2],
     'the original trace-group helper remains compatible'
+  );
+  t.end();
+});
+
+test('GPU trace duration grows with tightly packed non-overlapping lane slots', t => {
+  t.equal(getTraceDuration(250_000), 1000, 'the baseline capacity retains a one-second trace');
+  t.ok(
+    Math.abs(getTraceDuration(1_000_000) - 4000) < 2,
+    'one million spans expands to about four seconds'
+  );
+  t.ok(
+    Math.abs(getTraceDuration(10_000_000) - 40_000) < 25,
+    'ten million spans expands to about forty seconds'
+  );
+
+  const dataset = makeTraceDataset(4096, 0);
+  const spanFloats = new Float32Array(dataset.spans.buffer);
+  const laneSpans = Array.from({length: TRACE_LANE_COUNT}, () => [] as Array<[number, number]>);
+  let occupiedDuration = 0;
+  for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
+    const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
+    const start = spanFloats[wordOffset];
+    const duration = spanFloats[wordOffset + 1];
+    const lane = dataset.spans[wordOffset + 2];
+    laneSpans[lane].push([start, start + duration]);
+    occupiedDuration += duration;
+  }
+  for (const spans of laneSpans) {
+    spans.sort((left, right) => left[0] - right[0]);
+    for (let spanIndex = 1; spanIndex < spans.length; spanIndex++) {
+      t.ok(
+        spans[spanIndex][0] >= spans[spanIndex - 1][1],
+        'successive spans in one lane do not overlap'
+      );
+    }
+  }
+  const occupancy = occupiedDuration / (dataset.duration * TRACE_LANE_COUNT);
+  t.ok(occupancy > 0.6 && occupancy < 0.8, 'lane packing stays dense without saturating pixels');
+  t.ok(
+    dataset.groups.every(group => {
+      const groupFloats = new Float32Array(
+        group.data.buffer,
+        group.data.byteOffset,
+        group.data.length
+      );
+      return groupFloats[0] < getTraceDuration(TRACE_LANE_COUNT);
+    }),
+    'all color groups appear in the first timeline slot'
   );
   t.end();
 });
@@ -464,10 +514,9 @@ test('GPU trace span batches preserve global identity and publish coarse index b
     spanBatches.map(batch => [batch.firstSpanIndex, batch.count, batch.groupIndex]),
     [
       [0, 2, 0],
-      [2, 1, 0],
-      [3, 2, 1],
-      [5, 1, 1],
-      [6, 2, 2],
+      [2, 2, 0],
+      [4, 2, 1],
+      [6, 2, 1],
       [8, 2, 2],
       [10, 1, 2]
     ],
@@ -506,10 +555,12 @@ test('GPU trace span batches preserve global identity and publish coarse index b
   }
   for (const group of dataset.groups) {
     const groupBatches = spanBatches.filter(batch => batch.groupIndex === group.groupIndex);
+    const slotDuration = getTraceDuration(TRACE_LANE_COUNT);
     for (let batchIndex = 1; batchIndex < groupBatches.length; batchIndex++) {
       t.ok(
-        groupBatches[batchIndex].timeMin >= groupBatches[batchIndex - 1].timeMin,
-        'group batches retain increasing temporal locality'
+        Math.floor(groupBatches[batchIndex].timeMin / slotDuration) >=
+          Math.floor(groupBatches[batchIndex - 1].timeMin / slotDuration),
+        'group batches retain increasing temporal-slot locality'
       );
     }
   }

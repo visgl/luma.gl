@@ -80,7 +80,8 @@ describe('@luma.gl/experimental/lutrace package boundary', () => {
     const shader = getGPUTracePickingShader(384, 6);
 
     expect(shader).toContain('sourceIndex >= 384u');
-    expect(shader).toContain('request.active == 0u');
+    expect(shader).toContain('request.enabled == 0u');
+    expect(shader).not.toContain('active: u32');
     expect(shader).toContain('visibleMask[sourceIndex] == 0u');
     expect(shader).toContain('timing.z % 6u');
     expect(shader).toContain('atomicMin(&result, sourceIndex)');

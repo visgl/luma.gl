@@ -23,6 +23,8 @@ describe('GPU scene-backed trace shaders', () => {
 
     expect(source).toContain('sourceIndex >= 384u');
     expect(source).toContain('visibleMask[sourceIndex] == 0u');
+    expect(source).toContain('request.enabled == 0u');
+    expect(source).not.toContain('active: u32');
     expect(source).toContain(`timing.z % ${TRACE_LANES_PER_THREAD}u`);
     expect(source).toContain('atomicMin(&result, sourceIndex)');
   });

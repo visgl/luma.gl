@@ -12,6 +12,7 @@ import {
   TRACE_DENSITY_BIN_COUNT,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
+  TRACE_LANE_COUNT,
   TRACE_PROCESS_COUNT,
   TRACE_SPAN_BATCH_CAPACITY,
   TRACE_SPAN_RECORD_WORD_LENGTH,
@@ -79,6 +80,8 @@ describe('GPU hierarchical trace viewer', () => {
         dependencyCapacity: number;
         compileCount: number;
         frameIndex: number;
+        traceDuration: number;
+        view: {timeMin: number; timeMax: number; laneMin: number; laneMax: number};
         pendingPick: {x: number; y: number; requestIdentifier: number} | null;
         graphInspector: {
           getSnapshot: () => {
@@ -389,6 +392,21 @@ describe('GPU hierarchical trace viewer', () => {
 
       host.querySelector<HTMLButtonElement>('[data-clear-selection]')!.click();
       expect(state.selectedSpanIndex).toBe(0xffffffff);
+
+      host.querySelector<HTMLButtonElement>('[data-fit-trace]')!.click();
+      expect(state.view).toEqual({
+        timeMin: 0,
+        timeMax: state.traceDuration,
+        laneMin: 0,
+        laneMax: TRACE_LANE_COUNT
+      });
+      host.querySelector<HTMLButtonElement>('[data-reset]')!.click();
+      expect(state.view).toEqual({
+        timeMin: 0,
+        timeMax: Math.min(150, state.traceDuration),
+        laneMin: 0,
+        laneMax: 72
+      });
     } finally {
       viewer?.onFinalize();
       host.remove();
