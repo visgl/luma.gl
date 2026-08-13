@@ -91,11 +91,7 @@ import {
   TRACE_DEPENDENCY_RENDER_SHADER,
   TRACE_RENDER_SHADER
 } from './trace-shaders';
-import {
-  getTracePanelStyleMarkup,
-  getTracePipelineMarkup,
-  getTraceScanScatterMarkup
-} from './trace-panel';
+import {getTracePanelStyleMarkup} from './trace-panel';
 
 export const title = 'GPU Hierarchical Trace Viewer';
 export const description =
@@ -604,6 +600,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     );
     const dependencyMaskByteLength = Math.max(dataset.dependencyCount, 1) * UINT32_BYTE_LENGTH;
     const densityBinCount = TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT;
+    const densityValueCount = densityBinCount * TRACE_GROUPS.length;
     const outgoingTopologyChunkLengths = getTopologyChunkLengths(dataset.outgoing.nodes.length);
     const incomingTopologyChunkLengths = getTopologyChunkLengths(dataset.incoming.nodes.length);
     const outgoingTopology = makeSparseTopologyRows(
@@ -799,7 +796,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ),
       densityBins: this.createStorageBuffer(
         'gpu-trace-density-bins',
-        densityBinCount * UINT32_BYTE_LENGTH,
+        densityValueCount * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
       ),
       pickResult: this.createStorageBuffer(
@@ -1239,7 +1236,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       id: 'trace-clear-density',
       source: getDensityClearShader(),
       bindings: [storageWrite('densityBins', handles.densityBins)],
-      length: TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT,
+      length: TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT * TRACE_GROUPS.length,
       workgroupSize: TRACE_WORKGROUP_SIZE
     });
     for (const chunk of handles.spanChunks) {
@@ -1722,8 +1719,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
               <strong>One compiled graph, live trace policies</strong>
               <p>Hierarchy layout, batch culling, dependency focus, stable compaction, picking, adaptive density, and indirect draws stay on the GPU.</p>
             </div>
-            ${getTracePipelineMarkup()}
-            ${getTraceScanScatterMarkup()}
           </section>`
         }),
         makeHtmlCustomPanel({
