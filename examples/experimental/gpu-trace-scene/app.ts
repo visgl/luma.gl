@@ -39,11 +39,7 @@ import {
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS
 } from '../gpu-trace-viewer/trace-data';
-import {
-  getTracePanelStyleMarkup,
-  getTracePipelineMarkup,
-  getTraceScanScatterMarkup
-} from '../gpu-trace-viewer/trace-panel';
+import {getTracePanelStyleMarkup} from '../gpu-trace-viewer/trace-panel';
 import {TRACE_SCENE_RENDER_SHADER} from './trace-scene-shaders';
 
 export const title = 'GPU Scene Trace Explorer';
@@ -638,8 +634,6 @@ function makeControlMarkup({
       <div class="trace-section-header"><span class="trace-section-title">Visible resource groups</span><span class="trace-section-note">sampled GPU output</span></div>
       <div class="trace-metric-grid">${groupCards}</div>
     </section>
-    ${getTracePipelineMarkup()}
-    ${getTraceScanScatterMarkup()}
     <section class="trace-section">
       <div class="trace-section-header"><span class="trace-section-title">Command graph</span><span class="trace-section-note">CPU / GPU telemetry</span></div>
       <div data-scene-trace-inspector></div>

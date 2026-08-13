@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import tracePipelineImageUrl from './gpu-trace-pipeline.webp';
-import traceScanScatterImageUrl from './gpu-trace-scan-scatter.webp';
-
 export const TRACE_PANEL_STYLE = /* css */ `
   [data-trace-dashboard] {
     --trace-border: rgb(137 166 211 / 20%);
@@ -49,39 +46,6 @@ export const TRACE_PANEL_STYLE = /* css */ `
   [data-trace-dashboard] .trace-hero p {
     margin: 4px 0 0;
     color: #bcc9dc;
-  }
-  [data-trace-dashboard] .trace-pipeline-figure {
-    position: relative;
-    margin: 0;
-    overflow: hidden;
-    border: 1px solid rgb(91 192 255 / 27%);
-    border-radius: 8px;
-    background: #020813;
-    box-shadow: inset 0 0 24px rgb(22 137 255 / 8%);
-  }
-  [data-trace-dashboard] .trace-pipeline-figure img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-  [data-trace-dashboard] .trace-pipeline-caption {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 7px 9px;
-    border-top: 1px solid rgb(91 192 255 / 18%);
-    background: linear-gradient(90deg, rgb(6 16 30 / 96%), rgb(10 29 48 / 94%));
-  }
-  [data-trace-dashboard] .trace-pipeline-caption strong {
-    color: #dcefff;
-    font-size: 10px;
-    letter-spacing: .035em;
-  }
-  [data-trace-dashboard] .trace-pipeline-caption span {
-    color: #78a4c8;
-    font: 8px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
-    text-align: right;
   }
   [data-trace-dashboard] .trace-section {
     min-width: 0;
@@ -188,9 +152,51 @@ export const TRACE_PANEL_STYLE = /* css */ `
   [data-trace-dashboard] .trace-check-row label {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid var(--trace-border-soft);
+    border-radius: 6px;
+    background: rgb(11 20 34 / 54%);
     color: #c0cee1;
+    cursor: pointer;
+    transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+  }
+  [data-trace-dashboard] .trace-check-grid label:hover,
+  [data-trace-dashboard] .trace-check-row label:hover {
+    border-color: rgb(125 211 252 / 34%);
+    background: rgb(24 42 64 / 66%);
+  }
+  [data-trace-dashboard] .trace-check-grid label:has(input:checked),
+  [data-trace-dashboard] .trace-check-row label:has(input:checked) {
+    border-color: rgb(125 211 252 / 28%);
+    background: rgb(34 66 94 / 48%);
+    color: #e3edf9;
+  }
+  [data-trace-dashboard] input[type='checkbox'] {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 25px;
+    height: 14px;
+    margin: 0;
+    border: 1px solid rgb(139 159 187 / 42%);
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 6px 50%, #8190a6 0 3.5px, transparent 4px),
+      rgb(8 15 26 / 82%);
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+  }
+  [data-trace-dashboard] input[type='checkbox']:checked {
+    border-color: rgb(125 211 252 / 72%);
+    background:
+      radial-gradient(circle at 18px 50%, #f1f7fd 0 3.5px, transparent 4px),
+      #367fa4;
+    box-shadow: 0 0 0 1px rgb(125 211 252 / 10%);
+  }
+  [data-trace-dashboard] input[type='checkbox']:focus-visible {
+    outline: 2px solid rgb(125 211 252 / 72%);
+    outline-offset: 2px;
   }
   [data-trace-dashboard] .trace-check-row {
     display: flex;
@@ -263,24 +269,4 @@ export const TRACE_PANEL_STYLE = /* css */ `
 
 export function getTracePanelStyleMarkup(): string {
   return `<style>${TRACE_PANEL_STYLE}</style>`;
-}
-
-export function getTracePipelineMarkup(): string {
-  return `<figure class="trace-pipeline-figure">
-    <img src="${tracePipelineImageUrl}" alt="GPU trace interaction primitives: GPUHierarchyLayout with GPUScan, GPUGraphTraversal, policy filtering, GPUVisibilityWorkflow with GPUCompaction and GPUScan, GPUAncestorProjection, GPUSceneDrawGeneration, GPUSceneResourceGroups, rendering, picking, and GPUReadbackRing." />
-    <figcaption class="trace-pipeline-caption">
-      <strong>Reusable primitives inside the compiled GPUGraph</strong>
-      <span>scan · traversal · compaction · projection · indirect draws</span>
-    </figcaption>
-  </figure>`;
-}
-
-export function getTraceScanScatterMarkup(): string {
-  return `<figure class="trace-pipeline-figure">
-    <img src="${traceScanScatterImageUrl}" alt="Scan and stable scatter example: visibility flags one, zero, one, one, zero become exclusive prefix sums zero, one, one, two, three, then compact to span zero, span two, and span three in source order." />
-    <figcaption class="trace-pipeline-caption">
-      <strong>How stable GPU compaction works</strong>
-      <span>flags → exclusive scan → destination offsets → scatter</span>
-    </figcaption>
-  </figure>`;
 }
