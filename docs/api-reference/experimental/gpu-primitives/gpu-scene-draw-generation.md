@@ -131,6 +131,16 @@ to that graph.
 `stats` reports the imported scene row count, reserved scene capacity, command capacity, record
 size, transient ownership storage, and total output bytes without GPU readback.
 
+## Performance notes
+
+### Subgroup acceleration
+
+When the device exposes WebGPU subgroups, draw generation combines eligible and published rows
+within each subgroup before updating the global diagnostic counters. Dense visible scenes therefore
+perform substantially fewer contended atomic operations while preserving deterministic slot
+ownership, exact counts, and overflow reporting. Devices without subgroup support record the
+portable per-row counter path automatically.
+
 ## Current scope
 
 This implements roadmap Tranche 6.2a: deterministic explicit-slot publication and overflow. It

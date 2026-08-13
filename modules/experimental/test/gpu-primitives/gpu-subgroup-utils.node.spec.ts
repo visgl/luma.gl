@@ -6,17 +6,23 @@ import type {Device} from '@luma.gl/core';
 import {describe, expect, test} from 'vitest';
 import {
   getGPUShaderSubgroupStrategy,
+  getSubgroupBallotHelpersWGSL,
   getSubgroupCoalescedAtomicAddWGSL
 } from '../../src/gpu-primitives/gpu-subgroup-utils';
 
 describe('GPU subgroup shader utilities', () => {
-  test('requires both the device and WGSL capabilities', () => {
+  test('requires only the capabilities used by each shader path', () => {
     expect(getGPUShaderSubgroupStrategy(makeDevice([], []))).toBe('portable');
-    expect(getGPUShaderSubgroupStrategy(makeDevice(['subgroups'], []))).toBe('portable');
+    expect(getGPUShaderSubgroupStrategy(makeDevice(['subgroups'], []))).toBe('subgroups');
     expect(getGPUShaderSubgroupStrategy(makeDevice([], ['subgroup_id']))).toBe('portable');
-    expect(getGPUShaderSubgroupStrategy(makeDevice(['subgroups'], ['subgroup_id']))).toBe(
-      'subgroups'
-    );
+    expect(
+      getGPUShaderSubgroupStrategy(makeDevice(['subgroups'], []), {requiresSubgroupId: true})
+    ).toBe('portable');
+    expect(
+      getGPUShaderSubgroupStrategy(makeDevice(['subgroups'], ['subgroup_id']), {
+        requiresSubgroupId: true
+      })
+    ).toBe('subgroups');
   });
 
   test('bounds coalescing work by the caller-provided key count', () => {
@@ -25,6 +31,16 @@ describe('GPU subgroup shader utilities', () => {
     expect(source).toContain('subgroupGroup < 8u');
     expect(source).toContain('let hasPending = any(pendingBallot != vec4<u32>(0u));');
     expect(source).not.toContain('break;');
+  });
+
+  test('publishes ballot totals and exclusive lane ranks for atomic append allocation', () => {
+    const source = getSubgroupBallotHelpersWGSL();
+
+    expect(source).toContain('fn getBallotLaneCount(mask: vec4<u32>) -> u32');
+    expect(source).toContain(
+      'fn getBallotPrefixLaneCount(mask: vec4<u32>, invocation: u32) -> u32'
+    );
+    expect(source).toContain('mask[word] & lowerBits');
   });
 });
 

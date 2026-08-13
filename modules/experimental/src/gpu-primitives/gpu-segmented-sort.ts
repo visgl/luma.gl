@@ -253,7 +253,8 @@ function addSegmentBucketPass<Parameters>(
     )
     .join(',\n');
   const descending = sort.direction === 'descending';
-  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
 ${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 struct SortSegment {

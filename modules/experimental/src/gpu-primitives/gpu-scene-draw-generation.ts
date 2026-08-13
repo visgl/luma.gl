@@ -14,6 +14,7 @@ import {
   validatePackedUint32View
 } from './graph-data-view-utils';
 import {GPU_SCENE_ACTIVE_FLAG, GPU_SCENE_INVALID_REFERENCE, type GPUSceneView} from './gpu-scene';
+import {getGPUShaderSubgroupStrategy, getSubgroupBallotHelpersWGSL} from './gpu-subgroup-utils';
 
 const SCENE_DRAW_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
@@ -265,13 +266,15 @@ function addClaimPass<Parameters>(
   eligibility: GraphDataView<'uint32'>,
   owners: GraphDataView<'uint32'>
 ): void {
+  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const dispatch = getDispatchLayout(
     generation.scene.flags.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   addComputationPass(graph, {
     id: `${generation.id}-claim`,
-    source: `${makeDispatchConstants(dispatch)}
+    source: `${useSubgroups ? 'enable subgroups;' : ''}
+${makeDispatchConstants(dispatch)}
 const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
 const SLOTS_OFFSET: u32 = ${getViewElementOffset(generation.scene.commandSlots)}u;
@@ -285,10 +288,33 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(generation.overflow)}u;
 @group(0) @binding(2) var<storage, read_write> owners: array<atomic<u32>>;
 @group(0) @binding(3) var<storage, read_write> requiredCount: array<atomic<u32>>;
 @group(0) @binding(4) var<storage, read_write> overflow: array<atomic<u32>>;
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 @compute @workgroup_size(${SCENE_DRAW_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(global_invocation_id) globalId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
-  let index = getLinearIndex(globalId);
+${
+  useSubgroups
+    ? `  let index = getLinearIndex(globalId);
+  var slot = ${GPU_SCENE_INVALID_REFERENCE}u;
+  var accepted = false;
+  if (index < RECORD_COUNT) {
+    slot = commandSlots[SLOTS_OFFSET + index * SLOTS_STRIDE];
+    accepted = eligibility[ELIGIBILITY_OFFSET + index] != 0u &&
+      slot != ${GPU_SCENE_INVALID_REFERENCE}u;
+  }
+  let acceptedBallot = subgroupBallot(accepted);
+  let acceptedCount = getBallotLaneCount(acceptedBallot);
+  let leaderInvocation = getFirstBallotLane(acceptedBallot);
+  if (acceptedCount != 0u && subgroupInvocationId == leaderInvocation) {
+    atomicAdd(&requiredCount[REQUIRED_OFFSET], acceptedCount);
+  }
+  if (!accepted) { return; }
+  if (slot >= COMMAND_CAPACITY) {
+    atomicStore(&overflow[OVERFLOW_OFFSET], 1u);
+    return;
+  }
+  atomicMin(&owners[OWNERS_OFFSET + slot], index);`
+    : `  let index = getLinearIndex(globalId);
   if (index >= RECORD_COUNT) { return; }
   let slot = commandSlots[SLOTS_OFFSET + index * SLOTS_STRIDE];
   if (eligibility[ELIGIBILITY_OFFSET + index] == 0u || slot == ${GPU_SCENE_INVALID_REFERENCE}u) {
@@ -300,6 +326,8 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(generation.overflow)}u;
     return;
   }
   atomicMin(&owners[OWNERS_OFFSET + slot], index);
+  `
+}
 }`,
     resources: [
       {buffer: generation.scene.commandSlots, usage: 'storage-read'},
@@ -325,6 +353,7 @@ function addPublishPass<Parameters>(
   eligibility: GraphDataView<'uint32'>,
   owners: GraphDataView<'uint32'>
 ): void {
+  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const recordWords = generation.commands.recordByteLength / UINT32_BYTE_LENGTH;
   const firstInstanceWord = recordWords - 1;
   const dispatch = getDispatchLayout(
@@ -333,7 +362,8 @@ function addPublishPass<Parameters>(
   );
   addComputationPass(graph, {
     id: `${generation.id}-publish`,
-    source: `${makeDispatchConstants(dispatch)}
+    source: `${useSubgroups ? 'enable subgroups;' : ''}
+${makeDispatchConstants(dispatch)}
 const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
 const RECORD_WORDS: u32 = ${recordWords}u;
@@ -351,10 +381,41 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(generation.overflow)}u;
 @group(0) @binding(3) var<storage, read_write> commands: array<u32>;
 @group(0) @binding(4) var<storage, read_write> publishedCount: array<atomic<u32>>;
 @group(0) @binding(5) var<storage, read_write> overflow: array<atomic<u32>>;
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 @compute @workgroup_size(${SCENE_DRAW_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(global_invocation_id) globalId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
-  let index = getLinearIndex(globalId);
+${
+  useSubgroups
+    ? `  let index = getLinearIndex(globalId);
+  var slot = ${GPU_SCENE_INVALID_REFERENCE}u;
+  var candidate = false;
+  if (index < RECORD_COUNT) {
+    slot = commandSlots[SLOTS_OFFSET + index * SLOTS_STRIDE];
+    candidate = eligibility[ELIGIBILITY_OFFSET + index] != 0u &&
+      slot != ${GPU_SCENE_INVALID_REFERENCE}u && slot < COMMAND_CAPACITY;
+  }
+  var published = false;
+  if (candidate) {
+    published = atomicLoad(&owners[OWNERS_OFFSET + slot]) == index;
+  }
+  let collision = candidate && !published;
+  let collisionBallot = subgroupBallot(collision);
+  let publishedBallot = subgroupBallot(published);
+  let collisionLeader = getFirstBallotLane(collisionBallot);
+  let publishedLeader = getFirstBallotLane(publishedBallot);
+  let publishedTotal = getBallotLaneCount(publishedBallot);
+  if (any(collisionBallot != vec4<u32>(0u)) && subgroupInvocationId == collisionLeader) {
+    atomicStore(&overflow[OVERFLOW_OFFSET], 1u);
+  }
+  if (publishedTotal != 0u && subgroupInvocationId == publishedLeader) {
+    atomicAdd(&publishedCount[PUBLISHED_OFFSET], publishedTotal);
+  }
+  if (!published) { return; }
+  let commandOffset = COMMANDS_OFFSET + slot * RECORD_WORDS;
+  commands[commandOffset + 1u] = 1u;
+  commands[commandOffset + FIRST_INSTANCE_WORD] = index;`
+    : `  let index = getLinearIndex(globalId);
   if (index >= RECORD_COUNT) { return; }
   let slot = commandSlots[SLOTS_OFFSET + index * SLOTS_STRIDE];
   if (
@@ -372,6 +433,8 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(generation.overflow)}u;
   commands[commandOffset + 1u] = 1u;
   commands[commandOffset + FIRST_INSTANCE_WORD] = index;
   atomicAdd(&publishedCount[PUBLISHED_OFFSET], 1u);
+  `
+}
 }`,
     resources: [
       {buffer: generation.scene.commandSlots, usage: 'storage-read'},

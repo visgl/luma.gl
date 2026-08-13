@@ -27,7 +27,7 @@ export type GPUScanStrategy = 'portable' | 'subgroups';
 
 /** Selects the subgroup path only when both device and WGSL language capabilities are present. */
 export function getGPUScanStrategy(device: Device, segmented: boolean = false): GPUScanStrategy {
-  return segmented ? 'portable' : getGPUShaderSubgroupStrategy(device);
+  return segmented ? 'portable' : getGPUShaderSubgroupStrategy(device, {requiresSubgroupId: true});
 }
 
 /** Packed uint32 graph data accepted by {@link GPUScan}. */

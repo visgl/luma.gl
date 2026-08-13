@@ -34,7 +34,7 @@ export type GPUReductionStrategy = 'portable' | 'subgroups';
 
 /** Selects subgroup collectives only when the device and WGSL language both expose them. */
 export function getGPUReductionStrategy(device: Device): GPUReductionStrategy {
-  return getGPUShaderSubgroupStrategy(device);
+  return getGPUShaderSubgroupStrategy(device, {requiresSubgroupId: true});
 }
 
 /**

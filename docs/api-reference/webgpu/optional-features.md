@@ -150,8 +150,10 @@ For every optional implementation path:
 6. Benchmark the full workload; fewer shader instructions or barriers do not guarantee a faster
    bandwidth-bound operation.
 
-The experimental GPU primitives follow this pattern. All subgroup paths require both `subgroups`
-and `subgroup_id`; otherwise the same public operation records its portable shader.
+The experimental GPU primitives follow this pattern. Every subgroup path requires the `subgroups`
+device feature. Paths that address workgroup data using subgroup indices also require the
+`subgroup_id` WGSL language feature; ballot- and shuffle-only paths do not. If a complete path is
+unavailable, the same public operation records its portable shader.
 
 | Primitive or consumer | Subgroup work | Optimized scope |
 | --- | --- | --- |
@@ -164,10 +166,13 @@ and `subgroup_id`; otherwise the same public operation records its portable shad
 | [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning) | Equal-cell lanes coalesce into one local atomic update | Grids with at most 16 cells |
 | [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation) | Equal-cell lanes combine weights before statistic atomics | Aggregations with at most 16 cells |
 | [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation) | Equal-key lanes coalesce count or statistic atomics | Aggregations with at most 16 groups |
+| [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target) | Valid region hits reserve one output block per subgroup | Region-result publication |
+| [`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation) | Eligible and published rows coalesce diagnostic counter atomics | Required and published counts plus collision reporting |
+| `GPUChunkedIndexedScatter` | Equal-destination routes reserve contiguous output blocks | Scatters with at most 16 chunks |
 
-The narrow atomic thresholds are deliberate: the coalescing shader has bounded work proportional
-to the number of possible keys. Larger outputs retain the existing workgroup-local or direct
-global atomic implementations. The live GPU Sort and GPU Data Analysis examples request the
+The narrow keyed-atomic thresholds are deliberate: the coalescing shader has bounded work
+proportional to the number of possible keys. Larger outputs retain the existing workgroup-local or
+direct global atomic implementations. The live GPU Sort and GPU Data Analysis examples request the
 `'max'` feature level, validate results against CPU oracles, and therefore exercise these paths on
 supporting browsers without changing their public controls.
 
