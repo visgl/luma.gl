@@ -28,8 +28,8 @@ export function WorkgroupScanBenchmark(): ReactNode {
   return (
     <LiveBenchmarkPanel
       collapsible
-      title="256-lane workgroup scan benchmark"
-      description="Each round performs one exclusive 256-lane prefix scan per workgroup. Throughput is reported as input lane-values scanned per second."
+      title="GPUScan compute benchmark"
+      description="Each round applies the same 256-element exclusive prefix operation used within GPUScan. Throughput is reported as uint32 input elements processed per second."
       runLabel="Run benchmark"
       controls={
         <div className="luma-live-benchmark__controls">
@@ -106,9 +106,9 @@ function WorkgroupScanBenchmarkRunning({
   return (
     <div>
       <p style={{margin: '14px 0 10px'}}>
-        Measuring <strong>{formatWorkgroupScanCount(workgroupCount, roundCount)}</strong>{' '}
-        workgroup scans/dispatch ·{' '}
-        <strong>{formatLaneValueCount(workgroupCount, roundCount)}</strong> lane-values/dispatch…
+        Measuring <strong>{formatElementCount(workgroupCount, roundCount)}</strong> uint32
+        elements/dispatch across{' '}
+        <strong>{formatWorkgroupScanCount(workgroupCount, roundCount)}</strong> local scan blocks…
       </p>
 
       <table style={{fontSize: 13, minWidth: 620, width: '100%'}}>
@@ -119,7 +119,7 @@ function WorkgroupScanBenchmarkRunning({
             <th>Barriers / scan</th>
             <th>GPU median</th>
             <th>GPU p95</th>
-            <th>Scan throughput</th>
+            <th>Element throughput</th>
           </tr>
         </thead>
         <tbody>
@@ -161,10 +161,10 @@ function WorkgroupScanBenchmarkResults({
   return (
     <div>
       <p style={{margin: '14px 0 10px'}}>
-        <strong>{formatWorkgroupScanCount(report.workgroupCount, report.roundCount)}</strong>{' '}
-        workgroup scans/dispatch ·{' '}
-        <strong>{formatLaneValueCount(report.workgroupCount, report.roundCount)}</strong>{' '}
-        lane-values/dispatch ·{' '}
+        <strong>{formatElementCount(report.workgroupCount, report.roundCount)}</strong> uint32
+        elements/dispatch ·{' '}
+        <strong>{formatWorkgroupScanCount(report.workgroupCount, report.roundCount)}</strong> local
+        scan blocks ·{' '}
         <strong>{report.dispatchCount}</strong> dispatches/sample · {deviceLabel}
       </p>
 
@@ -176,7 +176,7 @@ function WorkgroupScanBenchmarkResults({
             <th>Barriers / scan</th>
             <th>GPU median</th>
             <th>GPU p95</th>
-            <th>Scan throughput</th>
+            <th>Element throughput</th>
           </tr>
         </thead>
         <tbody>
@@ -252,11 +252,11 @@ function formatWorkgroupScanCount(workgroupCount: number, roundCount: number): s
   return (workgroupCount * roundCount).toLocaleString();
 }
 
-function formatLaneValueCount(workgroupCount: number, roundCount: number): string {
-  const laneValueCount = workgroupCount * roundCount * 256;
-  return laneValueCount >= 1e6
-    ? `${(laneValueCount / 1e6).toFixed(2)}M`
-    : laneValueCount.toLocaleString();
+function formatElementCount(workgroupCount: number, roundCount: number): string {
+  const elementCount = workgroupCount * roundCount * 256;
+  return elementCount >= 1e6
+    ? `${(elementCount / 1e6).toFixed(2)}M`
+    : elementCount.toLocaleString();
 }
 
 function formatScanThroughput(
@@ -267,10 +267,10 @@ function formatScanThroughput(
   if (!gpuMedianMilliseconds || gpuMedianMilliseconds <= 0) {
     return 'Unavailable';
   }
-  const laneValuesPerSecond =
+  const elementsPerSecond =
     (report.workgroupCount * report.roundCount * report.workgroupSize * 1000) /
     gpuMedianMilliseconds;
-  return `${(laneValuesPerSecond / 1e9).toFixed(2)}G lanes/s`;
+  return `${(elementsPerSecond / 1e9).toFixed(2)}G elements/s`;
 }
 
 function formatMilliseconds(milliseconds: number): string {
