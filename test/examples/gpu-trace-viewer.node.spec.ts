@@ -49,6 +49,7 @@ import {
   getCandidateDensityShader,
   getCandidateDependencySpanVisibilityShader,
   getCandidateDependencyVisibilityShader,
+  getCandidateLabelShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
@@ -61,9 +62,12 @@ import {
   getFocusFrontierSeedShader,
   getFocusReachabilityClearShader,
   getPickClearShader,
+  getPickResolveShader,
   getTraceDrawCommandsShader,
+  getTraceLabelClearShader,
   TRACE_DENSITY_RENDER_SHADER,
   TRACE_DEPENDENCY_RENDER_SHADER,
+  TRACE_LABEL_RENDER_SHADER,
   TRACE_RENDER_SHADER
 } from '../../examples/experimental/gpu-trace-viewer/trace-shaders';
 
@@ -348,14 +352,18 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     TRACE_RENDER_SHADER,
     TRACE_DEPENDENCY_RENDER_SHADER,
     TRACE_DENSITY_RENDER_SHADER,
+    TRACE_LABEL_RENDER_SHADER,
     getBatchVisibilityShader(3),
     getPickClearShader(),
     getCandidateVisibilityShader(spanChunk),
+    getTraceLabelClearShader(5),
+    getCandidateLabelShader(spanChunk, 5),
     getCandidateDependencySpanVisibilityShader(spanChunk),
     getCandidatePassDispatchShader(),
     getDensityClearShader(),
     getCandidateDensityShader(spanChunk),
     getCandidatePickShader(spanChunk),
+    getPickResolveShader(spanChunk),
     getTraceDrawCommandsShader([
       {firstBatchIndex: 0, batchCount: 2},
       {firstBatchIndex: 2, batchCount: 1}
@@ -405,6 +413,21 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     TRACE_RENDER_SHADER,
     /select\(\s*1\.0,\s*spanReadability,\s*viewUniforms\.lodFadeEnabled != 0u\s*\)/,
     'hard-switch exact spans bypass sub-pixel readability fading'
+  );
+  t.match(
+    TRACE_RENDER_SHADER,
+    /focusEnabled = viewUniforms\.focusMode != 0u && hasSelection/,
+    'ordinary picking highlights its span without dimming the complete trace'
+  );
+  t.match(
+    getCandidateLabelShader(spanChunk, 5),
+    /spanPixelWidth < metric\.advancePixels/,
+    'label expansion rejects strings that do not fit before reserving glyph occurrences'
+  );
+  t.match(
+    TRACE_LABEL_RENDER_SHADER,
+    /isGlyphVertexClipped\(input\.glyphPixelOffset, input\.clipRect\)/,
+    'label rendering retains a final span clip-rectangle guard'
   );
   t.end();
 });

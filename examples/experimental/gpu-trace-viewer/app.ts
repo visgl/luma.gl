@@ -10,6 +10,8 @@ import {
   type CompiledGPUCommandGraph,
   DispatchCommandBuffer,
   DrawCommandBuffer,
+  FlatController,
+  type FlatControllerPick,
   GPUChunkedIndexedScatter,
   GPUCommandGraph,
   type GPUCommandGraphEncoding,
@@ -26,6 +28,8 @@ import {
   type GraphDataView,
   GraphVectorView
 } from '@luma.gl/experimental';
+import {buildSdfFontAtlas} from '@luma.gl/text';
+import {DictionaryTextRenderer} from '@luma.gl/text/experimental';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -59,11 +63,15 @@ import {
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_GROUPS,
   TRACE_INVALID_SPAN_INDEX,
+  TRACE_LABEL_DICTIONARY,
+  TRACE_LABEL_GLYPH_CAPACITY,
+  TRACE_LABEL_GLYPH_RECORD_WORD_LENGTH,
   TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_PROCESS_COUNT,
   TRACE_SPAN_BATCH_CAPACITY,
   TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
+  TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_STATUS_COUNT,
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS,
@@ -75,6 +83,7 @@ import {
   getCandidateDensityShader,
   getCandidateDependencySpanVisibilityShader,
   getCandidateDependencyVisibilityShader,
+  getCandidateLabelShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
@@ -87,9 +96,12 @@ import {
   getFocusFrontierSeedShader,
   getFocusReachabilityClearShader,
   getPickClearShader,
+  getPickResolveShader,
   getTraceDrawCommandsShader,
+  getTraceLabelClearShader,
   TRACE_DENSITY_RENDER_SHADER,
   TRACE_DEPENDENCY_RENDER_SHADER,
+  TRACE_LABEL_RENDER_SHADER,
   TRACE_RENDER_SHADER
 } from './trace-shaders';
 import {getTracePanelStyleMarkup} from './trace-panel';
@@ -101,6 +113,7 @@ export const description =
 const DEFAULT_CAPACITY = 4_000_000;
 const DEFAULT_DEPENDENCY_CAPACITY = 4_000_000;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
+const TRACE_PICK_RESULT_WORD_LENGTH = TRACE_SPAN_RECORD_WORD_LENGTH + 1;
 const TRACE_WORKGROUP_SIZE = 256;
 const TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT = Math.ceil(
   TRACE_SPAN_BATCH_CAPACITY / TRACE_WORKGROUP_SIZE
@@ -166,6 +179,9 @@ type PickPosition = {
   time: number;
   lane: number;
   requestIdentifier: number;
+  intent: 'hover' | 'select';
+  clientX: number;
+  clientY: number;
 };
 
 type TraceGraphResources = {
@@ -183,6 +199,7 @@ type TraceGraphResources = {
   spanDraws: TraceSpanDrawResources[];
   dependencyDrawCommandIndex: number;
   densityDrawCommandIndex: number;
+  labelDrawCommandIndex: number;
   spanBatchIndex: Buffer;
   candidateBatchIds: Buffer;
   dependencies: Buffer;
@@ -206,6 +223,7 @@ type TraceGraphResources = {
   dependencySpanVisibility: Buffer;
   visibleDependencyIds: Buffer;
   densityBins: Buffer;
+  labelGlyphs: Buffer;
   pickResult: Buffer;
   spanCount: number;
   spanBatchCount: number;
@@ -251,6 +269,7 @@ function getTraceResourceBuffers(resources: TraceGraphResources): Array<{byteLen
     resources.dependencySpanVisibility,
     resources.visibleDependencyIds,
     resources.densityBins,
+    resources.labelGlyphs,
     resources.pickResult,
     ...Array.from({length: resources.readbackRing.slotCount}, () => ({
       byteLength: resources.readbackRing.byteLength
@@ -273,6 +292,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   readonly model: Model;
   readonly dependencyModel: Model;
   readonly densityModel: Model;
+  readonly labelRenderer: DictionaryTextRenderer;
   readonly viewUniformBuffer: Buffer;
   readonly panels: ExamplePanelManager;
   readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
@@ -304,24 +324,26 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private threadStates = new Uint32Array(TRACE_THREAD_COUNT).fill(TRACE_EXPANDED_STATE);
   private autoScroll = true;
   private lodFadeEnabled = false;
+  private labelsEnabled = true;
   private view: TraceViewParameters = {timeMin: 0, timeMax: 150, laneMin: 0, laneMax: 72};
-  private dragging = false;
-  private pointerMoved = false;
-  private lastPointer: [number, number] = [0, 0];
   private pendingPick: PickPosition | null = null;
   private latestPickRequestIdentifier = 0;
+  private latestHoverPickRequestIdentifier = 0;
+  private latestSelectionPickRequestIdentifier = 0;
   private encodeTimeMilliseconds = 0;
   private compileCount = 0;
   private compileTimeMilliseconds = 0;
   private sampledVisibleCounts = [0, 0, 0];
   private sampledDependencyCount = 0;
+  private sampledLabelGlyphCount = 0;
   private sampledCandidateBatchCount = 0;
   private sampledCandidateDependencyBatchCount = 0;
   private droppedTelemetrySampleCount = 0;
   private deferredPickFrameCount = 0;
   private frameIndex = 0;
   private viewportWidth = 1;
-  private canvas: HTMLCanvasElement | null = null;
+  private flatController: FlatController | null = null;
+  private pickTooltipElement: HTMLElement | null = null;
   private statsElement: HTMLElement | null = null;
   private inspectorPanel: GPUCommandGraphInspectorPanel | null = null;
   private capacityElement: HTMLElement | null = null;
@@ -362,6 +384,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.model = this.createSpanModel();
     this.dependencyModel = this.createDependencyModel();
     this.densityModel = this.createDensityModel();
+    this.labelRenderer = this.createLabelRenderer();
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.rebuild(traceCapacity, dependencyCapacity);
     this.panels.mount();
@@ -369,13 +392,30 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
-      this.canvas = canvas;
-      canvas.style.cursor = 'grab';
-      canvas.addEventListener('pointerdown', this.handlePointerDown);
-      canvas.addEventListener('pointermove', this.handlePointerMove);
-      canvas.addEventListener('pointerup', this.handlePointerUp);
-      canvas.addEventListener('pointercancel', this.handlePointerCancel);
-      canvas.addEventListener('wheel', this.handleWheel, {passive: false});
+      this.flatController = new FlatController(canvas, {
+        getView: () => ({
+          xMin: this.view.timeMin,
+          xMax: this.view.timeMax,
+          yMin: this.view.laneMin,
+          yMax: this.view.laneMax
+        }),
+        getBounds: () => ({xMin: 0, xMax: this.traceDuration, yMin: 0, yMax: TRACE_LANE_COUNT}),
+        onViewChange: view => {
+          this.setViewTimeRange(view.xMin, view.xMax);
+          this.view.laneMin = view.yMin;
+          this.view.laneMax = view.yMax;
+        },
+        onPick: pick => this.requestPick(pick),
+        onPointerLeave: this.clearHoveredPick,
+        onInteractionStart: () => {
+          this.autoScroll = false;
+          this.clearHoveredPick();
+        }
+      });
+      this.pickTooltipElement = document.createElement('div');
+      this.pickTooltipElement.id = 'trace-pick-tooltip';
+      this.pickTooltipElement.hidden = true;
+      document.body.append(this.pickTooltipElement);
     }
   }
 
@@ -419,10 +459,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       if (readbackTicket) {
         this.pendingPick = null;
         readbackTicket.copyFrom(device.commandEncoder, resources.pickResult, {
-          byteLength: UINT32_BYTE_LENGTH
+          byteLength: TRACE_PICK_RESULT_WORD_LENGTH * UINT32_BYTE_LENGTH
         });
         queueMicrotask(() => {
-          void this.samplePickedSpan(resources, readbackTicket, pick.requestIdentifier);
+          void this.samplePickedSpan(resources, readbackTicket, pick);
         });
       } else {
         this.deferredPickFrameCount++;
@@ -475,18 +515,16 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   }
 
   override onFinalize(): void {
-    if (this.canvas) {
-      this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-      this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-      this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-      this.canvas.removeEventListener('pointercancel', this.handlePointerCancel);
-      this.canvas.removeEventListener('wheel', this.handleWheel);
-    }
+    this.flatController?.destroy();
+    this.flatController = null;
+    this.pickTooltipElement?.remove();
+    this.pickTooltipElement = null;
     this.panels.finalize();
     this.destroyResources();
     this.model.destroy();
     this.dependencyModel.destroy();
     this.densityModel.destroy();
+    this.labelRenderer.destroy();
     this.viewUniformBuffer.destroy();
   }
 
@@ -559,6 +597,62 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     });
   }
 
+  private createLabelRenderer(): DictionaryTextRenderer {
+    const fontAtlas = buildSdfFontAtlas({
+      characterSet: [...new Set(TRACE_LABEL_DICTIONARY.join(''))],
+      fontFamily: 'Monaco, Menlo, monospace',
+      fontWeight: 600,
+      fontSize: 48,
+      buffer: 5,
+      radius: 10,
+      smoothing: 0.08
+    });
+    return new DictionaryTextRenderer(this.device, {
+      id: 'gpu-trace-dictionary-labels',
+      dictionary: TRACE_LABEL_DICTIONARY,
+      fontAtlas,
+      fontSize: 12,
+      color: [0.94, 0.96, 1, 0.92],
+      modelProps: {
+        source: TRACE_LABEL_RENDER_SHADER,
+        topology: 'triangle-list',
+        colorAttachmentFormats: [this.device.preferredColorFormat],
+        depthStencilAttachmentFormat: 'depth24plus',
+        shaderLayout: {
+          attributes: [],
+          bindings: [
+            {name: 'labelGlyphs', type: 'read-only-storage', group: 0, location: 0},
+            {name: 'threadOffsets', type: 'read-only-storage', group: 0, location: 1},
+            {name: 'threadStates', type: 'read-only-storage', group: 0, location: 2},
+            {name: 'viewUniforms', type: 'uniform', group: 0, location: 3},
+            {
+              name: 'textDictionaryGlyphRanges',
+              type: 'read-only-storage',
+              group: 0,
+              location: 4
+            },
+            {
+              name: 'textDictionaryGlyphRecords',
+              type: 'read-only-storage',
+              group: 0,
+              location: 5
+            },
+            {name: 'textGlyphFrames', type: 'read-only-storage', group: 0, location: 6},
+            {name: 'textDictionaryStyle', type: 'uniform', group: 0, location: 7},
+            {
+              name: 'fontAtlasTexture',
+              type: 'texture',
+              viewDimension: '2d-array',
+              group: 0,
+              location: 8
+            }
+          ]
+        },
+        parameters: makeTraceBlendParameters()
+      }
+    });
+  }
+
   private rebuild(spanCapacity: number, dependencyCapacity: number): void {
     const started = performance.now();
     this.destroyResources();
@@ -574,6 +668,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.graphObservation = this.graphInspector.observeGraph(resources.compiled);
     this.allocationStats = getTraceAllocationStats([
       this.viewUniformBuffer,
+      this.labelRenderer.dictionaryMetrics,
+      this.labelRenderer.dictionaryGlyphRanges,
+      this.labelRenderer.dictionaryGlyphRecords,
+      this.labelRenderer.glyphFrames,
+      this.labelRenderer.styleUniforms,
       ...getTraceResourceBuffers(resources)
     ]);
     this.resources = resources;
@@ -581,6 +680,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.compileTimeMilliseconds = performance.now() - started;
     this.sampledVisibleCounts = TRACE_GROUPS.map(() => 0);
     this.sampledDependencyCount = 0;
+    this.sampledLabelGlyphCount = 0;
     this.sampledCandidateBatchCount = 0;
     this.sampledCandidateDependencyBatchCount = 0;
     this.recordWorkloadCounters();
@@ -649,13 +749,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     });
     const dependencyDrawCommandIndex = spanDraws.length;
     const densityDrawCommandIndex = dependencyDrawCommandIndex + 1;
+    const labelDrawCommandIndex = densityDrawCommandIndex + 1;
     const drawCommands = new DrawCommandBuffer(this.device, {
       id: 'gpu-trace-draw-commands',
       type: 'draw',
       commands: [
         ...spanDraws.map(() => ({vertexCount: 6, instanceCount: 0})),
         {vertexCount: 2, instanceCount: 0},
-        {vertexCount: 6, instanceCount: densityBinCount}
+        {vertexCount: 6, instanceCount: densityBinCount},
+        {vertexCount: 6, instanceCount: 0}
       ]
     });
     const candidateDispatchCommands = new DispatchCommandBuffer(this.device, {
@@ -729,6 +831,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       spanDraws,
       dependencyDrawCommandIndex,
       densityDrawCommandIndex,
+      labelDrawCommandIndex,
       spanBatchIndex: this.createDataBuffer('gpu-trace-span-batch-index', dataset.spanBatchIndex),
       candidateBatchIds: this.createStorageBuffer(
         'gpu-trace-candidate-batch-ids',
@@ -801,9 +904,14 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         densityValueCount * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
       ),
+      labelGlyphs: this.createStorageBuffer(
+        'gpu-trace-label-glyphs',
+        TRACE_LABEL_GLYPH_CAPACITY * TRACE_LABEL_GLYPH_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH,
+        Buffer.COPY_SRC
+      ),
       pickResult: this.createStorageBuffer(
         'gpu-trace-picked-span',
-        UINT32_BYTE_LENGTH,
+        TRACE_PICK_RESULT_WORD_LENGTH * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
       ),
       spanCount: dataset.spanCount,
@@ -951,6 +1059,32 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         resources.visibleDependencyIds
       ),
       densityBins: importTraceBuffer(graph, 'density-bins', resources.densityBins),
+      labelGlyphs: importTraceBuffer(graph, 'label-glyphs', resources.labelGlyphs),
+      labelDictionaryMetrics: importTraceBuffer(
+        graph,
+        'label-dictionary-metrics',
+        this.labelRenderer.dictionaryMetrics
+      ),
+      labelDictionaryGlyphRanges: importTraceBuffer(
+        graph,
+        'label-dictionary-glyph-ranges',
+        this.labelRenderer.dictionaryGlyphRanges
+      ),
+      labelDictionaryGlyphRecords: importTraceBuffer(
+        graph,
+        'label-dictionary-glyph-records',
+        this.labelRenderer.dictionaryGlyphRecords
+      ),
+      labelGlyphFrames: importTraceBuffer(
+        graph,
+        'label-glyph-frames',
+        this.labelRenderer.glyphFrames
+      ),
+      labelStyleUniforms: importTraceBuffer(
+        graph,
+        'label-style-uniforms',
+        this.labelRenderer.styleUniforms
+      ),
       pickResult: importTraceBuffer(graph, 'pick-result', resources.pickResult),
       drawCommands: importTraceBuffer(graph, 'draw-commands', resources.drawCommands.buffer)
     };
@@ -1235,6 +1369,30 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       }
     }
     addTraceComputePass(graph, {
+      id: 'trace-clear-span-labels',
+      source: getTraceLabelClearShader(resources.labelDrawCommandIndex),
+      bindings: [storageWrite('drawCommands', handles.drawCommands)],
+      length: 1,
+      workgroupSize: 1
+    });
+    for (const chunk of handles.spanChunks) {
+      addTraceIndirectComputePass(graph, {
+        id: `trace-candidate-span-labels-${chunk.chunkIndex}`,
+        source: getCandidateLabelShader(chunk, resources.labelDrawCommandIndex),
+        bindings: [
+          storageRead('spans', chunk.spans),
+          storageRead('spanBatches', handles.spanBatchIndex),
+          storageRead('candidateBatchIds', handles.candidateBatchIds),
+          uniformBinding('viewUniforms', handles.uniforms),
+          storageRead('visibilityFlags', chunk.visibility),
+          storageRead('dictionaryMetrics', handles.labelDictionaryMetrics),
+          storageWrite('labelGlyphs', handles.labelGlyphs),
+          storageWrite('drawCommands', handles.drawCommands)
+        ],
+        dispatchBuffer: handles.exactCandidateDispatchCommands
+      });
+    }
+    addTraceComputePass(graph, {
       id: 'trace-clear-density',
       source: getDensityClearShader(),
       bindings: [storageWrite('densityBins', handles.densityBins)],
@@ -1272,6 +1430,18 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageWrite('pickResult', handles.pickResult)
         ],
         dispatchBuffer: handles.pickCandidateDispatchCommands
+      });
+    }
+    for (const chunk of handles.spanChunks) {
+      addTraceComputePass(graph, {
+        id: `trace-resolve-pick-${chunk.chunkIndex}`,
+        source: getPickResolveShader(chunk),
+        bindings: [
+          storageRead('spans', chunk.spans),
+          storageWrite('pickResult', handles.pickResult)
+        ],
+        length: 1,
+        workgroupSize: 1
       });
     }
     const visibleSpanCountBuffer = graph.createTransientBuffer({
@@ -1324,6 +1494,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       {buffer: handles.reachedSpans, usage: 'storage-read'},
       {buffer: handles.dependencyEndpointPositions, usage: 'storage-read'},
       {buffer: handles.densityBins, usage: 'storage-read'},
+      {buffer: handles.labelGlyphs, usage: 'storage-read'},
+      {buffer: handles.threadOffsets, usage: 'storage-read'},
+      {buffer: handles.threadStates, usage: 'storage-read'},
+      {buffer: handles.labelDictionaryGlyphRanges, usage: 'storage-read'},
+      {buffer: handles.labelDictionaryGlyphRecords, usage: 'storage-read'},
+      {buffer: handles.labelGlyphFrames, usage: 'storage-read'},
+      {buffer: handles.labelStyleUniforms, usage: 'uniform'},
       {buffer: handles.uniforms, usage: 'uniform'},
       {buffer: handles.drawCommands, usage: 'indirect'}
     ];
@@ -1469,7 +1646,26 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           clearDepth: false,
           clearStencil: false
         }),
-        encode: ({renderPass}) => renderPass.executeBundles([resources.renderBundle])
+        encode: ({renderPass}) => {
+          renderPass.executeBundles([resources.renderBundle]);
+          const atlasTexture = this.labelRenderer.resources.atlasTexture;
+          if (atlasTexture.isReady) {
+            renderPass.setPipeline(this.labelRenderer.model.pipeline);
+            renderPass.setVertexArray(this.labelRenderer.model.vertexArray);
+            renderPass.setBindings({
+              labelGlyphs: resources.labelGlyphs,
+              threadOffsets: resources.threadOffsets,
+              threadStates: resources.threadStates,
+              viewUniforms: this.viewUniformBuffer,
+              textDictionaryGlyphRanges: this.labelRenderer.dictionaryGlyphRanges,
+              textDictionaryGlyphRecords: this.labelRenderer.dictionaryGlyphRecords,
+              textGlyphFrames: this.labelRenderer.glyphFrames,
+              textDictionaryStyle: this.labelRenderer.styleUniforms,
+              fontAtlasTexture: atlasTexture.texture
+            });
+            resources.drawCommands.draw(renderPass, resources.labelDrawCommandIndex);
+          }
+        }
       })
     });
     return graph.compile();
@@ -1517,6 +1713,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       viewUniforms: this.viewUniformBuffer
     });
     resources.drawCommands.draw(encoder, resources.densityDrawCommandIndex);
+
     return encoder.finish();
   }
 
@@ -1549,6 +1746,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     unsigned[16] = visibilityGeneration;
     unsigned[17] = dependencyEndpointOffset;
     unsigned[18] = this.lodFadeEnabled ? 1 : 0;
+    unsigned[19] = this.labelsEnabled ? 1 : 0;
     this.viewUniformBuffer.write(data);
   }
 
@@ -1568,6 +1766,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           .reduce((count, draw) => count + (values[draw.commandIndex * 4 + 1] ?? 0), 0)
       );
       this.sampledDependencyCount = values[resources.dependencyDrawCommandIndex * 4 + 1] ?? 0;
+      this.sampledLabelGlyphCount = values[resources.labelDrawCommandIndex * 4 + 1] ?? 0;
       this.recordWorkloadCounters();
       this.updateInspector();
     } catch {
@@ -1613,23 +1812,93 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
-  /** Reads a single explicitly requested GPU-picked source row after the frame is submitted. */
+  /** Reads the winning source row after the GPU resolves the pick into one compact buffer. */
   private async samplePickedSpan(
     resources: TraceGraphResources,
     readbackTicket: GPUReadbackTicket,
-    requestIdentifier: number
+    pick: PickPosition
   ): Promise<void> {
     try {
       const bytes = await readbackTicket.read();
-      if (resources !== this.resources || requestIdentifier !== this.latestPickRequestIdentifier) {
+      const latestRequestIdentifier =
+        pick.intent === 'select'
+          ? this.latestSelectionPickRequestIdentifier
+          : this.latestHoverPickRequestIdentifier;
+      if (resources !== this.resources || pick.requestIdentifier !== latestRequestIdentifier) {
         return;
       }
-      const pickedSpanIndex = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
+      const resultWords = new Uint32Array(
+        bytes.buffer,
+        bytes.byteOffset,
+        TRACE_PICK_RESULT_WORD_LENGTH
+      );
+      const pickedSpanIndex = resultWords[0];
       if (pickedSpanIndex !== INVALID_SPAN_INDEX) {
-        this.setSelectedSpan(pickedSpanIndex);
+        if (pick.intent === 'select') {
+          this.setSelectedSpan(pickedSpanIndex);
+        }
+        const recordByteOffset = bytes.byteOffset + UINT32_BYTE_LENGTH;
+        const words = new Uint32Array(
+          bytes.buffer,
+          recordByteOffset,
+          TRACE_SPAN_RECORD_WORD_LENGTH
+        );
+        const floats = new Float32Array(
+          bytes.buffer,
+          recordByteOffset,
+          TRACE_SPAN_RECORD_WORD_LENGTH
+        );
+        const groupIndex = words[3];
+        const statusIndex = words[7] & (TRACE_STATUS_COUNT - 1);
+        const dictionaryIndex = Math.min(
+          groupIndex * TRACE_STATUS_COUNT + statusIndex,
+          TRACE_LABEL_DICTIONARY.length - 1
+        );
+        this.showPickTooltip(pick.clientX, pick.clientY, {
+          sourceIndex: words[6],
+          label: TRACE_LABEL_DICTIONARY[dictionaryIndex],
+          group: TRACE_GROUPS[groupIndex] ?? 'unknown',
+          status: STATUS_NAMES[statusIndex] ?? 'unknown',
+          start: floats[0],
+          duration: floats[1],
+          processIndex: words[4],
+          threadIndex: words[5]
+        });
+      } else if (pick.intent === 'hover') {
+        this.hidePickTooltip();
       }
     } catch {
       // Device loss and cancellation release the ring slot without changing the selection.
+    }
+  }
+
+  private showPickTooltip(
+    clientX: number,
+    clientY: number,
+    span: {
+      sourceIndex: number;
+      label: string;
+      group: string;
+      status: string;
+      start: number;
+      duration: number;
+      processIndex: number;
+      threadIndex: number;
+    }
+  ): void {
+    const tooltip = this.pickTooltipElement;
+    if (!tooltip) {
+      return;
+    }
+    tooltip.innerHTML = `<strong>${span.label}</strong><span>#${formatCount(span.sourceIndex)} · ${span.group} · ${span.status}</span><span>${span.start.toFixed(2)} ms + ${span.duration.toFixed(2)} ms</span><span>Process ${span.processIndex} · Thread ${span.threadIndex % TRACE_THREADS_PER_PROCESS}</span>`;
+    tooltip.style.left = `${Math.min(clientX + 14, window.innerWidth - 230)}px`;
+    tooltip.style.top = `${Math.min(clientY + 14, window.innerHeight - 104)}px`;
+    tooltip.hidden = false;
+  }
+
+  private hidePickTooltip(): void {
+    if (this.pickTooltipElement) {
+      this.pickTooltipElement.hidden = true;
     }
   }
 
@@ -1700,6 +1969,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.dependencySpanVisibility,
       resources.visibleDependencyIds,
       resources.densityBins,
+      resources.labelGlyphs,
       resources.pickResult
     ]) {
       buffer.destroy();
@@ -1836,8 +2106,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         </div>
       </section>
       <section class="trace-section">
-        <div class="trace-section-header"><span class="trace-section-title">Timeline</span><span class="trace-section-note">drag to pan · wheel to zoom</span></div>
-        <div class="trace-check-row"><label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label><label><input type="checkbox" data-lod-fade${this.lodFadeEnabled ? ' checked' : ''}> Smooth LOD fade</label></div>
+        <div class="trace-section-header"><span class="trace-section-title">Timeline</span><span class="trace-section-note">hover to inspect · click to focus · drag to pan · wheel to zoom</span></div>
+        <div class="trace-check-row"><label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label><label><input type="checkbox" data-lod-fade${this.lodFadeEnabled ? ' checked' : ''}> Smooth LOD fade</label><label><input type="checkbox" data-labels${this.labelsEnabled ? ' checked' : ''}> Span labels</label></div>
         <div class="trace-actions" style="margin-top:6px"><button type="button" data-reset>Reset detail</button><button type="button" data-fit-trace>Fit trace</button></div>
       </section>
     </section>`;
@@ -1944,6 +2214,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.autoScroll = target.checked;
       } else if (target instanceof HTMLInputElement && target.matches('[data-lod-fade]')) {
         this.lodFadeEnabled = target.checked;
+      } else if (target instanceof HTMLInputElement && target.matches('[data-labels]')) {
+        this.labelsEnabled = target.checked;
       }
       this.updateInspector();
     };
@@ -2088,6 +2360,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ).length;
       this.statsElement.innerHTML = `<div class="trace-metric-grid">
         ${makeMetricCard('Exact spans', formatCount(visible), 'sampled visible')}
+        ${makeMetricCard('Label glyphs', formatCount(this.sampledLabelGlyphCount), this.labelsEnabled ? 'fitted and GPU-culled' : 'disabled')}
         ${makeMetricCard('Visible edges', formatCount(this.sampledDependencyCount), 'sampled dependencies')}
         ${makeMetricCard('Span batches', `${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}`, 'candidate / total')}
         ${makeMetricCard('Edge batches', `${formatCount(this.sampledCandidateDependencyBatchCount)}/${formatCount(resources.dependencyBatchCount)}`, 'candidate / total')}
@@ -2180,88 +2453,32 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     return laneCount;
   }
 
-  private readonly handlePointerDown = (event: PointerEvent): void => {
-    this.dragging = true;
-    this.pointerMoved = false;
-    this.autoScroll = false;
-    this.lastPointer = [event.clientX, event.clientY];
-    this.canvas?.setPointerCapture(event.pointerId);
-    if (this.canvas) {
-      this.canvas.style.cursor = 'grabbing';
-    }
-  };
-
-  private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.dragging || !this.canvas) {
+  private requestPick(pick: FlatControllerPick): void {
+    if (pick.intent === 'hover' && this.pendingPick?.intent === 'select') {
       return;
     }
-    const [lastX, lastY] = this.lastPointer;
-    const horizontalMovement = event.clientX - lastX;
-    const verticalMovement = event.clientY - lastY;
-    if (Math.abs(horizontalMovement) + Math.abs(verticalMovement) > 2) {
-      this.pointerMoved = true;
+    const requestIdentifier = ++this.latestPickRequestIdentifier;
+    if (pick.intent === 'select') {
+      this.latestSelectionPickRequestIdentifier = requestIdentifier;
+    } else {
+      this.latestHoverPickRequestIdentifier = requestIdentifier;
     }
-    const rectangle = this.canvas.getBoundingClientRect();
-    const timeRange = this.view.timeMax - this.view.timeMin;
-    const laneRange = this.view.laneMax - this.view.laneMin;
-    const nextTimeMin = this.view.timeMin - (horizontalMovement / rectangle.width) * timeRange;
-    this.setViewTimeRange(nextTimeMin, nextTimeMin + timeRange);
-    const maximumLaneStart = Math.max(0, TRACE_LANE_COUNT - laneRange);
-    this.view.laneMin = clamp(
-      this.view.laneMin + (verticalMovement / rectangle.height) * laneRange,
-      0,
-      maximumLaneStart
-    );
-    this.view.laneMax = this.view.laneMin + laneRange;
-    this.lastPointer = [event.clientX, event.clientY];
-  };
-
-  private readonly handlePointerUp = (event: PointerEvent): void => {
-    if (this.canvas && !this.pointerMoved) {
-      const rectangle = this.canvas.getBoundingClientRect();
-      const horizontalFraction = clamp((event.clientX - rectangle.left) / rectangle.width, 0, 1);
-      const verticalFraction = clamp((event.clientY - rectangle.top) / rectangle.height, 0, 1);
-      this.latestPickRequestIdentifier++;
-      this.pendingPick = {
-        time: this.view.timeMin + horizontalFraction * (this.view.timeMax - this.view.timeMin),
-        lane: this.view.laneMin + verticalFraction * (this.view.laneMax - this.view.laneMin),
-        requestIdentifier: this.latestPickRequestIdentifier
-      };
-    }
-    this.finishPointerInteraction(event);
-  };
-
-  private readonly handlePointerCancel = (event: PointerEvent): void => {
-    this.finishPointerInteraction(event);
-  };
-
-  private finishPointerInteraction(event: PointerEvent): void {
-    this.dragging = false;
-    if (this.canvas?.hasPointerCapture(event.pointerId)) {
-      this.canvas.releasePointerCapture(event.pointerId);
-    }
-    if (this.canvas) {
-      this.canvas.style.cursor = 'grab';
-    }
+    this.pendingPick = {
+      time: pick.x,
+      lane: pick.y,
+      requestIdentifier,
+      intent: pick.intent,
+      clientX: pick.clientX,
+      clientY: pick.clientY
+    };
   }
 
-  private readonly handleWheel = (event: WheelEvent): void => {
-    if (!this.canvas) {
-      return;
+  private readonly clearHoveredPick = (): void => {
+    this.latestHoverPickRequestIdentifier = ++this.latestPickRequestIdentifier;
+    if (this.pendingPick?.intent === 'hover') {
+      this.pendingPick = null;
     }
-    event.preventDefault();
-    this.autoScroll = false;
-    const rectangle = this.canvas.getBoundingClientRect();
-    const fraction = clamp((event.clientX - rectangle.left) / rectangle.width, 0, 1);
-    const previousRange = this.view.timeMax - this.view.timeMin;
-    const nextRange = clamp(
-      previousRange * Math.exp(event.deltaY * 0.0015),
-      0.5,
-      this.traceDuration
-    );
-    const anchor = this.view.timeMin + previousRange * fraction;
-    const timeMin = anchor - nextRange * fraction;
-    this.setViewTimeRange(timeMin, timeMin + nextRange);
+    this.hidePickTooltip();
   };
 
   private setViewTimeRange(timeMin: number, timeMax: number): void {

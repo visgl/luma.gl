@@ -35,6 +35,24 @@ export const TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL = 0.025;
 /** Density bins fully replace individual spans above this trace-time-per-pixel scale. */
 export const TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL = 0.055;
 export const TRACE_STATUS_COUNT = 4;
+/** Small operation-name dictionary shared by every generated span label. */
+export const TRACE_LABEL_DICTIONARY = [
+  'kernel',
+  'barrier',
+  'matrix multiply',
+  'kernel retry',
+  'send',
+  'receive wait',
+  'all-reduce',
+  'network error',
+  'read',
+  'I/O wait',
+  'write',
+  'I/O error'
+] as const;
+/** Bounded transient glyph occurrences; source strings and glyph layouts remain dictionary-shared. */
+export const TRACE_LABEL_GLYPH_CAPACITY = 1_000_000;
+export const TRACE_LABEL_GLYPH_RECORD_WORD_LENGTH = 6;
 export const TRACE_SAME_PROCESS_DEPENDENCY = 0;
 export const TRACE_CROSS_PROCESS_DEPENDENCY = 1;
 export const TRACE_PARENT_DEPENDENCY_FLAG = 1;

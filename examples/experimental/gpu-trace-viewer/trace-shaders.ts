@@ -16,6 +16,8 @@ import {
   TRACE_FILTER_HIDE_RUNTIME_SPANS,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_GROUPS,
+  TRACE_LABEL_DICTIONARY,
+  TRACE_LABEL_GLYPH_CAPACITY,
   TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_OVERLAPPING_CHILD_FLAG,
@@ -83,6 +85,7 @@ struct ViewUniforms {
   visibilityGeneration: u32,
   dependencyEndpointOffset: u32,
   lodFadeEnabled: u32,
+  labelsEnabled: u32,
 };
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
@@ -141,6 +144,265 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
     vec2<f32>(1.0, 1.0)
   );
   return corners[vertexIndex];
+}`;
+
+/** Clears the indirect glyph count before candidate spans append fitted labels. */
+export function getTraceLabelClearShader(labelDrawCommandIndex: number): string {
+  return /* wgsl */ `
+const LABEL_INSTANCE_COUNT_WORD: u32 = ${labelDrawCommandIndex * 4 + 1}u;
+@group(0) @binding(0) var<storage, read_write> drawCommands: array<atomic<u32>>;
+@compute @workgroup_size(1)
+fn main() {
+  atomicStore(&drawCommands[LABEL_INSTANCE_COUNT_WORD], 0u);
+}`;
+}
+
+/** Appends only exact-LOD labels whose complete dictionary string fits inside its span. */
+export function getCandidateLabelShader(
+  props: TraceSpanChunkShaderProps,
+  labelDrawCommandIndex: number
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+struct DictionaryMetric {
+  glyphCount: u32,
+  advancePixels: f32,
+};
+struct TraceLabelGlyph {
+  start: f32,
+  duration: f32,
+  lane: u32,
+  threadIndex: u32,
+  dictionaryIndex: u32,
+  glyphOffset: u32,
+};
+const LABEL_INSTANCE_COUNT_WORD: u32 = ${labelDrawCommandIndex * 4 + 1}u;
+const LABEL_GLYPH_CAPACITY: u32 = ${TRACE_LABEL_GLYPH_CAPACITY}u;
+const LABEL_HORIZONTAL_PADDING: f32 = 4.0;
+const LABEL_MINIMUM_LANE_HEIGHT: f32 = 11.0;
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read> visibilityFlags: array<u32>;
+@group(0) @binding(5) var<storage, read> dictionaryMetrics: array<DictionaryMetric>;
+@group(0) @binding(6) var<storage, read_write> labelGlyphs: array<TraceLabelGlyph>;
+@group(0) @binding(7) var<storage, read_write> drawCommands: array<atomic<u32>>;
+
+fn reserveGlyphs(glyphCount: u32) -> u32 {
+  loop {
+    let current = atomicLoad(&drawCommands[LABEL_INSTANCE_COUNT_WORD]);
+    if (current + glyphCount > LABEL_GLYPH_CAPACITY) {
+      return 0xffffffffu;
+    }
+    let result = atomicCompareExchangeWeak(
+      &drawCommands[LABEL_INSTANCE_COUNT_WORD],
+      current,
+      current + glyphCount
+    );
+    if (result.exchanged) {
+      return current;
+    }
+  }
+}
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  if (viewUniforms.labelsEnabled == 0u || !isExactModeActive()) {
+    return;
+  }
+  let batchIndex = candidateBatchIds[workgroupId.y];
+  if (
+    batchIndex < CHUNK_FIRST_BATCH_INDEX ||
+    batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT
+  ) {
+    return;
+  }
+  let batch = spanBatches[batchIndex];
+  let batchRowIndex = globalId.x;
+  if (batchRowIndex >= batch.spanCount) {
+    return;
+  }
+  let sourceIndex = batch.firstSpanIndex + batchRowIndex;
+  let chunkIndex = sourceIndex - CHUNK_FIRST_SPAN_INDEX;
+  let visibilityMask = 1u << (chunkIndex & 31u);
+  if ((visibilityFlags[chunkIndex >> 5u] & visibilityMask) == 0u) {
+    return;
+  }
+  let span = spans[chunkIndex];
+  let dictionaryIndex = min(span.group * 4u + (span.flags & 3u), ${TRACE_LABEL_DICTIONARY.length - 1}u);
+  let metric = dictionaryMetrics[dictionaryIndex];
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let spanPixelWidth = span.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
+  let lanePixelHeight =
+    max(viewUniforms.viewportHeight, 1.0) /
+    max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  if (
+    metric.glyphCount == 0u ||
+    spanPixelWidth < metric.advancePixels + LABEL_HORIZONTAL_PADDING * 2.0 ||
+    lanePixelHeight < LABEL_MINIMUM_LANE_HEIGHT
+  ) {
+    return;
+  }
+  let firstGlyph = reserveGlyphs(metric.glyphCount);
+  if (firstGlyph == 0xffffffffu) {
+    return;
+  }
+  for (var glyphOffset = 0u; glyphOffset < metric.glyphCount; glyphOffset++) {
+    labelGlyphs[firstGlyph + glyphOffset] = TraceLabelGlyph(
+      span.start,
+      span.duration,
+      span.lane,
+      span.threadIndex,
+      dictionaryIndex,
+      glyphOffset
+    );
+  }
+}`;
+}
+
+/** Dictionary-backed span labels reading only GPU-selected fitted glyph occurrences. */
+export const TRACE_LABEL_RENDER_SHADER = /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+struct TraceLabelGlyph {
+  start: f32,
+  duration: f32,
+  lane: u32,
+  threadIndex: u32,
+  dictionaryIndex: u32,
+  glyphOffset: u32,
+};
+struct DictionaryTextStyle {
+  color: vec4<f32>,
+  glyphScale: f32,
+  sdfThreshold: f32,
+  sdfSmoothing: f32,
+  renderMode: u32,
+};
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) textureCoordinate: vec2<f32>,
+  @interpolate(flat) @location(1) atlasPage: u32,
+  @location(2) color: vec4<f32>,
+  @location(3) glyphPixelOffset: vec2<f32>,
+  @interpolate(flat) @location(4) clipRect: vec4<f32>,
+};
+@group(0) @binding(0) var<storage, read> labelGlyphs: array<TraceLabelGlyph>;
+@group(0) @binding(1) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(2) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read> textDictionaryGlyphRanges: array<vec2<u32>>;
+@group(0) @binding(5) var<storage, read> textDictionaryGlyphRecords: array<vec2<u32>>;
+@group(0) @binding(6) var<storage, read> textGlyphFrames: array<vec4<f32>>;
+@group(0) @binding(7) var<uniform> textDictionaryStyle: DictionaryTextStyle;
+@group(0) @binding(8) var fontAtlasTexture: texture_2d_array<f32>;
+@group(0) @binding(9) var fontAtlasTextureSampler: sampler;
+
+fn unpackLowInt16(word: u32) -> i32 {
+  return i32(word << 16u) >> 16;
+}
+
+fn unpackHighInt16(word: u32) -> i32 {
+  return i32(word) >> 16;
+}
+
+fn isGlyphVertexClipped(glyphPixelOffset: vec2<f32>, clipRect: vec4<f32>) -> bool {
+  return glyphPixelOffset.x < clipRect.x ||
+    glyphPixelOffset.x > clipRect.x + clipRect.z ||
+    glyphPixelOffset.y < clipRect.y ||
+    glyphPixelOffset.y > clipRect.y + clipRect.w;
+}
+
+@vertex
+fn vertexMain(
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32
+) -> VertexOutput {
+  let occurrence = labelGlyphs[instanceIndex];
+  let dictionaryRange = textDictionaryGlyphRanges[occurrence.dictionaryIndex];
+  let glyphRecord = textDictionaryGlyphRecords[dictionaryRange.x + occurrence.glyphOffset];
+  let glyphId = glyphRecord.y & 0xffffu;
+  let glyphFrame = textGlyphFrames[glyphId];
+  let corner = getCorner(vertexIndex);
+  let glyphOffset = vec2<f32>(
+    f32(unpackLowInt16(glyphRecord.x)),
+    f32(unpackHighInt16(glyphRecord.x))
+  );
+  let glyphPixelOffset =
+    vec2<f32>(4.0, -0.75) +
+    (glyphOffset + corner * glyphFrame.zw) * textDictionaryStyle.glyphScale;
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let spanPixelWidth = occurrence.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
+  let lanePixelHeight =
+    max(viewUniforms.viewportHeight, 1.0) /
+    max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  let clipRect = vec4<f32>(0.0, -lanePixelHeight * 0.5, spanPixelWidth, lanePixelHeight);
+  let localLane = select(
+    0u,
+    occurrence.lane % LANES_PER_THREAD,
+    threadStates[occurrence.threadIndex] != 0u
+  );
+  let lane = f32(threadOffsets[occurrence.threadIndex] + localLane);
+  let x =
+    (occurrence.start - viewUniforms.timeMin) / timeRange * 2.0 - 1.0 +
+    glyphPixelOffset.x * 2.0 / max(viewUniforms.viewportWidth, 1.0);
+  let y =
+    1.0 - (lane + 0.5 - viewUniforms.laneMin) /
+      max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0) * 2.0 -
+    glyphPixelOffset.y * 2.0 / max(viewUniforms.viewportHeight, 1.0);
+  var output: VertexOutput;
+  output.position = vec4<f32>(x, y, 0.0, 1.0);
+  output.textureCoordinate =
+    (glyphFrame.xy + corner * glyphFrame.zw) /
+    vec2<f32>(textureDimensions(fontAtlasTexture));
+  output.atlasPage = glyphRecord.y >> 16u;
+  output.color = vec4<f32>(
+    textDictionaryStyle.color.rgb,
+    textDictionaryStyle.color.a * (1.0 - getDensityBlend())
+  );
+  output.glyphPixelOffset = glyphPixelOffset;
+  output.clipRect = clipRect;
+  return output;
+}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+  if (isGlyphVertexClipped(input.glyphPixelOffset, input.clipRect)) {
+    discard;
+  }
+  let sampledAlpha = textureSample(
+    fontAtlasTexture,
+    fontAtlasTextureSampler,
+    input.textureCoordinate,
+    i32(input.atlasPage)
+  ).a;
+  let glyphAlpha = select(
+    sampledAlpha,
+    smoothstep(
+      textDictionaryStyle.sdfThreshold - textDictionaryStyle.sdfSmoothing,
+      textDictionaryStyle.sdfThreshold + textDictionaryStyle.sdfSmoothing,
+      sampledAlpha
+    ),
+    textDictionaryStyle.renderMode != 0u
+  );
+  if (glyphAlpha <= 0.01 || input.color.a <= 0.01) {
+    discard;
+  }
+  return vec4<f32>(input.color.rgb, input.color.a * glyphAlpha);
 }`;
 
 const TRACE_VISIBILITY_FILTER_DECLARATIONS = /* wgsl */ `
@@ -216,7 +478,8 @@ struct VertexOutput {
   let isReached =
     (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   let hasSelection = viewUniforms.selectedSpanIndex != 0xffffffffu;
-  let focusOpacity = select(1.0, select(0.22, 1.0, isReached), hasSelection);
+  let focusEnabled = viewUniforms.focusMode != 0u && hasSelection;
+  let focusOpacity = select(1.0, select(0.22, 1.0, isReached), focusEnabled);
   let baseColor = getGroupColor(span.group) * pulse;
   // Long spans remain recognizable first; sub-pixel spans emerge only as they become readable.
   let spanPixelWidth = span.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
@@ -915,6 +1178,44 @@ fn main(
   if (sourceVisible && timePicked && lanePicked) {
     atomicMin(&pickResult[0], sourceIndex);
   }
+}`;
+}
+
+/** Copies the winning source row into the small pick result buffer for one-shot readback. */
+export function getPickResolveShader(props: TraceSpanChunkShaderProps): string {
+  return /* wgsl */ `
+${getSpanChunkDeclarations(props)}
+struct TraceSpan {
+  start: f32,
+  duration: f32,
+  lane: u32,
+  group: u32,
+  processIndex: u32,
+  threadIndex: u32,
+  sourceIndex: u32,
+  flags: u32,
+};
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read_write> pickResult: array<atomic<u32>>;
+
+@compute @workgroup_size(1)
+fn main() {
+  let sourceIndex = atomicLoad(&pickResult[0]);
+  if (
+    sourceIndex < CHUNK_FIRST_SPAN_INDEX ||
+    sourceIndex >= CHUNK_FIRST_SPAN_INDEX + CHUNK_SPAN_COUNT
+  ) {
+    return;
+  }
+  let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
+  atomicStore(&pickResult[1], bitcast<u32>(span.start));
+  atomicStore(&pickResult[2], bitcast<u32>(span.duration));
+  atomicStore(&pickResult[3], span.lane);
+  atomicStore(&pickResult[4], span.group);
+  atomicStore(&pickResult[5], span.processIndex);
+  atomicStore(&pickResult[6], span.threadIndex);
+  atomicStore(&pickResult[7], span.sourceIndex);
+  atomicStore(&pickResult[8], span.flags);
 }`;
 }
 

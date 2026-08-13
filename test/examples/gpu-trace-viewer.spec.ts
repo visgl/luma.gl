@@ -84,7 +84,15 @@ describe('GPU hierarchical trace viewer', () => {
         frameIndex: number;
         traceDuration: number;
         view: {timeMin: number; timeMax: number; laneMin: number; laneMax: number};
-        pendingPick: {x: number; y: number; requestIdentifier: number} | null;
+        pendingPick: {
+          time: number;
+          lane: number;
+          requestIdentifier: number;
+          intent: 'hover' | 'select';
+          clientX: number;
+          clientY: number;
+        } | null;
+        latestSelectionPickRequestIdentifier: number;
         graphInspector: {
           getSnapshot: () => {
             graphs: Array<{
@@ -145,7 +153,15 @@ describe('GPU hierarchical trace viewer', () => {
         graphInspection.counters.find(counter => counter.id === 'candidate-span-percent')
           ?.latestValue
       ).toBe(0);
-      state.pendingPick = {x: 0, y: 0, requestIdentifier: 1};
+      state.latestSelectionPickRequestIdentifier = 1;
+      state.pendingPick = {
+        time: 0,
+        lane: 0,
+        requestIdentifier: 1,
+        intent: 'select',
+        clientX: 0,
+        clientY: 0
+      };
       viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
       device.submit();
       expect(
