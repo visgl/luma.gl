@@ -111,6 +111,7 @@ import {
   getTraceLabelClearShader,
   TRACE_DENSITY_RENDER_SHADER,
   TRACE_DEPENDENCY_RENDER_SHADER,
+  TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE,
   TRACE_LABEL_RENDER_SHADER,
   TRACE_RENDER_SHADER
 } from './trace-shaders';
@@ -224,6 +225,7 @@ type TraceGraphResources = {
   labelDrawCommandIndex: number;
   spanBatchIndex: Buffer;
   candidateBatchIds: Buffer;
+  candidateChunkOffsets: Buffer;
   exactCandidateBatchIds: Buffer;
   dependencies: Buffer;
   dependencyBatchIndex: Buffer;
@@ -271,6 +273,7 @@ function getTraceResourceBuffers(resources: TraceGraphResources): Array<{byteLen
     ]),
     resources.spanBatchIndex,
     resources.candidateBatchIds,
+    resources.candidateChunkOffsets,
     resources.exactCandidateBatchIds,
     resources.dependencies,
     resources.dependencyBatchIndex,
@@ -370,6 +373,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private flatController: FlatController | null = null;
   private pickTooltipElement: HTMLElement | null = null;
   private statsElement: HTMLElement | null = null;
+  private frameStatsElement: HTMLElement | null = null;
   private inspectorPanel: GPUCommandGraphInspectorPanel | null = null;
   private capacityElement: HTMLElement | null = null;
   private selectionElement: HTMLElement | null = null;
@@ -380,6 +384,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private pendingDatasetRequest: {spanCapacity: number; dependencyCapacity: number} | null = null;
   private datasetRequestId = 0;
   private datasetStatus = 'Preparing source data…';
+  private gpuFrameInFlight = false;
+  private gpuFrameTimeMilliseconds = 0;
+  private lastRenderSignature = '';
+  private finalized = false;
 
   constructor({
     device,
@@ -469,6 +477,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.setViewTimeRange(timeMin, timeMin + windowSize);
       }
     }
+    const renderSignature = this.getRenderSignature(width, height);
+    if (this.gpuFrameInFlight || renderSignature === this.lastRenderSignature) {
+      return;
+    }
     const pick = this.pendingPick;
     const visibilityGeneration = (this.frameIndex % 0xfffffffe) + 1;
     resources.focusTraversalState.write(Uint32Array.of(this.focusDepth));
@@ -479,6 +491,28 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     if (!encoding) {
       return;
     }
+    this.lastRenderSignature = renderSignature;
+    this.gpuFrameInFlight = true;
+    const gpuFrameStartTime = performance.now();
+    queueMicrotask(() => {
+      const queue = (
+        device as Device & {handle?: {queue?: {onSubmittedWorkDone?: () => Promise<void>}}}
+      ).handle?.queue;
+      const submittedWork = queue?.onSubmittedWorkDone?.();
+      if (!submittedWork) {
+        this.gpuFrameInFlight = false;
+        return;
+      }
+      void submittedWork
+        .catch(() => undefined)
+        .finally(() => {
+          if (!this.finalized) {
+            this.gpuFrameTimeMilliseconds = performance.now() - gpuFrameStartTime;
+            this.gpuFrameInFlight = false;
+            this.updateInspector();
+          }
+        });
+    });
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
     if (
@@ -503,7 +537,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.deferredPickFrameCount++;
       }
     }
-    if (this.frameIndex % 60 === 0) {
+    if (this.frameIndex === 1 || this.frameIndex % 60 === 0) {
       const readbackTicket = resources.readbackRing.tryAcquire();
       if (readbackTicket) {
         readbackTicket.copyFrom(device.commandEncoder, resources.drawCommands.buffer);
@@ -544,12 +578,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.droppedTelemetrySampleCount++;
       }
     }
-    if (this.frameIndex % 10 === 0) {
+    if (this.frameIndex === 1 || this.frameIndex % 10 === 0) {
       this.updateInspector();
     }
   }
 
   override onFinalize(): void {
+    this.finalized = true;
     this.datasetRequestId++;
     this.datasetWorker?.terminate();
     this.datasetWorker = null;
@@ -881,11 +916,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     });
     const densityCandidateDispatchCommands = new DispatchCommandBuffer(this.device, {
       id: 'gpu-trace-density-candidate-dispatch-commands',
-      commands: [{x: TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT, y: 0, z: 1}]
+      commands: spanChunkData.map(() => ({x: TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT, y: 0, z: 1}))
     });
     const pickCandidateDispatchCommands = new DispatchCommandBuffer(this.device, {
       id: 'gpu-trace-pick-candidate-dispatch-commands',
-      commands: [{x: TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT, y: 0, z: 1}]
+      commands: spanChunkData.map(() => ({x: TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT, y: 0, z: 1}))
     });
     const candidateDependencyDispatchCommands = new DispatchCommandBuffer(this.device, {
       id: 'gpu-trace-candidate-dependency-dispatch-commands',
@@ -948,6 +983,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         'gpu-trace-candidate-batch-ids',
         dataset.spanBatches.length * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
+      ),
+      candidateChunkOffsets: this.createStorageBuffer(
+        'gpu-trace-candidate-chunk-offsets',
+        spanChunkData.length * UINT32_BYTE_LENGTH
       ),
       exactCandidateBatchIds: this.createStorageBuffer(
         'gpu-trace-exact-candidate-batch-ids',
@@ -1087,6 +1126,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         graph,
         'candidate-batch-ids',
         resources.candidateBatchIds
+      ),
+      candidateChunkOffsets: importTraceBuffer(
+        graph,
+        'candidate-chunk-offsets',
+        resources.candidateChunkOffsets
       ),
       exactCandidateBatchIds: importTraceBuffer(
         graph,
@@ -1304,15 +1348,17 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }).addToGraph(graph);
     addTraceComputePass(graph, {
       id: 'trace-candidate-pass-dispatch',
-      source: getCandidatePassDispatchShader(),
+      source: getCandidatePassDispatchShader(resources.spanChunks),
       bindings: [
         storageRead('candidateDispatchCommand', handles.candidateDispatchCommands),
         uniformBinding('viewUniforms', handles.uniforms),
         storageWrite('densityDispatchCommand', handles.densityCandidateDispatchCommands),
         storageWrite('pickDispatchCommand', handles.pickCandidateDispatchCommands),
-        storageRead('processStates', handles.processStates)
+        storageRead('processStates', handles.processStates),
+        storageRead('candidateBatchIds', handles.candidateBatchIds),
+        storageWrite('candidateChunkOffsets', handles.candidateChunkOffsets)
       ],
-      length: 1,
+      length: resources.spanChunks.length,
       workgroupSize: 1
     });
 
@@ -1455,7 +1501,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
               storageWrite('reachedSpans', handles.reachedSpans),
               storageRead('focusTraversalState', handles.focusTraversalState)
             ],
-            dispatchBuffer: focusDispatchCommands[currentFrontierIndex]
+            dispatchBuffer: focusDispatchCommands[currentFrontierIndex],
+            maximumInvocationCount:
+              Math.ceil(resources.focusFrontierCapacity / TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE) *
+              TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE
           });
           nodeWordBase += sourceNodeCount;
           offsetWordBase += sourceNodeCount + 1;
@@ -1503,7 +1552,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('reachedSpans', handles.reachedSpans),
           storageWrite('visibilityFlags', chunk.visibility)
         ],
-        dispatchBuffer: handles.exactCandidateDispatchCommands
+        dispatchBuffer: handles.exactCandidateDispatchCommands,
+        maximumInvocationCount: resources.spanBatchCount * TRACE_SPAN_BATCH_CAPACITY
       });
       if (resources.dependencyCount > 0) {
         addTraceIndirectComputePass(graph, {
@@ -1516,7 +1566,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             uniformBinding('viewUniforms', handles.uniforms),
             storageWrite('dependencySpanVisibility', handles.dependencySpanVisibility)
           ],
-          dispatchBuffer: handles.exactCandidateDispatchCommands
+          dispatchBuffer: handles.exactCandidateDispatchCommands,
+          maximumInvocationCount: resources.spanBatchCount * TRACE_SPAN_BATCH_CAPACITY
         });
       }
     }
@@ -1542,7 +1593,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageWrite('drawCommands', handles.drawCommands),
           uniformBinding('textDictionaryStyle', handles.labelStyleUniforms)
         ],
-        dispatchBuffer: handles.exactCandidateDispatchCommands
+        dispatchBuffer: handles.exactCandidateDispatchCommands,
+        maximumInvocationCount: resources.spanBatchCount * TRACE_SPAN_BATCH_CAPACITY
       });
     }
     addTraceComputePass(graph, {
@@ -1566,9 +1618,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('threadStates', handles.threadStates),
           storageRead('reachedSpans', handles.reachedSpans),
           storageWrite('densityBins', handles.densityBins),
-          storageRead('candidateDispatchCommand', handles.candidateDispatchCommands)
+          storageRead('candidateChunkOffsets', handles.candidateChunkOffsets)
         ],
-        dispatchBuffer: handles.densityCandidateDispatchCommands
+        dispatchBuffer: handles.densityCandidateDispatchCommands,
+        dispatchByteOffset: chunk.chunkIndex * 3 * UINT32_BYTE_LENGTH,
+        maximumInvocationCount: chunk.batchCount * TRACE_SPAN_BATCH_CAPACITY
       });
       addTraceIndirectComputePass(graph, {
         id: `trace-candidate-pick-${chunk.chunkIndex}`,
@@ -1582,9 +1636,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('threadOffsets', handles.threadOffsets),
           storageRead('threadStates', handles.threadStates),
           storageWrite('pickResult', handles.pickResult),
-          storageRead('candidateDispatchCommand', handles.candidateDispatchCommands)
+          storageRead('candidateChunkOffsets', handles.candidateChunkOffsets)
         ],
-        dispatchBuffer: handles.pickCandidateDispatchCommands
+        dispatchBuffer: handles.pickCandidateDispatchCommands,
+        dispatchByteOffset: chunk.chunkIndex * 3 * UINT32_BYTE_LENGTH,
+        maximumInvocationCount: chunk.batchCount * TRACE_SPAN_BATCH_CAPACITY
       });
     }
     for (const chunk of handles.spanChunks) {
@@ -1726,7 +1782,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           uniformBinding('viewUniforms', handles.uniforms),
           storageWrite('dependencyResults', handles.dependencyResults)
         ],
-        dispatchBuffer: handles.candidateDependencyDispatchCommands
+        dispatchBuffer: handles.candidateDependencyDispatchCommands,
+        maximumInvocationCount: resources.dependencyBatchCount * TRACE_WORKGROUP_SIZE
       });
       const visibleDependencyIds = graph.createDataView(handles.visibleDependencyIds, {
         format: 'uint32',
@@ -1789,7 +1846,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             storageWrite('dependencyEndpointPositions', handles.dependencyEndpointPositions)
           ],
           dispatchBuffer: endpointScatter.dispatchCommands.buffer,
-          dispatchByteOffset: chunk.chunkIndex * 3 * UINT32_BYTE_LENGTH
+          dispatchByteOffset: chunk.chunkIndex * 3 * UINT32_BYTE_LENGTH,
+          maximumInvocationCount: resources.dependencyCount * 2
         });
       }
     }
@@ -1797,6 +1855,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
 
     graph.addRenderPass({
       id: 'render-hierarchical-trace',
+      workload: {
+        operation: 'TraceRender',
+        commandCount: resources.spanDraws.length + (resources.dependencyCount > 0 ? 1 : 0) + 2,
+        maximumInvocationCount:
+          resources.spanCount * 6 +
+          resources.dependencyCount * 2 +
+          TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT * 6 +
+          TRACE_LABEL_GLYPH_CAPACITY * 6
+      },
       resources: renderResources,
       compile: () => ({
         getRenderPassProps: () => ({
@@ -2111,6 +2178,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ]),
       resources.spanBatchIndex,
       resources.candidateBatchIds,
+      resources.candidateChunkOffsets,
       resources.exactCandidateBatchIds,
       resources.dependencies,
       resources.dependencyBatchIndex,
@@ -2147,7 +2215,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       title: 'GPU Trace Manipulation',
       panels: [
         makeHtmlCustomPanel({
-          id: 'gpu-trace-overview',
+          id: 'gpu-trace-dashboard',
           title: '',
           html: `<section data-trace-dashboard>
             ${getTracePanelStyleMarkup()}
@@ -2156,37 +2224,36 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
               <strong>One compiled graph, live trace policies</strong>
               <p>Hierarchy layout, batch culling, dependency focus, stable compaction, picking, adaptive density, and indirect draws stay on the GPU.</p>
             </div>
-          </section>`
-        }),
-        makeHtmlCustomPanel({
-          id: 'gpu-trace-controls',
-          title: 'Trace controls',
-          html: this.getControlsHtml(),
-          onRender: root => this.bindPanelControls(root)
-        }),
-        makeHtmlCustomPanel({
-          id: 'gpu-trace-processes',
-          title: 'Processes and threads',
-          html: this.getHierarchyHtml(),
-          onRender: root => this.bindHierarchyControls(root)
-        }),
-        makeHtmlCustomPanel({
-          id: 'gpu-trace-stats',
-          title: 'Live GPU graph',
-          html: `<section data-trace-dashboard>
-            ${getTracePanelStyleMarkup()}
-            <div class="trace-metric-grid" data-capacity></div>
-            <div class="trace-selection" data-selection></div>
-            <section class="trace-section">
-              <div class="trace-section-header"><span class="trace-section-title">Live workload</span><span class="trace-section-note">sampled GPU output</span></div>
-              <div data-stats></div>
-            </section>
-            <section class="trace-section">
-              <div class="trace-section-header"><span class="trace-section-title">Command graph</span><span class="trace-section-note">CPU / GPU p50 and p95</span></div>
-              <div data-command-graph-inspector></div>
-            </section>
+            <div class="trace-frame-metric-grid" data-frame-stats></div>
+            <nav class="trace-tabs" role="tablist" aria-label="Trace viewer controls">
+              <button type="button" role="tab" aria-selected="true" data-trace-tab="overview">Overview</button>
+              <button type="button" role="tab" aria-selected="false" data-trace-tab="filters">Filters</button>
+              <button type="button" role="tab" aria-selected="false" data-trace-tab="hierarchy">Hierarchy</button>
+              <button type="button" role="tab" aria-selected="false" data-trace-tab="graph">GPUGraph</button>
+            </nav>
+            <div class="trace-tab-panel" role="tabpanel" data-trace-tab-panel="overview">
+              <div class="trace-metric-grid" data-capacity></div>
+              <div class="trace-selection" data-selection></div>
+              <section class="trace-section">
+                <div class="trace-section-header"><span class="trace-section-title">Live workload</span><span class="trace-section-note">sampled GPU output</span></div>
+                <div data-stats></div>
+              </section>
+            </div>
+            <div class="trace-tab-panel" role="tabpanel" data-trace-tab-panel="filters" hidden>
+              ${this.getControlsHtml()}
+            </div>
+            <div class="trace-tab-panel" role="tabpanel" data-trace-tab-panel="hierarchy" hidden>
+              ${this.getHierarchyHtml()}
+            </div>
+            <div class="trace-tab-panel" role="tabpanel" data-trace-tab-panel="graph" hidden>
+              <section class="trace-section">
+                <div class="trace-section-header"><span class="trace-section-title">Command graph</span><span class="trace-section-note">CPU / GPU p50 and p95</span></div>
+                <div data-command-graph-inspector></div>
+              </section>
+            </div>
           </section>`,
           onRender: root => {
+            this.frameStatsElement = root.querySelector('[data-frame-stats]');
             this.capacityElement = root.querySelector('[data-capacity]');
             this.selectionElement = root.querySelector('[data-selection]');
             this.statsElement = root.querySelector('[data-stats]');
@@ -2197,8 +2264,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
                 counterLabels: TRACE_INSPECTOR_COUNTER_LABELS
               }
             );
+            const removeTabs = this.bindPanelTabs(root);
+            const removeControls = this.bindPanelControls(root);
+            const removeHierarchy = this.bindHierarchyControls(root);
             this.updateInspector();
             return () => {
+              removeTabs();
+              removeControls();
+              removeHierarchy();
+              this.frameStatsElement = null;
               this.capacityElement = null;
               this.selectionElement = null;
               this.statsElement = null;
@@ -2209,6 +2283,26 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         })
       ]
     });
+  }
+
+  private bindPanelTabs(root: HTMLElement): () => void {
+    const onClick = (event: Event): void => {
+      const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+        '[data-trace-tab]'
+      );
+      if (!button) {
+        return;
+      }
+      const selectedTab = button.dataset.traceTab;
+      for (const tab of root.querySelectorAll<HTMLButtonElement>('[data-trace-tab]')) {
+        tab.setAttribute('aria-selected', String(tab === button));
+      }
+      for (const panel of root.querySelectorAll<HTMLElement>('[data-trace-tab-panel]')) {
+        panel.hidden = panel.dataset.traceTabPanel !== selectedTab;
+      }
+    };
+    root.addEventListener('click', onClick);
+    return () => root.removeEventListener('click', onClick);
   }
 
   private getControlsHtml(): string {
@@ -2529,6 +2623,26 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     if (!stats || !resources) {
       return;
     }
+    if (this.frameStatsElement) {
+      const preflight = resources.compiled.preflight;
+      const computeDispatchCount = preflight.nodes
+        .filter(node => node.type === 'compute')
+        .reduce((total, node) => total + node.commandCount, 0);
+      const drawCallCount = preflight.nodes
+        .filter(node => node.type === 'render')
+        .reduce((total, node) => total + node.commandCount, 0);
+      const invocationNodeCount = preflight.nodes.filter(
+        node => node.maximumInvocationCount > 0
+      ).length;
+      const framesPerSecond = this.gpuFrameTimeMilliseconds
+        ? 1000 / this.gpuFrameTimeMilliseconds
+        : 0;
+      this.frameStatsElement.innerHTML = `
+        ${makeMetricCard('GPU FPS', framesPerSecond ? framesPerSecond.toFixed(framesPerSecond >= 10 ? 0 : 1) : '—', this.gpuFrameInFlight ? 'frame in flight' : `${this.gpuFrameTimeMilliseconds.toFixed(1)} ms paced frame`)}
+        ${makeMetricCard('Shader invocations', `≤ ${formatCount(preflight.maximumInvocationCount)}`, `${invocationNodeCount}/${preflight.nodes.length} bounded nodes · fragment excluded`)}
+        ${makeMetricCard('Draw calls', formatCount(drawCallCount), 'per graph frame')}
+        ${makeMetricCard('Compute dispatches', formatCount(computeDispatchCount), 'per graph frame')}`;
+    }
     if (this.capacityElement) {
       const capacityContract = getTraceCapacityContract(
         this.spanCapacity,
@@ -2691,6 +2805,33 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const maximumTimeMin = Math.max(0, this.traceDuration - range);
     this.view.timeMin = clamp(timeMin, 0, maximumTimeMin);
     this.view.timeMax = this.view.timeMin + range;
+  }
+
+  /** Identifies every input that can change the GPU graph result between animation ticks. */
+  private getRenderSignature(width: number, height: number): string {
+    return [
+      this.compileCount,
+      width,
+      height,
+      this.view.timeMin,
+      this.view.timeMax,
+      this.view.laneMin,
+      this.view.laneMax,
+      this.enabledMask,
+      this.statusMask,
+      this.activeFilterMask,
+      this.dependencyMask,
+      this.minimumDuration,
+      this.selectedSpanIndex,
+      this.focusOnly ? 1 : 0,
+      this.focusDepth,
+      this.lodFadeEnabled ? 1 : 0,
+      this.labelsEnabled ? 1 : 0,
+      this.densityPattern,
+      this.pendingPick?.requestIdentifier ?? -1,
+      ...this.processStates,
+      ...this.threadStates
+    ].join(':');
   }
 }
 
@@ -2889,6 +3030,7 @@ function addTraceIndirectComputePass<Parameters>(
     bindings: readonly TraceComputePassBinding[];
     dispatchBuffer: GraphBufferHandle;
     dispatchByteOffset?: number;
+    maximumInvocationCount?: number;
   }
 ): void {
   graph.addComputePass({
@@ -2896,6 +3038,7 @@ function addTraceIndirectComputePass<Parameters>(
     workload: {
       operation: 'TraceComputeIndirect',
       commandCount: 1,
+      maximumInvocationCount: props.maximumInvocationCount,
       readByteLength: props.bindings.reduce(
         (total, binding) =>
           total + (binding.usage === 'storage-read' ? binding.buffer.byteLength : 0),

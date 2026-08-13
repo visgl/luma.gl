@@ -29,9 +29,6 @@ import {
 } from './trace-data';
 
 const TRACE_WORKGROUP_SIZE = 256;
-// WebGPU guarantees at least 65,535 workgroups per dispatch dimension. Candidate batches can
-// exceed that at the 25M scale, so full-data passes tile batch rows across Y and Z.
-const TRACE_CANDIDATE_DISPATCH_ROW_COUNT = 65_535;
 export const TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE = 64;
 
 export type TraceSpanChunkShaderProps = {
@@ -906,19 +903,49 @@ fn main() {
 }
 
 /** Routes candidate work to only the passes needed by the active LOD and interaction mode. */
-export function getCandidatePassDispatchShader(): string {
+export function getCandidatePassDispatchShader(
+  chunks: readonly {firstBatchIndex: number; batchCount: number}[] = [
+    {firstBatchIndex: 0, batchCount: 1}
+  ]
+): string {
+  const firstBatchIndices = chunks.map(chunk => `${chunk.firstBatchIndex}u`).join(', ');
+  const lastBatchIndices = chunks
+    .map(chunk => `${chunk.firstBatchIndex + chunk.batchCount}u`)
+    .join(', ');
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
 const PROCESS_COUNT: u32 = ${TRACE_PROCESS_COUNT}u;
-const CANDIDATE_DISPATCH_ROW_COUNT: u32 = ${TRACE_CANDIDATE_DISPATCH_ROW_COUNT}u;
+const CHUNK_COUNT: u32 = ${chunks.length}u;
+const FIRST_BATCH_INDICES = array<u32, ${chunks.length}>(${firstBatchIndices});
+const LAST_BATCH_INDICES = array<u32, ${chunks.length}>(${lastBatchIndices});
 @group(0) @binding(0) var<storage, read> candidateDispatchCommand: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(2) var<storage, read_write> densityDispatchCommand: array<u32>;
 @group(0) @binding(3) var<storage, read_write> pickDispatchCommand: array<u32>;
 @group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(6) var<storage, read_write> candidateChunkOffsets: array<u32>;
+
+fn lowerBoundCandidate(target: u32, candidateBatchCount: u32) -> u32 {
+  var low = 0u;
+  var high = candidateBatchCount;
+  while (low < high) {
+    let middle = low + (high - low) / 2u;
+    if (candidateBatchIds[middle] < target) {
+      low = middle + 1u;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
 
 @compute @workgroup_size(1)
-fn main() {
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let chunkIndex = globalId.x;
+  if (chunkIndex >= CHUNK_COUNT) {
+    return;
+  }
   let candidateWorkgroupCount = candidateDispatchCommand[0];
   let candidateBatchCount = candidateDispatchCommand[1];
   let densityModeActive = isDensityModeActive();
@@ -928,19 +955,24 @@ fn main() {
     hasCollapsedProcess = hasCollapsedProcess || processStates[processIndex] == 0u;
   }
   let densityActive = densityModeActive || hasCollapsedProcess;
-  let densityBatchCount = select(0u, candidateBatchCount, densityActive);
-  let pickBatchCount = select(0u, candidateBatchCount, pickActive);
+  let firstCandidateIndex = lowerBoundCandidate(
+    FIRST_BATCH_INDICES[chunkIndex],
+    candidateBatchCount
+  );
+  let lastCandidateIndex = lowerBoundCandidate(
+    LAST_BATCH_INDICES[chunkIndex],
+    candidateBatchCount
+  );
+  let chunkCandidateCount = lastCandidateIndex - firstCandidateIndex;
+  let commandOffset = chunkIndex * 3u;
+  candidateChunkOffsets[chunkIndex] = firstCandidateIndex;
 
-  densityDispatchCommand[0] = candidateWorkgroupCount;
-  densityDispatchCommand[1] = min(densityBatchCount, CANDIDATE_DISPATCH_ROW_COUNT);
-  densityDispatchCommand[2] =
-    (densityBatchCount + CANDIDATE_DISPATCH_ROW_COUNT - 1u) /
-    CANDIDATE_DISPATCH_ROW_COUNT;
-  pickDispatchCommand[0] = candidateWorkgroupCount;
-  pickDispatchCommand[1] = min(pickBatchCount, CANDIDATE_DISPATCH_ROW_COUNT);
-  pickDispatchCommand[2] =
-    (pickBatchCount + CANDIDATE_DISPATCH_ROW_COUNT - 1u) /
-    CANDIDATE_DISPATCH_ROW_COUNT;
+  densityDispatchCommand[commandOffset] = candidateWorkgroupCount;
+  densityDispatchCommand[commandOffset + 1u] = select(0u, chunkCandidateCount, densityActive);
+  densityDispatchCommand[commandOffset + 2u] = 1u;
+  pickDispatchCommand[commandOffset] = candidateWorkgroupCount;
+  pickDispatchCommand[commandOffset + 1u] = select(0u, chunkCandidateCount, pickActive);
+  pickDispatchCommand[commandOffset + 2u] = 1u;
 }`;
 }
 
@@ -996,18 +1028,14 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
 @group(0) @binding(8) var<storage, read_write> densityBins: array<atomic<u32>>;
-@group(0) @binding(9) var<storage, read> candidateDispatchCommand: array<u32>;
+@group(0) @binding(9) var<storage, read> candidateChunkOffsets: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let candidateIndex = workgroupId.y +
-    workgroupId.z * ${TRACE_CANDIDATE_DISPATCH_ROW_COUNT}u;
-  if (candidateIndex >= candidateDispatchCommand[1]) {
-    return;
-  }
+  let candidateIndex = candidateChunkOffsets[CHUNK_INDEX] + workgroupId.y;
   let batchIndex = candidateBatchIds[candidateIndex];
   if (
     batchIndex < CHUNK_FIRST_BATCH_INDEX ||
@@ -1238,7 +1266,7 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(7) var<storage, read_write> pickResult: array<atomic<u32>>;
-@group(0) @binding(8) var<storage, read> candidateDispatchCommand: array<u32>;
+@group(0) @binding(8) var<storage, read> candidateChunkOffsets: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
@@ -1248,11 +1276,7 @@ fn main(
   if (viewUniforms.pickLane < 0.0) {
     return;
   }
-  let candidateIndex = workgroupId.y +
-    workgroupId.z * ${TRACE_CANDIDATE_DISPATCH_ROW_COUNT}u;
-  if (candidateIndex >= candidateDispatchCommand[1]) {
-    return;
-  }
+  let candidateIndex = candidateChunkOffsets[CHUNK_INDEX] + workgroupId.y;
   let batchIndex = candidateBatchIds[candidateIndex];
   if (
     batchIndex < CHUNK_FIRST_BATCH_INDEX ||

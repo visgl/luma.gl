@@ -428,7 +428,10 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getTraceLabelClearShader(5),
     getCandidateLabelShader(spanChunk, 5),
     getCandidateDependencySpanVisibilityShader(spanChunk),
-    getCandidatePassDispatchShader(),
+    getCandidatePassDispatchShader([
+      {firstBatchIndex: 0, batchCount: 2},
+      {firstBatchIndex: 2, batchCount: 1}
+    ]),
     getDensityClearShader(),
     getSpanVisibilityClearShader(11),
     getCandidateDensityShader(spanChunk),
@@ -480,19 +483,22 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     'density aggregation uses scroll-stable trace-time bin membership'
   );
   t.match(
-    getCandidatePassDispatchShader(),
-    /min\(densityBatchCount, CANDIDATE_DISPATCH_ROW_COUNT\)/,
-    'density dispatch tiles candidate batches below the portable per-dimension limit'
+    getCandidatePassDispatchShader([
+      {firstBatchIndex: 0, batchCount: 7},
+      {firstBatchIndex: 7, batchCount: 5}
+    ]),
+    /lowerBoundCandidate/,
+    'density dispatch partitions the stable candidate list at span-chunk boundaries'
   );
   t.match(
     getCandidateDensityShader(spanChunk),
-    /workgroupId\.z \* 65535u/,
-    'density aggregation resolves tiled candidate rows across Y and Z'
+    /candidateChunkOffsets\[CHUNK_INDEX\] \+ workgroupId\.y/,
+    'density aggregation starts at its compacted chunk candidate offset'
   );
   t.match(
     getCandidatePickShader(spanChunk),
-    /candidateIndex >= candidateDispatchCommand\[1\]/,
-    'picking rejects padded rows in its tiled candidate dispatch'
+    /candidateChunkOffsets\[CHUNK_INDEX\] \+ workgroupId\.y/,
+    'picking consumes only the candidate rows assigned to its span chunk'
   );
   t.match(
     TRACE_DENSITY_RENDER_SHADER,
