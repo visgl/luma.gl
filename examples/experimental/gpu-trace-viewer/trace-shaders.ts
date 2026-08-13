@@ -221,7 +221,12 @@ struct VertexOutput {
   // Long spans remain recognizable first; sub-pixel spans emerge only as they become readable.
   let spanPixelWidth = span.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
   let spanReadability = smoothstep(0.6, 1.4, spanPixelWidth);
-  let exactOpacity = (1.0 - getDensityBlend()) * spanReadability;
+  let readabilityOpacity = select(
+    1.0,
+    spanReadability,
+    viewUniforms.lodFadeEnabled != 0u
+  );
+  let exactOpacity = (1.0 - getDensityBlend()) * readabilityOpacity;
   let minimumClipWidth = 3.0 / max(viewUniforms.viewportWidth, 1.0);
   var output: VertexOutput;
   output.position = vec4<f32>(

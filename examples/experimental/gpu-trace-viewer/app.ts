@@ -98,8 +98,8 @@ export const title = 'GPU Hierarchical Trace Viewer';
 export const description =
   'GPU-resident hierarchical traces with live filtering, adaptive density LOD, dependency traversal, picking, and indirect rendering.';
 
-const DEFAULT_CAPACITY = 250_000;
-const DEFAULT_DEPENDENCY_CAPACITY = 250_000;
+const DEFAULT_CAPACITY = 4_000_000;
+const DEFAULT_DEPENDENCY_CAPACITY = 4_000_000;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const TRACE_WORKGROUP_SIZE = 256;
 const TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT = Math.ceil(
