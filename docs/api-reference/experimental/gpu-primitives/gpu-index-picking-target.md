@@ -109,3 +109,12 @@ above this primitive.
 Use [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring) to move
 the small packed result to the CPU without allocating or remapping the same staging buffer every
 frame.
+
+## Performance notes
+
+### Subgroup acceleration
+
+When the device exposes WebGPU subgroups, valid region hits in each subgroup reserve one contiguous
+result block with a single global atomic operation. Each hit still publishes one object/batch pair,
+the total count and overflow contract are unchanged, and output order remains unspecified. Devices
+without subgroup support use the portable per-hit atomic append path automatically.

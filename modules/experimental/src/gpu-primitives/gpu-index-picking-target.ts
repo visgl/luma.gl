@@ -17,6 +17,7 @@ import {
   getViewElementOffset,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {getGPUShaderSubgroupStrategy, getSubgroupBallotHelpersWGSL} from './gpu-subgroup-utils';
 
 /** WebGPU-aligned byte capacity required by the single-pixel picking readback buffer. */
 export const INDEX_PICKING_READBACK_BYTE_LENGTH = 256;
@@ -264,20 +265,61 @@ export class GPUIndexPickingTarget<Parameters = void> {
         {buffer: props.result, usage: 'storage-read-write'}
       ],
       compile: ({device}) => {
+        const useSubgroups = getGPUShaderSubgroupStrategy(device) === 'subgroups';
         const computation = new Computation(device, {
           id,
-          source: `const REGION_OFFSET: u32 = ${regionOffset}u;
+          source: `${useSubgroups ? 'enable subgroups;' : ''}
+const REGION_OFFSET: u32 = ${regionOffset}u;
 const RESULT_OFFSET: u32 = ${resultOffset}u;
 const RESULT_CAPACITY: u32 = ${capacity}u;
 const TARGET_SIZE: vec2<u32> = vec2<u32>(${this.width}u, ${this.height}u);
 @group(0) @binding(0) var indices: texture_2d<i32>;
 @group(0) @binding(1) var<storage, read> region: array<u32>;
 @group(0) @binding(2) var<storage, read_write> result: array<atomic<u32>>;
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(8, 8)
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
+) {
   let extent = vec2<u32>(region[REGION_OFFSET + 2u], region[REGION_OFFSET + 3u]);
-  if (any(globalId.xy >= extent)) { return; }
+${
+  useSubgroups
+    ? `  let origin = vec2<u32>(region[REGION_OFFSET], region[REGION_OFFSET + 1u]);
+  var pick = vec2<i32>(${INDEX_PICKING_INVALID_INDEX}, ${INDEX_PICKING_INVALID_INDEX});
+  var selected = false;
+  if (all(globalId.xy < extent) && all(origin < TARGET_SIZE)) {
+    let pixel = origin + globalId.xy;
+    if (all(pixel < TARGET_SIZE)) {
+      pick = textureLoad(indices, vec2<i32>(pixel), 0).xy;
+      selected = pick.x != ${INDEX_PICKING_INVALID_INDEX};
+    }
+  }
+  let selectedBallot = subgroupBallot(selected);
+  let selectedCount = getBallotLaneCount(selectedBallot);
+  let leaderInvocation = getFirstBallotLane(selectedBallot);
+  var outputBase = 0u;
+  if (selected && subgroupInvocationId == leaderInvocation) {
+    outputBase = atomicAdd(&result[RESULT_OFFSET], selectedCount);
+  }
+  outputBase = subgroupShuffle(outputBase, leaderInvocation);
+  if (selected) {
+    let outputIndex = outputBase +
+      getBallotPrefixLaneCount(selectedBallot, subgroupInvocationId);
+    if (outputIndex < RESULT_CAPACITY) {
+      let pairOffset = RESULT_OFFSET + 2u + outputIndex * 2u;
+      atomicStore(&result[pairOffset], bitcast<u32>(pick.x));
+      atomicStore(&result[pairOffset + 1u], bitcast<u32>(pick.y));
+    }
+  }
+  if (
+    selected &&
+    subgroupInvocationId == leaderInvocation &&
+    outputBase + selectedCount > RESULT_CAPACITY
+  ) {
+    atomicStore(&result[RESULT_OFFSET + 1u], 1u);
+  }`
+    : `  if (any(globalId.xy >= extent)) { return; }
   let origin = vec2<u32>(region[REGION_OFFSET], region[REGION_OFFSET + 1u]);
   if (any(origin >= TARGET_SIZE)) { return; }
   let pixel = origin + globalId.xy;
@@ -291,7 +333,8 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     atomicStore(&result[pairOffset + 1u], bitcast<u32>(pick.y));
   } else {
     atomicStore(&result[RESULT_OFFSET + 1u], 1u);
-  }
+  }`
+}
 }`,
           shaderLayout: {
             bindings: [

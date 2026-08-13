@@ -100,7 +100,7 @@ export function LiveBenchmarkPanel({
         <div aria-live="polite" style={{marginTop: '1rem', overflowX: 'auto'}}>
           {results}
         </div>
-      ) : idleContent ? (
+      ) : idleContent && !unsupportedReason ? (
         <div style={{marginTop: '1rem', overflowX: 'auto'}}>{idleContent}</div>
       ) : null}
 

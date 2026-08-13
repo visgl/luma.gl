@@ -474,7 +474,8 @@ function addPartitionRangeCountPass<Parameters>(
   }
 ): void {
   const {rangeLayout} = compaction;
-  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
 ${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_START: u32 = ${props.rangeStart}u;
@@ -551,7 +552,8 @@ function addPartitionScatterPass<Parameters>(
   }
 ): void {
   const {rangeLayout} = compaction;
-  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
 ${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_START: u32 = ${props.rangeStart}u;
@@ -777,7 +779,8 @@ function addLocalScanPass<Parameters>(
 ): void {
   const {rangeLayout} = compaction;
   const passId = `${compaction.id}-local-scan`;
-  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
 ${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_COUNT: u32 = ${compaction.rangeCount}u;

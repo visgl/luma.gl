@@ -305,7 +305,8 @@ function addLocalBitonicSortPass<Parameters>(
   paddedLength: number
 ): void {
   const descending = sort.direction === 'descending';
-  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
 ${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const INVALID_INDEX: u32 = ${INVALID_INDEX}u;

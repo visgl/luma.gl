@@ -8,15 +8,21 @@ import type {Device} from '@luma.gl/core';
 export type GPUShaderSubgroupStrategy = 'portable' | 'subgroups';
 
 /**
- * Selects subgroup shaders only when the device feature and logical subgroup indexing are present.
+ * Selects subgroup shaders only when the device feature and any caller-required language features
+ * are present.
  *
- * The algorithms using this helper deliberately map subgroup lanes to their own logical workgroup
- * order instead of assuming a relationship with `local_invocation_index`.
+ * Algorithms that address workgroup data by logical subgroup order request `subgroup_id`. Ballot-
+ * and shuffle-only algorithms can use subgroups without assuming a relationship between
+ * `subgroup_invocation_id` and `local_invocation_index`.
  */
-export function getGPUShaderSubgroupStrategy(device: Device): GPUShaderSubgroupStrategy {
-  return device.features?.has('subgroups') && device.wgslLanguageFeatures?.has('subgroup_id')
-    ? 'subgroups'
-    : 'portable';
+export function getGPUShaderSubgroupStrategy(
+  device: Device,
+  options: {requiresSubgroupId?: boolean} = {}
+): GPUShaderSubgroupStrategy {
+  const supportsSubgroups = device.features?.has('subgroups');
+  const supportsRequiredLanguageFeatures =
+    !options.requiresSubgroupId || device.wgslLanguageFeatures?.has('subgroup_id');
+  return supportsSubgroups && supportsRequiredLanguageFeatures ? 'subgroups' : 'portable';
 }
 
 /** WGSL helpers for iterating the nonempty lanes in a subgroup ballot. @internal */
@@ -33,6 +39,17 @@ fn getFirstBallotLane(mask: vec4<u32>) -> u32 {
 fn getBallotLaneCount(mask: vec4<u32>) -> u32 {
   return countOneBits(mask.x) + countOneBits(mask.y) +
     countOneBits(mask.z) + countOneBits(mask.w);
+}
+
+fn getBallotPrefixLaneCount(mask: vec4<u32>, invocation: u32) -> u32 {
+  let word = invocation >> 5u;
+  let bit = invocation & 31u;
+  var count = 0u;
+  if (word > 0u) { count += countOneBits(mask.x); }
+  if (word > 1u) { count += countOneBits(mask.y); }
+  if (word > 2u) { count += countOneBits(mask.z); }
+  let lowerBits = (1u << bit) - 1u;
+  return count + countOneBits(mask[word] & lowerBits);
 }`;
 }
 
