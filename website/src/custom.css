@@ -120,16 +120,8 @@ main .container {
   transform: translateY(-50%) rotate(90deg);
 }
 
-.markdown .luma-live-benchmark__summary strong,
-.markdown .luma-live-benchmark__summary small {
+.markdown .luma-live-benchmark__summary strong {
   display: block;
-}
-
-.markdown .luma-live-benchmark__summary small {
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin-top: 0.15rem;
 }
 
 .markdown .luma-live-benchmark__body {
@@ -160,6 +152,7 @@ main .container {
 
 .markdown .luma-live-benchmark__actions {
   gap: 0.75rem 1rem;
+  margin-top: 0.9rem;
 }
 
 .markdown .luma-live-benchmark__controls {
@@ -174,6 +167,18 @@ main .container {
 
 .markdown .luma-live-benchmark__controls select {
   font-size: 0.85rem;
+}
+
+.markdown .luma-live-benchmark__notes {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin: 0.6rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.markdown .luma-live-benchmark__notes li + li {
+  margin-top: 0.15rem;
 }
 
 .markdown .luma-live-benchmark__secondary-label {
@@ -1510,6 +1515,43 @@ body:has(.luma-example-page) .theme-layout-footer,
 body:has(.textures-example-page) .theme-layout-footer,
 body:has(.integration-example-page) .theme-layout-footer {
   display: none;
+}
+
+/* Keep the shared site links useful without making the footer a second full-height page. */
+.theme-layout-footer.footer {
+  padding-block: 1.5rem;
+}
+
+.theme-layout-footer .footer__links {
+  display: grid;
+  gap: 1rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-inline: 0;
+  margin-bottom: 1rem;
+}
+
+.theme-layout-footer .footer__col {
+  flex: none;
+  margin-bottom: 0;
+  max-width: none;
+  padding-inline: 0;
+}
+
+.theme-layout-footer .footer__title {
+  margin-bottom: 0.4rem;
+}
+
+.theme-layout-footer .footer__item,
+.theme-layout-footer .footer__link-item {
+  line-height: 1.35;
+}
+
+.theme-layout-footer .footer__item + .footer__item {
+  margin-top: 0.25rem;
+}
+
+.theme-layout-footer .footer__copyright {
+  margin-top: 0.75rem;
 }
 
 /* Getting Started is an invitation into the GPU laboratory, not an install screen. */

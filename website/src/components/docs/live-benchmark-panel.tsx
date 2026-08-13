@@ -5,7 +5,7 @@ export type LiveBenchmarkPanelProps = {
   /** Accessible panel heading describing the benchmarked operation. */
   title: string;
   /** Short explanation of the workload and what its measurements include. */
-  description: string;
+  description?: string;
   /** Optional benchmark controls rendered beside the run action. */
   controls?: ReactNode;
   /** Places the benchmark in a single disclosure card instead of an always-open panel. */
@@ -16,6 +16,8 @@ export type LiveBenchmarkPanelProps = {
   onRun: () => Promise<ReactNode>;
   /** Optional stable placeholder rendered in the results area while work is in progress. */
   runningContent?: ReactNode;
+  /** Optional stable table or preview rendered before the first benchmark run. */
+  idleContent?: ReactNode;
   /** Explicit capability message that disables the benchmark without claiming synthetic results. */
   unsupportedReason?: string;
 };
@@ -34,6 +36,7 @@ export function LiveBenchmarkPanel({
   runLabel = 'Run live WebGPU benchmark',
   onRun,
   runningContent,
+  idleContent,
   unsupportedReason
 }: LiveBenchmarkPanelProps): ReactNode {
   const [isRunning, setIsRunning] = useState(false);
@@ -75,21 +78,7 @@ export function LiveBenchmarkPanel({
 
   const content = (
     <>
-      <p className="luma-live-benchmark__description">{description}</p>
-
-      <div className="luma-live-benchmark__actions">
-        {controls}
-        <button
-          className="button button--primary button--sm"
-          disabled={isRunning || Boolean(unsupportedReason)}
-          onClick={() => {
-            void handleRun();
-          }}
-          type="button"
-        >
-          {isRunning ? 'Running…' : runLabel}
-        </button>
-      </div>
+      {description ? <p className="luma-live-benchmark__description">{description}</p> : null}
 
       {unsupportedReason ? (
         <p aria-live="polite" style={{marginBottom: 0}}>
@@ -111,7 +100,23 @@ export function LiveBenchmarkPanel({
         <div aria-live="polite" style={{marginTop: '1rem', overflowX: 'auto'}}>
           {results}
         </div>
+      ) : idleContent ? (
+        <div style={{marginTop: '1rem', overflowX: 'auto'}}>{idleContent}</div>
       ) : null}
+
+      <div className="luma-live-benchmark__actions">
+        {controls}
+        <button
+          className="button button--primary button--sm"
+          disabled={isRunning || Boolean(unsupportedReason)}
+          onClick={() => {
+            void handleRun();
+          }}
+          type="button"
+        >
+          {isRunning ? 'Running…' : runLabel}
+        </button>
+      </div>
     </>
   );
 
@@ -119,10 +124,7 @@ export function LiveBenchmarkPanel({
     return (
       <details className="luma-live-benchmark" data-live-benchmark="true">
         <summary className="luma-live-benchmark__summary">
-          <span>
-            <strong>{title}</strong>
-            <small>Live · runs on this device</small>
-          </span>
+          <strong>{title}</strong>
         </summary>
         <div className="luma-live-benchmark__body">{content}</div>
       </details>

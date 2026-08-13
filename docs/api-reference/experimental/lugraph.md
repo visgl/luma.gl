@@ -911,8 +911,9 @@ The default bounded iteration count is `40`.
 The optional one-row `float32` `residual` reports the final iteration's L1 score change: the sum of
 absolute differences between the last two normalized score vectors. It is an observable error
 signal, not an automatic convergence threshold, early-termination mechanism, or promise that a
-fixed budget reached the stationary distribution. Reductions use portable WebGPU workgroups and
-ordinary `float32` arithmetic, not floating-point atomics or native GPU `float64`.
+fixed budget reached the stationary distribution. Reductions use subgroup additions when the
+max-feature device exposes both required WebGPU capabilities, with a portable workgroup fallback.
+Both paths use ordinary `float32` arithmetic, not floating-point atomics or native GPU `float64`.
 
 ## Reveal relationships with LuGraphForceLayout
 

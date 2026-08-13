@@ -4,6 +4,7 @@ import Link from '@docusaurus/Link';
 export type GPUPrimitivesDocsTabId =
   | 'overview'
   | 'command-graph'
+  | 'texture-history'
   | 'scan'
   | 'compaction'
   | 'mask'
@@ -50,6 +51,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'command-graph',
     label: 'Command Graph',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-command-graph'
+  },
+  {
+    id: 'texture-history',
+    label: 'Texture History',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-texture-history'
   },
   {
     id: 'scan',
@@ -238,11 +244,11 @@ const TAB_GROUPS: GPUPrimitivesDocsTabGroup[] = [
   {
     id: 'foundation',
     label: 'Foundation',
-    tabIds: ['overview', 'command-graph', 'readback-ring']
+    tabIds: ['overview', 'command-graph', 'texture-history', 'readback-ring']
   },
   {
     id: 'transforms',
-    label: 'Transforms',
+    label: 'Operations',
     tabIds: ['scan', 'compaction', 'mask', 'sort', 'fft2d', 'reduction', 'histogram']
   },
   {
