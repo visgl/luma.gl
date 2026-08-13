@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {WorkgroupScanBenchmark} from '@site/src/components/docs/workgroup-scan-benchmark';
 
 # GPUScan
 
@@ -15,11 +16,20 @@ adapter supports it and report the selected path in the inspector.
 
 ## Performance expectations
 
-The subgroup block kernel uses two workgroup barriers instead of the portable kernel's initial
-barrier plus two barriers for each of eight scan strides. A reasonable starting expectation for
-large unsegmented scans is a 15–40% scan-stage reduction and a 5–15% improvement for scan-heavy
-trace updates, but the result depends on adapter, subgroup size, input capacity, and the surrounding
-passes. These figures are targets for measurement rather than guaranteed performance.
+The standalone subgroup scan reduces block-local synchronization, but its global reads, writes,
+summary hierarchy, and offset passes can make the full operation bandwidth-bound. On an Apple M4
+Max, isolated 250K–10M element `GPUScan` measurements did not show a consistent end-to-end gain.
+Do not assume that fewer barriers automatically improve a bandwidth-bound scan or trace update.
+
+`runGPUWorkgroupScanBenchmark(device)` provides a complementary command-graph benchmark for the
+synchronization-sensitive case. It compares graph-owned portable and subgroup compute nodes that
+repeatedly scan generated lane values and write only one checksum per workgroup. Correctness is
+gated by a shared CPU checksum oracle, strategy order alternates between measured iterations, and
+reported GPU timings are normalized per dispatch. On the same M4 Max, its default 32-round workload
+was approximately 60% faster with subgroups. This is a compute-local upper-bound use case rather
+than a prediction for standalone `GPUScan`.
+
+<WorkgroupScanBenchmark />
 
 Append `?scan=portable` to the GPU Trace Viewer URL to disable the subgroup path while retaining the
 same maximum-feature device request. This provides an A/B benchmark control without adding a

@@ -72,6 +72,17 @@ export type {GraphDataViewBinding} from './graph-data-view-utils';
 
 export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';
+export {
+  runGPUWorkgroupScanBenchmark,
+  summarizeGPUWorkgroupScanBenchmarkSamples
+} from './gpu-workgroup-scan-benchmark';
+export type {
+  GPUWorkgroupScanBenchmarkDistribution,
+  GPUWorkgroupScanBenchmarkPathReport,
+  GPUWorkgroupScanBenchmarkProps,
+  GPUWorkgroupScanBenchmarkReport,
+  GPUWorkgroupScanBenchmarkStrategy
+} from './gpu-workgroup-scan-benchmark';
 export {GPUSegmentedSort} from './gpu-segmented-sort';
 export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';
