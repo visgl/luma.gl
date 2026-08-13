@@ -386,6 +386,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     /sourceVisible \|\| destinationVisible/,
     'dependency visibility retains edges with either endpoint in view'
   );
+  t.match(
+    getCandidateDensityShader(spanChunk),
+    /for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/,
+    'density aggregation preserves long-span coverage across bins'
+  );
   t.end();
 });
 
