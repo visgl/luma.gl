@@ -28,8 +28,7 @@ export function WorkgroupReductionBenchmark(): ReactNode {
   return (
     <LiveBenchmarkPanel
       collapsible
-      title="GPUReduction compute benchmark"
-      description="Each round sums 256 generated uint32 input elements using the same workgroup-local operation as a GPUReduction level. Throughput is reported as input elements reduced per second."
+      title="GPUReduction - Benchmark"
       runLabel="Run benchmark"
       controls={
         <div className="luma-live-benchmark__controls">
@@ -63,6 +62,7 @@ export function WorkgroupReductionBenchmark(): ReactNode {
           </label>
         </div>
       }
+      idleContent={<IdleTable workgroupCount={workgroupCount} roundCount={roundCount} />}
       runningContent={<RunningTable workgroupCount={workgroupCount} roundCount={roundCount} />}
       unsupportedReason={
         webGPUUnavailable
@@ -89,6 +89,19 @@ export function WorkgroupReductionBenchmark(): ReactNode {
   );
 }
 
+function IdleTable(props: {workgroupCount: number; roundCount: number}): ReactNode {
+  return (
+    <div>
+      <WorkloadSummary {...props} />
+      <BenchmarkTable>
+        <IdleRow barriers={10} label="GPUReduction" relative="1.00×" supported />
+        <IdleRow label="Subgroup optimization" secondary />
+      </BenchmarkTable>
+      <BenchmarkNotes />
+    </div>
+  );
+}
+
 function RunningTable(props: {workgroupCount: number; roundCount: number}): ReactNode {
   return (
     <div>
@@ -107,6 +120,7 @@ function RunningTable(props: {workgroupCount: number; roundCount: number}): Reac
           </tr>
         ))}
       </BenchmarkTable>
+      <BenchmarkNotes />
     </div>
   );
 }
@@ -140,12 +154,30 @@ function ResultsTable({
           supported={report.subgroupAvailable}
         />
       </BenchmarkTable>
-      <p style={{fontSize: 12, margin: '10px 0 0'}}>
-        {report.subgroupAvailable ? `Subgroups expose ${formatSubgroupSize(report)} lanes. ` : ''}
-        Measured paths passed the same CPU checksum oracle. Results are local to this browser,
-        adapter, and current system load.
-      </p>
+      <ul className="luma-live-benchmark__notes">
+        <li>
+          Each round sums 256 generated uint32 inputs using the workgroup-local operation at the
+          center of a GPUReduction level.
+        </li>
+        {report.subgroupAvailable ? (
+          <li>Subgroups expose {formatSubgroupSize(report)} lanes on this adapter.</li>
+        ) : null}
+        <li>Both paths passed the same CPU checksum oracle.</li>
+        <li>Results reflect this browser, adapter, and current system load.</li>
+      </ul>
     </div>
+  );
+}
+
+function BenchmarkNotes(): ReactNode {
+  return (
+    <ul className="luma-live-benchmark__notes">
+      <li>
+        Each round sums 256 generated uint32 inputs using the workgroup-local operation at the
+        center of a GPUReduction level.
+      </li>
+      <li>Throughput is input elements reduced per second.</li>
+    </ul>
   );
 }
 
@@ -162,7 +194,7 @@ function WorkloadSummary({
     <p style={{margin: '14px 0 10px'}}>
       <strong>{formatElementCount(workgroupCount, roundCount)}</strong> uint32 elements/dispatch ·{' '}
       <strong>{(workgroupCount * roundCount).toLocaleString()}</strong> reduction blocks
-      {suffix ? ` · ${suffix}` : '…'}
+      {suffix ? ` · ${suffix}` : null}
     </p>
   );
 }
@@ -174,9 +206,9 @@ function BenchmarkTable({children}: {children: ReactNode}): ReactNode {
         <tr>
           <th>Implementation</th>
           <th>Supported</th>
-          <th>Barriers / reduction</th>
+          <th title="Workgroup barriers per reduction round">Barriers</th>
           <th>GPU median</th>
-          <th>GPU p95</th>
+          <th>Relative</th>
           <th>Element throughput</th>
         </tr>
       </thead>
@@ -212,8 +244,45 @@ function ResultRow({
       </td>
       <td>{path?.barrierCountPerRound ?? '—'}</td>
       <td>{path ? formatMilliseconds(path.gpuTimeMilliseconds?.median) : '—'}</td>
-      <td>{path ? formatMilliseconds(path.gpuTimeMilliseconds?.percentile95) : '—'}</td>
+      <td>{path ? formatRelativeSpeed(report, path) : '—'}</td>
       <td>{path ? formatThroughput(report, path) : '—'}</td>
+    </tr>
+  );
+}
+
+function IdleRow({
+  barriers,
+  label,
+  relative = '—',
+  secondary = false,
+  supported = false
+}: {
+  barriers?: number;
+  label: string;
+  relative?: string;
+  secondary?: boolean;
+  supported?: boolean;
+}): ReactNode {
+  return (
+    <tr>
+      <td className={secondary ? 'luma-live-benchmark__secondary-label' : undefined}>{label}</td>
+      <td>
+        {supported ? (
+          <span
+            aria-label="Supported"
+            className="luma-live-benchmark__support luma-live-benchmark__support--yes"
+            title="Supported"
+          >
+            ✓
+          </span>
+        ) : (
+          '—'
+        )}
+      </td>
+      <td>{barriers ?? '—'}</td>
+      <td>—</td>
+      <td>{relative}</td>
+      <td>—</td>
     </tr>
   );
 }
@@ -235,6 +304,20 @@ function formatThroughput(
   if (!milliseconds) return '—';
   const elements = report.workgroupCount * report.roundCount * report.workgroupSize;
   return `${(elements / (milliseconds / 1000) / 1e9).toFixed(2)} G elements/s`;
+}
+
+function formatRelativeSpeed(
+  report: GPUWorkgroupReductionBenchmarkReport,
+  path: GPUWorkgroupReductionBenchmarkPathReport
+): string {
+  if (path.strategy === 'portable') return '1.00×';
+  const portableMilliseconds = report.paths.find(
+    candidate => candidate.strategy === 'portable'
+  )?.gpuTimeMilliseconds?.median;
+  const pathMilliseconds = path.gpuTimeMilliseconds?.median;
+  return portableMilliseconds && pathMilliseconds
+    ? `${(portableMilliseconds / pathMilliseconds).toFixed(2)}×`
+    : '—';
 }
 
 function formatSubgroupSize(report: GPUWorkgroupReductionBenchmarkReport): string {

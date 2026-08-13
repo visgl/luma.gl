@@ -120,16 +120,8 @@ main .container {
   transform: translateY(-50%) rotate(90deg);
 }
 
-.markdown .luma-live-benchmark__summary strong,
-.markdown .luma-live-benchmark__summary small {
+.markdown .luma-live-benchmark__summary strong {
   display: block;
-}
-
-.markdown .luma-live-benchmark__summary small {
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin-top: 0.15rem;
 }
 
 .markdown .luma-live-benchmark__body {
@@ -160,6 +152,7 @@ main .container {
 
 .markdown .luma-live-benchmark__actions {
   gap: 0.75rem 1rem;
+  margin-top: 0.9rem;
 }
 
 .markdown .luma-live-benchmark__controls {
@@ -174,6 +167,18 @@ main .container {
 
 .markdown .luma-live-benchmark__controls select {
   font-size: 0.85rem;
+}
+
+.markdown .luma-live-benchmark__notes {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin: 0.6rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.markdown .luma-live-benchmark__notes li + li {
+  margin-top: 0.15rem;
 }
 
 .markdown .luma-live-benchmark__secondary-label {

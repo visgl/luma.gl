@@ -53,8 +53,9 @@ graph-owned partial storage, followed by one global reduction. Chunk order and s
 unchanged; no input is packed or concatenated. An all-empty vector follows the same zero-result
 behavior as an empty data view.
 
-Integer sums wrap to 32 bits. Floating sums use a fixed 256-way tree. Floating minimum, maximum,
-and extent ignore NaN and infinity. Empty inputs and all-invalid floating inputs produce zero.
+Integer sums wrap to 32 bits. Floating sums use a 256-way hierarchical reduction. Floating
+minimum, maximum, and extent ignore NaN and infinity. Empty inputs and all-invalid floating inputs
+produce zero.
 
 ## Reduction hierarchy
 
@@ -80,7 +81,9 @@ Empty chunks add no passes and do not change the result.
 All intermediate views are graph-owned transients. Their declared node uses let the command-graph
 compiler infer ordering and reuse physical scratch allocations when lifetimes do not overlap.
 
-## Subgroup acceleration
+## Performance notes
+
+### Subgroup acceleration
 
 On a max-feature WebGPU device that exposes both the `subgroups` device feature and the
 `subgroup_id` WGSL language feature, each reduction level uses subgroup `add`, `min`, and `max`
@@ -93,7 +96,7 @@ domains, raster statistics, graph core-number and modularity summaries, and glob
 aggregations. It is most useful when reduction synchronization is a meaningful part of the total
 work; end-to-end workloads dominated by reading the input buffer may show a smaller improvement.
 
-### Performance expectations
+### Live benchmark
 
 The live benchmark isolates the 256-value workgroup reduction at the center of every hierarchy
 level. It reports absolute input-element throughput for the portable implementation and, when the

@@ -87,7 +87,9 @@ are supported. A zero-length scan adds no nodes.
 All arithmetic wraps modulo 2^32. Signed, floating-point, minimum/maximum, and custom associative
 scans remain future work.
 
-## Subgroup acceleration
+## Performance notes
+
+### Subgroup acceleration
 
 Unsegmented scans automatically use WebGPU subgroup operations when the created device exposes the
 `subgroups` feature and the browser exposes the `subgroup_id` WGSL language extension. The portable
@@ -103,7 +105,7 @@ visibility compaction both scan large flag arrays on interactive updates. The GP
 `featureLevel: 'max'`, so recent Chrome releases opt into the fast path automatically when the
 adapter supports it and report the selected path in the inspector.
 
-### Performance expectations
+### Live benchmark
 
 The standalone subgroup scan reduces block-local synchronization, but its global reads, writes,
 summary hierarchy, and offset passes can make the full operation bandwidth-bound. On an Apple M4

@@ -29,7 +29,6 @@ export function WorkgroupScanBenchmark(): ReactNode {
     <LiveBenchmarkPanel
       collapsible
       title="GPUScan compute benchmark"
-      description="Each round applies the same 256-element exclusive prefix operation used within GPUScan. Throughput is reported as uint32 input elements processed per second."
       runLabel="Run benchmark"
       controls={
         <div className="luma-live-benchmark__controls">
@@ -64,6 +63,9 @@ export function WorkgroupScanBenchmark(): ReactNode {
           </label>
         </div>
       }
+      idleContent={
+        <WorkgroupScanBenchmarkIdle workgroupCount={workgroupCount} roundCount={roundCount} />
+      }
       runningContent={
         <WorkgroupScanBenchmarkRunning
           workgroupCount={workgroupCount}
@@ -96,6 +98,28 @@ export function WorkgroupScanBenchmark(): ReactNode {
   );
 }
 
+function WorkgroupScanBenchmarkIdle({
+  workgroupCount,
+  roundCount
+}: {
+  workgroupCount: number;
+  roundCount: number;
+}): ReactNode {
+  return (
+    <div>
+      <p style={{margin: '14px 0 10px'}}>
+        <strong>{formatElementCount(workgroupCount, roundCount)}</strong> uint32 elements/dispatch ·{' '}
+        <strong>{formatWorkgroupScanCount(workgroupCount, roundCount)}</strong> local scan blocks
+      </p>
+      <ScanBenchmarkTable>
+        <IdleRow barriers={17} label="GPUScan" relative="1.00×" supported />
+        <IdleRow label="Subgroup optimization" secondary />
+      </ScanBenchmarkTable>
+      <ScanBenchmarkNotes />
+    </div>
+  );
+}
+
 function WorkgroupScanBenchmarkRunning({
   workgroupCount,
   roundCount
@@ -111,43 +135,28 @@ function WorkgroupScanBenchmarkRunning({
         <strong>{formatWorkgroupScanCount(workgroupCount, roundCount)}</strong> local scan blocks…
       </p>
 
-      <table style={{fontSize: 13, minWidth: 620, width: '100%'}}>
-        <thead>
-          <tr>
-            <th>Implementation</th>
-            <th>Supported</th>
-            <th>Barriers / scan</th>
-            <th>GPU median</th>
-            <th>GPU p95</th>
-            <th>Element throughput</th>
-          </tr>
-        </thead>
-        <tbody>
-          {['GPUScan', 'Subgroup optimization'].map((implementation, rowIndex) => (
-            <tr key={implementation}>
-              <td className={rowIndex === 1 ? 'luma-live-benchmark__secondary-label' : undefined}>
-                {implementation}
+      <ScanBenchmarkTable>
+        {['GPUScan', 'Subgroup optimization'].map((implementation, rowIndex) => (
+          <tr key={implementation}>
+            <td className={rowIndex === 1 ? 'luma-live-benchmark__secondary-label' : undefined}>
+              {implementation}
+            </td>
+            {[0, 1, 2, 3, 4].map(column => (
+              <td key={column}>
+                <BenchmarkSpinner />
               </td>
-              {[0, 1, 2, 3, 4].map(column => (
-                <td key={column}>
-                  <BenchmarkSpinner />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            ))}
+          </tr>
+        ))}
+      </ScanBenchmarkTable>
+      <ScanBenchmarkNotes />
     </div>
   );
 }
 
 function BenchmarkSpinner(): ReactNode {
   return (
-    <span
-      aria-label="Measuring"
-      className="luma-live-benchmark-spinner"
-      role="status"
-    />
+    <span aria-label="Measuring" className="luma-live-benchmark-spinner" role="status" />
   );
 }
 
@@ -168,40 +177,60 @@ function WorkgroupScanBenchmarkResults({
         <strong>{report.dispatchCount}</strong> dispatches/sample · {deviceLabel}
       </p>
 
-      <table style={{fontSize: 13, minWidth: 620, width: '100%'}}>
-        <thead>
-          <tr>
-            <th>Implementation</th>
-            <th>Supported</th>
-            <th>Barriers / scan</th>
-            <th>GPU median</th>
-            <th>GPU p95</th>
-            <th>Element throughput</th>
-          </tr>
-        </thead>
-        <tbody>
-          <BenchmarkResultRow
-            label="GPUScan"
-            path={report.paths.find(path => path.strategy === 'portable')!}
-            report={report}
-            supported
-          />
-          <BenchmarkResultRow
-            label="Subgroup optimization"
-            path={report.paths.find(path => path.strategy === 'subgroups')}
-            report={report}
-            secondary
-            supported={report.subgroupAvailable}
-          />
-        </tbody>
-      </table>
+      <ScanBenchmarkTable>
+        <BenchmarkResultRow
+          label="GPUScan"
+          path={report.paths.find(path => path.strategy === 'portable')!}
+          report={report}
+          supported
+        />
+        <BenchmarkResultRow
+          label="Subgroup optimization"
+          path={report.paths.find(path => path.strategy === 'subgroups')}
+          report={report}
+          secondary
+          supported={report.subgroupAvailable}
+        />
+      </ScanBenchmarkTable>
 
-      <p style={{fontSize: 12, margin: '10px 0 0'}}>
-        {report.subgroupAvailable ? `Subgroups use ${formatSubgroupSize(report)} lanes. ` : ''}
-        Measured paths passed the same CPU checksum oracle. Results are local to this browser,
-        adapter, and current system load.
-      </p>
+      <ul className="luma-live-benchmark__notes">
+        <li>
+          Each round applies the 256-element exclusive prefix operation used inside GPUScan.
+        </li>
+        {report.subgroupAvailable ? (
+          <li>Subgroups use {formatSubgroupSize(report)} lanes on this adapter.</li>
+        ) : null}
+        <li>Both paths passed the same CPU checksum oracle.</li>
+        <li>Results reflect this browser, adapter, and current system load.</li>
+      </ul>
     </div>
+  );
+}
+
+function ScanBenchmarkTable({children}: {children: ReactNode}): ReactNode {
+  return (
+    <table style={{fontSize: 13, minWidth: 620, width: '100%'}}>
+      <thead>
+        <tr>
+          <th>Implementation</th>
+          <th>Supported</th>
+          <th title="Workgroup barriers per scan round">Barriers</th>
+          <th>GPU median</th>
+          <th>Relative</th>
+          <th>Element throughput</th>
+        </tr>
+      </thead>
+      <tbody>{children}</tbody>
+    </table>
+  );
+}
+
+function ScanBenchmarkNotes(): ReactNode {
+  return (
+    <ul className="luma-live-benchmark__notes">
+      <li>Each round applies the 256-element exclusive prefix operation used inside GPUScan.</li>
+      <li>Throughput is uint32 input elements processed per second.</li>
+    </ul>
   );
 }
 
@@ -226,7 +255,7 @@ function BenchmarkResultRow({
       </td>
       <td>{path?.barrierCountPerRound ?? '—'}</td>
       <td>{path ? formatOptionalMilliseconds(path.gpuTimeMilliseconds?.median) : '—'}</td>
-      <td>{path ? formatOptionalMilliseconds(path.gpuTimeMilliseconds?.percentile95) : '—'}</td>
+      <td>{path ? formatRelativeSpeed(report, path) : '—'}</td>
       <td>{path ? formatScanThroughput(report, path) : '—'}</td>
     </tr>
   );
@@ -245,6 +274,31 @@ function SupportedIndicator({supported}: {supported: boolean}): ReactNode {
     >
       {supported ? '✓' : '×'}
     </span>
+  );
+}
+
+function IdleRow({
+  barriers,
+  label,
+  relative = '—',
+  secondary = false,
+  supported = false
+}: {
+  barriers?: number;
+  label: string;
+  relative?: string;
+  secondary?: boolean;
+  supported?: boolean;
+}): ReactNode {
+  return (
+    <tr>
+      <td className={secondary ? 'luma-live-benchmark__secondary-label' : undefined}>{label}</td>
+      <td>{supported ? <SupportedIndicator supported /> : '—'}</td>
+      <td>{barriers ?? '—'}</td>
+      <td>—</td>
+      <td>{relative}</td>
+      <td>—</td>
+    </tr>
   );
 }
 
@@ -279,6 +333,20 @@ function formatMilliseconds(milliseconds: number): string {
 
 function formatOptionalMilliseconds(milliseconds: number | undefined): string {
   return milliseconds === undefined ? 'Unavailable' : formatMilliseconds(milliseconds);
+}
+
+function formatRelativeSpeed(
+  report: GPUWorkgroupScanBenchmarkReport,
+  path: GPUWorkgroupScanBenchmarkPathReport
+): string {
+  if (path.strategy === 'portable') return '1.00×';
+  const portableMilliseconds = report.paths.find(
+    candidate => candidate.strategy === 'portable'
+  )?.gpuTimeMilliseconds?.median;
+  const pathMilliseconds = path.gpuTimeMilliseconds?.median;
+  return portableMilliseconds && pathMilliseconds
+    ? `${(portableMilliseconds / pathMilliseconds).toFixed(2)}×`
+    : '—';
 }
 
 function formatSubgroupSize(report: GPUWorkgroupScanBenchmarkReport): string {
