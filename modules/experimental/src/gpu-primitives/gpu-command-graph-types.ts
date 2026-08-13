@@ -503,6 +503,50 @@ type GPUCommandGraphNodeBase = {
   resources?: GraphResourceUse[];
   /** Explicit predecessor node identifiers in addition to inferred resource dependencies. */
   dependsOn?: string[];
+  /** Optional upper-bound work estimate used by graph preflight diagnostics. */
+  workload?: GPUCommandGraphNodeWorkloadEstimate;
+};
+
+/** Static upper-bound cost supplied by an operation when it adds a graph node. */
+export type GPUCommandGraphNodeWorkloadEstimate = {
+  /** Human-readable primitive or operation name, such as `GPUScan`. */
+  operation?: string;
+  /** Number of direct or indirect dispatch/draw/copy commands encoded by this node. */
+  commandCount?: number;
+  /** Maximum workgroups dispatched when the operation can determine that bound. */
+  maximumWorkgroupCount?: number;
+  /** Maximum shader invocations when the operation can determine that bound. */
+  maximumInvocationCount?: number;
+  /** Upper-bound bytes read by the operation. */
+  readByteLength?: number;
+  /** Upper-bound bytes written by the operation. */
+  writeByteLength?: number;
+};
+
+/** Immutable per-node workload entry in a compiled graph preflight report. */
+export type GPUCommandGraphNodePreflight = Readonly<
+  Required<Omit<GPUCommandGraphNodeWorkloadEstimate, 'operation'>> & {
+    id: string;
+    type: GPUCommandGraphNodeType;
+    operation?: string;
+  }
+>;
+
+/** Aggregated static workload bounds available before the graph is submitted. */
+export type GPUCommandGraphPreflightReport = {
+  readonly nodes: readonly GPUCommandGraphNodePreflight[];
+  /** Number of scheduled nodes that supplied a workload estimate. */
+  readonly annotatedNodeCount: number;
+  readonly commandCount: number;
+  readonly maximumWorkgroupCount: number;
+  readonly maximumInvocationCount: number;
+  readonly readByteLength: number;
+  readonly writeByteLength: number;
+  readonly largestBufferByteLength: number;
+  readonly largestStorageBufferBindingByteLength: number;
+  readonly maxBufferByteLength: number;
+  readonly maxStorageBufferBindingByteLength: number;
+  readonly fitsDeviceLimits: boolean;
 };
 
 /** Compute node compiled once and encoded into a graph-owned compute pass. */

@@ -52,6 +52,14 @@ test('GPUCommandGraph compiles dependencies and reuses transient buffers', async
   });
   graph.addComputePass({
     id: 'write-first',
+    workload: {
+      operation: 'TestFill',
+      commandCount: 1,
+      maximumWorkgroupCount: 2,
+      maximumInvocationCount: 512,
+      readByteLength: 16,
+      writeByteLength: 64
+    },
     resources: [{buffer: first, usage: 'storage-write'}],
     compile: () => ({encode: () => {}})
   });
@@ -85,6 +93,15 @@ test('GPUCommandGraph compiles dependencies and reuses transient buffers', async
     128,
     'reports total owned transient bytes'
   );
+  t.equal(compiled.preflight.commandCount, 1, 'aggregates annotated commands');
+  t.equal(compiled.preflight.annotatedNodeCount, 1, 'reports workload-estimate coverage');
+  t.equal(compiled.preflight.maximumWorkgroupCount, 2, 'aggregates annotated workgroups');
+  t.equal(compiled.preflight.maximumInvocationCount, 512, 'aggregates annotated invocations');
+  t.equal(compiled.preflight.readByteLength, 16, 'aggregates annotated reads');
+  t.equal(compiled.preflight.writeByteLength, 64, 'aggregates annotated writes');
+  t.equal(compiled.preflight.largestBufferByteLength, 128, 'reports the largest buffer');
+  t.equal(compiled.preflight.nodes[0].operation, 'TestFill', 'preserves operation identity');
+  t.equal(compiled.preflight.fitsDeviceLimits, true, 'reports valid declared resources');
   const commandEncoder = device.createCommandEncoder({id: 'graph-scheduling-encoding'});
   const encoding = compiled.encode(commandEncoder, {parameters: undefined});
   t.equal(encoding.stats.computePassCount, 1, 'coalesces consecutive graph compute nodes');

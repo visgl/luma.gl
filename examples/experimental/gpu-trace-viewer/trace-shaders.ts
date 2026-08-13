@@ -11,6 +11,7 @@ import {
   TRACE_DEPENDENCY_PROCESS_MASK,
   TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT,
   TRACE_ERROR_SPAN_FLAG,
+  TRACE_EXACT_SPAN_MINIMUM_PIXEL_WIDTH,
   TRACE_FILTER_ERRORS_ONLY,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_RUNTIME_SPANS,
@@ -87,12 +88,30 @@ struct ViewUniforms {
   lodFadeEnabled: u32,
   labelsEnabled: u32,
   densityPattern: u32,
+  densityBinOrigin: f32,
+  densityBinDuration: f32,
 };
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
 const THREADS_PER_PROCESS: u32 = ${TRACE_THREADS_PER_PROCESS}u;
 const DENSITY_BLEND_START_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL};
 const DENSITY_BLEND_END_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL};
+const EXACT_SPAN_MINIMUM_PIXEL_WIDTH: f32 = ${TRACE_EXACT_SPAN_MINIMUM_PIXEL_WIDTH};
+
+fn getSpanPixelWidth(duration: f32) -> f32 {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  return duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
+}
+
+fn isSpanWideEnoughForExactRendering(duration: f32) -> bool {
+  return getSpanPixelWidth(duration) >= EXACT_SPAN_MINIMUM_PIXEL_WIDTH;
+}
+
+fn getMinimumExactSpanDuration() -> f32 {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  return EXACT_SPAN_MINIMUM_PIXEL_WIDTH * timeRange /
+    max(viewUniforms.viewportWidth, 1.0);
+}
 
 fn getContinuousDensityBlend() -> f32 {
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
@@ -175,6 +194,7 @@ struct TraceSpanBatch {
   laneMax: u32,
   groupIndex: u32,
   batchIndex: u32,
+  maximumDuration: f32,
 };
 struct DictionaryMetric {
   glyphCount: u32,
@@ -230,7 +250,7 @@ fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  if (viewUniforms.labelsEnabled == 0u || !isExactModeActive()) {
+  if (viewUniforms.labelsEnabled == 0u) {
     return;
   }
   let batchIndex = candidateBatchIds[workgroupId.y];
@@ -254,8 +274,7 @@ fn main(
   let span = spans[chunkIndex];
   let dictionaryIndex = min(span.group * 4u + (span.flags & 3u), ${TRACE_LABEL_DICTIONARY.length - 1}u);
   let metric = dictionaryMetrics[dictionaryIndex];
-  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-  let spanPixelWidth = span.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
+  let spanPixelWidth = getSpanPixelWidth(span.duration);
   let lanePixelHeight =
     max(viewUniforms.viewportHeight, 1.0) /
     max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
@@ -359,7 +378,7 @@ fn vertexMain(
     ) +
     (glyphOffset + corner * glyphFrame.zw) * textDictionaryStyle.glyphScale;
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-  let spanPixelWidth = occurrence.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
+  let spanPixelWidth = getSpanPixelWidth(occurrence.duration);
   let lanePixelHeight =
     max(viewUniforms.viewportHeight, 1.0) /
     max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
@@ -385,7 +404,11 @@ fn vertexMain(
   output.atlasPage = glyphRecord.y >> 16u;
   output.color = vec4<f32>(
     textDictionaryStyle.color.rgb,
-    textDictionaryStyle.color.a * (1.0 - getDensityBlend())
+    textDictionaryStyle.color.a * select(
+      1.0 - getDensityBlend(),
+      1.0,
+      isSpanWideEnoughForExactRendering(occurrence.duration)
+    )
   );
   output.glyphPixelOffset = glyphPixelOffset;
   output.clipRect = clipRect;
@@ -495,14 +518,18 @@ struct VertexOutput {
   let focusOpacity = select(1.0, select(0.22, 1.0, isReached), focusEnabled);
   let baseColor = getGroupColor(span.group) * pulse;
   // Long spans remain recognizable first; sub-pixel spans emerge only as they become readable.
-  let spanPixelWidth = span.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
+  let spanPixelWidth = getSpanPixelWidth(span.duration);
   let spanReadability = smoothstep(0.6, 1.4, spanPixelWidth);
   let readabilityOpacity = select(
     1.0,
     spanReadability,
     viewUniforms.lodFadeEnabled != 0u
   );
-  let exactOpacity = (1.0 - getDensityBlend()) * readabilityOpacity;
+  let exactOpacity = select(
+    (1.0 - getDensityBlend()) * readabilityOpacity,
+    1.0,
+    isSpanWideEnoughForExactRendering(span.duration)
+  );
   let minimumClipWidth = 3.0 / max(viewUniforms.viewportWidth, 1.0);
   var output: VertexOutput;
   output.position = vec4<f32>(
@@ -602,8 +629,12 @@ struct DensityVertexOutput {
   let corner = getCorner(vertexIndex);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
   let laneHeight = 2.0 / laneRange;
-  let startX = (f32(binIndex) / f32(DENSITY_BIN_COUNT)) * 2.0 - 1.0;
-  let endX = (f32(binIndex + 1u) / f32(DENSITY_BIN_COUNT)) * 2.0 - 1.0;
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let binStart = viewUniforms.densityBinOrigin +
+    f32(binIndex) * viewUniforms.densityBinDuration;
+  let binEnd = binStart + viewUniforms.densityBinDuration;
+  let startX = ((binStart - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
+  let endX = ((binEnd - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
   let intensity = clamp(log2(f32(count) + 1.0) * viewUniforms.activityScale, 0.0, 1.0);
   let visible = count > 0u && f32(lane) >= viewUniforms.laneMin &&
     f32(lane) < viewUniforms.laneMax;
@@ -661,11 +692,13 @@ struct TraceSpanBatch {
   laneMax: u32,
   groupIndex: u32,
   batchIndex: u32,
+  maximumDuration: f32,
 };
 const BATCH_COUNT: u32 = ${batchCount}u;
 @group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(2) var<storage, read_write> candidateFlags: array<u32>;
+@group(0) @binding(3) var<storage, read_write> exactCandidateFlags: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -677,7 +710,11 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let timeVisible = batch.timeMax >= viewUniforms.timeMin &&
     batch.timeMin <= viewUniforms.timeMax;
   let groupVisible = (viewUniforms.enabledMask & (1u << batch.groupIndex)) != 0u;
-  candidateFlags[batchIndex] = select(0u, 1u, timeVisible && groupVisible);
+  let candidateVisible = timeVisible && groupVisible;
+  let exactCandidateVisible = candidateVisible &&
+    (isExactModeActive() || batch.maximumDuration >= getMinimumExactSpanDuration());
+  candidateFlags[batchIndex] = select(0u, 1u, candidateVisible);
+  exactCandidateFlags[batchIndex] = select(0u, 1u, exactCandidateVisible);
 }`;
 }
 
@@ -872,16 +909,14 @@ ${TRACE_SHADER_DECLARATIONS}
 const PROCESS_COUNT: u32 = ${TRACE_PROCESS_COUNT}u;
 @group(0) @binding(0) var<storage, read> candidateDispatchCommand: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
-@group(0) @binding(2) var<storage, read_write> exactDispatchCommand: array<u32>;
-@group(0) @binding(3) var<storage, read_write> densityDispatchCommand: array<u32>;
-@group(0) @binding(4) var<storage, read_write> pickDispatchCommand: array<u32>;
-@group(0) @binding(5) var<storage, read> processStates: array<u32>;
+@group(0) @binding(2) var<storage, read_write> densityDispatchCommand: array<u32>;
+@group(0) @binding(3) var<storage, read_write> pickDispatchCommand: array<u32>;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
 
 @compute @workgroup_size(1)
 fn main() {
   let candidateWorkgroupCount = candidateDispatchCommand[0];
   let candidateBatchCount = candidateDispatchCommand[1];
-  let exactModeActive = isExactModeActive();
   let densityModeActive = isDensityModeActive();
   let pickActive = viewUniforms.pickLane >= 0.0;
   var hasCollapsedProcess = false;
@@ -890,9 +925,6 @@ fn main() {
   }
   let densityActive = densityModeActive || hasCollapsedProcess;
 
-  exactDispatchCommand[0] = candidateWorkgroupCount;
-  exactDispatchCommand[1] = select(0u, candidateBatchCount, exactModeActive);
-  exactDispatchCommand[2] = 1u;
   densityDispatchCommand[0] = candidateWorkgroupCount;
   densityDispatchCommand[1] = select(0u, candidateBatchCount, densityActive);
   densityDispatchCommand[2] = 1u;
@@ -915,6 +947,19 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
+/** Clears exact visibility before sparse candidate batches publish retained spans. */
+export function getSpanVisibilityClearShader(spanCount: number): string {
+  return /* wgsl */ `
+const VISIBILITY_WORD_COUNT: u32 = ${Math.max(Math.ceil(spanCount / 32), 1)}u;
+@group(0) @binding(0) var<storage, read_write> visibilityFlags: array<u32>;
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  if (globalId.x < VISIBILITY_WORD_COUNT) {
+    visibilityFlags[globalId.x] = 0u;
+  }
+}`;
+}
+
 /** Classifies and aggregates focused candidate density without span-sized intermediate keys. */
 export function getCandidateDensityShader(props: TraceSpanChunkShaderProps): string {
   return /* wgsl */ `
@@ -929,6 +974,7 @@ struct TraceSpanBatch {
   laneMax: u32,
   groupIndex: u32,
   batchIndex: u32,
+  maximumDuration: f32,
 };
 ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
@@ -970,27 +1016,24 @@ fn main(
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
     (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
-  let densityVisible = sourceVisible && (isDensityModeActive() || !processExpanded);
+  let retainedExactSpan =
+    processExpanded && isSpanWideEnoughForExactRendering(span.duration);
+  let densityVisible =
+    sourceVisible && (isDensityModeActive() || !processExpanded) && !retainedExactSpan;
   if (densityVisible && focusVisible) {
-    let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-    let startFraction = clamp(
-      (span.start - viewUniforms.timeMin) / timeRange,
+    let maximumBin = f32(${TRACE_DENSITY_BIN_COUNT - 1}u);
+    let firstBin = u32(clamp(
+      floor((span.start - viewUniforms.densityBinOrigin) /
+        viewUniforms.densityBinDuration),
       0.0,
-      0.999999
-    );
-    let endFraction = clamp(
-      (span.start + span.duration - viewUniforms.timeMin) / timeRange,
+      maximumBin
+    ));
+    let lastBin = u32(clamp(
+      floor((span.start + span.duration - viewUniforms.densityBinOrigin) /
+        viewUniforms.densityBinDuration),
       0.0,
-      0.999999
-    );
-    let firstBin = min(
-      u32(startFraction * f32(${TRACE_DENSITY_BIN_COUNT}u)),
-      ${TRACE_DENSITY_BIN_COUNT - 1}u
-    );
-    let lastBin = min(
-      u32(endFraction * f32(${TRACE_DENSITY_BIN_COUNT}u)),
-      ${TRACE_DENSITY_BIN_COUNT - 1}u
-    );
+      maximumBin
+    ));
     // Preserve temporal coverage: a long span contributes to every density bin it crosses.
     for (var bin = firstBin; bin <= lastBin; bin++) {
       let densityKey =
@@ -1046,6 +1089,7 @@ struct TraceSpanBatch {
   laneMax: u32,
   groupIndex: u32,
   batchIndex: u32,
+  maximumDuration: f32,
 };
 ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
@@ -1075,6 +1119,9 @@ fn main(
   if (batchRowIndex >= batch.spanCount) {
     return;
   }
+  if (isDensityModeActive() && batch.maximumDuration < getMinimumExactSpanDuration()) {
+    return;
+  }
   let sourceIndex = batch.firstSpanIndex + batchRowIndex;
   let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
   let processExpanded = processStates[span.processIndex] != 0u;
@@ -1083,7 +1130,8 @@ fn main(
   let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let sourceVisible = isSpanSourceVisible(span, lane);
-  let exactVisible = sourceVisible && processExpanded;
+  let exactVisible = sourceVisible && processExpanded &&
+    (isExactModeActive() || isSpanWideEnoughForExactRendering(span.duration));
   let focusEnabled =
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
@@ -1092,8 +1140,6 @@ fn main(
   let visibilityMask = 1u << (chunkIndex & 31u);
   if (exactVisible && focusVisible) {
     atomicOr(&visibilityFlags[chunkIndex >> 5u], visibilityMask);
-  } else {
-    atomicAnd(&visibilityFlags[chunkIndex >> 5u], ~visibilityMask);
   }
 }`;
 }
@@ -1114,6 +1160,7 @@ struct TraceSpanBatch {
   laneMax: u32,
   groupIndex: u32,
   batchIndex: u32,
+  maximumDuration: f32,
 };
 @group(0) @binding(0) var<storage, read> visibilityFlags: array<u32>;
 @group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
@@ -1164,6 +1211,7 @@ struct TraceSpanBatch {
   laneMax: u32,
   groupIndex: u32,
   batchIndex: u32,
+  maximumDuration: f32,
 };
 ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;

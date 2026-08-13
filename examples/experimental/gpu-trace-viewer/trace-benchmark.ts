@@ -4,8 +4,14 @@
 
 import {
   TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
+  TRACE_DEPENDENCY_BATCH_CAPACITY,
+  TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
-  TRACE_SPAN_RECORD_WORD_LENGTH
+  TRACE_SPAN_RECORD_WORD_LENGTH,
+  TRACE_SPAN_BATCH_CAPACITY,
+  TRACE_SPAN_BATCH_RECORD_WORD_LENGTH,
+  getMaximumGeneratedTraceDependencyCount,
+  getMaximumTraceAdjacencyByteLength
 } from './trace-data';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
@@ -78,6 +84,59 @@ export type TraceCapacityContract = {
   fitsChunkedDeviceLimits: boolean;
 };
 
+export type TraceDatasetPreflight = {
+  spanCount: number;
+  dependencyCount: number;
+  estimatedSourceByteLength: number;
+  minimumScanInvocationCount: number;
+  requiresConfirmation: boolean;
+};
+
+const TRACE_SOFT_SOURCE_BYTE_LIMIT = 512 * 1024 * 1024;
+const TRACE_SOFT_SCAN_INVOCATION_LIMIT = 20_000_000;
+
+/** Estimates source topology and minimum full-data work before worker generation begins. */
+export function getTraceDatasetPreflight(
+  spanCapacity: number,
+  dependencyCapacity: number
+): TraceDatasetPreflight {
+  validateCount(spanCapacity);
+  validateCount(dependencyCapacity);
+  const dependencyCount = Math.min(
+    dependencyCapacity,
+    getMaximumGeneratedTraceDependencyCount(spanCapacity)
+  );
+  const spanByteLength = spanCapacity * TRACE_SPAN_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
+  const dependencyByteLength =
+    dependencyCount * TRACE_DEPENDENCY_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
+  const parentByteLength = spanCapacity * UINT32_BYTE_LENGTH;
+  const spanBatchByteLength =
+    Math.ceil(spanCapacity / TRACE_SPAN_BATCH_CAPACITY) *
+    TRACE_SPAN_BATCH_RECORD_WORD_LENGTH *
+    UINT32_BYTE_LENGTH;
+  const dependencyBatchByteLength =
+    Math.ceil(dependencyCount / TRACE_DEPENDENCY_BATCH_CAPACITY) *
+    TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH *
+    UINT32_BYTE_LENGTH;
+  const estimatedSourceByteLength =
+    spanByteLength +
+    dependencyByteLength +
+    parentByteLength +
+    spanBatchByteLength +
+    dependencyBatchByteLength +
+    getMaximumTraceAdjacencyByteLength(dependencyCount);
+  const minimumScanInvocationCount = spanCapacity + dependencyCount;
+  return Object.freeze({
+    spanCount: spanCapacity,
+    dependencyCount,
+    estimatedSourceByteLength,
+    minimumScanInvocationCount,
+    requiresConfirmation:
+      estimatedSourceByteLength >= TRACE_SOFT_SOURCE_BYTE_LIMIT ||
+      minimumScanInvocationCount >= TRACE_SOFT_SCAN_INVOCATION_LIMIT
+  });
+}
+
 /** Persistent GPU-buffer accounting independent of command-graph transient allocations. */
 export type TraceAllocationStats = {
   bufferCount: number;
@@ -135,8 +194,12 @@ export function getTraceCapacityContract(
   validateCount(limits.maxStorageBufferBindingSize);
   validateCount(limits.maxBufferSize);
   const spanBufferByteLength = spanCapacity * TRACE_SPAN_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
+  const generatedDependencyCount = Math.min(
+    dependencyCapacity,
+    getMaximumGeneratedTraceDependencyCount(spanCapacity)
+  );
   const dependencyBufferByteLength =
-    dependencyCapacity * TRACE_DEPENDENCY_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
+    generatedDependencyCount * TRACE_DEPENDENCY_RECORD_WORD_LENGTH * UINT32_BYTE_LENGTH;
   const largestSourceBufferByteLength = Math.max(spanBufferByteLength, dependencyBufferByteLength);
   const fitsStorageBufferBindingSize =
     largestSourceBufferByteLength <= limits.maxStorageBufferBindingSize;

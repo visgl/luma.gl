@@ -9,6 +9,7 @@ import {FillPattern, fillPatternShaderPlugin} from '../../examples/fill-pattern-
 import {
   getTraceAllocationStats,
   getTraceCapacityContract,
+  getTraceDatasetPreflight,
   getTraceScanTimingSummary,
   getTraceWorkloadCounters,
   TRACE_BENCHMARK_CAPACITIES,
@@ -17,6 +18,8 @@ import {
 import {
   getMaximumTraceAdjacencyByteLength,
   getTraceCapacityOptions,
+  getTraceDatasetTransferables,
+  getTraceDensityBinParameters,
   getTraceDensityBlend,
   getTraceDependencyCapacityOptions,
   getTraceDuration,
@@ -64,6 +67,7 @@ import {
   getFocusReachabilityClearShader,
   getPickClearShader,
   getPickResolveShader,
+  getSpanVisibilityClearShader,
   getTraceDrawCommandsShader,
   getTraceLabelClearShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -107,23 +111,23 @@ test('deck GPU trace copies complete canonical span records', t => {
 test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t => {
   t.deepEqual(
     getTraceCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000, 10_000_000],
-    'portable limits expose ten million spans through chunked source storage'
+    [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
+    'portable limits expose twenty-five million spans through chunked source storage'
   );
   t.deepEqual(
     getTraceDependencyCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
-    [0, 250_000, 1_000_000, 4_000_000],
-    'dependency options use their smaller fixed-width record size'
+    [0, 250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
+    'dependency options account for the sparse generated edge ceiling'
   );
   t.deepEqual(
     getTraceCapacityOptions(256 * 1024 * 1024, 1024 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000, 10_000_000],
+    [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
     'chunking removes the single-binding ceiling'
   );
   t.deepEqual(
     getTraceCapacityOptions(1024 * 1024 * 1024, 1024 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000, 10_000_000],
-    'maximum adapters expose the ten-million-span demonstration'
+    [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
+    'maximum adapters expose the twenty-five-million-span demonstration'
   );
   t.end();
 });
@@ -180,6 +184,22 @@ test('GPU trace span chunks preserve complete candidate batches and borrowed sou
   t.end();
 });
 
+test('GPU trace worker datasets transfer every owned allocation without copying shared views', t => {
+  const dataset = makeTraceDataset(2048, 128);
+  const transferables = getTraceDatasetTransferables(dataset);
+  t.equal(new Set(transferables).size, transferables.length, 'each owned buffer transfers once');
+  t.ok(transferables.includes(dataset.spans.buffer), 'canonical spans transfer ownership');
+  t.ok(
+    dataset.groups.every(group => group.data.buffer === dataset.spans.buffer),
+    'group views remain aliases of the transferred canonical span allocation'
+  );
+  t.ok(
+    dataset.spanBatches.every(batch => batch.data.buffer === dataset.spans.buffer),
+    'batch views remain aliases of the transferred canonical span allocation'
+  );
+  t.end();
+});
+
 test('GPU trace supremacy contract exposes standard scales and interaction scenarios', t => {
   t.deepEqual(
     TRACE_BENCHMARK_CAPACITIES,
@@ -214,8 +234,8 @@ test('GPU trace capacity contract separates chunked spans from dependency capaci
   t.equal(portable.spanBufferByteLength, 320_000_000, '10M spans require a 320 MB source buffer');
   t.equal(
     portable.dependencyBufferByteLength,
-    160_000_000,
-    '10M dependencies require a 160 MB source buffer'
+    37_517_264,
+    'the contract accounts for the sparse generator rather than unused dependency capacity'
   );
   t.equal(portable.fitsDeviceLimits, false, 'portable limits reject the monolithic 10M source');
   t.equal(portable.spanChunkCount, 5, 'portable chunk target splits the 320 MB source five ways');
@@ -241,6 +261,32 @@ test('GPU trace capacity contract separates chunked spans from dependency capaci
     maxBufferSize: 1024 * 1024 * 1024
   });
   t.equal(maximum.fitsDeviceLimits, true, 'maximum-context limits admit the same source layout');
+  t.end();
+});
+
+test('GPU trace dataset preflight leaves routine sizes frictionless and flags extreme work', t => {
+  const routine = getTraceDatasetPreflight(4_000_000, 4_000_000);
+  const extreme = getTraceDatasetPreflight(25_000_000, 25_000_000);
+  t.equal(
+    routine.requiresConfirmation,
+    false,
+    'the default 4M trace does not require confirmation'
+  );
+  t.equal(extreme.requiresConfirmation, true, 'the 25M trace requires a soft confirmation');
+  t.ok(
+    extreme.estimatedSourceByteLength > routine.estimatedSourceByteLength,
+    'source topology estimates grow with trace size'
+  );
+  t.equal(
+    extreme.dependencyCount,
+    5_862_070,
+    'preflight uses the sparse generated dependency upper bound'
+  );
+  t.equal(
+    extreme.minimumScanInvocationCount,
+    30_862_070,
+    'preflight exposes the minimum full-data work'
+  );
   t.end();
 });
 
@@ -335,6 +381,28 @@ test('GPU trace LOD switches at a stable trace-time-per-pixel threshold', t => {
   t.end();
 });
 
+test('GPU trace density bins stay anchored while the viewport scrolls', t => {
+  const first = getTraceDensityBinParameters(10, 110);
+  const scrolled = getTraceDensityBinParameters(10.1, 110.1);
+  const crossedBoundary = getTraceDensityBinParameters(10.3, 110.3);
+  t.equal(first.duration, scrolled.duration, 'scrolling preserves the zoom-selected bin duration');
+  t.equal(first.origin, scrolled.origin, 'sub-bin scrolling preserves the absolute bin anchor');
+  const sampleTime = 50.1;
+  const getSampleBinStart = ({origin, duration}: {origin: number; duration: number}): number =>
+    origin + Math.floor((sampleTime - origin) / duration) * duration;
+  t.equal(
+    getSampleBinStart(first),
+    getSampleBinStart(crossedBoundary),
+    'crossing a window boundary does not change absolute bin membership'
+  );
+  t.equal(
+    getTraceDensityBinParameters(10, 210).duration,
+    first.duration * 2,
+    'zooming out selects the next power-of-two density level'
+  );
+  t.end();
+});
+
 test('GPU trace adaptive LOD shaders parse as WGSL', t => {
   const spanChunk = {
     firstSpanIndex: 0,
@@ -362,6 +430,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getCandidateDependencySpanVisibilityShader(spanChunk),
     getCandidatePassDispatchShader(),
     getDensityClearShader(),
+    getSpanVisibilityClearShader(11),
     getCandidateDensityShader(spanChunk),
     getCandidatePickShader(spanChunk),
     getPickResolveShader(spanChunk),
@@ -404,6 +473,36 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getCandidateDensityShader(spanChunk),
     /for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/,
     'density aggregation preserves long-span coverage across bins'
+  );
+  t.match(
+    getCandidateDensityShader(spanChunk),
+    /span\.start - viewUniforms\.densityBinOrigin/,
+    'density aggregation uses scroll-stable trace-time bin membership'
+  );
+  t.match(
+    TRACE_DENSITY_RENDER_SHADER,
+    /binStart - viewUniforms\.timeMin/,
+    'stable density bins are projected into the moving viewport'
+  );
+  t.match(
+    getCandidateDensityShader(spanChunk),
+    /!retainedExactSpan/,
+    'density aggregation excludes spans retained as exact geometry'
+  );
+  t.match(
+    getCandidateVisibilityShader(spanChunk),
+    /isExactModeActive\(\) \|\| isSpanWideEnoughForExactRendering\(span\.duration\)/,
+    'wide spans remain eligible for exact compaction in density mode'
+  );
+  t.match(
+    getCandidateVisibilityShader(spanChunk),
+    /batch\.maximumDuration < getMinimumExactSpanDuration\(\)/,
+    'coarse exact visibility rejects batches whose longest span is too narrow'
+  );
+  t.match(
+    getBatchVisibilityShader(3),
+    /batch\.maximumDuration >= getMinimumExactSpanDuration\(\)/,
+    'the coarse pass creates a sparse exact batch list for wide spans'
   );
   t.match(
     TRACE_RENDER_SHADER,
@@ -574,9 +673,13 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
     'most lanes spend a clear majority of their time on one span group'
   );
   const occupancy = occupiedDuration / (dataset.duration * TRACE_LANE_COUNT);
-  t.ok(occupancy > 0.55 && occupancy < 0.8, 'lane packing stays dense without overlap');
+  t.ok(
+    occupancy > 0.4 && occupancy < 0.8,
+    'lane packing remains dense while sparse extra-wide spans extend individual lanes'
+  );
   t.ok(minimumDuration < 0.05, 'the trace includes very short spans');
   t.ok(maximumDuration > 20, 'the trace includes very wide spans');
+  t.ok(maximumDuration > 100, 'the trace includes sparse spans that survive coarse density LOD');
   t.ok(
     maximumDuration > TRACE_DURATION_FILTER_MAXIMUM,
     'duration filter maximum retains spans from the generated upper tail'
@@ -680,6 +783,10 @@ test('GPU trace span batches preserve global identity and publish coarse index b
       Math.abs(indexFloats[indexOffset + 3] - batch.timeMax) < 0.001,
       'index preserves maximum time'
     );
+    t.ok(
+      Math.abs(indexFloats[indexOffset + 8] - batch.maximumDuration) < 0.001,
+      'index preserves maximum span duration'
+    );
     for (let rowIndex = 0; rowIndex < batch.count; rowIndex++) {
       const sourceIndex = batch.firstSpanIndex + rowIndex;
       const wordOffset = sourceIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
@@ -688,6 +795,7 @@ test('GPU trace span batches preserve global identity and publish coarse index b
       const lane = dataset.spans[wordOffset + 2];
       t.ok(start >= batch.timeMin && end <= batch.timeMax, 'batch encloses span time');
       t.ok(lane >= batch.laneMin && lane < batch.laneMax, 'batch encloses span lane');
+      t.ok(spanFloats[wordOffset + 1] <= batch.maximumDuration, 'batch encloses span duration');
     }
   }
   for (const group of dataset.groups) {

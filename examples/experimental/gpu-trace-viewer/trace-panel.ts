@@ -72,6 +72,18 @@ export const TRACE_PANEL_STYLE = /* css */ `
     gap: 3px 9px;
     margin-top: 6px;
   }
+  [data-trace-dashboard] .trace-preflight {
+    display: grid;
+    gap: 7px;
+    margin-top: 7px;
+    padding: 7px;
+    border: 1px solid rgb(214 164 84 / 42%);
+    border-radius: 6px;
+    background: rgb(90 62 23 / 22%);
+    color: #d8c6a5;
+    font: 9px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-preflight[hidden] { display: none; }
   [data-trace-dashboard] .trace-metric-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
