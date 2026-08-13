@@ -422,10 +422,10 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
   );
   t.match(
     TRACE_DENSITY_RENDER_SHADER,
-    /patternOffset = f32\(\(lane \* 13u\) % 52u\)/,
+    /patternOffset = f32\(\(lane \* 3u\) % 10u\)/,
     'density patterns stagger their phase by lane instead of forming a screen-wide grid'
   );
-  t.equal(FillPattern.hash90, 3, 'the default dash pattern has a stable shader value');
+  t.equal(FillPattern.hash45, 2, 'the default diagonal dash pattern has a stable shader value');
   t.ok(fillPatternShaderPlugin.wgsl, 'the shared fill-pattern plugin supports WGSL');
   t.match(
     TRACE_RENDER_SHADER,

@@ -149,10 +149,10 @@ const TRACE_INSPECTOR_COUNTER_LABELS = {
 } as const;
 
 const DENSITY_PATTERN_OPTIONS: Array<{label: string; value: FillPatternType}> = [
-  {label: 'Dashes', value: FillPattern.hash90},
-  {label: 'Horizontal stripes', value: FillPattern.hash0},
-  {label: 'Diagonal /', value: FillPattern.hash45},
-  {label: 'Diagonal \\', value: FillPattern.hash135},
+  {label: 'Diagonal dashes', value: FillPattern.hash45},
+  {label: 'Reverse diagonal dashes', value: FillPattern.hash135},
+  {label: 'Vertical dashes', value: FillPattern.hash90},
+  {label: 'Horizontal dashes', value: FillPattern.hash0},
   {label: 'Grid', value: FillPattern.checker0},
   {label: 'Diamond grid', value: FillPattern.checker45},
   {label: 'Dots', value: FillPattern.dotgrid},
@@ -343,7 +343,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private autoScroll = true;
   private lodFadeEnabled = false;
   private labelsEnabled = true;
-  private densityPattern: FillPatternType = FillPattern.hash90;
+  private densityPattern: FillPatternType = FillPattern.hash45;
   private view: TraceViewParameters = {timeMin: 0, timeMax: 150, laneMin: 0, laneMax: 72};
   private pendingPick: PickPosition | null = null;
   private latestPickRequestIdentifier = 0;

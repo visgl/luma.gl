@@ -624,7 +624,7 @@ struct DensityVertexOutput {
     densityColor,
     select(0.0, (0.86 + 0.04 * intensity) * densityOpacity, visible)
   );
-  output.patternOffset = f32((lane * 13u) % 52u);
+  output.patternOffset = f32((lane * 3u) % 10u);
   return output;
 }
 
@@ -633,13 +633,13 @@ struct DensityVertexOutput {
     vec4<f32>(input.color.rgb, 1.0),
     f32(viewUniforms.densityPattern),
     input.position.xy + vec2<f32>(input.patternOffset, 0.0),
-    vec2<f32>(40.0, 12.0)
+    vec2<f32>(2.0, 8.0)
   );
-  // Preserve average brightness instead of applying the plugin mask to alpha. The default
-  // 40-pixel dash and 12-pixel gap average to 1.0, avoiding the old zoomed-out brightness dip.
+  // Use thin, low-contrast marks instead of alpha gaps so the pattern cannot be mistaken for
+  // thick boundaries between spans. The default diagonal pattern remains brightness-neutral.
   let patternBrightness = select(
     1.0,
-    mix(0.55, 1.135, patternColor.a),
+    mix(1.06, 0.80, patternColor.a),
     viewUniforms.densityPattern != 0u
   );
   return vec4<f32>(
