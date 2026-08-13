@@ -29,6 +29,9 @@ import {
 } from './trace-data';
 
 const TRACE_WORKGROUP_SIZE = 256;
+// WebGPU guarantees at least 65,535 workgroups per dispatch dimension. Candidate batches can
+// exceed that at the 25M scale, so full-data passes tile batch rows across Y and Z.
+const TRACE_CANDIDATE_DISPATCH_ROW_COUNT = 65_535;
 export const TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE = 64;
 
 export type TraceSpanChunkShaderProps = {
@@ -907,6 +910,7 @@ export function getCandidatePassDispatchShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
 const PROCESS_COUNT: u32 = ${TRACE_PROCESS_COUNT}u;
+const CANDIDATE_DISPATCH_ROW_COUNT: u32 = ${TRACE_CANDIDATE_DISPATCH_ROW_COUNT}u;
 @group(0) @binding(0) var<storage, read> candidateDispatchCommand: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(2) var<storage, read_write> densityDispatchCommand: array<u32>;
@@ -924,13 +928,19 @@ fn main() {
     hasCollapsedProcess = hasCollapsedProcess || processStates[processIndex] == 0u;
   }
   let densityActive = densityModeActive || hasCollapsedProcess;
+  let densityBatchCount = select(0u, candidateBatchCount, densityActive);
+  let pickBatchCount = select(0u, candidateBatchCount, pickActive);
 
   densityDispatchCommand[0] = candidateWorkgroupCount;
-  densityDispatchCommand[1] = select(0u, candidateBatchCount, densityActive);
-  densityDispatchCommand[2] = 1u;
+  densityDispatchCommand[1] = min(densityBatchCount, CANDIDATE_DISPATCH_ROW_COUNT);
+  densityDispatchCommand[2] =
+    (densityBatchCount + CANDIDATE_DISPATCH_ROW_COUNT - 1u) /
+    CANDIDATE_DISPATCH_ROW_COUNT;
   pickDispatchCommand[0] = candidateWorkgroupCount;
-  pickDispatchCommand[1] = select(0u, candidateBatchCount, pickActive);
-  pickDispatchCommand[2] = 1u;
+  pickDispatchCommand[1] = min(pickBatchCount, CANDIDATE_DISPATCH_ROW_COUNT);
+  pickDispatchCommand[2] =
+    (pickBatchCount + CANDIDATE_DISPATCH_ROW_COUNT - 1u) /
+    CANDIDATE_DISPATCH_ROW_COUNT;
 }`;
 }
 
@@ -986,13 +996,19 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
 @group(0) @binding(8) var<storage, read_write> densityBins: array<atomic<u32>>;
+@group(0) @binding(9) var<storage, read> candidateDispatchCommand: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
-  let batchIndex = candidateBatchIds[workgroupId.y];
+  let candidateIndex = workgroupId.y +
+    workgroupId.z * ${TRACE_CANDIDATE_DISPATCH_ROW_COUNT}u;
+  if (candidateIndex >= candidateDispatchCommand[1]) {
+    return;
+  }
+  let batchIndex = candidateBatchIds[candidateIndex];
   if (
     batchIndex < CHUNK_FIRST_BATCH_INDEX ||
     batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT
@@ -1222,6 +1238,7 @@ ${TRACE_VISIBILITY_FILTER_DECLARATIONS}
 @group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
 @group(0) @binding(6) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(7) var<storage, read_write> pickResult: array<atomic<u32>>;
+@group(0) @binding(8) var<storage, read> candidateDispatchCommand: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(
@@ -1231,7 +1248,12 @@ fn main(
   if (viewUniforms.pickLane < 0.0) {
     return;
   }
-  let batchIndex = candidateBatchIds[workgroupId.y];
+  let candidateIndex = workgroupId.y +
+    workgroupId.z * ${TRACE_CANDIDATE_DISPATCH_ROW_COUNT}u;
+  if (candidateIndex >= candidateDispatchCommand[1]) {
+    return;
+  }
+  let batchIndex = candidateBatchIds[candidateIndex];
   if (
     batchIndex < CHUNK_FIRST_BATCH_INDEX ||
     batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT

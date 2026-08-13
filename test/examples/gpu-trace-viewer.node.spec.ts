@@ -480,6 +480,21 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     'density aggregation uses scroll-stable trace-time bin membership'
   );
   t.match(
+    getCandidatePassDispatchShader(),
+    /min\(densityBatchCount, CANDIDATE_DISPATCH_ROW_COUNT\)/,
+    'density dispatch tiles candidate batches below the portable per-dimension limit'
+  );
+  t.match(
+    getCandidateDensityShader(spanChunk),
+    /workgroupId\.z \* 65535u/,
+    'density aggregation resolves tiled candidate rows across Y and Z'
+  );
+  t.match(
+    getCandidatePickShader(spanChunk),
+    /candidateIndex >= candidateDispatchCommand\[1\]/,
+    'picking rejects padded rows in its tiled candidate dispatch'
+  );
+  t.match(
     TRACE_DENSITY_RENDER_SHADER,
     /binStart - viewUniforms\.timeMin/,
     'stable density bins are projected into the moving viewport'

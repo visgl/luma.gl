@@ -1565,7 +1565,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('threadOffsets', handles.threadOffsets),
           storageRead('threadStates', handles.threadStates),
           storageRead('reachedSpans', handles.reachedSpans),
-          storageWrite('densityBins', handles.densityBins)
+          storageWrite('densityBins', handles.densityBins),
+          storageRead('candidateDispatchCommand', handles.candidateDispatchCommands)
         ],
         dispatchBuffer: handles.densityCandidateDispatchCommands
       });
@@ -1580,7 +1581,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('processStates', handles.processStates),
           storageRead('threadOffsets', handles.threadOffsets),
           storageRead('threadStates', handles.threadStates),
-          storageWrite('pickResult', handles.pickResult)
+          storageWrite('pickResult', handles.pickResult),
+          storageRead('candidateDispatchCommand', handles.candidateDispatchCommands)
         ],
         dispatchBuffer: handles.pickCandidateDispatchCommands
       });
