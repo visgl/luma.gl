@@ -415,6 +415,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     'hard-switch exact spans bypass sub-pixel readability fading'
   );
   t.match(
+    TRACE_DENSITY_RENDER_SHADER,
+    /DENSITY_STIPPLE_PERIOD/,
+    'aggregated density bins use a screen-space stipple distinct from exact spans'
+  );
+  t.match(
     TRACE_RENDER_SHADER,
     /focusEnabled = viewUniforms\.focusMode != 0u && hasSelection/,
     'ordinary picking highlights its span without dimming the complete trace'
@@ -428,6 +433,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     TRACE_LABEL_RENDER_SHADER,
     /isGlyphVertexClipped\(input\.glyphPixelOffset, input\.clipRect\)/,
     'label rendering retains a final span clip-rectangle guard'
+  );
+  t.match(
+    TRACE_LABEL_RENDER_SHADER,
+    /-textDictionaryStyle\.lineHeightPixels \* 0\.5/,
+    'the label line box is centered vertically around the span midpoint'
   );
   t.end();
 });

@@ -53,6 +53,8 @@ export const TRACE_LABEL_DICTIONARY = [
 /** Bounded transient glyph occurrences; source strings and glyph layouts remain dictionary-shared. */
 export const TRACE_LABEL_GLYPH_CAPACITY = 1_000_000;
 export const TRACE_LABEL_GLYPH_RECORD_WORD_LENGTH = 6;
+/** Screen-space label size shared by dictionary measurement and span-local placement. */
+export const TRACE_LABEL_FONT_SIZE = 16;
 export const TRACE_SAME_PROCESS_DEPENDENCY = 0;
 export const TRACE_CROSS_PROCESS_DEPENDENCY = 1;
 export const TRACE_PARENT_DEPENDENCY_FLAG = 1;

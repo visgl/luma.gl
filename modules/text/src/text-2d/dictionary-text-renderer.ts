@@ -47,7 +47,7 @@ export class DictionaryTextRenderer {
   readonly dictionaryGlyphRanges: Buffer;
   readonly dictionaryGlyphRecords: Buffer;
   readonly glyphFrames: Buffer;
-  /** Constant color, glyph scale, and SDF settings used by the host shader. */
+  /** Constant color, glyph scale, SDF settings, and screen-space line height used by the host. */
   readonly styleUniforms: Buffer;
   readonly glyphCounts: Uint32Array;
   readonly advances: Float32Array;
@@ -114,7 +114,7 @@ export class DictionaryTextRenderer {
       stream.dictionaryGlyphRecords
     );
     this.glyphFrames = createStorageBuffer(device, `${id}-glyph-frames`, stream.glyphFrames);
-    const styleData = new ArrayBuffer(8 * UINT32_BYTE_LENGTH);
+    const styleData = new ArrayBuffer(12 * UINT32_BYTE_LENGTH);
     const styleFloats = new Float32Array(styleData);
     const styleWords = new Uint32Array(styleData);
     styleFloats.set(color, 0);
@@ -122,6 +122,7 @@ export class DictionaryTextRenderer {
     styleFloats[5] = props.fontAtlas.renderSettings.threshold;
     styleFloats[6] = props.fontAtlas.renderSettings.smoothing;
     styleWords[7] = getFontRenderMode(props.fontAtlas.renderSettings.mode);
+    styleFloats[8] = fontSize;
     this.styleUniforms = device.createBuffer({
       id: `${id}-style-uniforms`,
       byteLength: styleData.byteLength,

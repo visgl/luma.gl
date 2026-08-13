@@ -64,6 +64,7 @@ import {
   TRACE_GROUPS,
   TRACE_INVALID_SPAN_INDEX,
   TRACE_LABEL_DICTIONARY,
+  TRACE_LABEL_FONT_SIZE,
   TRACE_LABEL_GLYPH_CAPACITY,
   TRACE_LABEL_GLYPH_RECORD_WORD_LENGTH,
   TRACE_LANE_COUNT,
@@ -611,7 +612,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       id: 'gpu-trace-dictionary-labels',
       dictionary: TRACE_LABEL_DICTIONARY,
       fontAtlas,
-      fontSize: 12,
+      fontSize: TRACE_LABEL_FONT_SIZE,
       color: [0.94, 0.96, 1, 0.92],
       modelProps: {
         source: TRACE_LABEL_RENDER_SHADER,
@@ -1387,7 +1388,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('visibilityFlags', chunk.visibility),
           storageRead('dictionaryMetrics', handles.labelDictionaryMetrics),
           storageWrite('labelGlyphs', handles.labelGlyphs),
-          storageWrite('drawCommands', handles.drawCommands)
+          storageWrite('drawCommands', handles.drawCommands),
+          uniformBinding('textDictionaryStyle', handles.labelStyleUniforms)
         ],
         dispatchBuffer: handles.exactCandidateDispatchCommands
       });

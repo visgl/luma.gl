@@ -187,10 +187,16 @@ struct TraceLabelGlyph {
   dictionaryIndex: u32,
   glyphOffset: u32,
 };
+struct DictionaryTextStyle {
+  color: vec4<f32>,
+  glyphScale: f32,
+  sdfThreshold: f32,
+  sdfSmoothing: f32,
+  renderMode: u32,
+  lineHeightPixels: f32,
+};
 const LABEL_INSTANCE_COUNT_WORD: u32 = ${labelDrawCommandIndex * 4 + 1}u;
 const LABEL_GLYPH_CAPACITY: u32 = ${TRACE_LABEL_GLYPH_CAPACITY}u;
-const LABEL_HORIZONTAL_PADDING: f32 = 4.0;
-const LABEL_MINIMUM_LANE_HEIGHT: f32 = 11.0;
 @group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
 @group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
 @group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
@@ -199,6 +205,7 @@ const LABEL_MINIMUM_LANE_HEIGHT: f32 = 11.0;
 @group(0) @binding(5) var<storage, read> dictionaryMetrics: array<DictionaryMetric>;
 @group(0) @binding(6) var<storage, read_write> labelGlyphs: array<TraceLabelGlyph>;
 @group(0) @binding(7) var<storage, read_write> drawCommands: array<atomic<u32>>;
+@group(0) @binding(8) var<uniform> textDictionaryStyle: DictionaryTextStyle;
 
 fn reserveGlyphs(glyphCount: u32) -> u32 {
   loop {
@@ -251,10 +258,11 @@ fn main(
   let lanePixelHeight =
     max(viewUniforms.viewportHeight, 1.0) /
     max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  let horizontalPadding = textDictionaryStyle.lineHeightPixels * (2.0 / 7.0);
   if (
     metric.glyphCount == 0u ||
-    spanPixelWidth < metric.advancePixels + LABEL_HORIZONTAL_PADDING * 2.0 ||
-    lanePixelHeight < LABEL_MINIMUM_LANE_HEIGHT
+    spanPixelWidth < metric.advancePixels + horizontalPadding * 2.0 ||
+    lanePixelHeight < textDictionaryStyle.lineHeightPixels + 2.0
   ) {
     return;
   }
@@ -292,6 +300,7 @@ struct DictionaryTextStyle {
   sdfThreshold: f32,
   sdfSmoothing: f32,
   renderMode: u32,
+  lineHeightPixels: f32,
 };
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -343,7 +352,10 @@ fn vertexMain(
     f32(unpackHighInt16(glyphRecord.x))
   );
   let glyphPixelOffset =
-    vec2<f32>(4.0, -0.75) +
+    vec2<f32>(
+      textDictionaryStyle.lineHeightPixels * (2.0 / 7.0),
+      -textDictionaryStyle.lineHeightPixels * 0.5
+    ) +
     (glyphOffset + corner * glyphFrame.zw) * textDictionaryStyle.glyphScale;
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let spanPixelWidth = occurrence.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
@@ -563,6 +575,7 @@ ${TRACE_SHADER_DECLARATIONS}
 
 const DENSITY_BIN_COUNT: u32 = ${TRACE_DENSITY_BIN_COUNT}u;
 const DENSITY_GROUP_COUNT: u32 = ${TRACE_GROUPS.length}u;
+const DENSITY_STIPPLE_PERIOD: u32 = 4u;
 @group(0) @binding(0) var<storage, read> densityBins: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 
@@ -614,7 +627,17 @@ struct DensityVertexOutput {
 }
 
 @fragment fn fragmentMain(input: DensityVertexOutput) -> @location(0) vec4<f32> {
-  return input.color;
+  let pixel = vec2<u32>(input.position.xy);
+  let stippleDot =
+    pixel.x % DENSITY_STIPPLE_PERIOD == 0u &&
+    pixel.y % DENSITY_STIPPLE_PERIOD == 0u;
+  // One bright pixel per 4x4 cell keeps average brightness at 1.0 while making aggregated
+  // geometry visibly distinct from exact solid spans.
+  let stippleBrightness = select(0.99, 1.15, stippleDot);
+  return vec4<f32>(
+    clamp(input.color.rgb * stippleBrightness, vec3<f32>(0.0), vec3<f32>(1.0)),
+    input.color.a
+  );
 }`;
 
 /** Coarsely rejects immutable span batches that cannot contribute to the active view. */
