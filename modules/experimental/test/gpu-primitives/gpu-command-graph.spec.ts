@@ -23,6 +23,7 @@ import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource
 } from '../../src/gpu-primitives/gpu-dispatch-utils';
+import {getGPUReductionStrategy} from '../../src/gpu-primitives/gpu-reduction';
 import {
   addGPUScanToGraphWithDispatchLimit,
   getGPUScanDispatchLayout,
@@ -750,6 +751,19 @@ test('GPUScan selects subgroups only when device and WGSL capabilities are both 
     'portable',
     'keeps segmented scans on the portable path'
   );
+  t.end();
+});
+
+test('GPUReduction selects subgroups only when device and WGSL capabilities are available', t => {
+  const makeDevice = (subgroups: boolean, subgroupId: boolean) =>
+    ({
+      features: {has: (feature: string) => feature === 'subgroups' && subgroups},
+      wgslLanguageFeatures: new Set(subgroupId ? ['subgroup_id'] : [])
+    }) as Device;
+
+  t.equal(getGPUReductionStrategy(makeDevice(true, true)), 'subgroups', 'selects subgroups');
+  t.equal(getGPUReductionStrategy(makeDevice(true, false)), 'portable', 'requires subgroup_id');
+  t.equal(getGPUReductionStrategy(makeDevice(false, true)), 'portable', 'requires device feature');
   t.end();
 });
 

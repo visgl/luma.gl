@@ -20,6 +20,7 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '../gpu-primitives/graph-data-view-utils';
+import {getGPUReductionStrategy} from '../gpu-primitives/gpu-reduction';
 import type {LuGraphPageRank} from './lu-graph-page-rank';
 
 const PAGE_RANK_WORKGROUP_SIZE = 256;
@@ -502,7 +503,33 @@ function addReductionPass<Parameters>(
     props.input.length,
     props.maxComputeWorkgroupsPerDimension
   );
+  const useSubgroups = getGPUReductionStrategy(commandGraph.device) === 'subgroups';
+  const reductionSource = useSubgroups
+    ? `let subgroupTotal = subgroupAdd(value);
+  if (subgroupInvocationId == 0u) {
+    reductionValues[subgroupId] = subgroupTotal;
+  }
+  workgroupBarrier();
+  let subgroupCount = ${PAGE_RANK_WORKGROUP_SIZE}u / subgroupSize;
+  if (subgroupCount > 1u) {
+    for (var stride = subgroupCount / 2u; stride > 0u; stride /= 2u) {
+      if (localInvocationIndex < stride) {
+        reductionValues[localInvocationIndex] += reductionValues[localInvocationIndex + stride];
+      }
+      workgroupBarrier();
+    }
+  }`
+    : `reductionValues[localInvocationIndex] = value;
+  workgroupBarrier();
+
+  for (var stride = ${PAGE_RANK_WORKGROUP_SIZE / 2}u; stride > 0u; stride /= 2u) {
+    if (localInvocationIndex < stride) {
+      reductionValues[localInvocationIndex] += reductionValues[localInvocationIndex + stride];
+    }
+    workgroupBarrier();
+  }`;
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const INPUT_COUNT: u32 = ${props.input.length}u;
 const OUTPUT_COUNT: u32 = ${props.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
@@ -513,21 +540,14 @@ var<workgroup> reductionValues: array<f32, ${PAGE_RANK_WORKGROUP_SIZE}>;
 @compute @workgroup_size(${PAGE_RANK_WORKGROUP_SIZE})
 fn main(
   @builtin(workgroup_id) workgroupId: vec3<u32>,
+  ${useSubgroups ? '@builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32,' : ''}
   @builtin(local_invocation_index) localInvocationIndex: u32
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, PAGE_RANK_WORKGROUP_SIZE)}
   if (workgroupIndex >= OUTPUT_COUNT) { return; }
   var value = 0.0;
   if (index < INPUT_COUNT) { value = inputValues[INPUT_OFFSET + index]; }
-  reductionValues[localInvocationIndex] = value;
-  workgroupBarrier();
-
-  for (var stride = ${PAGE_RANK_WORKGROUP_SIZE / 2}u; stride > 0u; stride /= 2u) {
-    if (localInvocationIndex < stride) {
-      reductionValues[localInvocationIndex] += reductionValues[localInvocationIndex + stride];
-    }
-    workgroupBarrier();
-  }
+  ${reductionSource}
   if (localInvocationIndex == 0u) {
     outputValues[OUTPUT_OFFSET + workgroupIndex] = reductionValues[0];
   }

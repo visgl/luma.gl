@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type Binding} from '@luma.gl/core';
+import {type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
@@ -27,6 +27,16 @@ import {
 
 const REDUCTION_WORKGROUP_SIZE = 256;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
+
+/** Compute strategy selected for one reduction level. @internal */
+export type GPUReductionStrategy = 'portable' | 'subgroups';
+
+/** Selects subgroup collectives only when the device and WGSL language both expose them. */
+export function getGPUReductionStrategy(device: Device): GPUReductionStrategy {
+  return device.features?.has('subgroups') && device.wgslLanguageFeatures?.has('subgroup_id')
+    ? 'subgroups'
+    : 'portable';
+}
 
 /**
  * Operation performed by {@link GPUReduction}.
@@ -421,7 +431,17 @@ function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
         }
         validityScratch[lane] = 1u;
       }`;
+  const strategy = getGPUReductionStrategy(graph.device);
+  const reductionSource =
+    strategy === 'subgroups'
+      ? getSubgroupReductionSource({
+          format: props.format,
+          operation: props.operation,
+          combine
+        })
+      : getPortableReductionSource(combine);
   const source = /* wgsl */ `
+${strategy === 'subgroups' ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const ELEMENT_COUNT: u32 = ${props.inputLength}u;
 const VALUES_PER_ROW: u32 = ${props.valuesPerRow}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.inputValues)}u;
@@ -438,6 +458,7 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
 
 @compute @workgroup_size(${REDUCTION_WORKGROUP_SIZE}) fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
+  ${strategy === 'subgroups' ? '@builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32,' : ''}
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, REDUCTION_WORKGROUP_SIZE)}
@@ -451,19 +472,7 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
   if (index < ELEMENT_COUNT) {
     ${readFirst}
   }
-  firstScratch[lane] = value;
-  secondScratch[lane] = secondValue;
-  validityScratch[lane] = valid;
-  workgroupBarrier();
-  var stride = ${REDUCTION_WORKGROUP_SIZE / 2}u;
-  loop {
-    if (lane < stride) {
-      ${combine}
-    }
-    workgroupBarrier();
-    if (stride == 1u) { break; }
-    stride = stride / 2u;
-  }
+  ${reductionSource}
   if (lane == 0u) {
     outputValues[OUTPUT_OFFSET + workgroupIndex * VALUES_PER_ROW] = firstScratch[0];
     ${isExtent ? 'outputValues[OUTPUT_OFFSET + workgroupIndex * VALUES_PER_ROW + 1u] = secondScratch[0];' : ''}
@@ -492,6 +501,93 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
     bindings,
     dispatchLayout
   });
+}
+
+/** Emits the portable 256-lane shared-memory reduction. */
+function getPortableReductionSource(combine: string): string {
+  return `firstScratch[lane] = value;
+  secondScratch[lane] = secondValue;
+  validityScratch[lane] = valid;
+  workgroupBarrier();
+  var stride = ${REDUCTION_WORKGROUP_SIZE / 2}u;
+  loop {
+    if (lane < stride) {
+      ${combine}
+    }
+    workgroupBarrier();
+    if (stride == 1u) { break; }
+    stride = stride / 2u;
+  }`;
+}
+
+/** Emits one collective per subgroup followed by a short shared-memory merge of subgroup totals. */
+function getSubgroupReductionSource(props: {
+  format: GPUScalarFormat;
+  operation: GPUReductionOperation;
+  combine: string;
+}): string {
+  const firstCollective = getSubgroupCollective(
+    props.format,
+    props.operation === 'extent' ? 'min' : props.operation,
+    'value',
+    'valid'
+  );
+  const secondCollective = getSubgroupCollective(
+    props.format,
+    props.operation === 'extent' ? 'max' : props.operation,
+    'secondValue',
+    'valid'
+  );
+  return `let subgroupValid = subgroupMax(valid);
+  let subgroupFirst = ${firstCollective};
+  let subgroupSecond = ${secondCollective};
+  if (subgroupInvocationId == 0u) {
+    firstScratch[subgroupId] = subgroupFirst;
+    secondScratch[subgroupId] = subgroupSecond;
+    validityScratch[subgroupId] = subgroupValid;
+  }
+  workgroupBarrier();
+  let subgroupCount = ${REDUCTION_WORKGROUP_SIZE}u / subgroupSize;
+  if (subgroupCount > 1u) {
+    var stride = subgroupCount / 2u;
+    loop {
+      if (lane < stride) {
+        ${props.combine}
+      }
+      workgroupBarrier();
+      if (stride == 1u) { break; }
+      stride = stride / 2u;
+    }
+  }`;
+}
+
+/** Returns a type-correct subgroup collective with neutral values for invalid lanes. */
+function getSubgroupCollective(
+  format: GPUScalarFormat,
+  operation: Exclude<GPUReductionOperation, 'extent'>,
+  value: string,
+  validity: string
+): string {
+  if (operation === 'sum') {
+    return `subgroupAdd(${value})`;
+  }
+  const identity = getReductionIdentity(format, operation);
+  const collective = operation === 'min' ? 'subgroupMin' : 'subgroupMax';
+  return `${collective}(select(${identity}, ${value}, ${validity} != 0u))`;
+}
+
+/** Returns the neutral value used to exclude an invalid lane from min/max collectives. */
+function getReductionIdentity(
+  format: GPUScalarFormat,
+  operation: Exclude<GPUReductionOperation, 'sum' | 'extent'>
+): string {
+  if (format === 'uint32') {
+    return operation === 'min' ? '4294967295u' : '0u';
+  }
+  if (format === 'sint32') {
+    return operation === 'min' ? '2147483647' : '(-2147483647 - 1)';
+  }
+  return operation === 'min' ? '3.402823466e+38' : '-3.402823466e+38';
 }
 
 /** Copies the single partial row to caller output and maps an invalid aggregate to zero. */

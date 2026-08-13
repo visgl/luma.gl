@@ -83,6 +83,13 @@ export type {
   GPUWorkgroupScanBenchmarkReport,
   GPUWorkgroupScanBenchmarkStrategy
 } from './gpu-workgroup-scan-benchmark';
+export {runGPUWorkgroupReductionBenchmark} from './gpu-workgroup-reduction-benchmark';
+export type {
+  GPUWorkgroupReductionBenchmarkPathReport,
+  GPUWorkgroupReductionBenchmarkProps,
+  GPUWorkgroupReductionBenchmarkReport,
+  GPUWorkgroupReductionBenchmarkStrategy
+} from './gpu-workgroup-reduction-benchmark';
 export {GPUSegmentedSort} from './gpu-segmented-sort';
 export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';

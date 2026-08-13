@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {WorkgroupReductionBenchmark} from '@site/src/components/docs/workgroup-reduction-benchmark';
 
 # GPUReduction
 
@@ -6,15 +7,16 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 ## Overview
 
-`GPUReduction` records a deterministic hierarchical reduction over a packed `uint32`, `sint32`,
-or `float32` graph data view or fixed-width graph vector.
+`GPUReduction` records a hierarchical reduction over a packed `uint32`, `sint32`, or `float32`
+graph data view or fixed-width graph vector.
 
 ## Concepts
 
 A reduction combines many scalar rows into one summary. `sum`, `min`, and `max` produce one value;
 `extent` produces the pair `[minimum, maximum]`. Workgroups first reduce independent blocks, then
-higher levels reduce those partial results until one row remains. This fixed tree avoids CPU
-readback and makes the floating-point order repeatable for a fixed input topology.
+higher levels reduce those partial results until one row remains. This hierarchy avoids CPU
+readback. The portable path uses a fixed floating-point tree; a subgroup-capable device may use its
+native subgroup reduction order and differ in the lowest-order floating-point bits.
 
 ### When to use it
 
@@ -37,6 +39,7 @@ new GPUReduction({input: values, output: extent, operation: 'extent'}).addToGrap
 type GPUReductionProps<T extends 'uint32' | 'sint32' | 'float32'> = {
   id?: string;
   input: GraphDataView<T> | GraphVectorView<T>;
+  mask?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   output: GraphDataView<T>;
   operation: 'sum' | 'min' | 'max' | 'extent';
 };
@@ -76,6 +79,27 @@ Empty chunks add no passes and do not change the result.
 
 All intermediate views are graph-owned transients. Their declared node uses let the command-graph
 compiler infer ordering and reuse physical scratch allocations when lifetimes do not overlap.
+
+## Subgroup acceleration
+
+On a max-feature WebGPU device that exposes both the `subgroups` device feature and the
+`subgroup_id` WGSL language feature, each reduction level uses subgroup `add`, `min`, and `max`
+collectives before merging the much smaller set of subgroup totals in workgroup memory. Other
+devices keep the portable shared-memory tree automatically; the `GPUReduction` API and results do
+not change.
+
+This path also benefits graph features that compose `GPUReduction`, including automatic histogram
+domains, raster statistics, graph core-number and modularity summaries, and global data-frame
+aggregations. It is most useful when reduction synchronization is a meaningful part of the total
+work; end-to-end workloads dominated by reading the input buffer may show a smaller improvement.
+
+### Performance expectations
+
+The live benchmark isolates the 256-value workgroup reduction at the center of every hierarchy
+level. It reports absolute input-element throughput for the portable implementation and, when the
+reader's adapter supports it, the subgroup optimization requested on the same max-feature device.
+
+<WorkgroupReductionBenchmark />
 
 ## `addToGraph(graph)`
 
