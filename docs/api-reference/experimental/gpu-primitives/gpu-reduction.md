@@ -83,26 +83,25 @@ compiler infer ordering and reuse physical scratch allocations when lifetimes do
 
 ## Performance notes
 
+<WorkgroupReductionBenchmark />
+
+### What the benchmark measures
+
+The benchmark isolates the 256-value workgroup reduction used at each hierarchy level. It reports
+absolute input throughput and compares the portable and subgroup paths on the same max-feature
+device.
+
 ### Subgroup acceleration
 
-On a max-feature WebGPU device that exposes both the `subgroups` device feature and the
-`subgroup_id` WGSL language feature, each reduction level uses subgroup `add`, `min`, and `max`
-collectives before merging the much smaller set of subgroup totals in workgroup memory. Other
-devices keep the portable shared-memory tree automatically; the `GPUReduction` API and results do
-not change.
+When a max-feature device exposes both `subgroups` and the `subgroup_id` WGSL feature,
+`GPUReduction` uses subgroup collectives before merging subgroup totals in workgroup memory. Other
+devices keep the portable tree automatically; the API does not change.
 
-This path also benefits graph features that compose `GPUReduction`, including automatic histogram
-domains, raster statistics, graph core-number and modularity summaries, and global data-frame
-aggregations. It is most useful when reduction synchronization is a meaningful part of the total
-work; end-to-end workloads dominated by reading the input buffer may show a smaller improvement.
+### Where it helps
 
-### Live benchmark
-
-The live benchmark isolates the 256-value workgroup reduction at the center of every hierarchy
-level. It reports absolute input-element throughput for the portable implementation and, when the
-reader's adapter supports it, the subgroup optimization requested on the same max-feature device.
-
-<WorkgroupReductionBenchmark />
+The fast path also benefits automatic histogram domains, raster statistics, graph summaries,
+PageRank, and global data-frame aggregations. Gains are largest when synchronization matters;
+bandwidth-bound graphs may improve less.
 
 ## `addToGraph(graph)`
 
