@@ -1313,6 +1313,10 @@ function getPassTimestamp(
 function getGPUCommandGraphCapabilities(device: Device): GPUCommandGraphCapabilities {
   return Object.freeze({
     timestampQueries: device.features.has('timestamp-query'),
+    subgroups: device.features.has('subgroups'),
+    subgroupId: device.wgslLanguageFeatures.has('subgroup_id'),
+    subgroupMinSize: device.info.subgroupMinSize,
+    subgroupMaxSize: device.info.subgroupMaxSize,
     softwareAdapter:
       device.info.gpu === 'software' ||
       device.info.gpuType === 'cpu' ||

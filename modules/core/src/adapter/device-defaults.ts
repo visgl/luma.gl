@@ -11,6 +11,7 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   powerPreference: 'high-performance',
   failIfMajorPerformanceCaveat: false,
   featureLevel: undefined!,
+  optionalFeatures: [],
   xrCompatible: false,
   createCanvasContext: undefined!,
   // WebGL specific

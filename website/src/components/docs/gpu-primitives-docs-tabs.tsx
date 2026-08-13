@@ -228,23 +228,117 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
   }
 ];
 
+type GPUPrimitivesDocsTabGroup = {
+  id: string;
+  label: string;
+  tabIds: GPUPrimitivesDocsTabId[];
+};
+
+const TAB_GROUPS: GPUPrimitivesDocsTabGroup[] = [
+  {
+    id: 'foundation',
+    label: 'Foundation',
+    tabIds: ['overview', 'command-graph', 'readback-ring']
+  },
+  {
+    id: 'transforms',
+    label: 'Transforms',
+    tabIds: ['scan', 'compaction', 'mask', 'sort', 'fft2d', 'reduction', 'histogram']
+  },
+  {
+    id: 'tables',
+    label: 'Tables & joins',
+    tabIds: ['group-aggregation', 'hash-index', 'batch-hash-index', 'hash-join', 'batch-hash-join']
+  },
+  {
+    id: 'graphs',
+    label: 'Graphs',
+    tabIds: [
+      'visibility-workflow',
+      'virtual-geometry',
+      'hierarchy-layout',
+      'graph-traversal',
+      'ancestor-projection'
+    ]
+  },
+  {
+    id: 'spatial',
+    label: 'Spatial',
+    tabIds: [
+      'grid-binning',
+      'grid-aggregation',
+      'grid-index',
+      'grid-index-query',
+      'point-spatial-filter',
+      'bvh',
+      'bvh-query',
+      'spatial-benchmark'
+    ]
+  },
+  {
+    id: 'rendering',
+    label: 'Rendering',
+    tabIds: [
+      'scene',
+      'scene-adapters',
+      'scene-draw-generation',
+      'scene-resource-groups',
+      'trace-scene',
+      'trace-interaction',
+      'trace-picking',
+      'index-picking',
+      'draw-command-buffer'
+    ]
+  }
+];
+
 export function GPUPrimitivesDocsTabs({active}: {active: GPUPrimitivesDocsTabId}): ReactNode {
+  const activeGroup = TAB_GROUPS.find(group => group.tabIds.includes(active))!;
+  const activeGroupTabs = activeGroup.tabIds.map(tabId => TABS.find(tab => tab.id === tabId)!);
+
   return (
-    <nav className="docs-page-tabs" aria-label="GPU primitives documentation sections">
-      {TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="gpu-primitives-docs-navigation">
+      <nav
+        className="docs-page-tabs gpu-primitives-docs-navigation__groups"
+        aria-label="GPU primitive categories"
+      >
+        {TAB_GROUPS.map(group => {
+          const firstTab = TABS.find(tab => tab.id === group.tabIds[0])!;
+          return (
+            <Link
+              key={group.id}
+              className={
+                group.id === activeGroup.id
+                  ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
+                  : 'docs-page-tabs__tab'
+              }
+              to={firstTab.href}
+              aria-current={group.id === activeGroup.id ? 'location' : undefined}
+            >
+              {group.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <nav
+        className="docs-page-tabs gpu-primitives-docs-navigation__operations"
+        aria-label={`${activeGroup.label} GPU primitives`}
+      >
+        {activeGroupTabs.map(tab => (
+          <Link
+            key={tab.id}
+            className={
+              tab.id === active
+                ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
+                : 'docs-page-tabs__tab'
+            }
+            to={tab.href}
+            aria-current={tab.id === active ? 'page' : undefined}
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }

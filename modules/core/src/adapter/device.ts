@@ -70,6 +70,10 @@ export type DeviceInfo = {
   fallback?: boolean;
   /** Effective WebGPU feature level used to create this device. Undefined for non-WebGPU devices. */
   featureLevel?: WebGPUDeviceFeatureLevel;
+  /** Minimum subgroup size reported by a WebGPU adapter, when available. */
+  subgroupMinSize?: number;
+  /** Maximum subgroup size reported by a WebGPU adapter, when available. */
+  subgroupMaxSize?: number;
   /** Shader language supported by device.createShader() */
   shadingLanguage: 'wgsl' | 'glsl';
   /** Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100 */
@@ -373,6 +377,8 @@ export type DeviceProps = {
   failIfMajorPerformanceCaveat?: boolean;
   /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to opt into compatibility mode, or `'best-available'` to upgrade a compatibility adapter to core when possible. */
   featureLevel?: WebGPUFeatureLevel;
+  /** WebGPU only: additional supported device features to request without enabling the full `'max'` profile. Unsupported entries are ignored. */
+  optionalFeatures?: readonly WebGPUDeviceFeature[];
   /** WebGPU only: requests an adapter that can present frames to a WebXR session. */
   xrCompatible?: boolean;
 
@@ -536,6 +542,8 @@ export abstract class Device {
   abstract info: DeviceInfo;
   /** Optional capability discovery */
   abstract features: DeviceFeatures;
+  /** WGSL language extensions exposed by the browser. These are discovered, not requested. */
+  readonly wgslLanguageFeatures: ReadonlySet<string> = new Set();
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
 

@@ -9,6 +9,7 @@ import {
   Adapter,
   type DeviceInfo,
   type DeviceProps,
+  type WebGPUDeviceFeature,
   log
 } from '@luma.gl/core';
 import type {WebGPUDevice} from './webgpu-device';
@@ -120,20 +121,29 @@ export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAd
  */
 export function getRequiredWebGPUFeatures(
   supportedFeatures: GPUSupportedFeatures,
-  featureLevel: RequestedWebGPUFeatureLevel
+  featureLevel: RequestedWebGPUFeatureLevel,
+  optionalFeatures: readonly WebGPUDeviceFeature[] = []
 ): GPUFeatureName[] {
   if (featureLevel === 'max') {
     return Array.from(supportedFeatures) as GPUFeatureName[];
   }
 
+  const requiredFeatures: GPUFeatureName[] = [];
   if (featureLevel === 'best-available' && supportedFeatures.has(CORE_FEATURES_AND_LIMITS)) {
     // Compatibility adapters expose this opt-in when they can be upgraded to
     // core. See WebGPU Fundamentals:
     // https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html
-    return [CORE_FEATURES_AND_LIMITS];
+    requiredFeatures.push(CORE_FEATURES_AND_LIMITS);
   }
 
-  return [];
+  for (const optionalFeature of optionalFeatures) {
+    const feature = optionalFeature as GPUFeatureName;
+    if (supportedFeatures.has(feature) && !requiredFeatures.includes(feature)) {
+      requiredFeatures.push(feature);
+    }
+  }
+
+  return requiredFeatures;
 }
 
 /**
@@ -188,7 +198,8 @@ export class WebGPUAdapter extends Adapter {
     const requestAdapterOptions = getWebGPURequestAdapterOptions(props);
     const gpuAdapterCacheKey = this.getGPUAdapterCacheKey(
       requestedFeatureLevel,
-      requestAdapterOptions
+      requestAdapterOptions,
+      props.optionalFeatures
     );
     const adapterPromise = this.getGPUAdapterPromise(gpuAdapterCacheKey, requestAdapterOptions);
 
@@ -207,7 +218,11 @@ export class WebGPUAdapter extends Adapter {
 
     const deviceDescriptor: GPUDeviceDescriptor = {};
 
-    const requiredFeatures = getRequiredWebGPUFeatures(adapter.features, requestedFeatureLevel);
+    const requiredFeatures = getRequiredWebGPUFeatures(
+      adapter.features,
+      requestedFeatureLevel,
+      props.optionalFeatures
+    );
     if (requiredFeatures.length > 0) {
       deviceDescriptor.requiredFeatures = requiredFeatures;
     }
@@ -257,13 +272,15 @@ export class WebGPUAdapter extends Adapter {
 
   protected getGPUAdapterCacheKey(
     featureLevel: RequestedWebGPUFeatureLevel,
-    requestAdapterOptions: GPURequestAdapterOptions
+    requestAdapterOptions: GPURequestAdapterOptions,
+    optionalFeatures: readonly WebGPUDeviceFeature[] = []
   ): string {
     return [
       featureLevel,
       requestAdapterOptions.featureLevel || 'core',
       requestAdapterOptions.powerPreference || 'default',
-      ...(requestAdapterOptions.xrCompatible ? ['xr-compatible'] : [])
+      ...(requestAdapterOptions.xrCompatible ? ['xr-compatible'] : []),
+      ...(optionalFeatures.length > 0 ? [[...optionalFeatures].sort().join(',')] : [])
     ].join(':');
   }
 }

@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {WorkgroupScanBenchmark} from '@site/src/components/docs/workgroup-scan-benchmark';
 
 # GPUScan
 
@@ -6,8 +7,8 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 ## Overview
 
-`GPUScan` adds a hierarchical `uint32` prefix sum to a `GPUCommandGraph`. Scans are exclusive by
-default and may be inclusive, segmented, or both.
+`GPUScan` computes a parallel prefix sum, commonly called a scan, over `uint32` values in a
+`GPUCommandGraph`. Scans are exclusive by default and may be inclusive, segmented, or both.
 
 ## Concepts
 
@@ -85,3 +86,36 @@ are supported. A zero-length scan adds no nodes.
 
 All arithmetic wraps modulo 2^32. Signed, floating-point, minimum/maximum, and custom associative
 scans remain future work.
+
+## Subgroup acceleration
+
+Unsegmented scans automatically use WebGPU subgroup operations when the created device exposes the
+`subgroups` feature and the browser exposes the `subgroup_id` WGSL language extension. The portable
+workgroup implementation remains the fallback, and segmented scans always use it. Subgroup lanes
+are mapped to explicit logical indices so prefix order does not depend on implementation-defined
+invocation layout.
+
+See [Optional WebGPU and WGSL features](/docs/api-reference/webgpu/optional-features) for why these
+two capabilities use different discovery and request mechanisms.
+
+This path is especially relevant to GPU-resident trace visualization: hierarchy layout and stable
+visibility compaction both scan large flag arrays on interactive updates. The GPU Trace Viewer uses
+`featureLevel: 'max'`, so recent Chrome releases opt into the fast path automatically when the
+adapter supports it and report the selected path in the inspector.
+
+### Performance expectations
+
+The standalone subgroup scan reduces block-local synchronization, but its global reads, writes,
+summary hierarchy, and offset passes can make the full operation bandwidth-bound. On an Apple M4
+Max, isolated 250K–10M element `GPUScan` measurements did not show a consistent end-to-end gain.
+Do not assume that fewer barriers automatically improve a bandwidth-bound scan or trace update.
+
+`runGPUWorkgroupScanBenchmark(device)` provides a complementary command-graph benchmark for the
+synchronization-sensitive case. It compares graph-owned portable and subgroup compute nodes that
+repeatedly scan generated values and write only one checksum per workgroup. Correctness is gated by
+a shared CPU checksum oracle, strategy order alternates between measured iterations, and reported
+GPU timings are normalized per dispatch. On the same M4 Max, its default 32-round workload was
+approximately 60% faster with subgroups. This is a compute-local upper-bound use case rather than a
+prediction for standalone `GPUScan`.
+
+<WorkgroupScanBenchmark />

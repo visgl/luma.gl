@@ -87,6 +87,7 @@ export class WebGPUDevice extends Device {
   readonly preferredDepthFormat = 'depth24plus';
 
   readonly features: DeviceFeatures;
+  override readonly wgslLanguageFeatures: ReadonlySet<string>;
   readonly info: DeviceInfo;
   readonly limits: DeviceLimits;
 
@@ -120,6 +121,8 @@ export class WebGPUDevice extends Device {
     this.handle = device;
     this.adapter = adapter;
     this.adapterInfo = adapterInfo;
+    const webgpu = navigator.gpu as GPU & {wgslLanguageFeatures?: Iterable<string>};
+    this.wgslLanguageFeatures = new Set(webgpu.wgslLanguageFeatures ?? []);
 
     this.info = this._getInfo();
     this.features = this._getFeatures();
@@ -515,6 +518,8 @@ export class WebGPUDevice extends Device {
       gpuArchitecture,
       fallback,
       featureLevel: getWebGPUDeviceFeatureLevel(this.props.featureLevel),
+      subgroupMinSize: getOptionalAdapterNumber(this.adapterInfo, 'subgroupMinSize'),
+      subgroupMaxSize: getOptionalAdapterNumber(this.adapterInfo, 'subgroupMaxSize'),
       shadingLanguage: 'wgsl',
       shadingLanguageVersion: 100
     };
@@ -593,6 +598,14 @@ export class WebGPUDevice extends Device {
     }
     return capabilities;
   }
+}
+
+function getOptionalAdapterNumber(
+  adapterInfo: GPUAdapterInfo,
+  property: string
+): number | undefined {
+  const value = (adapterInfo as unknown as Record<string, unknown>)[property];
+  return typeof value === 'number' ? value : undefined;
 }
 
 function getWebGPUDeviceLimits(limits: GPUSupportedLimits): DeviceLimits {
