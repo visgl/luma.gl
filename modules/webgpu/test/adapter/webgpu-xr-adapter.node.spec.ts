@@ -4,27 +4,11 @@
 
 import {afterEach, describe, expect, test, vi} from 'vitest';
 import {Device, type DeviceProps} from '@luma.gl/core';
-import {
-  getWebGPUFeatureLevel,
-  getWebGPURequestAdapterOptions,
-  WebGPUAdapter
-} from '../../src/adapter/webgpu-adapter';
+import {getWebGPURequestAdapterOptions, WebGPUAdapter} from '../../src/adapter/webgpu-adapter';
 
 class TestWebGPUAdapter extends WebGPUAdapter {
-  getAdapterCacheKey(props: DeviceProps): string {
-    return this.getGPUAdapterCacheKey(
-      getWebGPUFeatureLevel(props),
-      getWebGPURequestAdapterOptions(props)
-    );
-  }
-
   requestNativeAdapter(props: DeviceProps): Promise<GPUAdapter | null> {
-    const requestAdapterOptions = getWebGPURequestAdapterOptions(props);
-
-    return this.getGPUAdapterPromise(
-      this.getGPUAdapterCacheKey(getWebGPUFeatureLevel(props), requestAdapterOptions),
-      requestAdapterOptions
-    );
+    return this.requestGPUAdapter(getWebGPURequestAdapterOptions(props));
   }
 }
 
@@ -56,29 +40,9 @@ describe('XR-compatible WebGPU adapter requests', () => {
     });
   });
 
-  test('separates XR-compatible cache entries without changing ordinary cache keys', () => {
-    const adapter = new TestWebGPUAdapter();
-    const standardCacheKey = adapter.getAdapterCacheKey({});
-    const compatibleCacheKey = adapter.getAdapterCacheKey({xrCompatible: true});
-
-    expect(standardCacheKey).toBe('core:core:default');
-    expect(adapter.getAdapterCacheKey({xrCompatible: false})).toBe(standardCacheKey);
-    expect(compatibleCacheKey).toBe('core:core:default:xr-compatible');
-    expect(compatibleCacheKey).not.toBe(standardCacheKey);
-    expect(adapter.getAdapterCacheKey({xrCompatible: true, powerPreference: 'low-power'})).not.toBe(
-      compatibleCacheKey
-    );
-    expect(
-      adapter.getAdapterCacheKey({xrCompatible: true, featureLevel: 'compatibility'})
-    ).not.toBe(compatibleCacheKey);
-  });
-
-  test('forwards XR compatibility to native requests and caches each adapter profile', async () => {
-    const standardAdapter = {} as GPUAdapter;
-    const compatibleAdapter = {} as GPUAdapter;
-    const requestAdapter = vi.fn(async (options: GPURequestAdapterOptions) =>
-      options.xrCompatible ? compatibleAdapter : standardAdapter
-    );
+  test('forwards XR compatibility and obtains a fresh native adapter per request', async () => {
+    let adapterIndex = 0;
+    const requestAdapter = vi.fn(async () => ({adapterIndex: adapterIndex++}) as GPUAdapter);
     vi.stubGlobal('navigator', {gpu: {requestAdapter}});
 
     const adapter = new TestWebGPUAdapter();
@@ -87,16 +51,17 @@ describe('XR-compatible WebGPU adapter requests', () => {
     const compatibleAdapterRequest = adapter.requestNativeAdapter({xrCompatible: true});
     const repeatedCompatibleAdapterRequest = adapter.requestNativeAdapter({xrCompatible: true});
 
-    expect(repeatedStandardAdapterRequest).toBe(standardAdapterRequest);
-    expect(repeatedCompatibleAdapterRequest).toBe(compatibleAdapterRequest);
-    expect(compatibleAdapterRequest).not.toBe(standardAdapterRequest);
-    expect(requestAdapter).toHaveBeenCalledTimes(2);
+    expect(repeatedStandardAdapterRequest).not.toBe(standardAdapterRequest);
+    expect(repeatedCompatibleAdapterRequest).not.toBe(compatibleAdapterRequest);
+    expect(requestAdapter).toHaveBeenCalledTimes(4);
     expect(requestAdapter).toHaveBeenNthCalledWith(1, {featureLevel: 'core'});
-    expect(requestAdapter).toHaveBeenNthCalledWith(2, {
+    expect(requestAdapter).toHaveBeenNthCalledWith(3, {
       featureLevel: 'core',
       xrCompatible: true
     });
-    await expect(standardAdapterRequest).resolves.toBe(standardAdapter);
-    await expect(compatibleAdapterRequest).resolves.toBe(compatibleAdapter);
+    await expect(standardAdapterRequest).resolves.toMatchObject({adapterIndex: 0});
+    await expect(repeatedStandardAdapterRequest).resolves.toMatchObject({adapterIndex: 1});
+    await expect(compatibleAdapterRequest).resolves.toMatchObject({adapterIndex: 2});
+    await expect(repeatedCompatibleAdapterRequest).resolves.toMatchObject({adapterIndex: 3});
   });
 });

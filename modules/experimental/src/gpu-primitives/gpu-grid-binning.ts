@@ -16,9 +16,15 @@ import {
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
+import {
+  getGPUShaderSubgroupStrategy,
+  getSubgroupBallotHelpersWGSL,
+  getSubgroupCoalescedAtomicAddWGSL
+} from './gpu-subgroup-utils';
 
 const GRID_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_CELL_COUNT = 256;
+const MAXIMUM_SUBGROUP_COALESCED_CELL_COUNT = 16;
 
 /** Literal `[minX, minY, maxX, maxY]` bounds or one GPU-resident `float32x4` row. */
 export type GPUGridBinningBounds =
@@ -183,6 +189,10 @@ function addGridPass<Parameters>(
 ): void {
   const [width, height] = binning.gridSize;
   const local = binning.output.length <= MAXIMUM_LOCAL_CELL_COUNT;
+  const useSubgroups =
+    local &&
+    binning.output.length <= MAXIMUM_SUBGROUP_COALESCED_CELL_COUNT &&
+    getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const gpuBounds = isGPUGridBoundsView(binning.bounds);
   const literalBounds = binning.bounds as readonly [number, number, number, number];
   const boundsBinding = gpuBounds
@@ -198,14 +208,23 @@ function addGridPass<Parameters>(
   let minimumY = ${getFloatLiteral(literalBounds[1])};
   let maximumX = ${getFloatLiteral(literalBounds[2])};
   let maximumY = ${getFloatLiteral(literalBounds[3])};`;
+  const localAccumulation = useSubgroups
+    ? getSubgroupCoalescedAtomicAddWGSL(
+        'accepted',
+        'cellIndex',
+        'localCounts',
+        binning.output.length
+      )
+    : '  if (accepted) { atomicAdd(&localCounts[cellIndex], 1u); }';
   const accumulation = local
-    ? `if (accepted) { atomicAdd(&localCounts[cellIndex], 1u); }
+    ? `${localAccumulation}
   workgroupBarrier();
   if (lane < CELL_COUNT) {
     atomicAdd(&outputCounts[OUTPUT_OFFSET + lane], atomicLoad(&localCounts[lane]));
   }`
     : 'if (accepted) { atomicAdd(&outputCounts[OUTPUT_OFFSET + cellIndex], 1u); }';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 const ELEMENT_COUNT: u32 = ${binning.positions.length}u;
 const WIDTH: u32 = ${width}u;
 const HEIGHT: u32 = ${height}u;
@@ -217,6 +236,7 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(binning.output)}u;
 ${boundsBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${binning.output.length}>;` : ''}
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   if (maximum == minimum || value == minimum) { return 0u; }
@@ -226,7 +246,7 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
 
 @compute @workgroup_size(${GRID_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>
+  @builtin(local_invocation_id) localId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   let index = globalId.x;
   let lane = localId.x;

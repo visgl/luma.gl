@@ -18,8 +18,10 @@ import {
   validateMatchingVectorTopology,
   validatePackedView
 } from './graph-data-view-utils';
+import {getGPUShaderSubgroupStrategy, getSubgroupBallotHelpersWGSL} from './gpu-subgroup-utils';
 
 const GRID_AGGREGATION_WORKGROUP_SIZE = 256;
+const MAXIMUM_SUBGROUP_COALESCED_CELL_COUNT = 16;
 
 /** Packed point positions accepted by {@link GPUGridAggregation}. */
 export type GPUGridAggregationPositions = GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
@@ -243,6 +245,9 @@ function addGridAggregationPass<Parameters>(
   }
 ): void {
   const [width, height] = aggregation.gridSize;
+  const useSubgroups =
+    aggregation.output.length <= MAXIMUM_SUBGROUP_COALESCED_CELL_COUNT &&
+    getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const gpuBounds = isGPUGridBoundsView(aggregation.bounds);
   const literalBounds = aggregation.bounds as readonly [number, number, number, number];
   const boundsBinding = gpuBounds
@@ -261,7 +266,18 @@ function addGridAggregationPass<Parameters>(
   let minimumY = ${getFloatLiteral(literalBounds[1])};
   let maximumX = ${getFloatLiteral(literalBounds[2])};
   let maximumY = ${getFloatLiteral(literalBounds[3])};`;
+  const accumulation = useSubgroups
+    ? getSubgroupGridAggregationWGSL(
+        aggregation.operation,
+        aggregation.output.length,
+        aggregation.counts
+      )
+    : `  if (accepted) {
+    ${getAggregationCall(aggregation.operation)}
+    ${aggregation.counts ? `atomicAdd(&outputCounts[${getViewElementOffset(aggregation.counts)}u + cellIndex], 1u);` : ''}
+  }`;
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 const ELEMENT_COUNT: u32 = ${aggregation.positions.length}u;
 const WIDTH: u32 = ${width}u;
 const HEIGHT: u32 = ${height}u;
@@ -282,16 +298,20 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
 }
 
 ${getAggregationFunction(aggregation.operation)}
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${GRID_AGGREGATION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(global_invocation_id) globalId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   let index = globalId.x;
   ${boundsInitialization}
+  var accepted = false;
+  var cellIndex = 0u;
+  var weight = 0.0;
   if (index < ELEMENT_COUNT && maximumX >= minimumX && maximumY >= minimumY) {
     let x = positions[POSITIONS_OFFSET + index * 2u];
     let y = positions[POSITIONS_OFFSET + index * 2u + 1u];
-    let weight = weights[WEIGHTS_OFFSET + index];
+    weight = weights[WEIGHTS_OFFSET + index];
     let finitePosition = x == x && y == y && abs(x) <= 3.402823466e+38 && abs(y) <= 3.402823466e+38;
     let finiteWeight = weight == weight && abs(weight) <= 3.402823466e+38;
     let inX = x >= minimumX && x <= maximumX && (maximumX != minimumX || x == minimumX);
@@ -299,11 +319,11 @@ ${getAggregationFunction(aggregation.operation)}
     if (finitePosition && finiteWeight && inX && inY) {
       let column = getCoordinate(x, minimumX, maximumX, WIDTH);
       let row = getCoordinate(y, minimumY, maximumY, HEIGHT);
-      let cellIndex = row * WIDTH + column;
-      ${getAggregationCall(aggregation.operation)}
-      ${aggregation.counts ? `atomicAdd(&outputCounts[${getViewElementOffset(aggregation.counts)}u + cellIndex], 1u);` : ''}
+      cellIndex = row * WIDTH + column;
+      accepted = true;
     }
   }
+${accumulation}
 }`;
   const resources: GraphBufferUse[] = [
     {buffer: aggregation.positions, usage: 'storage-read'},
@@ -410,12 +430,54 @@ function getAggregationFunction(operation: GPUGridAggregationOperation): string 
 }
 
 /** Returns the WGSL statement that contributes one accepted weight. */
-function getAggregationCall(operation: GPUGridAggregationOperation): string {
+function getAggregationCall(
+  operation: GPUGridAggregationOperation,
+  cellIndex: string = 'cellIndex',
+  valueExpression: string = 'weight'
+): string {
   if (operation === 'min' || operation === 'max') {
     const atomicOperation = operation === 'min' ? 'atomicMin' : 'atomicMax';
-    return `${atomicOperation}(&outputValues[OUTPUT_OFFSET + cellIndex], encodeOrderedFloat(weight));`;
+    return `${atomicOperation}(&outputValues[OUTPUT_OFFSET + ${cellIndex}], encodeOrderedFloat(${valueExpression}));`;
   }
-  return 'atomicAddFloat(&outputValues[OUTPUT_OFFSET + cellIndex], weight);';
+  return `atomicAddFloat(&outputValues[OUTPUT_OFFSET + ${cellIndex}], ${valueExpression});`;
+}
+
+/** Coalesces equal cell keys and emits one statistic atomic per represented subgroup cell. */
+function getSubgroupGridAggregationWGSL(
+  operation: GPUGridAggregationOperation,
+  cellCount: number,
+  counts?: GraphDataView<'uint32'>
+): string {
+  const orderedOperation = operation === 'min' || operation === 'max';
+  const selectedWeight = orderedOperation
+    ? `select(${operation === 'min' ? '0xffffffffu' : '0u'}, encodeOrderedFloat(weight), matchingCell)`
+    : 'select(0.0, weight, matchingCell)';
+  const collective =
+    operation === 'min'
+      ? 'subgroupMin(selectedWeight)'
+      : operation === 'max'
+        ? 'subgroupMax(selectedWeight)'
+        : 'subgroupAdd(selectedWeight)';
+  const aggregationCall = orderedOperation
+    ? `${operation === 'min' ? 'atomicMin' : 'atomicMax'}(&outputValues[OUTPUT_OFFSET + leaderCell], aggregatedWeight);`
+    : getAggregationCall(operation, 'leaderCell', 'aggregatedWeight');
+  return /* wgsl */ `
+  var subgroupPending = accepted;
+  for (var subgroupCell = 0u; subgroupCell < ${cellCount}u; subgroupCell++) {
+    let pendingBallot = subgroupBallot(subgroupPending);
+    let hasPending = any(pendingBallot != vec4<u32>(0u));
+    let leaderInvocation = getFirstBallotLane(pendingBallot);
+    let leaderCell = subgroupShuffle(cellIndex, leaderInvocation);
+    let matchingCell = hasPending && subgroupPending && cellIndex == leaderCell;
+    let matchingBallot = subgroupBallot(matchingCell);
+    let selectedWeight = ${selectedWeight};
+    let aggregatedWeight = ${collective};
+    if (hasPending && subgroupInvocationId == leaderInvocation) {
+      ${aggregationCall}
+      ${counts ? `atomicAdd(&outputCounts[${getViewElementOffset(counts)}u + leaderCell], getBallotLaneCount(matchingBallot));` : ''}
+    }
+    subgroupPending = subgroupPending && !matchingCell;
+  }`;
 }
 
 /** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */

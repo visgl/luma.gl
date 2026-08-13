@@ -12,6 +12,7 @@ import {
   validatePackedUint32View
 } from './graph-data-view-utils';
 import type {GPUSortDirection} from './gpu-sort';
+import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 
 const MAXIMUM_SEGMENT_LENGTH = 256;
 const INVALID_INDEX = 0xffffffff;
@@ -252,7 +253,9 @@ function addSegmentBucketPass<Parameters>(
     )
     .join(',\n');
   const descending = sort.direction === 'descending';
+  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 struct SortSegment {
   keysOffset: u32,
   valuesOffset: u32,
@@ -290,52 +293,14 @@ fn comes_before(leftIndex: u32, rightIndex: u32, length: u32) -> bool {
 }
 
 @compute @workgroup_size(${width}) fn main(
-  @builtin(local_invocation_index) localInvocationIndex: u32,
+  ${useSubgroups ? '@builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32,' : '@builtin(local_invocation_index) localInvocationIndex: u32,'}
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
   let segmentIndex =
     (workgroupId.z * ${dispatchLayout.y}u + workgroupId.y) * ${dispatchLayout.x}u + workgroupId.x;
   if (segmentIndex >= SEGMENT_COUNT) { return; }
   let segment = SEGMENTS[segmentIndex];
-  indices[localInvocationIndex] = select(
-    INVALID_INDEX,
-    localInvocationIndex,
-    localInvocationIndex < segment.length
-  );
-  if (localInvocationIndex < segment.length) {
-    cachedKeys[localInvocationIndex] =
-      keys[KEYS_OFFSET + segment.keysOffset + localInvocationIndex];
-  } else {
-    cachedKeys[localInvocationIndex] = 0u;
-  }
-  workgroupBarrier();
-
-  for (var blockWidth = 2u; blockWidth <= ${width}u; blockWidth <<= 1u) {
-    for (var compareStride = blockWidth >> 1u; compareStride > 0u; compareStride >>= 1u) {
-      let partnerIndex = localInvocationIndex ^ compareStride;
-      if (partnerIndex > localInvocationIndex) {
-        let leftIndex = indices[localInvocationIndex];
-        let rightIndex = indices[partnerIndex];
-        let ascending = (localInvocationIndex & blockWidth) == 0u;
-        let shouldSwap = select(
-          comes_before(leftIndex, rightIndex, segment.length),
-          comes_before(rightIndex, leftIndex, segment.length),
-          ascending
-        );
-        indices[localInvocationIndex] = select(leftIndex, rightIndex, shouldSwap);
-        indices[partnerIndex] = select(rightIndex, leftIndex, shouldSwap);
-      }
-      workgroupBarrier();
-    }
-  }
-
-  if (localInvocationIndex < segment.length) {
-    let sourceIndex = indices[localInvocationIndex];
-    outputKeys[OUTPUT_KEYS_OFFSET + segment.outputKeysOffset + localInvocationIndex] =
-      cachedKeys[sourceIndex];
-    outputValues[OUTPUT_VALUES_OFFSET + segment.outputValuesOffset + localInvocationIndex] =
-      values[VALUES_OFFSET + segment.valuesOffset + sourceIndex];
-  }
+${useSubgroups ? getSubgroupSegmentedBitonicShader(width) : getPortableSegmentedBitonicShader(width)}
 }`;
   const identifier = `${sort.id}-bitonic-local-${width}`;
   const bindingViews: Record<string, GraphDataView> = {
@@ -378,4 +343,97 @@ fn comes_before(leftIndex: u32, rightIndex: u32, length: u32) -> bool {
       };
     }
   });
+}
+
+/** Emits the portable shared-memory network retained for CORE devices. */
+function getPortableSegmentedBitonicShader(width: number): string {
+  return /* wgsl */ `
+  indices[localInvocationIndex] = select(
+    INVALID_INDEX,
+    localInvocationIndex,
+    localInvocationIndex < segment.length
+  );
+  if (localInvocationIndex < segment.length) {
+    cachedKeys[localInvocationIndex] =
+      keys[KEYS_OFFSET + segment.keysOffset + localInvocationIndex];
+  } else {
+    cachedKeys[localInvocationIndex] = 0u;
+  }
+  workgroupBarrier();
+
+  for (var blockWidth = 2u; blockWidth <= ${width}u; blockWidth <<= 1u) {
+    for (var compareStride = blockWidth >> 1u; compareStride > 0u; compareStride >>= 1u) {
+      let partnerIndex = localInvocationIndex ^ compareStride;
+      if (partnerIndex > localInvocationIndex) {
+        let leftIndex = indices[localInvocationIndex];
+        let rightIndex = indices[partnerIndex];
+        let ascending = (localInvocationIndex & blockWidth) == 0u;
+        let shouldSwap = select(
+          comes_before(leftIndex, rightIndex, segment.length),
+          comes_before(rightIndex, leftIndex, segment.length),
+          ascending
+        );
+        indices[localInvocationIndex] = select(leftIndex, rightIndex, shouldSwap);
+        indices[partnerIndex] = select(rightIndex, leftIndex, shouldSwap);
+      }
+      workgroupBarrier();
+    }
+  }
+
+  if (localInvocationIndex < segment.length) {
+    let sourceIndex = indices[localInvocationIndex];
+    outputKeys[OUTPUT_KEYS_OFFSET + segment.outputKeysOffset + localInvocationIndex] =
+      cachedKeys[sourceIndex];
+    outputValues[OUTPUT_VALUES_OFFSET + segment.outputValuesOffset + localInvocationIndex] =
+      values[VALUES_OFFSET + segment.valuesOffset + sourceIndex];
+  }`;
+}
+
+/** Keeps subgroup-local compare/exchange stages in registers and synchronizes only cross-subgroup stages. */
+function getSubgroupSegmentedBitonicShader(width: number): string {
+  return /* wgsl */ `
+  let lane = subgroupId * subgroupSize + subgroupInvocationId;
+  var currentIndex = select(INVALID_INDEX, lane, lane < segment.length);
+  if (lane < segment.length) {
+    cachedKeys[lane] = keys[KEYS_OFFSET + segment.keysOffset + lane];
+  } else {
+    cachedKeys[lane] = 0u;
+  }
+  workgroupBarrier();
+
+  for (var blockWidth = 2u; blockWidth <= ${width}u; blockWidth <<= 1u) {
+    for (var compareStride = blockWidth >> 1u; compareStride > 0u; compareStride >>= 1u) {
+      var partnerIndex = INVALID_INDEX;
+      if (compareStride < subgroupSize) {
+        partnerIndex = subgroupShuffleXor(currentIndex, compareStride);
+      } else {
+        indices[lane] = currentIndex;
+        workgroupBarrier();
+        partnerIndex = indices[lane ^ compareStride];
+      }
+
+      let lowerLane = (lane & compareStride) == 0u;
+      let leftIndex = select(partnerIndex, currentIndex, lowerLane);
+      let rightIndex = select(currentIndex, partnerIndex, lowerLane);
+      let ascending = (lane & blockWidth) == 0u;
+      let shouldSwap = select(
+        comes_before(leftIndex, rightIndex, segment.length),
+        comes_before(rightIndex, leftIndex, segment.length),
+        ascending
+      );
+      let sortedLeft = select(leftIndex, rightIndex, shouldSwap);
+      let sortedRight = select(rightIndex, leftIndex, shouldSwap);
+      currentIndex = select(sortedRight, sortedLeft, lowerLane);
+
+      if (compareStride >= subgroupSize) {
+        workgroupBarrier();
+      }
+    }
+  }
+
+  if (lane < segment.length) {
+    outputKeys[OUTPUT_KEYS_OFFSET + segment.outputKeysOffset + lane] = cachedKeys[currentIndex];
+    outputValues[OUTPUT_VALUES_OFFSET + segment.outputValuesOffset + lane] =
+      values[VALUES_OFFSET + segment.valuesOffset + currentIndex];
+  }`;
 }

@@ -124,3 +124,10 @@ inputs and output must belong to the target graph.
 The graph owns no persistent result buffer, performs no submission, and introduces no readback.
 Out-of-range keys are ignored so callers can use a sentinel such as `0xffffffff` for missing or
 unmapped values.
+
+## Performance notes
+
+On subgroup-capable devices, aggregations with at most 16 groups combine lanes carrying the same
+key before issuing count, sum, minimum, maximum, or mean atomics. This targets compact dictionaries
+with high contention. Larger dictionaries and devices without both subgroup capabilities retain
+the existing local-count or direct-global-atomic implementations.

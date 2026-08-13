@@ -150,9 +150,26 @@ For every optional implementation path:
 6. Benchmark the full workload; fewer shader instructions or barriers do not guarantee a faster
    bandwidth-bound operation.
 
-The experimental [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan) follows this
-pattern: it uses subgroups only when both `subgroups` and `subgroup_id` are available, retains its
-portable implementation, and provides a live correctness-gated comparison.
+The experimental GPU primitives follow this pattern. All subgroup paths require both `subgroups`
+and `subgroup_id`; otherwise the same public operation records its portable shader.
+
+| Primitive or consumer | Subgroup work | Optimized scope |
+| --- | --- | --- |
+| [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan) | Native prefix collectives reduce workgroup barriers | Unsegmented scans |
+| [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction) | Native reductions merge each subgroup before shared-memory totals | Every reduction level; also PageRank and automatic histogram domains |
+| Indexed range compaction | Native prefix collectives compute local range offsets | `GPUIndexedRangeCompaction` and `GPUPartitionedIndexedRangeCompaction` |
+| [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort) | Register shuffles handle subgroup-local bitonic stages | Local bitonic networks through 256 rows, including `GPUBatchSort` chunks |
+| [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort) | The same shuffle network runs for every packed segment | Segments through 256 rows |
+| [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram) | Equal-bin lanes coalesce into one local atomic update | Histograms with at most 16 bins |
+| [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning) | Equal-cell lanes coalesce into one local atomic update | Grids with at most 16 cells |
+| [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation) | Equal-cell lanes combine weights before statistic atomics | Aggregations with at most 16 cells |
+| [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation) | Equal-key lanes coalesce count or statistic atomics | Aggregations with at most 16 groups |
+
+The narrow atomic thresholds are deliberate: the coalescing shader has bounded work proportional
+to the number of possible keys. Larger outputs retain the existing workgroup-local or direct
+global atomic implementations. The live GPU Sort and GPU Data Analysis examples request the
+`'max'` feature level, validate results against CPU oracles, and therefore exercise these paths on
+supporting browsers without changing their public controls.
 
 ## Related references
 

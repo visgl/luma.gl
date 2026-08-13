@@ -23,9 +23,15 @@ import {
   validatePackedView,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {
+  getGPUShaderSubgroupStrategy,
+  getSubgroupBallotHelpersWGSL,
+  getSubgroupCoalescedAtomicAddWGSL
+} from './gpu-subgroup-utils';
 
 const GROUP_AGGREGATION_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_GROUP_COUNT = 256;
+const MAXIMUM_SUBGROUP_COALESCED_GROUP_COUNT = 16;
 
 type GPUGroupAggregationDispatchLayout = GPUBoundedDispatchLayout;
 
@@ -295,6 +301,10 @@ function addGroupCountPass<Parameters>(
   }
 ): void {
   const local = props.output.length <= MAXIMUM_LOCAL_GROUP_COUNT;
+  const useSubgroups =
+    local &&
+    props.output.length <= MAXIMUM_SUBGROUP_COALESCED_GROUP_COUNT &&
+    getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const maskBinding = props.mask
     ? '@group(0) @binding(1) var<storage, read> selectionMask: array<u32>;'
     : '';
@@ -302,14 +312,23 @@ function addGroupCountPass<Parameters>(
   const maskCondition = props.mask
     ? `selectionMask[${getViewElementOffset(props.mask)}u + index] != 0u`
     : 'true';
+  const localAccumulation = useSubgroups
+    ? getSubgroupCoalescedAtomicAddWGSL(
+        'accepted',
+        'groupIndex',
+        'localCounts',
+        props.output.length
+      )
+    : '  if (accepted) { atomicAdd(&localCounts[groupIndex], 1u); }';
   const accumulation = local
-    ? `if (accepted) { atomicAdd(&localCounts[groupIndex], 1u); }
+    ? `${localAccumulation}
   workgroupBarrier();
   if (lane < GROUP_COUNT) {
     atomicAdd(&outputCounts[OUTPUT_OFFSET + lane], atomicLoad(&localCounts[lane]));
   }`
     : 'if (accepted) { atomicAdd(&outputCounts[OUTPUT_OFFSET + groupIndex], 1u); }';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 const ELEMENT_COUNT: u32 = ${props.keys.length}u;
 const GROUP_COUNT: u32 = ${props.output.length}u;
 const KEYS_OFFSET: u32 = ${getViewElementOffset(props.keys)}u;
@@ -318,10 +337,11 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 ${maskBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
   @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>
+  @builtin(local_invocation_id) localId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   let workgroupIndex = (workgroupId.z * ${props.dispatchLayout.y}u + workgroupId.y) * ${props.dispatchLayout.x}u + workgroupId.x;
   let index = workgroupIndex * ${GROUP_AGGREGATION_WORKGROUP_SIZE}u + localId.x;
@@ -413,6 +433,9 @@ function addGroupStatisticPass<Parameters>(
     dispatchLayout: GPUGroupAggregationDispatchLayout;
   }
 ): void {
+  const useSubgroups =
+    props.output.length <= MAXIMUM_SUBGROUP_COALESCED_GROUP_COUNT &&
+    getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const maskBinding = props.mask
     ? '@group(0) @binding(2) var<storage, read> selectionMask: array<u32>;'
     : '';
@@ -423,7 +446,14 @@ function addGroupStatisticPass<Parameters>(
   const maskCondition = props.mask
     ? `selectionMask[${getViewElementOffset(props.mask)}u + index] != 0u`
     : 'true';
+  const accumulation = useSubgroups
+    ? getSubgroupStatisticAggregationWGSL(props.operation, props.output.length, props.counts)
+    : `  if (accepted) {
+    ${getFloatAggregationCall(props.operation, 'groupIndex')}
+    ${props.counts ? `atomicAdd(&outputCounts[${getViewElementOffset(props.counts)}u + groupIndex], 1u);` : ''}
+  }`;
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 const ELEMENT_COUNT: u32 = ${props.keys.length}u;
 const GROUP_COUNT: u32 = ${props.output.length}u;
 const KEYS_OFFSET: u32 = ${getViewElementOffset(props.keys)}u;
@@ -436,22 +466,24 @@ ${maskBinding}
 ${countsBinding}
 
 ${getFloatAggregationFunction(props.operation)}
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
   @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(local_invocation_id) localId: vec3<u32>
+  @builtin(local_invocation_id) localId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   let workgroupIndex = (workgroupId.z * ${props.dispatchLayout.y}u + workgroupId.y) * ${props.dispatchLayout.x}u + workgroupId.x;
   let index = workgroupIndex * ${GROUP_AGGREGATION_WORKGROUP_SIZE}u + localId.x;
+  var accepted = false;
+  var groupIndex = 0u;
+  var value = 0.0;
   if (index < ELEMENT_COUNT && ${maskCondition}) {
-    let groupIndex = groupKeys[KEYS_OFFSET + index];
-    let value = inputValues[VALUES_OFFSET + index];
+    groupIndex = groupKeys[KEYS_OFFSET + index];
+    value = inputValues[VALUES_OFFSET + index];
     let finiteValue = value == value && abs(value) <= 3.402823466e+38;
-    if (groupIndex < GROUP_COUNT && finiteValue) {
-      ${getFloatAggregationCall(props.operation, 'groupIndex')}
-      ${props.counts ? `atomicAdd(&outputCounts[${getViewElementOffset(props.counts)}u + groupIndex], 1u);` : ''}
-    }
+    accepted = groupIndex < GROUP_COUNT && finiteValue;
   }
+${accumulation}
 }`;
   const resources: GraphBufferUse[] = [
     {buffer: props.keys, usage: 'storage-read'},
@@ -565,13 +597,52 @@ function getFloatAggregationFunction(
 /** Returns the WGSL statement that contributes one accepted floating-point value. */
 function getFloatAggregationCall(
   operation: Exclude<GPUGroupAggregationOperation, 'count'>,
-  groupIndex: string
+  groupIndex: string,
+  valueExpression: string = 'value'
 ): string {
   if (operation === 'min' || operation === 'max') {
     const atomicOperation = operation === 'min' ? 'atomicMin' : 'atomicMax';
-    return `${atomicOperation}(&outputValues[OUTPUT_OFFSET + ${groupIndex}], encodeOrderedFloat(value));`;
+    return `${atomicOperation}(&outputValues[OUTPUT_OFFSET + ${groupIndex}], encodeOrderedFloat(${valueExpression}));`;
   }
-  return `atomicAddFloat(&outputValues[OUTPUT_OFFSET + ${groupIndex}], value);`;
+  return `atomicAddFloat(&outputValues[OUTPUT_OFFSET + ${groupIndex}], ${valueExpression});`;
+}
+
+/** Coalesces equal group keys and emits one statistic atomic per key represented in a subgroup. */
+function getSubgroupStatisticAggregationWGSL(
+  operation: Exclude<GPUGroupAggregationOperation, 'count'>,
+  groupCount: number,
+  counts?: GraphDataView<'uint32'>
+): string {
+  const orderedOperation = operation === 'min' || operation === 'max';
+  const selectedValue = orderedOperation
+    ? `select(${operation === 'min' ? '0xffffffffu' : '0u'}, encodeOrderedFloat(value), matchingKey)`
+    : 'select(0.0, value, matchingKey)';
+  const collective =
+    operation === 'min'
+      ? 'subgroupMin(selectedValue)'
+      : operation === 'max'
+        ? 'subgroupMax(selectedValue)'
+        : 'subgroupAdd(selectedValue)';
+  const aggregationCall = orderedOperation
+    ? `${operation === 'min' ? 'atomicMin' : 'atomicMax'}(&outputValues[OUTPUT_OFFSET + leaderKey], aggregatedValue);`
+    : getFloatAggregationCall(operation, 'leaderKey', 'aggregatedValue');
+  return /* wgsl */ `
+  var subgroupPending = accepted;
+  for (var subgroupGroup = 0u; subgroupGroup < ${groupCount}u; subgroupGroup++) {
+    let pendingBallot = subgroupBallot(subgroupPending);
+    let hasPending = any(pendingBallot != vec4<u32>(0u));
+    let leaderInvocation = getFirstBallotLane(pendingBallot);
+    let leaderKey = subgroupShuffle(groupIndex, leaderInvocation);
+    let matchingKey = hasPending && subgroupPending && groupIndex == leaderKey;
+    let matchingBallot = subgroupBallot(matchingKey);
+    let selectedValue = ${selectedValue};
+    let aggregatedValue = ${collective};
+    if (hasPending && subgroupInvocationId == leaderInvocation) {
+      ${aggregationCall}
+      ${counts ? `atomicAdd(&outputCounts[${getViewElementOffset(counts)}u + leaderKey], getBallotLaneCount(matchingBallot));` : ''}
+    }
+    subgroupPending = subgroupPending && !matchingKey;
+  }`;
 }
 
 /** Plans a bounded 3D dispatch for one packed group-key chunk. @internal */

@@ -52,3 +52,11 @@ uses vector-wide scan offsets directly and does not pack source or output chunks
 
 The initial implementation compacts IDs rather than arbitrary records. Renderers and subsequent
 kernels use those IDs to fetch source data.
+
+## Performance notes
+
+`GPUCompaction` inherits the optional subgroup acceleration of its unsegmented `GPUScan`.
+`GPUIndexedRangeCompaction` and `GPUPartitionedIndexedRangeCompaction` also use subgroup prefix
+collectives for their dedicated per-range scans, reducing each local scan from 17 workgroup
+barriers to two. This path is used by the GPU Trace Viewer for stable span and dependency lists;
+CORE devices retain the original workgroup implementation.

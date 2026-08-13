@@ -1,0 +1,36 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import type {Device} from '@luma.gl/core';
+import {describe, expect, test} from 'vitest';
+import {
+  getGPUShaderSubgroupStrategy,
+  getSubgroupCoalescedAtomicAddWGSL
+} from '../../src/gpu-primitives/gpu-subgroup-utils';
+
+describe('GPU subgroup shader utilities', () => {
+  test('requires both the device and WGSL capabilities', () => {
+    expect(getGPUShaderSubgroupStrategy(makeDevice([], []))).toBe('portable');
+    expect(getGPUShaderSubgroupStrategy(makeDevice(['subgroups'], []))).toBe('portable');
+    expect(getGPUShaderSubgroupStrategy(makeDevice([], ['subgroup_id']))).toBe('portable');
+    expect(getGPUShaderSubgroupStrategy(makeDevice(['subgroups'], ['subgroup_id']))).toBe(
+      'subgroups'
+    );
+  });
+
+  test('bounds coalescing work by the caller-provided key count', () => {
+    const source = getSubgroupCoalescedAtomicAddWGSL('accepted', 'binIndex', 'localCounts', 8);
+
+    expect(source).toContain('subgroupGroup < 8u');
+    expect(source).toContain('let hasPending = any(pendingBallot != vec4<u32>(0u));');
+    expect(source).not.toContain('break;');
+  });
+});
+
+function makeDevice(features: string[], wgslLanguageFeatures: string[]): Device {
+  return {
+    features: new Set(features),
+    wgslLanguageFeatures: new Set(wgslLanguageFeatures)
+  } as unknown as Device;
+}
