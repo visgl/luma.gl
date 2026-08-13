@@ -24,6 +24,7 @@ import {
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
+import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 
 const REDUCTION_WORKGROUP_SIZE = 256;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
@@ -33,9 +34,7 @@ export type GPUReductionStrategy = 'portable' | 'subgroups';
 
 /** Selects subgroup collectives only when the device and WGSL language both expose them. */
 export function getGPUReductionStrategy(device: Device): GPUReductionStrategy {
-  return device.features?.has('subgroups') && device.wgslLanguageFeatures?.has('subgroup_id')
-    ? 'subgroups'
-    : 'portable';
+  return getGPUShaderSubgroupStrategy(device);
 }
 
 /**

@@ -135,14 +135,17 @@ type GPUSortProps = {
 - Inputs are not modified. The caller owns all four views and their imported buffers.
 
 `algorithm` defaults to `auto`. Inputs containing at most 256 rows use a complete, stable bitonic
-sorting network in workgroup memory, requiring only one graph node and one dispatch. Its workgroup
-contains only the padded power-of-two row count, and each source key is loaded into shared memory
-once before sorting. Larger inputs use a stable four-bit least-significant-digit radix sort: each
-digit contributes a workgroup-local histogram, a reusable `GPUScan`, and an order-preserving
-scatter. The radix implementation supports both sort directions, partial final digits, and the
-eight-storage-buffer CORE WebGPU limit without requiring subgroup features. Explicit algorithm
-selection remains available for measurement and testing; `resolvedAlgorithm` reports the concrete
-selection.
+sorting network, requiring only one graph node and one dispatch. CORE devices exchange every stage
+through workgroup memory. A subgroup-capable device keeps subgroup-local stages in registers with
+shuffle operations and synchronizes shared memory only for cross-subgroup stages. Each source key
+is still loaded once, and both paths produce the same stable order.
+
+Larger inputs use a stable four-bit least-significant-digit radix sort: each digit contributes a
+workgroup-local histogram, a reusable `GPUScan`, and an order-preserving scatter. The radix
+implementation supports both sort directions, partial final digits, and the eight-storage-buffer
+CORE WebGPU limit. Its internal unsegmented scans can still select their subgroup path. Explicit
+algorithm selection remains available for measurement and testing; `resolvedAlgorithm` reports
+the concrete selection.
 
 `keyBits` defaults to `32` and controls how many least-significant bits the radix implementation
 processes. A 32-bit sort therefore needs eight radix digits instead of 32 binary partitions. Radix

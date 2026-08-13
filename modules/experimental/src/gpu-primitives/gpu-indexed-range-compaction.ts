@@ -11,6 +11,7 @@ import {
   GraphVectorView
 } from './gpu-command-graph';
 import {GPUScan} from './gpu-scan';
+import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 import {
   createTransientView,
   getViewBinding,
@@ -20,6 +21,7 @@ import {
 } from './graph-data-view-utils';
 
 const RANGE_COMPACTION_WORKGROUP_SIZE = 256;
+const MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT = 64;
 
 /** Packed record layout describing source ranges consumed by indexed range compaction. */
 export type GPUIndexedRangeLayout = {
@@ -472,7 +474,9 @@ function addPartitionRangeCountPass<Parameters>(
   }
 ): void {
   const {rangeLayout} = compaction;
+  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_START: u32 = ${props.rangeStart}u;
 const RANGE_END: u32 = ${props.rangeEnd}u;
 const SOURCE_START: u32 = ${props.sourceStart}u;
@@ -488,12 +492,12 @@ const RANGE_COUNTS_OFFSET: u32 = ${getViewElementOffset(props.rangeCounts)}u;
 @group(0) @binding(1) var<storage, read> ranges: array<u32>;
 @group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
 @group(0) @binding(3) var<storage, read_write> rangeCounts: array<u32>;
-var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;
+${useSubgroups ? `var<workgroup> subgroupOffsets: array<u32, ${MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT}>;` : `var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;`}
 
 @compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32' : ''}
 ) {
   let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
   if (rangeId < RANGE_START || rangeId >= RANGE_END) {
@@ -505,14 +509,12 @@ fn main(
   if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END) {
     return;
   }
-${getPartitionSelectionScanShader(compaction.flagEncoding)}
+${getPartitionSelectionScanShader(compaction.flagEncoding, useSubgroups)}
 
-  if (localIndex == 0u) {
-    var selectedCount = 0u;
-    if (elementCount != 0u) {
-      selectedCount = prefixes[elementCount - 1u];
-    }
-    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = selectedCount;
+  if (elementCount == 0u && localIndex == 0u) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = 0u;
+  } else if (localIndex + 1u == elementCount) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = inclusivePrefix;
   }
 }`;
   addIndirectPass(graph, {
@@ -549,7 +551,9 @@ function addPartitionScatterPass<Parameters>(
   }
 ): void {
   const {rangeLayout} = compaction;
+  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_START: u32 = ${props.rangeStart}u;
 const RANGE_END: u32 = ${props.rangeEnd}u;
 const SOURCE_START: u32 = ${props.sourceStart}u;
@@ -567,12 +571,12 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 @group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
 @group(0) @binding(3) var<storage, read> rangeOffsets: array<u32>;
 @group(0) @binding(4) var<storage, read_write> outputIds: array<u32>;
-var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;
+${useSubgroups ? `var<workgroup> subgroupOffsets: array<u32, ${MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT}>;` : `var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;`}
 
 @compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32' : ''}
 ) {
   let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
   if (rangeId < RANGE_START || rangeId >= RANGE_END) {
@@ -584,11 +588,11 @@ fn main(
   if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END) {
     return;
   }
-${getPartitionSelectionScanShader(compaction.flagEncoding)}
+${getPartitionSelectionScanShader(compaction.flagEncoding, useSubgroups)}
 
   if (selected != 0u) {
     let outputIndex = rangeOffsets[RANGE_OFFSETS_OFFSET + rangeId] +
-      prefixes[localIndex] - selected;
+      inclusivePrefix - selected;
     outputIds[OUTPUT_OFFSET + outputIndex] = firstIndex + localIndex;
   }
 }`;
@@ -613,8 +617,37 @@ ${getPartitionSelectionScanShader(compaction.flagEncoding)}
   });
 }
 
-function getPartitionSelectionScanShader(encoding: GPUIndexedRangeFlagEncoding): string {
+function getPartitionSelectionScanShader(
+  encoding: GPUIndexedRangeFlagEncoding,
+  useSubgroups: boolean
+): string {
   const selectedExpression = getFlagSelectionExpression(encoding, 'chunkIndex');
+  if (useSubgroups) {
+    return /* wgsl */ `
+  let localIndex = subgroupId * subgroupSize + subgroupInvocationId;
+  let chunkIndex = firstIndex - SOURCE_START + localIndex;
+  var selected = 0u;
+  if (localIndex < elementCount && ${selectedExpression}) {
+    selected = 1u;
+  }
+  let subgroupPrefix = subgroupInclusiveAdd(selected);
+  if (subgroupInvocationId == subgroupSize - 1u) {
+    subgroupOffsets[subgroupId] = subgroupPrefix;
+  }
+  workgroupBarrier();
+
+  let subgroupCount = ${RANGE_COMPACTION_WORKGROUP_SIZE}u / subgroupSize;
+  if (localIndex == 0u) {
+    var runningOffset = 0u;
+    for (var subgroupIndex = 0u; subgroupIndex < subgroupCount; subgroupIndex++) {
+      let subgroupTotal = subgroupOffsets[subgroupIndex];
+      subgroupOffsets[subgroupIndex] = runningOffset;
+      runningOffset += subgroupTotal;
+    }
+  }
+  workgroupBarrier();
+  let inclusivePrefix = subgroupOffsets[subgroupId] + subgroupPrefix;`;
+  }
   return /* wgsl */ `
   let localIndex = localId.x;
   let chunkIndex = firstIndex - SOURCE_START + localIndex;
@@ -638,7 +671,8 @@ function getPartitionSelectionScanShader(encoding: GPUIndexedRangeFlagEncoding):
     prefixes[localIndex] += addend;
     workgroupBarrier();
     step *= 2u;
-  }`;
+  }
+  let inclusivePrefix = prefixes[localIndex];`;
 }
 
 function getFlagSelectionExpression(
@@ -743,7 +777,9 @@ function addLocalScanPass<Parameters>(
 ): void {
   const {rangeLayout} = compaction;
   const passId = `${compaction.id}-local-scan`;
+  const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_COUNT: u32 = ${compaction.rangeCount}u;
 const RANGE_WORD_STRIDE: u32 = ${rangeLayout.wordStride}u;
 const RANGE_FIRST_WORD: u32 = ${rangeLayout.firstIndexWordOffset}u;
@@ -758,12 +794,12 @@ const RANGE_COUNTS_OFFSET: u32 = ${getViewElementOffset(rangeCounts)}u;
 @group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
 @group(0) @binding(3) var<storage, read_write> localOffsets: array<u32>;
 @group(0) @binding(4) var<storage, read_write> rangeCounts: array<u32>;
-var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;
+${useSubgroups ? `var<workgroup> subgroupOffsets: array<u32, ${MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT}>;` : `var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;`}
 
 @compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32' : ''}
 ) {
   let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
   if (rangeId >= RANGE_COUNT) {
@@ -772,6 +808,66 @@ fn main(
   let recordOffset = RANGES_OFFSET + rangeId * RANGE_WORD_STRIDE;
   let firstIndex = ranges[recordOffset + RANGE_FIRST_WORD];
   let elementCount = ranges[recordOffset + RANGE_COUNT_WORD];
+${getRangeSelectionScanShader(useSubgroups)}
+
+  if (localIndex < elementCount) {
+    localOffsets[LOCAL_OFFSETS_OFFSET + firstIndex + localIndex] =
+      inclusivePrefix - selected;
+  }
+  if (elementCount == 0u && localIndex == 0u) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = 0u;
+  } else if (localIndex + 1u == elementCount) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = inclusivePrefix;
+  }
+}`;
+  addIndirectPass(graph, {
+    id: passId,
+    source,
+    views: {
+      flags: compaction.flags,
+      ranges: compaction.ranges,
+      activeRangeIds: compaction.activeRangeIds,
+      localOffsets,
+      rangeCounts
+    },
+    resources: [
+      {buffer: compaction.flags, usage: 'storage-read'},
+      {buffer: compaction.ranges, usage: 'storage-read'},
+      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+      {buffer: localOffsets, usage: 'storage-write'},
+      {buffer: rangeCounts, usage: 'storage-write'}
+    ],
+    dispatchBuffer: compaction.activeRangeDispatch
+  });
+}
+
+function getRangeSelectionScanShader(useSubgroups: boolean): string {
+  if (useSubgroups) {
+    return /* wgsl */ `
+  let localIndex = subgroupId * subgroupSize + subgroupInvocationId;
+  var selected = 0u;
+  if (localIndex < elementCount && flags[FLAGS_OFFSET + firstIndex + localIndex] != 0u) {
+    selected = 1u;
+  }
+  let subgroupPrefix = subgroupInclusiveAdd(selected);
+  if (subgroupInvocationId == subgroupSize - 1u) {
+    subgroupOffsets[subgroupId] = subgroupPrefix;
+  }
+  workgroupBarrier();
+
+  let subgroupCount = ${RANGE_COMPACTION_WORKGROUP_SIZE}u / subgroupSize;
+  if (localIndex == 0u) {
+    var runningOffset = 0u;
+    for (var subgroupIndex = 0u; subgroupIndex < subgroupCount; subgroupIndex++) {
+      let subgroupTotal = subgroupOffsets[subgroupIndex];
+      subgroupOffsets[subgroupIndex] = runningOffset;
+      runningOffset += subgroupTotal;
+    }
+  }
+  workgroupBarrier();
+  let inclusivePrefix = subgroupOffsets[subgroupId] + subgroupPrefix;`;
+  }
+  return /* wgsl */ `
   let localIndex = localId.x;
   var selected = 0u;
   if (localIndex < elementCount && flags[FLAGS_OFFSET + firstIndex + localIndex] != 0u) {
@@ -794,38 +890,7 @@ fn main(
     workgroupBarrier();
     step *= 2u;
   }
-
-  if (localIndex < elementCount) {
-    localOffsets[LOCAL_OFFSETS_OFFSET + firstIndex + localIndex] =
-      prefixes[localIndex] - selected;
-  }
-  if (localIndex == 0u) {
-    var selectedCount = 0u;
-    if (elementCount != 0u) {
-      selectedCount = prefixes[elementCount - 1u];
-    }
-    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = selectedCount;
-  }
-}`;
-  addIndirectPass(graph, {
-    id: passId,
-    source,
-    views: {
-      flags: compaction.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets,
-      rangeCounts
-    },
-    resources: [
-      {buffer: compaction.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: localOffsets, usage: 'storage-write'},
-      {buffer: rangeCounts, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  let inclusivePrefix = prefixes[localIndex];`;
 }
 
 function addScatterPass<Parameters>(

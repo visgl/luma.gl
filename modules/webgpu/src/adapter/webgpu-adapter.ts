@@ -169,7 +169,6 @@ export function getEffectiveWebGPUFeatureLevel(
 export class WebGPUAdapter extends Adapter {
   /** type of device's created by this adapter */
   readonly type: WebGPUDevice['type'] = 'webgpu';
-  protected gpuAdapterPromises = new Map<string, Promise<GPUAdapter | null>>();
 
   isSupported(): boolean {
     // Check if WebGPU is available
@@ -196,14 +195,7 @@ export class WebGPUAdapter extends Adapter {
 
     const requestedFeatureLevel = getWebGPUFeatureLevel(props);
     const requestAdapterOptions = getWebGPURequestAdapterOptions(props);
-    const gpuAdapterCacheKey = this.getGPUAdapterCacheKey(
-      requestedFeatureLevel,
-      requestAdapterOptions,
-      props.optionalFeatures
-    );
-    const adapterPromise = this.getGPUAdapterPromise(gpuAdapterCacheKey, requestAdapterOptions);
-
-    const adapter = await adapterPromise;
+    const adapter = await this.requestGPUAdapter(requestAdapterOptions);
 
     if (!adapter) {
       throw new Error('Failed to request WebGPU adapter');
@@ -232,7 +224,6 @@ export class WebGPUAdapter extends Adapter {
     }
 
     const gpuDevice = await adapter.requestDevice(deviceDescriptor);
-    this.gpuAdapterPromises.delete(gpuAdapterCacheKey);
 
     // log.probe(1, 'GPUDevice available')();
 
@@ -258,30 +249,11 @@ export class WebGPUAdapter extends Adapter {
     throw new Error('WebGPUAdapter.attach() not implemented');
   }
 
-  protected getGPUAdapterPromise(
-    cacheKey: string,
+  /** Requests a fresh native adapter for every device creation. */
+  protected requestGPUAdapter(
     requestAdapterOptions: GPURequestAdapterOptions
   ): Promise<GPUAdapter | null> {
-    let gpuAdapterPromise = this.gpuAdapterPromises.get(cacheKey);
-    if (!gpuAdapterPromise) {
-      gpuAdapterPromise = navigator.gpu.requestAdapter(requestAdapterOptions);
-      this.gpuAdapterPromises.set(cacheKey, gpuAdapterPromise);
-    }
-    return gpuAdapterPromise;
-  }
-
-  protected getGPUAdapterCacheKey(
-    featureLevel: RequestedWebGPUFeatureLevel,
-    requestAdapterOptions: GPURequestAdapterOptions,
-    optionalFeatures: readonly WebGPUDeviceFeature[] = []
-  ): string {
-    return [
-      featureLevel,
-      requestAdapterOptions.featureLevel || 'core',
-      requestAdapterOptions.powerPreference || 'default',
-      ...(requestAdapterOptions.xrCompatible ? ['xr-compatible'] : []),
-      ...(optionalFeatures.length > 0 ? [[...optionalFeatures].sort().join(',')] : [])
-    ].join(':');
+    return navigator.gpu.requestAdapter(requestAdapterOptions);
   }
 }
 

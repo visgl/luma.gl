@@ -123,10 +123,14 @@ Every segment is assigned one workgroup. Dispatches automatically expand across 
 dispatch dimensions where necessary and guard surplus workgroups in partially populated layouts.
 Node identifiers follow `${id}-bitonic-local-${width}`.
 
-Each workgroup loads its segment keys into shared memory once, performs a stable padded bitonic
-sorting network, and gathers the paired payload into its corresponding output range. Descriptors
-are compile-time shader constants, so each generated shader binds only four storage buffers and
-requires no subgroup extension, timestamp query, descriptor upload, or scratch allocation.
+Each workgroup loads its segment keys once, performs a stable padded bitonic sorting network, and
+gathers the paired payload into its corresponding output range. A subgroup-capable device keeps
+subgroup-local compare/exchange stages in registers and uses shared memory only across subgroup
+boundaries. Other devices retain the original all-shared-memory network automatically.
+
+Descriptors are compile-time shader constants, so each generated shader binds only four storage
+buffers and requires no timestamp query, descriptor upload, or scratch allocation. The optional
+subgroup path does not change graph nodes, storage, ordering, or the public API.
 
 The operation only records graph work. Compilation, encoding, submission, and optional result
 readback remain application-owned.

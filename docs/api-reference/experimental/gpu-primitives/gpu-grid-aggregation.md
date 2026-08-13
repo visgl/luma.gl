@@ -79,3 +79,10 @@ does not read the sums back.
 Counts remain independently available from [`GPUGridBinning`](./gpu-grid-binning) when an
 application needs both population and value statistics. Irregular spatial bins,
 higher-dimensional aggregates, variance, and custom associative operations remain future work.
+
+## Performance notes
+
+On subgroup-capable devices, grids with at most 16 cells combine weights from lanes targeting the
+same cell before issuing sum, minimum, maximum, or mean atomics. This targets coarse, highly
+contended spatial summaries. Larger grids and devices without both subgroup capabilities retain
+the existing direct-global-atomic implementation.

@@ -85,3 +85,10 @@ the final bin. For a degenerate equal-width domain, matching values enter bin ze
 
 Every encoding clears the output before accumulation, so a compiled graph is safely reusable.
 Up to 256 bins use workgroup-local atomics; larger histograms use direct global atomics.
+
+## Performance notes
+
+On subgroup-capable devices, histograms with at most 16 bins combine lanes targeting the same bin
+before updating workgroup memory. This replaces many contended local atomics with one update per
+represented bin and subgroup. Larger histograms and devices without both subgroup capabilities
+retain the existing paths automatically.

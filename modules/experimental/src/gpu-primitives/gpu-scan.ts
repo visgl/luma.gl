@@ -17,6 +17,7 @@ import {
   validateMatchingVectorTopology,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 
 const SCAN_WORKGROUP_SIZE = 256;
 const MAXIMUM_SCAN_SUBGROUP_COUNT = 64;
@@ -26,11 +27,7 @@ export type GPUScanStrategy = 'portable' | 'subgroups';
 
 /** Selects the subgroup path only when both device and WGSL language capabilities are present. */
 export function getGPUScanStrategy(device: Device, segmented: boolean = false): GPUScanStrategy {
-  return !segmented &&
-    device.features?.has('subgroups') &&
-    device.wgslLanguageFeatures?.has('subgroup_id')
-    ? 'subgroups'
-    : 'portable';
+  return segmented ? 'portable' : getGPUShaderSubgroupStrategy(device);
 }
 
 /** Packed uint32 graph data accepted by {@link GPUScan}. */

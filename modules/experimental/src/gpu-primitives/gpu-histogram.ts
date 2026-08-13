@@ -25,9 +25,15 @@ import {
   validatePackedView
 } from './graph-data-view-utils';
 import {GPUReduction} from './gpu-reduction';
+import {
+  getGPUShaderSubgroupStrategy,
+  getSubgroupBallotHelpersWGSL,
+  getSubgroupCoalescedAtomicAddWGSL
+} from './gpu-subgroup-utils';
 
 const HISTOGRAM_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_BIN_COUNT = 256;
+const MAXIMUM_SUBGROUP_COALESCED_BIN_COUNT = 16;
 const MAXIMUM_LITERAL_EDGE_COUNT = 257;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
 
@@ -352,6 +358,10 @@ function addIrregularHistogramPass<Parameters, T extends GPUScalarFormat>(
 ): void {
   const dispatchLayout = getHistogramDispatchLayout(graph, props.input.length);
   const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
+  const useSubgroups =
+    local &&
+    props.output.length <= MAXIMUM_SUBGROUP_COALESCED_BIN_COUNT &&
+    getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const shaderType = getShaderType(props.input.format);
   const gpuEdges = isGPUHistogramEdgesView(props.edges);
   const edgeBinding = gpuEdges
@@ -379,14 +389,18 @@ fn getEdge(index: u32) -> ${shaderType} { return EDGES[index]; }`;
     : 'true';
   const finiteCondition =
     props.input.format === 'float32' ? 'value == value && abs(value) <= 3.402823466e+38' : 'true';
+  const localAccumulation = useSubgroups
+    ? getSubgroupCoalescedAtomicAddWGSL('accepted', 'binIndex', 'localCounts', props.output.length)
+    : '  if (accepted) { atomicAdd(&localCounts[binIndex], 1u); }';
   const accumulation = local
-    ? `if (accepted) { atomicAdd(&localCounts[binIndex], 1u); }
+    ? `${localAccumulation}
   workgroupBarrier();
   if (lane < BIN_COUNT) {
     atomicAdd(&outputCounts[OUTPUT_OFFSET + lane], atomicLoad(&localCounts[lane]));
   }`
     : 'if (accepted) { atomicAdd(&outputCounts[OUTPUT_OFFSET + binIndex], 1u); }';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 const ELEMENT_COUNT: u32 = ${props.input.length}u;
 const BIN_COUNT: u32 = ${props.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
@@ -400,10 +414,11 @@ ${maskBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
 ${edgeAccessor}
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, HISTOGRAM_WORKGROUP_SIZE)}
   let lane = localInvocationIndex;
@@ -473,6 +488,10 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
 ): void {
   const dispatchLayout = getHistogramDispatchLayout(graph, props.input.length);
   const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
+  const useSubgroups =
+    local &&
+    props.output.length <= MAXIMUM_SUBGROUP_COALESCED_BIN_COUNT &&
+    getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const shaderType = getShaderType(props.input.format);
   const gpuDomain = isGPUHistogramDomainView(props.domain);
   const literalDomain = props.domain as readonly [number, number];
@@ -537,14 +556,18 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
             BIN_COUNT,
             orderedMaximum - orderedMinimum
           );`;
+  const localAccumulation = useSubgroups
+    ? getSubgroupCoalescedAtomicAddWGSL('accepted', 'binIndex', 'localCounts', props.output.length)
+    : '  if (accepted) { atomicAdd(&localCounts[binIndex], 1u); }';
   const accumulation = local
-    ? `if (accepted) { atomicAdd(&localCounts[binIndex], 1u); }
+    ? `${localAccumulation}
   workgroupBarrier();
   if (lane < BIN_COUNT) {
     atomicAdd(&outputCounts[OUTPUT_OFFSET + lane], atomicLoad(&localCounts[lane]));
   }`
     : 'if (accepted) { atomicAdd(&outputCounts[OUTPUT_OFFSET + binIndex], 1u); }';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 const ELEMENT_COUNT: u32 = ${props.input.length}u;
 const BIN_COUNT: u32 = ${props.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
@@ -557,10 +580,11 @@ ${maskBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
 ${integerBinningFunction}
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, HISTOGRAM_WORKGROUP_SIZE)}
   let lane = localInvocationIndex;
