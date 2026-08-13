@@ -86,6 +86,7 @@ struct ViewUniforms {
   dependencyEndpointOffset: u32,
   lodFadeEnabled: u32,
   labelsEnabled: u32,
+  densityPattern: u32,
 };
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
@@ -575,14 +576,13 @@ ${TRACE_SHADER_DECLARATIONS}
 
 const DENSITY_BIN_COUNT: u32 = ${TRACE_DENSITY_BIN_COUNT}u;
 const DENSITY_GROUP_COUNT: u32 = ${TRACE_GROUPS.length}u;
-const DENSITY_DASH_PERIOD: u32 = 10u;
-const DENSITY_DASH_LENGTH: u32 = 6u;
 @group(0) @binding(0) var<storage, read> densityBins: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 
 struct DensityVertexOutput {
   @builtin(position) position: vec4<f32>,
   @location(0) color: vec4<f32>,
+  @interpolate(flat) @location(1) patternOffset: f32,
 };
 
 @vertex fn vertexMain(
@@ -624,17 +624,26 @@ struct DensityVertexOutput {
     densityColor,
     select(0.0, (0.86 + 0.04 * intensity) * densityOpacity, visible)
   );
+  output.patternOffset = f32((lane * 13u) % 52u);
   return output;
 }
 
 @fragment fn fragmentMain(input: DensityVertexOutput) -> @location(0) vec4<f32> {
-  let pixel = vec2<u32>(input.position.xy);
-  let dashVisible = pixel.x % DENSITY_DASH_PERIOD < DENSITY_DASH_LENGTH;
-  // Six bright and four dim pixels average to 1.0, distinguishing aggregate geometry without
-  // reintroducing the apparent brightness loss that an alpha-masked pattern would cause.
-  let dashBrightness = select(0.82, 1.12, dashVisible);
+  let patternColor = pluginApplyFillPattern(
+    vec4<f32>(input.color.rgb, 1.0),
+    f32(viewUniforms.densityPattern),
+    input.position.xy + vec2<f32>(input.patternOffset, 0.0),
+    vec2<f32>(40.0, 12.0)
+  );
+  // Preserve average brightness instead of applying the plugin mask to alpha. The default
+  // 40-pixel dash and 12-pixel gap average to 1.0, avoiding the old zoomed-out brightness dip.
+  let patternBrightness = select(
+    1.0,
+    mix(0.55, 1.135, patternColor.a),
+    viewUniforms.densityPattern != 0u
+  );
   return vec4<f32>(
-    clamp(input.color.rgb * dashBrightness, vec3<f32>(0.0), vec3<f32>(1.0)),
+    clamp(input.color.rgb * patternBrightness, vec3<f32>(0.0), vec3<f32>(1.0)),
     input.color.a
   );
 }`;

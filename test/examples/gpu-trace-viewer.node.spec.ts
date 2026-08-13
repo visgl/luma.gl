@@ -5,6 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {getTraceRow, makeDeckTraceData} from '../../examples/deck/gpu-culled-trace/trace-data';
+import {FillPattern, fillPatternShaderPlugin} from '../../examples/fill-pattern-shader-plugin';
 import {
   getTraceAllocationStats,
   getTraceCapacityContract,
@@ -416,9 +417,16 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
   );
   t.match(
     TRACE_DENSITY_RENDER_SHADER,
-    /DENSITY_DASH_PERIOD/,
-    'aggregated density bins use a screen-space dash pattern distinct from exact spans'
+    /pluginApplyFillPattern/,
+    'aggregated density bins use the shared fill-pattern ShaderPlugin'
   );
+  t.match(
+    TRACE_DENSITY_RENDER_SHADER,
+    /patternOffset = f32\(\(lane \* 13u\) % 52u\)/,
+    'density patterns stagger their phase by lane instead of forming a screen-wide grid'
+  );
+  t.equal(FillPattern.hash90, 3, 'the default dash pattern has a stable shader value');
+  t.ok(fillPatternShaderPlugin.wgsl, 'the shared fill-pattern plugin supports WGSL');
   t.match(
     TRACE_RENDER_SHADER,
     /focusEnabled = viewUniforms\.focusMode != 0u && hasSelection/,

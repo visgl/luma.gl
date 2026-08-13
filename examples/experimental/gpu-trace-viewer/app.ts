@@ -31,6 +31,11 @@ import {
 import {buildSdfFontAtlas} from '@luma.gl/text';
 import {DictionaryTextRenderer} from '@luma.gl/text/experimental';
 import {
+  FillPattern,
+  type FillPatternType,
+  fillPatternShaderPlugin
+} from '../../fill-pattern-shader-plugin';
+import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
   makeHtmlCustomPanel
@@ -119,7 +124,7 @@ const TRACE_WORKGROUP_SIZE = 256;
 const TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT = Math.ceil(
   TRACE_SPAN_BATCH_CAPACITY / TRACE_WORKGROUP_SIZE
 );
-const VIEW_UNIFORM_BYTE_LENGTH = 80;
+const VIEW_UNIFORM_BYTE_LENGTH = 96;
 const MAXIMUM_FOCUS_DEPTH = 4;
 const INVALID_SPAN_INDEX = TRACE_INVALID_SPAN_INDEX;
 const STATUS_NAMES = ['ok', 'waiting', 'active', 'error'] as const;
@@ -142,6 +147,18 @@ const TRACE_INSPECTOR_COUNTER_LABELS = {
   'focus-active': 'Focus active',
   'pick-active': 'Pick active'
 } as const;
+
+const DENSITY_PATTERN_OPTIONS: Array<{label: string; value: FillPatternType}> = [
+  {label: 'Dashes', value: FillPattern.hash90},
+  {label: 'Horizontal stripes', value: FillPattern.hash0},
+  {label: 'Diagonal /', value: FillPattern.hash45},
+  {label: 'Diagonal \\', value: FillPattern.hash135},
+  {label: 'Grid', value: FillPattern.checker0},
+  {label: 'Diamond grid', value: FillPattern.checker45},
+  {label: 'Dots', value: FillPattern.dotgrid},
+  {label: 'Diagonal dots', value: FillPattern.dotgrid45},
+  {label: 'Solid', value: FillPattern.none}
+];
 
 type TraceViewParameters = {
   timeMin: number;
@@ -326,6 +343,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private autoScroll = true;
   private lodFadeEnabled = false;
   private labelsEnabled = true;
+  private densityPattern: FillPatternType = FillPattern.hash90;
   private view: TraceViewParameters = {timeMin: 0, timeMax: 150, laneMin: 0, laneMax: 72};
   private pendingPick: PickPosition | null = null;
   private latestPickRequestIdentifier = 0;
@@ -583,6 +601,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     return new Model(this.device, {
       id: 'gpu-trace-density-model',
       source: TRACE_DENSITY_RENDER_SHADER,
+      plugins: [fillPatternShaderPlugin],
       topology: 'triangle-list',
       vertexCount: 6,
       colorAttachmentFormats: [this.device.preferredColorFormat],
@@ -1749,6 +1768,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     unsigned[17] = dependencyEndpointOffset;
     unsigned[18] = this.lodFadeEnabled ? 1 : 0;
     unsigned[19] = this.labelsEnabled ? 1 : 0;
+    unsigned[20] = this.densityPattern;
     this.viewUniformBuffer.write(data);
   }
 
@@ -2110,6 +2130,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       <section class="trace-section">
         <div class="trace-section-header"><span class="trace-section-title">Timeline</span><span class="trace-section-note">hover to inspect · click to focus · drag to pan · wheel to zoom</span></div>
         <div class="trace-check-row"><label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label><label><input type="checkbox" data-lod-fade${this.lodFadeEnabled ? ' checked' : ''}> Smooth LOD fade</label><label><input type="checkbox" data-labels${this.labelsEnabled ? ' checked' : ''}> Span labels</label></div>
+        <div class="trace-control-stack" style="margin-top:7px">
+          <label>Density pattern <select data-density-pattern>${DENSITY_PATTERN_OPTIONS.map(
+            option =>
+              `<option value="${option.value}"${option.value === this.densityPattern ? ' selected' : ''}>${option.label}</option>`
+          ).join('')}</select></label>
+        </div>
         <div class="trace-actions" style="margin-top:6px"><button type="button" data-reset>Reset detail</button><button type="button" data-fit-trace>Fit trace</button></div>
       </section>
     </section>`;
@@ -2218,6 +2244,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.lodFadeEnabled = target.checked;
       } else if (target instanceof HTMLInputElement && target.matches('[data-labels]')) {
         this.labelsEnabled = target.checked;
+      } else if (target.matches('[data-density-pattern]')) {
+        this.densityPattern = Number(target.value) as FillPatternType;
       }
       this.updateInspector();
     };
@@ -2367,7 +2395,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         ${makeMetricCard('Span batches', `${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}`, 'candidate / total')}
         ${makeMetricCard('Edge batches', `${formatCount(this.sampledCandidateDependencyBatchCount)}/${formatCount(resources.dependencyBatchCount)}`, 'candidate / total')}
         ${makeMetricCard('CPU encode', `${this.encodeTimeMilliseconds.toFixed(2)} ms`, 'compiled graph')}
-        ${makeMetricCard('Trace LOD', densityMode ? 'Density' : 'Exact', `${densityMode ? 'adaptive bins' : 'individual spans'} · ${this.lodFadeEnabled ? 'smooth fade' : 'hard switch'}`)}
+        ${makeMetricCard('Trace LOD', densityMode ? 'Density' : 'Exact', `${densityMode ? `${getDensityPatternLabel(this.densityPattern)} pattern` : 'individual spans'} · ${this.lodFadeEnabled ? 'smooth fade' : 'hard switch'}`)}
         ${makeMetricCard('Layout lanes', formatCount(this.getVisibleLaneCount()), `${formatCount(collapsedProcessCount)} collapsed processes`)}
         ${makeMetricCard('Transient reuse', `${stats.reusePercentage.toFixed(0)}%`, `${stats.physicalTransientBufferCount}/${stats.logicalTransientBufferCount} allocations`)}
       </div>
@@ -2735,6 +2763,10 @@ function makeMetricCard(label: string, value: string, detail: string): string {
     <strong class="trace-metric-value">${value}</strong>
     <span class="trace-metric-detail">${detail}</span>
   </article>`;
+}
+
+function getDensityPatternLabel(pattern: FillPatternType): string {
+  return DENSITY_PATTERN_OPTIONS.find(option => option.value === pattern)?.label ?? 'Solid';
 }
 
 function formatCount(value: number): string {
