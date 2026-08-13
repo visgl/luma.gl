@@ -575,7 +575,8 @@ ${TRACE_SHADER_DECLARATIONS}
 
 const DENSITY_BIN_COUNT: u32 = ${TRACE_DENSITY_BIN_COUNT}u;
 const DENSITY_GROUP_COUNT: u32 = ${TRACE_GROUPS.length}u;
-const DENSITY_STIPPLE_PERIOD: u32 = 4u;
+const DENSITY_DASH_PERIOD: u32 = 10u;
+const DENSITY_DASH_LENGTH: u32 = 6u;
 @group(0) @binding(0) var<storage, read> densityBins: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 
@@ -628,14 +629,12 @@ struct DensityVertexOutput {
 
 @fragment fn fragmentMain(input: DensityVertexOutput) -> @location(0) vec4<f32> {
   let pixel = vec2<u32>(input.position.xy);
-  let stippleDot =
-    pixel.x % DENSITY_STIPPLE_PERIOD == 0u &&
-    pixel.y % DENSITY_STIPPLE_PERIOD == 0u;
-  // One bright pixel per 4x4 cell keeps average brightness at 1.0 while making aggregated
-  // geometry visibly distinct from exact solid spans.
-  let stippleBrightness = select(0.99, 1.15, stippleDot);
+  let dashVisible = pixel.x % DENSITY_DASH_PERIOD < DENSITY_DASH_LENGTH;
+  // Six bright and four dim pixels average to 1.0, distinguishing aggregate geometry without
+  // reintroducing the apparent brightness loss that an alpha-masked pattern would cause.
+  let dashBrightness = select(0.82, 1.12, dashVisible);
   return vec4<f32>(
-    clamp(input.color.rgb * stippleBrightness, vec3<f32>(0.0), vec3<f32>(1.0)),
+    clamp(input.color.rgb * dashBrightness, vec3<f32>(0.0), vec3<f32>(1.0)),
     input.color.a
   );
 }`;

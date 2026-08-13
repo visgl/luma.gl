@@ -416,8 +416,8 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
   );
   t.match(
     TRACE_DENSITY_RENDER_SHADER,
-    /DENSITY_STIPPLE_PERIOD/,
-    'aggregated density bins use a screen-space stipple distinct from exact spans'
+    /DENSITY_DASH_PERIOD/,
+    'aggregated density bins use a screen-space dash pattern distinct from exact spans'
   );
   t.match(
     TRACE_RENDER_SHADER,
