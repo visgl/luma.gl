@@ -664,11 +664,30 @@ fn main(
   let densityVisible = sourceVisible && (isDensityModeActive() || !processExpanded);
   if (densityVisible && focusVisible) {
     let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-    let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
-    let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);
-    let densityKey =
-      (u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin) * ${TRACE_GROUPS.length}u + span.group;
-    atomicAdd(&densityBins[densityKey], 1u);
+    let startFraction = clamp(
+      (span.start - viewUniforms.timeMin) / timeRange,
+      0.0,
+      0.999999
+    );
+    let endFraction = clamp(
+      (span.start + span.duration - viewUniforms.timeMin) / timeRange,
+      0.0,
+      0.999999
+    );
+    let firstBin = min(
+      u32(startFraction * f32(${TRACE_DENSITY_BIN_COUNT}u)),
+      ${TRACE_DENSITY_BIN_COUNT - 1}u
+    );
+    let lastBin = min(
+      u32(endFraction * f32(${TRACE_DENSITY_BIN_COUNT}u)),
+      ${TRACE_DENSITY_BIN_COUNT - 1}u
+    );
+    // Preserve temporal coverage: a long span contributes to every density bin it crosses.
+    for (var bin = firstBin; bin <= lastBin; bin++) {
+      let densityKey =
+        (u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin) * ${TRACE_GROUPS.length}u + span.group;
+      atomicAdd(&densityBins[densityKey], 1u);
+    }
   }
 }`;
 }
