@@ -15,6 +15,7 @@ import {
 import {
   getMaximumTraceAdjacencyByteLength,
   getTraceCapacityOptions,
+  getTraceDensityBlend,
   getTraceDependencyCapacityOptions,
   getTraceDuration,
   getTraceFocusFrontierCapacity,
@@ -280,7 +281,10 @@ test('GPU trace workload counters report persistent memory and proportional work
 });
 
 test('GPU trace LOD switches at a stable trace-time-per-pixel threshold', t => {
-  t.equal(isTraceDensityMode(0, 150, 2048), false, 'wide viewport keeps exact spans');
+  t.equal(getTraceDensityBlend(0, 50, 2000), 0, 'exact rendering leads into the blend');
+  t.equal(getTraceDensityBlend(0, 80, 2000), 0.5, 'both renderers share the midpoint');
+  t.equal(getTraceDensityBlend(0, 110, 2000), 1, 'density rendering finishes the blend');
+  t.equal(isTraceDensityMode(0, 150, 2048), true, 'wide time range remains density-dominant');
   t.equal(isTraceDensityMode(0, 150, 1), true, 'zoomed-out viewport uses density bins');
   t.equal(isTraceDensityMode(10, 10.01, 0), false, 'zero-width viewport remains bounded');
   t.end();
@@ -342,6 +346,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       throw new Error(`shader ${shaderIndex} failed to parse`, {cause: error});
     }
   }
+  t.match(
+    getCandidateDependencyVisibilityShader(endpointRouting),
+    /sourceVisible \|\| destinationVisible/,
+    'dependency visibility retains edges with either endpoint in view'
+  );
   t.end();
 });
 
@@ -422,10 +431,11 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
     'ten million spans expands to about forty seconds'
   );
 
-  const dataset = makeTraceDataset(4096, 0);
+  const dataset = makeTraceDataset(65_536, 0);
   const spanFloats = new Float32Array(dataset.spans.buffer);
   const laneSpans = Array.from({length: TRACE_LANE_COUNT}, () => [] as Array<[number, number]>);
   let occupiedDuration = 0;
+  let minimumDuration = Number.POSITIVE_INFINITY;
   let maximumDuration = 0;
   for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
     const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
@@ -434,6 +444,7 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
     const lane = dataset.spans[wordOffset + 2];
     laneSpans[lane].push([start, start + duration]);
     occupiedDuration += duration;
+    minimumDuration = Math.min(minimumDuration, duration);
     maximumDuration = Math.max(maximumDuration, duration);
   }
   for (const spans of laneSpans) {
@@ -446,7 +457,9 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
     }
   }
   const occupancy = occupiedDuration / (dataset.duration * TRACE_LANE_COUNT);
-  t.ok(occupancy > 0.6 && occupancy < 0.8, 'lane packing stays dense without saturating pixels');
+  t.ok(occupancy > 0.55 && occupancy < 0.8, 'lane packing stays dense without overlap');
+  t.ok(minimumDuration < 0.05, 'the trace includes very short spans');
+  t.ok(maximumDuration > 20, 'the trace includes very wide spans');
   t.ok(
     maximumDuration > TRACE_DURATION_FILTER_MAXIMUM,
     'duration filter maximum retains spans from the generated upper tail'

@@ -4,7 +4,8 @@
 
 import {
   TRACE_DENSITY_BIN_COUNT,
-  TRACE_DENSITY_TIME_PER_PIXEL,
+  TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL,
+  TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL,
   TRACE_DEPENDENCY_BATCH_CAPACITY,
   TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT,
   TRACE_DEPENDENCY_PROCESS_MASK,
@@ -14,6 +15,7 @@ import {
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_RUNTIME_SPANS,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
+  TRACE_GROUPS,
   TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_OVERLAPPING_CHILD_FLAG,
@@ -84,11 +86,31 @@ struct ViewUniforms {
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
 const THREADS_PER_PROCESS: u32 = ${TRACE_THREADS_PER_PROCESS}u;
-const DENSITY_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_TIME_PER_PIXEL};
+const DENSITY_BLEND_START_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL};
+const DENSITY_BLEND_END_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL};
+
+fn getDensityBlend() -> f32 {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let timePerPixel = timeRange / max(viewUniforms.viewportWidth, 1.0);
+  let linearBlend = clamp(
+    (timePerPixel - DENSITY_BLEND_START_TIME_PER_PIXEL) /
+      (DENSITY_BLEND_END_TIME_PER_PIXEL - DENSITY_BLEND_START_TIME_PER_PIXEL),
+    0.0,
+    1.0
+  );
+  return linearBlend * linearBlend * (3.0 - 2.0 * linearBlend);
+}
 
 fn isDensityMode() -> bool {
-  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-  return timeRange / max(viewUniforms.viewportWidth, 1.0) >= DENSITY_TIME_PER_PIXEL;
+  return getDensityBlend() >= 0.5;
+}
+
+fn isExactModeActive() -> bool {
+  return getDensityBlend() < 1.0;
+}
+
+fn isDensityModeActive() -> bool {
+  return getDensityBlend() > 0.0;
 }
 
 fn getGroupColor(group: u32) -> vec3<f32> {
@@ -187,16 +209,21 @@ struct VertexOutput {
   let hasSelection = viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusOpacity = select(1.0, select(0.22, 1.0, isReached), hasSelection);
   let baseColor = getGroupColor(span.group) * pulse;
+  // Long spans remain recognizable first; sub-pixel spans emerge only as they become readable.
+  let spanPixelWidth = span.duration / timeRange * max(viewUniforms.viewportWidth, 1.0);
+  let spanReadability = smoothstep(0.6, 1.4, spanPixelWidth);
+  let exactOpacity = (1.0 - getDensityBlend()) * spanReadability;
+  let minimumClipWidth = 3.0 / max(viewUniforms.viewportWidth, 1.0);
   var output: VertexOutput;
   output.position = vec4<f32>(
-    mix(startX, max(endX, startX + 0.00025), corner.x),
+    mix(startX, max(endX, startX + minimumClipWidth), corner.x),
     laneY - corner.y * laneHeight * 0.78,
     0.0,
     1.0
   );
   output.color = vec4<f32>(
     select(baseColor, vec3<f32>(1.0, 0.94, 0.47), isSelected),
-    select(0.9, 1.0, isSelected) * focusOpacity
+    select(0.9, 1.0, isSelected) * focusOpacity * exactOpacity
   );
   output.lane = lane;
   return output;
@@ -232,6 +259,8 @@ struct DependencyVertexOutput {
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
   let crossProcess = dependency.family != 0u;
+  // Keep edges out of the density-to-span handoff until their endpoints are clearly legible.
+  let dependencyOpacity = smoothstep(0.68, 0.92, 1.0 - getDensityBlend());
   var output: DependencyVertexOutput;
   output.position = vec4<f32>(
     ((endpointPosition.x - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0,
@@ -240,10 +269,10 @@ struct DependencyVertexOutput {
     1.0
   );
   output.color = select(
-    vec4<f32>(0.54, 0.73, 0.95, 0.48),
-    vec4<f32>(1.00, 0.77, 0.35, 0.76),
+    vec4<f32>(0.62, 0.79, 0.96, 0.68),
+    vec4<f32>(0.95, 0.73, 0.42, 0.88),
     crossProcess
-  );
+  ) * vec4<f32>(1.0, 1.0, 1.0, dependencyOpacity);
   return output;
 }
 
@@ -256,6 +285,7 @@ export const TRACE_DENSITY_RENDER_SHADER = /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
 
 const DENSITY_BIN_COUNT: u32 = ${TRACE_DENSITY_BIN_COUNT}u;
+const DENSITY_GROUP_COUNT: u32 = ${TRACE_GROUPS.length}u;
 @group(0) @binding(0) var<storage, read> densityBins: array<u32>;
 @group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 
@@ -270,26 +300,37 @@ struct DensityVertexOutput {
 ) -> DensityVertexOutput {
   let lane = instanceIndex / DENSITY_BIN_COUNT;
   let binIndex = instanceIndex % DENSITY_BIN_COUNT;
-  let count = densityBins[instanceIndex];
+  let densityValueOffset = instanceIndex * DENSITY_GROUP_COUNT;
+  var count = 0u;
+  var weightedColor = vec3<f32>(0.0);
+  for (var groupIndex = 0u; groupIndex < DENSITY_GROUP_COUNT; groupIndex++) {
+    let groupCount = densityBins[densityValueOffset + groupIndex];
+    count += groupCount;
+    weightedColor += getGroupColor(groupIndex) * f32(groupCount);
+  }
   let corner = getCorner(vertexIndex);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
   let laneHeight = 2.0 / laneRange;
   let startX = (f32(binIndex) / f32(DENSITY_BIN_COUNT)) * 2.0 - 1.0;
   let endX = (f32(binIndex + 1u) / f32(DENSITY_BIN_COUNT)) * 2.0 - 1.0;
-  let intensity = clamp(log2(f32(count) + 1.0) * viewUniforms.activityScale, 0.12, 1.0);
+  let intensity = clamp(log2(f32(count) + 1.0) * viewUniforms.activityScale, 0.0, 1.0);
   let visible = count > 0u && f32(lane) >= viewUniforms.laneMin &&
     f32(lane) < viewUniforms.laneMax;
+  let densityBlend = getDensityBlend();
+  let densityOpacity = select(1.0, densityBlend, isDensityModeActive());
   var output: DensityVertexOutput;
   output.position = vec4<f32>(
     mix(startX, endX, corner.x),
     1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0 -
-      corner.y * laneHeight * 0.78 * intensity,
+      corner.y * laneHeight * 0.72,
     0.0,
     1.0
   );
+  let groupColor = weightedColor / max(f32(count), 1.0);
+  let mutedColor = mix(vec3<f32>(0.16, 0.22, 0.3), groupColor, 0.72 + intensity * 0.18);
   output.color = vec4<f32>(
-    mix(vec3<f32>(0.15, 0.49, 0.74), vec3<f32>(1.0, 0.76, 0.31), intensity),
-    select(0.0, 0.94, visible)
+    mutedColor,
+    select(0.0, (0.3 + 0.62 * intensity) * densityOpacity, visible)
   );
   return output;
 }
@@ -361,7 +402,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   candidateFlags[batchIndex] = select(
     0u,
     1u,
-    timeVisible && familyVisible && !isDensityMode()
+    timeVisible && familyVisible && isExactModeActive()
   );
 }`;
 }
@@ -531,16 +572,17 @@ const PROCESS_COUNT: u32 = ${TRACE_PROCESS_COUNT}u;
 fn main() {
   let candidateWorkgroupCount = candidateDispatchCommand[0];
   let candidateBatchCount = candidateDispatchCommand[1];
-  let densityMode = isDensityMode();
+  let exactModeActive = isExactModeActive();
+  let densityModeActive = isDensityModeActive();
   let pickActive = viewUniforms.pickLane >= 0.0;
   var hasCollapsedProcess = false;
   for (var processIndex = 0u; processIndex < PROCESS_COUNT; processIndex++) {
     hasCollapsedProcess = hasCollapsedProcess || processStates[processIndex] == 0u;
   }
-  let densityActive = densityMode || hasCollapsedProcess;
+  let densityActive = densityModeActive || hasCollapsedProcess;
 
   exactDispatchCommand[0] = candidateWorkgroupCount;
-  exactDispatchCommand[1] = select(candidateBatchCount, 0u, densityMode);
+  exactDispatchCommand[1] = select(0u, candidateBatchCount, exactModeActive);
   exactDispatchCommand[2] = 1u;
   densityDispatchCommand[0] = candidateWorkgroupCount;
   densityDispatchCommand[1] = select(0u, candidateBatchCount, densityActive);
@@ -554,7 +596,7 @@ fn main() {
 /** Clears the fixed-size density target without touching source-aligned span storage. */
 export function getDensityClearShader(): string {
   return /* wgsl */ `
-const DENSITY_BIN_COUNT: u32 = ${TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT}u;
+const DENSITY_BIN_COUNT: u32 = ${TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT * TRACE_GROUPS.length}u;
 @group(0) @binding(0) var<storage, read_write> densityBins: array<u32>;
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -619,12 +661,13 @@ fn main(
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
     (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
-  let densityVisible = sourceVisible && (isDensityMode() || !processExpanded);
+  let densityVisible = sourceVisible && (isDensityModeActive() || !processExpanded);
   if (densityVisible && focusVisible) {
     let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
     let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
     let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);
-    let densityKey = u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin;
+    let densityKey =
+      (u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin) * ${TRACE_GROUPS.length}u + span.group;
     atomicAdd(&densityBins[densityKey], 1u);
   }
 }`;
@@ -926,8 +969,9 @@ fn main(
       dependency.destinationIndex,
       destinationCollapsed
     );
-    let visible = familyVisible && sourceVisible && destinationVisible &&
-      effectiveSource != effectiveDestination && !isDensityMode();
+    // Retain an edge while either endpoint is visible; rasterization clips the off-screen half.
+    let visible = familyVisible && (sourceVisible || destinationVisible) &&
+      effectiveSource != effectiveDestination && isExactModeActive();
     dependencyResults[index] = select(0u, 1u, visible);
     let endpointResultOffset = viewUniforms.dependencyEndpointOffset + index * 2u;
     dependencyResults[endpointResultOffset] = effectiveSource;

@@ -30,8 +30,10 @@ const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_00
 // Keep density scrolling visually continuous at common viewport widths while retaining a fixed,
 // allocation-stable aggregation target for the compiled GPU command graph.
 export const TRACE_DENSITY_BIN_COUNT = 512;
-/** Switch to density rendering when one horizontal pixel covers at least this much trace time. */
-export const TRACE_DENSITY_TIME_PER_PIXEL = 0.08;
+/** Exact spans are fully readable below this trace-time-per-pixel scale. */
+export const TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL = 0.025;
+/** Density bins fully replace individual spans above this trace-time-per-pixel scale. */
+export const TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL = 0.055;
 export const TRACE_STATUS_COUNT = 4;
 export const TRACE_SAME_PROCESS_DEPENDENCY = 0;
 export const TRACE_CROSS_PROCESS_DEPENDENCY = 1;
@@ -57,12 +59,12 @@ export const TRACE_INVALID_SPAN_INDEX = 0xffffffff;
 const TRACE_BASE_SLOT_COUNT = Math.ceil(TRACE_BASE_SPAN_CAPACITY / TRACE_LANE_COUNT);
 const TRACE_SLOT_DURATION = TRACE_DURATION / TRACE_BASE_SLOT_COUNT;
 const TRACE_LANE_ROTATION = 73;
-const TRACE_GROUP_DURATION_SCALES = [0.62, 0.72, 0.82] as const;
+const TRACE_DURATION_SCALE = 0.9;
+const TRACE_MAXIMUM_DURATION_SLOT_COUNT = 30;
 /** Largest useful minimum-duration filter value for the generated span distribution. */
 export const TRACE_DURATION_FILTER_MAXIMUM =
-  Math.floor(
-    TRACE_GROUP_DURATION_SCALES[TRACE_GROUP_DURATION_SCALES.length - 1] * TRACE_SLOT_DURATION * 100
-  ) / 100;
+  Math.floor(TRACE_MAXIMUM_DURATION_SLOT_COUNT * TRACE_DURATION_SCALE * TRACE_SLOT_DURATION * 100) /
+  100;
 
 /** Scales the timeline so larger datasets add time instead of adding pixel overdraw. */
 export function getTraceDuration(spanCount: number): number {
@@ -114,13 +116,29 @@ export function getTraceFocusFrontierCapacity(spanCount: number, dependencyCount
   return Math.max(Math.min(spanCount, dependencyCount + 1), 1);
 }
 
-/** Matches the GPU's adaptive exact-span versus density-rendering decision. */
+/** Matches the GPU's smooth exact-span versus density-rendering blend. */
+export function getTraceDensityBlend(
+  timeMin: number,
+  timeMax: number,
+  viewportWidth: number
+): number {
+  const timePerPixel = (timeMax - timeMin) / Math.max(viewportWidth, 1);
+  const blendRange =
+    TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL - TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL;
+  const linearBlend = Math.max(
+    0,
+    Math.min(1, (timePerPixel - TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL) / blendRange)
+  );
+  return linearBlend * linearBlend * (3 - 2 * linearBlend);
+}
+
+/** Reports the dominant LOD while both renderers overlap through the transition band. */
 export function isTraceDensityMode(
   timeMin: number,
   timeMax: number,
   viewportWidth: number
 ): boolean {
-  return (timeMax - timeMin) / Math.max(viewportWidth, 1) >= TRACE_DENSITY_TIME_PER_PIXEL;
+  return getTraceDensityBlend(timeMin, timeMax, viewportWidth) >= 0.5;
 }
 
 export type TraceGroupName = (typeof TRACE_GROUPS)[number];
@@ -246,13 +264,6 @@ export function makeTraceDataset(
 
   for (const [groupIndex, name] of TRACE_GROUPS.entries()) {
     const count = baseGroupSpanCount + Number(groupIndex < extraGroupSpanCount);
-    fillTraceGroup({
-      spans,
-      spanFloats,
-      firstSpanIndex,
-      spanCount: count,
-      groupIndex
-    });
     groups.push({
       name,
       groupIndex,
@@ -265,6 +276,8 @@ export function makeTraceDataset(
     });
     firstSpanIndex += count;
   }
+
+  const generatedDuration = fillTraceSpans(spans, spanFloats, groups, totalSpanCount);
 
   const topology = makeTraceDependencies(spans, totalSpanCount, maximumDependencyCount);
   const dependencyCount = topology.dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
@@ -285,7 +298,7 @@ export function makeTraceDataset(
     parentSpans: topology.parentSpans,
     outgoing: buildTraceAdjacency(topology.dependencies, 'outgoing'),
     incoming: buildTraceAdjacency(topology.dependencies, 'incoming'),
-    duration: getTraceDuration(totalSpanCount),
+    duration: Math.max(getTraceDuration(totalSpanCount), generatedDuration),
     spanCount: totalSpanCount,
     dependencyCount,
     processCount: TRACE_PROCESS_COUNT,
@@ -495,45 +508,61 @@ export function makeTraceGroups(totalSpanCount: number): TraceGroupData[] {
   return makeTraceDataset(totalSpanCount).groups;
 }
 
-/** Fills one stable group range with deterministic timing, ownership, and classification. */
-function fillTraceGroup(params: {
-  spans: Uint32Array;
-  spanFloats: Float32Array;
-  firstSpanIndex: number;
-  spanCount: number;
-  groupIndex: number;
-}): void {
-  let randomState = (0x9e3779b9 ^ Math.imul(params.groupIndex, 0x85ebca6b)) >>> 0;
+/** Fills stable group ranges with a deterministic, tightly packed heavy-tailed duration mix. */
+function fillTraceSpans(
+  spans: Uint32Array,
+  spanFloats: Float32Array,
+  groups: readonly TraceGroupData[],
+  spanCount: number
+): number {
+  let randomState = 0x9e3779b9;
   const random = (): number => {
     randomState ^= randomState << 13;
     randomState ^= randomState >>> 17;
     randomState ^= randomState << 5;
     return (randomState >>> 0) / 0x100000000;
   };
+  const nextStartByLane = new Float64Array(TRACE_LANE_COUNT);
+  let maximumEnd = 0;
 
-  for (let groupRowIndex = 0; groupRowIndex < params.spanCount; groupRowIndex++) {
-    const spanIndex = params.firstSpanIndex + groupRowIndex;
+  for (let timelineIndex = 0; timelineIndex < spanCount; timelineIndex++) {
+    const groupIndex = timelineIndex % groups.length;
+    const groupRowIndex = Math.floor(timelineIndex / groups.length);
+    const spanIndex = groups[groupIndex].firstSpanIndex + groupRowIndex;
     const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
-    const timelineIndex = groupRowIndex * TRACE_GROUPS.length + params.groupIndex;
     const slotIndex = Math.floor(timelineIndex / TRACE_LANE_COUNT);
     const laneIndex = (timelineIndex + slotIndex * TRACE_LANE_ROTATION) % TRACE_LANE_COUNT;
     const threadIndex = Math.floor(laneIndex / TRACE_LANES_PER_THREAD);
     const processIndex = Math.floor(threadIndex / TRACE_THREADS_PER_PROCESS);
-    const start = (slotIndex + random() * 0.06) * TRACE_SLOT_DURATION;
-    const durationScale = TRACE_GROUP_DURATION_SCALES[params.groupIndex];
-    const duration = durationScale * (0.82 + random() * 0.18) * TRACE_SLOT_DURATION;
+    const gap = (0.02 + random() * 0.04) * TRACE_SLOT_DURATION;
+    const durationClass = random();
+    const durationVariation = random();
+    const durationSlotCount =
+      durationClass < 0.58
+        ? 0.04 + durationVariation * 0.21
+        : durationClass < 0.89
+          ? 0.35 + durationVariation * 0.85
+          : durationClass < 0.98
+            ? 1.5 + durationVariation * 4
+            : 10 + durationVariation * 20;
+    const start = nextStartByLane[laneIndex] + gap;
+    const duration = durationSlotCount * TRACE_DURATION_SCALE * TRACE_SLOT_DURATION;
+    const end = start + duration;
+    nextStartByLane[laneIndex] = end;
+    maximumEnd = Math.max(maximumEnd, end);
     const status = Math.floor(random() * TRACE_STATUS_COUNT);
     const runtimeFlag = spanIndex % 11 === 0 ? TRACE_RUNTIME_SPAN_FLAG : 0;
     const errorFlag = spanIndex % 37 === 0 ? TRACE_ERROR_SPAN_FLAG : 0;
-    params.spanFloats[wordOffset] = start;
-    params.spanFloats[wordOffset + 1] = duration;
-    params.spans[wordOffset + 2] = laneIndex;
-    params.spans[wordOffset + 3] = params.groupIndex;
-    params.spans[wordOffset + 4] = processIndex;
-    params.spans[wordOffset + 5] = threadIndex;
-    params.spans[wordOffset + 6] = spanIndex;
-    params.spans[wordOffset + 7] = status | runtimeFlag | errorFlag;
+    spanFloats[wordOffset] = start;
+    spanFloats[wordOffset + 1] = duration;
+    spans[wordOffset + 2] = laneIndex;
+    spans[wordOffset + 3] = groupIndex;
+    spans[wordOffset + 4] = processIndex;
+    spans[wordOffset + 5] = threadIndex;
+    spans[wordOffset + 6] = spanIndex;
+    spans[wordOffset + 7] = status | runtimeFlag | errorFlag;
   }
+  return maximumEnd;
 }
 
 /** Generates sparse same-thread parent chains and cross-process dependency edges. */
