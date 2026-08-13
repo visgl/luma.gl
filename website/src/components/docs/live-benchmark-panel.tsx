@@ -10,6 +10,8 @@ export type LiveBenchmarkPanelProps = {
   runLabel?: string;
   /** Executes real benchmark work and returns the results to render. */
   onRun: () => Promise<ReactNode>;
+  /** Optional stable placeholder rendered in the results area while work is in progress. */
+  runningContent?: ReactNode;
   /** Explicit capability message that disables the benchmark without claiming synthetic results. */
   unsupportedReason?: string;
 };
@@ -33,6 +35,7 @@ export function LiveBenchmarkPanel({
   description,
   runLabel = 'Run live WebGPU benchmark',
   onRun,
+  runningContent,
   unsupportedReason
 }: LiveBenchmarkPanelProps): ReactNode {
   const [isRunning, setIsRunning] = useState(false);
@@ -100,7 +103,11 @@ export function LiveBenchmarkPanel({
         </p>
       ) : null}
 
-      {results ? (
+      {isRunning && runningContent ? (
+        <div aria-busy="true" aria-live="polite" style={{marginTop: '1rem', overflowX: 'auto'}}>
+          {runningContent}
+        </div>
+      ) : results ? (
         <div aria-live="polite" style={{marginTop: '1rem', overflowX: 'auto'}}>
           {results}
         </div>

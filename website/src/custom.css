@@ -73,6 +73,30 @@ main .container {
   position: relative;
 }
 
+.luma-live-benchmark-spinner {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  box-sizing: border-box;
+  border: 2px solid var(--ifm-color-emphasis-300);
+  border-top-color: var(--ifm-color-primary);
+  border-radius: 50%;
+  animation: lumaLiveBenchmarkSpin 0.7s linear infinite;
+  vertical-align: -0.1rem;
+}
+
+@keyframes lumaLiveBenchmarkSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luma-live-benchmark-spinner {
+    animation: none;
+  }
+}
+
 .badges img {
   height: 22px;
   width: auto;
@@ -206,6 +230,31 @@ html[data-theme="dark"] .markdown .docs-markdown-table__table th code {
 .markdown .docs-page-tabs__tab--active {
   border-bottom-color: var(--ifm-color-primary);
   color: var(--ifm-color-primary);
+}
+
+.markdown .gpu-primitives-docs-navigation {
+  border: 1px solid var(--docs-table-border);
+  border-radius: 10px;
+  margin: 0.5rem 0 1.5rem;
+  overflow: hidden;
+}
+
+.markdown .gpu-primitives-docs-navigation .docs-page-tabs {
+  margin: 0;
+  padding: 0 0.35rem;
+}
+
+.markdown .gpu-primitives-docs-navigation__groups {
+  background: var(--docs-table-header-background);
+}
+
+.markdown .gpu-primitives-docs-navigation__operations {
+  border-bottom: 0;
+}
+
+.markdown .gpu-primitives-docs-navigation__operations .docs-page-tabs__tab {
+  font-size: 0.9rem;
+  padding: 0.6rem 0.75rem;
 }
 
 .markdown .docs-api-card-grid {

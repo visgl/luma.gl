@@ -3,6 +3,8 @@ import {WorkgroupScanBenchmark} from '@site/src/components/docs/workgroup-scan-b
 
 # GPUScan
 
+<GPUPrimitivesDocsTabs active="scan" />
+
 Unsegmented scans automatically use WebGPU subgroup operations when the created device exposes the
 `subgroups` feature and the browser exposes the `subgroup_id` WGSL language extension. The portable
 workgroup implementation remains the fallback, and segmented scans always use it. Subgroup lanes
@@ -33,17 +35,6 @@ was approximately 60% faster with subgroups. This is a compute-local upper-bound
 than a prediction for standalone `GPUScan`.
 
 <WorkgroupScanBenchmark />
-
-Append `?scan=portable` to the GPU Trace Viewer URL to disable the subgroup path while retaining the
-same maximum-feature device request. This provides an A/B benchmark control without adding a
-strategy option to the public `GPUScan` API. For a useful comparison, select the same capacity and
-interaction scenario, wait for at least ten timestamp samples, and compare both the displayed
-`Scan GPU p50 / p95` aggregate and whole-graph GPU p50/p95. Reload once normally and once with
-`?scan=portable`; the inspector confirms the active path. Treat a consistent improvement across
-multiple reloads as signal, since individual GPU timestamp samples remain sensitive to browser and
-system load.
-
-<GPUPrimitivesDocsTabs active="scan" />
 
 ## Overview
 

@@ -63,9 +63,15 @@ export function WorkgroupScanBenchmark(): ReactNode {
       </div>
 
       <LiveBenchmarkPanel
-        title="Live portable versus subgroup workgroup scan"
+        title="Workgroup scan performance"
         description="Run equivalent GPUCommandGraph compute nodes that repeatedly scan generated lane values. The workload keeps data inside each workgroup so global-memory bandwidth does not hide synchronization costs."
         runLabel="Run workgroup scan benchmark"
+        runningContent={
+          <WorkgroupScanBenchmarkRunning
+            workgroupCount={workgroupCount}
+            roundCount={roundCount}
+          />
+        }
         unsupportedReason={
           webGPUUnavailable
             ? 'WebGPU is unavailable in this browser. Use a WebGPU-capable browser and a secure origin.'
@@ -90,6 +96,58 @@ export function WorkgroupScanBenchmark(): ReactNode {
         }}
       />
     </div>
+  );
+}
+
+function WorkgroupScanBenchmarkRunning({
+  workgroupCount,
+  roundCount
+}: {
+  workgroupCount: number;
+  roundCount: number;
+}): ReactNode {
+  return (
+    <div>
+      <p style={{margin: '14px 0 10px'}}>
+        Measuring <strong>{workgroupCount.toLocaleString()}</strong> workgroups ×{' '}
+        <strong>{roundCount}</strong> rounds on this device…
+      </p>
+
+      <table style={{fontSize: 13, minWidth: 620, width: '100%'}}>
+        <thead>
+          <tr>
+            <th>Strategy</th>
+            <th>Barriers / round</th>
+            <th>GPU median</th>
+            <th>GPU p95</th>
+            <th>Relative speed</th>
+            <th>CPU encode median</th>
+          </tr>
+        </thead>
+        <tbody>
+          {['Portable workgroup scan', 'Subgroup scan'].map(strategy => (
+            <tr key={strategy}>
+              <td>{strategy}</td>
+              {[0, 1, 2, 3, 4].map(column => (
+                <td key={column}>
+                  <BenchmarkSpinner />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function BenchmarkSpinner(): ReactNode {
+  return (
+    <span
+      aria-label="Measuring"
+      className="luma-live-benchmark-spinner"
+      role="status"
+    />
   );
 }
 
