@@ -7,8 +7,8 @@ import {WorkgroupScanBenchmark} from '@site/src/components/docs/workgroup-scan-b
 
 ## Overview
 
-`GPUScan` adds a hierarchical `uint32` prefix sum to a `GPUCommandGraph`. Scans are exclusive by
-default and may be inclusive, segmented, or both.
+`GPUScan` computes a parallel prefix sum, commonly called a scan, over `uint32` values in a
+`GPUCommandGraph`. Scans are exclusive by default and may be inclusive, segmented, or both.
 
 ## Concepts
 
