@@ -401,6 +401,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     /viewUniforms\.lodFadeEnabled/,
     'rendering selects the smooth or hard LOD transition from the view uniform'
   );
+  t.match(
+    TRACE_RENDER_SHADER,
+    /select\(\s*1\.0,\s*spanReadability,\s*viewUniforms\.lodFadeEnabled != 0u\s*\)/,
+    'hard-switch exact spans bypass sub-pixel readability fading'
+  );
   t.end();
 });
 
@@ -483,7 +488,10 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
 
   const dataset = makeTraceDataset(65_536, 0);
   const spanFloats = new Float32Array(dataset.spans.buffer);
-  const laneSpans = Array.from({length: TRACE_LANE_COUNT}, () => [] as Array<[number, number]>);
+  const laneSpans = Array.from(
+    {length: TRACE_LANE_COUNT},
+    () => [] as Array<[start: number, end: number, group: number]>
+  );
   let occupiedDuration = 0;
   let minimumDuration = Number.POSITIVE_INFINITY;
   let maximumDuration = 0;
@@ -492,20 +500,38 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
     const start = spanFloats[wordOffset];
     const duration = spanFloats[wordOffset + 1];
     const lane = dataset.spans[wordOffset + 2];
-    laneSpans[lane].push([start, start + duration]);
+    laneSpans[lane].push([start, start + duration, dataset.spans[wordOffset + 3]]);
     occupiedDuration += duration;
     minimumDuration = Math.min(minimumDuration, duration);
     maximumDuration = Math.max(maximumDuration, duration);
   }
+  let sameGroupNeighborCount = 0;
+  let neighborCount = 0;
+  let focusedLaneCount = 0;
   for (const spans of laneSpans) {
     spans.sort((left, right) => left[0] - right[0]);
+    const groupCounts = new Uint32Array(TRACE_GROUPS.length);
+    for (const span of spans) {
+      groupCounts[span[2]]++;
+    }
+    focusedLaneCount += Number(Math.max(...groupCounts) / spans.length > 0.65);
     for (let spanIndex = 1; spanIndex < spans.length; spanIndex++) {
       t.ok(
         spans[spanIndex][0] >= spans[spanIndex - 1][1],
         'successive spans in one lane do not overlap'
       );
+      sameGroupNeighborCount += Number(spans[spanIndex][2] === spans[spanIndex - 1][2]);
+      neighborCount++;
     }
   }
+  t.ok(
+    sameGroupNeighborCount / neighborCount > 0.9,
+    'span groups form coherent lane phases instead of alternating every span'
+  );
+  t.ok(
+    focusedLaneCount / laneSpans.length > 0.9,
+    'most lanes spend a clear majority of their time on one span group'
+  );
   const occupancy = occupiedDuration / (dataset.duration * TRACE_LANE_COUNT);
   t.ok(occupancy > 0.55 && occupancy < 0.8, 'lane packing stays dense without overlap');
   t.ok(minimumDuration < 0.05, 'the trace includes very short spans');

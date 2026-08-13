@@ -60,6 +60,9 @@ const TRACE_BASE_SLOT_COUNT = Math.ceil(TRACE_BASE_SPAN_CAPACITY / TRACE_LANE_CO
 const TRACE_SLOT_DURATION = TRACE_DURATION / TRACE_BASE_SLOT_COUNT;
 const TRACE_LANE_ROTATION = 73;
 const TRACE_DURATION_SCALE = 0.9;
+const TRACE_GROUP_PHASE_SLOT_COUNT = 24;
+const TRACE_GROUP_PHASE_CYCLE_LENGTH = 8;
+const TRACE_FOCUSED_GROUP_PHASE_COUNT = 6;
 const TRACE_MAXIMUM_DURATION_SLOT_COUNT = 30;
 /** Largest useful minimum-duration filter value for the generated span distribution. */
 export const TRACE_DURATION_FILTER_MAXIMUM =
@@ -525,17 +528,34 @@ function fillTraceSpans(
     return (randomState >>> 0) / 0x100000000;
   };
   const nextStartByLane = new Float64Array(TRACE_LANE_COUNT);
+  const groupRowCounts = new Uint32Array(groups.length);
   let maximumEnd = 0;
 
   for (let timelineIndex = 0; timelineIndex < spanCount; timelineIndex++) {
-    const groupIndex = timelineIndex % groups.length;
-    const groupRowIndex = Math.floor(timelineIndex / groups.length);
-    const spanIndex = groups[groupIndex].firstSpanIndex + groupRowIndex;
-    const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
     const slotIndex = Math.floor(timelineIndex / TRACE_LANE_COUNT);
     const laneIndex = (timelineIndex + slotIndex * TRACE_LANE_ROTATION) % TRACE_LANE_COUNT;
     const threadIndex = Math.floor(laneIndex / TRACE_LANES_PER_THREAD);
     const processIndex = Math.floor(threadIndex / TRACE_THREADS_PER_PROCESS);
+    const phaseIndex = Math.floor(slotIndex / TRACE_GROUP_PHASE_SLOT_COUNT);
+    const localLaneIndex = laneIndex % TRACE_LANES_PER_THREAD;
+    const focusedGroupIndex = (processIndex + localLaneIndex) % groups.length;
+    const phaseCycleIndex = phaseIndex % TRACE_GROUP_PHASE_CYCLE_LENGTH;
+    const preferredGroupIndex =
+      phaseCycleIndex < TRACE_FOCUSED_GROUP_PHASE_COUNT
+        ? focusedGroupIndex
+        : (focusedGroupIndex + phaseCycleIndex - TRACE_FOCUSED_GROUP_PHASE_COUNT + 1) %
+          groups.length;
+    let groupIndex = preferredGroupIndex;
+    for (let groupOffset = 0; groupOffset < groups.length; groupOffset++) {
+      const candidateGroupIndex = (preferredGroupIndex + groupOffset) % groups.length;
+      if (groupRowCounts[candidateGroupIndex] < groups[candidateGroupIndex].count) {
+        groupIndex = candidateGroupIndex;
+        break;
+      }
+    }
+    const groupRowIndex = groupRowCounts[groupIndex]++;
+    const spanIndex = groups[groupIndex].firstSpanIndex + groupRowIndex;
+    const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
     const gap = (0.02 + random() * 0.04) * TRACE_SLOT_DURATION;
     const durationClass = random();
     const durationVariation = random();
