@@ -85,6 +85,122 @@ main .container {
   vertical-align: -0.1rem;
 }
 
+.markdown .luma-live-benchmark {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 12px;
+  margin: 1.25rem 0 2rem;
+  background: var(--ifm-background-surface-color);
+  overflow: hidden;
+}
+
+.markdown .luma-live-benchmark__summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1rem 1.2rem;
+  position: relative;
+}
+
+.markdown .luma-live-benchmark__summary::-webkit-details-marker {
+  display: none;
+}
+
+.markdown .luma-live-benchmark__summary::after {
+  color: var(--ifm-color-emphasis-600);
+  content: '›';
+  font-size: 1.5rem;
+  line-height: 1;
+  position: absolute;
+  right: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 120ms ease;
+}
+
+.markdown .luma-live-benchmark[open] > .luma-live-benchmark__summary::after {
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.markdown .luma-live-benchmark__summary strong,
+.markdown .luma-live-benchmark__summary small {
+  display: block;
+}
+
+.markdown .luma-live-benchmark__summary small {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+.markdown .luma-live-benchmark__body {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  padding: 1rem 1.2rem 1.2rem;
+}
+
+.markdown .luma-live-benchmark--panel {
+  padding: 1.2rem;
+}
+
+.markdown .luma-live-benchmark--panel > h3 {
+  margin-top: 0;
+}
+
+.markdown .luma-live-benchmark__description {
+  color: var(--ifm-color-emphasis-700);
+  margin: 0 0 0.9rem;
+}
+
+.markdown .luma-live-benchmark__actions,
+.markdown .luma-live-benchmark__controls,
+.markdown .luma-live-benchmark__controls label {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.markdown .luma-live-benchmark__actions {
+  gap: 0.75rem 1rem;
+}
+
+.markdown .luma-live-benchmark__controls {
+  gap: 0.6rem 1rem;
+}
+
+.markdown .luma-live-benchmark__controls label {
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.markdown .luma-live-benchmark__controls select {
+  font-size: 0.85rem;
+}
+
+.markdown .luma-live-benchmark__secondary-label {
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.markdown .luma-live-benchmark__secondary-label::before {
+  color: var(--ifm-color-emphasis-500);
+  content: '↳';
+  left: 0.55rem;
+  position: absolute;
+}
+
+.markdown .luma-live-benchmark__support {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.markdown .luma-live-benchmark__support--yes {
+  color: var(--ifm-color-success-dark);
+}
+
+.markdown .luma-live-benchmark__support--no {
+  color: var(--ifm-color-danger-dark);
+}
+
 @keyframes lumaLiveBenchmarkSpin {
   to {
     transform: rotate(360deg);
@@ -92,8 +208,10 @@ main .container {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .luma-live-benchmark-spinner {
+  .luma-live-benchmark-spinner,
+  .markdown .luma-live-benchmark__summary::after {
     animation: none;
+    transition: none;
   }
 }
 

@@ -26,76 +26,73 @@ export function WorkgroupScanBenchmark(): ReactNode {
   }, []);
 
   return (
-    <div>
-      <div style={{display: 'flex', flexWrap: 'wrap', gap: 18, marginBottom: 12}}>
-        <label
-          htmlFor={workgroupCountId}
-          style={{alignItems: 'center', display: 'flex', gap: 8}}
-        >
-          Workgroups
-          <select
-            id={workgroupCountId}
-            onChange={event => setWorkgroupCount(Number(event.target.value))}
-            value={workgroupCount}
-          >
-            {WORKGROUP_COUNTS.map(count => (
-              <option key={count} value={count}>
-                {count.toLocaleString()}
-              </option>
-            ))}
-          </select>
-        </label>
+    <LiveBenchmarkPanel
+      collapsible
+      title="256-lane workgroup scan benchmark"
+      description="Each round performs one exclusive 256-lane prefix scan per workgroup. Throughput is reported as input lane-values scanned per second."
+      runLabel="Run benchmark"
+      controls={
+        <div className="luma-live-benchmark__controls">
+          <label htmlFor={workgroupCountId}>
+            Workgroups
+            <select
+              id={workgroupCountId}
+              onChange={event => setWorkgroupCount(Number(event.target.value))}
+              value={workgroupCount}
+            >
+              {WORKGROUP_COUNTS.map(count => (
+                <option key={count} value={count}>
+                  {count.toLocaleString()}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label htmlFor={roundCountId} style={{alignItems: 'center', display: 'flex', gap: 8}}>
-          Local scan rounds
-          <select
-            id={roundCountId}
-            onChange={event => setRoundCount(Number(event.target.value))}
-            value={roundCount}
-          >
-            {ROUND_COUNTS.map(count => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <LiveBenchmarkPanel
-        title="Workgroup scan performance"
-        description="Run equivalent GPUCommandGraph compute nodes that repeatedly scan generated lane values. The workload keeps data inside each workgroup so global-memory bandwidth does not hide synchronization costs."
-        runLabel="Run workgroup scan benchmark"
-        runningContent={
-          <WorkgroupScanBenchmarkRunning
-            workgroupCount={workgroupCount}
-            roundCount={roundCount}
+          <label htmlFor={roundCountId}>
+            Rounds
+            <select
+              id={roundCountId}
+              onChange={event => setRoundCount(Number(event.target.value))}
+              value={roundCount}
+            >
+              {ROUND_COUNTS.map(count => (
+                <option key={count} value={count}>
+                  {count}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      }
+      runningContent={
+        <WorkgroupScanBenchmarkRunning
+          workgroupCount={workgroupCount}
+          roundCount={roundCount}
+        />
+      }
+      unsupportedReason={
+        webGPUUnavailable
+          ? 'WebGPU is unavailable in this browser. Use a WebGPU-capable browser and a secure origin.'
+          : undefined
+      }
+      onRun={async () => {
+        // Subgroups are optional device features and must be requested when the device is created.
+        const device =
+          selectedDevice?.type === 'webgpu' && selectedDevice.info.featureLevel === 'max'
+            ? selectedDevice
+            : await createDevice('webgpu-max');
+        const report = await runGPUWorkgroupScanBenchmark(device, {
+          workgroupCount,
+          roundCount
+        });
+        return (
+          <WorkgroupScanBenchmarkResults
+            report={report}
+            deviceLabel={device.info.renderer || device.info.vendor || device.info.gpu}
           />
-        }
-        unsupportedReason={
-          webGPUUnavailable
-            ? 'WebGPU is unavailable in this browser. Use a WebGPU-capable browser and a secure origin.'
-            : undefined
-        }
-        onRun={async () => {
-          // Subgroups are optional device features and must be requested when the device is created.
-          const device =
-            selectedDevice?.type === 'webgpu' && selectedDevice.info.featureLevel === 'max'
-              ? selectedDevice
-              : await createDevice('webgpu-max');
-          const report = await runGPUWorkgroupScanBenchmark(device, {
-            workgroupCount,
-            roundCount
-          });
-          return (
-            <WorkgroupScanBenchmarkResults
-              report={report}
-              deviceLabel={device.info.renderer || device.info.vendor || device.info.gpu}
-            />
-          );
-        }}
-      />
-    </div>
+        );
+      }}
+    />
   );
 }
 
@@ -109,25 +106,28 @@ function WorkgroupScanBenchmarkRunning({
   return (
     <div>
       <p style={{margin: '14px 0 10px'}}>
-        Measuring <strong>{workgroupCount.toLocaleString()}</strong> workgroups ×{' '}
-        <strong>{roundCount}</strong> rounds on this device…
+        Measuring <strong>{formatWorkgroupScanCount(workgroupCount, roundCount)}</strong>{' '}
+        workgroup scans/dispatch ·{' '}
+        <strong>{formatLaneValueCount(workgroupCount, roundCount)}</strong> lane-values/dispatch…
       </p>
 
       <table style={{fontSize: 13, minWidth: 620, width: '100%'}}>
         <thead>
           <tr>
-            <th>Strategy</th>
-            <th>Barriers / round</th>
+            <th>Implementation</th>
+            <th>Supported</th>
+            <th>Barriers / scan</th>
             <th>GPU median</th>
             <th>GPU p95</th>
-            <th>Relative speed</th>
-            <th>CPU encode median</th>
+            <th>Scan throughput</th>
           </tr>
         </thead>
         <tbody>
-          {['Portable workgroup scan', 'Subgroup scan'].map(strategy => (
-            <tr key={strategy}>
-              <td>{strategy}</td>
+          {['GPUScan', 'Subgroup optimization'].map((implementation, rowIndex) => (
+            <tr key={implementation}>
+              <td className={rowIndex === 1 ? 'luma-live-benchmark__secondary-label' : undefined}>
+                {implementation}
+              </td>
               {[0, 1, 2, 3, 4].map(column => (
                 <td key={column}>
                   <BenchmarkSpinner />
@@ -158,59 +158,119 @@ function WorkgroupScanBenchmarkResults({
   report: GPUWorkgroupScanBenchmarkReport;
   deviceLabel: string;
 }): ReactNode {
-  const portablePath = report.paths.find(path => path.strategy === 'portable')!;
-  const portableMedian = getPrimaryMedian(portablePath);
-
   return (
     <div>
       <p style={{margin: '14px 0 10px'}}>
-        <strong>{report.workgroupCount.toLocaleString()}</strong> workgroups ×{' '}
-        <strong>{report.workgroupSize}</strong> lanes × <strong>{report.roundCount}</strong> rounds ·{' '}
+        <strong>{formatWorkgroupScanCount(report.workgroupCount, report.roundCount)}</strong>{' '}
+        workgroup scans/dispatch ·{' '}
+        <strong>{formatLaneValueCount(report.workgroupCount, report.roundCount)}</strong>{' '}
+        lane-values/dispatch ·{' '}
         <strong>{report.dispatchCount}</strong> dispatches/sample · {deviceLabel}
       </p>
 
       <table style={{fontSize: 13, minWidth: 620, width: '100%'}}>
         <thead>
           <tr>
-            <th>Strategy</th>
-            <th>Barriers / round</th>
+            <th>Implementation</th>
+            <th>Supported</th>
+            <th>Barriers / scan</th>
             <th>GPU median</th>
             <th>GPU p95</th>
-            <th>Relative speed</th>
-            <th>CPU encode median</th>
+            <th>Scan throughput</th>
           </tr>
         </thead>
         <tbody>
-          {report.paths.map(path => (
-            <tr key={path.strategy}>
-              <td>{path.strategy === 'subgroups' ? 'Subgroup scan' : 'Portable workgroup scan'}</td>
-              <td>{path.barrierCountPerRound}</td>
-              <td>{formatOptionalMilliseconds(path.gpuTimeMilliseconds?.median)}</td>
-              <td>{formatOptionalMilliseconds(path.gpuTimeMilliseconds?.percentile95)}</td>
-              <td>{formatRelativeSpeed(portableMedian, getPrimaryMedian(path))}</td>
-              <td>{formatMilliseconds(path.cpuEncodeTimeMilliseconds.median)}</td>
-            </tr>
-          ))}
+          <BenchmarkResultRow
+            label="GPUScan"
+            path={report.paths.find(path => path.strategy === 'portable')!}
+            report={report}
+            supported
+          />
+          <BenchmarkResultRow
+            label="Subgroup optimization"
+            path={report.paths.find(path => path.strategy === 'subgroups')}
+            report={report}
+            secondary
+            supported={report.subgroupAvailable}
+          />
         </tbody>
       </table>
 
       <p style={{fontSize: 12, margin: '10px 0 0'}}>
-        {report.subgroupAvailable
-          ? `The max-feature device exposes subgroups${formatSubgroupSize(report)}.`
-          : 'This adapter/browser does not expose both required subgroup capabilities, so only the portable path was measured.'}{' '}
-        Every path passed the same CPU checksum oracle before and after measurement. Results are
-        local to this browser, adapter, and current system load.
+        {report.subgroupAvailable ? `Subgroups use ${formatSubgroupSize(report)} lanes. ` : ''}
+        Measured paths passed the same CPU checksum oracle. Results are local to this browser,
+        adapter, and current system load.
       </p>
     </div>
   );
 }
 
-function getPrimaryMedian(path: GPUWorkgroupScanBenchmarkPathReport): number {
-  return path.gpuTimeMilliseconds?.median ?? path.cpuEncodeTimeMilliseconds.median;
+function BenchmarkResultRow({
+  label,
+  path,
+  report,
+  secondary = false,
+  supported
+}: {
+  label: string;
+  path: GPUWorkgroupScanBenchmarkPathReport | undefined;
+  report: GPUWorkgroupScanBenchmarkReport;
+  secondary?: boolean;
+  supported: boolean;
+}): ReactNode {
+  return (
+    <tr>
+      <td className={secondary ? 'luma-live-benchmark__secondary-label' : undefined}>{label}</td>
+      <td>
+        <SupportedIndicator supported={supported} />
+      </td>
+      <td>{path?.barrierCountPerRound ?? '—'}</td>
+      <td>{path ? formatOptionalMilliseconds(path.gpuTimeMilliseconds?.median) : '—'}</td>
+      <td>{path ? formatOptionalMilliseconds(path.gpuTimeMilliseconds?.percentile95) : '—'}</td>
+      <td>{path ? formatScanThroughput(report, path) : '—'}</td>
+    </tr>
+  );
 }
 
-function formatRelativeSpeed(portableMedian: number, pathMedian: number): string {
-  return pathMedian > 0 ? `${(portableMedian / pathMedian).toFixed(2)}×` : 'Unavailable';
+function SupportedIndicator({supported}: {supported: boolean}): ReactNode {
+  return (
+    <span
+      aria-label={supported ? 'Supported' : 'Not supported'}
+      className={
+        supported
+          ? 'luma-live-benchmark__support luma-live-benchmark__support--yes'
+          : 'luma-live-benchmark__support luma-live-benchmark__support--no'
+      }
+      title={supported ? 'Supported' : 'Not supported'}
+    >
+      {supported ? '✓' : '×'}
+    </span>
+  );
+}
+
+function formatWorkgroupScanCount(workgroupCount: number, roundCount: number): string {
+  return (workgroupCount * roundCount).toLocaleString();
+}
+
+function formatLaneValueCount(workgroupCount: number, roundCount: number): string {
+  const laneValueCount = workgroupCount * roundCount * 256;
+  return laneValueCount >= 1e6
+    ? `${(laneValueCount / 1e6).toFixed(2)}M`
+    : laneValueCount.toLocaleString();
+}
+
+function formatScanThroughput(
+  report: GPUWorkgroupScanBenchmarkReport,
+  path: GPUWorkgroupScanBenchmarkPathReport
+): string {
+  const gpuMedianMilliseconds = path.gpuTimeMilliseconds?.median;
+  if (!gpuMedianMilliseconds || gpuMedianMilliseconds <= 0) {
+    return 'Unavailable';
+  }
+  const laneValuesPerSecond =
+    (report.workgroupCount * report.roundCount * report.workgroupSize * 1000) /
+    gpuMedianMilliseconds;
+  return `${(laneValuesPerSecond / 1e9).toFixed(2)}G lanes/s`;
 }
 
 function formatMilliseconds(milliseconds: number): string {
@@ -223,9 +283,9 @@ function formatOptionalMilliseconds(milliseconds: number | undefined): string {
 
 function formatSubgroupSize(report: GPUWorkgroupScanBenchmarkReport): string {
   if (report.subgroupMinSize === undefined || report.subgroupMaxSize === undefined) {
-    return '';
+    return 'an adapter-defined number of';
   }
   return report.subgroupMinSize === report.subgroupMaxSize
-    ? ` with ${report.subgroupMinSize} lanes`
-    : ` with ${report.subgroupMinSize}–${report.subgroupMaxSize} lanes`;
+    ? `${report.subgroupMinSize}`
+    : `${report.subgroupMinSize}–${report.subgroupMaxSize}`;
 }

@@ -1,4 +1,4 @@
-import React, {type CSSProperties, type ReactNode, useEffect, useRef, useState} from 'react';
+import React, {type ReactNode, useEffect, useRef, useState} from 'react';
 
 /** Shared, user-triggered presentation for benchmarks executed on the visitor's actual device. */
 export type LiveBenchmarkPanelProps = {
@@ -6,6 +6,10 @@ export type LiveBenchmarkPanelProps = {
   title: string;
   /** Short explanation of the workload and what its measurements include. */
   description: string;
+  /** Optional benchmark controls rendered beside the run action. */
+  controls?: ReactNode;
+  /** Places the benchmark in a single disclosure card instead of an always-open panel. */
+  collapsible?: boolean;
   /** Optional action text; defaults to a WebGPU-oriented benchmark label. */
   runLabel?: string;
   /** Executes real benchmark work and returns the results to render. */
@@ -14,14 +18,6 @@ export type LiveBenchmarkPanelProps = {
   runningContent?: ReactNode;
   /** Explicit capability message that disables the benchmark without claiming synthetic results. */
   unsupportedReason?: string;
-};
-
-const PANEL_STYLE: CSSProperties = {
-  border: '1px solid var(--ifm-color-emphasis-300)',
-  borderRadius: 12,
-  margin: '1.25rem 0 2rem',
-  padding: '1.25rem',
-  background: 'var(--ifm-background-surface-color)'
 };
 
 /**
@@ -33,6 +29,8 @@ const PANEL_STYLE: CSSProperties = {
 export function LiveBenchmarkPanel({
   title,
   description,
+  controls,
+  collapsible = false,
   runLabel = 'Run live WebGPU benchmark',
   onRun,
   runningContent,
@@ -75,21 +73,23 @@ export function LiveBenchmarkPanel({
     }
   };
 
-  return (
-    <section aria-label={title} data-live-benchmark="true" style={PANEL_STYLE}>
-      <h3 style={{marginTop: 0}}>{title}</h3>
-      <p>{description}</p>
+  const content = (
+    <>
+      <p className="luma-live-benchmark__description">{description}</p>
 
-      <button
-        className="button button--primary"
-        disabled={isRunning || Boolean(unsupportedReason)}
-        onClick={() => {
-          void handleRun();
-        }}
-        type="button"
-      >
-        {isRunning ? 'Running on your device…' : runLabel}
-      </button>
+      <div className="luma-live-benchmark__actions">
+        {controls}
+        <button
+          className="button button--primary button--sm"
+          disabled={isRunning || Boolean(unsupportedReason)}
+          onClick={() => {
+            void handleRun();
+          }}
+          type="button"
+        >
+          {isRunning ? 'Running…' : runLabel}
+        </button>
+      </div>
 
       {unsupportedReason ? (
         <p aria-live="polite" style={{marginBottom: 0}}>
@@ -112,6 +112,31 @@ export function LiveBenchmarkPanel({
           {results}
         </div>
       ) : null}
+    </>
+  );
+
+  if (collapsible) {
+    return (
+      <details className="luma-live-benchmark" data-live-benchmark="true">
+        <summary className="luma-live-benchmark__summary">
+          <span>
+            <strong>{title}</strong>
+            <small>Live · runs on this device</small>
+          </span>
+        </summary>
+        <div className="luma-live-benchmark__body">{content}</div>
+      </details>
+    );
+  }
+
+  return (
+    <section
+      aria-label={title}
+      className="luma-live-benchmark luma-live-benchmark--panel"
+      data-live-benchmark="true"
+    >
+      <h3>{title}</h3>
+      {content}
     </section>
   );
 }
