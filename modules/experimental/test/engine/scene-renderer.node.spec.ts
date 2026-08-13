@@ -317,6 +317,78 @@ describe('shared PBR material factories', () => {
 });
 
 describe('SceneRenderer', () => {
+  test('adapts incoming directional lights and additive ambient radiance at the forward PBR boundary', async () => {
+    const device = await getNullTestDevice();
+    const renderer = new InspectableSceneRenderer(device);
+    const surface: SceneSurface = {
+      id: 'directional-light-convention',
+      geometry: makeGeometry(),
+      material: {id: 'directional-light-convention-material'},
+      transforms: [new Matrix4()]
+    };
+    const pointLight = {
+      type: 'point' as const,
+      position: [2, 3, 4] as [number, number, number],
+      intensity: 1
+    };
+    const spotLight = {
+      type: 'spot' as const,
+      position: [1, 2, 3] as [number, number, number],
+      direction: [0, -1, 0] as [number, number, number],
+      intensity: 1
+    };
+    const directionalLight = {
+      type: 'directional' as const,
+      direction: [0.4, -0.6, -1] as [number, number, number],
+      intensity: 1
+    };
+    const redAmbientLight = {
+      type: 'ambient' as const,
+      color: [1, 0, 0] as [number, number, number],
+      intensity: 0.25
+    };
+    const greenAmbientLight = {
+      type: 'ambient' as const,
+      color: [0, 1, 0] as [number, number, number],
+      intensity: 0.4
+    };
+    const options: SceneRenderOptions = {
+      ...makeOptions([surface]),
+      lights: [redAmbientLight, pointLight, spotLight, directionalLight, greenAmbientLight]
+    };
+
+    try {
+      const model = renderer.inspect(options).surfaces[0].model;
+      const lighting = model.shaderInputs.getUniformValues().lighting;
+
+      expect(lighting).toMatchObject({
+        pointLightCount: 1,
+        spotLightCount: 1,
+        directionalLightCount: 1
+      });
+      expect(lighting.lights[0].position).toEqual([2, 3, 4]);
+      expect(lighting.lights[1].direction).toEqual([0, -1, 0]);
+      expect(lighting.lights[2].direction).toEqual([-0.4, 0.6, 1]);
+      expect(lighting.ambientColor).toEqual([0.25, 0.4, 0]);
+      expect(options.lights?.[0]).toBe(redAmbientLight);
+      expect(options.lights?.[4]).toBe(greenAmbientLight);
+      expect(options.lights?.[3]).toBe(directionalLight);
+      expect(directionalLight.direction).toEqual([0.4, -0.6, -1]);
+      expect(options.lights?.[2]).toBe(spotLight);
+      expect(redAmbientLight.color).toEqual([1, 0, 0]);
+      expect(greenAmbientLight.color).toEqual([0, 1, 0]);
+
+      options.lights = [redAmbientLight];
+      const singleAmbientModel = renderer.inspect(options).surfaces[0].model;
+      expect(singleAmbientModel.shaderInputs.getUniformValues().lighting.ambientColor).toEqual([
+        0.25, 0, 0
+      ]);
+      expect(options.lights[0]).toBe(redAmbientLight);
+    } finally {
+      renderer.destroy();
+    }
+  });
+
   test('rebuilds punctual-light shader specialization only when lighting becomes enabled or disabled', async () => {
     const device = await getNullTestDevice();
     const renderer = new InspectableSceneRenderer(device);

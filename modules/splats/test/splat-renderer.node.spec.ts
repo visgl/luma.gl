@@ -115,6 +115,51 @@ test('SplatRenderer normalizes Float32 alpha and adapts HDR display mapping', t 
   t.end();
 });
 
+test('SplatRenderer recomputes automatic tone mapping when replacing source radiance', t => {
+  const device = new NullDevice({});
+  const highDynamicRangeSource = makeSplatSource([0.5]);
+  highDynamicRangeSource.colors = new Float32Array([4, 2, 0.5, 1]);
+  const highDynamicRangeBatch = makeGPUSplatData(device, highDynamicRangeSource);
+  const standardDynamicRangeBatch = makeGPUSplatData(device, makeSplatSource([0.5]));
+  const renderer = new SplatRenderer(device, {data: highDynamicRangeBatch});
+
+  t.equal(renderer.props.toneMapping, 'reinhard', 'automatically compresses HDR source colors');
+  renderer.setProps({data: standardDynamicRangeBatch});
+  t.equal(
+    renderer.props.toneMapping,
+    'none',
+    'removes automatic mapping for replacement SDR colors'
+  );
+  renderer.setProps({data: highDynamicRangeBatch});
+  t.equal(renderer.props.toneMapping, 'reinhard', 'restores automatic mapping for replacement HDR');
+  renderer.setProps({data: []});
+  t.equal(renderer.props.toneMapping, 'none', 'clears automatic mapping when all data is removed');
+  renderer.destroy();
+
+  const explicitlyMappedRenderer = new SplatRenderer(device, {
+    data: highDynamicRangeBatch,
+    toneMapping: 'none'
+  });
+  explicitlyMappedRenderer.setProps({data: standardDynamicRangeBatch});
+  explicitlyMappedRenderer.setProps({data: highDynamicRangeBatch});
+  t.equal(
+    explicitlyMappedRenderer.props.toneMapping,
+    'none',
+    'preserves an explicit unmapped override across both source formats'
+  );
+  explicitlyMappedRenderer.setProps({toneMapping: 'reinhard', data: []});
+  t.equal(
+    explicitlyMappedRenderer.props.toneMapping,
+    'reinhard',
+    'preserves an explicit mapping override when retained source data is cleared'
+  );
+
+  explicitlyMappedRenderer.destroy();
+  highDynamicRangeBatch.destroy();
+  standardDynamicRangeBatch.destroy();
+  t.end();
+});
+
 test('SplatRenderer preserves Float32 highlights on extended HDR presentation targets', t => {
   const device = new NullDevice({
     createCanvasContext: {colorFormat: 'rgba16float', toneMapping: 'extended'}
@@ -306,6 +351,83 @@ test('SplatRenderer preserves batches, stable cross-batch ordering, and source o
   secondBatch.destroy();
   t.ok(firstBuffer.destroyed, 'caller releases the first source batch');
   t.ok(secondBuffer.destroyed, 'caller releases the second source batch');
+  t.end();
+});
+
+test('SplatRenderer draws sorted WebGL rows and interleaved source batches exactly once', async t => {
+  const device = new NullDevice({});
+  const firstSource = makeSplatSource([0.2, 0.8], 0, 10);
+  const secondSource = makeSplatSource([0.5], 1, 20);
+  const firstBatch = makeGPUSplatData(device, firstSource);
+  const secondBatch = makeGPUSplatData(device, secondSource);
+  const firstSourceBuffer = firstBatch.positions.data[0].buffer;
+  const secondSourceBuffer = secondBatch.positions.data[0].buffer;
+  const renderer = new SplatRenderer(device, {
+    data: [firstBatch, secondBatch],
+    viewportSize: [32, 32],
+    sortMode: 'global'
+  });
+  const model = renderer.model;
+  if (!model) {
+    t.fail('creates an attribute-backed Gaussian splat model');
+    renderer.destroy();
+    firstBatch.destroy();
+    secondBatch.destroy();
+    t.end();
+    return;
+  }
+
+  const originalDraw = model.draw.bind(model);
+  const drawnRowBuffers: Array<{buffer: Buffer; rowCount: number}> = [];
+  model.draw = renderPass => {
+    const rowIndexBuffer = model.vertexArray.attributes[5];
+    if (rowIndexBuffer instanceof Buffer) {
+      drawnRowBuffers.push({buffer: rowIndexBuffer, rowCount: model.instanceCount});
+    }
+    return originalDraw(renderPass);
+  };
+  const renderPass = device.getDefaultRenderPass();
+  t.ok(renderer.draw(renderPass), 'draws every globally sorted source-batch run');
+
+  const drawnRows: number[] = [];
+  for (const {buffer, rowCount} of drawnRowBuffers) {
+    const rowBytes = await buffer.readAsync();
+    drawnRows.push(...new Uint32Array(rowBytes.buffer, rowBytes.byteOffset, rowCount).values());
+  }
+  t.deepEqual(drawnRows, [11, 20, 10], 'honors globally sorted cross-batch row identities');
+  t.deepEqual(
+    drawnRowBuffers.map(({rowCount}) => rowCount),
+    [1, 1, 1],
+    'draws each source row once without redrawing complete source batches'
+  );
+  const sortedPositionBuffer = renderer.getDrawRuns()[0]?.attributeBuffers?.positions;
+  if (!(sortedPositionBuffer instanceof Buffer)) {
+    t.fail('creates an independently owned, reordered WebGL position buffer');
+    renderer.destroy();
+    firstBatch.destroy();
+    secondBatch.destroy();
+    t.end();
+    return;
+  }
+  const sortedPositionBytes = await sortedPositionBuffer.readAsync();
+  const sortedPositions = new Float32Array(
+    sortedPositionBytes.buffer,
+    sortedPositionBytes.byteOffset,
+    sortedPositionBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
+  t.ok(Math.abs(sortedPositions[2] - 0.8) < 1e-6, 'reorders the furthest source row first');
+  t.ok(
+    Math.abs(firstSource.positions[2] - 0.2) < 1e-6,
+    'preserves the caller-owned CPU source row order'
+  );
+  t.ok(renderer.stats.rendererGpuByteLength > 0, 'accounts for renderer-owned sorted attributes');
+
+  renderer.destroy();
+  t.ok(sortedPositionBuffer.destroyed, 'releases renderer-owned sorted WebGL attributes');
+  t.notOk(firstSourceBuffer.destroyed, 'preserves the first caller-owned source GPU buffer');
+  t.notOk(secondSourceBuffer.destroyed, 'preserves the second caller-owned source GPU buffer');
+  firstBatch.destroy();
+  secondBatch.destroy();
   t.end();
 });
 

@@ -348,6 +348,60 @@ test('SplatRADHierarchyManager respects active-row budgets and missing-page back
   t.end();
 });
 
+test('SplatRADHierarchyManager budgets only visible rows while retaining authored traversal limits', t => {
+  const device = new NullDevice({});
+  const parent = makeRADPage(device, {
+    id: 'parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    childCounts: [5],
+    childStarts: [1]
+  });
+  const children = makeRADPage(device, {
+    id: 'children',
+    rowIndexBase: 1,
+    positions: [0, 0, 0, 4, 0, 0, -4, 0, 0, 0, 4, 0, 0, -4, 0],
+    childCounts: [2, 0, 0, 0, 0],
+    childStarts: [6, 0, 0, 0, 0]
+  });
+  const grandchildren = makeRADPage(device, {
+    id: 'grandchildren',
+    rowIndexBase: 6,
+    positions: [-0.1, 0, 0, 0.1, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [parent, children, grandchildren],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 2,
+    maxTraversalRows: 8,
+    refinementHysteresis: 0
+  });
+
+  manager.update(makeRADView());
+
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier),
+    [[6, 7]],
+    'refines the sole visible child through its next level instead of reserving culled siblings'
+  );
+  t.equal(manager.stats.activeRowCount, 2, 'accounts for only original visible frontier rows');
+  t.equal(manager.stats.culledRowCount, 4, 'still evaluates each authored invisible source child');
+  t.equal(
+    manager.stats.visibleRowCount + manager.stats.culledRowCount,
+    8,
+    'continues charging every authored child against the synchronous traversal budget'
+  );
+  t.equal(manager.stats.fallbackRowCount, 0, 'removes every fully replaced resident parent');
+  t.equal(manager.stats.requestedPageCount, 0, 'retains complete resident child-page readiness');
+  t.equal(manager.frontier[0].data, grandchildren.data, 'borrows the original finest source page');
+
+  manager.destroy();
+  parent.data.destroy();
+  children.data.destroy();
+  grandchildren.data.destroy();
+  t.end();
+});
+
 test('SplatRADHierarchyManager retains fallback when protected page budgets deny child admission', t => {
   const device = new NullDevice({});
   const residency = new SplatResidencyManager({maxResidentChunks: 2});
@@ -600,6 +654,299 @@ test('SplatRADHierarchyManager traverses a large mixed-page global row tree', t 
   t.end();
 });
 
+test('SplatRADHierarchyManager spends a hard row budget on the highest-priority source branch', t => {
+  const device = new NullDevice({});
+  const parents = makeRADPage(device, {
+    id: 'parents',
+    rowIndexBase: 0,
+    positions: [-0.2, 0, 0, 0.2, 0, 0],
+    scales: [0.025, 0.025, 0.025, 0.2, 0.2, 0.2],
+    childCounts: [2, 2],
+    childStarts: [2, 4]
+  });
+  const children = makeRADPage(device, {
+    id: 'children',
+    rowIndexBase: 2,
+    positions: [-0.25, 0, 0, -0.15, 0, 0, 0.15, 0, 0, 0.25, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [parents, children],
+    rootRows: [0, 1],
+    maximumActiveRows: 3,
+    maximumScreenSpaceError: 1,
+    refinementHysteresis: 0
+  });
+
+  manager.update(makeRADView());
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier),
+    [[0], [4, 5]],
+    'refines the later high-value parent instead of exhausting the budget on source order'
+  );
+  t.equal(manager.stats.activeRowCount, 3, 'honors the hard original-source-row budget');
+  t.equal(manager.frontier[0].data, parents.data, 'keeps the original coarse source page');
+  t.equal(manager.frontier[1].data, children.data, 'borrows the intact finer source page');
+
+  manager.destroy();
+  parents.data.destroy();
+  children.data.destroy();
+  t.end();
+});
+
+test('SplatRADHierarchyManager reproduces Spark authored anisotropic and high-opacity row sizes', t => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'authored',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    scales: [0.03, 0.09, 0.18],
+    opacities: [1.5]
+  });
+  const ordinaryManager = new SplatRADHierarchyManager({pages: [page]});
+  const sparkManager = new SplatRADHierarchyManager({pages: [page], lodOpacity: true});
+
+  ordinaryManager.update(makeRADView());
+  sparkManager.update(makeRADView());
+  t.ok(
+    Math.abs(ordinaryManager.frontier[0].geometricError - 0.2) < 1e-6,
+    'derives authored node diameter from twice the average original anisotropic source scale'
+  );
+  t.ok(
+    Math.abs(sparkManager.frontier[0].geometricError - 0.48) < 1e-6,
+    'applies Spark nonlinear opacity expansion without decoding the source alpha a second time'
+  );
+  t.equal(page.data.source.opacities[0], 1.5, 'never modifies the original decoded source alpha');
+  t.ok(
+    sparkManager.frontier[0].priority > ordinaryManager.frontier[0].priority,
+    'increases the request importance of a genuinely expanded coarse LoD parent'
+  );
+
+  ordinaryManager.destroy();
+  sparkManager.destroy();
+  page.data.destroy();
+  t.end();
+});
+
+test('SplatRADHierarchyManager applies Spark angular center, peripheral, and behind foveation', t => {
+  const device = new NullDevice({});
+  const parents = makeRADPage(device, {
+    id: 'parents',
+    rowIndexBase: 0,
+    positions: [0, 0, -0.25, 0.4330127, 0, -0.25, 0, 0, 0.25],
+    childCounts: [1, 1, 1],
+    childStarts: [3, 4, 5]
+  });
+  const children = makeRADPage(device, {
+    id: 'children',
+    rowIndexBase: 3,
+    positions: [0, 0, -0.25, 0.4330127, 0, -0.25, 0, 0, 0.25]
+  });
+  const view: SplatHierarchyView = {
+    cameraPosition: [0, 0, 0],
+    viewportSize: [1_000, 1_000],
+    verticalFieldOfView: Math.PI / 2,
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 1]
+  };
+  const manager = new SplatRADHierarchyManager({
+    pages: [parents, children],
+    rootRows: [0, 1, 2],
+    maximumScreenSpaceError: 150,
+    refinementHysteresis: 0
+  });
+
+  manager.update(view);
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier),
+    [[1, 2], [3]],
+    'keeps full detail ahead while retaining coarser peripheral and behind-camera source parents'
+  );
+
+  const unfoveatedManager = new SplatRADHierarchyManager({
+    pages: [parents, children],
+    rootRows: [0, 1, 2],
+    maximumScreenSpaceError: 150,
+    coneFov0: 180,
+    coneFov: 180,
+    refinementHysteresis: 0
+  });
+  unfoveatedManager.update(view);
+  t.deepEqual(
+    getFrontierSourceRows(unfoveatedManager.frontier),
+    [[2], [3, 4]],
+    'extends full detail to the peripheral source row while preserving behind-camera foveation'
+  );
+
+  manager.destroy();
+  unfoveatedManager.destroy();
+  parents.data.destroy();
+  children.data.destroy();
+  t.end();
+});
+
+test('SplatRADHierarchyManager stabilizes source-row replacement around the camera threshold', t => {
+  const device = new NullDevice({});
+  const parent = makeRADPage(device, {
+    id: 'parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    childCounts: [1],
+    childStarts: [1]
+  });
+  const child = makeRADPage(device, {id: 'child', rowIndexBase: 1, positions: [0, 0, 0]});
+  const events: number[][][] = [];
+  const manager = new SplatRADHierarchyManager({
+    pages: [parent, child],
+    maximumScreenSpaceError: 50,
+    refinementHysteresis: 0.2,
+    onFrontierChange: frontier => events.push(getFrontierSourceRows(frontier))
+  });
+  const view = (distance: number): SplatHierarchyView => ({
+    ...makeRADView(),
+    cameraPosition: [0, 0, distance],
+    verticalFieldOfView: Math.PI / 2
+  });
+
+  manager.update(view(2.1));
+  t.deepEqual(getFrontierSourceRows(manager.frontier), [[0]], 'starts with coarse parent coverage');
+  manager.update(view(1.6));
+  t.deepEqual(getFrontierSourceRows(manager.frontier), [[1]], 'refines beyond the upper deadband');
+  const refinedFrontier = manager.frontier;
+  manager.update(view(2.1));
+  t.equal(manager.frontier, refinedFrontier, 'keeps the exact original refined page frontier');
+  manager.update(view(2.2));
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier),
+    [[1]],
+    'does not churn source pages when the camera hovers inside the deadband'
+  );
+  manager.update(view(2.6));
+  t.deepEqual(getFrontierSourceRows(manager.frontier), [[0]], 'restores coarse coverage below it');
+  t.deepEqual(events, [[[0]], [[1]], [[0]]], 'does not signal unnecessary renderer rebuilds');
+
+  manager.destroy();
+  parent.data.destroy();
+  child.data.destroy();
+  t.end();
+});
+
+test('SplatRADHierarchyManager bounds synchronous camera traversal without losing parent coverage', t => {
+  const device = new NullDevice({});
+  const positions: number[] = [];
+  const childCounts: number[] = [];
+  const childStarts: number[] = [];
+  for (let rowIndex = 0; rowIndex < 511; rowIndex++) {
+    positions.push((rowIndex % 16) / 64 - 0.125, 0, 0);
+    childCounts.push(rowIndex < 255 ? 2 : 0);
+    childStarts.push(rowIndex < 255 ? rowIndex * 2 + 1 : 0);
+  }
+  const page = makeRADPage(device, {
+    id: 'bounded-tree',
+    rowIndexBase: 0,
+    positions,
+    childCounts,
+    childStarts
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 256,
+    maxTraversalRows: 31
+  });
+
+  manager.update(makeRADView());
+  t.ok(
+    manager.stats.visibleRowCount + manager.stats.culledRowCount <= 31,
+    'caps evaluated source rows before synchronous traversal can monopolize a camera frame'
+  );
+  t.equal(
+    manager.stats.activeRowCount,
+    16,
+    'retains the coherent partially refined source frontier'
+  );
+  t.equal(manager.stats.requestedPageCount, 0, 'does not demand children beyond the traversal cap');
+  t.equal(manager.frontier[0].data, page.data, 'borrows the original bounded source allocation');
+  const originalPositionBuffer = page.data.positions.data[0].buffer;
+  manager.setTraversalBudget(63);
+  t.equal(manager.stats.activeRowCount, 32, 'expands detail after a settled camera budget update');
+  t.ok(
+    manager.stats.visibleRowCount + manager.stats.culledRowCount <= 63,
+    'invalidates the unchanged-view fast path when the source traversal budget grows'
+  );
+  t.equal(
+    page.data.positions.data[0].buffer,
+    originalPositionBuffer,
+    'never reallocates or replaces the caller-owned source page while changing detail'
+  );
+
+  manager.setTraversalBudget(15);
+  t.equal(manager.stats.activeRowCount, 8, 'restores a responsive coarse frontier during motion');
+  const movingFrontier = manager.frontier;
+  manager.setTraversalBudget(15);
+  t.equal(manager.frontier, movingFrontier, 'skips unchanged traversal-budget updates');
+  manager.setTraversalBudget();
+  t.equal(manager.stats.activeRowCount, 256, 'allows an explicit unlimited settled traversal');
+  t.throws(
+    () => manager.setTraversalBudget(0),
+    /traversal capacity/,
+    'rejects invalid dynamic traversal budgets before replacing the active frontier'
+  );
+  t.throws(
+    () => new SplatRADHierarchyManager({maxTraversalRows: 0}),
+    /traversal capacity/,
+    'rejects an empty synchronous source-row traversal budget'
+  );
+
+  manager.destroy();
+  page.data.destroy();
+  t.end();
+});
+
+test('SplatRADHierarchyManager skips unchanged camera traversal but detects dynamic source rows', t => {
+  const device = new NullDevice({});
+  const parent = makeRADPage(device, {
+    id: 'parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    scales: [0.01, 0.01, 0.01],
+    childCounts: [1],
+    childStarts: [1]
+  });
+  const child = makeRADPage(device, {id: 'child', rowIndexBase: 1, positions: [0, 0, 0]});
+  const manager = new SplatRADHierarchyManager({
+    pages: [parent, child],
+    maximumScreenSpaceError: 20,
+    refinementHysteresis: 0
+  });
+
+  const view = makeRADView();
+  manager.update(view);
+  const originalFrontier = manager.frontier;
+  manager.update({
+    ...view,
+    cameraPosition: [...view.cameraPosition],
+    viewportSize: [...view.viewportSize],
+    modelViewProjectionMatrix: [...view.modelViewProjectionMatrix!]
+  });
+  t.equal(
+    manager.frontier,
+    originalFrontier,
+    'reuses exact source-row frontiers for identical views'
+  );
+
+  parent.data.updateRows(0, {scales: new Float32Array([0.2, 0.2, 0.2])});
+  manager.update(view);
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier),
+    [[1]],
+    'refreshes the authored source-row frontier after an in-place source GPU revision'
+  );
+
+  manager.destroy();
+  parent.data.destroy();
+  child.data.destroy();
+  t.end();
+});
+
 test('SplatRADHierarchyManager rejects inconsistent child metadata and overlapping row ranges', t => {
   const device = new NullDevice({});
   const root = makeRADPage(device, {id: 'root', rowIndexBase: 0, positions: [0, 0, 0]});
@@ -656,6 +1003,7 @@ function makeRADPage(
     sourceBatchIndex?: number;
     positions: number[];
     scales?: number[];
+    opacities?: number[];
     childCounts?: number[];
     childStarts?: number[];
   }
@@ -673,7 +1021,9 @@ function makeRADPage(
     scales: Float32Array.from(scales),
     rotations,
     colors,
-    opacities: new Float32Array(rowCount).fill(1),
+    opacities: options.opacities
+      ? Float32Array.from(options.opacities)
+      : new Float32Array(rowCount).fill(1),
     sourceBatchIndex: options.sourceBatchIndex ?? options.rowIndexBase,
     rowIndexBase: options.rowIndexBase
   });

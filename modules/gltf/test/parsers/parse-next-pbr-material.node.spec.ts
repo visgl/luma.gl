@@ -43,11 +43,15 @@ function makeTextureInfo(id: string, textureCoordinateSet = 0): any {
 }
 
 function makeAccessor(values: number[], type: 'SCALAR' | 'VEC3'): any {
+  const components = type === 'VEC3' ? 3 : 1;
+  const value = new Float32Array(values);
   return {
     componentType: 5126,
-    count: values.length / (type === 'VEC3' ? 3 : 1),
+    count: values.length / components,
     type,
-    bufferView: {data: {buffer: new Float32Array(values).buffer}}
+    components,
+    value,
+    bufferView: {data: {buffer: value.buffer}}
   };
 }
 

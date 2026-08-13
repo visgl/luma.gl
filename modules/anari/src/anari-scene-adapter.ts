@@ -32,6 +32,7 @@ import {
   type ANARIInstance,
   type ANARILight,
   type ANARIMaterial,
+  type ANARISampler,
   type ANARISurface,
   type ANARIWorld
 } from './anari-objects';
@@ -41,6 +42,7 @@ type SurfacePlacement = {
   surface: ANARISurface;
   transform: readonly number[];
   instanceId: string;
+  instance?: ANARIInstance;
 };
 
 type CachedGeometry = {
@@ -48,6 +50,44 @@ type CachedGeometry = {
   structuralVersion: number;
   geometry: Geometry;
   parameters: Readonly<Partial<ANARIGeometryParameters>>;
+  arrayVersions: ReadonlyMap<ANARIArray, number>;
+};
+
+type CachedAnalyticPrimitive = {type: 'sphere'; radius: number};
+
+type CachedMaterial = {
+  version: number;
+  samplers: ReadonlyMap<ANARISampler, number>;
+  material: SceneMaterial;
+};
+
+type CachedInstancePlacement = {
+  instance: ANARIInstance;
+  transforms: (readonly number[])[];
+  transformIndex: number;
+  instanceId: string;
+};
+
+type CachedSceneSurface = {
+  source: ANARISurface;
+  material: ANARIMaterial;
+  surface: SceneSurface;
+};
+
+type CachedWorldScene = {
+  world: ANARIWorld;
+  surfaces: SceneSurface[];
+  surfaceEntries: CachedSceneSurface[];
+  lights: Light[];
+  analyticPrimitives: Record<string, CachedAnalyticPrimitive>;
+  ambientRadiance: number;
+  observedCommitRevision: number;
+  topologyObjectIds: Set<string>;
+  lightObjectIds: Set<string>;
+  instancePlacements: Map<string, CachedInstancePlacement[]>;
+  materialSurfaces: Map<string, CachedSceneSurface[]>;
+  samplerMaterials: Map<string, Set<ANARIMaterial>>;
+  revisions: NonNullable<SceneRenderOptions['sceneRevisions']>;
 };
 
 type MaterialMapEnabledUniform =
@@ -255,6 +295,8 @@ const MATERIAL_TEXTURE_SLOTS = [
 /** Converts committed ANARI descriptions into the shared engine scene contract. */
 export class ANARISceneAdapter {
   private readonly geometries = new Map<ANARIGeometry, CachedGeometry>();
+  private readonly materials = new Map<ANARIMaterial, CachedMaterial>();
+  private readonly worlds = new Map<ANARIWorld, CachedWorldScene>();
 
   makeRenderOptions(frame: ANARIFrame): SceneRenderOptions | null {
     const world = frame.getParameter('world');
@@ -265,16 +307,29 @@ export class ANARISceneAdapter {
     }
 
     const [width, height] = getFrameSize(frame, frame.device.device);
+    const ambientRadiance = renderer.getParameter('ambientRadiance') ?? 0.12;
+    const toneMapMode = renderer.getParameter('toneMapMode');
+    const outputColorSpace = renderer.getParameter('outputColorSpace');
+    let cachedWorld = this.worlds.get(world);
+    if (!cachedWorld) {
+      cachedWorld = this.createCachedWorld(world, ambientRadiance);
+      this.worlds.set(world, cachedWorld);
+    } else {
+      this.updateCachedWorld(cachedWorld, ambientRadiance);
+    }
     return {
       id: frame.id,
-      surfaces: this.makeSceneSurfaces(world),
+      surfaces: cachedWorld.surfaces,
+      sceneRevisions: {...cachedWorld.revisions},
       camera: makeSceneCamera(camera, width, height),
-      lights: collectSceneLights(world, renderer.getParameter('ambientRadiance') ?? 0.12),
+      lights: cachedWorld.lights,
       background: renderer.getParameter('background') || [0.015, 0.018, 0.038, 1],
       width,
       height,
       environment: renderer.getParameter('environment'),
       exposure: renderer.getParameter('exposure') ?? 1.35,
+      ...(toneMapMode !== undefined ? {toneMapMode} : {}),
+      ...(outputColorSpace !== undefined ? {outputColorSpace} : {}),
       fogColor: renderer.getParameter('fogColor') || [0.025, 0.035, 0.075],
       fogDensity: renderer.getParameter('fogDensity') ?? 0,
       renderMode:
@@ -286,13 +341,149 @@ export class ANARISceneAdapter {
     };
   }
 
-  destroy(): void {
-    this.geometries.clear();
+  /** Returns cached analytic metadata without traversing the retained world a second time. */
+  getAnalyticPrimitives(world: ANARIWorld): Readonly<Record<string, CachedAnalyticPrimitive>> {
+    let cachedWorld = this.worlds.get(world);
+    if (!cachedWorld) {
+      cachedWorld = this.createCachedWorld(world, 0.12);
+      this.worlds.set(world, cachedWorld);
+    }
+    return cachedWorld.analyticPrimitives;
   }
 
-  private makeSceneSurfaces(world: ANARIWorld): SceneSurface[] {
+  destroy(): void {
+    this.geometries.clear();
+    this.materials.clear();
+    this.worlds.clear();
+  }
+
+  private createCachedWorld(world: ANARIWorld, ambientRadiance: number): CachedWorldScene {
+    const cachedWorld: CachedWorldScene = {
+      world,
+      surfaces: [],
+      surfaceEntries: [],
+      lights: [],
+      analyticPrimitives: {},
+      ambientRadiance,
+      observedCommitRevision: world.device.getSceneCommitRevision(),
+      topologyObjectIds: new Set(),
+      lightObjectIds: new Set(),
+      instancePlacements: new Map(),
+      materialSurfaces: new Map(),
+      samplerMaterials: new Map(),
+      revisions: {identity: world.id, topology: 0, transforms: 0, materials: 0, lights: 0}
+    };
+    this.rebuildCachedWorld(cachedWorld, ambientRadiance);
+    return cachedWorld;
+  }
+
+  private updateCachedWorld(cachedWorld: CachedWorldScene, ambientRadiance: number): void {
+    const currentRevision = cachedWorld.world.device.getSceneCommitRevision();
+    const ambientChanged = cachedWorld.ambientRadiance !== ambientRadiance;
+    if (currentRevision === cachedWorld.observedCommitRevision && !ambientChanged) {
+      return;
+    }
+
+    const commits = cachedWorld.world.device.getSceneCommitsSince(
+      cachedWorld.observedCommitRevision
+    );
+    let topologyChanged = commits === null;
+    let lightsChanged = ambientChanged || commits === null;
+    let lightDependenciesNeedRefresh = commits === null;
+    const changedInstanceIds = new Set<string>();
+    const changedMaterials = new Set<ANARIMaterial>();
+
+    for (const commit of commits ?? []) {
+      if (
+        commit.categories.includes('topology') &&
+        cachedWorld.topologyObjectIds.has(commit.objectId)
+      ) {
+        topologyChanged = true;
+      }
+      if (commit.categories.includes('lights') && cachedWorld.lightObjectIds.has(commit.objectId)) {
+        lightsChanged = true;
+        if (commit.categories.includes('topology')) {
+          lightDependenciesNeedRefresh = true;
+        }
+      }
+      if (
+        commit.categories.includes('transforms') &&
+        cachedWorld.instancePlacements.has(commit.objectId)
+      ) {
+        changedInstanceIds.add(commit.objectId);
+      }
+      if (commit.categories.includes('materials')) {
+        for (const surface of cachedWorld.materialSurfaces.get(commit.objectId) ?? []) {
+          changedMaterials.add(surface.material);
+        }
+        for (const material of cachedWorld.samplerMaterials.get(commit.objectId) ?? []) {
+          changedMaterials.add(material);
+        }
+      }
+    }
+
+    if (topologyChanged) {
+      this.rebuildCachedWorld(cachedWorld, ambientRadiance);
+      cachedWorld.revisions.topology++;
+      cachedWorld.revisions.lights++;
+      delete cachedWorld.revisions.dirtyInstanceIds;
+      return;
+    }
+
+    if (changedInstanceIds.size > 0) {
+      const dirtyInstanceIds = new Set<string>();
+      for (const instanceId of changedInstanceIds) {
+        for (const placement of cachedWorld.instancePlacements.get(instanceId) ?? []) {
+          placement.transforms[placement.transformIndex] =
+            placement.instance.getParameter('transform') || IDENTITY_MATRIX;
+          dirtyInstanceIds.add(placement.instanceId);
+        }
+      }
+      cachedWorld.revisions.transforms++;
+      cachedWorld.revisions.dirtyInstanceIds = Array.from(dirtyInstanceIds);
+    }
+
+    if (changedMaterials.size > 0) {
+      for (const material of changedMaterials) {
+        const normalizedMaterial = this.getMaterial(material);
+        for (const entry of cachedWorld.materialSurfaces.get(material.id) ?? []) {
+          entry.surface.material = normalizedMaterial;
+        }
+      }
+      this.updateMaterialDependencies(cachedWorld);
+      cachedWorld.revisions.materials++;
+    }
+
+    if (lightsChanged) {
+      cachedWorld.lights = collectSceneLights(cachedWorld.world, ambientRadiance);
+      cachedWorld.ambientRadiance = ambientRadiance;
+      cachedWorld.revisions.lights++;
+      if (lightDependenciesNeedRefresh) {
+        this.updateLightDependencies(cachedWorld);
+      }
+    }
+
+    cachedWorld.observedCommitRevision = currentRevision;
+  }
+
+  private rebuildCachedWorld(cachedWorld: CachedWorldScene, ambientRadiance: number): void {
+    cachedWorld.topologyObjectIds.clear();
+    cachedWorld.lightObjectIds.clear();
+    cachedWorld.instancePlacements.clear();
+    cachedWorld.materialSurfaces.clear();
+    cachedWorld.samplerMaterials.clear();
+    cachedWorld.surfaceEntries = [];
+    cachedWorld.analyticPrimitives = {};
+    cachedWorld.surfaces = this.makeSceneSurfaces(cachedWorld);
+    cachedWorld.lights = collectSceneLights(cachedWorld.world, ambientRadiance);
+    this.updateLightDependencies(cachedWorld);
+    cachedWorld.ambientRadiance = ambientRadiance;
+    cachedWorld.observedCommitRevision = cachedWorld.world.device.getSceneCommitRevision();
+  }
+
+  private makeSceneSurfaces(cachedWorld: CachedWorldScene): SceneSurface[] {
     const placementsBySurface = new Map<ANARISurface, SurfacePlacement[]>();
-    for (const placement of collectSurfacePlacements(world)) {
+    for (const placement of collectSurfacePlacements(cachedWorld.world, cachedWorld)) {
       const placements = placementsBySurface.get(placement.surface) || [];
       placements.push(placement);
       placementsBySurface.set(placement.surface, placements);
@@ -308,12 +499,13 @@ export class ANARISceneAdapter {
 
       const engineGeometry = this.getGeometry(geometry);
       const cachedGeometry = this.geometries.get(geometry)!;
-      sceneSurfaces.push({
+      const transforms = placements.map(placement => placement.transform);
+      const sceneSurface: SceneSurface = {
         id: surface.id,
         geometry: engineGeometry,
         geometryVersion: cachedGeometry.structuralVersion,
-        material: makeSceneMaterial(material),
-        transforms: placements.map(placement => placement.transform),
+        material: this.getMaterial(material),
+        transforms,
         instanceIds: placements.map(placement => placement.instanceId),
         ...(surface.getParameter('skin') ? {skin: surface.getParameter('skin')} : {}),
         ...(geometry.getParameter('morphTargets')
@@ -322,30 +514,170 @@ export class ANARISceneAdapter {
               morphWeights: geometry.getParameter('morphWeights') || []
             }
           : {})
-      });
+      };
+      sceneSurfaces.push(sceneSurface);
+      cachedWorld.topologyObjectIds.add(surface.id);
+      cachedWorld.topologyObjectIds.add(geometry.id);
+      for (const parameter of Object.values(geometry.getParameters())) {
+        if (parameter instanceof ANARIArray) {
+          cachedWorld.topologyObjectIds.add(parameter.id);
+        }
+      }
+
+      const entry: CachedSceneSurface = {source: surface, material, surface: sceneSurface};
+      cachedWorld.surfaceEntries.push(entry);
+      const materialSurfaces = cachedWorld.materialSurfaces.get(material.id) ?? [];
+      materialSurfaces.push(entry);
+      cachedWorld.materialSurfaces.set(material.id, materialSurfaces);
+
+      if (geometry.subtype === 'sphere') {
+        cachedWorld.analyticPrimitives[surface.id] = {
+          type: 'sphere',
+          radius: geometry.getParameter('radius') ?? 1
+        };
+      }
+
+      for (const [transformIndex, placement] of placements.entries()) {
+        if (!placement.instance) {
+          continue;
+        }
+        const instancePlacements = cachedWorld.instancePlacements.get(placement.instance.id) ?? [];
+        instancePlacements.push({
+          instance: placement.instance,
+          transforms,
+          transformIndex,
+          instanceId: placement.instanceId
+        });
+        cachedWorld.instancePlacements.set(placement.instance.id, instancePlacements);
+      }
     }
+    this.updateMaterialDependencies(cachedWorld);
     return sceneSurfaces;
+  }
+
+  private updateMaterialDependencies(cachedWorld: CachedWorldScene): void {
+    cachedWorld.samplerMaterials.clear();
+    for (const entry of cachedWorld.surfaceEntries) {
+      const parameters = entry.material.getParameters();
+      for (const slot of MATERIAL_TEXTURE_SLOTS) {
+        const sampler = parameters[slot.parameter];
+        if (!sampler) {
+          continue;
+        }
+        const materials = cachedWorld.samplerMaterials.get(sampler.id) ?? new Set<ANARIMaterial>();
+        materials.add(entry.material);
+        cachedWorld.samplerMaterials.set(sampler.id, materials);
+      }
+    }
+  }
+
+  private updateLightDependencies(cachedWorld: CachedWorldScene): void {
+    const {world} = cachedWorld;
+    const parameters = world.getParameters();
+    cachedWorld.lightObjectIds.clear();
+    cachedWorld.lightObjectIds.add(world.id);
+
+    if (parameters.light instanceof ANARIArray) {
+      cachedWorld.lightObjectIds.add(parameters.light.id);
+    }
+    for (const light of resolveObjectArray(parameters.light, parameters.lights)) {
+      cachedWorld.lightObjectIds.add(light.id);
+    }
+
+    if (parameters.instance instanceof ANARIArray) {
+      cachedWorld.lightObjectIds.add(parameters.instance.id);
+    }
+    for (const instance of resolveObjectArray(parameters.instance, parameters.instances)) {
+      cachedWorld.lightObjectIds.add(instance.id);
+      const groupValue = instance.getParameter('group');
+      if (groupValue instanceof ANARIArray) {
+        cachedWorld.lightObjectIds.add(groupValue.id);
+      }
+      const groups =
+        groupValue instanceof ANARIArray
+          ? groupValue.data
+          : Array.isArray(groupValue)
+            ? groupValue
+            : groupValue
+              ? [groupValue]
+              : [];
+      for (const group of groups) {
+        if (!(group instanceof ANARIGroup)) {
+          continue;
+        }
+        cachedWorld.lightObjectIds.add(group.id);
+        const groupParameters = group.getParameters();
+        if (groupParameters.light instanceof ANARIArray) {
+          cachedWorld.lightObjectIds.add(groupParameters.light.id);
+        }
+        for (const light of resolveObjectArray(groupParameters.light, groupParameters.lights)) {
+          cachedWorld.lightObjectIds.add(light.id);
+        }
+      }
+    }
+  }
+
+  private getMaterial(material: ANARIMaterial): SceneMaterial {
+    const cachedMaterial = this.materials.get(material);
+    if (
+      cachedMaterial?.version === material.version &&
+      Array.from(cachedMaterial.samplers).every(([sampler, version]) => sampler.version === version)
+    ) {
+      return cachedMaterial.material;
+    }
+
+    const samplers = new Map<ANARISampler, number>();
+    const parameters = material.getParameters();
+    for (const slot of MATERIAL_TEXTURE_SLOTS) {
+      const sampler = parameters[slot.parameter];
+      if (sampler) {
+        samplers.set(sampler, sampler.version);
+      }
+    }
+    const normalizedMaterial = makeSceneMaterial(material);
+    this.materials.set(material, {
+      version: material.version,
+      samplers,
+      material: normalizedMaterial
+    });
+    return normalizedMaterial;
   }
 
   private getGeometry(geometry: ANARIGeometry): Geometry {
     const cachedGeometry = this.geometries.get(geometry);
-    if (cachedGeometry?.version === geometry.version) {
+    const cachedArraysAreCurrent =
+      cachedGeometry !== undefined &&
+      Array.from(cachedGeometry.arrayVersions).every(
+        ([array, version]) => array.version === version
+      );
+    if (cachedGeometry?.version === geometry.version && cachedArraysAreCurrent) {
       return cachedGeometry.geometry;
     }
 
     const parameters = geometry.getParameters();
-    if (cachedGeometry && areGeometryStructuresEqual(cachedGeometry.parameters, parameters)) {
+    if (
+      cachedGeometry &&
+      cachedArraysAreCurrent &&
+      areGeometryStructuresEqual(cachedGeometry.parameters, parameters)
+    ) {
       cachedGeometry.version = geometry.version;
       cachedGeometry.parameters = parameters;
       return cachedGeometry.geometry;
     }
 
     const engineGeometry = makeEngineGeometry(geometry);
+    const arrayVersions = new Map<ANARIArray, number>();
+    for (const parameter of Object.values(parameters)) {
+      if (parameter instanceof ANARIArray) {
+        arrayVersions.set(parameter, parameter.version);
+      }
+    }
     this.geometries.set(geometry, {
       version: geometry.version,
-      structuralVersion: geometry.version,
+      structuralVersion: Math.max(geometry.version, (cachedGeometry?.structuralVersion ?? 0) + 1),
       geometry: engineGeometry,
-      parameters
+      parameters,
+      arrayVersions
     });
     return engineGeometry;
   }
@@ -452,11 +784,30 @@ export function getFrameSize(frame: ANARIFrame, device: Device): [number, number
   return device.getDefaultCanvasContext().getDrawingBufferSize();
 }
 
-function collectSurfacePlacements(world: ANARIWorld): SurfacePlacement[] {
+function collectSurfacePlacements(
+  world: ANARIWorld,
+  cachedWorld?: CachedWorldScene
+): SurfacePlacement[] {
   const placements: SurfacePlacement[] = [];
   const parameters = world.getParameters();
+  cachedWorld?.topologyObjectIds.add(world.id);
+  cachedWorld?.lightObjectIds.add(world.id);
+  if (parameters.surface instanceof ANARIArray) {
+    cachedWorld?.topologyObjectIds.add(parameters.surface.id);
+  }
+  if (parameters.instance instanceof ANARIArray) {
+    cachedWorld?.topologyObjectIds.add(parameters.instance.id);
+    cachedWorld?.lightObjectIds.add(parameters.instance.id);
+  }
+  if (parameters.light instanceof ANARIArray) {
+    cachedWorld?.lightObjectIds.add(parameters.light.id);
+  }
+  for (const light of resolveObjectArray(parameters.light, parameters.lights)) {
+    cachedWorld?.lightObjectIds.add(light.id);
+  }
   const directSurfaceOccurrences = new Map<string, number>();
   for (const surface of resolveObjectArray(parameters.surface, parameters.surfaces)) {
+    cachedWorld?.topologyObjectIds.add(surface.id);
     const occurrence = directSurfaceOccurrences.get(surface.id) || 0;
     directSurfaceOccurrences.set(surface.id, occurrence + 1);
     placements.push({
@@ -466,15 +817,26 @@ function collectSurfacePlacements(world: ANARIWorld): SurfacePlacement[] {
     });
   }
 
+  const instancePlacementOccurrences = new Map<string, number>();
   for (const instance of resolveObjectArray(parameters.instance, parameters.instances)) {
-    collectInstancePlacements(instance, placements);
+    cachedWorld?.topologyObjectIds.add(instance.id);
+    cachedWorld?.lightObjectIds.add(instance.id);
+    collectInstancePlacements(instance, placements, cachedWorld, instancePlacementOccurrences);
   }
   return placements;
 }
 
-function collectInstancePlacements(instance: ANARIInstance, placements: SurfacePlacement[]): void {
+function collectInstancePlacements(
+  instance: ANARIInstance,
+  placements: SurfacePlacement[],
+  cachedWorld: CachedWorldScene | undefined,
+  placementOccurrences: Map<string, number>
+): void {
   const parameters = instance.getParameters();
-  const placementOccurrences = new Map<string, number>();
+  if (parameters.group instanceof ANARIArray) {
+    cachedWorld?.topologyObjectIds.add(parameters.group.id);
+    cachedWorld?.lightObjectIds.add(parameters.group.id);
+  }
   const groups =
     parameters.group instanceof ANARIArray
       ? parameters.group.data
@@ -487,15 +849,28 @@ function collectInstancePlacements(instance: ANARIInstance, placements: SurfaceP
     if (!(group instanceof ANARIGroup)) {
       continue;
     }
+    cachedWorld?.topologyObjectIds.add(group.id);
+    cachedWorld?.lightObjectIds.add(group.id);
     const groupParameters = group.getParameters();
+    if (groupParameters.surface instanceof ANARIArray) {
+      cachedWorld?.topologyObjectIds.add(groupParameters.surface.id);
+    }
+    if (groupParameters.light instanceof ANARIArray) {
+      cachedWorld?.lightObjectIds.add(groupParameters.light.id);
+    }
+    for (const light of resolveObjectArray(groupParameters.light, groupParameters.lights)) {
+      cachedWorld?.lightObjectIds.add(light.id);
+    }
     for (const surface of resolveObjectArray(groupParameters.surface, groupParameters.surfaces)) {
+      cachedWorld?.topologyObjectIds.add(surface.id);
       const placementId = `${instance.id}:${group.id}:${surface.id}`;
       const occurrence = placementOccurrences.get(placementId) || 0;
       placementOccurrences.set(placementId, occurrence + 1);
       placements.push({
         surface,
         transform: parameters.transform || IDENTITY_MATRIX,
-        instanceId: occurrence === 0 ? placementId : `${placementId}:${occurrence}`
+        instanceId: occurrence === 0 ? placementId : `${placementId}:${occurrence}`,
+        instance
       });
     }
   }

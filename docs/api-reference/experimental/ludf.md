@@ -293,8 +293,41 @@ and negative zero compare equally and retain stable source order; infinities are
 values. Deselected rows never enter the published selected prefix.
 
 Sorting and top-K are performed independently within every original source batch. There is no
-implicit global cross-batch materialization or global top-K. Compiled results expose the original
-table, sorted `rowIndices`, updated `selectionMask`, and one selected count per preserved batch.
+implicit global cross-batch materialization. Compiled results expose the original table, sorted
+`rowIndices`, updated `selectionMask`, and one selected count per preserved batch.
+
+### Explicit global ordering and top-K
+
+Use `sortByGlobal` or `topKGlobal` when ordering must span every source batch. These operations
+explicitly stage numeric sort keys and source identities into GPU scratch; they never concatenate,
+copy, or reorder the original dataframe columns:
+
+```ts
+const globallySorted = dataframe.sortByGlobal('fare', {
+  direction: 'ascending',
+  nulls: 'last',
+  nans: 'last'
+});
+
+const highestOverall = dataframe.topKGlobal('fare', 10);
+const lowestOverall = dataframe.sortByGlobal('fare').topK(10);
+
+const compiled = highestOverall.compile(
+  new GPUCommandGraph<LuDataFrameQueryParameters>(device)
+);
+
+compiled.globalRowIndices;
+compiled.globalSelectedCount;
+compiled.selectionMask;
+compiled.selectedCounts;
+```
+
+`globalRowIndices` contains one globally stable source-row permutation, including discontinuous
+adapter-provided source offsets. `globalSelectedCount` is one GPU-owned scalar describing its
+valid prefix. Equal keys retain their original cross-batch source order; null placement, NaN
+placement, signed zeros, infinities, filtered rows, and derived values follow the same rules as
+per-batch sorting. A global top-K limit is applied once across all batches; the original
+batch-aligned selection masks and counts are updated to match that same global result.
 
 ### Scaling beyond one-dimensional workgroup limits
 
@@ -317,10 +350,10 @@ the CPU.
 
 ## Join or look up unique right-side keys
 
-luDF supports bounded, unique-right-key `uint32` inner joins and source-aligned left lookups. Left
-and right tables may have different batch topologies, empty chunks, nullable keys, and explicit
-original source-row offsets. The right-side hash index is built directly from its original batches;
-neither side is concatenated or repacked.
+luDF supports bounded, unique-right-key `uint32` inner, left outer, semi, and anti joins, together
+with source-aligned lookups. Left and right tables may have different batch topologies, empty
+chunks, nullable keys, and explicit original source-row offsets. The right-side hash index is built
+directly from its original batches; neither side is concatenated or repacked.
 
 ```ts
 const joined = customers
@@ -336,6 +369,8 @@ const joined = customers
 
 joined.rowIndices;
 joined.rightRowIndices;
+joined.rightValidity;
+joined.joinType;
 joined.requiredCounts;
 joined.selectedCounts;
 joined.overflows;
@@ -343,6 +378,18 @@ joined.indexStatistics;
 joined.lookupStatistics;
 joined.contractViolation;
 joined.rightTable;
+
+const leftOuter = customers
+  .leftJoin(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
+  .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device));
+
+const matchedCustomers = customers
+  .semiJoin(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
+  .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device));
+
+const unmatchedCustomers = customers
+  .antiJoin(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
+  .compile(new GPUCommandGraph<LuDataFrameQueryParameters>(device));
 
 const lookups = customers
   .lookup(accounts, {leftOn: 'customerId', rightOn: 'accountId'})
@@ -356,21 +403,36 @@ lookups.indexStatistics;
 lookups.contractViolation;
 ```
 
-For an inner join, `rowIndices` and `rightRowIndices` contain paired stable source identifiers;
-`selectedCounts` gives the published prefix while `requiredCounts` reports all matches before
-capacity truncation. `overflows` flags insufficient output capacity per original left batch.
-Lookups instead preserve source-aligned right identifiers and expose a match flag and probe count
-for every left row.
+For every join, `rowIndices` and `rightRowIndices` contain paired stable source identifiers;
+`selectedCounts` gives the published prefix while `requiredCounts` reports all selected result rows
+before capacity truncation. `overflows` flags insufficient output capacity per original left batch.
+`rightValidity` is a compacted, GPU-resident `uint32` sidecar: `1` means a right partner exists;
+`0` means the published left row is unmatched and its right identifier is the reserved
+`0xffffffff` marker.
+
+- `innerJoin` publishes only matching left rows and their right partners.
+- `leftJoin` publishes every selected left row, including missing and nullable left keys, and
+  explicitly marks unmatched right partners through `rightValidity`.
+- `semiJoin` publishes only selected left rows with an existing right partner.
+- `antiJoin` publishes only selected unmatched left rows, including nullable left keys; every
+  published `rightValidity` entry is zero.
+- `lookup` preserves source-aligned right identifiers and exposes a match flag and probe count for
+  every left row without compacting the original batches.
+
+All four join modes support the same `capacity`, `indexCapacity`, and `maxProbeCount` options and
+compose with filtered, projected, or derived left plans. Publication remains stable within each
+original left batch; no implicit global row ordering or source-column materialization occurs.
 
 The six GPU-resident index statistic words are, in order, unique entries, duplicate keys, index
 overflow, invalid keys, total probe count, and maximum probe count. A valid key equal to
 `0xffffffff` is reserved and therefore invalid; nullable right rows are ignored. Duplicate right
 keys, reserved valid keys, or incomplete hash-index construction set `contractViolation` and
-suppress all published matches instead of returning ambiguous results. Dictionary-encoded keys
-must have identical labels and ordering on both sides.
+suppress all published rows in every join mode instead of returning ambiguous results or treating
+an incomplete index as missing matches. Dictionary-encoded keys must have identical labels and
+ordering on both sides.
 
-Many-to-many joins, outer joins, multi-key joins, string-key hashing, and CPU-side result
-materialization are intentionally unsupported.
+Many-to-many joins, right/full outer joins, multi-key joins, string-key hashing, and CPU-side result
+materialization remain intentionally unsupported.
 
 ## Share GPU outputs with rendering and LuxFilter
 
@@ -447,7 +509,7 @@ Always call `destroy()` on compiled queries and owned frames when they are no lo
 are idempotent. Applications without an available WebGPU adapter must offer their own CPU path or
 display an unsupported-device state. luDF does not transparently switch execution backends.
 
-Native GPU `float64` and `int64`, arbitrary GPU strings, distributed or multi-GPU execution, global
-cross-batch sorting, full SQL semantics, and complete cuDF compatibility are outside the supported
-scope. See [GPU Primitives and Command Graphs](/docs/api-reference/experimental/gpu-primitives) for
+Native GPU `float64` and `int64`, arbitrary GPU strings, distributed or multi-GPU execution, full SQL
+semantics, and complete cuDF compatibility are outside the supported scope. See
+[GPU Primitives and Command Graphs](/docs/api-reference/experimental/gpu-primitives) for
 the underlying WebGPU execution infrastructure.

@@ -43,6 +43,26 @@ const tileHaloImplementation = readFileSync(
   path.join(packageRoot, 'src/luraster/gpu-raster-tile-halo.ts'),
   'utf8'
 );
+const overviewImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-overview.ts'),
+  'utf8'
+);
+const globalStatisticsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-global-statistics.ts'),
+  'utf8'
+);
+const connectedComponentsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-connected-components.ts'),
+  'utf8'
+);
+const denseComponentsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-dense-components.ts'),
+  'utf8'
+);
+const regionMeasurementsImplementation = readFileSync(
+  path.join(packageRoot, 'src/luraster/gpu-raster-region-measurements.ts'),
+  'utf8'
+);
 
 assert.doesNotThrow(() => readFileSync(declarationEntry, 'utf8'), 'LuRaster declarations exist');
 assert.doesNotMatch(
@@ -90,6 +110,81 @@ assert.doesNotMatch(
   /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
   'tile halo assembly leaves command submission, completion fences, and readback explicit'
 );
+assert.doesNotMatch(
+  overviewImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'analytical overview generation does not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  overviewImplementation,
+  /\bfetch\s*\(/,
+  'analytical overview generation does not choose an HTTP transport'
+);
+assert.doesNotMatch(
+  overviewImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'analytical overview generation leaves command submission and readback application-owned'
+);
+assert.doesNotMatch(
+  globalStatisticsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'global raster statistics do not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  globalStatisticsImplementation,
+  /\bfetch\s*\(/,
+  'global raster statistics do not choose source transport or replay decoding'
+);
+assert.doesNotMatch(
+  globalStatisticsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'global raster statistics leave submission, fences, and analytical readback application-owned'
+);
+assert.doesNotMatch(
+  connectedComponentsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'connected raster components do not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  connectedComponentsImplementation,
+  /\bfetch\s*\(/,
+  'connected raster components do not select a source transport'
+);
+assert.doesNotMatch(
+  connectedComponentsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'connected raster components never submit commands, poll convergence, or read back labels'
+);
+assert.doesNotMatch(
+  denseComponentsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'dense raster relabeling does not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  denseComponentsImplementation,
+  /\bfetch\s*\(/,
+  'dense raster relabeling does not select a source transport'
+);
+assert.doesNotMatch(
+  denseComponentsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'dense raster relabeling never submits commands, polls convergence, or reads back counts'
+);
+assert.doesNotMatch(
+  regionMeasurementsImplementation,
+  /(?:from\s*|import\s*\()\s*['"](?:@loaders\.gl|geotiff|apache-arrow|@deck\.gl)/,
+  'raster region measurements do not import external decoder or adapter libraries'
+);
+assert.doesNotMatch(
+  regionMeasurementsImplementation,
+  /\bfetch\s*\(/,
+  'raster region measurements do not choose an application source transport'
+);
+assert.doesNotMatch(
+  regionMeasurementsImplementation,
+  /\b(?:createCommandEncoder|createFence|submit|mapAsync|readAsync)\s*\(/,
+  'raster region measurements do not submit, synchronize, or read back grouped records'
+);
 
 const ecmaScriptRasterModule = await import(pathToFileURL(ecmaScriptModuleEntry).href);
 const commonJsRasterModule = require(commonJsEntry);
@@ -104,14 +199,21 @@ const requiredRuntimeExportNames = [
   'GPURasterBandMath',
   'GPURasterBoxBlur',
   'GPURasterBufferToTexture',
+  'GPURasterCategoricalOverview',
   'GPURasterClosing',
+  'GPURasterConnectedComponents',
   'GPURasterContrast',
   'GPURasterContourClassifier',
   'GPURasterContours',
   'GPURasterConvolution',
+  'GPURasterDenseComponents',
   'GPURasterDilation',
   'GPURasterErosion',
   'GPURasterGaussianBlur',
+  'GPURasterGlobalHistogramMerge',
+  'GPURasterGlobalInitialize',
+  'GPURasterGlobalPercentile',
+  'GPURasterGlobalStatisticsMerge',
   'GPURasterGradient',
   'GPURasterGradientMagnitude',
   'GPURasterHistogram',
@@ -121,6 +223,8 @@ const requiredRuntimeExportNames = [
   'GPURasterNeighborhood',
   'GPURasterOpening',
   'GPURasterOtsuThreshold',
+  'GPURasterOverview',
+  'GPURasterRegionMeasurements',
   'GPURasterScharr',
   'GPURasterSobel',
   'GPURasterStatistics',
@@ -135,6 +239,8 @@ const requiredRuntimeExportNames = [
   'GPURasterTileReader',
   'GPURasterTextureToBuffer',
   'getRasterDeviceLimits',
+  'getRasterRegionWorldCentroid',
+  'makeRasterOverviewMetadata',
   'planRasterDispatchStripes'
 ];
 
@@ -158,6 +264,31 @@ assert.equal(
   'CommonJS tile readers expose validated canonical request normalization'
 );
 for (const rasterModule of [ecmaScriptRasterModule, commonJsRasterModule]) {
+  for (const exportName of [
+    'GPURasterConnectedComponents',
+    'GPURasterDenseComponents',
+    'GPURasterRegionMeasurements',
+    'GPURasterGlobalHistogramMerge',
+    'GPURasterGlobalInitialize',
+    'GPURasterGlobalPercentile',
+    'GPURasterGlobalStatisticsMerge'
+  ]) {
+    assert.equal(
+      typeof rasterModule[exportName].prototype.addToGraph,
+      'function',
+      `${exportName} declares explicit GPU command-graph work`
+    );
+  }
+  assert.equal(
+    typeof rasterModule.GPURasterOverview.prototype.addToGraph,
+    'function',
+    'continuous analytical overviews expose explicit GPU command-graph work'
+  );
+  assert.equal(
+    typeof rasterModule.GPURasterCategoricalOverview.prototype.addToGraph,
+    'function',
+    'categorical analytical overviews expose explicit GPU command-graph work'
+  );
   assert.equal(
     typeof rasterModule.GPURasterTileHaloAssembler.prototype.plan,
     'function',
@@ -210,14 +341,21 @@ try {
   GPURasterBandMath,
   GPURasterBoxBlur,
   GPURasterBufferToTexture,
+  GPURasterCategoricalOverview,
   GPURasterClosing,
+  GPURasterConnectedComponents,
   GPURasterContrast,
   GPURasterContourClassifier,
   GPURasterContours,
   GPURasterConvolution,
+  GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
+  GPURasterGlobalHistogramMerge,
+  GPURasterGlobalInitialize,
+  GPURasterGlobalPercentile,
+  GPURasterGlobalStatisticsMerge,
   GPURasterGradient,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
@@ -227,6 +365,8 @@ try {
   GPURasterNeighborhood,
   GPURasterOpening,
   GPURasterOtsuThreshold,
+  GPURasterOverview,
+  GPURasterRegionMeasurements,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
@@ -241,13 +381,20 @@ try {
   GPURasterTileReader,
   GPURasterTextureToBuffer,
   getRasterDeviceLimits,
+  getRasterRegionWorldCentroid,
+  makeRasterOverviewMetadata,
   planRasterDispatchStripes,
   type GPURasterBand,
   type GPURasterBandMathOperation,
   type GPURasterBandMathProps,
   type GPURasterBinaryMorphologyProps,
   type GPURasterBorderMode,
+  type GPURasterBufferBand,
+  type GPURasterCategoricalOverviewFormat,
+  type GPURasterCategoricalOverviewProps,
   type GPURasterClosingProps,
+  type GPURasterConnectedComponentsProps,
+  type GPURasterConnectivity,
   type GPURasterContrastDomain,
   type GPURasterContrastMode,
   type GPURasterContrastProps,
@@ -257,10 +404,16 @@ try {
   type GPURasterConvolutionProps,
   type GPURasterDecodedBand,
   type GPURasterDecodedTile,
+  type GPURasterDenseComponentsProps,
   type GPURasterDilationProps,
   type GPURasterEdgeProps,
   type GPURasterErosionProps,
   type GPURasterGaussianBlurProps,
+  type GPURasterGlobalAccumulator,
+  type GPURasterGlobalHistogramMergeProps,
+  type GPURasterGlobalInitializeProps,
+  type GPURasterGlobalPercentileProps,
+  type GPURasterGlobalStatisticsMergeProps,
   type GPURasterGrayscaleMorphologyProps,
   type GPURasterGradientDirection,
   type GPURasterGradientMagnitudeProps,
@@ -284,7 +437,13 @@ try {
   type GPURasterOpeningProps,
   type GPURasterOtsuDomain,
   type GPURasterOtsuThresholdProps,
+  type GPURasterOverviewCategoricalPolicy,
+  type GPURasterOverviewMetadataOptions,
+  type GPURasterOverviewProps,
+  type GPURasterOverviewScale,
   type GPURasterPixelBounds,
+  type GPURasterRegionMeasurementOutputs,
+  type GPURasterRegionMeasurementsProps,
   type GPURasterResidentBand,
   type GPURasterResidentTile,
   type GPURasterScharrProps,
@@ -328,7 +487,12 @@ declare const bandMathOperation: GPURasterBandMathOperation;
 declare const bandMathOptions: GPURasterBandMathProps;
 declare const binaryMorphologyOptions: GPURasterBinaryMorphologyProps;
 declare const borderMode: GPURasterBorderMode;
+declare const categoricalOverviewFormat: GPURasterCategoricalOverviewFormat;
+declare const categoricalOverviewOptions: GPURasterCategoricalOverviewProps<'uint32'>;
+declare const signedCategoricalOverviewOptions: GPURasterCategoricalOverviewProps<'sint32'>;
 declare const closingOptions: GPURasterClosingProps;
+declare const connectedComponentsOptions: GPURasterConnectedComponentsProps;
+declare const rasterConnectivity: GPURasterConnectivity;
 declare const contrastDomain: GPURasterContrastDomain;
 declare const contrastMode: GPURasterContrastMode;
 declare const contrastOptions: GPURasterContrastProps;
@@ -340,10 +504,16 @@ declare const decodedFloatBand: GPURasterDecodedBand<'float32'>;
 declare const decodedSignedBand: GPURasterDecodedBand<'sint32'>;
 declare const decodedTile: GPURasterDecodedTile;
 declare const decodedUnsignedBand: GPURasterDecodedBand<'uint32'>;
+declare const denseComponentsOptions: GPURasterDenseComponentsProps;
 declare const dilationOptions: GPURasterDilationProps;
 declare const edgeOptions: GPURasterEdgeProps;
 declare const erosionOptions: GPURasterErosionProps;
 declare const gaussianOptions: GPURasterGaussianBlurProps;
+declare const globalAccumulator: GPURasterGlobalAccumulator;
+declare const globalHistogramMergeOptions: GPURasterGlobalHistogramMergeProps;
+declare const globalInitializeOptions: GPURasterGlobalInitializeProps;
+declare const globalPercentileOptions: GPURasterGlobalPercentileProps;
+declare const globalStatisticsMergeOptions: GPURasterGlobalStatisticsMergeProps;
 declare const grayscaleMorphologyOptions: GPURasterGrayscaleMorphologyProps;
 declare const gradientDirection: GPURasterGradientDirection;
 declare const gradientMagnitudeOptions: GPURasterGradientMagnitudeProps;
@@ -367,6 +537,12 @@ declare const noDataPolicy: GPURasterNoDataPolicy;
 declare const openingOptions: GPURasterOpeningProps;
 declare const otsuDomain: GPURasterOtsuDomain;
 declare const otsuOptions: GPURasterOtsuThresholdProps;
+declare const overviewCategoricalPolicy: GPURasterOverviewCategoricalPolicy;
+declare const overviewMetadataOptions: GPURasterOverviewMetadataOptions;
+declare const regionMeasurementOutputs: GPURasterRegionMeasurementOutputs;
+declare const regionMeasurementsOptions: GPURasterRegionMeasurementsProps;
+declare const overviewOptions: GPURasterOverviewProps;
+declare const overviewScale: GPURasterOverviewScale;
 declare const pixelBounds: GPURasterPixelBounds;
 declare const residentBand: GPURasterResidentBand;
 declare const residentTile: GPURasterResidentTile;
@@ -400,22 +576,31 @@ declare const rasterDispatchStripe: RasterDispatchStripe;
 declare const reductionMask: GPUReductionMask;
 declare const bandMath: GPURasterBandMath;
 declare const boxBlur: GPURasterBoxBlur;
+declare const categoricalOverview: GPURasterCategoricalOverview<'uint32'>;
 declare const closing: GPURasterClosing;
+declare const connectedComponents: GPURasterConnectedComponents;
 declare const contrast: GPURasterContrast;
 declare const contourClassifier: GPURasterContourClassifier;
 declare const contours: GPURasterContours;
 declare const convolution: GPURasterConvolution;
+declare const denseComponents: GPURasterDenseComponents;
 declare const dilation: GPURasterDilation;
 declare const erosion: GPURasterErosion;
 declare const gaussianBlur: GPURasterGaussianBlur;
+declare const globalHistogramMerge: GPURasterGlobalHistogramMerge;
+declare const globalInitialize: GPURasterGlobalInitialize;
+declare const globalPercentile: GPURasterGlobalPercentile;
+declare const globalStatisticsMerge: GPURasterGlobalStatisticsMerge;
 declare const gradient: GPURasterGradient;
 declare const gradientMagnitude: GPURasterGradientMagnitude;
 declare const laplacian: GPURasterLaplacian;
 declare const morphology: GPURasterMorphology;
 declare const ndvi: GPURasterNDVI;
+declare const regionMeasurements: GPURasterRegionMeasurements;
 declare const neighborhood: GPURasterNeighborhood;
 declare const opening: GPURasterOpening;
 declare const otsu: GPURasterOtsuThreshold;
+declare const overview: GPURasterOverview;
 declare const scharr: GPURasterScharr;
 declare const sobel: GPURasterSobel;
 declare const statistics: GPURasterStatistics;
@@ -432,14 +617,22 @@ declare const tileReader: GPURasterTileReader;
 declare const textureToBuffer: GPURasterTextureToBuffer;
 const bandMathContributor: GPUCommandGraphContributor = bandMath;
 const boxBlurContributor: GPUCommandGraphContributor = boxBlur;
+const categoricalOverviewContributor: GPUCommandGraphContributor = categoricalOverview;
 const closingContributor: GPUCommandGraphContributor = closing;
+const connectedComponentsContributor: GPUCommandGraphContributor = connectedComponents;
 const contrastContributor: GPUCommandGraphContributor = contrast;
 const contourClassifierContributor: GPUCommandGraphContributor = contourClassifier;
 const contoursContributor: GPUCommandGraphContributor = contours;
 const convolutionContributor: GPUCommandGraphContributor = convolution;
+const denseComponentsContributor: GPUCommandGraphContributor = denseComponents;
+const regionMeasurementsContributor: GPUCommandGraphContributor = regionMeasurements;
 const dilationContributor: GPUCommandGraphContributor = dilation;
 const erosionContributor: GPUCommandGraphContributor = erosion;
 const gaussianBlurContributor: GPUCommandGraphContributor = gaussianBlur;
+const globalHistogramMergeContributor: GPUCommandGraphContributor = globalHistogramMerge;
+const globalInitializeContributor: GPUCommandGraphContributor = globalInitialize;
+const globalPercentileContributor: GPUCommandGraphContributor = globalPercentile;
+const globalStatisticsMergeContributor: GPUCommandGraphContributor = globalStatisticsMerge;
 const gradientContributor: GPUCommandGraphContributor = gradient;
 const gradientMagnitudeContributor: GPUCommandGraphContributor = gradientMagnitude;
 const laplacianContributor: GPUCommandGraphContributor = laplacian;
@@ -448,6 +641,7 @@ const ndviContributor: GPUCommandGraphContributor = ndvi;
 const neighborhoodContributor: GPUCommandGraphContributor = neighborhood;
 const openingContributor: GPUCommandGraphContributor = opening;
 const otsuContributor: GPUCommandGraphContributor = otsu;
+const overviewContributor: GPUCommandGraphContributor = overview;
 const scharrContributor: GPUCommandGraphContributor = scharr;
 const sobelContributor: GPUCommandGraphContributor = sobel;
 const statisticsContributor: GPUCommandGraphContributor = statistics;
@@ -472,6 +666,28 @@ const configuredDilation: GPUCommandGraphContributor = new GPURasterDilation(dil
 const configuredErosion: GPUCommandGraphContributor = new GPURasterErosion(erosionOptions);
 const configuredOpening: GPUCommandGraphContributor = new GPURasterOpening(openingOptions);
 const configuredClosing: GPUCommandGraphContributor = new GPURasterClosing(closingOptions);
+const configuredConnectedComponents: GPUCommandGraphContributor =
+  new GPURasterConnectedComponents(connectedComponentsOptions);
+const configuredDenseComponents: GPUCommandGraphContributor =
+  new GPURasterDenseComponents(denseComponentsOptions);
+const configuredRegionMeasurements: GPUCommandGraphContributor =
+  new GPURasterRegionMeasurements(regionMeasurementsOptions);
+const configuredOverview: GPUCommandGraphContributor = new GPURasterOverview(overviewOptions);
+const configuredGlobalInitialize: GPUCommandGraphContributor = new GPURasterGlobalInitialize(
+  globalInitializeOptions
+);
+const configuredGlobalStatisticsMerge: GPUCommandGraphContributor =
+  new GPURasterGlobalStatisticsMerge(globalStatisticsMergeOptions);
+const configuredGlobalHistogramMerge: GPUCommandGraphContributor =
+  new GPURasterGlobalHistogramMerge(globalHistogramMergeOptions);
+const configuredGlobalPercentile: GPUCommandGraphContributor = new GPURasterGlobalPercentile(
+  globalPercentileOptions
+);
+const configuredCategoricalOverview: GPUCommandGraphContributor = new GPURasterCategoricalOverview(
+  categoricalOverviewOptions
+);
+const configuredSignedCategoricalOverview: GPUCommandGraphContributor =
+  new GPURasterCategoricalOverview(signedCategoricalOverviewOptions);
 const configuredScharr: GPUCommandGraphContributor = new GPURasterScharr(scharrOptions);
 const configuredSobel: GPUCommandGraphContributor = new GPURasterSobel(sobelOptions);
 const configuredTileCache = new GPURasterTileCache(tileCacheOptions);
@@ -485,6 +701,17 @@ const configuredTileHaloFill: GPUCommandGraphContributor = new GPURasterTileHalo
 const configuredTileReader = new GPURasterTileReader(tileSource);
 const normalizedTileRequest: GPURasterTileRequest = configuredTileReader.normalizeTileRequest(
   tileRequest
+);
+const generatedOverviewMetadata: GPURasterMetadata = makeRasterOverviewMetadata(
+  rasterMetadata,
+  overviewScale,
+  overviewMetadataOptions
+);
+const defaultOverviewMetadata: GPURasterMetadata = makeRasterOverviewMetadata(rasterMetadata, 2);
+const worldRegionCentroid: readonly [number, number] = getRasterRegionWorldCentroid(
+  rasterMetadata,
+  1.5,
+  2.5
 );
 const residentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(tileRequest);
 const cancelledResidentTilePromise: Promise<GPURasterTileLease> = configuredTileCache.acquire(
@@ -548,6 +775,7 @@ const applicationOwnedTileSource: GPURasterTileSource = {
 };
 const supportedGradientOperators: readonly GPURasterGradientOperator[] = ['sobel', 'scharr'];
 const supportedGradientDirections: readonly GPURasterGradientDirection[] = ['x', 'y'];
+const supportedRasterConnectivities: readonly GPURasterConnectivity[] = [4, 8];
 const supportedLaplacianConnectivities: readonly GPURasterLaplacianConnectivity[] = [4, 8];
 const supportedMorphologyModes: readonly GPURasterMorphologyMode[] = ['binary', 'grayscale'];
 const supportedMorphologyOperations: readonly GPURasterMorphologyOperation[] = [
@@ -573,6 +801,147 @@ const decodedValidity: Uint32Array | undefined = decodedFloatBand.validity;
 const exactTileDownsample: readonly [number, number] = tileLevel.downsample;
 const decodedTileBounds: GPURasterPixelBounds = decodedTile.pixelBounds;
 const decodedLevelZeroBounds: GPURasterPixelBounds = decodedTile.levelZeroBounds;
+const componentForegroundInput: GPURasterBufferBand<'uint32'> = connectedComponentsOptions.input;
+const sparseComponentLabels: GraphDataView<'uint32'> = connectedComponentsOptions.output;
+const componentObservationValidity: GraphDataView<'uint32'> =
+  connectedComponentsOptions.outputValidity;
+const componentConvergence: GraphDataView<'uint32'> = connectedComponentsOptions.converged;
+const optionalComponentIterationCount: GraphDataView<'uint32'> | undefined =
+  connectedComponentsOptions.iterationCount;
+const optionalComponentConnectivity: GPURasterConnectivity | undefined =
+  connectedComponentsOptions.connectivity;
+const optionalMaximumComponentIterations: number | undefined =
+  connectedComponentsOptions.maximumIterations;
+const declaredComponentInput: GPURasterBufferBand<'uint32'> = connectedComponents.input;
+const declaredComponentOutput: GraphDataView<'uint32'> = connectedComponents.output;
+const declaredComponentValidity: GraphDataView<'uint32'> = connectedComponents.outputValidity;
+const declaredComponentConvergence: GraphDataView<'uint32'> = connectedComponents.converged;
+const declaredComponentIterationCount: GraphDataView<'uint32'> | undefined =
+  connectedComponents.iterationCount;
+const declaredComponentConnectivity: GPURasterConnectivity = connectedComponents.connectivity;
+const declaredMaximumComponentIterations: number = connectedComponents.maximumIterations;
+const denseComponentSparseInput: GraphDataView<'uint32'> = denseComponentsOptions.input;
+const denseComponentInputValidity: GraphDataView<'uint32'> = denseComponentsOptions.inputValidity;
+const denseComponentInputConvergence: GraphDataView<'uint32'> = denseComponentsOptions.converged;
+const denseComponentLabels: GraphDataView<'uint32'> = denseComponentsOptions.output;
+const denseComponentObservationValidity: GraphDataView<'uint32'> =
+  denseComponentsOptions.outputValidity;
+const boundedDenseComponentCount: GraphDataView<'uint32'> = denseComponentsOptions.componentCount;
+const denseComponentOverflow: GraphDataView<'uint32'> = denseComponentsOptions.overflow;
+const optionalRequiredDenseComponentCount: GraphDataView<'uint32'> | undefined =
+  denseComponentsOptions.requiredComponentCount;
+const optionalDenseComponentCapacity: number | undefined = denseComponentsOptions.capacity;
+const declaredDenseComponentInput: GraphDataView<'uint32'> = denseComponents.input;
+const declaredDenseComponentInputValidity: GraphDataView<'uint32'> = denseComponents.inputValidity;
+const declaredDenseComponentConvergence: GraphDataView<'uint32'> = denseComponents.converged;
+const declaredDenseComponentOutput: GraphDataView<'uint32'> = denseComponents.output;
+const declaredDenseComponentValidity: GraphDataView<'uint32'> = denseComponents.outputValidity;
+const declaredDenseComponentCount: GraphDataView<'uint32'> = denseComponents.componentCount;
+const declaredDenseComponentOverflow: GraphDataView<'uint32'> = denseComponents.overflow;
+const declaredRequiredDenseComponentCount: GraphDataView<'uint32'> | undefined =
+  denseComponents.requiredComponentCount;
+const declaredDenseComponentCapacity: number = denseComponents.capacity;
+const regionMetadata: GPURasterMetadata = regionMeasurementsOptions.metadata;
+const regionDenseLabels: GraphDataView<'uint32'> = regionMeasurementsOptions.labels;
+const regionLabelValidity: GraphDataView<'uint32'> = regionMeasurementsOptions.labelValidity;
+const regionConvergence: GraphDataView<'uint32'> = regionMeasurementsOptions.converged;
+const regionComponentCount: GraphDataView<'uint32'> = regionMeasurementsOptions.componentCount;
+const regionComponentOverflow: GraphDataView<'uint32'> = regionMeasurementsOptions.overflow;
+const regionIntensity: GPURasterBufferBand<'float32'> = regionMeasurementsOptions.intensity;
+const regionOutputs: GPURasterRegionMeasurementOutputs = regionMeasurementsOptions.output;
+const optionalRegionCapacity: number | undefined = regionMeasurementsOptions.capacity;
+const regionPixelCounts: GraphDataView<'uint32'> = regionMeasurementOutputs.pixelCounts;
+const regionIntensityCounts: GraphDataView<'uint32'> = regionMeasurementOutputs.intensityCounts;
+const regionIntensitySums: GraphDataView<'float32'> = regionMeasurementOutputs.intensitySums;
+const regionIntensityMinimums: GraphDataView<'float32'> =
+  regionMeasurementOutputs.intensityMinimums;
+const regionIntensityMaximums: GraphDataView<'float32'> =
+  regionMeasurementOutputs.intensityMaximums;
+const regionIntensityMeans: GraphDataView<'float32'> = regionMeasurementOutputs.intensityMeans;
+const regionColumnSums: GraphDataView<'float32'> = regionMeasurementOutputs.columnSums;
+const regionRowSums: GraphDataView<'float32'> = regionMeasurementOutputs.rowSums;
+const regionCentroidColumns: GraphDataView<'float32'> = regionMeasurementOutputs.centroidColumns;
+const regionCentroidRows: GraphDataView<'float32'> = regionMeasurementOutputs.centroidRows;
+const regionAreas: GraphDataView<'float32'> = regionMeasurementOutputs.areas;
+const declaredRegionMetadata: GPURasterMetadata = regionMeasurements.metadata;
+const declaredRegionLabels: GraphDataView<'uint32'> = regionMeasurements.labels;
+const declaredRegionValidity: GraphDataView<'uint32'> = regionMeasurements.labelValidity;
+const declaredRegionConvergence: GraphDataView<'uint32'> = regionMeasurements.converged;
+const declaredRegionComponentCount: GraphDataView<'uint32'> = regionMeasurements.componentCount;
+const declaredRegionOverflow: GraphDataView<'uint32'> = regionMeasurements.overflow;
+const declaredRegionIntensity: GPURasterBufferBand<'float32'> = regionMeasurements.intensity;
+const declaredRegionOutputs: GPURasterRegionMeasurementOutputs = regionMeasurements.output;
+const declaredRegionCapacity: number = regionMeasurements.capacity;
+const persistentGlobalExtent: GraphDataView<'float32'> = globalAccumulator.extent;
+const persistentGlobalCount: GraphDataView<'uint32'> = globalAccumulator.count;
+const persistentGlobalSum: GraphDataView<'float32'> = globalAccumulator.sum;
+const persistentGlobalHistogram: GraphDataView<'uint32'> = globalAccumulator.histogram;
+const persistentGlobalOverflow: GraphDataView<'uint32'> = globalAccumulator.overflow;
+const initializedAccumulator: GPURasterGlobalAccumulator = globalInitializeOptions.accumulator;
+const statisticsAccumulator: GPURasterGlobalAccumulator =
+  globalStatisticsMergeOptions.accumulator;
+const histogramAccumulator: GPURasterGlobalAccumulator = globalHistogramMergeOptions.accumulator;
+const percentileAccumulator: GPURasterGlobalAccumulator = globalPercentileOptions.accumulator;
+const mergedStatisticsInput: GPURasterBufferBand<'float32'> = globalStatisticsMergeOptions.input;
+const replayedHistogramInput: GPURasterBufferBand<'float32'> = globalHistogramMergeOptions.input;
+const mergedStatisticsWidth: number = globalStatisticsMergeOptions.width;
+const mergedStatisticsHeight: number = globalStatisticsMergeOptions.height;
+const replayedHistogramWidth: number = globalHistogramMergeOptions.width;
+const replayedHistogramHeight: number = globalHistogramMergeOptions.height;
+const requestedGlobalPercentile: number = globalPercentileOptions.percentile;
+const publishedGlobalPercentile: GraphDataView<'float32'> = globalPercentileOptions.output;
+const optionalGlobalPercentileValidity: GraphDataView<'uint32'> | undefined =
+  globalPercentileOptions.outputValidity;
+const declaredGlobalAccumulator: GPURasterGlobalAccumulator = globalStatisticsMerge.accumulator;
+const declaredGlobalMergeWidth: number = globalStatisticsMerge.width;
+const declaredGlobalMergeHeight: number = globalStatisticsMerge.height;
+const declaredGlobalMergeInput: GPURasterBufferBand<'float32'> = globalStatisticsMerge.input;
+const declaredGlobalPercentile: number = globalPercentile.percentile;
+const declaredGlobalPercentileOutput: GraphDataView<'float32'> = globalPercentile.output;
+const declaredGlobalPercentileValidity: GraphDataView<'uint32'> | undefined =
+  globalPercentile.outputValidity;
+const isotropicOverviewScale: GPURasterOverviewScale = 2;
+const anisotropicOverviewScale: GPURasterOverviewScale = [2, 3];
+const supportedCategoricalOverviewFormats: readonly GPURasterCategoricalOverviewFormat[] = [
+  'uint32',
+  'sint32'
+];
+const supportedCategoricalOverviewPolicies: readonly GPURasterOverviewCategoricalPolicy[] = [
+  'nearest',
+  'mode'
+];
+const floatingOverviewInputFormat: 'float32' = overviewOptions.input.format;
+const floatingOverviewValues: GraphDataView<'float32'> = overviewOptions.output;
+const floatingOverviewSums: GraphDataView<'float32'> = overviewOptions.sum;
+const floatingOverviewValidity: GraphDataView<'uint32'> = overviewOptions.outputValidity;
+const floatingOverviewCounts: GraphDataView<'uint32'> = overviewOptions.validCount;
+const optionalOverviewInputSums: GraphDataView<'float32'> | undefined = overviewOptions.inputSum;
+const optionalOverviewInputCounts: GraphDataView<'uint32'> | undefined =
+  overviewOptions.inputValidCount;
+const optionalMaximumOverviewInputCount: number | undefined =
+  overviewOptions.maximumInputValidCount;
+const unsignedCategoricalInputFormat: 'uint32' = categoricalOverviewOptions.input.format;
+const unsignedCategoricalOverviewValues: GraphDataView<'uint32'> = categoricalOverviewOptions.output;
+const signedCategoricalOverviewValues: GraphDataView<'sint32'> =
+  signedCategoricalOverviewOptions.output;
+const categoricalOverviewValidity: GraphDataView<'uint32'> =
+  categoricalOverviewOptions.outputValidity;
+const optionalCategoricalOverviewCounts: GraphDataView<'uint32'> | undefined =
+  categoricalOverviewOptions.validCount;
+const declaredCategoricalPolicy: GPURasterOverviewCategoricalPolicy =
+  categoricalOverviewOptions.policy;
+const generatedContinuousMetadata: GPURasterMetadata = overview.metadata;
+const generatedCategoricalMetadata: GPURasterMetadata = categoricalOverview.metadata;
+const generatedSourceMetadata: GPURasterMetadata = overview.sourceMetadata;
+const generatedOverviewWidth: number = overview.width;
+const generatedOverviewHeight: number = overview.height;
+const generatedSourceWidth: number = overview.sourceWidth;
+const generatedSourceHeight: number = overview.sourceHeight;
+const generatedHorizontalScale: number = overview.horizontalScale;
+const generatedVerticalScale: number = overview.verticalScale;
+const optionalGeneratedLevel: number | undefined = overviewMetadataOptions.level;
+const optionalSourcePixelOrigin: readonly [number, number] | undefined =
+  overviewMetadataOptions.sourcePixelOrigin;
 const requestedHaloStages: readonly GPURasterHaloStage[] = tileHaloRequest.stages;
 const anisotropicHaloStage: GPURasterHaloStage = {
   requiredHalo: 3,
@@ -632,6 +1001,41 @@ const unsupportedGradientOperator: GPURasterGradientOperator = 'prewitt';
 const unsupportedGradientDirection: GPURasterGradientDirection = 'z';
 // @ts-expect-error Laplacian neighborhoods support four or eight adjacent raster pixels.
 const unsupportedLaplacianConnectivity: GPURasterLaplacianConnectivity = 6;
+// @ts-expect-error Raster segmentation supports four or eight connected neighbors only.
+const unsupportedRasterConnectivity: GPURasterConnectivity = 6;
+// @ts-expect-error Component foreground is an exact uint32 classification band.
+const invalidComponentForeground: GPURasterBufferBand<'float32'> = connectedComponentsOptions.input;
+// @ts-expect-error Sparse representative labels remain exact unsigned integers.
+const invalidComponentLabelFormat: GraphDataView<'float32'> = connectedComponentsOptions.output;
+// @ts-expect-error Component observation validity cannot masquerade as floating labels.
+const invalidComponentValidityFormat: GraphDataView<'float32'> =
+  connectedComponentsOptions.outputValidity;
+// @ts-expect-error Convergence is a required, caller-owned uint32 scalar.
+const invalidComponentConvergenceFormat: GraphDataView<'float32'> =
+  connectedComponentsOptions.converged;
+// @ts-expect-error Dense relabeling consumes exact unsigned sparse representative IDs.
+const invalidDenseComponentInput: GraphDataView<'float32'> = denseComponentsOptions.input;
+// @ts-expect-error Dense component labels remain exact unsigned integers.
+const invalidDenseComponentOutput: GraphDataView<'float32'> = denseComponentsOptions.output;
+// @ts-expect-error Bounded component populations are explicit unsigned GPU counters.
+const invalidDenseComponentCount: GraphDataView<'float32'> = denseComponentsOptions.componentCount;
+// @ts-expect-error Dense truncation status is a required unsigned GPU scalar.
+const invalidDenseComponentOverflow: GraphDataView<'float32'> = denseComponentsOptions.overflow;
+// @ts-expect-error Region intensity does not silently convert exact unsigned integer bands.
+const invalidRegionIntensity: GPURasterBufferBand<'uint32'> = regionMeasurementsOptions.intensity;
+// @ts-expect-error Region geometry population is an exact unsigned counter.
+const invalidRegionPixelCount: GraphDataView<'float32'> = regionMeasurementOutputs.pixelCounts;
+// @ts-expect-error Region intensity population is an exact unsigned counter.
+const invalidRegionIntensityCount: GraphDataView<'float32'> =
+  regionMeasurementOutputs.intensityCounts;
+// @ts-expect-error Region intensity statistics preserve calibrated floating values.
+const invalidRegionIntensitySum: GraphDataView<'uint32'> =
+  regionMeasurementOutputs.intensitySums;
+// @ts-expect-error Local centroids retain floating pixel coordinates.
+const invalidRegionCentroid: GraphDataView<'uint32'> =
+  regionMeasurementOutputs.centroidColumns;
+// @ts-expect-error Affine-coordinate-unit areas are floating measurements.
+const invalidRegionArea: GraphDataView<'uint32'> = regionMeasurementOutputs.areas;
 // @ts-expect-error Morphology exposes binary and grayscale scalar contracts only.
 const unsupportedMorphologyMode: GPURasterMorphologyMode = 'rgb';
 // @ts-expect-error Opening and closing are explicit composed contributors.
@@ -671,19 +1075,48 @@ const missingHaloStages: GPURasterTileHaloRequest = tileRequest;
 const invalidFloatingHaloOutput: GraphDataView<'uint32'> = tileHaloFillOptions.output;
 // @ts-expect-error Unsigned core extraction preserves uint32 samples without float conversion.
 const invalidUnsignedCoreOutput: GraphDataView<'float32'> = tileCoreExtractOptions.output;
+// @ts-expect-error Floating classifications cannot masquerade as exact categorical labels.
+const unsupportedCategoricalOverviewFormat: GPURasterCategoricalOverviewFormat = 'float32';
+// @ts-expect-error Integer categories support nearest or deterministic mode, never averaging.
+const unsupportedCategoricalOverviewPolicy: GPURasterOverviewCategoricalPolicy = 'mean';
+// @ts-expect-error Continuous overview means preserve calibrated float32 outputs.
+const invalidFloatingOverviewOutput: GraphDataView<'uint32'> = overviewOptions.output;
+// @ts-expect-error Unsigned category labels are never rounded through float32.
+const invalidUnsignedCategoricalOverviewOutput: GraphDataView<'float32'> =
+  categoricalOverviewOptions.output;
+// @ts-expect-error Signed category labels cannot be reinterpreted as unsigned values.
+const invalidSignedCategoricalOverviewOutput: GraphDataView<'uint32'> =
+  signedCategoricalOverviewOptions.output;
+// @ts-expect-error Persistent global extrema always retain calibrated float32 scalar samples.
+const invalidGlobalExtentFormat: GraphDataView<'uint32'> = globalAccumulator.extent;
+// @ts-expect-error Persistent global population counters never masquerade as floating values.
+const invalidGlobalCountFormat: GraphDataView<'float32'> = globalAccumulator.count;
+// @ts-expect-error Persistent global histogram bins retain exact uint32 counts.
+const invalidGlobalHistogramFormat: GraphDataView<'float32'> = globalAccumulator.histogram;
+// @ts-expect-error Sticky overflow diagnostics use an explicit uint32 bit mask.
+const invalidGlobalOverflowFormat: GraphDataView<'float32'> = globalAccumulator.overflow;
+// @ts-expect-error Percentile outputs preserve calibrated float32 values.
+const invalidGlobalPercentileFormat: GraphDataView<'uint32'> = globalPercentileOptions.output;
 
 void GPURaster;
 void GPURasterBandMath;
 void GPURasterBoxBlur;
 void GPURasterBufferToTexture;
+void GPURasterCategoricalOverview;
 void GPURasterClosing;
+void GPURasterConnectedComponents;
 void GPURasterContrast;
 void GPURasterContourClassifier;
 void GPURasterContours;
 void GPURasterConvolution;
+void GPURasterDenseComponents;
 void GPURasterDilation;
 void GPURasterErosion;
 void GPURasterGaussianBlur;
+void GPURasterGlobalHistogramMerge;
+void GPURasterGlobalInitialize;
+void GPURasterGlobalPercentile;
+void GPURasterGlobalStatisticsMerge;
 void GPURasterGradient;
 void GPURasterGradientMagnitude;
 void GPURasterHistogram;
@@ -693,6 +1126,8 @@ void GPURasterNDVI;
 void GPURasterNeighborhood;
 void GPURasterOpening;
 void GPURasterOtsuThreshold;
+void GPURasterOverview;
+void GPURasterRegionMeasurements;
 void GPURasterScharr;
 void GPURasterSobel;
 void GPURasterStatistics;
@@ -707,6 +1142,8 @@ void GPURasterTileLease;
 void GPURasterTileReader;
 void GPURasterTextureToBuffer;
 void getRasterDeviceLimits;
+void getRasterRegionWorldCentroid;
+void makeRasterOverviewMetadata;
 void planRasterDispatchStripes;
 void contributor;
 void rasterBand;
@@ -714,7 +1151,12 @@ void bandMathOperation;
 void bandMathOptions;
 void binaryMorphologyOptions;
 void borderMode;
+void categoricalOverviewFormat;
+void categoricalOverviewOptions;
+void signedCategoricalOverviewOptions;
 void closingOptions;
+void connectedComponentsOptions;
+void rasterConnectivity;
 void contrastDomain;
 void contrastMode;
 void contrastOptions;
@@ -726,10 +1168,16 @@ void decodedFloatBand;
 void decodedSignedBand;
 void decodedTile;
 void decodedUnsignedBand;
+void denseComponentsOptions;
 void dilationOptions;
 void edgeOptions;
 void erosionOptions;
 void gaussianOptions;
+void globalAccumulator;
+void globalHistogramMergeOptions;
+void globalInitializeOptions;
+void globalPercentileOptions;
+void globalStatisticsMergeOptions;
 void grayscaleMorphologyOptions;
 void gradientDirection;
 void gradientMagnitudeOptions;
@@ -753,6 +1201,12 @@ void noDataPolicy;
 void openingOptions;
 void otsuDomain;
 void otsuOptions;
+void overviewCategoricalPolicy;
+void overviewMetadataOptions;
+void regionMeasurementOutputs;
+void regionMeasurementsOptions;
+void overviewOptions;
+void overviewScale;
 void pixelBounds;
 void residentBand;
 void residentTile;
@@ -786,14 +1240,22 @@ void rasterDispatchStripe;
 void reductionMask;
 void bandMathContributor;
 void boxBlurContributor;
+void categoricalOverviewContributor;
 void closingContributor;
+void connectedComponentsContributor;
 void contrastContributor;
 void contourClassifierContributor;
 void contoursContributor;
 void convolutionContributor;
+void denseComponentsContributor;
+void regionMeasurementsContributor;
 void dilationContributor;
 void erosionContributor;
 void gaussianBlurContributor;
+void globalHistogramMergeContributor;
+void globalInitializeContributor;
+void globalPercentileContributor;
+void globalStatisticsMergeContributor;
 void gradientContributor;
 void gradientMagnitudeContributor;
 void laplacianContributor;
@@ -802,6 +1264,7 @@ void ndviContributor;
 void neighborhoodContributor;
 void openingContributor;
 void otsuContributor;
+void overviewContributor;
 void scharrContributor;
 void sobelContributor;
 void statisticsContributor;
@@ -820,6 +1283,16 @@ void configuredDilation;
 void configuredErosion;
 void configuredOpening;
 void configuredClosing;
+void configuredConnectedComponents;
+void configuredDenseComponents;
+void configuredRegionMeasurements;
+void configuredOverview;
+void configuredGlobalInitialize;
+void configuredGlobalStatisticsMerge;
+void configuredGlobalHistogramMerge;
+void configuredGlobalPercentile;
+void configuredCategoricalOverview;
+void configuredSignedCategoricalOverview;
 void configuredScharr;
 void configuredSobel;
 void configuredTileCache;
@@ -828,6 +1301,9 @@ void configuredTileHaloAssembler;
 void configuredTileHaloFill;
 void configuredTileReader;
 void normalizedTileRequest;
+void generatedOverviewMetadata;
+void defaultOverviewMetadata;
+void worldRegionCentroid;
 void residentTilePromise;
 void cancelledResidentTilePromise;
 void plannedTileHalo;
@@ -854,6 +1330,7 @@ void syntheticSignedBand;
 void applicationOwnedTileSource;
 void supportedGradientOperators;
 void supportedGradientDirections;
+void supportedRasterConnectivities;
 void supportedLaplacianConnectivities;
 void supportedMorphologyModes;
 void supportedMorphologyOperations;
@@ -870,6 +1347,96 @@ void decodedValidity;
 void exactTileDownsample;
 void decodedTileBounds;
 void decodedLevelZeroBounds;
+void componentForegroundInput;
+void sparseComponentLabels;
+void componentObservationValidity;
+void componentConvergence;
+void optionalComponentIterationCount;
+void optionalComponentConnectivity;
+void optionalMaximumComponentIterations;
+void declaredComponentInput;
+void declaredComponentOutput;
+void declaredComponentValidity;
+void declaredComponentConvergence;
+void declaredComponentIterationCount;
+void declaredComponentConnectivity;
+void declaredMaximumComponentIterations;
+void denseComponentSparseInput;
+void denseComponentInputValidity;
+void denseComponentInputConvergence;
+void denseComponentLabels;
+void denseComponentObservationValidity;
+void boundedDenseComponentCount;
+void denseComponentOverflow;
+void optionalRequiredDenseComponentCount;
+void optionalDenseComponentCapacity;
+void declaredDenseComponentInput;
+void declaredDenseComponentInputValidity;
+void declaredDenseComponentConvergence;
+void declaredDenseComponentOutput;
+void declaredDenseComponentValidity;
+void declaredDenseComponentCount;
+void declaredDenseComponentOverflow;
+void declaredRequiredDenseComponentCount;
+void declaredDenseComponentCapacity;
+void regionMetadata;
+void regionDenseLabels;
+void regionLabelValidity;
+void regionConvergence;
+void regionComponentCount;
+void regionComponentOverflow;
+void regionIntensity;
+void regionOutputs;
+void optionalRegionCapacity;
+void regionPixelCounts;
+void regionIntensityCounts;
+void regionIntensitySums;
+void regionIntensityMinimums;
+void regionIntensityMaximums;
+void regionIntensityMeans;
+void regionColumnSums;
+void regionRowSums;
+void regionCentroidColumns;
+void regionCentroidRows;
+void regionAreas;
+void declaredRegionMetadata;
+void declaredRegionLabels;
+void declaredRegionValidity;
+void declaredRegionConvergence;
+void declaredRegionComponentCount;
+void declaredRegionOverflow;
+void declaredRegionIntensity;
+void declaredRegionOutputs;
+void declaredRegionCapacity;
+void isotropicOverviewScale;
+void anisotropicOverviewScale;
+void supportedCategoricalOverviewFormats;
+void supportedCategoricalOverviewPolicies;
+void floatingOverviewInputFormat;
+void floatingOverviewValues;
+void floatingOverviewSums;
+void floatingOverviewValidity;
+void floatingOverviewCounts;
+void optionalOverviewInputSums;
+void optionalOverviewInputCounts;
+void optionalMaximumOverviewInputCount;
+void unsignedCategoricalInputFormat;
+void unsignedCategoricalOverviewValues;
+void signedCategoricalOverviewValues;
+void categoricalOverviewValidity;
+void optionalCategoricalOverviewCounts;
+void declaredCategoricalPolicy;
+void generatedContinuousMetadata;
+void generatedCategoricalMetadata;
+void generatedSourceMetadata;
+void generatedOverviewWidth;
+void generatedOverviewHeight;
+void generatedSourceWidth;
+void generatedSourceHeight;
+void generatedHorizontalScale;
+void generatedVerticalScale;
+void optionalGeneratedLevel;
+void optionalSourcePixelOrigin;
 void requestedHaloStages;
 void anisotropicHaloStage;
 void declaredStageHalo;
@@ -921,6 +1488,21 @@ void declaredGraphBudget;
 void unsupportedGradientOperator;
 void unsupportedGradientDirection;
 void unsupportedLaplacianConnectivity;
+void unsupportedRasterConnectivity;
+void invalidComponentForeground;
+void invalidComponentLabelFormat;
+void invalidComponentValidityFormat;
+void invalidComponentConvergenceFormat;
+void invalidDenseComponentInput;
+void invalidDenseComponentOutput;
+void invalidDenseComponentCount;
+void invalidDenseComponentOverflow;
+void invalidRegionIntensity;
+void invalidRegionPixelCount;
+void invalidRegionIntensityCount;
+void invalidRegionIntensitySum;
+void invalidRegionCentroid;
+void invalidRegionArea;
 void unsupportedMorphologyMode;
 void unsupportedMorphologyOperation;
 void unsupportedStructuringElement;
@@ -937,6 +1519,50 @@ void invalidTileReleaseFence;
 void missingHaloStages;
 void invalidFloatingHaloOutput;
 void invalidUnsignedCoreOutput;
+void unsupportedCategoricalOverviewFormat;
+void unsupportedCategoricalOverviewPolicy;
+void invalidFloatingOverviewOutput;
+void invalidUnsignedCategoricalOverviewOutput;
+void invalidSignedCategoricalOverviewOutput;
+void invalidGlobalExtentFormat;
+void invalidGlobalCountFormat;
+void invalidGlobalHistogramFormat;
+void invalidGlobalOverflowFormat;
+void invalidGlobalPercentileFormat;
+void persistentGlobalExtent;
+void persistentGlobalCount;
+void persistentGlobalSum;
+void persistentGlobalHistogram;
+void persistentGlobalOverflow;
+void initializedAccumulator;
+void statisticsAccumulator;
+void histogramAccumulator;
+void percentileAccumulator;
+void mergedStatisticsInput;
+void replayedHistogramInput;
+void mergedStatisticsWidth;
+void mergedStatisticsHeight;
+void replayedHistogramWidth;
+void replayedHistogramHeight;
+void requestedGlobalPercentile;
+void publishedGlobalPercentile;
+void optionalGlobalPercentileValidity;
+void declaredGlobalAccumulator;
+void declaredGlobalMergeWidth;
+void declaredGlobalMergeHeight;
+void declaredGlobalMergeInput;
+void declaredGlobalPercentile;
+void declaredGlobalPercentileOutput;
+void declaredGlobalPercentileValidity;
+void categoricalOverview;
+void connectedComponents;
+void denseComponents;
+void regionMeasurements;
+void globalHistogramMerge;
+void globalInitialize;
+void globalPercentile;
+void globalStatisticsMerge;
+void overview;
 void tileCache;
 void tileCoreExtract;
 void tileGraphLease;
@@ -970,6 +1596,18 @@ void RootGPURasterMorphology;
 // @ts-expect-error Composed morphology remains isolated from the experimental root.
 import {GPURasterClosing as RootGPURasterClosing} from '@luma.gl/experimental';
 void RootGPURasterClosing;
+// @ts-expect-error Raster connected-component labeling stays isolated from the experimental root.
+import {GPURasterConnectedComponents as RootGPURasterConnectedComponents} from '@luma.gl/experimental';
+void RootGPURasterConnectedComponents;
+// @ts-expect-error Dense raster component relabeling stays isolated from the experimental root.
+import {GPURasterDenseComponents as RootGPURasterDenseComponents} from '@luma.gl/experimental';
+void RootGPURasterDenseComponents;
+// @ts-expect-error Raster region measurement stays isolated from the experimental root.
+import {GPURasterRegionMeasurements as RootGPURasterRegionMeasurements} from '@luma.gl/experimental';
+void RootGPURasterRegionMeasurements;
+// @ts-expect-error High-precision raster centroid helpers remain in the raster subpath.
+import {getRasterRegionWorldCentroid as getRootRasterRegionWorldCentroid} from '@luma.gl/experimental';
+void getRootRasterRegionWorldCentroid;
 // @ts-expect-error External raster tile sources remain isolated from the experimental root.
 import {GPURasterTileReader as RootGPURasterTileReader} from '@luma.gl/experimental';
 void RootGPURasterTileReader;
@@ -991,6 +1629,24 @@ void RootGPURasterTileHaloFill;
 // @ts-expect-error Core-only extraction stays isolated from the experimental root.
 import {GPURasterTileCoreExtract as RootGPURasterTileCoreExtract} from '@luma.gl/experimental';
 void RootGPURasterTileCoreExtract;
+// @ts-expect-error Generated numerical overviews stay isolated from the experimental root.
+import {GPURasterOverview as RootGPURasterOverview} from '@luma.gl/experimental';
+void RootGPURasterOverview;
+// @ts-expect-error Exact categorical overviews stay isolated from the experimental root.
+import {GPURasterCategoricalOverview as RootGPURasterCategoricalOverview} from '@luma.gl/experimental';
+void RootGPURasterCategoricalOverview;
+// @ts-expect-error Overview spatial metadata helpers stay isolated from the experimental root.
+import {makeRasterOverviewMetadata as makeRootRasterOverviewMetadata} from '@luma.gl/experimental';
+void makeRootRasterOverviewMetadata;
+// @ts-expect-error Global accumulator initialization stays isolated from the experimental root.
+import {GPURasterGlobalInitialize as RootGPURasterGlobalInitialize} from '@luma.gl/experimental';
+void RootGPURasterGlobalInitialize;
+// @ts-expect-error Replayable global histogram merge stays isolated from the experimental root.
+import {GPURasterGlobalHistogramMerge as RootGPURasterGlobalHistogramMerge} from '@luma.gl/experimental';
+void RootGPURasterGlobalHistogramMerge;
+// @ts-expect-error Overflow-aware global percentile stays isolated from the experimental root.
+import {GPURasterGlobalPercentile as RootGPURasterGlobalPercentile} from '@luma.gl/experimental';
+void RootGPURasterGlobalPercentile;
 `
   );
   assert.equal(

@@ -375,12 +375,13 @@ export class SplatHierarchyManager {
       screenSpaceError
     );
     let residentChunk = this.residencyManager.getChunk(node.id);
-    if (!residentChunk && node.data && !node.data.destroyed) {
+    if (node.data && !node.data.destroyed) {
       residentChunk = this.residencyManager.add(node.data, {
         id: node.id,
         priority,
         levelOfDetail,
         bounds: node.bounds,
+        ...(residentChunk?.pinned ? {pinned: true} : {}),
         ...(node.ownsData !== undefined ? {ownsData: node.ownsData} : {})
       });
     }

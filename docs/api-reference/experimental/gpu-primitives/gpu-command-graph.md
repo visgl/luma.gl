@@ -67,6 +67,11 @@ reuse across frames. External textures avoid an explicit media-to-texture copy b
 sampling-only lifetime. Frame textures model presentation resources, while transients let the graph
 reuse internal allocations whose logical lifetimes do not overlap.
 
+[`GPUTextureHistory`](/docs/api-reference/experimental/gpu-primitives/gpu-texture-history) makes
+the persistent case reusable: its two caller-owned textures exchange previous/current roles through
+ordinary per-encoding texture overrides. No frame-scoped swapchain contract or texture-copy node is
+required.
+
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 
 <GPUDataAnalysisExample embedded />
@@ -272,7 +277,81 @@ its documented atomic graph resources; callers must select, adapt, or explicitly
 Declares a caller-owned `Texture` or ready `DynamicTexture`. Texture descriptors are exact rather
 than capacity-based: format, dimension, extent, mip count, and sample count must match at every
 encoding, while concrete usage must contain every declared flag. Recompile canvas-sized graphs
-after a device-pixel resize.
+after a device-pixel resize. Separate active imported handles cannot resolve to the same physical
+texture when either handle writes. Read-only aliases remain valid.
+
+### Retained texture history without copies
+
+[`GPUTextureHistory`](/docs/api-reference/experimental/gpu-primitives/gpu-texture-history) owns
+exactly two descriptor-identical textures. Import their initial roles once, compile the graph, and
+replace both role bindings when encoding later frames:
+
+```ts
+import {Texture} from '@luma.gl/core';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/experimental';
+
+const descriptor = {
+  format: 'rgba16float' as const,
+  width,
+  height,
+  usage: Texture.SAMPLE | Texture.STORAGE
+};
+const history = new GPUTextureHistory(device, {id: 'radiance', ...descriptor});
+const graph = new GPUCommandGraph(device, {id: 'temporal-renderer'});
+const previous = graph.importTexture(
+  {id: 'previous-radiance', ...descriptor},
+  history.previousTexture
+);
+const current = graph.importTexture(
+  {id: 'current-radiance', ...descriptor},
+  history.currentTexture
+);
+
+graph.addComputePass({
+  id: 'accumulate-radiance',
+  resources: [
+    {texture: previous, usage: 'sampled'},
+    {texture: current, usage: 'storage-write'}
+  ],
+  compile: ({device}) => createAccumulationExecutable(device, previous, current)
+});
+
+const compiled = graph.compile();
+compiled.encode(commandEncoder, {
+  parameters: undefined,
+  textures: history.getBindings('previous-radiance', 'current-radiance')
+});
+history.advance();
+```
+
+Advance roles only after encoding succeeds. The application still owns encoder submission, and a
+failed encoding leaves both physical roles unchanged. Cached graph views recognize the alternating
+physical textures; graph destruction releases those views but never destroys the borrowed history
+textures. Destroy or replace the history explicitly when its descriptor changes.
+
+History textures are persistent `importTexture()` resources, not `importFrameTexture()` resources.
+The latter represents fresh presentation attachments and intentionally rejects reuse across frame
+IDs. `reset()` restores the original role order but does not clear either texture; shaders must
+explicitly invalidate stale samples after a camera cut, topology change, or resize.
+
+### Physical texture overlap and writable aliases
+
+Texture hazard inference tracks views belonging to one logical `GraphTextureHandle`. Importing the
+same physical texture twice under separate handles would hide cross-handle write hazards, even if
+one binding is supplied through an encoding override or numbered frame texture. Before recording any
+node, `encode()` resolves the concrete textures and applies these rules:
+
+| Active imported resources | Result |
+| --- | --- |
+| Two handles share a physical texture and both are read-only | Allowed. |
+| Two handles share a physical texture and either declares `storage-write`, `storage-read-write`, `render-attachment`, or `copy-destination` | Rejected before recording any node. |
+| Multiple texture views share one canonical imported handle | Allowed; overlapping ranges participate in inferred texture hazards. |
+| A duplicate import is unused by all graph nodes | Allowed. |
+| A persistent override or frame binding introduces writable overlap | Only that encoding is rejected; corrected bindings can be retried. |
+
+Import writable shared storage once and derive all mip, layer, or aspect ranges from that canonical
+handle with `createTextureView()`. Retained-history previous/current roles must resolve to two
+different physical textures on every encoding.
 
 ### `importFrameTexture(descriptor)`
 
@@ -361,6 +440,39 @@ ordered after the render pass.
 Multisample resolve is currently a WebGPU contract. Render-pass callbacks cannot also supply their
 own framebuffer or resolve targets when graph attachments are present.
 
+### Caller-owned per-encoding framebuffers
+
+A render node without graph-managed `attachments` can select an existing application framebuffer
+through its compiled executable's `getRenderPassProps()` callback:
+
+```ts
+const graph = new GPUCommandGraph<{framebuffer: Framebuffer}>(device);
+
+graph.addRenderPass({
+  id: 'present-offscreen',
+  resources: [{texture: tracedImage, usage: 'sampled'}],
+  compile: () => ({
+    getRenderPassProps: ({parameters}) => ({framebuffer: parameters.framebuffer}),
+    encode: ({renderPass}) => model.draw(renderPass)
+  })
+});
+
+const compiled = graph.compile();
+compiled.encode(commandEncoder, {parameters: {framebuffer: firstTarget}});
+compiled.encode(otherCommandEncoder, {parameters: {framebuffer: secondTarget}});
+```
+
+Changing the compatible framebuffer does not recompile the graph, and both framebuffers remain
+caller-owned. The graph still opens and closes the render pass; acquiring or destroying the
+framebuffer and submitting each command encoder remain the application's responsibilities. Render
+pipelines must match the selected target's color and depth/stencil formats, so callers should
+recreate incompatible pipelines when those formats change.
+
+Because an application-provided framebuffer is not a declared graph resource, the graph cannot
+infer hazards for its attachment textures or order later nodes that sample them. Import the target
+texture and declare graph-managed `attachments` when later work in the same graph depends on its
+output. A node cannot combine graph-managed attachments with a callback-provided framebuffer.
+
 ## Node APIs and graph commands
 
 A graph command is a reusable description of GPU work, not a second command queue or a hidden
@@ -372,7 +484,7 @@ readback share one dependency-ordered execution without taking ownership of the 
 | Feature | Why it exists | Typical use |
 | --- | --- | --- |
 | `addComputePass()` | Schedule shader dispatch alongside its declared buffer and texture hazards. | Filtering, scans, sorting, hash-index construction, aggregation, and indirect-command generation. |
-| `addRenderPass()` | Schedule drawing with graph-managed attachments, resolves, and sampled resources. | Scene rendering, picking, off-screen layers, and multisampled frame composition. |
+| `addRenderPass()` | Schedule drawing with graph-managed attachments or compatible caller-owned framebuffers. | Scene rendering, picking, off-screen layers, and multisampled frame composition. |
 | `addCopyPass()` | Express transfers or encoder-level operations in the same ordered graph. | Explicit compact-result readback, staging uploads, and copying finished render targets. |
 | `dependsOn` | Describe an ordering requirement that no shared graph resource can express. | External side effects, timestamp boundaries, and application-owned synchronization. |
 | Repeated `encode()` | Reuse compiled pipelines and scratch allocations with new parameters or imports. | Interactive filters, animation frames, changing selections, and reusable query plans. |
@@ -419,7 +531,9 @@ graph.addRenderPass({
 ```
 
 The graph owns the `RenderPass` lifecycle. The executable records drawing commands; it must not
-end the pass, submit the encoder, or replace a graph-managed framebuffer.
+end the pass, submit the encoder, or replace a graph-managed framebuffer. When no `attachments` are
+declared, `getRenderPassProps()` may choose a compatible caller-owned framebuffer for each
+encoding.
 
 ### `addCopyPass(node)`
 
@@ -445,8 +559,8 @@ graph.addCopyPass({
 Prefer declared resource uses because they explain both ordering and transient lifetimes. Add
 `dependsOn: ['upstream-node-id']` only when an application-visible dependency has no corresponding
 buffer or texture hazard. Compile the complete graph once, then supply fresh parameters or
-compatible imported buffers through later `encode()` calls. Writable physical-buffer overlap is
-revalidated for every encoding before any node records work.
+compatible imported buffers and textures through later `encode()` calls. Writable physical-buffer
+and physical-texture overlap are revalidated for every encoding before any node records work.
 
 Buffer nodes declare storage, uniform, copy, indirect, vertex, and index uses. Texture nodes declare
 `sampled`, storage, render-attachment, and copy uses. Render attachments are automatically treated
@@ -504,6 +618,10 @@ Records every compiled node. `options.parameters` is forwarded to callbacks. `op
 override imported buffers by ID if capacity and usage remain compatible. `options.textures`
 overrides exact-size imported textures. It returns a `GPUCommandGraphEncoding` with synchronous
 whole-graph and per-node CPU encoding statistics.
+
+Defaults, `DynamicBuffer` and `DynamicTexture` wrappers, per-encoding replacements, and numbered
+frame-texture bindings must not introduce writable aliases between separate active logical handles.
+Read-only aliases remain valid. All resource validation occurs before the first node executes.
 
 `encode()` never submits, maps, reads, or grows resources.
 

@@ -14,6 +14,7 @@ import {
   useStore
 } from './react-luma';
 import type {Device} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import {makeArrowExamplePanelHostHtml} from '../../examples/arrow/arrow-example-panels';
@@ -77,6 +78,7 @@ import ABufferApp from '../../examples/experimental/a-buffer/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
 import GaussianSplatsApp from '../../examples/showcase/gaussian-splats/app';
+import type {GaussianSplatSourceCatalogEntry} from '../../examples/showcase/gaussian-splats/local-loaders';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
@@ -801,8 +803,21 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
   );
 };
 
-export const GaussianSplatViewerExample: React.FC<WebsiteExampleProps> = props => {
+export const GaussianSplatViewerExample: React.FC<
+  WebsiteExampleProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}
+> = ({defaultScene, ...props}) => {
   const loaderBundleUrl = useBaseUrl('/standalone-examples/gaussian-splats/loaders-gl.mjs');
+  const animationTemplate = useMemo(() => {
+    if (!defaultScene) {
+      return GaussianSplatsApp;
+    }
+
+    return class GaussianSplatSceneAnimationTemplate extends GaussianSplatsApp {
+      constructor(animationProps: AnimationProps) {
+        super({...animationProps, defaultScene});
+      }
+    };
+  }, [defaultScene]);
 
   if (typeof window !== 'undefined') {
     window.__lumaGaussianSplatsLoaderBundleUrl = loaderBundleUrl;
@@ -812,11 +827,11 @@ export const GaussianSplatViewerExample: React.FC<WebsiteExampleProps> = props =
     <LumaExample
       id="gaussian-splat-viewer"
       title="Gaussian Splat Viewer"
-      subtitle="Complete captured scenes streamed from Hugging Face"
+      subtitle="Captured scenes and camera-driven, worker-decoded RAD landscapes"
       directory="showcase"
       sourcePath="examples/showcase/gaussian-splats/app.ts"
       devices={['webgpu', 'webgl2']}
-      template={GaussianSplatsApp}
+      template={animationTemplate}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
       showStats

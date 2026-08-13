@@ -50,6 +50,8 @@ export type {
   GraphTextureViewProps
 } from './gpu-command-graph';
 export type {GPUCommandGraphContributor} from './gpu-command-graph';
+export {GPUTextureHistory} from './gpu-texture-history';
+export type {GPUTextureHistoryProps} from './gpu-texture-history';
 export {GPUCommandGraphInspector} from './gpu-command-graph-inspector';
 export type {
   GPUCommandGraphInspectorCounterSnapshot,
@@ -70,6 +72,26 @@ export type {GraphDataViewBinding} from './graph-data-view-utils';
 
 export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';
+export {
+  runGPUWorkgroupScanBenchmark,
+  summarizeGPUWorkgroupScanBenchmarkSamples
+} from './gpu-workgroup-scan-benchmark';
+export type {
+  GPUWorkgroupScanBenchmarkDistribution,
+  GPUWorkgroupScanBenchmarkPathReport,
+  GPUWorkgroupScanBenchmarkProps,
+  GPUWorkgroupScanBenchmarkReport,
+  GPUWorkgroupScanBenchmarkStrategy
+} from './gpu-workgroup-scan-benchmark';
+export {runGPUWorkgroupReductionBenchmark} from './gpu-workgroup-reduction-benchmark';
+export type {
+  GPUWorkgroupReductionBenchmarkPathReport,
+  GPUWorkgroupReductionBenchmarkProps,
+  GPUWorkgroupReductionBenchmarkReport,
+  GPUWorkgroupReductionBenchmarkStrategy
+} from './gpu-workgroup-reduction-benchmark';
+export {GPUSegmentedSort} from './gpu-segmented-sort';
+export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
 export {
@@ -79,6 +101,7 @@ export {
 export type {
   GPUIndexedRangeCompactionProps,
   GPUIndexedRangeCompactionResult,
+  GPUIndexedRangeFlagEncoding,
   GPUIndexedRangeLayout,
   GPUPartitionedIndexedRangeCompactionProps,
   GPUPartitionedIndexedRangeCompactionResult
@@ -196,6 +219,8 @@ export type {
 
 export {GPUBVH} from './gpu-bvh';
 export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats, GPUBVHStrategy} from './gpu-bvh';
+export {GPUSegmentedBVH} from './gpu-segmented-bvh';
+export type {GPUBVHSegment, GPUSegmentedBVHProps} from './gpu-segmented-bvh';
 
 export {GPUBVHQuery} from './gpu-bvh-query';
 export type {GPUBVHQueryKind, GPUBVHQueryProps, GPUBVHView} from './gpu-bvh-query';

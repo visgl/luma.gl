@@ -1,13 +1,14 @@
 # LuRaster Roadmap
 
-- **Status:** Active; foundational contracts complete and pointwise analytics in progress
-- **Target API:** `@luma.gl/experimental/luraster`
+- **Status:** Active; foundation, tiled analysis, dense components, and region metrics implemented
+- **Experimental API:** `@luma.gl/experimental/luraster`
 - **Execution model:** WebGPU `GPUCommandGraph` contributors
 - **Positioning:** GPU-resident raster analytics complementing `@luma.gl/experimental/geospatial`
+- **Next tranche:** 5.4, cross-tile region identities and mergeable segmentation measurements
 
 ## Overview
 
-LuRaster is a proposed, independently implemented WebGPU raster-analysis toolkit inspired by the
+LuRaster is an independently implemented WebGPU raster-analysis toolkit inspired by the
 image-processing scope of cuCIM. It adds georeferenced image operations to luma.gl command graphs
 without importing cuCIM, CUDA, image codecs, Apache Arrow, deck.gl, or projection libraries into
 the runtime.
@@ -18,11 +19,67 @@ those resources. One compiled graph can then be encoded repeatedly while compati
 replaced. Command submission, network access, decoding, resource ownership, and GPU readback remain
 application decisions.
 
-The initial product is two-dimensional raster analysis: validity-aware band math, normalized
-difference vegetation index (NDVI), statistics, histograms, contrast adjustment, spatial filters,
-thresholding, morphology, connected components, region measurements, contour extraction, and
-bounded tiled processing. Three-dimensional microscopy, sophisticated segmentation, reprojection,
-and frequency-domain algorithms are separate, evidence-gated extensions.
+The implemented two-dimensional toolkit includes validity-aware band math, normalized difference
+vegetation index (NDVI), statistics, histograms, contrast adjustment, thresholding, spatial
+filters, morphology, single-raster contour extraction, bounded tile residency, seam-safe
+neighborhoods, analytical overviews, dataset-wide replayable summaries, convergence-gated
+four/eight-connected sparse component labels, deterministic dense identifiers, bounded exact
+component counts, and validity-aware per-region intensity/geometric measurements. Cross-tile
+component or contour ownership and vector/raster zonal composition remain planned.
+Three-dimensional microscopy, sophisticated segmentation, reprojection, and frequency-domain
+algorithms are separate, evidence-gated extensions.
+
+### Reading this roadmap
+
+Start with [LuRaster Concepts and Execution Model](/docs/api-reference/experimental/luraster/concepts)
+for the user-facing vocabulary, data-flow model, operation selection, and ownership rules. The
+[LuRaster API reference](/docs/api-reference/experimental/luraster) documents shipped classes and
+their precise contracts; the [Satellite Raster Lab](/examples/showcase/raster-lab) exercises those
+contracts interactively. This roadmap distinguishes those implemented contracts from planned
+extensions, engineering prerequisites, and explicit decision gates.
+
+Phases 0, 1, 3, and 4 are complete for their stated boundaries. Phase 2's core analytical
+operations are available, with narrower percentile/stretch/presentation follow-ups still open.
+Phase 5 includes deterministic sparse foreground components, explicit GPU convergence, dense
+identifiers, bounded counts, capacity overflow, grouped intensity summaries, local centroids,
+and affine area; cross-tile identity remains open.
+Phase 6 already includes single-raster contour classification and indirect drawing, but not
+cross-tile contour ownership or zonal statistics. The next dependency-ready implementation is
+Tranche 5.4; Tranche 6.3 is an alternative when contour integration takes priority.
+
+Completing a phase means its separately documented contracts exist; it does not imply that every
+feature combination is automatic. In particular, the Raster Lab deliberately separates generated
+overviews, seamless source-neighborhood processing, and dataset-wide replay where their
+composition has not yet been integrated. Applications still select tiles, allocate results, submit
+commands, retain in-flight resources, and choose whether to inspect results.
+
+### Roadmap vocabulary
+
+| Term                                | Meaning and planning constraint                                                                                                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Raster and band                     | A raster describes a two-dimensional grid and coordinate metadata; a band supplies one same-grid scalar measurement, such as red reflectance or elevation.                   |
+| Raw and calibrated sample           | Raw is the stored native value. Analytical contributors apply `raw * scale + offset` once after rejecting raw-domain nodata.                                                 |
+| Validity and nodata                 | A `uint32` validity flag describes whether an observation exists; `noDataValue` is an exact native-format sentinel. Zero-valued valid samples are not automatically missing. |
+| Tile and window                     | A tile is one bounded application-selected source region; a window is its requested coordinate rectangle in an explicitly declared overview level.                           |
+| Half-open bounds                    | `[xMin, yMin, xMax, yMax]` includes the minimum coordinates and excludes the maxima, preventing neighboring owned regions from overlapping.                                  |
+| Source overview                     | A lower-resolution level selected from an application-owned source or decoder. Its resampling semantics belong to that source.                                               |
+| Analytical overview                 | A generated GPU reduction retaining valid sample sums/counts or exact categorical nearest/mode values. Ordinary display mipmaps are not substitutes.                         |
+| Receptive field                     | The source-pixel neighborhood needed for an output; consecutive local operations add their per-axis radii.                                                                   |
+| Halo and border                     | A halo contains real observations borrowed from neighboring tiles. Border policies apply only where the expanded region reaches an actual dataset edge.                      |
+| Owned core                          | The half-open result region assigned to one tile; padded halo pixels inform computation but must not be published or counted a second time.                                  |
+| Residency and lease                 | Residency retains decoded arrays or uploaded GPU resources within explicit budgets; a lease prevents their eviction while another operation depends on them.                 |
+| Completion fence                    | An application-created post-submit completion signal. Releasing a lease after this fence prevents destruction of resources referenced by in-flight work.                     |
+| Contributor and graph               | A contributor declares work with `addToGraph(graph)`; compilation prepares the graph, encoding records commands, and the application alone submits them.                     |
+| Replay                              | Processing selected tiles again after all first-pass global extrema are known; histogram replay bins every owned core against one final GPU-resident domain.                 |
+| Global accumulator and tile partial | Accumulators are caller-owned persistent outputs initialized explicitly per dataset; partials are graph-owned bounded scratch cleared for each tile encoding.                |
+| Approximate percentile              | A histogram-bin estimate, not an exact sorted quantile. Minimum/maximum endpoints are exact; interior values use bin centers and reject overflow.                            |
+| Connected component                 | A maximal group of valid nonzero foreground observations reachable through explicitly selected four- or eight-neighbor connectivity.                                        |
+| Sparse representative               | One plus the smallest row-major pixel index in a connected component; zero is background, and representative identifiers are not dense component counts.                    |
+| Dense component ID                  | A contiguous row-major root rank beginning at one; zero remains background, and capacity-truncated foreground is marked invalid.                                              |
+| Required and published count        | Required is the complete converged component population; published is the minimum of that population and the caller's explicit output capacity.                             |
+| Geometry and intensity population   | A region's valid labeled pixels define its geometry; only separately valid finite intensity samples contribute to its intensity population and statistics.                    |
+| Local centroid and affine area      | Centroid coordinates stay raster-local on the GPU; retained double-precision affine metadata converts them to world coordinates and areas remain in square CRS units.       |
+| Convergence                         | Explicit GPU evidence that bounded component hooking/compression reached a fixed point; exhausted budgets clear every published label and validity flag.                     |
 
 Official cuCIM references:
 
@@ -208,9 +265,12 @@ The installed ocular build tools already enumerate conditional `exports` entries
 CommonJS output for each `require` target. The existing TypeScript project includes `src/**/*` and
 therefore emits the new ESM files and declarations. An additional build system is unnecessary.
 
-### Proposed raster data contracts
+### Raster data contracts and illustrative extensions
 
-These names and signatures are illustrative design targets, not existing repository exports.
+The core scalar, band, CRS, metadata, and tile types below correspond to existing public
+experimental exports. `GPURasterContourOutput` illustrates a possible future aggregate shape and
+is not itself an exported API. Use the
+[LuRaster API reference](/docs/api-reference/experimental/luraster) for authoritative signatures.
 
 ```ts
 type GPURasterScalarFormat = 'float32' | 'uint32' | 'sint32';
@@ -446,13 +506,19 @@ Impact and cost are relative engineering estimates, not staffing or calendar com
 | -------------------------------- | ---------------------------------------------------------------------------- | ----------- | ------ | ------ |
 | 0 — Package foundation           | Approved scope, clean-room boundary, isolated imports, and CPU fixtures      | Complete    | High   | Small  |
 | 1 — Raster contracts             | Metadata, validity, explicit bridges, masked statistics, and safe dispatch   | Complete    | High   | Large  |
-| 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | In progress | High   | Medium |
+| 2 — Pointwise analytics          | Band math, NDVI, histograms, contrast, and thresholding                      | Follow-ups  | High   | Medium |
 | 3 — Neighborhood operators       | Border/nodata policies, convolution, gradients, and morphology               | Complete    | High   | Large  |
-| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | In progress | High   | Large  |
-| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | Planned     | High   | Large  |
+| 4 — Tiled processing             | Source adapters, safe residency, halos, valid overviews, and global merges   | Complete    | High   | Large  |
+| 5 — Segmentation and measurement | Deterministic labels, dense region IDs, statistics, and tile stitching       | In progress | High   | Large  |
 | 6 — Vector/raster integration    | Marching squares, indirect overlays, polygon sampling, and zonal statistics  | In progress | High   | Large  |
 | 7 — Advanced extensions          | CLAHE, richer segmentation, 3D, and separately gated spectral filtering      | Deferred    | Medium | Large  |
-| 8 — Productization               | Satellite/microscopy showcases, documentation, benchmarks, and release gates | Early slice | High   | Medium |
+| 8 — Productization               | Satellite/microscopy showcases, documentation, benchmarks, and release gates | In progress | High   | Medium |
+
+**Complete** means the phase's specifically scoped public contracts and exit evidence are
+implemented; it does not promise unlisted combinations or future extensions. **Follow-ups** means
+the core user-facing workflow is shipped while named optional contracts remain open.
+**In progress** identifies delivered slices within a larger unfinished phase. **Deferred** requires
+explicit consumer and feasibility evidence before implementation begins.
 
 ## Dependency-ordered tranche map
 
@@ -508,8 +574,10 @@ when their tests and rollback boundaries remain understandable.
 - **2.2 substantially complete:** `GPURasterHistogram` composes a nodata-aware validity mask, an
   explicit masked GPU extent, and caller-owned bins. `GPURasterStatistics` adds GPU-resident
   floating-band count, sum, mean, minimum, and maximum outputs. Caller-owned literal domains, GPU
-  domains, and optional published automatic extents are available. Percentiles, wide counters,
-  tiled global merges, and transparent 4K-plus reduction/histogram partitioning remain pending.
+  domains, and optional published automatic extents are available. Histogram-estimated global
+  percentiles and replayable global tiled extent/statistic/histogram merges are implemented;
+  exact or standalone percentile-domain contracts, wide counters, and transparent 4K-plus
+  reduction/histogram partitioning remain pending.
 - **2.3 substantially complete:** `GPURasterContrast` implements calibrated linear stretching,
   explicitly selected gamma adjustment, and global histogram equalization through an inclusive
   GPU CDF scan. Linear mode remains affine even when a nondefault gamma option is present.
@@ -567,8 +635,59 @@ when their tests and rollback boundaries remain understandable.
   resolves. Real WebGPU fixtures compare tiled and monolithic analytical output across seams,
   ragged edges, nodata, and composed neighborhood pipelines; the Raster Lab exercises explicit
   tile-only versus seamless-halo processing without downloading raster pixels.
-- **4.4 next:** generated nodata-aware analytical overviews, category-preserving policies, and
-  consistent coverage/affine metadata remain separate from already supported source overviews.
+- **4.4 complete for generated nodata-aware analytical overviews:** `GPURasterOverview`
+  publishes calibrated floating-point means together with explicit valid-sample sums, counts,
+  and observation masks; weighted pyramid levels carry prior sums and counts without averaging
+  averages. `GPURasterCategoricalOverview` preserves exact `uint32`/`sint32` labels through
+  explicit nearest or deterministic lowest-label-tie mode policies. Independent integer
+  horizontal/vertical factors retain ragged edges, bounded contribution counts, and
+  caller-owned GPU outputs. `makeRasterOverviewMetadata` preserves CRS, pixel interpretation,
+  aligned level-zero origin, and rotated/sheared affine scaling without registering generated data as
+  a source-provided overview. The Raster Lab distinguishes source-nearest samples from GPU
+  means and selectable categorical policies while retaining its fixed compact readback;
+  generated means and seamless source-nearest halos are explicitly mutually exclusive until
+  native-halo-to-generated-overview composition receives a separate integration pass.
+- **4.5 complete for replayable global tiled analysis:** `GPURasterGlobalInitialize`,
+  `GPURasterGlobalStatisticsMerge`, `GPURasterGlobalHistogramMerge`, and
+  `GPURasterGlobalPercentile` explicitly compose caller-owned persistent valid counts/extrema,
+  calibrated sums, stable-domain histogram replay, per-tile partial merging, bounded
+  histogram-derived quantiles, and sticky/saturating overflow diagnostics without CPU polling.
+  Half-open owned cores remain application-selected; sources, cache admission, command
+  submission, completion fences, and optional compact readback remain caller-owned.
+  Reversed/shuffled tile traversal reproduces global analytical domains, Otsu cutoffs, and
+  bounded-bin counts while retaining explicit source leases; floating sums retain normal
+  order-dependent rounding.
+- **5.1 complete for sparse connected foreground components:** `GPURasterConnectedComponents`
+  accepts exact `uint32` foreground values, separate observation validity, and exact raw
+  nodata. Explicit four/eight-neighbor connectivity deterministically publishes the smallest
+  row-major foreground representative plus one; valid background stays label zero, while
+  missing samples remain invalid barriers. Fixed graph rounds compose minimum-root hooking,
+  pointer compression, GPU-resident convergence, optional actual iteration counts, and
+  indirect suppression of converged work. An insufficient round budget fails closed by
+  clearing every published label and validity element. Application-owned command submission,
+  decoding, leases, and optional readback remain unchanged. Dense IDs, component counts,
+  region measurements, and cross-tile identities are explicitly not part of this tranche.
+- **5.2 complete for bounded dense component labels:** `GPURasterDenseComponents` marks
+  converged canonical representative roots, composes unsigned `GPUScan`, and remaps them to
+  deterministic contiguous IDs beginning at one. Caller-owned GPU outputs retain valid
+  background, distinguish missing or capacity-truncated foreground, publish exact required
+  and capacity-clamped component counts, and reset explicit overflow on every execution.
+  Nonconverged inputs clear every label, validity element, count, and overflow flag.
+  The Raster Lab exposes sparse/dense presentation, exact and bounded counts, capacity,
+  overflow, convergence, and actual rounds without exceeding its existing 228-byte summary.
+- **5.3 complete for bounded region measurements:** `GPURasterRegionMeasurements` composes
+  the shared grouped-aggregation primitive over convergence-gated dense labels. Caller-owned
+  outputs separately preserve exact geometry and finite-intensity populations; calibrated
+  floating intensity sum/min/max/mean; mergeable row/column moments; local pixel centroids;
+  and affine area in square CRS-coordinate units. Missing intensity does not erase valid
+  component geometry. Upstream nonconvergence, capacity overflow, and unusable rows fail
+  closed; `getRasterRegionWorldCentroid` applies retained affine coefficients in JavaScript
+  double precision without duplicating tile origins. The Raster Lab exposes one selected GPU
+  region record by explicitly switching from 48 to 40 histogram bins while keeping its single
+  analytical summary at exactly 228 bytes.
+- **5.4 next:** cross-tile component equivalences, deterministic global relabeling, and
+  mergeable region measurements; tranche 6.3 seam-safe contour ownership remains
+  independently available when vector integration takes priority.
 - **6.1 complete for single-level contours:** `GPURasterContourClassifier` classifies every
   marching-squares case, uses an explicit greater-than-or-equal threshold policy, resolves
   diagonal saddles with a deterministic bilinear decider, and rejects invalid source corners.
@@ -578,8 +697,8 @@ when their tests and rollback boundaries remain understandable.
   The Raster Lab renders its resulting line overlay without reading a draw count. Tile stitching
   and external deck.gl integration remain in Tranche 6.3.
 - **8.1 and 8.2 early slices:** a small interactive raster-lab example and initial API reference
-  demonstrate the current source-window/overview/cumulative-halo/NDVI/smoothing/gradient/
-  morphology/histogram/contour workflow. The full
+  demonstrate the current source-window/source-or-generated-overview/cumulative-halo/NDVI/
+  smoothing/gradient/morphology/histogram/contour workflow. The full
   satellite/microscopy/tiled/vector showcase matrix, broader documentation set, benchmarks, and
   final release gates remain pending.
 
@@ -707,8 +826,10 @@ required nonnegative-reflectance assumptions.
 **Entry:** Tranches 1.3 and 1.4.
 
 **Status:** Substantially complete. Validity-aware fixed-size histograms, masked GPU extents,
-and floating-band count/sum/mean summaries are implemented; percentile, overflow, and automatic
-large-raster partitioning contracts remain pending.
+and floating-band count/sum/mean summaries are implemented. Tranche 4.5 separately supplies
+histogram-estimated global percentiles and saturating global count/bin overflow diagnostics.
+Standalone exact/local percentile selection, wide integer totals, and automatic monolithic
+large-raster partitioning remain pending.
 
 **Work:** Compose explicit valid-pixel extent, masked histogram, valid count, sum, minimum,
 maximum, and mean. Exact integer min/max/extents and histograms remain in the raw integer domain;
@@ -843,8 +964,8 @@ Its public `normalizeTileRequest()` expands defaults and projects equivalent sou
 the same validated level-local request before application scheduling or cache lookup.
 The Raster Lab's synthetic adapter demonstrates full/west/east windows, 1×/2× source-provided
 overviews, explicit CRS/origin, and stale-request cancellation without bundling a decoder.
-Multi-tile residency and explicit halo assembly are implemented separately in tranches 4.2 and
-4.3; generated analytical overviews and stitched full-image results remain later work.
+Multi-tile residency, explicit halo assembly, and generated analytical overviews are implemented
+separately in tranches 4.2, 4.3, and 4.4; stitched full-image results remain later work.
 
 **Work:** Define an application-supplied asynchronous tile-source interface with dataset
 metadata, requested level, explicit coordinate reference frame, selected bands, spatial window,
@@ -899,9 +1020,9 @@ post-submit completion fence. `GPURasterTileHaloFill` contributes one exact-form
 preserving GPU gather pass per source; `GPURasterTileCoreExtract` contributes one packed,
 core-only publication pass. The Raster Lab exposes tile-only and seamless modes, cumulative
 radius, source/core bounds, neighbor counts, full-resolution/source-overview behavior, and
-tiled-versus-monolithic scalar parity without increasing analytical GPU readback. Automatic
-full-image result placement, contour seam ownership, global tiled merges, and generated
-analytical overviews remain separate tranches.
+tiled-versus-monolithic scalar parity without increasing analytical GPU readback. Generated
+analytical overviews and replayable global tiled merges are implemented separately in tranches
+4.4 and 4.5; automatic full-image result placement and contour seam ownership remain future work.
 
 **Work:** Acquire a neighborhood that covers the complete composed pipeline receptive field,
 including cumulative stage radii and any overview/resampling scale factors. For example,
@@ -919,6 +1040,27 @@ distinguishes disjoint XY rectangles of one texture.
 
 **Entry:** Tranche 4.2.
 
+**Status:** Complete for explicit bounded GPU-native floating and categorical overviews.
+`GPURasterOverview` consumes source validity and exact raw nodata before applying calibration,
+then publishes caller-owned `float32` sums/means, `uint32` valid counts, and separate validity.
+All-invalid parents retain zero sum/count, invalid masks, and canonical quiet-NaN values.
+Chained reductions consume prior sums and counts together, preserving ragged/partially masked
+weighting rather than averaging intermediate means; explicit maximum input counts reject
+potential `uint32` overflow before graph construction.
+`GPURasterCategoricalOverview` preserves exact unsigned/signed integer labels without float
+conversion and exposes explicit nearest or deterministic mode, including lowest-label tie
+resolution and optional valid contribution counts. Both contributors use bounded independent
+integer factors, clipped odd extents, caller-owned buffers, and explicit graph dispatch without
+GPU submission or readback. `makeRasterOverviewMetadata` scales rotated/sheared affine axes,
+retains CRS/pixel interpretation/level-zero origins, and distinguishes generated outputs from
+source-discovered levels; translated source tiles prove global reduction-grid alignment, and
+translated higher-level tiles require explicit current-level pixel origins. The Raster Lab
+compares source-nearest versus GPU-mean observations
+and categorical nearest/mode while preserving source-nearest cumulative halo assembly, cache
+admission, post-submit fences, and its existing compact scalar-only readback. Generated means
+and seamless halos are explicitly mutually exclusive in the example; native-halo-to-generated-
+overview composition remains separate integration work.
+
 **Work:** Support source-provided overviews plus explicit graph-generated numerical reductions.
 Floating overview pixels carry `sum` and `validCount` before division. Integer categorical and
 label overviews use a declared nearest/mode policy rather than averaging. Preserve overview
@@ -932,6 +1074,26 @@ analytical substitutes.
 ### Tranche 4.5 — Global tiled statistics and replay
 
 **Entry:** Tranches 4.2, 2.3, and 2.4.
+
+**Status:** Complete through `GPURasterGlobalAccumulator`, `GPURasterGlobalInitialize`,
+`GPURasterGlobalStatisticsMerge`, `GPURasterGlobalHistogramMerge`, and
+`GPURasterGlobalPercentile`. Explicitly initialized caller-owned GPU outputs retain first-pass
+calibrated extent/population/sum, followed by stable-domain second-pass histogram replay with
+cleared bounded tile partials. Unsigned population/bin counts saturate at `2^32 - 1`; sticky
+overflow bits distinguish total-count (`1`), histogram-bin (`2`), and nonfinite-sum (`4`)
+failures. Bounded `1..256`-bin percentile estimates publish exact minimum/maximum endpoints or
+selected-bin centers and become invalid when population is empty or any overflow bit is set.
+Global state survives tile-graph re-encoding until an application explicitly initializes another
+run. Tile traversal order does not change analytical extent, integer histogram, or Otsu cutoff;
+all-invalid partials never contribute, while floating sums retain normal order-dependent
+rounding. Command graph construction never chooses source decoding, network transport,
+submission, completion, or readback policy. Raster Lab exposes TILE versus FULL GLOBAL
+processing, forward/reverse west/east replay, global domain/count/replay diagnostics, and
+GPU-resident global Otsu selection through its unchanged compact analytical readback. The
+example's FULL GLOBAL mode supports native/source-nearest pointwise inputs; generated
+overviews, seamless halos, smoothing, derivatives, and morphology return explicitly to TILE.
+A histogram-derived global median reuses the existing four-byte threshold field only while
+automatic Otsu is inactive.
 
 **Work:** Define a multi-pass, replayable tile contract. First merge valid per-tile extrema and
 counts into caller-owned global extrema; then process every tile again with the resulting stable
@@ -952,6 +1114,19 @@ contracts without CPU result polling.
 
 **Entry:** Tranches 2.4 and 1.4.
 
+**Status:** Complete through `GPURasterConnectedComponents`, `GPURasterConnectivity`, and
+`GPURasterConnectedComponentsProps`. Exact unsigned classification values distinguish valid
+background from missing observations using a separate mask and raw nodata identity. Explicit
+four/eight-neighbor union-by-minimum-root publishes one plus the lowest row-major foreground
+index, preserving sparse deterministic representatives. A bounded sequence of initialization,
+atomic minimum-root hooking, pointer compression, GPU convergence detection, and gated final
+publication never polls the CPU. A required caller-owned convergence scalar and optional actual
+iteration count make completion explicit; exhausted iteration budgets zero every label and
+output-validity element. The Raster Lab colors sparse labels directly, exposes connectivity and
+bounded convergence, and reuses its existing compact scalar summary. Dense numbering and bounded
+component counts are provided by the separate Tranche 5.2 contributor; region statistics and
+cross-tile identity resolution remain future tranches.
+
 **Work:** Implement deterministic `uint32` union-by-minimum-root with explicit 4/8 connectivity,
 separate graph passes for initialization, hooking, path compression, and convergence state.
 Predeclare a bounded number of rounds. After convergence, a GPU-generated indirect dispatch may
@@ -969,6 +1144,20 @@ hidden readback occurs.
 
 **Entry:** Tranche 5.1.
 
+**Status:** Complete through `GPURasterDenseComponents` and `GPURasterDenseComponentsProps`.
+Canonical converged representative pixels become unsigned root flags; reusable exclusive
+`GPUScan` ranks them in row-major order, and a graph scatter publishes contiguous `1..N`
+identifiers. Valid background remains label `0` with validity `1`; missing or over-capacity
+foreground becomes label `0` with validity `0`. A caller-owned component count is clamped to
+explicit capacity, a separate caller-owned overflow scalar reports truncation, and an optional
+caller-owned required count preserves the exact unclamped population. Zero capacity, empty
+foreground, and repeated encodings have explicit deterministic behavior. Unconverged inputs
+clear every published label, validity flag, count, and overflow state. The Raster Lab retains
+its existing 228-byte readback by publishing exact required count, convergence, and actual
+rounds in prior contour slots; bounded display count and overflow derive from that exact
+required count and the visible capacity. Region measurements are provided by the separate
+Tranche 5.3 contributor; cross-tile IDs remain unimplemented.
+
 **Work:** Mark representative roots, apply `GPUScan` to unsigned root flags, and scatter dense
 labels with background `0` and foreground `1..componentCount`. Return caller-owned count,
 capacity-clamped count when appropriate, overflow, and optional unclamped totals. Use
@@ -983,6 +1172,22 @@ Global identifiers never silently wrap past `uint32`.
 ### Tranche 5.3 — Per-region measurements
 
 **Entry:** Tranches 5.2 and 1.3.
+
+**Status:** Complete through `GPURasterRegionMeasurements`,
+`GPURasterRegionMeasurementsProps`, `GPURasterRegionMeasurementOutputs`, and the pure
+`getRasterRegionWorldCentroid` metadata helper. Converged, nonoverflowing dense labels are
+translated into zero-based groups. Independent caller-owned `uint32` pixel and finite-intensity
+counts preserve the difference between spatial region membership and available measurements.
+Caller-owned `float32` outputs retain calibrated intensity sums, minima, maxima, and means;
+mergeable local column/row sums; pixel-space centroids; and affine area in square coordinate
+units. Area pixels use a half-pixel center, point pixels use integer centers, and retained
+double-precision affine coefficients convert local centroids without projected-origin
+cancellation. Invalid labels, missing/nonfinite/raw-nodata intensity, upstream nonconvergence,
+capacity overflow, unused rows, and zero capacity follow explicit cleared/empty contracts.
+Integer intensity inputs are not silently promoted; floating atomic accumulation order remains
+documented. The Raster Lab transfers only one selected region: an honest 40-bin histogram plus
+eight GPU scalar words replaces the ordinary 48-bin histogram inside the same 228-byte summary.
+No complete measurement table, label raster, source image, or additional transfer is introduced.
 
 **Work:** Convert converged dense foreground labels to zero-based group IDs, mask
 background/nodata, and compose `GPUGroupAggregation` for `uint32` pixel counts and
@@ -1147,6 +1352,12 @@ WebGPU execution, and no network requirement in automated tests.
 
 **Entry:** Each feature tranche as its public contract stabilizes.
 
+**Status:** In progress. A user-facing concepts and execution-model guide, detailed operator/API
+reference, experimental navigation, release summary, and interactive Satellite Raster Lab cover
+the implemented feature set. Task-specific microscopy/segmentation guides, external-loader
+walkthroughs, published benchmark baselines, and final complete website/release verification
+remain later productization work.
+
 **Work:** Add `modules/experimental/src/luraster/README.md` and
 `docs/api-reference/experimental/luraster/` guides. Add the raster category to both experimental
 sections of `docs/table-of-contents.json`, update the experimental overview, and document new
@@ -1205,8 +1416,10 @@ modules/experimental/src/luraster/
   gpu-raster-tile-cache.ts
   gpu-raster-tile-halo.ts
   gpu-raster-overview.ts
+  gpu-raster-global-statistics.ts
   gpu-raster-connected-components.ts
-  gpu-raster-region-statistics.ts
+  gpu-raster-dense-components.ts
+  gpu-raster-region-measurements.ts
   gpu-raster-contours.ts
   README.md
 
@@ -1224,8 +1437,17 @@ modules/experimental/test/luraster/
   gpu-raster-tile-halo.node.spec.ts
   gpu-raster-tile-halo.spec.ts
   gpu-raster-tile-halo-parity.spec.ts
+  gpu-raster-overview.node.spec.ts
+  gpu-raster-overview-pyramid.spec.ts
+  gpu-raster-overview.spec.ts
+  gpu-raster-global-statistics.node.spec.ts
+  gpu-raster-global-statistics.spec.ts
+  gpu-raster-global-pipeline.spec.ts
   gpu-raster-connected-components.spec.ts
-  gpu-raster-region-statistics.spec.ts
+  gpu-raster-dense-components-pipeline.spec.ts
+  gpu-raster-dense-components.spec.ts
+  gpu-raster-region-measurements-pipeline.spec.ts
+  gpu-raster-region-measurements.spec.ts
   gpu-raster-contours.spec.ts
 ```
 
@@ -1246,9 +1468,10 @@ later tranches.
 - `docs/table-of-contents.json`: both experimental navigation branches.
 - `docs/api-reference/experimental/README.md` and `docs/whats-new.md`: feature discovery.
 - `examples/showcase/raster-lab/`: synthetic satellite/NDVI, bounded tile residency, reusable
-  graphs, explicit seam-safe cumulative halos and owned cores, and indirect contour overlays;
-  microscopy, production imagery, stitched full-image result placement, and global tiled
-  statistics remain separate future examples.
+  graphs, explicit seam-safe cumulative halos and owned cores, source-nearest versus GPU-mean
+  overviews, exact categorical policies, replayable full-dataset extrema/histograms/Otsu, and
+  indirect contour overlays; microscopy, production imagery, and stitched full-image result
+  placement remain separate future examples.
 - `website/content/examples/showcase/`, `website/content/examples/table-of-contents.json`, and
   `website/src/examples.tsx`: website example integration.
 - `.ocularrc.js`: optional scoped Playwright alias if a browser smoke workflow is added.
@@ -1423,11 +1646,19 @@ helpers.
 
 ### Milestone A — Useful analytical MVP
 
+**Status:** Core workflow delivered; standalone exact/local percentiles, percentile-driven
+contrast, dedicated presentation conversion, and transparent oversized-raster partitioning are
+independent Phase 2 follow-ups.
+
 Deliver tranches 0.1–0.3, 1.1–1.4, 2.1–2.4, and initial 8.2 documentation. A caller can import
 the isolated subpath, upload red/NIR bands, compute calibrated NDVI, derive a nodata-correct
 histogram and contrast range, threshold the result, and reuse one graph without GPU readback.
 
 ### Milestone B — Spatially correct local and tiled processing
+
+**Status:** Scoped APIs delivered. Halo-correct neighborhoods, generated overviews, and global
+replay are explicit bounded workflows; composing all three together, automatic whole-image
+partitioning/placement, and decoder integration are not implied.
 
 Add tranches 3.1–3.4 and 4.1–4.5. A bounded-memory application can process large tiled rasters,
 smooth and detect edges, apply morphology, select valid overviews, and produce the same results
@@ -1435,25 +1666,37 @@ as a monolithic reference without tile seams or last-tile-only global histograms
 
 ### Milestone C — Segmentation and vector-ready output
 
+**Status:** Started with completed sparse, convergence-gated connected-component labeling,
+bounded dense region identifiers and counts, validity-aware region intensity/geometric
+measurements, single-raster marching squares, and indirect contour draws. Cross-tile
+component/contour ownership and zonal statistics remain open.
+
 Add tranches 5.1–5.4 and 6.1–6.4. An application can label components, calculate region and
 polygon-zonal statistics, and render stable georeferenced contours through indirect GPU draws
 and an external deck.gl adapter.
 
 ### Milestone D — Demonstrated release candidate
 
+**Status:** In progress for the satellite showcase and user documentation; microscopy,
+benchmarking, full integration, and release gates remain open.
+
 Add tranches 8.1–8.4. Satellite and microscopy examples, public documentation, package
 verification, bounded-resource diagnostics, and all required repository gates are complete.
 Advanced Phase 7 work is not a prerequisite.
 
-## Recommended first three pull requests
+## Completed foundation sequence
 
-### PR 1 — Optional package and reproducible fixtures
+These already-delivered slices document the original dependency order; they are not proposed
+future pull requests. The next implementation boundary is Tranche 5.4, with Tranche 6.3 available
+independently when contour seam ownership is more urgent.
+
+### Foundation slice 1 — Optional package and reproducible fixtures
 
 Deliver tranches 0.1, 0.2, and the initial portion of 0.3. Add the isolated export, minimal
 `luraster/index.ts`, built ESM/CommonJS/declaration verification, root-isolation tests, and tiny
 offline fixtures. Avoid unrelated graph/core changes.
 
-### PR 2 — Raster contracts, masked reductions, and device limits
+### Foundation slice 2 — Raster contracts, masked reductions, and device limits
 
 Deliver tranches 1.1–1.4. Add typed raster metadata, borrowed bands, validity masks, full
 affine/CRS rules, graph-native texture gather/scatter, opt-in masked reductions, explicit GPU
@@ -1461,7 +1704,7 @@ histogram domains, and caller-managed capability/stripe planning. Verify odd row
 ownership, actual graph-only histogram composition, and 4096² dispatch boundaries without
 claiming automatic large-image partitioning.
 
-### PR 3 — NDVI and extended scalar-analysis vertical slice
+### Foundation slice 3 — NDVI and extended scalar-analysis vertical slice
 
 Deliver tranche 2.1 and the minimum viable portion of 2.2. Reuse the existing opt-in masked
 reductions, preserve histogram auto-domain semantics, and demonstrate NDVI -> valid extent ->

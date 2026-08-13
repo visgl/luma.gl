@@ -46,7 +46,7 @@ test('GPUReduction handles operations, formats, hierarchy, and invalid floats', 
 
   const invalidFloats = Float32Array.from([Number.NaN, 4, Number.POSITIVE_INFINITY, -2]);
   const floatSum = await runReduction(device, Float32Array.from([0.1, 0.2, 0.3]), 'float32', 'sum');
-  t.ok(Math.abs(floatSum[0] - 0.6) < 1e-6, 'float sum uses the fixed reduction tree');
+  t.ok(Math.abs(floatSum[0] - 0.6) < 1e-6, 'float sum remains numerically accurate');
   t.deepEqual(await runReduction(device, invalidFloats, 'float32', 'min'), [-2]);
   t.deepEqual(await runReduction(device, invalidFloats, 'float32', 'max'), [4]);
   t.deepEqual(await runReduction(device, invalidFloats, 'float32', 'extent'), [-2, 4]);

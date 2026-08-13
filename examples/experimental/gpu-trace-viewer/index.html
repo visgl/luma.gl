@@ -29,11 +29,13 @@
   import {webgpuAdapter} from '@luma.gl/webgpu';
   import AnimationLoopTemplate from './app.ts';
 
+  const forcePortableScan = new URLSearchParams(location.search).get('scan') === 'portable';
   const device = luma.createDevice({
     id: 'gpu-trace-viewer',
     adapters: [webgpuAdapter],
     createCanvasContext: true,
-    featureLevel: 'max'
+    featureLevel: 'max',
+    _disabledFeatures: forcePortableScan ? {subgroups: true} : undefined
   });
   const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
   animationLoop.start();

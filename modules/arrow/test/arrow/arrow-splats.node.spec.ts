@@ -336,6 +336,88 @@ test('makeGPUSplatDataFromArrow rejects nullable semantic identifiers', t => {
   t.end();
 });
 
+test('makeGPUSplatDataFromArrow rejects invalid unsigned semantic identifiers', t => {
+  const device = new NullDevice({});
+  const source = makeSplatRecordBatch({positions: [0, 0, 0]});
+
+  for (const semanticId of [
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    -1,
+    0.5,
+    0x1_0000_0000
+  ]) {
+    const semanticIds = arrow.vectorFromArray([semanticId], new arrow.Float64());
+    const recordBatch: GPUSplatArrowRecordBatchLike = {
+      numRows: source.numRows,
+      schema: source.schema,
+      getChild: columnName =>
+        columnName === 'custom_category' ? semanticIds : source.getChild(columnName)
+    };
+
+    t.throws(
+      () => makeGPUSplatDataFromArrow(device, recordBatch, {semanticColumn: 'custom_category'}),
+      /semantic identifiers must be unsigned 32-bit integers/,
+      `rejects invalid numeric semantic identifier ${String(semanticId)}`
+    );
+  }
+
+  for (const semanticId of ['building', '7']) {
+    const semanticIds = arrow.vectorFromArray([semanticId], new arrow.Utf8());
+    const recordBatch: GPUSplatArrowRecordBatchLike = {
+      numRows: source.numRows,
+      schema: source.schema,
+      getChild: columnName => (columnName === 'label' ? semanticIds : source.getChild(columnName))
+    };
+
+    t.throws(
+      () => makeGPUSplatDataFromArrow(device, recordBatch),
+      /semantic identifiers must be unsigned 32-bit integers/,
+      `never coerces automatically detected string label ${semanticId} into a class identifier`
+    );
+  }
+
+  for (const {semanticId, semanticIds} of [
+    {semanticId: -1n, semanticIds: arrow.vectorFromArray([-1n], new arrow.Int64())},
+    {
+      semanticId: 0x1_0000_0000n,
+      semanticIds: arrow.vectorFromArray([0x1_0000_0000n], new arrow.Uint64())
+    }
+  ]) {
+    const recordBatch: GPUSplatArrowRecordBatchLike = {
+      numRows: source.numRows,
+      schema: source.schema,
+      getChild: columnName =>
+        columnName === 'semantic_id' ? semanticIds : source.getChild(columnName)
+    };
+
+    t.throws(
+      () => makeGPUSplatDataFromArrow(device, recordBatch),
+      /semantic identifiers must be unsigned 32-bit integers/,
+      `rejects out-of-range 64-bit semantic identifier ${String(semanticId)}`
+    );
+  }
+
+  const validSource = makeSplatRecordBatch({positions: [0, 0, 0, 1, 1, 1]});
+  const validSemanticIds = arrow.vectorFromArray([0n, 0xffff_ffffn], new arrow.Uint64());
+  const validRecordBatch: GPUSplatArrowRecordBatchLike = {
+    numRows: validSource.numRows,
+    schema: validSource.schema,
+    getChild: columnName =>
+      columnName === 'semantic_id' ? validSemanticIds : validSource.getChild(columnName)
+  };
+  const prepared = makeGPUSplatDataFromArrow(device, validRecordBatch)[0]!;
+
+  t.deepEqual(
+    Array.from(prepared.source.semanticIds ?? []),
+    [0, 0xffff_ffff],
+    'preserves both unsigned 32-bit bounds from numeric Arrow columns'
+  );
+  prepared.destroy();
+  t.end();
+});
+
 test('makeGPUSplatDataFromArrow honors linear field metadata and independent scale encodings', t => {
   const device = new NullDevice({});
   const recordBatch = makeSplatRecordBatch({

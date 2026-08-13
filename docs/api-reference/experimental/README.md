@@ -46,24 +46,34 @@ rays and early-exit shadows. Transform-only animation gathers updated bounds thr
 permutation and refits without sorting; topology changes and periodic spatial refreshes rebuild the
 Morton order. A topology-only graph Morton-sorts each mesh's triangles into GPU-built BLASes, which
 transform-only updates reuse. The general-purpose graph sorter fuses inputs of up to 256 rows into
-one workgroup and uses stable four-bit radix passes for larger inputs; small BVHs likewise build
-and refit in one workgroup. Consecutive compute nodes automatically share a compute pass when
-per-node GPU timestamp profiling is inactive. `RayTracingSceneRenderOptions` add analytic sphere metadata,
+one workgroup and uses stable four-bit radix passes for larger inputs; `GPUSegmentedSort` and
+`GPUSegmentedBVH` group many small packed mesh permutations and hierarchies into at most eight
+dispatches each. Traversal caches inverse ray directions and queued box-entry distances
+without changing visibility or temporal jitter. Consecutive compute nodes automatically share a
+compute pass when per-node GPU timestamp profiling is inactive. `RayTracingSceneRenderOptions` add
+analytic sphere metadata,
 perspective/orthographic camera selection, adaptive half-resolution rendering, interleaved pixel
 phases, retained-identity temporal reprojection, bounded rotating shadow samples, progressive
-accumulation, and upsampled HDR presentation. The default `0.5` resolution scale can decrease to
+accumulation, and upsampled HDR presentation. Reusable `GPUTextureHistory` pairs rotate color and
+metadata graph bindings without full-frame copies; sparse phases carry only untouched pixels. The
+default `0.5` resolution scale can decrease to
 `0.25` toward a `33.3` millisecond smoothed animation-frame budget; GPU timestamp queries are not
 required. Acceleration passes run only when geometry or instance transforms change. Shared scene
-statistics optionally expose internal dimensions, effective scale, sampled-pixel coverage, frame
-timing, and accumulated samples. The ray pass uses exactly eight storage buffers, and every TLAS or
-BLAS construction pass fits the default WebGPU CORE limit of eight storage buffers. Applications
-retain command-submission ownership.
+adapters can provide categorized committed-scene revisions so camera-only frames avoid repeatedly
+serializing every instance transform, material, and light.
+The canvas or a caller-owned offscreen framebuffer determines the actual attachment formats and
+target dimensions; scalar metallic-roughness lighting follows GGX/Smith/Fresnel, and presentation
+uses the shared tone-mapping and exact linear/sRGB output conventions. Shared scene statistics expose
+internal dimensions, effective scale, sampled-pixel coverage, frame timing, accumulated samples,
+and per-stage command-graph node, physical-pass, coalescing, and CPU encoding costs. The ray pass
+uses exactly eight storage buffers, and every TLAS or BLAS construction pass fits the default WebGPU
+CORE limit of eight storage buffers. Applications retain command-submission ownership.
 
 The Morton-sorted TLAS accelerates objects and instances, while GPU-built Morton-sorted BLASes
 accelerate each mesh's triangles. Hardware ray tracing, SAH/Karras hierarchy topology, indirect path
 tracing, denoising, and volume rendering are not implemented. Skeletal/morph deformation, material
-textures, alpha/transmission, and advanced PBR shading remain on the forward/deferred renderer
-paths.
+textures, alpha/transmission, and advanced PBR material extensions remain on the forward/deferred
+renderer paths.
 
 `createPBRMaterialFactory`, `createPBRMaterial`, and `createPBRModel` are also available when an
 application needs lower-level composition with the same canonical material and shader contracts.
@@ -124,6 +134,25 @@ introduces explicit command scheduling, typed table-backed graph views, hierarch
 compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written
 indirect draw commands.
 
+## GPU-resident Raster Analytics
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`@luma.gl/experimental/luraster`](/docs/api-reference/experimental/luraster) analyzes scientific
+and geospatial raster bands directly inside caller-owned WebGPU command graphs. It distinguishes
+missing observations from valid zeroes, preserves source calibration and spatial metadata, and
+composes vegetation indices, distributions, thresholds, neighborhood filters, morphology, and
+contour geometry without downloading raster pixels.
+
+Applications can optionally add bounded tile residency, seam-safe neighboring samples,
+validity-aware analytical overviews, and dataset-wide histogram replay. The
+[raster concepts and execution guide](/docs/api-reference/experimental/luraster/concepts)
+explains nodata, validity masks, owned tile cores, halos, overviews, and replay before introducing
+the API. The [Satellite Raster Lab](/examples/showcase/raster-lab) demonstrates every completed
+capability with real GPU computation and a fixed-size analytical summary.
+
 ## GPU-native Trace Exploration
 
 <p class="badges">
@@ -144,14 +173,25 @@ visibility, flat scenes, and indirect rendering without adding trace concepts to
 [`@luma.gl/experimental/lugraph`](/docs/api-reference/experimental/lugraph) turns existing GPU
 edge columns into reusable compressed adjacency, vertex degrees, unweighted and nonnegative
 weighted shortest paths, weakly connected components, label-propagation communities, local
-clustering coefficients, and dangling-aware PageRank scores. Social networks, dependency graphs,
-transaction investigations, and infrastructure maps can compose those operations into one WebGPU
-command graph without copying source batches or reading complete results back to JavaScript.
+clustering coefficients, durable core numbers, community modularity scores, bounded weighted
+community optimization, and dangling-aware PageRank scores. Social networks, dependency graphs,
+transaction investigations, and
+infrastructure maps can compose those operations into one WebGPU command graph without copying
+source batches or reading complete results back to JavaScript.
+The optimizer considers genuinely empty community labels, so over-merged starting groups can
+split; weighted `float32` accumulation can vary with GPU execution order, and stable tie-breaking
+does not guarantee identical weighted partitions.
 The [interactive graph explorer](/examples/experimental/lugraph-explorer) adds directly renderable
 exact force-layout coordinates, neighborhood highlighting, stable GPU picking, dragging, and pinning.
 An opt-in live benchmark compares nine actual CPU and WebGPU graph workloads across five graph
-families, covering all six Graphalytics workload families while reporting command encoding,
-completion fences, setup costs, and layout accuracy.
+families, covering all six
+[LDBC Graphalytics algorithm families](https://ldbcouncil.org/benchmarks/graphalytics/algorithms/)
+defined by the [Graph Data Council (GDC)](https://ldbcouncil.org/) while reporting command
+encoding, completion fences, setup costs, and layout accuracy. The council was formerly the Linked
+Data Benchmark Council (LDBC); its benchmark name remains LDBC Graphalytics. Core numbers and
+modularity scoring and optimization extend beyond those six families. Optimization is single-level
+local moving, not full multilevel Louvain or Leiden. Feature coverage and the local benchmark do
+not claim an official submission, certification, or published result.
 
 ## GPU-Resident Dataframes
 

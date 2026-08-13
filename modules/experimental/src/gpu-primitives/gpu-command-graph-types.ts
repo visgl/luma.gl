@@ -475,7 +475,12 @@ export type GPUCommandGraphComputeExecutable<Parameters> = {
 
 /** Compiled render-pass callback. */
 export type GPUCommandGraphRenderExecutable<Parameters> = {
-  /** Returns per-encoding render-pass options other than graph-declared attachments. */
+  /**
+   * Returns per-encoding render-pass options.
+   *
+   * A caller-owned framebuffer may be supplied only when the node does not declare graph-managed
+   * attachments. External framebuffer textures do not participate in graph hazard inference.
+   */
   getRenderPassProps?: (context: GPUCommandGraphEncodeContext<Parameters>) => RenderPassProps;
   /** Records commands into the render pass opened by the graph. */
   encode: (context: GPUCommandGraphEncodeContext<Parameters> & {renderPass: RenderPass}) => void;
@@ -539,6 +544,14 @@ export type GPUCommandGraphNodeType = GPUCommandGraphNode<unknown>['type'];
 export type GPUCommandGraphCapabilities = {
   /** Whether the device can collect GPU timestamp queries. */
   timestampQueries: boolean;
+  /** Whether the created WebGPU device exposes subgroup operations. */
+  subgroups: boolean;
+  /** Whether the browser's WGSL implementation exposes stable subgroup identifiers. */
+  subgroupId: boolean;
+  /** Minimum subgroup size reported by the adapter, when available. */
+  subgroupMinSize?: number;
+  /** Maximum subgroup size reported by the adapter, when available. */
+  subgroupMaxSize?: number;
   /** Whether adapter metadata identifies a CPU or fallback implementation. */
   softwareAdapter: boolean;
   /** Maximum size of one GPU buffer allocation. */

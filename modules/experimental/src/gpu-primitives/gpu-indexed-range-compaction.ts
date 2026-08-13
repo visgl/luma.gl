@@ -11,8 +11,8 @@ import {
   GraphVectorView
 } from './gpu-command-graph';
 import {GPUScan} from './gpu-scan';
+import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 import {
-  createTransientVectorView,
   createTransientView,
   getViewBinding,
   getViewElementOffset,
@@ -21,6 +21,7 @@ import {
 } from './graph-data-view-utils';
 
 const RANGE_COMPACTION_WORKGROUP_SIZE = 256;
+const MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT = 64;
 
 /** Packed record layout describing source ranges consumed by indexed range compaction. */
 export type GPUIndexedRangeLayout = {
@@ -31,6 +32,9 @@ export type GPUIndexedRangeLayout = {
   /** Word containing the source row count. */
   countWordOffset: number;
 };
+
+/** Physical representation of source-aligned selection flags. */
+export type GPUIndexedRangeFlagEncoding = 'uint32' | 'bitset';
 
 /** Properties for candidate-driven stable source-index compaction. */
 export type GPUIndexedRangeCompactionProps = {
@@ -72,6 +76,8 @@ export type GPUPartitionedIndexedRangeCompactionProps = {
   id?: string;
   /** Source-aligned flags split at complete range boundaries. */
   flags: GraphVectorView<'uint32'>;
+  /** Flag representation. Defaults to one uint32 per source row. */
+  flagEncoding?: GPUIndexedRangeFlagEncoding;
   /** Packed source-range records shared by every partition. */
   ranges: GraphDataView<'uint32'>;
   /** Number of range records. */
@@ -94,8 +100,6 @@ export type GPUPartitionedIndexedRangeCompactionProps = {
 
 /** GPU-generated partition metadata exposed to range-aware downstream consumers. */
 export type GPUPartitionedIndexedRangeCompactionResult = {
-  /** Source-aligned local offsets preserving the flags chunk topology. */
-  localOffsets: GraphVectorView<'uint32'>;
   /** Selected row count for every canonical range. */
   rangeCounts: GraphDataView<'uint32'>;
   /** Partition-local exclusive selected-row offset for every canonical range. */
@@ -215,14 +219,16 @@ export class GPUIndexedRangeCompaction {
 /**
  * Stably compacts active ranges into matching bounded output partitions.
  *
- * Range records remain one logical canonical index, while source flags, local scratch, and output
- * IDs preserve caller-provided chunk boundaries. Every range must be wholly contained by the flags
- * chunk selected by `partitionRangeEnds`. Each partition receives an independent compacted list;
- * emitted values remain global source indices.
+ * Range records remain one logical canonical index, while source flags and output IDs preserve
+ * caller-provided chunk boundaries. Every range must be wholly contained by the flags chunk
+ * selected by `partitionRangeEnds`. Each partition receives an independent compacted list; emitted
+ * values remain global source indices. Local offsets are recomputed during scatter instead of
+ * consuming source-sized scratch storage.
  */
 export class GPUPartitionedIndexedRangeCompaction {
   readonly id: string;
   readonly flags: GraphVectorView<'uint32'>;
+  readonly flagEncoding: GPUIndexedRangeFlagEncoding;
   readonly ranges: GraphDataView<'uint32'>;
   readonly rangeCount: number;
   readonly rangeLayout: GPUIndexedRangeLayout;
@@ -236,6 +242,7 @@ export class GPUPartitionedIndexedRangeCompaction {
   constructor(props: GPUPartitionedIndexedRangeCompactionProps) {
     this.id = props.id ?? 'gpu-partitioned-indexed-range-compaction';
     this.flags = props.flags;
+    this.flagEncoding = props.flagEncoding ?? 'uint32';
     this.ranges = props.ranges;
     this.rangeCount = props.rangeCount;
     this.rangeLayout = props.rangeLayout;
@@ -255,7 +262,11 @@ export class GPUPartitionedIndexedRangeCompaction {
     }
     validatePartitionedVector(this.id, 'flags', this.flags);
     validatePartitionedVector(this.id, 'output', this.output);
-    validateMatchingVectorTopology(this.flags, this.output, `${this.id} output`);
+    if (this.flagEncoding === 'bitset') {
+      validateBitsetVectorTopology(this.id, this.flags, this.output);
+    } else {
+      validateMatchingVectorTopology(this.flags, this.output, `${this.id} output`);
+    }
     validateRangeCompactionShape(this);
     validatePartitionRangeEnds(
       this.id,
@@ -265,7 +276,7 @@ export class GPUPartitionedIndexedRangeCompaction {
     );
   }
 
-  /** Adds partitioned local scans, bounded range scans, scatter, and count publication. */
+  /** Adds partitioned range counts, bounded range scans, scratchless scatter, and count publication. */
   addToGraph<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): GPUPartitionedIndexedRangeCompactionResult {
@@ -284,7 +295,6 @@ export class GPUPartitionedIndexedRangeCompaction {
       throw new Error(`${this.id} activeRangeDispatch must belong to the target graph`);
     }
 
-    const localOffsets = createTransientVectorView(graph, `${this.id}-local-offsets`, this.flags);
     const rangeCounts: GraphDataView<'uint32'> = createTransientView(
       graph,
       `${this.id}-range-counts`,
@@ -310,17 +320,15 @@ export class GPUPartitionedIndexedRangeCompaction {
     for (let partitionIndex = 0; partitionIndex < this.flags.data.length; partitionIndex++) {
       const flags = this.flags.data[partitionIndex];
       const output = this.output.data[partitionIndex];
-      const offsets = localOffsets.data[partitionIndex];
-      const sourceEnd = sourceStart + flags.length;
+      const sourceEnd = sourceStart + output.length;
       const rangeEnd = this.partitionRangeEnds[partitionIndex];
-      addPartitionLocalScanPass(graph, this, {
+      addPartitionRangeCountPass(graph, this, {
         partitionIndex,
         sourceStart,
         sourceEnd,
         rangeStart,
         rangeEnd,
         flags,
-        localOffsets: offsets,
         rangeCounts
       });
       const partitionRangeCount = rangeEnd - rangeStart;
@@ -346,7 +354,6 @@ export class GPUPartitionedIndexedRangeCompaction {
         rangeStart,
         rangeEnd,
         flags,
-        localOffsets: offsets,
         rangeOffsets,
         output
       });
@@ -354,7 +361,24 @@ export class GPUPartitionedIndexedRangeCompaction {
       rangeStart = rangeEnd;
     }
     addPartitionCountPass(graph, this, rangeCounts, rangeOffsets, partitionCounts);
-    return {localOffsets, rangeCounts, rangeOffsets, partitionCounts};
+    return {rangeCounts, rangeOffsets, partitionCounts};
+  }
+}
+
+function validateBitsetVectorTopology(
+  id: string,
+  flags: GraphVectorView<'uint32'>,
+  output: GraphVectorView<'uint32'>
+): void {
+  if (flags.data.length !== output.data.length) {
+    throw new Error(`${id} bitset flags must contain one chunk per output chunk`);
+  }
+  for (let chunkIndex = 0; chunkIndex < flags.data.length; chunkIndex++) {
+    const flagWordCount = flags.data[chunkIndex].length;
+    const sourceLength = output.data[chunkIndex].length;
+    if (flagWordCount !== Math.ceil(sourceLength / 32)) {
+      throw new Error(`${id} bitset flag chunks must contain one bit per output row`);
+    }
   }
 }
 
@@ -436,7 +460,7 @@ function validatePartitionRangeEnds(
   }
 }
 
-function addPartitionLocalScanPass<Parameters>(
+function addPartitionRangeCountPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   compaction: GPUPartitionedIndexedRangeCompaction,
   props: {
@@ -446,12 +470,14 @@ function addPartitionLocalScanPass<Parameters>(
     rangeStart: number;
     rangeEnd: number;
     flags: GraphDataView<'uint32'>;
-    localOffsets: GraphDataView<'uint32'>;
     rangeCounts: GraphDataView<'uint32'>;
   }
 ): void {
   const {rangeLayout} = compaction;
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_START: u32 = ${props.rangeStart}u;
 const RANGE_END: u32 = ${props.rangeEnd}u;
 const SOURCE_START: u32 = ${props.sourceStart}u;
@@ -462,19 +488,17 @@ const RANGE_COUNT_WORD: u32 = ${rangeLayout.countWordOffset}u;
 const FLAGS_OFFSET: u32 = ${getViewElementOffset(props.flags)}u;
 const RANGES_OFFSET: u32 = ${getViewElementOffset(compaction.ranges)}u;
 const ACTIVE_RANGE_IDS_OFFSET: u32 = ${getViewElementOffset(compaction.activeRangeIds)}u;
-const LOCAL_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.localOffsets)}u;
 const RANGE_COUNTS_OFFSET: u32 = ${getViewElementOffset(props.rangeCounts)}u;
 @group(0) @binding(0) var<storage, read> flags: array<u32>;
 @group(0) @binding(1) var<storage, read> ranges: array<u32>;
 @group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
-@group(0) @binding(3) var<storage, read_write> localOffsets: array<u32>;
-@group(0) @binding(4) var<storage, read_write> rangeCounts: array<u32>;
-var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;
+@group(0) @binding(3) var<storage, read_write> rangeCounts: array<u32>;
+${useSubgroups ? `var<workgroup> subgroupOffsets: array<u32, ${MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT}>;` : `var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;`}
 
 @compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32' : ''}
 ) {
   let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
   if (rangeId < RANGE_START || rangeId >= RANGE_END) {
@@ -486,10 +510,151 @@ fn main(
   if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END) {
     return;
   }
+${getPartitionSelectionScanShader(compaction.flagEncoding, useSubgroups)}
+
+  if (elementCount == 0u && localIndex == 0u) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = 0u;
+  } else if (localIndex + 1u == elementCount) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = inclusivePrefix;
+  }
+}`;
+  addIndirectPass(graph, {
+    id: `${compaction.id}-partition-${props.partitionIndex}-range-count`,
+    source,
+    views: {
+      flags: props.flags,
+      ranges: compaction.ranges,
+      activeRangeIds: compaction.activeRangeIds,
+      rangeCounts: props.rangeCounts
+    },
+    resources: [
+      {buffer: props.flags, usage: 'storage-read'},
+      {buffer: compaction.ranges, usage: 'storage-read'},
+      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+      {buffer: props.rangeCounts, usage: 'storage-write'}
+    ],
+    dispatchBuffer: compaction.activeRangeDispatch
+  });
+}
+
+function addPartitionScatterPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  compaction: GPUPartitionedIndexedRangeCompaction,
+  props: {
+    partitionIndex: number;
+    sourceStart: number;
+    sourceEnd: number;
+    rangeStart: number;
+    rangeEnd: number;
+    flags: GraphDataView<'uint32'>;
+    rangeOffsets: GraphDataView<'uint32'>;
+    output: GraphDataView<'uint32'>;
+  }
+): void {
+  const {rangeLayout} = compaction;
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
+  const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
+const RANGE_START: u32 = ${props.rangeStart}u;
+const RANGE_END: u32 = ${props.rangeEnd}u;
+const SOURCE_START: u32 = ${props.sourceStart}u;
+const SOURCE_END: u32 = ${props.sourceEnd}u;
+const RANGE_WORD_STRIDE: u32 = ${rangeLayout.wordStride}u;
+const RANGE_FIRST_WORD: u32 = ${rangeLayout.firstIndexWordOffset}u;
+const RANGE_COUNT_WORD: u32 = ${rangeLayout.countWordOffset}u;
+const FLAGS_OFFSET: u32 = ${getViewElementOffset(props.flags)}u;
+const RANGES_OFFSET: u32 = ${getViewElementOffset(compaction.ranges)}u;
+const ACTIVE_RANGE_IDS_OFFSET: u32 = ${getViewElementOffset(compaction.activeRangeIds)}u;
+const RANGE_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.rangeOffsets)}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
+@group(0) @binding(0) var<storage, read> flags: array<u32>;
+@group(0) @binding(1) var<storage, read> ranges: array<u32>;
+@group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
+@group(0) @binding(3) var<storage, read> rangeOffsets: array<u32>;
+@group(0) @binding(4) var<storage, read_write> outputIds: array<u32>;
+${useSubgroups ? `var<workgroup> subgroupOffsets: array<u32, ${MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT}>;` : `var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;`}
+
+@compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32' : ''}
+) {
+  let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
+  if (rangeId < RANGE_START || rangeId >= RANGE_END) {
+    return;
+  }
+  let recordOffset = RANGES_OFFSET + rangeId * RANGE_WORD_STRIDE;
+  let firstIndex = ranges[recordOffset + RANGE_FIRST_WORD];
+  let elementCount = ranges[recordOffset + RANGE_COUNT_WORD];
+  if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END) {
+    return;
+  }
+${getPartitionSelectionScanShader(compaction.flagEncoding, useSubgroups)}
+
+  if (selected != 0u) {
+    let outputIndex = rangeOffsets[RANGE_OFFSETS_OFFSET + rangeId] +
+      inclusivePrefix - selected;
+    outputIds[OUTPUT_OFFSET + outputIndex] = firstIndex + localIndex;
+  }
+}`;
+  addIndirectPass(graph, {
+    id: `${compaction.id}-partition-${props.partitionIndex}-scatter`,
+    source,
+    views: {
+      flags: props.flags,
+      ranges: compaction.ranges,
+      activeRangeIds: compaction.activeRangeIds,
+      rangeOffsets: props.rangeOffsets,
+      outputIds: props.output
+    },
+    resources: [
+      {buffer: props.flags, usage: 'storage-read'},
+      {buffer: compaction.ranges, usage: 'storage-read'},
+      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+      {buffer: props.rangeOffsets, usage: 'storage-read'},
+      {buffer: props.output, usage: 'storage-write'}
+    ],
+    dispatchBuffer: compaction.activeRangeDispatch
+  });
+}
+
+function getPartitionSelectionScanShader(
+  encoding: GPUIndexedRangeFlagEncoding,
+  useSubgroups: boolean
+): string {
+  const selectedExpression = getFlagSelectionExpression(encoding, 'chunkIndex');
+  if (useSubgroups) {
+    return /* wgsl */ `
+  let localIndex = subgroupId * subgroupSize + subgroupInvocationId;
+  let chunkIndex = firstIndex - SOURCE_START + localIndex;
+  var selected = 0u;
+  if (localIndex < elementCount && ${selectedExpression}) {
+    selected = 1u;
+  }
+  let subgroupPrefix = subgroupInclusiveAdd(selected);
+  if (subgroupInvocationId == subgroupSize - 1u) {
+    subgroupOffsets[subgroupId] = subgroupPrefix;
+  }
+  workgroupBarrier();
+
+  let subgroupCount = ${RANGE_COMPACTION_WORKGROUP_SIZE}u / subgroupSize;
+  if (localIndex == 0u) {
+    var runningOffset = 0u;
+    for (var subgroupIndex = 0u; subgroupIndex < subgroupCount; subgroupIndex++) {
+      let subgroupTotal = subgroupOffsets[subgroupIndex];
+      subgroupOffsets[subgroupIndex] = runningOffset;
+      runningOffset += subgroupTotal;
+    }
+  }
+  workgroupBarrier();
+  let inclusivePrefix = subgroupOffsets[subgroupId] + subgroupPrefix;`;
+  }
+  return /* wgsl */ `
   let localIndex = localId.x;
   let chunkIndex = firstIndex - SOURCE_START + localIndex;
   var selected = 0u;
-  if (localIndex < elementCount && flags[FLAGS_OFFSET + chunkIndex] != 0u) {
+  if (localIndex < elementCount && ${selectedExpression}) {
     selected = 1u;
   }
   prefixes[localIndex] = selected;
@@ -509,120 +674,16 @@ fn main(
     workgroupBarrier();
     step *= 2u;
   }
-
-  if (localIndex < elementCount) {
-    localOffsets[LOCAL_OFFSETS_OFFSET + chunkIndex] = prefixes[localIndex] - selected;
-  }
-  if (localIndex == 0u) {
-    var selectedCount = 0u;
-    if (elementCount != 0u) {
-      selectedCount = prefixes[elementCount - 1u];
-    }
-    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = selectedCount;
-  }
-}`;
-  addIndirectPass(graph, {
-    id: `${compaction.id}-partition-${props.partitionIndex}-local-scan`,
-    source,
-    views: {
-      flags: props.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets: props.localOffsets,
-      rangeCounts: props.rangeCounts
-    },
-    resources: [
-      {buffer: props.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: props.localOffsets, usage: 'storage-write'},
-      {buffer: props.rangeCounts, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  let inclusivePrefix = prefixes[localIndex];`;
 }
 
-function addPartitionScatterPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  compaction: GPUPartitionedIndexedRangeCompaction,
-  props: {
-    partitionIndex: number;
-    sourceStart: number;
-    sourceEnd: number;
-    rangeStart: number;
-    rangeEnd: number;
-    flags: GraphDataView<'uint32'>;
-    localOffsets: GraphDataView<'uint32'>;
-    rangeOffsets: GraphDataView<'uint32'>;
-    output: GraphDataView<'uint32'>;
-  }
-): void {
-  const {rangeLayout} = compaction;
-  const source = /* wgsl */ `
-const RANGE_START: u32 = ${props.rangeStart}u;
-const RANGE_END: u32 = ${props.rangeEnd}u;
-const SOURCE_START: u32 = ${props.sourceStart}u;
-const SOURCE_END: u32 = ${props.sourceEnd}u;
-const RANGE_WORD_STRIDE: u32 = ${rangeLayout.wordStride}u;
-const RANGE_FIRST_WORD: u32 = ${rangeLayout.firstIndexWordOffset}u;
-const RANGE_COUNT_WORD: u32 = ${rangeLayout.countWordOffset}u;
-const FLAGS_OFFSET: u32 = ${getViewElementOffset(props.flags)}u;
-const RANGES_OFFSET: u32 = ${getViewElementOffset(compaction.ranges)}u;
-const ACTIVE_RANGE_IDS_OFFSET: u32 = ${getViewElementOffset(compaction.activeRangeIds)}u;
-const LOCAL_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.localOffsets)}u;
-const RANGE_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.rangeOffsets)}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
-@group(0) @binding(0) var<storage, read> flags: array<u32>;
-@group(0) @binding(1) var<storage, read> ranges: array<u32>;
-@group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
-@group(0) @binding(3) var<storage, read> localOffsets: array<u32>;
-@group(0) @binding(4) var<storage, read> rangeOffsets: array<u32>;
-@group(0) @binding(5) var<storage, read_write> outputIds: array<u32>;
-
-@compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
-fn main(
-  @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
-) {
-  let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
-  if (rangeId < RANGE_START || rangeId >= RANGE_END) {
-    return;
-  }
-  let recordOffset = RANGES_OFFSET + rangeId * RANGE_WORD_STRIDE;
-  let firstIndex = ranges[recordOffset + RANGE_FIRST_WORD];
-  let elementCount = ranges[recordOffset + RANGE_COUNT_WORD];
-  if (firstIndex < SOURCE_START || firstIndex + elementCount > SOURCE_END ||
-      localId.x >= elementCount) {
-    return;
-  }
-  let chunkIndex = firstIndex - SOURCE_START + localId.x;
-  if (flags[FLAGS_OFFSET + chunkIndex] != 0u) {
-    let outputIndex = rangeOffsets[RANGE_OFFSETS_OFFSET + rangeId] +
-      localOffsets[LOCAL_OFFSETS_OFFSET + chunkIndex];
-    outputIds[OUTPUT_OFFSET + outputIndex] = firstIndex + localId.x;
-  }
-}`;
-  addIndirectPass(graph, {
-    id: `${compaction.id}-partition-${props.partitionIndex}-scatter`,
-    source,
-    views: {
-      flags: props.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets: props.localOffsets,
-      rangeOffsets: props.rangeOffsets,
-      outputIds: props.output
-    },
-    resources: [
-      {buffer: props.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: props.localOffsets, usage: 'storage-read'},
-      {buffer: props.rangeOffsets, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+function getFlagSelectionExpression(
+  encoding: GPUIndexedRangeFlagEncoding,
+  sourceIndex: string
+): string {
+  return encoding === 'bitset'
+    ? `(flags[FLAGS_OFFSET + (${sourceIndex} >> 5u)] & (1u << (${sourceIndex} & 31u))) != 0u`
+    : `flags[FLAGS_OFFSET + ${sourceIndex}] != 0u`;
 }
 
 function addPartitionCountPass<Parameters>(
@@ -718,7 +779,10 @@ function addLocalScanPass<Parameters>(
 ): void {
   const {rangeLayout} = compaction;
   const passId = `${compaction.id}-local-scan`;
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const RANGE_COUNT: u32 = ${compaction.rangeCount}u;
 const RANGE_WORD_STRIDE: u32 = ${rangeLayout.wordStride}u;
 const RANGE_FIRST_WORD: u32 = ${rangeLayout.firstIndexWordOffset}u;
@@ -733,12 +797,12 @@ const RANGE_COUNTS_OFFSET: u32 = ${getViewElementOffset(rangeCounts)}u;
 @group(0) @binding(2) var<storage, read> activeRangeIds: array<u32>;
 @group(0) @binding(3) var<storage, read_write> localOffsets: array<u32>;
 @group(0) @binding(4) var<storage, read_write> rangeCounts: array<u32>;
-var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;
+${useSubgroups ? `var<workgroup> subgroupOffsets: array<u32, ${MAXIMUM_RANGE_COMPACTION_SUBGROUP_COUNT}>;` : `var<workgroup> prefixes: array<u32, ${RANGE_COMPACTION_WORKGROUP_SIZE}>;`}
 
 @compute @workgroup_size(${RANGE_COMPACTION_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
-  @builtin(workgroup_id) workgroupId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32' : ''}
 ) {
   let rangeId = activeRangeIds[ACTIVE_RANGE_IDS_OFFSET + workgroupId.y];
   if (rangeId >= RANGE_COUNT) {
@@ -747,6 +811,66 @@ fn main(
   let recordOffset = RANGES_OFFSET + rangeId * RANGE_WORD_STRIDE;
   let firstIndex = ranges[recordOffset + RANGE_FIRST_WORD];
   let elementCount = ranges[recordOffset + RANGE_COUNT_WORD];
+${getRangeSelectionScanShader(useSubgroups)}
+
+  if (localIndex < elementCount) {
+    localOffsets[LOCAL_OFFSETS_OFFSET + firstIndex + localIndex] =
+      inclusivePrefix - selected;
+  }
+  if (elementCount == 0u && localIndex == 0u) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = 0u;
+  } else if (localIndex + 1u == elementCount) {
+    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = inclusivePrefix;
+  }
+}`;
+  addIndirectPass(graph, {
+    id: passId,
+    source,
+    views: {
+      flags: compaction.flags,
+      ranges: compaction.ranges,
+      activeRangeIds: compaction.activeRangeIds,
+      localOffsets,
+      rangeCounts
+    },
+    resources: [
+      {buffer: compaction.flags, usage: 'storage-read'},
+      {buffer: compaction.ranges, usage: 'storage-read'},
+      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+      {buffer: localOffsets, usage: 'storage-write'},
+      {buffer: rangeCounts, usage: 'storage-write'}
+    ],
+    dispatchBuffer: compaction.activeRangeDispatch
+  });
+}
+
+function getRangeSelectionScanShader(useSubgroups: boolean): string {
+  if (useSubgroups) {
+    return /* wgsl */ `
+  let localIndex = subgroupId * subgroupSize + subgroupInvocationId;
+  var selected = 0u;
+  if (localIndex < elementCount && flags[FLAGS_OFFSET + firstIndex + localIndex] != 0u) {
+    selected = 1u;
+  }
+  let subgroupPrefix = subgroupInclusiveAdd(selected);
+  if (subgroupInvocationId == subgroupSize - 1u) {
+    subgroupOffsets[subgroupId] = subgroupPrefix;
+  }
+  workgroupBarrier();
+
+  let subgroupCount = ${RANGE_COMPACTION_WORKGROUP_SIZE}u / subgroupSize;
+  if (localIndex == 0u) {
+    var runningOffset = 0u;
+    for (var subgroupIndex = 0u; subgroupIndex < subgroupCount; subgroupIndex++) {
+      let subgroupTotal = subgroupOffsets[subgroupIndex];
+      subgroupOffsets[subgroupIndex] = runningOffset;
+      runningOffset += subgroupTotal;
+    }
+  }
+  workgroupBarrier();
+  let inclusivePrefix = subgroupOffsets[subgroupId] + subgroupPrefix;`;
+  }
+  return /* wgsl */ `
   let localIndex = localId.x;
   var selected = 0u;
   if (localIndex < elementCount && flags[FLAGS_OFFSET + firstIndex + localIndex] != 0u) {
@@ -769,38 +893,7 @@ fn main(
     workgroupBarrier();
     step *= 2u;
   }
-
-  if (localIndex < elementCount) {
-    localOffsets[LOCAL_OFFSETS_OFFSET + firstIndex + localIndex] =
-      prefixes[localIndex] - selected;
-  }
-  if (localIndex == 0u) {
-    var selectedCount = 0u;
-    if (elementCount != 0u) {
-      selectedCount = prefixes[elementCount - 1u];
-    }
-    rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = selectedCount;
-  }
-}`;
-  addIndirectPass(graph, {
-    id: passId,
-    source,
-    views: {
-      flags: compaction.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets,
-      rangeCounts
-    },
-    resources: [
-      {buffer: compaction.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: localOffsets, usage: 'storage-write'},
-      {buffer: rangeCounts, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  let inclusivePrefix = prefixes[localIndex];`;
 }
 
 function addScatterPass<Parameters>(

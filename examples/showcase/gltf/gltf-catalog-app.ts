@@ -23,6 +23,10 @@ const MODEL_DIRECTORY_URL =
 const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
 const ROBOT_EXPRESSIVE_MODEL_URL =
   'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
+const SIMPLE_SKIN_LOD_MODEL_URL = new URL(
+  '../../../modules/gltf/test/data/SimpleSkinLOD.gltf',
+  import.meta.url
+).href;
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
 const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
@@ -41,7 +45,8 @@ const ADDITIONAL_ANIMATED_GLTF_MODELS = new Set([
   'Fox',
   'MorphStressTest',
   'RobotExpressive',
-  'SimpleMorph'
+  'SimpleMorph',
+  'SimpleSkinLOD'
 ]);
 
 const lightSources = {
@@ -128,6 +133,10 @@ const GLTF_MODEL_METADATA_OVERRIDES: Record<string, GLTFModelMetadata> = {
   RobotExpressive: {
     summary:
       'An expressive skinned robot with 14 named actions, facial expressions, and independently animated crowd playback.'
+  },
+  SimpleSkinLOD: {
+    summary:
+      'An animated, skinned character with three authored MSFT_lod mesh levels and screen-coverage thresholds.'
   }
 };
 const ROBOT_EXPRESSIVE_CATALOG_MODEL: GLTFCatalogModel = {
@@ -135,6 +144,12 @@ const ROBOT_EXPRESSIVE_CATALOG_MODEL: GLTFCatalogModel = {
   name: 'RobotExpressive',
   ...GLTF_MODEL_METADATA_OVERRIDES['RobotExpressive'],
   variants: {'glTF-Binary': 'RobotExpressive.glb'}
+};
+const SIMPLE_SKIN_LOD_CATALOG_MODEL: GLTFCatalogModel = {
+  label: 'Simple Skin LOD',
+  name: 'SimpleSkinLOD',
+  ...GLTF_MODEL_METADATA_OVERRIDES['SimpleSkinLOD'],
+  variants: {glTF: 'SimpleSkinLOD.gltf'}
 };
 export type GLTFModelReference = {
   name: string;
@@ -153,6 +168,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   loadedGLTF?: GLTFPostprocessed;
   previousCrowdFrameTime?: number;
   crowdActionNames: string[] = [];
+  levelOfDetailBias = 1;
+  levelOfDetailVertexBudget = 0;
   modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraHeight = 0;
@@ -163,6 +180,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   mouseCameraTime = 0;
   mouseCameraTilt = 0;
   options: Record<string, boolean> = {
+    autoLOD: false,
     useModelLights: true,
     cameraAnimation: true,
     gltfAnimation: true
@@ -310,6 +328,24 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return this.animatedCrowd?.actorCount || 1;
   }
 
+  /** Toggles actor-specific mesh detail without rebuilding the crowd or resetting animation. */
+  setAutomaticLevelOfDetail(enabled: boolean): void {
+    this.options['autoLOD'] = enabled;
+    this.animatedCrowd?.setLODEnabled(enabled);
+  }
+
+  /** Increases or decreases authored/generated screen-coverage detail selection. */
+  setLevelOfDetailBias(bias: number): void {
+    this.levelOfDetailBias = clampNumber(bias, 0.25, 4);
+    this.animatedCrowd?.setLODBias(this.levelOfDetailBias);
+  }
+
+  /** Limits submitted actor vertices without changing animation state; zero means unlimited. */
+  setLevelOfDetailVertexBudget(vertexBudget: number): void {
+    this.levelOfDetailVertexBudget = clampNumber(Math.round(vertexBudget), 0, 1_000_000);
+    this.animatedCrowd?.setLODVertexBudget(this.levelOfDetailVertexBudget || undefined);
+  }
+
   /** Places independently phased actors in one GPU-instanced draw per source primitive. */
   setAnimationInstanceCount(instanceCount: number): void {
     const actorCount = Math.max(1, Math.min(MAXIMUM_GLTF_CROWD_ACTORS, Math.floor(instanceCount)));
@@ -327,8 +363,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       try {
         this.animatedCrowd = createGLTFAnimatedCrowd(this.device, this.loadedGLTF, {
           ...this.activeScenegraphOptions,
-          capacity: MAXIMUM_GLTF_CROWD_ACTORS
+          capacity: MAXIMUM_GLTF_CROWD_ACTORS,
+          lod: {
+            enabled: this.options['autoLOD'],
+            autoGenerate: true,
+            ratios: [0.5, 0.25],
+            ...(this.levelOfDetailVertexBudget > 0
+              ? {vertexBudget: this.levelOfDetailVertexBudget}
+              : {})
+          }
         });
+        this.animatedCrowd.setLODBias(this.levelOfDetailBias);
       } catch (error) {
         showError(error);
         return;
@@ -378,7 +423,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           .filter((name): name is string => Boolean(name))
       )
     );
-    updateCrowdInfo(actorCount, this.animatedCrowd.models.length, this.crowdActionNames);
+    updateCrowdInfo(
+      actorCount,
+      this.animatedCrowd.lodStats.drawCount,
+      this.crowdActionNames,
+      this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined
+    );
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
@@ -430,13 +480,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           ? 0
           : Math.min(Math.max(time - this.previousCrowdFrameTime, 0) / 1000, 0.1);
       this.previousCrowdFrameTime = time;
+      const canvas = device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+      const levelOfDetailView = this.options['autoLOD']
+        ? {
+            viewMatrix,
+            projectionMatrix,
+            viewportWidth: canvas.width,
+            viewportHeight: canvas.height
+          }
+        : undefined;
+
       if (this.options['gltfAnimation']) {
-        this.animatedCrowd.update(deltaSeconds);
+        this.animatedCrowd.update(deltaSeconds, levelOfDetailView);
+      } else if (levelOfDetailView) {
+        this.animatedCrowd.setLODView(levelOfDetailView);
       }
 
       const modelMatrix = new Matrix4();
       const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
       for (const model of this.animatedCrowd.models) {
+        if (model.instanceCount === 0) {
+          continue;
+        }
         const sceneShaderInputProps: Record<string, unknown> = {
           lighting: this.getLightingProps(),
           pbrProjection: {
@@ -457,7 +522,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
 
       const drawCount = this.animatedCrowd.draw(renderPass);
-      updateCrowdInfo(this.animatedCrowd.actorCount, drawCount, this.crowdActionNames);
+      updateCrowdInfo(
+        this.animatedCrowd.actorCount,
+        drawCount,
+        this.crowdActionNames,
+        this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined
+      );
       renderPass.end();
       return;
     }
@@ -499,12 +569,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   async fetchModelList(): Promise<GLTFCatalogModel[]> {
     const response = await fetch(MODEL_LIST_URL);
     const models = (await response.json()) as GLTFCatalogModel[];
-    return [ROBOT_EXPRESSIVE_CATALOG_MODEL, ...models.filter(isAnimatedGLTFCatalogModel)].map(
-      model => ({
-        ...model,
-        hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
-      })
-    );
+    return [
+      ROBOT_EXPRESSIVE_CATALOG_MODEL,
+      SIMPLE_SKIN_LOD_CATALOG_MODEL,
+      ...models.filter(isAnimatedGLTFCatalogModel)
+    ].map(model => ({
+      ...model,
+      hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
+    }));
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {
@@ -779,6 +851,9 @@ function getModelUrl(modelReference: Required<GLTFModelReference>): string {
   if (modelReference.name === 'RobotExpressive') {
     return ROBOT_EXPRESSIVE_MODEL_URL;
   }
+  if (modelReference.name === 'SimpleSkinLOD') {
+    return SIMPLE_SKIN_LOD_MODEL_URL;
+  }
 
   return `${MODEL_DIRECTORY_URL}/${modelReference.name}/${modelReference.variant}/${modelReference.fileName}`;
 }
@@ -874,7 +949,7 @@ function getModelLoadingLabel(modelDescription: string): string {
 }
 
 async function loadModelMetadata(modelName: string): Promise<GLTFModelMetadata> {
-  if (modelName === 'RobotExpressive') {
+  if (modelName === 'RobotExpressive' || modelName === 'SimpleSkinLOD') {
     return GLTF_MODEL_METADATA_OVERRIDES[modelName] || {};
   }
 
@@ -1058,7 +1133,8 @@ function getAnimationClipNames(
 function updateCrowdInfo(
   actorCount: number = 1,
   drawCount: number = 0,
-  actionNames: readonly string[] = []
+  actionNames: readonly string[] = [],
+  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats']
 ): void {
   const container = document.getElementById(GLTF_CROWD_INFO_ID) as HTMLDivElement | null;
   if (!container) {
@@ -1066,16 +1142,50 @@ function updateCrowdInfo(
   }
 
   container.hidden = actorCount <= 1;
-  const actionSummary = actionNames.length
-    ? ` · ${actionNames.length > 1 ? 'Mixed actions' : 'Action'}: ${actionNames.join(', ')}`
-    : '';
-  const summary =
-    actorCount > 1
-      ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws${actionSummary}`
-      : '';
+  const summary = formatGLTFCrowdInfo(actorCount, drawCount, actionNames, levelOfDetailStats);
   if (container.textContent !== summary) {
     container.textContent = summary;
   }
+}
+
+/** Formats real actor, draw, and optional level-of-detail work for the Studio status readout. */
+export function formatGLTFCrowdInfo(
+  actorCount: number,
+  drawCount: number,
+  actionNames: readonly string[] = [],
+  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats']
+): string {
+  const actionSummary = actionNames.length
+    ? ` · ${actionNames.length > 1 ? 'Mixed actions' : 'Action'}: ${actionNames.join(', ')}`
+    : '';
+  const activeLevels = levelOfDetailStats?.levels.filter(level => level.actors > 0) || [];
+  const levelSummary = activeLevels.length
+    ? activeLevels.map(level => `L${level.level}: ${level.actors.toLocaleString()}`).join(' · ')
+    : 'No visible levels';
+  const levelSource =
+    levelOfDetailStats?.source === 'authored'
+      ? 'Authored LOD'
+      : levelOfDetailStats?.source === 'generated'
+        ? 'Generated LOD'
+        : 'Single-level geometry';
+  const vertexBudgetSummary = levelOfDetailStats
+    ? ` · Vertices: ${levelOfDetailStats.vertices.toLocaleString()}` +
+      (levelOfDetailStats.vertexBudget
+        ? ` / ${levelOfDetailStats.vertexBudget.toLocaleString()}` +
+          ` · Demoted: ${levelOfDetailStats.demotedActors.toLocaleString()}` +
+          (levelOfDetailStats.budgetSatisfied ? '' : ' · Budget exceeded')
+        : '')
+    : '';
+  const levelOfDetailSummary = levelOfDetailStats
+    ? ` · ${levelSource}` +
+      ` · ${levelSummary} · Visible: ${levelOfDetailStats.visibleActors.toLocaleString()}` +
+      ` · Culled: ${levelOfDetailStats.culledActors.toLocaleString()}` +
+      ` · Triangles: ${levelOfDetailStats.triangles.toLocaleString()}` +
+      vertexBudgetSummary
+    : '';
+  return actorCount > 1
+    ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws${actionSummary}${levelOfDetailSummary}`
+    : '';
 }
 
 function updateExtensionSupportTable(extensionSupport?: GLTFExtensionSupportMap) {

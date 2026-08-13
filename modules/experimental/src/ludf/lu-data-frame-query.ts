@@ -29,7 +29,11 @@ import {
   type CompiledLuDataFrameQuery,
   type LuDataFrameQueryParameters
 } from './lu-query-compiler';
-import {LuDataFrameSortQuery, type LuDataFrameSortOptions} from './lu-sort-query';
+import {
+  LuDataFrameGlobalSortQuery,
+  LuDataFrameSortQuery,
+  type LuDataFrameSortOptions
+} from './lu-sort-query';
 
 /** Portable scalar storage formats supported by computed dataframe columns. */
 export type LuDataFrameDerivedColumnFormat = 'float32' | 'sint32' | 'uint32';
@@ -203,6 +207,23 @@ export class LuDataFrameQuery<
     return new LuDataFrameSortQuery(this, column, options, limit, 'descending');
   }
 
+  /** Plans explicit stable ordering across every preserved source record batch. */
+  sortByGlobal<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameGlobalSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameGlobalSortQuery(this, column, options);
+  }
+
+  /** Plans one descending global top-K selection without copying source dataframe columns. */
+  topKGlobal<Column extends LuDataFrameScalarColumnNames<Logical, SelectedColumns>>(
+    column: Column,
+    limit: number,
+    options: LuDataFrameSortOptions = {}
+  ): LuDataFrameGlobalSortQuery<Logical, SelectedColumns, Column, Source> {
+    return new LuDataFrameGlobalSortQuery(this, column, options, limit, 'descending');
+  }
+
   /** Plans a stable, unique-right inner join without allocating, repacking, or retaining rows. */
   innerJoin<
     Right extends GPUTypeMap,
@@ -213,6 +234,42 @@ export class LuDataFrameQuery<
     options: LuDataFrameJoinOptions<LeftKey, RightKey>
   ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
     return new LuDataFrameJoinQuery(this, right, options);
+  }
+
+  /** Preserves every selected left row and explicitly marks missing right-side partners. */
+  leftJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options, 'left');
+  }
+
+  /** Preserves only selected left rows whose key exists in the unique-right index. */
+  semiJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options, 'semi');
+  }
+
+  /** Preserves selected unmatched left rows, including rows with nullable left keys. */
+  antiJoin<
+    Right extends GPUTypeMap,
+    LeftKey extends LuDataFrameColumnNamesOfFormat<Logical, SelectedColumns, 'uint32'>,
+    RightKey extends LuDataFrameColumnNamesOfFormat<Right, keyof Right & string, 'uint32'>
+  >(
+    right: LuDataFrame<Right>,
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+  ): LuDataFrameJoinQuery<Logical, SelectedColumns, Right, LeftKey, RightKey, Source> {
+    return new LuDataFrameJoinQuery(this, right, options, 'anti');
   }
 
   /** Plans a bounded, source-aligned unique-right lookup while preserving both batch topologies. */

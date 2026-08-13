@@ -118,6 +118,56 @@ test('ANARI renderer schemas validate graph-based ray tracing settings', testCon
   testContext.end();
 });
 
+test('ANARI renderer schemas validate presentation controls across every renderer subtype', testContext => {
+  const rendererSubtypes = [
+    'default',
+    'deferred',
+    'raytrace',
+    'debugNormals',
+    'debugDepth'
+  ] as const;
+
+  for (const subtype of rendererSubtypes) {
+    for (const toneMapMode of [0, 1, 2, 3] as const) {
+      testContext.ok(
+        ANARIRendererSchema.safeParse({
+          '@@type': subtype,
+          toneMapMode,
+          outputColorSpace: toneMapMode % 2 === 0 ? 'linear' : 'srgb'
+        }).success,
+        `${subtype} accepts portable presentation mode ${toneMapMode}`
+      );
+    }
+
+    testContext.ok(
+      ANARIRendererSchema.safeParse({'@@type': subtype}).success,
+      `${subtype} retains automatic presentation defaults when controls are omitted`
+    );
+  }
+
+  for (const toneMapMode of [-1, 4, 0.5, Number.NaN, '1', null]) {
+    testContext.notOk(
+      ANARIRendererSchema.safeParse({'@@type': 'raytrace', toneMapMode}).success,
+      `unsupported tone-mapping selector ${String(toneMapMode)} is rejected`
+    );
+  }
+
+  for (const outputColorSpace of ['display-p3', 'LINEAR', 1, null]) {
+    testContext.notOk(
+      ANARIRendererSchema.safeParse({'@@type': 'default', outputColorSpace}).success,
+      `unsupported output color space ${String(outputColorSpace)} is rejected`
+    );
+  }
+
+  const generatedSchema = JSON.stringify(ANARI_SCENE_JSON_SCHEMA);
+  testContext.ok(generatedSchema.includes('toneMapMode'), 'JSON Schema advertises tone mapping');
+  testContext.ok(
+    generatedSchema.includes('outputColorSpace'),
+    'JSON Schema advertises output color-space selection'
+  );
+  testContext.end();
+});
+
 test('ANARI scene schemas identify invalid properties and retained references', testContext => {
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   const materialIdentifier = Object.keys(scene.materials)[0];

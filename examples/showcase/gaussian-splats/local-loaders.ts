@@ -93,6 +93,12 @@ export type LocalGaussianSplatRADPage = {
   };
 };
 
+/** Source-level Spark encoding flags required to decode individual RAD pages correctly. */
+export type LocalGaussianSplatRADSplatEncoding = {
+  readonly lodOpacity?: boolean;
+  readonly [encodingName: string]: unknown;
+};
+
 /** Source metadata needed to demand, estimate, and traverse independent RAD pages. */
 export type LocalGaussianSplatRADMetadata = {
   count: number;
@@ -101,6 +107,7 @@ export type LocalGaussianSplatRADMetadata = {
   chunkSize?: number;
   maxSh?: number;
   lodTree?: boolean;
+  splatEncoding?: LocalGaussianSplatRADSplatEncoding;
 };
 
 /** Current camera-driven interest in one RAD page; larger priorities are serviced first. */
@@ -115,6 +122,8 @@ export type LocalGaussianSplatRADPageDecodeContext = {
   sourceUrl: string;
   metadata: LocalGaussianSplatRADMetadata;
   signal: AbortSignal;
+  /** Fetches the untouched original RADC bytes with request-local cancellation and progress. */
+  fetchChunkBytes: () => Promise<ArrayBuffer>;
   /** Published RADSourceLoader performs this decoder synchronously after the range fetch. */
   decodeDefault: () => Promise<unknown>;
 };
@@ -124,6 +133,8 @@ export type LocalGaussianSplatRADPageSourceOptions = LocalGaussianSplatLoadOptio
   maxConcurrentLoads?: number;
   /** Override with an actual worker bridge; the published RAD source has no worker parser. */
   decodePage?: (context: LocalGaussianSplatRADPageDecodeContext) => Promise<unknown>;
+  /** Releases a caller-provided decoder when its owning source closes or fails to open. */
+  onDestroy?: () => void;
 };
 
 /** Optional request-local cancellation and camera priority for one RAD page. */
@@ -158,7 +169,9 @@ type LocalGaussianSplatRADSource = {
     chunkSize?: number;
     maxSh?: number;
     lodTree?: boolean;
+    splatEncoding?: LocalGaussianSplatRADSplatEncoding;
   }>;
+  getChunk(chunkIndex: number, options?: {signal?: AbortSignal}): Promise<ArrayBuffer>;
   getChunkTable(
     chunkIndex: number,
     options?: {
@@ -247,8 +260,12 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
     sourceUrl:
       'https://storage.googleapis.com/forge-dev-public/asundqui/rad/260217/coit-40m-sh1-lod.rad',
     expectedSplatCount: 50_937_127,
-    upAxis: 'z',
-    up: [0, 0, 1]
+    upAxis: 'y',
+    up: [0, -1, 0],
+    camera: {
+      position: [-0.0858, -0.2203, 0.1128],
+      target: [0.0226670563, -0.1886351632, 0.0141479052]
+    }
   },
   {
     id: 'train-github',
@@ -269,10 +286,10 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
   }
 ];
 
-/** Keeps standalone synthetic by default while enabling real scenes in the published viewer. */
-export function getLocalGaussianSplatLoadersConfiguration():
-  | LocalGaussianSplatLoadersConfiguration
-  | undefined {
+/** Keeps scene defaults local to each viewer while preserving explicit URL selections. */
+export function getLocalGaussianSplatLoadersConfiguration(
+  defaultScene?: GaussianSplatSourceCatalogEntry['id']
+): LocalGaussianSplatLoadersConfiguration | undefined {
   if (typeof window === 'undefined') {
     return undefined;
   }
@@ -316,7 +333,7 @@ export function getLocalGaussianSplatLoadersConfiguration():
     };
   }
 
-  const sceneId = parameters.get('scene') || 'train';
+  const sceneId = parameters.get('scene') || defaultScene || 'train';
   const scene = GAUSSIAN_SPLAT_SOURCE_CATALOG.find(candidate => candidate.id === sceneId);
   if (!scene) {
     throw new Error(`Unknown Gaussian splat scene: ${sceneId}.`);
@@ -554,6 +571,7 @@ export class LocalGaussianSplatRADPageSource {
       this.cancelPage(request.chunkIndex, this.sourceAbortController.signal.reason);
     }
     this.demand.clear();
+    this.options.onDestroy?.();
   }
 
   private sortQueue(): void {
@@ -586,6 +604,7 @@ export class LocalGaussianSplatRADPageSource {
             sourceUrl: this.configuration.sourceUrl,
             metadata: this.metadata,
             signal,
+            fetchChunkBytes: async () => await this.source.getChunk(request.chunkIndex, {signal}),
             decodeDefault
           })
         : await decodeDefault();
@@ -770,7 +789,10 @@ export async function openLocalGaussianSplatRADPageSource(
         : {allChunkBytes: sourceMetadata.allChunkBytes}),
       ...(sourceMetadata.chunkSize === undefined ? {} : {chunkSize: sourceMetadata.chunkSize}),
       ...(sourceMetadata.maxSh === undefined ? {} : {maxSh: sourceMetadata.maxSh}),
-      ...(sourceMetadata.lodTree === undefined ? {} : {lodTree: sourceMetadata.lodTree})
+      ...(sourceMetadata.lodTree === undefined ? {} : {lodTree: sourceMetadata.lodTree}),
+      ...(sourceMetadata.splatEncoding === undefined
+        ? {}
+        : {splatEncoding: sourceMetadata.splatEncoding})
     };
     configuration.expectedSplatCount = metadata.count;
     configuration.expectedBatchCount = metadata.chunks.length;
@@ -789,6 +811,7 @@ export async function openLocalGaussianSplatRADPageSource(
     );
   } catch (error) {
     sourceAbortController.abort();
+    options.onDestroy?.();
     throw error;
   }
 }
@@ -1212,6 +1235,8 @@ function isGaussianSplatRADSource(value: unknown): value is LocalGaussianSplatRA
     value !== null &&
     'getMetadata' in value &&
     typeof value.getMetadata === 'function' &&
+    'getChunk' in value &&
+    typeof value.getChunk === 'function' &&
     'getChunkTable' in value &&
     typeof value.getChunkTable === 'function'
   );

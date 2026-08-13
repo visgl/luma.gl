@@ -1,6 +1,6 @@
 ---
 title: "LuRaster: Satellite Raster Lab"
-description: Explore seam-safe raster tile halos, budgeted GPU residency, NDVI, smoothing, edges, morphology, contours, and live histograms.
+description: Explore GPU region measurements, bounded connected components, global raster histograms, nodata-aware overviews, seam-safe halos, NDVI, and contours.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -12,39 +12,150 @@ import { RasterLabExample } from "@site/src/examples";
 
 <RasterLabExample />
 
-The Satellite Raster Lab generates a deterministic, entirely synthetic
-earth-observation scene with red and near-infrared reflectance bands, farmland,
-vegetation, waterways, cloud cover, and out-of-footprint nodata. Switch between
-full, western, and eastern source windows, select a full-resolution or
-source-provided 2× overview, and inspect the actual tile key, pixel dimensions,
-level-zero origin, and `EPSG:32610` coordinate identity. Adjust the bounded
-resident-tile capacity and watch real CPU/GPU occupancy, cache hits, misses,
-evictions, active lease pins, and graph compilation/reuse. An uncached window
-is decoded and uploaded; revisiting a resident window reuses its buffers,
-equally sized western/eastern windows reuse their compiled graph, and
-superseded source requests are canceled. Switch between **TILE ONLY** and
-**SEAMLESS HALO** to compare an independently processed window with an
-explicitly assembled, fence-pinned neighborhood; inspect its cumulative radius,
-owned half-open core, and resident source count. Switch between the derived
-vegetation index and its source bands, apply Gaussian or box
-smoothing, adjust the kernel radius or Gaussian sigma, choose Sobel, Scharr,
-or Laplacian edge detection, switch between signed horizontal/vertical
-derivatives and nonnegative gradient magnitude, or select binary/grayscale
-dilation, erosion, opening, and closing. Morphology controls select a
-four-connected Manhattan diamond or eight-connected square, radius zero
-through eight, strict or ignore nodata, and clamp, reflect, constant, or nodata
-borders, including an editable constant value. Change analytical contrast or
-gamma, select pixels above a live classification threshold, or increase the
-denominator epsilon to reject unstable normalized-difference measurements.
-An optional Otsu control derives its threshold directly from a pre-threshold
-GPU histogram before classifying the same resident pixels.
-An interactive contour slider extracts real marching-squares isolines and draws
-their GPU-generated line segments through an indirect draw record; no contour
-vertices or draw counts are downloaded for rendering.
-Every control changes the GPU-computed distribution, selected-pixel count,
-observed extent, and mean when its underlying values or selection change.
+## What you are looking at
+
+The Satellite Raster Lab is an interactive, GPU-resident raster-analysis
+workbench. Its landscape, red and near-infrared reflectance bands, clouds,
+waterways, fields, coordinates, and missing-data patterns are deterministic
+synthetic fixtures. No satellite scene, GeoTIFF, cloud service, or real-world
+location is being downloaded.
+
+The map displays one selected **FULL**, **WEST**, or **EAST** output window.
+The sidebar reports the actual analytical values behind that map: its selected
+band, valid population, adaptive 48- or 40-bin histogram, measured extent, GPU mean, source
+identity, overview provenance, cache residency, optional contours, and sparse
+or bounded dense connected-component overlays with exact region counts and
+selected-region geometry/intensity measurements. A
+control changes a histogram only when it changes the measured values or their
+selection; changing a contour level changes generated geometry without
+necessarily changing the underlying distribution.
+
+The central distinction is **where an operation gets its observations**. A
+local tile owns only its selected core; a seamless neighborhood temporarily
+borrows adjacent source pixels; and global statistics replay both source cores
+while the map still displays just one. None of these policies silently stitches
+a new full-resolution CPU image.
+
+For the underlying object model, ownership rules, and execution phases, see
+[LuRaster Concepts and Execution Model](/docs/api-reference/experimental/luraster/concepts).
+
+## Start with a five-minute walkthrough
+
+1. Keep **FULL**, **1× NATIVE**, **SOURCE NEAREST**, **TILE ONLY**, and
+   **TILE** selected. Switch between **NDVI**, **RED**, and **NEAR IR** and
+   watch the histogram and extent follow the actual active quantity.
+2. Select **WEST**, then **EAST**. Their source origins and local histograms
+   change. Revisit a resident tile and inspect the cache-hit and compiled-graph
+   reuse counters.
+3. Select **FULL GLOBAL**. The map continues to show one half-width tile, but
+   its count, histogram, extent, mean, and median now describe both owned
+   halves. Reverse **WEST → EAST** to **EAST → WEST**; exact counts and bins do
+   not change.
+4. Enable **Otsu** and switch between **WEST** and **EAST**. Both views use
+   the same dataset-wide cutoff and selected global histogram. The median
+   readout explains why it is unavailable while Otsu owns the compact scalar.
+5. Return to **TILE**, choose **2× OVERVIEW**, and compare **SOURCE NEAREST**
+   with **GPU MEAN**. Switch **MASK NEAREST** to **MASK MODE** and observe
+   that a genuine categorical-mask policy changes the resulting valid pixels.
+6. Restore **SOURCE NEAREST**, select **WEST**, enable Gaussian smoothing and
+   Sobel edges, and compare **TILE ONLY** with **SEAMLESS HALO**. The halo
+   readout reports the additional neighbor coverage and the half-open output
+   core that still belongs exclusively to WEST.
+7. Return to **TILE**, enable **COMPONENTS**, and compare **4-CONNECTED** with
+   **8-CONNECTED**. Switch **SPARSE ROOTS** to **DENSE 1..N** and compare the
+   exact region count with the number of published bounded IDs. Lower **Region
+   capacity** below that count: dense labels disappear with an explicit overflow
+   warning, while sparse roots remain usable. Restore the capacity, then lower
+   **Propagation budget** to `1` to see all unconverged labels fail closed.
+8. Restore a sufficient budget, choose **DENSE 1..N**, and enable **INSPECT
+   REGION**. Select different dense identifiers and compare their pixel count,
+   intensity range/mean, world centroid, and affine area. The histogram
+   explicitly changes from `48 bins` to `40 bins · 8 region scalars` while
+   preserving the exact same 228-byte GPU-to-CPU transfer.
+
+Every combination is deliberately explicit. Requesting a feature that cannot
+compose correctly with the current scope switches to a supported scope instead
+of presenting an unimplemented combination as valid.
+
+## Missing data is not the number zero
+
+Raster correctness depends on keeping a measurement's **value** separate from
+whether that measurement is **valid**. The fixture deliberately demonstrates
+several distinct cases:
+
+| Stored value                              | Separate validity | Meaning                                    | Analytical behavior                                           |
+| ----------------------------------------- | ----------------- | ------------------------------------------ | ------------------------------------------------------------- |
+| Finite reflectance, including a valid `0` | `1`               | An observed numeric value                  | Participates in statistics, filtering, and reduction.         |
+| Any reflectance below a cloud             | `0`               | The observation is explicitly masked       | Excluded even when its numeric bytes look plausible.          |
+| Raw sentinel `-9999`                      | `1`               | Outside the source footprint; still nodata | Rejected by the band's exact raw nodata rule.                 |
+| Derived `NaN`                             | `0`               | No valid derived observation exists        | Remains missing; it is never treated as a zero-valued sample. |
+| Binary category `0`                       | `1`               | Known background or another valid class    | Remains a valid categorical value, not nodata.                |
+
+The sentinel row is intentional: the fixture leaves its explicit mask at `1`
+so the example must independently honor **both** the validity mask and the
+band's raw nodata sentinel. A valid sample must survive both checks. Scientific
+code cannot replace this model with `if (value)`, `value !== 0`, a transparent
+display color, or a guessed alpha channel.
+
+Consequently, the **Cloud mask** card counts explicitly masked source pixels,
+while the **Valid observations** card excludes clouds, raw nodata, unstable
+NDVI denominators, and any active selection. Those counts answer different
+questions and should not be expected to add up when several exclusion rules
+apply.
+
+In generated-overview mode, that card changes to **Excluded observations**:
+its value is inferred from the existing post-analysis summary, not from a
+downloaded per-parent cloud count or a claimed raw-source contribution count.
+
+The derived vegetation index is:
+
+```text
+NDVI = (nearInfrared - red) / (nearInfrared + red)
+```
+
+An NDVI of `0` can be a perfectly valid observation: its two bands are equal.
+Negative water responses are also valid. The **epsilon** control rejects
+unstable divisions whose denominator is too small; it does not redefine zero
+or negative NDVI as missing.
+
+For binary classification, the value `0` means “known background” and `1`
+means “known foreground”; a separate observation-validity flag still
+distinguishes either case from an unknown pixel. Strict neighborhood rules can
+invalidate an output near a missing neighbor, while ignore rules can skip that
+neighbor. Neither policy invents an observation at an invalid center.
+
+## Control reference
+
+| Control                                           | What changes                                                                               | When to use it                                                                                                   |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **FULL / WEST / EAST**                            | The selected source window and visible owned core.                                         | Compare complete-scene references, adjacent tiles, source origins, and cache reuse.                              |
+| **1× NATIVE / 2× OVERVIEW**                       | The requested source level or generated target resolution.                                 | Trade spatial resolution against downstream analytical work.                                                     |
+| **SOURCE NEAREST / GPU MEAN**                     | Existing nearest-sampled data versus an explicitly generated validity-aware mean.          | Preserve source-provided samples, or aggregate continuous measurements without treating missing samples as zero. |
+| **MASK NEAREST / MASK MODE**                      | The representative categorical label versus the most frequent valid label.                 | Match discrete-class sampling to your actual cloud or classification semantics.                                  |
+| **TILE ONLY / SEAMLESS HALO**                     | Whether neighborhood operations can borrow real adjacent source pixels.                    | Compare local-border behavior with seam-correct smoothing, derivatives, or morphology.                           |
+| **TILE / FULL GLOBAL**                            | Local selected-core statistics versus replayed dataset-wide statistics.                    | Choose tile-local summaries or one consistent cross-tile domain, histogram, median, and Otsu cutoff.             |
+| **WEST → EAST / EAST → WEST**                     | The real order of global tile reduction and histogram replay.                              | Verify that valid populations, bins, extent, and Otsu do not depend on arrival order.                            |
+| **NDVI / RED / NEAR IR**                          | The analytical scalar field, not only its display colors.                                  | Compare a derived vegetation measure with either source band.                                                    |
+| **Gaussian / box / radius / sigma**               | Validity-aware spatial smoothing.                                                          | Reduce local sensor noise or calculate a uniformly weighted local mean.                                          |
+| **Sobel / Scharr / Laplacian / direction**        | First-order boundaries, gradient magnitude, or second-order response.                      | Study edge orientation, overall boundary strength, ridges, or valleys.                                           |
+| **Dilate / erode / open / close**                 | Grayscale extrema or binary foreground morphology.                                         | Expand/shrink regions, remove small islands, reconnect breaks, or fill small holes.                              |
+| **OFF / COMPONENTS**                              | An optional GPU-colored overlay and exact connected foreground-region count.               | Inspect classified islands while preserving missing data and valid background.                                   |
+| **4-CONNECTED / 8-CONNECTED**                     | Orthogonal-only or orthogonal-plus-diagonal foreground adjacency.                          | Decide whether corners touching diagonally belong to the same component.                                         |
+| **SPARSE ROOTS / DENSE 1..N**                     | Minimum representative roots versus consecutive GPU-generated region identifiers.          | Compare stable source representatives with compact IDs suitable for bounded region-indexed outputs.              |
+| **Region capacity**                               | Maximum number of published dense region IDs; exact required count remains visible.        | Verify zero capacity, explicit overflow, safe dense-overlay suppression, and the independent sparse fallback.    |
+| **OFF / INSPECT REGION**                          | Actual 40-bin analysis plus one selected dense region's eight GPU-generated scalar fields. | Inspect pixel population, intensity summary, affine centroid, and area without copying a region table or raster. |
+| **Dense region**                                  | The one-based dense component row copied from already-resident GPU measurement arrays.     | Compare individual region records without recompiling the analytical graph or increasing readback.               |
+| **Propagation budget**                            | The bounded maximum number of GPU hooking/compression rounds.                              | Compare a proven fixed point with an explicitly unconverged, safely cleared output.                              |
+| **Contrast / gamma / threshold / Otsu / epsilon** | Analytical transfer, classification, automatic histogram cutoff, or denominator stability. | Compare actual transformed measurements and valid selection policies.                                            |
+| **Contours / contour level**                      | GPU-generated marching-squares isolines and an indirect draw.                              | Inspect reusable scalar boundaries without downloading their vertices.                                           |
+| **Resident tile capacity**                        | Explicit decoded-CPU/GPU tile limits and eviction pressure.                                | Observe cache hits, misses, graph reuse, active pins, and bounded memory.                                        |
+
+## GPU execution and application ownership
 
 The demonstration uses the optional `@luma.gl/experimental/luraster` entry point.
+
+### Source, cache, and neighboring tiles
+
 `GPURasterTileReader` validates an application-owned synthetic source, its
 selected red/near-infrared bands, explicit overview level, half-open source
 window, affine/CRS metadata, native decoded samples, validity masks, and
@@ -53,16 +164,34 @@ budgets, deterministic least-recently-used eviction, cancellation-safe shared
 loads, owned native-band uploads, and compatible compiled-graph reuse. The
 browser application still owns source generation, cancellation policy, graph
 construction, command submission, and completion fences; one selected output
-core is analyzed at a time while cached neighbors and previously visited tiles
-can remain resident. `GPURasterTileHaloAssembler` adds explicit cumulative
+core is rendered at a time while global analysis can also replay both owned
+cores and previously visited tiles can remain resident.
+`GPURasterTileHaloAssembler` adds explicit cumulative
 source-neighborhood planning and composite neighbor leases.
 `GPURasterTileHaloFill` gathers every selected native-format source band and
 its validity directly on the GPU; `GPURasterTileCoreExtract` later publishes
 only the selected core. The example does not install a GeoTIFF decoder or
 download real satellite imagery.
+
+### Analytical overviews and global reductions
+
+`GPURasterOverview` can instead reduce native floating-point observations into
+explicit calibrated sums, valid-sample counts, analytical means, and separate
+validity; `GPURasterCategoricalOverview` preserves exact source labels under
+the selected nearest or mode policy. `makeRasterOverviewMetadata` carries the
+generated grid's affine transform, CRS, level, pixel interpretation, and
+level-zero origin without registering it as a source-provided level.
+`GPURasterGlobalInitialize` explicitly clears caller-owned dataset-wide
+accumulators, `GPURasterGlobalStatisticsMerge` combines valid tile extrema,
+count, and calibrated sum, and `GPURasterGlobalHistogramMerge` replays each
+owned core against the finalized global domain. `GPURasterGlobalPercentile`
+then publishes a bounded histogram-derived median without CPU sample polling.
 Normalized source requests expand omitted bands and full windows, default to
 level-local coordinates, and map equivalent level-zero windows to the same
 cache identity before any duplicate decoding or upload.
+
+### Pointwise, neighborhood, and contour operators
+
 `GPURasterNDVI` computes `(nearInfrared - red) / (nearInfrared + red)` directly
 from GPU-resident source bands while intersecting source validity and exact raw
 nodata. `GPURasterHistogram` composes a masked reduction with a GPU-domain
@@ -82,6 +211,19 @@ or Otsu thresholding and consumes that `uint32` mask as values while preserving
 the upstream observation validity separately. Threshold background is valid
 zero, not nodata. `GPURasterStatistics` calculates masked count, sum, mean,
 minimum, and maximum.
+`GPURasterConnectedComponents` consumes the final classified `uint32` values
+and their separate observation validity, propagates minimum representative
+roots through a bounded sequence of GPU hooking/compression rounds, and
+publishes explicit convergence before sparse labels are safe to render.
+`GPURasterDenseComponents` then scans true representative-root flags, assigns
+stable consecutive foreground IDs, and publishes an exact required count,
+capacity-clamped count, and explicit overflow without treating sparse pixel
+indices as compact array offsets.
+`GPURasterRegionMeasurements` groups converged dense IDs into separate
+geometry-pixel counts, valid-intensity counts/sums/minima/maxima/means,
+pixel-column/row moments, local centroids, and affine areas. These eleven
+bounded arrays stay on the GPU; overflowed or unconverged inputs clear every
+measurement before publication.
 `GPURasterOtsuThreshold` can select the threshold from a separate baseline
 histogram without introducing a CPU synchronization point.
 `GPURasterContours` classifies valid four-corner cells, resolves ambiguous
@@ -94,20 +236,217 @@ The histogram consumes that same mask and GPU-resident extent, so excluded
 pixels disappear from both the map selection and distribution. Every dependent
 compute pass is encoded into one explicitly submitted `GPUCommandGraph`.
 
+## The exact GPU-to-CPU readback boundary
+
 The map renderer consumes the original reflectance bands, derived vegetation
 index, contrast-adjusted active band, and validity flags directly from their GPU
-buffers. Only the two-value extent, 48 histogram bins, valid count, sum, mean,
-optional automatic threshold, and three contour diagnostics—228 bytes
-total—are copied back after submission to update visible summary statistics.
+buffers. Normally only the two-value extent, 48 histogram bins, valid count,
+sum, mean, optional automatic threshold, and three contour diagnostics—228
+bytes total—are copied back after submission to update visible summary
+statistics. Enabling the region inspector changes the **actual GPU histogram**
+to 40 bins and uses its freed 32 bytes for eight selected-region scalars; the
+overall transfer stays exactly 228 bytes.
+
+| Published aggregate                                           | Encoding                           |   Bytes |
+| ------------------------------------------------------------- | ---------------------------------- | ------: |
+| Observed minimum and maximum                                  | Two `float32` values               |       8 |
+| Histogram, inspection off                                     | 48 `uint32` bins                   |     192 |
+| Valid or selected population                                  | One `uint32`                       |       4 |
+| Sum of valid or selected values                               | One `float32`                      |       4 |
+| Mean of valid or selected values                              | One `float32`                      |       4 |
+| Otsu cutoff **or** global median                              | One shared `float32` slot          |       4 |
+| Contour diagnostics **or** component count/convergence/rounds | Three existing `uint32` slots      |      12 |
+| **Total per submitted analysis**                              | **One compact aggregate transfer** | **228** |
+
+With **INSPECT REGION** enabled, the 192-byte histogram row instead consists
+of 40 real `uint32` bins (160 bytes), one selected region's exact `uint32`
+geometry count (4 bytes), and seven `float32` values (28 bytes): intensity
+sum, minimum, maximum, mean, pixel-local centroid column, pixel-local centroid
+row, and affine area. The visible histogram renders exactly those 40 bins, and
+their sum still equals the displayed selected population. The automatic Otsu
+baseline remains an independent full-resolution 48-bin GPU histogram, so
+turning on inspection does not alter classification thresholds.
+
+The source imagery, output imagery, validity masks, generated parent sums and
+counts, categorical and connected-component labels, contour vertices, and
+indirect draw command remain
+on the GPU. The shared four-byte slot cannot report a global median and an
+automatic Otsu threshold simultaneously; the interface says so rather than
+issuing a second readback.
+
+Component mode temporarily disables contours and reuses all three existing
+four-byte diagnostic slots: the first reports the exact GPU-required component
+count, the second reports whether bounded propagation converged, and the third
+reports actual executed rounds. The dense contributor also produces genuine
+GPU-resident capacity-clamped count and overflow outputs. The interface derives
+the same displayed published count as `min(required, capacity)` and overflow as
+`required > capacity` from the already-read exact count; it does not transfer
+those additional GPU scalars. Selected-region inspection copies one scalar from
+each of eight bounded GPU arrays by direct buffer offset; the remaining region
+rows, separate intensity-population counts, and mergeable geometry moments are
+never downloaded. Neither representation increases the 228-byte summary,
+downloads labels, or interferes with the independent Otsu-threshold slot.
+Disabling component mode restores the previous contour preference.
+
 Layer switching, smoothing mode, kernel radius, Gaussian sigma, edge operator,
 derivative direction, morphological operation/mode/footprint/radius/nodata/
-border, contrast, gamma, thresholding, contour levels, epsilon, and explicit
-seam-safe halo selection rebuild
+border, contrast, gamma, thresholding, contour levels, epsilon, generated
+overview policy, categorical policy, explicit seam-safe halo selection, and
+tile/global replay scope rebuild
 their specialized analysis graph while keeping every source and output raster
 buffer resident; source pixels are never downloaded. Selecting a source
 window or overview instead selects an existing resident tile or performs one
 explicit CPU-to-GPU upload on a cache miss; neither path increases the 228-byte
-GPU-to-CPU analytical readback.
+GPU-to-CPU analytical readback. Visible generated-overview coverage derives
+from that same existing scalar summary and reports currently displayed
+analytical valid pixels after any filtering or threshold selection. It is not
+a count of raw observations contributing to each generated parent. Source
+pixels, per-parent overview counts, and categorical buffers are never downloaded.
+Global median reuses the existing four-byte automatic-threshold summary slot
+when Otsu is inactive; enabling global Otsu publishes its cutoff through that
+same slot instead. Either global result therefore preserves the original
+228-byte total, and global coverage divides by both owned cores rather than
+only the visible tile. The median readout explicitly reports that Otsu owns
+the compact scalar whenever automatic global thresholding is active.
+
+## Local tiles versus full-image statistics
+
+Use **TILE** when each selected west/east window should choose its own
+valid-pixel domain and distribution, or when generated analytical overviews,
+seam-safe neighborhood assembly, smoothing, derivatives, or morphology are
+required. Choose **FULL GLOBAL** when every window must use the same
+dataset-wide numerical extent, histogram, percentile, or Otsu threshold.
+Both cores apply the same selected contrast/gamma settings, but this example
+does not automatically equalize contrast against its global extent.
+
+### Why global histograms require a second pass
+
+Histogram bins only have meaning relative to their numerical domain. Suppose
+WEST contains values in `[0, 10]` and EAST contains values in `[100, 110]`.
+The first bin of WEST might represent `[0, 1)`, while the first bin of EAST
+might represent `[100, 101)`. Adding those local first bins would combine two
+different measurements and create an incorrect full-image distribution.
+
+The GPU must first discover the common extent `[0, 110]`, then replay both
+tile cores against that **same** domain:
+
+```text
+initialize global accumulator
+  → merge WEST extent, count, and sum
+  → merge EAST extent, count, and sum
+  → replay WEST into bins spanning the final global extent
+  → replay EAST into those same bins
+  → derive the global mean, percentile, or Otsu threshold
+```
+
+Reversing the first two tiles also reverses the real replay order, but exact
+unsaturated counts, bins, extrema, and Otsu results remain stable. Ordinary
+floating-point sums can differ by addition-order rounding.
+
+Global processing explicitly clears one caller-owned persistent accumulator,
+merges both selected western/eastern cores' valid extrema, calibrated sums,
+and populations, then replays both cores against the resulting stable GPU
+domain. Each replay clears only its graph-owned tile histogram partial before
+merging it into the separately persistent global bins; previously merged
+counts survive. The optional GPU Otsu stage consumes that stable global
+histogram and extent directly. Forward/reverse controls change the real source
+traversal while preserving exact unsaturated count/bin results, domain,
+threshold, and owned-core identity. Floating sums can differ by ordinary
+floating-point addition-order rounding.
+
+With automatic thresholding, the first global histogram describes all valid
+unclassified observations. Otsu selects one shared cutoff, both tile cores are
+classified against it, and a final global reduction/histogram reports only the
+selected observations. The displayed map remains one selected core even though
+its summary population and coverage denominator cover both cores.
+
+### Supported global combinations
+
+| Capability                                        | **TILE**                         | **FULL GLOBAL**                                           |
+| ------------------------------------------------- | -------------------------------- | --------------------------------------------------------- |
+| Native source or existing source-nearest overview | Yes                              | Yes                                                       |
+| NDVI, red, near-infrared, contrast, gamma         | Yes                              | Yes, applied independently and consistently to both cores |
+| Manual threshold and Otsu                         | Yes, tile-local                  | Yes, one shared dataset-wide cutoff                       |
+| GPU median                                        | Not shown                        | Yes, unless Otsu owns the same compact scalar             |
+| Contours                                          | Yes                              | Yes, for the selected visible core only                   |
+| Sparse or dense connected-component overlay       | Yes; temporarily pauses contours | No; enabling components returns to **TILE**               |
+| Gaussian/box smoothing, edges, morphology         | Yes                              | No; enabling one returns to **TILE**                      |
+| **SEAMLESS HALO**                                 | Yes with source-provided data    | No; selecting global returns to **TILE ONLY**             |
+| **GPU MEAN** generated overview                   | Yes without seamless halos       | No; selecting global restores **SOURCE NEAREST**          |
+
+**FULL GLOBAL** accepts either native resolution or an existing source-nearest
+overview and preserves pointwise NDVI, red, near-infrared, contrast, gamma,
+manual thresholds, and global Otsu. Selecting it switches generated GPU means
+back to **SOURCE NEAREST**, changes **SEAMLESS HALO** to **TILE ONLY**, and
+resets smoothing, edges, and morphology. Enabling any of those unsupported
+combinations returns to **TILE**; the example does not claim globally stitched
+neighborhood processing or generated-overview replay.
+
+### Overflow and percentile precision
+
+Persistent global populations and individual histogram bins saturate at
+`4,294,967,295` rather than wrapping. Sticky overflow bits distinguish total
+count (`1`), any histogram bin (`2`), and a nonfinite floating sum (`4`). A
+global percentile rejects empty or overflowed data; its endpoints are exact,
+while intermediate estimates use histogram-bin centers. Normal applications
+must respect the overflow signal before trusting global thresholds. Per-tile
+scratch scales with one core, persistent memory scales with bin count, and a
+correct stable-domain histogram reads each resident core twice. Actual
+performance depends on source replay, cache hits, tile size, bins, bandwidth,
+and GPU rather than promising an automatic speedup over framebuffer effects.
+
+## Existing source overviews versus analytical GPU overviews
+
+### Continuous values: nearest observation or valid-sample mean
+
+Use **SOURCE NEAREST** when an existing lower-resolution source level is
+trusted and avoiding native-resolution decoding, upload, or reduction is the
+priority. The synthetic source overview deliberately selects one existing
+nearest observation; it does not average neighboring observations or recover a
+missing selected sample. Use **GPU MEAN** when continuous observations require
+an honest valid-sample-weighted analytical reduction; choosing it automatically
+selects the 2× target when the current source view is native. For example, a `2 × 2`
+footprint containing values `[10, invalid, 30, invalid]` yields a generated
+sum of `40`, valid count of `2`, and mean of `20`, rather than diluting the
+result to `10`. An all-invalid parent retains zero sum/count, an invalid mask,
+and a `NaN` floating value. Odd right/bottom edges retain their real remaining
+coverage instead of being padded.
+
+When valid counts differ, chaining analytical overviews must retain the parent
+sums and counts rather than averaging already-computed means equally. For
+example, a parent with sum `30` and count `3` combined with a parent with sum
+`20` and count `1` yields `(30 + 20) / (3 + 1) = 12.5`, not the unweighted
+average `(10 + 20) / 2 = 15`. The underlying overview contributor supports
+these weighted chained inputs; the interactive lab demonstrates one generated
+2× level.
+
+### Categories: valid zero, nearest, and deterministic mode
+
+Choose **MASK NEAREST** when a categorical parent must retain one actual
+representative label. Even-sized footprints choose the upper-left of their
+central candidates; an invalid selected sample remains invalid even if
+another sample was valid. Choose **MASK MODE** when the most frequent valid
+label better represents the footprint; equal frequencies choose the smallest
+exact native label. Signed identifiers and unsigned categories larger than
+`2²⁴` remain integer values, and `0` can still be a valid category when its
+separate validity mask is set. The example uses an unsigned cloud-coverage
+mask; the underlying categorical contributor also supports those exact signed
+and wide unsigned label identities. Category reduction never interpolates
+labels.
+
+### Overview cost and provenance
+
+The floating reducer visits each valid source footprint sample once and adds
+explicit GPU-resident output, sum, count, and validity buffers. Mode additionally
+compares bounded category frequencies, so it costs more than representative
+nearest selection. Smaller generated grids can reduce later filtering,
+histogram, and rendering work, but generating them first incurs a reduction
+pass and native-source residency. The useful tradeoff depends on source
+sampling quality, nodata, scale, category policy, memory bandwidth, cache hits,
+and the measured GPU; a framebuffer effect or texture mipmap cannot replace
+the same scientific validity and categorical contracts.
+
+## Bounded residency, cache hits, and completion fences
 
 Use the resident-tile capacity slider to compare revisits with constrained
 eviction. Visit WEST and EAST at the same overview level to reuse one compiled
@@ -122,37 +461,6 @@ resources still referenced by submitted commands. Shutdown must preserve that
 same fence boundary; immediately releasing active leases provides no GPU
 completion guarantee.
 
-Use **TILE ONLY** when a pointwise measurement needs no observations outside its
-selected source window, or when independent local-border behavior is the intended
-result. Choose **SEAMLESS HALO** for smoothing, gradients, or morphology whose
-neighborhood crosses the boundary of a western or eastern core. The planner sums
-every selected stage's source-pixel radius: Gaussian radius `r` followed by
-Sobel adds `r + 1`; opening or closing at morphology radius `m` adds `2m`
-because both component passes affect the final output. Horizontal and vertical
-radii remain independent; overview footprints are additionally reported in
-level-zero source pixels.
-
-The GPU gathers real red and near-infrared observations and validity from each
-intersecting resident tile before NDVI and padded neighborhood processing. It
-then extracts exactly the selected half-open core before contrast, histogram,
-scalar summaries, rendering, or contour generation. West and east core ownership
-therefore never overlaps; ragged source edges clip against the true overview
-dimensions, and a neighborhood's border mode applies only at a genuine dataset
-edge. Combining separately measured west/east core counts and sums matches the
-corresponding full-raster analytical reference, including selected source
-overviews and missing observations, without downloading raster pixels or
-increasing the existing 228-byte per-analysis summary.
-
-One assembled band adds a graph-declared GPU gather pass for each intersecting
-source tile; publication adds an explicit core-copy pass. A nominal `w × h` core
-with cumulative radii `rx` and `ry` processes up to
-`(w + 2rx) × (h + 2ry)` pixels before true-edge clipping. All participating
-neighbors must fit the configured cache capacity and remain leased until a
-caller-created post-submit completion fence resolves. Large cores reduce
-duplicate halo work; small cores bound peak allocation. The best tradeoff
-depends on source tiling, stage radii, cache reuse, GPU bandwidth, and measured
-workload rather than a guaranteed speedup over presentation-only image effects.
-
 The CPU budget counts the full allocation of each distinct `ArrayBuffer` or
 `SharedArrayBuffer` retained by a tile's decoded sample and validity views.
 Several views sharing one backing allocation count it once; a small view into a
@@ -166,6 +474,75 @@ upload, and compilation work, but actual performance still depends on source
 latency, tile size, cache-hit rate, memory bandwidth, adapter limits, and the
 measured workload.
 
+**FULL GLOBAL** and a nonzero cross-tile halo require two simultaneously
+resident source cores. Attempting to shrink their cache below two tiles is
+rejected transactionally. A zero-radius seamless configuration requires no
+neighbor and therefore truthfully retains only its selected core.
+
+## Seam-safe halos and half-open ownership
+
+Use **TILE ONLY** when a pointwise measurement needs no observations outside its
+selected source window, or when independent local-border behavior is the intended
+result. Choose **SEAMLESS HALO** for smoothing, gradients, or morphology whose
+neighborhood crosses the boundary of a western or eastern core. The planner sums
+every selected stage's source-pixel radius: Gaussian radius `r` followed by
+Sobel adds `r + 1`; opening or closing at morphology radius `m` adds `2m`
+because both component passes affect the final output. Horizontal and vertical
+radii remain independent; overview footprints are additionally reported in
+level-zero source pixels.
+
+For example, split a conceptual 320-column raster at column 160 and choose a
+three-pixel neighborhood:
+
+```text
+WEST owned core:  [  0, 160)   WEST sampled neighborhood: [  0, 163)
+EAST owned core:  [160, 320)   EAST sampled neighborhood: [157, 320)
+```
+
+Columns 157–162 can participate in **both neighborhoods**, but every output
+column belongs to exactly one half-open core. Pixels beyond the actual left or
+right dataset edge use the selected border policy. Pixels across the internal
+seam come from the adjacent real resident tile; they are not fabricated using
+clamp, padding, or an independent tile-local border.
+
+### What is gathered and what gets published
+
+The GPU gathers real red and near-infrared observations and validity from each
+intersecting resident tile before NDVI and padded neighborhood processing. It
+then extracts exactly the selected half-open core before contrast, histogram,
+scalar summaries, rendering, or contour generation. West and east core ownership
+therefore never overlaps; ragged source edges clip against the true overview
+dimensions, and a neighborhood's border mode applies only at a genuine dataset
+edge. For **SOURCE NEAREST** processing, combining separately measured
+west/east core counts and sums matches the corresponding full-raster
+analytical reference, including selected source
+overviews and missing observations, without downloading raster pixels or
+increasing the existing 228-byte per-analysis summary.
+
+### Explicit composition limits
+
+This example does not yet compose native-resolution halo assembly with a
+subsequent generated overview. **GPU MEAN** therefore selects **TILE ONLY**;
+requesting **SEAMLESS HALO** switches back to **SOURCE NEAREST** rather than
+claiming seam parity for an unimplemented generated-overview path. Explicit
+native-halo → generated-overview composition remains future integration work.
+
+### Halo cost
+
+One assembled band adds a graph-declared GPU gather pass for each intersecting
+source tile; publication adds an explicit core-copy pass. A nominal `w × h` core
+with cumulative radii `rx` and `ry` processes up to
+`(w + 2rx) × (h + 2ry)` pixels before true-edge clipping. All participating
+neighbors must fit the configured cache capacity and remain leased until a
+caller-created post-submit completion fence resolves. Large cores reduce
+duplicate halo work; small cores bound peak allocation. The best tradeoff
+depends on source tiling, stage radii, cache reuse, GPU bandwidth, and measured
+workload rather than a guaranteed speedup over presentation-only image effects.
+
+## Choosing an analytical operator
+
+### Gaussian and box smoothing
+
 Choose Gaussian smoothing to reduce local sensor noise while weighting nearby
 observations most strongly; choose box smoothing when a uniformly weighted
 local mean is the intended measurement. Unlike a display-only image effect,
@@ -173,6 +550,8 @@ these mask-aware compute stages change the values consumed by histograms,
 statistics, and Otsu classification. Their separable kernels evaluate `O(r)`
 taps per pixel for radius `r`, compared with `O(r²)` for direct square
 convolution; actual elapsed time depends on the workload and GPU.
+
+### Sobel, Scharr, gradient magnitude, and Laplacian
 
 Choose Sobel for familiar signed horizontal or vertical boundaries and Scharr
 when orientation-sensitive or diagonal edges benefit from improved angular
@@ -186,6 +565,117 @@ Choose the signed four-connected Laplacian for second-order boundary or
 ridge/valley response; smooth first when sensor noise would dominate. Derivatives
 use raster-pixel coordinates, not CRS/world units, and remain genuine analytical
 inputs to the displayed histogram, threshold mask, and contours.
+
+### Manual classification and Otsu thresholds
+
+Use a manual threshold when the cutoff comes from domain knowledge and must
+remain constant across datasets. Use Otsu when the threshold should respond to
+the current valid distribution. Otsu first evaluates an unclassified baseline
+histogram; its resulting GPU scalar then classifies the same valid analytical
+values without a CPU synchronization step.
+
+In **TILE** scope, each selected window computes its own Otsu baseline and may
+choose a different threshold. In **FULL GLOBAL** scope, both tiles contribute
+to one stable baseline histogram, so WEST and EAST share the same cutoff. Their
+final global histogram describes only selected observations; it is not the
+unclassified baseline that produced the threshold.
+
+### Sparse roots, dense component IDs, and bounded output
+
+Use **COMPONENTS** to identify connected islands in the current thresholded
+foreground. The input remains a true `uint32` classification: nonzero means
+foreground, `0` means known background, and a separate validity mask excludes
+clouds, raw nodata, and other missing observations. Binary morphology, when
+enabled, contributes its final foreground values and its own observation
+validity; background never becomes missing just because its label is zero.
+
+**4-CONNECTED** joins pixels sharing an edge. **8-CONNECTED** additionally
+joins pixels touching at a corner:
+
+```text
+foreground  .           4-connected: two separate regions
+.           foreground  8-connected: one shared region
+```
+
+**SPARSE ROOTS** gives each foreground region its smallest row-major pixel
+index plus one. An island rooted at raster-local index `27`, for example,
+receives sparse label `28`; known background receives `0`. These representative
+labels are deterministic but not sequential: the next island might begin at
+index `491` and receive `492`.
+
+**DENSE 1..N** scans representative-root flags in row-major order and replaces
+those same example roots with compact consecutive IDs `1` and `2`. Valid
+background remains label `0` with validity `1`; missing observations remain
+label `0` with validity `0`. The exact **Components** value comes from the
+GPU's unclamped required count, not the number of selected foreground pixels.
+**Valid foreground** continues to count pixels, so one component can contain
+many foreground observations.
+
+**Region capacity** bounds how many dense component identities are published.
+For `9` real regions and capacity `4`, the exact readout remains `9 required`,
+the bounded output reports `4 / 4`, and the contributor invalidates foreground
+pixels belonging to components beyond the first four while preserving valid
+background. The example applies an intentionally stricter presentation policy:
+it hides the _entire_ dense overlay while overflow is present instead of
+showing a misleading partial segmentation. Selecting **SPARSE ROOTS** still
+renders every converged sparse region because sparse representatives do not
+depend on dense capacity. Capacity `0` is valid and makes every nonempty dense
+result overflow; it is not interpreted as unlimited.
+
+Both representations are rendered from their real GPU-resident label buffer;
+the alternate representation and scan scratch remain graph-owned. No component
+label raster is copied to the CPU.
+
+The **Propagation budget** predeclares at most 1–32 hooking/path-compression
+rounds. Completed fixed points gate later rounds with GPU-written indirect
+dispatch; the dashboard reports the actual executed rounds and whether a
+fixed point was proven. An insufficient budget clears **every** output label
+and output-validity flag on the GPU and reports `unresolved · labels cleared`.
+The renderer therefore cannot present plausible but incorrect unfinished
+regions.
+
+Enabling components automatically activates the existing classification
+threshold, pauses contours, and exits **FULL GLOBAL** to **TILE**. Native
+sources, source-nearest overviews, generated GPU-mean overviews, seamless halo
+preprocessing, smoothing, derivatives, grayscale/binary morphology, and local
+manual or Otsu thresholds remain available. Labeling operates on the final
+selected owned core; it does not merge root identities across tile seams.
+
+### Inspecting one region without downloading a region table
+
+Enable **INSPECT REGION** after selecting **DENSE 1..N**, then move **Dense
+region** between the available one-based component IDs. The graph computes
+bounded arrays for every published region, but the application copies only the
+selected row's eight scalar fields into its existing compact summary. Changing
+the selected identifier changes buffer-copy offsets; it does not rebuild or
+recompile the GPU graph.
+
+**Region pixels** counts every valid labeled foreground observation. The
+intensity sum, minimum, maximum, and mean separately include only valid finite
+floating-point intensity observations. A region's shape can therefore contain
+more pixels than its valid intensity sample population; the displayed mean is
+not defined as `sum / region pixels` when intensity observations are missing.
+The separate intensity count remains GPU-resident alongside mergeable row and
+column moments.
+
+Centroids are first calculated in tile-local pixel-center coordinates on the
+GPU. `getRasterRegionWorldCentroid` then applies the retained affine transform
+in JavaScript double precision. This avoids rounding a large projected origin
+to `float32` before adding small local offsets and preserves rotated,
+non-square, overview-scaled, and translated tile grids. Pixel area uses the
+absolute affine determinant, so region area is `pixel count × abs(det)`.
+The example labels square meters only for its explicitly recognized projected
+UTM source; unknown or geographic coordinate systems remain **coordinate
+units²** and are never presented as square meters.
+
+Capacity overflow, an insufficient propagation budget, invalid labels,
+out-of-range selected IDs, and empty regions leave the inspector unavailable;
+previous region values are not reused. Switching back to **OFF**, sparse roots,
+or a non-component analysis restores a genuine 48-bin histogram. Region
+identities and measurements remain local to the selected owned core;
+cross-tile identity merging is still a separate future tranche.
+
+### Grayscale and binary morphology
 
 Choose dilation to expand classified foreground, bridge sufficiently narrow
 gaps, or calculate the local grayscale maximum; choose erosion to shrink
@@ -207,6 +697,8 @@ without scratch. Actual throughput depends on radius, source resolution,
 validity, and the GPU; these operations are numerical raster analysis rather
 than screen-space display effects.
 
+### Marching-squares contours
+
 Use contour overlays when a measured scalar boundary should become reusable
 vector geometry, such as vegetation isolines or concentration thresholds.
 Classification and bounded segment scattering scale linearly with raster-cell
@@ -214,24 +706,30 @@ count, while a GPU-generated indirect draw avoids waiting for a CPU segment
 count. Prefix scans require additional graph passes and scratch storage, so
 actual performance depends on the workload, segment density, and GPU.
 
+## Current limitations and integration responsibilities
+
 Choose a source window when a smaller area of a decoded dataset is the desired
 analytical input; choose an existing source overview when its lower native
-resolution is appropriate and the source describes its pixel origin and affine
-transform explicitly. The synthetic 2× source overview chooses nearest samples;
-it is not a nodata-aware analytical reduction. The example analyzes one active
+resolution and nearest-sample policy are appropriate, or explicitly generate a
+nodata-aware analytical overview when valid weighted means or categorical
+policies matter. Both paths retain source pixel origin and affine metadata.
+The example renders one active
 output core at a time while retaining its selected real source neighbors and
 previously visited tiles within explicit CPU/GPU budgets. The optional
 seam-safe mode assembles cumulative neighborhoods and publishes nonoverlapping
 owned cores; it does not automatically construct one global stitched output,
-merge dataset-wide histograms, deduplicate contour segments across tiles,
-generate nodata-aware analytical overviews, or provide a GeoTIFF/COG transport
-or decoder. Those capabilities have separate ownership and correctness
-requirements.
+deduplicate contour segments across tiles, compose global replay with seamless
+native halos or generated overviews, or provide a GeoTIFF/COG transport or
+decoder. Global statistic/histogram merging is separately and explicitly
+available in **FULL GLOBAL** mode; remaining capabilities have separate
+ownership and correctness requirements.
 
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Segmentation, stitched contour seams, globally merged tiled statistics,
-automatic full-image output placement, and analytical overview generation
-remain planned capabilities.
+Cross-tile component stitching, stitched contour seams, automatic full-image
+output
+placement, global neighborhood/overview composition, marker-based
+segmentation, and seamless native-halo-to-generated-overview processing remain
+planned capabilities.

@@ -481,7 +481,7 @@ fn getTBN(uv: vec2f) -> mat3x3f
   let tex_dy: vec3f = dpdy(vec3f(uv, 0.0));
   var t: vec3f = (tex_dy.y * pos_dx - tex_dx.y * pos_dy) / (tex_dx.x * tex_dy.y - tex_dy.x * tex_dx.y);
 
-  var ng: vec3f = cross(pos_dx, pos_dy);
+  var ng: vec3f = cross(pos_dy, pos_dx);
 #ifdef HAS_NORMALS
   ng = normalize(fragmentInputs.pbr_vNormal);
 #endif

@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {WorkgroupReductionBenchmark} from '@site/src/components/docs/workgroup-reduction-benchmark';
 
 # GPUReduction
 
@@ -6,15 +7,16 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 ## Overview
 
-`GPUReduction` records a deterministic hierarchical reduction over a packed `uint32`, `sint32`,
-or `float32` graph data view or fixed-width graph vector.
+`GPUReduction` records a hierarchical reduction over a packed `uint32`, `sint32`, or `float32`
+graph data view or fixed-width graph vector.
 
 ## Concepts
 
 A reduction combines many scalar rows into one summary. `sum`, `min`, and `max` produce one value;
 `extent` produces the pair `[minimum, maximum]`. Workgroups first reduce independent blocks, then
-higher levels reduce those partial results until one row remains. This fixed tree avoids CPU
-readback and makes the floating-point order repeatable for a fixed input topology.
+higher levels reduce those partial results until one row remains. This hierarchy avoids CPU
+readback. The portable path uses a fixed floating-point tree; a subgroup-capable device may use its
+native subgroup reduction order and differ in the lowest-order floating-point bits.
 
 ### When to use it
 
@@ -37,6 +39,7 @@ new GPUReduction({input: values, output: extent, operation: 'extent'}).addToGrap
 type GPUReductionProps<T extends 'uint32' | 'sint32' | 'float32'> = {
   id?: string;
   input: GraphDataView<T> | GraphVectorView<T>;
+  mask?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   output: GraphDataView<T>;
   operation: 'sum' | 'min' | 'max' | 'extent';
 };
@@ -50,8 +53,9 @@ graph-owned partial storage, followed by one global reduction. Chunk order and s
 unchanged; no input is packed or concatenated. An all-empty vector follows the same zero-result
 behavior as an empty data view.
 
-Integer sums wrap to 32 bits. Floating sums use a fixed 256-way tree. Floating minimum, maximum,
-and extent ignore NaN and infinity. Empty inputs and all-invalid floating inputs produce zero.
+Integer sums wrap to 32 bits. Floating sums use a 256-way hierarchical reduction. Floating
+minimum, maximum, and extent ignore NaN and infinity. Empty inputs and all-invalid floating inputs
+produce zero.
 
 ## Reduction hierarchy
 
@@ -76,6 +80,28 @@ Empty chunks add no passes and do not change the result.
 
 All intermediate views are graph-owned transients. Their declared node uses let the command-graph
 compiler infer ordering and reuse physical scratch allocations when lifetimes do not overlap.
+
+## Performance notes
+
+<WorkgroupReductionBenchmark />
+
+### What the benchmark measures
+
+The benchmark isolates the 256-value workgroup reduction used at each hierarchy level. It reports
+absolute input throughput and compares the portable and subgroup paths on the same max-feature
+device.
+
+### Subgroup acceleration
+
+When a max-feature device exposes both `subgroups` and the `subgroup_id` WGSL feature,
+`GPUReduction` uses subgroup collectives before merging subgroup totals in workgroup memory. Other
+devices keep the portable tree automatically; the API does not change.
+
+### Where it helps
+
+The fast path also benefits automatic histogram domains, raster statistics, graph summaries,
+PageRank, and global data-frame aggregations. Gains are largest when synchronization matters;
+bandwidth-bound graphs may improve less.
 
 ## `addToGraph(graph)`
 

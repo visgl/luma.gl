@@ -12,6 +12,11 @@ import {
   getViewElementOffset,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {
+  getGPUShaderSubgroupStrategy,
+  getSubgroupBallotHelpersWGSL,
+  getSubgroupCoalescedAtomicAddWGSL
+} from './gpu-subgroup-utils';
 
 const CHUNKED_SCATTER_WORKGROUP_SIZE = 256;
 const PORTABLE_WORKGROUPS_PER_DIMENSION = 65_535;
@@ -266,7 +271,11 @@ function addCountPass<Parameters>(
   chunkState: GraphDataView<'uint32'>,
   sourceDispatchCommand: GraphBufferHandle
 ): void {
+  const useSubgroups =
+    scatter.chunkEnds.length <= MAXIMUM_ROUTE_COUNT &&
+    getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 ${getRouteDeclarations(scatter)}
 const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(scatter.sourceIds)}u;
 const SOURCE_COUNT_OFFSET: u32 = ${getViewElementOffset(scatter.sourceCount)}u;
@@ -277,19 +286,46 @@ const CHUNK_STATE_OFFSET: u32 = ${getViewElementOffset(chunkState)}u;
 @group(0) @binding(2) var<storage, read> routes: array<u32>;
 @group(0) @binding(3) var<storage, read_write> chunkState: array<atomic<u32>>;
 var<workgroup> localChunkCounts: array<atomic<u32>, ${scatter.chunkEnds.length}>;
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${CHUNKED_SCATTER_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(num_workgroups) workgroupCount: vec3<u32>
+  @builtin(num_workgroups) workgroupCount: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   if (localId.x < CHUNK_COUNT) {
     atomicStore(&localChunkCounts[localId.x], 0u);
   }
   workgroupBarrier();
 
-  let count = min(sourceCount[SOURCE_COUNT_OFFSET], SOURCE_CAPACITY);
+${
+  useSubgroups
+    ? `  let count = min(sourceCount[SOURCE_COUNT_OFFSET], SOURCE_CAPACITY);
+  let workgroupIndex =
+    (workgroupId.z * workgroupCount.y + workgroupId.y) * workgroupCount.x + workgroupId.x;
+  let sourceListIndex =
+    workgroupIndex * ${CHUNKED_SCATTER_WORKGROUP_SIZE}u + localId.x;
+  var routeRecordOffset = 0u;
+  var routeAccepted = false;
+  if (sourceListIndex < count) {
+    let sourceId = sourceIds[SOURCE_IDS_OFFSET + sourceListIndex];
+    routeAccepted = sourceId < SOURCE_CAPACITY;
+    routeRecordOffset = ROUTES_OFFSET + sourceId * ROUTE_WORD_STRIDE + FIRST_ROUTE_WORD;
+  }
+  for (var routeIndex = 0u; routeIndex < ROUTE_COUNT; routeIndex++) {
+    var chunkIndex = INVALID_CHUNK_INDEX;
+    if (routeAccepted) {
+      chunkIndex = getChunkIndex(routes[routeRecordOffset + routeIndex]);
+    }
+${getSubgroupCoalescedAtomicAddWGSL(
+  'chunkIndex != INVALID_CHUNK_INDEX',
+  'chunkIndex',
+  'localChunkCounts',
+  scatter.chunkEnds.length
+)}
+  }`
+    : `  let count = min(sourceCount[SOURCE_COUNT_OFFSET], SOURCE_CAPACITY);
   let workgroupIndex =
     (workgroupId.z * workgroupCount.y + workgroupId.y) * workgroupCount.x + workgroupId.x;
   let sourceListIndex =
@@ -305,7 +341,8 @@ fn main(
         }
       }
     }
-  }
+  }`
+}
   workgroupBarrier();
 
   if (localId.x < CHUNK_COUNT) {
@@ -384,7 +421,10 @@ function addScatterPass<Parameters>(
   sourceDispatchCommand: GraphBufferHandle
 ): void {
   const chunkCount = scatter.chunkEnds.length;
+  const useSubgroups =
+    chunkCount <= MAXIMUM_ROUTE_COUNT && getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;' : ''}
 ${getRouteDeclarations(scatter)}
 const CURSOR_BASE: u32 = ${chunkCount * 2}u;
 const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(scatter.sourceIds)}u;
@@ -399,12 +439,13 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(scatter.output)}u;
 @group(0) @binding(4) var<storage, read_write> outputJobs: array<u32>;
 var<workgroup> localChunkCounts: array<atomic<u32>, ${chunkCount}>;
 var<workgroup> chunkOutputBases: array<u32, ${chunkCount}>;
+${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${CHUNKED_SCATTER_WORKGROUP_SIZE})
 fn main(
   @builtin(local_invocation_id) localId: vec3<u32>,
   @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(num_workgroups) workgroupCount: vec3<u32>
+  @builtin(num_workgroups) workgroupCount: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
   if (localId.x < CHUNK_COUNT) {
     atomicStore(&localChunkCounts[localId.x], 0u);
@@ -423,7 +464,43 @@ fn main(
     (workgroupId.z * workgroupCount.y + workgroupId.y) * workgroupCount.x + workgroupId.x;
   let sourceListIndex =
     workgroupIndex * ${CHUNKED_SCATTER_WORKGROUP_SIZE}u + localId.x;
+${
+  useSubgroups
+    ? `  var routeRecordOffset = 0u;
+  var routeAccepted = false;
   if (sourceListIndex < count) {
+    sourceId = sourceIds[SOURCE_IDS_OFFSET + sourceListIndex];
+    routeAccepted = sourceId < SOURCE_CAPACITY;
+    routeRecordOffset = ROUTES_OFFSET + sourceId * ROUTE_WORD_STRIDE + FIRST_ROUTE_WORD;
+  }
+  for (var routeIndex = 0u; routeIndex < ROUTE_COUNT; routeIndex++) {
+    var chunkIndex = INVALID_CHUNK_INDEX;
+    if (routeAccepted) {
+      chunkIndex = getChunkIndex(routes[routeRecordOffset + routeIndex]);
+    }
+    routeChunks[routeIndex] = chunkIndex;
+    var subgroupPending = chunkIndex != INVALID_CHUNK_INDEX;
+    for (var subgroupChunk = 0u; subgroupChunk < CHUNK_COUNT; subgroupChunk++) {
+      let pendingBallot = subgroupBallot(subgroupPending);
+      let hasPending = any(pendingBallot != vec4<u32>(0u));
+      let leaderInvocation = getFirstBallotLane(pendingBallot);
+      let leaderChunk = subgroupShuffle(chunkIndex, leaderInvocation);
+      let matchingChunk = hasPending && subgroupPending && chunkIndex == leaderChunk;
+      let matchingBallot = subgroupBallot(matchingChunk);
+      let matchingCount = getBallotLaneCount(matchingBallot);
+      var subgroupBase = 0u;
+      if (hasPending && subgroupInvocationId == leaderInvocation) {
+        subgroupBase = atomicAdd(&localChunkCounts[leaderChunk], matchingCount);
+      }
+      subgroupBase = subgroupShuffle(subgroupBase, leaderInvocation);
+      if (matchingChunk) {
+        routeLocalOffsets[routeIndex] = subgroupBase +
+          getBallotPrefixLaneCount(matchingBallot, subgroupInvocationId);
+      }
+      subgroupPending = subgroupPending && !matchingChunk;
+    }
+  }`
+    : `  if (sourceListIndex < count) {
     sourceId = sourceIds[SOURCE_IDS_OFFSET + sourceListIndex];
     if (sourceId < SOURCE_CAPACITY) {
       let routeRecordOffset = ROUTES_OFFSET + sourceId * ROUTE_WORD_STRIDE + FIRST_ROUTE_WORD;
@@ -435,7 +512,8 @@ fn main(
         }
       }
     }
-  }
+  }`
+}
   workgroupBarrier();
 
   if (localId.x < CHUNK_COUNT) {

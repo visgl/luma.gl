@@ -23,6 +23,7 @@ type BenchmarkPanelComponent = React.ComponentType<{
   description: string;
   onRun: () => Promise<React.ReactNode>;
   unsupportedReason?: string;
+  idleContent?: React.ReactNode;
 }>;
 const benchmarkPanelModule: {exports: Record<string, BenchmarkPanelComponent>} = {exports: {}};
 const loadBenchmarkPanel = new Function(
@@ -65,7 +66,8 @@ describe('live documentation benchmark panel', () => {
         title: 'Live spatial benchmark',
         description: 'Runs on WebGPU adapters.',
         onRun: runBenchmark,
-        unsupportedReason: 'WebGPU is unavailable in this browser.'
+        unsupportedReason: 'WebGPU is unavailable in this browser.',
+        idleContent: React.createElement('p', null, 'Portable Supported ✓')
       })
     );
 
@@ -73,5 +75,6 @@ describe('live documentation benchmark panel', () => {
     expect(markup).toContain('WebGPU is unavailable in this browser.');
     expect(markup).toContain('disabled=""');
     expect(markup).not.toContain('Invalid results');
+    expect(markup).not.toContain('Portable Supported');
   });
 });

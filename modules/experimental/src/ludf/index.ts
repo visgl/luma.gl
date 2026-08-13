@@ -40,10 +40,14 @@ export type {
 } from './lu-global-aggregation-query';
 export {LuDataFrameHistogramQuery} from './lu-histogram-query';
 export type {LuDataFrameHistogramOptions} from './lu-histogram-query';
-export {LuDataFrameSortQuery} from './lu-sort-query';
+export {LuDataFrameGlobalSortQuery, LuDataFrameSortQuery} from './lu-sort-query';
 export type {LuDataFrameSortOptions} from './lu-sort-query';
 export {LuDataFrameJoinQuery, LuDataFrameLookupQuery} from './lu-join-query';
-export type {LuDataFrameJoinOptions, LuDataFrameLookupOptions} from './lu-join-query';
+export type {
+  LuDataFrameJoinOptions,
+  LuDataFrameJoinType,
+  LuDataFrameLookupOptions
+} from './lu-join-query';
 export {and, column, literal, LuExpression, not, or, parameter} from './lu-expression';
 export type {
   LuExpressionBinaryOperator,
@@ -57,4 +61,5 @@ export {CompiledLuDataFrameGroupedAggregation} from './lu-group-aggregation-comp
 export {CompiledLuDataFrameAggregation} from './lu-global-aggregation-compiler';
 export {CompiledLuDataFrameHistogram} from './lu-histogram-compiler';
 export {CompiledLuDataFrameSort} from './lu-sort-compiler';
+export {CompiledLuDataFrameGlobalSort} from './lu-global-sort-compiler';
 export {CompiledLuDataFrameJoin, CompiledLuDataFrameLookup} from './lu-join-compiler';

@@ -287,6 +287,8 @@ const rendererProperties = {
   background: ANARIVector4Schema.optional(),
   ambientRadiance: nonnegativeNumberSchema.optional(),
   exposure: positiveNumberSchema.optional(),
+  toneMapMode: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  outputColorSpace: z.enum(['linear', 'srgb']).optional(),
   bloomIntensity: nonnegativeNumberSchema.optional(),
   bloomThreshold: nonnegativeNumberSchema.optional(),
   bloomRadius: nonnegativeNumberSchema.optional(),

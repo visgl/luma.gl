@@ -20,7 +20,10 @@ import type {LuDataFrameQueryParameters} from './lu-query-compiler';
 const MAXIMUM_UINT32 = 0xffffffff;
 const MAXIMUM_HASH_CAPACITY = 0x80000000;
 
-/** Unique-right inner-join columns, per-batch output capacity, and bounded hash-index controls. */
+/** Stable, unique-right join semantics applied independently to every preserved left batch. */
+export type LuDataFrameJoinType = 'inner' | 'left' | 'semi' | 'anti';
+
+/** Unique-right join columns, per-batch output capacity, and bounded hash-index controls. */
 export type LuDataFrameJoinOptions<
   LeftKey extends string = string,
   RightKey extends string = string
@@ -64,7 +67,7 @@ export type LuDataFrameNormalizedJoinOptions<
   capacity?: number;
 }>;
 
-/** Immutable bounded, stable, unique-right unsigned inner join without source materialization. */
+/** Immutable bounded, stable, unique-right unsigned join without source materialization. */
 export class LuDataFrameJoinQuery<
   Logical extends GPUTypeMap,
   SelectedColumns extends keyof Logical & string,
@@ -79,16 +82,20 @@ export class LuDataFrameJoinQuery<
   readonly right: LuDataFrame<Right>;
   /** Immutable, fully validated key names and fixed GPU index/publication bounds. */
   readonly options: LuDataFrameNormalizedJoinOptions<LeftKey, RightKey>;
+  /** Explicit matching semantics; outer and anti joins preserve unmatched selected rows. */
+  readonly joinType: LuDataFrameJoinType;
 
   /** Validates both key schemas and bounded capacities without touching GPU resources. @internal */
   constructor(
     query: LuDataFrameQuery<Logical, SelectedColumns, Source>,
     right: LuDataFrame<Right>,
-    options: LuDataFrameJoinOptions<LeftKey, RightKey>
+    options: LuDataFrameJoinOptions<LeftKey, RightKey>,
+    joinType: LuDataFrameJoinType = 'inner'
   ) {
     this.query = query;
     this.right = right;
     this.options = normalizeLuDataFrameJoinOptions(query, right, options, true);
+    this.joinType = joinType;
     Object.freeze(this);
   }
 
@@ -103,6 +110,7 @@ export class LuDataFrameJoinQuery<
       this.query.derivedColumns,
       this.right,
       this.options,
+      this.joinType,
       graph
     );
   }

@@ -1,4 +1,8 @@
+import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+
 # LuRaster: GPU-Resident Raster Analytics
+
+<ExperimentalDocsTabs active="luraster" />
 
 `@luma.gl/experimental/luraster` provides optional, graph-native WebGPU operations for
 two-dimensional scientific and geospatial rasters. Applications control image decoding,
@@ -12,30 +16,171 @@ explicitly budgeted CPU/GPU tile residency, cancellation-safe loading, and reusa
 graphs around that reader. `GPURasterTileHaloAssembler` coordinates cumulative receptive-field
 planning and fence-safe neighboring tile leases; `GPURasterTileHaloFill` and
 `GPURasterTileCoreExtract` explicitly assemble native samples and publish seam-safe owned cores
-through the caller's command graph. The reader, cache, and assembler never submit commands.
+through the caller's command graph. `GPURasterOverview` and
+`GPURasterCategoricalOverview` separately generate nodata-aware analytical overview values and
+coverage without mistaking source-selected samples or presentation mipmaps for scientific
+reductions. Explicit global initialization, tiled statistic merges, stable-domain histogram
+replay, and bounded percentile selection preserve caller-owned dataset-wide results across
+separately processed tiles. The reader, cache, and assembler never submit commands.
 
 Current contributors cover raster metadata, explicit texture/buffer conversion, calibrated
 pointwise band math, normalized difference vegetation index (NDVI), validity-aware histograms,
 scalar summaries, contrast/gamma/equalization transforms, analytical thresholds, mask-aware
 neighborhood stencils, direct convolution, separable Gaussian/box smoothing, signed
 Sobel/Scharr/Laplacian derivatives, gradient magnitude, binary/grayscale dilation, erosion,
-opening, and closing, GPU-resident marching-squares contours, indirect vector overlays, and
-adapter-limit planning. They implement `GPUCommandGraphContributor` structurally: calling
-`addToGraph(graph)` only declares work. No contributor submits commands or reads results back.
+opening, closing, deterministic connected foreground components, bounded dense region labels and
+counts, grouped intensity and spatial region measurements, GPU-resident marching-squares
+contours, indirect vector overlays, and adapter-limit planning. They implement
+`GPUCommandGraphContributor` structurally: calling `addToGraph(graph)` only declares work. No
+contributor submits commands or reads results back.
+
+## Start here
+
+A raster is a rectangular grid of observations, not necessarily a picture. Its cells might
+contain reflectance, elevation, temperature, or a land-cover category. LuRaster keeps those
+observations, their missing-data status, and their geographical meaning available to GPU
+computation instead of flattening them into display colors.
+
+| If you need to... | Start with... | Why |
+| --- | --- | --- |
+| Connect a decoded raster dataset or source-provided overview | `GPURasterTileSource` and `GPURasterTileReader` | The application keeps its existing decoder, transport, and source metadata. |
+| Avoid repeatedly decoding and uploading bounded tiles | `GPURasterTileCache` | Explicit CPU/GPU budgets, eviction, leases, and compatible graph reuse control residency. |
+| Calculate NDVI, arithmetic, or a local distribution | `GPURasterNDVI`, `GPURasterBandMath`, or `GPURasterHistogram` | Operations preserve scientific values, calibration, and observation validity. |
+| Filter across a tile boundary without seams | `GPURasterTileHaloAssembler`, `GPURasterTileHaloFill`, and `GPURasterTileCoreExtract` | Real neighboring pixels are processed, but each output pixel has exactly one owner. |
+| Create a meaningful lower-resolution analytical grid | `GPURasterOverview` or `GPURasterCategoricalOverview` | Continuous means preserve valid-sample weights; categorical results preserve exact labels. |
+| Calculate one histogram or threshold across many tiles | `GPURasterGlobalInitialize`, `GPURasterGlobalStatisticsMerge`, and `GPURasterGlobalHistogramMerge` | Every tile contributes against the same final dataset-wide numerical domain. |
+| Identify connected classified foreground regions | `GPURasterConnectedComponents` | Four- or eight-neighbor grouping preserves missing-data barriers and publishes an explicit GPU convergence signal. |
+| Obtain contiguous region IDs and a bounded exact component count | `GPURasterDenseComponents` | Converged representative roots become compact deterministic IDs with explicit capacity and overflow. |
+| Measure intensity, population, centroid, and area for each region | `GPURasterRegionMeasurements` | Independent geometry and intensity masks produce bounded GPU records while preserving high-precision spatial metadata. |
+
+For a guided explanation of missing observations, grid ownership, replay, resource lifetimes,
+and common mistakes, read
+[LuRaster Concepts and Execution Model](/docs/api-reference/experimental/luraster/concepts).
+
+### What “nodata-aware” means
+
+**Nodata** means an observation is missing or unusable. It does not mean its value is zero.
+A cloud can hide a satellite pixel; a sensor can publish a designated sentinel such as
+`-9999`; floating-point input can contain `NaN`; a calculation can encounter an unstable
+denominator. A nodata-aware operation excludes those observations without discarding meaningful
+values such as elevation `0`, category `0`, or valid binary background `0`.
+
+LuRaster represents each observation with two independent pieces of information:
+
+```text
+sample values:    [12,   0, -9999, 18,  0]
+validity mask:    [ 1,   1,     1,  0,  0]
+nodata sentinel:              -9999
+observation:      valid valid missing missing missing
+```
+
+The second observation is a real zero because its validity is `1` and it does not equal the
+sentinel. The third is missing even though its mask is `1`: the raw sample matches the sentinel.
+The fourth and fifth are missing because their masks are `0`, regardless of their stored values.
+Floating operations additionally reject non-finite observations and results. The resulting
+validity must travel with the resulting values into later filters, histograms, thresholds,
+overviews, and other analytical stages.
+
+### Tiles, cores, halos, and half-open bounds
+
+A **tile** is a bounded rectangular subset of a larger raster. Its **core** is the set of
+pixels that tile owns and may publish. Bounds are **half-open**: `[0, 4)` contains columns
+`0`, `1`, `2`, and `3`, but not column `4`.
+
+```text
+pixel column:        0  1  2  3 | 4  5  6  7
+west owned core:     [0, 4)
+east owned core:                  [4, 8)
+west halo, radius 1: [0, 5)
+east halo, radius 1:          [3, 8)
+```
+
+A **halo** is temporary neighboring coverage needed by an operation whose result depends on
+nearby samples. Both expanded regions may read columns `3` and `4`; only their disjoint cores
+publish them. This prevents artificial seams without double-counting boundary pixels.
+Successive neighborhoods accumulate their radii, and true outer dataset edges clip the halo.
+
+### Source overviews versus analytical overviews
+
+An **overview** is a lower-resolution grid covering the same source region. A source overview
+already exists in application-owned decoded data; LuRaster can select it, but its sampling
+policy remains the source's responsibility. An analytical overview is explicitly generated on
+the GPU from resident observations using a documented numerical policy.
+
+For continuous observations, the footprint `[10, missing, 30, missing]` has mean `20`, not
+`10`: only the two valid samples contribute. Its separate sum `40` and count `2` preserve
+correct weights for further pyramid levels. Categorical labels instead use an explicitly
+selected nearest-center policy or the most frequent valid label. An invalid nearest-selected
+sample remains invalid rather than silently substituting a neighbor; category `0` remains
+valid when its separate mask is `1`.
+
+### Local results versus replayable global results
+
+A tile-local histogram answers “what values occur in this tile?” A global histogram answers
+the same question for every selected, disjoint core. Local histograms with independently chosen
+minimum/maximum values cannot be added: their identically numbered bins represent different
+numerical intervals.
+
+**Replayable** means the application can revisit bounded resident or reloaded tiles in multiple
+explicit phases while caller-owned global outputs remain on the GPU:
+
+1. Reset the global accumulator once for the intended dataset run.
+2. Visit every owned core to establish the complete global minimum, maximum, count, and sum.
+3. Revisit those same cores and bin every valid value against that finalized global domain.
+4. Optionally derive a GPU-resident approximate percentile or Otsu threshold.
+
+Replay is not a background loader, an automatic second network fetch, or an implicit command
+submission. The application chooses tile traversal, caching, graph encoding, submission, and
+completion. Cached tiles can remain GPU-resident across both passes when budgets permit.
+
+### CPU and GPU ownership at a glance
+
+| Stage | Where the work happens | Who owns the policy or resource |
+| --- | --- | --- |
+| Read, authenticate, decode, and select source levels | CPU/application-defined transport | The application and its chosen decoder, potentially a future loaders.gl integration. |
+| Upload decoded samples | CPU-to-GPU transfer | The application, or an explicitly selected `GPURasterTileCache` for cache-owned buffers. |
+| Describe analysis and allocate final outputs | CPU graph construction | The application owns imported buffers, graph selection, and published output allocations. |
+| Execute analysis, reductions, and replay | GPU compute passes | Contributors declare graph work; the application encodes and submits it. |
+| Display or inspect results | GPU rendering; optional GPU-to-CPU transfer | The application chooses indirect rendering, compact summaries, or explicit readback. |
+| Release resident tiles and graphs | CPU-controlled GPU lifetime | The application retains leases and creates a completion fence after the final submission. |
+
+LuRaster does not ship a GeoTIFF/COG parser, HTTP range transport, reprojection system, or
+implicit loaders.gl dependency. An application can place loaders.gl or another decoder on the
+CPU side of `GPURasterTileSource`; future loaders.gl 5 integration does not change ownership of
+GPU graphs, uploads, submissions, or fences.
+
+### Analytical compute versus image effects
+
+Use an ordinary image effect when the goal is to change how an already rendered image looks.
+Use LuRaster when the result must remain a scientifically meaningful GPU observation that a
+later histogram, threshold, filter, contour, or application can consume. Bounded tile
+residency, reusable graphs, separable filters, and compact scalar summaries can avoid full-image
+allocation, repeated upload, and unnecessary GPU-to-CPU transfers. Actual speed still depends
+on tile size, cache behavior, source latency, memory bandwidth, workload, and measured GPU
+performance; LuRaster does not promise that every analytical operation outruns a visual effect.
+
+## Import the optional subpath
 
 ```ts
 import {DrawCommandBuffer, GPUCommandGraph} from '@luma.gl/experimental';
 import {
   GPURasterBandMath,
   GPURasterBoxBlur,
+  GPURasterCategoricalOverview,
   GPURasterClosing,
+  GPURasterConnectedComponents,
   GPURasterContourClassifier,
   GPURasterContours,
   GPURasterContrast,
   GPURasterConvolution,
+  GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
   GPURasterGaussianBlur,
+  GPURasterGlobalHistogramMerge,
+  GPURasterGlobalInitialize,
+  GPURasterGlobalPercentile,
+  GPURasterGlobalStatisticsMerge,
   GPURasterGradient,
   GPURasterGradientMagnitude,
   GPURasterHistogram,
@@ -45,6 +190,8 @@ import {
   GPURasterNeighborhood,
   GPURasterOpening,
   GPURasterOtsuThreshold,
+  GPURasterOverview,
+  GPURasterRegionMeasurements,
   GPURasterScharr,
   GPURasterSobel,
   GPURasterStatistics,
@@ -54,8 +201,26 @@ import {
   GPURasterTileHaloAssembler,
   GPURasterTileHaloFill,
   GPURasterTileReader,
+  getRasterRegionWorldCentroid,
+  makeRasterOverviewMetadata,
   type GPURasterBufferBand,
+  type GPURasterCategoricalOverviewFormat,
+  type GPURasterCategoricalOverviewProps,
+  type GPURasterConnectedComponentsProps,
+  type GPURasterConnectivity,
   type GPURasterDecodedBand,
+  type GPURasterDenseComponentsProps,
+  type GPURasterGlobalAccumulator,
+  type GPURasterGlobalHistogramMergeProps,
+  type GPURasterGlobalInitializeProps,
+  type GPURasterGlobalPercentileProps,
+  type GPURasterGlobalStatisticsMergeProps,
+  type GPURasterOverviewCategoricalPolicy,
+  type GPURasterOverviewMetadataOptions,
+  type GPURasterOverviewProps,
+  type GPURasterOverviewScale,
+  type GPURasterRegionMeasurementOutputs,
+  type GPURasterRegionMeasurementsProps,
   type GPURasterTileGraphLease,
   type GPURasterTileHaloLease,
   type GPURasterTileHaloRequest,
@@ -68,6 +233,63 @@ import {
 
 The `./luraster` subpath is an explicit opt-in. Its runtime symbols are not exported from
 `@luma.gl/experimental`, and the existing experimental package remains private.
+
+## Quick start: analyze valid observations on the GPU
+
+The application supplies a device, raster dimensions, uploaded red and near-infrared bands,
+and explicitly allocated output views in the same command graph. In this example,
+`createApplicationOwnedRasterViews` represents application code; it is not a LuRaster loader
+or allocation helper.
+
+```ts
+const graph = new GPUCommandGraph(device, {id: 'vegetation-analysis'});
+
+// Application-defined: import source buffers and allocate every published graph view.
+const {
+  redBand,
+  nearInfraredBand,
+  vegetationValues,
+  vegetationValidity,
+  histogramBins,
+  histogramDomain
+} = createApplicationOwnedRasterViews(graph, device);
+
+new GPURasterNDVI({
+  id: 'calibrated-vegetation-index',
+  width,
+  height,
+  red: redBand,
+  nearInfrared: nearInfraredBand,
+  output: vegetationValues,
+  outputValidity: vegetationValidity,
+  epsilon: 0.0001
+}).addToGraph(graph);
+
+const vegetationBand: GPURasterBufferBand<'float32'> = {
+  id: 'vegetation-index',
+  format: 'float32',
+  storage: {kind: 'buffer', values: vegetationValues},
+  validity: vegetationValidity
+};
+
+new GPURasterHistogram({
+  id: 'valid-vegetation-distribution',
+  input: vegetationBand,
+  output: histogramBins,
+  domainOutput: histogramDomain
+}).addToGraph(graph);
+
+const compiled = graph.compile();
+const encoder = device.createCommandEncoder();
+compiled.encode(encoder, {parameters: undefined});
+device.submit(encoder.finish());
+```
+
+The NDVI stage intersects the source masks, rejects raw nodata before calibration, and publishes
+a separate validity mask. The histogram consumes that mask and derives its domain only from
+valid index values. Compilation and encoding do not submit work; the final application-owned
+`device.submit` does. No raster pixels or histogram values are downloaded unless application
+code explicitly requests a readback after submission.
 
 ## Try the Satellite Raster Lab
 
@@ -102,8 +324,56 @@ source tile independently or **SEAMLESS HALO** to gather real neighboring reside
 run smoothing, derivatives, and grayscale morphology over the cumulative padded region, and
 extract only the selected half-open core before displaying its statistics. Cumulative halo,
 owned-core bounds, and resident-source counts update with analytical controls and the chosen
-overview. Its 2× source overview still selects existing nearest samples, not a nodata-aware
-aggregate; generated analytical overviews and global tiled reductions remain separate work.
+source overview. Choose **SOURCE NEAREST** to use the adapter's existing nearest-sample 2×
+overview, or **GPU MEAN** to generate a validity-aware mean from native source observations;
+selecting **GPU MEAN** automatically switches a native-resolution view to its 2× target.
+**MASK NEAREST** and **MASK MODE** become available in GPU-generated mode and select exact
+categorical coverage policies. Provenance and displayed analytical valid-pixel coverage
+distinguish the resulting inputs without increasing the 228-byte readback. This visible
+coverage is the existing post-filter/threshold valid count, not the unretrieved per-parent
+source contribution count. The current example deliberately
+makes **GPU MEAN** and **SEAMLESS HALO** mutually
+exclusive: selecting either switches the other back to its compatible source/tile mode. All
+analytical filters work on generated means, and source-nearest overviews retain their complete
+seam-safe path; composing native halo assembly before generated overviews remains future demo
+work. Choose **TILE** to keep the current window's local analytical domain or **FULL GLOBAL**
+to merge both owned synthetic windows into one stable dataset-wide extent, histogram, and GPU
+Otsu threshold. **WEST → EAST** and **EAST → WEST** change the explicit traversal order while
+preserving the global distribution; tile count, replay count, domain, population, and threshold
+diagnostics expose real graph work without increasing the existing 228-byte scalar readback.
+The **FULL GLOBAL** example supports native or source-nearest overview NDVI/red/near-infrared,
+contrast, gamma, manual thresholds, and global Otsu. It explicitly resets Gaussian/box
+smoothing, edge operators, morphology, generated overviews, and seamless halos; enabling any of
+those unsupported combinations returns to **TILE** mode. A generated global median reuses the
+existing four-byte threshold summary slot only when automatic Otsu is inactive.
+
+Choose **COMPONENTS** to classify the current foreground into actual GPU-resident regions.
+**SPARSE ROOTS** preserves their minimum-pixel representative IDs; **DENSE 1..N** shows their
+contiguous row-major ranks. **4-CONNECTED** and **8-CONNECTED** determine whether diagonal
+touching joins regions, while an explicit component capacity distinguishes the exact required
+population from its bounded published count. Both presentation modes run the real GPU dense
+relabeling and count contributor. Sparse coloring remains usable if dense capacity overflows;
+the dense overlay is suppressed entirely when capacity is insufficient or propagation did not
+converge. Missing observations remain distinct from valid background.
+
+Region mode operates on the selected local tile, explicitly exits **FULL GLOBAL**, and disables
+contours temporarily. Three existing contour diagnostic words carry exact required component
+count, GPU convergence, and actual rounds; the displayed bounded count and overflow derive from
+that required count and visible capacity. This does not replace the contributor's genuine
+caller-owned GPU bounded-count and overflow outputs. The separate foreground readout still counts
+selected pixels rather than regions. Existing source/analytical overviews, seam-safe local
+processing, smoothing, derivatives, morphology, manual thresholds, and local Otsu remain
+available; leaving component mode restores the previous contour policy and the summary remains
+exactly 228 bytes.
+
+The optional **REGION METRICS** inspector selects one converged dense region and displays its
+real GPU pixel count, intensity sum/minimum/maximum/mean, local centroid transformed by the
+original double-precision affine, and coordinate-aware area. In this explicitly selected mode,
+the analytical histogram truly uses **40 bins** instead of its ordinary **48 bins**; the eight
+freed four-byte positions contain exactly one selected region record. The existing population,
+domain, component count, convergence, iteration count, and automatic threshold retain their
+previous slots. Turning the inspector off restores the genuine 48-bin histogram. Both paths use
+one 228-byte GPU-to-CPU readback; no complete region table or label raster is copied.
 
 ## Raster bands and validity
 
@@ -124,6 +394,38 @@ values and canonical `uint32` validity flags. Invalid pixels receive `NaN` and v
 valid pixels receive validity `1`. Non-finite raw or calibrated inputs and non-finite results
 are rejected. Integer nodata comparisons occur before float conversion, preserving exact
 `uint32` and `sint32` sentinel identities.
+
+### How an observation becomes valid
+
+Interpret a sample in this order:
+
+1. If a source validity mask exists and its entry is `0`, the observation is missing.
+2. If the raw sample equals its band's raw-format `noDataValue`, it is missing.
+3. Floating contributors reject non-finite raw values before calibration.
+4. Apply the band's own scale and offset to the remaining raw sample.
+5. Reject non-finite calibrated values or an operation-specific invalid result, such as an
+   NDVI denominator whose magnitude does not exceed `epsilon`.
+
+For example, a `uint32` band with `noDataValue: 65535`, `scale: 0.0001`, and `offset: -1`
+rejects raw `65535` **before** conversion or scaling. Raw `0` instead becomes a valid
+calibrated `-1` when its source mask is nonzero. Comparing calibrated values with the raw
+sentinel, or using truthiness to reject raw zero, would corrupt both observations.
+
+Do not use stored result values as a substitute for their masks:
+
+| Stored value | Output validity | Meaning |
+| --- | --- | --- |
+| Floating `0` | `1` | A real observed or calculated zero. |
+| Floating `NaN` | `0` | An invalid floating-point result. |
+| Categorical or binary `0` | `1` | A valid zero-valued category or valid background. |
+| Categorical or binary `0` | `0` | A missing categorical observation. |
+
+`GPURasterThreshold` publishes a classification band, not a complete observation-validity
+band: both below-threshold background and invalid samples contain zero. Preserve the original
+observation mask separately when passing threshold values into binary morphology or categorical
+analysis. Neighborhood operators also have explicit invalid-neighbor policies; “ignore and
+renormalize” and “propagate missingness” are different scientific choices, not interchangeable
+rendering effects.
 
 Use `GPURasterTextureToBuffer` and `GPURasterBufferToTexture` for explicit representation
 changes. Texture upload, decoding, and readback are application responsibilities.
@@ -314,10 +616,173 @@ HTTP range transport, GeoTIFF/COG decoder, loader package, GPU upload, or cache 
 Applications that need bounded upload, residency, eviction, deduplicated concurrent requests,
 and graph reuse can explicitly compose it with `GPURasterTileCache`, described below.
 `GPURasterTileHaloAssembler` can then acquire the complete neighboring coverage required by an
-explicitly declared analytical pipeline. None of these objects stitches contour geometry,
-merges global tiled statistics, or generates nodata-aware analytical overviews. Existing source
-overviews are accepted as source-provided samples; their scientific aggregation policy remains
-application-owned.
+explicitly declared analytical pipeline. None of these reader, cache, or halo objects stitches
+contour geometry, implicitly merges global tiled statistics, or implicitly generates analytical
+overviews.
+Existing source overviews are accepted as source-provided samples; their scientific aggregation
+policy remains application-owned. Applications explicitly compose `GPURasterOverview` or
+`GPURasterCategoricalOverview` when a verified GPU-generated policy is required, and add the
+global accumulator contributors explicitly for stable cross-tile statistics.
+
+## GPU-generated analytical overviews
+
+Use an existing source-provided overview when its source-side sampling or reduction policy is
+known, its lower resolution avoids unnecessary decoding or upload, and its analytical meaning
+is appropriate for the task. Use `GPURasterOverview` when continuous floating-point observations
+must be reduced on the GPU without treating nodata as zero, discarding valid-sample weights, or
+averaging intermediate averages. Use `GPURasterCategoricalOverview` when classification labels
+need an explicit nearest-sample or most-frequent-label policy without fractional interpolation.
+
+Generated overviews are distinct from source-provided `GPURasterTileReader` levels. They do not
+register new source levels, replace a decoder, select a transport, discover a GeoTIFF pyramid,
+or move source samples between CPU and GPU. Each contributor adds one explicit compute pass to
+the caller's command graph and writes only caller-owned output views.
+
+| Question | Source-provided overview | GPU-generated analytical overview |
+| --- | --- | --- |
+| Where do its samples originate? | A level the application-owned source already exposes. | Existing resident observations in a caller-owned graph. |
+| Who chooses the sampling policy? | The source or application; the reader does not infer its meaning. | The explicit floating mean or categorical nearest/mode contributor. |
+| Does selecting it create GPU reduction work? | No; it requests an existing decoded source level. | Yes; the application explicitly adds a bounded compute pass. |
+| Can floating means preserve nodata and future weights? | Only if the source itself supplies and documents those semantics. | Yes; separate sum, valid count, validity, and mean are published. |
+| Does it become a new decoder/source level automatically? | It is already declared in source metadata. | No; the generated output remains application-owned graph data. |
+
+Display-oriented mipmaps and browser image resampling are not substitutes for either contract:
+they do not, by themselves, expose exact categorical identity, missing-observation coverage,
+weighted analytical sums, or the resulting raster's geospatial metadata.
+
+### Floating means, nodata, and valid coverage
+
+`GPURasterOverview` consumes a `float32` source band and publishes four separate packed output
+views: the analytical mean, canonical `uint32` validity, calibrated `float32` sum, and `uint32`
+valid-sample count.
+
+```ts
+const generatedMetadata = makeRasterOverviewMetadata(sourceMetadata, [2, 3]);
+
+new GPURasterOverview({
+  id: 'nodata-aware-reflectance-overview',
+  metadata: sourceMetadata,
+  scale: [2, 3],
+  input: reflectanceBand,
+  output: overviewValues,
+  outputValidity: overviewValidity,
+  sum: overviewSums,
+  validCount: overviewValidCounts
+}).addToGraph(graph);
+```
+
+The reducer first intersects the explicit source validity mask, raw nodata sentinel, and
+finite raw observation. Source calibration is applied exactly once as
+`rawValue * input.scale + input.offset`; non-finite calibrated results are excluded. The parent
+value is the sum of remaining calibrated observations divided by their valid count, not by the
+nominal footprint area. A `2 × 2` footprint containing `[10, invalid, 30, invalid]` therefore
+publishes sum `40`, count `2`, mean `20`, and validity `1`. An entirely invalid footprint
+publishes sum `0`, count `0`, validity `0`, and a canonical quiet `NaN` mean.
+
+Odd right and bottom edges use only existing source observations; missing coverage is not
+zero-padded. Retaining the sum and count separately makes population coverage and correctly
+weighted downstream pyramid levels available without downloading samples.
+
+### Weighted multilevel pyramids
+
+Forward both sum and valid count when reducing an already generated mean. Supply an explicit
+maximum number of raw observations that any input parent can represent:
+
+```ts
+new GPURasterOverview({
+  id: 'weighted-coarser-overview',
+  metadata: generatedMetadata,
+  scale: 2,
+  input: firstOverviewBand,
+  inputSum: overviewSums,
+  inputValidCount: overviewValidCounts,
+  maximumInputValidCount: 6,
+  output: coarserValues,
+  outputValidity: coarserValidity,
+  sum: coarserSums,
+  validCount: coarserValidCounts
+}).addToGraph(graph);
+```
+
+For parent inputs with `(sum, count)` of `(10, 1)` and `(60, 3)`, the correct next-level mean
+is `(10 + 60) / (1 + 3) = 17.5`; averaging their intermediate means `(10 + 20) / 2 = 15`
+would bias the smaller population. Weighted levels consume the already calibrated sums directly
+and never apply source calibration a second time.
+
+`inputSum` and `inputValidCount` must be supplied together, and weighted mode requires
+`maximumInputValidCount`. Construction rejects any configuration whose maximum
+`horizontalScale * verticalScale * maximumInputValidCount` could exceed the `uint32` count
+range. An observed child count above its declared bound invalidates the parent instead of
+wrapping or silently publishing incorrect coverage.
+
+### Exact categorical nearest and mode
+
+`GPURasterCategoricalOverview` preserves either `uint32` or `sint32` source identities and
+requires an explicit categorical policy:
+
+```ts
+new GPURasterCategoricalOverview({
+  id: 'land-cover-majority-overview',
+  metadata: sourceMetadata,
+  scale: [2, 2],
+  input: landCoverLabels,
+  policy: 'mode',
+  output: overviewLabels,
+  outputValidity: overviewLabelValidity,
+  validCount: overviewLabelCoverage
+}).addToGraph(graph);
+```
+
+Choose `'nearest'` when a representative existing sample is required. Even-sized footprints
+select the upper-left of their central candidates. If that selected observation is masked or
+matches raw nodata, the result is invalid; it does not silently substitute a different valid
+label. Choose `'mode'` when the most frequent valid label better represents a region. Invalid
+samples are ignored, and equal frequencies deterministically select the numerically smallest
+exact label. Negative signed categories and unsigned identifiers above `2²⁴` remain native
+integers rather than passing through `float32`.
+
+`outputValidity` is always explicit. An invalid categorical parent publishes value `0` with
+validity `0`; a valid category whose identity is actually zero remains distinguishable through
+validity `1`. Optional `validCount` reports the number of valid observations in the complete
+footprint for either policy, including valid alternatives when a nearest-selected center is
+itself invalid.
+
+### Spatial metadata, grid alignment, and cost
+
+`GPURasterOverviewScale` accepts an integer or `[horizontalScale, verticalScale]`; each axis
+must be between `1` and `8`. Output dimensions use independent ceiling division, so a `5 × 7`
+source at `[2, 3]` produces `3 × 3` parents. `makeRasterOverviewMetadata` derives the same
+target metadata as either contributor without allocating GPU resources:
+
+```ts
+const metadata = makeRasterOverviewMetadata(sourceMetadata, [2, 3], {
+  level: 2,
+  sourcePixelOrigin: [4, 6]
+});
+```
+
+For an already positioned source affine `[a, b, c, d, e, f]`, the generated affine is
+`[a * sx, b * sy, c, d * sx, e * sy, f]`. Existing source translations `c` and `f` stay
+unchanged, including rotated or sheared grids; source coordinate-reference-system identity,
+pixel interpretation, and level-zero origin are preserved. The target level defaults to the
+source level plus one, and an explicitly supplied level must be greater than its source level.
+
+The source origin must align with both reduction axes. When a level-zero source omits
+`sourcePixelOrigin`, LuRaster infers its `levelZeroOrigin` or `[0, 0]` and rejects globally
+misaligned translated tiles. A higher-level source with a nonzero `levelZeroOrigin` must supply
+`sourcePixelOrigin` explicitly in its current-level pixel coordinates; its level-zero origin
+alone cannot safely recover that current-level grid position. An explicit origin verifies
+alignment only: source metadata already contains the correct affine translation and preserved
+level-zero origin, so the helper never translates either value a second time.
+
+The floating reduction evaluates up to `horizontalScale * verticalScale` observations per
+output pixel. Categorical mode additionally compares bounded candidate frequencies and can
+cost quadratically more within that footprint. Lower-resolution GPU-resident outputs may
+reduce work in later histograms, filters, and rendering, but reductions also allocate explicit
+output/sum/count/mask buffers and add a graph pass. Throughput depends on scale, nodata density,
+categorical policy, source residency, memory bandwidth, adapter limits, and the measured GPU;
+neither display-oriented image effects nor ordinary texture mipmaps preserve these analytical
+validity, weighting, categorical, or affine contracts.
 
 ## Bounded tile residency and compiled-graph reuse
 
@@ -623,9 +1088,12 @@ downstream analytical values and bounded residency, unlike a framebuffer-only im
 but it does not guarantee a universal performance improvement.
 
 Halo planning and graph contributors do not automatically write one global stitched image,
-deduplicate contour segments across tiles, merge dataset-wide histograms, generate analytical
-overviews, or integrate a GeoTIFF/COG transport. Applications own result placement and command
-submission; those additional feature contracts remain separate roadmap tranches.
+deduplicate contour segments across tiles, implicitly merge dataset-wide histograms, or integrate a
+GeoTIFF/COG transport. Applications explicitly add `GPURasterOverview` or
+`GPURasterCategoricalOverview` when generated overviews are needed; halo contributors do not
+add them implicitly. They separately compose global statistic/histogram merge contributors when
+dataset-wide results are needed. Applications own result placement and command submission;
+automatic full-image stitching and contour seam ownership remain separate work.
 
 ### Analytical tiling versus screen-space image effects
 
@@ -646,9 +1114,189 @@ determine actual performance.
 
 Bounded residency alone does not assemble neighborhoods or decide output ownership; applications
 explicitly compose `GPURasterTileHaloAssembler`, `GPURasterTileHaloFill`, and
-`GPURasterTileCoreExtract` when those contracts are required. Automatic full-image output
-stitching, contour seam ownership, dataset-wide statistic merges, and generated analytical
-overviews remain separate roadmap tranches.
+`GPURasterTileCoreExtract` when those contracts are required, or the separate analytical
+overview and global merge contributors when verified GPU-generated reductions or cross-tile
+statistics are needed. Automatic full-image output stitching and contour seam ownership remain
+separate roadmap tranches.
+
+## Replayable global tiled statistics
+
+Use tile-local statistics when a displayed window intentionally defines its own numerical
+extent, histogram, and classification threshold. Use explicit global accumulators when
+independently resident windows must share one dataset-wide contrast domain, histogram,
+percentile, or Otsu threshold. Computing a separate automatic domain per tile and adding those
+bin arrays is incorrect: equivalent bin indexes then refer to different numerical ranges.
+
+`GPURasterGlobalAccumulator` groups five caller-owned graph views:
+
+```ts
+const accumulator: GPURasterGlobalAccumulator = {
+  extent: globalExtent,       // float32[2]: minimum, maximum
+  count: globalValidCount,    // uint32[1]: saturating valid population
+  sum: globalValueSum,        // float32[1]: calibrated population sum
+  histogram: globalHistogram, // uint32[1..256]: saturating persistent bins
+  overflow: globalOverflow    // uint32[1]: sticky population/bin/sum flags
+};
+```
+
+All five buffers remain caller-owned. Extent and sum retain calibrated scientific values, while
+population and histogram bins use `uint32`. Initialization, statistics, histogram replay, and
+percentile publication are separate `GPUCommandGraphContributor` operations. None of them
+decodes tiles, loads an adapter, acquires residency, submits commands, creates completion
+fences, downloads pixels, or polls a GPU result.
+
+### Why local histograms cannot simply be added
+
+Suppose two owned tiles each contain three valid observations and each independently creates
+four bins:
+
+```text
+west samples:        [0, 5, 10]       local domain [0, 10]
+west local bins:     [1, 0, 1, 1]
+
+east samples:        [100, 105, 110]  local domain [100, 110]
+east local bins:     [1, 0, 1, 1]
+
+incorrect bin sum:   [2, 0, 2, 2]     incomparable local intervals
+global domain:       [0, 110]
+correct global bins: [3, 0, 0, 3]     every sample uses the same intervals
+```
+
+Local bin `0` refers to values near zero in the west but near `100` in the east. Merely adding
+those arrays invents a distribution that does not correspond to any shared numerical axis.
+The first global pass discovers the common `[0, 110]` extent; only the second pass can assign
+both tiles to scientifically comparable bins.
+
+### Explicit initialization and first-pass global domain
+
+Initialize one accumulator exactly once for each intended dataset-wide run:
+
+```ts
+new GPURasterGlobalInitialize({
+  id: 'begin-global-vegetation-analysis',
+  accumulator
+}).addToGraph(graph);
+
+for (const tile of applicationOwnedTiles) {
+  new GPURasterGlobalStatisticsMerge({
+    id: `global-statistics-${tile.id}`,
+    width: tile.width,
+    height: tile.height,
+    input: tile.observedBand,
+    accumulator
+  }).addToGraph(graph);
+}
+```
+
+Initialization explicitly writes extent `[0, 0]`, count `0`, sum `0`, every histogram bin `0`,
+and overflow `0`. Each first-pass merge excludes masked observations, exact raw nodata, and
+non-finite values before source calibration. A tile with no valid observations is a strict
+no-op, so an all-invalid dataset retains its initialized zero extent/count/sum. Valid tiles
+expand the persistent minimum/maximum and accumulate their calibrated count and sum.
+
+Do not put `GPURasterGlobalInitialize` inside a compiled tile graph that will be encoded once
+per tile. Doing so resets the global results on every replay and leaves only the final tile.
+Keep initialization in an explicitly encoded one-time graph or register it once before every
+tile merge in a single graph.
+
+### Stable-domain second-pass histogram replay
+
+After **every** first-pass tile has contributed to the final domain, replay those same
+half-open owned cores against the persistent extent:
+
+```ts
+for (const tile of applicationOwnedTiles) {
+  new GPURasterGlobalHistogramMerge({
+    id: `global-histogram-${tile.id}`,
+    width: tile.width,
+    height: tile.height,
+    input: tile.observedBand,
+    accumulator
+  }).addToGraph(graph);
+}
+
+new GPURasterOtsuThreshold({
+  id: 'global-vegetation-cutoff',
+  histogram: accumulator.histogram,
+  domain: accumulator.extent,
+  output: globalThreshold
+}).addToGraph(graph);
+```
+
+Each histogram contributor clears only its bounded graph-owned **tile partial**, fills that
+partial using the already finalized GPU-resident global extent, and explicitly adds it into
+the separate persistent global bins. Re-encoding a compatible tile graph therefore clears stale
+local counts without erasing previously merged tiles. Binning retains the existing inclusive
+upper endpoint. Merge only disjoint owned cores; including padded source halos as separate
+population observations would double-count tile seams.
+
+The application may declare all first-pass and second-pass work in one command graph when all
+participating tiles can remain pinned together. For larger bounded-residency datasets, import
+the same caller-owned accumulator buffers into independently compiled initialization,
+first-pass tile, second-pass tile, and finalization graphs. Replay source tiles through the
+application-owned decoder or explicit residency cache, preserve imported-buffer replacement,
+and retain every source/graph lease until its caller-created post-submit fence resolves.
+Never start histogram replay before global extent merging finishes.
+
+Each graph must import the same underlying persistent GPU buffers and construct its own
+graph-local `GraphDataView` objects; views from the initialization graph cannot be passed
+directly to a different tile graph. Compile a merge-only tile graph once when its shape is
+compatible, replace imported source buffers at each encoding, and submit every first-pass
+encoding before any second-pass encoding. The WebGPU queue preserves submitted command order;
+no intermediate CPU readback is needed to discover the finalized global domain. Place reset
+only in the one-time initialization graph, never in either replayed tile graph.
+
+### Quantile approximation and overflow policy
+
+`GPURasterGlobalPercentile` consumes the finalized global histogram, extent, count, and sticky
+overflow flags without synchronizing with the CPU:
+
+```ts
+new GPURasterGlobalPercentile({
+  id: 'global-median',
+  accumulator,
+  percentile: 0.5,
+  output: globalMedian,
+  outputValidity: globalMedianValidity
+}).addToGraph(graph);
+```
+
+`percentile` is a number from `0` through `1`. Rank selection uses
+`floor(percentile * (globalCount - 1))`; the `0` and `1` endpoints are the exact global
+minimum and maximum. Intermediate values are the center of their selected histogram bin, not
+exact sample-order statistics. Their quantization error is bounded by half the bin width;
+choosing more bins improves resolution at the cost of persistent storage and merge work.
+Histogram length is explicitly limited to `1` through `256` bins.
+
+Population and individual histogram-bin counters saturate at `4,294,967,295` rather than
+wrapping. `accumulator.overflow` accumulates sticky bit flags:
+
+- Bit `1`: the global valid population exceeded `uint32` capacity.
+- Bit `2`: at least one global histogram bin exceeded `uint32` capacity.
+- Bit `4`: an accumulated global `float32` sum became non-finite.
+
+Only explicit reinitialization clears these flags. Empty populations or **any** overflow flag
+make percentile output an invalid quiet `NaN`, with optional validity `0`. Existing
+`GPURasterOtsuThreshold` does not inspect this separate overflow buffer automatically; use its
+result only when the application establishes that overflow is absent. Global extrema, exact
+unsaturated population/bin counts, and histogram-derived thresholds do not depend on tile
+arrival order. Floating sums can differ by ordinary `float32` addition-order rounding.
+
+### Replay cost and explicit ownership
+
+A complete global histogram reads each selected analytical tile twice: once to establish its
+valid global domain and once to bin against that stable domain. One-time initialization and
+optional percentile/Otsu selection add bounded graph passes. Persistent accumulator memory
+scales with histogram-bin count; temporary validity, calibrated samples, reduction scratch,
+and per-tile bin partials scale with selected tile size, never with full dataset dimensions.
+
+Resident replay can avoid repeat decoding and GPU upload when cache budgets retain a tile;
+bounded applications may instead reacquire or re-decode it between phases. Command submission,
+source transport, loaders.gl 5 integration, decoder cancellation, residency policy, leases,
+fences, threshold application, and optional readback remain caller-controlled. Throughput
+depends on tile size, histogram bins, cache hits, source latency, dispatch count, bandwidth,
+and GPU; global analytical replay provides consistent scientific domains rather than a
+universal speedup over display-only image effects.
 
 ## Pointwise band math
 
@@ -786,8 +1434,10 @@ new GPURasterStatistics({
 
 The caller provides one `uint32` count row, one `float32` sum row, one `float32` mean row,
 and a two-row `float32` extent. Empty or all-invalid selections have count, sum, mean, and
-extent equal to zero. Integer-wide sums, percentile estimates, and automatic large-raster
-partitioning remain separate future work.
+extent equal to zero. Integer-wide sums, exact or standalone tile-local percentile estimation,
+and automatic large-raster partitioning remain separate future work;
+`GPURasterGlobalPercentile` already provides histogram-estimated percentiles for an explicit
+global accumulator.
 
 ## Contrast, gamma, and histogram equalization
 
@@ -1396,6 +2046,329 @@ performance depends on pixel count, radius, GPU limits, memory bandwidth, and wo
 metadata can drive explicit `GPURasterTileHaloAssembler` planning, but does not partition
 oversized rasters or schedule neighborhood assembly automatically.
 
+## Connected-component labeling
+
+A connected component is one maximal group of foreground pixels reachable through a selected
+pixel-neighbor relationship. Use `GPURasterConnectedComponents` after thresholding or binary
+morphology when you need to identify which selected observations form the same contiguous
+field, cloud, water body, microscopy object, or other classified region.
+
+The input is a packed `GPURasterBufferBand<'uint32'>`. Every nonzero valid value is foreground;
+zero with valid observation status is background. A separate zero validity flag or exact raw
+`noDataValue` is missing data, not background, and cannot connect foreground pixels across a
+nodata barrier. Classification has identity calibration only: `scale` must be absent or `1`,
+and `offset` must be absent or `0`.
+
+```ts
+const classifiedForeground: GPURasterBufferBand<'uint32'> = {
+  id: 'classified-vegetation',
+  format: 'uint32',
+  storage: {kind: 'buffer', values: thresholdMask},
+  validity: analyzedObservationValidity
+};
+
+new GPURasterConnectedComponents({
+  id: 'vegetation-components',
+  width,
+  height,
+  input: classifiedForeground,
+  connectivity: 8,
+  maximumIterations: 24,
+  output: representativeLabels,
+  outputValidity: componentValidity,
+  converged: componentConvergence,
+  iterationCount: completedComponentIterations
+}).addToGraph(graph);
+```
+
+`output` and `outputValidity` are separate caller-owned `GraphDataView<'uint32'>` buffers
+containing one element per input pixel. `converged` is a required caller-owned, one-element
+`uint32` result. Optional `iterationCount` is another one-element caller-owned `uint32` output.
+All source and output views must belong to the same graph and must not alias incompatible
+resources. The contributor declares work only; decoding, graph encoding, submission, leases,
+fences, rendering, and any optional result inspection remain application-owned.
+
+### Four-connected versus eight-connected regions
+
+With `connectivity: 4`, pixels connect only through their north, south, east, and west neighbors.
+With `connectivity: 8`, diagonal neighbors also connect. Four-connectivity is the default.
+
+```text
+Foreground classification:     Four-connected labels:       Eight-connected labels:
+
+1 0 1                          1 0 3                        1 0 1
+0 1 0                          0 5 0                        0 1 0
+1 0 1                          7 0 9                        1 0 1
+```
+
+All five foreground pixels remain distinct under four-connectivity. Under eight-connectivity,
+the central pixel connects them into one component. If that center is instead invalid, it
+cannot bridge diagonal neighbors under either policy; valid zero-valued background remains
+separately valid but never joins a component.
+
+Every converged foreground label is the smallest row-major pixel index in its component plus
+one. The `+1` reserves label `0` for background while preserving a deterministic representative
+independent of workgroup execution order. Component identifiers are deliberately **sparse**:
+labels `1`, `3`, `5`, `7`, and `9` do not mean nine components. Compose the separate
+`GPURasterDenseComponents` contributor when contiguous IDs or an actual component count are
+required. Compose `GPURasterRegionMeasurements` after dense relabeling for bounded per-region
+geometry and intensity; cross-tile component merging remains a separate contract.
+
+### Convergence is required, not assumed
+
+Connected components compose initialization, minimum-root hooking, pointer compression,
+GPU-resident convergence detection, and final publication in one bounded command graph.
+`maximumIterations` fixes the largest number of declared rounds; it is not a promise that a
+long thin region has already converged. GPU-controlled indirect dispatch can skip remaining
+rounds after a fixed point is reached without reading or polling convergence on the CPU.
+
+Explicit iteration budgets must be integers from `1` through `64`. Omitting the option selects
+`max(1, ceil(log2(width * height)) + 2)`. This default is a bounded practical estimate, not a
+proof that every foreground geometry converges. An application requiring stronger certainty
+must inspect the published GPU convergence state or gate its dependent graph work on that state.
+
+When convergence is established, `converged[0]` is `1`; foreground labels hold exact sparse
+representatives, valid background is label `0` with output validity `1`, and missing
+observations are label `0` with output validity `0`. If the round budget is insufficient,
+`converged[0]` remains `0` and **every output label and every output-validity element is
+cleared**. This fail-closed contract prevents a downstream renderer, count, region measurement,
+or another GPU stage from mistaking partial labels for finished segmentation.
+
+Optional `iterationCount` reports the number of rounds that actually performed GPU work,
+including the final unchanged round that proves convergence. Empty-foreground and all-background
+inputs converge without turning valid background into missing data. Increase a visibly
+insufficient iteration budget only by explicitly rebuilding or selecting a graph with the new
+bounded specialization.
+
+One initialization pass, three passes for each declared round, and one final gated publication
+produce exactly `3 * maximumIterations + 2` graph stages. Each stage uses at most eight storage
+bindings. Graph-owned scratch contains `4 * width * height` parent bytes, one four-byte change
+flag, and one twelve-byte indirect dispatch record before allocation alignment; caller-owned
+values, output validity, convergence, and optional iteration counters are additional. Pointer
+compression and GPU-controlled zero-workgroup dispatch reduce active execution after convergence
+but do not remove already declared graph stages. Source masks, labels, output validity, and
+published status remain caller-owned. This sparse contributor does not itself partition a full
+image, remap dense labels, resolve cross-tile equivalences, or synchronize with the CPU.
+
+## Dense component labels and bounded counts
+
+Use `GPURasterDenseComponents` after a converged `GPURasterConnectedComponents` result when
+component IDs must index a compact output or the application needs the actual number of regions.
+Sparse representative `9` means “the region rooted at pixel index 8,” not “nine regions.” Dense
+relabeling instead orders genuine roots by their row-major source pixel and assigns contiguous
+IDs starting at `1`; zero remains reserved for valid background.
+
+```ts
+new GPURasterDenseComponents({
+  id: 'bounded-vegetation-regions',
+  width,
+  height,
+  input: representativeLabels,
+  inputValidity: componentValidity,
+  converged: componentConvergence,
+  output: denseRegionLabels,
+  outputValidity: denseRegionValidity,
+  componentCount: publishedRegionCount,
+  overflow: regionCapacityOverflow,
+  requiredComponentCount: exactRequiredRegionCount,
+  capacity: 3
+}).addToGraph(graph);
+```
+
+Every input and output is a caller-owned `GraphDataView<'uint32'>` from the same command graph.
+`input`, `inputValidity`, `output`, and `outputValidity` each contain `width * height` elements;
+`converged`, `componentCount`, `overflow`, and optional `requiredComponentCount` each contain one.
+Capacity is an integer from `0` through `width * height`; omitting it admits the entire raster.
+The contributor marks canonical representative roots, composes the shared unsigned exclusive
+`GPUScan`, and scatters dense IDs entirely on the GPU. Root markers, prefix ranks, and scan
+scratch remain graph-owned; no label or count is polled or downloaded by the contributor.
+
+### Sparse roots, dense ranks, and capacity
+
+For five disconnected foreground roots:
+
+```text
+Sparse representative labels:   Root flags:       Dense labels:
+
+1 0 3                          1 0 1             1 0 2
+0 5 0                          0 1 0             0 3 0
+7 0 9                          1 0 1             4 0 5
+```
+
+The exact required count is `5`, not the largest sparse representative `9`. With `capacity: 3`,
+only dense labels `1`, `2`, and `3` are published. The result becomes:
+
+```text
+Bounded dense labels:     Output validity:     Meaning:
+
+1 0 2                     1 1 1                two retained regions and real background
+0 3 0                     1 1 1                one retained region and real background
+0 0 0                     0 1 0                two dropped regions and real background
+
+requiredComponentCount = 5
+componentCount         = 3
+overflow               = 1
+```
+
+A dropped foreground pixel is `label = 0, validity = 0`; a genuine background pixel is
+`label = 0, validity = 1`. Missing input remains invalid. The zero labels in the last row
+therefore have two different meanings: the outer pixels exceeded capacity, while the center
+is a real valid background observation. Consumers must inspect validity and overflow instead of
+treating all zero labels as interchangeable.
+
+`componentCount` is always the capacity-clamped published population:
+`min(requiredComponentCount, capacity)`. `overflow` is `1` exactly when the converged required
+population exceeds capacity; it is reset on each graph encoding rather than remaining sticky.
+`requiredComponentCount` is optional, but when supplied it receives the exact unclamped count.
+With zero capacity, every foreground output is invalid; an empty/background-only input still
+has count `0`, overflow `0`, and valid background masks.
+
+### Convergence gates every dense output
+
+Dense relabeling consumes the exact GPU `converged` scalar published by its sparse upstream
+contributor. If that scalar is zero, every dense label, output-validity flag, bounded count,
+optional required count, and overflow value is cleared. Thus `overflow = 0` alone does not
+prove a usable result: consumers must also require `converged = 1`. Out-of-range or malformed
+sparse representatives are rejected at the affected pixels without out-of-bounds root access.
+
+Capacity is a bound on published component IDs, not a count of foreground pixels and not a
+global multi-tile region limit. Ordering is deterministic within the current raster/core.
+`GPURasterRegionMeasurements` can consume those converged dense IDs directly; cross-tile region
+identity reconciliation remains a separate future contributor. Source decoding, graph
+submission, fences, and any optional compact readback remain application-owned.
+
+## Per-region intensity and spatial measurements
+
+Use `GPURasterRegionMeasurements` when contiguous classified regions need actual measurements:
+the number of region pixels, the population and distribution of a scientific intensity band,
+their raster-local centroid, or affine region area. The contributor consumes converged,
+nonoverflowing dense region IDs and writes 11 independently allocated caller-owned GPU columns.
+
+```ts
+new GPURasterRegionMeasurements({
+  id: 'vegetation-region-measurements',
+  metadata: rasterMetadata,
+  labels: denseRegionLabels,
+  labelValidity: denseRegionValidity,
+  converged: componentConvergence,
+  componentCount: publishedRegionCount,
+  overflow: regionCapacityOverflow,
+  intensity: vegetationIndexBand,
+  capacity: 256,
+  output: {
+    pixelCounts: regionPixelCounts,
+    intensityCounts: regionIntensityCounts,
+    intensitySums: regionIntensitySums,
+    intensityMinimums: regionIntensityMinimums,
+    intensityMaximums: regionIntensityMaximums,
+    intensityMeans: regionIntensityMeans,
+    columnSums: regionColumnSums,
+    rowSums: regionRowSums,
+    centroidColumns: regionCentroidColumns,
+    centroidRows: regionCentroidRows,
+    areas: regionAreas
+  }
+}).addToGraph(graph);
+```
+
+The first two result columns are exact `GraphDataView<'uint32'>`; the remaining nine are
+`GraphDataView<'float32'>`. Every column has the same caller-allocated length; row zero
+describes dense region ID `1`. `capacity` defaults to that length and may be explicitly reduced
+to any integer from zero through the allocated length. Zero-length columns are valid and add
+no grouped passes. Nonempty columns with `capacity: 0` are cleared into their empty-row state.
+Every input/output belongs to the same graph, and all 11 output buffers must remain distinct.
+
+### Region geometry and measured intensity are different populations
+
+The region mask and intensity mask answer different questions. Consider a valid three-pixel
+region whose intensity sensor missed its middle sample:
+
+```text
+Dense region IDs:       [  1,   1,   1]
+Region validity:        [  1,   1,   1]
+Intensity values:       [ 10, 999,  20]
+Intensity validity:     [  1,   0,   1]
+
+pixelCounts[0]       = 3
+intensityCounts[0]   = 2
+intensitySums[0]     = 30
+intensityMeans[0]    = 15
+intensityMinimums[0] = 10
+intensityMaximums[0] = 20
+```
+
+The region still has three geometric pixels; its centroid and area include all three. Only the
+two valid, finite, non-nodata intensity observations contribute to intensity count, sum,
+minimum, maximum, or mean. Dividing `30` by the geometric count `3` would incorrectly report
+`10`; the correct mean is `30 / intensityCounts[0] = 15`.
+
+Intensity accepts `GPURasterBufferBand<'float32'>` only. Raw-domain validity and exact nodata
+are checked before applying `raw * scale + offset` exactly once; nonfinite raw or calibrated
+values are rejected. Integer source intensities require an explicit caller-controlled float
+conversion with its precision tradeoff; `uint32` values above `2^24` are not all exactly
+representable as `float32`. Floating atomic accumulation order can vary, so sums, means, and
+centroid moments should be compared with an appropriate numerical tolerance.
+
+### Pixel centroids, affine translation, and coordinate units
+
+`columnSums` and `rowSums` are mergeable moments of every valid geometric region pixel.
+Area-interpreted pixels contribute their centers `(column + 0.5, row + 0.5)`; point-interpreted
+pixels contribute `(column, row)`. The local centroid is:
+
+```text
+centroidColumns[region] = columnSums[region] / pixelCounts[region]
+centroidRows[region]    = rowSums[region] / pixelCounts[region]
+```
+
+Keeping these GPU outputs in local pixel coordinates avoids adding a large projected world
+origin in `float32`. Once an application explicitly inspects a selected centroid, use the
+retained JavaScript-double affine metadata:
+
+```ts
+const worldCentroid = getRasterRegionWorldCentroid(
+  rasterMetadata,
+  selectedCentroidColumn,
+  selectedCentroidRow
+);
+```
+
+For `affine = [a, b, c, d, e, f]`:
+
+```text
+worldX = a * centroidColumn + b * centroidRow + c
+worldY = d * centroidColumn + e * centroidRow + f
+pixelArea = abs(a * e - b * d)
+regionArea = pixelCounts[region] * pixelArea
+```
+
+The centroid already includes the appropriate area/point center offset; do not add another
+half-pixel. Source/tile affine metadata also already contains its origin; do not add
+`levelZeroOrigin` again. Rotation, shear, negative scale, and non-square pixels are included in
+the affine determinant. Area is always expressed in **squared CRS coordinate units**: a
+projected meter-based CRS yields square meters, while a geographic degree-based CRS yields
+square degrees. LuRaster does not perform geodesic area conversion or reproject coordinates.
+
+### Empty rows, capacity failure, and execution ownership
+
+Valid topology with no accepted intensity observations publishes a real nonzero `pixelCounts`
+entry, zero `intensityCounts` and sum, and `NaN` intensity minimum/maximum/mean; geometric
+centroid and area remain valid. Completely unused rows publish zero counts, sums, moments, and
+area, with `NaN` intensity extrema/mean and `NaN` centroid coordinates.
+
+If the upstream dense stage did not converge, its overflow flag is nonzero, its published count
+exceeds region capacity, or a dense label is invalid/out of range, region grouping refuses the
+unsafe rows. Global convergence/overflow/count failures reset **every** output row to the empty
+contract on each encoding; partially valid-looking tables never survive a failed execution.
+Group keys are zero-based scratch derived from bounded 1-based labels, never unbounded sparse
+representatives. Existing `GPUGroupAggregation` contributors perform the typed grouped work;
+intermediate keys, masks, calibrated values, and moments are graph-owned transient resources.
+
+All result columns, metadata, source samples, submission, completion fences, optional inspection,
+and coordinate policy remain application-owned. No full label array, region table, source
+imagery, or CPU result is read by the contributor. Cross-tile region identity reconciliation,
+global region merges, polygon-zonal metrics, and exact integer intensity aggregation remain
+separate future integrations.
+
 ## Raster compute versus image effects
 
 Existing luma.gl image-processing effects are useful for presentation: they transform rendered
@@ -1519,7 +2492,8 @@ Pointwise and neighborhood contributors use bounded two-dimensional dispatch. Hi
 extent primitives still use bounded 256-invocation one-dimensional passes. On adapters allowing
 65,535 workgroups per dimension, a `4096 × 4096` single-view histogram needs 65,536 workgroups
 and is rejected; the application must process smaller tiles or explicitly managed stripes.
-Transparent large-raster partitioning and global tiled histogram merges are not yet implemented.
+Replayable global histogram merges combine those explicit bounded tiles; transparent automatic
+large-raster partitioning remains unimplemented.
 Halo planning, neighbor assembly, and core extraction are explicit caller-composed operations;
 they do not automatically partition an oversized source or bypass adapter limits.
 
@@ -1529,15 +2503,22 @@ resource lifetimes, coordinate reprojection, and any synchronization or readback
 
 ## Current scope and clean-room implementation
 
-Percentile-based contrast, built-in GeoTIFF/COG decoding, generated analytical overviews,
-global merged statistics, connected components, tiled contour stitching, automatic whole-image
-result placement, and FFT-backed raster convolution are not part of the current implementation.
+Percentile-driven contrast application, built-in GeoTIFF/COG decoding, cross-tile region
+identity, tiled contour stitching, automatic whole-image result placement, and FFT-backed
+raster convolution are not part of the current implementation.
 Application-owned tile ingress, source-provided overviews/windows, independently budgeted
 multi-tile CPU/GPU residency, fence-safe eviction, compatible compiled-graph reuse, explicit
 cumulative neighborhood halo planning and native-format GPU assembly, half-open core
-extraction, Sobel, Scharr, Laplacian, gradient magnitude, bounded spatial smoothing,
-binary/grayscale dilation, erosion, opening, closing, and single-raster contour extraction are
-implemented.
+extraction, nodata-aware calibrated floating-point overview means and weighted pyramids, exact
+integer categorical nearest/mode overviews, generated affine/CRS metadata, Sobel, Scharr,
+Laplacian, gradient magnitude, bounded spatial smoothing, binary/grayscale dilation, erosion,
+opening, closing, deterministic four/eight-connected sparse representative labels with
+fail-closed GPU convergence, deterministic dense root ranks, exact/bounded component counts and
+per-execution capacity overflow, grouped geometric and valid-intensity populations,
+float-only intensity sum/min/max/mean, mergeable local centroid moments and affine area,
+replayable global tiled extent/population/sum/histogram merges,
+explicit sticky/saturating overflow diagnostics, bounded histogram-based percentiles, global
+Otsu input, and single-raster contour extraction are implemented.
 
 The design is informed by public [cuCIM documentation](https://docs.rapids.ai/api/cucim/stable/),
 but all TypeScript and WGSL are independently implemented for browser WebGPU. LuRaster does not

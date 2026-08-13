@@ -98,6 +98,8 @@ test('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer mater
         componentType: 5126,
         count: 2,
         type: 'SCALAR',
+        components: 1,
+        value: new Float32Array([0, 1]),
         bufferView: {
           data: {
             buffer: new Float32Array([0, 1]).buffer
@@ -108,6 +110,8 @@ test('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer mater
         componentType: 5126,
         count: 2,
         type: 'VEC4',
+        components: 4,
+        value: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1]),
         bufferView: {
           data: {
             buffer: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1]).buffer
@@ -170,6 +174,8 @@ test('gltf#createScenegraphsFromGLTF wires texture-transform KHR_animation_point
         componentType: 5126,
         count: 2,
         type: 'SCALAR',
+        components: 1,
+        value: new Float32Array([0, 1]),
         bufferView: {
           data: {
             buffer: new Float32Array([0, 1]).buffer
@@ -180,6 +186,8 @@ test('gltf#createScenegraphsFromGLTF wires texture-transform KHR_animation_point
         componentType: 5126,
         count: 2,
         type: 'SCALAR',
+        components: 1,
+        value: new Float32Array([0.2, 1.2]),
         bufferView: {
           data: {
             buffer: new Float32Array([0.2, 1.2]).buffer

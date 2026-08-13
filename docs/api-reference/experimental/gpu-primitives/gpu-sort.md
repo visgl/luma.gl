@@ -9,8 +9,10 @@ import {GPUSortExample} from '@site/src/examples';
 
 `GPUSort` adds one stable, out-of-place key/value ordering to a `GPUCommandGraph`.
 `GPUBatchSort` applies the same ordering independently to aligned GPU vector chunks, preserving
-streaming and record-batch boundaries without implicitly packing them. Neither API submits
-commands or reads results back to the CPU.
+streaming and record-batch boundaries without implicitly packing them.
+[`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort) batches
+many small, independent domains that already share packed parent buffers into at most eight graph
+dispatches. None of these APIs submits commands or reads results back to the CPU.
 
 ## Concepts
 
@@ -38,6 +40,12 @@ The distinction is deliberate. Silently concatenating chunks would allocate pack
 discard useful partition metadata, and turn an incremental operation into whole-dataset work.
 Callers that need a global order across chunks must explicitly choose and provision a packed
 representation.
+
+When independent domains are already packed into four shared parent buffers,
+[`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort) keeps the
+boundaries and inter-segment padding intact while sorting equal-width domains together. It does
+not combine separately allocated streaming chunks; it only exploits storage that the application
+explicitly packed in advance.
 
 ### Algorithm selection follows the work unit
 
@@ -127,14 +135,17 @@ type GPUSortProps = {
 - Inputs are not modified. The caller owns all four views and their imported buffers.
 
 `algorithm` defaults to `auto`. Inputs containing at most 256 rows use a complete, stable bitonic
-sorting network in workgroup memory, requiring only one graph node and one dispatch. Its workgroup
-contains only the padded power-of-two row count, and each source key is loaded into shared memory
-once before sorting. Larger inputs use a stable four-bit least-significant-digit radix sort: each
-digit contributes a workgroup-local histogram, a reusable `GPUScan`, and an order-preserving
-scatter. The radix implementation supports both sort directions, partial final digits, and the
-eight-storage-buffer CORE WebGPU limit without requiring subgroup features. Explicit algorithm
-selection remains available for measurement and testing; `resolvedAlgorithm` reports the concrete
-selection.
+sorting network, requiring only one graph node and one dispatch. CORE devices exchange every stage
+through workgroup memory. A subgroup-capable device keeps subgroup-local stages in registers with
+shuffle operations and synchronizes shared memory only for cross-subgroup stages. Each source key
+is still loaded once, and both paths produce the same stable order.
+
+Larger inputs use a stable four-bit least-significant-digit radix sort: each digit contributes a
+workgroup-local histogram, a reusable `GPUScan`, and an order-preserving scatter. The radix
+implementation supports both sort directions, partial final digits, and the eight-storage-buffer
+CORE WebGPU limit. Its internal unsegmented scans can still select their subgroup path. Explicit
+algorithm selection remains available for measurement and testing; `resolvedAlgorithm` reports
+the concrete selection.
 
 `keyBits` defaults to `32` and controls how many least-significant bits the radix implementation
 processes. A 32-bit sort therefore needs eight radix digits instead of 32 binary partitions. Radix

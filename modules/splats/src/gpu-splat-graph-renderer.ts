@@ -263,8 +263,12 @@ export class GPUSplatGraphRenderer {
     this.requiresEncoding = true;
   }
 
-  /** Updates camera or styling uniforms in O(batch count), never O(splat count). */
-  setProps(props: Partial<GPUSplatGraphRendererProps>): void {
+  /** Updates mutable camera, styling, or borrowed data; graph allocation options are immutable. */
+  setProps(
+    props: Partial<
+      Omit<GPUSplatGraphRendererProps, 'clearColor' | 'expectedSplatCount' | 'expectedBatchCount'>
+    >
+  ): void {
     if (props.data !== undefined) {
       const replacementBatches = normalizeSplatGraphBatches(props.data);
       const matchesRetainedBatches =

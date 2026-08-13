@@ -62,3 +62,9 @@ does not concatenate or pack positions.
 This API accumulates counts only. Weighted floating-point sums are provided separately by
 `GPUGridAggregation`, keeping integer count overflow and floating-point rounding contracts
 explicit.
+
+## Performance notes
+
+On subgroup-capable devices, grids with at most 16 cells combine lanes targeting the same cell
+before updating workgroup memory. This is intended for coarse, highly contended occupancy grids;
+larger grids and devices without both subgroup capabilities retain the existing paths.

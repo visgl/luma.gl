@@ -7,10 +7,13 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {describe, expect, test} from 'vitest';
 import GPUTraceViewerAnimationLoopTemplate from '../../examples/experimental/gpu-trace-viewer/app';
 import {
+  getTraceFocusFrontierCapacity,
   TRACE_COLLAPSED_STATE,
   TRACE_DENSITY_BIN_COUNT,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
+  TRACE_LANE_COUNT,
   TRACE_PROCESS_COUNT,
   TRACE_SPAN_BATCH_CAPACITY,
   TRACE_SPAN_RECORD_WORD_LENGTH,
@@ -50,14 +53,20 @@ describe('GPU hierarchical trace viewer', () => {
             buffer: {readAsync: () => Promise<Uint8Array>};
           };
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
-          spanChunks: Array<{visibleIds: {readAsync: () => Promise<Uint8Array>}}>;
+          spanChunks: Array<{
+            spanCount: number;
+            visibility: {byteLength: number};
+            visibleIds: {readAsync: () => Promise<Uint8Array>};
+          }>;
           visibleDependencyIds: {readAsync: () => Promise<Uint8Array>};
           dependencyResults: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
+            byteLength: number;
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
           };
           dependencyCount: number;
+          focusFrontierCapacity: number;
           spanCount: number;
           spanBatchCount: number;
           dependencyBatchCount: number;
@@ -67,11 +76,14 @@ describe('GPU hierarchical trace viewer', () => {
         selectedSpanIndex: number;
         focusDepth: number;
         focusOnly: boolean;
+        lodFadeEnabled: boolean;
         activeFilterMask: number;
         spanCapacity: number;
         dependencyCapacity: number;
         compileCount: number;
         frameIndex: number;
+        traceDuration: number;
+        view: {timeMin: number; timeMax: number; laneMin: number; laneMax: number};
         pendingPick: {x: number; y: number; requestIdentifier: number} | null;
         graphInspector: {
           getSnapshot: () => {
@@ -85,13 +97,30 @@ describe('GPU hierarchical trace viewer', () => {
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
+      expect(state.resources.focusFrontierCapacity).toBe(
+        getTraceFocusFrontierCapacity(state.resources.spanCount, state.resources.dependencyCount)
+      );
+      expect(
+        state.resources.spanChunks.every(
+          chunk =>
+            chunk.visibility.byteLength ===
+            Math.ceil(chunk.spanCount / 32) * Uint32Array.BYTES_PER_ELEMENT
+        )
+      ).toBe(true);
       expect(state.resources.dependencyBatchCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
       expect(host.querySelectorAll('[data-span-capacity]')).toHaveLength(1);
       expect(host.querySelectorAll('[data-dependency-capacity]')).toHaveLength(1);
+      const durationFilter = host.querySelector<HTMLInputElement>('[data-duration]');
+      expect(durationFilter?.max).toBe(String(TRACE_DURATION_FILTER_MAXIMUM));
+      expect(durationFilter?.step).toBe('0.01');
       expect(state.spanCapacity).toBe(4096);
       expect(state.dependencyCapacity).toBe(250_000);
+      const lodFade = host.querySelector<HTMLInputElement>('[data-lod-fade]');
+      expect(lodFade).not.toBeNull();
+      expect(lodFade!.checked).toBe(false);
+      expect(state.lodFadeEnabled).toBe(false);
       const dependencyCapacity = host.querySelector<HTMLSelectElement>(
         '[data-dependency-capacity]'
       );
@@ -203,6 +232,75 @@ describe('GPU hierarchical trace viewer', () => {
       )[1];
       expect(dependencyCandidateCount).toBeGreaterThan(0);
       expect(dependencyCandidateCount).toBeLessThan(state.resources.dependencyBatchCount);
+
+      const autoScroll = host.querySelector<HTMLInputElement>('[data-auto-scroll]');
+      expect(autoScroll).not.toBeNull();
+      autoScroll!.checked = false;
+      autoScroll!.dispatchEvent(new Event('change', {bubbles: true}));
+      const initialView = {...state.view};
+      state.view = {timeMin: 0, timeMax: 82, laneMin: 0, laneMax: 72};
+      viewer.onRender({device, time: 6000, width: 2000, height: 1} as AnimationProps);
+      device.submit();
+      const hardExactCandidateBytes =
+        await state.resources.exactCandidateDispatchCommands.buffer.readAsync();
+      const hardDensityCandidateBytes =
+        await state.resources.densityCandidateDispatchCommands.buffer.readAsync();
+      const hardDependencyCandidateBytes =
+        await state.resources.candidateDependencyDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(hardExactCandidateBytes.buffer, hardExactCandidateBytes.byteOffset, 3)[1]
+      ).toBe(0);
+      expect(
+        new Uint32Array(
+          hardDensityCandidateBytes.buffer,
+          hardDensityCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      expect(
+        new Uint32Array(
+          hardDependencyCandidateBytes.buffer,
+          hardDependencyCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBe(0);
+
+      lodFade!.checked = true;
+      lodFade!.dispatchEvent(new Event('change', {bubbles: true}));
+      expect(state.lodFadeEnabled).toBe(true);
+      viewer.onRender({device, time: 6000, width: 2000, height: 1} as AnimationProps);
+      device.submit();
+      const smoothExactCandidateBytes =
+        await state.resources.exactCandidateDispatchCommands.buffer.readAsync();
+      const smoothDensityCandidateBytes =
+        await state.resources.densityCandidateDispatchCommands.buffer.readAsync();
+      const smoothDependencyCandidateBytes =
+        await state.resources.candidateDependencyDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(
+          smoothExactCandidateBytes.buffer,
+          smoothExactCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      expect(
+        new Uint32Array(
+          smoothDensityCandidateBytes.buffer,
+          smoothDensityCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      expect(
+        new Uint32Array(
+          smoothDependencyCandidateBytes.buffer,
+          smoothDependencyCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      lodFade!.checked = false;
+      lodFade!.dispatchEvent(new Event('change', {bubbles: true}));
+      expect(state.lodFadeEnabled).toBe(false);
+      state.view = initialView;
 
       const firstGroup = host.querySelector<HTMLInputElement>('[data-group="0"]');
       expect(firstGroup).not.toBeNull();
@@ -321,13 +419,15 @@ describe('GPU hierarchical trace viewer', () => {
       expect(focusedCounts[1] + focusedCounts[5] + focusedCounts[9]).toBeLessThanOrEqual(
         firstCounts[1] + firstCounts[5] + firstCounts[9]
       );
+      expect(state.resources.reachedSpans.byteLength).toBe(
+        Math.ceil(state.resources.spanCount / 32) * Uint32Array.BYTES_PER_ELEMENT
+      );
       const reachedBytes = await state.resources.reachedSpans.readAsync(
-        29 * Uint32Array.BYTES_PER_ELEMENT,
+        0,
         Uint32Array.BYTES_PER_ELEMENT
       );
-      expect(new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0]).toBe(
-        state.frameIndex
-      );
+      const reachedWord = new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0];
+      expect(reachedWord & (1 << 29)).not.toBe(0);
       focusOnly!.checked = false;
       focusOnly!.dispatchEvent(new Event('change', {bubbles: true}));
       expect(state.focusOnly).toBe(false);
@@ -370,6 +470,21 @@ describe('GPU hierarchical trace viewer', () => {
 
       host.querySelector<HTMLButtonElement>('[data-clear-selection]')!.click();
       expect(state.selectedSpanIndex).toBe(0xffffffff);
+
+      host.querySelector<HTMLButtonElement>('[data-fit-trace]')!.click();
+      expect(state.view).toEqual({
+        timeMin: 0,
+        timeMax: state.traceDuration,
+        laneMin: 0,
+        laneMax: TRACE_LANE_COUNT
+      });
+      host.querySelector<HTMLButtonElement>('[data-reset]')!.click();
+      expect(state.view).toEqual({
+        timeMin: 0,
+        timeMax: Math.min(150, state.traceDuration),
+        laneMin: 0,
+        laneMax: 72
+      });
     } finally {
       viewer?.onFinalize();
       host.remove();

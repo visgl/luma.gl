@@ -299,7 +299,22 @@ function makeSplatSourceFromArrowRecordBatch(
       if (semanticId === null || semanticId === undefined) {
         throw new Error('Gaussian splat semantic identifiers cannot be null');
       }
-      semanticIds[rowIndex] = Number(semanticId);
+      const numericSemanticId =
+        typeof semanticId === 'number'
+          ? semanticId
+          : typeof semanticId === 'bigint'
+            ? Number(semanticId)
+            : Number.NaN;
+      if (
+        !Number.isInteger(numericSemanticId) ||
+        numericSemanticId < 0 ||
+        numericSemanticId > 0xffff_ffff
+      ) {
+        throw new RangeError(
+          'Gaussian splat semantic identifiers must be unsigned 32-bit integers'
+        );
+      }
+      semanticIds[rowIndex] = numericSemanticId;
     }
   }
 

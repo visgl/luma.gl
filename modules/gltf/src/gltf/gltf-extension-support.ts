@@ -37,11 +37,26 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
   },
   EXT_meshopt_compression: {
     supportLevel: 'built-in',
-    comment: 'Meshopt-compressed primitives are decoded during load.'
+    comment: 'EXT meshopt-compressed buffer views are decoded by loaders.gl before rendering.'
+  },
+  KHR_meshopt_compression: {
+    supportLevel: 'none',
+    comment:
+      'The installed loaders.gl GLTFLoader supports EXT_meshopt_compression, not the KHR release candidate.'
   },
   KHR_mesh_quantization: {
     supportLevel: 'built-in',
-    comment: 'Quantized accessors are unpacked before geometry creation.'
+    comment: 'Loader-materialized quantized accessors retain their typed values and normalization.'
+  },
+  EXT_mesh_features: {
+    supportLevel: 'loader-only',
+    comment:
+      'Feature identifiers are decoded by loaders.gl; automatic rendering and picking are application-owned.'
+  },
+  EXT_structural_metadata: {
+    supportLevel: 'loader-only',
+    comment:
+      'Structural metadata is decoded by loaders.gl; automatic rendering and querying are application-owned.'
   },
   KHR_lights_punctual: {
     supportLevel: 'built-in',
@@ -61,7 +76,8 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
   },
   KHR_texture_transform: {
     supportLevel: 'built-in',
-    comment: 'UV transforms are applied during load.'
+    comment:
+      'Per-slot UV transforms and animated pointers are applied at runtime; avoid duplicate legacy loader-side baking.'
   },
   EXT_texture_webp: {
     supportLevel: 'loader-only',
@@ -69,9 +85,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
       'Texture source is resolved during load; final support depends on browser and device decode support.'
   },
   EXT_texture_avif: {
-    supportLevel: 'loader-only',
+    supportLevel: 'none',
     comment:
-      'Texture source is resolved during load; final support depends on browser and device decode support.'
+      'The image loader can decode supported AVIF images, but GLTFLoader does not select EXT_texture_avif sources.'
   },
   KHR_materials_specular: {
     supportLevel: 'built-in',
@@ -167,8 +183,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment: 'Video textures are not created automatically by the stock pipeline.'
   },
   MSFT_lod: {
-    supportLevel: 'none',
-    comment: 'Level-of-detail switching is not implemented in the stock scenegraph loader.'
+    supportLevel: 'parsed-and-wired',
+    comment:
+      'Node levels are parsed and selected by opt-in animated crowds; material LOD and GPU-driven selection are not implemented.'
   }
 };
 

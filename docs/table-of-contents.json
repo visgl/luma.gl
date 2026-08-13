@@ -211,6 +211,7 @@
           "api-reference/experimental/pbr-environment",
           "api-reference/experimental/geospatial",
           "api-reference/experimental/luraster/README",
+          "api-reference/experimental/luraster/concepts",
           "api-reference/experimental/luproj",
           "api-reference/experimental/lugraph",
           "api-reference/experimental/ludf",
@@ -232,6 +233,7 @@
             "items": [
               "api-reference/experimental/gpu-primitives/README",
               "api-reference/experimental/gpu-primitives/gpu-command-graph",
+              "api-reference/experimental/gpu-primitives/gpu-texture-history",
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
               "api-reference/experimental/gpu-primitives/gpu-mask",
@@ -241,6 +243,7 @@
               "api-reference/experimental/gpu-primitives/gpu-graph-traversal",
               "api-reference/experimental/gpu-primitives/gpu-ancestor-projection",
               "api-reference/experimental/gpu-primitives/gpu-sort",
+              "api-reference/experimental/gpu-primitives/gpu-segmented-sort",
               "api-reference/experimental/gpu-primitives/gpu-fft2d",
               "api-reference/experimental/gpu-primitives/gpu-reduction",
               "api-reference/experimental/gpu-primitives/gpu-histogram",
@@ -250,6 +253,7 @@
               "api-reference/experimental/gpu-primitives/gpu-grid-index-query",
               "api-reference/experimental/gpu-primitives/gpu-point-spatial-filter",
               "api-reference/experimental/gpu-primitives/gpu-bvh",
+              "api-reference/experimental/gpu-primitives/gpu-segmented-bvh",
               "api-reference/experimental/gpu-primitives/gpu-bvh-query",
               "api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark",
               "api-reference/experimental/gpu-primitives/gpu-scene",
@@ -347,6 +351,7 @@
           "api-reference/experimental/pbr-environment",
           "api-reference/experimental/geospatial",
           "api-reference/experimental/luraster/README",
+          "api-reference/experimental/luraster/concepts",
           "api-reference/experimental/luproj",
           "api-reference/experimental/lugraph",
           "api-reference/experimental/ludf",
@@ -366,6 +371,7 @@
             "items": [
               "api-reference/experimental/gpu-primitives/README",
               "api-reference/experimental/gpu-primitives/gpu-command-graph",
+              "api-reference/experimental/gpu-primitives/gpu-texture-history",
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
               "api-reference/experimental/gpu-primitives/gpu-mask",
@@ -375,6 +381,7 @@
               "api-reference/experimental/gpu-primitives/gpu-graph-traversal",
               "api-reference/experimental/gpu-primitives/gpu-ancestor-projection",
               "api-reference/experimental/gpu-primitives/gpu-sort",
+              "api-reference/experimental/gpu-primitives/gpu-segmented-sort",
               "api-reference/experimental/gpu-primitives/gpu-fft2d",
               "api-reference/experimental/gpu-primitives/gpu-reduction",
               "api-reference/experimental/gpu-primitives/gpu-histogram",
@@ -384,6 +391,7 @@
               "api-reference/experimental/gpu-primitives/gpu-grid-index-query",
               "api-reference/experimental/gpu-primitives/gpu-point-spatial-filter",
               "api-reference/experimental/gpu-primitives/gpu-bvh",
+              "api-reference/experimental/gpu-primitives/gpu-segmented-bvh",
               "api-reference/experimental/gpu-primitives/gpu-bvh-query",
               "api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark",
               "api-reference/experimental/gpu-primitives/gpu-scene",
@@ -549,7 +557,10 @@
       {
         "type": "category",
         "label": "@luma.gl/webgpu",
-        "items": ["api-reference/webgpu/README"]
+        "items": [
+          "api-reference/webgpu/README",
+          "api-reference/webgpu/optional-features"
+        ]
       }
     ]
   },

@@ -28,12 +28,22 @@ export {
 export {
   createGLTFAnimatedCrowd,
   GLTFAnimatedCrowd,
+  type GLTFCrowdLODLevelStats,
+  type GLTFCrowdLODOptions,
+  type GLTFCrowdLODStats,
+  type GLTFCrowdLODView,
   type GLTFAnimatedCrowdOptions,
   GLTFCrowdActor,
   type GLTFCrowdActorOptions,
   type GLTFCrowdClipSelectionOptions,
   type GLTFCrowdPrimitiveGroup
 } from './gltf/gltf-animated-crowd';
+export {
+  generateGLTFLODLevels,
+  type GenerateGLTFLODLevelsOptions,
+  getGLTFNodeLODs,
+  type GLTFNodeLODLevel
+} from './gltf/gltf-lod';
 export {
   type GLTFExtensionSupport,
   type GLTFExtensionSupportLevel,

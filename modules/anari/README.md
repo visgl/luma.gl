@@ -142,10 +142,16 @@ frame.render();
 The ANARI adapter translates committed objects for the shared `RayTracingSceneRenderer` in
 `@luma.gl/experimental`. Its retained WebGPU command graphs build Morton-sorted object/instance
 TLAS and per-mesh triangle BLAS hierarchies, derive tight transformed mesh bounds from BLAS roots,
-and reuse existing hierarchy topology while instances animate. General-purpose `GPUSort` and
-`GPUBVH` graph contributors fuse small work into single workgroups; larger sorts use stable
-multi-bit radix passes. The tracer evaluates direct lighting and shadows, progressively
-accumulates compatible history, adapts its internal resolution, and presents HDR when configured.
+and reuse existing hierarchy topology while instances animate. General-purpose `GPUSort`,
+`GPUSegmentedSort`, `GPUBVH`, and `GPUSegmentedBVH` contributors fuse small work into single
+workgroups, batch independent packed mesh permutations and hierarchies, and use stable multi-bit
+radix passes for larger sorts. The adapter caches committed world descriptors and publishes
+categorized scene revisions, so camera-only frames avoid repeated hierarchy traversal and full
+transform serialization.
+Traversal reuses cached inverse directions and queued box intersections. The tracer evaluates
+direct lighting and shadows, progressively accumulates compatible history, adapts its internal
+resolution, and presents HDR when configured. Retained `GPUTextureHistory` pairs rotate color and
+surface metadata without full-frame copies; sparse updates carry only untouched pixels.
 Every pass remains within default WebGPU CORE storage-buffer limits and leaves submission under
 application control.
 
@@ -243,7 +249,7 @@ materials, HDR emissive accents, and bloom.
 
 The showcase glTF importer uses `@loaders.gl/gltf` and the canonical `@luma.gl/gltf` helpers,
 preserving indexed meshes, RGB/RGBA vertex colors, `TEXCOORD_0`/`TEXCOORD_1`, authored tangent and
-skin attributes, punctual lights, all 17 supported core/PBR-extension image maps, and source
+skin attributes, punctual lights, all 21 supported core/PBR-extension image maps, and source
 material factors. Per-slot sampler addressing/filtering/mipmap settings, sRGB versus linear color
 space, UV selection, and `KHR_texture_transform` matrices remain intact. `opaque`, `mask`, and
 `blend` materials retain authored cutoff and double-sided settings.

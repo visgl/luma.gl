@@ -50,6 +50,7 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
       </label>
       <label>Spatial grid
         <select data-grid>
+          <option>4</option>
           <option>8</option>
           <option selected>16</option>
           <option>17</option>
@@ -71,7 +72,7 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
       <div class="lab-heading">
         <div>
           <p class="eyebrow">LUDF / DERIVED COLUMN LAB</p>
-          <h2>Write the expression. Watch the data move.</h2>
+          <h2>Run an expression and watch your data move.</h2>
           <p>Transform and filter the exact GPU buffers already driving the charts above.</p>
         </div>
         <span class="lab-badge">ZERO ROW COPIES</span>

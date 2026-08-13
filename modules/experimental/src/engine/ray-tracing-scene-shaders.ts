@@ -104,6 +104,44 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
 }
 `;
 
+/** Carries only unsampled sparse-phase pixels forward without full-frame texture copies. */
+export const RAY_TRACING_HISTORY_CARRY_SHADER = /* wgsl */ `
+${RAY_TRACING_SCENE_TYPES}
+
+@group(0) @binding(0) var<uniform> uniforms: RayTracingUniforms;
+@group(0) @binding(1) var historyImage: texture_2d<f32>;
+@group(0) @binding(2) var historyMetadata: texture_2d<f32>;
+@group(0) @binding(3) var outputImage: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(4) var outputMetadata: texture_storage_2d<rgba16float, write>;
+
+@compute @workgroup_size(8, 8, 1)
+fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
+  let phaseCount = max(uniforms.displayPhase.w, 1u);
+  if (phaseCount <= 1u || invocation.y >= uniforms.dimensions.y) {
+    return;
+  }
+
+  let untouchedPhaseCount = phaseCount - 1u;
+  let compactWidth =
+    (uniforms.dimensions.x * untouchedPhaseCount + phaseCount - 1u) / phaseCount;
+  if (invocation.x >= compactWidth) {
+    return;
+  }
+
+  let selectedPhase = (uniforms.displayPhase.z + invocation.y) % phaseCount;
+  let blockIndex = invocation.x / untouchedPhaseCount;
+  let laneIndex = invocation.x % untouchedPhaseCount;
+  let pixelX = blockIndex * phaseCount + laneIndex + select(0u, 1u, laneIndex >= selectedPhase);
+  if (pixelX >= uniforms.dimensions.x) {
+    return;
+  }
+
+  let pixel = vec2<i32>(i32(pixelX), i32(invocation.y));
+  textureStore(outputImage, pixel, textureLoad(historyImage, pixel, 0));
+  textureStore(outputMetadata, pixel, textureLoad(historyMetadata, pixel, 0));
+}
+`;
+
 /** Direct-light software ray tracer shared by every retained-scene rendering frontend. */
 export const RAY_TRACING_SCENE_SHADER = /* wgsl */ `
 ${RAY_TRACING_SCENE_TYPES}
@@ -133,6 +171,11 @@ struct RayHit {
   distance: f32,
   normal: vec3<f32>,
   primitiveIndex: u32,
+};
+
+struct PendingRayNode {
+  nodeIndex: u32,
+  entryDistance: f32,
 };
 
 struct HistoricalRaySample {
@@ -176,12 +219,13 @@ fn makeRandom(seed: u32) -> f32 {
 fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
   let coordinates = (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy);
   let clipCoordinates = vec2<f32>(coordinates.x * 2.0 - 1.0, 1.0 - coordinates.y * 2.0);
-  let nearPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, -1.0, 1.0);
   let farPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, 1.0, 1.0);
-  let nearPosition = nearPoint.xyz / nearPoint.w;
   let farPosition = farPoint.xyz / farPoint.w;
-  let orthographic = uniforms.cameraPosition.w > 0.5;
-  let origin = select(uniforms.cameraPosition.xyz, nearPosition, orthographic);
+  var origin = uniforms.cameraPosition.xyz;
+  if (uniforms.cameraPosition.w > 0.5) {
+    let nearPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, -1.0, 1.0);
+    origin = nearPoint.xyz / nearPoint.w;
+  }
   return Ray(origin, normalize(farPosition - origin));
 }
 
@@ -205,20 +249,6 @@ fn makeCameraRay(pixel: vec2<u32>, sampleIndex: u32) -> Ray {
 
 fn makeGuideCameraRay(pixel: vec2<u32>) -> Ray {
   return makeCameraRayAtOffset(pixel, vec2<f32>(0.5));
-}
-
-fn intersectsBounds(ray: Ray, center: vec3<f32>, radius: f32, maximumDistance: f32) -> bool {
-  let relativeOrigin = ray.origin - center;
-  let directionLength = dot(ray.direction, ray.direction);
-  let halfProjection = dot(relativeOrigin, ray.direction);
-  let discriminant = halfProjection * halfProjection -
-    directionLength * (dot(relativeOrigin, relativeOrigin) - radius * radius);
-  if (discriminant < 0.0) {
-    return false;
-  }
-  let root = sqrt(discriminant);
-  return (-halfProjection + root) / directionLength > RAY_EPSILON &&
-    (-halfProjection - root) / directionLength < maximumDistance;
 }
 
 fn intersectSphere(ray: Ray, radius: f32, maximumDistance: f32) -> f32 {
@@ -262,7 +292,18 @@ fn intersectTriangle(ray: Ray, triangle: RayTriangle, maximumDistance: f32) -> v
   return vec3<f32>(distance, firstWeight, secondWeight);
 }
 
-fn intersectNodeBounds(ray: Ray, nodeIndex: u32, maximumDistance: f32) -> f32 {
+fn makeInverseRayDirection(direction: vec3<f32>) -> vec3<f32> {
+  let parallelAxes = abs(direction) < vec3<f32>(0.0000001);
+  let safeDirection = select(direction, vec3<f32>(1.0), parallelAxes);
+  return vec3<f32>(1.0) / safeDirection;
+}
+
+fn intersectNodeBounds(
+  ray: Ray,
+  inverseDirection: vec3<f32>,
+  nodeIndex: u32,
+  maximumDistance: f32
+) -> f32 {
   var nearestDistance = 0.0;
   var farthestDistance = maximumDistance;
   let componentIndex = nodeIndex * 3u;
@@ -281,8 +322,8 @@ fn intersectNodeBounds(ray: Ray, nodeIndex: u32, maximumDistance: f32) -> f32 {
         return RAY_INFINITY;
       }
     } else {
-      let firstDistance = (minimum - origin) / direction;
-      let secondDistance = (maximum - origin) / direction;
+      let firstDistance = (minimum - origin) * inverseDirection[axis];
+      let secondDistance = (maximum - origin) * inverseDirection[axis];
       nearestDistance = max(nearestDistance, min(firstDistance, secondDistance));
       farthestDistance = min(farthestDistance, max(firstDistance, secondDistance));
       if (nearestDistance > farthestDistance) {
@@ -297,7 +338,12 @@ fn intersectNodeBounds(ray: Ray, nodeIndex: u32, maximumDistance: f32) -> f32 {
   return nearestDistance;
 }
 
-fn intersectBlasNodeBounds(ray: Ray, nodeIndex: u32, maximumDistance: f32) -> f32 {
+fn intersectBlasNodeBounds(
+  ray: Ray,
+  inverseDirection: vec3<f32>,
+  nodeIndex: u32,
+  maximumDistance: f32
+) -> f32 {
   var nearestDistance = 0.0;
   var farthestDistance = maximumDistance;
   let node = blasNodes[nodeIndex];
@@ -316,8 +362,8 @@ fn intersectBlasNodeBounds(ray: Ray, nodeIndex: u32, maximumDistance: f32) -> f3
         return RAY_INFINITY;
       }
     } else {
-      let firstDistance = (minimum - origin) / direction;
-      let secondDistance = (maximum - origin) / direction;
+      let firstDistance = (minimum - origin) * inverseDirection[axis];
+      let secondDistance = (maximum - origin) * inverseDirection[axis];
       nearestDistance = max(nearestDistance, min(firstDistance, secondDistance));
       farthestDistance = min(farthestDistance, max(firstDistance, secondDistance));
       if (nearestDistance > farthestDistance) {
@@ -338,10 +384,6 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
   let localRay = Ray(localOrigin, localDirection);
-  if (!intersectsBounds(localRay, primitive.bounds.xyz, primitive.bounds.w, closestHit.distance)) {
-    return closestHit;
-  }
-
   let sphereRadius = primitive.properties.y;
   if (sphereRadius > 0.0) {
     let distance = intersectSphere(localRay, sphereRadius, closestHit.distance);
@@ -364,16 +406,27 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
     return closestHit;
   }
 
-  var pendingBlasNodes: array<u32, BLAS_STACK_CAPACITY>;
+  let inverseLocalDirection = makeInverseRayDirection(localDirection);
+  let rootBlasDistance = intersectBlasNodeBounds(
+    localRay,
+    inverseLocalDirection,
+    packedNodeStart,
+    closestHit.distance
+  );
+  if (rootBlasDistance >= closestHit.distance) {
+    return closestHit;
+  }
+
+  var pendingBlasNodes: array<PendingRayNode, BLAS_STACK_CAPACITY>;
   var pendingBlasCount = 1u;
-  pendingBlasNodes[0] = 0u;
+  pendingBlasNodes[0] = PendingRayNode(0u, rootBlasDistance);
   while (pendingBlasCount > 0u) {
     pendingBlasCount--;
-    let localNodeIndex = pendingBlasNodes[pendingBlasCount];
-    let nodeIndex = packedNodeStart + localNodeIndex;
-    if (intersectBlasNodeBounds(localRay, nodeIndex, closestHit.distance) >= closestHit.distance) {
+    let pendingBlasNode = pendingBlasNodes[pendingBlasCount];
+    if (pendingBlasNode.entryDistance >= closestHit.distance) {
       continue;
     }
+    let localNodeIndex = pendingBlasNode.nodeIndex;
 
     if (localNodeIndex >= internalNodeCount) {
       let leafIndex = localNodeIndex - internalNodeCount;
@@ -404,11 +457,13 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
     let rightNode = leftNode + 1u;
     let leftBlasDistance = intersectBlasNodeBounds(
       localRay,
+      inverseLocalDirection,
       packedNodeStart + leftNode,
       closestHit.distance
     );
     let rightBlasDistance = intersectBlasNodeBounds(
       localRay,
+      inverseLocalDirection,
       packedNodeStart + rightNode,
       closestHit.distance
     );
@@ -419,11 +474,11 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
     let fartherBlasDistance = max(leftBlasDistance, rightBlasDistance);
 
     if (fartherBlasDistance < closestHit.distance) {
-      pendingBlasNodes[pendingBlasCount] = fartherNode;
+      pendingBlasNodes[pendingBlasCount] = PendingRayNode(fartherNode, fartherBlasDistance);
       pendingBlasCount++;
     }
     if (nearerBlasDistance < closestHit.distance) {
-      pendingBlasNodes[pendingBlasCount] = nearerNode;
+      pendingBlasNodes[pendingBlasCount] = PendingRayNode(nearerNode, nearerBlasDistance);
       pendingBlasCount++;
     }
   }
@@ -435,10 +490,6 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
   let localRay = Ray(localOrigin, localDirection);
-  if (!intersectsBounds(localRay, primitive.bounds.xyz, primitive.bounds.w, maximumDistance)) {
-    return false;
-  }
-
   let sphereRadius = primitive.properties.y;
   if (sphereRadius > 0.0) {
     return intersectSphere(localRay, sphereRadius, maximumDistance) < maximumDistance;
@@ -454,16 +505,27 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
     return false;
   }
 
-  var pendingBlasNodes: array<u32, BLAS_STACK_CAPACITY>;
+  let inverseLocalDirection = makeInverseRayDirection(localDirection);
+  let rootBlasDistance = intersectBlasNodeBounds(
+    localRay,
+    inverseLocalDirection,
+    packedNodeStart,
+    maximumDistance
+  );
+  if (rootBlasDistance >= maximumDistance) {
+    return false;
+  }
+
+  var pendingBlasNodes: array<PendingRayNode, BLAS_STACK_CAPACITY>;
   var pendingBlasCount = 1u;
-  pendingBlasNodes[0] = 0u;
+  pendingBlasNodes[0] = PendingRayNode(0u, rootBlasDistance);
   while (pendingBlasCount > 0u) {
     pendingBlasCount--;
-    let localNodeIndex = pendingBlasNodes[pendingBlasCount];
-    let nodeIndex = packedNodeStart + localNodeIndex;
-    if (intersectBlasNodeBounds(localRay, nodeIndex, maximumDistance) >= maximumDistance) {
+    let pendingBlasNode = pendingBlasNodes[pendingBlasCount];
+    if (pendingBlasNode.entryDistance >= maximumDistance) {
       continue;
     }
+    let localNodeIndex = pendingBlasNode.nodeIndex;
 
     if (localNodeIndex >= internalNodeCount) {
       let leafIndex = localNodeIndex - internalNodeCount;
@@ -484,11 +546,13 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
     let rightNode = leftNode + 1u;
     let leftBlasDistance = intersectBlasNodeBounds(
       localRay,
+      inverseLocalDirection,
       packedNodeStart + leftNode,
       maximumDistance
     );
     let rightBlasDistance = intersectBlasNodeBounds(
       localRay,
+      inverseLocalDirection,
       packedNodeStart + rightNode,
       maximumDistance
     );
@@ -499,11 +563,11 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
     let fartherBlasDistance = max(leftBlasDistance, rightBlasDistance);
 
     if (fartherBlasDistance < maximumDistance) {
-      pendingBlasNodes[pendingBlasCount] = fartherNode;
+      pendingBlasNodes[pendingBlasCount] = PendingRayNode(fartherNode, fartherBlasDistance);
       pendingBlasCount++;
     }
     if (nearerBlasDistance < maximumDistance) {
-      pendingBlasNodes[pendingBlasCount] = nearerNode;
+      pendingBlasNodes[pendingBlasCount] = PendingRayNode(nearerNode, nearerBlasDistance);
       pendingBlasCount++;
     }
   }
@@ -516,16 +580,23 @@ fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
     return closestHit;
   }
 
-  var pendingNodes: array<u32, BVH_STACK_CAPACITY>;
+  let inverseDirection = makeInverseRayDirection(ray.direction);
+  let rootDistance = intersectNodeBounds(ray, inverseDirection, 0u, closestHit.distance);
+  if (rootDistance >= closestHit.distance) {
+    return closestHit;
+  }
+
+  var pendingNodes: array<PendingRayNode, BVH_STACK_CAPACITY>;
   var pendingCount = 1u;
-  pendingNodes[0] = 0u;
+  pendingNodes[0] = PendingRayNode(0u, rootDistance);
 
   while (pendingCount > 0u) {
     pendingCount--;
-    let nodeIndex = pendingNodes[pendingCount];
-    if (intersectNodeBounds(ray, nodeIndex, closestHit.distance) >= closestHit.distance) {
+    let pendingNode = pendingNodes[pendingCount];
+    if (pendingNode.entryDistance >= closestHit.distance) {
       continue;
     }
+    let nodeIndex = pendingNode.nodeIndex;
 
     if (nodeIndex >= uniforms.acceleration.x) {
       let leafIndex = nodeIndex - uniforms.acceleration.x;
@@ -541,8 +612,8 @@ fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
 
     let leftNode = nodeIndex * 2u + 1u;
     let rightNode = leftNode + 1u;
-    let leftDistance = intersectNodeBounds(ray, leftNode, closestHit.distance);
-    let rightDistance = intersectNodeBounds(ray, rightNode, closestHit.distance);
+    let leftDistance = intersectNodeBounds(ray, inverseDirection, leftNode, closestHit.distance);
+    let rightDistance = intersectNodeBounds(ray, inverseDirection, rightNode, closestHit.distance);
     let leftFirst = leftDistance <= rightDistance;
     let nearerNode = select(rightNode, leftNode, leftFirst);
     let fartherNode = select(leftNode, rightNode, leftFirst);
@@ -550,11 +621,11 @@ fn intersectScene(ray: Ray, maximumDistance: f32) -> RayHit {
     let fartherDistance = max(leftDistance, rightDistance);
 
     if (fartherDistance < closestHit.distance) {
-      pendingNodes[pendingCount] = fartherNode;
+      pendingNodes[pendingCount] = PendingRayNode(fartherNode, fartherDistance);
       pendingCount++;
     }
     if (nearerDistance < closestHit.distance) {
-      pendingNodes[pendingCount] = nearerNode;
+      pendingNodes[pendingCount] = PendingRayNode(nearerNode, nearerDistance);
       pendingCount++;
     }
   }
@@ -566,16 +637,23 @@ fn intersectsScene(ray: Ray, maximumDistance: f32) -> bool {
     return false;
   }
 
-  var pendingNodes: array<u32, BVH_STACK_CAPACITY>;
+  let inverseDirection = makeInverseRayDirection(ray.direction);
+  let rootDistance = intersectNodeBounds(ray, inverseDirection, 0u, maximumDistance);
+  if (rootDistance >= maximumDistance) {
+    return false;
+  }
+
+  var pendingNodes: array<PendingRayNode, BVH_STACK_CAPACITY>;
   var pendingCount = 1u;
-  pendingNodes[0] = 0u;
+  pendingNodes[0] = PendingRayNode(0u, rootDistance);
 
   while (pendingCount > 0u) {
     pendingCount--;
-    let nodeIndex = pendingNodes[pendingCount];
-    if (intersectNodeBounds(ray, nodeIndex, maximumDistance) >= maximumDistance) {
+    let pendingNode = pendingNodes[pendingCount];
+    if (pendingNode.entryDistance >= maximumDistance) {
       continue;
     }
+    let nodeIndex = pendingNode.nodeIndex;
 
     if (nodeIndex >= uniforms.acceleration.x) {
       let leafIndex = nodeIndex - uniforms.acceleration.x;
@@ -589,8 +667,8 @@ fn intersectsScene(ray: Ray, maximumDistance: f32) -> bool {
 
     let leftNode = nodeIndex * 2u + 1u;
     let rightNode = leftNode + 1u;
-    let leftDistance = intersectNodeBounds(ray, leftNode, maximumDistance);
-    let rightDistance = intersectNodeBounds(ray, rightNode, maximumDistance);
+    let leftDistance = intersectNodeBounds(ray, inverseDirection, leftNode, maximumDistance);
+    let rightDistance = intersectNodeBounds(ray, inverseDirection, rightNode, maximumDistance);
     let leftFirst = leftDistance <= rightDistance;
     let nearerNode = select(rightNode, leftNode, leftFirst);
     let fartherNode = select(leftNode, rightNode, leftFirst);
@@ -598,11 +676,11 @@ fn intersectsScene(ray: Ray, maximumDistance: f32) -> bool {
     let fartherDistance = max(leftDistance, rightDistance);
 
     if (fartherDistance < maximumDistance) {
-      pendingNodes[pendingCount] = fartherNode;
+      pendingNodes[pendingCount] = PendingRayNode(fartherNode, fartherDistance);
       pendingCount++;
     }
     if (nearerDistance < maximumDistance) {
-      pendingNodes[pendingCount] = nearerNode;
+      pendingNodes[pendingCount] = PendingRayNode(nearerNode, nearerDistance);
       pendingCount++;
     }
   }
@@ -617,21 +695,26 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
   let baseColor = primitive.baseColor.rgb;
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
-  let reflectance = mix(vec3<f32>(0.04), baseColor, metallic);
+  let dielectricReflectance = vec3<f32>(0.04);
+  let reflectance = mix(dielectricReflectance, baseColor, metallic);
+  let maximumReflectance = max(reflectance.r, max(reflectance.g, reflectance.b));
+  let grazingReflectance = vec3<f32>(clamp(maximumReflectance * 25.0, 0.0, 1.0));
+  let alphaRoughness = roughness * roughness;
+  let alphaRoughnessSquared = alphaRoughness * alphaRoughness;
+  let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance) *
+    (1.0 - metallic) / PI;
+  let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0);
   var result = primitive.emissive.rgb;
-  var directLightCount = 0u;
-  for (var lightIndex = 0u; lightIndex < uniforms.dimensions.w; lightIndex++) {
-    if (u32(lights[lightIndex].directionType.w) != 0u) {
-      directLightCount++;
-    }
-  }
+  let directLightCount = u32(max(uniforms.temporal.y, 0.0));
+  let boundedDirectLightCount = max(directLightCount, 1u);
   let requestedShadowSamples = u32(max(uniforms.temporal.z, 0.0));
   let shadowSampleCount = select(
     min(requestedShadowSamples, directLightCount),
     directLightCount,
     requestedShadowSamples == 0u || uniforms.settings.w <= 0.5
   );
-  let rotatingLightOffset = uniforms.acceleration.w % max(directLightCount, 1u);
+  let rotatingLightOffset = uniforms.acceleration.w % boundedDirectLightCount;
+  let lightSampleWeight = f32(directLightCount) / f32(max(shadowSampleCount, 1u));
   var directLightIndex = 0u;
 
   for (var lightIndex = 0u; lightIndex < uniforms.dimensions.w; lightIndex++) {
@@ -644,13 +727,13 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
     }
 
     let rotatingLightIndex = (directLightIndex + directLightCount - rotatingLightOffset) %
-      max(directLightCount, 1u);
+      boundedDirectLightCount;
     directLightIndex++;
     if (rotatingLightIndex >= shadowSampleCount) {
       continue;
     }
 
-    var lightDirection = normalize(-light.directionType.xyz);
+    var lightDirection = vec3<f32>(0.0);
     var lightDistance = RAY_INFINITY;
     var attenuation = 1.0;
     if (lightType >= 2u) {
@@ -666,6 +749,8 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
         let outerCone = light.attenuationOuterCone.w;
         attenuation *= smoothstep(outerCone, innerCone, angle);
       }
+    } else {
+      lightDirection = normalize(-light.directionType.xyz);
     }
 
     let normalLight = max(dot(normal, lightDirection), 0.0);
@@ -683,12 +768,24 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
     let halfDirection = normalize(lightDirection + viewDirection);
     let normalHalf = max(dot(normal, halfDirection), 0.0);
     let viewHalf = max(dot(viewDirection, halfDirection), 0.0);
-    let fresnel = reflectance + (vec3<f32>(1.0) - reflectance) * pow(1.0 - viewHalf, 5.0);
-    let specularPower = mix(128.0, 4.0, roughness);
-    let specular = fresnel * pow(normalHalf, specularPower) * (specularPower + 2.0) / (2.0 * PI);
-    let diffuse = baseColor * (1.0 - metallic) / PI;
-    let lightSampleWeight = f32(directLightCount) / f32(max(shadowSampleCount, 1u));
-    result += (diffuse + specular) * lightColor * normalLight * attenuation * lightSampleWeight;
+    let fresnel = reflectance + (grazingReflectance - reflectance) *
+      pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0);
+    let distributionDenominator =
+      (normalHalf * alphaRoughnessSquared - normalHalf) * normalHalf + 1.0;
+    let distribution = alphaRoughnessSquared /
+      (PI * distributionDenominator * distributionDenominator);
+    let lightVisibility = 2.0 * normalLight /
+      (normalLight + sqrt(alphaRoughnessSquared +
+        (1.0 - alphaRoughnessSquared) * normalLight * normalLight));
+    let viewVisibility = 2.0 * normalView /
+      (normalView + sqrt(alphaRoughnessSquared +
+        (1.0 - alphaRoughnessSquared) * normalView * normalView));
+    let geometricOcclusion = lightVisibility * viewVisibility;
+    let diffuseContribution = (vec3<f32>(1.0) - fresnel) * diffuse;
+    let specular = fresnel * geometricOcclusion * distribution /
+      (4.0 * normalLight * normalView);
+    result += (diffuseContribution + specular) * lightColor * normalLight *
+      attenuation * lightSampleWeight;
   }
 
   if (uniforms.fog.w > 0.0) {
@@ -869,40 +966,48 @@ fn getHistoricalRaySample(
   let topRightWeight = historyFraction.x * (1.0 - historyFraction.y);
   let bottomLeftWeight = (1.0 - historyFraction.x) * historyFraction.y;
   let bottomRightWeight = historyFraction.x * historyFraction.y;
-  let topLeftSample = loadHistoricalRaySample(firstHistoryPixel, hit, previousDistance);
-  let topRightSample = loadHistoricalRaySample(
-    vec2<i32>(secondHistoryPixel.x, firstHistoryPixel.y),
-    hit,
-    previousDistance
-  );
-  let bottomLeftSample = loadHistoricalRaySample(
-    vec2<i32>(firstHistoryPixel.x, secondHistoryPixel.y),
-    hit,
-    previousDistance
-  );
-  let bottomRightSample = loadHistoricalRaySample(secondHistoryPixel, hit, previousDistance);
   var historicalColor = vec3<f32>(0.0);
   var historicalSampleCount = 0.0;
   var totalWeight = 0.0;
-  if (topLeftSample.valid) {
-    historicalColor += topLeftSample.color * topLeftWeight;
-    historicalSampleCount += topLeftSample.sampleCount * topLeftWeight;
-    totalWeight += topLeftWeight;
+  if (topLeftWeight > 0.0) {
+    let topLeftSample = loadHistoricalRaySample(firstHistoryPixel, hit, previousDistance);
+    if (topLeftSample.valid) {
+      historicalColor += topLeftSample.color * topLeftWeight;
+      historicalSampleCount += topLeftSample.sampleCount * topLeftWeight;
+      totalWeight += topLeftWeight;
+    }
   }
-  if (topRightSample.valid) {
-    historicalColor += topRightSample.color * topRightWeight;
-    historicalSampleCount += topRightSample.sampleCount * topRightWeight;
-    totalWeight += topRightWeight;
+  if (topRightWeight > 0.0) {
+    let topRightSample = loadHistoricalRaySample(
+      vec2<i32>(secondHistoryPixel.x, firstHistoryPixel.y),
+      hit,
+      previousDistance
+    );
+    if (topRightSample.valid) {
+      historicalColor += topRightSample.color * topRightWeight;
+      historicalSampleCount += topRightSample.sampleCount * topRightWeight;
+      totalWeight += topRightWeight;
+    }
   }
-  if (bottomLeftSample.valid) {
-    historicalColor += bottomLeftSample.color * bottomLeftWeight;
-    historicalSampleCount += bottomLeftSample.sampleCount * bottomLeftWeight;
-    totalWeight += bottomLeftWeight;
+  if (bottomLeftWeight > 0.0) {
+    let bottomLeftSample = loadHistoricalRaySample(
+      vec2<i32>(firstHistoryPixel.x, secondHistoryPixel.y),
+      hit,
+      previousDistance
+    );
+    if (bottomLeftSample.valid) {
+      historicalColor += bottomLeftSample.color * bottomLeftWeight;
+      historicalSampleCount += bottomLeftSample.sampleCount * bottomLeftWeight;
+      totalWeight += bottomLeftWeight;
+    }
   }
-  if (bottomRightSample.valid) {
-    historicalColor += bottomRightSample.color * bottomRightWeight;
-    historicalSampleCount += bottomRightSample.sampleCount * bottomRightWeight;
-    totalWeight += bottomRightWeight;
+  if (bottomRightWeight > 0.0) {
+    let bottomRightSample = loadHistoricalRaySample(secondHistoryPixel, hit, previousDistance);
+    if (bottomRightSample.valid) {
+      historicalColor += bottomRightSample.color * bottomRightWeight;
+      historicalSampleCount += bottomRightSample.sampleCount * bottomRightWeight;
+      totalWeight += bottomRightWeight;
+    }
   }
 
   if (totalWeight <= 0.0) {
@@ -932,10 +1037,16 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   let sampleCount = clamp(u32(uniforms.settings.z), 1u, 16u);
   let guideRay = makeGuideCameraRay(pixel);
   let guideHit = intersectScene(guideRay, RAY_INFINITY);
+  let useStableGuideSample = sampleCount == 1u &&
+    uniforms.previousCameraPosition.w < 0.5 && uniforms.temporal.w < 0.5;
   var accumulatedColor = vec3<f32>(0.0);
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
-    let ray = makeCameraRay(pixel, sampleIndex);
-    let hit = intersectScene(ray, RAY_INFINITY);
+    var ray = guideRay;
+    var hit = guideHit;
+    if (!useStableGuideSample) {
+      ray = makeCameraRay(pixel, sampleIndex);
+      hit = intersectScene(ray, RAY_INFINITY);
+    }
     var color = uniforms.background.rgb;
     if (hit.distance < RAY_INFINITY) {
       color = evaluateDirectLighting(ray, hit);
@@ -970,8 +1081,21 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
 }
 `;
 
-/** Resolves accumulated ray colors while preserving linear HDR presentation. */
-export function getRayTracingScenePresentationShader(highDynamicRange: boolean): string {
+/** Compile-time presentation controls shared with the canonical forward PBR renderer. */
+export type RayTracingPresentationOptions = {
+  /** Zero disables tone mapping; one selects Reinhard, two Khronos Neutral, three ACES. */
+  toneMapMode: number;
+  /** Zero preserves linear color; one applies the exact sRGB transfer function. */
+  outputEncoding: number;
+};
+
+/** Resolves retained ray radiance with attachment-aware, canonical PBR color management. */
+export function getRayTracingScenePresentationShader(
+  options: RayTracingPresentationOptions | boolean
+): string {
+  const toneMapMode = typeof options === 'boolean' ? (options ? 0 : 2) : options.toneMapMode;
+  const outputEncoding = typeof options === 'boolean' ? (options ? 0 : 1) : options.outputEncoding;
+
   return /* wgsl */ `
 @group(0) @binding(0) var image: texture_2d<f32>;
 
@@ -1012,14 +1136,56 @@ fn sampleRayTracingImage(textureCoordinates: vec2<f32>) -> vec3<f32> {
   return mix(mix(topLeft, topRight, fraction.x), mix(bottomLeft, bottomRight, fraction.x), fraction.y);
 }
 
+fn encodeRayTracingLinearSRGB(linearColor: vec3<f32>) -> vec3<f32> {
+  let positiveColor = max(linearColor, vec3<f32>(0.0));
+  return select(
+    positiveColor * 12.92,
+    1.055 * pow(positiveColor, vec3<f32>(1.0 / 2.4)) - 0.055,
+    positiveColor > vec3<f32>(0.0031308)
+  );
+}
+
+fn toneMapRayTracingKhronosPBRNeutral(inputColor: vec3<f32>) -> vec3<f32> {
+  let startCompression = 0.76;
+  let darkestChannel = min(inputColor.r, min(inputColor.g, inputColor.b));
+  let offset = select(
+    0.04,
+    darkestChannel - 6.25 * darkestChannel * darkestChannel,
+    darkestChannel < 0.08
+  );
+  var color = inputColor - vec3<f32>(offset);
+  let peak = max(color.r, max(color.g, color.b));
+  if (peak < startCompression) {
+    return color;
+  }
+
+  let compressionRange = 1.0 - startCompression;
+  let compressedPeak = 1.0 - compressionRange * compressionRange /
+    (peak + compressionRange - startCompression);
+  color *= compressedPeak / max(peak, 0.0001);
+  let desaturation = 1.0 - 1.0 / (0.15 * (peak - compressedPeak) + 1.0);
+  return mix(color, vec3<f32>(compressedPeak), desaturation);
+}
+
 @fragment
 fn fragmentMain(@location(0) textureCoordinates: vec2<f32>) -> @location(0) vec4<f32> {
   let radiance = sampleRayTracingImage(textureCoordinates);
-  if (${highDynamicRange}) {
-    return vec4<f32>(radiance, 1.0);
+  var color = max(radiance, vec3<f32>(0.0));
+  if (${toneMapMode} == 1) {
+    color /= vec3<f32>(1.0) + color;
+  } else if (${toneMapMode} == 2) {
+    color = toneMapRayTracingKhronosPBRNeutral(color);
+  } else if (${toneMapMode} == 3) {
+    color = clamp(
+      (color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14),
+      vec3<f32>(0.0),
+      vec3<f32>(1.0)
+    );
   }
-  let mappedColor = vec3<f32>(1.0) - exp(-radiance);
-  return vec4<f32>(pow(max(mappedColor, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2)), 1.0);
+  if (${outputEncoding} == 0) {
+    return vec4<f32>(color, 1.0);
+  }
+  return vec4<f32>(encodeRayTracingLinearSRGB(color), 1.0);
 }
 `;
 }

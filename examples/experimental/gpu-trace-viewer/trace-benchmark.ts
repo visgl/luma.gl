@@ -85,6 +85,28 @@ export type TraceAllocationStats = {
   largestBufferByteLength: number;
 };
 
+/** Aggregated per-node GPU timings for scan work in one trace graph. */
+export type TraceScanTimingSummary = {
+  nodeCount: number;
+  sampleCount: number;
+  p50Milliseconds: number;
+  p95Milliseconds: number;
+};
+
+type TraceTimingSnapshot = {
+  readonly graphs: readonly {
+    readonly id: string;
+    readonly nodes: readonly {
+      readonly id: string;
+      readonly gpu: {
+        readonly sampleCount: number;
+        readonly p50Milliseconds?: number;
+        readonly p95Milliseconds?: number;
+      };
+    }[];
+  }[];
+};
+
 export type TraceWorkloadCounterProps = {
   spanCount: number;
   dependencyCount: number;
@@ -194,6 +216,31 @@ export function getTraceWorkloadCounters(
     'filter-active': Number(props.filterActive),
     'focus-active': Number(props.focusActive),
     'pick-active': Number(props.pickActive)
+  });
+}
+
+/** Sums retained p50/p95 timings for every hierarchical scan node in one compiled trace graph. */
+export function getTraceScanTimingSummary(
+  snapshot: TraceTimingSnapshot,
+  graphId: string
+): TraceScanTimingSummary | null {
+  const graph = snapshot.graphs.find(candidate => candidate.id === graphId);
+  const scanNodes =
+    graph?.nodes.filter(
+      node =>
+        node.id.includes('-scan-') &&
+        node.gpu.sampleCount > 0 &&
+        node.gpu.p50Milliseconds !== undefined &&
+        node.gpu.p95Milliseconds !== undefined
+    ) ?? [];
+  if (scanNodes.length === 0) {
+    return null;
+  }
+  return Object.freeze({
+    nodeCount: scanNodes.length,
+    sampleCount: Math.min(...scanNodes.map(node => node.gpu.sampleCount)),
+    p50Milliseconds: scanNodes.reduce((sum, node) => sum + node.gpu.p50Milliseconds!, 0),
+    p95Milliseconds: scanNodes.reduce((sum, node) => sum + node.gpu.p95Milliseconds!, 0)
   });
 }
 

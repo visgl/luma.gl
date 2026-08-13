@@ -117,6 +117,12 @@ Status meanings:
 - `App`: applications are responsible for selecting and applying the feature.
 - `❌`: no built-in handling today.
 
+`GLTFLoader` already owns container parsing, linked resources, typed/deinterleaved accessor
+postprocessing, Draco and `EXT_meshopt_compression` decoding, Basis/KTX2 texture selection,
+conditional WebP selection, and supported 3D Tiles feature/structural metadata. The rendering
+package consumes those results; it does not need independent mesh codecs, accessor decoders, or
+GLB container serialization. `postProcessGLTF()` must still be called explicitly in loaders.gl v4.
+
 <table style={{width: '100%'}}>
   <thead>
     <tr>
@@ -131,11 +137,24 @@ Status meanings:
       regular glTF meshes.
     </SupportRow>
     <SupportRow name="EXT_meshopt_compression" support="✅ *️⃣">
-      Meshopt-compressed primitives are decoded during load and converted to regular
-      glTF meshes.
+      <code>@loaders.gl/gltf</code> already decodes EXT meshopt-compressed buffer views
+      during load; luma.gl consumes the resulting accessor values.
+    </SupportRow>
+    <SupportRow name="KHR_meshopt_compression" support="❌">
+      The newer Khronos release-candidate spelling is not implemented by the installed
+      <code>@loaders.gl/gltf</code> decoder. Supporting it belongs in loaders.gl first.
     </SupportRow>
     <SupportRow name="KHR_mesh_quantization" support="✅ *️⃣">
-      Quantized accessors are unpacked during load before geometry creation.
+      loaders.gl materializes typed quantized accessor values and normalization metadata;
+      luma.gl preserves the GPU attribute format or expands morph bases only when needed.
+    </SupportRow>
+    <SupportRow name="EXT_mesh_features" support="*️⃣">
+      <code>@loaders.gl/gltf</code> decodes supported feature identifiers. Automatic
+      rendering, picking, and application-specific feature queries are not provided.
+    </SupportRow>
+    <SupportRow name="EXT_structural_metadata" support="*️⃣">
+      <code>@loaders.gl/gltf</code> decodes supported structural metadata and property
+      tables. Applications remain responsible for interpreting and presenting that data.
     </SupportRow>
     <SupportRow name="EXT_mesh_gpu_instancing" support="✅">
       Accessor-backed translation, rotation, and scale become one real instanced draw
@@ -143,13 +162,15 @@ Status meanings:
       instance, and application-defined <code>_NAME</code> attributes remain available.
     </SupportRow>
     <SupportRow name="KHR_lights_punctual" support="✅">
-      Directional, point, and spot lights preserve authored intensity, range,
+      loaders.gl exposes the authored light definitions; luma.gl creates directional,
+      point, and spot lights that preserve intensity, range,
       source-node world transforms, and spotlight inner/outer cones. Use
       <code>parseGLTFLights(gltf, {'{'}useByteColors: false{'}'})</code> for source-linear
       RGB colors.
     </SupportRow>
     <SupportRow name="KHR_materials_unlit" support="✅">
-      Unlit materials bypass the default lighting calculations.
+      loaders.gl preserves the unlit marker; luma.gl bypasses the default lighting
+      calculations when creating the material.
     </SupportRow>
     <SupportRow name="KHR_materials_emissive_strength" support="✅ 🚧" fromVersion="9.3">
       Emissive strength now multiplies the emissive contribution in the stock PBR
@@ -225,18 +246,20 @@ Status meanings:
       <code>@loaders.gl/gltf</code> resolves the texture source; runtime support still
       depends on browser and device decode support.
     </SupportRow>
-    <SupportRow name="EXT_texture_avif" support="✅ *️⃣">
-      Same as WebP: the source is resolved during load, with final support depending on
-      decode support.
+    <SupportRow name="EXT_texture_avif" support="❌">
+      The generic image loader can decode AVIF when the browser supports it, but the
+      installed glTF loader does not select texture sources from this extension.
     </SupportRow>
     <SupportRow name="KHR_texture_transform" support="✅">
-      All 17 supported material slots retain independent offset, rotation, scale,
+      All 21 supported material slots retain independent offset, rotation, scale,
       and authored <code>TEXCOORD_0</code> / <code>TEXCOORD_1</code> selection.
+      The runtime shader path must not be combined with duplicate legacy loader-side
+      UV baking.
     </SupportRow>
     <SupportRow name="KHR_animation_pointer" support="✅ 🚧" fromVersion="9.3">
       Node TRS, morph-weight, and recursive boolean visibility pointers; selected
       material factor pointers; and animated <code>KHR_texture_transform</code>
-      offset/rotation/scale pointers across all 17 supported slots are wired to
+      offset/rotation/scale pointers across all 21 supported slots are wired to
       runtime updates. Perspective/orthographic camera properties and typed punctual-light
       color, intensity, range, spotlight angles, and physical chromatic-dispersion factors are also
       supported. Boolean
@@ -271,8 +294,14 @@ Status meanings:
     <SupportRow name="EXT_texture_video" support="❌">
       Video textures are not created automatically by the glTF pipeline.
     </SupportRow>
-    <SupportRow name="MSFT_lod" support="❌">
-      Level-of-detail switching is not implemented in the stock scenegraph loader.
+    <SupportRow name="MSFT_lod" support="✅" fromVersion="10.0">
+      Animated crowds resolve authored node levels and{' '}
+      <code>MSFT_screencoverage</code> thresholds, select independently animated
+      actors by projected screen size, and compact each occupied mesh level into
+      one instanced draw per primitive on WebGPU and WebGL 2. Optional index-only
+      mesh decimation generates levels for assets that do not author them.
+      Material-level LOD, GPU-driven selection, and progressive streaming are not
+      implemented.
     </SupportRow>
   </tbody>
 </table>
@@ -310,9 +339,10 @@ const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
 ```
 
 `built-in` and `parsed-and-wired` capabilities satisfy required-extension checks. `loader-only`
-capabilities, including browser-dependent WebP and AVIF image decoding, do not promise complete
-portable runtime support. Unknown or `none` capabilities also fail when required. Optional
-unsupported extensions remain visible in the report without preventing scene creation.
+capabilities, including browser-dependent WebP selection and decoded feature/structural metadata,
+do not promise complete portable runtime support. AVIF source selection, unknown extensions, and
+other `none` capabilities also fail when required. Optional unsupported extensions remain visible
+in the report without preventing scene creation.
 
 The returned `scenegraphs.extensionSupport` preserves the document-specific capability report.
 Strict checks run before model creation, so an unsupported required feature does not leave a
@@ -359,12 +389,14 @@ targets are evaluated in the same frame.
   screen-space transmission/refraction; the standalone `createScenegraphsFromGLTF()`
   rendering path does not perform that capture and retains its alpha fallback.
   Iridescence and anisotropy still use pragmatic shared-shader approximations.
-- The supported material extensions wire all 17 canonical core/extension texture
+- The supported material extensions wire all 21 canonical core/extension texture
   slots, including auxiliary specular, clearcoat, sheen, iridescence, anisotropy,
   transmission, and volume maps. The physical response of some advanced effects
   remains an approximation.
 - `@luma.gl/gltf` relies on `@loaders.gl/gltf` for low-level extension decoding,
-  decompression, and glTF post-processing.
+  decompression, accessor post-processing, and binary GLB container encoding. The
+  loader's legacy CPU texture-transform preprocessing and the runtime's animated
+  shader transforms must not both apply the same authored UV transform.
 - Core glTF skin attributes and animated morph targets are supported independently
   of these extension rows; source skin palettes are updated automatically once per animation
   frame. See [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation),

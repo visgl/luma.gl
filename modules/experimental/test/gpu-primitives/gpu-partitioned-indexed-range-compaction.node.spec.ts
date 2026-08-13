@@ -15,25 +15,42 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
   test('preserves source partitions through local range compaction', () => {
     const fixture = createCompactionFixture();
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
+    const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
       const result = fixture.compaction.addToGraph(fixture.graph);
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'visible-clear-range-counts',
-        'visible-partition-0-local-scan',
+        'visible-partition-0-range-count',
         'visible-partition-0-range-scan-level-0-scan',
         'visible-partition-0-scatter',
-        'visible-partition-1-local-scan',
+        'visible-partition-1-range-count',
         'visible-partition-1-range-scan-level-0-scan',
         'visible-partition-1-scatter',
         'visible-publish-counts'
       ]);
-      expect(result.localOffsets.data.map(chunk => chunk.length)).toEqual([6, 5]);
       expect(result.rangeCounts.length).toBe(4);
       expect(result.rangeOffsets.length).toBe(4);
       expect(result.partitionCounts.length).toBe(2);
+      expect(
+        createTransientBuffer.mock.calls.some(([descriptor]) =>
+          descriptor.id?.includes('local-offsets')
+        )
+      ).toBe(false);
     } finally {
       addComputePass.mockRestore();
+      createTransientBuffer.mockRestore();
+      fixture.device.destroy();
+    }
+  });
+
+  test('accepts one packed visibility bit per source row', () => {
+    const fixture = createCompactionFixture('bitset');
+    try {
+      const result = fixture.compaction.addToGraph(fixture.graph);
+      expect(fixture.compaction.flags.data.map(chunk => chunk.length)).toEqual([1, 1]);
+      expect(result.partitionCounts.length).toBe(2);
+    } finally {
       fixture.device.destroy();
     }
   });
@@ -75,13 +92,22 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
             output: createVector(fixture.graph, 'mismatched-output', [5, 6])
           })
       ).toThrow(/same chunk topology/i);
+      expect(
+        () =>
+          new GPUPartitionedIndexedRangeCompaction({
+            ...props,
+            flagEncoding: 'bitset',
+            flags: createVector(fixture.graph, 'short-bitset-flags', [1, 1]),
+            output: createVector(fixture.graph, 'long-bitset-output', [33, 5])
+          })
+      ).toThrow(/one bit per output row/i);
     } finally {
       fixture.device.destroy();
     }
   });
 });
 
-function createCompactionFixture(): {
+function createCompactionFixture(flagEncoding: 'uint32' | 'bitset' = 'uint32'): {
   device: NullDevice;
   graph: GPUCommandGraph;
   compaction: GPUPartitionedIndexedRangeCompaction;
@@ -94,7 +120,8 @@ function createCompactionFixture(): {
   const graph = new GPUCommandGraph(device, {id: 'partitioned-range-compaction-node-graph'});
   const compaction = new GPUPartitionedIndexedRangeCompaction({
     id: 'visible',
-    flags: createVector(graph, 'flags', [6, 5]),
+    flags: createVector(graph, 'flags', flagEncoding === 'bitset' ? [1, 1] : [6, 5]),
+    flagEncoding,
     ranges: createView(graph, 'ranges', 8),
     rangeCount: 4,
     rangeLayout: {wordStride: 2, firstIndexWordOffset: 0, countWordOffset: 1},

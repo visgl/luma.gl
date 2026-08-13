@@ -8,13 +8,18 @@ import {getTraceRow, makeDeckTraceData} from '../../examples/deck/gpu-culled-tra
 import {
   getTraceAllocationStats,
   getTraceCapacityContract,
+  getTraceScanTimingSummary,
   getTraceWorkloadCounters,
   TRACE_BENCHMARK_CAPACITIES,
   TRACE_BENCHMARK_SCENARIOS
 } from '../../examples/experimental/gpu-trace-viewer/trace-benchmark';
 import {
+  getMaximumTraceAdjacencyByteLength,
   getTraceCapacityOptions,
+  getTraceDensityBlend,
   getTraceDependencyCapacityOptions,
+  getTraceDuration,
+  getTraceFocusFrontierCapacity,
   isTraceDensityMode,
   makeTraceDataset,
   makeTraceDependencyBatches,
@@ -24,8 +29,10 @@ import {
   TRACE_CROSS_PROCESS_DEPENDENCY,
   TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
+  TRACE_DURATION_FILTER_MAXIMUM,
   TRACE_GROUPS,
   TRACE_INVALID_SPAN_INDEX,
+  TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_PARENT_DEPENDENCY_FLAG,
   TRACE_PROCESS_COUNT,
@@ -34,11 +41,13 @@ import {
   TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH,
   TRACE_SPAN_RECORD_WORD_LENGTH,
   TRACE_THREAD_COUNT,
-  TRACE_THREADS_PER_PROCESS
+  TRACE_THREADS_PER_PROCESS,
+  type TraceAdjacencyData
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
 import {
   getBatchVisibilityShader,
   getCandidateDensityShader,
+  getCandidateDependencySpanVisibilityShader,
   getCandidateDependencyVisibilityShader,
   getCandidatePassDispatchShader,
   getCandidatePickShader,
@@ -50,6 +59,7 @@ import {
   getFocusFrontierDispatchShader,
   getFocusFrontierExpansionShader,
   getFocusFrontierSeedShader,
+  getFocusReachabilityClearShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -109,6 +119,25 @@ test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t =>
     getTraceCapacityOptions(1024 * 1024 * 1024, 1024 * 1024 * 1024),
     [250_000, 1_000_000, 4_000_000, 10_000_000],
     'maximum adapters expose the ten-million-span demonstration'
+  );
+  t.end();
+});
+
+test('GPU trace focus frontiers scale with reachable dependency population', t => {
+  t.equal(
+    getTraceFocusFrontierCapacity(100_000_000, 250_000),
+    250_001,
+    'a sparse 100M-span trace allocates one frontier entry per dependency plus its seed'
+  );
+  t.equal(
+    getTraceFocusFrontierCapacity(100_000_000, 100_000_000),
+    100_000_000,
+    'a dense trace retains enough capacity to reach every span'
+  );
+  t.equal(
+    getTraceFocusFrontierCapacity(0, 0),
+    1,
+    'an empty trace retains one allocation-safe frontier word'
   );
   t.end();
 });
@@ -252,8 +281,50 @@ test('GPU trace workload counters report persistent memory and proportional work
   t.end();
 });
 
+test('GPU trace scan timing summary isolates and aggregates scan nodes', t => {
+  const summary = getTraceScanTimingSummary(
+    {
+      graphs: [
+        {
+          id: 'trace',
+          nodes: [
+            {
+              id: 'visibility-scan-level-0-scan',
+              gpu: {sampleCount: 8, p50Milliseconds: 0.5, p95Milliseconds: 0.75}
+            },
+            {
+              id: 'hierarchy-scan-level-0-add-offsets',
+              gpu: {sampleCount: 7, p50Milliseconds: 0.25, p95Milliseconds: 0.25}
+            },
+            {
+              id: 'draw-spans',
+              gpu: {sampleCount: 8, p50Milliseconds: 1.5, p95Milliseconds: 2}
+            }
+          ]
+        }
+      ]
+    },
+    'trace'
+  );
+  t.deepEqual(
+    summary,
+    {nodeCount: 2, sampleCount: 7, p50Milliseconds: 0.75, p95Milliseconds: 1},
+    'only scan stages contribute and the minimum common sample count is reported'
+  );
+  t.equal(getTraceScanTimingSummary({graphs: []}, 'trace'), null, 'missing samples return null');
+  t.end();
+});
+
 test('GPU trace LOD switches at a stable trace-time-per-pixel threshold', t => {
-  t.equal(isTraceDensityMode(0, 150, 2048), false, 'wide viewport keeps exact spans');
+  t.equal(getTraceDensityBlend(0, 50, 2000), 0, 'exact rendering leads into the blend');
+  t.equal(getTraceDensityBlend(0, 80, 2000), 0.5, 'both renderers share the midpoint');
+  t.equal(getTraceDensityBlend(0, 110, 2000), 1, 'density rendering finishes the blend');
+  t.equal(getTraceDensityBlend(0, 50, 2000, false), 0, 'hard switch keeps the exact boundary');
+  t.equal(getTraceDensityBlend(0, 79, 2000, false), 0, 'hard switch stays exact below midpoint');
+  t.equal(getTraceDensityBlend(0, 80, 2000, false), 1, 'hard switch selects density at midpoint');
+  t.equal(getTraceDensityBlend(0, 81, 2000, false), 1, 'hard switch stays density above midpoint');
+  t.equal(getTraceDensityBlend(0, 110, 2000, false), 1, 'hard switch keeps density boundary');
+  t.equal(isTraceDensityMode(0, 150, 2048), true, 'wide time range remains density-dominant');
   t.equal(isTraceDensityMode(0, 150, 1), true, 'zoomed-out viewport uses density bins');
   t.equal(isTraceDensityMode(10, 10.01, 0), false, 'zero-width viewport remains bounded');
   t.end();
@@ -280,6 +351,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getBatchVisibilityShader(3),
     getPickClearShader(),
     getCandidateVisibilityShader(spanChunk),
+    getCandidateDependencySpanVisibilityShader(spanChunk),
     getCandidatePassDispatchShader(),
     getDensityClearShader(),
     getCandidateDensityShader(spanChunk),
@@ -292,11 +364,13 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getDependencyEndpointResolveShader(endpointRouting, 0),
     getDependencyEndpointResolveShader(endpointRouting, 1),
     getCandidateDependencyVisibilityShader(endpointRouting),
+    getFocusReachabilityClearShader(1),
     getFocusFrontierSeedShader(11),
     getFocusFrontierClearShader(),
     getFocusFrontierExpansionShader({
       spanCount: 11,
-      sourceNodeBase: 0,
+      frontierCapacity: 5,
+      nodeWordBase: 0,
       sourceNodeCount: 6,
       offsetWordBase: 0,
       neighborWordBase: 0,
@@ -312,6 +386,44 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       throw new Error(`shader ${shaderIndex} failed to parse`, {cause: error});
     }
   }
+  t.match(
+    getCandidateDependencyVisibilityShader(endpointRouting),
+    /sourceVisible \|\| destinationVisible/,
+    'dependency visibility retains edges with either endpoint in view'
+  );
+  t.match(
+    getCandidateDensityShader(spanChunk),
+    /for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/,
+    'density aggregation preserves long-span coverage across bins'
+  );
+  t.match(
+    TRACE_RENDER_SHADER,
+    /viewUniforms\.lodFadeEnabled/,
+    'rendering selects the smooth or hard LOD transition from the view uniform'
+  );
+  t.match(
+    TRACE_RENDER_SHADER,
+    /select\(\s*1\.0,\s*spanReadability,\s*viewUniforms\.lodFadeEnabled != 0u\s*\)/,
+    'hard-switch exact spans bypass sub-pixel readability fading'
+  );
+  t.end();
+});
+
+test('GPU trace focus seed exposes only resources consumed by its compute entry point', t => {
+  const reflection = new WgslReflect(getFocusFrontierSeedShader(11));
+  t.deepEqual(
+    reflection.storage.map(resource => ({name: resource.name, location: resource.binding})),
+    [
+      {name: 'selectedSeeds', location: 0},
+      {name: 'activeSeedCount', location: 1},
+      {name: 'focusTraversalState', location: 2},
+      {name: 'reachedSpans', location: 3},
+      {name: 'frontier', location: 4},
+      {name: 'frontierCount', location: 5},
+      {name: 'dispatchCommand', location: 6}
+    ],
+    'seed bindings match the native WebGPU pipeline layout without an optimized-out slot'
+  );
   t.end();
 });
 
@@ -322,9 +434,9 @@ test('GPU trace data preserves deterministic canonical group and hierarchy ident
   t.deepEqual(
     dataset.groups.map(group => [group.firstSpanIndex, group.count]),
     [
-      [0, 85],
-      [85, 85],
-      [170, 87]
+      [0, 86],
+      [86, 86],
+      [172, 85]
     ],
     'group ranges completely cover canonical source rows'
   );
@@ -357,8 +469,87 @@ test('GPU trace data preserves deterministic canonical group and hierarchy ident
   }
   t.deepEqual(
     makeTraceGroups(7).map(group => group.count),
-    [2, 2, 3],
+    [3, 2, 2],
     'the original trace-group helper remains compatible'
+  );
+  t.end();
+});
+
+test('GPU trace duration grows with tightly packed non-overlapping lane slots', t => {
+  t.equal(getTraceDuration(250_000), 1000, 'the baseline capacity retains a one-second trace');
+  t.ok(
+    Math.abs(getTraceDuration(1_000_000) - 4000) < 2,
+    'one million spans expands to about four seconds'
+  );
+  t.ok(
+    Math.abs(getTraceDuration(10_000_000) - 40_000) < 25,
+    'ten million spans expands to about forty seconds'
+  );
+
+  const dataset = makeTraceDataset(65_536, 0);
+  const spanFloats = new Float32Array(dataset.spans.buffer);
+  const laneSpans = Array.from(
+    {length: TRACE_LANE_COUNT},
+    () => [] as Array<[start: number, end: number, group: number]>
+  );
+  let occupiedDuration = 0;
+  let minimumDuration = Number.POSITIVE_INFINITY;
+  let maximumDuration = 0;
+  for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
+    const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
+    const start = spanFloats[wordOffset];
+    const duration = spanFloats[wordOffset + 1];
+    const lane = dataset.spans[wordOffset + 2];
+    laneSpans[lane].push([start, start + duration, dataset.spans[wordOffset + 3]]);
+    occupiedDuration += duration;
+    minimumDuration = Math.min(minimumDuration, duration);
+    maximumDuration = Math.max(maximumDuration, duration);
+  }
+  let sameGroupNeighborCount = 0;
+  let neighborCount = 0;
+  let focusedLaneCount = 0;
+  for (const spans of laneSpans) {
+    spans.sort((left, right) => left[0] - right[0]);
+    const groupCounts = new Uint32Array(TRACE_GROUPS.length);
+    for (const span of spans) {
+      groupCounts[span[2]]++;
+    }
+    focusedLaneCount += Number(Math.max(...groupCounts) / spans.length > 0.65);
+    for (let spanIndex = 1; spanIndex < spans.length; spanIndex++) {
+      t.ok(
+        spans[spanIndex][0] >= spans[spanIndex - 1][1],
+        'successive spans in one lane do not overlap'
+      );
+      sameGroupNeighborCount += Number(spans[spanIndex][2] === spans[spanIndex - 1][2]);
+      neighborCount++;
+    }
+  }
+  t.ok(
+    sameGroupNeighborCount / neighborCount > 0.9,
+    'span groups form coherent lane phases instead of alternating every span'
+  );
+  t.ok(
+    focusedLaneCount / laneSpans.length > 0.9,
+    'most lanes spend a clear majority of their time on one span group'
+  );
+  const occupancy = occupiedDuration / (dataset.duration * TRACE_LANE_COUNT);
+  t.ok(occupancy > 0.55 && occupancy < 0.8, 'lane packing stays dense without overlap');
+  t.ok(minimumDuration < 0.05, 'the trace includes very short spans');
+  t.ok(maximumDuration > 20, 'the trace includes very wide spans');
+  t.ok(
+    maximumDuration > TRACE_DURATION_FILTER_MAXIMUM,
+    'duration filter maximum retains spans from the generated upper tail'
+  );
+  t.ok(
+    dataset.groups.every(group => {
+      const groupFloats = new Float32Array(
+        group.data.buffer,
+        group.data.byteOffset,
+        group.data.length
+      );
+      return groupFloats[0] < getTraceDuration(TRACE_LANE_COUNT);
+    }),
+    'all color groups appear in the first timeline slot'
   );
   t.end();
 });
@@ -419,10 +610,9 @@ test('GPU trace span batches preserve global identity and publish coarse index b
     spanBatches.map(batch => [batch.firstSpanIndex, batch.count, batch.groupIndex]),
     [
       [0, 2, 0],
-      [2, 1, 0],
-      [3, 2, 1],
-      [5, 1, 1],
-      [6, 2, 2],
+      [2, 2, 0],
+      [4, 2, 1],
+      [6, 2, 1],
       [8, 2, 2],
       [10, 1, 2]
     ],
@@ -461,10 +651,12 @@ test('GPU trace span batches preserve global identity and publish coarse index b
   }
   for (const group of dataset.groups) {
     const groupBatches = spanBatches.filter(batch => batch.groupIndex === group.groupIndex);
+    const slotDuration = getTraceDuration(TRACE_LANE_COUNT);
     for (let batchIndex = 1; batchIndex < groupBatches.length; batchIndex++) {
       t.ok(
-        groupBatches[batchIndex].timeMin >= groupBatches[batchIndex - 1].timeMin,
-        'group batches retain increasing temporal locality'
+        Math.floor(groupBatches[batchIndex].timeMin / slotDuration) >=
+          Math.floor(groupBatches[batchIndex - 1].timeMin / slotDuration),
+        'group batches retain increasing temporal-slot locality'
       );
     }
   }
@@ -482,33 +674,49 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
   t.ok(dataset.dependencyCount > 0, 'generates realistic sparse dependencies');
   t.equal(
     dataset.outgoing.offsets.length,
-    dataset.spanCount + 1,
-    'forward CSR owns one offset per span plus its sentinel'
+    dataset.outgoing.nodes.length + 1,
+    'forward CSR owns one offset per active source plus its sentinel'
   );
   t.equal(
     dataset.incoming.offsets.length,
-    dataset.spanCount + 1,
-    'reverse CSR owns one offset per span plus its sentinel'
+    dataset.incoming.nodes.length + 1,
+    'reverse CSR owns one offset per active destination plus its sentinel'
   );
   t.equal(
-    dataset.outgoing.offsets[dataset.spanCount],
+    dataset.outgoing.offsets[dataset.outgoing.nodes.length],
     dataset.dependencyCount,
     'forward sentinel equals the canonical dependency count'
   );
   t.equal(
-    dataset.incoming.offsets[dataset.spanCount],
+    dataset.incoming.offsets[dataset.incoming.nodes.length],
     dataset.dependencyCount,
     'reverse sentinel equals the canonical dependency count'
   );
+  t.ok(
+    dataset.outgoing.nodes.length <= dataset.dependencyCount &&
+      dataset.incoming.nodes.length <= dataset.dependencyCount,
+    'both directions allocate rows only for nodes that own edges'
+  );
+  for (const adjacency of [dataset.outgoing, dataset.incoming]) {
+    for (let rowIndex = 0; rowIndex < adjacency.nodes.length; rowIndex++) {
+      if (rowIndex > 0) {
+        t.ok(
+          adjacency.nodes[rowIndex] > adjacency.nodes[rowIndex - 1],
+          'sparse owner rows preserve strict global-ID order for GPU binary search'
+        );
+      }
+      t.ok(
+        adjacency.offsets[rowIndex + 1] > adjacency.offsets[rowIndex],
+        'every sparse owner row contains at least one dependency'
+      );
+    }
+  }
   for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
     const parentSpanIndex = dataset.parentSpans[spanIndex];
     if (parentSpanIndex === TRACE_INVALID_SPAN_INDEX) {
       continue;
     }
-    const incoming = dataset.incoming.neighbors.subarray(
-      dataset.incoming.offsets[spanIndex],
-      dataset.incoming.offsets[spanIndex + 1]
-    );
+    const incoming = getTraceAdjacencyNeighbors(dataset.incoming, spanIndex);
     t.ok(incoming.includes(parentSpanIndex), 'canonical ancestry is backed by a real parent edge');
   }
 
@@ -520,14 +728,8 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
     const destination = dataset.dependencies[wordOffset + 1];
     const family = dataset.dependencies[wordOffset + 2];
     const metadata = dataset.dependencies[wordOffset + 3];
-    const outgoing = dataset.outgoing.neighbors.subarray(
-      dataset.outgoing.offsets[source],
-      dataset.outgoing.offsets[source + 1]
-    );
-    const incoming = dataset.incoming.neighbors.subarray(
-      dataset.incoming.offsets[destination],
-      dataset.incoming.offsets[destination + 1]
-    );
+    const outgoing = getTraceAdjacencyNeighbors(dataset.outgoing, source);
+    const incoming = getTraceAdjacencyNeighbors(dataset.incoming, destination);
     t.ok(outgoing.includes(destination), 'forward CSR contains the canonical destination');
     t.ok(incoming.includes(source), 'reverse CSR contains the canonical source');
     t.equal(metadata & 0xff, TRACE_PARENT_DEPENDENCY_FLAG, 'parent classification remains numeric');
@@ -549,6 +751,16 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
   }
   t.ok(sameProcessCount > 0, 'includes same-thread parent dependencies');
   t.ok(crossProcessCount > 0, 'includes cross-process parent dependencies');
+  t.equal(
+    getMaximumTraceAdjacencyByteLength(250_000),
+    6_000_008,
+    '250K dependencies need at most 6 MB of bidirectional sparse adjacency at any span count'
+  );
+  t.ok(
+    getMaximumTraceAdjacencyByteLength(250_000) * 100 <
+      2 * (100_000_000 + 1 + 250_000) * Uint32Array.BYTES_PER_ELEMENT,
+    '100M spans with 250K dependencies use over 100x less adjacency storage than dense CSR'
+  );
   t.end();
 });
 
@@ -565,7 +777,9 @@ test('GPU trace data handles empty inputs and rejects invalid capacities', t => 
     0,
     'empty traces have no dependency batch index records'
   );
+  t.deepEqual(Array.from(dataset.outgoing.nodes), [], 'empty forward CSR has no active rows');
   t.deepEqual(Array.from(dataset.outgoing.offsets), [0], 'empty forward CSR has a sentinel');
+  t.deepEqual(Array.from(dataset.incoming.nodes), [], 'empty reverse CSR has no active rows');
   t.deepEqual(Array.from(dataset.incoming.offsets), [0], 'empty reverse CSR has a sentinel');
   t.throws(() => makeTraceDataset(-1), /nonnegative uint32/, 'negative capacity is rejected');
   t.throws(() => makeTraceDataset(1.5), /nonnegative uint32/, 'fractional capacity is rejected');
@@ -576,3 +790,10 @@ test('GPU trace data handles empty inputs and rejects invalid capacities', t => 
   );
   t.end();
 });
+
+function getTraceAdjacencyNeighbors(adjacency: TraceAdjacencyData, node: number): Uint32Array {
+  const rowIndex = adjacency.nodes.indexOf(node);
+  return rowIndex < 0
+    ? adjacency.neighbors.subarray(0, 0)
+    : adjacency.neighbors.subarray(adjacency.offsets[rowIndex], adjacency.offsets[rowIndex + 1]);
+}

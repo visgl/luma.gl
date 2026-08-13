@@ -9,6 +9,7 @@ import {
   Sampler,
   Texture,
   type Device,
+  type Framebuffer,
   type SamplerProps
 } from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
@@ -256,6 +257,133 @@ test('GPUCommandGraph resolves multisampled color attachments', async t => {
     /match a multisampled source and be single-sampled/,
     'single-sample sources cannot declare resolve targets'
   );
+  t.end();
+});
+
+test('GPUCommandGraph redirects reusable render passes to caller-owned framebuffers', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const firstTexture = device.createTexture({
+    id: 'caller-owned-color-0',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const secondTexture = device.createTexture({
+    id: 'caller-owned-color-1',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const firstFramebuffer = device.createFramebuffer({
+    id: 'caller-owned-framebuffer-0',
+    width: 4,
+    height: 4,
+    colorAttachments: [firstTexture],
+    depthStencilAttachment: null
+  });
+  const secondFramebuffer = device.createFramebuffer({
+    id: 'caller-owned-framebuffer-1',
+    width: 4,
+    height: 4,
+    colorAttachments: [secondTexture],
+    depthStencilAttachment: null
+  });
+  const graph = new GPUCommandGraph<{
+    framebuffer: Framebuffer;
+    clearColor: [number, number, number, number];
+  }>(device, {id: 'caller-owned-framebuffers'});
+  let compilationCount = 0;
+  let encodingCount = 0;
+
+  graph.addRenderPass({
+    id: 'redirect-render-target',
+    compile: () => {
+      compilationCount++;
+      return {
+        getRenderPassProps: ({parameters}) => ({
+          framebuffer: parameters.framebuffer,
+          clearColor: parameters.clearColor
+        }),
+        encode: () => {
+          encodingCount++;
+        }
+      };
+    }
+  });
+
+  const compiled = graph.compile();
+  const firstEncoder = device.createCommandEncoder({id: 'caller-owned-encoding-0'});
+  compiled.encode(firstEncoder, {
+    parameters: {framebuffer: firstFramebuffer, clearColor: [1, 0, 0, 1]}
+  });
+  device.submit(firstEncoder.finish());
+
+  const secondEncoder = device.createCommandEncoder({id: 'caller-owned-encoding-1'});
+  compiled.encode(secondEncoder, {
+    parameters: {framebuffer: secondFramebuffer, clearColor: [0, 1, 0, 1]}
+  });
+  device.submit(secondEncoder.finish());
+
+  t.deepEqual(
+    Array.from((await readPixels(firstTexture, 4, 4)).subarray(0, 4)),
+    [255, 0, 0, 255],
+    'the first offscreen framebuffer receives only its own render pass'
+  );
+  t.deepEqual(
+    Array.from((await readPixels(secondTexture, 4, 4)).subarray(0, 4)),
+    [0, 255, 0, 255],
+    'the next encoding can target a different caller-owned framebuffer'
+  );
+  t.equal(compilationCount, 1, 'changing the target does not recompile the render executable');
+  t.equal(encodingCount, 2, 'the same compiled render executable records both frames');
+
+  const conflictingGraph = new GPUCommandGraph(device, {id: 'conflicting-framebuffer'});
+  const managedColor = conflictingGraph.importTexture(
+    {
+      id: 'managed-color',
+      format: 'rgba8unorm',
+      width: 4,
+      height: 4,
+      usage: Texture.RENDER
+    },
+    firstTexture
+  );
+  conflictingGraph.addRenderPass({
+    id: 'conflicting-render-target',
+    attachments: {colorAttachments: [conflictingGraph.createTextureView(managedColor)]},
+    compile: () => ({
+      getRenderPassProps: () => ({framebuffer: secondFramebuffer}),
+      encode: () => {}
+    })
+  });
+  const conflictingCompiled = conflictingGraph.compile();
+  t.throws(
+    () =>
+      conflictingCompiled.encode(device.createCommandEncoder({id: 'conflicting-encoding'}), {
+        parameters: undefined
+      }),
+    /cannot supply framebuffer with graph attachments/,
+    'graph-managed attachments cannot be replaced by a callback-supplied framebuffer'
+  );
+
+  conflictingCompiled.destroy();
+  compiled.destroy();
+  t.notOk(firstFramebuffer.destroyed, 'the first framebuffer remains caller-owned');
+  t.notOk(secondFramebuffer.destroyed, 'the replacement framebuffer remains caller-owned');
+  t.notOk(firstTexture.destroyed, 'the first framebuffer texture remains caller-owned');
+  t.notOk(secondTexture.destroyed, 'the replacement framebuffer texture remains caller-owned');
+  firstFramebuffer.destroy();
+  secondFramebuffer.destroy();
+  firstTexture.destroy();
+  secondTexture.destroy();
   t.end();
 });
 

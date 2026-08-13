@@ -15,6 +15,8 @@ export type RasterLabMorphologyMode = 'grayscale' | 'binary';
 export type RasterLabMorphologyShape = 'square' | 'cross';
 export type RasterLabMorphologyNoDataPolicy = 'propagate' | 'ignore';
 export type RasterLabMorphologyBorderMode = 'clamp' | 'reflect' | 'constant' | 'nodata';
+export type RasterLabComponentConnectivity = 4 | 8;
+export type RasterLabComponentLabelMode = 'sparse' | 'dense';
 
 /** Canvas-backed rectangle in physical pixels, measured from the upper-left corner. */
 export type RasterLabViewport = {x: number; y: number; width: number; height: number};
@@ -29,6 +31,7 @@ export type RasterLabRendererSources = {
   validity: Buffer;
   thresholdValidity: Buffer;
   morphologyValidity: Buffer;
+  componentLabels: Buffer;
   contourVertices: Buffer;
   contourCommands: DrawCommandBuffer;
 };
@@ -52,6 +55,12 @@ export type RasterLabDisplaySettings = {
   threshold: number;
   thresholdEnabled: boolean;
   automaticThreshold: boolean;
+  componentsEnabled: boolean;
+  componentConnectivity: RasterLabComponentConnectivity;
+  componentLabelMode: RasterLabComponentLabelMode;
+  componentCapacity: number;
+  componentMaximumIterations: number;
+  regionMetricsEnabled: boolean;
   contoursEnabled: boolean;
   contourLevel: number;
 };
@@ -69,7 +78,8 @@ struct DisplayUniforms {
 @group(0) @binding(4) var<storage, read> validityValues: array<u32>;
 @group(0) @binding(5) var<storage, read> thresholdValidityValues: array<u32>;
 @group(0) @binding(6) var<storage, read> morphologyValidityValues: array<u32>;
-@group(0) @binding(7) var<uniform> uniforms: DisplayUniforms;
+@group(0) @binding(7) var<storage, read> componentLabelValues: array<u32>;
+@group(0) @binding(8) var<uniform> uniforms: DisplayUniforms;
 
 struct VertexOutput {
   @builtin(position) position: vec4f,
@@ -96,6 +106,14 @@ fn getVegetationColor(value: f32) -> vec3f {
   let third = mix(second, grassland, smoothstep(0.15, 0.4, value));
   let fourth = mix(third, forest, smoothstep(0.37, 0.68, value));
   return mix(fourth, canopy, smoothstep(0.69, 0.95, value));
+}
+
+fn getComponentColor(label: u32) -> vec3f {
+  let mixedLabel = label * 1664525u + 1013904223u;
+  let red = 0.32 + f32(mixedLabel & 255u) / 420.0;
+  let green = 0.34 + f32((mixedLabel >> 8u) & 255u) / 405.0;
+  let blue = 0.38 + f32((mixedLabel >> 16u) & 255u) / 430.0;
+  return vec3f(red, green, blue);
 }
 
 @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
@@ -146,6 +164,15 @@ fn getVegetationColor(value: f32) -> vec3f {
 
   if (uniforms.presentation.y > 0.5 && thresholdValidityValues[pixelIndex] == 0u) {
     color = mix(color * 0.27, vec3f(0.07, 0.12, 0.17), 0.34);
+  }
+
+  if (uniforms.raster.w > 0.5) {
+    let label = componentLabelValues[pixelIndex];
+    if (label == 0u) {
+      color = mix(color * 0.19, vec3f(0.04, 0.075, 0.105), 0.52);
+    } else {
+      color = mix(color * 0.36, getComponentColor(label), 0.82);
+    }
   }
 
   return vec4f(color, 1.0);
@@ -220,7 +247,8 @@ export class RasterLabRenderer {
             {name: 'validityValues', type: 'read-only-storage', group: 0, location: 4},
             {name: 'thresholdValidityValues', type: 'read-only-storage', group: 0, location: 5},
             {name: 'morphologyValidityValues', type: 'read-only-storage', group: 0, location: 6},
-            {name: 'uniforms', type: 'uniform', group: 0, location: 7}
+            {name: 'componentLabelValues', type: 'read-only-storage', group: 0, location: 7},
+            {name: 'uniforms', type: 'uniform', group: 0, location: 8}
           ]
         },
         bindings: {
@@ -231,6 +259,7 @@ export class RasterLabRenderer {
           validityValues: sources.validity,
           thresholdValidityValues: sources.thresholdValidity,
           morphologyValidityValues: sources.morphologyValidity,
+          componentLabelValues: sources.componentLabels,
           uniforms: this.uniformBuffer
         },
         parameters: {depthCompare: 'always', depthWriteEnabled: false}
@@ -303,7 +332,7 @@ export class RasterLabRenderer {
         this.rasterWidth,
         this.rasterHeight,
         settings.mode === 'ndvi' ? 0 : settings.mode === 'red' ? 1 : 2,
-        settings.contrast,
+        Number(settings.componentsEnabled),
         Number(settings.morphologyOperation !== 'none' && settings.morphologyMode === 'binary'),
         Number(settings.thresholdEnabled),
         Number(settings.edgeMode !== 'none'),

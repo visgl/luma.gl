@@ -11,6 +11,7 @@ import {
   type GPUBoundedDispatchLayout
 } from './gpu-dispatch-utils';
 import {addGPUScanToGraphWithDispatchLimit, GPUScan} from './gpu-scan';
+import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 import {
   createTransientView,
   getViewBinding,
@@ -304,7 +305,10 @@ function addLocalBitonicSortPass<Parameters>(
   paddedLength: number
 ): void {
   const descending = sort.direction === 'descending';
+  const useSubgroups =
+    getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
   const source = /* wgsl */ `
+${useSubgroups ? 'enable subgroups;\nrequires subgroup_id;' : ''}
 const INVALID_INDEX: u32 = ${INVALID_INDEX}u;
 const LOGICAL_LENGTH: u32 = ${sort.keys.length}u;
 const PADDED_LENGTH: u32 = ${paddedLength}u;
@@ -331,26 +335,48 @@ fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
 }
 
 @compute @workgroup_size(${paddedLength}) fn main(
-  @builtin(local_invocation_index) localInvocationIndex: u32
+  ${useSubgroups ? '@builtin(subgroup_invocation_id) subgroupInvocationId: u32,\n  @builtin(subgroup_size) subgroupSize: u32,\n  @builtin(subgroup_id) subgroupId: u32' : '@builtin(local_invocation_index) localInvocationIndex: u32'}
 ) {
-  if (localInvocationIndex < PADDED_LENGTH) {
-    indices[localInvocationIndex] = select(
-      INVALID_INDEX,
-      localInvocationIndex,
-      localInvocationIndex < LOGICAL_LENGTH
-    );
-    if (localInvocationIndex < LOGICAL_LENGTH) {
-      cachedKeys[localInvocationIndex] = keys[KEYS_OFFSET + localInvocationIndex];
-    } else {
-      cachedKeys[localInvocationIndex] = 0u;
-    }
+${useSubgroups ? getSubgroupLocalBitonicShader() : getPortableLocalBitonicShader()}
+}`;
+  addComputationPass(graph, {
+    id: `${sort.id}-bitonic-local`,
+    source,
+    resources: [
+      {buffer: sort.keys, usage: 'storage-read'},
+      {buffer: sort.values, usage: 'storage-read'},
+      {buffer: sort.outputKeys, usage: 'storage-write'},
+      {buffer: sort.outputValues, usage: 'storage-write'}
+    ],
+    bindings: {
+      keys: sort.keys,
+      values: sort.values,
+      outputKeys: sort.outputKeys,
+      outputValues: sort.outputValues
+    },
+    dispatchLayout: {x: 1, y: 1, z: 1}
+  });
+}
+
+/** Emits the original shared-memory sorting network for CORE WebGPU devices. */
+function getPortableLocalBitonicShader(): string {
+  return /* wgsl */ `
+  indices[localInvocationIndex] = select(
+    INVALID_INDEX,
+    localInvocationIndex,
+    localInvocationIndex < LOGICAL_LENGTH
+  );
+  if (localInvocationIndex < LOGICAL_LENGTH) {
+    cachedKeys[localInvocationIndex] = keys[KEYS_OFFSET + localInvocationIndex];
+  } else {
+    cachedKeys[localInvocationIndex] = 0u;
   }
   workgroupBarrier();
 
   for (var blockWidth = 2u; blockWidth <= PADDED_LENGTH; blockWidth <<= 1u) {
     for (var compareStride = blockWidth >> 1u; compareStride > 0u; compareStride >>= 1u) {
       let partnerIndex = localInvocationIndex ^ compareStride;
-      if (localInvocationIndex < PADDED_LENGTH && partnerIndex > localInvocationIndex) {
+      if (partnerIndex > localInvocationIndex) {
         let leftIndex = indices[localInvocationIndex];
         let rightIndex = indices[partnerIndex];
         let ascending = (localInvocationIndex & blockWidth) == 0u;
@@ -370,25 +396,55 @@ fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
     let sourceIndex = indices[localInvocationIndex];
     outputKeys[OUTPUT_KEYS_OFFSET + localInvocationIndex] = cachedKeys[sourceIndex];
     outputValues[OUTPUT_VALUES_OFFSET + localInvocationIndex] = values[VALUES_OFFSET + sourceIndex];
+  }`;
+}
+
+/** Uses register shuffles for every compare/exchange contained by one subgroup. */
+function getSubgroupLocalBitonicShader(): string {
+  return /* wgsl */ `
+  let lane = subgroupId * subgroupSize + subgroupInvocationId;
+  var currentIndex = select(INVALID_INDEX, lane, lane < LOGICAL_LENGTH);
+  if (lane < LOGICAL_LENGTH) {
+    cachedKeys[lane] = keys[KEYS_OFFSET + lane];
+  } else {
+    cachedKeys[lane] = 0u;
   }
-}`;
-  addComputationPass(graph, {
-    id: `${sort.id}-bitonic-local`,
-    source,
-    resources: [
-      {buffer: sort.keys, usage: 'storage-read'},
-      {buffer: sort.values, usage: 'storage-read'},
-      {buffer: sort.outputKeys, usage: 'storage-write'},
-      {buffer: sort.outputValues, usage: 'storage-write'}
-    ],
-    bindings: {
-      keys: sort.keys,
-      values: sort.values,
-      outputKeys: sort.outputKeys,
-      outputValues: sort.outputValues
-    },
-    dispatchLayout: {x: 1, y: 1, z: 1}
-  });
+  workgroupBarrier();
+
+  for (var blockWidth = 2u; blockWidth <= PADDED_LENGTH; blockWidth <<= 1u) {
+    for (var compareStride = blockWidth >> 1u; compareStride > 0u; compareStride >>= 1u) {
+      var partnerIndex = INVALID_INDEX;
+      if (compareStride < subgroupSize) {
+        partnerIndex = subgroupShuffleXor(currentIndex, compareStride);
+      } else {
+        indices[lane] = currentIndex;
+        workgroupBarrier();
+        partnerIndex = indices[lane ^ compareStride];
+      }
+
+      let lowerLane = (lane & compareStride) == 0u;
+      let leftIndex = select(partnerIndex, currentIndex, lowerLane);
+      let rightIndex = select(currentIndex, partnerIndex, lowerLane);
+      let ascending = (lane & blockWidth) == 0u;
+      let shouldSwap = select(
+        comes_before(leftIndex, rightIndex),
+        comes_before(rightIndex, leftIndex),
+        ascending
+      );
+      let sortedLeft = select(leftIndex, rightIndex, shouldSwap);
+      let sortedRight = select(rightIndex, leftIndex, shouldSwap);
+      currentIndex = select(sortedRight, sortedLeft, lowerLane);
+
+      if (compareStride >= subgroupSize) {
+        workgroupBarrier();
+      }
+    }
+  }
+
+  if (lane < LOGICAL_LENGTH) {
+    outputKeys[OUTPUT_KEYS_OFFSET + lane] = cachedKeys[currentIndex];
+    outputValues[OUTPUT_VALUES_OFFSET + lane] = values[VALUES_OFFSET + currentIndex];
+  }`;
 }
 
 /** Initializes logical indices and invalid padding for a power-of-two bitonic network. */
