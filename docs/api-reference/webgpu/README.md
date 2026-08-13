@@ -56,6 +56,9 @@ through `device.wgslLanguageFeatures`, and WGSL can validate one with a `require
 `featureLevel: 'max'` requests every adapter device feature and maximum supported limit; WGSL
 language extensions never need to be added to the device descriptor.
 
+See [Optional WebGPU and WGSL features](/docs/api-reference/webgpu/optional-features) for the full
+request, discovery, shader-gating, fallback, and limit-selection model.
+
 Applications can opt into WebGPU compatibility mode on browsers and backends that support it:
 
 ```typescript

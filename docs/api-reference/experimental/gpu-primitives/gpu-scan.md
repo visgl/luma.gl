@@ -9,6 +9,9 @@ workgroup implementation remains the fallback, and segmented scans always use it
 are mapped to explicit logical indices so prefix order does not depend on implementation-defined
 invocation layout.
 
+See [Optional WebGPU and WGSL features](/docs/api-reference/webgpu/optional-features) for why these
+two capabilities use different discovery and request mechanisms.
+
 This path is especially relevant to GPU-resident trace visualization: hierarchy layout and stable
 visibility compaction both scan large flag arrays on interactive updates. The GPU Trace Viewer uses
 `featureLevel: 'max'`, so recent Chrome releases opt into the fast path automatically when the

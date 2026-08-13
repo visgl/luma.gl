@@ -557,7 +557,10 @@
       {
         "type": "category",
         "label": "@luma.gl/webgpu",
-        "items": ["api-reference/webgpu/README"]
+        "items": [
+          "api-reference/webgpu/README",
+          "api-reference/webgpu/optional-features"
+        ]
       }
     ]
   },

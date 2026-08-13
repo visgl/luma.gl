@@ -8,6 +8,11 @@ import {Feature as F} from '@site/src/react-luma';
 The luma.gl `Device` provides a device "feature" system that allows applications
 to check whether specific advanced capabilities are present on the current browser or GPU.
 
+WebGPU device features must be requested during device creation, while WGSL language features are
+discovered dynamically and are not device descriptor entries. See
+[Optional WebGPU and WGSL features](/docs/api-reference/webgpu/optional-features) for the canonical
+capability-selection pattern.
+
 ## Background
 
 Both WebGL 2 and WebGPU provide extension mechanisms that allow implementations to
