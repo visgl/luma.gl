@@ -41,10 +41,15 @@ export type LuGraphModularityOptimizationProps = {
 /**
  * Improves a GPU-resident graph partition through single-level Newman modularity local moves.
  *
- * Every synchronized round scores weak-neighbor community candidates against an immutable
- * partition and accepts only its single best strictly improving move. Equal gains choose the
- * lowest vertex identifier and then the lowest candidate community. Original source-edge weights,
- * multiplicity, direction, self-loops, and resolution follow {@link LuGraphModularity} exactly.
+ * Every synchronized round scores weak-neighbor and unused singleton community candidates
+ * against an immutable partition and accepts only its single best strictly improving move.
+ * Equal computed gains choose the lowest vertex identifier and then the lowest candidate
+ * community. Original source-edge weights, multiplicity, direction, self-loops, and resolution
+ * follow {@link LuGraphModularity} exactly.
+ *
+ * Weighted float32 accumulation uses unordered atomic additions, so low-order rounding,
+ * computed gains, threshold decisions, and selected partitions can vary across GPU execution
+ * orders or adapters. Stable tie-breaking applies to the computed gains within each round.
  *
  * The final partition and its exact GPU-computed modularity remain caller-owned. This operation
  * performs neither graph coarsening nor multilevel Louvain or Leiden optimization. Overflow,

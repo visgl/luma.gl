@@ -11,7 +11,7 @@ nonnegative weighted single-source routes, weakly connected components,
 deterministic label-propagation communities, local clustering coefficients, structural core
 numbers, and normalized PageRank with dangling-vertex redistribution. Partition modularity scores
 caller-owned community assignments directly against the original weighted source edges, while
-bounded single-level optimization can improve those assignments one deterministic move at a time.
+bounded single-level optimization can improve those assignments one best-gain move at a time.
 The progressive exact force-directed layout produces directly renderable GPU positions. An optional
 `LuGraphSpatialForceLayout` can approximate distant
 uniform-grid cells while keeping nearby forces exact; it preserves the same positions, explicit
@@ -117,13 +117,18 @@ automatic modularity optimization.
 `LuGraphModularityOptimization` improves identity-initialized or caller-supplied `uint32`
 communities using the same directed or undirected weighted objective. Each bounded round selects
 the single globally largest strictly positive modularity gain, breaking ties by the lowest vertex
-identifier and then the lowest candidate community. It publishes improved labels, the actual
-one-row `float32` modularity score, and optional convergence and validity statuses without CPU
+identifier and then the lowest candidate community. Proposals include the lowest genuinely unused
+community label, so over-merged warm starts can split even when their only edges are self-loops;
+occupancy includes zero-degree isolates. It publishes improved labels, the actual one-row
+`float32` modularity score, and optional convergence and validity statuses without CPU
 synchronization. The default 32 rounds can be changed from zero through 1024; zero rounds score
 the unchanged initial partition. Directed graphs require reverse CSR, original weights and edge
 multiplicity are preserved, and invalid labels, invalid accepted weights, zero edge weight, or
-adjacency overflow fail closed. This is single-level Louvain-style local moving, not full
-multilevel Louvain, Leiden refinement, graph coarsening, or a global optimum.
+adjacency overflow fail closed. Tie-breaking is stable for fixed computed gains, but unordered
+atomic `float32` additions can alter near-tied gains, threshold decisions, labels, and scores
+across GPU execution orders or adapters; weighted partitions can vary. This is
+single-level Louvain-style local moving, not full multilevel Louvain, Leiden refinement, graph
+coarsening, or a global optimum.
 
 Exact layout suits smaller graphs and accuracy-sensitive workflows; the optional
 flat-grid approximation suits applications that can trade some far-field accuracy for fewer

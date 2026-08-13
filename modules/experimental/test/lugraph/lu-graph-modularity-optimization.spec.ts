@@ -162,6 +162,100 @@ const optimizationScenarios: OptimizationScenario[] = [
     expectedConvergence: false
   },
   {
+    name: 'directed warm-start communities can split into a genuinely empty singleton label',
+    vertexCount: 2,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    initialCommunities: [0, 0],
+    iterations: 1,
+    expectedLabels: [1, 0],
+    expectedScore: 0.5,
+    expectedConvergence: false
+  },
+  {
+    name: 'directed singleton splits converge only after another complete no-improvement round',
+    vertexCount: 2,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    initialCommunities: [0, 0],
+    iterations: 2,
+    expectedLabels: [1, 0],
+    expectedScore: 0.5,
+    expectedConvergence: true
+  },
+  {
+    name: 'undirected warm-start communities can split self-loops into an empty singleton label',
+    vertexCount: 2,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    initialCommunities: [0, 0],
+    directed: false,
+    iterations: 1,
+    expectedLabels: [1, 0],
+    expectedScore: 0.5,
+    expectedConvergence: false
+  },
+  {
+    name: 'undirected singleton splits publish truthful convergence after the following round',
+    vertexCount: 2,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    initialCommunities: [0, 0],
+    directed: false,
+    iterations: 2,
+    expectedLabels: [1, 0],
+    expectedScore: 0.5,
+    expectedConvergence: true
+  },
+  {
+    name: 'singleton vacancy selection includes labels occupied solely by isolated vertices',
+    vertexCount: 3,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    initialCommunities: [2, 2, 0],
+    iterations: 2,
+    expectedLabels: [1, 2, 0],
+    expectedScore: 0.5,
+    expectedConvergence: true
+  },
+  {
+    name: 'singleton creation chooses the lowest genuinely absent stable community identifier',
+    vertexCount: 2,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    initialCommunities: [1, 1],
+    directed: false,
+    iterations: 1,
+    expectedLabels: [0, 1],
+    expectedScore: 0.5,
+    expectedConvergence: false
+  },
+  {
+    name: 'weighted singleton splitting preserves original source-edge modularity contributions',
+    vertexCount: 2,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    weightChunks: [[3], [], [1]],
+    initialCommunities: [0, 0],
+    directed: false,
+    iterations: 2,
+    expectedLabels: [1, 0],
+    expectedScore: 0.375,
+    expectedConvergence: true
+  },
+  {
+    name: 'strict minimumGain rejects a singleton split whose quality gain equals its threshold',
+    vertexCount: 2,
+    sourceChunks: [[0], [], [1]],
+    targetChunks: [[0], [], [1]],
+    initialCommunities: [0, 0],
+    minimumGain: 0.5,
+    iterations: 1,
+    expectedLabels: [0, 0],
+    expectedScore: 0,
+    expectedConvergence: true
+  },
+  {
     name: 'disconnected directed edges optimize into independent stable communities',
     vertexCount: 4,
     sourceChunks: [[0], [], [2]],
@@ -686,12 +780,24 @@ function calculateExpectedOptimization(scenario: OptimizationScenario): Expected
   let converged = false;
 
   for (let iteration = 0; iteration < iterations; iteration++) {
+    const occupiedCommunities = new Set(labels);
+    let availableCommunity = INVALID_COMMUNITY;
+    for (let community = 0; community < scenario.vertexCount; community++) {
+      if (!occupiedCommunities.has(community)) {
+        availableCommunity = community;
+        break;
+      }
+    }
+
     let selectedVertex = INVALID_COMMUNITY;
     let selectedCommunity = INVALID_COMMUNITY;
     let selectedGain = minimumGain;
 
     for (let vertex = 0; vertex < scenario.vertexCount; vertex++) {
       const candidateCommunities = new Set<number>();
+      if (availableCommunity !== INVALID_COMMUNITY) {
+        candidateCommunities.add(availableCommunity);
+      }
       for (const edge of edges) {
         if (edge.source === vertex && edge.target !== vertex) {
           candidateCommunities.add(labels[edge.target]);

@@ -33,8 +33,7 @@ type OptimizationView =
   | GraphDataView<'uint32'>
   | GraphDataView<'float32'>
   | GraphDataView<'uint32x2'>
-  | GraphDataView<'float32x4'>
-  | GraphDataView<'uint32x4'>;
+  | GraphDataView<'float32x4'>;
 
 type OptimizationBinding = {
   view: OptimizationView;
@@ -73,12 +72,12 @@ type ImportedOptimization = {
   output: GraphDataView<'uint32'>;
   statistics: GraphDataView<'float32x4'>;
   candidates: GraphDataView<'uint32x2'>;
-  control: GraphDataView<'uint32x4'>;
+  control: GraphDataView<'uint32'>;
   converged?: GraphDataView<'uint32'>;
   maxComputeWorkgroupsPerDimension: number;
 };
 
-/** Composes deterministic, single-level directed or undirected GPU modularity local moving. */
+/** Composes single-level modularity local moving with stable ties for computed GPU gains. */
 export function addLuGraphModularityOptimizationToGraphWithDispatchLimit<Parameters>(
   optimization: LuGraphModularityOptimization,
   commandGraph: GPUCommandGraph<Parameters>,
@@ -187,7 +186,12 @@ export function addLuGraphModularityOptimizationToGraphWithDispatchLimit<Paramet
       'uint32x2',
       vertexCount
     ),
-    control: createTransientView(commandGraph, `${optimization.id}-control`, 'uint32x4', 1),
+    control: createTransientView(
+      commandGraph,
+      `${optimization.id}-control`,
+      'uint32',
+      vertexCount + 5
+    ),
     ...(optimization.converged
       ? {
           converged: commandGraph.importGPUVector(
@@ -222,7 +226,13 @@ export function addLuGraphModularityOptimizationToGraphWithDispatchLimit<Paramet
 
   for (let iteration = 0; iteration < Math.max(optimization.iterations, 1); iteration++) {
     addIterationResetPass(commandGraph, {state, iteration});
-    if (vertexCount > 0) addStatisticsInitializationPass(commandGraph, {state, iteration});
+    if (vertexCount > 0) {
+      addStatisticsInitializationPass(commandGraph, {state, iteration});
+      if (iteration < optimization.iterations) {
+        addCommunityOccupancyPass(commandGraph, {state, iteration});
+        addAvailableCommunitySelectionPass(commandGraph, {state, iteration});
+      }
+    }
     for (const [chunkIndex, sources] of state.sourceVertices.data.entries()) {
       if (sources.length === 0) continue;
       addEdgeStatisticsPass(commandGraph, {
@@ -284,6 +294,7 @@ fn main() {
   atomicStore(&control[1u], select(0u, ${INVALID_STATUS}u, hasOverflow));
   atomicStore(&control[2u], 0u);
   atomicStore(&control[3u], ${INVALID_COMMUNITY}u);
+  atomicStore(&control[4u], ${INVALID_COMMUNITY}u);
   ${initializeConvergence}
 }`;
   addOptimizationPass(commandGraph, {
@@ -394,6 +405,7 @@ fn main() {
   atomicStore(&control[0u], 0u);
   atomicStore(&control[2u], 0u);
   atomicStore(&control[3u], ${INVALID_COMMUNITY}u);
+  atomicStore(&control[4u], ${INVALID_COMMUNITY}u);
 }`;
   addOptimizationPass(commandGraph, {
     id: `${props.state.id}-iteration-${props.iteration}-reset`,
@@ -430,12 +442,83 @@ fn main(
   atomicStore(&statistics[4u * index + 1u], 0u);
   atomicStore(&statistics[4u * index + 2u], 0u);
   atomicStore(&statistics[4u * index + 3u], 0u);
+  atomicStore(&control[5u + index], 0u);
   if (output[${getViewElementOffset(state.output)}u + index] >= VERTEX_COUNT) {
     atomicOr(&control[1u], ${INVALID_STATUS}u);
   }
 }`;
   addOptimizationPass(commandGraph, {
     id: `${state.id}-iteration-${props.iteration}-initialize-statistics`,
+    source,
+    bindings,
+    dispatchLayout
+  });
+}
+
+/** Marks every occupied stable community, including communities containing only isolates. */
+function addCommunityOccupancyPass<Parameters>(
+  commandGraph: GPUCommandGraph<Parameters>,
+  props: {state: ImportedOptimization; iteration: number}
+): void {
+  const {state} = props;
+  const bindings: Record<string, OptimizationBinding> = {
+    communities: {view: state.output, usage: 'storage-read'},
+    control: {view: state.control, usage: 'storage-read-write', atomic: true}
+  };
+  const dispatchLayout = getDispatchLayout(state, state.vertexCount);
+  const source = /* wgsl */ `
+const VERTEX_COUNT: u32 = ${state.vertexCount}u;
+${getBindingDeclarations(bindings)}
+
+@compute @workgroup_size(${OPTIMIZATION_WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  ${getBoundedInvocationIndexSource(dispatchLayout, OPTIMIZATION_WORKGROUP_SIZE)}
+  if (index >= VERTEX_COUNT || atomicLoad(&control[1u]) != 0u) { return; }
+  let community = communities[${getViewElementOffset(state.output)}u + index];
+  if (community >= VERTEX_COUNT) {
+    atomicOr(&control[1u], ${INVALID_STATUS}u);
+    return;
+  }
+  atomicStore(&control[5u + community], 1u);
+}`;
+  addOptimizationPass(commandGraph, {
+    id: `${state.id}-iteration-${props.iteration}-mark-community-occupancy`,
+    source,
+    bindings,
+    dispatchLayout
+  });
+}
+
+/** Selects the globally lowest genuinely unoccupied stable community in linear GPU work. */
+function addAvailableCommunitySelectionPass<Parameters>(
+  commandGraph: GPUCommandGraph<Parameters>,
+  props: {state: ImportedOptimization; iteration: number}
+): void {
+  const {state} = props;
+  const bindings: Record<string, OptimizationBinding> = {
+    control: {view: state.control, usage: 'storage-read-write', atomic: true}
+  };
+  const dispatchLayout = getDispatchLayout(state, state.vertexCount);
+  const source = /* wgsl */ `
+const VERTEX_COUNT: u32 = ${state.vertexCount}u;
+${getBindingDeclarations(bindings)}
+
+@compute @workgroup_size(${OPTIMIZATION_WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  ${getBoundedInvocationIndexSource(dispatchLayout, OPTIMIZATION_WORKGROUP_SIZE)}
+  if (index >= VERTEX_COUNT || atomicLoad(&control[1u]) != 0u) { return; }
+  if (atomicLoad(&control[5u + index]) == 0u) {
+    atomicMin(&control[4u], index);
+  }
+}`;
+  addOptimizationPass(commandGraph, {
+    id: `${state.id}-iteration-${props.iteration}-select-unused-community`,
     source,
     bindings,
     dispatchLayout
@@ -521,7 +604,7 @@ fn main(
   });
 }
 
-/** Computes exact weak-neighbor insertion gains using at most eight portable storage bindings. */
+/** Scores neighboring and unused community candidates with at most eight storage bindings. */
 function addCandidatePass<Parameters>(
   commandGraph: GPUCommandGraph<Parameters>,
   props: {state: ImportedOptimization; iteration: number}
@@ -657,6 +740,38 @@ fn main(
         bestGain = gain;
         bestCommunity = candidateCommunity;
       }
+    }
+  }
+
+  let availableCommunity = atomicLoad(&control[4u]);
+  if (availableCommunity < VERTEX_COUNT && availableCommunity != currentCommunity) {
+    let availableStatistics = statistics[availableCommunity];
+    if (!isFiniteVector(availableStatistics)) {
+      atomicOr(&control[1u], ${INVALID_STATUS}u);
+      return;
+    }
+    let outgoingWeight = getCommunityWeight(index, availableCommunity, 0u);
+    let incomingWeight = ${
+      state.directed ? 'getCommunityWeight(index, availableCommunity, 1u)' : 'outgoingWeight'
+    };
+    let observedGain =
+      ((outgoingWeight - currentOutgoingWeight) +
+       (incomingWeight - currentIncomingWeight)) / total;
+    let expectedGain = RESOLUTION * (
+      (vertexStatistics.y / total) *
+        ((availableStatistics.z - (currentStatistics.z - vertexStatistics.x)) / total) +
+      (vertexStatistics.x / total) *
+        ((availableStatistics.w - (currentStatistics.w - vertexStatistics.y)) / total)
+    );
+    let gain = observedGain - expectedGain;
+    if (!isFiniteValue(gain)) {
+      atomicOr(&control[1u], ${INVALID_STATUS}u);
+      return;
+    }
+    if (gain > MINIMUM_GAIN &&
+        (gain > bestGain || (gain == bestGain && availableCommunity < bestCommunity))) {
+      bestGain = gain;
+      bestCommunity = availableCommunity;
     }
   }
 
@@ -867,8 +982,6 @@ function getBindingDeclarations(bindings: Record<string, OptimizationBinding>): 
         element = 'vec2<u32>';
       } else if (binding.view.format === 'float32x4') {
         element = 'vec4<f32>';
-      } else if (binding.view.format === 'uint32x4') {
-        element = 'vec4<u32>';
       }
       return `@group(0) @binding(${location}) var<storage, ${access}> ${name}: array<${element}>;`;
     })

@@ -333,7 +333,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(capabilitiesDocumentation).toContain('six standardized workload families');
   });
 
-  test('explains deterministic weighted single-level modularity optimization and truthful bounds', () => {
+  test('explains singleton refinement, weighted rounding limits, and bounded modularity optimization', () => {
     expect(graphDocumentation).toContain(
       '## Improve weighted community partitions with LuGraphModularityOptimization'
     );
@@ -363,8 +363,21 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('exactly **one**');
     expect(graphDocumentation).toContain('globally best move per round');
     expect(graphDocumentation).toContain('strictly positive and strictly greater than');
+    expect(graphDocumentation).toContain('lowest genuinely unused stable community identifier');
+    expect(graphDocumentation).toContain('Occupancy\ncounts every vertex');
+    expect(graphDocumentation).toContain('zero-degree isolates');
+    expect(graphDocumentation).toContain('over-merged warm start split');
+    expect(graphDocumentation).toContain('`[0, 0]` can become `[1, 0]`');
+    expect(graphDocumentation).toContain('improving modularity from zero to `0.5`');
     expect(graphDocumentation).toContain('lowest stable vertex identifier');
     expect(graphDocumentation).toContain('lowest\ncandidate community identifier');
+    expect(graphDocumentation).toContain('deterministic for a fixed snapshot');
+    expect(graphDocumentation).toContain('unordered atomic additions');
+    expect(graphDocumentation).toContain('floating-point\naddition is not associative');
+    expect(graphDocumentation).toContain('GPU execution orders or\nadapters');
+    expect(graphDocumentation).toContain('Near-tied gains, strict `minimumGain` decisions');
+    expect(graphDocumentation).toContain('selected community labels');
+    expect(graphDocumentation).toContain('weighted partitions are not\nguaranteed to be identical');
     expect(graphDocumentation).toContain('never intentionally accepts a modularity regression');
     expect(graphDocumentation).toContain('`iterations` defaults to `32`');
     expect(graphDocumentation).toContain('integer from `0` through `1024`');
@@ -382,6 +395,7 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
     expect(graphDocumentation).toContain('final `LuGraphModularity` scoring');
     expect(graphDocumentation).toContain('`O(K × (V + E + sum(degree²)))`');
     expect(graphDocumentation).toContain('`O(V + E)` graph-owned packed scratch');
+    expect(graphDocumentation).toContain('linear per-round community occupancy and vacancy checks');
     expect(graphDocumentation).toContain('**single-level Louvain-style local moving**');
     expect(graphDocumentation).toContain('not the complete multilevel');
     expect(graphDocumentation).toContain('Leiden refinement');
@@ -391,12 +405,20 @@ describe('luGraph GPU-resident graph analytics documentation', () => {
       'single globally largest strictly positive modularity gain'
     );
     expect(packageDocumentation).toContain('single-level Louvain-style local moving');
+    expect(packageDocumentation).toContain('lowest genuinely unused\ncommunity label');
+    expect(packageDocumentation).toContain('occupancy includes zero-degree isolates');
+    expect(packageDocumentation).toContain('unordered\natomic `float32` additions');
+    expect(packageDocumentation).toContain('weighted partitions can vary');
     expect(packageDocumentation).toContain('not full');
     expect(experimentalOverview).toContain('bounded weighted');
+    expect(experimentalOverview).toContain('over-merged starting groups can\nsplit');
+    expect(experimentalOverview).toContain('does not guarantee identical weighted partitions');
     expect(experimentalOverview).toContain('not full multilevel Louvain or Leiden');
     expect(capabilitiesDocumentation).toContain(
       '| Single-level modularity optimization | Experimental |'
     );
+    expect(capabilitiesDocumentation).toContain('empty-label splits, and stable tie-breaking');
+    expect(capabilitiesDocumentation).toContain('weighted floating-point rounding can vary');
     expect(capabilitiesDocumentation).toContain('full multilevel Louvain coarsening');
     expect(capabilitiesDocumentation).toContain('Leiden refinement, and dynamic graph updates');
   });

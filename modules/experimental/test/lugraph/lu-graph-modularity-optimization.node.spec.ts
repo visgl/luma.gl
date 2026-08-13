@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {readFileSync} from 'node:fs';
+
 import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import * as experimentalModule from '@luma.gl/experimental';
@@ -50,6 +52,28 @@ describe('LuGraphModularityOptimization optional graph-analysis contract', () =>
   test('exports bounded modularity improvement only through the optional LuGraph entry point', () => {
     expect(typeof LuGraphModularityOptimization).toBe('function');
     expect('LuGraphModularityOptimization' in experimentalModule).toBe(false);
+  });
+
+  test('documents deterministic computed-gain ties without promising bitwise weighted stability', () => {
+    const source = readFileSync(
+      new URL('../../src/lugraph/lu-graph-modularity-optimization.ts', import.meta.url),
+      'utf8'
+    );
+    const normalizedSource = source.replace(/^\s*\*\s?/gm, ' ').replace(/\s+/g, ' ');
+
+    expect(normalizedSource).toContain(
+      'Equal computed gains choose the lowest vertex identifier and then the lowest candidate community'
+    );
+    expect(normalizedSource).toContain(
+      'Weighted float32 accumulation uses unordered atomic additions'
+    );
+    expect(normalizedSource).toContain(
+      'low-order rounding, computed gains, threshold decisions, and'
+    );
+    expect(normalizedSource).toContain(
+      'selected partitions can vary across GPU execution orders or adapters'
+    );
+    expect(normalizedSource).not.toMatch(/bitwise(?:\s+|-)deterministic/i);
   });
 
   test('borrows weighted topology, seed, and outputs without allocating or synchronizing', () => {

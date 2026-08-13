@@ -851,13 +851,26 @@ distinct caller-owned one-row `GPUVector<'uint32'>` status vectors.
 
 The objective is the same Newman modularity used by `LuGraphModularity`. Directed graphs use
 `Q = Σc [Lc / W - γ × Kout,c × Kin,c / W²]`; undirected graphs use
-`Q = Σc [Lc / W - γ × (Kc / (2W))²]`. For every eligible vertex and neighboring candidate
-community, the contributor evaluates
+`Q = Σc [Lc / W - γ × (Kc / (2W))²]`. For every eligible vertex, the contributor considers
+neighboring communities and the lowest genuinely unused stable community identifier. Occupancy
+counts every vertex, including zero-degree isolates, so an occupied zero-volume community is never
+mistaken for an empty one. This singleton candidate lets an over-merged warm start split even when
+its only relationships are self-loops: two equally weighted self-loops with initial labels
+`[0, 0]` can become `[1, 0]`, improving modularity from zero to `0.5`.
+
+For each candidate, the contributor evaluates
 `ΔQ = Q(partition after moving the vertex) - Q(current partition)`. It accepts exactly **one**
 globally best move per round, and only when `ΔQ` is strictly positive and strictly greater than
 `minimumGain`. Tied gains choose the lowest stable vertex identifier, followed by the lowest
 candidate community identifier. Evaluating an immutable prior partition and applying only one move
 avoids simultaneous conflicting moves and never intentionally accepts a modularity regression.
+
+This tie-breaking policy is deterministic for a fixed snapshot of computed `float32` gains.
+However, weighted degrees and community volumes use unordered atomic additions, and floating-point
+addition is not associative. Low-order rounding can therefore differ across GPU execution orders or
+adapters. Near-tied gains, strict `minimumGain` decisions, selected community labels, and final
+modularity scores may consequently vary across runs or devices; weighted partitions are not
+guaranteed to be identical.
 
 `iterations` defaults to `32` and may be any integer from `0` through `1024`.
 `minimumGain` defaults to zero and must be a finite, nonnegative value representable as `float32`.
@@ -879,12 +892,13 @@ overflow in required adjacency fails closed. Every output label then becomes `0x
 modularity score becomes zero, and optional validity and convergence become zero. An empty graph
 has no label rows, score zero, validity zero, and convergence one if adjacency did not overflow.
 
-The contributor encodes all bounded candidate evaluation, deterministic winner selection, label
+The contributor encodes all bounded candidate evaluation, stable tie-broken winner selection, label
 updates, and final `LuGraphModularity` scoring into the caller-owned GPU command graph. It does
 not submit work, read results back, or synchronize with the CPU. Worst-case work for `K` rounds is
 `O(K × (V + E + sum(degree²)))`, with separate `O(V + E)` initialization and final scoring and
-`O(V + E)` graph-owned packed scratch; high-degree hubs and large round budgets require explicit
-measurement. This is **single-level Louvain-style local moving**, not the complete multilevel
+`O(V + E)` graph-owned packed scratch; linear per-round community occupancy and vacancy checks are
+included in that bound. High-degree hubs and large round budgets require explicit measurement.
+This is **single-level Louvain-style local moving**, not the complete multilevel
 Louvain algorithm, Leiden refinement, community coarsening, hierarchical aggregation, a global
 optimality guarantee, or a seventh Graphalytics workload.
 

@@ -178,6 +178,9 @@ community optimization, and dangling-aware PageRank scores. Social networks, dep
 transaction investigations, and
 infrastructure maps can compose those operations into one WebGPU command graph without copying
 source batches or reading complete results back to JavaScript.
+The optimizer considers genuinely empty community labels, so over-merged starting groups can
+split; weighted `float32` accumulation can vary with GPU execution order, and stable tie-breaking
+does not guarantee identical weighted partitions.
 The [interactive graph explorer](/examples/experimental/lugraph-explorer) adds directly renderable
 exact force-layout coordinates, neighborhood highlighting, stable GPU picking, dragging, and pinning.
 An opt-in live benchmark compares nine actual CPU and WebGPU graph workloads across five graph
