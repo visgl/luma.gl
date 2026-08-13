@@ -1,4 +1,8 @@
+import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+
 # GPUTextureHistory
+
+<GPUPrimitivesDocsTabs active="texture-history" />
 
 ## Overview
 

@@ -1512,6 +1512,43 @@ body:has(.integration-example-page) .theme-layout-footer {
   display: none;
 }
 
+/* Keep the shared site links useful without making the footer a second full-height page. */
+.theme-layout-footer.footer {
+  padding-block: 1.5rem;
+}
+
+.theme-layout-footer .footer__links {
+  display: grid;
+  gap: 1rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-inline: 0;
+  margin-bottom: 1rem;
+}
+
+.theme-layout-footer .footer__col {
+  flex: none;
+  margin-bottom: 0;
+  max-width: none;
+  padding-inline: 0;
+}
+
+.theme-layout-footer .footer__title {
+  margin-bottom: 0.4rem;
+}
+
+.theme-layout-footer .footer__item,
+.theme-layout-footer .footer__link-item {
+  line-height: 1.35;
+}
+
+.theme-layout-footer .footer__item + .footer__item {
+  margin-top: 0.25rem;
+}
+
+.theme-layout-footer .footer__copyright {
+  margin-top: 0.75rem;
+}
+
 /* Getting Started is an invitation into the GPU laboratory, not an install screen. */
 .markdown .luma-onboarding {
   --luma-onboarding-surface: #fff;

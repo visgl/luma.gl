@@ -89,7 +89,7 @@ All five bindings belong to bind group zero:
 | 0 | Read-only storage | Packed eight-word canonical span records from `GPUTraceScene` |
 | 1 | Read-only storage | Exclusive-scanned effective thread offsets from `GPUTraceInteraction` |
 | 2 | Read-only storage | Source-aligned final visibility mask from `GPUTraceInteraction` |
-| 3 | Read-only storage | Pick request: `time: f32`, `lane: f32`, `active: u32`, `padding: u32` |
+| 3 | Read-only storage | Pick request: `time: f32`, `lane: f32`, `enabled: u32`, `padding: u32` |
 | 4 | Read/write storage | One `atomic<u32>` result initialized to `0xffffffff` |
 
 `spanCount` must be a nonnegative safe integer, and `lanesPerThread` must be a positive safe
