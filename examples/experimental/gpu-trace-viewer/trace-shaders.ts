@@ -82,6 +82,7 @@ struct ViewUniforms {
   pickLane: f32,
   visibilityGeneration: u32,
   dependencyEndpointOffset: u32,
+  lodFadeEnabled: u32,
 };
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
@@ -89,7 +90,7 @@ const THREADS_PER_PROCESS: u32 = ${TRACE_THREADS_PER_PROCESS}u;
 const DENSITY_BLEND_START_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL};
 const DENSITY_BLEND_END_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL};
 
-fn getDensityBlend() -> f32 {
+fn getContinuousDensityBlend() -> f32 {
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let timePerPixel = timeRange / max(viewUniforms.viewportWidth, 1.0);
   let linearBlend = clamp(
@@ -99,6 +100,14 @@ fn getDensityBlend() -> f32 {
     1.0
   );
   return linearBlend * linearBlend * (3.0 - 2.0 * linearBlend);
+}
+
+fn getDensityBlend() -> f32 {
+  let continuousBlend = getContinuousDensityBlend();
+  if (viewUniforms.lodFadeEnabled != 0u) {
+    return continuousBlend;
+  }
+  return select(0.0, 1.0, continuousBlend >= 0.5);
 }
 
 fn isDensityMode() -> bool {
@@ -327,10 +336,11 @@ struct DensityVertexOutput {
     1.0
   );
   let groupColor = weightedColor / max(f32(count), 1.0);
-  let mutedColor = mix(vec3<f32>(0.16, 0.22, 0.3), groupColor, 0.72 + intensity * 0.18);
+  // Keep the density LOD at the same perceived brightness as exact span geometry.
+  let densityColor = groupColor * (0.92 + intensity * 0.08);
   output.color = vec4<f32>(
-    mutedColor,
-    select(0.0, (0.3 + 0.62 * intensity) * densityOpacity, visible)
+    densityColor,
+    select(0.0, (0.86 + 0.04 * intensity) * densityOpacity, visible)
   );
   return output;
 }

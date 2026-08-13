@@ -116,11 +116,12 @@ export function getTraceFocusFrontierCapacity(spanCount: number, dependencyCount
   return Math.max(Math.min(spanCount, dependencyCount + 1), 1);
 }
 
-/** Matches the GPU's smooth exact-span versus density-rendering blend. */
+/** Matches the GPU's exact-span versus density-rendering blend. */
 export function getTraceDensityBlend(
   timeMin: number,
   timeMax: number,
-  viewportWidth: number
+  viewportWidth: number,
+  smoothTransition = true
 ): number {
   const timePerPixel = (timeMax - timeMin) / Math.max(viewportWidth, 1);
   const blendRange =
@@ -129,7 +130,8 @@ export function getTraceDensityBlend(
     0,
     Math.min(1, (timePerPixel - TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL) / blendRange)
   );
-  return linearBlend * linearBlend * (3 - 2 * linearBlend);
+  const smoothBlend = linearBlend * linearBlend * (3 - 2 * linearBlend);
+  return smoothTransition ? smoothBlend : Number(smoothBlend >= 0.5);
 }
 
 /** Reports the dominant LOD while both renderers overlap through the transition band. */

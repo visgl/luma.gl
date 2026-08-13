@@ -319,6 +319,11 @@ test('GPU trace LOD switches at a stable trace-time-per-pixel threshold', t => {
   t.equal(getTraceDensityBlend(0, 50, 2000), 0, 'exact rendering leads into the blend');
   t.equal(getTraceDensityBlend(0, 80, 2000), 0.5, 'both renderers share the midpoint');
   t.equal(getTraceDensityBlend(0, 110, 2000), 1, 'density rendering finishes the blend');
+  t.equal(getTraceDensityBlend(0, 50, 2000, false), 0, 'hard switch keeps the exact boundary');
+  t.equal(getTraceDensityBlend(0, 79, 2000, false), 0, 'hard switch stays exact below midpoint');
+  t.equal(getTraceDensityBlend(0, 80, 2000, false), 1, 'hard switch selects density at midpoint');
+  t.equal(getTraceDensityBlend(0, 81, 2000, false), 1, 'hard switch stays density above midpoint');
+  t.equal(getTraceDensityBlend(0, 110, 2000, false), 1, 'hard switch keeps density boundary');
   t.equal(isTraceDensityMode(0, 150, 2048), true, 'wide time range remains density-dominant');
   t.equal(isTraceDensityMode(0, 150, 1), true, 'zoomed-out viewport uses density bins');
   t.equal(isTraceDensityMode(10, 10.01, 0), false, 'zero-width viewport remains bounded');
@@ -390,6 +395,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     getCandidateDensityShader(spanChunk),
     /for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/,
     'density aggregation preserves long-span coverage across bins'
+  );
+  t.match(
+    TRACE_RENDER_SHADER,
+    /viewUniforms\.lodFadeEnabled/,
+    'rendering selects the smooth or hard LOD transition from the view uniform'
   );
   t.end();
 });

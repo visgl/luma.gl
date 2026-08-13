@@ -76,6 +76,7 @@ describe('GPU hierarchical trace viewer', () => {
         selectedSpanIndex: number;
         focusDepth: number;
         focusOnly: boolean;
+        lodFadeEnabled: boolean;
         activeFilterMask: number;
         spanCapacity: number;
         dependencyCapacity: number;
@@ -116,6 +117,10 @@ describe('GPU hierarchical trace viewer', () => {
       expect(durationFilter?.step).toBe('0.01');
       expect(state.spanCapacity).toBe(4096);
       expect(state.dependencyCapacity).toBe(250_000);
+      const lodFade = host.querySelector<HTMLInputElement>('[data-lod-fade]');
+      expect(lodFade).not.toBeNull();
+      expect(lodFade!.checked).toBe(false);
+      expect(state.lodFadeEnabled).toBe(false);
       const dependencyCapacity = host.querySelector<HTMLSelectElement>(
         '[data-dependency-capacity]'
       );
@@ -227,6 +232,75 @@ describe('GPU hierarchical trace viewer', () => {
       )[1];
       expect(dependencyCandidateCount).toBeGreaterThan(0);
       expect(dependencyCandidateCount).toBeLessThan(state.resources.dependencyBatchCount);
+
+      const autoScroll = host.querySelector<HTMLInputElement>('[data-auto-scroll]');
+      expect(autoScroll).not.toBeNull();
+      autoScroll!.checked = false;
+      autoScroll!.dispatchEvent(new Event('change', {bubbles: true}));
+      const initialView = {...state.view};
+      state.view = {timeMin: 0, timeMax: 82, laneMin: 0, laneMax: 72};
+      viewer.onRender({device, time: 6000, width: 2000, height: 1} as AnimationProps);
+      device.submit();
+      const hardExactCandidateBytes =
+        await state.resources.exactCandidateDispatchCommands.buffer.readAsync();
+      const hardDensityCandidateBytes =
+        await state.resources.densityCandidateDispatchCommands.buffer.readAsync();
+      const hardDependencyCandidateBytes =
+        await state.resources.candidateDependencyDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(hardExactCandidateBytes.buffer, hardExactCandidateBytes.byteOffset, 3)[1]
+      ).toBe(0);
+      expect(
+        new Uint32Array(
+          hardDensityCandidateBytes.buffer,
+          hardDensityCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      expect(
+        new Uint32Array(
+          hardDependencyCandidateBytes.buffer,
+          hardDependencyCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBe(0);
+
+      lodFade!.checked = true;
+      lodFade!.dispatchEvent(new Event('change', {bubbles: true}));
+      expect(state.lodFadeEnabled).toBe(true);
+      viewer.onRender({device, time: 6000, width: 2000, height: 1} as AnimationProps);
+      device.submit();
+      const smoothExactCandidateBytes =
+        await state.resources.exactCandidateDispatchCommands.buffer.readAsync();
+      const smoothDensityCandidateBytes =
+        await state.resources.densityCandidateDispatchCommands.buffer.readAsync();
+      const smoothDependencyCandidateBytes =
+        await state.resources.candidateDependencyDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(
+          smoothExactCandidateBytes.buffer,
+          smoothExactCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      expect(
+        new Uint32Array(
+          smoothDensityCandidateBytes.buffer,
+          smoothDensityCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      expect(
+        new Uint32Array(
+          smoothDependencyCandidateBytes.buffer,
+          smoothDependencyCandidateBytes.byteOffset,
+          3
+        )[1]
+      ).toBeGreaterThan(0);
+      lodFade!.checked = false;
+      lodFade!.dispatchEvent(new Event('change', {bubbles: true}));
+      expect(state.lodFadeEnabled).toBe(false);
+      state.view = initialView;
 
       const firstGroup = host.querySelector<HTMLInputElement>('[data-group="0"]');
       expect(firstGroup).not.toBeNull();

@@ -303,6 +303,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private processStates = new Uint32Array(TRACE_PROCESS_COUNT).fill(TRACE_EXPANDED_STATE);
   private threadStates = new Uint32Array(TRACE_THREAD_COUNT).fill(TRACE_EXPANDED_STATE);
   private autoScroll = true;
+  private lodFadeEnabled = false;
   private view: TraceViewParameters = {timeMin: 0, timeMax: 150, laneMin: 0, laneMax: 72};
   private dragging = false;
   private pointerMoved = false;
@@ -1547,6 +1548,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     floats[15] = pick?.lane ?? -1;
     unsigned[16] = visibilityGeneration;
     unsigned[17] = dependencyEndpointOffset;
+    unsigned[18] = this.lodFadeEnabled ? 1 : 0;
     this.viewUniformBuffer.write(data);
   }
 
@@ -1835,7 +1837,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       </section>
       <section class="trace-section">
         <div class="trace-section-header"><span class="trace-section-title">Timeline</span><span class="trace-section-note">drag to pan · wheel to zoom</span></div>
-        <div class="trace-check-row"><label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label></div>
+        <div class="trace-check-row"><label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label><label><input type="checkbox" data-lod-fade${this.lodFadeEnabled ? ' checked' : ''}> Smooth LOD fade</label></div>
         <div class="trace-actions" style="margin-top:6px"><button type="button" data-reset>Reset detail</button><button type="button" data-fit-trace>Fit trace</button></div>
       </section>
     </section>`;
@@ -1940,6 +1942,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         this.focusOnly = target.checked;
       } else if (target instanceof HTMLInputElement && target.matches('[data-auto-scroll]')) {
         this.autoScroll = target.checked;
+      } else if (target instanceof HTMLInputElement && target.matches('[data-lod-fade]')) {
+        this.lodFadeEnabled = target.checked;
       }
       this.updateInspector();
     };
@@ -2088,7 +2092,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         ${makeMetricCard('Span batches', `${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}`, 'candidate / total')}
         ${makeMetricCard('Edge batches', `${formatCount(this.sampledCandidateDependencyBatchCount)}/${formatCount(resources.dependencyBatchCount)}`, 'candidate / total')}
         ${makeMetricCard('CPU encode', `${this.encodeTimeMilliseconds.toFixed(2)} ms`, 'compiled graph')}
-        ${makeMetricCard('Trace LOD', densityMode ? 'Density' : 'Exact', densityMode ? 'adaptive bins' : 'individual spans')}
+        ${makeMetricCard('Trace LOD', densityMode ? 'Density' : 'Exact', `${densityMode ? 'adaptive bins' : 'individual spans'} · ${this.lodFadeEnabled ? 'smooth fade' : 'hard switch'}`)}
         ${makeMetricCard('Layout lanes', formatCount(this.getVisibleLaneCount()), `${formatCount(collapsedProcessCount)} collapsed processes`)}
         ${makeMetricCard('Transient reuse', `${stats.reusePercentage.toFixed(0)}%`, `${stats.physicalTransientBufferCount}/${stats.logicalTransientBufferCount} allocations`)}
       </div>
