@@ -20,11 +20,14 @@ describe('makeGPUAnalyticsTableFromArrowTable package boundaries', () => {
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     ) as {
       dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
       peerDependencies?: Record<string, string>;
     };
 
     expect(typeof makeGPUAnalyticsTableFromArrowTable).toBe('function');
-    expect(packageJson.dependencies?.['apache-arrow']).toBeDefined();
+    expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
+    expect(packageJson.devDependencies?.['apache-arrow']).toBe('^17.0.0');
+    expect(packageJson.peerDependencies?.['apache-arrow']).toBe('>=17.0.0');
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeDefined();
     expect(packageJson.dependencies?.['@luma.gl/experimental']).toBeUndefined();
     expect(packageJson.peerDependencies?.['@luma.gl/experimental']).toBeUndefined();

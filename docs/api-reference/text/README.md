@@ -16,6 +16,11 @@ Both builders cache identical inputs and incrementally add newly requested chara
 
 `@luma.gl/arrow` owns Arrow source data, source mapping, upload, and Arrow UTF-8/dictionary preparation. It converts Arrow vectors into `GPUVector` objects or prepared GPU state, then constructs renderer models that only know about GPU-resident resources.
 
+`ArrowTextRenderer` accepts `Utf8`, `Utf8View`, `Dictionary<Utf8>`, and
+`Dictionary<Utf8View>` label vectors. `Utf8View` is detected at runtime and normalized before GPU
+upload, so applications can use Apache Arrow 21.2 view columns while the package remains compatible
+with Apache Arrow 17 runtimes. Binary and `BinaryView` columns are not text inputs.
+
 ## Public Architecture
 
 | Responsibility | Public APIs |

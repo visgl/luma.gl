@@ -82,6 +82,10 @@ function getArrowDataBufferByteLength(data: Data, countedVectors: Set<Vector>): 
   for (const buffer of data.buffers as unknown as unknown[]) {
     byteLength += getBufferByteLength(buffer);
   }
+  const variadicBuffers = (data as Data & {variadicBuffers?: readonly unknown[]}).variadicBuffers;
+  for (const buffer of variadicBuffers ?? []) {
+    byteLength += getBufferByteLength(buffer);
+  }
   for (const childData of data.children) {
     byteLength += getArrowDataBufferByteLength(childData, countedVectors);
   }

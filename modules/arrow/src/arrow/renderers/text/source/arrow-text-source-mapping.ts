@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {RecordBatch, Table, Vector} from 'apache-arrow';
-import type {ArrowUtf8TextVector} from '../conversion';
+import {isArrowUtf8TextInputVector, type ArrowUtf8TextInputVector} from '../conversion/arrow-text';
 import {getArrowPaths, getArrowVectorByPath} from '../../../arrow-utils/arrow-paths';
 
 /** Raw Arrow table or record batch accepted by text source mapping helpers. */
@@ -30,7 +30,7 @@ export type ArrowTextSourceVectorSelectors = {
     import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>
   >;
   /** UTF-8 labels. Defaults to `texts`. */
-  texts?: string | ArrowUtf8TextVector;
+  texts?: string | ArrowUtf8TextInputVector;
   /** Clip rectangles. Defaults to `clipRects`; `null` disables them. */
   clipRects?: OptionalArrowTextColumnSelector<
     import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>
@@ -53,7 +53,7 @@ export type ArrowTextSourceVectorSelectors = {
 /** Resolved raw Arrow vectors consumed by text conversion helpers. */
 export type ArrowTextMappedSourceVectors = {
   positions: Vector<import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>>;
-  texts: ArrowUtf8TextVector;
+  texts: ArrowUtf8TextInputVector;
   clipRects?: Vector<import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>>;
   colors?: Vector<RowColorColumnDataType | CharacterColorDataType>;
   angles?: Vector<import('apache-arrow').Float32>;
@@ -192,7 +192,10 @@ function resolveArrowTextSourceVector(
   table: Table | undefined,
   availablePaths: Set<string>
 ): Vector | undefined {
-  if (selector instanceof Vector) {
+  if (
+    selector instanceof Vector ||
+    (inputName === 'texts' && isArrowUtf8TextInputVector(selector))
+  ) {
     return selector;
   }
 
