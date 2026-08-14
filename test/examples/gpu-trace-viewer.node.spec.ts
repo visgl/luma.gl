@@ -474,6 +474,11 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       1,
       `dependency endpoint shader ${chunkIndex} declares its chunk index once`
     );
+    t.match(
+      shader,
+      new RegExp(`const CHUNK_INDEX: u32 = ${chunkIndex}u;`),
+      `dependency endpoint shader ${chunkIndex} declares the selected chunk index`
+    );
   }
   t.match(
     getCandidateDependencyVisibilityShader(endpointRouting),
