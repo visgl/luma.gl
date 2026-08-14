@@ -467,6 +467,14 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       throw new Error(`shader ${shaderIndex} failed to parse`, {cause: error});
     }
   }
+  for (const chunkIndex of [0, 1]) {
+    const shader = getDependencyEndpointResolveShader(endpointRouting, chunkIndex);
+    t.equal(
+      shader.match(/const CHUNK_INDEX:/g)?.length,
+      1,
+      `dependency endpoint shader ${chunkIndex} declares its chunk index once`
+    );
+  }
   t.match(
     getCandidateDependencyVisibilityShader(endpointRouting),
     /sourceVisible \|\| destinationVisible/,
