@@ -94,11 +94,19 @@ const scratch = graph.createTransientBuffer({
 
 graph.addComputePass({
   id: 'update',
-  resources: [
-    {buffer: source, usage: 'storage-read'},
-    {buffer: scratch, usage: 'storage-write'}
-  ],
-  compile: ({device}) => makeExecutableNode(device)
+  resources: {
+    source: {buffer: source, usage: 'storage-read'},
+    target: {buffer: scratch, usage: 'storage-write'}
+  },
+  compile: ({device}) => ({
+    encode: ({computePass, resources}) => {
+      computation.setBindings({
+        source: resources.source.buffer,
+        target: resources.target.buffer
+      });
+      computation.dispatch(computePass);
+    }
+  })
 });
 
 const compiled = graph.compile();
@@ -493,6 +501,43 @@ readback share one dependency-ordered execution without taking ownership of the 
 | `dependsOn` | Describe an ordering requirement that no shared graph resource can express. | External side effects, timestamp boundaries, and application-owned synchronization. |
 | Repeated `encode()` | Reuse compiled pipelines and scratch allocations with new parameters or imports. | Interactive filters, animation frames, changing selections, and reusable query plans. |
 
+### Named resource contracts
+
+The preferred node form declares resources as a named object. The callback receives a typed
+`resources` object inferred from those names and declarations. It does not receive the graph-wide
+`getBuffer()`, `getTexture()`, `getTextureView()`, or `getExternalTexture()` resolvers, so an
+undeclared graph handle cannot be resolved accidentally.
+
+```ts
+graph.addComputePass({
+  id: 'update',
+  resources: {
+    source: {buffer: source, usage: 'storage-read'},
+    target: {buffer: target, usage: 'storage-write'}
+  },
+  compile: ({device}) => ({
+    encode: ({computePass, resources}) => {
+      computation.setBindings({
+        source: resources.source.buffer,
+        target: resources.target.buffer
+      });
+      computation.dispatch(computePass);
+    }
+  })
+});
+```
+
+A buffer declaration resolves to `{buffer, logical}`. A whole-texture declaration resolves to
+`{texture, textureView, logical}`, while a view-scoped declaration resolves only to
+`{textureView, logical}` so it cannot silently widen access to other mips, layers, or aspects. An
+external-texture declaration resolves to `{externalTexture, logical}`. `logical` preserves the
+declared handle or view and its metadata.
+
+The array form remains supported for existing contributors. Its callback receives the legacy
+graph-wide resolver context, so the array declaration and every resolver call must remain in sync.
+Named and array declarations participate in the same validation, hazard inference, transient
+lifetime planning, and stable scheduling.
+
 ### `addComputePass(node)`
 
 Use a compute node whenever a shader reads or writes resources that other graph features consume.
@@ -506,11 +551,19 @@ for the produced data.
 ```ts
 graph.addComputePass({
   id: 'select-visible-rows',
-  resources: [
-    {buffer: inputRows, usage: 'storage-read'},
-    {buffer: visibilityMask, usage: 'storage-write'}
-  ],
-  compile: ({device}) => createVisibilityExecutable(device)
+  resources: {
+    inputRows: {buffer: inputRows, usage: 'storage-read'},
+    visibilityMask: {buffer: visibilityMask, usage: 'storage-write'}
+  },
+  compile: ({device}) => ({
+    encode: ({computePass, resources}) => {
+      visibility.setBindings({
+        inputRows: resources.inputRows.buffer,
+        visibilityMask: resources.visibilityMask.buffer
+      });
+      visibility.dispatch(computePass);
+    }
+  })
 });
 ```
 

@@ -53,6 +53,10 @@ import type {
   GPUCommandGraphEncodingStats,
   GPUCommandGraphNode,
   GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphNamedComputeNode,
+  GPUCommandGraphNamedCopyNode,
+  GPUCommandGraphNamedEncodeContext,
+  GPUCommandGraphNamedRenderNode,
   GPUCommandGraphPreflightReport,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphRenderNode,
@@ -65,7 +69,10 @@ import type {
   GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
+  GraphNamedResources,
   GraphRenderPassAttachments,
+  GraphResolvedResources,
+  GraphResourceUse,
   GraphTextureDescriptor,
   GraphTextureUsage,
   GraphTextureUse,
@@ -92,6 +99,13 @@ export type {
   GPUCommandGraphEncodeOptions,
   GPUCommandGraphNode,
   GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphNamedComputeExecutable,
+  GPUCommandGraphNamedComputeNode,
+  GPUCommandGraphNamedCopyExecutable,
+  GPUCommandGraphNamedCopyNode,
+  GPUCommandGraphNamedEncodeContext,
+  GPUCommandGraphNamedRenderExecutable,
+  GPUCommandGraphNamedRenderNode,
   GPUCommandGraphNodePreflight,
   GPUCommandGraphNodeTiming,
   GPUCommandGraphNodeType,
@@ -111,7 +125,14 @@ export type {
   GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
+  GraphNamedResources,
   GraphRenderPassAttachments,
+  GraphResolvedBufferResource,
+  GraphResolvedExternalTextureResource,
+  GraphResolvedResource,
+  GraphResolvedResources,
+  GraphResolvedTextureViewResource,
+  GraphResolvedWholeTextureResource,
   GraphResourceUse,
   GraphTextureAspect,
   GraphTextureDescriptor,
@@ -218,6 +239,129 @@ export class GPUCommandGraphEncoding {
       nodes
     };
   }
+}
+
+function isGraphNamedResources(
+  resources: GraphResourceUse[] | GraphNamedResources | undefined
+): resources is GraphNamedResources {
+  return resources !== undefined && !Array.isArray(resources);
+}
+
+function normalizeNamedComputeNode<Parameters>(
+  node: Omit<GPUCommandGraphNamedComputeNode<Parameters, GraphNamedResources>, 'type'>
+): GPUCommandGraphComputeNode<Parameters> {
+  const {resources, compile, ...props} = node;
+  return {
+    ...props,
+    type: 'compute',
+    resources: Object.values(resources),
+    compile: context => {
+      const executable = compile(context);
+      return {
+        encode: encodeContext => {
+          executable.encode({
+            ...getNamedEncodeContext(resources, encodeContext),
+            computePass: encodeContext.computePass
+          });
+        },
+        ...(executable.destroy ? {destroy: executable.destroy} : {})
+      };
+    }
+  };
+}
+
+function normalizeNamedRenderNode<Parameters>(
+  node: Omit<GPUCommandGraphNamedRenderNode<Parameters, GraphNamedResources>, 'type'>
+): GPUCommandGraphRenderNode<Parameters> {
+  const {resources, compile, ...props} = node;
+  return {
+    ...props,
+    type: 'render',
+    resources: Object.values(resources),
+    compile: context => {
+      const executable = compile(context);
+      const getRenderPassProps = executable.getRenderPassProps;
+      return {
+        ...(getRenderPassProps
+          ? {
+              getRenderPassProps: (encodeContext: GPUCommandGraphEncodeContext<Parameters>) =>
+                getRenderPassProps(getNamedEncodeContext(resources, encodeContext))
+            }
+          : {}),
+        encode: encodeContext => {
+          executable.encode({
+            ...getNamedEncodeContext(resources, encodeContext),
+            renderPass: encodeContext.renderPass
+          });
+        },
+        ...(executable.destroy ? {destroy: executable.destroy} : {})
+      };
+    }
+  };
+}
+
+function normalizeNamedCopyNode<Parameters>(
+  node: Omit<GPUCommandGraphNamedCopyNode<Parameters, GraphNamedResources>, 'type'>
+): GPUCommandGraphCopyNode<Parameters> {
+  const {resources, compile, ...props} = node;
+  return {
+    ...props,
+    type: 'copy',
+    resources: Object.values(resources),
+    compile: context => {
+      const executable = compile(context);
+      return {
+        encode: encodeContext => {
+          executable.encode(getNamedEncodeContext(resources, encodeContext));
+        },
+        ...(executable.destroy ? {destroy: executable.destroy} : {})
+      };
+    }
+  };
+}
+
+function getNamedEncodeContext<Parameters, Resources extends GraphNamedResources>(
+  resources: Resources,
+  context: GPUCommandGraphEncodeContext<Parameters>
+): GPUCommandGraphNamedEncodeContext<Parameters, Resources> {
+  return {
+    commandEncoder: context.commandEncoder,
+    parameters: context.parameters,
+    resources: getResolvedResources(resources, context)
+  };
+}
+
+function getResolvedResources<Parameters, Resources extends GraphNamedResources>(
+  resources: Resources,
+  context: GPUCommandGraphEncodeContext<Parameters>
+): GraphResolvedResources<Resources> {
+  const resolvedResources: Record<string, unknown> = {};
+  for (const [name, resource] of Object.entries(resources)) {
+    if (isGraphBufferUse(resource)) {
+      resolvedResources[name] = {
+        buffer: context.getBuffer(resource.buffer),
+        logical: resource.buffer
+      };
+    } else if (isGraphTextureUse(resource)) {
+      resolvedResources[name] =
+        resource.texture instanceof GraphTextureView
+          ? {
+              textureView: context.getTextureView(resource.texture),
+              logical: resource.texture
+            }
+          : {
+              texture: context.getTexture(resource.texture),
+              textureView: context.getTextureView(resource.texture),
+              logical: resource.texture
+            };
+    } else {
+      resolvedResources[name] = {
+        externalTexture: context.getExternalTexture(resource.externalTexture),
+        logical: resource.externalTexture
+      };
+    }
+  }
+  return resolvedResources as GraphResolvedResources<Resources>;
 }
 
 /**
@@ -451,8 +595,27 @@ export class GPUCommandGraph<Parameters = void> {
    * The graph opens and closes the compute pass; the compiled executable only records commands.
    * Declared resource uses participate in automatic dependency inference.
    */
-  addComputePass(node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>): void {
-    this.addNode({...node, type: 'compute'});
+  addComputePass<const Resources extends GraphNamedResources>(
+    node: Omit<GPUCommandGraphNamedComputeNode<Parameters, Resources>, 'type'>
+  ): void;
+  addComputePass(node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>): void;
+  addComputePass(
+    node:
+      | Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>
+      | Omit<GPUCommandGraphNamedComputeNode<Parameters, GraphNamedResources>, 'type'>
+  ): void {
+    if (isGraphNamedResources(node.resources)) {
+      this.addNode(
+        normalizeNamedComputeNode(
+          node as Omit<GPUCommandGraphNamedComputeNode<Parameters, GraphNamedResources>, 'type'>
+        )
+      );
+    } else {
+      this.addNode({
+        ...(node as Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>),
+        type: 'compute'
+      });
+    }
   }
 
   /**
@@ -461,7 +624,15 @@ export class GPUCommandGraph<Parameters = void> {
    * Graph attachments are validated, added to the node's resource uses, and resolved to a cached
    * framebuffer at encode time. The graph opens and closes the render pass.
    */
-  addRenderPass(node: Omit<GPUCommandGraphRenderNode<Parameters>, 'type'>): void {
+  addRenderPass<const Resources extends GraphNamedResources>(
+    node: Omit<GPUCommandGraphNamedRenderNode<Parameters, Resources>, 'type'>
+  ): void;
+  addRenderPass(node: Omit<GPUCommandGraphRenderNode<Parameters>, 'type'>): void;
+  addRenderPass(
+    node:
+      | Omit<GPUCommandGraphRenderNode<Parameters>, 'type'>
+      | Omit<GPUCommandGraphNamedRenderNode<Parameters, GraphNamedResources>, 'type'>
+  ): void {
     if (node.attachments) {
       this.validateRenderAttachments(node.id, node.attachments);
     }
@@ -484,11 +655,16 @@ export class GPUCommandGraph<Parameters = void> {
             : [])
         ]
       : [];
-    this.addNode({
-      ...node,
-      resources: [...(node.resources ?? []), ...attachmentUses],
-      type: 'render'
-    });
+    const normalizedNode = isGraphNamedResources(node.resources)
+      ? normalizeNamedRenderNode(
+          node as Omit<GPUCommandGraphNamedRenderNode<Parameters, GraphNamedResources>, 'type'>
+        )
+      : ({
+          ...(node as Omit<GPUCommandGraphRenderNode<Parameters>, 'type'>),
+          type: 'render'
+        } as GPUCommandGraphRenderNode<Parameters>);
+    normalizedNode.resources = [...(normalizedNode.resources ?? []), ...attachmentUses];
+    this.addNode(normalizedNode);
   }
 
   /**
@@ -496,8 +672,27 @@ export class GPUCommandGraph<Parameters = void> {
    *
    * Its executable records directly into the caller-owned command encoder.
    */
-  addCopyPass(node: Omit<GPUCommandGraphCopyNode<Parameters>, 'type'>): void {
-    this.addNode({...node, type: 'copy'});
+  addCopyPass<const Resources extends GraphNamedResources>(
+    node: Omit<GPUCommandGraphNamedCopyNode<Parameters, Resources>, 'type'>
+  ): void;
+  addCopyPass(node: Omit<GPUCommandGraphCopyNode<Parameters>, 'type'>): void;
+  addCopyPass(
+    node:
+      | Omit<GPUCommandGraphCopyNode<Parameters>, 'type'>
+      | Omit<GPUCommandGraphNamedCopyNode<Parameters, GraphNamedResources>, 'type'>
+  ): void {
+    if (isGraphNamedResources(node.resources)) {
+      this.addNode(
+        normalizeNamedCopyNode(
+          node as Omit<GPUCommandGraphNamedCopyNode<Parameters, GraphNamedResources>, 'type'>
+        )
+      );
+    } else {
+      this.addNode({
+        ...(node as Omit<GPUCommandGraphCopyNode<Parameters>, 'type'>),
+        type: 'copy'
+      });
+    }
   }
 
   /**
