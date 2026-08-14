@@ -1,17 +1,372 @@
-# Effects, Lighting and Materials Roadmap
+# glTF, PBR, Animation, and Rendering Roadmap
 
-Placeholder for roadmap on improved scenegraph and loaders support
+**Audit date:** August 7, 2026. **Shipped baseline:** luma.gl `master` at
+[`436bca9c9`](https://github.com/visgl/luma.gl/tree/436bca9c98071b197d48083e7ebc8efcc82aec25).
 
-### MultiPass Rendering
+This roadmap identifies opportunities to improve luma.gl's asset interoperability, rendering
+fidelity, animation, and large-scene performance. The broader open-source graphics ecosystem offers
+many useful implementations and reference materials; the goal here is to learn from that work
+while accurately describing luma.gl's own capabilities and limitations.
 
-### Roadmap / Ideas
+## Objective
 
-* `TransformPass` ? - Does a transform feedback pass fit into / make sense in the multi pass system?
-* Temporal Passes - add a "shake" or "shock wave" or "blur" pass that plays and the removes/disables itself? A stack of playing passes?
-* Image Effects, add toon effects etc.
-* FPS limits, priorities, disable passes when FPS drops?
+Improve luma.gl's glTF rendering while preserving its existing strengths: explicit GPU ownership,
+portable WebGPU/WebGL2 execution, typed shader composition, reusable engine primitives, and
+independently animated, GPU-instanced characters.
 
+The desired outcome is stronger than loading a document successfully:
 
-### PSSM Shadowmaps
+1. The same authored asset renders faithfully against the Khronos reference across both backends.
+2. Compression, textures, lights, cameras, animation, deformation, and materials survive real
+   import/export workflows.
+3. Large character populations remain bounded by draw, geometry, animation, and residency budgets.
+4. New behavior lives in its existing owner rather than creating another renderer, mixer, skeleton,
+   shader library, splat decoder, or incompatible scene graph.
+5. Every advertised capability states its standards maturity, backend constraints, and actual
+   runtime behavior.
 
+## Snapshot: shipped versus pending
 
+Current `master` already provides:
+
+- A glTF extension registry with **32 named entries**: **19 built-in**, **five parsed-and-wired**,
+  **three loader-only**, and **five unsupported**. Thus 24 entries have built-in or
+  parsed-and-wired support classifications. This is a count of luma.gl's own registry, not a
+  percentage of all glTF extensions or a claim of complete visual fidelity.
+- Metallic-roughness PBR; 21 authored texture slots; specular, IOR, clearcoat, sheen, iridescence,
+  anisotropy, transmission, volume, dispersion, and emissive-strength support; plus explicitly
+  qualified draft/release-candidate material behavior.
+- Native `KHR_materials_variants`, `KHR_animation_pointer`, `KHR_node_visibility`, and
+  `EXT_mesh_gpu_instancing` implementations.
+- Shared animation clips, linear/step/cubic interpolation, quaternion interpolation, weighted
+  actions, looping, and crossfades.
+- POSITION/NORMAL/TANGENT morph targets, skin palettes, and independent GPU-instanced actor clips
+  with one instanced draw per compatible source primitive.
+- Source-faithful glTF/GLB export, including arbitrary preserved extension records and pointer
+  animation channels.
+- An existing `@luma.gl/splats` adapter for the `KHR_gaussian_splatting` release candidate,
+  spherical-harmonic data, feature identities, and optional caller-owned SPZ decoding.
+
+However, ordinary skinning still has a **64-joint uniform-palette limit**; ordinary morph animation
+rewrites vertex buffers on the CPU; crowd clips and joint palettes are evaluated on the CPU;
+standalone glTF transmission does not capture refracted scene color; authored image-based lighting,
+XMP, and video textures are not interpreted; and `MSFT_lod` is unsupported on current `master`.
+
+**Already implemented, but not shipped on this baseline:**
+[PR #3039](https://github.com/visgl/luma.gl/pull/3039) contains reviewed authored `MSFT_lod` node
+levels, generated endpoint-preserving mesh simplification, screen-space actor selection, hysteresis,
+and farthest-first global indexed-reference budgets. PR #3044 was merged **into #3039's branch**,
+not into `master`. Treat this tranche as pending until #3039 itself lands. Even then, material LOD,
+progressive downloading, lazy resource residency, and GPU-driven classification remain separate
+work.
+
+## Standards and terminology guardrails
+
+- A `KHR_` prefix does **not** imply ratification. `KHR_meshopt_compression`,
+  `KHR_materials_diffuse_transmission`, `KHR_gaussian_splatting`, and `KHR_interactivity` are
+  release candidates in the audited specifications.
+- `KHR_animation_pointer`, `KHR_node_visibility`, and `KHR_materials_variants` are ratified;
+  `EXT_mesh_gpu_instancing`, `EXT_meshopt_compression`, and `EXT_texture_webp` are also ratified
+  despite the `EXT_` prefix.
+- `MSFT_lod` is a vendor extension, not a ratified Khronos LOD standard. Its node/material IDs
+  and optional screen-coverage metadata do not define a per-instance selection algorithm.
+- `EXT_lights_image_based` and `EXT_lights_ies` are multi-vendor extensions.
+  `EXT_lights_area` must not be described as a ratified Khronos extension.
+- `EXT_materials_bump` and `KHR_materials_volume_scatter` remain proposals/drafts. Existing local
+  scattering is a useful approximation, not a random-walk or full subsurface-transport claim.
+- Decoding data, constructing GPU resources, executing shaders, exporting an extension, and
+  progressively streaming it are distinct capabilities. Describe and document them separately.
+- `@luma.gl/splats` already owns Gaussian decoding/rendering. The outstanding glTF gap is optional
+  scene routing and extension discovery, not implementing another splat adapter.
+- Generated LOD vertex budgets count **submitted index references**, not unique vertices, exact
+  shader invocations, GPU bytes, or an authorization to silently cull actors.
+
+## Remaining implementation tranches
+
+### Tranche 0 — Establish a reference asset, image, and feature ledger
+
+**Priority:** P0. **Owners:** `@luma.gl/gltf`, `@luma.gl/shadertools`, shared test infrastructure.
+
+- Curate pinned, correctly licensed Khronos assets covering every supported material extension,
+  compressed geometry, 64+/256-joint rigs, sparse/interleaved accessors, eight-influence skinning,
+  morph combinations, punctual lights, animated pointers, variants, and documented LOD samples.
+- Capture deterministic WebGPU and WebGL2 frames with identical cameras, exposure, environment,
+  color space, and tone mapping; compare them against pinned Khronos Sample Viewer output.
+- Record perceptual/image tolerances, validation diagnostics, source extension maturity, loaded
+  bytes, peak GPU residency, draw counts, triangles, submitted index references, animation CPU
+  time, and shader compilation time.
+- Generate extension/support counts from the runtime registry; remove stale documentation that
+  still describes 17 texture slots when the implementation supports 21.
+
+**Exit criteria:** one reproducible compatibility ledger per backend; every supported extension
+has a real positive fixture and every unsupported required extension has a negative fixture; image
+differences and performance budgets appear in CI artifacts. Do not claim formal Khronos
+certification.
+
+### Tranche 1 — Land the existing authored/generated crowd LOD work
+
+**Priority:** P0. **Owners:** `@luma.gl/gltf`, `@luma.gl/engine`.
+
+- Land [#3039](https://github.com/visgl/luma.gl/pull/3039); preserve its existing authored
+  `MSFT_lod` node parsing, deterministic index-only simplification, animated crowd bucketing,
+  screen-coverage hysteresis, and farthest-first global submitted-index budgets.
+- Preserve per-actor clip state, compacted skin palettes, explicit draw-count accounting, and the
+  WebGPU/WebGL2 fallback contract.
+- Explicitly mark material LOD, progressive fetching, GPU classification, and lazy resource
+  residency as separate future work.
+
+**Exit criteria:** the code is on `master`, both graphics backends pass the authored/generated LOD
+fixtures, budgets never silently cull actors, and public capability rows reflect the landed state.
+
+### Tranche 2 — Close real glTF codec and primitive compatibility gaps
+
+**Priority:** P0. **Owners:** upstream `@loaders.gl/gltf`, `@luma.gl/gltf`.
+
+- Implement actual `KHR_meshopt_compression` release-candidate decoding in the shared asset-loader
+  boundary, including geometry/index buffers, animation tracks, morph targets, and instance data.
+- Keep the existing ratified `EXT_meshopt_compression` behavior; validate that the two extensions
+  never occupy the same prohibited buffer/buffer-view combination.
+- Register support only after decoding succeeds; strict `extensionsRequired` must remain truthful.
+- Normalize unsupported `LINE_LOOP` and `TRIANGLE_FAN` primitives into portable indexed topology;
+  exercise sparse, normalized, interleaved, and shared accessors without mutating source data.
+- Turn conditional Basis/KTX2, AVIF, and WebP handling into explicit device/browser capability
+  negotiation with deterministic fallback and failure diagnostics.
+
+**Exit criteria:** official Meshopt fixtures and accessor variants load on both backends; required
+codec support is never advertised without an available decoder; compressed textures preserve color
+space, mips, and ownership.
+
+### Tranche 3 — Make reference-grade PBR consistent across rendering paths
+
+**Priority:** P0. **Owners:** `@luma.gl/shadertools`, `@luma.gl/engine`, `@luma.gl/gltf`.
+
+- Share a single feature-specialized PBR contract across standalone glTF, experimental scene
+  rendering, and retained scenes instead of maintaining divergent approximations.
+- Add an optional portable opaque-scene capture/refraction path for standalone transmission,
+  including roughness-aware filtering, attenuation, dispersion, and linear HDR handling.
+- Validate multi-scatter energy compensation, anisotropic visibility, thin-film interference,
+  Charlie sheen, layered clearcoat, normal/tangent fidelity, and GGX environment prefiltering
+  against the reference corpus.
+- Add furnace, white-environment, direct-light, and roughness-mip tests; preserve explicit
+  fallbacks where floating-point filtering or attachments are unavailable.
+- Support source-faithful legacy `KHR_materials_pbrSpecularGlossiness` conversion or explicitly
+  bounded material adaptation.
+
+**Exit criteria:** published per-material image tolerances pass on WebGPU and WebGL2, standalone
+and retained rendering have equivalent supported optical behavior, and unsupported transport is
+not labeled physically complete.
+
+### Tranche 4 — Raise ordinary skinning beyond the 64-joint ceiling
+
+**Priority:** P0. **Owners:** `@luma.gl/shadertools`, `@luma.gl/engine`, `@luma.gl/gltf`.
+
+- Reuse the existing WebGPU storage-buffer and WebGL2 floating-point texture palette patterns
+  already exercised by animated crowds.
+- Select the smallest valid palette transport per device and rig; preserve the inexpensive uniform
+  path for small skeletons.
+- Add `JOINTS_1`/`WEIGHTS_1` support for eight-influence assets; preserve existing normalized
+  integer weights, multiple independent skins, nontrivial inverse binds, and mesh-local transforms.
+- Expose truthful device limits and deterministic failure instead of silently truncating joint 65.
+
+**Exit criteria:** 64-, 128-, and 256-joint assets render correctly on both backends where their
+documented resources are available; multiple skin instances remain isolated; no second skeleton
+runtime is introduced.
+
+### Tranche 5 — Move morph deformation and per-instance weights onto the GPU
+
+**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shadertools`, `@luma.gl/gltf`.
+
+- Keep immutable POSITION/NORMAL/TANGENT bases and deltas resident on the GPU.
+- Support a portable vertex-shader path plus an optional WebGPU compute deformation path for
+  large target sets; do not rewrite the complete vertex buffer for every weight change.
+- Add actor-indexed morph-weight storage/texture indirection that composes with existing
+  independently skinned crowd palettes and `KHR_animation_pointer` channels.
+- Preserve tangent handedness, normalized directions, sparse targets, variant-compatible shader
+  layouts, and source geometry sharing.
+
+**Exit criteria:** independently posed and independently morphed characters share one compatible
+instanced draw per source primitive/LOD bucket; visible-pixel tests prove distinct actor morphs on
+WebGPU and WebGL2; no per-frame CPU geometry upload occurs on the accelerated path.
+
+### Tranche 6 — Sample character clips on the GPU
+
+**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shadertools`, `@luma.gl/gltf`.
+
+- Introduce optional reusable animation/joint atlases with per-actor clip, time, phase, playback
+  speed, interpolation, and blend parameters.
+- Use GPU storage/compute when available and a floating-point texture/shader sampling fallback on
+  WebGL2, without representing the existing CPU mixer as GPU animation.
+- Preserve actor-specific actions and crossfades, shared skin/morph deformation, deterministic
+  slot ownership, and existing small-scene CPU playback semantics.
+- Introduce visibility- and distance-aware animation cadence only where interpolation remains
+  visually acceptable.
+
+**Exit criteria:** CPU animation time is no longer proportional to actor × joint count on the
+accelerated path; heterogeneous clips visibly animate in shared draws on both backends; a
+published benchmark records CPU time, upload bytes, and draw counts.
+
+### Tranche 7 — Finish production animation orchestration
+
+**Priority:** P1. **Owner:** `@luma.gl/engine`; glTF adapters remain format-specific.
+
+- Add additive clip blending, hierarchical bone/target masks, animation events, and reusable action
+  layers to the existing shared mixer.
+- Add explicit retargeting maps, root-motion extraction, transition synchronization, and optional
+  declarative state/blend graphs without coupling the engine to glTF.
+- Compose these controls with actor-local pointer channels, morph weights, visibility, lights,
+  cameras, and materials; preserve seconds-based playback and existing interpolation behavior.
+
+**Exit criteria:** one asset can independently blend locomotion, an upper-body gesture, facial
+animation, and a timed event; a second rig can reuse the same authored clip through an explicit
+retargeting map.
+
+### Tranche 8 — Import authored environments and photometric lights
+
+**Priority:** P1. **Owners:** `@luma.gl/gltf`, `@luma.gl/shadertools`, retained scene adapters.
+
+- Map `EXT_lights_image_based` into the existing environment/IBL resources instead of introducing a
+  parallel environment representation.
+- Add optional `EXT_lights_ies` profile ingestion, physically scaled directional/point/spot
+  lights, and shared area-light primitives only when their source extension maturity is disclosed.
+- Preserve exposure, linear color, IBL orientation, shadow integration, light animation, and
+  backend-specific resource limits.
+
+**Exit criteria:** the same authored light/environment asset renders with matching orientation,
+intensity, and animated parameters in standalone and retained-scene paths.
+
+### Tranche 9 — Add real progressive node/material LOD and bounded residency
+
+**Priority:** P1. **Owners:** `@luma.gl/gltf`, shared loaders, generic engine resource ownership.
+
+- Build on the landed node-LOD metadata rather than reimplementing #3039.
+- Support lowest-detail-first fetching for vendor-authored node **and** material levels, explicit
+  cancellation, priority changes, range requests where valid, and safe replacement of superseded
+  resources.
+- Stop eagerly creating GPU models/materials for every detached level; add explicit residency,
+  upload, and eviction budgets that preserve stable actor animation state.
+- Keep scene roots, material variants, skin palettes, morph resources, and exporter round trips
+  correct when levels are detached or loaded later.
+
+**Exit criteria:** requesting a coarse level measurably reduces initial download and GPU upload;
+camera changes reprioritize outstanding work; cancellation and teardown leak no GPU resources;
+WebGL2 and WebGPU retain compatible visible results.
+
+### Tranche 10 — Graduate GPU-driven visibility, LOD, and budgeted draws
+
+**Priority:** P1. **Owners:** existing `@luma.gl/experimental` GPU primitives, engine draw APIs,
+`@luma.gl/gltf` adapters.
+
+- Reuse existing `GPUScene`, visibility/compaction primitives, and `DrawCommandBuffer` rather than
+  inventing another scene scheduler.
+- Classify visible actor slots by projected size, hysteresis, and a global submitted-index budget;
+  retain deterministic farthest-first demotion and stable source actor IDs.
+- Compact transforms, joint-palette references, morph weights, and material selectors into one
+  occupied bucket per compatible source primitive/LOD/material combination.
+- Add WebGPU indirect drawing only where the required device features are present. Existing draw
+  generation depends on `indirect-first-instance`; WebGL2 must retain its explicit CPU bucketing
+  and ordinary instanced-draw fallback.
+
+**Exit criteria:** zero per-actor draw calls, no GPU-to-CPU visibility readback, correct independent
+actor skin/morph state after compaction, bounded submitted indices, and documented WebGL2 fallback
+behavior.
+
+### Tranche 11 — Route existing Gaussian splats through glTF scenes
+
+**Priority:** P1. **Owners:** `@luma.gl/gltf`, existing `@luma.gl/splats` optional integration.
+
+- Add a loader/runtime extension hook that recognizes `KHR_gaussian_splatting` and delegates to
+  the **already shipped** `@luma.gl/splats` accessor and SPZ integration.
+- Compose ordinary PBR meshes, authored splat primitives, cameras, semantic feature IDs, and
+  transparent ordering in one compatible scene without forcing a hard `gltf -> splats` dependency.
+- Report release-candidate support only when the optional bridge exists and any decoder required
+  by the particular asset is available.
+
+**Exit criteria:** an official mixed mesh/splat glTF asset renders through one user-facing loading
+workflow; SH bands, feature identities, optional SPZ content, and original resource ownership are
+preserved.
+
+### Tranche 12 — Complete production asset interchange and optional authoring
+
+**Priority:** P2. **Owners:** `@luma.gl/gltf`, optional upstream codec/authoring adapters.
+
+- Extend existing source-faithful export with direct retained-scene extraction and explicit
+  extension hooks; preserve variants, typed animation pointers, node visibility, generated LOD,
+  texture transforms, sparse/interleaved accessors, skins, and morph targets.
+- Offer optional Draco, Meshopt, and KTX2/Basis encoding only when a real encoder is supplied;
+  retaining an already-compressed image does not count as encoding.
+- Preserve exporter scene roots for detached vendor LOD nodes. Simplify geometry **before**
+  attaching vendor extension metadata when using tools that discard unknown extensions.
+
+**Exit criteria:** exported GLB/glTF assets round-trip through the Khronos validator and at least
+two independent runtimes without changing animation, variants, compression declarations, or LOD
+ownership.
+
+### Tranche 13 — Add maturity-aware advanced extensions and authoring tools
+
+**Priority:** P2. **Owners:** `@luma.gl/gltf`, `@luma.gl/engine`, optional scene integrations.
+
+- Represent standards maturity, optional decoder availability, backend restrictions, loader-only
+  support, and export support separately in the extension registry and viewer.
+- Add ratified `KHR_xmp_json_ld` metadata and carefully scoped video-texture ingestion where
+  lifecycle and browser support are explicit; do not treat the archived `KHR_xmp` spelling as a
+  current ratified extension.
+- Evaluate `KHR_interactivity` release-candidate graphs, node selection/hover semantics, and
+  experimental OpenPBR coat/fuzz/diffuse-roughness proposals behind explicit feature gates.
+- Provide a diagnostic viewer for clips, morph weights, variants, lights, extensions, GPU memory,
+  LOD histograms, triangle/index budgets, and reference-image differences.
+
+**Exit criteria:** experimental specifications cannot silently masquerade as ratified support;
+unsupported required extensions produce actionable diagnostics; asset inspection is possible
+without claiming complete game-engine functionality.
+
+## Suggested landing order
+
+| Wave | Tranches | Primary outcome |
+| --- | --- | --- |
+| Measure and unblock | 0, 1, 2 | Trustworthy evidence, already-reviewed LOD, and real release-candidate Meshopt assets. |
+| Improve rendering and character fidelity | 3, 4, 5, 6 | Reference-grade materials, large rigs, GPU morphing, and genuinely GPU-sampled character animation. |
+| Expand full scene workflows | 7, 8, 9 | Layered animation, authored environments/lights, and progressive node/material residency. |
+| Scale mixed-scene GPU rendering | 10, 11 | GPU-driven budgeted skin+morph crowds and seamless mixed mesh/splat documents. |
+| Harden interchange and future standards | 12, 13 | Real optional encoding, durable round trips, explicit maturity flags, and asset diagnostics. |
+
+Land tranches independently. Every tranche needs source fixtures, ownership/lifecycle regressions,
+WebGPU/WebGL2 coverage or an explicit backend limitation, user-facing documentation, and a measured
+before/after result. Describe capabilities as available only after those gates pass.
+
+## Primary sources
+
+### Standards and reference assets
+
+- [Khronos glTF extension registry](https://github.com/KhronosGroup/glTF/blob/main/extensions/README.md)
+- [`KHR_meshopt_compression` release-candidate specification](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_meshopt_compression/README.md)
+- [`MSFT_lod` vendor-extension specification](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/MSFT_lod/README.md)
+- [Khronos glTF Sample Viewer](https://github.com/KhronosGroup/glTF-Sample-Viewer)
+- [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets)
+- [Khronos glTF PBR material reference](https://www.khronos.org/gltf/pbr)
+
+### Babylon.js
+
+- [First-party glTF loader extension inventory](https://github.com/BabylonJS/Babylon.js/blob/2a99325e9cafd98eb6212025fdcf3cfd9078a7d6/packages/dev/loaders/src/glTF/2.0/Extensions/index.ts)
+- [Progressive node/material `MSFT_lod` implementation](https://github.com/BabylonJS/Babylon.js/blob/2a99325e9cafd98eb6212025fdcf3cfd9078a7d6/packages/dev/loaders/src/glTF/2.0/Extensions/MSFT_lod.pure.ts)
+- [Baked vertex-animation manager](https://github.com/BabylonJS/Babylon.js/blob/2a99325e9cafd98eb6212025fdcf3cfd9078a7d6/packages/dev/core/src/BakedVertexAnimation/bakedVertexAnimationManager.ts)
+- [WGSL per-instance baked-animation sampling](https://github.com/BabylonJS/Babylon.js/blob/2a99325e9cafd98eb6212025fdcf3cfd9078a7d6/packages/dev/core/src/ShadersWGSL/ShadersInclude/bakedVertexAnimation.fx)
+- [GLSL per-instance baked-animation sampling](https://github.com/BabylonJS/Babylon.js/blob/2a99325e9cafd98eb6212025fdcf3cfd9078a7d6/packages/dev/core/src/Shaders/ShadersInclude/bakedVertexAnimation.fx)
+- [First-party glTF exporter extension inventory](https://github.com/BabylonJS/Babylon.js/blob/2a99325e9cafd98eb6212025fdcf3cfd9078a7d6/packages/dev/serializers/src/glTF/2.0/Extensions/index.ts)
+- [Animation-group target masks](https://doc.babylonjs.com/typedoc/classes/BABYLON.AnimationGroupMask)
+
+### Three.js
+
+- [`GLTFLoader` built-in extensions and external plugin boundaries](https://threejs.org/docs/pages/GLTFLoader.html)
+- [`GLTFExporter` supported material and scene extensions](https://threejs.org/docs/pages/GLTFExporter.html)
+- [`InstancedMesh` per-instance morph-weight textures](https://threejs.org/docs/pages/InstancedMesh.html)
+- [`AnimationAction` additive blending and playback behavior](https://threejs.org/docs/pages/AnimationAction.html)
+- [`PMREMGenerator` filtered image-based lighting](https://threejs.org/docs/pages/PMREMGenerator.html)
+
+### Additional integration and rendering references
+
+- [PlayCanvas glTF model and animation import](https://developer.playcanvas.com/user-manual/assets/models/building/)
+- [PlayCanvas hardware-instancing limitations](https://developer.playcanvas.com/user-manual/graphics/advanced-rendering/hardware-instancing/)
+- [PlayCanvas GPU-driven indirect drawing](https://developer.playcanvas.com/user-manual/graphics/advanced-rendering/indirect-drawing/)
+- [Filament rendering and glTF feature inventory](https://google.github.io/filament/dup/intro.html)
+- [Filament physically based material reference](https://google.github.io/filament/main/materials.html)
+- [Filament physically based rendering and energy compensation](https://google.github.io/filament/main/filament.html)
