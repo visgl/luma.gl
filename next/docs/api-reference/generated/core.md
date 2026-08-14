@@ -168,6 +168,7 @@
 * [VertexArrayProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexArrayProps.md)
 * [VertexFormat](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormat.md)
 * [VertexFormatDataTypeT](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormatDataTypeT.md)
+* [WebGPUDeviceFeature](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeature.md)
 * [WebGPUDeviceFeatureLevel](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeatureLevel.md)
 * [WebGPUFeatureLevel](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUFeatureLevel.md)
 

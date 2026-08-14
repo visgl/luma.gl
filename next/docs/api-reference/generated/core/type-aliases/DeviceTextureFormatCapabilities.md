@@ -2,7 +2,7 @@
 
 > **DeviceTextureFormatCapabilities** = `object`
 
-Defined in: [modules/core/src/adapter/device.ts:350](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L350)
+Defined in: [modules/core/src/adapter/device.ts:354](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L354)
 
 Texture format capabilities that have been checked against a specific device
 
@@ -12,7 +12,7 @@ Texture format capabilities that have been checked against a specific device
 
 > **blend**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:359](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L359)
+Defined in: [modules/core/src/adapter/device.ts:363](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L363)
 
 Is the format blendable.
 
@@ -22,7 +22,7 @@ Is the format blendable.
 
 > **create**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:353](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L353)
+Defined in: [modules/core/src/adapter/device.ts:357](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L357)
 
 Can the format be created and sampled?
 
@@ -32,7 +32,7 @@ Can the format be created and sampled?
 
 > **filter**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:357](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L357)
+Defined in: [modules/core/src/adapter/device.ts:361](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L361)
 
 Is the format filterable.
 
@@ -42,7 +42,7 @@ Is the format filterable.
 
 > **format**: [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
-Defined in: [modules/core/src/adapter/device.ts:351](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L351)
+Defined in: [modules/core/src/adapter/device.ts:355](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L355)
 
 ***
 
@@ -50,7 +50,7 @@ Defined in: [modules/core/src/adapter/device.ts:351](https://github.com/visgl/lu
 
 > **render**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:355](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L355)
+Defined in: [modules/core/src/adapter/device.ts:359](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L359)
 
 Is the format renderable.
 
@@ -60,6 +60,6 @@ Is the format renderable.
 
 > **store**: `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:361](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L361)
+Defined in: [modules/core/src/adapter/device.ts:365](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L365)
 
 Is the format storeable.

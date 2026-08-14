@@ -2,7 +2,7 @@
 
 > **isHTMLInCanvasSupported**(): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:271](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L271)
+Defined in: [modules/core/src/adapter/device.ts:275](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L275)
 
 Whether the browser exposes the canvas-side HTML-in-Canvas proposal APIs.
 

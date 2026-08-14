@@ -349,9 +349,9 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [Abstract Class: CommandEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
 - [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
 - [Abstract Class: ComputePipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in494
-- [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in244
-- [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in92
+- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in500
+- [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in248
+- [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in96
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
 - [Abstract Class: Fence](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md): Defined in11
 - [Abstract Class: Framebuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in27
@@ -534,6 +534,7 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [Type Alias: VertexArrayProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexArrayProps.md): VertexArrayProps = ResourceProps & object
 - [Type Alias: VertexFormat](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormat.md): VertexFormat = "uint8" \| "uint8x2" \| "uint8x3-webgl" \| "uint8x4" \| "sint8" \| "sint8x2" \| "sint8x3-webgl" \| "sint8x4" \| "unorm8" \| "unorm8x2" \| "unorm8x3-webgl" \| "unorm8x4" \| "unorm8x4-bgra" \| "unorm10-10-10-2" \| "snorm8" \| "snorm8x2" \| "snorm8x3-webgl" \| "snorm8x4" \| "uint16" \| "sint16" \| "unorm16" \| "snorm16" \| "uint16x2" \| "uint16x3-webgl" \| "uint16x4" \| "sint16x2" \| "sint16x3-webgl" \| "sint16x4" \| "unorm16x2" \| "unorm16x3-webgl" \| "unorm16x4" \| "snorm16x2" \| "snorm16x3-webgl" \| "snorm16x4" \| "uint32" \| "uint32x2" \| "uint32x3" \| "uint32x4" \| "sint32" \| "sint32x2" \| "sint32x3" \| "sint32x4" \| "float16" \| "float16x2" \| "float16x4" \| "float32" \| "float32x2" \| "float32x3" \| "float32x4"
 - [Type Alias: VertexFormatDataTypeT<T>](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormatDataTypeT.md): VertexFormatDataTypeT\ = T extends VertexFormatUint8 ? "uint8" T extends VertexFormatUnorm8 ? "unorm8" T extends VertexFormatUint16 ? "uint16" T extends VertexFormatUnorm16 ? "unorm16" T extends VertexFormatUint32 ? "uint32" ... extends ... ? ... : ...
+- [Type Alias: WebGPUDeviceFeature](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeature.md): WebGPUDeviceFeature = "core-features-and-limits" \| "depth-clip-control" \| "depth32float-stencil8" \| "texture-compression-bc" \| "texture-compression-bc-sliced-3d" \| "texture-compression-etc2" \| "texture-compression-astc" \| "texture-compression-astc-sliced-3d" \| "timestamp-query" \| "indirect-first-instance" \| "shader-f16" \| "rg11b10ufloat-renderable" \| "bgra8unorm-storage" \| "float32-filterable" \| "float32-blendable" \| "clip-distances" \| "dual-source-blending" \| "subgroups"
 - [Type Alias: WebGPUDeviceFeatureLevel](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeatureLevel.md): WebGPUDeviceFeatureLevel = Exclude\
 - [Type Alias: WebGPUFeatureLevel](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUFeatureLevel.md): WebGPUFeatureLevel = "core" \| "max" \| "compatibility" \| "best-available"
 - [Variable: dataTypeDecoder](https://luma.gl/next/docs/api-reference/generated/core/variables/dataTypeDecoder.md): const dataTypeDecoder: DataTypeDecoder
@@ -682,6 +683,7 @@ WebGL Device Adapter
 WebGPU Device Adapter
 
 - [Overview](https://luma.gl/next/docs/api-reference/webgpu.md): WebGPU Device Adapter
+- [Optional WebGPU and WGSL features](https://luma.gl/next/docs/api-reference/webgpu/optional-features.md): WebGPU exposes optional capabilities through three related but distinct channels. Applications
 
 ### developer-guide
 

@@ -52,6 +52,24 @@ const device = await luma.createDevice({
 });
 ```
 
+Applications can instead request individual optional device features. Unsupported features are ignored, so the application can retain a portable fallback:
+
+```
+const device = await luma.createDevice({
+
+  type: 'webgpu',
+
+  adapters: [webgpuAdapter],
+
+  optionalFeatures: ['subgroups']
+
+});
+```
+
+Device features must be requested before the `GPUDevice` is created and are reported through `device.features`. WGSL language extensions are different: the browser exposes them dynamically through `device.wgslLanguageFeatures`, and WGSL can validate one with a `requires` directive. `featureLevel: 'max'` requests every adapter device feature and maximum supported limit; WGSL language extensions never need to be added to the device descriptor.
+
+See [Optional WebGPU and WGSL features](https://luma.gl/next/docs/api-reference/webgpu/optional-features.md) for the full request, discovery, shader-gating, fallback, and limit-selection model.
+
 Applications can opt into WebGPU compatibility mode on browsers and backends that support it:
 
 ```

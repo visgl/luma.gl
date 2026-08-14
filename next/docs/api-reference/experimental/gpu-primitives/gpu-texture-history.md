@@ -1,5 +1,9 @@
 # GPUTextureHistory
 
+[Foundation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Operations](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Tables & joins](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Spatial](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Rendering](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)
+
+[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)
+
 ## Overview[​](#overview "Direct link to Overview")
 
 `GPUTextureHistory` owns exactly two descriptor-identical, caller-configured textures and rotates their previous/current roles without copying texels. Its bindings plug directly into [`GPUCommandGraph.encode()`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md#compiledgpucommandgraph), allowing one compiled graph to reuse retained radiance, temporal metadata, simulation state, or feedback buffers across frames.

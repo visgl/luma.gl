@@ -132,6 +132,7 @@ class GPUDataAnalysisExample {
     try {
       const device = await luma.createDevice({
         type: 'webgpu',
+        featureLevel: 'max',
         adapters: [webgpuAdapter]
       });
       if (this.destroyed) {

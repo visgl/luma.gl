@@ -90,7 +90,7 @@ Renderer (usually driver name)
 
 > **shadingLanguage**: `"wgsl"` | `"glsl"`
 
-Defined in: [modules/core/src/adapter/device.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L74)
+Defined in: [modules/core/src/adapter/device.ts:78](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L78)
 
 Shader language supported by device.createShader()
 
@@ -100,9 +100,29 @@ Shader language supported by device.createShader()
 
 > **shadingLanguageVersion**: `number`
 
-Defined in: [modules/core/src/adapter/device.ts:76](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L76)
+Defined in: [modules/core/src/adapter/device.ts:80](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L80)
 
 Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100
+
+***
+
+### subgroupMaxSize?[​](#subgroupmaxsize "Direct link to subgroupMaxSize?")
+
+> `optional` **subgroupMaxSize?**: `number`
+
+Defined in: [modules/core/src/adapter/device.ts:76](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L76)
+
+Maximum subgroup size reported by a WebGPU adapter, when available.
+
+***
+
+### subgroupMinSize?[​](#subgroupminsize "Direct link to subgroupMinSize?")
+
+> `optional` **subgroupMinSize?**: `number`
+
+Defined in: [modules/core/src/adapter/device.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L74)
+
+Minimum subgroup size reported by a WebGPU adapter, when available.
 
 ***
 

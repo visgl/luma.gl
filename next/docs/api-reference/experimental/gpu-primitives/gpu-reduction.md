@@ -1,14 +1,16 @@
 # GPUReduction
 
-[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Trace Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Batch Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+[Foundation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Operations](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Tables & joins](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Spatial](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Rendering](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)
+
+[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUReduction` records a deterministic hierarchical reduction over a packed `uint32`, `sint32`, or `float32` graph data view or fixed-width graph vector.
+`GPUReduction` records a hierarchical reduction over a packed `uint32`, `sint32`, or `float32` graph data view or fixed-width graph vector.
 
 ## Concepts[​](#concepts "Direct link to Concepts")
 
-A reduction combines many scalar rows into one summary. `sum`, `min`, and `max` produce one value; `extent` produces the pair `[minimum, maximum]`. Workgroups first reduce independent blocks, then higher levels reduce those partial results until one row remains. This fixed tree avoids CPU readback and makes the floating-point order repeatable for a fixed input topology.
+A reduction combines many scalar rows into one summary. `sum`, `min`, and `max` produce one value; `extent` produces the pair `[minimum, maximum]`. Workgroups first reduce independent blocks, then higher levels reduce those partial results until one row remains. This hierarchy avoids CPU readback. The portable path uses a fixed floating-point tree; a subgroup-capable device may use its native subgroup reduction order and differ in the lowest-order floating-point bits.
 
 ### When to use it[​](#when-to-use-it "Direct link to When to use it")
 
@@ -29,6 +31,8 @@ type GPUReductionProps<T extends 'uint32' | 'sint32' | 'float32'> = {
 
   input: GraphDataView<T> | GraphVectorView<T>;
 
+  mask?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+
   output: GraphDataView<T>;
 
   operation: 'sum' | 'min' | 'max' | 'extent';
@@ -40,7 +44,7 @@ type GPUReductionProps<T extends 'uint32' | 'sint32' | 'float32'> = {
 
 For a `GraphVectorView`, each non-empty `GraphDataView` chunk is reduced independently into graph-owned partial storage, followed by one global reduction. Chunk order and storage remain unchanged; no input is packed or concatenated. An all-empty vector follows the same zero-result behavior as an empty data view.
 
-Integer sums wrap to 32 bits. Floating sums use a fixed 256-way tree. Floating minimum, maximum, and extent ignore NaN and infinity. Empty inputs and all-invalid floating inputs produce zero.
+Integer sums wrap to 32 bits. Floating sums use a 256-way hierarchical reduction. Floating minimum, maximum, and extent ignore NaN and infinity. Empty inputs and all-invalid floating inputs produce zero.
 
 ## Reduction hierarchy[​](#reduction-hierarchy "Direct link to Reduction hierarchy")
 
@@ -57,6 +61,36 @@ The reduction is planned in levels. Each level dispatches one 256-thread workgro
 For a multi-chunk vector, each non-empty chunk gets its own hierarchy. The last level of each chunk writes directly into one slot of a shared partial view. A merge hierarchy then reduces those slots. Empty chunks add no passes and do not change the result.
 
 All intermediate views are graph-owned transients. Their declared node uses let the command-graph compiler infer ordering and reuse physical scratch allocations when lifetimes do not overlap.
+
+## Performance notes[​](#performance-notes "Direct link to Performance notes")
+
+**GPUReduction - Benchmark**
+
+**33.55M** uint32 elements/dispatch ·<!-- --> **131,072** reduction blocks
+
+| Implementation        | Supported | Barriers | GPU median | Relative | Element throughput |
+| --------------------- | --------- | -------- | ---------- | -------- | ------------------ |
+| GPUReduction          | ✓         | 10       | —          | 1.00×    | —                  |
+| Subgroup optimization | —         | —        | —          | —        | —                  |
+
+* Each round sums 256 generated uint32 inputs using the workgroup-local operation at the center of a GPUReduction level.
+* Throughput is input elements reduced per second.
+
+Workgroups4,096 (4096)Rounds32
+
+Run benchmark
+
+### What the benchmark measures[​](#what-the-benchmark-measures "Direct link to What the benchmark measures")
+
+The benchmark isolates the 256-value workgroup reduction used at each hierarchy level. It reports absolute input throughput and compares the portable and subgroup paths on the same max-feature device.
+
+### Subgroup acceleration[​](#subgroup-acceleration "Direct link to Subgroup acceleration")
+
+When a max-feature device exposes both `subgroups` and the `subgroup_id` WGSL feature, `GPUReduction` uses subgroup collectives before merging subgroup totals in workgroup memory. Other devices keep the portable tree automatically; the API does not change.
+
+### Where it helps[​](#where-it-helps "Direct link to Where it helps")
+
+The fast path also benefits automatic histogram domains, raster statistics, graph summaries, PageRank, and global data-frame aggregations. Gains are largest when synchronization matters; bandwidth-bound graphs may improve less.
 
 ## `addToGraph(graph)`[​](#addtographgraph "Direct link to addtographgraph")
 

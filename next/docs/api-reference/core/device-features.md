@@ -4,6 +4,8 @@
 
 The luma.gl `Device` provides a device "feature" system that allows applications to check whether specific advanced capabilities are present on the current browser or GPU.
 
+WebGPU device features must be requested during device creation, while WGSL language features are discovered dynamically and are not device descriptor entries. See [Optional WebGPU and WGSL features](https://luma.gl/next/docs/api-reference/webgpu/optional-features.md) for the canonical capability-selection pattern.
+
 ## Background[​](#background "Direct link to Background")
 
 Both WebGL 2 and WebGPU provide extension mechanisms that allow implementations to expose additional capabilities that may not be supported on all browsers and GPUs. This allows new GPU features to be provided without waiting for new official versions of the WebGL or WebGPU standards to be approved and published.

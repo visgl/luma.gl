@@ -1,10 +1,12 @@
 # GPUScan
 
-[Guide](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection.md)[Hierarchy](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal.md)[Ancestors](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)[Grid Binning](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Grid Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation.md)[Grid Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)[Grid Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md)[Point Filter](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter.md)[BVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md)[BVH Query](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md)[Spatial Benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md)[Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)[Scene Adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters.md)[Scene Draws](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation.md)[Scene Groups](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups.md)[Trace Scene](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene.md)[Trace Interaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction.md)[Trace Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-trace-picking.md)[Group Aggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md)[Batch Hash Index](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-index.md)[Hash Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md)[Batch Join](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md)[Picking](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md)
+[Foundation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md)[Operations](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Tables & joins](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md)[Graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow.md)[Spatial](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning.md)[Rendering](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scene.md)
+
+[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-scan.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-mask.md)[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-sort.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-fft2d.md)[Reduction](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-reduction.md)[Histogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUScan` adds a hierarchical `uint32` prefix sum to a `GPUCommandGraph`. Scans are exclusive by default and may be inclusive, segmented, or both.
+`GPUScan` computes a parallel prefix sum, commonly called a scan, over `uint32` values in a `GPUCommandGraph`. Scans are exclusive by default and may be inclusive, segmented, or both.
 
 ## Concepts[​](#concepts "Direct link to Concepts")
 
@@ -64,3 +66,35 @@ For input `[1, 0, 1, 1]`, exclusive output is `[0, 1, 1, 2]` and inclusive outpu
 The implementation scans 256 values per workgroup, recursively scans block sums, and propagates block offsets back to lower levels. Segmented scans propagate associative `(sum, segment)` summaries between workgroups and only apply a carry before the first local segment start. Vector scans add transient chunk-summary and carry buffers; they never concatenate or repack caller data. All scratch allocations participate in graph lifetime reuse. Arbitrary non-power-of-two lengths are supported. A zero-length scan adds no nodes.
 
 All arithmetic wraps modulo 2^32. Signed, floating-point, minimum/maximum, and custom associative scans remain future work.
+
+## Performance notes[​](#performance-notes "Direct link to Performance notes")
+
+### Subgroup acceleration[​](#subgroup-acceleration "Direct link to Subgroup acceleration")
+
+Unsegmented scans automatically use WebGPU subgroup operations when the created device exposes the `subgroups` feature and the browser exposes the `subgroup_id` WGSL language extension. The portable workgroup implementation remains the fallback, and segmented scans always use it. Subgroup lanes are mapped to explicit logical indices so prefix order does not depend on implementation-defined invocation layout.
+
+See [Optional WebGPU and WGSL features](https://luma.gl/next/docs/api-reference/webgpu/optional-features.md) for why these two capabilities use different discovery and request mechanisms.
+
+This path is especially relevant to GPU-resident trace visualization: hierarchy layout and stable visibility compaction both scan large flag arrays on interactive updates. The GPU Trace Viewer uses `featureLevel: 'max'`, so recent Chrome releases opt into the fast path automatically when the adapter supports it and report the selected path in the inspector.
+
+### Live benchmark[​](#live-benchmark "Direct link to Live benchmark")
+
+The standalone subgroup scan reduces block-local synchronization, but its global reads, writes, summary hierarchy, and offset passes can make the full operation bandwidth-bound. On an Apple M4 Max, isolated 250K–10M element `GPUScan` measurements did not show a consistent end-to-end gain. Do not assume that fewer barriers automatically improve a bandwidth-bound scan or trace update.
+
+`runGPUWorkgroupScanBenchmark(device)` provides a complementary command-graph benchmark for the synchronization-sensitive case. It compares graph-owned portable and subgroup compute nodes that repeatedly scan generated values and write only one checksum per workgroup. Correctness is gated by a shared CPU checksum oracle, strategy order alternates between measured iterations, and reported GPU timings are normalized per dispatch. On the same M4 Max, its default 32-round workload was approximately 60% faster with subgroups. This is a compute-local upper-bound use case rather than a prediction for standalone `GPUScan`.
+
+**GPUScan compute benchmark**
+
+**33.55M** uint32 elements/dispatch ·<!-- --> **131,072** local scan blocks
+
+| Implementation        | Supported | Barriers | GPU median | Relative | Element throughput |
+| --------------------- | --------- | -------- | ---------- | -------- | ------------------ |
+| GPUScan               | ✓         | 17       | —          | 1.00×    | —                  |
+| Subgroup optimization | —         | —        | —          | —        | —                  |
+
+* Each round applies the 256-element exclusive prefix operation used inside GPUScan.
+* Throughput is uint32 input elements processed per second.
+
+Workgroups4,096 (4096)Rounds32
+
+Run benchmark

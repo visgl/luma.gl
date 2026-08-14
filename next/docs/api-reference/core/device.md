@@ -72,6 +72,7 @@ Specifies props to use when luma creates the device.
 | `createCanvasContext?: CanvasContextProps` \| `true`                    | [CanvasContexProps](https://luma.gl/next/docs/api-reference/core/canvas-context.md#canvascontextprops)                 | Create a default `CanvasContext` for the new `Device`. `true` creates a context with default props.                                                                                                                                                                                                         |
 | `powerPreference?: string`                                              | `'high-performance'`                                                                                                        | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                                                                                                                                                                                                                                   |
 | `featureLevel?: 'core' \| 'max' \| 'compatibility' \| 'best-available'` | `'core'`                                                                                                                    | WebGPU feature/limit profile to request. `'core'` is the portable default; `'max'` requests every supported adapter feature and limit; `'compatibility'` opts into compatibility mode; `'best-available'` upgrades a compatibility adapter to core when available. WebGL and null devices ignore this prop. |
+| `optionalFeatures?: WebGPUDeviceFeature[]`                              | `[]`                                                                                                                        | WebGPU device features to request in addition to the selected profile. Unsupported entries are ignored. Use this for targeted capabilities such as `'subgroups'` without enabling the full `'max'` profile.                                                                                                 |
 | `xrCompatible?: boolean`                                                | `false`                                                                                                                     | Request a WebGPU adapter that can present frames to a WebXR session. Standard adapter requests remain unchanged unless this is enabled.                                                                                                                                                                     |
 | `failIfMajorPerformanceCaveat?: boolean`                                | `false`                                                                                                                     | Fail device creation if only a low-performance or software GPU is available.                                                                                                                                                                                                                                |
 | `webgl?: WebGLContextAttributes`                                        | [`WebGLContextAttributes`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes) | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                                                                                                                                                                                                                                   |
@@ -166,16 +167,18 @@ Information about the device (vendor, versions etc).
 
 Get debug information about the device:
 
-| Field                    | Type                                 | Description                           |
-| ------------------------ | ------------------------------------ | ------------------------------------- |
-| `vendor`                 | `string`                             | GPU vendor (unmasked if possible)     |
-| `renderer`               | `string`                             | Renderer (unmasked if possible)       |
-| `version`                | `string`                             | WebGL version                         |
-| `gpu`                    | `string`                             | GPU name                              |
-| `gpuBackend?`            | `string`                             | `'angle' \| 'metal' \| 'unknown'`     |
-| `featureLevel?`          | `'core' \| 'max' \| 'compatibility'` | Effective WebGPU feature level.       |
-| `shadingLanguage`        | `string`                             | shading language (`'glsl' \| 'wgsl'`) |
-| `shadingLanguageVersion` | `number`                             | shading language version              |
+| Field                    | Type                                 | Description                                           |
+| ------------------------ | ------------------------------------ | ----------------------------------------------------- |
+| `vendor`                 | `string`                             | GPU vendor (unmasked if possible)                     |
+| `renderer`               | `string`                             | Renderer (unmasked if possible)                       |
+| `version`                | `string`                             | WebGL version                                         |
+| `gpu`                    | `string`                             | GPU name                                              |
+| `gpuBackend?`            | `string`                             | `'angle' \| 'metal' \| 'unknown'`                     |
+| `featureLevel?`          | `'core' \| 'max' \| 'compatibility'` | Effective WebGPU feature level.                       |
+| `subgroupMinSize?`       | `number`                             | Minimum subgroup size reported by the WebGPU adapter. |
+| `subgroupMaxSize?`       | `number`                             | Maximum subgroup size reported by the WebGPU adapter. |
+| `shadingLanguage`        | `string`                             | shading language (`'glsl' \| 'wgsl'`)                 |
+| `shadingLanguageVersion` | `number`                             | shading language version                              |
 
 Remarks:
 
@@ -195,6 +198,14 @@ features: Set<DeviceFeature>;
 ```
 
 Applications can determine whether the device implements an optional features by checking `device.features.has(...)`.
+
+### wgslLanguageFeatures[​](#wgsllanguagefeatures "Direct link to wgslLanguageFeatures")
+
+```
+readonly wgslLanguageFeatures: ReadonlySet<string>;
+```
+
+WGSL language extensions exposed by the browser. Unlike `device.features`, these extensions are discovered dynamically and are not requested during device creation. Non-WebGPU devices expose an empty set.
 
 ### limits[​](#limits "Direct link to limits")
 

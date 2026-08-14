@@ -35,6 +35,8 @@ if (device.info.gpu === 'nvidia') {
 | `gpuType`                | `N/A`           | `N/A`            | `N/A`              | `N/A`  | `discrete`, `integrated`, `cpu` or `unknown`               |
 | `gpuBackend`             | `N/A`           | `N/A`            | `N/A`              | `N/A`  | `metal`, `opengl`, `vulkan`, `d3d12`, ... or `unknown`     |
 | `gpuArchitecture`        | `N/A`           | `N/A`            | `N/A`              | `N/A`  | `common-3` on Apple                                        |
+| `subgroupMinSize`        | `N/A`           | `N/A`            | `N/A`              | `N/A`  | Minimum WebGPU subgroup size, when reported                |
+| `subgroupMaxSize`        | `N/A`           | `N/A`            | `N/A`              | `N/A`  | Maximum WebGPU subgroup size, when reported                |
 | `shadingLanguage`        | `N/A`           | `N/A`            | `N/A`              | `N/A`  | Shading language `wgsl`, `glsl`                            |
 | `shadingLanguageVersion` | `N/A`           | `N/A`            | `N/A`              | `N/A`  | Shading language version GLSL 3.00 = 300, WGSL 1.00 = 100) |
 
