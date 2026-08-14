@@ -483,6 +483,16 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     'density aggregation uses scroll-stable trace-time bin membership'
   );
   t.match(
+    getBatchVisibilityShader(3),
+    /viewUniforms\.timeMin - timePadding/,
+    'coarse visibility keeps a horizontal guard band around the viewport'
+  );
+  t.match(
+    getCandidateVisibilityShader(spanChunk),
+    /span\.start <= viewUniforms\.timeMax \+ timePadding/,
+    'exact spans remain candidates until they clear the padded viewport edge'
+  );
+  t.match(
     getCandidatePassDispatchShader([
       {firstBatchIndex: 0, batchCount: 7},
       {firstBatchIndex: 7, batchCount: 5}

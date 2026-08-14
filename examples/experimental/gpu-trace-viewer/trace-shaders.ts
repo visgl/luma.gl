@@ -32,6 +32,7 @@ const TRACE_WORKGROUP_SIZE = 256;
 export const TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE = 64;
 
 export type TraceSpanChunkShaderProps = {
+  chunkIndex?: number;
   firstSpanIndex: number;
   spanCount: number;
   firstBatchIndex: number;
@@ -39,7 +40,8 @@ export type TraceSpanChunkShaderProps = {
 };
 
 function getSpanChunkDeclarations(props: TraceSpanChunkShaderProps): string {
-  return `const CHUNK_FIRST_SPAN_INDEX: u32 = ${props.firstSpanIndex}u;
+  return `const CHUNK_INDEX: u32 = ${props.chunkIndex ?? 0}u;
+const CHUNK_FIRST_SPAN_INDEX: u32 = ${props.firstSpanIndex}u;
 const CHUNK_SPAN_COUNT: u32 = ${props.spanCount}u;
 const CHUNK_FIRST_BATCH_INDEX: u32 = ${props.firstBatchIndex}u;
 const CHUNK_BATCH_COUNT: u32 = ${props.batchCount}u;`;
@@ -97,6 +99,13 @@ const THREADS_PER_PROCESS: u32 = ${TRACE_THREADS_PER_PROCESS}u;
 const DENSITY_BLEND_START_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL};
 const DENSITY_BLEND_END_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL};
 const EXACT_SPAN_MINIMUM_PIXEL_WIDTH: f32 = ${TRACE_EXACT_SPAN_MINIMUM_PIXEL_WIDTH};
+const VISIBILITY_GUARD_PIXEL_WIDTH: f32 = 8.0;
+
+fn getVisibilityTimePadding() -> f32 {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  return VISIBILITY_GUARD_PIXEL_WIDTH * timeRange /
+    max(viewUniforms.viewportWidth, 1.0);
+}
 
 fn getSpanPixelWidth(duration: f32) -> f32 {
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
@@ -449,7 +458,9 @@ const SIMILAR_DURATION_PARENT_FLAG: u32 = ${TRACE_SIMILAR_DURATION_PARENT_FLAG}u
 
 fn isSpanSourceVisible(span: TraceSpan, lane: f32) -> bool {
   let end = span.start + span.duration;
-  let timeVisible = end >= viewUniforms.timeMin && span.start <= viewUniforms.timeMax;
+  let timePadding = getVisibilityTimePadding();
+  let timeVisible = end >= viewUniforms.timeMin - timePadding &&
+    span.start <= viewUniforms.timeMax + timePadding;
   let laneVisible = lane >= viewUniforms.laneMin && lane < viewUniforms.laneMax;
   let groupVisible = (viewUniforms.enabledMask & (1u << span.group)) != 0u;
   let statusVisible = (viewUniforms.statusMask & (1u << (span.flags & 3u))) != 0u;
@@ -707,8 +718,9 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     return;
   }
   let batch = spanBatches[batchIndex];
-  let timeVisible = batch.timeMax >= viewUniforms.timeMin &&
-    batch.timeMin <= viewUniforms.timeMax;
+  let timePadding = getVisibilityTimePadding();
+  let timeVisible = batch.timeMax >= viewUniforms.timeMin - timePadding &&
+    batch.timeMin <= viewUniforms.timeMax + timePadding;
   let groupVisible = (viewUniforms.enabledMask & (1u << batch.groupIndex)) != 0u;
   let candidateVisible = timeVisible && groupVisible;
   let exactCandidateVisible = candidateVisible &&
@@ -742,8 +754,9 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     return;
   }
   let batch = dependencyBatches[batchIndex];
-  let timeVisible = batch.timeMin <= viewUniforms.timeMax &&
-    batch.timeMax >= viewUniforms.timeMin;
+  let timePadding = getVisibilityTimePadding();
+  let timeVisible = batch.timeMin <= viewUniforms.timeMax + timePadding &&
+    batch.timeMax >= viewUniforms.timeMin - timePadding;
   let familyVisible = (batch.familyMask & viewUniforms.dependencyMask) != 0u;
   candidateFlags[batchIndex] = select(
     0u,
@@ -926,12 +939,12 @@ const LAST_BATCH_INDICES = array<u32, ${chunks.length}>(${lastBatchIndices});
 @group(0) @binding(5) var<storage, read> candidateBatchIds: array<u32>;
 @group(0) @binding(6) var<storage, read_write> candidateChunkOffsets: array<u32>;
 
-fn lowerBoundCandidate(target: u32, candidateBatchCount: u32) -> u32 {
+fn lowerBoundCandidate(targetBatchIndex: u32, candidateBatchCount: u32) -> u32 {
   var low = 0u;
   var high = candidateBatchCount;
   while (low < high) {
     let middle = low + (high - low) / 2u;
-    if (candidateBatchIds[middle] < target) {
+    if (candidateBatchIds[middle] < targetBatchIndex) {
       low = middle + 1u;
     } else {
       high = middle;
