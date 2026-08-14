@@ -241,6 +241,10 @@ graph schedules render, compute, and copy commands equally.
 The proof of concept follows a small constitution. These rules matter more than the exact method
 names because they determine whether independently developed primitives remain composable.
 
+The detailed [GPUCommandGraph design document](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph-design)
+compares this model with other GPU graph APIs, expands the evaluation criteria, and proposes a
+staged plan for enforcing declared node resource contracts.
+
 ### Encoding is explicit
 
 A compiled graph records into a `CommandEncoder` supplied by the caller. Calling `encode()` does

@@ -26,6 +26,7 @@
 - Always `yarn lint fix` after making changes to ensure that Biome formatting is maintained.
 
 ## Pull requests
+- If GitHub CLI access is unavailable or unauthenticated, look for and use an available GitHub plugin or connected GitHub app before treating GitHub access as blocked.
 - When opening a PR, wait 15 minutes for review comments, address them and respond, then make sure CI is green.
 
 ## Merge preparation

@@ -15,6 +15,10 @@ attachments and consume explicitly numbered, frame-scoped swapchain and external
 See [Choosing a GPU Data-Processing API](/docs/api-guide/gpu/gpu-data-processing) for guidance on
 when to use a command graph, portable GPGPU evaluators, or lower-level compute helpers.
 
+See [GPUCommandGraph Design](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph-design)
+for the design criteria, comparison with CUDA, SYCL, OpenCL, Daxa, and Taskflow, and the proposed
+plan for enforcing node resource contracts.
+
 ## Concepts
 
 A graph definition describes resources, node uses, and explicit ordering constraints. Compilation
