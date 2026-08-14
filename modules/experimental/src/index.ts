@@ -260,6 +260,12 @@ export type {ComparisonSplitterProps} from './controls/comparison-splitter';
 export {ComparisonSplitter} from './controls/comparison-splitter';
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
+export type {
+  FlatControllerPick,
+  FlatControllerProps,
+  FlatViewState
+} from './controls/flat-controller';
+export {FlatController} from './controls/flat-controller';
 
 export * from './webxr/index';
 

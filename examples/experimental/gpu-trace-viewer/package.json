@@ -15,6 +15,7 @@
     "@luma.gl/experimental": "9.4.0-alpha.4",
     "@luma.gl/shadertools": "9.4.0-alpha.4",
     "@luma.gl/tables": "9.4.0-alpha.4",
+    "@luma.gl/text": "9.4.0-alpha.4",
     "@luma.gl/webgpu": "9.4.0-alpha.4"
   },
   "devDependencies": {

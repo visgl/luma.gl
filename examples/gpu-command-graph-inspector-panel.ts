@@ -161,6 +161,10 @@ export class GPUCommandGraphInspectorPanel {
       <span>${graph.stats.nodeOrder.length} nodes</span>
       <span>${formatBytes(graph.stats.logicalResourceBytes)} logical</span>
       <span>${formatBytes(graph.stats.physicalTransientResourceBytes)} scratch</span>
+      ${graph.preflight?.annotatedNodeCount ? `<span>${graph.preflight.annotatedNodeCount}/${graph.stats.nodeOrder.length} costed nodes</span>` : ''}
+      ${graph.preflight?.maximumInvocationCount ? `<span>${formatCount(graph.preflight.maximumInvocationCount)} max invocations</span>` : ''}
+      ${graph.preflight?.readByteLength ? `<span>${formatBytes(graph.preflight.readByteLength)} max reads</span>` : ''}
+      ${graph.preflight?.writeByteLength ? `<span>${formatBytes(graph.preflight.writeByteLength)} max writes</span>` : ''}
       <span>${reusePercentage ? `${reusePercentage.toFixed(0)}% reuse` : 'no reuse'}</span>
       <span>${gpuSampleCount ? 'GPU timings sampled' : 'CPU timings only'}</span>`;
     const countersElement = this.element.querySelector<HTMLElement>(
@@ -184,6 +188,10 @@ export class GPUCommandGraphInspectorPanel {
   private getCounterLabel(counterId: string): string {
     return getOwnLabel(this.counterLabels, counterId);
   }
+}
+
+function formatCount(value: number): string {
+  return COMPACT_COUNTER_FORMATTER.format(value);
 }
 
 const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `

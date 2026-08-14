@@ -545,6 +545,21 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
 
   graph.addComputePass({
     id: props.id,
+    workload: {
+      operation: 'GPUScan',
+      commandCount: 1,
+      maximumWorkgroupCount:
+        props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
+      maximumInvocationCount:
+        props.dispatchLayout.x *
+        props.dispatchLayout.y *
+        props.dispatchLayout.z *
+        SCAN_WORKGROUP_SIZE,
+      readByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT,
+      writeByteLength:
+        props.length * Uint32Array.BYTES_PER_ELEMENT +
+        props.blockCount * Uint32Array.BYTES_PER_ELEMENT
+    },
     resources: [
       {buffer: props.input, usage: 'storage-read'},
       {buffer: props.output, usage: 'storage-write'},
@@ -743,6 +758,19 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
 }`;
   graph.addComputePass({
     id: props.id,
+    workload: {
+      operation: 'GPUScan',
+      commandCount: 1,
+      maximumWorkgroupCount:
+        props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
+      maximumInvocationCount:
+        props.dispatchLayout.x *
+        props.dispatchLayout.y *
+        props.dispatchLayout.z *
+        SCAN_WORKGROUP_SIZE,
+      readByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT * 2,
+      writeByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT
+    },
     resources: [
       {buffer: props.output, usage: 'storage-read-write'},
       {buffer: props.offsets, usage: 'storage-read'},

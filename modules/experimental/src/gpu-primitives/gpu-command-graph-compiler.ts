@@ -8,6 +8,7 @@ import type {
   GPUCommandGraphComputeExecutable,
   GPUCommandGraphCopyExecutable,
   GPUCommandGraphNode,
+  GPUCommandGraphPreflightReport,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphStats,
   GraphBufferHandle,
@@ -99,6 +100,8 @@ export type GPUCommandGraphCompilation<Parameters> = {
   textureTransientAllocations: TextureTransientAllocation[];
   /** Scheduling and allocation statistics. */
   stats: GPUCommandGraphStats;
+  /** Static resource and workload report for application-defined soft sanity checks. */
+  preflight: GPUCommandGraphPreflightReport;
 };
 
 /**
@@ -245,6 +248,7 @@ export function compileGPUCommandGraph<Parameters>(props: {
       'physical transient resource estimates'
     )
   };
+  const preflight = getGPUCommandGraphPreflightReport(props.device, logicalBuffers, nodeOrder);
 
   return {
     device: props.device,
@@ -257,8 +261,69 @@ export function compileGPUCommandGraph<Parameters>(props: {
     transientTextures,
     bufferTransientAllocations: bufferPlan,
     textureTransientAllocations: texturePlan,
-    stats
+    stats,
+    preflight
   };
+}
+
+function getGPUCommandGraphPreflightReport<Parameters>(
+  device: Device,
+  buffers: GraphBufferHandle[],
+  nodes: GPUCommandGraphNode<Parameters>[]
+): GPUCommandGraphPreflightReport {
+  const nodeReports = nodes.map(node => {
+    const workload = node.workload ?? {};
+    return Object.freeze({
+      id: node.id,
+      type: node.type,
+      ...(workload.operation ? {operation: workload.operation} : {}),
+      commandCount: workload.commandCount ?? 0,
+      maximumWorkgroupCount: workload.maximumWorkgroupCount ?? 0,
+      maximumInvocationCount: workload.maximumInvocationCount ?? 0,
+      readByteLength: workload.readByteLength ?? 0,
+      writeByteLength: workload.writeByteLength ?? 0
+    });
+  });
+  const largestBufferByteLength = buffers.reduce(
+    (maximum, buffer) => Math.max(maximum, buffer.byteLength),
+    0
+  );
+  const largestStorageBufferBindingByteLength = nodes.reduce((maximum, node) => {
+    for (const resource of node.resources ?? []) {
+      if (
+        isGraphBufferUse(resource) &&
+        (resource.usage === 'storage-read' ||
+          resource.usage === 'storage-write' ||
+          resource.usage === 'storage-read-write')
+      ) {
+        maximum = Math.max(maximum, getBufferHandle(resource.buffer).byteLength);
+      }
+    }
+    return maximum;
+  }, 0);
+  const sum = (key: keyof (typeof nodeReports)[number]): number =>
+    nodeReports.reduce((total, node) => {
+      const value = node[key];
+      return typeof value === 'number'
+        ? addSafeByteLengths(total, value, 'workload estimates')
+        : total;
+    }, 0);
+  return Object.freeze({
+    nodes: Object.freeze(nodeReports),
+    annotatedNodeCount: nodes.filter(node => node.workload !== undefined).length,
+    commandCount: sum('commandCount'),
+    maximumWorkgroupCount: sum('maximumWorkgroupCount'),
+    maximumInvocationCount: sum('maximumInvocationCount'),
+    readByteLength: sum('readByteLength'),
+    writeByteLength: sum('writeByteLength'),
+    largestBufferByteLength,
+    largestStorageBufferBindingByteLength,
+    maxBufferByteLength: device.limits.maxBufferSize,
+    maxStorageBufferBindingByteLength: device.limits.maxStorageBufferBindingSize,
+    fitsDeviceLimits:
+      largestBufferByteLength <= device.limits.maxBufferSize &&
+      largestStorageBufferBindingByteLength <= device.limits.maxStorageBufferBindingSize
+  });
 }
 
 /** Returns the underlying logical buffer for either a handle or typed data view. @internal */

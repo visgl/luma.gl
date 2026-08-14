@@ -9,6 +9,7 @@ import type {
   GPUCommandGraphEncodeOptions,
   GPUCommandGraphEncodingStats,
   GPUCommandGraphNodeType,
+  GPUCommandGraphPreflightReport,
   GPUCommandGraphStats,
   GPUCommandGraphTimingReport
 } from './gpu-command-graph-types';
@@ -21,6 +22,8 @@ export type GPUCommandGraphInspectorGraph = {
   readonly stats: GPUCommandGraphStats;
   /** Device capabilities relevant to graph execution. */
   readonly capabilities: GPUCommandGraphCapabilities;
+  /** Optional static workload bounds supplied by compiled graph operations. */
+  readonly preflight?: GPUCommandGraphPreflightReport;
 };
 
 /** Minimal encoding surface consumed by {@link GPUCommandGraphInspector}. */
@@ -143,6 +146,8 @@ export type GPUCommandGraphInspectorGraphSnapshot = {
   readonly stats: GPUCommandGraphInspectorStatsSnapshot;
   /** Graph-relevant device capabilities and limits. */
   readonly capabilities: Readonly<GPUCommandGraphCapabilities>;
+  /** Static workload bounds, when the observed graph exposes them. */
+  readonly preflight?: GPUCommandGraphPreflightReport;
   /** Number of synchronously recorded graph encodings. */
   readonly encodingCount: number;
   /** Number of GPU timing readbacks that rejected for this registration. */
@@ -176,6 +181,7 @@ type GraphInspectionState = {
   id: string;
   stats: GPUCommandGraphInspectorStatsSnapshot;
   capabilities: Readonly<GPUCommandGraphCapabilities>;
+  preflight?: GPUCommandGraphPreflightReport;
   encodingCount: number;
   timingReadFailureCount: number;
   cpuSamples: number[];
@@ -226,6 +232,7 @@ export class GPUCommandGraphInspector {
       id: graph.id,
       stats: copyGraphStats(graph.stats),
       capabilities: Object.freeze({...graph.capabilities}),
+      ...(graph.preflight ? {preflight: copyPreflightReport(graph.preflight)} : {}),
       encodingCount: 0,
       timingReadFailureCount: 0,
       cpuSamples: [],
@@ -466,6 +473,7 @@ export class GPUCommandGraphInspector {
       id: graph.id,
       stats: graph.stats,
       capabilities: graph.capabilities,
+      ...(graph.preflight ? {preflight: graph.preflight} : {}),
       encodingCount: graph.encodingCount,
       timingReadFailureCount: graph.timingReadFailureCount,
       totals: Object.freeze({
@@ -480,6 +488,15 @@ export class GPUCommandGraphInspector {
 
 function copyGraphStats(stats: GPUCommandGraphStats): GPUCommandGraphInspectorStatsSnapshot {
   return Object.freeze({...stats, nodeOrder: Object.freeze([...stats.nodeOrder])});
+}
+
+function copyPreflightReport(
+  preflight: GPUCommandGraphPreflightReport
+): GPUCommandGraphPreflightReport {
+  return Object.freeze({
+    ...preflight,
+    nodes: Object.freeze(preflight.nodes.map(node => Object.freeze({...node})))
+  });
 }
 
 function summarizeSamples(samples: readonly number[]): GPUCommandGraphInspectorDurationSnapshot {

@@ -18,7 +18,7 @@ export const TRACE_THREAD_COUNT = TRACE_PROCESS_COUNT * TRACE_THREADS_PER_PROCES
 export const TRACE_LANE_COUNT = TRACE_THREAD_COUNT * TRACE_LANES_PER_THREAD;
 export const TRACE_SPAN_RECORD_WORD_LENGTH = GPU_TRACE_SPAN_RECORD_WORD_LENGTH;
 export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = GPU_TRACE_LINK_RECORD_WORD_LENGTH;
-export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 8;
+export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 9;
 export const TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH = 6;
 // One span batch maps to one portable WebGPU workgroup for candidate-driven local compaction.
 export const TRACE_SPAN_BATCH_CAPACITY = 256;
@@ -26,7 +26,7 @@ export const TRACE_SPAN_BATCH_CAPACITY = 256;
 export const TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH = 64 * 1024 * 1024;
 // One dependency batch maps to one portable WebGPU workgroup for candidate-driven compaction.
 export const TRACE_DEPENDENCY_BATCH_CAPACITY = 128;
-const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000];
+const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000];
 // Keep density scrolling visually continuous at common viewport widths while retaining a fixed,
 // allocation-stable aggregation target for the compiled GPU command graph.
 export const TRACE_DENSITY_BIN_COUNT = 512;
@@ -34,7 +34,29 @@ export const TRACE_DENSITY_BIN_COUNT = 512;
 export const TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL = 0.025;
 /** Density bins fully replace individual spans above this trace-time-per-pixel scale. */
 export const TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL = 0.055;
+/** Spans that remain this wide in the current view bypass density aggregation. */
+export const TRACE_EXACT_SPAN_MINIMUM_PIXEL_WIDTH = 6;
 export const TRACE_STATUS_COUNT = 4;
+/** Small operation-name dictionary shared by every generated span label. */
+export const TRACE_LABEL_DICTIONARY = [
+  'kernel',
+  'barrier',
+  'matrix multiply',
+  'kernel retry',
+  'send',
+  'receive wait',
+  'all-reduce',
+  'network error',
+  'read',
+  'I/O wait',
+  'write',
+  'I/O error'
+] as const;
+/** Bounded transient glyph occurrences; source strings and glyph layouts remain dictionary-shared. */
+export const TRACE_LABEL_GLYPH_CAPACITY = 1_000_000;
+export const TRACE_LABEL_GLYPH_RECORD_WORD_LENGTH = 6;
+/** Screen-space label size shared by dictionary measurement and span-local placement. */
+export const TRACE_LABEL_FONT_SIZE = 16;
 export const TRACE_SAME_PROCESS_DEPENDENCY = 0;
 export const TRACE_CROSS_PROCESS_DEPENDENCY = 1;
 export const TRACE_PARENT_DEPENDENCY_FLAG = 1;
@@ -64,6 +86,9 @@ const TRACE_GROUP_PHASE_SLOT_COUNT = 24;
 const TRACE_GROUP_PHASE_CYCLE_LENGTH = 8;
 const TRACE_FOCUSED_GROUP_PHASE_COUNT = 6;
 const TRACE_MAXIMUM_DURATION_SLOT_COUNT = 30;
+const TRACE_EXTRA_WIDE_SPAN_INTERVAL = 4093;
+const TRACE_EXTRA_WIDE_SPAN_MINIMUM_SLOT_COUNT = 120;
+const TRACE_EXTRA_WIDE_SPAN_SLOT_COUNT_RANGE = 180;
 /** Largest useful minimum-duration filter value for the generated span distribution. */
 export const TRACE_DURATION_FILTER_MAXIMUM =
   Math.floor(TRACE_MAXIMUM_DURATION_SLOT_COUNT * TRACE_DURATION_SCALE * TRACE_SLOT_DURATION * 100) /
@@ -99,13 +124,24 @@ export function getTraceDependencyCapacityOptions(
 ): number[] {
   const dependencyRecordByteLength =
     TRACE_DEPENDENCY_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
-  const maximumDependencyCapacity = Math.floor(
+  const maximumStoredDependencyCount = Math.floor(
     Math.min(maxStorageBufferBindingSize, maxBufferSize) / dependencyRecordByteLength
+  );
+  const maximumGeneratedDependencyCount = getMaximumGeneratedTraceDependencyCount(
+    TRACE_DEMONSTRATION_CAPACITIES.at(-1)!
   );
   return [
     0,
-    ...TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumDependencyCapacity)
+    ...TRACE_DEMONSTRATION_CAPACITIES.filter(
+      capacity =>
+        Math.min(capacity, maximumGeneratedDependencyCount) <= maximumStoredDependencyCount
+    )
   ];
+}
+
+/** Upper bound for the example's intentionally sparse generated dependency topology. */
+export function getMaximumGeneratedTraceDependencyCount(spanCount: number): number {
+  return Math.ceil(spanCount / 5) + Math.ceil(spanCount / 29) + 1;
 }
 
 /**
@@ -146,6 +182,19 @@ export function isTraceDensityMode(
   return getTraceDensityBlend(timeMin, timeMax, viewportWidth) >= 0.5;
 }
 
+/** Returns scroll-stable, absolute trace-time bins for the current zoom level. */
+export function getTraceDensityBinParameters(
+  timeMin: number,
+  timeMax: number
+): {origin: number; duration: number} {
+  const timeRange = Math.max(timeMax - timeMin, Number.EPSILON);
+  // Reserve one bin on each side so the anchored range covers the viewport at every alignment.
+  const targetDuration = timeRange / (TRACE_DENSITY_BIN_COUNT - 2);
+  const duration = 2 ** Math.ceil(Math.log2(targetDuration));
+  const origin = Math.floor(timeMin / duration) * duration - duration;
+  return Object.freeze({origin, duration});
+}
+
 export type TraceGroupName = (typeof TRACE_GROUPS)[number];
 
 /** Stable source range for one indirect trace-span draw group. */
@@ -169,6 +218,7 @@ export type TraceSpanBatchData = {
   timeMax: number;
   laneMin: number;
   laneMax: number;
+  maximumDuration: number;
   /** Borrowed source-aligned view into the canonical span allocation. */
   data: Uint32Array;
 };
@@ -238,6 +288,31 @@ export type TraceDatasetData = {
   processCount: number;
   threadCount: number;
 };
+
+/** Lists each unique owned allocation so a worker can transfer a dataset without copying it. */
+export function getTraceDatasetTransferables(dataset: TraceDatasetData): ArrayBuffer[] {
+  const getOwnedBuffer = (array: Uint32Array): ArrayBuffer => {
+    const buffer = array.buffer;
+    // Generated datasets always own ordinary transferable ArrayBuffers.
+    if (!(buffer instanceof ArrayBuffer)) {
+      throw new TypeError();
+    }
+    return buffer;
+  };
+  return [
+    getOwnedBuffer(dataset.spans),
+    getOwnedBuffer(dataset.spanBatchIndex),
+    getOwnedBuffer(dataset.dependencies),
+    getOwnedBuffer(dataset.dependencyBatchIndex),
+    getOwnedBuffer(dataset.parentSpans),
+    getOwnedBuffer(dataset.outgoing.nodes),
+    getOwnedBuffer(dataset.outgoing.offsets),
+    getOwnedBuffer(dataset.outgoing.neighbors),
+    getOwnedBuffer(dataset.incoming.nodes),
+    getOwnedBuffer(dataset.incoming.offsets),
+    getOwnedBuffer(dataset.incoming.neighbors)
+  ];
+}
 
 /**
  * Creates deterministic, storage-ready hierarchical spans and dependency adjacency.
@@ -421,15 +496,18 @@ export function makeTraceSpanBatches(
       let timeMax = Number.NEGATIVE_INFINITY;
       let laneMin = TRACE_LANE_COUNT;
       let laneMax = 0;
+      let maximumDuration = 0;
       for (let rowIndex = 0; rowIndex < count; rowIndex++) {
         const wordOffset = (firstSpanIndex + rowIndex) * TRACE_SPAN_RECORD_WORD_LENGTH;
         const start = spanFloats[wordOffset];
-        const end = start + spanFloats[wordOffset + 1];
+        const duration = spanFloats[wordOffset + 1];
+        const end = start + duration;
         const lane = spans[wordOffset + 2];
         timeMin = Math.min(timeMin, start);
         timeMax = Math.max(timeMax, end);
         laneMin = Math.min(laneMin, lane);
         laneMax = Math.max(laneMax, lane + 1);
+        maximumDuration = Math.max(maximumDuration, duration);
       }
       spanBatches.push({
         batchIndex: spanBatches.length,
@@ -441,6 +519,7 @@ export function makeTraceSpanBatches(
         timeMax,
         laneMin,
         laneMax,
+        maximumDuration,
         data: spans.subarray(
           firstSpanIndex * TRACE_SPAN_RECORD_WORD_LENGTH,
           (firstSpanIndex + count) * TRACE_SPAN_RECORD_WORD_LENGTH
@@ -461,6 +540,7 @@ export function makeTraceSpanBatches(
     spanBatchIndex[wordOffset + 5] = batch.laneMax;
     spanBatchIndex[wordOffset + 6] = batch.groupIndex;
     spanBatchIndex[wordOffset + 7] = batch.batchIndex;
+    spanBatchIndexFloats[wordOffset + 8] = batch.maximumDuration;
   }
   return {spanBatches, spanBatchIndex};
 }
@@ -559,8 +639,11 @@ function fillTraceSpans(
     const gap = (0.02 + random() * 0.04) * TRACE_SLOT_DURATION;
     const durationClass = random();
     const durationVariation = random();
-    const durationSlotCount =
-      durationClass < 0.58
+    const extraWideSpan = (timelineIndex + 1) % TRACE_EXTRA_WIDE_SPAN_INTERVAL === 0;
+    const durationSlotCount = extraWideSpan
+      ? TRACE_EXTRA_WIDE_SPAN_MINIMUM_SLOT_COUNT +
+        durationVariation * TRACE_EXTRA_WIDE_SPAN_SLOT_COUNT_RANGE
+      : durationClass < 0.58
         ? 0.04 + durationVariation * 0.21
         : durationClass < 0.89
           ? 0.35 + durationVariation * 0.85
@@ -593,7 +676,7 @@ function makeTraceDependencies(
   spanCount: number,
   requestedMaximumDependencyCount: number
 ): {dependencies: Uint32Array; parentSpans: Uint32Array} {
-  const generatedMaximumDependencyCount = Math.ceil(spanCount / 5) + Math.ceil(spanCount / 29) + 1;
+  const generatedMaximumDependencyCount = getMaximumGeneratedTraceDependencyCount(spanCount);
   const maximumDependencyCount = Math.min(
     requestedMaximumDependencyCount,
     generatedMaximumDependencyCount

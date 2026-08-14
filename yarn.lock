@@ -15212,6 +15212,7 @@ __metadata:
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/tables": "npm:9.4.0-alpha.4"
+    "@luma.gl/text": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"

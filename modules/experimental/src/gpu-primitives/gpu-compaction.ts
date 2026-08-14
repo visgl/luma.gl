@@ -331,6 +331,33 @@ function addCompactionPass<Parameters>(
 ): void {
   graph.addComputePass({
     id: props.id,
+    workload: {
+      operation: 'GPUCompaction',
+      commandCount: 1,
+      maximumWorkgroupCount:
+        props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
+      maximumInvocationCount:
+        props.dispatchLayout.x *
+        props.dispatchLayout.y *
+        props.dispatchLayout.z *
+        COMPACTION_WORKGROUP_SIZE,
+      readByteLength: props.resources.reduce(
+        (total, resource) =>
+          total +
+          (resource.usage === 'storage-read' || resource.usage === 'storage-read-write'
+            ? resource.buffer.length * resource.buffer.rowByteLength
+            : 0),
+        0
+      ),
+      writeByteLength: props.resources.reduce(
+        (total, resource) =>
+          total +
+          (resource.usage === 'storage-write' || resource.usage === 'storage-read-write'
+            ? resource.buffer.length * resource.buffer.rowByteLength
+            : 0),
+        0
+      )
+    },
     resources: props.resources,
     compile: ({device}) => {
       const computation = new Computation(device, {

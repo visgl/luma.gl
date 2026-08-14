@@ -53,6 +53,7 @@ import type {
   GPUCommandGraphEncodingStats,
   GPUCommandGraphNode,
   GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphPreflightReport,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphRenderNode,
   GPUCommandGraphStats,
@@ -91,8 +92,11 @@ export type {
   GPUCommandGraphEncodeOptions,
   GPUCommandGraphNode,
   GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphNodePreflight,
   GPUCommandGraphNodeTiming,
   GPUCommandGraphNodeType,
+  GPUCommandGraphNodeWorkloadEstimate,
+  GPUCommandGraphPreflightReport,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphRenderNode,
   GPUCommandGraphStats,
@@ -527,6 +531,16 @@ export class GPUCommandGraph<Parameters = void> {
     if (this.nodeIds.has(node.id)) {
       throw new Error(`GPUCommandGraph node id "${node.id}" is already in use`);
     }
+    for (const [name, value] of Object.entries(node.workload ?? {})) {
+      if (
+        name !== 'operation' &&
+        (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+      ) {
+        throw new Error(
+          `GPUCommandGraph node "${node.id}" workload ${name} must be a nonnegative safe integer`
+        );
+      }
+    }
     for (const resource of node.resources ?? []) {
       if (isGraphBufferUse(resource)) {
         const buffer = getBufferHandle(resource.buffer);
@@ -731,6 +745,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   readonly id: string;
   /** Scheduling and transient-allocation statistics. */
   readonly stats: GPUCommandGraphStats;
+  /** Static resource and workload bounds for application-defined preflight policy. */
+  readonly preflight: GPUCommandGraphPreflightReport;
   /** Adapter capabilities and limits relevant to graph execution. */
   readonly capabilities: GPUCommandGraphCapabilities;
 
@@ -796,6 +812,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     this.bufferTransientAllocations = props.bufferTransientAllocations;
     this.textureTransientAllocations = props.textureTransientAllocations;
     this.stats = props.stats;
+    this.preflight = props.preflight;
     this.capabilities = getGPUCommandGraphCapabilities(this.device);
   }
 

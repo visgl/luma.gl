@@ -72,6 +72,59 @@ export const TRACE_PANEL_STYLE = /* css */ `
     gap: 3px 9px;
     margin-top: 6px;
   }
+  [data-trace-dashboard] .trace-preflight {
+    display: grid;
+    gap: 7px;
+    margin-top: 7px;
+    padding: 7px;
+    border: 1px solid rgb(214 164 84 / 42%);
+    border-radius: 6px;
+    background: rgb(90 62 23 / 22%);
+    color: #d8c6a5;
+    font: 9px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-preflight[hidden] { display: none; }
+  [data-trace-dashboard] .trace-frame-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  [data-trace-dashboard] .trace-frame-metric-grid .trace-metric-card {
+    min-height: 47px;
+    padding: 6px;
+  }
+  [data-trace-dashboard] .trace-frame-metric-grid .trace-metric-value { font-size: 12px; }
+  [data-trace-dashboard] .trace-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--trace-border-soft);
+    border-radius: 7px;
+    background: rgb(6 12 22 / 72%);
+  }
+  [data-trace-dashboard] .trace-tabs button {
+    min-width: 0;
+    padding: 5px 3px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--trace-text-muted);
+    font: 650 9px/1.2 system-ui, sans-serif;
+    cursor: pointer;
+  }
+  [data-trace-dashboard] .trace-tabs button:hover { color: var(--trace-text); }
+  [data-trace-dashboard] .trace-tabs button[aria-selected='true'] {
+    background: rgb(54 91 132 / 48%);
+    box-shadow: inset 0 0 0 1px rgb(125 211 252 / 22%);
+    color: #dcecff;
+  }
+  [data-trace-dashboard] .trace-tab-panel {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+  [data-trace-dashboard] .trace-tab-panel[hidden] { display: none; }
   [data-trace-dashboard] .trace-metric-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
