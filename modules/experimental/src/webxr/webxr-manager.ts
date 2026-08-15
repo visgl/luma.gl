@@ -51,6 +51,21 @@ export type WebXRFrameState = {
   views: readonly WebXRViewState[];
 };
 
+/** Experimental v10 input state for one active XR frame. */
+export type WebXRInputState = {
+  inputSource: XRInputSource;
+  index: number;
+  handedness: XRHandedness;
+  targetRayMode: XRTargetRayMode;
+  profiles: readonly string[];
+  gamepad: Gamepad | null;
+  targetRayPose: XRPose | null;
+  targetRayMatrix: Float32Array | null;
+  gripPose: XRPose | null;
+  gripMatrix: Float32Array | null;
+  selectActive: boolean;
+};
+
 /**
  * Experimental v10 WebXR session and per-view render-state helper.
  *
@@ -69,7 +84,11 @@ export class WebXRManager {
 
   private _framebuffer: Framebuffer | null = null;
   private _webGPUViewResources: WebXRWebGPUViewResources[] = [];
+  private _selectActiveInputSources = new Set<XRInputSource>();
   private _sessionEndListener = () => this.clearSession();
+  private _selectStartListener = (event: Event) => this._handleSelectActive(event, true);
+  private _selectEndListener = (event: Event) => this._handleSelectActive(event, false);
+  private _inputSourcesChangeListener = (event: Event) => this._handleInputSourcesChange(event);
 
   constructor(device: Device, props: WebXRManagerProps = {}) {
     if (!isWebXRWebGLDevice(device) && !isWebXRWebGPUDevice(device)) {
@@ -117,6 +136,9 @@ export class WebXRManager {
       this.referenceSpace = await session.requestReferenceSpace(this.props.referenceSpaceType);
       this.session = session;
       session.addEventListener('end', this._sessionEndListener);
+      session.addEventListener('selectstart', this._selectStartListener);
+      session.addEventListener('selectend', this._selectEndListener);
+      session.addEventListener('inputsourceschange', this._inputSourcesChangeListener);
       return this;
     } catch (error) {
       this.clearSession();
@@ -144,8 +166,44 @@ export class WebXRManager {
     return this._getWebGPUFrameState(xrFrame, viewerPose);
   }
 
+  getInputState(xrFrame: XRFrame): readonly WebXRInputState[] | null {
+    if (!this.session || !this.referenceSpace) {
+      return null;
+    }
+    if (xrFrame.session !== this.session) {
+      throw new Error('XRFrame belongs to a different XRSession');
+    }
+
+    const inputSources = Array.from(this.session.inputSources);
+    this._trimSelectActiveInputSources(inputSources);
+
+    return inputSources.map((inputSource, index) => {
+      const targetRayPose = xrFrame.getPose(inputSource.targetRaySpace, this.referenceSpace!);
+      const gripPose = inputSource.gripSpace
+        ? xrFrame.getPose(inputSource.gripSpace, this.referenceSpace!)
+        : undefined;
+
+      return {
+        inputSource,
+        index,
+        handedness: inputSource.handedness,
+        targetRayMode: inputSource.targetRayMode,
+        profiles: inputSource.profiles,
+        gamepad: inputSource.gamepad ?? null,
+        targetRayPose: targetRayPose ?? null,
+        targetRayMatrix: targetRayPose?.transform.matrix ?? null,
+        gripPose: gripPose ?? null,
+        gripMatrix: gripPose?.transform.matrix ?? null,
+        selectActive: this._selectActiveInputSources.has(inputSource)
+      };
+    });
+  }
+
   clearSession(): void {
     this.session?.removeEventListener('end', this._sessionEndListener);
+    this.session?.removeEventListener('selectstart', this._selectStartListener);
+    this.session?.removeEventListener('selectend', this._selectEndListener);
+    this.session?.removeEventListener('inputsourceschange', this._inputSourcesChangeListener);
     this._framebuffer?.destroy();
     this._framebuffer = null;
 
@@ -159,6 +217,7 @@ export class WebXRManager {
     this.webGPUBinding = null;
     this.referenceSpace = null;
     this.session = null;
+    this._selectActiveInputSources.clear();
   }
 
   destroy(): void {
@@ -337,6 +396,33 @@ export class WebXRManager {
     viewResources.framebuffer.destroy();
     viewResources.depthTexture?.destroy();
     viewResources.colorTexture.destroy();
+  }
+
+  private _handleSelectActive(event: Event, selectActive: boolean): void {
+    const inputSource = (event as XRInputSourceEvent).inputSource;
+    if (!inputSource) {
+      return;
+    }
+
+    if (selectActive) {
+      this._selectActiveInputSources.add(inputSource);
+    } else {
+      this._selectActiveInputSources.delete(inputSource);
+    }
+  }
+
+  private _handleInputSourcesChange(event: Event): void {
+    for (const inputSource of (event as XRInputSourcesChangeEvent).removed || []) {
+      this._selectActiveInputSources.delete(inputSource);
+    }
+  }
+
+  private _trimSelectActiveInputSources(inputSources: readonly XRInputSource[]): void {
+    for (const inputSource of this._selectActiveInputSources) {
+      if (!inputSources.includes(inputSource)) {
+        this._selectActiveInputSources.delete(inputSource);
+      }
+    }
   }
 
   static defaultProps: Required<WebXRManagerProps> = {

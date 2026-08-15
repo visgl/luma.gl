@@ -57,6 +57,8 @@ const animationLoop = new AnimationLoop({
 - Uses `XRSession.requestReferenceSpace()` with `local` by default.
 - Treats `XRViewerPose.views` as an arbitrary per-frame view list, not a fixed stereo pair.
 - Exposes `projectionMatrix` from `XRView.projectionMatrix` and `viewMatrix` from `XRView.transform.inverse.matrix`.
+- Resolves per-frame input-source target-ray and grip poses in the same reference space as rendering.
+- Tracks active `selectstart`/`selectend` state per input source so examples can build controller rays, pointer selection, and locomotion helpers without subscribing to raw session events.
 - Never destroys browser-owned WebGL framebuffers or WebGPU compositor textures.
 - Raw AR camera textures remain WebGL-only; WebGPU AR can use an application-provided procedural or video fallback.
 
@@ -112,6 +114,24 @@ export type WebXRFrameState = {
 };
 ```
 
+### `WebXRInputState`
+
+```ts
+export type WebXRInputState = {
+  inputSource: XRInputSource;
+  index: number;
+  handedness: XRHandedness;
+  targetRayMode: XRTargetRayMode;
+  profiles: readonly string[];
+  gamepad: Gamepad | null;
+  targetRayPose: XRPose | null;
+  targetRayMatrix: Float32Array | null;
+  gripPose: XRPose | null;
+  gripMatrix: Float32Array | null;
+  selectActive: boolean;
+};
+```
+
 ## Methods
 
 ### `constructor(device: Device, props?: WebXRManagerProps)`
@@ -125,6 +145,10 @@ Attaches or clears the current XR session.
 ### `getFrameState(xrFrame: XRFrame): WebXRFrameState | null`
 
 Resolves frame state for an active XR frame. Returns `null` when no viewer pose is available.
+
+### `getInputState(xrFrame: XRFrame): readonly WebXRInputState[] | null`
+
+Resolves input source state for an active XR frame. Returns `null` when no session is attached.
 
 ### `clearSession(): void`
 
