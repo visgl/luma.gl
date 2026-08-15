@@ -47,6 +47,11 @@
       "require": "./dist/lugraph/benchmarks.cjs",
       "types": "./dist/lugraph/benchmarks.d.ts"
     },
+    "./lucim": {
+      "import": "./dist/lucim/index.js",
+      "require": "./dist/lucim/index.cjs",
+      "types": "./dist/lucim/index.d.ts"
+    },
     "./luraster": {
       "import": "./dist/luraster/index.js",
       "require": "./dist/luraster/index.cjs",
