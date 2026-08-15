@@ -4731,9 +4731,6 @@ __metadata:
     apache-arrow: "npm:^17.0.0"
   peerDependencies:
     apache-arrow: ">=17.0.0"
-  peerDependenciesMeta:
-    apache-arrow:
-      optional: true
   languageName: unknown
   linkType: soft
 

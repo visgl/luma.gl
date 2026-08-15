@@ -283,7 +283,7 @@ function getArrowUtf8ViewBytes(
   viewBytes: Uint8Array,
   rowIndex: number
 ): Uint8Array {
-  const viewByteOffset = rowIndex * ARROW_VARIABLE_WIDTH_VIEW_BYTE_LENGTH;
+  const viewByteOffset = (data.offset + rowIndex) * ARROW_VARIABLE_WIDTH_VIEW_BYTE_LENGTH;
   const view = new DataView(
     viewBytes.buffer,
     viewBytes.byteOffset + viewByteOffset,

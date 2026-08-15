@@ -163,7 +163,11 @@ test('ArrowTextRenderer normalizes Utf8View labels with Arrow 17-compatible impo
 
   const normalized = normalizeArrowUtf8TextVector(texts);
   t.ok(normalized.type instanceof arrow.Utf8, 'normalizes Utf8View to Utf8');
-  t.deepEqual(Array.from(normalized), labels, 'preserves inline, out-of-line, and null labels');
+  t.deepEqual(
+    Array.from(normalized),
+    labels,
+    'preserves sliced inline, out-of-line, and null labels'
+  );
 
   const device = new NullDevice({});
   const renderer = await ArrowTextRenderer.create(device, {
@@ -375,10 +379,10 @@ function makeArrowUtf8ViewTexts(labels: readonly (string | null)[]): ArrowUtf8Te
   }
 
   const type = {typeId: 24} as unknown as arrow.DataType;
-  const values = new Uint8Array(labels.length * 16);
+  const dataOffset = 1;
+  const values = new Uint8Array((labels.length + dataOffset) * 16);
   const variadicBytes: number[] = [];
-  const nullBitmapOffset = 1;
-  const nullBitmap = new Uint8Array(Math.ceil((labels.length + nullBitmapOffset) / 8));
+  const nullBitmap = new Uint8Array(Math.ceil((labels.length + dataOffset) / 8));
   const textEncoder = new TextEncoder();
 
   for (let rowIndex = 0; rowIndex < labels.length; rowIndex++) {
@@ -386,9 +390,9 @@ function makeArrowUtf8ViewTexts(labels: readonly (string | null)[]): ArrowUtf8Te
     if (label === null) {
       continue;
     }
-    nullBitmap[(rowIndex + nullBitmapOffset) >> 3] |= 1 << ((rowIndex + nullBitmapOffset) & 7);
+    nullBitmap[(rowIndex + dataOffset) >> 3] |= 1 << ((rowIndex + dataOffset) & 7);
     const encodedLabel = textEncoder.encode(label);
-    const viewByteOffset = rowIndex * 16;
+    const viewByteOffset = (rowIndex + dataOffset) * 16;
     const view = new DataView(values.buffer, viewByteOffset, 16);
     view.setInt32(0, encodedLabel.byteLength, true);
     if (encodedLabel.byteLength <= 12) {
@@ -405,7 +409,7 @@ function makeArrowUtf8ViewTexts(labels: readonly (string | null)[]): ArrowUtf8Te
   const data = {
     type,
     length: labels.length,
-    offset: nullBitmapOffset,
+    offset: dataOffset,
     nullCount: labels.filter(label => label === null).length,
     values,
     nullBitmap,
