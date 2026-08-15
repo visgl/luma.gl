@@ -259,11 +259,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
     expect(applicationSource).toContain('WebXRInputActionManager');
-    expect(applicationSource).toContain('getWebXRInputActivationState');
-    expect(applicationSource).toContain('getWebXRInputGrip');
-    expect(applicationSource).toContain('getWebXRInputRay');
+    expect(applicationSource).toContain('getWebXRControllerState');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
-    expect(applicationSource).toContain('getWebXRInputSourceState');
     expect(applicationSource).toContain('getWebXRLocomotionState');
     expect(applicationSource).toContain('getWebXRTeleportTranslation');
     expect(applicationSource).toContain('isPointInWebXRBounds');
@@ -288,26 +285,29 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('this.updateXRInputActions(inputState)');
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
-    expect(rayMethod).toContain('const inputSourceState = getWebXRInputSourceState(input)');
-    expect(rayMethod).toContain('const inputActivationState = getWebXRInputActivationState(input)');
-    expect(rayMethod).toContain('const inputGrip = getWebXRInputGrip(input)');
-    expect(rayMethod).toContain('if (inputSourceState.isController && inputGrip)');
-    expect(rayMethod).toContain('this.controllerGripMatrix.copy(inputGrip.matrix)');
-    expect(rayMethod).toContain('multiplyRight(this.controllerGripMatrix.copy(inputGrip.matrix))');
-    expect(rayMethod).toContain('cameraMix: inputActivationState.isSqueezeActive');
-    expect(rayMethod).toContain("inputSourceState.handedness === 'right'");
+    expect(rayMethod).toContain('const controllerState = getWebXRControllerState(input)');
+    expect(rayMethod).toContain('if (!controllerState)');
+    expect(rayMethod).toContain('if (controllerState.grip)');
+    expect(rayMethod).toContain('this.controllerGripMatrix.copy(controllerState.grip.matrix)');
+    expect(rayMethod).toContain(
+      'multiplyRight(this.controllerGripMatrix.copy(controllerState.grip.matrix))'
+    );
+    expect(rayMethod).toContain('cameraMix: controllerState.isSqueezeActive');
+    expect(rayMethod).toContain("controllerState.handedness === 'right'");
     expect(rayMethod).toContain('this.controllerGripModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerGripModel.draw(renderPass)');
-    expect(rayMethod).toContain('const inputRay = getWebXRInputRay(input)');
-    expect(rayMethod).toContain('const controllerActivation = inputActivationState.primaryAction');
-    expect(rayMethod).toContain('!inputSourceState.usesTrackedPointer');
-    expect(rayMethod).toContain('!inputRay');
-    expect(rayMethod).toContain('this.controllerRayMatrix.copy(inputRay.matrix)');
-    expect(rayMethod).toContain('multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix))');
+    expect(rayMethod).toContain('if (!controllerState.ray)');
+    expect(rayMethod).toContain('const controllerActivation = controllerState.primaryAction');
+    expect(rayMethod).toContain('this.controllerRayMatrix.copy(controllerState.ray.matrix)');
+    expect(rayMethod).toContain(
+      'multiplyRight(this.controllerRayMatrix.copy(controllerState.ray.matrix))'
+    );
     expect(rayMethod).toContain('cameraMix: controllerActivation');
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
-    expect(rayMethod).toContain('getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8})');
+    expect(rayMethod).toContain(
+      'getWebXRInputRayPlaneIntersection(controllerState.ray, {maxDistance: 8})'
+    );
     expect(rayMethod).toContain('boundsState: WebXRBoundsState | null');
     expect(rayMethod).toContain(
       'const teleportTarget = getXRTeleportTargetState(floorHit.point, boundsState)'

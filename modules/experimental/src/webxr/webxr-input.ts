@@ -79,6 +79,22 @@ export type WebXRInputActionState = WebXRInputActivationState & {
   squeezeActionEnded: boolean;
 };
 
+/** Experimental v10 consolidated state for one tracked-pointer WebXR controller. */
+export type WebXRControllerState = {
+  inputState: WebXRInputState;
+  inputSource: XRInputSource;
+  sourceState: WebXRInputSourceState;
+  activationState: WebXRInputActivationState;
+  primaryProfile: string | null;
+  handedness: XRHandedness;
+  ray: WebXRInputRay | null;
+  grip: WebXRInputGrip | null;
+  primaryAction: number;
+  squeezeAction: number;
+  isPrimaryActive: boolean;
+  isSqueezeActive: boolean;
+};
+
 export type WebXRInputRayPlaneIntersectionProps = {
   planePoint?: NumberArray3;
   planeNormal?: NumberArray3;
@@ -255,6 +271,32 @@ export function getWebXRInputActionState(
     primaryActionEnded: !activationState.isPrimaryActive && wasPrimaryActive,
     squeezeActionStarted: activationState.isSqueezeActive && !wasSqueezeActive,
     squeezeActionEnded: !activationState.isSqueezeActive && wasSqueezeActive
+  };
+}
+
+export function getWebXRControllerState(
+  inputState: WebXRInputState,
+  props: WebXRInputActivationProps = {}
+): WebXRControllerState | null {
+  const sourceState = getWebXRInputSourceState(inputState);
+  if (!sourceState.isController) {
+    return null;
+  }
+
+  const activationState = getWebXRInputActivationState(inputState, props);
+  return {
+    inputState,
+    inputSource: inputState.inputSource,
+    sourceState,
+    activationState,
+    primaryProfile: sourceState.primaryProfile,
+    handedness: sourceState.handedness,
+    ray: getWebXRInputRay(inputState),
+    grip: getWebXRInputGrip(inputState),
+    primaryAction: activationState.primaryAction,
+    squeezeAction: activationState.squeezeAction,
+    isPrimaryActive: activationState.isPrimaryActive,
+    isSqueezeActive: activationState.isSqueezeActive
   };
 }
 

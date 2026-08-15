@@ -5,6 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {
   WebXRInputActionManager,
+  getWebXRControllerState,
   getWebXRInputActionState,
   getWebXRInputActivationState,
   getWebXRInputGrip,
@@ -105,6 +106,61 @@ test('webxr#getWebXRInputSourceState classifies input source capabilities', test
   testCase.equal(gazeState.kind, 'gaze', 'gaze target rays classify as gaze input');
   testCase.equal(gazeState.primaryProfile, null, 'empty profile lists return null');
   testCase.equal(gazeState.isGaze, true, 'marks gaze input');
+  testCase.end();
+});
+
+test('webxr#getWebXRControllerState consolidates tracked-pointer controller state', testCase => {
+  const targetRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, -3, 4, 0, 2, 5, 7, 1]);
+  const gripMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -0.25, 1.125, -0.75, 1]);
+  const inputState = makeMockWebXRInputState(targetRayMatrix, gripMatrix, {
+    handedness: 'left',
+    gamepad: makeMockXRStandardGamepad([
+      {value: 0.4, pressed: true, touched: true},
+      {value: 0.8, pressed: true, touched: true}
+    ]),
+    profiles: ['oculus-touch-v3']
+  });
+  const controllerState = getWebXRControllerState(inputState);
+
+  testCase.equal(controllerState?.inputState, inputState, 'retains source input state');
+  testCase.equal(controllerState?.inputSource, inputState.inputSource, 'retains input source');
+  testCase.equal(controllerState?.primaryProfile, 'oculus-touch-v3', 'keeps primary profile');
+  testCase.equal(controllerState?.handedness, 'left', 'keeps handedness');
+  testCase.equal(controllerState?.sourceState.isController, true, 'includes input source state');
+  testCase.equal(controllerState?.activationState.triggerValue, 0.4, 'includes activation state');
+  testCase.equal(controllerState?.primaryAction, 0.4, 'aliases primary action');
+  testCase.equal(controllerState?.squeezeAction, 0.8, 'aliases squeeze action');
+  testCase.deepEqual(controllerState?.ray?.origin, [2, 5, 7], 'includes target ray state');
+  testCase.deepEqual(controllerState?.grip?.position, [-0.25, 1.125, -0.75], 'includes grip state');
+
+  const partialControllerState = getWebXRControllerState(
+    makeMockWebXRInputState(null, null, {
+      profiles: ['generic-trigger-squeeze-thumbstick']
+    })
+  );
+  testCase.equal(partialControllerState?.ray, null, 'allows controller state without target ray');
+  testCase.equal(partialControllerState?.grip, null, 'allows controller state without grip pose');
+
+  testCase.equal(
+    getWebXRControllerState(
+      makeMockWebXRInputState(targetRayMatrix, null, {
+        hand: {} as XRHand,
+        profiles: ['generic-hand-select']
+      })
+    ),
+    null,
+    'hands are not controller states'
+  );
+  testCase.equal(
+    getWebXRControllerState(
+      makeMockWebXRInputState(null, null, {
+        targetRayMode: 'screen',
+        profiles: ['generic-touchscreen']
+      })
+    ),
+    null,
+    'screen input is not a controller state'
+  );
   testCase.end();
 });
 

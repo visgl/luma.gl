@@ -25,11 +25,8 @@ import {
   getWebXRDOMOverlaySessionInit,
   getWebXRBoundsState,
   getWebXRHandPinch,
-  getWebXRInputActivationState,
-  getWebXRInputGrip,
-  getWebXRInputRay,
+  getWebXRControllerState,
   getWebXRInputRayPlaneIntersection,
-  getWebXRInputSourceState,
   getWebXRLocomotionState,
   getWebXRSessionRenderState,
   getWebXRTeleportTranslation,
@@ -923,22 +920,24 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     boundsState: WebXRBoundsState | null
   ): void {
     for (const input of inputState) {
-      const inputSourceState = getWebXRInputSourceState(input);
-      const inputActivationState = getWebXRInputActivationState(input);
-      const inputGrip = getWebXRInputGrip(input);
-      if (inputSourceState.isController && inputGrip) {
+      const controllerState = getWebXRControllerState(input);
+      if (!controllerState) {
+        continue;
+      }
+
+      if (controllerState.grip) {
         this.modelViewProjectionMatrix
           .copy(view.projectionMatrix)
           .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
-          .multiplyRight(this.controllerGripMatrix.copy(inputGrip.matrix));
+          .multiplyRight(this.controllerGripMatrix.copy(controllerState.grip.matrix));
         this.uniformStore.setUniforms(
           {
             app: {
               modelViewProjectionMatrix: this.modelViewProjectionMatrix,
               time,
-              cameraMix: inputActivationState.isSqueezeActive
+              cameraMix: controllerState.isSqueezeActive
                 ? 1
-                : inputSourceState.handedness === 'right'
+                : controllerState.handedness === 'right'
                   ? 0.45
                   : 0,
               lightIntensity: 1
@@ -950,16 +949,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.controllerGripModel.draw(renderPass);
       }
 
-      const inputRay = getWebXRInputRay(input);
-      if (!inputSourceState.usesTrackedPointer || !inputRay) {
+      if (!controllerState.ray) {
         continue;
       }
-      const controllerActivation = inputActivationState.primaryAction;
+      const controllerActivation = controllerState.primaryAction;
 
       this.modelViewProjectionMatrix
         .copy(view.projectionMatrix)
         .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
-        .multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix));
+        .multiplyRight(this.controllerRayMatrix.copy(controllerState.ray.matrix));
       this.uniformStore.setUniforms(
         {
           app: {
@@ -974,7 +972,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.controllerRayModel.predraw(this.device.commandEncoder);
       this.controllerRayModel.draw(renderPass);
 
-      const floorHit = getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8});
+      const floorHit = getWebXRInputRayPlaneIntersection(controllerState.ray, {maxDistance: 8});
       if (floorHit) {
         const teleportTarget = getXRTeleportTargetState(floorHit.point, boundsState);
         if (teleportTarget.allowed) {
