@@ -92,9 +92,13 @@ test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffer
   try {
     const manager = new WebXRManager(device, {projectionLayerInit: {scaleFactor: 0.8}});
     await manager.setSession(session);
+    let viewerPose = makeMockXRViewerPose(activeViews);
     const frame = {
       session,
-      getViewerPose: () => ({views: activeViews})
+      getViewerPose: () => {
+        viewerPose = makeMockXRViewerPose(activeViews);
+        return viewerPose;
+      }
     } as XRFrame;
     const frameState = manager.getFrameState(frame);
 
@@ -113,6 +117,14 @@ test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffer
     testCase.equal(session.updatedBaseLayer, null, 'WebGPU does not install a legacy WebGL layer');
     testCase.equal(manager.baseLayer, null, 'legacy layer remains unset');
     testCase.equal(manager.projectionLayer, projectionLayer, 'exposes the native projection layer');
+    testCase.equal(frameState?.viewer.pose, viewerPose, 'retains WebGPU viewer pose');
+    testCase.equal(frameState?.viewer.matrix, viewerPose.transform.matrix, 'exposes viewer matrix');
+    testCase.equal(
+      frameState?.viewer.viewMatrix,
+      viewerPose.transform.inverse.matrix,
+      'exposes inverse viewer matrix'
+    );
+    testCase.deepEqual(frameState?.viewer.position, [1, 1.5, -2], 'exposes viewer position');
     testCase.deepEqual(
       manager.getProjectionLayerState(),
       getWebXRProjectionLayerState(projectionLayer),
@@ -301,7 +313,7 @@ test('webxr#WebXRManager handles legacy image indices and rotating GPU composito
   try {
     const manager = new WebXRManager(device);
     await manager.setSession(session);
-    const frame = {session, getViewerPose: () => ({views: [view]})} as XRFrame;
+    const frame = {session, getViewerPose: () => makeMockXRViewerPose([view])} as XRFrame;
     const firstFrameState = manager.getFrameState(frame);
 
     testCase.equal(device.createdTextures.length, 1, 'depth attachment remains optional');
@@ -389,7 +401,7 @@ test('webxr#WebXRManager shares identical WebGPU atlas attachments across stereo
     await manager.setSession(session);
     const frame = {
       session,
-      getViewerPose: () => ({views: activeViews})
+      getViewerPose: () => makeMockXRViewerPose(activeViews)
     } as XRFrame;
     const frameState = manager.getFrameState(frame);
 
@@ -482,7 +494,7 @@ test('webxr#WebXRManager rejects unsupported WebGPU sessions and foreign frames'
     const foreignSession = makeMockXRSession(referenceSpace, ['webgpu']);
     const foreignFrame = {
       session: foreignSession,
-      getViewerPose: () => ({views: [makeMockXRView('left', 0)]})
+      getViewerPose: () => makeMockXRViewerPose([makeMockXRView('left', 0)])
     } as XRFrame;
 
     testCase.throws(
@@ -750,7 +762,7 @@ test('webxr#WebXRManager preserves shared WebGL framebuffers in a mocked Node se
     await manager.setSession(session);
     const frameState = manager.getFrameState({
       session,
-      getViewerPose: () => ({views: [leftView, rightView]})
+      getViewerPose: () => makeMockXRViewerPose([leftView, rightView])
     } as XRFrame);
 
     testCase.equal(compatibilityCallCount, 1, 'makes WebGL context XR compatible');
@@ -908,6 +920,22 @@ function makeMockXRView(eye: XREye, index: number): XRView {
     projectionMatrix: new Float32Array([index + 1]),
     transform: {inverse: {matrix: new Float32Array([index + 10])}}
   } as XRView;
+}
+
+function makeMockXRViewerPose(views: readonly XRView[]): XRViewerPose {
+  return {
+    transform: {
+      position: {x: 1, y: 1.5, z: -2, w: 1} as DOMPointReadOnly,
+      orientation: {x: 0, y: 0, z: 0, w: 1} as DOMPointReadOnly,
+      matrix: new Float32Array([7]),
+      inverse: {
+        position: {x: -1, y: -1.5, z: 2, w: 1} as DOMPointReadOnly,
+        orientation: {x: 0, y: 0, z: 0, w: 1} as DOMPointReadOnly,
+        matrix: new Float32Array([8])
+      } as XRRigidTransform
+    } as XRRigidTransform,
+    views
+  } as XRViewerPose;
 }
 
 function makeMockXRInputSource(props: {

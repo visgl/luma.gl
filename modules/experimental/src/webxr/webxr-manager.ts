@@ -49,9 +49,18 @@ export type WebXRViewState = {
   camera: XRCamera | null;
 };
 
+/** Experimental v10 viewer pose state resolved once for an active XR frame. */
+export type WebXRViewerState = {
+  pose: XRViewerPose;
+  matrix: Float32Array;
+  viewMatrix: Float32Array;
+  position: [x: number, y: number, z: number];
+};
+
 /** Experimental v10 render state resolved from one active XR frame. */
 export type WebXRFrameState = {
   xrFrame: XRFrame;
+  viewer: WebXRViewerState;
   /** The shared WebGL framebuffer or first WebGPU view framebuffer. */
   framebuffer: Framebuffer;
   views: readonly WebXRViewState[];
@@ -292,7 +301,7 @@ export class WebXRManager {
       return makeWebXRViewState(xrView, index, framebuffer, viewport);
     });
 
-    return {xrFrame, framebuffer, views};
+    return {xrFrame, viewer: makeWebXRViewerState(viewerPose), framebuffer, views};
   }
 
   private _getWebGPUFrameState(xrFrame: XRFrame, viewerPose: XRViewerPose): WebXRFrameState {
@@ -315,7 +324,12 @@ export class WebXRManager {
       }
     }
 
-    return {xrFrame, framebuffer: views[0]!.framebuffer, views};
+    return {
+      xrFrame,
+      viewer: makeWebXRViewerState(viewerPose),
+      framebuffer: views[0]!.framebuffer,
+      views
+    };
   }
 
   private _getWebGLFramebuffer(): Framebuffer {
@@ -571,6 +585,16 @@ function makeWebXRViewState(
     projectionMatrix: xrView.projectionMatrix,
     viewMatrix: xrView.transform.inverse.matrix,
     camera: xrView.camera ?? null
+  };
+}
+
+function makeWebXRViewerState(viewerPose: XRViewerPose): WebXRViewerState {
+  const {position} = viewerPose.transform;
+  return {
+    pose: viewerPose,
+    matrix: viewerPose.transform.matrix,
+    viewMatrix: viewerPose.transform.inverse.matrix,
+    position: [position.x, position.y, position.z]
   };
 }
 

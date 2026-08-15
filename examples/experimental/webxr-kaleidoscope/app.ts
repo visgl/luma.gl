@@ -790,7 +790,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     meshDetectionState: WebXRMeshDetectionState | null
   ): void {
     this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState);
-    const lightIntensity = getXRLightIntensity(lightEstimationState);
+    const lightIntensity =
+      getXRLightIntensity(lightEstimationState) *
+      getXRViewerHeightLightScale(frameState.viewer.position);
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
@@ -1227,6 +1229,10 @@ export function getXRTeleportTargetState(
     point,
     allowed: !boundsState || isPointInWebXRBounds(point, boundsState.bounds)
   };
+}
+
+export function getXRViewerHeightLightScale(position: readonly [number, number, number]): number {
+  return Math.min(1.15, Math.max(0.85, 0.85 + position[1] * 0.12));
 }
 
 export function getXRLocomotionSceneOffset(

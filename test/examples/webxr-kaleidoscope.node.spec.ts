@@ -10,6 +10,7 @@ import {
   applyXRSnapTurn,
   applyXRSceneOffset,
   getXRLocomotionSceneOffset,
+  getXRViewerHeightLightScale,
   getXRTeleportTargetState
 } from '../../examples/experimental/webxr-kaleidoscope/app';
 
@@ -201,6 +202,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toMatch(
       /this\.xrSessionMode\s*===\s*'immersive-ar'\s*\?\s*\[0,\s*0,\s*0,\s*0\]/
     );
+    expect(renderMethod).toContain('getXRViewerHeightLightScale(frameState.viewer.position)');
     expect(renderMethod.indexOf('this.preparePortal({')).toBeLessThan(
       renderMethod.indexOf('this.device.beginRenderPass({')
     );
@@ -438,7 +440,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(enterMethod).toContain('.setSession(session, this.webXRManager.referenceSpace)');
     expect(enterMethod).toContain('.catch(() => this.webXRLightEstimationManager.clearSession())');
     expect(renderMethod).toContain('lightEstimationState: WebXRLightEstimationState | null');
-    expect(renderMethod).toContain('const lightIntensity = getXRLightIntensity(');
+    expect(renderMethod).toContain('getXRLightIntensity(lightEstimationState) *');
+    expect(renderMethod).toContain('getXRViewerHeightLightScale(frameState.viewer.position)');
     expect(renderMethod).toContain('lightIntensity,');
     expect(clearMethod).toContain('this.webXRLightEstimationManager.clearSession()');
     expect(applicationSource).toContain('this.webXRLightEstimationManager.destroy()');
@@ -653,6 +656,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(getXRLocomotionSceneOffset([0, 1], 1, 0, 2)).toEqual([0, 0, -2]);
     expect(getXRLocomotionSceneOffset([0, 1], 1, Math.PI / 2, 2)).toEqual([2, 0, 0]);
     expect(getXRLocomotionSceneOffset([1, 0], 0.5, Math.PI / 2, 2)).toEqual([0, 0, 1]);
+    expect(getXRViewerHeightLightScale([0, 0, 0])).toBe(0.85);
+    expect(getXRViewerHeightLightScale([0, 1.5, 0])).toBeCloseTo(1.03);
+    expect(getXRViewerHeightLightScale([0, 4, 0])).toBe(1.15);
     const boundsState = {
       bounds: [
         [-1, 0, -1],

@@ -344,11 +344,13 @@ declare global {
     getViewerPose(referenceSpace: XRReferenceSpace): XRViewerPose | undefined;
   }
 
-  interface XRViewerPose {
+  interface XRViewerPose extends XRPose {
     readonly views: readonly XRView[];
   }
 
   interface XRRigidTransform {
+    readonly position: DOMPointReadOnly;
+    readonly orientation: DOMPointReadOnly;
     readonly matrix: Float32Array;
     readonly inverse: XRRigidTransform;
   }

@@ -14,11 +14,12 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
   const session = makeXRSession(referenceSpace);
   const leftView = makeXRView('left', 0);
   const rightView = makeXRView('right', 1);
+  const viewerPose = makeXRViewerPose([leftView, rightView]);
   const xrFrame = {
     session,
     getViewerPose: (receivedReferenceSpace: XRReferenceSpace) => {
       t.equal(receivedReferenceSpace, referenceSpace, 'queries configured reference space');
-      return {views: [leftView, rightView]} as XRViewerPose;
+      return viewerPose;
     }
   } as XRFrame;
 
@@ -62,6 +63,14 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
     t.equal(makeXRCompatibleCallCount, 1, 'makes WebGL context XR compatible');
     t.equal(session.updatedBaseLayer, webXRManager.baseLayer, 'updates session render state');
     t.ok(frameState, 'active XR frame resolves state');
+    t.equal(frameState?.viewer.pose, viewerPose, 'retains the source viewer pose');
+    t.equal(frameState?.viewer.matrix, viewerPose.transform.matrix, 'exposes viewer matrix');
+    t.equal(
+      frameState?.viewer.viewMatrix,
+      viewerPose.transform.inverse.matrix,
+      'exposes inverse viewer matrix'
+    );
+    t.deepEqual(frameState?.viewer.position, [1, 1.5, -2], 'exposes viewer position');
     t.equal(frameState?.framebuffer.props.handle, xrFramebufferHandle, 'wraps XR framebuffer');
     t.equal(
       frameState?.views[0]?.framebuffer,
@@ -102,9 +111,10 @@ test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t
   const referenceSpace = {} as XRReferenceSpace;
   const session = makeXRSession(referenceSpace);
   const view = makeXRView('none', 0);
+  const viewerPose = makeXRViewerPose([view]);
   const xrFrame = {
     session,
-    getViewerPose: () => ({views: [view]}) as XRViewerPose
+    getViewerPose: () => viewerPose
   } as XRFrame;
 
   const originalMakeXRCompatible = gl.makeXRCompatible;
@@ -126,6 +136,7 @@ test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t
     const frameState = webXRManager.getFrameState(xrFrame);
 
     t.ok(frameState, 'active XR frame resolves state');
+    t.equal(frameState?.viewer.pose, viewerPose, 'retains viewer pose with null framebuffers');
     t.equal(frameState?.framebuffer.props.handle, null, 'wraps null as the default framebuffer');
     t.equal(
       frameState?.views[0]?.framebuffer,
@@ -168,4 +179,20 @@ function makeXRView(eye: XREye, index: number): XRView {
       inverse: {matrix: new Float32Array([index + 10])}
     }
   } as XRView;
+}
+
+function makeXRViewerPose(views: readonly XRView[]): XRViewerPose {
+  return {
+    transform: {
+      position: {x: 1, y: 1.5, z: -2, w: 1} as DOMPointReadOnly,
+      orientation: {x: 0, y: 0, z: 0, w: 1} as DOMPointReadOnly,
+      matrix: new Float32Array([7]),
+      inverse: {
+        position: {x: -1, y: -1.5, z: 2, w: 1} as DOMPointReadOnly,
+        orientation: {x: 0, y: 0, z: 0, w: 1} as DOMPointReadOnly,
+        matrix: new Float32Array([8])
+      } as XRRigidTransform
+    } as XRRigidTransform,
+    views
+  } as XRViewerPose;
 }

@@ -194,6 +194,7 @@ export type {
   WebXRProjectionLayerControlsProps,
   WebXRProjectionLayerState,
   WebXRReferenceSpaceState,
+  WebXRViewerState,
   WebXRViewState
 } from './webxr-manager';
 export {
