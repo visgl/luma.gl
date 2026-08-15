@@ -8,6 +8,7 @@ import {
   getWebXRControllerRayPlaneIntersection,
   getWebXRControllerRayPlaneIntersections,
   getWebXRControllerRayPlaneTarget,
+  getWebXRControllerRayPlaneTargetByHandedness,
   getWebXRControllerRayPlaneTargets,
   getWebXRControllerState,
   getWebXRControllerStateByHandedness,
@@ -356,6 +357,65 @@ test('webxr#getWebXRControllerRayPlaneTarget validates controller targets agains
   );
   testCase.equal(targets.length, 1, 'filters controllers without target hits');
   testCase.equal(targets[0]?.allowed, true, 'keeps allowed flag in target collections');
+  testCase.end();
+});
+
+test('webxr#getWebXRControllerRayPlaneTargetByHandedness selects target hands', testCase => {
+  const floorRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0, 1.6, 0, 1]);
+  const leftInputSource = {} as XRInputSource;
+  const rightInputSource = {} as XRInputSource;
+  const noneInputSource = {} as XRInputSource;
+  const targets = getWebXRControllerRayPlaneTargets([
+    getWebXRControllerState(
+      makeMockWebXRInputState(floorRayMatrix, null, {
+        inputSource: leftInputSource,
+        handedness: 'left'
+      })
+    )!,
+    getWebXRControllerState(
+      makeMockWebXRInputState(floorRayMatrix, null, {
+        inputSource: rightInputSource,
+        handedness: 'right'
+      })
+    )!,
+    getWebXRControllerState(
+      makeMockWebXRInputState(floorRayMatrix, null, {
+        inputSource: noneInputSource,
+        handedness: 'none'
+      })
+    )!
+  ]);
+
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByHandedness(targets)?.controllerState.inputSource,
+    leftInputSource,
+    'default any returns first target'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByHandedness(targets, 'right')?.controllerState.inputSource,
+    rightInputSource,
+    'selects right-hand targets'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByHandedness(targets, 'none')?.controllerState.inputSource,
+    noneInputSource,
+    'selects unhanded targets'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByHandedness(targets, 'left')?.controllerState.inputSource,
+    leftInputSource,
+    'selects left-hand targets'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByHandedness([], 'right'),
+    null,
+    'empty target lists return null'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByHandedness(null, 'right'),
+    null,
+    'null target lists return null'
+  );
   testCase.end();
 });
 

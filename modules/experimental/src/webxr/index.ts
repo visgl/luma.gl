@@ -170,6 +170,7 @@ export {
   getWebXRControllerRayPlaneIntersection,
   getWebXRControllerRayPlaneIntersections,
   getWebXRControllerRayPlaneTarget,
+  getWebXRControllerRayPlaneTargetByHandedness,
   getWebXRControllerRayPlaneTargets,
   getWebXRControllerState,
   getWebXRControllerStateByHandedness,

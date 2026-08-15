@@ -398,6 +398,17 @@ export function getWebXRControllerRayPlaneTargets(
     .filter((target): target is WebXRControllerRayPlaneTarget => Boolean(target));
 }
 
+export function getWebXRControllerRayPlaneTargetByHandedness(
+  targets: readonly WebXRControllerRayPlaneTarget[] | null,
+  handedness: WebXRControllerHandedness = 'any'
+): WebXRControllerRayPlaneTarget | null {
+  return (
+    (targets || []).find(
+      target => handedness === 'any' || target.controllerState.handedness === handedness
+    ) || null
+  );
+}
+
 export function getWebXRInputRayPlaneIntersection(
   ray: WebXRInputRay,
   props: WebXRInputRayPlaneIntersectionProps = {}
