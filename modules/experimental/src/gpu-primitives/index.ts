@@ -181,6 +181,24 @@ export type {
   GPUFFT2DSupport
 } from './gpu-fft2d';
 
+export {
+  GPUTranspose,
+  GPU_TRANSPOSE_TILE_SIZE,
+  makeGPUTransposeStats
+} from './gpu-transpose';
+export type {
+  GPUTransposeFormat,
+  GPUTransposeProps,
+  GPUTransposeStats
+} from './gpu-transpose';
+export {runGPUTransposeBenchmark} from './gpu-transpose-benchmark';
+export type {
+  GPUTransposeBenchmarkPathReport,
+  GPUTransposeBenchmarkProps,
+  GPUTransposeBenchmarkReport,
+  GPUTransposeBenchmarkStrategy
+} from './gpu-transpose-benchmark';
+
 export {GPUHistogram} from './gpu-histogram';
 export type {
   GPUHistogramDomain,

@@ -14,6 +14,7 @@ export type GPUPrimitivesDocsTabId =
   | 'graph-traversal'
   | 'ancestor-projection'
   | 'sort'
+  | 'transpose'
   | 'fft2d'
   | 'reduction'
   | 'histogram'
@@ -101,6 +102,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'sort',
     label: 'Sort',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-sort'
+  },
+  {
+    id: 'transpose',
+    label: 'Transpose',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-transpose'
   },
   {
     id: 'fft2d',
@@ -249,7 +255,7 @@ const TAB_GROUPS: GPUPrimitivesDocsTabGroup[] = [
   {
     id: 'transforms',
     label: 'Operations',
-    tabIds: ['scan', 'compaction', 'mask', 'sort', 'fft2d', 'reduction', 'histogram']
+    tabIds: ['scan', 'compaction', 'mask', 'sort', 'transpose', 'fft2d', 'reduction', 'histogram']
   },
   {
     id: 'tables',

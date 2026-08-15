@@ -64,8 +64,9 @@ later render pass consume that count without a CPU synchronization point.
 The implementation consists of `GPUCommandGraph`, `GPUTextureHistory`, typed graph data views,
 `GPUScan`, `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUVirtualGeometrySelection`,
 `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`,
-`GPUSegmentedSort`, `GPUBVH`, `GPUSegmentedBVH`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
-`GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT2D`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and
+`GPUSegmentedSort`, `GPUTranspose`, `GPUBVH`, `GPUSegmentedBVH`, `GPUReduction`, `GPUHistogram`,
+`GPUGridBinning`, `GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT2D`, `GPUIndexPickingTarget`,
+`GPUReadbackRing`, and
 `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to process
 and thread collapse, source and topology filtering, dependency focusing, visible-parent projection,
 GPU picking, activity histograms, and indirect span and edge rendering over up to four million
@@ -1681,6 +1682,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection)
 - [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
 - [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort)
+- [`GPUTranspose`](/docs/api-reference/experimental/gpu-primitives/gpu-transpose)
 - [`GPUFFT2D`](/docs/api-reference/experimental/gpu-primitives/gpu-fft2d)
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
