@@ -5,7 +5,11 @@
 import test from 'test/utils/vitest-tape';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
-import {getGLTFExtensionSupport} from '@luma.gl/gltf';
+import {
+  getGLTFExtensionSupport,
+  getGLTFExtensionSupportSummary,
+  getRegisteredGLTFExtensions
+} from '@luma.gl/gltf';
 
 type GLTFPostprocessedWithRemovedExtensions = GLTFPostprocessed & {
   extensionsRemoved?: string[];
@@ -119,6 +123,48 @@ test('gltf#getGLTFExtensionSupport distinguishes actual loader implementations',
     support.get('EXT_texture_avif')?.supportLevel,
     'none',
     'generic AVIF image decoding does not imply glTF extension source selection'
+  );
+
+  t.end();
+});
+
+test('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summaries', t => {
+  const extensions = getRegisteredGLTFExtensions();
+  const summary = getGLTFExtensionSupportSummary();
+
+  t.deepEqual(
+    extensions.map(extension => extension.extensionName),
+    [...extensions.map(extension => extension.extensionName)].sort(),
+    'registry entries are returned in stable extension-name order'
+  );
+  t.deepEqual(
+    summary,
+    {
+      total: 35,
+      supported: 25,
+      bySupportLevel: {'built-in': 19, 'parsed-and-wired': 6, 'loader-only': 4, none: 6},
+      byStandardStatus: {
+        ratified: 26,
+        'release-candidate': 2,
+        'multi-vendor': 2,
+        vendor: 1,
+        draft: 2,
+        archived: 2,
+        unknown: 0
+      }
+    },
+    'summary is derived from the registry rather than copied into documentation'
+  );
+  t.equal(
+    extensions.find(extension => extension.extensionName === 'KHR_meshopt_compression')
+      ?.standardStatus,
+    'release-candidate',
+    'a KHR prefix does not imply ratification'
+  );
+  t.equal(
+    extensions.find(extension => extension.extensionName === 'MSFT_lod')?.standardStatus,
+    'vendor',
+    'vendor extensions retain their source maturity'
   );
 
   t.end();

@@ -16,6 +16,16 @@ https://github.com/KhronosGroup/glTF-Sample-Assets/tree/2bac6f8c57bf471df0d2a1e8
 included at `examples/showcase/anari/public/gltf/SimpleSkin.gltf`. It adds three `MSFT_lod` mesh
 levels while preserving the original joint attributes, two-joint skin, and skeletal animation.
 
+`BumpMaterial.gltf` is a compact positive fixture authored by vis.gl contributors for the
+experimental `EXT_materials_bump` extension. Its geometry and embedded height texture are
+dedicated to the public domain under CC0-1.0.
+
+## luma.gl negative fixture (MIT)
+
+`UnsupportedRequiredExtensions.gltf` is authored by vis.gl contributors and declares every
+registry entry with support level `none` as required. It is distributed under the repository's
+MIT license and must remain synchronized with the runtime registry.
+
 ## Babylon.js reference fixture (Apache-2.0)
 
 `msft-lod.gltf` is an unmodified, self-contained three-level `MSFT_lod` interoperability fixture

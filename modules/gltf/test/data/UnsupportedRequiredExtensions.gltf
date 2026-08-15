@@ -1,0 +1,29 @@
+{
+  "asset": {
+    "version": "2.0",
+    "copyright": "Copyright (c) vis.gl contributors",
+    "extras": {
+      "license": "MIT",
+      "purpose": "Negative fixture covering every unsupported required extension in the runtime registry."
+    }
+  },
+  "scene": 0,
+  "scenes": [{"nodes": []}],
+  "nodes": [],
+  "extensionsUsed": [
+    "EXT_lights_image_based",
+    "EXT_texture_avif",
+    "EXT_texture_video",
+    "KHR_meshopt_compression",
+    "KHR_xmp",
+    "KHR_xmp_json_ld"
+  ],
+  "extensionsRequired": [
+    "EXT_lights_image_based",
+    "EXT_texture_avif",
+    "EXT_texture_video",
+    "KHR_meshopt_compression",
+    "KHR_xmp",
+    "KHR_xmp_json_ld"
+  ]
+}
