@@ -178,6 +178,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
   });
 
   test('keeps standalone launch, sidebar, and backend metadata accurate', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
     const standaloneSource = readFileSync(STANDALONE_PATH, 'utf8');
     const metadataSource = readFileSync(EXAMPLE_METADATA_PATH, 'utf8');
     const packageSource = JSON.parse(readFileSync(PACKAGE_PATH, 'utf8')) as {
@@ -194,6 +195,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(standaloneSource).toContain("toggleSession('immersive-vr')");
     expect(standaloneSource).toContain("toggleSession('immersive-ar')");
     expect(standaloneSource).toContain('switch-backend');
+    expect(applicationSource).toContain(
+      'https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1'
+    );
     expect(metadataSource).toContain('backends: [webgpu, webgl2]');
     expect(metadataSource).toContain('Immersive Prism Portal');
     expect(packageSource.dependencies).toHaveProperty('@luma.gl/webgpu');
