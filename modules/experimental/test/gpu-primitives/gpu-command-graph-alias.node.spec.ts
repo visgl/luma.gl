@@ -11,6 +11,7 @@ import {
   type GraphDataView,
   type GraphImportedBuffer
 } from '@luma.gl/experimental';
+import {GPUData} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
@@ -19,6 +20,7 @@ type GraphAliasFixture = {
   graph: GPUCommandGraph;
   buffers: Buffer[];
   dynamicBuffers: DynamicBuffer[];
+  data: GPUData[];
 };
 
 describe('GPUCommandGraph physical imported-buffer ownership', () => {
@@ -315,6 +317,115 @@ describe('GPUCommandGraph physical imported-buffer ownership', () => {
     }
   });
 
+  test('canonicalizes typed imports with raw buffer handles in either import order', () => {
+    const fixture = createGraphAliasFixture('typed-raw-canonicalization');
+    const rawFirstBuffer = createGraphAliasBuffer(fixture, 'raw-first');
+    const rawFirstHandle = importGraphAliasBuffer(fixture, 'raw-first', rawFirstBuffer);
+    const rawFirstData = createGraphAliasData(fixture, rawFirstBuffer);
+
+    const tableFirstBuffer = createGraphAliasBuffer(fixture, 'table-first');
+    const tableFirstData = createGraphAliasData(fixture, tableFirstBuffer);
+    const tableFirstView = fixture.graph.importGPUData('table-first', tableFirstData);
+    const tableFirstAlias = importGraphAliasBuffer(fixture, 'table-first-alias', tableFirstBuffer);
+
+    try {
+      expect(fixture.graph.importGPUData('raw-first-data', rawFirstData).buffer).toBe(
+        rawFirstHandle
+      );
+      expect(tableFirstAlias).not.toBe(tableFirstView.buffer);
+      expect(fixture.graph.importGPUData('table-first-again', tableFirstData).buffer).toBe(
+        tableFirstView.buffer
+      );
+    } finally {
+      destroyGraphAliasFixture(fixture);
+    }
+  });
+
+  test('preserves a typed DynamicBuffer wrapper imported after its raw backing', () => {
+    const fixture = createGraphAliasFixture('typed-dynamic-wrapper');
+    const originalBuffer = createGraphAliasBuffer(fixture, 'original-backing');
+    const rawHandle = importGraphAliasBuffer(fixture, 'raw-backing', originalBuffer);
+    const dynamicBuffer = createGraphAliasDynamicBuffer(fixture, 'dynamic-wrapper', originalBuffer);
+    const dynamicData = createGraphAliasData(fixture, dynamicBuffer);
+    const rawData = createGraphAliasData(fixture, originalBuffer);
+    const firstView = fixture.graph.importGPUData('dynamic-data', dynamicData);
+    const resolvedBuffers: Buffer[] = [];
+
+    expect(firstView.buffer).not.toBe(rawHandle);
+    expect(firstView.buffer.defaultBuffer).toBe(dynamicBuffer);
+    expect(fixture.graph.importGPUData('dynamic-data-again', dynamicData).buffer).toBe(
+      firstView.buffer
+    );
+    expect(fixture.graph.importGPUData('raw-data', rawData).buffer).toBe(rawHandle);
+
+    fixture.graph.addCopyPass({
+      id: 'observe-dynamic-data',
+      resources: [{buffer: firstView, usage: 'storage-read'}],
+      compile: () => ({encode: ({getBuffer}) => resolvedBuffers.push(getBuffer(firstView))})
+    });
+    const compiled = fixture.graph.compile();
+
+    try {
+      encodeGraphAliasFixture(fixture, compiled);
+      dynamicBuffer.resize({byteLength: 32});
+      encodeGraphAliasFixture(fixture, compiled);
+      expect(resolvedBuffers).toEqual([originalBuffer, dynamicBuffer.buffer]);
+    } finally {
+      compiled.destroy();
+      destroyGraphAliasFixture(fixture);
+    }
+  });
+
+  test('maps a resized DynamicBuffer backing to its canonical wrapper handle', () => {
+    const fixture = createGraphAliasFixture('resized-dynamic-backing');
+    const dynamicBuffer = createGraphAliasDynamicBuffer(fixture, 'dynamic-backing');
+    const dynamicHandle = importGraphAliasBuffer(fixture, 'dynamic', dynamicBuffer);
+    dynamicBuffer.resize({byteLength: 32});
+    const replacementData = createGraphAliasData(fixture, dynamicBuffer.buffer);
+    const replacementView = fixture.graph.importGPUData('replacement-data', replacementData);
+    const explicitAlias = importGraphAliasBuffer(
+      fixture,
+      'replacement-alias',
+      dynamicBuffer.buffer
+    );
+
+    try {
+      expect(replacementView.buffer).toBe(dynamicHandle);
+      expect(explicitAlias).not.toBe(dynamicHandle);
+      expect(fixture.graph.importGPUData('replacement-data-again', replacementData).buffer).toBe(
+        dynamicHandle
+      );
+    } finally {
+      destroyGraphAliasFixture(fixture);
+    }
+  });
+
+  test('falls back to a raw alias after a borrowed DynamicBuffer replaces its backing', () => {
+    const fixture = createGraphAliasFixture('replaced-dynamic-backing');
+    const originalBuffer = createGraphAliasBuffer(fixture, 'preserved-backing');
+    const dynamicBuffer = createGraphAliasDynamicBuffer(
+      fixture,
+      'borrowed-dynamic',
+      originalBuffer
+    );
+    const dynamicHandle = importGraphAliasBuffer(fixture, 'dynamic', dynamicBuffer);
+    const preservedHandle = importGraphAliasBuffer(fixture, 'preserved', originalBuffer);
+    dynamicBuffer.resize({byteLength: 32});
+    const preservedData = createGraphAliasData(fixture, originalBuffer);
+    const replacementData = createGraphAliasData(fixture, dynamicBuffer.buffer);
+
+    try {
+      expect(fixture.graph.importGPUData('preserved-data', preservedData).buffer).toBe(
+        preservedHandle
+      );
+      expect(fixture.graph.importGPUData('replacement-data', replacementData).buffer).toBe(
+        dynamicHandle
+      );
+    } finally {
+      destroyGraphAliasFixture(fixture);
+    }
+  });
+
   test('allows multiple active ranges over one canonical logical buffer handle', () => {
     const fixture = createGraphAliasFixture('shared-logical-handle');
     const sharedBuffer = createGraphAliasBuffer(fixture, 'shared-ranges');
@@ -389,7 +500,8 @@ function createGraphAliasFixture(identifier: string): GraphAliasFixture {
     device,
     graph: new GPUCommandGraph(device, {id: identifier}),
     buffers: [],
-    dynamicBuffers: []
+    dynamicBuffers: [],
+    data: []
   };
 }
 
@@ -405,6 +517,33 @@ function createGraphAliasBuffer(
   });
   fixture.buffers.push(buffer);
   return buffer;
+}
+
+function createGraphAliasDynamicBuffer(
+  fixture: GraphAliasFixture,
+  identifier: string,
+  buffer?: Buffer
+): DynamicBuffer {
+  const dynamicBuffer = new DynamicBuffer(fixture.device, {
+    id: identifier,
+    ...(buffer ? {buffer, ownsBuffer: false} : {byteLength: 16, usage: Buffer.STORAGE})
+  });
+  fixture.dynamicBuffers.push(dynamicBuffer);
+  return dynamicBuffer;
+}
+
+function createGraphAliasData(
+  fixture: GraphAliasFixture,
+  buffer: Buffer | DynamicBuffer
+): GPUData<'uint32'> {
+  const data = new GPUData({
+    buffer,
+    format: 'uint32',
+    length: 4,
+    ownsBuffer: false
+  });
+  fixture.data.push(data);
+  return data;
 }
 
 function importGraphAliasBuffer(
@@ -446,6 +585,7 @@ function encodeGraphAliasFixture(
 }
 
 function destroyGraphAliasFixture(fixture: GraphAliasFixture): void {
+  for (const data of fixture.data) data.destroy();
   for (const dynamicBuffer of fixture.dynamicBuffers) dynamicBuffer.destroy();
   for (const buffer of fixture.buffers) buffer.destroy();
   fixture.device.destroy();
