@@ -117,11 +117,35 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       prepareMethodStart
     );
     const prepareMethod = applicationSource.slice(prepareMethodStart, prepareMethodEnd);
+    const prepareControllerMethodStart = applicationSource.indexOf(
+      'private prepareControllerTargets('
+    );
+    const prepareControllerMethodEnd = applicationSource.indexOf(
+      '\n  private drawControllerTargets(',
+      prepareControllerMethodStart
+    );
+    const prepareControllerMethod = applicationSource.slice(
+      prepareControllerMethodStart,
+      prepareControllerMethodEnd
+    );
+    const drawControllerMethodStart = applicationSource.indexOf('private drawControllerTargets(');
+    const drawControllerMethodEnd = applicationSource.indexOf(
+      '\n  private updateModelMatrix(',
+      drawControllerMethodStart
+    );
+    const drawControllerMethod = applicationSource.slice(
+      drawControllerMethodStart,
+      drawControllerMethodEnd
+    );
 
     expect(renderMethodStart).toBeGreaterThan(0);
     expect(renderMethodEnd).toBeGreaterThan(renderMethodStart);
     expect(previewMethodStart).toBeGreaterThan(0);
     expect(previewMethodEnd).toBeGreaterThan(previewMethodStart);
+    expect(prepareControllerMethodStart).toBeGreaterThan(0);
+    expect(prepareControllerMethodEnd).toBeGreaterThan(prepareControllerMethodStart);
+    expect(drawControllerMethodStart).toBeGreaterThan(0);
+    expect(drawControllerMethodEnd).toBeGreaterThan(drawControllerMethodStart);
     expect(previewMethod).toContain('const renderPass = device.beginRenderPass(');
     expect(previewMethod).toContain('this.drawPortal(renderPass)');
     expect(previewMethod).toContain('renderPass.end()');
@@ -130,10 +154,14 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('!renderedFramebuffers.has(framebuffer)');
     expect(renderMethod).toContain('renderedFramebuffers.add(framebuffer)');
     expect(renderMethod).toContain(
-      'this.drawControllerTargets(renderPass, view, inputState, time)'
+      'const controllerTargets = this.prepareControllerTargets(view, inputState, time)'
     );
+    expect(renderMethod).toContain('this.drawControllerTargets(renderPass, controllerTargets)');
     expect(renderMethod).toMatch(
       /this\.xrSessionMode\s*===\s*'immersive-ar'\s*\?\s*\[0,\s*0,\s*0,\s*0\]/
+    );
+    expect(renderMethod.indexOf('this.prepareControllerTargets(')).toBeLessThan(
+      renderMethod.indexOf('this.device.beginRenderPass({')
     );
     expect(renderMethod.indexOf('this.preparePortal({')).toBeLessThan(
       renderMethod.indexOf('this.device.beginRenderPass({')
@@ -146,13 +174,30 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       renderMethod.indexOf('renderPass.setParameters({viewport: view.viewport})')
     ).toBeLessThan(renderMethod.indexOf('this.drawPortal(renderPass)'));
     expect(renderMethod.indexOf('this.drawPortal(renderPass)')).toBeLessThan(
-      renderMethod.indexOf('this.drawControllerTargets(renderPass, view, inputState, time)')
+      renderMethod.indexOf('this.drawControllerTargets(renderPass, controllerTargets)')
     );
     expect(prepareMethod).toContain('this.uniformStore.setUniforms(');
     expect(prepareMethod).toContain('this.device.commandEncoder');
     expect(prepareMethod).toContain('this.model.predraw(this.device.commandEncoder)');
     expect(prepareMethod.indexOf('this.uniformStore.setUniforms(')).toBeLessThan(
       prepareMethod.indexOf('this.model.predraw(this.device.commandEncoder)')
+    );
+    expect(prepareControllerMethod).toContain('rayUniforms.uniformStore.setUniforms(');
+    expect(prepareControllerMethod).toContain('reticleUniforms.uniformStore.setUniforms(');
+    expect(prepareControllerMethod).toContain('this.device.commandEncoder');
+    expect(prepareControllerMethod).toContain(
+      'this.controllerRayModel.predraw(this.device.commandEncoder)'
+    );
+    expect(prepareControllerMethod).toContain(
+      'this.controllerReticleModel.predraw(this.device.commandEncoder)'
+    );
+    expect(drawControllerMethod).not.toContain('setUniforms(');
+    expect(drawControllerMethod).not.toContain('this.device.commandEncoder');
+    expect(drawControllerMethod).toContain(
+      'this.controllerRayModel.setBindings({app: controllerTarget.rayUniformBuffer})'
+    );
+    expect(drawControllerMethod).toContain(
+      'this.controllerReticleModel.setBindings({app: controllerTarget.reticleUniformBuffer})'
     );
   });
 
@@ -164,12 +209,18 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       renderMethodStart
     );
     const renderMethod = applicationSource.slice(renderMethodStart, renderMethodEnd);
-    const rayMethodStart = applicationSource.indexOf('private drawControllerTargets(');
+    const rayMethodStart = applicationSource.indexOf('private prepareControllerTargets(');
     const rayMethodEnd = applicationSource.indexOf(
-      '\n  private updateModelMatrix(',
+      '\n  private drawControllerTargets(',
       rayMethodStart
     );
     const rayMethod = applicationSource.slice(rayMethodStart, rayMethodEnd);
+    const drawMethodStart = applicationSource.indexOf('private drawControllerTargets(');
+    const drawMethodEnd = applicationSource.indexOf(
+      '\n  private updateModelMatrix(',
+      drawMethodStart
+    );
+    const drawMethod = applicationSource.slice(drawMethodStart, drawMethodEnd);
 
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRInputRay');
@@ -192,7 +243,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain('multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix))');
     expect(rayMethod).toContain('cameraMix: input.selectActive ? 1 : 0');
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
-    expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
+    expect(drawMethod).toContain('this.controllerRayModel.draw(renderPass)');
     expect(rayMethod).toContain('getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8})');
     expect(rayMethod).toContain(
       'this._floorHitByInputSource.set(input.inputSource, floorHit.point)'
@@ -202,7 +253,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(rayMethod).toContain('multiplyRight(this.controllerReticleMatrix)');
     expect(rayMethod).toContain('this.controllerReticleModel.predraw(this.device.commandEncoder)');
-    expect(rayMethod).toContain('this.controllerReticleModel.draw(renderPass)');
+    expect(drawMethod).toContain('this.controllerReticleModel.draw(renderPass)');
   });
 
   test('uses select for teleport candidates and squeeze or keyboard for exit', () => {
@@ -240,6 +291,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(enterMethod).toContain(
       "session.addEventListener('squeezeend', this._xrSqueezeEndListener)"
     );
+    expect(enterMethod).toContain('this.setXRSession(session, sessionMode)');
+    expect(applicationSource).toContain("this.getWebXRManagerProps(sessionMode, 'local-floor')");
+    expect(applicationSource).toContain("this.getWebXRManagerProps(sessionMode, 'local')");
     expect(updateModelMethod).toContain('translate(this.xrSceneOffset)');
     expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
     expect(teleportMethod).toContain('this.xrSceneOffset[0] -= floorHit[0]');
