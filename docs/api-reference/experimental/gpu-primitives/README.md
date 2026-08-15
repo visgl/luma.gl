@@ -65,7 +65,8 @@ The implementation consists of `GPUCommandGraph`, `GPUTextureHistory`, typed gra
 `GPUScan`, `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUVirtualGeometrySelection`,
 `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`,
 `GPUSegmentedSort`, `GPUTranspose`, `GPUBVH`, `GPUSegmentedBVH`, `GPUReduction`, `GPUHistogram`,
-`GPUGridBinning`, `GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT2D`, `GPUIndexPickingTarget`,
+`GPUGridBinning`, `GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT1D`, `GPUFFT2D`,
+`GPUIndexPickingTarget`,
 `GPUReadbackRing`, and
 `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to process
 and thread collapse, source and topology filtering, dependency focusing, visible-parent projection,
@@ -1683,6 +1684,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
 - [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-primitives/gpu-segmented-sort)
 - [`GPUTranspose`](/docs/api-reference/experimental/gpu-primitives/gpu-transpose)
+- [`GPUFFT1D`](/docs/api-reference/experimental/gpu-primitives/gpu-fft1d)
 - [`GPUFFT2D`](/docs/api-reference/experimental/gpu-primitives/gpu-fft2d)
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)

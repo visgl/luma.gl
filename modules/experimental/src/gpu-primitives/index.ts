@@ -199,6 +199,30 @@ export type {
   GPUTransposeBenchmarkStrategy
 } from './gpu-transpose-benchmark';
 
+export {
+  getGPUFFT1DSupport,
+  getGPUFFT1DStrategy,
+  GPUFFT1D,
+  GPU_FFT1D_MAX_LENGTH,
+  GPU_FFT1D_MIN_LENGTH,
+  GPU_FFT1D_WORKGROUP_SIZE,
+  makeGPUFFT1DStats
+} from './gpu-fft1d';
+export type {
+  GPUFFT1DDirection,
+  GPUFFT1DProps,
+  GPUFFT1DStats,
+  GPUFFT1DStrategy,
+  GPUFFT1DSupport
+} from './gpu-fft1d';
+export {runGPUFFT1DBenchmark} from './gpu-fft1d-benchmark';
+export type {
+  GPUFFT1DBenchmarkPathReport,
+  GPUFFT1DBenchmarkProps,
+  GPUFFT1DBenchmarkReport,
+  GPUFFT1DBenchmarkStrategy
+} from './gpu-fft1d-benchmark';
+
 export {GPUHistogram} from './gpu-histogram';
 export type {
   GPUHistogramDomain,
