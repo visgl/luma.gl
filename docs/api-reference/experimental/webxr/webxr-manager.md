@@ -58,7 +58,7 @@ const animationLoop = new AnimationLoop({
 - Treats `XRViewerPose.views` as an arbitrary per-frame view list, not a fixed stereo pair.
 - Exposes `projectionMatrix` from `XRView.projectionMatrix` and `viewMatrix` from `XRView.transform.inverse.matrix`.
 - Resolves per-frame input-source target-ray and grip poses in the same reference space as rendering.
-- Tracks active `selectstart`/`selectend` state per input source so examples can build controller rays, pointer selection, and locomotion helpers without subscribing to raw session events.
+- Tracks active `selectstart`/`selectend` and `squeezestart`/`squeezeend` state per input source so examples can build controller rays, pointer selection, grab, and locomotion helpers without subscribing to raw session events.
 - Provides `getWebXRInputRay(inputState)` for normalized world-space target-ray origin and direction extraction.
 - Provides `getWebXRInputRayPlaneIntersection(ray, props)` for floor, wall, and placement plane hits used by teleport and pointer-selection examples.
 - Never destroys browser-owned WebGL framebuffers or WebGPU compositor textures.
@@ -131,6 +131,7 @@ export type WebXRInputState = {
   gripPose: XRPose | null;
   gripMatrix: Float32Array | null;
   selectActive: boolean;
+  squeezeActive: boolean;
 };
 ```
 

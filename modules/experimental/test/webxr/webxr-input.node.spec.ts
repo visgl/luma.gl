@@ -110,6 +110,7 @@ function makeMockWebXRInputState(targetRayMatrix: Float32Array | null): WebXRInp
     targetRayMatrix,
     gripPose: null,
     gripMatrix: null,
-    selectActive: false
+    selectActive: false,
+    squeezeActive: false
   };
 }

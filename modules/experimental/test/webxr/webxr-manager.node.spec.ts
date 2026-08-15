@@ -512,18 +512,30 @@ test('webxr#WebXRManager resolves input source poses and select activity', async
     testCase.equal(inputState?.[0]?.gripPose, gripPose, 'keeps grip pose');
     testCase.equal(inputState?.[0]?.gripMatrix, gripPose.transform.matrix, 'keeps grip');
     testCase.equal(inputState?.[0]?.selectActive, false, 'select starts inactive');
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'squeeze starts inactive');
     testCase.equal(inputState?.[1]?.targetRayPose, null, 'missing poses become null');
     testCase.equal(inputState?.[1]?.gripPose, null, 'missing grip spaces become null');
 
     session.dispatchEvent(makeMockXRInputSourceEvent('selectstart', controllerInputSource, frame));
     inputState = manager.getInputState(frame);
     testCase.equal(inputState?.[0]?.selectActive, true, 'selectstart marks the source active');
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'select does not affect squeeze');
+
+    session.dispatchEvent(makeMockXRInputSourceEvent('squeezestart', controllerInputSource, frame));
+    inputState = manager.getInputState(frame);
+    testCase.equal(inputState?.[0]?.squeezeActive, true, 'squeezestart marks the source active');
+    testCase.equal(inputState?.[0]?.selectActive, true, 'squeeze does not affect select');
+
+    session.dispatchEvent(makeMockXRInputSourceEvent('squeezeend', controllerInputSource, frame));
+    inputState = manager.getInputState(frame);
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'squeezeend marks the source inactive');
 
     session.dispatchEvent(makeMockXRInputSourceEvent('selectend', controllerInputSource, frame));
     inputState = manager.getInputState(frame);
     testCase.equal(inputState?.[0]?.selectActive, false, 'selectend marks the source inactive');
 
     session.dispatchEvent(makeMockXRInputSourceEvent('selectstart', controllerInputSource, frame));
+    session.dispatchEvent(makeMockXRInputSourceEvent('squeezestart', controllerInputSource, frame));
     session.inputSources = [screenInputSource];
     session.dispatchEvent(
       Object.assign(new Event('inputsourceschange'), {
@@ -536,6 +548,7 @@ test('webxr#WebXRManager resolves input source poses and select activity', async
     testCase.equal(inputState?.length, 1, 'removed sources disappear from snapshots');
     testCase.equal(inputState?.[0]?.inputSource, screenInputSource, 'keeps remaining source');
     testCase.equal(inputState?.[0]?.selectActive, false, 'removed source cannot stay selected');
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'removed source cannot stay squeezed');
 
     const foreignFrame = {
       session: makeMockXRSession(referenceSpace, []),
@@ -736,7 +749,7 @@ function makeMockXRPose(matrix: number[]): XRPose {
 }
 
 function makeMockXRInputSourceEvent(
-  type: 'selectstart' | 'selectend',
+  type: 'selectstart' | 'selectend' | 'squeezestart' | 'squeezeend',
   inputSource: XRInputSource,
   frame: XRFrame
 ): XRInputSourceEvent {

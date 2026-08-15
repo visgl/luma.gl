@@ -64,6 +64,7 @@ export type WebXRInputState = {
   gripPose: XRPose | null;
   gripMatrix: Float32Array | null;
   selectActive: boolean;
+  squeezeActive: boolean;
 };
 
 /**
@@ -85,9 +86,16 @@ export class WebXRManager {
   private _framebuffer: Framebuffer | null = null;
   private _webGPUViewResources: WebXRWebGPUViewResources[] = [];
   private _selectActiveInputSources = new Set<XRInputSource>();
+  private _squeezeActiveInputSources = new Set<XRInputSource>();
   private _sessionEndListener = () => this.clearSession();
-  private _selectStartListener = (event: Event) => this._handleSelectActive(event, true);
-  private _selectEndListener = (event: Event) => this._handleSelectActive(event, false);
+  private _selectStartListener = (event: Event) =>
+    this._handleInputSourceActive(this._selectActiveInputSources, event, true);
+  private _selectEndListener = (event: Event) =>
+    this._handleInputSourceActive(this._selectActiveInputSources, event, false);
+  private _squeezeStartListener = (event: Event) =>
+    this._handleInputSourceActive(this._squeezeActiveInputSources, event, true);
+  private _squeezeEndListener = (event: Event) =>
+    this._handleInputSourceActive(this._squeezeActiveInputSources, event, false);
   private _inputSourcesChangeListener = (event: Event) => this._handleInputSourcesChange(event);
 
   constructor(device: Device, props: WebXRManagerProps = {}) {
@@ -138,6 +146,8 @@ export class WebXRManager {
       session.addEventListener('end', this._sessionEndListener);
       session.addEventListener('selectstart', this._selectStartListener);
       session.addEventListener('selectend', this._selectEndListener);
+      session.addEventListener('squeezestart', this._squeezeStartListener);
+      session.addEventListener('squeezeend', this._squeezeEndListener);
       session.addEventListener('inputsourceschange', this._inputSourcesChangeListener);
       return this;
     } catch (error) {
@@ -175,7 +185,8 @@ export class WebXRManager {
     }
 
     const inputSources = Array.from(this.session.inputSources);
-    this._trimSelectActiveInputSources(inputSources);
+    this._trimActiveInputSources(this._selectActiveInputSources, inputSources);
+    this._trimActiveInputSources(this._squeezeActiveInputSources, inputSources);
 
     return inputSources.map((inputSource, index) => {
       const targetRayPose = xrFrame.getPose(inputSource.targetRaySpace, this.referenceSpace!);
@@ -194,7 +205,8 @@ export class WebXRManager {
         targetRayMatrix: targetRayPose?.transform.matrix ?? null,
         gripPose: gripPose ?? null,
         gripMatrix: gripPose?.transform.matrix ?? null,
-        selectActive: this._selectActiveInputSources.has(inputSource)
+        selectActive: this._selectActiveInputSources.has(inputSource),
+        squeezeActive: this._squeezeActiveInputSources.has(inputSource)
       };
     });
   }
@@ -203,6 +215,8 @@ export class WebXRManager {
     this.session?.removeEventListener('end', this._sessionEndListener);
     this.session?.removeEventListener('selectstart', this._selectStartListener);
     this.session?.removeEventListener('selectend', this._selectEndListener);
+    this.session?.removeEventListener('squeezestart', this._squeezeStartListener);
+    this.session?.removeEventListener('squeezeend', this._squeezeEndListener);
     this.session?.removeEventListener('inputsourceschange', this._inputSourcesChangeListener);
     this._framebuffer?.destroy();
     this._framebuffer = null;
@@ -218,6 +232,7 @@ export class WebXRManager {
     this.referenceSpace = null;
     this.session = null;
     this._selectActiveInputSources.clear();
+    this._squeezeActiveInputSources.clear();
   }
 
   destroy(): void {
@@ -398,29 +413,37 @@ export class WebXRManager {
     viewResources.colorTexture.destroy();
   }
 
-  private _handleSelectActive(event: Event, selectActive: boolean): void {
+  private _handleInputSourceActive(
+    activeInputSources: Set<XRInputSource>,
+    event: Event,
+    active: boolean
+  ): void {
     const inputSource = (event as XRInputSourceEvent).inputSource;
     if (!inputSource) {
       return;
     }
 
-    if (selectActive) {
-      this._selectActiveInputSources.add(inputSource);
+    if (active) {
+      activeInputSources.add(inputSource);
     } else {
-      this._selectActiveInputSources.delete(inputSource);
+      activeInputSources.delete(inputSource);
     }
   }
 
   private _handleInputSourcesChange(event: Event): void {
     for (const inputSource of (event as XRInputSourcesChangeEvent).removed || []) {
       this._selectActiveInputSources.delete(inputSource);
+      this._squeezeActiveInputSources.delete(inputSource);
     }
   }
 
-  private _trimSelectActiveInputSources(inputSources: readonly XRInputSource[]): void {
-    for (const inputSource of this._selectActiveInputSources) {
+  private _trimActiveInputSources(
+    activeInputSources: Set<XRInputSource>,
+    inputSources: readonly XRInputSource[]
+  ): void {
+    for (const inputSource of activeInputSources) {
       if (!inputSources.includes(inputSource)) {
-        this._selectActiveInputSources.delete(inputSource);
+        activeInputSources.delete(inputSource);
       }
     }
   }
