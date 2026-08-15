@@ -26,5 +26,6 @@
 - [`WebXRMediaLayerManager`](/docs/api-reference/experimental/webxr/webxr-media-layer-manager) creates video-backed quad, cylinder, and equirect composition layers through the XR compositor.
 - [`WebXRMeshDetectionManager`](/docs/api-reference/experimental/webxr/webxr-mesh-detection-manager) resolves detected AR mesh poses, vertex/index buffers, labels, and added/updated/removed frame diffs.
 - [`WebXRPlaneDetectionManager`](/docs/api-reference/experimental/webxr/webxr-plane-detection-manager) resolves detected AR plane poses, polygons, labels, and added/updated/removed frame diffs.
+- [`WebXRSessionStateManager`](/docs/api-reference/experimental/webxr/webxr-session-state-manager) tracks session visibility, frame rates, and optional target frame-rate requests.
 
 WebGPU raw camera textures are not part of this v10 work in progress.

@@ -30,6 +30,7 @@ declare global {
   }
 
   type XRSessionMode = 'inline' | 'immersive-vr' | 'immersive-ar';
+  type XRVisibilityState = 'visible' | 'visible-blurred' | 'hidden';
   type XRReferenceSpaceType = 'viewer' | 'local' | 'local-floor' | 'bounded-floor' | 'unbounded';
   type XREye = 'none' | 'left' | 'right';
   type XRHandedness = 'none' | 'left' | 'right';
@@ -116,6 +117,10 @@ declare global {
   interface XRSession extends EventTarget {
     readonly enabledFeatures?: readonly string[];
     readonly inputSources: XRInputSourceArray;
+    readonly visibilityState?: XRVisibilityState;
+    readonly frameRate?: number;
+    readonly supportedFrameRates?: Float32Array | readonly number[];
+    readonly isSystemKeyboardSupported?: boolean;
     readonly depthUsage?: XRDepthUsage;
     readonly depthDataFormat?: XRDepthDataFormat;
     readonly depthType?: XRDepthType | null;
@@ -137,6 +142,7 @@ declare global {
     initiateRoomCapture?(): Promise<void>;
     resumeDepthSensing?(): void;
     updateRenderState(renderStateInit?: XRRenderStateInit): Promise<void>;
+    updateTargetFrameRate?(rate: number): Promise<void>;
   }
 
   interface XRSpace extends EventTarget {}

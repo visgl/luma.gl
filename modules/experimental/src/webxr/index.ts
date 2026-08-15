@@ -60,6 +60,17 @@ export {
 export type {WebXRMediaLayerState, WebXRMediaLayerType} from './webxr-media-layers';
 export {WebXRMediaLayerManager} from './webxr-media-layers';
 export type {
+  WebXRSessionState,
+  WebXRSessionStateManagerProps,
+  WebXRTargetFrameRate
+} from './webxr-session-state';
+export {
+  getWebXRSupportedFrameRates,
+  getWebXRTargetFrameRate,
+  makeWebXRSessionState,
+  WebXRSessionStateManager
+} from './webxr-session-state';
+export type {
   WebXRMeshDetectionManagerProps,
   WebXRMeshDetectionSessionInitProps,
   WebXRMeshDetectionState,

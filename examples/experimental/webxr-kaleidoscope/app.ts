@@ -16,6 +16,7 @@ import {
   WebXRMeshDetectionManager,
   WebXRManager,
   WebXRPlaneDetectionManager,
+  WebXRSessionStateManager,
   getWebXRBoundsState,
   getWebXRHandPinch,
   getWebXRInputRay,
@@ -401,6 +402,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly webXRPlaneDetectionManager = new WebXRPlaneDetectionManager({
     orientations: ['horizontal']
   });
+  readonly webXRSessionStateManager = new WebXRSessionStateManager({
+    targetFrameRate: 'highest'
+  });
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly controllerRayMatrix = new Matrix4();
@@ -560,6 +564,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRLightEstimationManager.destroy();
     this.webXRMeshDetectionManager.destroy();
     this.webXRPlaneDetectionManager.destroy();
+    this.webXRSessionStateManager.destroy();
     this.webXRManager.destroy();
   }
 
@@ -673,6 +678,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           ? this.createCameraTexture(session)
           : null;
       this.webXRDOMOverlayManager.setSession(session, {root: getDOMOverlayRoot()});
+      await this.webXRSessionStateManager
+        .setSession(session)
+        .catch(() => this.webXRSessionStateManager.clearSession());
       this.xrSession = session;
       this.xrSessionMode = sessionMode;
       AppAnimationLoopTemplate.notifyCurrentListeners();
@@ -998,6 +1006,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRLightEstimationManager.clearSession();
     this.webXRMeshDetectionManager.clearSession();
     this.webXRPlaneDetectionManager.clearSession();
+    this.webXRSessionStateManager.clearSession();
     this.webXRManager.clearSession();
     AppAnimationLoopTemplate.notifyCurrentListeners();
     if (!this._isFinalized) {
