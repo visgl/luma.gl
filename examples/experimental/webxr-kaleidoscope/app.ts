@@ -16,6 +16,7 @@ import {
   getWebXRHandPinch,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
+  pulseWebXRInputHaptics,
   type WebXRFrameState,
   type WebXRHandTrackingState,
   type WebXRHitTestState,
@@ -393,6 +394,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   xrSessionMode: ImmersiveXRSessionMode | null = null;
   private _isFinalized = false;
   private _floorHitByInputSource = new Map<XRInputSource, [number, number, number]>();
+  private _inputStateByInputSource = new Map<XRInputSource, WebXRInputState>();
   private _xrSessionEndListener = () => this._clearXRSession();
   private _xrSelectEndListener = (event: Event) =>
     this.teleportToInputSource((event as XRInputSourceEvent).inputSource);
@@ -663,6 +665,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
     this._floorHitByInputSource.clear();
+    this._inputStateByInputSource.clear();
+    for (const input of inputState) {
+      this._inputStateByInputSource.set(input.inputSource, input);
+    }
 
     for (const view of frameState.views) {
       this.modelViewProjectionMatrix
@@ -840,6 +846,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.xrSceneOffset[0] -= floorHit[0];
     this.xrSceneOffset[2] -= floorHit[2];
+    const inputState = this._inputStateByInputSource.get(inputSource);
+    if (inputState) {
+      void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45});
+    }
     this._floorHitByInputSource.clear();
   }
 
@@ -891,6 +901,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.xrSceneOffset[1] = 0;
     this.xrSceneOffset[2] = 0;
     this._floorHitByInputSource.clear();
+    this._inputStateByInputSource.clear();
     this.cameraTexture?.destroy();
     this.cameraTexture = null;
     this.webXRDOMOverlayManager.clearSession();

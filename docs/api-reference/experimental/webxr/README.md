@@ -17,6 +17,7 @@
 - [`WebXRDOMOverlayManager`](/docs/api-reference/experimental/webxr/webxr-dom-overlay-manager) tracks DOM overlay state and suppresses XR select events from overlay UI.
 - [`getWebXRHandPinch`](/docs/api-reference/experimental/webxr/webxr-hand-gestures) derives simple thumb-to-finger pinch gestures from tracked hand joints.
 - [`WebXRHandTrackingManager`](/docs/api-reference/experimental/webxr/webxr-hand-tracking-manager) resolves articulated hand joint matrices and radii from WebXR hand input sources.
+- [`pulseWebXRInputHaptics`](/docs/api-reference/experimental/webxr/webxr-haptics) pulses compatible controller haptic actuators exposed through WebXR input gamepads.
 - [`WebXRHitTestManager`](/docs/api-reference/experimental/webxr/webxr-hit-test-manager) requests an AR hit-test source and resolves hit poses in the app reference space.
 - [`WebXRAnchorManager`](/docs/api-reference/experimental/webxr/webxr-anchor-manager) creates, tracks, resolves, and deletes AR anchors.
 - [`WebXRMediaLayerManager`](/docs/api-reference/experimental/webxr/webxr-media-layer-manager) creates video-backed quad, cylinder, and equirect composition layers through the XR compositor.

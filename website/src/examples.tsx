@@ -1741,6 +1741,18 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
                   : 'Drag to explore · headset optional'}
             </span>
           </div>
+          <span style={{fontSize: 12, lineHeight: 1.5}}>
+            Desktop XR testing works with the{' '}
+            <a
+              href="https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1"
+              target="_blank"
+              rel="noreferrer"
+              style={{color: '#a5f3fc'}}
+            >
+              Immersive Web Emulator Chrome extension
+            </a>
+            .
+          </span>
           {xrError ? (
             <span role="alert" style={{color: '#fda4af', fontSize: 12, lineHeight: 1.5}}>
               {xrError}

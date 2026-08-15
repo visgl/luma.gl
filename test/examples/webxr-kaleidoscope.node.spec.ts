@@ -212,6 +212,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRInputRay');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
+    expect(applicationSource).toContain('pulseWebXRInputHaptics');
     expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
     expect(applicationSource).toContain("id: 'immersive-prism-controller-rays'");
     expect(applicationSource).toContain("id: 'immersive-prism-controller-reticles'");
@@ -220,6 +221,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('function makeControllerReticleGeometry()');
     expect(applicationSource).toContain('const segmentCount = 32');
     expect(renderMethod).toContain('inputState: readonly WebXRInputState[]');
+    expect(renderMethod).toContain('this._inputStateByInputSource.clear()');
+    expect(renderMethod).toContain('this._inputStateByInputSource.set(input.inputSource, input)');
     expect(renderMethod).toContain('renderPass.end()');
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
@@ -351,6 +354,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain('readonly xrSceneOffset: [number, number, number]');
     expect(applicationSource).toContain('new Map<XRInputSource, [number, number, number]>()');
+    expect(applicationSource).toContain('new Map<XRInputSource, WebXRInputState>()');
     expect(applicationSource).not.toContain(
       'private _xrSelectEndListener = () => void this.exitXR()'
     );
@@ -368,6 +372,10 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
     expect(teleportMethod).toContain('this.xrSceneOffset[0] -= floorHit[0]');
     expect(teleportMethod).toContain('this.xrSceneOffset[2] -= floorHit[2]');
+    expect(teleportMethod).toContain('this._inputStateByInputSource.get(inputSource)');
+    expect(teleportMethod).toContain(
+      'void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45})'
+    );
     expect(teleportMethod).toContain('this._floorHitByInputSource.clear()');
     expect(clearMethod).toContain(
       "session?.removeEventListener('selectend', this._xrSelectEndListener)"
@@ -377,6 +385,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(clearMethod).toContain('this.xrSceneOffset[0] = 0');
     expect(clearMethod).toContain('this._floorHitByInputSource.clear()');
+    expect(clearMethod).toContain('this._inputStateByInputSource.clear()');
     expect(applicationSource).toContain(
       "event.key === 'Escape' || event.key.toLowerCase() === 'q'"
     );
@@ -465,6 +474,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(standaloneSource).toContain('id="webxr-dom-overlay"');
     expect(standaloneSource).toContain('.portal-panel:xr-overlay');
     expect(applicationSource).toContain(
+      'https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1'
+    );
+    expect(readFileSync(WEBSITE_EXAMPLES_PATH, 'utf8')).toContain(
       'https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1'
     );
     expect(metadataSource).toContain('backends: [webgpu, webgl2]');
