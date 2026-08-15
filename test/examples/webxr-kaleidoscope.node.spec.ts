@@ -235,6 +235,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
+    expect(applicationSource).toContain('getWebXRGamepadState');
     expect(applicationSource).toContain('getWebXRInputRay');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
     expect(applicationSource).toContain('isPointInWebXRBounds');
@@ -253,11 +254,13 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
     expect(rayMethod).toContain('const inputRay = getWebXRInputRay(input)');
+    expect(rayMethod).toContain('const gamepadState = getWebXRGamepadState(input)');
+    expect(rayMethod).toContain('gamepadState?.primaryTrigger?.value || 0');
     expect(rayMethod).toContain("input.targetRayMode !== 'tracked-pointer'");
     expect(rayMethod).toContain('!inputRay');
     expect(rayMethod).toContain('this.controllerRayMatrix.copy(inputRay.matrix)');
     expect(rayMethod).toContain('multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix))');
-    expect(rayMethod).toContain('cameraMix: input.selectActive ? 1 : 0');
+    expect(rayMethod).toContain('cameraMix: controllerActivation');
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
     expect(rayMethod).toContain('getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8})');

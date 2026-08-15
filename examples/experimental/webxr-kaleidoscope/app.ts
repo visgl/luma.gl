@@ -19,6 +19,7 @@ import {
   WebXRReferenceSpaceManager,
   WebXRSessionStateManager,
   getWebXRBoundsState,
+  getWebXRGamepadState,
   getWebXRHandPinch,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
@@ -814,6 +815,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (input.targetRayMode !== 'tracked-pointer' || !inputRay) {
         continue;
       }
+      const gamepadState = getWebXRGamepadState(input);
+      const controllerActivation = Math.max(
+        input.selectActive ? 1 : 0,
+        gamepadState?.primaryTrigger?.value || 0
+      );
 
       this.modelViewProjectionMatrix
         .copy(view.projectionMatrix)
@@ -824,7 +830,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           app: {
             modelViewProjectionMatrix: this.modelViewProjectionMatrix,
             time,
-            cameraMix: input.selectActive ? 1 : 0,
+            cameraMix: controllerActivation,
             lightIntensity: 1
           }
         },
@@ -846,7 +852,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             app: {
               modelViewProjectionMatrix: this.modelViewProjectionMatrix,
               time,
-              cameraMix: input.selectActive ? 1 : 0,
+              cameraMix: controllerActivation,
               lightIntensity: 1
             }
           },

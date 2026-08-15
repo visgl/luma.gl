@@ -36,6 +36,14 @@ export {getWebXRHandPinch} from './webxr-hand-gestures';
 export type {WebXRHandJointState, WebXRHandTrackingState} from './webxr-hand-tracking';
 export {WEBXR_HAND_JOINTS, WebXRHandTrackingManager} from './webxr-hand-tracking';
 export type {
+  WebXRGamepadAxisName,
+  WebXRGamepadAxisState,
+  WebXRGamepadButtonName,
+  WebXRGamepadButtonState,
+  WebXRGamepadState
+} from './webxr-gamepad';
+export {getWebXRGamepadState, getWebXRGamepadStates} from './webxr-gamepad';
+export type {
   WebXRGamepadHapticActuator,
   WebXRHapticPulseProps,
   WebXRHapticPulseResult
