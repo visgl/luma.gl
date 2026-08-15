@@ -235,7 +235,8 @@ export class GPUCommandGraph<Parameters = void> {
   private readonly buffers = new Map<string, GraphBufferHandle>();
   private readonly textures = new Map<string, GraphTextureHandle>();
   private readonly externalTextures = new Map<string, GraphExternalTextureHandle>();
-  private readonly tableBufferHandles = new Map<Buffer, GraphBufferHandle>();
+  private readonly importedBufferHandles = new Map<Buffer, GraphBufferHandle>();
+  private readonly dynamicBufferHandles = new Map<DynamicBuffer, GraphBufferHandle>();
   private readonly nodes: GPUCommandGraphNode<Parameters>[] = [];
   private readonly nodeIds = new Set<string>();
   private compiled = false;
@@ -276,7 +277,17 @@ export class GPUCommandGraph<Parameters = void> {
     if (defaultBuffer) {
       validateImportedBuffer(defaultBuffer, descriptor, this.device);
     }
-    return this.addBuffer(new GraphBufferHandle(this, descriptor, false, defaultBuffer));
+    const handle = this.addBuffer(new GraphBufferHandle(this, descriptor, false, defaultBuffer));
+    if (defaultBuffer) {
+      const coreBuffer = getCoreBuffer(defaultBuffer);
+      if (!this.importedBufferHandles.has(coreBuffer)) {
+        this.importedBufferHandles.set(coreBuffer, handle);
+      }
+      if (defaultBuffer instanceof DynamicBuffer && !this.dynamicBufferHandles.has(defaultBuffer)) {
+        this.dynamicBufferHandles.set(defaultBuffer, handle);
+      }
+    }
+    return handle;
   }
 
   /**
@@ -611,13 +622,15 @@ export class GPUCommandGraph<Parameters = void> {
       throw new Error(`GPUCommandGraph import "${id}" requires GPUData.format`);
     }
     const coreBuffer = getCoreBuffer(data.buffer);
-    let handle = this.tableBufferHandles.get(coreBuffer);
+    let handle =
+      data.buffer instanceof DynamicBuffer
+        ? this.dynamicBufferHandles.get(data.buffer)
+        : this.getImportedBufferHandle(coreBuffer);
     if (!handle) {
       handle = this.importBuffer(
         {id, byteLength: coreBuffer.byteLength, usage: coreBuffer.usage},
         data.buffer
       );
-      this.tableBufferHandles.set(coreBuffer, handle);
     }
     return this.createDataView(handle, {
       format: data.format,
@@ -626,6 +639,27 @@ export class GPUCommandGraph<Parameters = void> {
       byteStride: data.byteStride,
       rowByteLength: data.rowByteLength
     });
+  }
+
+  private getImportedBufferHandle(buffer: Buffer): GraphBufferHandle | undefined {
+    const cachedHandle = this.importedBufferHandles.get(buffer);
+    if (cachedHandle?.defaultBuffer && getCoreBuffer(cachedHandle.defaultBuffer) === buffer) {
+      return cachedHandle;
+    }
+    this.importedBufferHandles.delete(buffer);
+    for (const [dynamicBuffer, handle] of this.dynamicBufferHandles) {
+      if (dynamicBuffer.buffer === buffer) {
+        this.importedBufferHandles.set(buffer, handle);
+        return handle;
+      }
+    }
+    for (const handle of this.buffers.values()) {
+      if (handle.defaultBuffer === buffer) {
+        this.importedBufferHandles.set(buffer, handle);
+        return handle;
+      }
+    }
+    return undefined;
   }
 
   private assertBuffer(buffer: GraphBufferHandle): void {
