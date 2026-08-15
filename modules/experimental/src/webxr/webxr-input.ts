@@ -192,6 +192,23 @@ export function getWebXRInputRay(inputState: WebXRInputState): WebXRInputRay | n
   };
 }
 
+export function getWebXRInputRays(
+  inputStates: readonly WebXRInputState[] | null
+): readonly WebXRInputRay[] {
+  return (inputStates || [])
+    .map(inputState => getWebXRInputRay(inputState))
+    .filter((ray): ray is WebXRInputRay => Boolean(ray));
+}
+
+export function getWebXRInputRayByInputSource(
+  rays: readonly WebXRInputRay[] | null,
+  inputSource: XRInputSource | null | undefined
+): WebXRInputRay | null {
+  return (
+    (inputSource && (rays || []).find(ray => ray.inputState.inputSource === inputSource)) || null
+  );
+}
+
 export function getWebXRInputGrip(inputState: WebXRInputState): WebXRInputGrip | null {
   const matrix = inputState.gripMatrix;
   if (!matrix) {
@@ -471,6 +488,17 @@ export function getWebXRInputRayPlaneIntersection(
       ray.origin[2] + ray.direction[2] * distance
     ]
   };
+}
+
+export function getWebXRInputRayPlaneIntersections(
+  rays: readonly WebXRInputRay[] | null,
+  props: WebXRInputRayPlaneIntersectionProps = {}
+): readonly WebXRInputRayPlaneIntersection[] {
+  return (rays || [])
+    .map(ray => getWebXRInputRayPlaneIntersection(ray, props))
+    .filter((intersection): intersection is WebXRInputRayPlaneIntersection =>
+      Boolean(intersection)
+    );
 }
 
 function getWebXRTargetBounds(

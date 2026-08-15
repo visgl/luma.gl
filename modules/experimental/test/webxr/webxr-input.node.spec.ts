@@ -18,7 +18,10 @@ import {
   getWebXRInputActivationState,
   getWebXRInputGrip,
   getWebXRInputRay,
+  getWebXRInputRayByInputSource,
   getWebXRInputRayPlaneIntersection,
+  getWebXRInputRayPlaneIntersections,
+  getWebXRInputRays,
   getWebXRInputStateByInputSource,
   getWebXRInputSourceState
 } from '../../src/webxr/webxr-input';
@@ -48,6 +51,55 @@ test('webxr#getWebXRInputRay handles missing and degenerate target rays', testCa
   );
   testCase.deepEqual(ray?.origin, [3, 4, 5], 'still resolves origin');
   testCase.deepEqual(ray?.direction, [0, 0, -1], 'falls back to forward direction');
+  testCase.end();
+});
+
+test('webxr#getWebXRInputRays filters input snapshots with target rays', testCase => {
+  const firstInputSource = {} as XRInputSource;
+  const secondInputSource = {} as XRInputSource;
+  const firstRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 2, 3, 1]);
+  const secondRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0.5, 2, 1]);
+  const rays = getWebXRInputRays([
+    makeMockWebXRInputState(firstRayMatrix, null, {inputSource: firstInputSource}),
+    makeMockWebXRInputState(null, null),
+    makeMockWebXRInputState(secondRayMatrix, null, {inputSource: secondInputSource})
+  ]);
+
+  testCase.deepEqual(getWebXRInputRays(null), [], 'null input snapshots become empty list');
+  testCase.equal(rays.length, 2, 'filters out missing target-ray poses');
+  testCase.equal(rays[0]?.inputState.inputSource, firstInputSource, 'preserves ray order');
+  testCase.deepEqual(rays[0]?.origin, [1, 2, 3], 'resolves first ray origin');
+  testCase.equal(rays[1]?.inputState.inputSource, secondInputSource, 'keeps later ray');
+  testCase.deepEqual(rays[1]?.origin, [-1, 0.5, 2], 'resolves second ray origin');
+  testCase.end();
+});
+
+test('webxr#getWebXRInputRayByInputSource selects ray identity', testCase => {
+  const firstInputSource = {} as XRInputSource;
+  const secondInputSource = {} as XRInputSource;
+  const missingInputSource = {} as XRInputSource;
+  const rayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 1, 0, 1]);
+  const rays = getWebXRInputRays([
+    makeMockWebXRInputState(rayMatrix, null, {inputSource: firstInputSource}),
+    makeMockWebXRInputState(rayMatrix, null, {inputSource: secondInputSource})
+  ]);
+
+  testCase.equal(
+    getWebXRInputRayByInputSource(rays, secondInputSource)?.inputState.inputSource,
+    secondInputSource,
+    'selects ray by exact input source identity'
+  );
+  testCase.equal(
+    getWebXRInputRayByInputSource(rays, missingInputSource),
+    null,
+    'missing input sources return null'
+  );
+  testCase.equal(
+    getWebXRInputRayByInputSource(null, secondInputSource),
+    null,
+    'null ray lists return null'
+  );
+  testCase.equal(getWebXRInputRayByInputSource(rays, null), null, 'null input sources return null');
   testCase.end();
 });
 
@@ -685,6 +737,38 @@ test('webxr#getWebXRInputRayPlaneIntersection resolves floor hits and custom pla
 
   testCase.equal(wallHit?.distance, 2, 'normalizes custom plane normals');
   testCase.deepEqual(wallHit?.point, [1, 2, 1], 'intersects custom plane');
+  testCase.end();
+});
+
+test('webxr#getWebXRInputRayPlaneIntersections filters batch ray hits', testCase => {
+  const floorRay = {
+    inputState: makeMockWebXRInputState(null),
+    origin: [0, 1.6, 0],
+    direction: [0, -0.8, -0.6],
+    matrix: new Float32Array(16)
+  };
+  const farRay = {
+    inputState: makeMockWebXRInputState(null),
+    origin: [1, 1.6, 0],
+    direction: [0, -0.8, -0.6],
+    matrix: new Float32Array(16)
+  };
+  const parallelRay = {
+    inputState: makeMockWebXRInputState(null),
+    origin: [0, 1, 0],
+    direction: [1, 0, 0],
+    matrix: new Float32Array(16)
+  };
+  const hits = getWebXRInputRayPlaneIntersections([floorRay, farRay, parallelRay], {
+    maxDistance: 2.1
+  });
+
+  testCase.deepEqual(getWebXRInputRayPlaneIntersections(null), [], 'null ray lists become empty');
+  testCase.equal(hits.length, 2, 'filters out rays without usable intersections');
+  testCase.equal(hits[0]?.ray, floorRay, 'keeps first intersecting ray');
+  testCase.deepEqual(hits[0]?.point, [0, 0, -1.2], 'keeps first floor hit');
+  testCase.equal(hits[1]?.ray, farRay, 'keeps later intersecting ray');
+  testCase.deepEqual(hits[1]?.point, [1, 0, -1.2], 'keeps later floor hit');
   testCase.end();
 });
 

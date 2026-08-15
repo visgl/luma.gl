@@ -180,7 +180,10 @@ export {
   getWebXRInputActivationState,
   getWebXRInputGrip,
   getWebXRInputRay,
+  getWebXRInputRayByInputSource,
   getWebXRInputRayPlaneIntersection,
+  getWebXRInputRayPlaneIntersections,
+  getWebXRInputRays,
   getWebXRInputStateByInputSource,
   getWebXRInputSourceState,
   WebXRInputActionManager
