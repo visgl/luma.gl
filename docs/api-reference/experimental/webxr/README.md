@@ -24,6 +24,7 @@
 - [`WebXRHitTestManager`](/docs/api-reference/experimental/webxr/webxr-hit-test-manager) requests an AR hit-test source and resolves hit poses in the app reference space.
 - [`WebXRAnchorManager`](/docs/api-reference/experimental/webxr/webxr-anchor-manager) creates, tracks, resolves, and deletes AR anchors.
 - [`WebXRLightEstimationManager`](/docs/api-reference/experimental/webxr/webxr-light-estimation-manager) resolves AR light probes, direct-light estimates, spherical harmonics, and optional reflection cube maps.
+- [`getWebXRLocomotionState`](/docs/api-reference/experimental/webxr/webxr-locomotion) derives movement, turn, and snap-turn intent from WebXR gamepad axes.
 - [`WebXRMediaLayerManager`](/docs/api-reference/experimental/webxr/webxr-media-layer-manager) creates video-backed quad, cylinder, and equirect composition layers through the XR compositor.
 - [`WebXRMeshDetectionManager`](/docs/api-reference/experimental/webxr/webxr-mesh-detection-manager) resolves detected AR mesh poses, vertex/index buffers, labels, and added/updated/removed frame diffs.
 - [`WebXRPlaneDetectionManager`](/docs/api-reference/experimental/webxr/webxr-plane-detection-manager) resolves detected AR plane poses, polygons, labels, and added/updated/removed frame diffs.

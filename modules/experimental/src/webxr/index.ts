@@ -84,6 +84,18 @@ export {
   getWebXRReflectionTextureFormat,
   WebXRLightEstimationManager
 } from './webxr-light-estimation';
+export type {
+  WebXRLocomotionAxis,
+  WebXRLocomotionHandedness,
+  WebXRLocomotionProps,
+  WebXRLocomotionState
+} from './webxr-locomotion';
+export {
+  getWebXRLocomotionAxes,
+  getWebXRLocomotionAxisValue,
+  getWebXRLocomotionGamepadState,
+  getWebXRLocomotionState
+} from './webxr-locomotion';
 export type {WebXRMediaLayerState, WebXRMediaLayerType} from './webxr-media-layers';
 export {WebXRMediaLayerManager} from './webxr-media-layers';
 export type {
