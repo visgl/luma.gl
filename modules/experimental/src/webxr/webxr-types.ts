@@ -30,6 +30,7 @@ declare global {
   type XREye = 'none' | 'left' | 'right';
   type XRHandedness = 'none' | 'left' | 'right';
   type XRTargetRayMode = 'gaze' | 'tracked-pointer' | 'screen';
+  type XRHitTestTrackableType = 'point' | 'plane' | 'mesh';
   type XRFrameRequestCallback = (time: DOMHighResTimeStamp, frame: XRFrame) => void;
 
   interface XRSystem extends EventTarget {
@@ -54,6 +55,7 @@ declare global {
     cancelAnimationFrame(animationFrameId: number): void;
     end(): Promise<void>;
     requestAnimationFrame(callback: XRFrameRequestCallback): number;
+    requestHitTestSource?(options: XRHitTestOptionsInit): Promise<XRHitTestSource | null>;
     requestReferenceSpace(type: XRReferenceSpaceType): Promise<XRReferenceSpace>;
     updateRenderState(renderStateInit?: XRRenderStateInit): Promise<void>;
   }
@@ -97,8 +99,29 @@ declare global {
     readonly transform: XRRigidTransform;
   }
 
+  interface XRRay {
+    readonly origin: DOMPointReadOnly;
+    readonly direction: DOMPointReadOnly;
+    readonly matrix: Float32Array;
+  }
+
+  interface XRHitTestOptionsInit {
+    space: XRSpace;
+    offsetRay?: XRRay;
+    entityTypes?: XRHitTestTrackableType[];
+  }
+
+  interface XRHitTestSource {
+    cancel(): void;
+  }
+
+  interface XRHitTestResult {
+    getPose(baseSpace: XRSpace): XRPose | undefined;
+  }
+
   interface XRFrame {
     readonly session: XRSession;
+    getHitTestResults?(hitTestSource: XRHitTestSource): XRHitTestResult[];
     getPose(space: XRSpace, baseSpace: XRSpace): XRPose | undefined;
     getViewerPose(referenceSpace: XRReferenceSpace): XRViewerPose | undefined;
   }

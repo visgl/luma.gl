@@ -7,6 +7,12 @@ export {WebXRAnimationFrameProvider} from './webxr-animation-frame-provider';
 export type {WebXRCameraTextureProps} from './webxr-camera-texture';
 export {WebXRCameraTexture} from './webxr-camera-texture';
 export type {
+  WebXRHitTestManagerProps,
+  WebXRHitTestResult,
+  WebXRHitTestState
+} from './webxr-hit-test';
+export {WebXRHitTestManager} from './webxr-hit-test';
+export type {
   WebXRInputRay,
   WebXRInputRayPlaneIntersection,
   WebXRInputRayPlaneIntersectionProps

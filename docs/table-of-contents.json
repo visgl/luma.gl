@@ -419,6 +419,7 @@
             "items": [
               "api-reference/experimental/webxr/README",
               "api-reference/experimental/webxr/webxr-camera-texture",
+              "api-reference/experimental/webxr/webxr-hit-test-manager",
               "api-reference/experimental/webxr/webxr-manager"
             ]
           }
