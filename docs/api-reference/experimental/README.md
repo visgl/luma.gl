@@ -153,6 +153,18 @@ explains nodata, validity masks, owned tile cores, halos, overviews, and replay 
 the API. The [Satellite Raster Lab](/examples/showcase/raster-lab) demonstrates every completed
 capability with real GPU computation and a fixed-size analytical summary.
 
+## GPU-resident Volume Algorithms
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`@luma.gl/experimental/lucim`](/docs/api-reference/experimental/lucim) adds cuCIM-inspired dense
+three-dimensional image processing to caller-owned WebGPU command graphs. Its first four tranches
+define physical volume metadata and calibrated thresholding, cube/octahedron/ball morphology,
+bounded 6/18/26-connected sparse labeling, and fixed-capacity per-label voxel counts and bounds.
+Every stage composes through explicit graph views without hidden submission or readback.
+
 ## GPU-native Trace Exploration
 
 <p class="badges">
