@@ -37,6 +37,7 @@ import GPUSceneGraphApp from '../../examples/experimental/gpu-scene-graph/app';
 import GPUTraceSceneApp from '../../examples/experimental/gpu-trace-scene/app';
 import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
 import LuGraphExplorerApp from '../../examples/experimental/lugraph-explorer/app';
+import LuCIMVolumeLabApp from '../../examples/experimental/lucim-volume-lab/app';
 import {
   initializeGPUSortExample,
   type GPUSortExampleHandle
@@ -1435,6 +1436,19 @@ export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props =
     config={exampleConfig}
     devices={['webgpu']}
     canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const LuCIMVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="lucim-volume-lab"
+    title="LuCIM Volume Lab"
+    subtitle="GPU-resident tri-planar volume segmentation"
+    directory="experimental"
+    template={LuCIMVolumeLabApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     {...props}
   />
 );
