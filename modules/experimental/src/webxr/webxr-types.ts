@@ -110,13 +110,25 @@ declare global {
   }
 
   interface XRRenderStateInit {
+    depthNear?: number;
+    depthFar?: number;
+    inlineVerticalFieldOfView?: number;
     baseLayer?: XRWebGLLayer;
     layers?: readonly XRLayer[];
+  }
+
+  interface XRRenderState {
+    readonly depthNear: number;
+    readonly depthFar: number;
+    readonly inlineVerticalFieldOfView: number | null;
+    readonly baseLayer: XRWebGLLayer | null;
+    readonly layers?: readonly XRLayer[];
   }
 
   interface XRSession extends EventTarget {
     readonly enabledFeatures?: readonly string[];
     readonly inputSources: XRInputSourceArray;
+    readonly renderState?: XRRenderState;
     readonly visibilityState?: XRVisibilityState;
     readonly frameRate?: number;
     readonly supportedFrameRates?: Float32Array | readonly number[];

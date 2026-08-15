@@ -17,6 +17,7 @@ import {
   WebXRManager,
   WebXRPlaneDetectionManager,
   WebXRReferenceSpaceManager,
+  WebXRRenderStateManager,
   WebXRSessionStateManager,
   getWebXRBoundsState,
   getWebXRGamepadState,
@@ -405,6 +406,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     orientations: ['horizontal']
   });
   readonly webXRReferenceSpaceManager = new WebXRReferenceSpaceManager();
+  readonly webXRRenderStateManager = new WebXRRenderStateManager({
+    depthNear: 0.05,
+    depthFar: 100
+  });
   readonly webXRSessionStateManager = new WebXRSessionStateManager({
     targetFrameRate: 'highest'
   });
@@ -568,6 +573,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRMeshDetectionManager.destroy();
     this.webXRPlaneDetectionManager.destroy();
     this.webXRReferenceSpaceManager.destroy();
+    this.webXRRenderStateManager.destroy();
     this.webXRSessionStateManager.destroy();
     this.webXRManager.destroy();
   }
@@ -659,6 +665,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           : {})
       });
       this.webXRReferenceSpaceManager.setReferenceSpace(this.webXRManager.referenceSpace);
+      await this.webXRRenderStateManager
+        .setSession(session)
+        .catch(() => this.webXRRenderStateManager.clearSession());
       this.webXRHandTrackingManager.setSession(session, this.webXRManager.referenceSpace);
       if (sessionMode === 'immersive-ar') {
         await this.webXRHitTestManager
@@ -1017,6 +1026,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRMeshDetectionManager.clearSession();
     this.webXRPlaneDetectionManager.clearSession();
     this.webXRReferenceSpaceManager.clearReferenceSpace();
+    this.webXRRenderStateManager.clearSession();
     this.webXRSessionStateManager.clearSession();
     this.webXRManager.clearSession();
     AppAnimationLoopTemplate.notifyCurrentListeners();

@@ -28,6 +28,7 @@
 - [`WebXRMeshDetectionManager`](/docs/api-reference/experimental/webxr/webxr-mesh-detection-manager) resolves detected AR mesh poses, vertex/index buffers, labels, and added/updated/removed frame diffs.
 - [`WebXRPlaneDetectionManager`](/docs/api-reference/experimental/webxr/webxr-plane-detection-manager) resolves detected AR plane poses, polygons, labels, and added/updated/removed frame diffs.
 - [`WebXRReferenceSpaceManager`](/docs/api-reference/experimental/webxr/webxr-reference-space-manager) tracks reference-space reset events and forwards offset reference-space creation.
+- [`WebXRRenderStateManager`](/docs/api-reference/experimental/webxr/webxr-render-state-manager) updates and snapshots WebXR render-state clip planes and inline field of view.
 - [`WebXRSessionStateManager`](/docs/api-reference/experimental/webxr/webxr-session-state-manager) tracks session visibility, frame rates, and optional target frame-rate requests.
 
 WebGPU raw camera textures are not part of this v10 work in progress.
