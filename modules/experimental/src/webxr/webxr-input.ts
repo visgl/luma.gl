@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {NumberArray3} from '@math.gl/core';
+import {getWebXRGamepadState} from './webxr-gamepad';
 import type {WebXRInputState} from './webxr-manager';
 
 /** Experimental v10 world-space target ray derived from one WebXR input source. */
@@ -36,6 +37,19 @@ export type WebXRInputSourceState = {
   hasTargetRay: boolean;
   hasGrip: boolean;
   hasGamepad: boolean;
+};
+
+/** Experimental v10 normalized select/squeeze activation for one WebXR input source. */
+export type WebXRInputActivationState = {
+  inputState: WebXRInputState;
+  selectActive: boolean;
+  squeezeActive: boolean;
+  triggerValue: number;
+  squeezeValue: number;
+  primaryAction: number;
+  squeezeAction: number;
+  isPrimaryActive: boolean;
+  isSqueezeActive: boolean;
 };
 
 export type WebXRInputRayPlaneIntersectionProps = {
@@ -116,6 +130,28 @@ export function getWebXRInputSourceState(inputState: WebXRInputState): WebXRInpu
   };
 }
 
+export function getWebXRInputActivationState(
+  inputState: WebXRInputState
+): WebXRInputActivationState {
+  const gamepadState = getWebXRGamepadState(inputState);
+  const triggerValue = clampActionValue(gamepadState?.primaryTrigger?.value ?? 0);
+  const squeezeValue = clampActionValue(gamepadState?.primarySqueeze?.value ?? 0);
+  const primaryAction = Math.max(inputState.selectActive ? 1 : 0, triggerValue);
+  const squeezeAction = Math.max(inputState.squeezeActive ? 1 : 0, squeezeValue);
+
+  return {
+    inputState,
+    selectActive: inputState.selectActive,
+    squeezeActive: inputState.squeezeActive,
+    triggerValue,
+    squeezeValue,
+    primaryAction,
+    squeezeAction,
+    isPrimaryActive: primaryAction > 0,
+    isSqueezeActive: squeezeAction > 0
+  };
+}
+
 export function getWebXRInputRayPlaneIntersection(
   ray: WebXRInputRay,
   props: WebXRInputRayPlaneIntersectionProps = {}
@@ -158,6 +194,10 @@ export function getWebXRInputRayPlaneIntersection(
       ray.origin[2] + ray.direction[2] * distance
     ]
   };
+}
+
+function clampActionValue(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
 function dotVector3(left: NumberArray3, right: NumberArray3): number {

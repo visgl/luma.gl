@@ -4,6 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {
+  getWebXRInputActivationState,
   getWebXRInputGrip,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
@@ -105,6 +106,55 @@ test('webxr#getWebXRInputSourceState classifies input source capabilities', test
   testCase.end();
 });
 
+test('webxr#getWebXRInputActivationState normalizes events and gamepad buttons', testCase => {
+  const eventInputState = makeMockWebXRInputState(null, null, {
+    selectActive: true,
+    squeezeActive: true
+  });
+  const eventActivationState = getWebXRInputActivationState(eventInputState);
+
+  testCase.equal(eventActivationState.inputState, eventInputState, 'retains source input state');
+  testCase.equal(eventActivationState.primaryAction, 1, 'select events drive primary action');
+  testCase.equal(eventActivationState.squeezeAction, 1, 'squeeze events drive squeeze action');
+  testCase.equal(eventActivationState.isPrimaryActive, true, 'marks primary action active');
+  testCase.equal(eventActivationState.isSqueezeActive, true, 'marks squeeze action active');
+
+  const gamepadInputState = makeMockWebXRInputState(null, null, {
+    gamepad: makeMockXRStandardGamepad([
+      {value: 0.42, pressed: false, touched: true},
+      {value: 0.7, pressed: true, touched: true}
+    ])
+  });
+  const gamepadActivationState = getWebXRInputActivationState(gamepadInputState);
+
+  testCase.equal(gamepadActivationState.selectActive, false, 'keeps select event state');
+  testCase.equal(gamepadActivationState.triggerValue, 0.42, 'uses xr-standard trigger value');
+  testCase.equal(gamepadActivationState.squeezeValue, 0.7, 'uses xr-standard squeeze value');
+  testCase.equal(
+    gamepadActivationState.primaryAction,
+    0.42,
+    'gamepad triggers drive primary action'
+  );
+  testCase.equal(
+    gamepadActivationState.squeezeAction,
+    0.7,
+    'gamepad squeeze drives squeeze action'
+  );
+
+  const clampedActivationState = getWebXRInputActivationState(
+    makeMockWebXRInputState(null, null, {
+      gamepad: makeMockXRStandardGamepad([
+        {value: 1.5, pressed: true, touched: true},
+        {value: -0.2, pressed: false, touched: false}
+      ])
+    })
+  );
+
+  testCase.equal(clampedActivationState.triggerValue, 1, 'clamps trigger values to one');
+  testCase.equal(clampedActivationState.squeezeValue, 0, 'clamps squeeze values to zero');
+  testCase.end();
+});
+
 test('webxr#getWebXRInputRayPlaneIntersection resolves floor hits and custom planes', testCase => {
   const floorRay = {
     inputState: makeMockWebXRInputState(null),
@@ -187,7 +237,17 @@ function makeMockWebXRInputState(
     targetRayMatrix,
     gripPose: null,
     gripMatrix,
-    selectActive: false,
-    squeezeActive: false
+    selectActive: props.selectActive ?? false,
+    squeezeActive: props.squeezeActive ?? false
   };
+}
+
+function makeMockXRStandardGamepad(
+  buttons: {value: number; pressed: boolean; touched: boolean}[]
+): Gamepad {
+  return {
+    mapping: 'xr-standard',
+    buttons: buttons as GamepadButton[],
+    axes: []
+  } as Gamepad;
 }

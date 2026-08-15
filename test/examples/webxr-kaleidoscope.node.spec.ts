@@ -258,7 +258,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
-    expect(applicationSource).toContain('getWebXRGamepadState');
+    expect(applicationSource).toContain('getWebXRInputActivationState');
     expect(applicationSource).toContain('getWebXRInputGrip');
     expect(applicationSource).toContain('getWebXRInputRay');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
@@ -287,17 +287,17 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
     expect(rayMethod).toContain('const inputSourceState = getWebXRInputSourceState(input)');
+    expect(rayMethod).toContain('const inputActivationState = getWebXRInputActivationState(input)');
     expect(rayMethod).toContain('const inputGrip = getWebXRInputGrip(input)');
     expect(rayMethod).toContain('if (inputSourceState.isController && inputGrip)');
     expect(rayMethod).toContain('this.controllerGripMatrix.copy(inputGrip.matrix)');
     expect(rayMethod).toContain('multiplyRight(this.controllerGripMatrix.copy(inputGrip.matrix))');
-    expect(rayMethod).toContain('cameraMix: input.squeezeActive');
+    expect(rayMethod).toContain('cameraMix: inputActivationState.isSqueezeActive');
     expect(rayMethod).toContain("inputSourceState.handedness === 'right'");
     expect(rayMethod).toContain('this.controllerGripModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerGripModel.draw(renderPass)');
     expect(rayMethod).toContain('const inputRay = getWebXRInputRay(input)');
-    expect(rayMethod).toContain('const gamepadState = getWebXRGamepadState(input)');
-    expect(rayMethod).toContain('gamepadState?.primaryTrigger?.value || 0');
+    expect(rayMethod).toContain('const controllerActivation = inputActivationState.primaryAction');
     expect(rayMethod).toContain('!inputSourceState.usesTrackedPointer');
     expect(rayMethod).toContain('!inputRay');
     expect(rayMethod).toContain('this.controllerRayMatrix.copy(inputRay.matrix)');

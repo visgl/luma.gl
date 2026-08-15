@@ -23,8 +23,8 @@ import {
   getWebXRDepthSensingSessionInit,
   getWebXRDOMOverlaySessionInit,
   getWebXRBoundsState,
-  getWebXRGamepadState,
   getWebXRHandPinch,
+  getWebXRInputActivationState,
   getWebXRInputGrip,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
@@ -920,6 +920,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   ): void {
     for (const input of inputState) {
       const inputSourceState = getWebXRInputSourceState(input);
+      const inputActivationState = getWebXRInputActivationState(input);
       const inputGrip = getWebXRInputGrip(input);
       if (inputSourceState.isController && inputGrip) {
         this.modelViewProjectionMatrix
@@ -931,7 +932,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             app: {
               modelViewProjectionMatrix: this.modelViewProjectionMatrix,
               time,
-              cameraMix: input.squeezeActive
+              cameraMix: inputActivationState.isSqueezeActive
                 ? 1
                 : inputSourceState.handedness === 'right'
                   ? 0.45
@@ -949,11 +950,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (!inputSourceState.usesTrackedPointer || !inputRay) {
         continue;
       }
-      const gamepadState = getWebXRGamepadState(input);
-      const controllerActivation = Math.max(
-        input.selectActive ? 1 : 0,
-        gamepadState?.primaryTrigger?.value || 0
-      );
+      const controllerActivation = inputActivationState.primaryAction;
 
       this.modelViewProjectionMatrix
         .copy(view.projectionMatrix)

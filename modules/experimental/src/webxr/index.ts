@@ -150,6 +150,7 @@ export type {
 } from './webxr-hit-test';
 export {WebXRHitTestManager} from './webxr-hit-test';
 export type {
+  WebXRInputActivationState,
   WebXRInputGrip,
   WebXRInputRay,
   WebXRInputRayPlaneIntersection,
@@ -158,6 +159,7 @@ export type {
   WebXRInputSourceState
 } from './webxr-input';
 export {
+  getWebXRInputActivationState,
   getWebXRInputGrip,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
