@@ -11,6 +11,7 @@ import {
   WebXRCameraTexture,
   WebXRManager,
   getWebXRInputRay,
+  getWebXRInputRayPlaneIntersection,
   type WebXRFrameState,
   type WebXRInputState
 } from '@luma.gl/experimental';
@@ -353,10 +354,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly fallbackTexture: Texture;
   readonly model: Model;
   readonly controllerRayModel: Model;
+  readonly controllerReticleModel: Model;
   readonly webXRManager: WebXRManager;
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly controllerRayMatrix = new Matrix4();
+  readonly controllerReticleMatrix = new Matrix4();
   readonly viewMatrix = new Matrix4().lookAt({
     eye: [0.32, 0.24, 4.4],
     center: CAMERA_TARGET
@@ -434,6 +437,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
+    this.controllerReticleModel = new Model(device, {
+      id: 'immersive-prism-controller-reticles',
+      source: CONTROLLER_RAY_WGSL_SHADER,
+      vs: CONTROLLER_RAY_VS_GLSL,
+      fs: CONTROLLER_RAY_FS_GLSL,
+      geometry: makeControllerReticleGeometry(),
+      bindings: {
+        app: this.uniformStore.getManagedUniformBuffer('app')
+      },
+      parameters: {
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal',
+        blend: true,
+        blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
     this.initializePreviewControls();
 
     if (typeof window !== 'undefined') {
@@ -452,6 +476,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       window.removeEventListener('keydown', this._keyDownListener);
     }
     this.orbitControls?.destroy();
+    this.controllerReticleModel.destroy();
     this.controllerRayModel.destroy();
     this.model.destroy();
     this.fallbackTexture.destroy();
@@ -592,7 +617,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
       renderPass.setParameters({viewport: view.viewport});
       this.drawPortal(renderPass);
-      this.drawControllerRays(renderPass, view, inputState, time);
+      this.drawControllerTargets(renderPass, view, inputState, time);
       renderPass.end();
     }
   }
@@ -620,7 +645,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model.draw(renderPass);
   }
 
-  private drawControllerRays(
+  private drawControllerTargets(
     renderPass: ReturnType<Device['beginRenderPass']>,
     view: WebXRFrameState['views'][number],
     inputState: readonly WebXRInputState[],
@@ -632,11 +657,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         continue;
       }
 
-      this.controllerRayMatrix.copy(inputRay.matrix);
       this.modelViewProjectionMatrix
         .copy(view.projectionMatrix)
         .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
-        .multiplyRight(this.controllerRayMatrix);
+        .multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix));
       this.uniformStore.setUniforms(
         {
           app: {
@@ -649,6 +673,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
       this.controllerRayModel.predraw(this.device.commandEncoder);
       this.controllerRayModel.draw(renderPass);
+
+      const floorHit = getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8});
+      if (floorHit) {
+        this.controllerReticleMatrix.identity().translate(floorHit.point);
+        this.modelViewProjectionMatrix
+          .copy(view.projectionMatrix)
+          .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
+          .multiplyRight(this.controllerReticleMatrix);
+        this.uniformStore.setUniforms(
+          {
+            app: {
+              modelViewProjectionMatrix: this.modelViewProjectionMatrix,
+              time,
+              cameraMix: input.selectActive ? 1 : 0
+            }
+          },
+          this.device.commandEncoder
+        );
+        this.controllerReticleModel.predraw(this.device.commandEncoder);
+        this.controllerReticleModel.draw(renderPass);
+      }
     }
   }
 
@@ -756,6 +801,35 @@ function makeControllerRayGeometry(): Geometry {
       positions: {
         size: 3,
         value: new Float32Array([0, 0, 0, 0, 0, -3.2])
+      }
+    }
+  });
+}
+
+function makeControllerReticleGeometry(): Geometry {
+  const positions: number[] = [];
+  const segmentCount = 32;
+  const radius = 0.12;
+
+  for (let segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++) {
+    const startAngle = (segmentIndex / segmentCount) * Math.PI * 2;
+    const endAngle = ((segmentIndex + 1) / segmentCount) * Math.PI * 2;
+    positions.push(
+      Math.cos(startAngle) * radius,
+      0,
+      Math.sin(startAngle) * radius,
+      Math.cos(endAngle) * radius,
+      0,
+      Math.sin(endAngle) * radius
+    );
+  }
+
+  return new Geometry({
+    topology: 'line-list',
+    attributes: {
+      positions: {
+        size: 3,
+        value: new Float32Array(positions)
       }
     }
   });

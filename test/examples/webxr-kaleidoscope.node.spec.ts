@@ -129,7 +129,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('new Set<Framebuffer>()');
     expect(renderMethod).toContain('!renderedFramebuffers.has(framebuffer)');
     expect(renderMethod).toContain('renderedFramebuffers.add(framebuffer)');
-    expect(renderMethod).toContain('this.drawControllerRays(renderPass, view, inputState, time)');
+    expect(renderMethod).toContain(
+      'this.drawControllerTargets(renderPass, view, inputState, time)'
+    );
     expect(renderMethod).toMatch(
       /this\.xrSessionMode\s*===\s*'immersive-ar'\s*\?\s*\[0,\s*0,\s*0,\s*0\]/
     );
@@ -144,7 +146,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       renderMethod.indexOf('renderPass.setParameters({viewport: view.viewport})')
     ).toBeLessThan(renderMethod.indexOf('this.drawPortal(renderPass)'));
     expect(renderMethod.indexOf('this.drawPortal(renderPass)')).toBeLessThan(
-      renderMethod.indexOf('this.drawControllerRays(renderPass, view, inputState, time)')
+      renderMethod.indexOf('this.drawControllerTargets(renderPass, view, inputState, time)')
     );
     expect(prepareMethod).toContain('this.uniformStore.setUniforms(');
     expect(prepareMethod).toContain('this.device.commandEncoder');
@@ -162,7 +164,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       renderMethodStart
     );
     const renderMethod = applicationSource.slice(renderMethodStart, renderMethodEnd);
-    const rayMethodStart = applicationSource.indexOf('private drawControllerRays(');
+    const rayMethodStart = applicationSource.indexOf('private drawControllerTargets(');
     const rayMethodEnd = applicationSource.indexOf(
       '\n  private updateModelMatrix(',
       rayMethodStart
@@ -171,10 +173,14 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRInputRay');
+    expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
     expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
     expect(applicationSource).toContain("id: 'immersive-prism-controller-rays'");
+    expect(applicationSource).toContain("id: 'immersive-prism-controller-reticles'");
     expect(applicationSource).toContain("topology: 'line-list'");
     expect(applicationSource).toContain('new Float32Array([0, 0, 0, 0, 0, -3.2])');
+    expect(applicationSource).toContain('function makeControllerReticleGeometry()');
+    expect(applicationSource).toContain('const segmentCount = 32');
     expect(renderMethod).toContain('inputState: readonly WebXRInputState[]');
     expect(renderMethod).toContain('renderPass.end()');
     expect(rayMethodStart).toBeGreaterThan(0);
@@ -183,10 +189,17 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain("input.targetRayMode !== 'tracked-pointer'");
     expect(rayMethod).toContain('!inputRay');
     expect(rayMethod).toContain('this.controllerRayMatrix.copy(inputRay.matrix)');
-    expect(rayMethod).toContain('multiplyRight(this.controllerRayMatrix)');
+    expect(rayMethod).toContain('multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix))');
     expect(rayMethod).toContain('cameraMix: input.selectActive ? 1 : 0');
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
+    expect(rayMethod).toContain('getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8})');
+    expect(rayMethod).toContain(
+      'this.controllerReticleMatrix.identity().translate(floorHit.point)'
+    );
+    expect(rayMethod).toContain('multiplyRight(this.controllerReticleMatrix)');
+    expect(rayMethod).toContain('this.controllerReticleModel.predraw(this.device.commandEncoder)');
+    expect(rayMethod).toContain('this.controllerReticleModel.draw(renderPass)');
   });
 
   test('requests isolated XR-compatible website devices while preserving preview fallback', () => {
