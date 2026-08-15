@@ -86,6 +86,7 @@ export type WebXRCompositionLayerState = {
   xrFrame: XRFrame;
   session: XRSession;
   layer: XRCompositionLayer;
+  controls: WebXRCompositionLayerControlsState;
   subImage: XRWebGLSubImage;
   framebuffer: Framebuffer;
   colorTexture: Texture;
@@ -95,6 +96,31 @@ export type WebXRCompositionLayerState = {
   layout: XRLayerLayout;
   needsRedraw: boolean;
   imageIndex: number | null;
+};
+```
+
+### `WebXRCompositionLayerControlsProps`
+
+```ts
+export type WebXRCompositionLayerControlsProps = {
+  blendTextureSourceAlpha?: boolean;
+  forceMonoPresentation?: boolean;
+  opacity?: number;
+  quality?: XRLayerQuality;
+};
+```
+
+### `WebXRCompositionLayerControlsState`
+
+```ts
+export type WebXRCompositionLayerControlsState = {
+  layer: XRCompositionLayer;
+  blendTextureSourceAlpha: boolean;
+  forceMonoPresentation: boolean;
+  opacity: number;
+  mipLevels: number;
+  quality: XRLayerQuality;
+  needsRedraw: boolean;
 };
 ```
 
@@ -124,6 +150,18 @@ Creates and tracks an `XREquirectLayer`.
 
 Creates and tracks an `XRCubeLayer`.
 
+### `setLayerControls(layer: XRCompositionLayer, props: WebXRCompositionLayerControlsProps): WebXRCompositionLayerControlsState`
+
+Updates common composition-layer controls such as opacity, source alpha blending, mono presentation, and compositor quality.
+
+### `getLayerControls(layer: XRCompositionLayer): WebXRCompositionLayerControlsState`
+
+Returns common composition-layer controls without resolving a frame subimage.
+
+### `destroyLayer(layer: XRCompositionLayer): void`
+
+Removes event listeners, releases luma wrapper resources, and calls `XRCompositionLayer.destroy()` for a tracked layer.
+
 ### `updateRenderState(layers: readonly XRLayer[]): Promise<void>`
 
 Updates the session render state with the supplied WebXR layers.
@@ -145,3 +183,11 @@ Clears the current session wrappers.
 ### `getWebXRLayersSessionInit(props?: WebXRLayersSessionInitProps): XRSessionInit`
 
 Builds a minimal `XRSessionInit` fragment for requesting the `layers` feature.
+
+### `setWebXRCompositionLayerControls(layer, props): WebXRCompositionLayerControlsState`
+
+Updates common controls on any `XRCompositionLayer` and returns the resulting state.
+
+### `getWebXRCompositionLayerControls(layer, needsRedrawOverride?): WebXRCompositionLayerControlsState`
+
+Returns a snapshot of common composition-layer controls. `needsRedrawOverride` can include manager-observed redraw events that have not yet been consumed by `getLayerState()`.

@@ -24,6 +24,7 @@ export type WebXRCompositionLayerState = {
   xrFrame: XRFrame;
   session: XRSession;
   layer: XRCompositionLayer;
+  controls: WebXRCompositionLayerControlsState;
   subImage: XRWebGLSubImage;
   framebuffer: Framebuffer;
   colorTexture: Texture;
@@ -33,6 +34,23 @@ export type WebXRCompositionLayerState = {
   layout: XRLayerLayout;
   needsRedraw: boolean;
   imageIndex: number | null;
+};
+
+export type WebXRCompositionLayerControlsProps = {
+  blendTextureSourceAlpha?: boolean;
+  forceMonoPresentation?: boolean;
+  opacity?: number;
+  quality?: XRLayerQuality;
+};
+
+export type WebXRCompositionLayerControlsState = {
+  layer: XRCompositionLayer;
+  blendTextureSourceAlpha: boolean;
+  forceMonoPresentation: boolean;
+  opacity: number;
+  mipLevels: number;
+  quality: XRLayerQuality;
+  needsRedraw: boolean;
 };
 
 type ResolvedWebXRCompositionLayerManagerProps = Required<WebXRCompositionLayerManagerProps>;
@@ -89,6 +107,35 @@ export class WebXRCompositionLayerManager {
     const layer = this.xrWebGLBinding.createQuadLayer(init);
     this._trackLayer(layer);
     return layer;
+  }
+
+  setLayerControls(
+    layer: XRCompositionLayer,
+    props: WebXRCompositionLayerControlsProps
+  ): WebXRCompositionLayerControlsState {
+    if (!this._layers.has(layer)) {
+      throw new Error('XRCompositionLayer is not tracked by this manager');
+    }
+    return setWebXRCompositionLayerControls(layer, props);
+  }
+
+  getLayerControls(layer: XRCompositionLayer): WebXRCompositionLayerControlsState {
+    if (!this._layers.has(layer)) {
+      throw new Error('XRCompositionLayer is not tracked by this manager');
+    }
+    return getWebXRCompositionLayerControls(layer, this._redrawLayers.has(layer));
+  }
+
+  destroyLayer(layer: XRCompositionLayer): void {
+    if (!this._layers.has(layer)) {
+      return;
+    }
+
+    layer.removeEventListener('redraw', this._redrawListener);
+    this._redrawLayers.delete(layer);
+    this._layers.delete(layer);
+    this._destroyLayerResources(layer);
+    layer.destroy();
   }
 
   createCylinderLayer(init: XRCylinderLayerInit): XRCylinderLayer {
@@ -150,6 +197,7 @@ export class WebXRCompositionLayerManager {
       xrFrame,
       session: this.session,
       layer,
+      controls: getWebXRCompositionLayerControls(layer, needsRedraw),
       subImage,
       framebuffer: resources.framebuffer,
       colorTexture: resources.colorTexture,
@@ -251,17 +299,26 @@ export class WebXRCompositionLayerManager {
   }
 
   private _destroyResources(): void {
-    for (const resourceList of this._resources.values()) {
-      for (const resources of resourceList) {
-        if (!resources) {
-          continue;
-        }
-        resources.framebuffer.destroy();
-        resources.depthStencilTexture?.destroy();
-        resources.colorTexture.destroy();
-      }
+    for (const layer of this._resources.keys()) {
+      this._destroyLayerResources(layer);
     }
     this._resources.clear();
+  }
+
+  private _destroyLayerResources(layer: XRCompositionLayer): void {
+    const resourceList = this._resources.get(layer);
+    if (!resourceList) {
+      return;
+    }
+    for (const resources of resourceList) {
+      if (!resources) {
+        continue;
+      }
+      resources.framebuffer.destroy();
+      resources.depthStencilTexture?.destroy();
+      resources.colorTexture.destroy();
+    }
+    this._resources.delete(layer);
   }
 
   static defaultProps: ResolvedWebXRCompositionLayerManagerProps = {
@@ -274,6 +331,40 @@ export class WebXRCompositionLayerManager {
 export function getWebXRLayersSessionInit(props: WebXRLayersSessionInitProps = {}): XRSessionInit {
   return {
     [props.required ? 'requiredFeatures' : 'optionalFeatures']: ['layers']
+  };
+}
+
+export function setWebXRCompositionLayerControls(
+  layer: XRCompositionLayer,
+  props: WebXRCompositionLayerControlsProps
+): WebXRCompositionLayerControlsState {
+  if (props.blendTextureSourceAlpha !== undefined) {
+    layer.blendTextureSourceAlpha = props.blendTextureSourceAlpha;
+  }
+  if (props.forceMonoPresentation !== undefined) {
+    layer.forceMonoPresentation = props.forceMonoPresentation;
+  }
+  if (props.opacity !== undefined) {
+    layer.opacity = props.opacity;
+  }
+  if (props.quality !== undefined) {
+    layer.quality = props.quality;
+  }
+  return getWebXRCompositionLayerControls(layer);
+}
+
+export function getWebXRCompositionLayerControls(
+  layer: XRCompositionLayer,
+  needsRedrawOverride = false
+): WebXRCompositionLayerControlsState {
+  return {
+    layer,
+    blendTextureSourceAlpha: layer.blendTextureSourceAlpha,
+    forceMonoPresentation: layer.forceMonoPresentation,
+    opacity: layer.opacity,
+    mipLevels: layer.mipLevels,
+    quality: layer.quality,
+    needsRedraw: layer.needsRedraw || needsRedrawOverride
   };
 }
 

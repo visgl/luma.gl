@@ -50,11 +50,18 @@ export type {
 } from './webxr-haptics';
 export {getWebXRInputHapticActuator, pulseWebXRInputHaptics} from './webxr-haptics';
 export type {
+  WebXRCompositionLayerControlsProps,
+  WebXRCompositionLayerControlsState,
   WebXRCompositionLayerManagerProps,
   WebXRCompositionLayerState,
   WebXRLayersSessionInitProps
 } from './webxr-layers';
-export {getWebXRLayersSessionInit, WebXRCompositionLayerManager} from './webxr-layers';
+export {
+  getWebXRCompositionLayerControls,
+  getWebXRLayersSessionInit,
+  setWebXRCompositionLayerControls,
+  WebXRCompositionLayerManager
+} from './webxr-layers';
 export type {
   WebXRLightEstimationManagerProps,
   WebXRLightEstimationSessionInitProps,

@@ -5,7 +5,9 @@
 import type {Device, Framebuffer, FramebufferProps, Texture, TextureProps} from '@luma.gl/core';
 import test from 'test/utils/vitest-tape';
 import {
+  getWebXRCompositionLayerControls,
   getWebXRLayersSessionInit,
+  setWebXRCompositionLayerControls,
   WebXRCompositionLayerManager
 } from '../../src/webxr/webxr-layers';
 
@@ -20,6 +22,10 @@ type MockTexture = Texture & {
 type MockTextureProps = TextureProps & {
   handle?: unknown;
   _isHandleBorrowed?: boolean;
+};
+
+type MockXRCompositionLayer = XRCompositionLayer & {
+  destroyCount: number;
 };
 
 test('webxr#WebXRCompositionLayerManager creates quad layers and resolves subimages', async testCase => {
@@ -66,6 +72,11 @@ test('webxr#WebXRCompositionLayerManager creates quad layers and resolves subima
     testCase.equal(state?.session, session, 'retains source session');
     testCase.equal(state?.xrFrame, frame, 'retains source frame');
     testCase.equal(state?.layer, layer, 'retains composition layer');
+    testCase.deepEqual(
+      state?.controls,
+      getWebXRCompositionLayerControls(layer),
+      'exposes common layer controls'
+    );
     testCase.equal(state?.subImage, subImage, 'retains source subimage');
     testCase.deepEqual(state?.viewport, [4, 8, 128, 64], 'exposes subimage viewport');
     testCase.equal(state?.layout, 'mono', 'exposes layer layout');
@@ -151,8 +162,33 @@ test('webxr#WebXRCompositionLayerManager handles cylinder layers and helpers', a
     });
     const state = manager.getLayerState({session} as XRFrame, layer, 'left');
     const textureProps = state?.colorTexture.props as MockTextureProps | undefined;
+    const controls = manager.setLayerControls(layer, {
+      blendTextureSourceAlpha: false,
+      forceMonoPresentation: true,
+      opacity: 0.42,
+      quality: 'text-optimized'
+    });
 
     testCase.equal(state?.eye, 'left', 'retains requested eye');
+    testCase.deepEqual(
+      controls,
+      {
+        layer,
+        blendTextureSourceAlpha: false,
+        forceMonoPresentation: true,
+        opacity: 0.42,
+        mipLevels: 1,
+        quality: 'text-optimized',
+        needsRedraw: false
+      },
+      'updates and snapshots common layer controls'
+    );
+    layer.dispatchEvent(new Event('redraw'));
+    testCase.equal(
+      manager.getLayerControls(layer).needsRedraw,
+      true,
+      'controls include redraw state'
+    );
     testCase.equal(state?.depthStencilTexture, null, 'depth texture is optional');
     testCase.equal(textureProps?.dimension, '2d', 'uses 2d texture without image index');
     testCase.equal(textureProps?.format, 'rgba16float', 'uses configured color texture format');
@@ -160,6 +196,13 @@ test('webxr#WebXRCompositionLayerManager handles cylinder layers and helpers', a
       () => manager.getLayerState({session: makeMockXRSession()} as XRFrame, layer),
       /different XRSession/,
       'rejects frames from another session'
+    );
+    manager.destroyLayer(layer);
+    testCase.equal((layer as MockXRCompositionLayer).destroyCount, 1, 'destroys tracked layer');
+    testCase.equal(
+      (state?.colorTexture as MockTexture | undefined)?.destroyCount,
+      1,
+      'destroys layer color wrapper'
     );
   } finally {
     globalThis.XRWebGLBinding = originalXRWebGLBinding;
@@ -174,6 +217,15 @@ test('webxr#WebXRCompositionLayerManager handles cylinder layers and helpers', a
     getWebXRLayersSessionInit({required: true}),
     {requiredFeatures: ['layers']},
     'creates required layers session init'
+  );
+  const standaloneLayer = makeMockCompositionLayer('mono', {
+    viewPixelWidth: 1,
+    viewPixelHeight: 1
+  } as XRQuadLayerInit);
+  testCase.equal(
+    setWebXRCompositionLayerControls(standaloneLayer, {opacity: 0.75}).opacity,
+    0.75,
+    'standalone helper updates common controls'
   );
   testCase.end();
 });
@@ -332,7 +384,7 @@ function makeMockXRWebGLBindingClass(subImage: XRWebGLSubImage): typeof XRWebGLB
 function makeMockCompositionLayer(
   layout: XRLayerLayout,
   init: XRQuadLayerInit | XRCylinderLayerInit | XREquirectLayerInit | XRCubeLayerInit
-): XRCompositionLayer {
+): MockXRCompositionLayer {
   return Object.assign(new EventTarget(), {
     layout,
     blendTextureSourceAlpha: true,
@@ -341,10 +393,13 @@ function makeMockCompositionLayer(
     mipLevels: init.mipLevels || 1,
     quality: 'default' as XRLayerQuality,
     needsRedraw: false,
+    destroyCount: 0,
     space: init.space,
     transform: init.transform,
-    destroy() {}
-  }) as XRCompositionLayer;
+    destroy() {
+      this.destroyCount++;
+    }
+  }) as MockXRCompositionLayer;
 }
 
 function makeMockXRWebGLSubImage(
