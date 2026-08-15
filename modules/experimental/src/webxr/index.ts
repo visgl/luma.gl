@@ -143,6 +143,7 @@ export {
 } from './webxr-plane-detection';
 export type {
   WebXRHitTestManagerProps,
+  WebXRHitTestPlacementResultProps,
   WebXRHitTestResult,
   WebXRHitTestResultSelectionProps,
   WebXRHitTestState,
@@ -151,6 +152,7 @@ export type {
   WebXRTransientInputHitTestResultSelectionProps
 } from './webxr-hit-test';
 export {
+  getWebXRHitTestPlacementResult,
   getWebXRHitTestResult,
   getWebXRTransientInputHitTestResult,
   WebXRHitTestManager

@@ -4,6 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {
+  getWebXRHitTestPlacementResult,
   getWebXRHitTestResult,
   getWebXRTransientInputHitTestResult,
   WebXRHitTestManager
@@ -71,6 +72,11 @@ test('webxr#WebXRHitTestManager resolves AR hit-test poses', async testCase => {
   testCase.equal(hitTestState?.hits[0]?.pose, firstPose, 'retains hit pose');
   testCase.equal(hitTestState?.hits[0]?.matrix, firstPose.transform.matrix, 'exposes hit matrix');
   testCase.equal(getWebXRHitTestResult(hitTestState), hitTestState?.hits[0], 'selects first hit');
+  testCase.equal(
+    getWebXRHitTestPlacementResult(hitTestState),
+    hitTestState?.hits[0],
+    'placement selection falls back to regular hits'
+  );
   testCase.equal(
     getWebXRHitTestResult(hitTestState, {index: 1}),
     null,
@@ -195,6 +201,16 @@ test('webxr#WebXRHitTestManager resolves transient input hit-test poses', async 
     getWebXRTransientInputHitTestResult(null),
     null,
     'null transient hit states return null'
+  );
+  testCase.equal(
+    getWebXRHitTestPlacementResult(hitTestState),
+    hitTestState?.transientInput[0]?.results[0],
+    'placement selection prefers transient input hits'
+  );
+  testCase.equal(
+    getWebXRHitTestPlacementResult(hitTestState, {preferTransientInput: false}),
+    hitTestState?.transientInput[0]?.results[0],
+    'placement selection falls back to transient input hits'
   );
 
   session.dispatchEvent(new Event('end'));

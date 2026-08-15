@@ -403,8 +403,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain('WebXRHitTestManager');
     expect(applicationSource).toContain('type WebXRHitTestState');
-    expect(applicationSource).toContain('getWebXRHitTestResult');
-    expect(applicationSource).toContain('getWebXRTransientInputHitTestResult');
+    expect(applicationSource).toContain('getWebXRHitTestPlacementResult');
     expect(applicationSource).toContain('readonly webXRHitTestManager = new WebXRHitTestManager()');
     expect(applicationSource).toContain('this.webXRHitTestManager.getHitTestState(xrFrame)');
     expect(enterMethod).toContain("sessionMode === 'immersive-ar'");
@@ -418,10 +417,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       'this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState)'
     );
     expect(updateModelMethod).toContain('const hitTestMatrix =');
-    expect(updateModelMethod).toContain(
-      'getWebXRTransientInputHitTestResult(hitTestState)?.matrix'
-    );
-    expect(updateModelMethod).toContain('getWebXRHitTestResult(hitTestState)?.matrix');
+    expect(updateModelMethod).toContain('getWebXRHitTestPlacementResult(hitTestState)?.matrix');
     expect(updateModelMethod).toContain("this.xrSessionMode === 'immersive-ar' && hitTestMatrix");
     expect(updateModelMethod).toContain('this.modelMatrix.copy(hitTestMatrix)');
     expect(updateModelMethod).toContain('scale([0.54, 0.54, 0.54])');

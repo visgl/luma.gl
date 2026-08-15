@@ -29,8 +29,7 @@ import {
   getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
   getWebXRControllerRayPlaneTargetByInputSource,
-  getWebXRHitTestResult,
-  getWebXRTransientInputHitTestResult,
+  getWebXRHitTestPlacementResult,
   getWebXRInputStateByInputSource,
   getWebXRLocomotionState,
   getWebXRSessionRenderState,
@@ -1056,9 +1055,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   ): void {
     this.modelMatrix.identity();
     if (isXR) {
-      const hitTestMatrix =
-        getWebXRTransientInputHitTestResult(hitTestState)?.matrix ||
-        getWebXRHitTestResult(hitTestState)?.matrix;
+      const hitTestMatrix = getWebXRHitTestPlacementResult(hitTestState)?.matrix;
       if (this.xrSessionMode === 'immersive-ar' && hitTestMatrix) {
         this.modelMatrix.copy(hitTestMatrix).scale([0.54, 0.54, 0.54]);
         return;

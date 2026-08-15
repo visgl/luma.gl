@@ -40,6 +40,10 @@ export type WebXRTransientInputHitTestResultSelectionProps = WebXRHitTestResultS
   inputSource?: XRInputSource | null;
 };
 
+export type WebXRHitTestPlacementResultProps = WebXRTransientInputHitTestResultSelectionProps & {
+  preferTransientInput?: boolean;
+};
+
 /**
  * Experimental v10 WebXR hit-test source and per-frame result helper.
  *
@@ -176,6 +180,23 @@ export function getWebXRTransientInputHitTestResult(
   );
 
   return transientInput?.results[props.index ?? 0] || null;
+}
+
+export function getWebXRHitTestPlacementResult(
+  hitTestState: WebXRHitTestState | null,
+  props: WebXRHitTestPlacementResultProps = {}
+): WebXRHitTestResult | null {
+  if (props.preferTransientInput !== false) {
+    return (
+      getWebXRTransientInputHitTestResult(hitTestState, props) ||
+      getWebXRHitTestResult(hitTestState, props)
+    );
+  }
+
+  return (
+    getWebXRHitTestResult(hitTestState, props) ||
+    getWebXRTransientInputHitTestResult(hitTestState, props)
+  );
 }
 
 async function requestTransientInputHitTestSource(
