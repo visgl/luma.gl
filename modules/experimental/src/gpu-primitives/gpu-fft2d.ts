@@ -9,11 +9,18 @@ import {
   GPU_FFT2D_SHADER,
   GPU_FFT2D_WORKGROUP_DIMENSION
 } from './gpu-fft2d-shaders';
+import {
+  getGPUFFTLengthReason,
+  GPU_FFT_MAX_LENGTH,
+  GPU_FFT_MIN_LENGTH,
+  makeGPUFFTPassPlan,
+  type GPUFFTDirection
+} from './gpu-fft-utils';
 
 /** Smallest supported transform dimension. */
-export const GPU_FFT2D_MIN_DIMENSION = 2;
+export const GPU_FFT2D_MIN_DIMENSION = GPU_FFT_MIN_LENGTH;
 /** Largest supported transform dimension. */
-export const GPU_FFT2D_MAX_DIMENSION = 2048;
+export const GPU_FFT2D_MAX_DIMENSION = GPU_FFT_MAX_LENGTH;
 
 /** Construction options for {@link GPUFFT2D}. */
 export type GPUFFT2DProps = {
@@ -28,7 +35,7 @@ export type GPUFFT2DProps = {
 };
 
 /** Transform sign and normalization convention. */
-export type GPUFFT2DDirection = 'forward' | 'inverse';
+export type GPUFFT2DDirection = GPUFFTDirection;
 
 /** Caller-owned resources supplied to {@link GPUFFT2D.encode}. */
 export type GPUFFT2DEncodeOptions = {
@@ -363,10 +370,8 @@ function addAxisPasses(
   axis: GPUFFT2DAxis,
   transformSize: number
 ): void {
-  const stageCount = Math.log2(transformSize);
-  passes.push({axis, kind: 'bit-reversal', transformSize, stage: stageCount});
-  for (let stage = 1; stage <= stageCount; stage++) {
-    passes.push({axis, kind: 'butterfly', transformSize, stage});
+  for (const pass of makeGPUFFTPassPlan(transformSize)) {
+    passes.push({axis, transformSize, ...pass});
   }
 }
 
@@ -414,16 +419,7 @@ function getGPUFFT2DDimensionReason(
 }
 
 function getDimensionReason(name: string, dimension: number): string | undefined {
-  if (!Number.isInteger(dimension)) {
-    return `GPUFFT2D ${name} must be an integer.`;
-  }
-  if (dimension < GPU_FFT2D_MIN_DIMENSION || dimension > GPU_FFT2D_MAX_DIMENSION) {
-    return `GPUFFT2D ${name} must be from ${GPU_FFT2D_MIN_DIMENSION} through ${GPU_FFT2D_MAX_DIMENSION}.`;
-  }
-  if ((dimension & (dimension - 1)) !== 0) {
-    return `GPUFFT2D ${name} must be a power of two.`;
-  }
-  return undefined;
+  return getGPUFFTLengthReason('GPUFFT2D', name, dimension);
 }
 
 function validateGPUFFT2DBuffer(

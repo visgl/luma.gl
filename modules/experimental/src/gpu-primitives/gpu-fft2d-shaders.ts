@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {GPU_FFT_COMMON_SHADER_SOURCE} from './gpu-fft-utils';
+
 /** Number of invocations along each dimension of one GPUFFT2D workgroup. */
 export const GPU_FFT2D_WORKGROUP_DIMENSION = 8;
 
@@ -25,28 +27,11 @@ struct GPUFFT2DParameters {
 @group(0) @binding(1) var<storage, read_write> outputValues: array<vec2f>;
 @group(0) @binding(2) var<uniform> parameters: GPUFFT2DParameters;
 
-const GPU_FFT2D_PI: f32 = 3.14159265358979323846;
-
-fn reverseLowBits(value: u32, bitCount: u32) -> u32 {
-  var source = value;
-  var reversed = 0u;
-  for (var bitIndex = 0u; bitIndex < bitCount; bitIndex++) {
-    reversed = (reversed << 1u) | (source & 1u);
-    source = source >> 1u;
-  }
-  return reversed;
-}
+${GPU_FFT_COMMON_SHADER_SOURCE}
 
 fn getLinearIndex(xCoordinate: u32, yCoordinate: u32, batchIndex: u32) -> u32 {
   return batchIndex * parameters.width * parameters.height +
     yCoordinate * parameters.width + xCoordinate;
-}
-
-fn multiplyComplex(left: vec2f, right: vec2f) -> vec2f {
-  return vec2f(
-    left.x * right.x - left.y * right.y,
-    left.x * right.y + left.y * right.x
-  );
 }
 
 @compute @workgroup_size(${GPU_FFT2D_WORKGROUP_DIMENSION}, ${GPU_FFT2D_WORKGROUP_DIMENSION}, 1)
@@ -76,7 +61,7 @@ fn main(@builtin(global_invocation_id) globalIdentifier: vec3u) {
     let secondY = select(secondCoordinate, globalIdentifier.y, horizontal);
     let firstValue = inputValues[getLinearIndex(firstX, firstY, globalIdentifier.z)];
     let secondValue = inputValues[getLinearIndex(secondX, secondY, globalIdentifier.z)];
-    let angle = parameters.directionSign * 2.0 * GPU_FFT2D_PI *
+    let angle = parameters.directionSign * 2.0 * GPU_FFT_PI *
       f32(twiddleIndex) / f32(butterflySpan);
     let twiddle = vec2f(cos(angle), sin(angle));
     let rotatedSecondValue = multiplyComplex(secondValue, twiddle);
