@@ -6,17 +6,30 @@
 export type WebXRHitTestManagerProps = {
   entityTypes?: XRHitTestTrackableType[];
   offsetRay?: XRRay;
+  transientInput?: WebXRTransientInputHitTestProps | false;
+};
+
+export type WebXRTransientInputHitTestProps = {
+  profile: string;
+  entityTypes?: XRHitTestTrackableType[];
+  offsetRay?: XRRay;
 };
 
 export type WebXRHitTestState = {
   xrFrame: XRFrame;
   hits: readonly WebXRHitTestResult[];
+  transientInput: readonly WebXRTransientInputHitTestResult[];
 };
 
 export type WebXRHitTestResult = {
   xrHitTestResult: XRHitTestResult;
   pose: XRPose;
   matrix: Float32Array;
+};
+
+export type WebXRTransientInputHitTestResult = {
+  inputSource: XRInputSource;
+  results: readonly WebXRHitTestResult[];
 };
 
 /**
@@ -31,6 +44,7 @@ export class WebXRHitTestManager {
   referenceSpace: XRReferenceSpace | null = null;
   viewerSpace: XRReferenceSpace | null = null;
   hitTestSource: XRHitTestSource | null = null;
+  transientInputHitTestSource: XRTransientInputHitTestSource | null = null;
 
   private _sessionEndListener = () => this.clearSession();
 
@@ -70,6 +84,10 @@ export class WebXRHitTestManager {
     this.referenceSpace = referenceSpace;
     this.viewerSpace = viewerSpace;
     this.hitTestSource = hitTestSource;
+    this.transientInputHitTestSource = await requestTransientInputHitTestSource(
+      session,
+      this.props.transientInput
+    );
     session.addEventListener('end', this._sessionEndListener);
     return this;
   }
@@ -89,17 +107,20 @@ export class WebXRHitTestManager {
       .getHitTestResults(this.hitTestSource)
       .map(xrHitTestResult => makeWebXRHitTestResult(xrHitTestResult, this.referenceSpace!))
       .filter((hit): hit is WebXRHitTestResult => Boolean(hit));
+    const transientInput = this._getTransientInputHitTestResults(xrFrame);
 
-    return {xrFrame, hits};
+    return {xrFrame, hits, transientInput};
   }
 
   clearSession(): void {
     this.session?.removeEventListener('end', this._sessionEndListener);
     this.hitTestSource?.cancel();
+    this.transientInputHitTestSource?.cancel();
     this.session = null;
     this.referenceSpace = null;
     this.viewerSpace = null;
     this.hitTestSource = null;
+    this.transientInputHitTestSource = null;
   }
 
   destroy(): void {
@@ -108,8 +129,44 @@ export class WebXRHitTestManager {
 
   static defaultProps: Required<WebXRHitTestManagerProps> = {
     entityTypes: undefined!,
-    offsetRay: undefined!
+    offsetRay: undefined!,
+    transientInput: false
   };
+
+  private _getTransientInputHitTestResults(
+    xrFrame: XRFrame
+  ): readonly WebXRTransientInputHitTestResult[] {
+    if (!this.transientInputHitTestSource || !xrFrame.getHitTestResultsForTransientInput) {
+      return [];
+    }
+
+    return xrFrame
+      .getHitTestResultsForTransientInput(this.transientInputHitTestSource)
+      .map(transientResult => ({
+        inputSource: transientResult.inputSource,
+        results: transientResult.results
+          .map(xrHitTestResult => makeWebXRHitTestResult(xrHitTestResult, this.referenceSpace!))
+          .filter((hit): hit is WebXRHitTestResult => Boolean(hit))
+      }))
+      .filter(transientResult => transientResult.results.length > 0);
+  }
+}
+
+async function requestTransientInputHitTestSource(
+  session: XRSession,
+  props: WebXRTransientInputHitTestProps | false
+): Promise<XRTransientInputHitTestSource | null> {
+  if (!props || !session.requestHitTestSourceForTransientInput) {
+    return null;
+  }
+
+  const transientInputHitTestSource = await session.requestHitTestSourceForTransientInput({
+    profile: props.profile,
+    offsetRay: props.offsetRay,
+    entityTypes: props.entityTypes
+  });
+
+  return transientInputHitTestSource || null;
 }
 
 function makeWebXRHitTestResult(

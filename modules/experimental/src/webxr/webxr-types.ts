@@ -129,6 +129,9 @@ declare global {
     pauseDepthSensing?(): void;
     requestAnimationFrame(callback: XRFrameRequestCallback): number;
     requestHitTestSource?(options: XRHitTestOptionsInit): Promise<XRHitTestSource | null>;
+    requestHitTestSourceForTransientInput?(
+      options: XRTransientInputHitTestOptionsInit
+    ): Promise<XRTransientInputHitTestSource | null>;
     requestLightProbe?(options?: XRLightProbeInit): Promise<XRLightProbe>;
     requestReferenceSpace(type: XRReferenceSpaceType): Promise<XRReferenceSpace>;
     initiateRoomCapture?(): Promise<void>;
@@ -197,13 +200,28 @@ declare global {
     entityTypes?: XRHitTestTrackableType[];
   }
 
+  interface XRTransientInputHitTestOptionsInit {
+    profile: string;
+    offsetRay?: XRRay;
+    entityTypes?: XRHitTestTrackableType[];
+  }
+
   interface XRHitTestSource {
+    cancel(): void;
+  }
+
+  interface XRTransientInputHitTestSource {
     cancel(): void;
   }
 
   interface XRHitTestResult {
     createAnchor?(): Promise<XRAnchor>;
     getPose(baseSpace: XRSpace): XRPose | undefined;
+  }
+
+  interface XRTransientInputHitTestResult {
+    readonly inputSource: XRInputSource;
+    readonly results: readonly XRHitTestResult[];
   }
 
   interface XRAnchor {
@@ -281,6 +299,9 @@ declare global {
     fillPoses?(spaces: readonly XRSpace[], baseSpace: XRSpace, transforms: Float32Array): boolean;
     getDepthInformation?(view: XRView): XRCPUDepthInformation | null;
     getHitTestResults?(hitTestSource: XRHitTestSource): XRHitTestResult[];
+    getHitTestResultsForTransientInput?(
+      hitTestSource: XRTransientInputHitTestSource
+    ): XRTransientInputHitTestResult[];
     getImageTrackingResults?(): readonly XRImageTrackingResult[];
     getJointPose?(joint: XRJointSpace, baseSpace: XRSpace): XRJointPose | null;
     getLightEstimate?(lightProbe: XRLightProbe): XRLightEstimate | null;

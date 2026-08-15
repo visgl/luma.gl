@@ -73,7 +73,9 @@ export {
 export type {
   WebXRHitTestManagerProps,
   WebXRHitTestResult,
-  WebXRHitTestState
+  WebXRHitTestState,
+  WebXRTransientInputHitTestProps,
+  WebXRTransientInputHitTestResult
 } from './webxr-hit-test';
 export {WebXRHitTestManager} from './webxr-hit-test';
 export type {

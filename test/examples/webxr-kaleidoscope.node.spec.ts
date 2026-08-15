@@ -324,15 +324,18 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(enterMethod).toContain("sessionMode === 'immersive-ar'");
     expect(enterMethod).toContain('this.webXRHitTestManager');
     expect(enterMethod).toContain("entityTypes: ['plane', 'point', 'mesh']");
+    expect(enterMethod).toContain('transientInput: {');
+    expect(enterMethod).toContain("profile: 'generic-touchscreen'");
     expect(enterMethod).toContain('.catch(() => this.webXRHitTestManager.clearSession())');
     expect(renderMethod).toContain('hitTestState: WebXRHitTestState | null');
     expect(renderMethod).toContain(
       'this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState)'
     );
-    expect(updateModelMethod).toContain(
-      "this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]"
-    );
-    expect(updateModelMethod).toContain('this.modelMatrix.copy(hitTestState.hits[0].matrix)');
+    expect(updateModelMethod).toContain('const hitTestMatrix =');
+    expect(updateModelMethod).toContain('hitTestState?.transientInput[0]?.results[0]?.matrix');
+    expect(updateModelMethod).toContain('hitTestState?.hits[0]?.matrix');
+    expect(updateModelMethod).toContain("this.xrSessionMode === 'immersive-ar' && hitTestMatrix");
+    expect(updateModelMethod).toContain('this.modelMatrix.copy(hitTestMatrix)');
     expect(updateModelMethod).toContain('scale([0.54, 0.54, 0.54])');
     expect(clearMethod).toContain('this.webXRHitTestManager.clearSession()');
     expect(applicationSource).toContain('this.webXRHitTestManager.destroy()');
@@ -413,9 +416,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain(
       'this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState)'
     );
-    expect(updateModelMethod).toContain(
-      "this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]"
-    );
+    expect(updateModelMethod).toContain("this.xrSessionMode === 'immersive-ar' && hitTestMatrix");
     expect(updateModelMethod).toContain(
       "this.xrSessionMode === 'immersive-ar' && planeDetectionState?.planes[0]"
     );
@@ -461,9 +462,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain(
       'this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState)'
     );
-    expect(updateModelMethod).toContain(
-      "this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]"
-    );
+    expect(updateModelMethod).toContain("this.xrSessionMode === 'immersive-ar' && hitTestMatrix");
     expect(updateModelMethod).toContain(
       "this.xrSessionMode === 'immersive-ar' && planeDetectionState?.planes[0]"
     );

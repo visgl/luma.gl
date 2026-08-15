@@ -6,10 +6,13 @@ import test from 'test/utils/vitest-tape';
 import {WebXRHitTestManager} from '../../src/webxr/webxr-hit-test';
 
 type MockXRHitTestSource = XRHitTestSource & {cancelCount: number};
+type MockXRTransientInputHitTestSource = XRTransientInputHitTestSource & {cancelCount: number};
 type MockXRSession = XRSession & {
   requestedReferenceSpaceTypes: XRReferenceSpaceType[];
   receivedHitTestOptions: XRHitTestOptionsInit | null;
+  receivedTransientInputHitTestOptions: XRTransientInputHitTestOptionsInit | null;
   nextHitTestSource: XRHitTestSource | null;
+  nextTransientInputHitTestSource: XRTransientInputHitTestSource | null;
 };
 
 test('webxr#WebXRHitTestManager resolves AR hit-test poses', async testCase => {
@@ -63,10 +66,108 @@ test('webxr#WebXRHitTestManager resolves AR hit-test poses', async testCase => {
   testCase.equal(hitTestState?.hits[0]?.xrHitTestResult, firstResult, 'retains raw hit result');
   testCase.equal(hitTestState?.hits[0]?.pose, firstPose, 'retains hit pose');
   testCase.equal(hitTestState?.hits[0]?.matrix, firstPose.transform.matrix, 'exposes hit matrix');
+  testCase.deepEqual(hitTestState?.transientInput, [], 'exposes empty transient input results');
 
   session.dispatchEvent(new Event('end'));
   testCase.equal(hitTestSource.cancelCount, 1, 'session end cancels source');
   testCase.equal(manager.getHitTestState(frame), null, 'ended sessions expose no hit state');
+  testCase.end();
+});
+
+test('webxr#WebXRHitTestManager resolves transient input hit-test poses', async testCase => {
+  const appReferenceSpace = {} as XRReferenceSpace;
+  const viewerReferenceSpace = {} as XRReferenceSpace;
+  const offsetRay = {} as XRRay;
+  const hitTestSource = makeMockXRHitTestSource();
+  const transientInputHitTestSource = makeMockXRTransientInputHitTestSource();
+  const inputSource = {targetRayMode: 'screen', profiles: ['generic-touchscreen']} as XRInputSource;
+  const firstPose = makeMockXRPose([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0.5, 0, -1.5, 1]);
+  const firstResult = makeMockXRHitTestResult(firstPose);
+  const missingPoseResult = makeMockXRHitTestResult(undefined);
+  const session = makeMockXRSession({
+    appReferenceSpace,
+    viewerReferenceSpace,
+    hitTestSource,
+    transientInputHitTestSource
+  });
+  const frame = {
+    session,
+    getHitTestResults(receivedHitTestSource: XRHitTestSource): XRHitTestResult[] {
+      testCase.equal(receivedHitTestSource, hitTestSource, 'queries configured hit-test source');
+      return [];
+    },
+    getHitTestResultsForTransientInput(
+      receivedTransientInputHitTestSource: XRTransientInputHitTestSource
+    ): XRTransientInputHitTestResult[] {
+      testCase.equal(
+        receivedTransientInputHitTestSource,
+        transientInputHitTestSource,
+        'queries configured transient input source'
+      );
+      return [
+        {
+          inputSource,
+          results: [firstResult, missingPoseResult]
+        }
+      ];
+    }
+  } as XRFrame;
+
+  const manager = new WebXRHitTestManager();
+  await manager.setSession(session, appReferenceSpace, {
+    entityTypes: ['plane', 'point'],
+    transientInput: {
+      profile: 'generic-touchscreen',
+      entityTypes: ['plane', 'mesh'],
+      offsetRay
+    }
+  });
+  const hitTestState = manager.getHitTestState(frame);
+
+  testCase.deepEqual(
+    session.receivedTransientInputHitTestOptions,
+    {
+      profile: 'generic-touchscreen',
+      offsetRay,
+      entityTypes: ['plane', 'mesh']
+    },
+    'requests transient input hit-test source with caller options'
+  );
+  testCase.equal(
+    manager.transientInputHitTestSource,
+    transientInputHitTestSource,
+    'retains transient input hit-test source'
+  );
+  testCase.equal(hitTestState?.hits.length, 0, 'keeps regular hit results separate');
+  testCase.equal(hitTestState?.transientInput.length, 1, 'returns one transient input group');
+  testCase.equal(
+    hitTestState?.transientInput[0]?.inputSource,
+    inputSource,
+    'retains transient input source'
+  );
+  testCase.equal(
+    hitTestState?.transientInput[0]?.results.length,
+    1,
+    'filters transient hits without poses'
+  );
+  testCase.equal(
+    hitTestState?.transientInput[0]?.results[0]?.xrHitTestResult,
+    firstResult,
+    'retains raw transient hit result'
+  );
+  testCase.equal(
+    hitTestState?.transientInput[0]?.results[0]?.matrix,
+    firstPose.transform.matrix,
+    'exposes transient hit matrix'
+  );
+
+  session.dispatchEvent(new Event('end'));
+  testCase.equal(hitTestSource.cancelCount, 1, 'session end cancels hit-test source');
+  testCase.equal(
+    transientInputHitTestSource.cancelCount,
+    1,
+    'session end cancels transient input source'
+  );
   testCase.end();
 });
 
@@ -139,13 +240,16 @@ function makeMockXRSession(props: {
   appReferenceSpace: XRReferenceSpace;
   viewerReferenceSpace: XRReferenceSpace;
   hitTestSource: XRHitTestSource;
+  transientInputHitTestSource?: XRTransientInputHitTestSource;
 }): MockXRSession {
   const session = Object.assign(new EventTarget(), {
     enabledFeatures: ['hit-test'],
     inputSources: [],
     requestedReferenceSpaceTypes: [] as XRReferenceSpaceType[],
     receivedHitTestOptions: null as XRHitTestOptionsInit | null,
+    receivedTransientInputHitTestOptions: null as XRTransientInputHitTestOptionsInit | null,
     nextHitTestSource: props.hitTestSource,
+    nextTransientInputHitTestSource: props.transientInputHitTestSource || null,
     async requestReferenceSpace(type: XRReferenceSpaceType): Promise<XRReferenceSpace> {
       session.requestedReferenceSpaceTypes.push(type);
       return type === 'viewer' ? props.viewerReferenceSpace : props.appReferenceSpace;
@@ -153,6 +257,12 @@ function makeMockXRSession(props: {
     async requestHitTestSource(options: XRHitTestOptionsInit): Promise<XRHitTestSource | null> {
       session.receivedHitTestOptions = options;
       return session.nextHitTestSource;
+    },
+    async requestHitTestSourceForTransientInput(
+      options: XRTransientInputHitTestOptionsInit
+    ): Promise<XRTransientInputHitTestSource | null> {
+      session.receivedTransientInputHitTestOptions = options;
+      return session.nextTransientInputHitTestSource;
     }
   }) as MockXRSession;
 
@@ -160,6 +270,15 @@ function makeMockXRSession(props: {
 }
 
 function makeMockXRHitTestSource(): MockXRHitTestSource {
+  return {
+    cancelCount: 0,
+    cancel() {
+      this.cancelCount++;
+    }
+  };
+}
+
+function makeMockXRTransientInputHitTestSource(): MockXRTransientInputHitTestSource {
   return {
     cancelCount: 0,
     cancel() {

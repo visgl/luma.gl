@@ -651,7 +651,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       if (sessionMode === 'immersive-ar') {
         await this.webXRHitTestManager
           .setSession(session, this.webXRManager.referenceSpace, {
-            entityTypes: ['plane', 'point', 'mesh']
+            entityTypes: ['plane', 'point', 'mesh'],
+            transientInput: {
+              profile: 'generic-touchscreen',
+              entityTypes: ['plane', 'point', 'mesh']
+            }
           })
           .catch(() => this.webXRHitTestManager.clearSession());
         await this.webXRLightEstimationManager
@@ -887,8 +891,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   ): void {
     this.modelMatrix.identity();
     if (isXR) {
-      if (this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]) {
-        this.modelMatrix.copy(hitTestState.hits[0].matrix).scale([0.54, 0.54, 0.54]);
+      const hitTestMatrix =
+        hitTestState?.transientInput[0]?.results[0]?.matrix || hitTestState?.hits[0]?.matrix;
+      if (this.xrSessionMode === 'immersive-ar' && hitTestMatrix) {
+        this.modelMatrix.copy(hitTestMatrix).scale([0.54, 0.54, 0.54]);
         return;
       }
       if (this.xrSessionMode === 'immersive-ar' && planeDetectionState?.planes[0]) {
