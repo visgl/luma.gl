@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {NullDevice} from '@luma.gl/test-utils';
-import {GPUData, type GPUDataView} from '@luma.gl/tables';
+import {GPUData, GPUVector, type FixedSizeList, type GPUDataView} from '@luma.gl/tables';
 import {expectTypeOf, test} from 'vitest';
 
 test('GPUData infers inline struct field types', () => {
@@ -28,5 +28,26 @@ test('GPUData infers inline struct field types', () => {
   const scalarData = new GPUData({buffer, length: 2, format: 'float32'});
   expectTypeOf(scalarData.format).toEqualTypeOf<'float32' | undefined>();
 
+  buffer.destroy();
+});
+
+test('GPUData and GPUVector preserve literal fixed-size-list formats', () => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 32});
+  const data = new GPUData({
+    buffer,
+    length: 2,
+    format: 'fixed-size-list<float32,4>'
+  });
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'embeddings',
+    data: [data]
+  });
+
+  expectTypeOf(data.format).toEqualTypeOf<FixedSizeList<'float32', 4> | undefined>();
+  expectTypeOf(vector.format).toEqualTypeOf<FixedSizeList<'float32', 4> | undefined>();
+
+  vector.destroy();
   buffer.destroy();
 });
