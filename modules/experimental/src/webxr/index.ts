@@ -33,6 +33,8 @@ export type {
   WebXRLayersSessionInitProps
 } from './webxr-layers';
 export {getWebXRLayersSessionInit, WebXRCompositionLayerManager} from './webxr-layers';
+export type {WebXRMediaLayerState, WebXRMediaLayerType} from './webxr-media-layers';
+export {WebXRMediaLayerManager} from './webxr-media-layers';
 export type {
   WebXRHitTestManagerProps,
   WebXRHitTestResult,

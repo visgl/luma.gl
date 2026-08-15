@@ -287,6 +287,16 @@ declare global {
     onredraw: ((this: XRCylinderLayer, event: Event) => unknown) | null;
   }
 
+  interface XREquirectLayer extends XRCompositionLayer {
+    space: XRReferenceSpace;
+    transform: XRRigidTransform;
+    radius: number;
+    centralHorizontalAngle: number;
+    upperVerticalAngle: number;
+    lowerVerticalAngle: number;
+    onredraw: ((this: XREquirectLayer, event: Event) => unknown) | null;
+  }
+
   interface XRSubImage {
     readonly viewport: XRViewport;
   }
@@ -326,6 +336,33 @@ declare global {
     radius?: number;
     centralAngle?: number;
     aspectRatio?: number;
+  }
+
+  interface XRMediaLayerInit {
+    space: XRSpace;
+    layout?: XRLayerLayout;
+    invertStereo?: boolean;
+  }
+
+  interface XRMediaQuadLayerInit extends XRMediaLayerInit {
+    transform?: XRRigidTransform;
+    width?: number;
+    height?: number;
+  }
+
+  interface XRMediaCylinderLayerInit extends XRMediaLayerInit {
+    transform?: XRRigidTransform;
+    radius?: number;
+    centralAngle?: number;
+    aspectRatio?: number;
+  }
+
+  interface XRMediaEquirectLayerInit extends XRMediaLayerInit {
+    transform?: XRRigidTransform;
+    radius?: number;
+    centralHorizontalAngle?: number;
+    upperVerticalAngle?: number;
+    lowerVerticalAngle?: number;
   }
 
   interface XRWebGLLayerInit {
@@ -380,6 +417,20 @@ declare global {
     getDepthInformation?(view: XRView): XRWebGLDepthInformation | null;
     getSubImage(layer: XRCompositionLayer, frame: XRFrame, eye?: XREye): XRWebGLSubImage;
     getViewSubImage(layer: XRProjectionLayer, view: XRView): XRWebGLSubImage;
+  }
+
+  class XRMediaBinding {
+    constructor(session: XRSession);
+
+    createQuadLayer(video: HTMLVideoElement, layerInit: XRMediaQuadLayerInit): XRQuadLayer;
+    createCylinderLayer(
+      video: HTMLVideoElement,
+      layerInit: XRMediaCylinderLayerInit
+    ): XRCylinderLayer;
+    createEquirectLayer(
+      video: HTMLVideoElement,
+      layerInit: XRMediaEquirectLayerInit
+    ): XREquirectLayer;
   }
 
   class XRGPUBinding {

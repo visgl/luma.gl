@@ -102,7 +102,7 @@ export type WebXRCompositionLayerState = {
 
 ### `constructor(device: Device, props?: WebXRCompositionLayerManagerProps)`
 
-Creates a WebGL composition-layer manager. WebXR composition layers are WebGL-only in this helper because the current WebXR Layers API exposes non-projection layer creation through `XRWebGLBinding` and `XRMediaBinding`.
+Creates a WebGL composition-layer manager. This helper is for renderable WebGL layers created through `XRWebGLBinding`. Use `WebXRMediaLayerManager` for video-backed layers created through `XRMediaBinding`.
 
 ### `setSession(session: XRSession | null): Promise<this>`
 
