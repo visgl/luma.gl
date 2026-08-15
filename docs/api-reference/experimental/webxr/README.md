@@ -10,6 +10,7 @@
 ## Scope
 
 - [`WebXRAnimationFrameProvider`](/docs/api-reference/experimental/webxr/webxr-manager) drives an engine `AnimationLoop` from `XRSession.requestAnimationFrame()`.
+- [`getWebXRBoundsState`](/docs/api-reference/experimental/webxr/webxr-bounds) reads room-scale `bounded-floor` geometry for teleport limits and floor overlays.
 - [`WebXRManager`](/docs/api-reference/experimental/webxr/webxr-manager) prepares WebGPU projection layers or an `XRWebGLLayer`, then resolves per-view framebuffer, viewport, projection, and view matrix state.
 - [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture) binds WebXR Raw Camera Access as a borrowed read-only WebGL texture sampled through GLSL `sampler2D`.
 - [`WebXRCompositionLayerManager`](/docs/api-reference/experimental/webxr/webxr-composition-layer-manager) creates WebGL quad, cylinder, equirect, and cube composition layers and resolves borrowed subimage framebuffers for rendering.

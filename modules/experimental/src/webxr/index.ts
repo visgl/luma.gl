@@ -6,6 +6,12 @@ export type {WebXRRawCameraBinding} from './webxr-types';
 export type {WebXRAnchorPose, WebXRAnchorState} from './webxr-anchor';
 export {WebXRAnchorManager} from './webxr-anchor';
 export {WebXRAnimationFrameProvider} from './webxr-animation-frame-provider';
+export type {WebXRBoundsPoint, WebXRBoundsState} from './webxr-bounds';
+export {
+  getWebXRBoundsState,
+  isPointInWebXRBounds,
+  isWebXRBoundedReferenceSpace
+} from './webxr-bounds';
 export type {WebXRCameraTextureProps} from './webxr-camera-texture';
 export {WebXRCameraTexture} from './webxr-camera-texture';
 export type {

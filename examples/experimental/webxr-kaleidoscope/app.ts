@@ -16,9 +16,11 @@ import {
   WebXRMeshDetectionManager,
   WebXRManager,
   WebXRPlaneDetectionManager,
+  getWebXRBoundsState,
   getWebXRHandPinch,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
+  isPointInWebXRBounds,
   pulseWebXRInputHaptics,
   type WebXRFrameState,
   type WebXRHandTrackingState,
@@ -642,7 +644,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     try {
       await this.webXRManager.setSession(session, {
-        referenceSpaceTypes: ['local-floor', 'local'],
+        referenceSpaceTypes: ['bounded-floor', 'local-floor', 'local'],
         ...(this.device.type === 'webgl'
           ? {layerInit: {alpha: sessionMode === 'immersive-ar'}}
           : {})
@@ -925,6 +927,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!floorHit) {
       return;
     }
+    const boundsState = getWebXRBoundsState(this.webXRManager.referenceSpace);
+    if (boundsState && !isPointInWebXRBounds(floorHit, boundsState.bounds)) {
+      return;
+    }
 
     this.xrSceneOffset[0] -= floorHit[0];
     this.xrSceneOffset[2] -= floorHit[2];
@@ -1017,6 +1023,7 @@ function getXRSessionInit(
               'anchors',
               'depth-sensing',
               ...domOverlayFeatures,
+              'bounded-floor',
               'hand-tracking',
               'hit-test',
               'light-estimation',
@@ -1024,7 +1031,7 @@ function getXRSessionInit(
               'plane-detection',
               'local-floor'
             ]
-          : [...domOverlayFeatures, 'hand-tracking', 'local-floor'],
+          : [...domOverlayFeatures, 'bounded-floor', 'hand-tracking', 'local-floor'],
       ...(sessionMode === 'immersive-ar' ? {depthSensing: AR_DEPTH_SENSING} : {}),
       ...domOverlayInit
     };
@@ -1037,6 +1044,7 @@ function getXRSessionInit(
           'camera-access',
           'depth-sensing',
           ...domOverlayFeatures,
+          'bounded-floor',
           'hand-tracking',
           'hit-test',
           'light-estimation',
@@ -1048,7 +1056,7 @@ function getXRSessionInit(
         ...domOverlayInit
       }
     : {
-        optionalFeatures: [...domOverlayFeatures, 'hand-tracking', 'local-floor'],
+        optionalFeatures: [...domOverlayFeatures, 'bounded-floor', 'hand-tracking', 'local-floor'],
         ...domOverlayInit
       };
 }

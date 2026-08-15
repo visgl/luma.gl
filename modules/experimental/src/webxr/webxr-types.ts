@@ -143,6 +143,10 @@ declare global {
 
   interface XRReferenceSpace extends XRSpace {}
 
+  interface XRBoundedReferenceSpace extends XRReferenceSpace {
+    readonly boundsGeometry: readonly DOMPointReadOnly[];
+  }
+
   interface XRInputSourceArray {
     readonly length: number;
     readonly [index: number]: XRInputSource;

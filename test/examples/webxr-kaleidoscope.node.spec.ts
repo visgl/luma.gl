@@ -96,7 +96,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(applicationSource).toContain("'depth-sensing',\n              ...domOverlayFeatures,");
     expect(applicationSource).toContain(
-      ": [...domOverlayFeatures, 'hand-tracking', 'local-floor']"
+      ": [...domOverlayFeatures, 'bounded-floor', 'hand-tracking', 'local-floor']"
     );
     expect(applicationSource).toContain('optionalFeatures: [...domOverlayFeatures,');
     expect(applicationSource).toContain('...domOverlayInit');
@@ -123,7 +123,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(applicationSource).toContain('this.webXRDOMOverlayManager.clearSession()');
     expect(applicationSource).toContain('this.webXRHandTrackingManager.clearSession()');
-    expect(applicationSource).toContain("referenceSpaceTypes: ['local-floor', 'local']");
+    expect(applicationSource).toContain(
+      "referenceSpaceTypes: ['bounded-floor', 'local-floor', 'local']"
+    );
     expect(applicationSource).toContain('function getDOMOverlayRoot(): Element | null');
     expect(applicationSource).toContain("usagePreference: ['gpu-optimized', 'cpu-optimized']");
     expect(applicationSource).toContain(
@@ -217,8 +219,10 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     const rayMethod = applicationSource.slice(rayMethodStart, rayMethodEnd);
 
     expect(applicationSource).toContain('type WebXRInputState');
+    expect(applicationSource).toContain('getWebXRBoundsState');
     expect(applicationSource).toContain('getWebXRInputRay');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
+    expect(applicationSource).toContain('isPointInWebXRBounds');
     expect(applicationSource).toContain('pulseWebXRInputHaptics');
     expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
     expect(applicationSource).toContain("id: 'immersive-prism-controller-rays'");
@@ -515,6 +519,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(updateModelMethod).toContain('translate(this.xrSceneOffset)');
     expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
+    expect(teleportMethod).toContain('getWebXRBoundsState(this.webXRManager.referenceSpace)');
+    expect(teleportMethod).toContain('!isPointInWebXRBounds(floorHit, boundsState.bounds)');
     expect(teleportMethod).toContain('this.xrSceneOffset[0] -= floorHit[0]');
     expect(teleportMethod).toContain('this.xrSceneOffset[2] -= floorHit[2]');
     expect(teleportMethod).toContain('this._inputStateByInputSource.get(inputSource)');
