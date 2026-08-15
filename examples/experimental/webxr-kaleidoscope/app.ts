@@ -10,6 +10,7 @@ import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
   WebXRManager,
+  getWebXRInputRay,
   type WebXRFrameState,
   type WebXRInputState
 } from '@luma.gl/experimental';
@@ -626,11 +627,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     time: number
   ): void {
     for (const input of inputState) {
-      if (input.targetRayMode !== 'tracked-pointer' || !input.targetRayMatrix) {
+      const inputRay = getWebXRInputRay(input);
+      if (input.targetRayMode !== 'tracked-pointer' || !inputRay) {
         continue;
       }
 
-      this.controllerRayMatrix.copy(input.targetRayMatrix);
+      this.controllerRayMatrix.copy(inputRay.matrix);
       this.modelViewProjectionMatrix
         .copy(view.projectionMatrix)
         .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))

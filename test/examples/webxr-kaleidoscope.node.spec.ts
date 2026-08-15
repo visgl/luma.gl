@@ -170,6 +170,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     const rayMethod = applicationSource.slice(rayMethodStart, rayMethodEnd);
 
     expect(applicationSource).toContain('type WebXRInputState');
+    expect(applicationSource).toContain('getWebXRInputRay');
     expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
     expect(applicationSource).toContain("id: 'immersive-prism-controller-rays'");
     expect(applicationSource).toContain("topology: 'line-list'");
@@ -178,9 +179,10 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('renderPass.end()');
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
+    expect(rayMethod).toContain('const inputRay = getWebXRInputRay(input)');
     expect(rayMethod).toContain("input.targetRayMode !== 'tracked-pointer'");
-    expect(rayMethod).toContain('!input.targetRayMatrix');
-    expect(rayMethod).toContain('this.controllerRayMatrix.copy(input.targetRayMatrix)');
+    expect(rayMethod).toContain('!inputRay');
+    expect(rayMethod).toContain('this.controllerRayMatrix.copy(inputRay.matrix)');
     expect(rayMethod).toContain('multiplyRight(this.controllerRayMatrix)');
     expect(rayMethod).toContain('cameraMix: input.selectActive ? 1 : 0');
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');

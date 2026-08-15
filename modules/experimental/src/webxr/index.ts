@@ -6,6 +6,8 @@ export type {WebXRRawCameraBinding} from './webxr-types';
 export {WebXRAnimationFrameProvider} from './webxr-animation-frame-provider';
 export type {WebXRCameraTextureProps} from './webxr-camera-texture';
 export {WebXRCameraTexture} from './webxr-camera-texture';
+export type {WebXRInputRay} from './webxr-input';
+export {getWebXRInputRay} from './webxr-input';
 export type {
   WebXRFrameState,
   WebXRInputState,

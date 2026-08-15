@@ -59,6 +59,7 @@ const animationLoop = new AnimationLoop({
 - Exposes `projectionMatrix` from `XRView.projectionMatrix` and `viewMatrix` from `XRView.transform.inverse.matrix`.
 - Resolves per-frame input-source target-ray and grip poses in the same reference space as rendering.
 - Tracks active `selectstart`/`selectend` state per input source so examples can build controller rays, pointer selection, and locomotion helpers without subscribing to raw session events.
+- Provides `getWebXRInputRay(inputState)` for normalized world-space target-ray origin and direction extraction.
 - Never destroys browser-owned WebGL framebuffers or WebGPU compositor textures.
 - Raw AR camera textures remain WebGL-only; WebGPU AR can use an application-provided procedural or video fallback.
 
@@ -132,6 +133,17 @@ export type WebXRInputState = {
 };
 ```
 
+### `WebXRInputRay`
+
+```ts
+export type WebXRInputRay = {
+  inputState: WebXRInputState;
+  origin: NumberArray3;
+  direction: NumberArray3;
+  matrix: Float32Array;
+};
+```
+
 ## Methods
 
 ### `constructor(device: Device, props?: WebXRManagerProps)`
@@ -149,6 +161,10 @@ Resolves frame state for an active XR frame. Returns `null` when no viewer pose 
 ### `getInputState(xrFrame: XRFrame): readonly WebXRInputState[] | null`
 
 Resolves input source state for an active XR frame. Returns `null` when no session is attached.
+
+### `getWebXRInputRay(inputState: WebXRInputState): WebXRInputRay | null`
+
+Returns a normalized world-space target ray for an input state, or `null` when the input source has no target-ray pose for the frame.
 
 ### `clearSession(): void`
 
