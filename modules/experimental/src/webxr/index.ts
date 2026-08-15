@@ -144,11 +144,17 @@ export {
 export type {
   WebXRHitTestManagerProps,
   WebXRHitTestResult,
+  WebXRHitTestResultSelectionProps,
   WebXRHitTestState,
   WebXRTransientInputHitTestProps,
-  WebXRTransientInputHitTestResult
+  WebXRTransientInputHitTestResult,
+  WebXRTransientInputHitTestResultSelectionProps
 } from './webxr-hit-test';
-export {WebXRHitTestManager} from './webxr-hit-test';
+export {
+  getWebXRHitTestResult,
+  getWebXRTransientInputHitTestResult,
+  WebXRHitTestManager
+} from './webxr-hit-test';
 export type {
   WebXRControllerHandedness,
   WebXRControllerRayPlaneIntersection,

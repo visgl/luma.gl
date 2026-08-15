@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
-import {WebXRHitTestManager} from '../../src/webxr/webxr-hit-test';
+import {
+  getWebXRHitTestResult,
+  getWebXRTransientInputHitTestResult,
+  WebXRHitTestManager
+} from '../../src/webxr/webxr-hit-test';
 
 type MockXRHitTestSource = XRHitTestSource & {cancelCount: number};
 type MockXRTransientInputHitTestSource = XRTransientInputHitTestSource & {cancelCount: number};
@@ -66,6 +70,13 @@ test('webxr#WebXRHitTestManager resolves AR hit-test poses', async testCase => {
   testCase.equal(hitTestState?.hits[0]?.xrHitTestResult, firstResult, 'retains raw hit result');
   testCase.equal(hitTestState?.hits[0]?.pose, firstPose, 'retains hit pose');
   testCase.equal(hitTestState?.hits[0]?.matrix, firstPose.transform.matrix, 'exposes hit matrix');
+  testCase.equal(getWebXRHitTestResult(hitTestState), hitTestState?.hits[0], 'selects first hit');
+  testCase.equal(
+    getWebXRHitTestResult(hitTestState, {index: 1}),
+    null,
+    'missing hit indices return null'
+  );
+  testCase.equal(getWebXRHitTestResult(null), null, 'null hit states return null');
   testCase.deepEqual(hitTestState?.transientInput, [], 'exposes empty transient input results');
 
   session.dispatchEvent(new Event('end'));
@@ -159,6 +170,31 @@ test('webxr#WebXRHitTestManager resolves transient input hit-test poses', async 
     hitTestState?.transientInput[0]?.results[0]?.matrix,
     firstPose.transform.matrix,
     'exposes transient hit matrix'
+  );
+  testCase.equal(
+    getWebXRTransientInputHitTestResult(hitTestState),
+    hitTestState?.transientInput[0]?.results[0],
+    'selects first transient input hit'
+  );
+  testCase.equal(
+    getWebXRTransientInputHitTestResult(hitTestState, {inputSource}),
+    hitTestState?.transientInput[0]?.results[0],
+    'selects transient input hit by source'
+  );
+  testCase.equal(
+    getWebXRTransientInputHitTestResult(hitTestState, {inputSource: {} as XRInputSource}),
+    null,
+    'missing transient input sources return null'
+  );
+  testCase.equal(
+    getWebXRTransientInputHitTestResult(hitTestState, {index: 1}),
+    null,
+    'missing transient hit indices return null'
+  );
+  testCase.equal(
+    getWebXRTransientInputHitTestResult(null),
+    null,
+    'null transient hit states return null'
   );
 
   session.dispatchEvent(new Event('end'));

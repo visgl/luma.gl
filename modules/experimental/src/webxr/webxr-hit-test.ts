@@ -32,6 +32,14 @@ export type WebXRTransientInputHitTestResult = {
   results: readonly WebXRHitTestResult[];
 };
 
+export type WebXRHitTestResultSelectionProps = {
+  index?: number;
+};
+
+export type WebXRTransientInputHitTestResultSelectionProps = WebXRHitTestResultSelectionProps & {
+  inputSource?: XRInputSource | null;
+};
+
 /**
  * Experimental v10 WebXR hit-test source and per-frame result helper.
  *
@@ -150,6 +158,24 @@ export class WebXRHitTestManager {
       }))
       .filter(transientResult => transientResult.results.length > 0);
   }
+}
+
+export function getWebXRHitTestResult(
+  hitTestState: WebXRHitTestState | null,
+  props: WebXRHitTestResultSelectionProps = {}
+): WebXRHitTestResult | null {
+  return hitTestState?.hits[props.index ?? 0] || null;
+}
+
+export function getWebXRTransientInputHitTestResult(
+  hitTestState: WebXRHitTestState | null,
+  props: WebXRTransientInputHitTestResultSelectionProps = {}
+): WebXRHitTestResult | null {
+  const transientInput = (hitTestState?.transientInput || []).find(
+    transientResult => !props.inputSource || transientResult.inputSource === props.inputSource
+  );
+
+  return transientInput?.results[props.index ?? 0] || null;
 }
 
 async function requestTransientInputHitTestSource(
