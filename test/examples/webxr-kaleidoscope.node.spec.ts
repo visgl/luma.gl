@@ -87,12 +87,12 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
 
     expect(applicationSource).toContain("requiredFeatures: ['webgpu']");
+    expect(applicationSource).toContain("'hand-tracking',");
     expect(applicationSource).toContain(
-      "optionalFeatures: ['anchors', 'camera-access', 'depth-sensing', 'hit-test', 'local-floor']"
+      "? ['anchors', 'depth-sensing', 'hand-tracking', 'hit-test', 'local-floor']"
     );
-    expect(applicationSource).toContain(
-      "? ['anchors', 'depth-sensing', 'hit-test', 'local-floor']"
-    );
+    expect(applicationSource).toContain(": ['hand-tracking', 'local-floor']");
+    expect(applicationSource).toContain(": {optionalFeatures: ['hand-tracking', 'local-floor']}");
     expect(applicationSource).toContain('depthSensing: AR_DEPTH_SENSING');
     expect(applicationSource).toContain("usagePreference: ['gpu-optimized', 'cpu-optimized']");
     expect(applicationSource).toContain(

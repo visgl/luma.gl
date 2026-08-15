@@ -35,6 +35,32 @@ declare global {
   type XRDepthType = 'raw' | 'smooth';
   type XRDepthUsage = 'cpu-optimized' | 'gpu-optimized';
   type XRTextureType = number;
+  type XRHandJoint =
+    | 'wrist'
+    | 'thumb-metacarpal'
+    | 'thumb-phalanx-proximal'
+    | 'thumb-phalanx-distal'
+    | 'thumb-tip'
+    | 'index-finger-metacarpal'
+    | 'index-finger-phalanx-proximal'
+    | 'index-finger-phalanx-intermediate'
+    | 'index-finger-phalanx-distal'
+    | 'index-finger-tip'
+    | 'middle-finger-metacarpal'
+    | 'middle-finger-phalanx-proximal'
+    | 'middle-finger-phalanx-intermediate'
+    | 'middle-finger-phalanx-distal'
+    | 'middle-finger-tip'
+    | 'ring-finger-metacarpal'
+    | 'ring-finger-phalanx-proximal'
+    | 'ring-finger-phalanx-intermediate'
+    | 'ring-finger-phalanx-distal'
+    | 'ring-finger-tip'
+    | 'pinky-finger-metacarpal'
+    | 'pinky-finger-phalanx-proximal'
+    | 'pinky-finger-phalanx-intermediate'
+    | 'pinky-finger-phalanx-distal'
+    | 'pinky-finger-tip';
   type XRFrameRequestCallback = (time: DOMHighResTimeStamp, frame: XRFrame) => void;
 
   interface XRSystem extends EventTarget {
@@ -100,6 +126,16 @@ declare global {
 
   interface XRHand {
     readonly size: number;
+    get(jointName: XRHandJoint): XRJointSpace | undefined;
+    [Symbol.iterator](): IterableIterator<[XRHandJoint, XRJointSpace]>;
+  }
+
+  interface XRJointSpace extends XRSpace {
+    readonly jointName: XRHandJoint;
+  }
+
+  interface XRJointPose extends XRPose {
+    readonly radius: number;
   }
 
   interface XRInputSourceEvent extends Event {
@@ -165,8 +201,11 @@ declare global {
     readonly session: XRSession;
     readonly trackedAnchors?: ReadonlySet<XRAnchor>;
     createAnchor?(pose: XRRigidTransform, space: XRSpace): Promise<XRAnchor>;
+    fillJointRadii?(jointSpaces: readonly XRJointSpace[], radii: Float32Array): boolean;
+    fillPoses?(spaces: readonly XRSpace[], baseSpace: XRSpace, transforms: Float32Array): boolean;
     getDepthInformation?(view: XRView): XRCPUDepthInformation | null;
     getHitTestResults?(hitTestSource: XRHitTestSource): XRHitTestResult[];
+    getJointPose?(joint: XRJointSpace, baseSpace: XRSpace): XRJointPose | null;
     getPose(space: XRSpace, baseSpace: XRSpace): XRPose | undefined;
     getViewerPose(referenceSpace: XRReferenceSpace): XRViewerPose | undefined;
   }

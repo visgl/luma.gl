@@ -126,6 +126,7 @@ export type WebXRInputState = {
   targetRayMode: XRTargetRayMode;
   profiles: readonly string[];
   gamepad: Gamepad | null;
+  hand: XRHand | null;
   targetRayPose: XRPose | null;
   targetRayMatrix: Float32Array | null;
   gripPose: XRPose | null;

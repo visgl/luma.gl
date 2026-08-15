@@ -822,18 +822,25 @@ function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: strin
       requiredFeatures: ['webgpu'],
       optionalFeatures:
         sessionMode === 'immersive-ar'
-          ? ['anchors', 'depth-sensing', 'hit-test', 'local-floor']
-          : ['local-floor'],
+          ? ['anchors', 'depth-sensing', 'hand-tracking', 'hit-test', 'local-floor']
+          : ['hand-tracking', 'local-floor'],
       ...(sessionMode === 'immersive-ar' ? {depthSensing: AR_DEPTH_SENSING} : {})
     };
   }
 
   return sessionMode === 'immersive-ar'
     ? {
-        optionalFeatures: ['anchors', 'camera-access', 'depth-sensing', 'hit-test', 'local-floor'],
+        optionalFeatures: [
+          'anchors',
+          'camera-access',
+          'depth-sensing',
+          'hand-tracking',
+          'hit-test',
+          'local-floor'
+        ],
         depthSensing: AR_DEPTH_SENSING
       }
-    : {optionalFeatures: ['local-floor']};
+    : {optionalFeatures: ['hand-tracking', 'local-floor']};
 }
 
 function makeSpatialPortalGeometry(): Geometry {

@@ -19,6 +19,8 @@ export {
   getWebXRDepthTextureFormat,
   WebXRDepthSensingManager
 } from './webxr-depth-sensing';
+export type {WebXRHandJointState, WebXRHandTrackingState} from './webxr-hand-tracking';
+export {WEBXR_HAND_JOINTS, WebXRHandTrackingManager} from './webxr-hand-tracking';
 export type {
   WebXRHitTestManagerProps,
   WebXRHitTestResult,
