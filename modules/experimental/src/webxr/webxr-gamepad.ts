@@ -70,10 +70,36 @@ export type WebXRGamepadButtonActionState = {
   touchEnded: boolean;
 };
 
+export type WebXRGamepadAxisActionProps = {
+  deadzone?: number;
+};
+
+export type WebXRGamepadAxisActionState = {
+  inputState: WebXRInputState;
+  inputSource: XRInputSource;
+  gamepadState: WebXRGamepadState;
+  axis: WebXRGamepadAxisState;
+  index: number;
+  name: WebXRGamepadAxisName;
+  value: number;
+  previousValue: number;
+  valueDelta: number;
+  deadzone: number;
+  active: boolean;
+  wasActive: boolean;
+  activeStarted: boolean;
+  activeEnded: boolean;
+};
+
 export type WebXRGamepadPreviousButtonState = {
   value: number;
   pressed: boolean;
   touched: boolean;
+};
+
+export type WebXRGamepadPreviousAxisState = {
+  value: number;
+  active: boolean;
 };
 
 const XR_STANDARD_BUTTON_NAMES: readonly WebXRGamepadButtonName[] = [
@@ -89,6 +115,8 @@ const XR_STANDARD_AXIS_NAMES: readonly WebXRGamepadAxisName[] = [
   'thumbstick-x',
   'thumbstick-y'
 ];
+
+const DEFAULT_AXIS_DEADZONE = 0.15;
 
 /** Tracks per-frame WebXR gamepad button action transitions. */
 export class WebXRGamepadActionManager {
@@ -135,6 +163,61 @@ export class WebXRGamepadActionManager {
       this._previousButtonsByInputSource.delete(inputSource);
     } else {
       this._previousButtonsByInputSource.clear();
+    }
+  }
+}
+
+/** Tracks per-frame WebXR gamepad axis value and dead-zone transitions. */
+export class WebXRGamepadAxisManager {
+  private _previousAxesByInputSource = new Map<
+    XRInputSource,
+    Map<number, WebXRGamepadPreviousAxisState>
+  >();
+
+  update(
+    inputStates: readonly WebXRInputState[] | null,
+    props: WebXRGamepadAxisActionProps = {}
+  ): readonly WebXRGamepadAxisActionState[] {
+    const gamepadStates = getWebXRGamepadStates(inputStates);
+    const activeInputSources = new Set<XRInputSource>();
+    const actionStates: WebXRGamepadAxisActionState[] = [];
+
+    for (const gamepadState of gamepadStates) {
+      activeInputSources.add(gamepadState.inputSource);
+      const previousAxes =
+        this._previousAxesByInputSource.get(gamepadState.inputSource) || new Map();
+      const nextAxes = new Map<number, WebXRGamepadPreviousAxisState>();
+
+      for (const axis of gamepadState.axes) {
+        const previousAxis = previousAxes.get(axis.index);
+        const actionState = getWebXRGamepadAxisActionState(gamepadState, axis, {
+          ...props,
+          previousAxis
+        });
+        actionStates.push(actionState);
+        nextAxes.set(axis.index, {
+          value: axis.value,
+          active: actionState.active
+        });
+      }
+
+      this._previousAxesByInputSource.set(gamepadState.inputSource, nextAxes);
+    }
+
+    for (const inputSource of this._previousAxesByInputSource.keys()) {
+      if (!activeInputSources.has(inputSource)) {
+        this._previousAxesByInputSource.delete(inputSource);
+      }
+    }
+
+    return actionStates;
+  }
+
+  reset(inputSource?: XRInputSource): void {
+    if (inputSource) {
+      this._previousAxesByInputSource.delete(inputSource);
+    } else {
+      this._previousAxesByInputSource.clear();
     }
   }
 }
@@ -211,6 +294,36 @@ export function getWebXRGamepadButtonActionState(
   };
 }
 
+export function getWebXRGamepadAxisActionState(
+  gamepadState: WebXRGamepadState,
+  axis: WebXRGamepadAxisState,
+  props: WebXRGamepadAxisActionProps & {
+    previousAxis?: WebXRGamepadPreviousAxisState | null;
+  } = {}
+): WebXRGamepadAxisActionState {
+  const deadzone = getNormalizedAxisDeadzone(props.deadzone);
+  const previousValue = props.previousAxis?.value ?? 0;
+  const wasActive = props.previousAxis?.active ?? false;
+  const active = Math.abs(axis.value) > deadzone;
+
+  return {
+    inputState: gamepadState.inputState,
+    inputSource: gamepadState.inputSource,
+    gamepadState,
+    axis,
+    index: axis.index,
+    name: axis.name,
+    value: axis.value,
+    previousValue,
+    valueDelta: axis.value - previousValue,
+    deadzone,
+    active,
+    wasActive,
+    activeStarted: active && !wasActive,
+    activeEnded: !active && wasActive
+  };
+}
+
 function getWebXRGamepadButtonState(
   button: GamepadButton,
   index: number,
@@ -246,4 +359,8 @@ function getWebXRGamepadAxes(
   const xAxis = axes[startIndex];
   const yAxis = axes[startIndex + 1];
   return xAxis && yAxis ? [xAxis.value, yAxis.value] : null;
+}
+
+function getNormalizedAxisDeadzone(deadzone: number = DEFAULT_AXIS_DEADZONE): number {
+  return Math.max(0, Math.min(1, deadzone));
 }

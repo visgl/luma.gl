@@ -9,14 +9,19 @@
 
 For `xr-standard` mappings, the helper names the reserved indices: trigger, squeeze, touchpad, thumbstick, touchpad axes, and thumbstick axes. Nonstandard mappings keep generic `button-N` and `axis-N` names because their layout is runtime specific.
 
-`WebXRGamepadActionManager` keeps the previous frame's button states and reports transitions such as `pressStarted`, `pressEnded`, `touchStarted`, and `valueDelta`.
+`WebXRGamepadActionManager` keeps the previous frame's button states and reports transitions such as `pressStarted`, `pressEnded`, `touchStarted`, and `valueDelta`. `WebXRGamepadAxisManager` does the same for axis values, with a configurable dead zone for `activeStarted` and `activeEnded`.
 
 ## Usage
 
 ```typescript
-import {WebXRGamepadActionManager, getWebXRGamepadState} from '@luma.gl/experimental';
+import {
+  WebXRGamepadActionManager,
+  WebXRGamepadAxisManager,
+  getWebXRGamepadState
+} from '@luma.gl/experimental';
 
 const gamepadActions = new WebXRGamepadActionManager();
+const gamepadAxes = new WebXRGamepadAxisManager();
 
 const inputStates = webXRManager.getInputState(xrFrame);
 for (const inputState of inputStates || []) {
@@ -30,6 +35,12 @@ for (const inputState of inputStates || []) {
 for (const action of gamepadActions.update(inputStates)) {
   if (action.name === 'trigger' && action.pressStarted) {
     // Trigger was pressed this frame.
+  }
+}
+
+for (const axis of gamepadAxes.update(inputStates, {deadzone: 0.2})) {
+  if (axis.name === 'thumbstick-y' && axis.active) {
+    // Use axis.value for locomotion or scrolling.
   }
 }
 ```
@@ -77,6 +88,44 @@ export type WebXRGamepadAxisState = {
   index: number;
   name: WebXRGamepadAxisName;
   value: number;
+};
+```
+
+### `WebXRGamepadAxisActionProps`
+
+```ts
+export type WebXRGamepadAxisActionProps = {
+  deadzone?: number;
+};
+```
+
+### `WebXRGamepadPreviousAxisState`
+
+```ts
+export type WebXRGamepadPreviousAxisState = {
+  value: number;
+  active: boolean;
+};
+```
+
+### `WebXRGamepadAxisActionState`
+
+```ts
+export type WebXRGamepadAxisActionState = {
+  inputState: WebXRInputState;
+  inputSource: XRInputSource;
+  gamepadState: WebXRGamepadState;
+  axis: WebXRGamepadAxisState;
+  index: number;
+  name: WebXRGamepadAxisName;
+  value: number;
+  previousValue: number;
+  valueDelta: number;
+  deadzone: number;
+  active: boolean;
+  wasActive: boolean;
+  activeStarted: boolean;
+  activeEnded: boolean;
 };
 ```
 
@@ -150,6 +199,10 @@ Returns snapshots for all input states with gamepads.
 
 Returns one button action state by comparing the current snapshot with an optional previous button state.
 
+### `getWebXRGamepadAxisActionState(gamepadState, axis, props?): WebXRGamepadAxisActionState`
+
+Returns one axis action state by comparing the current snapshot with an optional previous axis state. The `deadzone` option is clamped to the `[0, 1]` range and defaults to `0.15`.
+
 ### `WebXRGamepadActionManager`
 
 Tracks previous button state by `XRInputSource` identity.
@@ -161,3 +214,15 @@ Snapshots all current gamepads and returns one action state per button. Input so
 ### `reset(inputSource?: XRInputSource): void`
 
 Clears the previous-state cache for one input source, or for every tracked input source when omitted.
+
+### `WebXRGamepadAxisManager`
+
+Tracks previous axis state by `XRInputSource` identity.
+
+### `update(inputStates: readonly WebXRInputState[] | null, props?: WebXRGamepadAxisActionProps): readonly WebXRGamepadAxisActionState[]`
+
+Snapshots all current gamepad axes and returns one action state per axis. Input sources missing from the current frame are removed from the previous-state cache.
+
+### `reset(inputSource?: XRInputSource): void`
+
+Clears the previous-axis cache for one input source, or for every tracked input source when omitted.

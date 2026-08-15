@@ -5,6 +5,8 @@
 import test from 'test/utils/vitest-tape';
 import {
   WebXRGamepadActionManager,
+  WebXRGamepadAxisManager,
+  getWebXRGamepadAxisActionState,
   getWebXRGamepadButtonActionState,
   getWebXRGamepadState,
   getWebXRGamepadStates
@@ -230,6 +232,172 @@ test('webxr#WebXRGamepadActionManager trims inactive input sources', testCase =>
   testCase.end();
 });
 
+test('webxr#WebXRGamepadAxisManager reports dead-zone transitions', testCase => {
+  const inputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [],
+    axes: [0.1, 0, 0, 0]
+  });
+  const manager = new WebXRGamepadAxisManager();
+
+  const firstActions = manager.update([inputState], {deadzone: 0.2});
+  testCase.equal(firstActions.length, 4, 'returns one action per current axis');
+  testCase.deepEqual(
+    pickAxisAction(firstActions[0]!),
+    {
+      name: 'touchpad-x',
+      value: 0.1,
+      previousValue: 0,
+      valueDelta: 0.1,
+      deadzone: 0.2,
+      active: false,
+      wasActive: false,
+      activeStarted: false,
+      activeEnded: false
+    },
+    'starts below the configured dead zone'
+  );
+
+  inputState.gamepad!.axes[0] = 0.75;
+  inputState.gamepad!.axes[3] = -0.3;
+  const secondActions = manager.update([inputState], {deadzone: 0.2});
+  testCase.deepEqual(
+    pickAxisAction(secondActions[0]!),
+    {
+      name: 'touchpad-x',
+      value: 0.75,
+      previousValue: 0.1,
+      valueDelta: 0.65,
+      deadzone: 0.2,
+      active: true,
+      wasActive: false,
+      activeStarted: true,
+      activeEnded: false
+    },
+    'reports active start when the value exits the dead zone'
+  );
+  testCase.deepEqual(
+    pickAxisAction(secondActions[3]!),
+    {
+      name: 'thumbstick-y',
+      value: -0.3,
+      previousValue: 0,
+      valueDelta: -0.3,
+      deadzone: 0.2,
+      active: true,
+      wasActive: false,
+      activeStarted: true,
+      activeEnded: false
+    },
+    'tracks negative axis values by magnitude'
+  );
+
+  inputState.gamepad!.axes[0] = 0.2;
+  const thirdActions = manager.update([inputState], {deadzone: 0.2});
+  testCase.deepEqual(
+    pickAxisAction(thirdActions[0]!),
+    {
+      name: 'touchpad-x',
+      value: 0.2,
+      previousValue: 0.75,
+      valueDelta: -0.55,
+      deadzone: 0.2,
+      active: false,
+      wasActive: true,
+      activeStarted: false,
+      activeEnded: true
+    },
+    'dead-zone edge is inactive'
+  );
+
+  manager.reset(inputState.inputSource);
+  inputState.gamepad!.axes[0] = 1;
+  testCase.equal(
+    manager.update([inputState], {deadzone: 0.2})[0]?.wasActive,
+    false,
+    'reset clears previous axis state for one input source'
+  );
+  testCase.end();
+});
+
+test('webxr#WebXRGamepadAxisManager trims inactive input sources', testCase => {
+  const firstInputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [],
+    axes: [1]
+  });
+  const secondInputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [],
+    axes: [0.4]
+  });
+  const manager = new WebXRGamepadAxisManager();
+
+  manager.update([firstInputState, secondInputState]);
+  manager.update([secondInputState]);
+
+  firstInputState.gamepad!.axes[0] = 0;
+  const firstActionAfterTrim = manager.update([firstInputState])[0];
+  testCase.equal(firstActionAfterTrim?.wasActive, false, 'inactive input source state is trimmed');
+  testCase.equal(
+    firstActionAfterTrim?.activeEnded,
+    false,
+    'trimmed source does not report stale inactive transition'
+  );
+
+  manager.reset();
+  secondInputState.gamepad!.axes[0] = 0.5;
+  testCase.equal(
+    manager.update([secondInputState], {deadzone: 0.2})[0]?.activeStarted,
+    true,
+    'global reset clears every input source'
+  );
+  testCase.end();
+});
+
+test('webxr#getWebXRGamepadAxisActionState compares standalone states', testCase => {
+  const inputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [],
+    axes: [-0.25]
+  });
+  const gamepadState = getWebXRGamepadState(inputState)!;
+
+  const actionState = getWebXRGamepadAxisActionState(gamepadState, gamepadState.axes[0]!, {
+    deadzone: 2,
+    previousAxis: {
+      value: -0.75,
+      active: true
+    }
+  });
+
+  testCase.equal(actionState.inputState, inputState, 'keeps input-state identity');
+  testCase.equal(actionState.inputSource, inputState.inputSource, 'keeps input-source identity');
+  testCase.equal(actionState.gamepadState, gamepadState, 'keeps gamepad-state identity');
+  testCase.equal(actionState.axis, gamepadState.axes[0], 'keeps axis-state identity');
+  testCase.deepEqual(
+    pickAxisAction(actionState),
+    {
+      name: 'touchpad-x',
+      value: -0.25,
+      previousValue: -0.75,
+      valueDelta: 0.5,
+      deadzone: 1,
+      active: false,
+      wasActive: true,
+      activeStarted: false,
+      activeEnded: true
+    },
+    'compares standalone previous axis state and clamps dead zone'
+  );
+  testCase.equal(
+    getWebXRGamepadAxisActionState(gamepadState, gamepadState.axes[0]!, {deadzone: -1}).deadzone,
+    0,
+    'dead zone cannot be negative'
+  );
+  testCase.end();
+});
+
 test('webxr#getWebXRGamepadButtonActionState compares standalone states', testCase => {
   const inputState = makeWebXRInputState({
     mapping: 'xr-standard',
@@ -344,5 +512,29 @@ function pickAction(actionState: {
     wasTouched: actionState.wasTouched,
     touchStarted: actionState.touchStarted,
     touchEnded: actionState.touchEnded
+  };
+}
+
+function pickAxisAction(actionState: {
+  name: unknown;
+  value: unknown;
+  previousValue: unknown;
+  valueDelta: unknown;
+  deadzone: unknown;
+  active: unknown;
+  wasActive: unknown;
+  activeStarted: unknown;
+  activeEnded: unknown;
+}): object {
+  return {
+    name: actionState.name,
+    value: actionState.value,
+    previousValue: actionState.previousValue,
+    valueDelta: actionState.valueDelta,
+    deadzone: actionState.deadzone,
+    active: actionState.active,
+    wasActive: actionState.wasActive,
+    activeStarted: actionState.activeStarted,
+    activeEnded: actionState.activeEnded
   };
 }
