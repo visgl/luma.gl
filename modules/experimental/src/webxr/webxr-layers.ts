@@ -100,6 +100,24 @@ export class WebXRCompositionLayerManager {
     return layer;
   }
 
+  createEquirectLayer(init: XREquirectLayerInit): XREquirectLayer {
+    if (!this.xrWebGLBinding) {
+      throw new Error('WebXRCompositionLayerManager has no XRWebGLBinding');
+    }
+    const layer = this.xrWebGLBinding.createEquirectLayer(init);
+    this._trackLayer(layer);
+    return layer;
+  }
+
+  createCubeLayer(init: XRCubeLayerInit): XRCubeLayer {
+    if (!this.xrWebGLBinding) {
+      throw new Error('WebXRCompositionLayerManager has no XRWebGLBinding');
+    }
+    const layer = this.xrWebGLBinding.createCubeLayer(init);
+    this._trackLayer(layer);
+    return layer;
+  }
+
   async updateRenderState(layers: readonly XRLayer[]): Promise<void> {
     if (!this.session) {
       throw new Error('WebXRCompositionLayerManager has no XRSession');

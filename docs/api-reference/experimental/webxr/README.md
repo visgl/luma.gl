@@ -12,7 +12,7 @@
 - [`WebXRAnimationFrameProvider`](/docs/api-reference/experimental/webxr/webxr-manager) drives an engine `AnimationLoop` from `XRSession.requestAnimationFrame()`.
 - [`WebXRManager`](/docs/api-reference/experimental/webxr/webxr-manager) prepares WebGPU projection layers or an `XRWebGLLayer`, then resolves per-view framebuffer, viewport, projection, and view matrix state.
 - [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture) binds WebXR Raw Camera Access as a borrowed read-only WebGL texture sampled through GLSL `sampler2D`.
-- [`WebXRCompositionLayerManager`](/docs/api-reference/experimental/webxr/webxr-composition-layer-manager) creates WebGL quad and cylinder composition layers and resolves borrowed subimage framebuffers for rendering.
+- [`WebXRCompositionLayerManager`](/docs/api-reference/experimental/webxr/webxr-composition-layer-manager) creates WebGL quad, cylinder, equirect, and cube composition layers and resolves borrowed subimage framebuffers for rendering.
 - [`WebXRDepthSensingManager`](/docs/api-reference/experimental/webxr/webxr-depth-sensing-manager) resolves WebXR depth sensing state from CPU buffers or borrowed WebGL depth textures.
 - [`WebXRDOMOverlayManager`](/docs/api-reference/experimental/webxr/webxr-dom-overlay-manager) tracks DOM overlay state and suppresses XR select events from overlay UI.
 - [`WebXRHandTrackingManager`](/docs/api-reference/experimental/webxr/webxr-hand-tracking-manager) resolves articulated hand joint matrices and radii from WebXR hand input sources.
@@ -20,4 +20,4 @@
 - [`WebXRAnchorManager`](/docs/api-reference/experimental/webxr/webxr-anchor-manager) creates, tracks, resolves, and deletes AR anchors.
 - [`WebXRMediaLayerManager`](/docs/api-reference/experimental/webxr/webxr-media-layer-manager) creates video-backed quad, cylinder, and equirect composition layers through the XR compositor.
 
-WebGPU raw camera textures and cube composition layers are not part of this v10 work in progress.
+WebGPU raw camera textures are not part of this v10 work in progress.

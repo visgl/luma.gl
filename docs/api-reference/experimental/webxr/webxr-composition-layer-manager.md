@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
 </p>
 
-`WebXRCompositionLayerManager` is the experimental WebXR Layers API helper for WebGL composition layers. It creates quad and cylinder layers through `XRWebGLBinding`, resolves `XRWebGLSubImage` objects during an active XR animation frame, and exposes borrowed luma.gl texture and framebuffer wrappers for rendering into those browser-owned opaque textures.
+`WebXRCompositionLayerManager` is the experimental WebXR Layers API helper for WebGL composition layers. It creates quad, cylinder, equirect, and cube layers through `XRWebGLBinding`, resolves `XRWebGLSubImage` objects during an active XR animation frame, and exposes borrowed luma.gl texture and framebuffer wrappers for rendering into those browser-owned opaque textures.
 
 Use this manager for high-fidelity XR panels, HUDs, and curved UI surfaces that should be composited by the XR runtime instead of drawn into the main projection layer.
 
@@ -115,6 +115,14 @@ Creates and tracks an `XRQuadLayer`.
 ### `createCylinderLayer(init: XRCylinderLayerInit): XRCylinderLayer`
 
 Creates and tracks an `XRCylinderLayer`.
+
+### `createEquirectLayer(init: XREquirectLayerInit): XREquirectLayer`
+
+Creates and tracks an `XREquirectLayer`.
+
+### `createCubeLayer(init: XRCubeLayerInit): XRCubeLayer`
+
+Creates and tracks an `XRCubeLayer`.
 
 ### `updateRenderState(layers: readonly XRLayer[]): Promise<void>`
 

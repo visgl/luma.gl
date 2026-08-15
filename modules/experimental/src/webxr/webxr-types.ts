@@ -297,6 +297,12 @@ declare global {
     onredraw: ((this: XREquirectLayer, event: Event) => unknown) | null;
   }
 
+  interface XRCubeLayer extends XRCompositionLayer {
+    space: XRReferenceSpace;
+    orientation: DOMPointReadOnly | null;
+    onredraw: ((this: XRCubeLayer, event: Event) => unknown) | null;
+  }
+
   interface XRSubImage {
     readonly viewport: XRViewport;
   }
@@ -336,6 +342,18 @@ declare global {
     radius?: number;
     centralAngle?: number;
     aspectRatio?: number;
+  }
+
+  interface XREquirectLayerInit extends XRLayerInit {
+    transform?: XRRigidTransform;
+    radius?: number;
+    centralHorizontalAngle?: number;
+    upperVerticalAngle?: number;
+    lowerVerticalAngle?: number;
+  }
+
+  interface XRCubeLayerInit extends XRLayerInit {
+    orientation?: DOMPointReadOnly | null;
   }
 
   interface XRMediaLayerInit {
@@ -413,6 +431,8 @@ declare global {
     createProjectionLayer(layerInit?: XRProjectionLayerInit): XRProjectionLayer;
     createQuadLayer(layerInit: XRQuadLayerInit): XRQuadLayer;
     createCylinderLayer(layerInit: XRCylinderLayerInit): XRCylinderLayer;
+    createEquirectLayer(layerInit: XREquirectLayerInit): XREquirectLayer;
+    createCubeLayer(layerInit: XRCubeLayerInit): XRCubeLayer;
     getCameraImage(camera: XRCamera): WebGLTexture | null;
     getDepthInformation?(view: XRView): XRWebGLDepthInformation | null;
     getSubImage(layer: XRCompositionLayer, frame: XRFrame, eye?: XREye): XRWebGLSubImage;

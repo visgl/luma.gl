@@ -178,6 +178,59 @@ test('webxr#WebXRCompositionLayerManager handles cylinder layers and helpers', a
   testCase.end();
 });
 
+test('webxr#WebXRCompositionLayerManager handles equirect and cube layers', async testCase => {
+  const originalXRWebGLBinding = globalThis.XRWebGLBinding;
+  const session = makeMockXRSession();
+  const device = makeMockDevice();
+  const referenceSpace = {} as XRReferenceSpace;
+  const orientation = {x: 0, y: 0, z: 0, w: 1} as DOMPointReadOnly;
+  const subImage = makeMockXRWebGLSubImage({
+    colorTexture: {} as WebGLTexture,
+    depthStencilTexture: null,
+    imageIndex: undefined,
+    colorTextureWidth: 2048,
+    colorTextureHeight: 1024
+  });
+
+  globalThis.XRWebGLBinding = makeMockXRWebGLBindingClass(subImage);
+
+  try {
+    const manager = new WebXRCompositionLayerManager(device);
+    await manager.setSession(session);
+    const equirectLayer = manager.createEquirectLayer({
+      space: referenceSpace,
+      viewPixelWidth: 2048,
+      viewPixelHeight: 1024,
+      radius: 0,
+      centralHorizontalAngle: Math.PI * 2,
+      upperVerticalAngle: Math.PI / 2,
+      lowerVerticalAngle: -Math.PI / 2
+    });
+    const cubeLayer = manager.createCubeLayer({
+      space: referenceSpace,
+      viewPixelWidth: 1024,
+      viewPixelHeight: 1024,
+      orientation
+    });
+    await manager.updateRenderState([equirectLayer, cubeLayer]);
+
+    const equirectState = manager.getLayerState({session} as XRFrame, equirectLayer);
+    const cubeState = manager.getLayerState({session} as XRFrame, cubeLayer);
+
+    testCase.equal(session.updatedLayers[0], equirectLayer, 'updates render state with equirect');
+    testCase.equal(session.updatedLayers[1], cubeLayer, 'updates render state with cube');
+    testCase.equal(equirectState?.layer, equirectLayer, 'resolves equirect subimage state');
+    testCase.equal(cubeState?.layer, cubeLayer, 'resolves cube subimage state');
+    testCase.equal(equirectState?.colorTexture.width, 2048, 'uses equirect subimage width');
+    testCase.equal(equirectState?.colorTexture.height, 1024, 'uses equirect subimage height');
+    testCase.equal((cubeLayer as XRCubeLayer).orientation, orientation, 'retains cube orientation');
+  } finally {
+    globalThis.XRWebGLBinding = originalXRWebGLBinding;
+  }
+
+  testCase.end();
+});
+
 function makeMockDevice(): Device & {
   compatibilityCallCount: number;
   createdFramebuffers: MockFramebuffer[];
@@ -260,6 +313,16 @@ function makeMockXRWebGLBindingClass(subImage: XRWebGLSubImage): typeof XRWebGLB
       return makeMockCompositionLayer('mono', init) as XRCylinderLayer;
     }
 
+    createEquirectLayer(init: XREquirectLayerInit): XREquirectLayer {
+      return makeMockCompositionLayer('mono', init) as XREquirectLayer;
+    }
+
+    createCubeLayer(init: XRCubeLayerInit): XRCubeLayer {
+      return Object.assign(makeMockCompositionLayer('mono', init), {
+        orientation: init.orientation || null
+      }) as XRCubeLayer;
+    }
+
     getSubImage(): XRWebGLSubImage {
       return subImage;
     }
@@ -268,7 +331,7 @@ function makeMockXRWebGLBindingClass(subImage: XRWebGLSubImage): typeof XRWebGLB
 
 function makeMockCompositionLayer(
   layout: XRLayerLayout,
-  init: XRQuadLayerInit | XRCylinderLayerInit
+  init: XRQuadLayerInit | XRCylinderLayerInit | XREquirectLayerInit | XRCubeLayerInit
 ): XRCompositionLayer {
   return Object.assign(new EventTarget(), {
     layout,
