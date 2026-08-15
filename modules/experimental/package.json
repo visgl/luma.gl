@@ -62,6 +62,11 @@
       "require": "./dist/luproj/index.cjs",
       "types": "./dist/luproj/index.d.ts"
     },
+    "./luvs": {
+      "import": "./dist/luvs/index.js",
+      "require": "./dist/luvs/index.cjs",
+      "types": "./dist/luvs/index.d.ts"
+    },
     "./luproj/benchmarks": {
       "import": "./dist/luproj/benchmarks.js",
       "require": "./dist/luproj/benchmarks.cjs",
