@@ -28,6 +28,12 @@ export {getWebXRDOMOverlaySessionInit, WebXRDOMOverlayManager} from './webxr-dom
 export type {WebXRHandJointState, WebXRHandTrackingState} from './webxr-hand-tracking';
 export {WEBXR_HAND_JOINTS, WebXRHandTrackingManager} from './webxr-hand-tracking';
 export type {
+  WebXRCompositionLayerManagerProps,
+  WebXRCompositionLayerState,
+  WebXRLayersSessionInitProps
+} from './webxr-layers';
+export {getWebXRLayersSessionInit, WebXRCompositionLayerManager} from './webxr-layers';
+export type {
   WebXRHitTestManagerProps,
   WebXRHitTestResult,
   WebXRHitTestState

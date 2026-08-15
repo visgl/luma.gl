@@ -39,6 +39,9 @@ declare global {
   type XRDepthType = 'raw' | 'smooth';
   type XRDepthUsage = 'cpu-optimized' | 'gpu-optimized';
   type XRTextureType = number;
+  type XRLayerTextureType = 'texture' | 'texture-array';
+  type XRLayerLayout = 'default' | 'mono' | 'stereo' | 'stereo-left-right' | 'stereo-top-bottom';
+  type XRLayerQuality = 'default' | 'text-optimized' | 'graphics-optimized';
   type XRDOMOverlayType = 'screen' | 'floating' | 'head-locked';
   type XRHandJoint =
     | 'wrist'
@@ -97,7 +100,7 @@ declare global {
 
   interface XRRenderStateInit {
     baseLayer?: XRWebGLLayer;
-    layers?: XRProjectionLayer[];
+    layers?: readonly XRLayer[];
   }
 
   interface XRSession extends EventTarget {
@@ -253,6 +256,78 @@ declare global {
     readonly height: number;
   }
 
+  interface XRLayer extends EventTarget {}
+
+  interface XRCompositionLayer extends XRLayer {
+    readonly layout: XRLayerLayout;
+    blendTextureSourceAlpha: boolean;
+    forceMonoPresentation: boolean;
+    opacity: number;
+    readonly mipLevels: number;
+    quality: XRLayerQuality;
+    readonly needsRedraw: boolean;
+
+    destroy(): void;
+  }
+
+  interface XRQuadLayer extends XRCompositionLayer {
+    space: XRSpace;
+    transform: XRRigidTransform;
+    width: number;
+    height: number;
+    onredraw: ((this: XRQuadLayer, event: Event) => unknown) | null;
+  }
+
+  interface XRCylinderLayer extends XRCompositionLayer {
+    space: XRSpace;
+    transform: XRRigidTransform;
+    radius: number;
+    centralAngle: number;
+    aspectRatio: number;
+    onredraw: ((this: XRCylinderLayer, event: Event) => unknown) | null;
+  }
+
+  interface XRSubImage {
+    readonly viewport: XRViewport;
+  }
+
+  interface XRWebGLSubImage extends XRSubImage {
+    readonly colorTexture: WebGLTexture;
+    readonly depthStencilTexture: WebGLTexture | null;
+    readonly motionVectorTexture: WebGLTexture | null;
+    readonly imageIndex?: number;
+    readonly colorTextureWidth: number;
+    readonly colorTextureHeight: number;
+    readonly depthStencilTextureWidth?: number | null;
+    readonly depthStencilTextureHeight?: number | null;
+  }
+
+  interface XRLayerInit {
+    space: XRSpace;
+    textureType?: XRLayerTextureType;
+    colorFormat?: number;
+    depthFormat?: number | null;
+    mipLevels?: number;
+    viewPixelWidth: number;
+    viewPixelHeight: number;
+    layout?: XRLayerLayout;
+    isStatic?: boolean;
+    clearOnAccess?: boolean;
+  }
+
+  interface XRQuadLayerInit extends XRLayerInit {
+    transform?: XRRigidTransform;
+    width?: number;
+    height?: number;
+  }
+
+  interface XRCylinderLayerInit extends XRLayerInit {
+    transform?: XRRigidTransform;
+    radius?: number;
+    centralAngle?: number;
+    aspectRatio?: number;
+  }
+
   interface XRWebGLLayerInit {
     antialias?: boolean;
     depth?: boolean;
@@ -269,7 +344,7 @@ declare global {
     textureUsage?: GPUTextureUsageFlags;
   }
 
-  interface XRProjectionLayer {}
+  interface XRProjectionLayer extends XRLayer {}
 
   interface XRGPUSubImage {
     readonly colorTexture: GPUTexture;
@@ -298,8 +373,13 @@ declare global {
   class XRWebGLBinding {
     constructor(session: XRSession, context: WebGLRenderingContext | WebGL2RenderingContext);
 
+    createProjectionLayer(layerInit?: XRProjectionLayerInit): XRProjectionLayer;
+    createQuadLayer(layerInit: XRQuadLayerInit): XRQuadLayer;
+    createCylinderLayer(layerInit: XRCylinderLayerInit): XRCylinderLayer;
     getCameraImage(camera: XRCamera): WebGLTexture | null;
     getDepthInformation?(view: XRView): XRWebGLDepthInformation | null;
+    getSubImage(layer: XRCompositionLayer, frame: XRFrame, eye?: XREye): XRWebGLSubImage;
+    getViewSubImage(layer: XRProjectionLayer, view: XRView): XRWebGLSubImage;
   }
 
   class XRGPUBinding {
