@@ -193,12 +193,15 @@ vectors or bind them explicitly through storage.
 | --- | --- |
 | `FixedSizeList<Float32, 3>` | `float32x3` |
 | `FixedSizeList<Uint8, 4>` as normalized color | `unorm8x4` |
+| `FixedSizeList<Float32, 384>` embedding | `fixed-size-list<float32,384>` |
+| `FixedSizeList<Float32, 768>` embedding | `fixed-size-list<float32,768>` |
+| `FixedSizeList<Float32, 1536>` embedding | `fixed-size-list<float32,1536>` |
 | `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>` |
 | `List<FixedSizeList<Uint8, 4>>` vertex colors | `vertex-list<unorm8x4>` |
 
-Short fixed-size lists preserve their existing vertex-attribute mappings.
-Fixed-size-list GPU formats can describe wider caller-created table storage
-without inventing unsupported vertex formats such as `float32x768`.
+Short fixed-size lists preserve their existing vertex-attribute mappings. Wide
+fixed-size lists become ordinary row-aligned storage columns without inventing
+unsupported formats such as `float32x768`.
 
 Arrow data types remain adapter/readback metadata. Table core uses
 `GPUVectorFormat`.
