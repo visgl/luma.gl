@@ -259,7 +259,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
     expect(applicationSource).toContain('WebXRInputActionManager');
-    expect(applicationSource).toContain('getWebXRControllerRayPlaneTarget');
+    expect(applicationSource).toContain('getWebXRControllerRayPlaneTargets');
     expect(applicationSource).toContain('getWebXRControllerStateByHandedness');
     expect(applicationSource).toContain('getWebXRControllerStates');
     expect(applicationSource).toContain('getWebXRLocomotionState');
@@ -290,6 +290,12 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain(
       "const dominantControllerState = getWebXRControllerStateByHandedness(controllerStates, 'right')"
     );
+    expect(rayMethod).toContain(
+      'const teleportTargets = getWebXRControllerRayPlaneTargets(controllerStates, {'
+    );
+    expect(rayMethod).toContain('const teleportTargetByInputSource = new Map(');
+    expect(rayMethod).toContain('teleportTargets.map(teleportTarget =>');
+    expect(rayMethod).toContain('teleportTarget.controllerState.inputSource');
     expect(rayMethod).toContain('for (const controllerState of controllerStates)');
     expect(rayMethod).toContain('if (controllerState.grip)');
     expect(rayMethod).toContain('this.controllerGripMatrix.copy(controllerState.grip.matrix)');
@@ -310,7 +316,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
     expect(rayMethod).toContain(
-      'const teleportTarget = getWebXRControllerRayPlaneTarget(controllerState, {'
+      'const teleportTarget = teleportTargetByInputSource.get(controllerState.inputSource)'
     );
     expect(rayMethod).toContain('maxDistance: 8');
     expect(rayMethod).toContain('bounds: boundsState');

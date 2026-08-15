@@ -25,7 +25,7 @@ import {
   getWebXRDOMOverlaySessionInit,
   getWebXRBoundsState,
   getWebXRHandPinch,
-  getWebXRControllerRayPlaneTarget,
+  getWebXRControllerRayPlaneTargets,
   getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
   getWebXRLocomotionState,
@@ -922,6 +922,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   ): void {
     const controllerStates = getWebXRControllerStates(inputState);
     const dominantControllerState = getWebXRControllerStateByHandedness(controllerStates, 'right');
+    const teleportTargets = getWebXRControllerRayPlaneTargets(controllerStates, {
+      maxDistance: 8,
+      bounds: boundsState
+    });
+    const teleportTargetByInputSource = new Map(
+      teleportTargets.map(teleportTarget => [
+        teleportTarget.controllerState.inputSource,
+        teleportTarget
+      ])
+    );
+
     for (const controllerState of controllerStates) {
       if (controllerState.grip) {
         this.modelViewProjectionMatrix
@@ -970,10 +981,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.controllerRayModel.predraw(this.device.commandEncoder);
       this.controllerRayModel.draw(renderPass);
 
-      const teleportTarget = getWebXRControllerRayPlaneTarget(controllerState, {
-        maxDistance: 8,
-        bounds: boundsState
-      });
+      const teleportTarget = teleportTargetByInputSource.get(controllerState.inputSource);
       if (teleportTarget) {
         if (teleportTarget.allowed) {
           this._floorHitByInputSource.set(controllerState.inputSource, teleportTarget.point);
