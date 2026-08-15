@@ -21,6 +21,9 @@ import {
   getWebXRInputRayByInputSource,
   getWebXRInputRayPlaneIntersection,
   getWebXRInputRayPlaneIntersections,
+  getWebXRInputRayPlaneTarget,
+  getWebXRInputRayPlaneTargetByInputSource,
+  getWebXRInputRayPlaneTargets,
   getWebXRInputRays,
   getWebXRInputStateByInputSource,
   getWebXRInputSourceState
@@ -401,6 +404,105 @@ test('webxr#getWebXRControllerRayPlaneIntersection resolves controller target hi
   testCase.end();
 });
 
+test('webxr#getWebXRInputRayPlaneTarget validates input ray targets against bounds', testCase => {
+  const floorRay = getWebXRInputRay(
+    makeMockWebXRInputState(
+      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0, 1.6, 0, 1])
+    )
+  )!;
+  const bounds = [
+    [-1, 0, -2],
+    [1, 0, -2],
+    [1, 0, 1],
+    [-1, 0, 1]
+  ] as const;
+  const target = getWebXRInputRayPlaneTarget(floorRay, {bounds});
+
+  testCase.equal(target?.ray, floorRay, 'retains source input ray');
+  testCase.equal(target?.allowed, true, 'marks in-bounds input ray target allowed');
+  testCase.ok(Math.abs((target?.point[2] || 0) + 1.2) < 1e-6, 'uses ray-plane hit as target point');
+  testCase.equal(
+    getWebXRInputRayPlaneTarget(floorRay, {
+      bounds: {
+        bounds: [
+          [1, 0, 1],
+          [2, 0, 1],
+          [2, 0, 2],
+          [1, 0, 2]
+        ]
+      } as any
+    })?.allowed,
+    false,
+    'marks out-of-bounds input ray target blocked'
+  );
+  testCase.equal(
+    getWebXRInputRayPlaneTarget(floorRay, {maxDistance: 1}),
+    null,
+    'missing intersections do not produce input ray targets'
+  );
+  testCase.end();
+});
+
+test('webxr#getWebXRInputRayPlaneTargets filters and selects bounded targets', testCase => {
+  const firstInputSource = {} as XRInputSource;
+  const secondInputSource = {} as XRInputSource;
+  const missingInputSource = {} as XRInputSource;
+  const firstRay = getWebXRInputRay(
+    makeMockWebXRInputState(
+      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0, 1.6, 0, 1]),
+      null,
+      {inputSource: firstInputSource}
+    )
+  )!;
+  const secondRay = getWebXRInputRay(
+    makeMockWebXRInputState(
+      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0.5, 1.6, 0, 1]),
+      null,
+      {inputSource: secondInputSource}
+    )
+  )!;
+  const parallelRay = {
+    inputState: makeMockWebXRInputState(null),
+    origin: [0, 1, 0],
+    direction: [1, 0, 0],
+    matrix: new Float32Array(16)
+  };
+  const targets = getWebXRInputRayPlaneTargets([firstRay, secondRay, parallelRay], {
+    bounds: [
+      [-1, 0, -2],
+      [1, 0, -2],
+      [1, 0, 1],
+      [-1, 0, 1]
+    ]
+  });
+
+  testCase.deepEqual(getWebXRInputRayPlaneTargets(null), [], 'null ray lists become empty');
+  testCase.equal(targets.length, 2, 'filters rays without usable target hits');
+  testCase.equal(targets[0]?.ray, firstRay, 'keeps first target ray');
+  testCase.equal(targets[0]?.allowed, true, 'keeps allowed state');
+  testCase.equal(
+    getWebXRInputRayPlaneTargetByInputSource(targets, secondInputSource)?.ray,
+    secondRay,
+    'selects targets by exact input source identity'
+  );
+  testCase.equal(
+    getWebXRInputRayPlaneTargetByInputSource(targets, missingInputSource),
+    null,
+    'missing input sources return null'
+  );
+  testCase.equal(
+    getWebXRInputRayPlaneTargetByInputSource(null, secondInputSource),
+    null,
+    'null target lists return null'
+  );
+  testCase.equal(
+    getWebXRInputRayPlaneTargetByInputSource(targets, null),
+    null,
+    'null input sources return null'
+  );
+  testCase.end();
+});
+
 test('webxr#getWebXRControllerRayPlaneTarget validates controller targets against bounds', testCase => {
   const floorRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0, 1.6, 0, 1]);
   const controllerState = getWebXRControllerState(makeMockWebXRInputState(floorRayMatrix))!;
@@ -411,9 +513,11 @@ test('webxr#getWebXRControllerRayPlaneTarget validates controller targets agains
     [-1, 0, 1]
   ] as const;
   const target = getWebXRControllerRayPlaneTarget(controllerState, {bounds});
+  const inputTarget = getWebXRInputRayPlaneTarget(controllerState.ray!, {bounds});
 
   testCase.equal(target?.controllerState, controllerState, 'retains controller state');
   testCase.equal(target?.allowed, true, 'marks in-bounds target allowed');
+  testCase.equal(target?.allowed, inputTarget?.allowed, 'matches generic input ray target bounds');
   testCase.deepEqual(target?.point, target?.rayIntersection.point, 'uses ray hit as target point');
   testCase.equal(
     getWebXRControllerRayPlaneTarget(controllerState, {

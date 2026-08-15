@@ -112,6 +112,15 @@ export type WebXRInputRayPlaneIntersection = {
   distance: number;
 };
 
+export type WebXRInputRayPlaneTargetProps = WebXRInputRayPlaneIntersectionProps & {
+  bounds?: readonly WebXRBoundsPoint[] | WebXRBoundsState | null;
+};
+
+/** Experimental v10 bounded target derived from one input ray-plane hit. */
+export type WebXRInputRayPlaneTarget = WebXRInputRayPlaneIntersection & {
+  allowed: boolean;
+};
+
 /** Experimental v10 ray-plane hit derived from one WebXR controller state. */
 export type WebXRControllerRayPlaneIntersection = {
   controllerState: WebXRControllerState;
@@ -120,9 +129,7 @@ export type WebXRControllerRayPlaneIntersection = {
   distance: number;
 };
 
-export type WebXRControllerRayPlaneTargetProps = WebXRInputRayPlaneIntersectionProps & {
-  bounds?: readonly WebXRBoundsPoint[] | WebXRBoundsState | null;
-};
+export type WebXRControllerRayPlaneTargetProps = WebXRInputRayPlaneTargetProps;
 
 /** Experimental v10 bounded target derived from one controller ray-plane hit. */
 export type WebXRControllerRayPlaneTarget = WebXRControllerRayPlaneIntersection & {
@@ -408,10 +415,14 @@ export function getWebXRControllerRayPlaneTarget(
     return null;
   }
 
-  const bounds = getWebXRTargetBounds(props.bounds);
+  const target = getWebXRInputRayPlaneTarget(intersection.rayIntersection.ray, props);
+  if (!target) {
+    return null;
+  }
+
   return {
     ...intersection,
-    allowed: !bounds || isPointInWebXRBounds(intersection.point, bounds)
+    allowed: target.allowed
   };
 }
 
@@ -499,6 +510,42 @@ export function getWebXRInputRayPlaneIntersections(
     .filter((intersection): intersection is WebXRInputRayPlaneIntersection =>
       Boolean(intersection)
     );
+}
+
+export function getWebXRInputRayPlaneTarget(
+  ray: WebXRInputRay,
+  props: WebXRInputRayPlaneTargetProps = {}
+): WebXRInputRayPlaneTarget | null {
+  const intersection = getWebXRInputRayPlaneIntersection(ray, props);
+  if (!intersection) {
+    return null;
+  }
+
+  const bounds = getWebXRTargetBounds(props.bounds);
+  return {
+    ...intersection,
+    allowed: !bounds || isPointInWebXRBounds(intersection.point, bounds)
+  };
+}
+
+export function getWebXRInputRayPlaneTargets(
+  rays: readonly WebXRInputRay[] | null,
+  props: WebXRInputRayPlaneTargetProps = {}
+): readonly WebXRInputRayPlaneTarget[] {
+  return (rays || [])
+    .map(ray => getWebXRInputRayPlaneTarget(ray, props))
+    .filter((target): target is WebXRInputRayPlaneTarget => Boolean(target));
+}
+
+export function getWebXRInputRayPlaneTargetByInputSource(
+  targets: readonly WebXRInputRayPlaneTarget[] | null,
+  inputSource: XRInputSource | null | undefined
+): WebXRInputRayPlaneTarget | null {
+  return (
+    (inputSource &&
+      (targets || []).find(target => target.ray.inputState.inputSource === inputSource)) ||
+    null
+  );
 }
 
 function getWebXRTargetBounds(

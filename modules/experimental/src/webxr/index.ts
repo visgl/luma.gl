@@ -163,6 +163,8 @@ export type {
   WebXRInputRay,
   WebXRInputRayPlaneIntersection,
   WebXRInputRayPlaneIntersectionProps,
+  WebXRInputRayPlaneTarget,
+  WebXRInputRayPlaneTargetProps,
   WebXRInputSourceKind,
   WebXRInputSourceState
 } from './webxr-input';
@@ -183,6 +185,9 @@ export {
   getWebXRInputRayByInputSource,
   getWebXRInputRayPlaneIntersection,
   getWebXRInputRayPlaneIntersections,
+  getWebXRInputRayPlaneTarget,
+  getWebXRInputRayPlaneTargetByInputSource,
+  getWebXRInputRayPlaneTargets,
   getWebXRInputRays,
   getWebXRInputStateByInputSource,
   getWebXRInputSourceState,
