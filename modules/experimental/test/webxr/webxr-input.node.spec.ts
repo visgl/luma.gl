@@ -6,6 +6,7 @@ import test from 'test/utils/vitest-tape';
 import {
   WebXRInputActionManager,
   getWebXRControllerState,
+  getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
   getWebXRInputActionState,
   getWebXRInputActivationState,
@@ -204,6 +205,61 @@ test('webxr#getWebXRControllerStates filters controller snapshots', testCase => 
     'keeps later controller input source'
   );
   testCase.equal(controllerStates[1]?.primaryAction, 1, 'keeps controller activation state');
+  testCase.end();
+});
+
+test('webxr#getWebXRControllerStateByHandedness selects controller hands', testCase => {
+  const leftInputSource = {} as XRInputSource;
+  const rightInputSource = {} as XRInputSource;
+  const noneInputSource = {} as XRInputSource;
+  const controllerStates = getWebXRControllerStates([
+    makeMockWebXRInputState(null, null, {
+      inputSource: leftInputSource,
+      handedness: 'left',
+      profiles: ['generic-trigger-squeeze-thumbstick']
+    }),
+    makeMockWebXRInputState(null, null, {
+      inputSource: rightInputSource,
+      handedness: 'right',
+      profiles: ['generic-trigger-squeeze-thumbstick']
+    }),
+    makeMockWebXRInputState(null, null, {
+      inputSource: noneInputSource,
+      handedness: 'none',
+      profiles: ['generic-trigger-squeeze-thumbstick']
+    })
+  ]);
+
+  testCase.equal(
+    getWebXRControllerStateByHandedness(controllerStates)?.inputSource,
+    leftInputSource,
+    'default any returns first controller'
+  );
+  testCase.equal(
+    getWebXRControllerStateByHandedness(controllerStates, 'right')?.inputSource,
+    rightInputSource,
+    'selects right-hand controllers'
+  );
+  testCase.equal(
+    getWebXRControllerStateByHandedness(controllerStates, 'none')?.inputSource,
+    noneInputSource,
+    'selects unhanded controllers'
+  );
+  testCase.equal(
+    getWebXRControllerStateByHandedness(controllerStates, 'left')?.inputSource,
+    leftInputSource,
+    'selects left-hand controllers'
+  );
+  testCase.equal(
+    getWebXRControllerStateByHandedness([], 'right'),
+    null,
+    'empty controller lists return null'
+  );
+  testCase.equal(
+    getWebXRControllerStateByHandedness(null, 'right'),
+    null,
+    'null controller lists return null'
+  );
   testCase.end();
 });
 

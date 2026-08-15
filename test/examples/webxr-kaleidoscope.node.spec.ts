@@ -259,6 +259,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
     expect(applicationSource).toContain('WebXRInputActionManager');
+    expect(applicationSource).toContain('getWebXRControllerStateByHandedness');
     expect(applicationSource).toContain('getWebXRControllerStates');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
     expect(applicationSource).toContain('getWebXRLocomotionState');
@@ -285,16 +286,18 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('this.updateXRInputActions(inputState)');
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
+    expect(rayMethod).toContain('const controllerStates = getWebXRControllerStates(inputState)');
     expect(rayMethod).toContain(
-      'for (const controllerState of getWebXRControllerStates(inputState))'
+      "const dominantControllerState = getWebXRControllerStateByHandedness(controllerStates, 'right')"
     );
+    expect(rayMethod).toContain('for (const controllerState of controllerStates)');
     expect(rayMethod).toContain('if (controllerState.grip)');
     expect(rayMethod).toContain('this.controllerGripMatrix.copy(controllerState.grip.matrix)');
     expect(rayMethod).toContain(
       'multiplyRight(this.controllerGripMatrix.copy(controllerState.grip.matrix))'
     );
     expect(rayMethod).toContain('cameraMix: controllerState.isSqueezeActive');
-    expect(rayMethod).toContain("controllerState.handedness === 'right'");
+    expect(rayMethod).toContain('controllerState === dominantControllerState');
     expect(rayMethod).toContain('this.controllerGripModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerGripModel.draw(renderPass)');
     expect(rayMethod).toContain('if (!controllerState.ray)');

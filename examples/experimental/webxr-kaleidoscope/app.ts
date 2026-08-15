@@ -25,6 +25,7 @@ import {
   getWebXRDOMOverlaySessionInit,
   getWebXRBoundsState,
   getWebXRHandPinch,
+  getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
   getWebXRInputRayPlaneIntersection,
   getWebXRLocomotionState,
@@ -919,7 +920,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     time: number,
     boundsState: WebXRBoundsState | null
   ): void {
-    for (const controllerState of getWebXRControllerStates(inputState)) {
+    const controllerStates = getWebXRControllerStates(inputState);
+    const dominantControllerState = getWebXRControllerStateByHandedness(controllerStates, 'right');
+    for (const controllerState of controllerStates) {
       if (controllerState.grip) {
         this.modelViewProjectionMatrix
           .copy(view.projectionMatrix)
@@ -932,7 +935,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
               time,
               cameraMix: controllerState.isSqueezeActive
                 ? 1
-                : controllerState.handedness === 'right'
+                : controllerState === dominantControllerState
                   ? 0.45
                   : 0,
               lightIntensity: 1

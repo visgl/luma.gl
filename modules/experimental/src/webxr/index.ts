@@ -150,6 +150,7 @@ export type {
 } from './webxr-hit-test';
 export {WebXRHitTestManager} from './webxr-hit-test';
 export type {
+  WebXRControllerHandedness,
   WebXRControllerState,
   WebXRInputActionState,
   WebXRInputActivationState,
@@ -164,6 +165,7 @@ export type {
 } from './webxr-input';
 export {
   getWebXRControllerState,
+  getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
   getWebXRInputActionState,
   getWebXRInputActivationState,

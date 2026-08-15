@@ -95,6 +95,8 @@ export type WebXRControllerState = {
   isSqueezeActive: boolean;
 };
 
+export type WebXRControllerHandedness = XRHandedness | 'any';
+
 export type WebXRInputRayPlaneIntersectionProps = {
   planePoint?: NumberArray3;
   planeNormal?: NumberArray3;
@@ -307,6 +309,17 @@ export function getWebXRControllerStates(
   return (inputStates || [])
     .map(inputState => getWebXRControllerState(inputState, props))
     .filter((controllerState): controllerState is WebXRControllerState => Boolean(controllerState));
+}
+
+export function getWebXRControllerStateByHandedness(
+  controllerStates: readonly WebXRControllerState[] | null,
+  handedness: WebXRControllerHandedness = 'any'
+): WebXRControllerState | null {
+  return (
+    (controllerStates || []).find(
+      controllerState => handedness === 'any' || controllerState.handedness === handedness
+    ) || null
+  );
 }
 
 export function getWebXRInputRayPlaneIntersection(
