@@ -151,6 +151,7 @@ export type {
 export {WebXRHitTestManager} from './webxr-hit-test';
 export type {
   WebXRControllerHandedness,
+  WebXRControllerRayPlaneIntersection,
   WebXRControllerState,
   WebXRInputActionState,
   WebXRInputActivationState,
@@ -164,6 +165,8 @@ export type {
   WebXRInputSourceState
 } from './webxr-input';
 export {
+  getWebXRControllerRayPlaneIntersection,
+  getWebXRControllerRayPlaneIntersections,
   getWebXRControllerState,
   getWebXRControllerStateByHandedness,
   getWebXRControllerStates,

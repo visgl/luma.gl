@@ -5,6 +5,8 @@
 import test from 'test/utils/vitest-tape';
 import {
   WebXRInputActionManager,
+  getWebXRControllerRayPlaneIntersection,
+  getWebXRControllerRayPlaneIntersections,
   getWebXRControllerState,
   getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
@@ -260,6 +262,50 @@ test('webxr#getWebXRControllerStateByHandedness selects controller hands', testC
     null,
     'null controller lists return null'
   );
+  testCase.end();
+});
+
+test('webxr#getWebXRControllerRayPlaneIntersection resolves controller target hits', testCase => {
+  const floorRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0, 1.6, 0, 1]);
+  const controllerState = getWebXRControllerState(makeMockWebXRInputState(floorRayMatrix))!;
+  const floorHit = getWebXRControllerRayPlaneIntersection(controllerState);
+
+  testCase.equal(floorHit?.controllerState, controllerState, 'retains controller state');
+  testCase.equal(floorHit?.rayIntersection.ray, controllerState.ray, 'retains ray intersection');
+  testCase.ok(
+    Math.abs((floorHit?.distance || 0) - 2) < 1e-6,
+    'returns normalized controller ray distance'
+  );
+  testCase.ok(
+    Math.abs((floorHit?.point[0] || 0) - 0) < 1e-6 &&
+      Math.abs((floorHit?.point[1] || 0) - 0) < 1e-6 &&
+      Math.abs((floorHit?.point[2] || 0) + 1.2) < 1e-6,
+    'returns controller ray hit point'
+  );
+
+  const noRayControllerState = getWebXRControllerState(makeMockWebXRInputState(null))!;
+  testCase.equal(
+    getWebXRControllerRayPlaneIntersection(noRayControllerState),
+    null,
+    'controllers without target rays do not produce hits'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneIntersection(controllerState, {maxDistance: 1}),
+    null,
+    'rejects hits outside supplied ray range'
+  );
+
+  const controllerRayHits = getWebXRControllerRayPlaneIntersections([
+    noRayControllerState,
+    controllerState
+  ]);
+  testCase.equal(
+    getWebXRControllerRayPlaneIntersections(null).length,
+    0,
+    'null controller lists become empty hit lists'
+  );
+  testCase.equal(controllerRayHits.length, 1, 'filters controllers without ray-plane hits');
+  testCase.equal(controllerRayHits[0]?.controllerState, controllerState, 'keeps hit controller');
   testCase.end();
 });
 

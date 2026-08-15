@@ -111,6 +111,14 @@ export type WebXRInputRayPlaneIntersection = {
   distance: number;
 };
 
+/** Experimental v10 ray-plane hit derived from one WebXR controller state. */
+export type WebXRControllerRayPlaneIntersection = {
+  controllerState: WebXRControllerState;
+  rayIntersection: WebXRInputRayPlaneIntersection;
+  point: NumberArray3;
+  distance: number;
+};
+
 const DEFAULT_INPUT_ACTION_THRESHOLD = 0.05;
 
 /** Tracks per-frame select/squeeze transitions across WebXR input sources. */
@@ -320,6 +328,39 @@ export function getWebXRControllerStateByHandedness(
       controllerState => handedness === 'any' || controllerState.handedness === handedness
     ) || null
   );
+}
+
+export function getWebXRControllerRayPlaneIntersection(
+  controllerState: WebXRControllerState,
+  props: WebXRInputRayPlaneIntersectionProps = {}
+): WebXRControllerRayPlaneIntersection | null {
+  const ray = controllerState.ray;
+  if (!ray) {
+    return null;
+  }
+
+  const rayIntersection = getWebXRInputRayPlaneIntersection(ray, props);
+  if (!rayIntersection) {
+    return null;
+  }
+
+  return {
+    controllerState,
+    rayIntersection,
+    point: rayIntersection.point,
+    distance: rayIntersection.distance
+  };
+}
+
+export function getWebXRControllerRayPlaneIntersections(
+  controllerStates: readonly WebXRControllerState[] | null,
+  props: WebXRInputRayPlaneIntersectionProps = {}
+): readonly WebXRControllerRayPlaneIntersection[] {
+  return (controllerStates || [])
+    .map(controllerState => getWebXRControllerRayPlaneIntersection(controllerState, props))
+    .filter((intersection): intersection is WebXRControllerRayPlaneIntersection =>
+      Boolean(intersection)
+    );
 }
 
 export function getWebXRInputRayPlaneIntersection(

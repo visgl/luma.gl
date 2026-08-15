@@ -259,9 +259,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
     expect(applicationSource).toContain('WebXRInputActionManager');
+    expect(applicationSource).toContain('getWebXRControllerRayPlaneIntersection');
     expect(applicationSource).toContain('getWebXRControllerStateByHandedness');
     expect(applicationSource).toContain('getWebXRControllerStates');
-    expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
     expect(applicationSource).toContain('getWebXRLocomotionState');
     expect(applicationSource).toContain('getWebXRTeleportTranslation');
     expect(applicationSource).toContain('isPointInWebXRBounds');
@@ -310,7 +310,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
     expect(rayMethod).toContain(
-      'getWebXRInputRayPlaneIntersection(controllerState.ray, {maxDistance: 8})'
+      'getWebXRControllerRayPlaneIntersection(controllerState, {maxDistance: 8})'
     );
     expect(rayMethod).toContain('boundsState: WebXRBoundsState | null');
     expect(rayMethod).toContain(

@@ -25,9 +25,9 @@ import {
   getWebXRDOMOverlaySessionInit,
   getWebXRBoundsState,
   getWebXRHandPinch,
+  getWebXRControllerRayPlaneIntersection,
   getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
-  getWebXRInputRayPlaneIntersection,
   getWebXRLocomotionState,
   getWebXRSessionRenderState,
   getWebXRTeleportTranslation,
@@ -970,7 +970,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.controllerRayModel.predraw(this.device.commandEncoder);
       this.controllerRayModel.draw(renderPass);
 
-      const floorHit = getWebXRInputRayPlaneIntersection(controllerState.ray, {maxDistance: 8});
+      const floorHit = getWebXRControllerRayPlaneIntersection(controllerState, {maxDistance: 8});
       if (floorHit) {
         const teleportTarget = getXRTeleportTargetState(floorHit.point, boundsState);
         if (teleportTarget.allowed) {
