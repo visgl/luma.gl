@@ -43,13 +43,19 @@ export default getVitestConfig({
     node: {
       test: {
         color: 'blue',
-        browser: {enabled: false}
+        browser: {enabled: false},
+        // Node tests restore the globals they replace, so workers can safely reuse their module
+        // graph. This avoids rebuilding the full monorepo graph in a child process for every file.
+        pool: 'threads',
+        isolate: false
       }
     },
     browser: {
       test: {
         color: 'green',
         environment: 'node',
+        // GPU devices and presentation resources are intentionally isolated between test files.
+        isolate: true,
         fileParallelism: !process.env.CI,
         setupFiles: ['./test/utils/browser-process-shim.mjs'],
         include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
@@ -60,6 +66,8 @@ export default getVitestConfig({
       test: {
         color: 'cyan',
         environment: 'node',
+        // GPU devices and presentation resources are intentionally isolated between test files.
+        isolate: true,
         fileParallelism: !process.env.CI,
         setupFiles: ['./test/utils/browser-process-shim.mjs'],
         include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],

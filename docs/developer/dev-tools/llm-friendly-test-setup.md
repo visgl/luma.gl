@@ -31,6 +31,10 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   - `browser`
   - `headless`
 - Browser execution uses Playwright through `@vis.gl/dev-tools`.
+- Node test files run in worker threads and reuse the worker's module graph. Tests that replace
+  globals or mutate module-level state must restore that state in an `afterEach` or `afterAll` hook.
+- Browser test files remain isolated because GPU devices, presentation contexts, and queued GPU
+  work are not safe to share between files.
 - The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
 
 ## Playwright behavior
