@@ -115,6 +115,10 @@
         color: #fda4af;
       }
 
+      #exit-xr[hidden] {
+        display: none;
+      }
+
       .preview-hint {
         position: fixed;
         right: 24px;
@@ -149,6 +153,7 @@
       <div class="portal-panel__actions">
         <button id="enter-vr" type="button">Enter VR</button>
         <button id="enter-ar" type="button">Enter AR</button>
+        <button id="exit-xr" type="button" hidden>Exit XR</button>
         <button id="switch-backend" type="button">Use WebGL2</button>
       </div>
       <span id="backend-status" role="status">Preparing GPU renderer…</span>
@@ -166,9 +171,32 @@
       const sceneElement = document.getElementById('scene');
       const backendStatus = document.getElementById('backend-status');
       const sessionStatus = document.getElementById('session-status');
+      const enterVRButton = document.getElementById('enter-vr');
+      const enterARButton = document.getElementById('enter-ar');
+      const exitXRButton = document.getElementById('exit-xr');
       const switchBackendButton = document.getElementById('switch-backend');
       let animationLoop = null;
       let currentDevice = null;
+
+      function updateSessionControls(message = '') {
+        const application = AnimationLoopTemplate.current;
+        const sessionMode = application?.xrSessionMode || null;
+        const isLive = Boolean(application?.xrSession);
+        enterVRButton.textContent =
+          isLive && sessionMode === 'immersive-vr' ? 'VR active' : 'Enter VR';
+        enterARButton.textContent =
+          isLive && sessionMode === 'immersive-ar' ? 'AR active' : 'Enter AR';
+        enterVRButton.disabled = isLive;
+        enterARButton.disabled = isLive;
+        switchBackendButton.disabled = isLive;
+        exitXRButton.hidden = !isLive;
+        sessionStatus.dataset.error = 'false';
+        sessionStatus.textContent =
+          message ||
+          (isLive
+            ? `${sessionMode === 'immersive-ar' ? 'AR' : 'VR'} session active`
+            : 'Desktop preview active');
+      }
 
       function makeDeviceProps(type, xrCompatible = false) {
         return {
@@ -205,6 +233,7 @@
         currentDevice = await createPreferredDevice(type);
         animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device: currentDevice});
         await animationLoop.start();
+        updateSessionControls();
 
         if (currentDevice.type === 'webgpu') {
           const supportsNativeXR = currentDevice.props.xrCompatible && 'XRGPUBinding' in window;
@@ -228,13 +257,13 @@
           sessionStatus.dataset.error = 'false';
           if (application.xrSessionMode === mode) {
             await application.exitXR();
-            sessionStatus.textContent = 'Returned to the live desktop preview';
+            updateSessionControls('Returned to the live desktop preview');
           } else {
             if (application.xrSession) {
               await application.exitXR();
             }
             await application.enterXR(mode);
-            sessionStatus.textContent = `${mode === 'immersive-ar' ? 'AR' : 'VR'} session active`;
+            updateSessionControls();
           }
         } catch (error) {
           sessionStatus.dataset.error = 'true';
@@ -242,11 +271,21 @@
         }
       }
 
-      document.getElementById('enter-vr').addEventListener('click', () => {
+      enterVRButton.addEventListener('click', () => {
         void toggleSession('immersive-vr');
       });
-      document.getElementById('enter-ar').addEventListener('click', () => {
+      enterARButton.addEventListener('click', () => {
         void toggleSession('immersive-ar');
+      });
+      exitXRButton.addEventListener('click', () => {
+        const application = AnimationLoopTemplate.current;
+        void application
+          ?.exitXR()
+          .then(() => updateSessionControls('Returned to the live desktop preview'))
+          .catch(error => {
+            sessionStatus.dataset.error = 'true';
+            sessionStatus.textContent = error instanceof Error ? error.message : String(error);
+          });
       });
       switchBackendButton.addEventListener('click', () => {
         void startRenderer(currentDevice?.type === 'webgpu' ? 'webgl' : 'webgpu').catch(error => {
@@ -259,6 +298,7 @@
         sessionStatus.dataset.error = 'true';
         sessionStatus.textContent = error instanceof Error ? error.message : String(error);
       });
+      AnimationLoopTemplate.subscribeToCurrent(() => updateSessionControls());
     </script>
   </body>
 </html>

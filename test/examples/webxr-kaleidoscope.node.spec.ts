@@ -414,14 +414,27 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('static subscribeToCurrent(listener: () => void)');
     expect(applicationSource).toContain('AppAnimationLoopTemplate.setCurrent(this)');
     expect(applicationSource).toContain('AppAnimationLoopTemplate.setCurrent(null)');
+    expect(applicationSource).toContain('private static notifyCurrentListeners(): void');
+    expect(applicationSource).toContain('AppAnimationLoopTemplate.notifyCurrentListeners()');
     expect(exampleSource).toContain('useSyncExternalStore(');
     expect(exampleSource).toContain('WebXRKaleidoscopeApp.subscribeToCurrent');
+    expect(exampleSource).toContain(
+      'const activeXRMode = activeApplication?.xrSessionMode ?? null'
+    );
+    expect(exampleSource).toContain(
+      'const isXRLive = Boolean(activeApplication?.xrSession && activeXRMode)'
+    );
     expect(exampleSource).toContain('const effectiveDevice = activeApplication?.device');
     expect(exampleSource).toContain('selectedDevice?.type === effectiveDevice?.type');
     expect(exampleSource).toContain('effectiveDevice?.props.xrCompatible === true');
     expect(exampleSource).toMatch(
       /const backendDescription\s*=\s*usesWebGPU\s*\?\s*hasNativeWebGPUXR/
     );
+    expect(exampleSource).toContain('const handleExitXR = async () =>');
+    expect(exampleSource).toContain('await app.exitXR()');
+    expect(exampleSource).toContain('Exit XR');
+    expect(exampleSource).toContain('disabled={xrStatus ===');
+    expect(exampleSource).toContain('isXRLive');
   });
 
   test('keeps standalone launch, sidebar, and backend metadata accurate', () => {
@@ -441,6 +454,13 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(standaloneSource).toContain("toggleSession('immersive-vr')");
     expect(standaloneSource).toContain("toggleSession('immersive-ar')");
+    expect(standaloneSource).toContain('id="exit-xr"');
+    expect(standaloneSource).toContain("function updateSessionControls(message = '')");
+    expect(standaloneSource).toContain('exitXRButton.hidden = !isLive');
+    expect(standaloneSource).toContain('enterVRButton.disabled = isLive');
+    expect(standaloneSource).toContain('switchBackendButton.disabled = isLive');
+    expect(standaloneSource).toContain("exitXRButton.addEventListener('click'");
+    expect(standaloneSource).toContain('AnimationLoopTemplate.subscribeToCurrent');
     expect(standaloneSource).toContain('switch-backend');
     expect(standaloneSource).toContain('id="webxr-dom-overlay"');
     expect(standaloneSource).toContain('.portal-panel:xr-overlay');

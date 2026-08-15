@@ -344,6 +344,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private static setCurrent(current: AppAnimationLoopTemplate | null): void {
     AppAnimationLoopTemplate.current = current;
+    AppAnimationLoopTemplate.notifyCurrentListeners();
+  }
+
+  private static notifyCurrentListeners(): void {
     for (const listener of AppAnimationLoopTemplate.currentListeners) {
       listener();
     }
@@ -607,6 +611,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.webXRDOMOverlayManager.setSession(session, {root: getDOMOverlayRoot()});
       this.xrSession = session;
       this.xrSessionMode = sessionMode;
+      AppAnimationLoopTemplate.notifyCurrentListeners();
       session.addEventListener('end', this._xrSessionEndListener);
       session.addEventListener('selectend', this._xrSelectEndListener);
       session.addEventListener('squeezeend', this._xrSqueezeEndListener);
@@ -892,6 +897,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRHandTrackingManager.clearSession();
     this.webXRHitTestManager.clearSession();
     this.webXRManager.clearSession();
+    AppAnimationLoopTemplate.notifyCurrentListeners();
     if (!this._isFinalized) {
       this.animationLoop.setProps({animationFrameProvider: undefined});
     }

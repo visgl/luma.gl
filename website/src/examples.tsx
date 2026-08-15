@@ -1572,6 +1572,8 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
   const [xrMode, setXRMode] = useState<XRMode | null>(null);
   const [xrError, setXRError] = useState<string | null>(null);
   const effectiveDevice = activeApplication?.device;
+  const activeXRMode = activeApplication?.xrSessionMode ?? null;
+  const isXRLive = Boolean(activeApplication?.xrSession && activeXRMode);
   const usesWebGPU =
     selectedDevice?.type === 'webgpu' || (!selectedDevice && effectiveDevice?.type === 'webgpu');
   const hasWebGPUBinding = typeof window !== 'undefined' && 'XRGPUBinding' in window;
@@ -1598,12 +1600,12 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
     setXRMode(sessionMode);
     setXRError(null);
     try {
-      if (xrStatus === 'live' && xrMode === sessionMode) {
+      if (app.xrSessionMode === sessionMode) {
         await app.exitXR();
         setXRStatus('idle');
         setXRMode(null);
       } else {
-        if (xrStatus === 'live') {
+        if (app.xrSession) {
           await app.exitXR();
         }
         await app.enterXR(sessionMode);
@@ -1616,13 +1618,32 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
       setXRError(getErrorMessage(error));
     }
   };
+  const handleExitXR = async () => {
+    const app = WebXRKaleidoscopeApp.current;
+    if (!app) {
+      return;
+    }
+
+    setXRStatus('pending');
+    setXRMode(app.xrSessionMode);
+    setXRError(null);
+    try {
+      await app.exitXR();
+      setXRStatus('idle');
+      setXRMode(null);
+    } catch (error) {
+      setXRStatus('error');
+      setXRMode(null);
+      setXRError(getErrorMessage(error));
+    }
+  };
   const getXRButtonText = (sessionMode: XRMode) => {
     const label = sessionMode === 'immersive-vr' ? 'VR' : 'AR';
     if (xrStatus === 'pending' && xrMode === sessionMode) {
       return `Starting ${label}`;
     }
-    if (xrStatus === 'live' && xrMode === sessionMode) {
-      return `Exit ${label}`;
+    if (isXRLive && activeXRMode === sessionMode) {
+      return `${label} active`;
     }
     if (xrStatus === 'error' && xrMode === sessionMode) {
       return `Retry ${label}`;
@@ -1633,7 +1654,7 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
     border: '1px solid rgba(103, 232, 249, 0.4)',
     borderRadius: 999,
     background:
-      xrStatus === 'live' && xrMode === sessionMode
+      isXRLive && activeXRMode === sessionMode
         ? 'rgba(34, 211, 238, 0.24)'
         : 'rgba(15, 23, 42, 0.84)',
     color: '#ecfeff',
@@ -1689,7 +1710,7 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
             <button
               type="button"
               onClick={() => void handleXRSession('immersive-vr')}
-              disabled={xrStatus === 'pending'}
+              disabled={xrStatus === 'pending' || isXRLive}
               style={getXRButtonStyle('immersive-vr')}
             >
               {getXRButtonText('immersive-vr')}
@@ -1697,16 +1718,26 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
             <button
               type="button"
               onClick={() => void handleXRSession('immersive-ar')}
-              disabled={xrStatus === 'pending'}
+              disabled={xrStatus === 'pending' || isXRLive}
               style={getXRButtonStyle('immersive-ar')}
             >
               {getXRButtonText('immersive-ar')}
             </button>
+            {isXRLive ? (
+              <button
+                type="button"
+                onClick={() => void handleExitXR()}
+                disabled={xrStatus === 'pending'}
+                style={getXRButtonStyle(activeXRMode || 'immersive-vr')}
+              >
+                Exit XR
+              </button>
+            ) : null}
             <span aria-live="polite" style={{fontSize: 12, lineHeight: 1.5}}>
               {xrStatus === 'pending'
                 ? `Requesting ${xrMode === 'immersive-ar' ? 'AR' : 'VR'} session`
-                : xrStatus === 'live'
-                  ? `${xrMode === 'immersive-ar' ? 'AR' : 'VR'} session active`
+                : isXRLive
+                  ? `${activeXRMode === 'immersive-ar' ? 'AR' : 'VR'} session active`
                   : 'Drag to explore · headset optional'}
             </span>
           </div>
