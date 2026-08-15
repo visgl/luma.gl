@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
+  Data,
   DataType,
   Dictionary,
   Int16,
@@ -29,15 +30,43 @@ import {
 } from '@luma.gl/text/experimental';
 
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
+const ARROW_UTF8_VIEW_TYPE_ID = 24;
+const ARROW_VARIABLE_WIDTH_VIEW_BYTE_LENGTH = 16;
+const ARROW_VARIABLE_WIDTH_VIEW_INLINE_CAPACITY = 12;
 
 /** Integer Arrow dictionary key types accepted by UTF-8 text helpers. */
 export type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
+/** Structural Utf8View type accepted without requiring an Apache Arrow 21 type import. */
+export type ArrowUtf8View = DataType & {
+  readonly TArray: Uint8Array;
+  readonly TValue: string;
+};
 /** Dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
 export type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
+/** Dictionary-encoded Utf8View Arrow text leaf accepted at renderer input boundaries. */
+export type ArrowUtf8ViewDictionary = Dictionary<ArrowUtf8View, ArrowUtf8DictionaryIndexType>;
 /** Plain or dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
 export type ArrowUtf8TextType = Utf8 | ArrowUtf8Dictionary;
 /** Plain or dictionary-encoded UTF-8 Arrow text vector accepted by text helpers. */
 export type ArrowUtf8TextVector = Vector<ArrowUtf8TextType>;
+/** Plain or dictionary-encoded Utf8/Utf8View type accepted at renderer input boundaries. */
+export type ArrowUtf8TextInputType = ArrowUtf8TextType | ArrowUtf8View | ArrowUtf8ViewDictionary;
+/** Utf8 or Utf8View vector accepted at renderer input boundaries. */
+export type ArrowUtf8TextInputVector = Vector<ArrowUtf8TextInputType>;
+
+type ArrowUtf8ViewData = {
+  readonly type: DataType;
+  readonly length: number;
+  readonly offset: number;
+  readonly nullCount: number;
+  readonly nullBitmap?: Uint8Array | null;
+  readonly valueOffsets?: unknown;
+  readonly values?: Uint8Array | ArrayLike<number> | null;
+  readonly typeIds?: unknown;
+  readonly children?: readonly Data[];
+  readonly dictionary?: ArrowUtf8TextInputVector;
+  readonly variadicBuffers?: readonly Uint8Array[];
+};
 
 /** Mutable virtual UTF-8 byte range for one Arrow text row. */
 export type Utf8TextIndexTarget = {
@@ -133,6 +162,165 @@ export function isArrowUtf8DictionaryVector(value: unknown): value is Vector<Arr
 /** Returns whether a runtime Arrow vector stores plain or dictionary-encoded UTF-8 labels. */
 export function isArrowUtf8TextVector(value: unknown): value is ArrowUtf8TextVector {
   return isArrowUtf8Vector(value) || isArrowUtf8DictionaryVector(value);
+}
+
+/** Returns whether an Arrow type is Utf8View without importing that Arrow 21 class. */
+export function isArrowUtf8ViewType(type: DataType): type is ArrowUtf8View {
+  return Number(type.typeId) === ARROW_UTF8_VIEW_TYPE_ID;
+}
+
+/** Returns whether a runtime Arrow vector stores Utf8View labels. */
+export function isArrowUtf8ViewVector(value: unknown): value is Vector<ArrowUtf8View> {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    'type' in value &&
+    isArrowUtf8ViewType(value.type as DataType) &&
+    'data' in value &&
+    Array.isArray(value.data)
+  );
+}
+
+/** Returns whether an Arrow type stores dictionary-encoded Utf8View labels. */
+export function isArrowUtf8ViewDictionaryType(type: DataType): type is ArrowUtf8ViewDictionary {
+  return (
+    DataType.isDictionary(type) &&
+    isArrowUtf8ViewType(type.dictionary) &&
+    isArrowUtf8DictionaryIndexType(type.indices)
+  );
+}
+
+/** Returns whether a runtime Arrow vector stores dictionary-encoded Utf8View labels. */
+export function isArrowUtf8ViewDictionaryVector(
+  value: unknown
+): value is Vector<ArrowUtf8ViewDictionary> {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    'type' in value &&
+    isArrowUtf8ViewDictionaryType(value.type as DataType) &&
+    'data' in value &&
+    Array.isArray(value.data)
+  );
+}
+
+/** Returns whether a runtime Arrow vector stores Utf8 or Utf8View labels. */
+export function isArrowUtf8TextInputVector(value: unknown): value is ArrowUtf8TextInputVector {
+  return (
+    isArrowUtf8TextVector(value) ||
+    isArrowUtf8ViewVector(value) ||
+    isArrowUtf8ViewDictionaryVector(value)
+  );
+}
+
+/**
+ * Normalizes Utf8View input to Arrow Utf8 so existing text conversion paths can consume it.
+ * Ordinary Utf8 vectors are returned unchanged.
+ */
+export function normalizeArrowUtf8TextVector(texts: ArrowUtf8TextInputVector): ArrowUtf8TextVector {
+  if (isArrowUtf8TextVector(texts)) {
+    return texts;
+  }
+  if (isArrowUtf8ViewVector(texts)) {
+    return new Vector(texts.data.map(data => normalizeArrowUtf8ViewData(data)));
+  }
+
+  const dictionaryType = texts.type as ArrowUtf8ViewDictionary;
+  const normalizedType = new Dictionary(
+    new Utf8(),
+    dictionaryType.indices,
+    dictionaryType.id,
+    dictionaryType.isOrdered
+  );
+  const normalizedData = texts.data.map(data => {
+    const sourceData = data as unknown as ArrowUtf8ViewData;
+    // Dictionary Data always carries its referenced dictionary vector.
+    const dictionary = sourceData.dictionary!;
+    return new Data(
+      normalizedType,
+      sourceData.offset,
+      sourceData.length,
+      sourceData.nullCount,
+      [
+        sourceData.valueOffsets,
+        sourceData.values,
+        sourceData.nullBitmap,
+        sourceData.typeIds
+      ] as never,
+      [...(sourceData.children ?? [])],
+      normalizeArrowUtf8TextVector(dictionary)
+    );
+  });
+  return new Vector(normalizedData);
+}
+
+function normalizeArrowUtf8ViewData(data: ArrowUtf8ViewData): Data<Utf8> {
+  const viewBytes = data.values as Uint8Array;
+  const valueOffsets = new Int32Array(data.length + 1);
+  const nullBitmap = normalizeArrowValidityBitmap(data);
+  let byteLength = 0;
+
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+    if (isArrowDataRowValid(data, rowIndex)) {
+      byteLength += getArrowUtf8ViewBytes(data, viewBytes, rowIndex).byteLength;
+    }
+    valueOffsets[rowIndex + 1] = byteLength;
+  }
+
+  const values = new Uint8Array(byteLength);
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+    if (!isArrowDataRowValid(data, rowIndex)) {
+      continue;
+    }
+    values.set(getArrowUtf8ViewBytes(data, viewBytes, rowIndex), valueOffsets[rowIndex]);
+  }
+
+  return new Data(new Utf8(), 0, data.length, data.nullCount, [valueOffsets, values, nullBitmap]);
+}
+
+function getArrowUtf8ViewBytes(
+  data: ArrowUtf8ViewData,
+  viewBytes: Uint8Array,
+  rowIndex: number
+): Uint8Array {
+  const viewByteOffset = (data.offset + rowIndex) * ARROW_VARIABLE_WIDTH_VIEW_BYTE_LENGTH;
+  const view = new DataView(
+    viewBytes.buffer,
+    viewBytes.byteOffset + viewByteOffset,
+    ARROW_VARIABLE_WIDTH_VIEW_BYTE_LENGTH
+  );
+  const byteLength = view.getInt32(0, true);
+  if (byteLength <= ARROW_VARIABLE_WIDTH_VIEW_INLINE_CAPACITY) {
+    return viewBytes.subarray(viewByteOffset + 4, viewByteOffset + 4 + byteLength);
+  }
+
+  const bufferIndex = view.getInt32(8, true);
+  const bufferByteOffset = view.getInt32(12, true);
+  // Out-of-line Utf8View values always reference a variadic data buffer.
+  const variadicBuffer = data.variadicBuffers![bufferIndex]!;
+  return variadicBuffer.subarray(bufferByteOffset, bufferByteOffset + byteLength);
+}
+
+function normalizeArrowValidityBitmap(data: ArrowUtf8ViewData): Uint8Array | undefined {
+  if (data.nullCount === 0 || !data.nullBitmap) {
+    return undefined;
+  }
+
+  const nullBitmap = new Uint8Array(Math.ceil(data.length / 8));
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+    if (isArrowDataRowValid(data, rowIndex)) {
+      nullBitmap[rowIndex >> 3] |= 1 << (rowIndex & 7);
+    }
+  }
+  return nullBitmap;
+}
+
+function isArrowDataRowValid(data: ArrowUtf8ViewData, rowIndex: number): boolean {
+  if (data.nullCount === 0 || !data.nullBitmap) {
+    return true;
+  }
+  const bitmapIndex = data.offset + rowIndex;
+  return (data.nullBitmap[bitmapIndex >> 3] & (1 << (bitmapIndex & 7))) !== 0;
 }
 
 /** Normalize Arrow UTF-8 chunks into one virtual byte space. */

@@ -26,6 +26,7 @@ import {
   supportsGpuTextExpansion
 } from '@luma.gl/text/experimental';
 import {
+  type ArrowTextSourceVectors,
   type ArrowUtf8TextVector,
   type ArrowTextAttributeInputProps,
   type ArrowTextDictionaryStorageInputProps,
@@ -36,9 +37,12 @@ import {
   convertArrowTextToDictionaryModelProps,
   convertArrowTextToStorage,
   convertArrowTextToStorageModelProps,
+  isArrowUtf8ViewDictionaryVector,
+  isArrowUtf8ViewVector,
+  normalizeArrowUtf8TextVector,
   type ConvertedArrowTextData
 } from '../conversion/index';
-import * as arrow from 'apache-arrow';
+import {DataType, Table, Vector, type RecordBatch} from 'apache-arrow';
 import {
   createArrowTextShaderInputs,
   configureArrowTextShaderAssembler,
@@ -182,7 +186,7 @@ export type ArrowTextRendererPrepareGPUTableDataProps = {
   /** GPU table containing uploaded columns selected by `columns`. */
   gpuTable: GPUTable;
   /** CPU Arrow batches that back `gpuTable` and provide text metadata. */
-  recordBatches: arrow.RecordBatch[];
+  recordBatches: RecordBatch[];
   /** Source vector or column selector props. */
   props: ArrowTextRendererPrepareInputProps;
 };
@@ -336,7 +340,7 @@ export class ArrowTextRenderer extends GPURenderable<
       throw new Error('ArrowTextRenderer data requires at least one Arrow record batch');
     }
     const firstRecordBatch = firstResult.value;
-    const initialProps = {...props, data: new arrow.Table([firstRecordBatch])};
+    const initialProps = {...props, data: new Table([firstRecordBatch])};
     const renderer = new ArrowTextRenderer(
       device,
       initialProps,
@@ -376,9 +380,9 @@ export class ArrowTextRenderer extends GPURenderable<
     device: Device,
     props: ArrowTextRendererPrepareDataProps
   ): ArrowTextRendererData {
-    const sourceVectors = getArrowTextSourceVectors(props);
+    const sourceVectors = normalizeArrowTextSourceVectors(getArrowTextSourceVectors(props));
     const hasCharacterColors = isArrowTextCharacterColorType(sourceVectors.colors?.type);
-    if (arrow.DataType.isDictionary(sourceVectors.texts.type) && !hasCharacterColors) {
+    if (DataType.isDictionary(sourceVectors.texts.type) && !hasCharacterColors) {
       return convertArrowTextToDictionary(device, {sourceVectors});
     }
     if (!hasCharacterColors) {
@@ -391,11 +395,12 @@ export class ArrowTextRenderer extends GPURenderable<
   static prepareDataFromGPUTable(
     props: ArrowTextRendererPrepareGPUTableDataProps
   ): ArrowTextRendererData {
-    const sourceTable = new arrow.Table(props.recordBatches);
+    const sourceTable = new Table(props.recordBatches);
     const sourceVectors = resolveArrowTextSourceVectors({
       data: sourceTable,
       selectors: props.props
     });
+    const normalizedSourceVectors = normalizeArrowTextSourceVectors(sourceVectors);
 
     return {
       positions: getRequiredGPUVector(props.gpuTable, 'positions', 'ArrowTextRenderer data'),
@@ -427,7 +432,7 @@ export class ArrowTextRenderer extends GPURenderable<
             alignmentBaselines: getOptionalGPUVector(props.gpuTable, 'alignmentBaselines')
           }
         : {}),
-      sourceVectors,
+      sourceVectors: normalizedSourceVectors,
       destroy: () => {}
     };
   }
@@ -540,7 +545,7 @@ export class ArrowTextRenderer extends GPURenderable<
       return;
     }
     const resolvedRecordBatchIterator = getArrowRecordBatchAsyncIterator(props.data);
-    const sourceRecordBatches: arrow.RecordBatch[] = [];
+    const sourceRecordBatches: RecordBatch[] = [];
     let streamingTextTable: GPUTable | null = null;
     let isSourceVectorStreaming = false;
     let hasStartedStreaming = false;
@@ -896,7 +901,7 @@ export class ArrowTextRenderer extends GPURenderable<
     data: ArrowTextRendererData
   ): ArrowTextRendererResolvedModel {
     const hasCharacterColors = isArrowTextCharacterColorType(data.sourceVectors.colors?.type);
-    const hasTextDictionary = arrow.DataType.isDictionary(data.sourceVectors.texts.type);
+    const hasTextDictionary = DataType.isDictionary(data.sourceVectors.texts.type);
     const alignmentBufferCount =
       Number(Boolean(data.sourceVectors.textAnchors)) +
       Number(Boolean(data.sourceVectors.alignmentBaselines));
@@ -1006,7 +1011,7 @@ function getArrowTextRendererDataBatches(data: ArrowTextRendererData): ArrowText
       sourceVectors: Object.fromEntries(
         Object.entries(data.sourceVectors).map(([name, vector]) => {
           const arrowData = vector.data[batchIndex]!;
-          return [name, new arrow.Vector([arrowData as never])];
+          return [name, new Vector([arrowData as never])];
         })
       ),
       destroy: () => {}
@@ -1092,10 +1097,10 @@ export function prepareArrowTextInput(
 /** Uploads a single Arrow record batch as the first batch of a streaming GPU table. */
 export function createArrowTextGPUTable(
   device: Device,
-  recordBatch: arrow.RecordBatch,
+  recordBatch: RecordBatch,
   props: ArrowTextRendererPrepareInputProps = {}
 ): GPUTable {
-  const table = new arrow.Table([recordBatch]);
+  const table = new Table([recordBatch]);
   const {arrowPaths, shaderLayout} = getStreamingTextInputOptions(table, props);
   return makeGPUTableFromArrowTable(device, table, {
     arrowPaths,
@@ -1106,7 +1111,7 @@ export function createArrowTextGPUTable(
 /** Uploads an Arrow table as a GPU table using the text input shader layout. */
 export function createArrowTextGPUTableFromTable(
   device: Device,
-  table: arrow.Table,
+  table: Table,
   props: ArrowTextRendererPrepareInputProps = {}
 ): GPUTable {
   const {arrowPaths, shaderLayout} = getStreamingTextInputOptions(table, props);
@@ -1120,10 +1125,10 @@ export function createArrowTextGPUTableFromTable(
 export function addArrowTextGPUTableBatch(
   device: Device,
   gpuTable: GPUTable,
-  recordBatch: arrow.RecordBatch,
+  recordBatch: RecordBatch,
   props: ArrowTextRendererPrepareInputProps = {}
 ): void {
-  const table = new arrow.Table([recordBatch]);
+  const table = new Table([recordBatch]);
   const {arrowPaths, shaderLayout} = getStreamingTextInputOptions(table, props);
   const sourceBatchIndex = gpuTable.batches.length;
   const sourceRowIndexOffset = gpuTable.batches.reduce(
@@ -1146,10 +1151,10 @@ export function addArrowTextGPUTableBatch(
 /** Builds prepared text input from an existing GPU table and its matching CPU Arrow batches. */
 export function prepareArrowTextInputFromGPUTable(
   gpuTable: GPUTable,
-  recordBatches: arrow.RecordBatch[],
+  recordBatches: RecordBatch[],
   props: ArrowTextRendererPrepareInputProps = {}
 ): ArrowTextRendererInput {
-  const sourceTable = new arrow.Table(recordBatches);
+  const sourceTable = new Table(recordBatches);
   const {texts} = resolveArrowTextSourceVectors({data: sourceTable, selectors: props});
   const prepared = ArrowTextRenderer.prepareDataFromGPUTable({
     gpuTable,
@@ -1165,7 +1170,7 @@ export function prepareArrowTextInputFromGPUTable(
 /** Builds a borrowed one-batch text input view without copying or repacking GPU buffers. */
 function prepareArrowTextInputFromGPUTableBatch(
   gpuTable: GPUTable,
-  recordBatch: arrow.RecordBatch,
+  recordBatch: RecordBatch,
   props: ArrowTextRendererPrepareInputProps
 ): ArrowTextRendererInput {
   const gpuBatch = gpuTable.batches[gpuTable.batches.length - 1]!;
@@ -1209,12 +1214,12 @@ function appendArrowTextInputSourceMetadata(
   target: ArrowTextRendererInput,
   source: ArrowTextRendererInput
 ): void {
-  const targetSourceRecord = target.sourceVectors as unknown as Record<string, arrow.Vector>;
-  const sourceSourceRecord = source.sourceVectors as unknown as Record<string, arrow.Vector>;
+  const targetSourceRecord = target.sourceVectors as unknown as Record<string, Vector>;
+  const sourceSourceRecord = source.sourceVectors as unknown as Record<string, Vector>;
   for (const [name, sourceVector] of Object.entries(sourceSourceRecord)) {
     const targetVector = targetSourceRecord[name];
     targetSourceRecord[name] = targetVector
-      ? new arrow.Vector([...targetVector.data, ...sourceVector.data] as never)
+      ? new Vector([...targetVector.data, ...sourceVector.data] as never)
       : sourceVector;
   }
   target.arrowVectorByteLength += source.arrowVectorByteLength;
@@ -1223,10 +1228,10 @@ function appendArrowTextInputSourceMetadata(
 
 function prepareArrowTextInputFromRecordBatches(
   device: Device,
-  recordBatches: arrow.RecordBatch[],
+  recordBatches: RecordBatch[],
   props: ArrowTextRendererPrepareInputProps
 ): ArrowTextRendererInput {
-  const sourceVectors = getArrowTextSourceVectorsFromTable(new arrow.Table(recordBatches), props);
+  const sourceVectors = getArrowTextSourceVectorsFromTable(new Table(recordBatches), props);
   const prepared = ArrowTextRenderer.prepareData(device, sourceVectors);
   return {
     ...prepared,
@@ -1246,9 +1251,9 @@ function prepareArrowTextInputFromSourceVectors(
 }
 
 async function* replayArrowTextRecordBatches(
-  firstRecordBatch: arrow.RecordBatch,
-  iterator: AsyncIterator<arrow.RecordBatch>
-): AsyncGenerator<arrow.RecordBatch> {
+  firstRecordBatch: RecordBatch,
+  iterator: AsyncIterator<RecordBatch>
+): AsyncGenerator<RecordBatch> {
   yield firstRecordBatch;
   for (let result = await iterator.next(); !result.done; result = await iterator.next()) {
     yield result.value;
@@ -1277,7 +1282,7 @@ export async function prepareArrowTextInputFromData(
     return prepareArrowTextInputFromRecordBatches(device, recordBatches, props);
   }
 
-  const table = new arrow.Table(recordBatches);
+  const table = new Table(recordBatches);
   const gpuTable = createArrowTextGPUTableFromTable(device, table, props);
   const prepared = prepareArrowTextInputFromGPUTable(gpuTable, recordBatches, props);
   const destroyPrepared = prepared.destroy;
@@ -1327,7 +1332,7 @@ function getResolvedColumnSelectors(
 }
 
 function getStreamingTextInputOptions(
-  table: arrow.Table,
+  table: Table,
   props: ArrowTextRendererPrepareInputProps
 ): {
   arrowPaths: Record<string, string>;
@@ -1388,7 +1393,7 @@ function getStreamingTextInputShaderLayout(sourceVectors: ArrowTextMappedSourceV
 }
 
 function getOptionalColumnSelector(
-  value: string | arrow.Vector | null | undefined,
+  value: string | Vector | null | undefined,
   defaultColumnName: string | null
 ): string | null {
   if (value === null) {
@@ -1404,22 +1409,35 @@ function getArrowTextSourceVectors(
 }
 
 function getArrowTextSourceVectorsFromTable(
-  table: arrow.Table,
+  table: Table,
   props: ArrowTextRendererPrepareInputProps
 ): ArrowTextRendererPrepareDataProps {
   return resolveArrowTextSourceVectors({data: table, selectors: props});
 }
 
+function normalizeArrowTextSourceVectors(
+  sourceVectors: ArrowTextRendererPrepareDataProps
+): ArrowTextSourceVectors {
+  return {
+    ...sourceVectors,
+    texts: normalizeArrowUtf8TextVector(sourceVectors.texts)
+  };
+}
+
 function shouldPrepareRecordBatchesFromArrowVectors(
-  recordBatches: arrow.RecordBatch[],
+  recordBatches: RecordBatch[],
   props: ArrowTextRendererPrepareInputProps
 ): boolean {
   if (hasDirectArrowTextSourceVectorSelectors(props)) {
     return true;
   }
-  const table = new arrow.Table(recordBatches);
-  const colors = resolveArrowTextSourceVectors({data: table, selectors: props}).colors;
-  return isArrowTextCharacterColorType(colors?.type);
+  const table = new Table(recordBatches);
+  const sourceVectors = resolveArrowTextSourceVectors({data: table, selectors: props});
+  return (
+    isArrowTextCharacterColorType(sourceVectors.colors?.type) ||
+    isArrowUtf8ViewVector(sourceVectors.texts) ||
+    isArrowUtf8ViewDictionaryVector(sourceVectors.texts)
+  );
 }
 
 function hasArrowTextSourcePropsChanged(props: Partial<ArrowTextRendererProps>): boolean {
@@ -1456,7 +1474,7 @@ function hasDirectArrowTextSourceVectorSelectors(
     props.pixelOffsets,
     props.textAnchors,
     props.alignmentBaselines
-  ].some(selector => selector instanceof arrow.Vector);
+  ].some(selector => selector instanceof Vector);
 }
 
 function shouldLoadTextDataBatches(props: ArrowTextRendererProps, dataChanged: boolean): boolean {
@@ -1504,10 +1522,8 @@ function areTextColorsEqual(
   );
 }
 
-function isArrowTextCharacterColorType(
-  type: arrow.DataType | undefined
-): type is CharacterColorDataType {
-  return Boolean(type) && arrow.DataType.isList(type);
+function isArrowTextCharacterColorType(type: DataType | undefined): type is CharacterColorDataType {
+  return Boolean(type) && DataType.isList(type);
 }
 
 function getArrowTextRenderModules(device: Device): unknown[] {
@@ -1528,8 +1544,8 @@ function mergeHostShaderModules(
   ];
 }
 
-async function getArrowRecordBatches(data: ArrowRecordBatchSource): Promise<arrow.RecordBatch[]> {
-  const recordBatches: arrow.RecordBatch[] = [];
+async function getArrowRecordBatches(data: ArrowRecordBatchSource): Promise<RecordBatch[]> {
+  const recordBatches: RecordBatch[] = [];
   const recordBatchIterator = getArrowRecordBatchAsyncIterator(data);
   for (
     let recordBatchResult = await recordBatchIterator.next();

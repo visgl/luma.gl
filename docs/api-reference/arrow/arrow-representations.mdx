@@ -206,8 +206,8 @@ Implementation notes:
 
 | Semantic data | Supported | Recommended Arrow column |
 | --- | :---: | --- |
-| Text labels | ✅ | `Utf8` |
-| Repeated text labels | ✅ | `Dictionary<Utf8>` |
+| Text labels | ✅ | `Utf8` or `Utf8View` |
+| Repeated text labels | ✅ | `Dictionary<Utf8>` or `Dictionary<Utf8View>` |
 | Text row colors | ✅ | `FixedSizeList<Uint8 \| Float16 \| Float32, 4>` |
 | Text row RGB colors | ❌ | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>` |
 | Text character colors | ✅ | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 4>>` |
@@ -216,6 +216,8 @@ Implementation notes:
 Semantic notes:
 
 - `Utf8` stores one independent string per row.
+- `Utf8View` stores short strings inline and references variadic buffers for longer strings;
+  `ArrowTextRenderer` normalizes either layout before text preparation.
 - `Dictionary<Utf8>` is preferred when many rows reuse the same labels,
   categories, or symbols.
 - Text row colors are one color per string. Text character colors are aligned with
