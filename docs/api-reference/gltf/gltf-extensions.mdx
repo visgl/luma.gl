@@ -315,14 +315,30 @@ import {
   assertSupportedGLTFExtensions,
   createScenegraphsFromGLTF,
   getGLTFExtensionSupport,
+  getGLTFExtensionSupportSummary,
+  getRegisteredGLTFExtensions,
   getUnsupportedRequiredGLTFExtensions
 } from '@luma.gl/gltf';
+
+const registrySummary = getGLTFExtensionSupportSummary();
+console.log(
+  `${registrySummary.supported}/${registrySummary.total} registered extensions have complete runtime support`
+);
+
+for (const registeredExtension of getRegisteredGLTFExtensions()) {
+  console.log(
+    registeredExtension.extensionName,
+    registeredExtension.supportLevel,
+    registeredExtension.standardStatus
+  );
+}
 
 for (const capability of getGLTFExtensionSupport(gltf).values()) {
   console.log(capability.extensionName, {
     required: capability.required,
     supported: capability.supported,
     level: capability.supportLevel,
+    standardStatus: capability.standardStatus,
     explanation: capability.comment
   });
 }

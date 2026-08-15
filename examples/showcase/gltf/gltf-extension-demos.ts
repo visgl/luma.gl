@@ -270,5 +270,9 @@ export const GLTF_EXTENSION_DEMOS: GLTFExtensionDemo[] = [
       {name: 'LightVisibility', label: 'Light Visibility'},
       {name: 'CubeVisibility', label: 'Cube Visibility'}
     ]
+  },
+  {
+    extensionName: 'EXT_materials_bump',
+    models: [{name: 'BumpMaterial', label: 'Bump Material'}]
   }
 ];

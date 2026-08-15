@@ -47,7 +47,12 @@ export {
 export {
   type GLTFExtensionSupport,
   type GLTFExtensionSupportLevel,
-  getGLTFExtensionSupport
+  type GLTFExtensionStandardStatus,
+  type GLTFExtensionSupportSummary,
+  type GLTFRegisteredExtensionSupport,
+  getGLTFExtensionSupport,
+  getGLTFExtensionSupportSummary,
+  getRegisteredGLTFExtensions
 } from './gltf/gltf-extension-support';
 export {
   type GLTFSkinBinding,

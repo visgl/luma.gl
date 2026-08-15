@@ -256,7 +256,7 @@
     "extras": {
       "license": "CC0-1.0",
       "author": "Marco Hutter",
-      "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SimpleSkin",
+      "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/SimpleSkin",
       "modifications": "Combined embedded buffers and added three MSFT_lod skinned mesh levels."
     }
   },

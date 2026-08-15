@@ -15,16 +15,20 @@ import {
 } from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
+import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
 
 /* eslint-disable camelcase */
 
-const MODEL_DIRECTORY_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
-const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
+const MODEL_DIRECTORY_URL = GLTF_SAMPLE_ASSETS_MODEL_URL;
+const MODEL_LIST_URL = `${GLTF_SAMPLE_ASSETS_MODEL_URL}/model-index.json`;
 const ROBOT_EXPRESSIVE_MODEL_URL =
   'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
 const SIMPLE_SKIN_LOD_MODEL_URL = new URL(
   '../../../modules/gltf/test/data/SimpleSkinLOD.gltf',
+  import.meta.url
+).href;
+const BUMP_MATERIAL_MODEL_URL = new URL(
+  '../../../modules/gltf/test/data/BumpMaterial.gltf',
   import.meta.url
 ).href;
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
@@ -150,6 +154,12 @@ const SIMPLE_SKIN_LOD_CATALOG_MODEL: GLTFCatalogModel = {
   name: 'SimpleSkinLOD',
   ...GLTF_MODEL_METADATA_OVERRIDES['SimpleSkinLOD'],
   variants: {glTF: 'SimpleSkinLOD.gltf'}
+};
+const BUMP_MATERIAL_CATALOG_MODEL: GLTFCatalogModel = {
+  label: 'Bump Material',
+  name: 'BumpMaterial',
+  summary: 'A compact CC0 fixture for the experimental EXT_materials_bump extension.',
+  variants: {glTF: 'BumpMaterial.gltf'}
 };
 export type GLTFModelReference = {
   name: string;
@@ -572,6 +582,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return [
       ROBOT_EXPRESSIVE_CATALOG_MODEL,
       SIMPLE_SKIN_LOD_CATALOG_MODEL,
+      BUMP_MATERIAL_CATALOG_MODEL,
       ...models.filter(isAnimatedGLTFCatalogModel)
     ].map(model => ({
       ...model,
@@ -853,6 +864,9 @@ function getModelUrl(modelReference: Required<GLTFModelReference>): string {
   }
   if (modelReference.name === 'SimpleSkinLOD') {
     return SIMPLE_SKIN_LOD_MODEL_URL;
+  }
+  if (modelReference.name === 'BumpMaterial') {
+    return BUMP_MATERIAL_MODEL_URL;
   }
 
   return `${MODEL_DIRECTORY_URL}/${modelReference.name}/${modelReference.variant}/${modelReference.fileName}`;
