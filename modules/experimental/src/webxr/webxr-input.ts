@@ -300,6 +300,15 @@ export function getWebXRControllerState(
   };
 }
 
+export function getWebXRControllerStates(
+  inputStates: readonly WebXRInputState[] | null,
+  props: WebXRInputActivationProps = {}
+): readonly WebXRControllerState[] {
+  return (inputStates || [])
+    .map(inputState => getWebXRControllerState(inputState, props))
+    .filter((controllerState): controllerState is WebXRControllerState => Boolean(controllerState));
+}
+
 export function getWebXRInputRayPlaneIntersection(
   ray: WebXRInputRay,
   props: WebXRInputRayPlaneIntersectionProps = {}

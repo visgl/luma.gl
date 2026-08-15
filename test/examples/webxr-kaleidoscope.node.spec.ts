@@ -259,7 +259,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
     expect(applicationSource).toContain('WebXRInputActionManager');
-    expect(applicationSource).toContain('getWebXRControllerState');
+    expect(applicationSource).toContain('getWebXRControllerStates');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
     expect(applicationSource).toContain('getWebXRLocomotionState');
     expect(applicationSource).toContain('getWebXRTeleportTranslation');
@@ -285,8 +285,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('this.updateXRInputActions(inputState)');
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
-    expect(rayMethod).toContain('const controllerState = getWebXRControllerState(input)');
-    expect(rayMethod).toContain('if (!controllerState)');
+    expect(rayMethod).toContain(
+      'for (const controllerState of getWebXRControllerStates(inputState))'
+    );
     expect(rayMethod).toContain('if (controllerState.grip)');
     expect(rayMethod).toContain('this.controllerGripMatrix.copy(controllerState.grip.matrix)');
     expect(rayMethod).toContain(
@@ -314,7 +315,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(rayMethod).toContain('if (teleportTarget.allowed)');
     expect(rayMethod).toContain(
-      'this._floorHitByInputSource.set(input.inputSource, floorHit.point)'
+      'this._floorHitByInputSource.set(controllerState.inputSource, floorHit.point)'
     );
     expect(rayMethod).toContain(
       'this.controllerReticleMatrix.identity().translate(teleportTarget.point)'

@@ -164,6 +164,7 @@ export type {
 } from './webxr-input';
 export {
   getWebXRControllerState,
+  getWebXRControllerStates,
   getWebXRInputActionState,
   getWebXRInputActivationState,
   getWebXRInputGrip,

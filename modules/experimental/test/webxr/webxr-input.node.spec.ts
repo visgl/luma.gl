@@ -6,6 +6,7 @@ import test from 'test/utils/vitest-tape';
 import {
   WebXRInputActionManager,
   getWebXRControllerState,
+  getWebXRControllerStates,
   getWebXRInputActionState,
   getWebXRInputActivationState,
   getWebXRInputGrip,
@@ -161,6 +162,48 @@ test('webxr#getWebXRControllerState consolidates tracked-pointer controller stat
     null,
     'screen input is not a controller state'
   );
+  testCase.end();
+});
+
+test('webxr#getWebXRControllerStates filters controller snapshots', testCase => {
+  const firstInputSource = {} as XRInputSource;
+  const secondInputSource = {} as XRInputSource;
+  const controllerInputState = makeMockWebXRInputState(null, null, {
+    inputSource: firstInputSource,
+    gamepad: makeMockXRStandardGamepad([{value: 0.04, pressed: false, touched: false}])
+  });
+  const handInputState = makeMockWebXRInputState(null, null, {
+    hand: {} as XRHand,
+    profiles: ['generic-hand-select']
+  });
+  const screenInputState = makeMockWebXRInputState(null, null, {
+    targetRayMode: 'screen',
+    profiles: ['generic-touchscreen']
+  });
+  const secondControllerInputState = makeMockWebXRInputState(null, null, {
+    inputSource: secondInputSource,
+    profiles: ['generic-trigger-squeeze-thumbstick'],
+    selectActive: true
+  });
+  const controllerStates = getWebXRControllerStates(
+    [controllerInputState, handInputState, screenInputState, secondControllerInputState],
+    {activationThreshold: 0.05}
+  );
+
+  testCase.deepEqual(getWebXRControllerStates(null), [], 'null input snapshots become empty list');
+  testCase.equal(controllerStates.length, 2, 'filters out hands and screen input');
+  testCase.equal(controllerStates[0]?.inputSource, firstInputSource, 'preserves controller order');
+  testCase.equal(
+    controllerStates[0]?.isPrimaryActive,
+    false,
+    'passes activation props to each controller'
+  );
+  testCase.equal(
+    controllerStates[1]?.inputSource,
+    secondInputSource,
+    'keeps later controller input source'
+  );
+  testCase.equal(controllerStates[1]?.primaryAction, 1, 'keeps controller activation state');
   testCase.end();
 });
 
