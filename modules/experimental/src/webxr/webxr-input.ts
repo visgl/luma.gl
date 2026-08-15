@@ -13,6 +13,13 @@ export type WebXRInputRay = {
   matrix: Float32Array;
 };
 
+/** Experimental v10 world-space grip pose derived from one tracked WebXR input source. */
+export type WebXRInputGrip = {
+  inputState: WebXRInputState;
+  position: NumberArray3;
+  matrix: Float32Array;
+};
+
 export type WebXRInputRayPlaneIntersectionProps = {
   planePoint?: NumberArray3;
   planeNormal?: NumberArray3;
@@ -40,6 +47,19 @@ export function getWebXRInputRay(inputState: WebXRInputState): WebXRInputRay | n
     inputState,
     origin: [matrix[12], matrix[13], matrix[14]],
     direction,
+    matrix
+  };
+}
+
+export function getWebXRInputGrip(inputState: WebXRInputState): WebXRInputGrip | null {
+  const matrix = inputState.gripMatrix;
+  if (!matrix) {
+    return null;
+  }
+
+  return {
+    inputState,
+    position: [matrix[12], matrix[13], matrix[14]],
     matrix
   };
 }

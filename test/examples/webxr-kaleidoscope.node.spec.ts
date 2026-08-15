@@ -250,6 +250,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
     expect(applicationSource).toContain('getWebXRGamepadState');
+    expect(applicationSource).toContain('getWebXRInputGrip');
     expect(applicationSource).toContain('getWebXRInputRay');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
     expect(applicationSource).toContain('getWebXRLocomotionState');
@@ -260,8 +261,10 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
     expect(applicationSource).toContain("id: 'immersive-prism-controller-rays'");
     expect(applicationSource).toContain("id: 'immersive-prism-controller-reticles'");
+    expect(applicationSource).toContain("id: 'immersive-prism-controller-grips'");
     expect(applicationSource).toContain("topology: 'line-list'");
     expect(applicationSource).toContain('new Float32Array([0, 0, 0, 0, 0, -3.2])');
+    expect(applicationSource).toContain('function makeControllerGripGeometry()');
     expect(applicationSource).toContain('function makeControllerReticleGeometry()');
     expect(applicationSource).toContain('const segmentCount = 32');
     expect(renderMethod).toContain('inputState: readonly WebXRInputState[]');
@@ -273,6 +276,15 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('renderPass.end()');
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
+    expect(rayMethod).toContain('const inputGrip = getWebXRInputGrip(input)');
+    expect(rayMethod).toContain('if (inputGrip)');
+    expect(rayMethod).toContain('this.controllerGripMatrix.copy(inputGrip.matrix)');
+    expect(rayMethod).toContain('multiplyRight(this.controllerGripMatrix.copy(inputGrip.matrix))');
+    expect(rayMethod).toContain(
+      "cameraMix: input.squeezeActive ? 1 : input.handedness === 'right' ? 0.45 : 0"
+    );
+    expect(rayMethod).toContain('this.controllerGripModel.predraw(this.device.commandEncoder)');
+    expect(rayMethod).toContain('this.controllerGripModel.draw(renderPass)');
     expect(rayMethod).toContain('const inputRay = getWebXRInputRay(input)');
     expect(rayMethod).toContain('const gamepadState = getWebXRGamepadState(input)');
     expect(rayMethod).toContain('gamepadState?.primaryTrigger?.value || 0');
@@ -301,6 +313,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain('this.controllerReticleModel.draw(renderPass)');
     expect(applicationSource).toContain('let blockedColor = vec3<f32>(1.0, 0.08, 0.10)');
     expect(applicationSource).toContain('app.cameraMix < 0.0 ? blockedColor : targetColor');
+    expect(applicationSource).toContain('this.controllerGripModel.destroy()');
   });
 
   test('renders tracked hand joints from WebXR hand snapshots', () => {

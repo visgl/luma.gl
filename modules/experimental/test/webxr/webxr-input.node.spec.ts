@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
-import {getWebXRInputRay, getWebXRInputRayPlaneIntersection} from '../../src/webxr/webxr-input';
+import {
+  getWebXRInputGrip,
+  getWebXRInputRay,
+  getWebXRInputRayPlaneIntersection
+} from '../../src/webxr/webxr-input';
 import type {WebXRInputState} from '../../src/webxr/webxr-manager';
 
 test('webxr#getWebXRInputRay resolves origin and normalized target-ray direction', testCase => {
@@ -30,6 +34,22 @@ test('webxr#getWebXRInputRay handles missing and degenerate target rays', testCa
   );
   testCase.deepEqual(ray?.origin, [3, 4, 5], 'still resolves origin');
   testCase.deepEqual(ray?.direction, [0, 0, -1], 'falls back to forward direction');
+  testCase.end();
+});
+
+test('webxr#getWebXRInputGrip resolves tracked controller grip poses', testCase => {
+  const matrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -0.25, 1.125, -0.75, 1]);
+  const inputState = makeMockWebXRInputState(null, matrix);
+  const grip = getWebXRInputGrip(inputState);
+
+  testCase.equal(grip?.inputState, inputState, 'retains source input state');
+  testCase.equal(grip?.matrix, matrix, 'retains source grip matrix');
+  testCase.deepEqual(grip?.position, [-0.25, 1.125, -0.75], 'uses matrix translation as position');
+  testCase.equal(
+    getWebXRInputGrip(makeMockWebXRInputState(null, null)),
+    null,
+    'missing grip matrices do not produce grips'
+  );
   testCase.end();
 });
 
@@ -98,7 +118,10 @@ test('webxr#getWebXRInputRayPlaneIntersection rejects unusable hits', testCase =
   testCase.end();
 });
 
-function makeMockWebXRInputState(targetRayMatrix: Float32Array | null): WebXRInputState {
+function makeMockWebXRInputState(
+  targetRayMatrix: Float32Array | null,
+  gripMatrix: Float32Array | null = null
+): WebXRInputState {
   return {
     inputSource: {} as XRInputSource,
     index: 0,
@@ -109,7 +132,7 @@ function makeMockWebXRInputState(targetRayMatrix: Float32Array | null): WebXRInp
     targetRayPose: null,
     targetRayMatrix,
     gripPose: null,
-    gripMatrix: null,
+    gripMatrix,
     selectActive: false,
     squeezeActive: false
   };

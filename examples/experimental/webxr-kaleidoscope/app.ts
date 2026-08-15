@@ -25,6 +25,7 @@ import {
   getWebXRBoundsState,
   getWebXRGamepadState,
   getWebXRHandPinch,
+  getWebXRInputGrip,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
   getWebXRLocomotionState,
@@ -404,6 +405,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly uniformStore: UniformStore<{app: AppUniforms}>;
   readonly fallbackTexture: Texture;
   readonly model: Model;
+  readonly controllerGripModel: Model;
   readonly controllerRayModel: Model;
   readonly controllerReticleModel: Model;
   readonly handJointModel: Model;
@@ -428,6 +430,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   });
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
+  readonly controllerGripMatrix = new Matrix4();
   readonly controllerRayMatrix = new Matrix4();
   readonly controllerReticleMatrix = new Matrix4();
   readonly handJointMatrix = new Matrix4();
@@ -491,6 +494,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendAlphaOperation: 'add',
         blendColorSrcFactor: 'src-alpha',
         blendColorDstFactor: 'one-minus-src-alpha',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
+    this.controllerGripModel = new Model(device, {
+      id: 'immersive-prism-controller-grips',
+      source: CONTROLLER_RAY_WGSL_SHADER,
+      vs: CONTROLLER_RAY_VS_GLSL,
+      fs: CONTROLLER_RAY_FS_GLSL,
+      geometry: makeControllerGripGeometry(),
+      bindings: {
+        app: this.uniformStore.getManagedUniformBuffer('app')
+      },
+      parameters: {
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal',
+        blend: true,
+        blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one',
         blendAlphaSrcFactor: 'one',
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
@@ -577,6 +601,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
     this.orbitControls?.destroy();
     this.controllerReticleModel.destroy();
+    this.controllerGripModel.destroy();
     this.handJointModel.destroy();
     this.controllerRayModel.destroy();
     this.model.destroy();
@@ -879,6 +904,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     boundsState: WebXRBoundsState | null
   ): void {
     for (const input of inputState) {
+      const inputGrip = getWebXRInputGrip(input);
+      if (inputGrip) {
+        this.modelViewProjectionMatrix
+          .copy(view.projectionMatrix)
+          .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
+          .multiplyRight(this.controllerGripMatrix.copy(inputGrip.matrix));
+        this.uniformStore.setUniforms(
+          {
+            app: {
+              modelViewProjectionMatrix: this.modelViewProjectionMatrix,
+              time,
+              cameraMix: input.squeezeActive ? 1 : input.handedness === 'right' ? 0.45 : 0,
+              lightIntensity: 1
+            }
+          },
+          this.device.commandEncoder
+        );
+        this.controllerGripModel.predraw(this.device.commandEncoder);
+        this.controllerGripModel.draw(renderPass);
+      }
+
       const inputRay = getWebXRInputRay(input);
       if (input.targetRayMode !== 'tracked-pointer' || !inputRay) {
         continue;
@@ -1230,6 +1276,24 @@ function makeControllerRayGeometry(): Geometry {
       positions: {
         size: 3,
         value: new Float32Array([0, 0, 0, 0, 0, -3.2])
+      }
+    }
+  });
+}
+
+function makeControllerGripGeometry(): Geometry {
+  return new Geometry({
+    topology: 'line-list',
+    attributes: {
+      positions: {
+        size: 3,
+        value: new Float32Array([
+          -0.045, 0, 0, 0.045, 0, 0, 0, -0.035, 0, 0, 0.035, 0, 0, 0, 0.045, 0, 0, -0.13, -0.032,
+          -0.032, -0.07, 0.032, -0.032, -0.07, 0.032, -0.032, -0.07, 0.032, 0.032, -0.07, 0.032,
+          0.032, -0.07, -0.032, 0.032, -0.07, -0.032, 0.032, -0.07, -0.032, -0.032, -0.07, -0.024,
+          -0.024, -0.15, 0.024, -0.024, -0.15, 0.024, -0.024, -0.15, 0.024, 0.024, -0.15, 0.024,
+          0.024, -0.15, -0.024, 0.024, -0.15, -0.024, 0.024, -0.15, -0.024, -0.024, -0.15
+        ])
       }
     }
   });

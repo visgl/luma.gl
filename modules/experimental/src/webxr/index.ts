@@ -148,11 +148,16 @@ export type {
 } from './webxr-hit-test';
 export {WebXRHitTestManager} from './webxr-hit-test';
 export type {
+  WebXRInputGrip,
   WebXRInputRay,
   WebXRInputRayPlaneIntersection,
   WebXRInputRayPlaneIntersectionProps
 } from './webxr-input';
-export {getWebXRInputRay, getWebXRInputRayPlaneIntersection} from './webxr-input';
+export {
+  getWebXRInputGrip,
+  getWebXRInputRay,
+  getWebXRInputRayPlaneIntersection
+} from './webxr-input';
 export type {
   WebXRReferenceSpaceResetState,
   WebXRTeleportOffsetProps,
