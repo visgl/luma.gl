@@ -154,9 +154,9 @@ The first implementation does not need to change the public callback shape.
 The compiled contract should use normalized handle identity rather than string IDs. IDs remain
 labels and binding keys; they must not become the authority for access control.
 
-### Stronger follow-up API
+### Typed named-resource API
 
-A later breaking revision can make valid code easier to write by naming declared attachments and
+A backward-compatible overload makes valid code easier to write by naming declared resources and
 returning a typed resource interface to the callback, following the spirit of Daxa task
 attachments:
 
@@ -179,9 +179,10 @@ graph.addComputePass({
 });
 ```
 
-This shape can infer callback resource names and types, reduce repeated handle references, and make
-undeclared access unavailable by construction. It should follow, rather than block, enforcement of
-the existing array-based API.
+This shape infers callback resource names and types, reduces repeated handle references, and makes
+the graph-wide resolver functions unavailable to named callbacks. View-scoped texture declarations
+expose only their concrete view rather than the whole physical texture. The array form remains
+available for compatibility and can gain strict runtime enforcement independently.
 
 ### Compatibility and rollout
 
@@ -191,7 +192,8 @@ the existing array-based API.
 4. Enable strict enforcement by default while the API remains experimental. Avoid a permanent
    production `off` switch that would make allocation safety configuration-dependent.
 5. Document the command-encoder discard rule for callback and contract failures.
-6. Consider the typed named-resource form only after the minimal invariant is stable.
+6. Prefer the typed named-resource form for new nodes while retaining the array form during the
+   compatibility period.
 
 ### Verification plan
 
