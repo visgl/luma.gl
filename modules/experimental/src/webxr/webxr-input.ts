@@ -40,16 +40,43 @@ export type WebXRInputSourceState = {
 };
 
 /** Experimental v10 normalized select/squeeze activation for one WebXR input source. */
+export type WebXRInputActivationProps = {
+  activationThreshold?: number;
+};
+
 export type WebXRInputActivationState = {
   inputState: WebXRInputState;
+  inputSource: XRInputSource;
   selectActive: boolean;
   squeezeActive: boolean;
   triggerValue: number;
   squeezeValue: number;
   primaryAction: number;
   squeezeAction: number;
+  activationThreshold: number;
   isPrimaryActive: boolean;
   isSqueezeActive: boolean;
+};
+
+export type WebXRInputPreviousActionState = {
+  primaryAction: number;
+  squeezeAction: number;
+  isPrimaryActive: boolean;
+  isSqueezeActive: boolean;
+};
+
+/** Experimental v10 per-frame action transition state for one WebXR input source. */
+export type WebXRInputActionState = WebXRInputActivationState & {
+  previousPrimaryAction: number;
+  previousSqueezeAction: number;
+  primaryActionDelta: number;
+  squeezeActionDelta: number;
+  wasPrimaryActive: boolean;
+  wasSqueezeActive: boolean;
+  primaryActionStarted: boolean;
+  primaryActionEnded: boolean;
+  squeezeActionStarted: boolean;
+  squeezeActionEnded: boolean;
 };
 
 export type WebXRInputRayPlaneIntersectionProps = {
@@ -65,6 +92,52 @@ export type WebXRInputRayPlaneIntersection = {
   point: NumberArray3;
   distance: number;
 };
+
+const DEFAULT_INPUT_ACTION_THRESHOLD = 0.05;
+
+/** Tracks per-frame select/squeeze transitions across WebXR input sources. */
+export class WebXRInputActionManager {
+  private _previousActionsByInputSource = new Map<XRInputSource, WebXRInputPreviousActionState>();
+
+  update(
+    inputStates: readonly WebXRInputState[] | null,
+    props: WebXRInputActivationProps = {}
+  ): readonly WebXRInputActionState[] {
+    const activeInputSources = new Set<XRInputSource>();
+    const actionStates: WebXRInputActionState[] = [];
+
+    for (const inputState of inputStates || []) {
+      activeInputSources.add(inputState.inputSource);
+      const actionState = getWebXRInputActionState(inputState, {
+        ...props,
+        previousAction: this._previousActionsByInputSource.get(inputState.inputSource)
+      });
+      actionStates.push(actionState);
+      this._previousActionsByInputSource.set(inputState.inputSource, {
+        primaryAction: actionState.primaryAction,
+        squeezeAction: actionState.squeezeAction,
+        isPrimaryActive: actionState.isPrimaryActive,
+        isSqueezeActive: actionState.isSqueezeActive
+      });
+    }
+
+    for (const inputSource of this._previousActionsByInputSource.keys()) {
+      if (!activeInputSources.has(inputSource)) {
+        this._previousActionsByInputSource.delete(inputSource);
+      }
+    }
+
+    return actionStates;
+  }
+
+  reset(inputSource?: XRInputSource): void {
+    if (inputSource) {
+      this._previousActionsByInputSource.delete(inputSource);
+    } else {
+      this._previousActionsByInputSource.clear();
+    }
+  }
+}
 
 export function getWebXRInputRay(inputState: WebXRInputState): WebXRInputRay | null {
   const matrix = inputState.targetRayMatrix;
@@ -131,8 +204,10 @@ export function getWebXRInputSourceState(inputState: WebXRInputState): WebXRInpu
 }
 
 export function getWebXRInputActivationState(
-  inputState: WebXRInputState
+  inputState: WebXRInputState,
+  props: WebXRInputActivationProps = {}
 ): WebXRInputActivationState {
+  const activationThreshold = clampActionValue(props.activationThreshold ?? 0);
   const gamepadState = getWebXRGamepadState(inputState);
   const triggerValue = clampActionValue(gamepadState?.primaryTrigger?.value ?? 0);
   const squeezeValue = clampActionValue(gamepadState?.primarySqueeze?.value ?? 0);
@@ -141,14 +216,45 @@ export function getWebXRInputActivationState(
 
   return {
     inputState,
+    inputSource: inputState.inputSource,
     selectActive: inputState.selectActive,
     squeezeActive: inputState.squeezeActive,
     triggerValue,
     squeezeValue,
     primaryAction,
     squeezeAction,
-    isPrimaryActive: primaryAction > 0,
-    isSqueezeActive: squeezeAction > 0
+    activationThreshold,
+    isPrimaryActive: primaryAction > activationThreshold,
+    isSqueezeActive: squeezeAction > activationThreshold
+  };
+}
+
+export function getWebXRInputActionState(
+  inputState: WebXRInputState,
+  props: WebXRInputActivationProps & {
+    previousAction?: WebXRInputPreviousActionState | null;
+  } = {}
+): WebXRInputActionState {
+  const activationState = getWebXRInputActivationState(inputState, {
+    activationThreshold: props.activationThreshold ?? DEFAULT_INPUT_ACTION_THRESHOLD
+  });
+  const previousPrimaryAction = props.previousAction?.primaryAction ?? 0;
+  const previousSqueezeAction = props.previousAction?.squeezeAction ?? 0;
+  const wasPrimaryActive = props.previousAction?.isPrimaryActive ?? false;
+  const wasSqueezeActive = props.previousAction?.isSqueezeActive ?? false;
+
+  return {
+    ...activationState,
+    previousPrimaryAction,
+    previousSqueezeAction,
+    primaryActionDelta: activationState.primaryAction - previousPrimaryAction,
+    squeezeActionDelta: activationState.squeezeAction - previousSqueezeAction,
+    wasPrimaryActive,
+    wasSqueezeActive,
+    primaryActionStarted: activationState.isPrimaryActive && !wasPrimaryActive,
+    primaryActionEnded: !activationState.isPrimaryActive && wasPrimaryActive,
+    squeezeActionStarted: activationState.isSqueezeActive && !wasSqueezeActive,
+    squeezeActionEnded: !activationState.isSqueezeActive && wasSqueezeActive
   };
 }
 

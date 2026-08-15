@@ -13,6 +13,7 @@ import {
   WebXRDOMOverlayManager,
   WebXRHandTrackingManager,
   WebXRHitTestManager,
+  WebXRInputActionManager,
   WebXRLightEstimationManager,
   WebXRMeshDetectionManager,
   WebXRManager,
@@ -430,6 +431,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly webXRSessionStateManager = new WebXRSessionStateManager({
     targetFrameRate: 'highest'
   });
+  readonly webXRInputActionManager = new WebXRInputActionManager();
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly controllerGripMatrix = new Matrix4();
@@ -844,6 +846,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.drawHandJoints(renderPass, view, handState, time);
       renderPass.end();
     }
+
+    this.updateXRInputActions(inputState);
   }
 
   private updateXRLocomotion(
@@ -1094,6 +1098,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this._floorHitByInputSource.clear();
   }
 
+  private updateXRInputActions(inputState: readonly WebXRInputState[]): void {
+    const actionStates = this.webXRInputActionManager.update(inputState);
+    for (const actionState of actionStates) {
+      if (actionState.primaryActionEnded) {
+        this.teleportToInputSource(actionState.inputSource);
+      }
+      if (actionState.squeezeActionEnded) {
+        void this.exitXR();
+      }
+    }
+  }
+
   private applyXRSceneOffset(offset: readonly [number, number, number]): void {
     applyXRSceneOffset(this.xrSceneOffset, offset);
   }
@@ -1101,6 +1117,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private clearXRInteractionState(): void {
     this._floorHitByInputSource.clear();
     this._inputStateByInputSource.clear();
+    this.webXRInputActionManager.reset();
     this._lastXRLocomotionTimeMilliseconds = null;
     this._lastXRSnapTurn = 0;
   }

@@ -150,8 +150,11 @@ export type {
 } from './webxr-hit-test';
 export {WebXRHitTestManager} from './webxr-hit-test';
 export type {
+  WebXRInputActionState,
   WebXRInputActivationState,
+  WebXRInputActivationProps,
   WebXRInputGrip,
+  WebXRInputPreviousActionState,
   WebXRInputRay,
   WebXRInputRayPlaneIntersection,
   WebXRInputRayPlaneIntersectionProps,
@@ -159,11 +162,13 @@ export type {
   WebXRInputSourceState
 } from './webxr-input';
 export {
+  getWebXRInputActionState,
   getWebXRInputActivationState,
   getWebXRInputGrip,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
-  getWebXRInputSourceState
+  getWebXRInputSourceState,
+  WebXRInputActionManager
 } from './webxr-input';
 export type {
   WebXRReferenceSpaceResetState,

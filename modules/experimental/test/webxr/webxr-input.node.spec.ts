@@ -4,6 +4,8 @@
 
 import test from 'test/utils/vitest-tape';
 import {
+  WebXRInputActionManager,
+  getWebXRInputActionState,
   getWebXRInputActivationState,
   getWebXRInputGrip,
   getWebXRInputRay,
@@ -114,6 +116,11 @@ test('webxr#getWebXRInputActivationState normalizes events and gamepad buttons',
   const eventActivationState = getWebXRInputActivationState(eventInputState);
 
   testCase.equal(eventActivationState.inputState, eventInputState, 'retains source input state');
+  testCase.equal(
+    eventActivationState.inputSource,
+    eventInputState.inputSource,
+    'keeps input source'
+  );
   testCase.equal(eventActivationState.primaryAction, 1, 'select events drive primary action');
   testCase.equal(eventActivationState.squeezeAction, 1, 'squeeze events drive squeeze action');
   testCase.equal(eventActivationState.isPrimaryActive, true, 'marks primary action active');
@@ -152,6 +159,111 @@ test('webxr#getWebXRInputActivationState normalizes events and gamepad buttons',
 
   testCase.equal(clampedActivationState.triggerValue, 1, 'clamps trigger values to one');
   testCase.equal(clampedActivationState.squeezeValue, 0, 'clamps squeeze values to zero');
+  testCase.equal(
+    getWebXRInputActivationState(
+      makeMockWebXRInputState(null, null, {
+        gamepad: makeMockXRStandardGamepad([{value: 0.04, pressed: false, touched: false}])
+      }),
+      {activationThreshold: 0.05}
+    ).isPrimaryActive,
+    false,
+    'optional threshold filters low activation values'
+  );
+  testCase.end();
+});
+
+test('webxr#WebXRInputActionManager reports action transitions', testCase => {
+  const inputSource = {} as XRInputSource;
+  const manager = new WebXRInputActionManager();
+
+  testCase.deepEqual(manager.update(null), [], 'null input snapshots become empty actions');
+
+  const inactiveActionStates = manager.update([makeMockWebXRInputState(null, null, {inputSource})]);
+  testCase.equal(
+    inactiveActionStates[0]?.primaryActionStarted,
+    false,
+    'inactive sources do not start'
+  );
+
+  const activeActionStates = manager.update([
+    makeMockWebXRInputState(null, null, {
+      inputSource,
+      gamepad: makeMockXRStandardGamepad([{value: 0.35, pressed: true, touched: true}])
+    })
+  ]);
+  testCase.equal(
+    activeActionStates[0]?.primaryActionStarted,
+    true,
+    'trigger press starts primary action'
+  );
+  testCase.equal(
+    activeActionStates[0]?.primaryActionEnded,
+    false,
+    'trigger press does not end action'
+  );
+  testCase.equal(activeActionStates[0]?.previousPrimaryAction, 0, 'keeps previous primary action');
+  testCase.equal(activeActionStates[0]?.primaryActionDelta, 0.35, 'reports primary action delta');
+
+  const heldActionStates = manager.update([
+    makeMockWebXRInputState(null, null, {
+      inputSource,
+      gamepad: makeMockXRStandardGamepad([{value: 0.7, pressed: true, touched: true}])
+    })
+  ]);
+  testCase.equal(heldActionStates[0]?.primaryActionStarted, false, 'held action does not restart');
+  testCase.equal(heldActionStates[0]?.wasPrimaryActive, true, 'keeps previous active flag');
+  testCase.equal(heldActionStates[0]?.primaryActionDelta, 0.35, 'reports held action delta');
+
+  const endedActionStates = manager.update([makeMockWebXRInputState(null, null, {inputSource})]);
+  testCase.equal(endedActionStates[0]?.primaryActionEnded, true, 'release ends primary action');
+  testCase.equal(endedActionStates[0]?.previousPrimaryAction, 0.7, 'keeps previous release value');
+
+  const squeezeAction = getWebXRInputActionState(
+    makeMockWebXRInputState(null, null, {
+      inputSource,
+      squeezeActive: true
+    }),
+    {
+      previousAction: {
+        primaryAction: 0,
+        squeezeAction: 0,
+        isPrimaryActive: false,
+        isSqueezeActive: false
+      }
+    }
+  );
+  testCase.equal(
+    squeezeAction.squeezeActionStarted,
+    true,
+    'standalone helper tracks squeeze starts'
+  );
+  testCase.equal(
+    squeezeAction.activationThreshold,
+    0.05,
+    'standalone helper uses default threshold'
+  );
+
+  manager.update([]);
+  const newActionStates = manager.update([
+    makeMockWebXRInputState(null, null, {
+      inputSource,
+      gamepad: makeMockXRStandardGamepad([{value: 0.35, pressed: true, touched: true}])
+    })
+  ]);
+  testCase.equal(
+    newActionStates[0]?.wasPrimaryActive,
+    false,
+    'missing sources trim previous state'
+  );
+
+  manager.reset(inputSource);
+  const resetActionStates = manager.update([
+    makeMockWebXRInputState(null, null, {
+      inputSource,
+      gamepad: makeMockXRStandardGamepad([{value: 0.35, pressed: true, touched: true}])
+    })
+  ]);
+  testCase.equal(resetActionStates[0]?.wasPrimaryActive, false, 'reset clears previous state');
   testCase.end();
 });
 
@@ -226,7 +338,7 @@ function makeMockWebXRInputState(
   props: Partial<WebXRInputState> = {}
 ): WebXRInputState {
   return {
-    inputSource: {} as XRInputSource,
+    inputSource: props.inputSource ?? ({} as XRInputSource),
     index: 0,
     handedness: props.handedness ?? 'right',
     targetRayMode: props.targetRayMode ?? 'tracked-pointer',

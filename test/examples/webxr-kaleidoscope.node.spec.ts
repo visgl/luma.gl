@@ -258,6 +258,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain('type WebXRInputState');
     expect(applicationSource).toContain('getWebXRBoundsState');
+    expect(applicationSource).toContain('WebXRInputActionManager');
     expect(applicationSource).toContain('getWebXRInputActivationState');
     expect(applicationSource).toContain('getWebXRInputGrip');
     expect(applicationSource).toContain('getWebXRInputRay');
@@ -284,6 +285,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('this._inputStateByInputSource.clear()');
     expect(renderMethod).toContain('this._inputStateByInputSource.set(input.inputSource, input)');
     expect(renderMethod).toContain('renderPass.end()');
+    expect(renderMethod).toContain('this.updateXRInputActions(inputState)');
     expect(rayMethodStart).toBeGreaterThan(0);
     expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
     expect(rayMethod).toContain('const inputSourceState = getWebXRInputSourceState(input)');
@@ -587,6 +589,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('private _lastXRSnapTurn = 0');
     expect(applicationSource).toContain('new Map<XRInputSource, [number, number, number]>()');
     expect(applicationSource).toContain('new Map<XRInputSource, WebXRInputState>()');
+    expect(applicationSource).toContain(
+      'readonly webXRInputActionManager = new WebXRInputActionManager()'
+    );
     expect(applicationSource).not.toContain(
       'private _xrSelectEndListener = () => void this.exitXR()'
     );
@@ -646,6 +651,12 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       'void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45})'
     );
     expect(teleportMethod).toContain('this._floorHitByInputSource.clear()');
+    expect(teleportMethod).toContain('private updateXRInputActions(');
+    expect(teleportMethod).toContain('this.webXRInputActionManager.update(inputState)');
+    expect(teleportMethod).toContain('actionState.primaryActionEnded');
+    expect(teleportMethod).toContain('this.teleportToInputSource(actionState.inputSource)');
+    expect(teleportMethod).toContain('actionState.squeezeActionEnded');
+    expect(teleportMethod).toContain('void this.exitXR()');
     expect(clearMethod).toContain(
       "session?.removeEventListener('selectend', this._xrSelectEndListener)"
     );
@@ -656,6 +667,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(clearMethod).toContain('this.xrSceneYaw = 0');
     expect(clearMethod).toContain('this.clearXRInteractionState()');
     expect(applicationSource).toContain('private clearXRInteractionState(): void');
+    expect(applicationSource).toContain('this.webXRInputActionManager.reset()');
     expect(applicationSource).toContain('this._lastXRLocomotionTimeMilliseconds = null');
     expect(applicationSource).toContain('this._lastXRSnapTurn = 0');
     expect(applicationSource).toContain('this._floorHitByInputSource.clear()');
