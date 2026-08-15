@@ -89,11 +89,27 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain("requiredFeatures: ['webgpu']");
     expect(applicationSource).toContain("'hand-tracking',");
     expect(applicationSource).toContain(
-      "? ['anchors', 'depth-sensing', 'hand-tracking', 'hit-test', 'local-floor']"
+      "const domOverlayFeatures = domOverlayRoot ? ['dom-overlay'] : []"
     );
-    expect(applicationSource).toContain(": ['hand-tracking', 'local-floor']");
-    expect(applicationSource).toContain(": {optionalFeatures: ['hand-tracking', 'local-floor']}");
+    expect(applicationSource).toContain(
+      'const domOverlayInit = domOverlayRoot ? {domOverlay: {root: domOverlayRoot}} : {}'
+    );
+    expect(applicationSource).toContain("'depth-sensing',\n              ...domOverlayFeatures,");
+    expect(applicationSource).toContain(
+      ": [...domOverlayFeatures, 'hand-tracking', 'local-floor']"
+    );
+    expect(applicationSource).toContain('optionalFeatures: [...domOverlayFeatures,');
+    expect(applicationSource).toContain('...domOverlayInit');
     expect(applicationSource).toContain('depthSensing: AR_DEPTH_SENSING');
+    expect(applicationSource).toContain('WebXRDOMOverlayManager');
+    expect(applicationSource).toContain(
+      'readonly webXRDOMOverlayManager = new WebXRDOMOverlayManager()'
+    );
+    expect(applicationSource).toContain(
+      'this.webXRDOMOverlayManager.setSession(session, {root: getDOMOverlayRoot()})'
+    );
+    expect(applicationSource).toContain('this.webXRDOMOverlayManager.clearSession()');
+    expect(applicationSource).toContain('function getDOMOverlayRoot(): Element | null');
     expect(applicationSource).toContain("usagePreference: ['gpu-optimized', 'cpu-optimized']");
     expect(applicationSource).toContain(
       "dataFormatPreference: ['luminance-alpha', 'float32', 'unsigned-short']"
@@ -323,6 +339,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(exampleSource).toMatch(/\s+xrCompatible(?:\s|=)/);
     expect(exampleSource).toContain('native stereo projection layers when supported');
     expect(exampleSource).toContain('choose WebGL2 for immersive fallback');
+    expect(exampleSource).toContain('id="webxr-dom-overlay"');
     expect(wrapperSource).toContain('xrCompatible?: boolean');
     expect(wrapperSource).toContain('props.xrCompatible === true');
     expect(wrapperSource).toContain('continuing with desktop preview');
@@ -368,6 +385,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(standaloneSource).toContain("toggleSession('immersive-vr')");
     expect(standaloneSource).toContain("toggleSession('immersive-ar')");
     expect(standaloneSource).toContain('switch-backend');
+    expect(standaloneSource).toContain('id="webxr-dom-overlay"');
+    expect(standaloneSource).toContain('.portal-panel:xr-overlay');
     expect(applicationSource).toContain(
       'https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1'
     );

@@ -45,6 +45,13 @@
         backdrop-filter: blur(18px);
       }
 
+      .portal-panel:xr-overlay {
+        top: 18px;
+        left: 18px;
+        width: min(360px, calc(100vw - 36px));
+        background: rgba(6, 12, 28, 0.72);
+      }
+
       .portal-panel__eyebrow {
         margin: 0 0 9px;
         color: #67e8f9;
@@ -132,7 +139,7 @@
   </head>
   <body>
     <main id="scene" aria-label="Animated stereoscopic prism portal preview"></main>
-    <aside class="portal-panel">
+    <aside id="webxr-dom-overlay" class="portal-panel">
       <div class="portal-panel__eyebrow">luma.gl · spatial rendering</div>
       <h1>Immersive Prism Portal</h1>
       <p>

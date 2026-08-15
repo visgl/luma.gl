@@ -9,6 +9,7 @@ import {AnimationLoopTemplate, Geometry, Model, OrbitControls} from '@luma.gl/en
 import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
+  WebXRDOMOverlayManager,
   WebXRHitTestManager,
   WebXRManager,
   getWebXRInputRay,
@@ -363,6 +364,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly controllerRayModel: Model;
   readonly controllerReticleModel: Model;
   readonly webXRManager: WebXRManager;
+  readonly webXRDOMOverlayManager = new WebXRDOMOverlayManager();
   readonly webXRHitTestManager = new WebXRHitTestManager();
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
@@ -493,6 +495,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model.destroy();
     this.fallbackTexture.destroy();
     this.uniformStore.destroy();
+    this.webXRDOMOverlayManager.destroy();
     this.webXRHitTestManager.destroy();
     this.webXRManager.destroy();
   }
@@ -545,7 +548,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const session = await navigator.xr.requestSession(
       sessionMode,
-      getXRSessionInit(sessionMode, this.device.type)
+      getXRSessionInit(sessionMode, this.device.type, getDOMOverlayRoot())
     );
 
     try {
@@ -564,6 +567,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         sessionMode === 'immersive-ar' && this.device.type === 'webgl'
           ? this.createCameraTexture(session)
           : null;
+      this.webXRDOMOverlayManager.setSession(session, {root: getDOMOverlayRoot()});
       this.xrSession = session;
       this.xrSessionMode = sessionMode;
       session.addEventListener('end', this._xrSessionEndListener);
@@ -808,6 +812,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this._floorHitByInputSource.clear();
     this.cameraTexture?.destroy();
     this.cameraTexture = null;
+    this.webXRDOMOverlayManager.clearSession();
     this.webXRHitTestManager.clearSession();
     this.webXRManager.clearSession();
     if (!this._isFinalized) {
@@ -816,15 +821,30 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: string): XRSessionInit {
+function getXRSessionInit(
+  sessionMode: ImmersiveXRSessionMode,
+  deviceType: string,
+  domOverlayRoot: Element | null = null
+): XRSessionInit {
+  const domOverlayFeatures = domOverlayRoot ? ['dom-overlay'] : [];
+  const domOverlayInit = domOverlayRoot ? {domOverlay: {root: domOverlayRoot}} : {};
+
   if (deviceType === 'webgpu') {
     return {
       requiredFeatures: ['webgpu'],
       optionalFeatures:
         sessionMode === 'immersive-ar'
-          ? ['anchors', 'depth-sensing', 'hand-tracking', 'hit-test', 'local-floor']
-          : ['hand-tracking', 'local-floor'],
-      ...(sessionMode === 'immersive-ar' ? {depthSensing: AR_DEPTH_SENSING} : {})
+          ? [
+              'anchors',
+              'depth-sensing',
+              ...domOverlayFeatures,
+              'hand-tracking',
+              'hit-test',
+              'local-floor'
+            ]
+          : [...domOverlayFeatures, 'hand-tracking', 'local-floor'],
+      ...(sessionMode === 'immersive-ar' ? {depthSensing: AR_DEPTH_SENSING} : {}),
+      ...domOverlayInit
     };
   }
 
@@ -834,13 +854,22 @@ function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: strin
           'anchors',
           'camera-access',
           'depth-sensing',
+          ...domOverlayFeatures,
           'hand-tracking',
           'hit-test',
           'local-floor'
         ],
-        depthSensing: AR_DEPTH_SENSING
+        depthSensing: AR_DEPTH_SENSING,
+        ...domOverlayInit
       }
-    : {optionalFeatures: ['hand-tracking', 'local-floor']};
+    : {
+        optionalFeatures: [...domOverlayFeatures, 'hand-tracking', 'local-floor'],
+        ...domOverlayInit
+      };
+}
+
+function getDOMOverlayRoot(): Element | null {
+  return typeof document !== 'undefined' ? document.getElementById('webxr-dom-overlay') : null;
 }
 
 function makeSpatialPortalGeometry(): Geometry {

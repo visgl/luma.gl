@@ -19,6 +19,12 @@ export {
   getWebXRDepthTextureFormat,
   WebXRDepthSensingManager
 } from './webxr-depth-sensing';
+export type {
+  WebXRDOMOverlayManagerProps,
+  WebXRDOMOverlaySessionInitProps,
+  WebXRDOMOverlayState
+} from './webxr-dom-overlay';
+export {getWebXRDOMOverlaySessionInit, WebXRDOMOverlayManager} from './webxr-dom-overlay';
 export type {WebXRHandJointState, WebXRHandTrackingState} from './webxr-hand-tracking';
 export {WEBXR_HAND_JOINTS, WebXRHandTrackingManager} from './webxr-hand-tracking';
 export type {

@@ -25,6 +25,10 @@ declare global {
     makeXRCompatible(): Promise<void>;
   }
 
+  interface GlobalEventHandlers {
+    onbeforexrselect: ((this: GlobalEventHandlers, event: Event) => unknown) | null;
+  }
+
   type XRSessionMode = 'inline' | 'immersive-vr' | 'immersive-ar';
   type XRReferenceSpaceType = 'viewer' | 'local' | 'local-floor' | 'bounded-floor' | 'unbounded';
   type XREye = 'none' | 'left' | 'right';
@@ -35,6 +39,7 @@ declare global {
   type XRDepthType = 'raw' | 'smooth';
   type XRDepthUsage = 'cpu-optimized' | 'gpu-optimized';
   type XRTextureType = number;
+  type XRDOMOverlayType = 'screen' | 'floating' | 'head-locked';
   type XRHandJoint =
     | 'wrist'
     | 'thumb-metacarpal'
@@ -72,6 +77,15 @@ declare global {
     optionalFeatures?: string[];
     requiredFeatures?: string[];
     depthSensing?: XRDepthStateInit;
+    domOverlay?: XRDOMOverlayInit;
+  }
+
+  interface XRDOMOverlayInit {
+    root: Element;
+  }
+
+  interface XRDOMOverlayState {
+    type: XRDOMOverlayType;
   }
 
   interface XRDepthStateInit {
@@ -93,6 +107,7 @@ declare global {
     readonly depthDataFormat?: XRDepthDataFormat;
     readonly depthType?: XRDepthType | null;
     readonly depthActive?: boolean;
+    readonly domOverlayState?: XRDOMOverlayState | null;
 
     cancelAnimationFrame(animationFrameId: number): void;
     end(): Promise<void>;

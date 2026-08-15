@@ -1655,6 +1655,7 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
       config={exampleConfig}
       headerControls={
         <div
+          id="webxr-dom-overlay"
           style={{
             background: 'linear-gradient(135deg, rgba(8, 15, 32, 0.96), rgba(15, 23, 42, 0.9))',
             border: '1px solid rgba(103, 232, 249, 0.18)',
