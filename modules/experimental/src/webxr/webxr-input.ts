@@ -409,6 +409,17 @@ export function getWebXRControllerRayPlaneTargetByHandedness(
   );
 }
 
+export function getWebXRControllerRayPlaneTargetByInputSource(
+  targets: readonly WebXRControllerRayPlaneTarget[] | null,
+  inputSource: XRInputSource | null | undefined
+): WebXRControllerRayPlaneTarget | null {
+  return (
+    (inputSource &&
+      (targets || []).find(target => target.controllerState.inputSource === inputSource)) ||
+    null
+  );
+}
+
 export function getWebXRInputRayPlaneIntersection(
   ray: WebXRInputRay,
   props: WebXRInputRayPlaneIntersectionProps = {}

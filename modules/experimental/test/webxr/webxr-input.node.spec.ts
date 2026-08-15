@@ -9,6 +9,7 @@ import {
   getWebXRControllerRayPlaneIntersections,
   getWebXRControllerRayPlaneTarget,
   getWebXRControllerRayPlaneTargetByHandedness,
+  getWebXRControllerRayPlaneTargetByInputSource,
   getWebXRControllerRayPlaneTargets,
   getWebXRControllerState,
   getWebXRControllerStateByHandedness,
@@ -415,6 +416,50 @@ test('webxr#getWebXRControllerRayPlaneTargetByHandedness selects target hands', 
     getWebXRControllerRayPlaneTargetByHandedness(null, 'right'),
     null,
     'null target lists return null'
+  );
+  testCase.end();
+});
+
+test('webxr#getWebXRControllerRayPlaneTargetByInputSource selects target identity', testCase => {
+  const floorRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0, 1.6, 0, 1]);
+  const firstInputSource = {} as XRInputSource;
+  const secondInputSource = {} as XRInputSource;
+  const missingInputSource = {} as XRInputSource;
+  const targets = getWebXRControllerRayPlaneTargets([
+    getWebXRControllerState(
+      makeMockWebXRInputState(floorRayMatrix, null, {
+        inputSource: firstInputSource,
+        handedness: 'left'
+      })
+    )!,
+    getWebXRControllerState(
+      makeMockWebXRInputState(floorRayMatrix, null, {
+        inputSource: secondInputSource,
+        handedness: 'right'
+      })
+    )!
+  ]);
+
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByInputSource(targets, secondInputSource)?.controllerState
+      .inputSource,
+    secondInputSource,
+    'selects target by exact input source identity'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByInputSource(targets, missingInputSource),
+    null,
+    'missing input sources return null'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByInputSource(null, secondInputSource),
+    null,
+    'null target lists return null'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargetByInputSource(targets, null),
+    null,
+    'null input sources return null'
   );
   testCase.end();
 });
