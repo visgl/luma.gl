@@ -15,6 +15,14 @@ to reduce workgroup-memory bank conflicts, and both reads and writes remain coal
 the primitive useful as a data-layout building block for multidimensional FFTs, tensor-like
 algorithms, and tiled numerical kernels without introducing a tensor abstraction.
 
+## When to use
+
+Use `GPUTranspose` when a row-major GPU field must change axis order and the transposed result feeds
+another GPU operation, especially for rectangular FFT stages or tiled numerical pipelines. It is
+most useful when it avoids CPU readback or makes later memory access coalesced. For tiny matrices,
+one-off CPU data, or consumers that can read the original strided layout efficiently, a separate
+GPU transpose pass may cost more than it saves.
+
 ## Usage
 
 ```ts

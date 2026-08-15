@@ -223,6 +223,31 @@ export type {
   GPUFFT1DBenchmarkStrategy
 } from './gpu-fft1d-benchmark';
 
+export {
+  getGPUConvolutionSupport,
+  GPUConvolution,
+  GPU_CONVOLUTION_AUTO_DIRECT_KERNEL_AREA,
+  GPU_CONVOLUTION_WORKGROUP_SIZE,
+  makeGPUConvolutionStats
+} from './gpu-convolution';
+export type {
+  GPUConvolutionBoundary,
+  GPUConvolutionPlanProps,
+  GPUConvolutionProps,
+  GPUConvolutionStats,
+  GPUConvolutionStrategy,
+  GPUConvolutionSupport
+} from './gpu-convolution';
+export {runGPUConvolutionBenchmark} from './gpu-convolution-benchmark';
+export type {
+  GPUConvolutionBenchmarkCase,
+  GPUConvolutionBenchmarkCaseReport,
+  GPUConvolutionBenchmarkPathReport,
+  GPUConvolutionBenchmarkProps,
+  GPUConvolutionBenchmarkReport,
+  GPUConvolutionBenchmarkStrategy
+} from './gpu-convolution-benchmark';
+
 export {GPUHistogram} from './gpu-histogram';
 export type {
   GPUHistogramDomain,

@@ -66,7 +66,7 @@ The implementation consists of `GPUCommandGraph`, `GPUTextureHistory`, typed gra
 `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`,
 `GPUSegmentedSort`, `GPUTranspose`, `GPUBVH`, `GPUSegmentedBVH`, `GPUReduction`, `GPUHistogram`,
 `GPUGridBinning`, `GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT1D`, `GPUFFT2D`,
-`GPUIndexPickingTarget`,
+`GPUConvolution`, `GPUIndexPickingTarget`,
 `GPUReadbackRing`, and
 `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to process
 and thread collapse, source and topology filtering, dependency focusing, visible-parent projection,
@@ -1686,6 +1686,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUTranspose`](/docs/api-reference/experimental/gpu-primitives/gpu-transpose)
 - [`GPUFFT1D`](/docs/api-reference/experimental/gpu-primitives/gpu-fft1d)
 - [`GPUFFT2D`](/docs/api-reference/experimental/gpu-primitives/gpu-fft2d)
+- [`GPUConvolution`](/docs/api-reference/experimental/gpu-primitives/gpu-convolution)
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
 - [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning)

@@ -17,6 +17,7 @@ export type GPUPrimitivesDocsTabId =
   | 'transpose'
   | 'fft1d'
   | 'fft2d'
+  | 'convolution'
   | 'reduction'
   | 'histogram'
   | 'grid-binning'
@@ -118,6 +119,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'fft2d',
     label: 'FFT 2D',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-fft2d'
+  },
+  {
+    id: 'convolution',
+    label: 'Convolution',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-convolution'
   },
   {
     id: 'reduction',
@@ -269,6 +275,7 @@ const TAB_GROUPS: GPUPrimitivesDocsTabGroup[] = [
       'transpose',
       'fft1d',
       'fft2d',
+      'convolution',
       'reduction',
       'histogram'
     ]
