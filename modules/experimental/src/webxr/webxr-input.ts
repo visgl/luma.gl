@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {NumberArray3} from '@math.gl/core';
+import {isPointInWebXRBounds, type WebXRBoundsPoint, type WebXRBoundsState} from './webxr-bounds';
 import {getWebXRGamepadState} from './webxr-gamepad';
 import type {WebXRInputState} from './webxr-manager';
 
@@ -117,6 +118,15 @@ export type WebXRControllerRayPlaneIntersection = {
   rayIntersection: WebXRInputRayPlaneIntersection;
   point: NumberArray3;
   distance: number;
+};
+
+export type WebXRControllerRayPlaneTargetProps = WebXRInputRayPlaneIntersectionProps & {
+  bounds?: readonly WebXRBoundsPoint[] | WebXRBoundsState | null;
+};
+
+/** Experimental v10 bounded target derived from one controller ray-plane hit. */
+export type WebXRControllerRayPlaneTarget = WebXRControllerRayPlaneIntersection & {
+  allowed: boolean;
 };
 
 const DEFAULT_INPUT_ACTION_THRESHOLD = 0.05;
@@ -363,6 +373,31 @@ export function getWebXRControllerRayPlaneIntersections(
     );
 }
 
+export function getWebXRControllerRayPlaneTarget(
+  controllerState: WebXRControllerState,
+  props: WebXRControllerRayPlaneTargetProps = {}
+): WebXRControllerRayPlaneTarget | null {
+  const intersection = getWebXRControllerRayPlaneIntersection(controllerState, props);
+  if (!intersection) {
+    return null;
+  }
+
+  const bounds = getWebXRTargetBounds(props.bounds);
+  return {
+    ...intersection,
+    allowed: !bounds || isPointInWebXRBounds(intersection.point, bounds)
+  };
+}
+
+export function getWebXRControllerRayPlaneTargets(
+  controllerStates: readonly WebXRControllerState[] | null,
+  props: WebXRControllerRayPlaneTargetProps = {}
+): readonly WebXRControllerRayPlaneTarget[] {
+  return (controllerStates || [])
+    .map(controllerState => getWebXRControllerRayPlaneTarget(controllerState, props))
+    .filter((target): target is WebXRControllerRayPlaneTarget => Boolean(target));
+}
+
 export function getWebXRInputRayPlaneIntersection(
   ray: WebXRInputRay,
   props: WebXRInputRayPlaneIntersectionProps = {}
@@ -405,6 +440,12 @@ export function getWebXRInputRayPlaneIntersection(
       ray.origin[2] + ray.direction[2] * distance
     ]
   };
+}
+
+function getWebXRTargetBounds(
+  bounds: readonly WebXRBoundsPoint[] | WebXRBoundsState | null | undefined
+): readonly WebXRBoundsPoint[] | null {
+  return bounds ? ('bounds' in bounds ? bounds.bounds : bounds) : null;
 }
 
 function clampActionValue(value: number): number {

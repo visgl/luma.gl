@@ -7,6 +7,8 @@ import {
   WebXRInputActionManager,
   getWebXRControllerRayPlaneIntersection,
   getWebXRControllerRayPlaneIntersections,
+  getWebXRControllerRayPlaneTarget,
+  getWebXRControllerRayPlaneTargets,
   getWebXRControllerState,
   getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
@@ -306,6 +308,54 @@ test('webxr#getWebXRControllerRayPlaneIntersection resolves controller target hi
   );
   testCase.equal(controllerRayHits.length, 1, 'filters controllers without ray-plane hits');
   testCase.equal(controllerRayHits[0]?.controllerState, controllerState, 'keeps hit controller');
+  testCase.end();
+});
+
+test('webxr#getWebXRControllerRayPlaneTarget validates controller targets against bounds', testCase => {
+  const floorRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0.8, 0.6, 0, 0, 1.6, 0, 1]);
+  const controllerState = getWebXRControllerState(makeMockWebXRInputState(floorRayMatrix))!;
+  const bounds = [
+    [-1, 0, -2],
+    [1, 0, -2],
+    [1, 0, 1],
+    [-1, 0, 1]
+  ] as const;
+  const target = getWebXRControllerRayPlaneTarget(controllerState, {bounds});
+
+  testCase.equal(target?.controllerState, controllerState, 'retains controller state');
+  testCase.equal(target?.allowed, true, 'marks in-bounds target allowed');
+  testCase.deepEqual(target?.point, target?.rayIntersection.point, 'uses ray hit as target point');
+  testCase.equal(
+    getWebXRControllerRayPlaneTarget(controllerState, {
+      bounds: {
+        bounds: [
+          [1, 0, 1],
+          [2, 0, 1],
+          [2, 0, 2],
+          [1, 0, 2]
+        ]
+      } as any
+    })?.allowed,
+    false,
+    'marks out-of-bounds target blocked'
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTarget(controllerState, {maxDistance: 1}),
+    null,
+    'missing intersections do not produce target states'
+  );
+
+  const targets = getWebXRControllerRayPlaneTargets(
+    [getWebXRControllerState(makeMockWebXRInputState(null))!, controllerState],
+    {bounds}
+  );
+  testCase.equal(
+    getWebXRControllerRayPlaneTargets(null).length,
+    0,
+    'null controller lists become empty target lists'
+  );
+  testCase.equal(targets.length, 1, 'filters controllers without target hits');
+  testCase.equal(targets[0]?.allowed, true, 'keeps allowed flag in target collections');
   testCase.end();
 });
 
