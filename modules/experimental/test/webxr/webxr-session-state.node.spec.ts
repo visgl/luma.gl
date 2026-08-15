@@ -5,6 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {
   WebXRSessionStateManager,
+  getWebXRSessionRenderState,
   getWebXRSupportedFrameRates,
   getWebXRTargetFrameRate,
   makeWebXRSessionState
@@ -50,12 +51,66 @@ test('webxr#WebXRSessionStateManager tracks visibility and frame-rate state', as
   session.dispatchEvent(new Event('visibilitychange'));
   sessionState = manager.getSessionState();
   testCase.equal(sessionState?.isVisible, false, 'visibility changes update cached state');
+  testCase.deepEqual(
+    getWebXRSessionRenderState(sessionState),
+    {isRenderable: false, acceptsInput: false, intensityScale: 0},
+    'hidden sessions are not renderable or interactive'
+  );
 
   await manager.updateTargetFrameRate(90);
   testCase.deepEqual(session.updatedTargetFrameRates, [120, 90], 'requests explicit frame rate');
 
   session.dispatchEvent(new Event('end'));
   testCase.equal(manager.getSessionState(), null, 'ended sessions expose no state');
+  testCase.end();
+});
+
+test('webxr#getWebXRSessionRenderState maps visibility to render behavior', testCase => {
+  const visibleSessionState = makeWebXRSessionState(
+    makeMockXRSession({
+      visibilityState: 'visible',
+      frameRate: 90,
+      supportedFrameRates: [90],
+      isSystemKeyboardSupported: false
+    })
+  );
+  const blurredSessionState = makeWebXRSessionState(
+    makeMockXRSession({
+      visibilityState: 'visible-blurred',
+      frameRate: 90,
+      supportedFrameRates: [90],
+      isSystemKeyboardSupported: false
+    })
+  );
+  const hiddenSessionState = makeWebXRSessionState(
+    makeMockXRSession({
+      visibilityState: 'hidden',
+      frameRate: 90,
+      supportedFrameRates: [90],
+      isSystemKeyboardSupported: false
+    })
+  );
+
+  testCase.deepEqual(
+    getWebXRSessionRenderState(null),
+    {isRenderable: true, acceptsInput: true, intensityScale: 1},
+    'missing session state keeps non-XR rendering behavior enabled'
+  );
+  testCase.deepEqual(
+    getWebXRSessionRenderState(visibleSessionState),
+    {isRenderable: true, acceptsInput: true, intensityScale: 1},
+    'focused visible sessions render normally'
+  );
+  testCase.deepEqual(
+    getWebXRSessionRenderState(blurredSessionState),
+    {isRenderable: true, acceptsInput: false, intensityScale: 0.62},
+    'visible-blurred sessions render dimmed without accepting input'
+  );
+  testCase.deepEqual(
+    getWebXRSessionRenderState(hiddenSessionState),
+    {isRenderable: false, acceptsInput: false, intensityScale: 0},
+    'hidden sessions do not render'
+  );
   testCase.end();
 });
 

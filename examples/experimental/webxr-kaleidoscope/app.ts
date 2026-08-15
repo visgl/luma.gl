@@ -29,6 +29,7 @@ import {
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
   getWebXRLocomotionState,
+  getWebXRSessionRenderState,
   getWebXRTeleportTranslation,
   isPointInWebXRBounds,
   mergeWebXRSessionInit,
@@ -623,6 +624,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const time = elapsedTimeMilliseconds * 0.001;
     const xrFrame = animationFrame as XRFrame | null;
     const frameState = xrFrame && this.xrSession ? this.webXRManager.getFrameState(xrFrame) : null;
+    const sessionRenderState = getWebXRSessionRenderState(
+      this.xrSession ? this.webXRSessionStateManager.getSessionState() : null
+    );
     const inputState = xrFrame && this.xrSession ? this.webXRManager.getInputState(xrFrame) : null;
     const handState =
       xrFrame && this.xrSession
@@ -647,16 +651,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         : null;
 
     if (frameState) {
-      this.updateXRLocomotion(inputState || [], elapsedTimeMilliseconds);
+      if (!sessionRenderState.isRenderable) {
+        this.clearXRInteractionState();
+        return;
+      }
+      const activeInputState = sessionRenderState.acceptsInput ? inputState || [] : [];
+      this.updateXRLocomotion(activeInputState, elapsedTimeMilliseconds);
       this.renderXRFrame(
         time,
         frameState,
-        inputState || [],
-        handState || [],
+        activeInputState,
+        sessionRenderState.acceptsInput ? handState || [] : [],
         hitTestState,
         lightEstimationState,
         planeDetectionState,
-        meshDetectionState
+        meshDetectionState,
+        sessionRenderState.intensityScale
       );
       return;
     }
@@ -787,12 +797,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     hitTestState: WebXRHitTestState | null,
     lightEstimationState: WebXRLightEstimationState | null,
     planeDetectionState: WebXRPlaneDetectionState | null,
-    meshDetectionState: WebXRMeshDetectionState | null
+    meshDetectionState: WebXRMeshDetectionState | null,
+    sessionIntensityScale: number
   ): void {
     this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState);
     const lightIntensity =
       getXRLightIntensity(lightEstimationState) *
-      getXRViewerHeightLightScale(frameState.viewer.position);
+      getXRViewerHeightLightScale(frameState.viewer.position) *
+      sessionIntensityScale;
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
@@ -1083,6 +1095,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     applyXRSceneOffset(this.xrSceneOffset, offset);
   }
 
+  private clearXRInteractionState(): void {
+    this._floorHitByInputSource.clear();
+    this._inputStateByInputSource.clear();
+    this._lastXRLocomotionTimeMilliseconds = null;
+    this._lastXRSnapTurn = 0;
+  }
+
   private createCameraTexture(session: XRSession): WebXRCameraTexture | null {
     if (this.device.type !== 'webgl' || typeof XRWebGLBinding === 'undefined') {
       return null;
@@ -1131,10 +1150,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.xrSceneOffset[1] = 0;
     this.xrSceneOffset[2] = 0;
     this.xrSceneYaw = 0;
-    this._lastXRLocomotionTimeMilliseconds = null;
-    this._lastXRSnapTurn = 0;
-    this._floorHitByInputSource.clear();
-    this._inputStateByInputSource.clear();
+    this.clearXRInteractionState();
     this.cameraTexture?.destroy();
     this.cameraTexture = null;
     this.webXRDOMOverlayManager.clearSession();

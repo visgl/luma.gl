@@ -18,6 +18,12 @@ export type WebXRSessionState = {
   isSystemKeyboardSupported: boolean | null;
 };
 
+export type WebXRSessionRenderState = {
+  isRenderable: boolean;
+  acceptsInput: boolean;
+  intensityScale: number;
+};
+
 /** Experimental v10 WebXR session visibility and frame-rate helper. */
 export class WebXRSessionStateManager {
   props: Required<WebXRSessionStateManagerProps>;
@@ -132,4 +138,30 @@ export function getWebXRTargetFrameRate(
   }
 
   return supportedFrameRates.includes(targetFrameRate) ? targetFrameRate : null;
+}
+
+export function getWebXRSessionRenderState(
+  sessionState: WebXRSessionState | null
+): WebXRSessionRenderState {
+  if (!sessionState) {
+    return {
+      isRenderable: true,
+      acceptsInput: true,
+      intensityScale: 1
+    };
+  }
+
+  if (!sessionState.isVisible) {
+    return {
+      isRenderable: false,
+      acceptsInput: false,
+      intensityScale: 0
+    };
+  }
+
+  return {
+    isRenderable: true,
+    acceptsInput: sessionState.isFocused,
+    intensityScale: sessionState.isFocused ? 1 : 0.62
+  };
 }

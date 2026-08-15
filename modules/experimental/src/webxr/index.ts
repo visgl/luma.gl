@@ -99,11 +99,13 @@ export {
 export type {WebXRMediaLayerState, WebXRMediaLayerType} from './webxr-media-layers';
 export {WebXRMediaLayerManager} from './webxr-media-layers';
 export type {
+  WebXRSessionRenderState,
   WebXRSessionState,
   WebXRSessionStateManagerProps,
   WebXRTargetFrameRate
 } from './webxr-session-state';
 export {
+  getWebXRSessionRenderState,
   getWebXRSupportedFrameRates,
   getWebXRTargetFrameRate,
   makeWebXRSessionState,
