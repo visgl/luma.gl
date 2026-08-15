@@ -234,6 +234,7 @@
             "items": [
               "api-reference/experimental/gpu-primitives/README",
               "api-reference/experimental/gpu-primitives/gpu-command-graph",
+              "api-reference/experimental/gpu-primitives/gpu-command-graph-design",
               "api-reference/experimental/gpu-primitives/gpu-texture-history",
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
@@ -374,6 +375,7 @@
             "items": [
               "api-reference/experimental/gpu-primitives/README",
               "api-reference/experimental/gpu-primitives/gpu-command-graph",
+              "api-reference/experimental/gpu-primitives/gpu-command-graph-design",
               "api-reference/experimental/gpu-primitives/gpu-texture-history",
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
@@ -561,10 +563,7 @@
       {
         "type": "category",
         "label": "@luma.gl/webgpu",
-        "items": [
-          "api-reference/webgpu/README",
-          "api-reference/webgpu/optional-features"
-        ]
+        "items": ["api-reference/webgpu/README"]
       }
     ]
   },

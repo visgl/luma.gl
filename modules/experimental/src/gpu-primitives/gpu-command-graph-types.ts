@@ -433,6 +433,61 @@ export type GraphExternalTextureUse = {
 /** One resource use declared by a graph node. */
 export type GraphResourceUse = GraphBufferUse | GraphTextureUse | GraphExternalTextureUse;
 
+/** Named resource uses declared by a graph node. */
+export type GraphNamedResources = Readonly<Record<string, GraphResourceUse>>;
+
+/** Concrete buffer available to a named-resource node callback. */
+export type GraphResolvedBufferResource<Use extends GraphBufferUse = GraphBufferUse> = {
+  /** Physical buffer bound for this encoding. */
+  readonly buffer: Buffer;
+  /** Logical handle or typed data view from the node declaration. */
+  readonly logical: Use['buffer'];
+};
+
+/** Concrete texture available for a whole-texture declaration. */
+export type GraphResolvedWholeTextureResource<Use extends GraphTextureUse = GraphTextureUse> = {
+  /** Physical texture bound for this encoding. */
+  readonly texture: Texture;
+  /** Default physical view of the texture. */
+  readonly textureView: TextureView;
+  /** Logical texture handle from the node declaration. */
+  readonly logical: Use['texture'];
+};
+
+/** Concrete texture view available for a view-scoped declaration. */
+export type GraphResolvedTextureViewResource<Use extends GraphTextureUse = GraphTextureUse> = {
+  /** Physical view matching the declared logical subresource range. */
+  readonly textureView: TextureView;
+  /** Logical texture view from the node declaration. */
+  readonly logical: Use['texture'];
+};
+
+/** Concrete external texture available to a named-resource render callback. */
+export type GraphResolvedExternalTextureResource<
+  Use extends GraphExternalTextureUse = GraphExternalTextureUse
+> = {
+  /** Frame-scoped external texture bound for this encoding. */
+  readonly externalTexture: ExternalTexture;
+  /** Logical external-texture handle from the node declaration. */
+  readonly logical: Use['externalTexture'];
+};
+
+/** Concrete resource type inferred from one named resource-use declaration. */
+export type GraphResolvedResource<Use extends GraphResourceUse> = Use extends GraphBufferUse
+  ? GraphResolvedBufferResource<Use>
+  : Use extends GraphTextureUse
+    ? Use['texture'] extends GraphTextureView
+      ? GraphResolvedTextureViewResource<Use>
+      : GraphResolvedWholeTextureResource<Use>
+    : Use extends GraphExternalTextureUse
+      ? GraphResolvedExternalTextureResource<Use>
+      : never;
+
+/** Concrete resources inferred from a node's named resource-use declarations. */
+export type GraphResolvedResources<Resources extends GraphNamedResources> = Readonly<{
+  [Name in keyof Resources]: GraphResolvedResource<Resources[Name]>;
+}>;
+
 /** Graph-owned texture attachments resolved into a framebuffer for a render node. */
 export type GraphRenderPassAttachments = {
   /** Color attachment views in render-target order. */
@@ -463,6 +518,58 @@ export type GPUCommandGraphEncodeContext<Parameters> = {
   getTextureView: (texture: GraphTextureHandle | GraphTextureView) => TextureView;
   /** Resolves a frame-scoped external-image handle to its concrete sampled binding. */
   getExternalTexture: (texture: GraphExternalTextureHandle) => ExternalTexture;
+};
+
+/** Encode context restricted to one node's named, declared resources. */
+export type GPUCommandGraphNamedEncodeContext<
+  Parameters,
+  Resources extends GraphNamedResources
+> = Pick<GPUCommandGraphEncodeContext<Parameters>, 'commandEncoder' | 'parameters'> & {
+  /** Concrete per-encoding bindings keyed by the node's declared resource names. */
+  readonly resources: GraphResolvedResources<Resources>;
+};
+
+/** Compiled compute-pass callback using named resource declarations. */
+export type GPUCommandGraphNamedComputeExecutable<
+  Parameters,
+  Resources extends GraphNamedResources
+> = {
+  /** Records commands using only the node's named resources. */
+  encode: (
+    context: GPUCommandGraphNamedEncodeContext<Parameters, Resources> & {
+      computePass: ComputePass;
+    }
+  ) => void;
+  /** Releases node-owned compiled resources. */
+  destroy?: () => void;
+};
+
+/** Compiled render-pass callback using named resource declarations. */
+export type GPUCommandGraphNamedRenderExecutable<
+  Parameters,
+  Resources extends GraphNamedResources
+> = {
+  /** Returns per-encoding render-pass options using only the node's named resources. */
+  getRenderPassProps?: (
+    context: GPUCommandGraphNamedEncodeContext<Parameters, Resources>
+  ) => RenderPassProps;
+  /** Records commands using only the node's named resources. */
+  encode: (
+    context: GPUCommandGraphNamedEncodeContext<Parameters, Resources> & {renderPass: RenderPass}
+  ) => void;
+  /** Releases node-owned compiled resources. */
+  destroy?: () => void;
+};
+
+/** Compiled command-encoder callback using named resource declarations. */
+export type GPUCommandGraphNamedCopyExecutable<
+  Parameters,
+  Resources extends GraphNamedResources
+> = {
+  /** Records commands using only the node's named resources. */
+  encode: (context: GPUCommandGraphNamedEncodeContext<Parameters, Resources>) => void;
+  /** Releases node-owned compiled resources. */
+  destroy?: () => void;
 };
 
 /** Compiled compute-pass callback. */
@@ -505,6 +612,14 @@ type GPUCommandGraphNodeBase = {
   dependsOn?: string[];
   /** Optional upper-bound work estimate used by graph preflight diagnostics. */
   workload?: GPUCommandGraphNodeWorkloadEstimate;
+};
+
+type GPUCommandGraphNamedNodeBase<Resources extends GraphNamedResources> = Omit<
+  GPUCommandGraphNodeBase,
+  'resources'
+> & {
+  /** Named resources read or written by the node. */
+  resources: Resources;
 };
 
 /** Static upper-bound cost supplied by an operation when it adds a graph node. */
@@ -557,6 +672,19 @@ export type GPUCommandGraphComputeNode<Parameters> = GPUCommandGraphNodeBase & {
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphComputeExecutable<Parameters>;
 };
 
+/** Compute node whose callback receives typed, named resource bindings. */
+export type GPUCommandGraphNamedComputeNode<
+  Parameters,
+  Resources extends GraphNamedResources
+> = GPUCommandGraphNamedNodeBase<Resources> & {
+  /** Node discriminator. */
+  type: 'compute';
+  /** Creates reusable node resources and the named-resource encode callback. */
+  compile: (
+    context: GPUCommandGraphCompileContext
+  ) => GPUCommandGraphNamedComputeExecutable<Parameters, Resources>;
+};
+
 /** Render node compiled once and encoded into a graph-owned render pass. */
 export type GPUCommandGraphRenderNode<Parameters> = GPUCommandGraphNodeBase & {
   /** Node discriminator. */
@@ -567,12 +695,40 @@ export type GPUCommandGraphRenderNode<Parameters> = GPUCommandGraphNodeBase & {
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphRenderExecutable<Parameters>;
 };
 
+/** Render node whose callback receives typed, named resource bindings. */
+export type GPUCommandGraphNamedRenderNode<
+  Parameters,
+  Resources extends GraphNamedResources
+> = GPUCommandGraphNamedNodeBase<Resources> & {
+  /** Node discriminator. */
+  type: 'render';
+  /** Optional graph-managed render attachments. */
+  attachments?: GraphRenderPassAttachments;
+  /** Creates reusable node resources and the named-resource encode callback. */
+  compile: (
+    context: GPUCommandGraphCompileContext
+  ) => GPUCommandGraphNamedRenderExecutable<Parameters, Resources>;
+};
+
 /** Copy or pass-independent node compiled once and encoded directly on the command encoder. */
 export type GPUCommandGraphCopyNode<Parameters> = GPUCommandGraphNodeBase & {
   /** Node discriminator. */
   type: 'copy';
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphCopyExecutable<Parameters>;
+};
+
+/** Copy node whose callback receives typed, named resource bindings. */
+export type GPUCommandGraphNamedCopyNode<
+  Parameters,
+  Resources extends GraphNamedResources
+> = GPUCommandGraphNamedNodeBase<Resources> & {
+  /** Node discriminator. */
+  type: 'copy';
+  /** Creates reusable node resources and the named-resource encode callback. */
+  compile: (
+    context: GPUCommandGraphCompileContext
+  ) => GPUCommandGraphNamedCopyExecutable<Parameters, Resources>;
 };
 
 /** Any node accepted by a `GPUCommandGraph`. */
