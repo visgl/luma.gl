@@ -98,6 +98,11 @@ export type {
   WebXRFrameState,
   WebXRInputState,
   WebXRManagerProps,
+  WebXRReferenceSpaceState,
   WebXRViewState
 } from './webxr-manager';
-export {WebXRManager} from './webxr-manager';
+export {
+  getWebXRReferenceSpaceTypes,
+  requestWebXRReferenceSpace,
+  WebXRManager
+} from './webxr-manager';

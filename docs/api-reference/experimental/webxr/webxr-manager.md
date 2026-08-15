@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
 </p>
 
-`WebXRManager` is the experimental WebGPU and WebGL session and per-view render-state helper for luma.gl. It prepares a native WebGPU projection layer or an `XRWebGLLayer`, requests a reference space, and resolves framebuffers, viewports, projection matrices, and view matrices for one active `XRFrame`.
+`WebXRManager` is the experimental WebGPU and WebGL session and per-view render-state helper for luma.gl. It prepares a native WebGPU projection layer or an `XRWebGLLayer`, negotiates a reference space, and resolves framebuffers, viewports, projection matrices, and view matrices for one active `XRFrame`.
 
 ## Usage
 
@@ -15,7 +15,9 @@ import {AnimationLoop} from '@luma.gl/engine';
 import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/experimental';
 
 const webXRManager = new WebXRManager(device);
-await webXRManager.setSession(session);
+await webXRManager.setSession(session, {
+  referenceSpaceTypes: ['local-floor', 'local']
+});
 
 const animationLoop = new AnimationLoop({
   device,
@@ -55,6 +57,8 @@ const animationLoop = new AnimationLoop({
 - Wraps WebGPU compositor color and optional depth textures as borrowed per-view attachments, preserving browser-provided texture-array slices and viewports.
 - Shares a framebuffer when multiple eyes target the same texture slice; otherwise each eye receives an independently clearable framebuffer.
 - Uses `XRSession.requestReferenceSpace()` with `local` by default.
+- Accepts an ordered `referenceSpaceTypes` fallback list, useful for preferring `bounded-floor` or `local-floor` while retaining compatibility with devices and emulators that only expose `local`.
+- Exposes the resolved `referenceSpaceType` after `setSession()` succeeds.
 - Treats `XRViewerPose.views` as an arbitrary per-frame view list, not a fixed stereo pair.
 - Exposes `projectionMatrix` from `XRView.projectionMatrix` and `viewMatrix` from `XRView.transform.inverse.matrix`.
 - Resolves per-frame input-source target-ray and grip poses in the same reference space as rendering.
@@ -85,8 +89,20 @@ Browser support for native WebGPU WebXR is still emerging. Keep a WebGL2 fallbac
 ```ts
 export type WebXRManagerProps = {
   referenceSpaceType?: XRReferenceSpaceType;
+  referenceSpaceTypes?: readonly XRReferenceSpaceType[];
   layerInit?: XRWebGLLayerInit;
   projectionLayerInit?: XRProjectionLayerInit;
+};
+```
+
+When `referenceSpaceTypes` is supplied, the manager tries each type in order. When it is omitted, `referenceSpaceType` is used for backwards-compatible single-type setup.
+
+### `WebXRReferenceSpaceState`
+
+```ts
+export type WebXRReferenceSpaceState = {
+  referenceSpace: XRReferenceSpace;
+  referenceSpaceType: XRReferenceSpaceType;
 };
 ```
 
@@ -165,7 +181,15 @@ Creates an experimental WebGPU or WebGL WebXR manager.
 
 ### `setSession(session: XRSession | null, props?: WebXRManagerProps): Promise<this>`
 
-Attaches or clears the current XR session.
+Attaches or clears the current XR session. When attaching, the manager requests the first supported reference space from `referenceSpaceTypes` or falls back to `referenceSpaceType`.
+
+### `getWebXRReferenceSpaceTypes(props?: Pick<WebXRManagerProps, 'referenceSpaceType' | 'referenceSpaceTypes'>): readonly XRReferenceSpaceType[]`
+
+Normalizes reference-space props into a de-duplicated request order.
+
+### `requestWebXRReferenceSpace(session: XRSession, referenceSpaceTypes: readonly XRReferenceSpaceType[]): Promise<WebXRReferenceSpaceState>`
+
+Requests each reference-space type in order and resolves with the first successful reference space and its type.
 
 ### `getFrameState(xrFrame: XRFrame): WebXRFrameState | null`
 

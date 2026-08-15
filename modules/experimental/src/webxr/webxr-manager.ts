@@ -27,8 +27,14 @@ type WebXRWebGPUViewResources = {
 /** Experimental v10 WebXR session setup options. */
 export type WebXRManagerProps = {
   referenceSpaceType?: XRReferenceSpaceType;
+  referenceSpaceTypes?: readonly XRReferenceSpaceType[];
   layerInit?: XRWebGLLayerInit;
   projectionLayerInit?: XRProjectionLayerInit;
+};
+
+export type WebXRReferenceSpaceState = {
+  referenceSpace: XRReferenceSpace;
+  referenceSpaceType: XRReferenceSpaceType;
 };
 
 /** Experimental v10 per-view render state for one active XR frame. */
@@ -80,6 +86,7 @@ export class WebXRManager {
 
   session: XRSession | null = null;
   referenceSpace: XRReferenceSpace | null = null;
+  referenceSpaceType: XRReferenceSpaceType | null = null;
   baseLayer: XRWebGLLayer | null = null;
   projectionLayer: XRProjectionLayer | null = null;
   webGPUBinding: XRGPUBinding | null = null;
@@ -142,7 +149,12 @@ export class WebXRManager {
     }
 
     try {
-      this.referenceSpace = await session.requestReferenceSpace(this.props.referenceSpaceType);
+      const referenceSpaceState = await requestWebXRReferenceSpace(
+        session,
+        getWebXRReferenceSpaceTypes(this.props)
+      );
+      this.referenceSpace = referenceSpaceState.referenceSpace;
+      this.referenceSpaceType = referenceSpaceState.referenceSpaceType;
       this.session = session;
       session.addEventListener('end', this._sessionEndListener);
       session.addEventListener('selectstart', this._selectStartListener);
@@ -232,6 +244,7 @@ export class WebXRManager {
     this.projectionLayer = null;
     this.webGPUBinding = null;
     this.referenceSpace = null;
+    this.referenceSpaceType = null;
     this.session = null;
     this._selectActiveInputSources.clear();
     this._squeezeActiveInputSources.clear();
@@ -452,9 +465,43 @@ export class WebXRManager {
 
   static defaultProps: Required<WebXRManagerProps> = {
     referenceSpaceType: 'local',
+    referenceSpaceTypes: undefined!,
     layerInit: undefined!,
     projectionLayerInit: undefined!
   };
+}
+
+export function getWebXRReferenceSpaceTypes(
+  props: Pick<WebXRManagerProps, 'referenceSpaceType' | 'referenceSpaceTypes'> = {}
+): readonly XRReferenceSpaceType[] {
+  const referenceSpaceTypes =
+    props.referenceSpaceTypes && props.referenceSpaceTypes.length > 0
+      ? props.referenceSpaceTypes
+      : [props.referenceSpaceType || WebXRManager.defaultProps.referenceSpaceType];
+
+  return Array.from(new Set(referenceSpaceTypes));
+}
+
+export async function requestWebXRReferenceSpace(
+  session: XRSession,
+  referenceSpaceTypes: readonly XRReferenceSpaceType[]
+): Promise<WebXRReferenceSpaceState> {
+  let lastError: unknown = null;
+  for (const referenceSpaceType of referenceSpaceTypes) {
+    try {
+      return {
+        referenceSpace: await session.requestReferenceSpace(referenceSpaceType),
+        referenceSpaceType
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+  throw new Error('WebXR reference space request failed');
 }
 
 function makeWebXRViewState(

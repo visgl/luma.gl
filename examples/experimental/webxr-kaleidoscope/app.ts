@@ -642,7 +642,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     try {
       await this.webXRManager.setSession(session, {
-        referenceSpaceType: 'local',
+        referenceSpaceTypes: ['local-floor', 'local'],
         ...(this.device.type === 'webgl'
           ? {layerInit: {alpha: sessionMode === 'immersive-ar'}}
           : {})

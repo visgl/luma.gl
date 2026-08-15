@@ -123,6 +123,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(applicationSource).toContain('this.webXRDOMOverlayManager.clearSession()');
     expect(applicationSource).toContain('this.webXRHandTrackingManager.clearSession()');
+    expect(applicationSource).toContain("referenceSpaceTypes: ['local-floor', 'local']");
     expect(applicationSource).toContain('function getDOMOverlayRoot(): Element | null');
     expect(applicationSource).toContain("usagePreference: ['gpu-optimized', 'cpu-optimized']");
     expect(applicationSource).toContain(

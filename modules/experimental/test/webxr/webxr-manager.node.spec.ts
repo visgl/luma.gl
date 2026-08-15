@@ -11,7 +11,7 @@ import type {
   TextureView
 } from '@luma.gl/core';
 import test from 'test/utils/vitest-tape';
-import {WebXRManager} from '../../src/webxr/webxr-manager';
+import {WebXRManager, getWebXRReferenceSpaceTypes} from '../../src/webxr/webxr-manager';
 
 type MockTextureHandle = GPUTexture & {destroyCount: number};
 type MockTexture = Texture & {destroyCount: number};
@@ -24,6 +24,7 @@ type MockWebGPUDevice = Device & {
 };
 type MockXRSession = XRSession & {
   inputSources: XRInputSource[];
+  requestedReferenceSpaceTypes: XRReferenceSpaceType[];
   updatedBaseLayer: XRWebGLLayer | null;
   updatedLayers: XRProjectionLayer[] | null;
 };
@@ -438,6 +439,74 @@ test('webxr#WebXRManager rejects unsupported WebGPU sessions and foreign frames'
   testCase.end();
 });
 
+test('webxr#WebXRManager negotiates reference-space fallbacks', async testCase => {
+  const boundedReferenceSpace = {} as XRReferenceSpace;
+  const localReferenceSpace = {} as XRReferenceSpace;
+  const session = makeMockXRSession(boundedReferenceSpace, [], [], {
+    rejectedReferenceSpaceTypes: ['bounded-floor', 'local-floor'],
+    referenceSpacesByType: {
+      local: localReferenceSpace
+    }
+  });
+  const gl = {
+    async makeXRCompatible() {}
+  } as WebGL2RenderingContext;
+  const device = {
+    type: 'webgl',
+    gl,
+    createFramebuffer: (props: FramebufferProps) => makeMockFramebuffer(props)
+  } as unknown as Device;
+  const originalXRWebGLLayer = globalThis.XRWebGLLayer;
+
+  globalThis.XRWebGLLayer = class {
+    readonly framebuffer = null;
+    readonly framebufferWidth = 1;
+    readonly framebufferHeight = 1;
+
+    getViewport(): XRViewport {
+      return {x: 0, y: 0, width: 1, height: 1};
+    }
+  } as typeof XRWebGLLayer;
+
+  try {
+    const manager = new WebXRManager(device, {
+      referenceSpaceTypes: ['bounded-floor', 'local-floor', 'local-floor', 'local']
+    });
+    await manager.setSession(session);
+
+    testCase.deepEqual(
+      getWebXRReferenceSpaceTypes({
+        referenceSpaceTypes: ['bounded-floor', 'local-floor', 'local-floor', 'local']
+      }),
+      ['bounded-floor', 'local-floor', 'local'],
+      'normalizes duplicate reference-space fallback entries'
+    );
+    testCase.deepEqual(
+      getWebXRReferenceSpaceTypes({referenceSpaceType: 'unbounded'}),
+      ['unbounded'],
+      'keeps backwards-compatible single reference-space setup'
+    );
+    testCase.deepEqual(
+      session.requestedReferenceSpaceTypes,
+      ['bounded-floor', 'local-floor', 'local'],
+      'tries reference spaces in caller order until one succeeds'
+    );
+    testCase.equal(
+      manager.referenceSpace,
+      localReferenceSpace,
+      'stores the first supported reference space'
+    );
+    testCase.equal(manager.referenceSpaceType, 'local', 'stores the first supported type');
+
+    manager.clearSession();
+    testCase.equal(manager.referenceSpaceType, null, 'clears resolved reference-space type');
+  } finally {
+    globalThis.XRWebGLLayer = originalXRWebGLLayer;
+  }
+
+  testCase.end();
+});
+
 test('webxr#WebXRManager resolves input source poses and select activity', async testCase => {
   const referenceSpace = {} as XRReferenceSpace;
   const targetRaySpace = {} as XRSpace;
@@ -700,19 +769,29 @@ function makeMockTextureHandle(
 function makeMockXRSession(
   referenceSpace: XRReferenceSpace,
   enabledFeatures: readonly string[],
-  inputSources: XRInputSource[] = []
+  inputSources: XRInputSource[] = [],
+  props: {
+    rejectedReferenceSpaceTypes?: readonly XRReferenceSpaceType[];
+    referenceSpacesByType?: Partial<Record<XRReferenceSpaceType, XRReferenceSpace>>;
+  } = {}
 ): MockXRSession {
+  const rejectedReferenceSpaceTypes = new Set(props.rejectedReferenceSpaceTypes || []);
   const session = Object.assign(new EventTarget(), {
     enabledFeatures,
     inputSources,
+    requestedReferenceSpaceTypes: [] as XRReferenceSpaceType[],
     updatedBaseLayer: null as XRWebGLLayer | null,
     updatedLayers: null as XRProjectionLayer[] | null,
     async updateRenderState(renderStateInit: XRRenderStateInit = {}) {
       session.updatedBaseLayer = renderStateInit.baseLayer || null;
       session.updatedLayers = renderStateInit.layers || null;
     },
-    async requestReferenceSpace() {
-      return referenceSpace;
+    async requestReferenceSpace(type: XRReferenceSpaceType) {
+      session.requestedReferenceSpaceTypes.push(type);
+      if (rejectedReferenceSpaceTypes.has(type)) {
+        throw new Error(`Unsupported reference space: ${type}`);
+      }
+      return props.referenceSpacesByType?.[type] || referenceSpace;
     }
   }) as MockXRSession;
 
