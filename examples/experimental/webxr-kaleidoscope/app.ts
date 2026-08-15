@@ -16,6 +16,7 @@ import {
   WebXRMeshDetectionManager,
   WebXRManager,
   WebXRPlaneDetectionManager,
+  WebXRReferenceSpaceManager,
   WebXRSessionStateManager,
   getWebXRBoundsState,
   getWebXRHandPinch,
@@ -402,6 +403,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly webXRPlaneDetectionManager = new WebXRPlaneDetectionManager({
     orientations: ['horizontal']
   });
+  readonly webXRReferenceSpaceManager = new WebXRReferenceSpaceManager();
   readonly webXRSessionStateManager = new WebXRSessionStateManager({
     targetFrameRate: 'highest'
   });
@@ -564,6 +566,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRLightEstimationManager.destroy();
     this.webXRMeshDetectionManager.destroy();
     this.webXRPlaneDetectionManager.destroy();
+    this.webXRReferenceSpaceManager.destroy();
     this.webXRSessionStateManager.destroy();
     this.webXRManager.destroy();
   }
@@ -654,6 +657,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           ? {layerInit: {alpha: sessionMode === 'immersive-ar'}}
           : {})
       });
+      this.webXRReferenceSpaceManager.setReferenceSpace(this.webXRManager.referenceSpace);
       this.webXRHandTrackingManager.setSession(session, this.webXRManager.referenceSpace);
       if (sessionMode === 'immersive-ar') {
         await this.webXRHitTestManager
@@ -1006,6 +1010,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRLightEstimationManager.clearSession();
     this.webXRMeshDetectionManager.clearSession();
     this.webXRPlaneDetectionManager.clearSession();
+    this.webXRReferenceSpaceManager.clearReferenceSpace();
     this.webXRSessionStateManager.clearSession();
     this.webXRManager.clearSession();
     AppAnimationLoopTemplate.notifyCurrentListeners();

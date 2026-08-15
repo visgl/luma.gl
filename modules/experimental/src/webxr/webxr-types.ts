@@ -147,7 +147,20 @@ declare global {
 
   interface XRSpace extends EventTarget {}
 
-  interface XRReferenceSpace extends XRSpace {}
+  interface XRReferenceSpace extends XRSpace {
+    getOffsetReferenceSpace?(originOffset: XRRigidTransform): XRReferenceSpace;
+    onreset?: ((this: XRReferenceSpace, event: XRReferenceSpaceEvent) => unknown) | null;
+  }
+
+  interface XRReferenceSpaceEvent extends Event {
+    readonly referenceSpace: XRReferenceSpace;
+    readonly transform: XRRigidTransform | null;
+  }
+
+  interface XRReferenceSpaceEventInit extends EventInit {
+    referenceSpace: XRReferenceSpace;
+    transform?: XRRigidTransform | null;
+  }
 
   interface XRBoundedReferenceSpace extends XRReferenceSpace {
     readonly boundsGeometry: readonly DOMPointReadOnly[];

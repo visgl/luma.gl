@@ -101,6 +101,8 @@ export type {
   WebXRInputRayPlaneIntersectionProps
 } from './webxr-input';
 export {getWebXRInputRay, getWebXRInputRayPlaneIntersection} from './webxr-input';
+export type {WebXRReferenceSpaceResetState} from './webxr-reference-space';
+export {makeWebXRReferenceSpaceState, WebXRReferenceSpaceManager} from './webxr-reference-space';
 export type {
   WebXRImageTrackingManagerProps,
   WebXRImageTrackingSessionInitProps,

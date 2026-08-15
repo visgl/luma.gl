@@ -115,8 +115,15 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('WebXRLightEstimationManager');
     expect(applicationSource).toContain('WebXRMeshDetectionManager');
     expect(applicationSource).toContain('WebXRPlaneDetectionManager');
+    expect(applicationSource).toContain('WebXRReferenceSpaceManager');
     expect(applicationSource).toContain('WebXRSessionStateManager');
     expect(applicationSource).toContain("targetFrameRate: 'highest'");
+    expect(applicationSource).toContain(
+      'readonly webXRReferenceSpaceManager = new WebXRReferenceSpaceManager()'
+    );
+    expect(applicationSource).toContain(
+      'this.webXRReferenceSpaceManager.setReferenceSpace(this.webXRManager.referenceSpace)'
+    );
     expect(applicationSource).toContain(
       'this.webXRHandTrackingManager.setSession(session, this.webXRManager.referenceSpace)'
     );
@@ -127,6 +134,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(applicationSource).toContain('this.webXRDOMOverlayManager.clearSession()');
     expect(applicationSource).toContain('this.webXRHandTrackingManager.clearSession()');
+    expect(applicationSource).toContain('this.webXRReferenceSpaceManager.clearReferenceSpace()');
+    expect(applicationSource).toContain('this.webXRReferenceSpaceManager.destroy()');
     expect(applicationSource).toContain('this.webXRSessionStateManager.clearSession()');
     expect(applicationSource).toContain('this.webXRSessionStateManager.destroy()');
     expect(applicationSource).toContain(
