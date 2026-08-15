@@ -1,7 +1,9 @@
 # glTF reference evidence
 
 `yarn gltf:reference-evidence --headless --software-gpu` captures the glTF showcase with a fixed
-camera and rendering contract on WebGPU core and WebGL2. Each invocation creates a unique retained
+camera and rendering contract on WebGPU core and WebGL2. It captures both the extension material
+fixture and a fixed three-actor RobotExpressive Studio pose with skinning and a facial morph. Each
+invocation creates a unique retained
 directory under `.playwright-artifacts/gltf-reference/` unless `--artifact-base` selects another
 parent.
 
@@ -16,14 +18,16 @@ adapter, renderer, and backend identity; `--software-gpu` remains available for 
 
 The run directory contains:
 
-- a canvas-only PNG and machine-readable evidence document for each backend;
+- a canvas-only PNG and machine-readable evidence document for each scenario and backend;
 - browser console, page-error, request-failure, and WebGPU-probe diagnostics;
-- a highlighted WebGPU/WebGL2 difference PNG; and
+- a highlighted WebGPU/WebGL2 difference PNG for each scenario; and
 - `manifest.json`, including the comparison tolerances and pinned Khronos source revisions.
 
-The capture disables animation, automatic LOD, model lights, and external image-based lighting. It
-uses fixed fallback lights, sRGB output, no tone mapper, exposure 1, a 1280x720 viewport, and an
-explicit yaw, pitch, and distance multiplier. Overlapping website chrome is hidden after the
+The material capture disables animation. The Studio capture pauses all actors at deterministic
+authored clip times after applying a fixed speed, loop, and facial morph. Both disable automatic
+LOD, model lights, and external image-based lighting. They use fixed fallback lights, sRGB output,
+no tone mapper, exposure 1, a 1280x720 viewport, and explicit yaw, pitch, and distance multipliers.
+Overlapping website chrome is hidden after the
 evidence document is ready so that the PNG contains only the canvas render. Evidence records asset
 transfer sizes, load and scenegraph creation time, average frame CPU time, animation CPU time,
 luma.gl GPU residency, draw counts, submitted index and vertex references, and triangles. Shader

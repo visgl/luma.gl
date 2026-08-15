@@ -3,9 +3,23 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {PrimitiveTopology} from '@luma.gl/core';
+import type {AnimationLoopMode} from '@luma.gl/engine';
 
 export const GLTF_REFERENCE_EVIDENCE_SCHEMA = 'luma.gl/gltf-reference-evidence';
-export const GLTF_REFERENCE_EVIDENCE_VERSION = 1;
+export const GLTF_REFERENCE_EVIDENCE_VERSION = 2;
+
+export type GLTFReferenceStudioOptions = {
+  actorCount: number;
+  selectedActorIndex: number;
+  clipName: string;
+  time: number;
+  speed: number;
+  loop: AnimationLoopMode;
+  morphTarget: string;
+  morphWeight: number;
+  variant: string;
+  cameraIndex: number | null;
+};
 
 export type GLTFReferenceCaptureOptions = {
   modelName: string;
@@ -14,6 +28,7 @@ export type GLTFReferenceCaptureOptions = {
   yaw: number;
   pitch: number;
   distanceMultiplier: number;
+  studio?: GLTFReferenceStudioOptions;
 };
 
 export type GLTFReferenceModelDraw = {
@@ -22,7 +37,7 @@ export type GLTFReferenceModelDraw = {
   instanceCount: number;
   vertexCount: number;
   indexCount?: number;
-  indexBuffer: {byteLength: number; indexType?: 'uint16' | 'uint32'} | null;
+  indexBuffer: {byteLength: number; indexType?: 'uint8' | 'uint16' | 'uint32'} | null;
 };
 
 export type GLTFReferenceDrawMetrics = {
@@ -71,12 +86,28 @@ export type GLTFReferenceEvidence = {
     far: number;
   };
   rendering: {
-    animation: 'disabled';
+    animation: 'disabled' | 'fixed-studio-state';
     automaticLevelOfDetail: 'disabled';
     environment: 'fixed-fallback-lights';
     exposure: 1;
     toneMapping: 'none';
     outputColorSpace: 'srgb';
+  };
+  studio?: {
+    actorCount: number;
+    selectedActorIndex: number;
+    selectedClip: string;
+    time: number;
+    duration: number;
+    speed: number;
+    playing: boolean;
+    loop: AnimationLoopMode;
+    morphTargets: Array<{label: string; value: number}>;
+    selectedVariant: string;
+    skinCount: number;
+    jointCount: number;
+    cameraCount: number;
+    selectedCameraIndex: number | null;
   };
   extensions: Array<{
     extensionName: string;
@@ -117,7 +148,7 @@ export function getGLTFReferenceCaptureOptions(
   const variant = searchParameters.get('variant')?.trim() || 'glTF';
   const defaultFileExtension = variant === 'glTF-Binary' ? 'glb' : 'gltf';
 
-  return {
+  const captureOptions: GLTFReferenceCaptureOptions = {
     modelName,
     variant,
     fileName: searchParameters.get('file')?.trim() || `${modelName}.${defaultFileExtension}`,
@@ -125,6 +156,29 @@ export function getGLTFReferenceCaptureOptions(
     pitch: getFiniteSearchNumber(searchParameters, 'pitch', -0.15),
     distanceMultiplier: Math.max(0.05, getFiniteSearchNumber(searchParameters, 'distance', 1))
   };
+  if (searchParameters.get('studio') === '1') {
+    const loop = searchParameters.get('loop');
+    captureOptions.studio = {
+      actorCount: clampInteger(getFiniteSearchNumber(searchParameters, 'actors', 1), 1, 100),
+      selectedActorIndex: clampInteger(getFiniteSearchNumber(searchParameters, 'actor', 0), 0, 99),
+      clipName: searchParameters.get('clip')?.trim() || '',
+      time: Math.max(0, getFiniteSearchNumber(searchParameters, 'animation-time', 0)),
+      speed: Math.max(0, Math.min(4, getFiniteSearchNumber(searchParameters, 'speed', 1))),
+      loop: loop === 'once' || loop === 'ping-pong' ? loop : 'repeat',
+      morphTarget: searchParameters.get('morph')?.trim() || '',
+      morphWeight: Math.max(
+        0,
+        Math.min(1, getFiniteSearchNumber(searchParameters, 'morph-weight', 0))
+      ),
+      variant: searchParameters.get('material-variant')?.trim() || '',
+      cameraIndex: getOptionalSearchInteger(searchParameters, 'camera')
+    };
+    captureOptions.studio.selectedActorIndex = Math.min(
+      captureOptions.studio.selectedActorIndex,
+      captureOptions.studio.actorCount - 1
+    );
+  }
+  return captureOptions;
 }
 
 /** Calculate submitted geometry metrics for models that completed a draw. */
@@ -146,7 +200,12 @@ export function getGLTFReferenceDrawMetrics(
 
     const indexCount = model.indexBuffer
       ? (model.indexCount ??
-        model.indexBuffer.byteLength / (model.indexBuffer.indexType === 'uint32' ? 4 : 2))
+        model.indexBuffer.byteLength /
+          (model.indexBuffer.indexType === 'uint32'
+            ? 4
+            : model.indexBuffer.indexType === 'uint8'
+              ? 1
+              : 2))
       : 0;
     const vertexCount = model.indexBuffer ? 0 : model.vertexCount;
     const submittedElementCount = (indexCount || vertexCount) * instanceCount;
@@ -198,4 +257,17 @@ function getFiniteSearchNumber(
   }
   const parsedValue = Number(value);
   return Number.isFinite(parsedValue) ? parsedValue : fallback;
+}
+
+function getOptionalSearchInteger(searchParameters: URLSearchParams, name: string): number | null {
+  const value = searchParameters.get(name);
+  if (value === null || value.trim() === '') {
+    return null;
+  }
+  const parsedValue = Number(value);
+  return Number.isSafeInteger(parsedValue) && parsedValue >= 0 ? parsedValue : null;
+}
+
+function clampInteger(value: number, minimum: number, maximum: number): number {
+  return Math.max(minimum, Math.min(maximum, Math.floor(value)));
 }
