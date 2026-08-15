@@ -26,6 +26,8 @@ import {
   getWebXRHandPinch,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
+  getWebXRLocomotionState,
+  getWebXRTeleportTranslation,
   isPointInWebXRBounds,
   mergeWebXRSessionInit,
   pulseWebXRInputHaptics,
@@ -52,6 +54,7 @@ const RIBBON_SEGMENT_COUNT = 34;
 const PARTICLE_COUNT = 220;
 const PORTAL_DEPTH = 10.4;
 const CAMERA_TARGET: [number, number, number] = [0, 0, -2.6];
+const XR_LOCOMOTION_SPEED = 1.4;
 const AR_DEPTH_SENSING: XRDepthStateInit = {
   usagePreference: ['gpu-optimized', 'cpu-optimized'],
   dataFormatPreference: ['luminance-alpha', 'float32', 'unsigned-short'],
@@ -435,6 +438,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private _isFinalized = false;
   private _floorHitByInputSource = new Map<XRInputSource, [number, number, number]>();
   private _inputStateByInputSource = new Map<XRInputSource, WebXRInputState>();
+  private _lastXRLocomotionTimeMilliseconds: number | null = null;
   private _xrSessionEndListener = () => this._clearXRSession();
   private _xrSelectEndListener = (event: Event) =>
     this.teleportToInputSource((event as XRInputSourceEvent).inputSource);
@@ -609,6 +613,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         : null;
 
     if (frameState) {
+      this.updateXRLocomotion(inputState || [], elapsedTimeMilliseconds);
       this.renderXRFrame(
         time,
         frameState,
@@ -791,6 +796,37 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
+  private updateXRLocomotion(
+    inputState: readonly WebXRInputState[],
+    elapsedTimeMilliseconds: number
+  ): void {
+    if (this.xrSessionMode !== 'immersive-vr') {
+      this._lastXRLocomotionTimeMilliseconds = null;
+      return;
+    }
+
+    const lastTimeMilliseconds = this._lastXRLocomotionTimeMilliseconds;
+    this._lastXRLocomotionTimeMilliseconds = elapsedTimeMilliseconds;
+    const deltaSeconds =
+      lastTimeMilliseconds === null
+        ? 0
+        : Math.min(0.05, Math.max(0, (elapsedTimeMilliseconds - lastTimeMilliseconds) * 0.001));
+    const locomotionState = getWebXRLocomotionState(inputState, {
+      deadzone: 0.22,
+      snapTurnThreshold: 0.86
+    });
+    if (!locomotionState.moveActive) {
+      return;
+    }
+
+    const [strafe, forward] = locomotionState.move;
+    this.applyXRSceneOffset([
+      strafe * XR_LOCOMOTION_SPEED * deltaSeconds,
+      0,
+      -forward * XR_LOCOMOTION_SPEED * deltaSeconds
+    ]);
+  }
+
   private preparePortal(options: {
     cameraMix: number;
     lightIntensity: number;
@@ -962,13 +998,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
-    this.xrSceneOffset[0] -= floorHit[0];
-    this.xrSceneOffset[2] -= floorHit[2];
+    this.applyXRSceneOffset(getWebXRTeleportTranslation(floorHit));
     const inputState = this._inputStateByInputSource.get(inputSource);
     if (inputState) {
       void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45});
     }
     this._floorHitByInputSource.clear();
+  }
+
+  private applyXRSceneOffset(offset: readonly [number, number, number]): void {
+    applyXRSceneOffset(this.xrSceneOffset, offset);
   }
 
   private createCameraTexture(session: XRSession): WebXRCameraTexture | null {
@@ -1018,6 +1057,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.xrSceneOffset[0] = 0;
     this.xrSceneOffset[1] = 0;
     this.xrSceneOffset[2] = 0;
+    this._lastXRLocomotionTimeMilliseconds = null;
     this._floorHitByInputSource.clear();
     this._inputStateByInputSource.clear();
     this.cameraTexture?.destroy();
@@ -1081,6 +1121,16 @@ function getXRLightIntensity(lightState: WebXRLightEstimationState | null): numb
 
   const [red, green, blue] = lightState.primaryLightIntensity;
   return Math.min(1.6, Math.max(0.55, (red + green + blue) / 3));
+}
+
+export function applyXRSceneOffset(
+  sceneOffset: [number, number, number],
+  offset: readonly [number, number, number]
+): [number, number, number] {
+  sceneOffset[0] += offset[0];
+  sceneOffset[1] += offset[1];
+  sceneOffset[2] += offset[2];
+  return sceneOffset;
 }
 
 function makeSpatialPortalGeometry(): Geometry {

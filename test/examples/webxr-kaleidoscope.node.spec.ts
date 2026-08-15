@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
+import {applyXRSceneOffset} from '../../examples/experimental/webxr-kaleidoscope/app';
 
 const APPLICATION_PATH = path.join(
   process.cwd(),
@@ -239,6 +240,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('getWebXRGamepadState');
     expect(applicationSource).toContain('getWebXRInputRay');
     expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
+    expect(applicationSource).toContain('getWebXRLocomotionState');
+    expect(applicationSource).toContain('getWebXRTeleportTranslation');
     expect(applicationSource).toContain('isPointInWebXRBounds');
     expect(applicationSource).toContain('pulseWebXRInputHaptics');
     expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
@@ -517,10 +520,20 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       teleportMethodStart
     );
     const teleportMethod = applicationSource.slice(teleportMethodStart, teleportMethodEnd);
+    const locomotionMethodStart = applicationSource.indexOf('private updateXRLocomotion(');
+    const locomotionMethodEnd = applicationSource.indexOf(
+      '\n  private preparePortal(',
+      locomotionMethodStart
+    );
+    const locomotionMethod = applicationSource.slice(locomotionMethodStart, locomotionMethodEnd);
     const clearMethodStart = applicationSource.indexOf('private _clearXRSession(');
     const clearMethod = applicationSource.slice(clearMethodStart);
 
     expect(applicationSource).toContain('readonly xrSceneOffset: [number, number, number]');
+    expect(applicationSource).toContain('const XR_LOCOMOTION_SPEED = 1.4');
+    expect(applicationSource).toContain(
+      'private _lastXRLocomotionTimeMilliseconds: number | null = null'
+    );
     expect(applicationSource).toContain('new Map<XRInputSource, [number, number, number]>()');
     expect(applicationSource).toContain('new Map<XRInputSource, WebXRInputState>()');
     expect(applicationSource).not.toContain(
@@ -536,12 +549,24 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(enterMethod).toContain(
       "session.addEventListener('squeezeend', this._xrSqueezeEndListener)"
     );
+    expect(applicationSource).toContain(
+      'this.updateXRLocomotion(inputState || [], elapsedTimeMilliseconds)'
+    );
+    expect(locomotionMethodStart).toBeGreaterThan(0);
+    expect(locomotionMethodEnd).toBeGreaterThan(locomotionMethodStart);
+    expect(locomotionMethod).toContain("this.xrSessionMode !== 'immersive-vr'");
+    expect(locomotionMethod).toContain('getWebXRLocomotionState(inputState');
+    expect(locomotionMethod).toContain('deadzone: 0.22');
+    expect(locomotionMethod).toContain('snapTurnThreshold: 0.86');
+    expect(locomotionMethod).toContain('Math.min(0.05, Math.max(0,');
+    expect(locomotionMethod).toContain('this.applyXRSceneOffset([');
     expect(updateModelMethod).toContain('translate(this.xrSceneOffset)');
     expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
     expect(teleportMethod).toContain('getWebXRBoundsState(this.webXRManager.referenceSpace)');
     expect(teleportMethod).toContain('!isPointInWebXRBounds(floorHit, boundsState.bounds)');
-    expect(teleportMethod).toContain('this.xrSceneOffset[0] -= floorHit[0]');
-    expect(teleportMethod).toContain('this.xrSceneOffset[2] -= floorHit[2]');
+    expect(teleportMethod).toContain(
+      'this.applyXRSceneOffset(getWebXRTeleportTranslation(floorHit))'
+    );
     expect(teleportMethod).toContain('this._inputStateByInputSource.get(inputSource)');
     expect(teleportMethod).toContain(
       'void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45})'
@@ -554,11 +579,16 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       "session?.removeEventListener('squeezeend', this._xrSqueezeEndListener)"
     );
     expect(clearMethod).toContain('this.xrSceneOffset[0] = 0');
+    expect(clearMethod).toContain('this._lastXRLocomotionTimeMilliseconds = null');
     expect(clearMethod).toContain('this._floorHitByInputSource.clear()');
     expect(clearMethod).toContain('this._inputStateByInputSource.clear()');
     expect(applicationSource).toContain(
       "event.key === 'Escape' || event.key.toLowerCase() === 'q'"
     );
+
+    const sceneOffset: [number, number, number] = [1, 2, 3];
+    expect(applyXRSceneOffset(sceneOffset, [-0.5, 0, 1.25])).toBe(sceneOffset);
+    expect(sceneOffset).toEqual([0.5, 2, 4.25]);
   });
 
   test('requests isolated XR-compatible website devices while preserving preview fallback', () => {
