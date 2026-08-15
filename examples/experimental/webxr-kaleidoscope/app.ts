@@ -10,7 +10,8 @@ import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
   WebXRManager,
-  type WebXRFrameState
+  type WebXRFrameState,
+  type WebXRInputState
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 
@@ -240,6 +241,83 @@ void main(void) {
 }
 `;
 
+const CONTROLLER_RAY_WGSL_SHADER = /* wgsl */ `\
+struct AppUniforms {
+  modelViewProjectionMatrix: mat4x4<f32>,
+  time: f32,
+  cameraMix: f32,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec3<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) rayDepth: f32,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(inputs.positions, 1.0);
+  outputs.rayDepth = clamp(-inputs.positions.z / 3.2, 0.0, 1.0);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let idleColor = vec3<f32>(0.05, 0.92, 1.0);
+  let activeColor = vec3<f32>(1.0, 0.36, 0.18);
+  let color = mix(idleColor, activeColor, app.cameraMix);
+  let alpha = mix(0.86, 0.28, inputs.rayDepth);
+  return vec4<f32>(color * (1.15 - inputs.rayDepth * 0.38), alpha);
+}
+`;
+
+const CONTROLLER_RAY_VS_GLSL = /* glsl */ `\
+#version 300 es
+
+in vec3 positions;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+out float vRayDepth;
+
+void main(void) {
+  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
+  vRayDepth = clamp(-positions.z / 3.2, 0.0, 1.0);
+}
+`;
+
+const CONTROLLER_RAY_FS_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+in float vRayDepth;
+out vec4 fragColor;
+
+void main(void) {
+  vec3 idleColor = vec3(0.05, 0.92, 1.0);
+  vec3 activeColor = vec3(1.0, 0.36, 0.18);
+  vec3 color = mix(idleColor, activeColor, app.cameraMix);
+  float alpha = mix(0.86, 0.28, vRayDepth);
+  fragColor = vec4(color * (1.15 - vRayDepth * 0.38), alpha);
+}
+`;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static current: AppAnimationLoopTemplate | null = null;
   private static readonly currentListeners = new Set<() => void>();
@@ -273,9 +351,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly uniformStore: UniformStore<{app: AppUniforms}>;
   readonly fallbackTexture: Texture;
   readonly model: Model;
+  readonly controllerRayModel: Model;
   readonly webXRManager: WebXRManager;
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
+  readonly controllerRayMatrix = new Matrix4();
   readonly viewMatrix = new Matrix4().lookAt({
     eye: [0.32, 0.24, 4.4],
     center: CAMERA_TARGET
@@ -332,6 +412,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
+    this.controllerRayModel = new Model(device, {
+      id: 'immersive-prism-controller-rays',
+      source: CONTROLLER_RAY_WGSL_SHADER,
+      vs: CONTROLLER_RAY_VS_GLSL,
+      fs: CONTROLLER_RAY_FS_GLSL,
+      geometry: makeControllerRayGeometry(),
+      bindings: {
+        app: this.uniformStore.getManagedUniformBuffer('app')
+      },
+      parameters: {
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal',
+        blend: true,
+        blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
     this.initializePreviewControls();
 
     if (typeof window !== 'undefined') {
@@ -350,6 +451,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       window.removeEventListener('keydown', this._keyDownListener);
     }
     this.orbitControls?.destroy();
+    this.controllerRayModel.destroy();
     this.model.destroy();
     this.fallbackTexture.destroy();
     this.uniformStore.destroy();
@@ -360,9 +462,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const time = elapsedTimeMilliseconds * 0.001;
     const xrFrame = animationFrame as XRFrame | null;
     const frameState = xrFrame && this.xrSession ? this.webXRManager.getFrameState(xrFrame) : null;
+    const inputState = xrFrame && this.xrSession ? this.webXRManager.getInputState(xrFrame) : null;
 
     if (frameState) {
-      this.renderXRFrame(time, frameState);
+      this.renderXRFrame(time, frameState, inputState || []);
       return;
     }
 
@@ -447,10 +550,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       .multiplyRight(this.viewMatrix)
       .multiplyRight(this.modelMatrix);
     this.preparePortal({cameraMix: 0, texture: this.fallbackTexture, time});
-    this.drawPortal(device.beginRenderPass({clearColor: [0.006, 0.008, 0.028, 1], clearDepth: 1}));
+    const renderPass = device.beginRenderPass({
+      clearColor: [0.006, 0.008, 0.028, 1],
+      clearDepth: 1
+    });
+    this.drawPortal(renderPass);
+    renderPass.end();
   }
 
-  private renderXRFrame(time: number, frameState: WebXRFrameState): void {
+  private renderXRFrame(
+    time: number,
+    frameState: WebXRFrameState,
+    inputState: readonly WebXRInputState[]
+  ): void {
     this.updateModelMatrix(time, true);
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
@@ -479,6 +591,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
       renderPass.setParameters({viewport: view.viewport});
       this.drawPortal(renderPass);
+      this.drawControllerRays(renderPass, view, inputState, time);
+      renderPass.end();
     }
   }
 
@@ -503,7 +617,37 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private drawPortal(renderPass: ReturnType<Device['beginRenderPass']>): void {
     this.model.draw(renderPass);
-    renderPass.end();
+  }
+
+  private drawControllerRays(
+    renderPass: ReturnType<Device['beginRenderPass']>,
+    view: WebXRFrameState['views'][number],
+    inputState: readonly WebXRInputState[],
+    time: number
+  ): void {
+    for (const input of inputState) {
+      if (input.targetRayMode !== 'tracked-pointer' || !input.targetRayMatrix) {
+        continue;
+      }
+
+      this.controllerRayMatrix.copy(input.targetRayMatrix);
+      this.modelViewProjectionMatrix
+        .copy(view.projectionMatrix)
+        .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
+        .multiplyRight(this.controllerRayMatrix);
+      this.uniformStore.setUniforms(
+        {
+          app: {
+            modelViewProjectionMatrix: this.modelViewProjectionMatrix,
+            time,
+            cameraMix: input.selectActive ? 1 : 0
+          }
+        },
+        this.device.commandEncoder
+      );
+      this.controllerRayModel.predraw(this.device.commandEncoder);
+      this.controllerRayModel.draw(renderPass);
+    }
   }
 
   private updateModelMatrix(time: number, isXR: boolean): void {
@@ -599,6 +743,18 @@ function makeSpatialPortalGeometry(): Geometry {
       positions: {size: 3, value: new Float32Array(positions)},
       texCoords: {size: 2, value: new Float32Array(texCoords)},
       shardData: {size: 4, value: new Float32Array(shardAttributes)}
+    }
+  });
+}
+
+function makeControllerRayGeometry(): Geometry {
+  return new Geometry({
+    topology: 'line-list',
+    attributes: {
+      positions: {
+        size: 3,
+        value: new Float32Array([0, 0, 0, 0, 0, -3.2])
+      }
     }
   });
 }
