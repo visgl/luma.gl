@@ -426,6 +426,7 @@
               "api-reference/experimental/webxr/webxr-hand-gestures",
               "api-reference/experimental/webxr/webxr-hand-tracking-manager",
               "api-reference/experimental/webxr/webxr-haptics",
+              "api-reference/experimental/webxr/webxr-image-tracking-manager",
               "api-reference/experimental/webxr/webxr-hit-test-manager",
               "api-reference/experimental/webxr/webxr-light-estimation-manager",
               "api-reference/experimental/webxr/webxr-media-layer-manager",

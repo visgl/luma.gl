@@ -83,6 +83,16 @@ export type {
 } from './webxr-input';
 export {getWebXRInputRay, getWebXRInputRayPlaneIntersection} from './webxr-input';
 export type {
+  WebXRImageTrackingManagerProps,
+  WebXRImageTrackingSessionInitProps,
+  WebXRImageTrackingState,
+  WebXRTrackedImageState
+} from './webxr-image-tracking';
+export {
+  getWebXRImageTrackingSessionInit,
+  WebXRImageTrackingManager
+} from './webxr-image-tracking';
+export type {
   WebXRFrameState,
   WebXRInputState,
   WebXRManagerProps,

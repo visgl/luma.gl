@@ -35,6 +35,8 @@ declare global {
   type XRHandedness = 'none' | 'left' | 'right';
   type XRTargetRayMode = 'gaze' | 'tracked-pointer' | 'screen';
   type XRHitTestTrackableType = 'point' | 'plane' | 'mesh';
+  type XRImageTrackability = 'untrackable' | 'trackable';
+  type XRImageTrackingState = 'untracked' | 'tracked' | 'emulated';
   type XRPlaneOrientation = 'horizontal' | 'vertical';
   type XRDepthDataFormat = 'luminance-alpha' | 'float32' | 'unsigned-short';
   type XRDepthType = 'raw' | 'smooth';
@@ -83,6 +85,12 @@ declare global {
     requiredFeatures?: string[];
     depthSensing?: XRDepthStateInit;
     domOverlay?: XRDOMOverlayInit;
+    trackedImages?: XRTrackedImageInit[];
+  }
+
+  interface XRTrackedImageInit {
+    image: ImageBitmap;
+    widthInMeters: number;
   }
 
   interface XRDOMOverlayInit {
@@ -117,6 +125,7 @@ declare global {
 
     cancelAnimationFrame(animationFrameId: number): void;
     end(): Promise<void>;
+    getImageTrackability?(): Promise<readonly XRImageTrackability[]>;
     pauseDepthSensing?(): void;
     requestAnimationFrame(callback: XRFrameRequestCallback): number;
     requestHitTestSource?(options: XRHitTestOptionsInit): Promise<XRHitTestSource | null>;
@@ -237,6 +246,13 @@ declare global {
 
   interface XRMeshSet extends ReadonlySet<XRMesh> {}
 
+  interface XRImageTrackingResult {
+    readonly imageSpace: XRSpace;
+    readonly index: number;
+    readonly trackingState: XRImageTrackingState;
+    readonly measuredWidthInMeters: number;
+  }
+
   interface XRDepthInformation {
     readonly width: number;
     readonly height: number;
@@ -265,6 +281,7 @@ declare global {
     fillPoses?(spaces: readonly XRSpace[], baseSpace: XRSpace, transforms: Float32Array): boolean;
     getDepthInformation?(view: XRView): XRCPUDepthInformation | null;
     getHitTestResults?(hitTestSource: XRHitTestSource): XRHitTestResult[];
+    getImageTrackingResults?(): readonly XRImageTrackingResult[];
     getJointPose?(joint: XRJointSpace, baseSpace: XRSpace): XRJointPose | null;
     getLightEstimate?(lightProbe: XRLightProbe): XRLightEstimate | null;
     getPose(space: XRSpace, baseSpace: XRSpace): XRPose | undefined;
