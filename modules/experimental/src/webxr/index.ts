@@ -54,6 +54,16 @@ export {
 export type {WebXRMediaLayerState, WebXRMediaLayerType} from './webxr-media-layers';
 export {WebXRMediaLayerManager} from './webxr-media-layers';
 export type {
+  WebXRPlaneDetectionManagerProps,
+  WebXRPlaneDetectionSessionInitProps,
+  WebXRPlaneDetectionState,
+  WebXRPlaneState
+} from './webxr-plane-detection';
+export {
+  getWebXRPlaneDetectionSessionInit,
+  WebXRPlaneDetectionManager
+} from './webxr-plane-detection';
+export type {
   WebXRHitTestManagerProps,
   WebXRHitTestResult,
   WebXRHitTestState

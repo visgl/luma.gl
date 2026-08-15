@@ -429,6 +429,7 @@
               "api-reference/experimental/webxr/webxr-hit-test-manager",
               "api-reference/experimental/webxr/webxr-light-estimation-manager",
               "api-reference/experimental/webxr/webxr-media-layer-manager",
+              "api-reference/experimental/webxr/webxr-plane-detection-manager",
               "api-reference/experimental/webxr/webxr-manager"
             ]
           }

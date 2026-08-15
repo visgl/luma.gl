@@ -35,6 +35,7 @@ declare global {
   type XRHandedness = 'none' | 'left' | 'right';
   type XRTargetRayMode = 'gaze' | 'tracked-pointer' | 'screen';
   type XRHitTestTrackableType = 'point' | 'plane' | 'mesh';
+  type XRPlaneOrientation = 'horizontal' | 'vertical';
   type XRDepthDataFormat = 'luminance-alpha' | 'float32' | 'unsigned-short';
   type XRDepthType = 'raw' | 'smooth';
   type XRDepthUsage = 'cpu-optimized' | 'gpu-optimized';
@@ -121,6 +122,7 @@ declare global {
     requestHitTestSource?(options: XRHitTestOptionsInit): Promise<XRHitTestSource | null>;
     requestLightProbe?(options?: XRLightProbeInit): Promise<XRLightProbe>;
     requestReferenceSpace(type: XRReferenceSpaceType): Promise<XRReferenceSpace>;
+    initiateRoomCapture?(): Promise<void>;
     resumeDepthSensing?(): void;
     updateRenderState(renderStateInit?: XRRenderStateInit): Promise<void>;
   }
@@ -215,6 +217,16 @@ declare global {
     readonly primaryLightIntensity: DOMPointReadOnly;
   }
 
+  interface XRPlane {
+    readonly planeSpace: XRSpace;
+    readonly polygon: readonly DOMPointReadOnly[];
+    readonly orientation: XRPlaneOrientation | null;
+    readonly lastChangedTime: DOMHighResTimeStamp;
+    readonly semanticLabel?: string | null;
+  }
+
+  interface XRPlaneSet extends ReadonlySet<XRPlane> {}
+
   interface XRDepthInformation {
     readonly width: number;
     readonly height: number;
@@ -236,6 +248,7 @@ declare global {
   interface XRFrame {
     readonly session: XRSession;
     readonly trackedAnchors?: ReadonlySet<XRAnchor>;
+    readonly detectedPlanes?: XRPlaneSet;
     createAnchor?(pose: XRRigidTransform, space: XRSpace): Promise<XRAnchor>;
     fillJointRadii?(jointSpaces: readonly XRJointSpace[], radii: Float32Array): boolean;
     fillPoses?(spaces: readonly XRSpace[], baseSpace: XRSpace, transforms: Float32Array): boolean;
