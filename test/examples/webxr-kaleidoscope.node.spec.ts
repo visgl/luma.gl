@@ -9,7 +9,8 @@ import {WgslReflect} from 'wgsl_reflect';
 import {
   applyXRSnapTurn,
   applyXRSceneOffset,
-  getXRLocomotionSceneOffset
+  getXRLocomotionSceneOffset,
+  getXRTeleportTargetState
 } from '../../examples/experimental/webxr-kaleidoscope/app';
 
 const APPLICATION_PATH = path.join(
@@ -194,7 +195,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain('!renderedFramebuffers.has(framebuffer)');
     expect(renderMethod).toContain('renderedFramebuffers.add(framebuffer)');
     expect(renderMethod).toContain(
-      'this.drawControllerTargets(renderPass, view, inputState, time)'
+      'this.drawControllerTargets(renderPass, view, inputState, time, boundsState)'
     );
     expect(renderMethod).toContain('this.drawHandJoints(renderPass, view, handState, time)');
     expect(renderMethod).toMatch(
@@ -210,11 +211,18 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(
       renderMethod.indexOf('renderPass.setParameters({viewport: view.viewport})')
     ).toBeLessThan(renderMethod.indexOf('this.drawPortal(renderPass)'));
+    expect(renderMethod).toContain(
+      'this.drawControllerTargets(renderPass, view, inputState, time, boundsState)'
+    );
     expect(renderMethod.indexOf('this.drawPortal(renderPass)')).toBeLessThan(
-      renderMethod.indexOf('this.drawControllerTargets(renderPass, view, inputState, time)')
+      renderMethod.indexOf(
+        'this.drawControllerTargets(renderPass, view, inputState, time, boundsState)'
+      )
     );
     expect(
-      renderMethod.indexOf('this.drawControllerTargets(renderPass, view, inputState, time)')
+      renderMethod.indexOf(
+        'this.drawControllerTargets(renderPass, view, inputState, time, boundsState)'
+      )
     ).toBeLessThan(renderMethod.indexOf('this.drawHandJoints(renderPass, view, handState, time)'));
     expect(prepareMethod).toContain('this.uniformStore.setUniforms(');
     expect(prepareMethod).toContain('this.device.commandEncoder');
@@ -248,6 +256,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('getWebXRTeleportTranslation');
     expect(applicationSource).toContain('isPointInWebXRBounds');
     expect(applicationSource).toContain('pulseWebXRInputHaptics');
+    expect(applicationSource).toContain('type WebXRBoundsState');
     expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
     expect(applicationSource).toContain("id: 'immersive-prism-controller-rays'");
     expect(applicationSource).toContain("id: 'immersive-prism-controller-reticles'");
@@ -256,6 +265,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('function makeControllerReticleGeometry()');
     expect(applicationSource).toContain('const segmentCount = 32');
     expect(renderMethod).toContain('inputState: readonly WebXRInputState[]');
+    expect(renderMethod).toContain(
+      'const boundsState = getWebXRBoundsState(this.webXRManager.referenceSpace)'
+    );
     expect(renderMethod).toContain('this._inputStateByInputSource.clear()');
     expect(renderMethod).toContain('this._inputStateByInputSource.set(input.inputSource, input)');
     expect(renderMethod).toContain('renderPass.end()');
@@ -272,15 +284,23 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
     expect(rayMethod).toContain('getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8})');
+    expect(rayMethod).toContain('boundsState: WebXRBoundsState | null');
+    expect(rayMethod).toContain(
+      'const teleportTarget = getXRTeleportTargetState(floorHit.point, boundsState)'
+    );
+    expect(rayMethod).toContain('if (teleportTarget.allowed)');
     expect(rayMethod).toContain(
       'this._floorHitByInputSource.set(input.inputSource, floorHit.point)'
     );
     expect(rayMethod).toContain(
-      'this.controllerReticleMatrix.identity().translate(floorHit.point)'
+      'this.controllerReticleMatrix.identity().translate(teleportTarget.point)'
     );
     expect(rayMethod).toContain('multiplyRight(this.controllerReticleMatrix)');
+    expect(rayMethod).toContain('cameraMix: teleportTarget.allowed ? controllerActivation : -1');
     expect(rayMethod).toContain('this.controllerReticleModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerReticleModel.draw(renderPass)');
+    expect(applicationSource).toContain('let blockedColor = vec3<f32>(1.0, 0.08, 0.10)');
+    expect(applicationSource).toContain('app.cameraMix < 0.0 ? blockedColor : targetColor');
   });
 
   test('renders tracked hand joints from WebXR hand snapshots', () => {
@@ -583,9 +603,12 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(updateModelMethod).toContain('rotateY(this.xrSceneYaw)');
     expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
     expect(teleportMethod).toContain('getWebXRBoundsState(this.webXRManager.referenceSpace)');
-    expect(teleportMethod).toContain('!isPointInWebXRBounds(floorHit, boundsState.bounds)');
     expect(teleportMethod).toContain(
-      'this.applyXRSceneOffset(getWebXRTeleportTranslation(floorHit))'
+      'const teleportTarget = getXRTeleportTargetState(floorHit, boundsState)'
+    );
+    expect(teleportMethod).toContain('!teleportTarget.allowed');
+    expect(teleportMethod).toContain(
+      'this.applyXRSceneOffset(getWebXRTeleportTranslation(teleportTarget.point))'
     );
     expect(teleportMethod).toContain('this._inputStateByInputSource.get(inputSource)');
     expect(teleportMethod).toContain(
@@ -617,6 +640,26 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(getXRLocomotionSceneOffset([0, 1], 1, 0, 2)).toEqual([0, 0, -2]);
     expect(getXRLocomotionSceneOffset([0, 1], 1, Math.PI / 2, 2)).toEqual([2, 0, 0]);
     expect(getXRLocomotionSceneOffset([1, 0], 0.5, Math.PI / 2, 2)).toEqual([0, 0, 1]);
+    const boundsState = {
+      bounds: [
+        [-1, 0, -1],
+        [1, 0, -1],
+        [1, 0, 1],
+        [-1, 0, 1]
+      ]
+    } as any;
+    expect(getXRTeleportTargetState([0, 0, 0], boundsState)).toEqual({
+      point: [0, 0, 0],
+      allowed: true
+    });
+    expect(getXRTeleportTargetState([2, 0, 0], boundsState)).toEqual({
+      point: [2, 0, 0],
+      allowed: false
+    });
+    expect(getXRTeleportTargetState([8, 0, 8], null)).toEqual({
+      point: [8, 0, 8],
+      allowed: true
+    });
   });
 
   test('requests isolated XR-compatible website devices while preserving preview fallback', () => {

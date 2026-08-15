@@ -32,6 +32,7 @@ import {
   isPointInWebXRBounds,
   mergeWebXRSessionInit,
   pulseWebXRInputHaptics,
+  type WebXRBoundsState,
   type WebXRFrameState,
   type WebXRHandTrackingState,
   type WebXRHitTestState,
@@ -313,7 +314,9 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let idleColor = vec3<f32>(0.05, 0.92, 1.0);
   let activeColor = vec3<f32>(1.0, 0.36, 0.18);
-  let color = mix(idleColor, activeColor, app.cameraMix);
+  let blockedColor = vec3<f32>(1.0, 0.08, 0.10);
+  let targetColor = mix(idleColor, activeColor, clamp(app.cameraMix, 0.0, 1.0));
+  let color = select(blockedColor, targetColor, app.cameraMix >= 0.0);
   let alpha = mix(0.86, 0.28, inputs.rayDepth);
   return vec4<f32>(color * (1.15 - inputs.rayDepth * 0.38), alpha);
 }
@@ -356,7 +359,9 @@ out vec4 fragColor;
 void main(void) {
   vec3 idleColor = vec3(0.05, 0.92, 1.0);
   vec3 activeColor = vec3(1.0, 0.36, 0.18);
-  vec3 color = mix(idleColor, activeColor, app.cameraMix);
+  vec3 blockedColor = vec3(1.0, 0.08, 0.10);
+  vec3 targetColor = mix(idleColor, activeColor, clamp(app.cameraMix, 0.0, 1.0));
+  vec3 color = app.cameraMix < 0.0 ? blockedColor : targetColor;
   float alpha = mix(0.86, 0.28, vRayDepth);
   fragColor = vec4(color * (1.15 - vRayDepth * 0.38), alpha);
 }
@@ -766,6 +771,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const renderedFramebuffers = new Set<Framebuffer>();
     this._floorHitByInputSource.clear();
     this._inputStateByInputSource.clear();
+    const boundsState = getWebXRBoundsState(this.webXRManager.referenceSpace);
     for (const input of inputState) {
       this._inputStateByInputSource.set(input.inputSource, input);
     }
@@ -794,7 +800,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
       renderPass.setParameters({viewport: view.viewport});
       this.drawPortal(renderPass);
-      this.drawControllerTargets(renderPass, view, inputState, time);
+      this.drawControllerTargets(renderPass, view, inputState, time, boundsState);
       this.drawHandJoints(renderPass, view, handState, time);
       renderPass.end();
     }
@@ -869,7 +875,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     renderPass: ReturnType<Device['beginRenderPass']>,
     view: WebXRFrameState['views'][number],
     inputState: readonly WebXRInputState[],
-    time: number
+    time: number,
+    boundsState: WebXRBoundsState | null
   ): void {
     for (const input of inputState) {
       const inputRay = getWebXRInputRay(input);
@@ -902,8 +909,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       const floorHit = getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8});
       if (floorHit) {
-        this._floorHitByInputSource.set(input.inputSource, floorHit.point);
-        this.controllerReticleMatrix.identity().translate(floorHit.point);
+        const teleportTarget = getXRTeleportTargetState(floorHit.point, boundsState);
+        if (teleportTarget.allowed) {
+          this._floorHitByInputSource.set(input.inputSource, floorHit.point);
+        }
+        this.controllerReticleMatrix.identity().translate(teleportTarget.point);
         this.modelViewProjectionMatrix
           .copy(view.projectionMatrix)
           .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
@@ -913,7 +923,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             app: {
               modelViewProjectionMatrix: this.modelViewProjectionMatrix,
               time,
-              cameraMix: controllerActivation,
+              cameraMix: teleportTarget.allowed ? controllerActivation : -1,
               lightIntensity: 1
             }
           },
@@ -1008,11 +1018,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
     const boundsState = getWebXRBoundsState(this.webXRManager.referenceSpace);
-    if (boundsState && !isPointInWebXRBounds(floorHit, boundsState.bounds)) {
+    const teleportTarget = getXRTeleportTargetState(floorHit, boundsState);
+    if (!teleportTarget.allowed) {
       return;
     }
 
-    this.applyXRSceneOffset(getWebXRTeleportTranslation(floorHit));
+    this.applyXRSceneOffset(getWebXRTeleportTranslation(teleportTarget.point));
     const inputState = this._inputStateByInputSource.get(inputSource);
     if (inputState) {
       void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45});
@@ -1155,6 +1166,21 @@ export function applyXRSnapTurn(
   snapTurnRadians = XR_SNAP_TURN_RADIANS
 ): number {
   return sceneYaw + snapTurn * snapTurnRadians;
+}
+
+export type XRTeleportTargetState = {
+  point: readonly [number, number, number];
+  allowed: boolean;
+};
+
+export function getXRTeleportTargetState(
+  point: readonly [number, number, number],
+  boundsState: WebXRBoundsState | null
+): XRTeleportTargetState {
+  return {
+    point,
+    allowed: !boundsState || isPointInWebXRBounds(point, boundsState.bounds)
+  };
 }
 
 export function getXRLocomotionSceneOffset(
