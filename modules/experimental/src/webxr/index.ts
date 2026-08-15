@@ -41,6 +41,16 @@ export type {
   WebXRLayersSessionInitProps
 } from './webxr-layers';
 export {getWebXRLayersSessionInit, WebXRCompositionLayerManager} from './webxr-layers';
+export type {
+  WebXRLightEstimationManagerProps,
+  WebXRLightEstimationSessionInitProps,
+  WebXRLightEstimationState
+} from './webxr-light-estimation';
+export {
+  getWebXRLightEstimationSessionInit,
+  getWebXRReflectionTextureFormat,
+  WebXRLightEstimationManager
+} from './webxr-light-estimation';
 export type {WebXRMediaLayerState, WebXRMediaLayerType} from './webxr-media-layers';
 export {WebXRMediaLayerManager} from './webxr-media-layers';
 export type {

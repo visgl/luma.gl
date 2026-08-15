@@ -38,6 +38,7 @@ declare global {
   type XRDepthDataFormat = 'luminance-alpha' | 'float32' | 'unsigned-short';
   type XRDepthType = 'raw' | 'smooth';
   type XRDepthUsage = 'cpu-optimized' | 'gpu-optimized';
+  type XRReflectionFormat = 'srgba8' | 'rgba16f';
   type XRTextureType = number;
   type XRLayerTextureType = 'texture' | 'texture-array';
   type XRLayerLayout = 'default' | 'mono' | 'stereo' | 'stereo-left-right' | 'stereo-top-bottom';
@@ -111,12 +112,14 @@ declare global {
     readonly depthType?: XRDepthType | null;
     readonly depthActive?: boolean;
     readonly domOverlayState?: XRDOMOverlayState | null;
+    readonly preferredReflectionFormat?: XRReflectionFormat;
 
     cancelAnimationFrame(animationFrameId: number): void;
     end(): Promise<void>;
     pauseDepthSensing?(): void;
     requestAnimationFrame(callback: XRFrameRequestCallback): number;
     requestHitTestSource?(options: XRHitTestOptionsInit): Promise<XRHitTestSource | null>;
+    requestLightProbe?(options?: XRLightProbeInit): Promise<XRLightProbe>;
     requestReferenceSpace(type: XRReferenceSpaceType): Promise<XRReferenceSpace>;
     resumeDepthSensing?(): void;
     updateRenderState(renderStateInit?: XRRenderStateInit): Promise<void>;
@@ -197,6 +200,21 @@ declare global {
     delete(): void;
   }
 
+  interface XRLightProbe extends EventTarget {
+    readonly probeSpace: XRSpace;
+    onreflectionchange: ((this: XRLightProbe, event: Event) => unknown) | null;
+  }
+
+  interface XRLightProbeInit {
+    reflectionFormat?: XRReflectionFormat;
+  }
+
+  interface XRLightEstimate {
+    readonly sphericalHarmonicsCoefficients: Float32Array;
+    readonly primaryLightDirection: DOMPointReadOnly;
+    readonly primaryLightIntensity: DOMPointReadOnly;
+  }
+
   interface XRDepthInformation {
     readonly width: number;
     readonly height: number;
@@ -224,6 +242,7 @@ declare global {
     getDepthInformation?(view: XRView): XRCPUDepthInformation | null;
     getHitTestResults?(hitTestSource: XRHitTestSource): XRHitTestResult[];
     getJointPose?(joint: XRJointSpace, baseSpace: XRSpace): XRJointPose | null;
+    getLightEstimate?(lightProbe: XRLightProbe): XRLightEstimate | null;
     getPose(space: XRSpace, baseSpace: XRSpace): XRPose | undefined;
     getViewerPose(referenceSpace: XRReferenceSpace): XRViewerPose | undefined;
   }
@@ -435,6 +454,7 @@ declare global {
     createCubeLayer(layerInit: XRCubeLayerInit): XRCubeLayer;
     getCameraImage(camera: XRCamera): WebGLTexture | null;
     getDepthInformation?(view: XRView): XRWebGLDepthInformation | null;
+    getReflectionCubeMap?(lightProbe: XRLightProbe): WebGLTexture | null;
     getSubImage(layer: XRCompositionLayer, frame: XRFrame, eye?: XREye): XRWebGLSubImage;
     getViewSubImage(layer: XRProjectionLayer, view: XRView): XRWebGLSubImage;
   }
@@ -463,6 +483,9 @@ declare global {
 }
 
 export type WebXRDepthBinding = Pick<XRWebGLBinding, 'getDepthInformation'>;
+
+/** Experimental v10 WebXR lighting-estimation reflection cube-map subset. */
+export type WebXRLightEstimationBinding = Pick<XRWebGLBinding, 'getReflectionCubeMap'>;
 
 /** Experimental v10 raw-camera subset required by WebXRCameraTexture. */
 export type WebXRRawCameraBinding = Pick<XRWebGLBinding, 'getCameraImage'>;

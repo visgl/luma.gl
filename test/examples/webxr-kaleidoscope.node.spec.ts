@@ -109,6 +109,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain(
       'readonly webXRHandTrackingManager = new WebXRHandTrackingManager()'
     );
+    expect(applicationSource).toContain("'light-estimation',");
+    expect(applicationSource).toContain('WebXRLightEstimationManager');
     expect(applicationSource).toContain(
       'this.webXRHandTrackingManager.setSession(session, this.webXRManager.referenceSpace)'
     );
@@ -330,6 +332,45 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(updateModelMethod).toContain('scale([0.54, 0.54, 0.54])');
     expect(clearMethod).toContain('this.webXRHitTestManager.clearSession()');
     expect(applicationSource).toContain('this.webXRHitTestManager.destroy()');
+  });
+
+  test('uses optional AR light estimation to modulate portal intensity', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const renderMethodStart = applicationSource.indexOf('private renderXRFrame(');
+    const renderMethodEnd = applicationSource.indexOf(
+      '\n  private preparePortal(',
+      renderMethodStart
+    );
+    const renderMethod = applicationSource.slice(renderMethodStart, renderMethodEnd);
+    const enterMethodStart = applicationSource.indexOf('async enterXR(');
+    const enterMethodEnd = applicationSource.indexOf('\n  async exitAR(', enterMethodStart);
+    const enterMethod = applicationSource.slice(enterMethodStart, enterMethodEnd);
+    const clearMethodStart = applicationSource.indexOf('private _clearXRSession(');
+    const clearMethod = applicationSource.slice(clearMethodStart);
+
+    expect(applicationSource).toContain('type WebXRLightEstimationState');
+    expect(applicationSource).toContain('WebXRLightEstimationManager');
+    expect(applicationSource).toContain(
+      'readonly webXRLightEstimationManager = new WebXRLightEstimationManager({'
+    );
+    expect(applicationSource).toContain("reflectionFormat: 'preferred'");
+    expect(applicationSource).toContain('lightIntensity: number');
+    expect(applicationSource).toContain("lightIntensity: 'f32'");
+    expect(applicationSource).toContain('color *= app.lightIntensity');
+    expect(applicationSource).toContain('function getXRLightIntensity(');
+    expect(applicationSource).toContain('lightState.primaryLightIntensity');
+    expect(applicationSource).toContain("'light-estimation',");
+    expect(applicationSource).toContain(
+      'this.webXRLightEstimationManager.getLightEstimationState(xrFrame)'
+    );
+    expect(enterMethod).toContain('this.webXRLightEstimationManager');
+    expect(enterMethod).toContain('.setSession(session, this.webXRManager.referenceSpace)');
+    expect(enterMethod).toContain('.catch(() => this.webXRLightEstimationManager.clearSession())');
+    expect(renderMethod).toContain('lightEstimationState: WebXRLightEstimationState | null');
+    expect(renderMethod).toContain('const lightIntensity = getXRLightIntensity(');
+    expect(renderMethod).toContain('lightIntensity,');
+    expect(clearMethod).toContain('this.webXRLightEstimationManager.clearSession()');
+    expect(applicationSource).toContain('this.webXRLightEstimationManager.destroy()');
   });
 
   test('uses select for teleport candidates and squeeze or keyboard for exit', () => {

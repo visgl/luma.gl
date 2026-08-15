@@ -12,6 +12,7 @@ import {
   WebXRDOMOverlayManager,
   WebXRHandTrackingManager,
   WebXRHitTestManager,
+  WebXRLightEstimationManager,
   WebXRManager,
   getWebXRHandPinch,
   getWebXRInputRay,
@@ -20,7 +21,8 @@ import {
   type WebXRFrameState,
   type WebXRHandTrackingState,
   type WebXRHitTestState,
-  type WebXRInputState
+  type WebXRInputState,
+  type WebXRLightEstimationState
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 
@@ -47,13 +49,15 @@ type AppUniforms = {
   modelViewProjectionMatrix: NumberArray;
   time: number;
   cameraMix: number;
+  lightIntensity: number;
 };
 
 const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
   uniformTypes: {
     modelViewProjectionMatrix: 'mat4x4<f32>',
     time: 'f32',
-    cameraMix: 'f32'
+    cameraMix: 'f32',
+    lightIntensity: 'f32'
   }
 };
 
@@ -62,6 +66,7 @@ struct AppUniforms {
   modelViewProjectionMatrix: mat4x4<f32>,
   time: f32,
   cameraMix: f32,
+  lightIntensity: f32,
 };
 
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
@@ -147,6 +152,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let cameraColor = textureSample(cameraTexture, cameraTextureSampler, cameraUv).rgb;
   color = mix(color, cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
               app.cameraMix * (1.0 - inputs.depthFactor * 0.7));
+  color *= app.lightIntensity;
   let alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
                     (0.75 + inputs.shardKind * 0.12), 0.0, 0.98);
   return vec4<f32>(color, alpha);
@@ -164,6 +170,7 @@ uniform appUniforms {
   mat4 modelViewProjectionMatrix;
   float time;
   float cameraMix;
+  float lightIntensity;
 } app;
 
 out vec2 vUV;
@@ -208,6 +215,7 @@ uniform appUniforms {
   mat4 modelViewProjectionMatrix;
   float time;
   float cameraMix;
+  float lightIntensity;
 } app;
 
 in vec2 vUV;
@@ -249,6 +257,7 @@ void main(void) {
   color = mix(color,
     cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
     app.cameraMix * (1.0 - vDepthFactor * 0.7));
+  color *= app.lightIntensity;
   float alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
     (0.75 + vShardKind * 0.12), 0.0, 0.98);
   fragColor = vec4(color, alpha);
@@ -260,6 +269,7 @@ struct AppUniforms {
   modelViewProjectionMatrix: mat4x4<f32>,
   time: f32,
   cameraMix: f32,
+  lightIntensity: f32,
 };
 
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
@@ -300,6 +310,7 @@ uniform appUniforms {
   mat4 modelViewProjectionMatrix;
   float time;
   float cameraMix;
+  float lightIntensity;
 } app;
 
 out float vRayDepth;
@@ -318,6 +329,7 @@ uniform appUniforms {
   mat4 modelViewProjectionMatrix;
   float time;
   float cameraMix;
+  float lightIntensity;
 } app;
 
 in float vRayDepth;
@@ -376,6 +388,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly webXRDOMOverlayManager = new WebXRDOMOverlayManager();
   readonly webXRHandTrackingManager = new WebXRHandTrackingManager();
   readonly webXRHitTestManager = new WebXRHitTestManager();
+  readonly webXRLightEstimationManager = new WebXRLightEstimationManager({
+    reflectionFormat: 'preferred'
+  });
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly controllerRayMatrix = new Matrix4();
@@ -532,6 +547,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRDOMOverlayManager.destroy();
     this.webXRHandTrackingManager.destroy();
     this.webXRHitTestManager.destroy();
+    this.webXRLightEstimationManager.destroy();
     this.webXRManager.destroy();
   }
 
@@ -549,9 +565,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         : null;
     const hitTestState =
       xrFrame && this.xrSession ? this.webXRHitTestManager.getHitTestState(xrFrame) : null;
+    const lightEstimationState =
+      xrFrame && this.xrSession
+        ? this.webXRLightEstimationManager.getLightEstimationState(xrFrame)
+        : null;
 
     if (frameState) {
-      this.renderXRFrame(time, frameState, inputState || [], handState || [], hitTestState);
+      this.renderXRFrame(
+        time,
+        frameState,
+        inputState || [],
+        handState || [],
+        hitTestState,
+        lightEstimationState
+      );
       return;
     }
 
@@ -605,6 +632,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         await this.webXRHitTestManager
           .setSession(session, this.webXRManager.referenceSpace, {entityTypes: ['plane', 'point']})
           .catch(() => this.webXRHitTestManager.clearSession());
+        await this.webXRLightEstimationManager
+          .setSession(session, this.webXRManager.referenceSpace)
+          .catch(() => this.webXRLightEstimationManager.clearSession());
       }
       this.cameraTexture =
         sessionMode === 'immersive-ar' && this.device.type === 'webgl'
@@ -644,7 +674,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       .perspective({fovy: Math.PI / 3.05, aspect, near: 0.08, far: 36})
       .multiplyRight(this.viewMatrix)
       .multiplyRight(this.modelMatrix);
-    this.preparePortal({cameraMix: 0, texture: this.fallbackTexture, time});
+    this.preparePortal({cameraMix: 0, lightIntensity: 1, texture: this.fallbackTexture, time});
     const renderPass = device.beginRenderPass({
       clearColor: [0.006, 0.008, 0.028, 1],
       clearDepth: 1
@@ -658,9 +688,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     frameState: WebXRFrameState,
     inputState: readonly WebXRInputState[],
     handState: readonly WebXRHandTrackingState[],
-    hitTestState: WebXRHitTestState | null
+    hitTestState: WebXRHitTestState | null,
+    lightEstimationState: WebXRLightEstimationState | null
   ): void {
     this.updateModelMatrix(time, true, hitTestState);
+    const lightIntensity = getXRLightIntensity(lightEstimationState);
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
@@ -682,6 +714,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       renderedFramebuffers.add(framebuffer);
       this.preparePortal({
         cameraMix: cameraTexture ? 1 : 0,
+        lightIntensity,
         texture: cameraTexture || this.fallbackTexture,
         time
       });
@@ -701,6 +734,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private preparePortal(options: {
     cameraMix: number;
+    lightIntensity: number;
     texture: Texture | WebXRCameraTexture;
     time: number;
   }): void {
@@ -709,7 +743,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         app: {
           modelViewProjectionMatrix: this.modelViewProjectionMatrix,
           time: options.time,
-          cameraMix: options.cameraMix
+          cameraMix: options.cameraMix,
+          lightIntensity: options.lightIntensity
         }
       },
       this.device.commandEncoder
@@ -743,7 +778,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           app: {
             modelViewProjectionMatrix: this.modelViewProjectionMatrix,
             time,
-            cameraMix: input.selectActive ? 1 : 0
+            cameraMix: input.selectActive ? 1 : 0,
+            lightIntensity: 1
           }
         },
         this.device.commandEncoder
@@ -764,7 +800,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             app: {
               modelViewProjectionMatrix: this.modelViewProjectionMatrix,
               time,
-              cameraMix: input.selectActive ? 1 : 0
+              cameraMix: input.selectActive ? 1 : 0,
+              lightIntensity: 1
             }
           },
           this.device.commandEncoder
@@ -801,7 +838,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             app: {
               modelViewProjectionMatrix: this.modelViewProjectionMatrix,
               time,
-              cameraMix: handColorMix
+              cameraMix: handColorMix,
+              lightIntensity: 1
             }
           },
           this.device.commandEncoder
@@ -907,6 +945,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRDOMOverlayManager.clearSession();
     this.webXRHandTrackingManager.clearSession();
     this.webXRHitTestManager.clearSession();
+    this.webXRLightEstimationManager.clearSession();
     this.webXRManager.clearSession();
     AppAnimationLoopTemplate.notifyCurrentListeners();
     if (!this._isFinalized) {
@@ -934,6 +973,7 @@ function getXRSessionInit(
               ...domOverlayFeatures,
               'hand-tracking',
               'hit-test',
+              'light-estimation',
               'local-floor'
             ]
           : [...domOverlayFeatures, 'hand-tracking', 'local-floor'],
@@ -951,6 +991,7 @@ function getXRSessionInit(
           ...domOverlayFeatures,
           'hand-tracking',
           'hit-test',
+          'light-estimation',
           'local-floor'
         ],
         depthSensing: AR_DEPTH_SENSING,
@@ -964,6 +1005,15 @@ function getXRSessionInit(
 
 function getDOMOverlayRoot(): Element | null {
   return typeof document !== 'undefined' ? document.getElementById('webxr-dom-overlay') : null;
+}
+
+function getXRLightIntensity(lightState: WebXRLightEstimationState | null): number {
+  if (!lightState) {
+    return 1;
+  }
+
+  const [red, green, blue] = lightState.primaryLightIntensity;
+  return Math.min(1.6, Math.max(0.55, (red + green + blue) / 3));
 }
 
 function makeSpatialPortalGeometry(): Geometry {

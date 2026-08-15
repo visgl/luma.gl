@@ -20,6 +20,7 @@
 - [`pulseWebXRInputHaptics`](/docs/api-reference/experimental/webxr/webxr-haptics) pulses compatible controller haptic actuators exposed through WebXR input gamepads.
 - [`WebXRHitTestManager`](/docs/api-reference/experimental/webxr/webxr-hit-test-manager) requests an AR hit-test source and resolves hit poses in the app reference space.
 - [`WebXRAnchorManager`](/docs/api-reference/experimental/webxr/webxr-anchor-manager) creates, tracks, resolves, and deletes AR anchors.
+- [`WebXRLightEstimationManager`](/docs/api-reference/experimental/webxr/webxr-light-estimation-manager) resolves AR light probes, direct-light estimates, spherical harmonics, and optional reflection cube maps.
 - [`WebXRMediaLayerManager`](/docs/api-reference/experimental/webxr/webxr-media-layer-manager) creates video-backed quad, cylinder, and equirect composition layers through the XR compositor.
 
 WebGPU raw camera textures are not part of this v10 work in progress.
