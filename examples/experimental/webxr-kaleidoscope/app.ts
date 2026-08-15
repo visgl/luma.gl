@@ -360,6 +360,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly controllerRayMatrix = new Matrix4();
   readonly controllerReticleMatrix = new Matrix4();
+  readonly xrSceneOffset: [number, number, number] = [0, 0, 0];
   readonly viewMatrix = new Matrix4().lookAt({
     eye: [0.32, 0.24, 4.4],
     center: CAMERA_TARGET
@@ -371,8 +372,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   xrSession: XRSession | null = null;
   xrSessionMode: ImmersiveXRSessionMode | null = null;
   private _isFinalized = false;
+  private _floorHitByInputSource = new Map<XRInputSource, [number, number, number]>();
   private _xrSessionEndListener = () => this._clearXRSession();
-  private _xrSelectEndListener = () => void this.exitXR();
+  private _xrSelectEndListener = (event: Event) =>
+    this.teleportToInputSource((event as XRInputSourceEvent).inputSource);
+  private _xrSqueezeEndListener = () => void this.exitXR();
   private _keyDownListener = (event: KeyboardEvent) => {
     if (!this.xrSession) {
       return;
@@ -548,6 +552,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.xrSessionMode = sessionMode;
       session.addEventListener('end', this._xrSessionEndListener);
       session.addEventListener('selectend', this._xrSelectEndListener);
+      session.addEventListener('squeezeend', this._xrSqueezeEndListener);
       this.animationLoop.setProps({
         animationFrameProvider: new WebXRAnimationFrameProvider(session)
       });
@@ -593,6 +598,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
+    this._floorHitByInputSource.clear();
 
     for (const view of frameState.views) {
       this.modelViewProjectionMatrix
@@ -676,6 +682,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       const floorHit = getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8});
       if (floorHit) {
+        this._floorHitByInputSource.set(input.inputSource, floorHit.point);
         this.controllerReticleMatrix.identity().translate(floorHit.point);
         this.modelViewProjectionMatrix
           .copy(view.projectionMatrix)
@@ -701,6 +708,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.modelMatrix.identity();
     if (isXR) {
       this.modelMatrix
+        .translate(this.xrSceneOffset)
         .translate([0, 0.12, -2.15])
         .scale([0.88, 0.88, 0.88])
         .rotateZ(Math.sin(time * 0.2) * 0.055)
@@ -711,6 +719,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .rotateX(Math.sin(time * 0.31) * 0.055)
         .rotateY(Math.cos(time * 0.26) * 0.075);
     }
+  }
+
+  private teleportToInputSource(inputSource: XRInputSource | undefined): void {
+    const floorHit = inputSource && this._floorHitByInputSource.get(inputSource);
+    if (!floorHit) {
+      return;
+    }
+
+    this.xrSceneOffset[0] -= floorHit[0];
+    this.xrSceneOffset[2] -= floorHit[2];
+    this._floorHitByInputSource.clear();
   }
 
   private createCameraTexture(session: XRSession): WebXRCameraTexture | null {
@@ -754,8 +773,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const session = this.xrSession;
     session?.removeEventListener('end', this._xrSessionEndListener);
     session?.removeEventListener('selectend', this._xrSelectEndListener);
+    session?.removeEventListener('squeezeend', this._xrSqueezeEndListener);
     this.xrSession = null;
     this.xrSessionMode = null;
+    this.xrSceneOffset[0] = 0;
+    this.xrSceneOffset[1] = 0;
+    this.xrSceneOffset[2] = 0;
+    this._floorHitByInputSource.clear();
     this.cameraTexture?.destroy();
     this.cameraTexture = null;
     this.webXRManager.clearSession();

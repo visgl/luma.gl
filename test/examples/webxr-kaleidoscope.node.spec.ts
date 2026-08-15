@@ -195,11 +195,67 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain('this.controllerRayModel.draw(renderPass)');
     expect(rayMethod).toContain('getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8})');
     expect(rayMethod).toContain(
+      'this._floorHitByInputSource.set(input.inputSource, floorHit.point)'
+    );
+    expect(rayMethod).toContain(
       'this.controllerReticleMatrix.identity().translate(floorHit.point)'
     );
     expect(rayMethod).toContain('multiplyRight(this.controllerReticleMatrix)');
     expect(rayMethod).toContain('this.controllerReticleModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerReticleModel.draw(renderPass)');
+  });
+
+  test('uses select for teleport candidates and squeeze or keyboard for exit', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const enterMethodStart = applicationSource.indexOf('async enterXR(');
+    const enterMethodEnd = applicationSource.indexOf('\n  async exitAR(', enterMethodStart);
+    const enterMethod = applicationSource.slice(enterMethodStart, enterMethodEnd);
+    const updateModelStart = applicationSource.indexOf('private updateModelMatrix(');
+    const updateModelEnd = applicationSource.indexOf(
+      '\n  private teleportToInputSource(',
+      updateModelStart
+    );
+    const updateModelMethod = applicationSource.slice(updateModelStart, updateModelEnd);
+    const teleportMethodStart = applicationSource.indexOf('private teleportToInputSource(');
+    const teleportMethodEnd = applicationSource.indexOf(
+      '\n  private createCameraTexture(',
+      teleportMethodStart
+    );
+    const teleportMethod = applicationSource.slice(teleportMethodStart, teleportMethodEnd);
+    const clearMethodStart = applicationSource.indexOf('private _clearXRSession(');
+    const clearMethod = applicationSource.slice(clearMethodStart);
+
+    expect(applicationSource).toContain('readonly xrSceneOffset: [number, number, number]');
+    expect(applicationSource).toContain('new Map<XRInputSource, [number, number, number]>()');
+    expect(applicationSource).not.toContain(
+      'private _xrSelectEndListener = () => void this.exitXR()'
+    );
+    expect(applicationSource).toContain('private _xrSqueezeEndListener = () => void this.exitXR()');
+    expect(applicationSource).toContain(
+      'this.teleportToInputSource((event as XRInputSourceEvent).inputSource)'
+    );
+    expect(enterMethod).toContain(
+      "session.addEventListener('selectend', this._xrSelectEndListener)"
+    );
+    expect(enterMethod).toContain(
+      "session.addEventListener('squeezeend', this._xrSqueezeEndListener)"
+    );
+    expect(updateModelMethod).toContain('translate(this.xrSceneOffset)');
+    expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
+    expect(teleportMethod).toContain('this.xrSceneOffset[0] -= floorHit[0]');
+    expect(teleportMethod).toContain('this.xrSceneOffset[2] -= floorHit[2]');
+    expect(teleportMethod).toContain('this._floorHitByInputSource.clear()');
+    expect(clearMethod).toContain(
+      "session?.removeEventListener('selectend', this._xrSelectEndListener)"
+    );
+    expect(clearMethod).toContain(
+      "session?.removeEventListener('squeezeend', this._xrSqueezeEndListener)"
+    );
+    expect(clearMethod).toContain('this.xrSceneOffset[0] = 0');
+    expect(clearMethod).toContain('this._floorHitByInputSource.clear()');
+    expect(applicationSource).toContain(
+      "event.key === 'Escape' || event.key.toLowerCase() === 'q'"
+    );
   });
 
   test('requests isolated XR-compatible website devices while preserving preview fallback', () => {
