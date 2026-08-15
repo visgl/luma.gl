@@ -10,11 +10,13 @@ import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
   WebXRDOMOverlayManager,
+  WebXRHandTrackingManager,
   WebXRHitTestManager,
   WebXRManager,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
   type WebXRFrameState,
+  type WebXRHandTrackingState,
   type WebXRHitTestState,
   type WebXRInputState
 } from '@luma.gl/experimental';
@@ -363,13 +365,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly model: Model;
   readonly controllerRayModel: Model;
   readonly controllerReticleModel: Model;
+  readonly handJointModel: Model;
   readonly webXRManager: WebXRManager;
   readonly webXRDOMOverlayManager = new WebXRDOMOverlayManager();
+  readonly webXRHandTrackingManager = new WebXRHandTrackingManager();
   readonly webXRHitTestManager = new WebXRHitTestManager();
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly controllerRayMatrix = new Matrix4();
   readonly controllerReticleMatrix = new Matrix4();
+  readonly handJointMatrix = new Matrix4();
   readonly xrSceneOffset: [number, number, number] = [0, 0, 0];
   readonly viewMatrix = new Matrix4().lookAt({
     eye: [0.32, 0.24, 4.4],
@@ -472,6 +477,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
+    this.handJointModel = new Model(device, {
+      id: 'immersive-prism-hand-joints',
+      source: CONTROLLER_RAY_WGSL_SHADER,
+      vs: CONTROLLER_RAY_VS_GLSL,
+      fs: CONTROLLER_RAY_FS_GLSL,
+      geometry: makeHandJointGeometry(),
+      bindings: {
+        app: this.uniformStore.getManagedUniformBuffer('app')
+      },
+      parameters: {
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal',
+        blend: true,
+        blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
     this.initializePreviewControls();
 
     if (typeof window !== 'undefined') {
@@ -491,11 +517,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
     this.orbitControls?.destroy();
     this.controllerReticleModel.destroy();
+    this.handJointModel.destroy();
     this.controllerRayModel.destroy();
     this.model.destroy();
     this.fallbackTexture.destroy();
     this.uniformStore.destroy();
     this.webXRDOMOverlayManager.destroy();
+    this.webXRHandTrackingManager.destroy();
     this.webXRHitTestManager.destroy();
     this.webXRManager.destroy();
   }
@@ -505,11 +533,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const xrFrame = animationFrame as XRFrame | null;
     const frameState = xrFrame && this.xrSession ? this.webXRManager.getFrameState(xrFrame) : null;
     const inputState = xrFrame && this.xrSession ? this.webXRManager.getInputState(xrFrame) : null;
+    const handState =
+      xrFrame && this.xrSession
+        ? this.webXRHandTrackingManager.getHandsState(
+            xrFrame,
+            (inputState || []).map(input => input.inputSource)
+          )
+        : null;
     const hitTestState =
       xrFrame && this.xrSession ? this.webXRHitTestManager.getHitTestState(xrFrame) : null;
 
     if (frameState) {
-      this.renderXRFrame(time, frameState, inputState || [], hitTestState);
+      this.renderXRFrame(time, frameState, inputState || [], handState || [], hitTestState);
       return;
     }
 
@@ -558,6 +593,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           ? {layerInit: {alpha: sessionMode === 'immersive-ar'}}
           : {})
       });
+      this.webXRHandTrackingManager.setSession(session, this.webXRManager.referenceSpace);
       if (sessionMode === 'immersive-ar') {
         await this.webXRHitTestManager
           .setSession(session, this.webXRManager.referenceSpace, {entityTypes: ['plane', 'point']})
@@ -613,6 +649,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     time: number,
     frameState: WebXRFrameState,
     inputState: readonly WebXRInputState[],
+    handState: readonly WebXRHandTrackingState[],
     hitTestState: WebXRHitTestState | null
   ): void {
     this.updateModelMatrix(time, true, hitTestState);
@@ -645,6 +682,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       renderPass.setParameters({viewport: view.viewport});
       this.drawPortal(renderPass);
       this.drawControllerTargets(renderPass, view, inputState, time);
+      this.drawHandJoints(renderPass, view, handState, time);
       renderPass.end();
     }
   }
@@ -721,6 +759,42 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         );
         this.controllerReticleModel.predraw(this.device.commandEncoder);
         this.controllerReticleModel.draw(renderPass);
+      }
+    }
+  }
+
+  private drawHandJoints(
+    renderPass: ReturnType<Device['beginRenderPass']>,
+    view: WebXRFrameState['views'][number],
+    handState: readonly WebXRHandTrackingState[],
+    time: number
+  ): void {
+    for (const hand of handState) {
+      const handColorMix = hand.handedness === 'right' ? 1 : 0;
+
+      for (const joint of hand.joints) {
+        if (!joint.matrix) {
+          continue;
+        }
+
+        const jointScale = Math.max(joint.radius ?? 0.008, 0.006) * 1.8;
+        this.handJointMatrix.copy(joint.matrix).scale([jointScale, jointScale, jointScale]);
+        this.modelViewProjectionMatrix
+          .copy(view.projectionMatrix)
+          .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
+          .multiplyRight(this.handJointMatrix);
+        this.uniformStore.setUniforms(
+          {
+            app: {
+              modelViewProjectionMatrix: this.modelViewProjectionMatrix,
+              time,
+              cameraMix: handColorMix
+            }
+          },
+          this.device.commandEncoder
+        );
+        this.handJointModel.predraw(this.device.commandEncoder);
+        this.handJointModel.draw(renderPass);
       }
     }
   }
@@ -813,6 +887,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cameraTexture?.destroy();
     this.cameraTexture = null;
     this.webXRDOMOverlayManager.clearSession();
+    this.webXRHandTrackingManager.clearSession();
     this.webXRHitTestManager.clearSession();
     this.webXRManager.clearSession();
     if (!this._isFinalized) {
@@ -927,6 +1002,18 @@ function makeControllerReticleGeometry(): Geometry {
       positions: {
         size: 3,
         value: new Float32Array(positions)
+      }
+    }
+  });
+}
+
+function makeHandJointGeometry(): Geometry {
+  return new Geometry({
+    topology: 'line-list',
+    attributes: {
+      positions: {
+        size: 3,
+        value: new Float32Array([-1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1])
       }
     }
   });
