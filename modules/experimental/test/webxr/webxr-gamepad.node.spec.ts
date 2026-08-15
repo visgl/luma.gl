@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
-import {getWebXRGamepadState, getWebXRGamepadStates} from '../../src/webxr/webxr-gamepad';
+import {
+  WebXRGamepadActionManager,
+  getWebXRGamepadButtonActionState,
+  getWebXRGamepadState,
+  getWebXRGamepadStates
+} from '../../src/webxr/webxr-gamepad';
 import type {WebXRInputState} from '../../src/webxr/webxr-manager';
 
 test('webxr#getWebXRGamepadState snapshots xr-standard buttons and axes', testCase => {
@@ -86,6 +91,184 @@ test('webxr#getWebXRGamepadStates filters missing gamepads', testCase => {
   testCase.end();
 });
 
+test('webxr#WebXRGamepadActionManager reports button transitions', testCase => {
+  const inputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [
+      {value: 0, pressed: false, touched: false},
+      {value: 0, pressed: false, touched: false}
+    ],
+    axes: []
+  });
+  const manager = new WebXRGamepadActionManager();
+
+  const firstActions = manager.update([inputState]);
+  testCase.equal(firstActions.length, 2, 'returns one action per current button');
+  testCase.deepEqual(
+    pickAction(firstActions[0]!),
+    {
+      name: 'trigger',
+      value: 0,
+      previousValue: 0,
+      valueDelta: 0,
+      pressed: false,
+      wasPressed: false,
+      pressStarted: false,
+      pressEnded: false,
+      touched: false,
+      wasTouched: false,
+      touchStarted: false,
+      touchEnded: false
+    },
+    'starts from neutral previous state'
+  );
+
+  inputState.gamepad!.buttons[0] = {value: 1, pressed: true, touched: true} as GamepadButton;
+  inputState.gamepad!.buttons[1] = {value: 0.4, pressed: false, touched: true} as GamepadButton;
+  const secondActions = manager.update([inputState]);
+  testCase.deepEqual(
+    pickAction(secondActions[0]!),
+    {
+      name: 'trigger',
+      value: 1,
+      previousValue: 0,
+      valueDelta: 1,
+      pressed: true,
+      wasPressed: false,
+      pressStarted: true,
+      pressEnded: false,
+      touched: true,
+      wasTouched: false,
+      touchStarted: true,
+      touchEnded: false
+    },
+    'reports press and touch starts'
+  );
+  testCase.deepEqual(
+    pickAction(secondActions[1]!),
+    {
+      name: 'squeeze',
+      value: 0.4,
+      previousValue: 0,
+      valueDelta: 0.4,
+      pressed: false,
+      wasPressed: false,
+      pressStarted: false,
+      pressEnded: false,
+      touched: true,
+      wasTouched: false,
+      touchStarted: true,
+      touchEnded: false
+    },
+    'tracks touch-only actions'
+  );
+
+  inputState.gamepad!.buttons[0] = {value: 0.25, pressed: false, touched: false} as GamepadButton;
+  inputState.gamepad!.buttons[1] = {value: 0, pressed: false, touched: false} as GamepadButton;
+  const thirdActions = manager.update([inputState]);
+  testCase.deepEqual(
+    pickAction(thirdActions[0]!),
+    {
+      name: 'trigger',
+      value: 0.25,
+      previousValue: 1,
+      valueDelta: -0.75,
+      pressed: false,
+      wasPressed: true,
+      pressStarted: false,
+      pressEnded: true,
+      touched: false,
+      wasTouched: true,
+      touchStarted: false,
+      touchEnded: true
+    },
+    'reports press and touch ends'
+  );
+
+  manager.reset(inputState.inputSource);
+  inputState.gamepad!.buttons[0] = {value: 0.5, pressed: true, touched: true} as GamepadButton;
+  testCase.equal(
+    manager.update([inputState])[0]?.wasPressed,
+    false,
+    'reset clears previous state for one input source'
+  );
+  testCase.end();
+});
+
+test('webxr#WebXRGamepadActionManager trims inactive input sources', testCase => {
+  const firstInputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [{value: 1, pressed: true, touched: true}],
+    axes: []
+  });
+  const secondInputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [{value: 0.2, pressed: false, touched: true}],
+    axes: []
+  });
+  const manager = new WebXRGamepadActionManager();
+
+  manager.update([firstInputState, secondInputState]);
+  manager.update([secondInputState]);
+
+  firstInputState.gamepad!.buttons[0] = {value: 0, pressed: false, touched: false} as GamepadButton;
+  const firstActionAfterTrim = manager.update([firstInputState])[0];
+  testCase.equal(firstActionAfterTrim?.wasPressed, false, 'inactive input source state is trimmed');
+  testCase.equal(
+    firstActionAfterTrim?.pressStarted,
+    false,
+    'trimmed source does not report stale release'
+  );
+
+  manager.reset();
+  secondInputState.gamepad!.buttons[0] = {value: 1, pressed: true, touched: true} as GamepadButton;
+  testCase.equal(
+    manager.update([secondInputState])[0]?.pressStarted,
+    true,
+    'global reset clears every input source'
+  );
+  testCase.end();
+});
+
+test('webxr#getWebXRGamepadButtonActionState compares standalone states', testCase => {
+  const inputState = makeWebXRInputState({
+    mapping: 'xr-standard',
+    buttons: [{value: 0.25, pressed: false, touched: false}],
+    axes: []
+  });
+  const gamepadState = getWebXRGamepadState(inputState)!;
+
+  const actionState = getWebXRGamepadButtonActionState(gamepadState, gamepadState.buttons[0]!, {
+    value: 0.75,
+    pressed: true,
+    touched: true
+  });
+
+  testCase.equal(actionState.inputState, inputState, 'keeps input-state identity');
+  testCase.equal(actionState.inputSource, inputState.inputSource, 'keeps input-source identity');
+  testCase.equal(actionState.gamepadState, gamepadState, 'keeps gamepad-state identity');
+  testCase.equal(actionState.button, gamepadState.buttons[0], 'keeps button-state identity');
+  testCase.deepEqual(
+    pickAction(actionState),
+    {
+      name: 'trigger',
+      value: 0.25,
+      previousValue: 0.75,
+      valueDelta: -0.5,
+      pressed: false,
+      wasPressed: true,
+      pressStarted: false,
+      pressEnded: true,
+      touched: false,
+      wasTouched: true,
+      touchStarted: false,
+      touchEnded: true
+    },
+    'compares standalone previous button state'
+  );
+  testCase.end();
+});
+
 function makeWebXRInputState(props: {
   mapping: GamepadMappingType | '';
   buttons: GamepadButtonInit[];
@@ -132,4 +315,34 @@ function makeGamepad(props: {
     timestamp: 0,
     vibrationActuator: null
   } as Gamepad;
+}
+
+function pickAction(actionState: {
+  name: unknown;
+  value: unknown;
+  previousValue: unknown;
+  valueDelta: unknown;
+  pressed: unknown;
+  wasPressed: unknown;
+  pressStarted: unknown;
+  pressEnded: unknown;
+  touched: unknown;
+  wasTouched: unknown;
+  touchStarted: unknown;
+  touchEnded: unknown;
+}): object {
+  return {
+    name: actionState.name,
+    value: actionState.value,
+    previousValue: actionState.previousValue,
+    valueDelta: actionState.valueDelta,
+    pressed: actionState.pressed,
+    wasPressed: actionState.wasPressed,
+    pressStarted: actionState.pressStarted,
+    pressEnded: actionState.pressEnded,
+    touched: actionState.touched,
+    wasTouched: actionState.wasTouched,
+    touchStarted: actionState.touchStarted,
+    touchEnded: actionState.touchEnded
+  };
 }

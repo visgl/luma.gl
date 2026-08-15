@@ -9,10 +9,14 @@
 
 For `xr-standard` mappings, the helper names the reserved indices: trigger, squeeze, touchpad, thumbstick, touchpad axes, and thumbstick axes. Nonstandard mappings keep generic `button-N` and `axis-N` names because their layout is runtime specific.
 
+`WebXRGamepadActionManager` keeps the previous frame's button states and reports transitions such as `pressStarted`, `pressEnded`, `touchStarted`, and `valueDelta`.
+
 ## Usage
 
 ```typescript
-import {getWebXRGamepadState} from '@luma.gl/experimental';
+import {WebXRGamepadActionManager, getWebXRGamepadState} from '@luma.gl/experimental';
+
+const gamepadActions = new WebXRGamepadActionManager();
 
 const inputStates = webXRManager.getInputState(xrFrame);
 for (const inputState of inputStates || []) {
@@ -20,6 +24,12 @@ for (const inputState of inputStates || []) {
   const trigger = gamepadState?.primaryTrigger?.value || 0;
   if (trigger > 0.25) {
     // Use analog trigger input for selection, locomotion, or UI.
+  }
+}
+
+for (const action of gamepadActions.update(inputStates)) {
+  if (action.name === 'trigger' && action.pressStarted) {
+    // Trigger was pressed this frame.
   }
 }
 ```
@@ -70,6 +80,40 @@ export type WebXRGamepadAxisState = {
 };
 ```
 
+### `WebXRGamepadPreviousButtonState`
+
+```ts
+export type WebXRGamepadPreviousButtonState = {
+  value: number;
+  pressed: boolean;
+  touched: boolean;
+};
+```
+
+### `WebXRGamepadButtonActionState`
+
+```ts
+export type WebXRGamepadButtonActionState = {
+  inputState: WebXRInputState;
+  inputSource: XRInputSource;
+  gamepadState: WebXRGamepadState;
+  button: WebXRGamepadButtonState;
+  index: number;
+  name: WebXRGamepadButtonName;
+  value: number;
+  previousValue: number;
+  valueDelta: number;
+  pressed: boolean;
+  wasPressed: boolean;
+  pressStarted: boolean;
+  pressEnded: boolean;
+  touched: boolean;
+  wasTouched: boolean;
+  touchStarted: boolean;
+  touchEnded: boolean;
+};
+```
+
 ### `WebXRGamepadState`
 
 ```ts
@@ -101,3 +145,19 @@ Returns a per-frame snapshot for the input state's gamepad, or `null` when the i
 ### `getWebXRGamepadStates(inputStates: readonly WebXRInputState[] | null): readonly WebXRGamepadState[]`
 
 Returns snapshots for all input states with gamepads.
+
+### `getWebXRGamepadButtonActionState(gamepadState, button, previousButton?): WebXRGamepadButtonActionState`
+
+Returns one button action state by comparing the current snapshot with an optional previous button state.
+
+### `WebXRGamepadActionManager`
+
+Tracks previous button state by `XRInputSource` identity.
+
+### `update(inputStates: readonly WebXRInputState[] | null): readonly WebXRGamepadButtonActionState[]`
+
+Snapshots all current gamepads and returns one action state per button. Input sources missing from the current frame are removed from the previous-state cache.
+
+### `reset(inputSource?: XRInputSource): void`
+
+Clears the previous-state cache for one input source, or for every tracked input source when omitted.

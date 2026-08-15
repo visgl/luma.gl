@@ -50,6 +50,32 @@ export type WebXRGamepadState = {
   touched: readonly WebXRGamepadButtonState[];
 };
 
+export type WebXRGamepadButtonActionState = {
+  inputState: WebXRInputState;
+  inputSource: XRInputSource;
+  gamepadState: WebXRGamepadState;
+  button: WebXRGamepadButtonState;
+  index: number;
+  name: WebXRGamepadButtonName;
+  value: number;
+  previousValue: number;
+  valueDelta: number;
+  pressed: boolean;
+  wasPressed: boolean;
+  pressStarted: boolean;
+  pressEnded: boolean;
+  touched: boolean;
+  wasTouched: boolean;
+  touchStarted: boolean;
+  touchEnded: boolean;
+};
+
+export type WebXRGamepadPreviousButtonState = {
+  value: number;
+  pressed: boolean;
+  touched: boolean;
+};
+
 const XR_STANDARD_BUTTON_NAMES: readonly WebXRGamepadButtonName[] = [
   'trigger',
   'squeeze',
@@ -63,6 +89,55 @@ const XR_STANDARD_AXIS_NAMES: readonly WebXRGamepadAxisName[] = [
   'thumbstick-x',
   'thumbstick-y'
 ];
+
+/** Tracks per-frame WebXR gamepad button action transitions. */
+export class WebXRGamepadActionManager {
+  private _previousButtonsByInputSource = new Map<
+    XRInputSource,
+    Map<number, WebXRGamepadPreviousButtonState>
+  >();
+
+  update(inputStates: readonly WebXRInputState[] | null): readonly WebXRGamepadButtonActionState[] {
+    const gamepadStates = getWebXRGamepadStates(inputStates);
+    const activeInputSources = new Set<XRInputSource>();
+    const actionStates: WebXRGamepadButtonActionState[] = [];
+
+    for (const gamepadState of gamepadStates) {
+      activeInputSources.add(gamepadState.inputSource);
+      const previousButtons =
+        this._previousButtonsByInputSource.get(gamepadState.inputSource) || new Map();
+      const nextButtons = new Map<number, WebXRGamepadPreviousButtonState>();
+
+      for (const button of gamepadState.buttons) {
+        const previousButton = previousButtons.get(button.index);
+        actionStates.push(getWebXRGamepadButtonActionState(gamepadState, button, previousButton));
+        nextButtons.set(button.index, {
+          value: button.value,
+          pressed: button.pressed,
+          touched: button.touched
+        });
+      }
+
+      this._previousButtonsByInputSource.set(gamepadState.inputSource, nextButtons);
+    }
+
+    for (const inputSource of this._previousButtonsByInputSource.keys()) {
+      if (!activeInputSources.has(inputSource)) {
+        this._previousButtonsByInputSource.delete(inputSource);
+      }
+    }
+
+    return actionStates;
+  }
+
+  reset(inputSource?: XRInputSource): void {
+    if (inputSource) {
+      this._previousButtonsByInputSource.delete(inputSource);
+    } else {
+      this._previousButtonsByInputSource.clear();
+    }
+  }
+}
 
 /** Snapshots the live XR gamepad attached to one WebXR input state. */
 export function getWebXRGamepadState(inputState: WebXRInputState): WebXRGamepadState | null {
@@ -104,6 +179,36 @@ export function getWebXRGamepadStates(
   return (inputStates || [])
     .map(inputState => getWebXRGamepadState(inputState))
     .filter((gamepadState): gamepadState is WebXRGamepadState => Boolean(gamepadState));
+}
+
+export function getWebXRGamepadButtonActionState(
+  gamepadState: WebXRGamepadState,
+  button: WebXRGamepadButtonState,
+  previousButton: WebXRGamepadPreviousButtonState | null = null
+): WebXRGamepadButtonActionState {
+  const previousValue = previousButton?.value ?? 0;
+  const wasPressed = previousButton?.pressed ?? false;
+  const wasTouched = previousButton?.touched ?? false;
+
+  return {
+    inputState: gamepadState.inputState,
+    inputSource: gamepadState.inputSource,
+    gamepadState,
+    button,
+    index: button.index,
+    name: button.name,
+    value: button.value,
+    previousValue,
+    valueDelta: button.value - previousValue,
+    pressed: button.pressed,
+    wasPressed,
+    pressStarted: button.pressed && !wasPressed,
+    pressEnded: !button.pressed && wasPressed,
+    touched: button.touched,
+    wasTouched,
+    touchStarted: button.touched && !wasTouched,
+    touchEnded: !button.touched && wasTouched
+  };
 }
 
 function getWebXRGamepadButtonState(

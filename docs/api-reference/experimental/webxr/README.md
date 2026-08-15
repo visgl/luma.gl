@@ -16,7 +16,7 @@
 - [`WebXRCompositionLayerManager`](/docs/api-reference/experimental/webxr/webxr-composition-layer-manager) creates WebGL quad, cylinder, equirect, and cube composition layers, manages common layer controls, and resolves borrowed subimage framebuffers for rendering.
 - [`WebXRDepthSensingManager`](/docs/api-reference/experimental/webxr/webxr-depth-sensing-manager) resolves WebXR depth sensing state from CPU buffers or borrowed WebGL depth textures.
 - [`WebXRDOMOverlayManager`](/docs/api-reference/experimental/webxr/webxr-dom-overlay-manager) tracks DOM overlay state and suppresses XR select events from overlay UI.
-- [`getWebXRGamepadState`](/docs/api-reference/experimental/webxr/webxr-gamepad) snapshots live XR gamepad buttons and axes into stable per-frame state.
+- [`getWebXRGamepadState`](/docs/api-reference/experimental/webxr/webxr-gamepad) snapshots live XR gamepad buttons and axes into stable per-frame state, with optional per-frame action transitions through `WebXRGamepadActionManager`.
 - [`getWebXRHandPinch`](/docs/api-reference/experimental/webxr/webxr-hand-gestures) derives simple thumb-to-finger pinch gestures from tracked hand joints.
 - [`WebXRHandTrackingManager`](/docs/api-reference/experimental/webxr/webxr-hand-tracking-manager) resolves articulated hand joint matrices and radii from WebXR hand input sources.
 - [`WebXRImageTrackingManager`](/docs/api-reference/experimental/webxr/webxr-image-tracking-manager) resolves AR tracked-image poses, tracking states, measured widths, and added/updated/removed frame diffs.
