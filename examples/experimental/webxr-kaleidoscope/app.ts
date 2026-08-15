@@ -6,6 +6,7 @@ import type {Device, Framebuffer, NumberArray, Texture, VariableShaderType} from
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Geometry, Model, OrbitControls} from '@luma.gl/engine';
+import type {NumberArray2} from '@math.gl/core';
 import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
@@ -834,11 +835,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const [strafe, forward] = locomotionState.move;
-    this.applyXRSceneOffset([
-      strafe * XR_LOCOMOTION_SPEED * deltaSeconds,
-      0,
-      -forward * XR_LOCOMOTION_SPEED * deltaSeconds
-    ]);
+    this.applyXRSceneOffset(
+      getXRLocomotionSceneOffset([strafe, forward], deltaSeconds, this.xrSceneYaw)
+    );
   }
 
   private preparePortal(options: {
@@ -1156,6 +1155,27 @@ export function applyXRSnapTurn(
   snapTurnRadians = XR_SNAP_TURN_RADIANS
 ): number {
   return sceneYaw + snapTurn * snapTurnRadians;
+}
+
+export function getXRLocomotionSceneOffset(
+  move: NumberArray2,
+  deltaSeconds: number,
+  sceneYaw = 0,
+  speed = XR_LOCOMOTION_SPEED
+): [number, number, number] {
+  const localX = move[0] * speed * deltaSeconds;
+  const localZ = -move[1] * speed * deltaSeconds;
+  const cosine = Math.cos(sceneYaw);
+  const sine = Math.sin(sceneYaw);
+  return [
+    normalizeXRSceneOffsetComponent(localX * cosine - localZ * sine),
+    0,
+    normalizeXRSceneOffsetComponent(localX * sine + localZ * cosine)
+  ];
+}
+
+function normalizeXRSceneOffsetComponent(value: number): number {
+  return Math.abs(value) < 1e-12 ? 0 : value;
 }
 
 function makeSpatialPortalGeometry(): Geometry {

@@ -8,7 +8,8 @@ import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 import {
   applyXRSnapTurn,
-  applyXRSceneOffset
+  applyXRSceneOffset,
+  getXRLocomotionSceneOffset
 } from '../../examples/experimental/webxr-kaleidoscope/app';
 
 const APPLICATION_PATH = path.join(
@@ -576,7 +577,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(locomotionMethod).toContain('duration: 30');
     expect(locomotionMethod).toContain('this._lastXRSnapTurn = locomotionState.snapTurn');
     expect(locomotionMethod).toContain('Math.min(0.05, Math.max(0,');
-    expect(locomotionMethod).toContain('this.applyXRSceneOffset([');
+    expect(locomotionMethod).toContain('getXRLocomotionSceneOffset(');
+    expect(locomotionMethod).toContain('[strafe, forward], deltaSeconds, this.xrSceneYaw');
     expect(updateModelMethod).toContain('translate(this.xrSceneOffset)');
     expect(updateModelMethod).toContain('rotateY(this.xrSceneYaw)');
     expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
@@ -612,6 +614,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applyXRSnapTurn(0.25, 1, 0.5)).toBe(0.75);
     expect(applyXRSnapTurn(0.25, -1, 0.5)).toBe(-0.25);
     expect(applyXRSnapTurn(0.25, 0, 0.5)).toBe(0.25);
+    expect(getXRLocomotionSceneOffset([0, 1], 1, 0, 2)).toEqual([0, 0, -2]);
+    expect(getXRLocomotionSceneOffset([0, 1], 1, Math.PI / 2, 2)).toEqual([2, 0, 0]);
+    expect(getXRLocomotionSceneOffset([1, 0], 0.5, Math.PI / 2, 2)).toEqual([0, 0, 1]);
   });
 
   test('requests isolated XR-compatible website devices while preserving preview fallback', () => {
