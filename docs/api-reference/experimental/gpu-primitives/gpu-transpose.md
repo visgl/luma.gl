@@ -15,6 +15,14 @@ to reduce workgroup-memory bank conflicts, and both reads and writes remain coal
 the primitive useful as a data-layout building block for multidimensional FFTs, tensor-like
 algorithms, and tiled numerical kernels without introducing a tensor abstraction.
 
+## When to use
+
+Use `GPUTranspose` when a rectangular scalar field already lives in graph buffers and a following
+GPU stage needs the axes exchanged—for example, between row and column transforms or before a
+layout-sensitive tiled kernel. For tiny matrices, one-off CPU-owned data, or algorithms that can
+consume the original strides directly, avoiding the extra full-buffer read and write is usually
+cheaper than transposing.
+
 ## Usage
 
 ```ts
