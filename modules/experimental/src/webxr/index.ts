@@ -153,12 +153,15 @@ export type {
   WebXRInputGrip,
   WebXRInputRay,
   WebXRInputRayPlaneIntersection,
-  WebXRInputRayPlaneIntersectionProps
+  WebXRInputRayPlaneIntersectionProps,
+  WebXRInputSourceKind,
+  WebXRInputSourceState
 } from './webxr-input';
 export {
   getWebXRInputGrip,
   getWebXRInputRay,
-  getWebXRInputRayPlaneIntersection
+  getWebXRInputRayPlaneIntersection,
+  getWebXRInputSourceState
 } from './webxr-input';
 export type {
   WebXRReferenceSpaceResetState,

@@ -20,6 +20,24 @@ export type WebXRInputGrip = {
   matrix: Float32Array;
 };
 
+export type WebXRInputSourceKind = 'controller' | 'hand' | 'screen' | 'gaze' | 'unknown';
+
+export type WebXRInputSourceState = {
+  inputState: WebXRInputState;
+  kind: WebXRInputSourceKind;
+  primaryProfile: string | null;
+  targetRayMode: XRTargetRayMode;
+  handedness: XRHandedness;
+  isController: boolean;
+  isHand: boolean;
+  isScreen: boolean;
+  isGaze: boolean;
+  usesTrackedPointer: boolean;
+  hasTargetRay: boolean;
+  hasGrip: boolean;
+  hasGamepad: boolean;
+};
+
 export type WebXRInputRayPlaneIntersectionProps = {
   planePoint?: NumberArray3;
   planeNormal?: NumberArray3;
@@ -61,6 +79,40 @@ export function getWebXRInputGrip(inputState: WebXRInputState): WebXRInputGrip |
     inputState,
     position: [matrix[12], matrix[13], matrix[14]],
     matrix
+  };
+}
+
+export function getWebXRInputSourceState(inputState: WebXRInputState): WebXRInputSourceState {
+  const primaryProfile = inputState.profiles[0] ?? null;
+  const isHand = Boolean(inputState.hand);
+  const isScreen = inputState.targetRayMode === 'screen';
+  const isGaze = inputState.targetRayMode === 'gaze';
+  const usesTrackedPointer = inputState.targetRayMode === 'tracked-pointer';
+  const isController = usesTrackedPointer && !isHand;
+  const kind: WebXRInputSourceKind = isHand
+    ? 'hand'
+    : isController
+      ? 'controller'
+      : isScreen
+        ? 'screen'
+        : isGaze
+          ? 'gaze'
+          : 'unknown';
+
+  return {
+    inputState,
+    kind,
+    primaryProfile,
+    targetRayMode: inputState.targetRayMode,
+    handedness: inputState.handedness,
+    isController,
+    isHand,
+    isScreen,
+    isGaze,
+    usesTrackedPointer,
+    hasTargetRay: Boolean(inputState.targetRayMatrix),
+    hasGrip: Boolean(inputState.gripMatrix),
+    hasGamepad: Boolean(inputState.gamepad)
   };
 }
 

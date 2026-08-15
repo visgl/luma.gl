@@ -6,7 +6,8 @@ import test from 'test/utils/vitest-tape';
 import {
   getWebXRInputGrip,
   getWebXRInputRay,
-  getWebXRInputRayPlaneIntersection
+  getWebXRInputRayPlaneIntersection,
+  getWebXRInputSourceState
 } from '../../src/webxr/webxr-input';
 import type {WebXRInputState} from '../../src/webxr/webxr-manager';
 
@@ -50,6 +51,57 @@ test('webxr#getWebXRInputGrip resolves tracked controller grip poses', testCase 
     null,
     'missing grip matrices do not produce grips'
   );
+  testCase.end();
+});
+
+test('webxr#getWebXRInputSourceState classifies input source capabilities', testCase => {
+  const targetRayMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 2, 3, 1]);
+  const gripMatrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 3, 2, 1, 1]);
+  const controllerState = getWebXRInputSourceState(
+    makeMockWebXRInputState(targetRayMatrix, gripMatrix, {
+      gamepad: {} as Gamepad,
+      profiles: ['oculus-touch-v3', 'generic-trigger-squeeze-thumbstick']
+    })
+  );
+
+  testCase.equal(controllerState.kind, 'controller', 'tracked pointer without hand is controller');
+  testCase.equal(controllerState.primaryProfile, 'oculus-touch-v3', 'keeps primary profile');
+  testCase.equal(controllerState.isController, true, 'marks controllers');
+  testCase.equal(controllerState.usesTrackedPointer, true, 'marks tracked pointers');
+  testCase.equal(controllerState.hasTargetRay, true, 'detects target ray matrices');
+  testCase.equal(controllerState.hasGrip, true, 'detects grip matrices');
+  testCase.equal(controllerState.hasGamepad, true, 'detects gamepads');
+
+  const handState = getWebXRInputSourceState(
+    makeMockWebXRInputState(targetRayMatrix, null, {
+      hand: {} as XRHand,
+      profiles: ['generic-hand-select']
+    })
+  );
+  testCase.equal(handState.kind, 'hand', 'hand sources take precedence over tracked pointers');
+  testCase.equal(handState.isHand, true, 'marks hands');
+  testCase.equal(handState.isController, false, 'hands are not classified as controllers');
+
+  const screenState = getWebXRInputSourceState(
+    makeMockWebXRInputState(null, null, {
+      handedness: 'none',
+      targetRayMode: 'screen',
+      profiles: ['generic-touchscreen']
+    })
+  );
+  testCase.equal(screenState.kind, 'screen', 'screen target rays classify as screen input');
+  testCase.equal(screenState.isScreen, true, 'marks screen input');
+  testCase.equal(screenState.hasTargetRay, false, 'missing target rays are reflected');
+
+  const gazeState = getWebXRInputSourceState(
+    makeMockWebXRInputState(null, null, {
+      targetRayMode: 'gaze',
+      profiles: []
+    })
+  );
+  testCase.equal(gazeState.kind, 'gaze', 'gaze target rays classify as gaze input');
+  testCase.equal(gazeState.primaryProfile, null, 'empty profile lists return null');
+  testCase.equal(gazeState.isGaze, true, 'marks gaze input');
   testCase.end();
 });
 
@@ -120,15 +172,17 @@ test('webxr#getWebXRInputRayPlaneIntersection rejects unusable hits', testCase =
 
 function makeMockWebXRInputState(
   targetRayMatrix: Float32Array | null,
-  gripMatrix: Float32Array | null = null
+  gripMatrix: Float32Array | null = null,
+  props: Partial<WebXRInputState> = {}
 ): WebXRInputState {
   return {
     inputSource: {} as XRInputSource,
     index: 0,
-    handedness: 'right',
-    targetRayMode: 'tracked-pointer',
-    profiles: [],
-    gamepad: null,
+    handedness: props.handedness ?? 'right',
+    targetRayMode: props.targetRayMode ?? 'tracked-pointer',
+    profiles: props.profiles ?? [],
+    gamepad: props.gamepad ?? null,
+    hand: props.hand ?? null,
     targetRayPose: null,
     targetRayMatrix,
     gripPose: null,
