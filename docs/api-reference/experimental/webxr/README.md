@@ -27,7 +27,7 @@
 - [`WebXRMediaLayerManager`](/docs/api-reference/experimental/webxr/webxr-media-layer-manager) creates video-backed quad, cylinder, and equirect composition layers through the XR compositor.
 - [`WebXRMeshDetectionManager`](/docs/api-reference/experimental/webxr/webxr-mesh-detection-manager) resolves detected AR mesh poses, vertex/index buffers, labels, and added/updated/removed frame diffs.
 - [`WebXRPlaneDetectionManager`](/docs/api-reference/experimental/webxr/webxr-plane-detection-manager) resolves detected AR plane poses, polygons, labels, and added/updated/removed frame diffs.
-- [`WebXRReferenceSpaceManager`](/docs/api-reference/experimental/webxr/webxr-reference-space-manager) tracks reference-space reset events and forwards offset reference-space creation.
+- [`WebXRReferenceSpaceManager`](/docs/api-reference/experimental/webxr/webxr-reference-space-manager) tracks reference-space reset events, forwards offset reference-space creation, and builds bounded teleport offsets.
 - [`WebXRRenderStateManager`](/docs/api-reference/experimental/webxr/webxr-render-state-manager) updates and snapshots WebXR render-state clip planes and inline field of view.
 - [`mergeWebXRSessionInit`](/docs/api-reference/experimental/webxr/webxr-session-init) composes required and optional feature lists from multiple WebXR helper modules.
 - [`WebXRSessionStateManager`](/docs/api-reference/experimental/webxr/webxr-session-state-manager) tracks session visibility, frame rates, and optional target frame-rate requests.

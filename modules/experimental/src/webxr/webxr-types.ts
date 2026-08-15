@@ -353,6 +353,12 @@ declare global {
     readonly inverse: XRRigidTransform;
   }
 
+  interface XRRigidTransformConstructor {
+    new (position?: DOMPointInit, orientation?: DOMPointInit): XRRigidTransform;
+  }
+
+  var XRRigidTransform: XRRigidTransformConstructor | undefined;
+
   interface XRCamera {
     readonly width: number;
     readonly height: number;
