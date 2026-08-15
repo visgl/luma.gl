@@ -60,6 +60,7 @@ const animationLoop = new AnimationLoop({
 - Resolves per-frame input-source target-ray and grip poses in the same reference space as rendering.
 - Tracks active `selectstart`/`selectend` state per input source so examples can build controller rays, pointer selection, and locomotion helpers without subscribing to raw session events.
 - Provides `getWebXRInputRay(inputState)` for normalized world-space target-ray origin and direction extraction.
+- Provides `getWebXRInputRayPlaneIntersection(ray, props)` for floor, wall, and placement plane hits used by teleport and pointer-selection examples.
 - Never destroys browser-owned WebGL framebuffers or WebGPU compositor textures.
 - Raw AR camera textures remain WebGL-only; WebGPU AR can use an application-provided procedural or video fallback.
 
@@ -144,6 +145,16 @@ export type WebXRInputRay = {
 };
 ```
 
+### `WebXRInputRayPlaneIntersection`
+
+```ts
+export type WebXRInputRayPlaneIntersection = {
+  ray: WebXRInputRay;
+  point: NumberArray3;
+  distance: number;
+};
+```
+
 ## Methods
 
 ### `constructor(device: Device, props?: WebXRManagerProps)`
@@ -165,6 +176,10 @@ Resolves input source state for an active XR frame. Returns `null` when no sessi
 ### `getWebXRInputRay(inputState: WebXRInputState): WebXRInputRay | null`
 
 Returns a normalized world-space target ray for an input state, or `null` when the input source has no target-ray pose for the frame.
+
+### `getWebXRInputRayPlaneIntersection(ray: WebXRInputRay, props?: WebXRInputRayPlaneIntersectionProps): WebXRInputRayPlaneIntersection | null`
+
+Returns the forward intersection between an input ray and a plane. The default plane is `y=0`, suitable for simple floor reticles and teleport candidates.
 
 ### `clearSession(): void`
 
