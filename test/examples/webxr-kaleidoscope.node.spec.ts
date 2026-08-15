@@ -88,10 +88,15 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain("requiredFeatures: ['webgpu']");
     expect(applicationSource).toContain(
-      "optionalFeatures: ['anchors', 'camera-access', 'hit-test', 'local-floor']"
+      "optionalFeatures: ['anchors', 'camera-access', 'depth-sensing', 'hit-test', 'local-floor']"
     );
     expect(applicationSource).toContain(
-      "sessionMode === 'immersive-ar' ? ['anchors', 'hit-test', 'local-floor'] : ['local-floor']"
+      "? ['anchors', 'depth-sensing', 'hit-test', 'local-floor']"
+    );
+    expect(applicationSource).toContain('depthSensing: AR_DEPTH_SENSING');
+    expect(applicationSource).toContain("usagePreference: ['gpu-optimized', 'cpu-optimized']");
+    expect(applicationSource).toContain(
+      "dataFormatPreference: ['luminance-alpha', 'float32', 'unsigned-short']"
     );
     expect(applicationSource).toMatch(
       /sessionMode\s*===\s*'immersive-ar'\s*&&\s*this\.device\.type\s*===\s*'webgl'/

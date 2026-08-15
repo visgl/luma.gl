@@ -9,6 +9,17 @@ export {WebXRAnimationFrameProvider} from './webxr-animation-frame-provider';
 export type {WebXRCameraTextureProps} from './webxr-camera-texture';
 export {WebXRCameraTexture} from './webxr-camera-texture';
 export type {
+  WebXRDepthSensingManagerProps,
+  WebXRDepthSensingSessionInitProps,
+  WebXRDepthState,
+  WebXRDepthViewState
+} from './webxr-depth-sensing';
+export {
+  getWebXRDepthSensingSessionInit,
+  getWebXRDepthTextureFormat,
+  WebXRDepthSensingManager
+} from './webxr-depth-sensing';
+export type {
   WebXRHitTestManagerProps,
   WebXRHitTestResult,
   WebXRHitTestState

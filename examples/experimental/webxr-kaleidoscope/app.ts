@@ -32,6 +32,11 @@ const RIBBON_SEGMENT_COUNT = 34;
 const PARTICLE_COUNT = 220;
 const PORTAL_DEPTH = 10.4;
 const CAMERA_TARGET: [number, number, number] = [0, 0, -2.6];
+const AR_DEPTH_SENSING: XRDepthStateInit = {
+  usagePreference: ['gpu-optimized', 'cpu-optimized'],
+  dataFormatPreference: ['luminance-alpha', 'float32', 'unsigned-short'],
+  depthTypeRequest: ['smooth', 'raw']
+};
 
 type AppUniforms = {
   modelViewProjectionMatrix: NumberArray;
@@ -816,12 +821,18 @@ function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: strin
     return {
       requiredFeatures: ['webgpu'],
       optionalFeatures:
-        sessionMode === 'immersive-ar' ? ['anchors', 'hit-test', 'local-floor'] : ['local-floor']
+        sessionMode === 'immersive-ar'
+          ? ['anchors', 'depth-sensing', 'hit-test', 'local-floor']
+          : ['local-floor'],
+      ...(sessionMode === 'immersive-ar' ? {depthSensing: AR_DEPTH_SENSING} : {})
     };
   }
 
   return sessionMode === 'immersive-ar'
-    ? {optionalFeatures: ['anchors', 'camera-access', 'hit-test', 'local-floor']}
+    ? {
+        optionalFeatures: ['anchors', 'camera-access', 'depth-sensing', 'hit-test', 'local-floor'],
+        depthSensing: AR_DEPTH_SENSING
+      }
     : {optionalFeatures: ['local-floor']};
 }
 

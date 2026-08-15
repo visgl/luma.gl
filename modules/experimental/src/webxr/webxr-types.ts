@@ -31,6 +31,10 @@ declare global {
   type XRHandedness = 'none' | 'left' | 'right';
   type XRTargetRayMode = 'gaze' | 'tracked-pointer' | 'screen';
   type XRHitTestTrackableType = 'point' | 'plane' | 'mesh';
+  type XRDepthDataFormat = 'luminance-alpha' | 'float32' | 'unsigned-short';
+  type XRDepthType = 'raw' | 'smooth';
+  type XRDepthUsage = 'cpu-optimized' | 'gpu-optimized';
+  type XRTextureType = number;
   type XRFrameRequestCallback = (time: DOMHighResTimeStamp, frame: XRFrame) => void;
 
   interface XRSystem extends EventTarget {
@@ -41,6 +45,14 @@ declare global {
   interface XRSessionInit {
     optionalFeatures?: string[];
     requiredFeatures?: string[];
+    depthSensing?: XRDepthStateInit;
+  }
+
+  interface XRDepthStateInit {
+    usagePreference: XRDepthUsage[];
+    dataFormatPreference: XRDepthDataFormat[];
+    depthTypeRequest?: XRDepthType[];
+    matchDepthView?: boolean;
   }
 
   interface XRRenderStateInit {
@@ -51,12 +63,18 @@ declare global {
   interface XRSession extends EventTarget {
     readonly enabledFeatures?: readonly string[];
     readonly inputSources: XRInputSourceArray;
+    readonly depthUsage?: XRDepthUsage;
+    readonly depthDataFormat?: XRDepthDataFormat;
+    readonly depthType?: XRDepthType | null;
+    readonly depthActive?: boolean;
 
     cancelAnimationFrame(animationFrameId: number): void;
     end(): Promise<void>;
+    pauseDepthSensing?(): void;
     requestAnimationFrame(callback: XRFrameRequestCallback): number;
     requestHitTestSource?(options: XRHitTestOptionsInit): Promise<XRHitTestSource | null>;
     requestReferenceSpace(type: XRReferenceSpaceType): Promise<XRReferenceSpace>;
+    resumeDepthSensing?(): void;
     updateRenderState(renderStateInit?: XRRenderStateInit): Promise<void>;
   }
 
@@ -125,10 +143,29 @@ declare global {
     delete(): void;
   }
 
+  interface XRDepthInformation {
+    readonly width: number;
+    readonly height: number;
+    readonly normDepthBufferFromNormView: XRRigidTransform;
+    readonly rawValueToMeters: number;
+  }
+
+  interface XRCPUDepthInformation extends XRDepthInformation {
+    readonly data: ArrayBuffer;
+    getDepthInMeters(x: number, y: number): number;
+  }
+
+  interface XRWebGLDepthInformation extends XRDepthInformation {
+    readonly texture: WebGLTexture;
+    readonly textureType: XRTextureType;
+    readonly imageIndex?: number;
+  }
+
   interface XRFrame {
     readonly session: XRSession;
     readonly trackedAnchors?: ReadonlySet<XRAnchor>;
     createAnchor?(pose: XRRigidTransform, space: XRSpace): Promise<XRAnchor>;
+    getDepthInformation?(view: XRView): XRCPUDepthInformation | null;
     getHitTestResults?(hitTestSource: XRHitTestSource): XRHitTestResult[];
     getPose(space: XRSpace, baseSpace: XRSpace): XRPose | undefined;
     getViewerPose(referenceSpace: XRReferenceSpace): XRViewerPose | undefined;
@@ -208,6 +245,7 @@ declare global {
     constructor(session: XRSession, context: WebGLRenderingContext | WebGL2RenderingContext);
 
     getCameraImage(camera: XRCamera): WebGLTexture | null;
+    getDepthInformation?(view: XRView): XRWebGLDepthInformation | null;
   }
 
   class XRGPUBinding {
@@ -218,6 +256,8 @@ declare global {
     getViewSubImage(layer: XRProjectionLayer, view: XRView): XRGPUSubImage;
   }
 }
+
+export type WebXRDepthBinding = Pick<XRWebGLBinding, 'getDepthInformation'>;
 
 /** Experimental v10 raw-camera subset required by WebXRCameraTexture. */
 export type WebXRRawCameraBinding = Pick<XRWebGLBinding, 'getCameraImage'>;

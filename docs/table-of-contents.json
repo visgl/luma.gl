@@ -420,6 +420,7 @@
               "api-reference/experimental/webxr/README",
               "api-reference/experimental/webxr/webxr-anchor-manager",
               "api-reference/experimental/webxr/webxr-camera-texture",
+              "api-reference/experimental/webxr/webxr-depth-sensing-manager",
               "api-reference/experimental/webxr/webxr-hit-test-manager",
               "api-reference/experimental/webxr/webxr-manager"
             ]
