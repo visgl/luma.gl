@@ -6,7 +6,10 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
-import {applyXRSceneOffset} from '../../examples/experimental/webxr-kaleidoscope/app';
+import {
+  applyXRSnapTurn,
+  applyXRSceneOffset
+} from '../../examples/experimental/webxr-kaleidoscope/app';
 
 const APPLICATION_PATH = path.join(
   process.cwd(),
@@ -531,9 +534,12 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain('readonly xrSceneOffset: [number, number, number]');
     expect(applicationSource).toContain('const XR_LOCOMOTION_SPEED = 1.4');
+    expect(applicationSource).toContain('const XR_SNAP_TURN_RADIANS = Math.PI / 8');
+    expect(applicationSource).toContain('xrSceneYaw = 0');
     expect(applicationSource).toContain(
       'private _lastXRLocomotionTimeMilliseconds: number | null = null'
     );
+    expect(applicationSource).toContain('private _lastXRSnapTurn = 0');
     expect(applicationSource).toContain('new Map<XRInputSource, [number, number, number]>()');
     expect(applicationSource).toContain('new Map<XRInputSource, WebXRInputState>()');
     expect(applicationSource).not.toContain(
@@ -558,9 +564,21 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(locomotionMethod).toContain('getWebXRLocomotionState(inputState');
     expect(locomotionMethod).toContain('deadzone: 0.22');
     expect(locomotionMethod).toContain('snapTurnThreshold: 0.86');
+    expect(locomotionMethod).toContain('locomotionState.snapTurn && this._lastXRSnapTurn === 0');
+    expect(locomotionMethod).toContain(
+      'this.xrSceneYaw = applyXRSnapTurn(this.xrSceneYaw, locomotionState.snapTurn)'
+    );
+    expect(locomotionMethod).toContain('locomotionState.turnInputState');
+    expect(locomotionMethod).toContain(
+      'void pulseWebXRInputHaptics(locomotionState.turnInputState'
+    );
+    expect(locomotionMethod).toContain('intensity: 0.35');
+    expect(locomotionMethod).toContain('duration: 30');
+    expect(locomotionMethod).toContain('this._lastXRSnapTurn = locomotionState.snapTurn');
     expect(locomotionMethod).toContain('Math.min(0.05, Math.max(0,');
     expect(locomotionMethod).toContain('this.applyXRSceneOffset([');
     expect(updateModelMethod).toContain('translate(this.xrSceneOffset)');
+    expect(updateModelMethod).toContain('rotateY(this.xrSceneYaw)');
     expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
     expect(teleportMethod).toContain('getWebXRBoundsState(this.webXRManager.referenceSpace)');
     expect(teleportMethod).toContain('!isPointInWebXRBounds(floorHit, boundsState.bounds)');
@@ -579,7 +597,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       "session?.removeEventListener('squeezeend', this._xrSqueezeEndListener)"
     );
     expect(clearMethod).toContain('this.xrSceneOffset[0] = 0');
+    expect(clearMethod).toContain('this.xrSceneYaw = 0');
     expect(clearMethod).toContain('this._lastXRLocomotionTimeMilliseconds = null');
+    expect(clearMethod).toContain('this._lastXRSnapTurn = 0');
     expect(clearMethod).toContain('this._floorHitByInputSource.clear()');
     expect(clearMethod).toContain('this._inputStateByInputSource.clear()');
     expect(applicationSource).toContain(
@@ -589,6 +609,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     const sceneOffset: [number, number, number] = [1, 2, 3];
     expect(applyXRSceneOffset(sceneOffset, [-0.5, 0, 1.25])).toBe(sceneOffset);
     expect(sceneOffset).toEqual([0.5, 2, 4.25]);
+    expect(applyXRSnapTurn(0.25, 1, 0.5)).toBe(0.75);
+    expect(applyXRSnapTurn(0.25, -1, 0.5)).toBe(-0.25);
+    expect(applyXRSnapTurn(0.25, 0, 0.5)).toBe(0.25);
   });
 
   test('requests isolated XR-compatible website devices while preserving preview fallback', () => {

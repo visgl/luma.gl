@@ -55,6 +55,7 @@ const PARTICLE_COUNT = 220;
 const PORTAL_DEPTH = 10.4;
 const CAMERA_TARGET: [number, number, number] = [0, 0, -2.6];
 const XR_LOCOMOTION_SPEED = 1.4;
+const XR_SNAP_TURN_RADIANS = Math.PI / 8;
 const AR_DEPTH_SENSING: XRDepthStateInit = {
   usagePreference: ['gpu-optimized', 'cpu-optimized'],
   dataFormatPreference: ['luminance-alpha', 'float32', 'unsigned-short'],
@@ -425,6 +426,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly controllerReticleMatrix = new Matrix4();
   readonly handJointMatrix = new Matrix4();
   readonly xrSceneOffset: [number, number, number] = [0, 0, 0];
+  xrSceneYaw = 0;
   readonly viewMatrix = new Matrix4().lookAt({
     eye: [0.32, 0.24, 4.4],
     center: CAMERA_TARGET
@@ -439,6 +441,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private _floorHitByInputSource = new Map<XRInputSource, [number, number, number]>();
   private _inputStateByInputSource = new Map<XRInputSource, WebXRInputState>();
   private _lastXRLocomotionTimeMilliseconds: number | null = null;
+  private _lastXRSnapTurn = 0;
   private _xrSessionEndListener = () => this._clearXRSession();
   private _xrSelectEndListener = (event: Event) =>
     this.teleportToInputSource((event as XRInputSourceEvent).inputSource);
@@ -815,6 +818,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       deadzone: 0.22,
       snapTurnThreshold: 0.86
     });
+    if (locomotionState.snapTurn && this._lastXRSnapTurn === 0) {
+      this.xrSceneYaw = applyXRSnapTurn(this.xrSceneYaw, locomotionState.snapTurn);
+      if (locomotionState.turnInputState) {
+        void pulseWebXRInputHaptics(locomotionState.turnInputState, {
+          intensity: 0.35,
+          duration: 30
+        });
+      }
+    }
+    this._lastXRSnapTurn = locomotionState.snapTurn;
+
     if (!locomotionState.moveActive) {
       return;
     }
@@ -976,6 +990,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       this.modelMatrix
         .translate(this.xrSceneOffset)
+        .rotateY(this.xrSceneYaw)
         .translate([0, 0.12, -2.15])
         .scale([0.88, 0.88, 0.88])
         .rotateZ(Math.sin(time * 0.2) * 0.055)
@@ -1057,7 +1072,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.xrSceneOffset[0] = 0;
     this.xrSceneOffset[1] = 0;
     this.xrSceneOffset[2] = 0;
+    this.xrSceneYaw = 0;
     this._lastXRLocomotionTimeMilliseconds = null;
+    this._lastXRSnapTurn = 0;
     this._floorHitByInputSource.clear();
     this._inputStateByInputSource.clear();
     this.cameraTexture?.destroy();
@@ -1131,6 +1148,14 @@ export function applyXRSceneOffset(
   sceneOffset[1] += offset[1];
   sceneOffset[2] += offset[2];
   return sceneOffset;
+}
+
+export function applyXRSnapTurn(
+  sceneYaw: number,
+  snapTurn: -1 | 0 | 1,
+  snapTurnRadians = XR_SNAP_TURN_RADIANS
+): number {
+  return sceneYaw + snapTurn * snapTurnRadians;
 }
 
 function makeSpatialPortalGeometry(): Geometry {
