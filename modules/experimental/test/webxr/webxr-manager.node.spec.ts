@@ -23,6 +23,7 @@ type MockWebGPUDevice = Device & {
   createdFramebuffers: MockFramebuffer[];
 };
 type MockXRSession = XRSession & {
+  inputSources: XRInputSource[];
   updatedBaseLayer: XRWebGLLayer | null;
   updatedLayers: XRProjectionLayer[] | null;
 };
@@ -437,6 +438,138 @@ test('webxr#WebXRManager rejects unsupported WebGPU sessions and foreign frames'
   testCase.end();
 });
 
+test('webxr#WebXRManager resolves input source poses and select activity', async testCase => {
+  const referenceSpace = {} as XRReferenceSpace;
+  const targetRaySpace = {} as XRSpace;
+  const gripSpace = {} as XRSpace;
+  const screenTargetRaySpace = {} as XRSpace;
+  const targetRayPose = makeMockXRPose([1, 2, 3, 4]);
+  const gripPose = makeMockXRPose([5, 6, 7, 8]);
+  const poseBySpace = new Map<XRSpace, XRPose>([
+    [targetRaySpace, targetRayPose],
+    [gripSpace, gripPose]
+  ]);
+  const controllerInputSource = makeMockXRInputSource({
+    handedness: 'left',
+    targetRayMode: 'tracked-pointer',
+    targetRaySpace,
+    gripSpace,
+    profiles: ['oculus-touch-v3', 'generic-trigger-squeeze-thumbstick'],
+    gamepad: {} as Gamepad
+  });
+  const screenInputSource = makeMockXRInputSource({
+    handedness: 'none',
+    targetRayMode: 'screen',
+    targetRaySpace: screenTargetRaySpace,
+    profiles: ['generic-screen']
+  });
+  const session = makeMockXRSession(referenceSpace, [], [controllerInputSource, screenInputSource]);
+  const gl = {
+    async makeXRCompatible() {}
+  } as WebGL2RenderingContext;
+  const device = {
+    type: 'webgl',
+    gl,
+    createFramebuffer: (props: FramebufferProps) => makeMockFramebuffer(props)
+  } as unknown as Device;
+  const originalXRWebGLLayer = globalThis.XRWebGLLayer;
+
+  globalThis.XRWebGLLayer = class {
+    readonly framebuffer = null;
+    readonly framebufferWidth = 1;
+    readonly framebufferHeight = 1;
+
+    getViewport(): XRViewport {
+      return {x: 0, y: 0, width: 1, height: 1};
+    }
+  } as typeof XRWebGLLayer;
+
+  try {
+    const manager = new WebXRManager(device);
+    await manager.setSession(session);
+    const frame = {
+      session,
+      getPose(space: XRSpace, baseSpace: XRReferenceSpace): XRPose | undefined {
+        testCase.equal(baseSpace, referenceSpace, 'queries poses in the manager reference space');
+        return poseBySpace.get(space);
+      },
+      getViewerPose: () => undefined
+    } as XRFrame;
+    let inputState = manager.getInputState(frame);
+
+    testCase.equal(inputState?.length, 2, 'reports every active input source');
+    testCase.equal(inputState?.[0]?.inputSource, controllerInputSource, 'retains input identity');
+    testCase.equal(inputState?.[0]?.handedness, 'left', 'keeps handedness');
+    testCase.equal(inputState?.[0]?.targetRayMode, 'tracked-pointer', 'keeps target ray mode');
+    testCase.deepEqual(
+      inputState?.[0]?.profiles,
+      ['oculus-touch-v3', 'generic-trigger-squeeze-thumbstick'],
+      'keeps profile order'
+    );
+    testCase.equal(inputState?.[0]?.gamepad, controllerInputSource.gamepad, 'keeps gamepad');
+    testCase.equal(inputState?.[0]?.targetRayPose, targetRayPose, 'keeps target ray pose');
+    testCase.equal(inputState?.[0]?.targetRayMatrix, targetRayPose.transform.matrix, 'keeps ray');
+    testCase.equal(inputState?.[0]?.gripPose, gripPose, 'keeps grip pose');
+    testCase.equal(inputState?.[0]?.gripMatrix, gripPose.transform.matrix, 'keeps grip');
+    testCase.equal(inputState?.[0]?.selectActive, false, 'select starts inactive');
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'squeeze starts inactive');
+    testCase.equal(inputState?.[1]?.targetRayPose, null, 'missing poses become null');
+    testCase.equal(inputState?.[1]?.gripPose, null, 'missing grip spaces become null');
+
+    session.dispatchEvent(makeMockXRInputSourceEvent('selectstart', controllerInputSource, frame));
+    inputState = manager.getInputState(frame);
+    testCase.equal(inputState?.[0]?.selectActive, true, 'selectstart marks the source active');
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'select does not affect squeeze');
+
+    session.dispatchEvent(makeMockXRInputSourceEvent('squeezestart', controllerInputSource, frame));
+    inputState = manager.getInputState(frame);
+    testCase.equal(inputState?.[0]?.squeezeActive, true, 'squeezestart marks the source active');
+    testCase.equal(inputState?.[0]?.selectActive, true, 'squeeze does not affect select');
+
+    session.dispatchEvent(makeMockXRInputSourceEvent('squeezeend', controllerInputSource, frame));
+    inputState = manager.getInputState(frame);
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'squeezeend marks the source inactive');
+
+    session.dispatchEvent(makeMockXRInputSourceEvent('selectend', controllerInputSource, frame));
+    inputState = manager.getInputState(frame);
+    testCase.equal(inputState?.[0]?.selectActive, false, 'selectend marks the source inactive');
+
+    session.dispatchEvent(makeMockXRInputSourceEvent('selectstart', controllerInputSource, frame));
+    session.dispatchEvent(makeMockXRInputSourceEvent('squeezestart', controllerInputSource, frame));
+    session.inputSources = [screenInputSource];
+    session.dispatchEvent(
+      Object.assign(new Event('inputsourceschange'), {
+        added: [],
+        removed: [controllerInputSource],
+        session
+      }) as XRInputSourcesChangeEvent
+    );
+    inputState = manager.getInputState(frame);
+    testCase.equal(inputState?.length, 1, 'removed sources disappear from snapshots');
+    testCase.equal(inputState?.[0]?.inputSource, screenInputSource, 'keeps remaining source');
+    testCase.equal(inputState?.[0]?.selectActive, false, 'removed source cannot stay selected');
+    testCase.equal(inputState?.[0]?.squeezeActive, false, 'removed source cannot stay squeezed');
+
+    const foreignFrame = {
+      session: makeMockXRSession(referenceSpace, []),
+      getPose: () => undefined,
+      getViewerPose: () => undefined
+    } as XRFrame;
+    testCase.throws(
+      () => manager.getInputState(foreignFrame),
+      /different XRSession/,
+      'rejects foreign frames for input snapshots'
+    );
+
+    manager.clearSession();
+    testCase.equal(manager.getInputState(frame), null, 'cleared sessions expose no inputs');
+  } finally {
+    globalThis.XRWebGLLayer = originalXRWebGLLayer;
+  }
+
+  testCase.end();
+});
+
 test('webxr#WebXRManager preserves shared WebGL framebuffers in a mocked Node session', async testCase => {
   const referenceSpace = {} as XRReferenceSpace;
   const session = makeMockXRSession(referenceSpace, []);
@@ -566,10 +699,12 @@ function makeMockTextureHandle(
 
 function makeMockXRSession(
   referenceSpace: XRReferenceSpace,
-  enabledFeatures: readonly string[]
+  enabledFeatures: readonly string[],
+  inputSources: XRInputSource[] = []
 ): MockXRSession {
   const session = Object.assign(new EventTarget(), {
     enabledFeatures,
+    inputSources,
     updatedBaseLayer: null as XRWebGLLayer | null,
     updatedLayers: null as XRProjectionLayer[] | null,
     async updateRenderState(renderStateInit: XRRenderStateInit = {}) {
@@ -591,4 +726,32 @@ function makeMockXRView(eye: XREye, index: number): XRView {
     projectionMatrix: new Float32Array([index + 1]),
     transform: {inverse: {matrix: new Float32Array([index + 10])}}
   } as XRView;
+}
+
+function makeMockXRInputSource(props: {
+  handedness: XRHandedness;
+  targetRayMode: XRTargetRayMode;
+  targetRaySpace: XRSpace;
+  gripSpace?: XRSpace;
+  profiles: readonly string[];
+  gamepad?: Gamepad;
+}): XRInputSource {
+  return props as XRInputSource;
+}
+
+function makeMockXRPose(matrix: number[]): XRPose {
+  return {
+    transform: {
+      matrix: new Float32Array(matrix),
+      inverse: {matrix: new Float32Array(matrix)}
+    }
+  } as XRPose;
+}
+
+function makeMockXRInputSourceEvent(
+  type: 'selectstart' | 'selectend' | 'squeezestart' | 'squeezeend',
+  inputSource: XRInputSource,
+  frame: XRFrame
+): XRInputSourceEvent {
+  return Object.assign(new Event(type), {inputSource, frame}) as XRInputSourceEvent;
 }

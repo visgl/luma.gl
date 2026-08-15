@@ -57,6 +57,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('source: WGSL_SHADER');
     expect(applicationSource).toContain('vs: VS_GLSL');
     expect(applicationSource).toContain('fs: FS_GLSL');
+    expect(applicationSource).toContain('source: CONTROLLER_RAY_WGSL_SHADER');
+    expect(applicationSource).toContain('vs: CONTROLLER_RAY_VS_GLSL');
+    expect(applicationSource).toContain('fs: CONTROLLER_RAY_FS_GLSL');
     expect(applicationSource).not.toContain('WebXR Kaleidoscope requires WebGL2');
   });
 
@@ -102,21 +105,63 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       renderMethodStart
     );
     const renderMethod = applicationSource.slice(renderMethodStart, renderMethodEnd);
+    const previewMethodStart = applicationSource.indexOf('private renderPreviewFrame(');
+    const previewMethodEnd = applicationSource.indexOf(
+      '\n  private renderXRFrame(',
+      previewMethodStart
+    );
+    const previewMethod = applicationSource.slice(previewMethodStart, previewMethodEnd);
     const prepareMethodStart = applicationSource.indexOf('private preparePortal(');
     const prepareMethodEnd = applicationSource.indexOf(
       '\n  private drawPortal(',
       prepareMethodStart
     );
     const prepareMethod = applicationSource.slice(prepareMethodStart, prepareMethodEnd);
+    const prepareControllerMethodStart = applicationSource.indexOf(
+      'private prepareControllerTargets('
+    );
+    const prepareControllerMethodEnd = applicationSource.indexOf(
+      '\n  private drawControllerTargets(',
+      prepareControllerMethodStart
+    );
+    const prepareControllerMethod = applicationSource.slice(
+      prepareControllerMethodStart,
+      prepareControllerMethodEnd
+    );
+    const drawControllerMethodStart = applicationSource.indexOf('private drawControllerTargets(');
+    const drawControllerMethodEnd = applicationSource.indexOf(
+      '\n  private updateModelMatrix(',
+      drawControllerMethodStart
+    );
+    const drawControllerMethod = applicationSource.slice(
+      drawControllerMethodStart,
+      drawControllerMethodEnd
+    );
 
     expect(renderMethodStart).toBeGreaterThan(0);
     expect(renderMethodEnd).toBeGreaterThan(renderMethodStart);
+    expect(previewMethodStart).toBeGreaterThan(0);
+    expect(previewMethodEnd).toBeGreaterThan(previewMethodStart);
+    expect(prepareControllerMethodStart).toBeGreaterThan(0);
+    expect(prepareControllerMethodEnd).toBeGreaterThan(prepareControllerMethodStart);
+    expect(drawControllerMethodStart).toBeGreaterThan(0);
+    expect(drawControllerMethodEnd).toBeGreaterThan(drawControllerMethodStart);
+    expect(previewMethod).toContain('const renderPass = device.beginRenderPass(');
+    expect(previewMethod).toContain('this.drawPortal(renderPass)');
+    expect(previewMethod).toContain('renderPass.end()');
     expect(renderMethod).toContain('view.framebuffer ?? frameState.framebuffer');
     expect(renderMethod).toContain('new Set<Framebuffer>()');
     expect(renderMethod).toContain('!renderedFramebuffers.has(framebuffer)');
     expect(renderMethod).toContain('renderedFramebuffers.add(framebuffer)');
+    expect(renderMethod).toContain(
+      'const controllerTargets = this.prepareControllerTargets(view, inputState, time)'
+    );
+    expect(renderMethod).toContain('this.drawControllerTargets(renderPass, controllerTargets)');
     expect(renderMethod).toMatch(
       /this\.xrSessionMode\s*===\s*'immersive-ar'\s*\?\s*\[0,\s*0,\s*0,\s*0\]/
+    );
+    expect(renderMethod.indexOf('this.prepareControllerTargets(')).toBeLessThan(
+      renderMethod.indexOf('this.device.beginRenderPass({')
     );
     expect(renderMethod.indexOf('this.preparePortal({')).toBeLessThan(
       renderMethod.indexOf('this.device.beginRenderPass({')
@@ -128,11 +173,142 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(
       renderMethod.indexOf('renderPass.setParameters({viewport: view.viewport})')
     ).toBeLessThan(renderMethod.indexOf('this.drawPortal(renderPass)'));
+    expect(renderMethod.indexOf('this.drawPortal(renderPass)')).toBeLessThan(
+      renderMethod.indexOf('this.drawControllerTargets(renderPass, controllerTargets)')
+    );
     expect(prepareMethod).toContain('this.uniformStore.setUniforms(');
     expect(prepareMethod).toContain('this.device.commandEncoder');
     expect(prepareMethod).toContain('this.model.predraw(this.device.commandEncoder)');
     expect(prepareMethod.indexOf('this.uniformStore.setUniforms(')).toBeLessThan(
       prepareMethod.indexOf('this.model.predraw(this.device.commandEncoder)')
+    );
+    expect(prepareControllerMethod).toContain('rayUniforms.uniformStore.setUniforms(');
+    expect(prepareControllerMethod).toContain('reticleUniforms.uniformStore.setUniforms(');
+    expect(prepareControllerMethod).toContain('this.device.commandEncoder');
+    expect(prepareControllerMethod).toContain(
+      'this.controllerRayModel.predraw(this.device.commandEncoder)'
+    );
+    expect(prepareControllerMethod).toContain(
+      'this.controllerReticleModel.predraw(this.device.commandEncoder)'
+    );
+    expect(drawControllerMethod).not.toContain('setUniforms(');
+    expect(drawControllerMethod).not.toContain('this.device.commandEncoder');
+    expect(drawControllerMethod).toContain(
+      'this.controllerRayModel.setBindings({app: controllerTarget.rayUniformBuffer})'
+    );
+    expect(drawControllerMethod).toContain(
+      'this.controllerReticleModel.setBindings({app: controllerTarget.reticleUniformBuffer})'
+    );
+  });
+
+  test('renders tracked-pointer controller rays from WebXR input snapshots', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const renderMethodStart = applicationSource.indexOf('private renderXRFrame(');
+    const renderMethodEnd = applicationSource.indexOf(
+      '\n  private preparePortal(',
+      renderMethodStart
+    );
+    const renderMethod = applicationSource.slice(renderMethodStart, renderMethodEnd);
+    const rayMethodStart = applicationSource.indexOf('private prepareControllerTargets(');
+    const rayMethodEnd = applicationSource.indexOf(
+      '\n  private drawControllerTargets(',
+      rayMethodStart
+    );
+    const rayMethod = applicationSource.slice(rayMethodStart, rayMethodEnd);
+    const drawMethodStart = applicationSource.indexOf('private drawControllerTargets(');
+    const drawMethodEnd = applicationSource.indexOf(
+      '\n  private updateModelMatrix(',
+      drawMethodStart
+    );
+    const drawMethod = applicationSource.slice(drawMethodStart, drawMethodEnd);
+
+    expect(applicationSource).toContain('type WebXRInputState');
+    expect(applicationSource).toContain('getWebXRInputRay');
+    expect(applicationSource).toContain('getWebXRInputRayPlaneIntersection');
+    expect(applicationSource).toContain('this.webXRManager.getInputState(xrFrame)');
+    expect(applicationSource).toContain("id: 'immersive-prism-controller-rays'");
+    expect(applicationSource).toContain("id: 'immersive-prism-controller-reticles'");
+    expect(applicationSource).toContain("topology: 'line-list'");
+    expect(applicationSource).toContain('new Float32Array([0, 0, 0, 0, 0, -3.2])');
+    expect(applicationSource).toContain('function makeControllerReticleGeometry()');
+    expect(applicationSource).toContain('const segmentCount = 32');
+    expect(renderMethod).toContain('inputState: readonly WebXRInputState[]');
+    expect(renderMethod).toContain('renderPass.end()');
+    expect(rayMethodStart).toBeGreaterThan(0);
+    expect(rayMethodEnd).toBeGreaterThan(rayMethodStart);
+    expect(rayMethod).toContain('const inputRay = getWebXRInputRay(input)');
+    expect(rayMethod).toContain("input.targetRayMode !== 'tracked-pointer'");
+    expect(rayMethod).toContain('!inputRay');
+    expect(rayMethod).toContain('this.controllerRayMatrix.copy(inputRay.matrix)');
+    expect(rayMethod).toContain('multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix))');
+    expect(rayMethod).toContain('cameraMix: input.selectActive ? 1 : 0');
+    expect(rayMethod).toContain('this.controllerRayModel.predraw(this.device.commandEncoder)');
+    expect(drawMethod).toContain('this.controllerRayModel.draw(renderPass)');
+    expect(rayMethod).toContain('getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8})');
+    expect(rayMethod).toContain(
+      'this._floorHitByInputSource.set(input.inputSource, floorHit.point)'
+    );
+    expect(rayMethod).toContain(
+      'this.controllerReticleMatrix.identity().translate(floorHit.point)'
+    );
+    expect(rayMethod).toContain('multiplyRight(this.controllerReticleMatrix)');
+    expect(rayMethod).toContain('this.controllerReticleModel.predraw(this.device.commandEncoder)');
+    expect(drawMethod).toContain('this.controllerReticleModel.draw(renderPass)');
+  });
+
+  test('uses select for teleport candidates and squeeze or keyboard for exit', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const enterMethodStart = applicationSource.indexOf('async enterXR(');
+    const enterMethodEnd = applicationSource.indexOf('\n  async exitAR(', enterMethodStart);
+    const enterMethod = applicationSource.slice(enterMethodStart, enterMethodEnd);
+    const updateModelStart = applicationSource.indexOf('private updateModelMatrix(');
+    const updateModelEnd = applicationSource.indexOf(
+      '\n  private teleportToInputSource(',
+      updateModelStart
+    );
+    const updateModelMethod = applicationSource.slice(updateModelStart, updateModelEnd);
+    const teleportMethodStart = applicationSource.indexOf('private teleportToInputSource(');
+    const teleportMethodEnd = applicationSource.indexOf(
+      '\n  private createCameraTexture(',
+      teleportMethodStart
+    );
+    const teleportMethod = applicationSource.slice(teleportMethodStart, teleportMethodEnd);
+    const clearMethodStart = applicationSource.indexOf('private _clearXRSession(');
+    const clearMethod = applicationSource.slice(clearMethodStart);
+
+    expect(applicationSource).toContain('readonly xrSceneOffset: [number, number, number]');
+    expect(applicationSource).toContain('new Map<XRInputSource, [number, number, number]>()');
+    expect(applicationSource).not.toContain(
+      'private _xrSelectEndListener = () => void this.exitXR()'
+    );
+    expect(applicationSource).toContain('private _xrSqueezeEndListener = () => void this.exitXR()');
+    expect(applicationSource).toContain(
+      'this.teleportToInputSource((event as XRInputSourceEvent).inputSource)'
+    );
+    expect(enterMethod).toContain(
+      "session.addEventListener('selectend', this._xrSelectEndListener)"
+    );
+    expect(enterMethod).toContain(
+      "session.addEventListener('squeezeend', this._xrSqueezeEndListener)"
+    );
+    expect(enterMethod).toContain('this.setXRSession(session, sessionMode)');
+    expect(applicationSource).toContain("this.getWebXRManagerProps(sessionMode, 'local-floor')");
+    expect(applicationSource).toContain("this.getWebXRManagerProps(sessionMode, 'local')");
+    expect(updateModelMethod).toContain('translate(this.xrSceneOffset)');
+    expect(teleportMethod).toContain('this._floorHitByInputSource.get(inputSource)');
+    expect(teleportMethod).toContain('this.xrSceneOffset[0] -= floorHit[0]');
+    expect(teleportMethod).toContain('this.xrSceneOffset[2] -= floorHit[2]');
+    expect(teleportMethod).toContain('this._floorHitByInputSource.clear()');
+    expect(clearMethod).toContain(
+      "session?.removeEventListener('selectend', this._xrSelectEndListener)"
+    );
+    expect(clearMethod).toContain(
+      "session?.removeEventListener('squeezeend', this._xrSqueezeEndListener)"
+    );
+    expect(clearMethod).toContain('this.xrSceneOffset[0] = 0');
+    expect(clearMethod).toContain('this._floorHitByInputSource.clear()');
+    expect(applicationSource).toContain(
+      "event.key === 'Escape' || event.key.toLowerCase() === 'q'"
     );
   });
 
