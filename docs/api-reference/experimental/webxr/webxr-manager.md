@@ -132,6 +132,29 @@ export type WebXRFrameState = {
 };
 ```
 
+### `WebXRProjectionLayerControlsProps`
+
+```ts
+export type WebXRProjectionLayerControlsProps = {
+  fixedFoveation?: number | null;
+  deltaPose?: XRRigidTransform | null;
+};
+```
+
+### `WebXRProjectionLayerState`
+
+```ts
+export type WebXRProjectionLayerState = {
+  layer: XRProjectionLayer;
+  textureWidth: number;
+  textureHeight: number;
+  textureArrayLength: number;
+  ignoreDepthValues: boolean;
+  fixedFoveation: number | null;
+  deltaPose: XRRigidTransform | null;
+};
+```
+
 ### `WebXRInputState`
 
 ```ts
@@ -198,6 +221,22 @@ Resolves frame state for an active XR frame. Returns `null` when no viewer pose 
 ### `getInputState(xrFrame: XRFrame): readonly WebXRInputState[] | null`
 
 Resolves input source state for an active XR frame. Returns `null` when no session is attached.
+
+### `getProjectionLayerState(): WebXRProjectionLayerState | null`
+
+Returns WebGPU projection-layer metadata and current controls, or `null` when the active session is not using a native projection layer.
+
+### `setProjectionLayerControls(props: WebXRProjectionLayerControlsProps): WebXRProjectionLayerState | null`
+
+Updates native projection-layer controls such as fixed foveation and delta pose, then returns the updated state. Returns `null` when no projection layer is active.
+
+### `getWebXRProjectionLayerState(layer: XRProjectionLayer): WebXRProjectionLayerState`
+
+Returns projection-layer texture dimensions, array length, depth handling, fixed foveation, and delta pose.
+
+### `setWebXRProjectionLayerControls(layer, props): WebXRProjectionLayerState`
+
+Updates controls on any `XRProjectionLayer` and returns the updated state.
 
 ### `getWebXRInputRay(inputState: WebXRInputState): WebXRInputRay | null`
 

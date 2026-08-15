@@ -151,11 +151,15 @@ export type {
   WebXRFrameState,
   WebXRInputState,
   WebXRManagerProps,
+  WebXRProjectionLayerControlsProps,
+  WebXRProjectionLayerState,
   WebXRReferenceSpaceState,
   WebXRViewState
 } from './webxr-manager';
 export {
+  getWebXRProjectionLayerState,
   getWebXRReferenceSpaceTypes,
   requestWebXRReferenceSpace,
+  setWebXRProjectionLayerControls,
   WebXRManager
 } from './webxr-manager';

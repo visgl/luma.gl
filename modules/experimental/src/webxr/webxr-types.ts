@@ -515,7 +515,14 @@ declare global {
     textureUsage?: GPUTextureUsageFlags;
   }
 
-  interface XRProjectionLayer extends XRLayer {}
+  interface XRProjectionLayer extends XRCompositionLayer {
+    readonly textureWidth: number;
+    readonly textureHeight: number;
+    readonly textureArrayLength: number;
+    readonly ignoreDepthValues: boolean;
+    fixedFoveation: number | null;
+    deltaPose: XRRigidTransform | null;
+  }
 
   interface XRGPUSubImage {
     readonly colorTexture: GPUTexture;

@@ -11,7 +11,12 @@ import type {
   TextureView
 } from '@luma.gl/core';
 import test from 'test/utils/vitest-tape';
-import {WebXRManager, getWebXRReferenceSpaceTypes} from '../../src/webxr/webxr-manager';
+import {
+  WebXRManager,
+  getWebXRProjectionLayerState,
+  getWebXRReferenceSpaceTypes,
+  setWebXRProjectionLayerControls
+} from '../../src/webxr/webxr-manager';
 
 type MockTextureHandle = GPUTexture & {destroyCount: number};
 type MockTexture = Texture & {destroyCount: number};
@@ -35,9 +40,16 @@ test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffer
   const session = makeMockXRSession(referenceSpace, ['webgpu']);
   const leftView = makeMockXRView('left', 0);
   const rightView = makeMockXRView('right', 1);
-  const projectionLayer = new EventTarget() as XRProjectionLayer;
+  const projectionLayer = makeMockXRProjectionLayer({
+    textureWidth: 1024,
+    textureHeight: 768,
+    textureArrayLength: 2,
+    ignoreDepthValues: false,
+    fixedFoveation: 0.25
+  });
   const colorTextureHandle = makeMockTextureHandle('bgra8unorm', 2);
   const depthTextureHandle = makeMockTextureHandle('depth24plus', 2);
+  const deltaPose = {matrix: new Float32Array([1, 0, 0, 0]), inverse: {}} as XRRigidTransform;
   let activeViews = [leftView, rightView];
   let receivedProjectionLayerInit: XRProjectionLayerInit | undefined;
   let receivedBindingSession: XRSession | undefined;
@@ -101,6 +113,24 @@ test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffer
     testCase.equal(session.updatedBaseLayer, null, 'WebGPU does not install a legacy WebGL layer');
     testCase.equal(manager.baseLayer, null, 'legacy layer remains unset');
     testCase.equal(manager.projectionLayer, projectionLayer, 'exposes the native projection layer');
+    testCase.deepEqual(
+      manager.getProjectionLayerState(),
+      getWebXRProjectionLayerState(projectionLayer),
+      'snapshots native projection layer metadata'
+    );
+    testCase.deepEqual(
+      manager.setProjectionLayerControls({fixedFoveation: 0.6, deltaPose}),
+      {
+        layer: projectionLayer,
+        textureWidth: 1024,
+        textureHeight: 768,
+        textureArrayLength: 2,
+        ignoreDepthValues: false,
+        fixedFoveation: 0.6,
+        deltaPose
+      },
+      'updates and snapshots projection layer controls'
+    );
     testCase.equal(frameState?.views.length, 2, 'resolves both stereo views');
     testCase.equal(
       frameState?.framebuffer,
@@ -182,11 +212,58 @@ test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffer
       'never destroys browser-owned depth texture'
     );
     testCase.equal(manager.projectionLayer, null, 'clears native projection layer');
+    testCase.equal(
+      manager.getProjectionLayerState(),
+      null,
+      'cleared projection layer has no state'
+    );
+    testCase.equal(
+      manager.setProjectionLayerControls({fixedFoveation: 0.5}),
+      null,
+      'cleared projection layer ignores control updates'
+    );
     testCase.equal(manager.webGPUBinding, null, 'clears native GPU binding');
   } finally {
     globalThis.XRGPUBinding = originalXRGPUBinding;
   }
 
+  testCase.end();
+});
+
+test('webxr#projection layer control helpers update standalone layers', testCase => {
+  const deltaPose = {matrix: new Float32Array([1]), inverse: {}} as XRRigidTransform;
+  const projectionLayer = makeMockXRProjectionLayer({
+    textureWidth: 512,
+    textureHeight: 256,
+    textureArrayLength: 1,
+    ignoreDepthValues: true,
+    fixedFoveation: null,
+    deltaPose: null
+  });
+
+  const projectionLayerState = setWebXRProjectionLayerControls(projectionLayer, {
+    fixedFoveation: 0.75,
+    deltaPose
+  });
+
+  testCase.deepEqual(
+    projectionLayerState,
+    {
+      layer: projectionLayer,
+      textureWidth: 512,
+      textureHeight: 256,
+      textureArrayLength: 1,
+      ignoreDepthValues: true,
+      fixedFoveation: 0.75,
+      deltaPose
+    },
+    'updates standalone projection layer controls'
+  );
+  testCase.deepEqual(
+    getWebXRProjectionLayerState(projectionLayer),
+    projectionLayerState,
+    'snapshots standalone projection layer state'
+  );
   testCase.end();
 });
 
@@ -764,6 +841,32 @@ function makeMockTextureHandle(
       return undefined;
     }
   } as unknown as MockTextureHandle;
+}
+
+function makeMockXRProjectionLayer(props: {
+  textureWidth: number;
+  textureHeight: number;
+  textureArrayLength: number;
+  ignoreDepthValues: boolean;
+  fixedFoveation?: number | null;
+  deltaPose?: XRRigidTransform | null;
+}): XRProjectionLayer {
+  return Object.assign(new EventTarget(), {
+    layout: 'stereo' as XRLayerLayout,
+    blendTextureSourceAlpha: true,
+    forceMonoPresentation: false,
+    opacity: 1,
+    mipLevels: 1,
+    quality: 'default' as XRLayerQuality,
+    needsRedraw: false,
+    textureWidth: props.textureWidth,
+    textureHeight: props.textureHeight,
+    textureArrayLength: props.textureArrayLength,
+    ignoreDepthValues: props.ignoreDepthValues,
+    fixedFoveation: props.fixedFoveation ?? null,
+    deltaPose: props.deltaPose ?? null,
+    destroy() {}
+  }) as XRProjectionLayer;
 }
 
 function makeMockXRSession(

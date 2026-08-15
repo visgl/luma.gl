@@ -57,6 +57,21 @@ export type WebXRFrameState = {
   views: readonly WebXRViewState[];
 };
 
+export type WebXRProjectionLayerControlsProps = {
+  fixedFoveation?: number | null;
+  deltaPose?: XRRigidTransform | null;
+};
+
+export type WebXRProjectionLayerState = {
+  layer: XRProjectionLayer;
+  textureWidth: number;
+  textureHeight: number;
+  textureArrayLength: number;
+  ignoreDepthValues: boolean;
+  fixedFoveation: number | null;
+  deltaPose: XRRigidTransform | null;
+};
+
 /** Experimental v10 input state for one active XR frame. */
 export type WebXRInputState = {
   inputSource: XRInputSource;
@@ -223,6 +238,18 @@ export class WebXRManager {
         squeezeActive: this._squeezeActiveInputSources.has(inputSource)
       };
     });
+  }
+
+  getProjectionLayerState(): WebXRProjectionLayerState | null {
+    return this.projectionLayer ? getWebXRProjectionLayerState(this.projectionLayer) : null;
+  }
+
+  setProjectionLayerControls(
+    props: WebXRProjectionLayerControlsProps
+  ): WebXRProjectionLayerState | null {
+    return this.projectionLayer
+      ? setWebXRProjectionLayerControls(this.projectionLayer, props)
+      : null;
   }
 
   clearSession(): void {
@@ -502,6 +529,31 @@ export async function requestWebXRReferenceSpace(
     throw lastError;
   }
   throw new Error('WebXR reference space request failed');
+}
+
+export function setWebXRProjectionLayerControls(
+  layer: XRProjectionLayer,
+  props: WebXRProjectionLayerControlsProps
+): WebXRProjectionLayerState {
+  if (props.fixedFoveation !== undefined) {
+    layer.fixedFoveation = props.fixedFoveation;
+  }
+  if (props.deltaPose !== undefined) {
+    layer.deltaPose = props.deltaPose;
+  }
+  return getWebXRProjectionLayerState(layer);
+}
+
+export function getWebXRProjectionLayerState(layer: XRProjectionLayer): WebXRProjectionLayerState {
+  return {
+    layer,
+    textureWidth: layer.textureWidth,
+    textureHeight: layer.textureHeight,
+    textureArrayLength: layer.textureArrayLength,
+    ignoreDepthValues: layer.ignoreDepthValues,
+    fixedFoveation: layer.fixedFoveation,
+    deltaPose: layer.deltaPose
+  };
 }
 
 function makeWebXRViewState(
