@@ -9,10 +9,12 @@ import {AnimationLoopTemplate, Geometry, Model, OrbitControls} from '@luma.gl/en
 import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
+  WebXRHitTestManager,
   WebXRManager,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
   type WebXRFrameState,
+  type WebXRHitTestState,
   type WebXRInputState
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
@@ -356,6 +358,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly controllerRayModel: Model;
   readonly controllerReticleModel: Model;
   readonly webXRManager: WebXRManager;
+  readonly webXRHitTestManager = new WebXRHitTestManager();
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly controllerRayMatrix = new Matrix4();
@@ -485,6 +488,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model.destroy();
     this.fallbackTexture.destroy();
     this.uniformStore.destroy();
+    this.webXRHitTestManager.destroy();
     this.webXRManager.destroy();
   }
 
@@ -493,9 +497,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const xrFrame = animationFrame as XRFrame | null;
     const frameState = xrFrame && this.xrSession ? this.webXRManager.getFrameState(xrFrame) : null;
     const inputState = xrFrame && this.xrSession ? this.webXRManager.getInputState(xrFrame) : null;
+    const hitTestState =
+      xrFrame && this.xrSession ? this.webXRHitTestManager.getHitTestState(xrFrame) : null;
 
     if (frameState) {
-      this.renderXRFrame(time, frameState, inputState || []);
+      this.renderXRFrame(time, frameState, inputState || [], hitTestState);
       return;
     }
 
@@ -544,6 +550,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           ? {layerInit: {alpha: sessionMode === 'immersive-ar'}}
           : {})
       });
+      if (sessionMode === 'immersive-ar') {
+        await this.webXRHitTestManager
+          .setSession(session, this.webXRManager.referenceSpace, {entityTypes: ['plane', 'point']})
+          .catch(() => this.webXRHitTestManager.clearSession());
+      }
       this.cameraTexture =
         sessionMode === 'immersive-ar' && this.device.type === 'webgl'
           ? this.createCameraTexture(session)
@@ -592,9 +603,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private renderXRFrame(
     time: number,
     frameState: WebXRFrameState,
-    inputState: readonly WebXRInputState[]
+    inputState: readonly WebXRInputState[],
+    hitTestState: WebXRHitTestState | null
   ): void {
-    this.updateModelMatrix(time, true);
+    this.updateModelMatrix(time, true, hitTestState);
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
@@ -704,9 +716,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  private updateModelMatrix(time: number, isXR: boolean): void {
+  private updateModelMatrix(
+    time: number,
+    isXR: boolean,
+    hitTestState: WebXRHitTestState | null = null
+  ): void {
     this.modelMatrix.identity();
     if (isXR) {
+      if (this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]) {
+        this.modelMatrix.copy(hitTestState.hits[0].matrix).scale([0.54, 0.54, 0.54]);
+        return;
+      }
+
       this.modelMatrix
         .translate(this.xrSceneOffset)
         .translate([0, 0.12, -2.15])
@@ -782,6 +803,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this._floorHitByInputSource.clear();
     this.cameraTexture?.destroy();
     this.cameraTexture = null;
+    this.webXRHitTestManager.clearSession();
     this.webXRManager.clearSession();
     if (!this._isFinalized) {
       this.animationLoop.setProps({animationFrameProvider: undefined});
@@ -791,11 +813,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: string): XRSessionInit {
   if (deviceType === 'webgpu') {
-    return {requiredFeatures: ['webgpu'], optionalFeatures: ['local-floor']};
+    return {
+      requiredFeatures: ['webgpu'],
+      optionalFeatures:
+        sessionMode === 'immersive-ar' ? ['hit-test', 'local-floor'] : ['local-floor']
+    };
   }
 
   return sessionMode === 'immersive-ar'
-    ? {optionalFeatures: ['camera-access', 'local-floor']}
+    ? {optionalFeatures: ['camera-access', 'hit-test', 'local-floor']}
     : {optionalFeatures: ['local-floor']};
 }
 

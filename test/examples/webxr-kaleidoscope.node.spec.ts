@@ -87,7 +87,12 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
 
     expect(applicationSource).toContain("requiredFeatures: ['webgpu']");
-    expect(applicationSource).toContain("optionalFeatures: ['camera-access', 'local-floor']");
+    expect(applicationSource).toContain(
+      "optionalFeatures: ['camera-access', 'hit-test', 'local-floor']"
+    );
+    expect(applicationSource).toContain(
+      "sessionMode === 'immersive-ar' ? ['hit-test', 'local-floor'] : ['local-floor']"
+    );
     expect(applicationSource).toMatch(
       /sessionMode\s*===\s*'immersive-ar'\s*&&\s*this\.device\.type\s*===\s*'webgl'/
     );
@@ -203,6 +208,47 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(rayMethod).toContain('multiplyRight(this.controllerReticleMatrix)');
     expect(rayMethod).toContain('this.controllerReticleModel.predraw(this.device.commandEncoder)');
     expect(rayMethod).toContain('this.controllerReticleModel.draw(renderPass)');
+  });
+
+  test('uses AR hit tests for placement while preserving fallback locomotion', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const renderMethodStart = applicationSource.indexOf('private renderXRFrame(');
+    const renderMethodEnd = applicationSource.indexOf(
+      '\n  private preparePortal(',
+      renderMethodStart
+    );
+    const renderMethod = applicationSource.slice(renderMethodStart, renderMethodEnd);
+    const enterMethodStart = applicationSource.indexOf('async enterXR(');
+    const enterMethodEnd = applicationSource.indexOf('\n  async exitAR(', enterMethodStart);
+    const enterMethod = applicationSource.slice(enterMethodStart, enterMethodEnd);
+    const updateModelStart = applicationSource.indexOf('private updateModelMatrix(');
+    const updateModelEnd = applicationSource.indexOf(
+      '\n  private teleportToInputSource(',
+      updateModelStart
+    );
+    const updateModelMethod = applicationSource.slice(updateModelStart, updateModelEnd);
+    const clearMethodStart = applicationSource.indexOf('private _clearXRSession(');
+    const clearMethod = applicationSource.slice(clearMethodStart);
+
+    expect(applicationSource).toContain('WebXRHitTestManager');
+    expect(applicationSource).toContain('type WebXRHitTestState');
+    expect(applicationSource).toContain('readonly webXRHitTestManager = new WebXRHitTestManager()');
+    expect(applicationSource).toContain('this.webXRHitTestManager.getHitTestState(xrFrame)');
+    expect(enterMethod).toContain("sessionMode === 'immersive-ar'");
+    expect(enterMethod).toContain('this.webXRHitTestManager');
+    expect(enterMethod).toContain(
+      ".setSession(session, this.webXRManager.referenceSpace, {entityTypes: ['plane', 'point']})"
+    );
+    expect(enterMethod).toContain('.catch(() => this.webXRHitTestManager.clearSession())');
+    expect(renderMethod).toContain('hitTestState: WebXRHitTestState | null');
+    expect(renderMethod).toContain('this.updateModelMatrix(time, true, hitTestState)');
+    expect(updateModelMethod).toContain(
+      "this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]"
+    );
+    expect(updateModelMethod).toContain('this.modelMatrix.copy(hitTestState.hits[0].matrix)');
+    expect(updateModelMethod).toContain('scale([0.54, 0.54, 0.54])');
+    expect(clearMethod).toContain('this.webXRHitTestManager.clearSession()');
+    expect(applicationSource).toContain('this.webXRHitTestManager.destroy()');
   });
 
   test('uses select for teleport candidates and squeeze or keyboard for exit', () => {
