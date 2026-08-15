@@ -29,6 +29,7 @@ import {
   getWebXRControllerStateByHandedness,
   getWebXRControllerStates,
   getWebXRControllerRayPlaneTargetByInputSource,
+  getWebXRInputStateByInputSource,
   getWebXRLocomotionState,
   getWebXRSessionRenderState,
   getWebXRTeleportTranslation,
@@ -451,12 +452,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   xrSessionMode: ImmersiveXRSessionMode | null = null;
   private _isFinalized = false;
   private _floorHitByInputSource = new Map<XRInputSource, [number, number, number]>();
-  private _inputStateByInputSource = new Map<XRInputSource, WebXRInputState>();
   private _lastXRLocomotionTimeMilliseconds: number | null = null;
   private _lastXRSnapTurn = 0;
   private _xrSessionEndListener = () => this._clearXRSession();
-  private _xrSelectEndListener = (event: Event) =>
-    this.teleportToInputSource((event as XRInputSourceEvent).inputSource);
+  private _xrSelectEndListener = (event: Event) => {
+    const xrEvent = event as XRInputSourceEvent;
+    this.teleportToInputSource(
+      xrEvent.inputSource,
+      this.webXRManager.getInputState(xrEvent.frame) || []
+    );
+  };
   private _xrSqueezeEndListener = () => void this.exitXR();
   private _keyDownListener = (event: KeyboardEvent) => {
     if (!this.xrSession) {
@@ -811,11 +816,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
     this._floorHitByInputSource.clear();
-    this._inputStateByInputSource.clear();
     const boundsState = getWebXRBoundsState(this.webXRManager.referenceSpace);
-    for (const input of inputState) {
-      this._inputStateByInputSource.set(input.inputSource, input);
-    }
 
     for (const view of frameState.views) {
       this.modelViewProjectionMatrix
@@ -1083,7 +1084,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  private teleportToInputSource(inputSource: XRInputSource | undefined): void {
+  private teleportToInputSource(
+    inputSource: XRInputSource | undefined,
+    inputState: readonly WebXRInputState[]
+  ): void {
     const floorHit = inputSource && this._floorHitByInputSource.get(inputSource);
     if (!floorHit) {
       return;
@@ -1095,9 +1099,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     this.applyXRSceneOffset(getWebXRTeleportTranslation(teleportTarget.point));
-    const inputState = this._inputStateByInputSource.get(inputSource);
-    if (inputState) {
-      void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45});
+    const sourceInputState = getWebXRInputStateByInputSource(inputState, inputSource);
+    if (sourceInputState) {
+      void pulseWebXRInputHaptics(sourceInputState, {intensity: 0.5, duration: 45});
     }
     this._floorHitByInputSource.clear();
   }
@@ -1106,7 +1110,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const actionStates = this.webXRInputActionManager.update(inputState);
     for (const actionState of actionStates) {
       if (actionState.primaryActionEnded) {
-        this.teleportToInputSource(actionState.inputSource);
+        this.teleportToInputSource(actionState.inputSource, inputState);
       }
       if (actionState.squeezeActionEnded) {
         void this.exitXR();
@@ -1120,7 +1124,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private clearXRInteractionState(): void {
     this._floorHitByInputSource.clear();
-    this._inputStateByInputSource.clear();
     this.webXRInputActionManager.reset();
     this._lastXRLocomotionTimeMilliseconds = null;
     this._lastXRSnapTurn = 0;

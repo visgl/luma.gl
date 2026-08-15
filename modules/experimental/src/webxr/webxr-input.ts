@@ -329,6 +329,15 @@ export function getWebXRControllerStates(
     .filter((controllerState): controllerState is WebXRControllerState => Boolean(controllerState));
 }
 
+export function getWebXRInputStateByInputSource(
+  inputStates: readonly WebXRInputState[] | null,
+  inputSource: XRInputSource | null | undefined
+): WebXRInputState | null {
+  return (
+    (inputSource && (inputStates || []).find(input => input.inputSource === inputSource)) || null
+  );
+}
+
 export function getWebXRControllerStateByHandedness(
   controllerStates: readonly WebXRControllerState[] | null,
   handedness: WebXRControllerHandedness = 'any'

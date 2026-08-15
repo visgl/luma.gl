@@ -19,6 +19,7 @@ import {
   getWebXRInputGrip,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
+  getWebXRInputStateByInputSource,
   getWebXRInputSourceState
 } from '../../src/webxr/webxr-input';
 import type {WebXRInputState} from '../../src/webxr/webxr-manager';
@@ -211,6 +212,41 @@ test('webxr#getWebXRControllerStates filters controller snapshots', testCase => 
     'keeps later controller input source'
   );
   testCase.equal(controllerStates[1]?.primaryAction, 1, 'keeps controller activation state');
+  testCase.end();
+});
+
+test('webxr#getWebXRInputStateByInputSource selects input identity', testCase => {
+  const firstInputSource = {} as XRInputSource;
+  const secondInputSource = {} as XRInputSource;
+  const missingInputSource = {} as XRInputSource;
+  const firstInputState = makeMockWebXRInputState(null, null, {
+    inputSource: firstInputSource
+  });
+  const secondInputState = makeMockWebXRInputState(null, null, {
+    inputSource: secondInputSource
+  });
+  const inputStates = [firstInputState, secondInputState];
+
+  testCase.equal(
+    getWebXRInputStateByInputSource(inputStates, secondInputSource),
+    secondInputState,
+    'selects input state by exact input source identity'
+  );
+  testCase.equal(
+    getWebXRInputStateByInputSource(inputStates, missingInputSource),
+    null,
+    'missing input sources return null'
+  );
+  testCase.equal(
+    getWebXRInputStateByInputSource(null, secondInputSource),
+    null,
+    'null input lists return null'
+  );
+  testCase.equal(
+    getWebXRInputStateByInputSource(inputStates, null),
+    null,
+    'null input sources return null'
+  );
   testCase.end();
 });
 

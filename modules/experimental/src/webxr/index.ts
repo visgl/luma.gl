@@ -181,6 +181,7 @@ export {
   getWebXRInputGrip,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
+  getWebXRInputStateByInputSource,
   getWebXRInputSourceState,
   WebXRInputActionManager
 } from './webxr-input';

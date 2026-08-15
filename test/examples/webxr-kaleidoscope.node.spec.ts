@@ -263,6 +263,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('getWebXRControllerRayPlaneTargets');
     expect(applicationSource).toContain('getWebXRControllerStateByHandedness');
     expect(applicationSource).toContain('getWebXRControllerStates');
+    expect(applicationSource).toContain('getWebXRInputStateByInputSource');
     expect(applicationSource).toContain('getWebXRLocomotionState');
     expect(applicationSource).toContain('getWebXRTeleportTranslation');
     expect(applicationSource).toContain('isPointInWebXRBounds');
@@ -281,8 +282,6 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(renderMethod).toContain(
       'const boundsState = getWebXRBoundsState(this.webXRManager.referenceSpace)'
     );
-    expect(renderMethod).toContain('this._inputStateByInputSource.clear()');
-    expect(renderMethod).toContain('this._inputStateByInputSource.set(input.inputSource, input)');
     expect(renderMethod).toContain('renderPass.end()');
     expect(renderMethod).toContain('this.updateXRInputActions(inputState)');
     expect(rayMethodStart).toBeGreaterThan(0);
@@ -597,7 +596,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(applicationSource).toContain('private _lastXRSnapTurn = 0');
     expect(applicationSource).toContain('new Map<XRInputSource, [number, number, number]>()');
-    expect(applicationSource).toContain('new Map<XRInputSource, WebXRInputState>()');
+    expect(applicationSource).not.toContain('new Map<XRInputSource, WebXRInputState>()');
     expect(applicationSource).toContain(
       'readonly webXRInputActionManager = new WebXRInputActionManager()'
     );
@@ -605,9 +604,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       'private _xrSelectEndListener = () => void this.exitXR()'
     );
     expect(applicationSource).toContain('private _xrSqueezeEndListener = () => void this.exitXR()');
-    expect(applicationSource).toContain(
-      'this.teleportToInputSource((event as XRInputSourceEvent).inputSource)'
-    );
+    expect(applicationSource).toContain('const xrEvent = event as XRInputSourceEvent');
+    expect(applicationSource).toContain('this.webXRManager.getInputState(xrEvent.frame) || []');
     expect(enterMethod).toContain(
       "session.addEventListener('selectend', this._xrSelectEndListener)"
     );
@@ -655,15 +653,19 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(teleportMethod).toContain(
       'this.applyXRSceneOffset(getWebXRTeleportTranslation(teleportTarget.point))'
     );
-    expect(teleportMethod).toContain('this._inputStateByInputSource.get(inputSource)');
     expect(teleportMethod).toContain(
-      'void pulseWebXRInputHaptics(inputState, {intensity: 0.5, duration: 45})'
+      'const sourceInputState = getWebXRInputStateByInputSource(inputState, inputSource)'
+    );
+    expect(teleportMethod).toContain(
+      'void pulseWebXRInputHaptics(sourceInputState, {intensity: 0.5, duration: 45})'
     );
     expect(teleportMethod).toContain('this._floorHitByInputSource.clear()');
     expect(teleportMethod).toContain('private updateXRInputActions(');
     expect(teleportMethod).toContain('this.webXRInputActionManager.update(inputState)');
     expect(teleportMethod).toContain('actionState.primaryActionEnded');
-    expect(teleportMethod).toContain('this.teleportToInputSource(actionState.inputSource)');
+    expect(teleportMethod).toContain(
+      'this.teleportToInputSource(actionState.inputSource, inputState)'
+    );
     expect(teleportMethod).toContain('actionState.squeezeActionEnded');
     expect(teleportMethod).toContain('void this.exitXR()');
     expect(clearMethod).toContain(
@@ -680,7 +682,6 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('this._lastXRLocomotionTimeMilliseconds = null');
     expect(applicationSource).toContain('this._lastXRSnapTurn = 0');
     expect(applicationSource).toContain('this._floorHitByInputSource.clear()');
-    expect(applicationSource).toContain('this._inputStateByInputSource.clear()');
     expect(applicationSource).toContain(
       "event.key === 'Escape' || event.key.toLowerCase() === 'q'"
     );
