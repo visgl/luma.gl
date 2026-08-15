@@ -6,7 +6,7 @@ import type {Device, Framebuffer, NumberArray, Texture, VariableShaderType} from
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Geometry, Model, OrbitControls} from '@luma.gl/engine';
-import type {NumberArray2} from '@math.gl/core';
+import type {NumberArray2, NumberArray3} from '@math.gl/core';
 import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
@@ -1260,12 +1260,12 @@ export function applyXRSnapTurn(
 }
 
 export type XRTeleportTargetState = {
-  point: readonly [number, number, number];
+  point: NumberArray3;
   allowed: boolean;
 };
 
 export function getXRTeleportTargetState(
-  point: readonly [number, number, number],
+  point: NumberArray3,
   boundsState: WebXRBoundsState | null
 ): XRTeleportTargetState {
   return {
