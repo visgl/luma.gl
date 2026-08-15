@@ -13,6 +13,7 @@ import {
   WebXRHandTrackingManager,
   WebXRHitTestManager,
   WebXRManager,
+  getWebXRHandPinch,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
   type WebXRFrameState,
@@ -770,7 +771,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     time: number
   ): void {
     for (const hand of handState) {
-      const handColorMix = hand.handedness === 'right' ? 1 : 0;
+      const pinchState = getWebXRHandPinch(hand);
+      const handColorMix = pinchState?.pinchActive ? 1 : hand.handedness === 'right' ? 0.45 : 0;
 
       for (const joint of hand.joints) {
         if (!joint.matrix) {

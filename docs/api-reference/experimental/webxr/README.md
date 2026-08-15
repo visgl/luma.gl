@@ -15,6 +15,7 @@
 - [`WebXRCompositionLayerManager`](/docs/api-reference/experimental/webxr/webxr-composition-layer-manager) creates WebGL quad, cylinder, equirect, and cube composition layers and resolves borrowed subimage framebuffers for rendering.
 - [`WebXRDepthSensingManager`](/docs/api-reference/experimental/webxr/webxr-depth-sensing-manager) resolves WebXR depth sensing state from CPU buffers or borrowed WebGL depth textures.
 - [`WebXRDOMOverlayManager`](/docs/api-reference/experimental/webxr/webxr-dom-overlay-manager) tracks DOM overlay state and suppresses XR select events from overlay UI.
+- [`getWebXRHandPinch`](/docs/api-reference/experimental/webxr/webxr-hand-gestures) derives simple thumb-to-finger pinch gestures from tracked hand joints.
 - [`WebXRHandTrackingManager`](/docs/api-reference/experimental/webxr/webxr-hand-tracking-manager) resolves articulated hand joint matrices and radii from WebXR hand input sources.
 - [`WebXRHitTestManager`](/docs/api-reference/experimental/webxr/webxr-hit-test-manager) requests an AR hit-test source and resolves hit poses in the app reference space.
 - [`WebXRAnchorManager`](/docs/api-reference/experimental/webxr/webxr-anchor-manager) creates, tracks, resolves, and deletes AR anchors.

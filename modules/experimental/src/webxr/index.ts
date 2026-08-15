@@ -25,6 +25,8 @@ export type {
   WebXRDOMOverlayState
 } from './webxr-dom-overlay';
 export {getWebXRDOMOverlaySessionInit, WebXRDOMOverlayManager} from './webxr-dom-overlay';
+export type {WebXRHandPinchProps, WebXRHandPinchState} from './webxr-hand-gestures';
+export {getWebXRHandPinch} from './webxr-hand-gestures';
 export type {WebXRHandJointState, WebXRHandTrackingState} from './webxr-hand-tracking';
 export {WEBXR_HAND_JOINTS, WebXRHandTrackingManager} from './webxr-hand-tracking';
 export type {

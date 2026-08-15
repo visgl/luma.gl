@@ -261,6 +261,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     const clearMethod = applicationSource.slice(clearMethodStart);
 
     expect(applicationSource).toContain('type WebXRHandTrackingState');
+    expect(applicationSource).toContain('getWebXRHandPinch');
     expect(applicationSource).toContain('this.webXRHandTrackingManager.getHandsState(');
     expect(applicationSource).toContain('(inputState || []).map(input => input.inputSource)');
     expect(applicationSource).toContain("id: 'immersive-prism-hand-joints'");
@@ -273,12 +274,14 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(handMethodStart).toBeGreaterThan(0);
     expect(handMethodEnd).toBeGreaterThan(handMethodStart);
     expect(handMethod).toContain('for (const hand of handState)');
+    expect(handMethod).toContain('const pinchState = getWebXRHandPinch(hand)');
+    expect(handMethod).toContain('pinchState?.pinchActive ? 1');
     expect(handMethod).toContain('for (const joint of hand.joints)');
     expect(handMethod).toContain('if (!joint.matrix)');
     expect(handMethod).toContain('Math.max(joint.radius ?? 0.008, 0.006) * 1.8');
     expect(handMethod).toContain('this.handJointMatrix.copy(joint.matrix)');
     expect(handMethod).toContain('multiplyRight(this.handJointMatrix)');
-    expect(handMethod).toContain("hand.handedness === 'right' ? 1 : 0");
+    expect(handMethod).toContain("hand.handedness === 'right' ? 0.45 : 0");
     expect(handMethod).toContain('this.handJointModel.predraw(this.device.commandEncoder)');
     expect(handMethod).toContain('this.handJointModel.draw(renderPass)');
     expect(clearMethod).toContain('this.webXRHandTrackingManager.clearSession()');
