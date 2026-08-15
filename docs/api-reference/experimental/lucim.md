@@ -166,3 +166,10 @@ not hidden inside the implemented operations.
 
 Texture upload, medical-image decoding, chunk scheduling, command submission, synchronization,
 and readback remain application responsibilities.
+
+## Try the Volume Lab
+
+The [LuCIM Volume Lab](/examples/experimental/lucim-volume-lab) runs the implemented tranches over a
+deterministic, non-diagnostic CT-like phantom. Its synchronized axial, coronal, and sagittal views
+sample resident source, mask, and sparse-label buffers directly. Threshold changes update one GPU
+scalar and reuse the compiled graph; only convergence, iteration, and overflow status are read back.

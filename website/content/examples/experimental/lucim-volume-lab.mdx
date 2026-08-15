@@ -1,0 +1,41 @@
+---
+title: LuCIM Volume Lab
+description: Segment and inspect a synthetic CT-like volume with reusable WebGPU command graphs.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, gpgpu, volume, rendering]
+---
+
+import {LuCIMVolumeLabExample} from '@site/src/examples';
+
+<LuCIMVolumeLabExample />
+
+The LuCIM Volume Lab is a deliberately compact bridge between the foundational volume algorithms
+and future medical or atmospheric applications. It generates a deterministic, non-diagnostic
+CT-like phantom containing air, tissue, lung-like cavities, cortical structures, calibration
+inserts, and an explicitly missing acquisition wedge. No patient data, external asset, decoder, or
+network request is involved.
+
+Three synchronized panels show axial, coronal, and sagittal slices. Cyan crosshairs connect their
+selected coordinates. **Anatomy** applies an adjustable density window directly to the resident
+source values; **Threshold** overlays the current classification; and **Components** colors the
+deterministic sparse roots produced after three-dimensional closing and six-connected labeling.
+
+Changing the density threshold writes one GPU scalar and re-encodes the already compiled graph:
+
+1. calibrated volume thresholding;
+2. ball-footprint binary closing;
+3. bounded connected-component stabilization; and
+4. fixed-capacity voxel counts and three-dimensional index bounds.
+
+Persistent source values, masks, component labels, and region rows remain GPU-resident and feed the
+slice renderer directly. The inspector reads back only convergence, iteration count, and overflow
+flags. An invalid observation remains separate from valid air or background and appears as a hatched
+wedge rather than being silently converted to zero.
+
+This tranche keeps its tri-planar renderer and synthetic source inside the example. A later CAT
+tranche can add physical region measurements and a licensed NIfTI or preprocessed source adapter;
+the hurricane track can separately pressure-test chunking, three-dimensional halos, and time steps
+before any example-local abstraction is promoted into a public API.
