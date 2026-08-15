@@ -10,6 +10,8 @@ import {
   GLTF_SAMPLE_ASSETS_MODEL_URL,
   GLTF_SAMPLE_ASSETS_REVISION,
   GLTF_SAMPLE_ASSETS_SOURCE_URL,
+  GLTF_SAMPLE_VIEWER_RELEASE_REVISION,
+  GLTF_SAMPLE_VIEWER_RELEASE_SOURCE_URL,
   GLTF_SAMPLE_VIEWER_REVISION,
   GLTF_SAMPLE_VIEWER_SOURCE_URL
 } from './gltf-reference-source';
@@ -31,6 +33,8 @@ export type GLTFReferenceLedger = {
   sampleAssetsSource: string;
   sampleViewerRevision: string;
   sampleViewerSource: string;
+  sampleViewerReleaseRevision: string;
+  sampleViewerReleaseSource: string;
   extensions: GLTFReferenceLedgerEntry[];
   unsupportedRequiredFixture: {
     assetLocation: string;
@@ -98,6 +102,8 @@ export function getGLTFReferenceLedger(): GLTFReferenceLedger {
     sampleAssetsSource: GLTF_SAMPLE_ASSETS_SOURCE_URL,
     sampleViewerRevision: GLTF_SAMPLE_VIEWER_REVISION,
     sampleViewerSource: GLTF_SAMPLE_VIEWER_SOURCE_URL,
+    sampleViewerReleaseRevision: GLTF_SAMPLE_VIEWER_RELEASE_REVISION,
+    sampleViewerReleaseSource: GLTF_SAMPLE_VIEWER_RELEASE_SOURCE_URL,
     extensions,
     unsupportedRequiredFixture: {
       assetLocation: 'modules/gltf/test/data/UnsupportedRequiredExtensions.gltf',

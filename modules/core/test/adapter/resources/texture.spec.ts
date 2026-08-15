@@ -1363,6 +1363,100 @@ test('Texture#copyExternalImage uploads image data on both backends', async t =>
   t.end();
 });
 
+test('WebGPUTexture#copyExternalImage falls back to a CPU upload', async t => {
+  const device = await getWebGPUTestDevice();
+  const texture = device.createTexture({
+    width: 2,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.COPY_DST | Texture.COPY_SRC | Texture.RENDER
+  });
+  const image = await createImageBitmap(
+    new ImageData(new Uint8ClampedArray([11, 12, 13, 255, 21, 22, 23, 255]), 2, 1)
+  );
+  const queue = (device as Device & {handle: GPUDevice}).handle.queue;
+  const queuePrototype = Object.getPrototypeOf(queue) as GPUQueue;
+  const descriptor = Object.getOwnPropertyDescriptor(queuePrototype, 'copyExternalImageToTexture');
+  const gpuType = device.info.gpuType;
+  let nativeCopyCallCount = 0;
+
+  Object.defineProperty(queuePrototype, 'copyExternalImageToTexture', {
+    configurable: true,
+    value: () => {
+      nativeCopyCallCount++;
+      throw new TypeError('Failed to copy content from external image.');
+    }
+  });
+  device.info.gpuType = 'unknown';
+  try {
+    texture.copyExternalImage({image});
+  } finally {
+    device.info.gpuType = gpuType;
+    if (descriptor) {
+      Object.defineProperty(queuePrototype, 'copyExternalImageToTexture', descriptor);
+    } else {
+      Reflect.deleteProperty(queuePrototype, 'copyExternalImageToTexture');
+    }
+  }
+
+  const result = await readTexturePixels(texture, {width: 2, height: 1});
+  t.deepEquals(
+    result,
+    new Uint8Array([11, 12, 13, 255, 21, 22, 23, 255]),
+    'WebGPU CPU fallback uploads pixel data'
+  );
+  t.equal(nativeCopyCallCount, 1, 'native TypeError path was attempted once');
+
+  image.close();
+  texture.destroy();
+  t.end();
+});
+
+test('WebGPUTexture#copyExternalImage proactively uses CPU upload on CPU adapters', async t => {
+  const device = await getWebGPUTestDevice();
+  const texture = device.createTexture({
+    width: 2,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.COPY_DST | Texture.COPY_SRC | Texture.RENDER
+  });
+  const image = new ImageData(new Uint8ClampedArray([31, 32, 33, 255, 41, 42, 43, 255]), 2, 1);
+  const queue = (device as Device & {handle: GPUDevice}).handle.queue;
+  const queuePrototype = Object.getPrototypeOf(queue) as GPUQueue;
+  const descriptor = Object.getOwnPropertyDescriptor(queuePrototype, 'copyExternalImageToTexture');
+  const gpuType = device.info.gpuType;
+  let nativeCopyCallCount = 0;
+
+  Object.defineProperty(queuePrototype, 'copyExternalImageToTexture', {
+    configurable: true,
+    value: () => {
+      nativeCopyCallCount++;
+    }
+  });
+  device.info.gpuType = 'cpu';
+  try {
+    texture.copyExternalImage({image});
+  } finally {
+    device.info.gpuType = gpuType;
+    if (descriptor) {
+      Object.defineProperty(queuePrototype, 'copyExternalImageToTexture', descriptor);
+    } else {
+      Reflect.deleteProperty(queuePrototype, 'copyExternalImageToTexture');
+    }
+  }
+
+  const result = await readTexturePixels(texture, {width: 2, height: 1});
+  t.deepEquals(
+    result,
+    new Uint8Array([31, 32, 33, 255, 41, 42, 43, 255]),
+    'CPU adapter fallback uploads pixel data'
+  );
+  t.equal(nativeCopyCallCount, 0, 'unstable native external-image copy was bypassed');
+
+  texture.destroy();
+  t.end();
+});
+
 test('Texture#copyImageData is a compatibility wrapper over writeData', async t => {
   for (const device of await getTestDevices()) {
     const writeDataTexture = device.createTexture({

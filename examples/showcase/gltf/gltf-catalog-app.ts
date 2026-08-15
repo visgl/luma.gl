@@ -5,7 +5,13 @@
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
 import {Color, Device, log, RenderPass} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  type Model,
+  ModelNode,
+  OrbitControls
+} from '@luma.gl/engine';
 import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
 import {
   createGLTFAnimatedCrowd,
@@ -16,6 +22,15 @@ import {
 } from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
+import {
+  GLTF_REFERENCE_EVIDENCE_SCHEMA,
+  GLTF_REFERENCE_EVIDENCE_VERSION,
+  getGLTFReferenceCaptureOptions,
+  getGLTFReferenceDrawMetrics,
+  getGLTFReferenceResourceMetrics,
+  type GLTFReferenceCaptureOptions,
+  type GLTFReferenceEvidence
+} from './gltf-reference-evidence';
 
 /* eslint-disable camelcase */
 
@@ -165,6 +180,17 @@ export type GLTFModelReference = {
   fileName?: string;
 };
 
+declare global {
+  interface Window {
+    __lumaGLTFReferenceEvidence?: GLTFReferenceEvidence;
+    __lumaGLTFReferenceError?: string;
+    __lumaGLTFReferenceProgress?: {
+      stage: string;
+      updatedAt: string;
+    };
+  }
+}
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
@@ -193,12 +219,46 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   gltfLoadGeneration: number = 0;
   cleanupCallbacks: Array<() => void> = [];
   modelMetadataCache = new Map<string, Promise<GLTFModelMetadata>>();
+  readonly referenceCaptureOptions: GLTFReferenceCaptureOptions | undefined;
+  referenceModelUrl = '';
+  referenceLoadMetrics?: {
+    loadMilliseconds: number;
+    fetchAndPostprocessMilliseconds: number;
+    scenegraphCreationMilliseconds: number;
+  };
+  referenceFrameCount = 0;
+  referenceFrameCpuMilliseconds = 0;
+  referenceInitialDrawCpuMilliseconds?: number;
+  referenceRenderStage = '';
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
+    this.referenceCaptureOptions = getGLTFReferenceCaptureOptions(window.location.search);
     ensureLoadingIndicatorStyles();
     this.options = loadOptions(this.options);
+    if (this.referenceCaptureOptions) {
+      this.options = {
+        ...this.options,
+        autoLOD: false,
+        useModelLights: false,
+        cameraAnimation: false,
+        gltfAnimation: false
+      };
+      delete window.__lumaGLTFReferenceEvidence;
+      delete window.__lumaGLTFReferenceError;
+      delete window.__lumaGLTFReferenceProgress;
+      void this.device.lost.then(loss => {
+        if (this.isFinalized || !this.referenceCaptureOptions) {
+          return;
+        }
+        const message = `WebGPU device lost during glTF reference capture: ${loss.message}`;
+        window.__lumaGLTFReferenceError = message;
+        this.publishReferenceRenderStage('device-lost');
+        log.error(message)();
+      });
+    }
+
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     this.orbitControls = new OrbitControls(canvas, {
       distance: 1,
@@ -215,12 +275,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cleanupCallbacks.push(() => this.orbitControls.destroy());
 
     const modelStorageKey = this.getModelStorageKey();
-    window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
-    const initialModelName = window.localStorage[modelStorageKey];
+    if (!this.referenceCaptureOptions) {
+      window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
+    }
+    const initialModelName =
+      this.referenceCaptureOptions?.modelName || window.localStorage[modelStorageKey];
 
     this.cleanupCallbacks.push(...setOptionsUI(this.options));
 
-    this.fetchModelList()
+    const modelListPromise = this.referenceCaptureOptions
+      ? Promise.resolve([getReferenceCaptureCatalogModel(this.referenceCaptureOptions)])
+      : this.fetchModelList();
+    modelListPromise
       .then(models => {
         if (this.isFinalized) {
           return;
@@ -231,10 +297,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           : models.find(model => model.name === this.getDefaultModelName())?.name ||
             models[0]?.name ||
             initialModelName;
-        window.localStorage[modelStorageKey] = currentModelName;
+        if (!this.referenceCaptureOptions) {
+          window.localStorage[modelStorageKey] = currentModelName;
+        }
         const cleanupModelMenu = this.initializeModelMenus(models, currentModelName);
         this.cleanupCallbacks.push(cleanupModelMenu);
-        this.loadGLTF(currentModelName);
+        this.loadGLTF(
+          this.referenceCaptureOptions
+            ? {
+                name: this.referenceCaptureOptions.modelName,
+                variant: this.referenceCaptureOptions.variant,
+                fileName: this.referenceCaptureOptions.fileName
+              }
+            : currentModelName
+        );
       })
       .catch(error => {
         log.error(
@@ -251,6 +327,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize() {
     this.isFinalized = true;
     this.gltfLoadGeneration++;
+    delete window.__lumaGLTFReferenceEvidence;
+    delete window.__lumaGLTFReferenceError;
     for (const cleanupCallback of this.cleanupCallbacks) {
       cleanupCallback();
     }
@@ -270,6 +348,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   getDefaultModelName(): string {
     return 'CesiumMan';
+  }
+
+  isReferenceCapture(): boolean {
+    return Boolean(this.referenceCaptureOptions);
   }
 
   getModelStorageKey(): string {
@@ -422,6 +504,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
+    const frameStartTime = performance.now();
+    let animationCpuMilliseconds = 0;
     const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
     this.drawBackground(renderPass);
 
@@ -429,6 +513,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       renderPass.end();
       return;
     }
+
+    this.publishReferenceRenderStage('model-frame-started');
 
     updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
     this.orbitControls.setAutoRotate(this.options['cameraAnimation']);
@@ -441,20 +527,42 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         ? Math.sqrt(actorCount - 1) * actorSpacing + this.sceneRadius
         : this.sceneRadius;
     const orbitDistance =
-      this.orbitControls.distance * Math.max(1, crowdRadius / Math.max(this.sceneRadius, 0.001));
+      this.orbitControls.distance *
+      Math.max(1, crowdRadius / Math.max(this.sceneRadius, 0.001)) *
+      (this.referenceCaptureOptions?.distanceMultiplier || 1);
     const far = Math.max(orbitDistance + crowdRadius * 2, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const cameraPos = this.orbitControls.getEyePosition();
-    const distanceScale = orbitDistance / Math.max(this.orbitControls.distance, 0.001);
-    cameraPos[0] = this.center[0] + (cameraPos[0] - this.center[0]) * distanceScale;
-    cameraPos[1] =
-      this.cameraHeight +
-      (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR * distanceScale;
-    cameraPos[2] = this.center[2] + (cameraPos[2] - this.center[2]) * distanceScale;
+    const orbitControlsCameraPosition = this.orbitControls.getEyePosition();
+    const referenceYaw = this.referenceCaptureOptions?.yaw;
+    const referencePitch = this.referenceCaptureOptions?.pitch;
+    const horizontalOrbitScale = Math.cos(referencePitch || 0);
+    const cameraPos: [number, number, number] =
+      referenceYaw !== undefined && referencePitch !== undefined
+        ? [
+            this.center[0] + orbitDistance * horizontalOrbitScale * Math.sin(referenceYaw),
+            this.cameraHeight +
+              orbitDistance * CAMERA_TILT_HEIGHT_FACTOR * Math.sin(referencePitch),
+            this.center[2] + orbitDistance * horizontalOrbitScale * Math.cos(referenceYaw)
+          ]
+        : [
+            orbitControlsCameraPosition[0],
+            orbitControlsCameraPosition[1],
+            orbitControlsCameraPosition[2]
+          ];
+    if (!this.referenceCaptureOptions) {
+      const distanceScale = orbitDistance / Math.max(this.orbitControls.distance, 0.001);
+      cameraPos[0] = this.center[0] + (cameraPos[0] - this.center[0]) * distanceScale;
+      cameraPos[1] =
+        this.cameraHeight +
+        (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR * distanceScale;
+      cameraPos[2] = this.center[2] + (cameraPos[2] - this.center[2]) * distanceScale;
+    }
 
     if (this.options['gltfAnimation'] && !this.animatedCrowd) {
+      const animationStartTime = performance.now();
       this.scenegraphsFromGLTF.animator?.setTime(time);
+      animationCpuMilliseconds += performance.now() - animationStartTime;
     }
 
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
@@ -479,7 +587,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         : undefined;
 
       if (this.options['gltfAnimation']) {
+        const animationStartTime = performance.now();
         this.animatedCrowd.update(deltaSeconds, levelOfDetailView);
+        animationCpuMilliseconds += performance.now() - animationStartTime;
       } else if (levelOfDetailView) {
         this.animatedCrowd.setLODView(levelOfDetailView);
       }
@@ -518,9 +628,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.animatedCrowd.animationStats
       );
       renderPass.end();
+      this.publishReferenceEvidence({
+        animationCpuMilliseconds,
+        cameraPosition: cameraPos,
+        drawMetrics: {
+          drawCount,
+          submittedIndexReferences: this.animatedCrowd.lodStats.vertices,
+          submittedVertexReferences: 0,
+          triangleCount: this.animatedCrowd.lodStats.triangles
+        },
+        far,
+        frameStartTime,
+        near
+      });
       return;
     }
 
+    const drawnModels: Model[] = [];
     this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
 
@@ -550,9 +674,123 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
 
       model.shaderInputs.setProps(sceneShaderInputProps);
-      model.draw(renderPass);
+      this.publishReferenceRenderStage(`drawing-model:${model.id}`);
+      if (model.draw(renderPass)) {
+        drawnModels.push(model);
+      }
+      this.publishReferenceRenderStage(`drew-model:${model.id}`);
     });
+    this.publishReferenceRenderStage('ending-render-pass');
     renderPass.end();
+    this.publishReferenceRenderStage('render-pass-ended');
+    this.publishReferenceEvidence({
+      animationCpuMilliseconds,
+      cameraPosition: cameraPos,
+      drawMetrics: getGLTFReferenceDrawMetrics(drawnModels),
+      far,
+      frameStartTime,
+      near
+    });
+    this.publishReferenceRenderStage('evidence-published');
+  }
+
+  private publishReferenceRenderStage(stage: string): void {
+    if (
+      !this.referenceCaptureOptions ||
+      this.referenceFrameCount > 0 ||
+      stage === this.referenceRenderStage
+    ) {
+      return;
+    }
+    this.referenceRenderStage = stage;
+    window.__lumaGLTFReferenceProgress = {stage, updatedAt: new Date().toISOString()};
+    log.log(0, `glTF reference render stage: ${stage}`)();
+  }
+
+  private publishReferenceEvidence(options: {
+    animationCpuMilliseconds: number;
+    cameraPosition: [number, number, number];
+    drawMetrics: ReturnType<typeof getGLTFReferenceDrawMetrics>;
+    far: number;
+    frameStartTime: number;
+    near: number;
+  }): void {
+    const captureOptions = this.referenceCaptureOptions;
+    const loadMetrics = this.referenceLoadMetrics;
+    if (!captureOptions || !loadMetrics || !this.scenegraphsFromGLTF || !this.referenceModelUrl) {
+      return;
+    }
+
+    const frameCpuMilliseconds = performance.now() - options.frameStartTime;
+    this.referenceFrameCount++;
+    this.referenceFrameCpuMilliseconds += frameCpuMilliseconds;
+    this.referenceInitialDrawCpuMilliseconds ??= frameCpuMilliseconds;
+
+    const deviceInfo = this.device.info;
+    window.__lumaGLTFReferenceEvidence = {
+      schema: GLTF_REFERENCE_EVIDENCE_SCHEMA,
+      version: GLTF_REFERENCE_EVIDENCE_VERSION,
+      status: 'ready',
+      model: {
+        name: captureOptions.modelName,
+        variant: captureOptions.variant,
+        fileName: captureOptions.fileName,
+        url: this.referenceModelUrl
+      },
+      renderer: {
+        backend: this.device.type,
+        vendor: deviceInfo.vendor,
+        renderer: deviceInfo.renderer,
+        version: deviceInfo.version,
+        gpu: deviceInfo.gpu,
+        gpuType: deviceInfo.gpuType,
+        gpuBackend: deviceInfo.gpuBackend,
+        featureLevel: deviceInfo.featureLevel,
+        shadingLanguage: deviceInfo.shadingLanguage
+      },
+      camera: {
+        yaw: captureOptions.yaw,
+        pitch: captureOptions.pitch,
+        distanceMultiplier: captureOptions.distanceMultiplier,
+        position: options.cameraPosition,
+        target: [this.center[0], this.center[1], this.center[2]],
+        verticalFieldOfViewRadians: Math.PI / 3,
+        near: options.near,
+        far: options.far
+      },
+      rendering: {
+        animation: 'disabled',
+        automaticLevelOfDetail: 'disabled',
+        environment: 'fixed-fallback-lights',
+        exposure: 1,
+        toneMapping: 'none',
+        outputColorSpace: 'srgb'
+      },
+      extensions: Array.from(this.scenegraphsFromGLTF.extensionSupport.values())
+        .map(extension => ({
+          extensionName: extension.extensionName,
+          required: extension.required,
+          supported: extension.supported,
+          supportLevel: extension.supportLevel,
+          standardStatus: extension.standardStatus
+        }))
+        .sort((leftExtension, rightExtension) =>
+          leftExtension.extensionName.localeCompare(rightExtension.extensionName)
+        ),
+      metrics: {
+        frameCount: this.referenceFrameCount,
+        averageFrameCpuMilliseconds: this.referenceFrameCpuMilliseconds / this.referenceFrameCount,
+        animationCpuMilliseconds: options.animationCpuMilliseconds,
+        ...loadMetrics,
+        initialDrawCpuMilliseconds: this.referenceInitialDrawCpuMilliseconds,
+        shaderCompilationMilliseconds: null,
+        shaderCompilationAvailability: 'not-exposed-by-device-api',
+        gpuMemoryBytes: this.device.statsManager.getStats('GPU Time and Memory').get('GPU Memory')
+          .count,
+        resources: getGLTFReferenceResourceMetrics(this.referenceModelUrl),
+        ...options.drawMetrics
+      }
+    };
   }
 
   async fetchModelList(): Promise<GLTFCatalogModel[]> {
@@ -570,6 +808,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {
+    const loadStartTime = performance.now();
+    this.referenceModelUrl = '';
+    this.referenceLoadMetrics = undefined;
+    this.referenceFrameCount = 0;
+    this.referenceFrameCpuMilliseconds = 0;
+    this.referenceInitialDrawCpuMilliseconds = undefined;
+    this.referenceRenderStage = '';
+    delete window.__lumaGLTFReferenceEvidence;
+    delete window.__lumaGLTFReferenceError;
+    delete window.__lumaGLTFReferenceProgress;
     const loadGeneration = ++this.gltfLoadGeneration;
     const candidateModelReferences = getModelLoadCandidates(modelReference, this.availableModels);
     const primaryModelReference = candidateModelReferences[0];
@@ -596,7 +844,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         {modelUrl}
       )();
       const processedGLTF = postProcessGLTF(gltf);
+      const fetchAndPostprocessEndTime = performance.now();
 
+      const scenegraphCreationStartTime = performance.now();
       const scenegraphOptions = {
         lights: true,
         imageBasedLightingEnvironment,
@@ -608,6 +858,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         processedGLTF,
         scenegraphOptions
       );
+      const scenegraphCreationEndTime = performance.now();
       log.log(0, `Created glTF scenegraphs: ${modelDescription}`)();
 
       if (this.isLoadStale(loadGeneration)) {
@@ -624,6 +875,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.activeScenegraphOptions = scenegraphOptions;
       this.previousCrowdFrameTime = undefined;
       this.modelLights = scenegraphsFromGLTF.lights;
+      this.referenceModelUrl = modelUrl;
+      this.referenceLoadMetrics = {
+        loadMilliseconds: scenegraphCreationEndTime - loadStartTime,
+        fetchAndPostprocessMilliseconds: fetchAndPostprocessEndTime - loadStartTime,
+        scenegraphCreationMilliseconds: scenegraphCreationEndTime - scenegraphCreationStartTime
+      };
       updateCrowdInfo();
       this.updateModelInfo(
         resolvedModelReference,
@@ -652,6 +909,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         return;
       }
       log.error(`Failed to load glTF model: ${modelDescription}`, error)();
+      if (this.referenceCaptureOptions) {
+        window.__lumaGLTFReferenceError = error instanceof Error ? error.message : String(error);
+      }
       showError(error);
     } finally {
       if (!this.isLoadStale(loadGeneration)) {
@@ -675,6 +935,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   ): void {
     const catalogModel = this.availableModels.find(model => model.name === modelReference.name);
     updateModelInfoBox(catalogModel, modelReference, actionNames);
+    if (this.referenceCaptureOptions) {
+      return;
+    }
 
     void this.fetchModelMetadata(modelReference.name).then(modelMetadata => {
       if (this.isLoadStale(loadGeneration)) {
@@ -709,6 +972,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     return this.modelMetadataCache.get(modelName)!;
   }
+}
+
+function getReferenceCaptureCatalogModel(
+  captureOptions: GLTFReferenceCaptureOptions
+): GLTFCatalogModel {
+  if (captureOptions.modelName === BUMP_MATERIAL_CATALOG_MODEL.name) {
+    return BUMP_MATERIAL_CATALOG_MODEL;
+  }
+
+  return {
+    label: captureOptions.modelName,
+    name: captureOptions.modelName,
+    hasGLBVariant: captureOptions.variant === 'glTF-Binary',
+    variants: {[captureOptions.variant]: captureOptions.fileName}
+  };
 }
 
 function setModelMenu(
@@ -1310,6 +1588,10 @@ function getModelLightSummary(modelLights: Light[]): string {
   return Object.entries(lightCounts)
     .map(([lightType, count]) => `${count} ${lightType}`)
     .join(', ');
+}
+
+function clampNumber(value: number, minValue: number, maxValue: number): number {
+  return Math.min(Math.max(value, minValue), maxValue);
 }
 
 function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {

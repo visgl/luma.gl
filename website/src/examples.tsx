@@ -11,6 +11,7 @@ import {
   LumaExample,
   ReactExample,
   type ExampleDisplayProps,
+  type LumaExampleProps,
   useStore
 } from './react-luma';
 import type {Device} from '@luma.gl/core';
@@ -770,18 +771,44 @@ export const ANARIPlaygroundExample: React.FC = () => {
   );
 };
 
-export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="gltf"
-    title="glTF Asset Studio"
-    subtitle="Physical materials · animated characters · standards-native glTF"
-    directory="showcase"
-    template={GLTFApp}
-    config={exampleConfig}
-    canvasContextProfile="high-dynamic-range"
-    {...props}
-  />
-);
+export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
+  const referenceDevice = getGLTFReferenceDeviceSelection();
+
+  return (
+    <LumaExample
+      id="gltf"
+      title="glTF Asset Studio"
+      subtitle="Physical materials · animated characters · standards-native glTF"
+      directory="showcase"
+      template={GLTFApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      devices={referenceDevice ? [referenceDevice] : undefined}
+      {...props}
+    />
+  );
+};
+
+function getGLTFReferenceDeviceSelection(): NonNullable<LumaExampleProps['devices']>[number] | null {
+  if (
+    typeof window === 'undefined' ||
+    new URLSearchParams(window.location.search).get('gltf-reference') !== '1'
+  ) {
+    return null;
+  }
+
+  const deviceType = window.localStorage.getItem('luma-device-type');
+  switch (deviceType) {
+    case 'webgpu-core':
+    case 'webgpu-max':
+    case 'webgpu-compatibility':
+      return deviceType;
+    case 'webgl':
+      return 'webgl2';
+    default:
+      return null;
+  }
+}
 
 export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
   if (typeof window !== 'undefined') {

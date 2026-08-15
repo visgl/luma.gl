@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import {mkdir, writeFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import net from 'node:net';
@@ -57,7 +61,11 @@ export async function runWebsiteExample(options = {}) {
       }
 
       targetUrl = resolveTargetUrl(options, resolvedBaseUrl, ocularConfig);
-      serverProcess = startWebsiteServer(websiteDir, parseBaseUrl(resolvedBaseUrl));
+      serverProcess = startWebsiteServer(
+        websiteDir,
+        parseBaseUrl(resolvedBaseUrl),
+        options.websiteServerMode
+      );
       await waitForServer(resolvedBaseUrl, START_TIMEOUT_MS);
     } else if (usingExistingServer) {
       targetUrl = resolveTargetUrl(options, resolvedBaseUrl, ocularConfig);
@@ -100,10 +108,24 @@ export async function runWebsiteExample(options = {}) {
       if (options.highDynamicRangeCapture && !selectedDeviceType) {
         throw new Error('[playwright] HDR capture requires an available selected device backend.');
       }
+      if (options.preparePage) {
+        await options.preparePage(page, {
+          artifactDir,
+          selectedDeviceType,
+          targetUrl
+        });
+      }
       if (options.captureDelayMilliseconds) {
         await page.waitForTimeout(options.captureDelayMilliseconds);
       }
       const webgpuProbe = await probeWebGPU(page);
+      const pageData = options.collectPageData
+        ? await options.collectPageData(page, {
+            artifactDir,
+            selectedDeviceType,
+            targetUrl
+          })
+        : null;
 
       await writeJsonArtifact(artifactDir, 'webgpu-probe.json', webgpuProbe);
       await writeJsonArtifact(artifactDir, 'page-diagnostics.json', diagnostics);
@@ -112,11 +134,21 @@ export async function runWebsiteExample(options = {}) {
         ? null
         : path.join(artifactDir, DEFAULT_SCREENSHOT_NAME);
       if (screenshotPath) {
-        await page.screenshot({
-          path: screenshotPath,
-          fullPage: !options.highDynamicRangeCapture,
-          timeout: SCREENSHOT_TIMEOUT_MS
-        });
+        if (options.screenshotSelector) {
+          const screenshotTarget = page.locator(options.screenshotSelector).first();
+          if ((await screenshotTarget.count()) === 0) {
+            throw new Error(
+              `[playwright] Screenshot selector not found: ${options.screenshotSelector}`
+            );
+          }
+          await screenshotTarget.screenshot({path: screenshotPath, timeout: SCREENSHOT_TIMEOUT_MS});
+        } else {
+          await page.screenshot({
+            path: screenshotPath,
+            fullPage: !options.highDynamicRangeCapture,
+            timeout: SCREENSHOT_TIMEOUT_MS
+          });
+        }
       }
 
       const highDynamicRangeArtifacts = options.highDynamicRangeCapture
@@ -137,10 +169,19 @@ export async function runWebsiteExample(options = {}) {
         diagnostics,
         endpointURL: browserHandle.endpointURL,
         highDynamicRangeArtifacts,
+        pageData,
         screenshotPath,
+        selectedDeviceType,
         targetUrl,
         usingExistingServer
       };
+    } catch (error) {
+      try {
+        await writeFailureArtifacts({artifactDir, diagnostics, error, page, targetUrl});
+      } catch (artifactError) {
+        (options.logger || console).error('[playwright] Failed to retain capture diagnostics', artifactError);
+      }
+      throw error;
     } finally {
       dispose();
     }
@@ -231,12 +272,25 @@ export async function applyViewportSize(page, viewportWidth, viewportHeight) {
   });
 }
 
-function startWebsiteServer(websiteDir, endpoint) {
-  const child = spawn('yarn', ['start', '--host', endpoint.host, '--port', String(endpoint.port)], {
+function startWebsiteServer(websiteDir, endpoint, serverMode = 'development') {
+  const isStaticServer = serverMode === 'static';
+  const command = isStaticServer ? process.execPath : 'yarn';
+  const arguments_ = isStaticServer
+    ? [
+        path.resolve(websiteDir, '../scripts/playwright/serve-static-website.mjs'),
+        '--root',
+        path.join(websiteDir, 'build'),
+        '--host',
+        endpoint.host,
+        '--port',
+        String(endpoint.port)
+      ]
+    : ['start', '--host', endpoint.host, '--port', String(endpoint.port)];
+  const child = spawn(command, arguments_, {
     cwd: websiteDir,
     env: {...process.env, CI: '1'},
     stdio: 'inherit',
-    shell: process.platform === 'win32'
+    shell: !isStaticServer && process.platform === 'win32'
   });
   child.on('exit', code => {
     if (code !== 0 && code !== null) {
@@ -321,6 +375,34 @@ async function writeJsonArtifact(artifactDir, filename, value) {
 
 async function writeTextArtifact(artifactDir, filename, value) {
   await writeFile(path.join(artifactDir, filename), value, 'utf8');
+}
+
+export async function writeFailureArtifacts({artifactDir, diagnostics, error, page, targetUrl}) {
+  const captureError =
+    error instanceof Error
+      ? {name: error.name, message: error.message, stack: error.stack}
+      : {name: 'Error', message: String(error)};
+  const pageState = await collectFailurePageState(page);
+  await Promise.all([
+    writeJsonArtifact(artifactDir, 'capture-error.json', captureError),
+    writeJsonArtifact(artifactDir, 'page-diagnostics.json', diagnostics),
+    writeJsonArtifact(artifactDir, 'page-state.json', pageState),
+    writeTextArtifact(artifactDir, 'last-url.txt', `${targetUrl}\n`)
+  ]);
+}
+
+async function collectFailurePageState(page) {
+  if (!page || typeof page.evaluate !== 'function') {
+    return null;
+  }
+  try {
+    return await page.evaluate(() => ({
+      gltfReferenceError: globalThis.__lumaGLTFReferenceError ?? null,
+      gltfReferenceProgress: globalThis.__lumaGLTFReferenceProgress ?? null
+    }));
+  } catch {
+    return null;
+  }
 }
 
 async function watchScreenshots(page, artifactDir, watchInterval = DEFAULT_WATCH_INTERVAL_MS) {

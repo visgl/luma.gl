@@ -44,6 +44,8 @@
     "website:build": "yarn workspace website-docusaurus build",
     "website:start": "yarn workspace website-docusaurus start",
     "website-debug": "node ./scripts/playwright/website-playwright.mjs",
+    "gltf:reference-evidence": "node ./scripts/gltf-reference/capture-reference-evidence.mjs",
+    "gltf:reference-evidence:test": "node --test ./scripts/gltf-reference/*.test.mjs ./scripts/playwright/*.test.mjs",
     "playwright:install": "playwright install chromium",
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
@@ -68,6 +70,7 @@
     "esbuild": "^0.28.1",
     "h3-js": "^4.4.0",
     "playwright": "^1.58.0",
+    "pngjs": "^7.0.0",
     "pre-commit": "^1.2.2",
     "vitest": "^4.0.18",
     "wgsl_reflect": "1.2.3",

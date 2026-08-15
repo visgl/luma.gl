@@ -134,26 +134,43 @@ export class WebGPUTexture extends Texture {
   copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
     const options = this._normalizeCopyExternalImageOptions(options_);
 
+    // Chromium's software WebGPU adapters can accept an external-image copy and then lose the
+    // device asynchronously. Use the deterministic CPU upload for supported RGBA8 images before
+    // issuing that unstable queue operation; hardware adapters retain the native fast path.
+    if (this.device.info.gpuType === 'cpu' && this._copyExternalImageData(options)) {
+      return {width: options.width, height: options.height};
+    }
+
     this.device.pushErrorScope('validation');
-    this.device.handle.queue.copyExternalImageToTexture(
-      // source: GPUImageCopyExternalImage
-      {
-        source: options.image,
-        origin: [options.sourceX, options.sourceY],
-        flipY: false // options.flipY
-      },
-      // destination: GPUImageCopyTextureTagged
-      {
-        texture: this.handle,
-        origin: [options.x, options.y, options.z],
-        mipLevel: options.mipLevel,
-        aspect: options.aspect,
-        colorSpace: options.colorSpace,
-        premultipliedAlpha: options.premultipliedAlpha
-      },
-      // copySize: GPUExtent3D
-      [options.width, options.height, options.depth] // depth is always 1 for 2D textures
-    );
+    try {
+      this.device.handle.queue.copyExternalImageToTexture(
+        // source: GPUImageCopyExternalImage
+        {
+          source: options.image,
+          origin: [options.sourceX, options.sourceY],
+          flipY: false // options.flipY
+        },
+        // destination: GPUImageCopyTextureTagged
+        {
+          texture: this.handle,
+          origin: [options.x, options.y, options.z],
+          mipLevel: options.mipLevel,
+          aspect: options.aspect,
+          colorSpace: options.colorSpace,
+          premultipliedAlpha: options.premultipliedAlpha
+        },
+        // copySize: GPUExtent3D
+        [options.width, options.height, options.depth] // depth is always 1 for 2D textures
+      );
+    } catch (error) {
+      // Chromium can reject ImageBitmap uploads on software WebGPU adapters. Preserve the native
+      // path for normal devices, but fall back to a CPU upload for the common RGBA8 case.
+      this.device.popErrorScope(() => {});
+      if (!(error instanceof TypeError) || !this._copyExternalImageData(options)) {
+        throw error;
+      }
+      return {width: options.width, height: options.height};
+    }
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`copyExternalImage: ${error.message}`), this)();
       this.device.debug();
@@ -161,6 +178,33 @@ export class WebGPUTexture extends Texture {
 
     // TODO - should these be clipped to the texture size minus x,y,z?
     return {width: options.width, height: options.height};
+  }
+
+  private _copyExternalImageData(options: Required<CopyExternalImageOptions>): boolean {
+    if (
+      (this.format !== 'rgba8unorm' && this.format !== 'rgba8unorm-srgb') ||
+      options.depth !== 1 ||
+      options.aspect !== 'all'
+    ) {
+      return false;
+    }
+
+    const data = getExternalImageData(options);
+    if (!data) {
+      return false;
+    }
+
+    this.writeData(data, {
+      x: options.x,
+      y: options.y,
+      z: options.z,
+      width: options.width,
+      height: options.height,
+      depthOrArrayLayers: 1,
+      mipLevel: options.mipLevel,
+      aspect: options.aspect
+    });
+    return true;
   }
 
   copyElementImage(options_: CopyElementImageOptions): {width: number; height: number} {
@@ -472,5 +516,63 @@ export class WebGPUTexture extends Texture {
       }
     }
     this.view._reinitialize(this);
+  }
+}
+
+function getExternalImageData(
+  options: Required<CopyExternalImageOptions>
+): Uint8ClampedArray | null {
+  const canvas =
+    typeof OffscreenCanvas !== 'undefined'
+      ? new OffscreenCanvas(options.width, options.height)
+      : typeof document !== 'undefined'
+        ? document.createElement('canvas')
+        : null;
+  if (!canvas) {
+    return null;
+  }
+  canvas.width = options.width;
+  canvas.height = options.height;
+
+  const context = canvas.getContext('2d') as
+    | CanvasRenderingContext2D
+    | OffscreenCanvasRenderingContext2D
+    | null;
+  if (!context) {
+    return null;
+  }
+
+  try {
+    if (typeof ImageData !== 'undefined' && options.image instanceof ImageData) {
+      context.putImageData(options.image, -options.sourceX, -options.sourceY);
+    } else {
+      context.drawImage(
+        options.image as CanvasImageSource,
+        options.sourceX,
+        options.sourceY,
+        options.width,
+        options.height,
+        0,
+        0,
+        options.width,
+        options.height
+      );
+    }
+    const data = context.getImageData(0, 0, options.width, options.height).data;
+    if (options.premultipliedAlpha) {
+      premultiplyAlpha(data);
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function premultiplyAlpha(data: Uint8ClampedArray): void {
+  for (let index = 0; index < data.length; index += 4) {
+    const alpha = data[index + 3] / 255;
+    data[index] *= alpha;
+    data[index + 1] *= alpha;
+    data[index + 2] *= alpha;
   }
 }
