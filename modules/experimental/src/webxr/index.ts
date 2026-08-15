@@ -79,6 +79,19 @@ export {
   WebXRSessionStateManager
 } from './webxr-session-state';
 export type {
+  WebXRSessionFeature,
+  WebXRSessionFeatures,
+  WebXRSessionSupport,
+  WebXRSessionSupportProps
+} from './webxr-session-init';
+export {
+  getWebXRSessionFeatures,
+  getWebXRSessionSupport,
+  isWebXRSessionFeatureEnabled,
+  mergeWebXRSessionInit,
+  WEBXR_DEFAULT_SESSION_SUPPORT_MODES
+} from './webxr-session-init';
+export type {
   WebXRMeshDetectionManagerProps,
   WebXRMeshDetectionSessionInitProps,
   WebXRMeshDetectionState,

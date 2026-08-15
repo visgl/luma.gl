@@ -88,19 +88,13 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
 
     expect(applicationSource).toContain("requiredFeatures: ['webgpu']");
     expect(applicationSource).toContain("'hand-tracking',");
+    expect(applicationSource).toContain('mergeWebXRSessionInit');
+    expect(applicationSource).toContain('getWebXRDOMOverlaySessionInit(domOverlayRoot)');
+    expect(applicationSource).toContain('getWebXRDepthSensingSessionInit(AR_DEPTH_SENSING)');
+    expect(applicationSource).toContain("...(deviceType === 'webgl' ? ['camera-access'] : [])");
     expect(applicationSource).toContain(
-      "const domOverlayFeatures = domOverlayRoot ? ['dom-overlay'] : []"
+      "sessionMode === 'immersive-ar'\n          ? [...arOptionalFeatures, ...baseOptionalFeatures]"
     );
-    expect(applicationSource).toContain(
-      'const domOverlayInit = domOverlayRoot ? {domOverlay: {root: domOverlayRoot}} : {}'
-    );
-    expect(applicationSource).toContain("'depth-sensing',\n              ...domOverlayFeatures,");
-    expect(applicationSource).toContain(
-      ": [...domOverlayFeatures, 'bounded-floor', 'hand-tracking', 'local-floor']"
-    );
-    expect(applicationSource).toContain('optionalFeatures: [...domOverlayFeatures,');
-    expect(applicationSource).toContain('...domOverlayInit');
-    expect(applicationSource).toContain('depthSensing: AR_DEPTH_SENSING');
     expect(applicationSource).toContain('WebXRDOMOverlayManager');
     expect(applicationSource).toContain(
       'readonly webXRDOMOverlayManager = new WebXRDOMOverlayManager()'
@@ -111,7 +105,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(applicationSource).toContain("'light-estimation',");
     expect(applicationSource).toContain("'mesh-detection',");
-    expect(applicationSource).toContain("'plane-detection',");
+    expect(applicationSource).toContain("'plane-detection'");
     expect(applicationSource).toContain('WebXRLightEstimationManager');
     expect(applicationSource).toContain('WebXRMeshDetectionManager');
     expect(applicationSource).toContain('WebXRPlaneDetectionManager');
@@ -436,7 +430,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       'readonly webXRPlaneDetectionManager = new WebXRPlaneDetectionManager({'
     );
     expect(applicationSource).toContain("orientations: ['horizontal']");
-    expect(applicationSource).toContain("'plane-detection',");
+    expect(applicationSource).toContain("'plane-detection'");
     expect(applicationSource).toContain(
       'this.webXRPlaneDetectionManager.getPlaneDetectionState(xrFrame)'
     );

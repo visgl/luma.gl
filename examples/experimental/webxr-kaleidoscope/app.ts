@@ -19,12 +19,15 @@ import {
   WebXRReferenceSpaceManager,
   WebXRRenderStateManager,
   WebXRSessionStateManager,
+  getWebXRDepthSensingSessionInit,
+  getWebXRDOMOverlaySessionInit,
   getWebXRBoundsState,
   getWebXRGamepadState,
   getWebXRHandPinch,
   getWebXRInputRay,
   getWebXRInputRayPlaneIntersection,
   isPointInWebXRBounds,
+  mergeWebXRSessionInit,
   pulseWebXRInputHaptics,
   type WebXRFrameState,
   type WebXRHandTrackingState,
@@ -1041,54 +1044,30 @@ function getXRSessionInit(
   deviceType: string,
   domOverlayRoot: Element | null = null
 ): XRSessionInit {
-  const domOverlayFeatures = domOverlayRoot ? ['dom-overlay'] : [];
-  const domOverlayInit = domOverlayRoot ? {domOverlay: {root: domOverlayRoot}} : {};
+  const baseOptionalFeatures = ['bounded-floor', 'hand-tracking', 'local-floor'];
+  const arOptionalFeatures = [
+    'anchors',
+    ...(deviceType === 'webgl' ? ['camera-access'] : []),
+    'hit-test',
+    'light-estimation',
+    'mesh-detection',
+    'plane-detection'
+  ];
+  const domOverlaySessionInit = domOverlayRoot
+    ? getWebXRDOMOverlaySessionInit(domOverlayRoot)
+    : undefined;
 
-  if (deviceType === 'webgpu') {
-    return {
-      requiredFeatures: ['webgpu'],
+  return mergeWebXRSessionInit(
+    deviceType === 'webgpu' ? {requiredFeatures: ['webgpu']} : undefined,
+    {
       optionalFeatures:
         sessionMode === 'immersive-ar'
-          ? [
-              'anchors',
-              'depth-sensing',
-              ...domOverlayFeatures,
-              'bounded-floor',
-              'hand-tracking',
-              'hit-test',
-              'light-estimation',
-              'mesh-detection',
-              'plane-detection',
-              'local-floor'
-            ]
-          : [...domOverlayFeatures, 'bounded-floor', 'hand-tracking', 'local-floor'],
-      ...(sessionMode === 'immersive-ar' ? {depthSensing: AR_DEPTH_SENSING} : {}),
-      ...domOverlayInit
-    };
-  }
-
-  return sessionMode === 'immersive-ar'
-    ? {
-        optionalFeatures: [
-          'anchors',
-          'camera-access',
-          'depth-sensing',
-          ...domOverlayFeatures,
-          'bounded-floor',
-          'hand-tracking',
-          'hit-test',
-          'light-estimation',
-          'mesh-detection',
-          'plane-detection',
-          'local-floor'
-        ],
-        depthSensing: AR_DEPTH_SENSING,
-        ...domOverlayInit
-      }
-    : {
-        optionalFeatures: [...domOverlayFeatures, 'bounded-floor', 'hand-tracking', 'local-floor'],
-        ...domOverlayInit
-      };
+          ? [...arOptionalFeatures, ...baseOptionalFeatures]
+          : baseOptionalFeatures
+    },
+    sessionMode === 'immersive-ar' ? getWebXRDepthSensingSessionInit(AR_DEPTH_SENSING) : undefined,
+    domOverlaySessionInit
+  );
 }
 
 function getDOMOverlayRoot(): Element | null {
