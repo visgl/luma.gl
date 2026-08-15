@@ -72,7 +72,11 @@ test('webxr#WebXRAnchorManager creates anchors from hit-test results and syncs t
 
   manager.setSession(session, referenceSpace);
   manager.anchors.add(staleAnchor);
-  const anchor = await manager.createAnchorFromHitTestResult(hitTestResult);
+  const anchor = await manager.createAnchorFromHitTest({
+    xrHitTestResult: hitTestResult,
+    pose: makeMockXRPose([1]),
+    matrix: new Float32Array(16)
+  });
   const anchorState = manager.getAnchorState(frame);
 
   testCase.equal(anchor, hitTestAnchor, 'returns hit-test anchor');
@@ -84,6 +88,38 @@ test('webxr#WebXRAnchorManager creates anchors from hit-test results and syncs t
   testCase.equal(hitTestAnchor.deleteCount, 1, 'session end deletes tracked anchors');
   testCase.equal(staleAnchor.deleteCount, 0, 'stale anchors already removed are not deleted');
   testCase.equal(manager.session, null, 'session end clears session');
+  testCase.end();
+});
+
+test('webxr#WebXRAnchorManager handles nullable hit-test anchor selections', async testCase => {
+  const session = new EventTarget() as XRSession;
+  const referenceSpace = {} as XRReferenceSpace;
+  const hitTestAnchor = makeMockXRAnchor({} as XRSpace);
+  const hitTestResult = {
+    async createAnchor(): Promise<XRAnchor> {
+      return hitTestAnchor;
+    },
+    getPose: () => undefined
+  } as XRHitTestResult;
+  const manager = new WebXRAnchorManager();
+
+  manager.setSession(session, referenceSpace);
+  testCase.equal(
+    await manager.createAnchorFromHitTest(null),
+    null,
+    'missing hit-test selections return null'
+  );
+  testCase.equal(manager.anchors.size, 0, 'nullable selections do not mutate anchors');
+  testCase.equal(
+    await manager.createAnchorFromHitTest({
+      xrHitTestResult: hitTestResult,
+      pose: makeMockXRPose([1]),
+      matrix: new Float32Array(16)
+    }),
+    hitTestAnchor,
+    'creates anchors from wrapped hit-test results'
+  );
+  testCase.equal(manager.anchors.has(hitTestAnchor), true, 'tracks wrapped hit-test anchors');
   testCase.end();
 });
 

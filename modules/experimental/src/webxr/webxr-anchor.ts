@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {WebXRHitTestResult} from './webxr-hit-test';
+
 export type WebXRAnchorState = {
   xrFrame: XRFrame;
   anchors: readonly WebXRAnchorPose[];
@@ -51,6 +53,12 @@ export class WebXRAnchorManager {
     const anchor = await xrFrame.createAnchor(pose, space || this.referenceSpace);
     this.anchors.add(anchor);
     return anchor;
+  }
+
+  async createAnchorFromHitTest(
+    hitTestResult: WebXRHitTestResult | null
+  ): Promise<XRAnchor | null> {
+    return hitTestResult ? this.createAnchorFromHitTestResult(hitTestResult.xrHitTestResult) : null;
   }
 
   async createAnchorFromHitTestResult(xrHitTestResult: XRHitTestResult): Promise<XRAnchor> {
