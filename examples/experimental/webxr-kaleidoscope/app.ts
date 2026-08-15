@@ -816,12 +816,12 @@ function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: strin
     return {
       requiredFeatures: ['webgpu'],
       optionalFeatures:
-        sessionMode === 'immersive-ar' ? ['hit-test', 'local-floor'] : ['local-floor']
+        sessionMode === 'immersive-ar' ? ['anchors', 'hit-test', 'local-floor'] : ['local-floor']
     };
   }
 
   return sessionMode === 'immersive-ar'
-    ? {optionalFeatures: ['camera-access', 'hit-test', 'local-floor']}
+    ? {optionalFeatures: ['anchors', 'camera-access', 'hit-test', 'local-floor']}
     : {optionalFeatures: ['local-floor']};
 }
 

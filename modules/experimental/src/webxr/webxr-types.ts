@@ -116,11 +116,19 @@ declare global {
   }
 
   interface XRHitTestResult {
+    createAnchor?(): Promise<XRAnchor>;
     getPose(baseSpace: XRSpace): XRPose | undefined;
+  }
+
+  interface XRAnchor {
+    readonly anchorSpace: XRSpace;
+    delete(): void;
   }
 
   interface XRFrame {
     readonly session: XRSession;
+    readonly trackedAnchors?: ReadonlySet<XRAnchor>;
+    createAnchor?(pose: XRRigidTransform, space: XRSpace): Promise<XRAnchor>;
     getHitTestResults?(hitTestSource: XRHitTestSource): XRHitTestResult[];
     getPose(space: XRSpace, baseSpace: XRSpace): XRPose | undefined;
     getViewerPose(referenceSpace: XRReferenceSpace): XRViewerPose | undefined;

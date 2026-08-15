@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export type {WebXRRawCameraBinding} from './webxr-types';
+export type {WebXRAnchorPose, WebXRAnchorState} from './webxr-anchor';
+export {WebXRAnchorManager} from './webxr-anchor';
 export {WebXRAnimationFrameProvider} from './webxr-animation-frame-provider';
 export type {WebXRCameraTextureProps} from './webxr-camera-texture';
 export {WebXRCameraTexture} from './webxr-camera-texture';
