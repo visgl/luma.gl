@@ -13,6 +13,7 @@ import {
   WebXRHandTrackingManager,
   WebXRHitTestManager,
   WebXRLightEstimationManager,
+  WebXRMeshDetectionManager,
   WebXRManager,
   WebXRPlaneDetectionManager,
   getWebXRHandPinch,
@@ -24,6 +25,7 @@ import {
   type WebXRHitTestState,
   type WebXRInputState,
   type WebXRLightEstimationState,
+  type WebXRMeshDetectionState,
   type WebXRPlaneDetectionState
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
@@ -393,6 +395,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly webXRLightEstimationManager = new WebXRLightEstimationManager({
     reflectionFormat: 'preferred'
   });
+  readonly webXRMeshDetectionManager = new WebXRMeshDetectionManager();
   readonly webXRPlaneDetectionManager = new WebXRPlaneDetectionManager({
     orientations: ['horizontal']
   });
@@ -553,6 +556,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRHandTrackingManager.destroy();
     this.webXRHitTestManager.destroy();
     this.webXRLightEstimationManager.destroy();
+    this.webXRMeshDetectionManager.destroy();
     this.webXRPlaneDetectionManager.destroy();
     this.webXRManager.destroy();
   }
@@ -579,6 +583,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       xrFrame && this.xrSession
         ? this.webXRPlaneDetectionManager.getPlaneDetectionState(xrFrame)
         : null;
+    const meshDetectionState =
+      xrFrame && this.xrSession
+        ? this.webXRMeshDetectionManager.getMeshDetectionState(xrFrame)
+        : null;
 
     if (frameState) {
       this.renderXRFrame(
@@ -588,7 +596,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         handState || [],
         hitTestState,
         lightEstimationState,
-        planeDetectionState
+        planeDetectionState,
+        meshDetectionState
       );
       return;
     }
@@ -641,11 +650,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.webXRHandTrackingManager.setSession(session, this.webXRManager.referenceSpace);
       if (sessionMode === 'immersive-ar') {
         await this.webXRHitTestManager
-          .setSession(session, this.webXRManager.referenceSpace, {entityTypes: ['plane', 'point']})
+          .setSession(session, this.webXRManager.referenceSpace, {
+            entityTypes: ['plane', 'point', 'mesh']
+          })
           .catch(() => this.webXRHitTestManager.clearSession());
         await this.webXRLightEstimationManager
           .setSession(session, this.webXRManager.referenceSpace)
           .catch(() => this.webXRLightEstimationManager.clearSession());
+        this.webXRMeshDetectionManager.setSession(session, this.webXRManager.referenceSpace);
         this.webXRPlaneDetectionManager.setSession(session, this.webXRManager.referenceSpace, {
           orientations: ['horizontal']
         });
@@ -704,9 +716,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     handState: readonly WebXRHandTrackingState[],
     hitTestState: WebXRHitTestState | null,
     lightEstimationState: WebXRLightEstimationState | null,
-    planeDetectionState: WebXRPlaneDetectionState | null
+    planeDetectionState: WebXRPlaneDetectionState | null,
+    meshDetectionState: WebXRMeshDetectionState | null
   ): void {
-    this.updateModelMatrix(time, true, hitTestState, planeDetectionState);
+    this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState);
     const lightIntensity = getXRLightIntensity(lightEstimationState);
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
@@ -869,7 +882,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     time: number,
     isXR: boolean,
     hitTestState: WebXRHitTestState | null = null,
-    planeDetectionState: WebXRPlaneDetectionState | null = null
+    planeDetectionState: WebXRPlaneDetectionState | null = null,
+    meshDetectionState: WebXRMeshDetectionState | null = null
   ): void {
     this.modelMatrix.identity();
     if (isXR) {
@@ -879,6 +893,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
       if (this.xrSessionMode === 'immersive-ar' && planeDetectionState?.planes[0]) {
         this.modelMatrix.copy(planeDetectionState.planes[0].matrix).scale([0.54, 0.54, 0.54]);
+        return;
+      }
+      if (this.xrSessionMode === 'immersive-ar' && meshDetectionState?.meshes[0]) {
+        this.modelMatrix.copy(meshDetectionState.meshes[0].matrix).scale([0.54, 0.54, 0.54]);
         return;
       }
 
@@ -966,6 +984,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.webXRHandTrackingManager.clearSession();
     this.webXRHitTestManager.clearSession();
     this.webXRLightEstimationManager.clearSession();
+    this.webXRMeshDetectionManager.clearSession();
     this.webXRPlaneDetectionManager.clearSession();
     this.webXRManager.clearSession();
     AppAnimationLoopTemplate.notifyCurrentListeners();
@@ -995,6 +1014,7 @@ function getXRSessionInit(
               'hand-tracking',
               'hit-test',
               'light-estimation',
+              'mesh-detection',
               'plane-detection',
               'local-floor'
             ]
@@ -1014,6 +1034,7 @@ function getXRSessionInit(
           'hand-tracking',
           'hit-test',
           'light-estimation',
+          'mesh-detection',
           'plane-detection',
           'local-floor'
         ],

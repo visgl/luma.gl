@@ -22,6 +22,7 @@
 - [`WebXRAnchorManager`](/docs/api-reference/experimental/webxr/webxr-anchor-manager) creates, tracks, resolves, and deletes AR anchors.
 - [`WebXRLightEstimationManager`](/docs/api-reference/experimental/webxr/webxr-light-estimation-manager) resolves AR light probes, direct-light estimates, spherical harmonics, and optional reflection cube maps.
 - [`WebXRMediaLayerManager`](/docs/api-reference/experimental/webxr/webxr-media-layer-manager) creates video-backed quad, cylinder, and equirect composition layers through the XR compositor.
+- [`WebXRMeshDetectionManager`](/docs/api-reference/experimental/webxr/webxr-mesh-detection-manager) resolves detected AR mesh poses, vertex/index buffers, labels, and added/updated/removed frame diffs.
 - [`WebXRPlaneDetectionManager`](/docs/api-reference/experimental/webxr/webxr-plane-detection-manager) resolves detected AR plane poses, polygons, labels, and added/updated/removed frame diffs.
 
 WebGPU raw camera textures are not part of this v10 work in progress.

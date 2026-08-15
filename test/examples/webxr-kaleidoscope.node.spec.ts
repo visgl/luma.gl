@@ -110,8 +110,10 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       'readonly webXRHandTrackingManager = new WebXRHandTrackingManager()'
     );
     expect(applicationSource).toContain("'light-estimation',");
+    expect(applicationSource).toContain("'mesh-detection',");
     expect(applicationSource).toContain("'plane-detection',");
     expect(applicationSource).toContain('WebXRLightEstimationManager');
+    expect(applicationSource).toContain('WebXRMeshDetectionManager');
     expect(applicationSource).toContain('WebXRPlaneDetectionManager');
     expect(applicationSource).toContain(
       'this.webXRHandTrackingManager.setSession(session, this.webXRManager.referenceSpace)'
@@ -321,13 +323,11 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('this.webXRHitTestManager.getHitTestState(xrFrame)');
     expect(enterMethod).toContain("sessionMode === 'immersive-ar'");
     expect(enterMethod).toContain('this.webXRHitTestManager');
-    expect(enterMethod).toContain(
-      ".setSession(session, this.webXRManager.referenceSpace, {entityTypes: ['plane', 'point']})"
-    );
+    expect(enterMethod).toContain("entityTypes: ['plane', 'point', 'mesh']");
     expect(enterMethod).toContain('.catch(() => this.webXRHitTestManager.clearSession())');
     expect(renderMethod).toContain('hitTestState: WebXRHitTestState | null');
     expect(renderMethod).toContain(
-      'this.updateModelMatrix(time, true, hitTestState, planeDetectionState)'
+      'this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState)'
     );
     expect(updateModelMethod).toContain(
       "this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]"
@@ -411,7 +411,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(enterMethod).toContain("orientations: ['horizontal']");
     expect(renderMethod).toContain('planeDetectionState: WebXRPlaneDetectionState | null');
     expect(renderMethod).toContain(
-      'this.updateModelMatrix(time, true, hitTestState, planeDetectionState)'
+      'this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState)'
     );
     expect(updateModelMethod).toContain(
       "this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]"
@@ -424,6 +424,57 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     );
     expect(clearMethod).toContain('this.webXRPlaneDetectionManager.clearSession()');
     expect(applicationSource).toContain('this.webXRPlaneDetectionManager.destroy()');
+  });
+
+  test('uses optional AR mesh detection as final placement fallback', () => {
+    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const renderMethodStart = applicationSource.indexOf('private renderXRFrame(');
+    const renderMethodEnd = applicationSource.indexOf(
+      '\n  private preparePortal(',
+      renderMethodStart
+    );
+    const renderMethod = applicationSource.slice(renderMethodStart, renderMethodEnd);
+    const enterMethodStart = applicationSource.indexOf('async enterXR(');
+    const enterMethodEnd = applicationSource.indexOf('\n  async exitAR(', enterMethodStart);
+    const enterMethod = applicationSource.slice(enterMethodStart, enterMethodEnd);
+    const updateModelStart = applicationSource.indexOf('private updateModelMatrix(');
+    const updateModelEnd = applicationSource.indexOf(
+      '\n  private teleportToInputSource(',
+      updateModelStart
+    );
+    const updateModelMethod = applicationSource.slice(updateModelStart, updateModelEnd);
+    const clearMethodStart = applicationSource.indexOf('private _clearXRSession(');
+    const clearMethod = applicationSource.slice(clearMethodStart);
+
+    expect(applicationSource).toContain('type WebXRMeshDetectionState');
+    expect(applicationSource).toContain('WebXRMeshDetectionManager');
+    expect(applicationSource).toContain(
+      'readonly webXRMeshDetectionManager = new WebXRMeshDetectionManager()'
+    );
+    expect(applicationSource).toContain("'mesh-detection',");
+    expect(applicationSource).toContain("entityTypes: ['plane', 'point', 'mesh']");
+    expect(applicationSource).toContain(
+      'this.webXRMeshDetectionManager.getMeshDetectionState(xrFrame)'
+    );
+    expect(enterMethod).toContain('this.webXRMeshDetectionManager.setSession(');
+    expect(renderMethod).toContain('meshDetectionState: WebXRMeshDetectionState | null');
+    expect(renderMethod).toContain(
+      'this.updateModelMatrix(time, true, hitTestState, planeDetectionState, meshDetectionState)'
+    );
+    expect(updateModelMethod).toContain(
+      "this.xrSessionMode === 'immersive-ar' && hitTestState?.hits[0]"
+    );
+    expect(updateModelMethod).toContain(
+      "this.xrSessionMode === 'immersive-ar' && planeDetectionState?.planes[0]"
+    );
+    expect(updateModelMethod).toContain(
+      "this.xrSessionMode === 'immersive-ar' && meshDetectionState?.meshes[0]"
+    );
+    expect(updateModelMethod).toContain(
+      'this.modelMatrix.copy(meshDetectionState.meshes[0].matrix)'
+    );
+    expect(clearMethod).toContain('this.webXRMeshDetectionManager.clearSession()');
+    expect(applicationSource).toContain('this.webXRMeshDetectionManager.destroy()');
   });
 
   test('uses select for teleport candidates and squeeze or keyboard for exit', () => {

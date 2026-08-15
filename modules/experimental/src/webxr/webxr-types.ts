@@ -227,6 +227,16 @@ declare global {
 
   interface XRPlaneSet extends ReadonlySet<XRPlane> {}
 
+  interface XRMesh {
+    readonly meshSpace: XRSpace;
+    readonly vertices: Float32Array;
+    readonly indices: Uint32Array;
+    readonly lastChangedTime: DOMHighResTimeStamp;
+    readonly semanticLabel?: string | null;
+  }
+
+  interface XRMeshSet extends ReadonlySet<XRMesh> {}
+
   interface XRDepthInformation {
     readonly width: number;
     readonly height: number;
@@ -249,6 +259,7 @@ declare global {
     readonly session: XRSession;
     readonly trackedAnchors?: ReadonlySet<XRAnchor>;
     readonly detectedPlanes?: XRPlaneSet;
+    readonly detectedMeshes?: XRMeshSet;
     createAnchor?(pose: XRRigidTransform, space: XRSpace): Promise<XRAnchor>;
     fillJointRadii?(jointSpaces: readonly XRJointSpace[], radii: Float32Array): boolean;
     fillPoses?(spaces: readonly XRSpace[], baseSpace: XRSpace, transforms: Float32Array): boolean;
