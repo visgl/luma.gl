@@ -1466,10 +1466,9 @@ export function getDependencyEndpointResolveShader(
   const chunk = props.spanChunks[chunkIndex];
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
-${getSpanChunkDeclarations(chunk)}
+${getSpanChunkDeclarations({...chunk, chunkIndex})}
 const DEPENDENCY_COUNT: u32 = ${props.dependencyCount}u;
 const CHUNK_COUNT: u32 = ${props.spanChunks.length}u;
-const CHUNK_INDEX: u32 = ${chunkIndex}u;
 const OFFSET_BASE: u32 = ${props.spanChunks.length}u;
 @group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
 @group(0) @binding(1) var<storage, read> endpointJobs: array<u32>;
