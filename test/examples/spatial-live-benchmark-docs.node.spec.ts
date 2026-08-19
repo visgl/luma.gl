@@ -15,7 +15,7 @@ const geospatialDocumentation = readFileSync(
 );
 const benchmarkDocumentation = readFileSync(
   new URL(
-    '../../docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark.md',
+    '../../docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark.md',
     import.meta.url
   ),
   'utf8'

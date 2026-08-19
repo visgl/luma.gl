@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {getGPUTracePickingShader} from '@luma.gl/experimental/lutrace';
+import {getGPUTracePickingShader} from '@luma.gl/experimental/gpu-trace';
 import {TRACE_SCENE_RENDER_SHADER} from '../../examples/experimental/gpu-trace-scene/trace-scene-shaders';
 import {
   TRACE_ERROR_SPAN_FLAG,

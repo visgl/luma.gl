@@ -10,8 +10,8 @@ import {
   type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-primitives/gpu-command-graph';
-import type {GPUGridIndexBounds, GPUGridIndexSize} from '../gpu-primitives/gpu-grid-index';
+} from '../gpu-core/gpu-command-graph';
+import type {GPUGridIndexBounds, GPUGridIndexSize} from '../gpu-core/gpu-grid-index';
 import {
   createTransientView,
   getViewBinding,
@@ -19,7 +19,7 @@ import {
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-primitives/graph-data-view-utils';
+} from '../gpu-core/graph-data-view-utils';
 import {
   GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
   type GeospatialDispatchLayout

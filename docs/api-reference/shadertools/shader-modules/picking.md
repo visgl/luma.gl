@@ -1,8 +1,10 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # picking
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/Deprecated-from-v9.1-red.svg?style=flat-square" alt="Deprecated in v9.1" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Deprecated in v9.1</DocumentationBadge>
+</DocumentationBadges>
 
 :::caution
 The `picking` shader module in `@luma.gl/shadertools` is deprecated.
@@ -93,12 +95,12 @@ When inactive, renders normal colors, with the exception of selected object whic
 
 | Setting                                | Description                                                         |
 | -------------------------------------- | ------------------------------------------------------------------- |
-| `isActive`?: boolean                   | Whether in picking or normal rendering (+highlighting) mode         |
-| `isAttribute`: boolean                 | Set to true when picking an attribute value instead of object index |
-| `useByteColors`?: boolean              | Interprets highlight colors as byte-style `0..255` values           |
-| `isHighlightActive`?: boolean          | Do we have a highlighted item?                                      |
-| `highlightedObjectColor`?: NumberArray | Set to a picking color to visually highlight that item              |
-| `highlightColor`?: NumberArray         | Color of visual highlight of "selected" item                        |
+| `isActive`?: boolean | Whether in picking or normal rendering (+highlighting) mode |
+| `isAttribute`: boolean | Set to true when picking an attribute value instead of object index |
+| `useByteColors`?: boolean | Interprets highlight colors as byte-style `0..255` values |
+| `isHighlightActive`?: boolean | Do we have a highlighted item? |
+| `highlightedObjectColor`?: NumberArray | Set to a picking color to visually highlight that item |
+| `highlightColor`?: NumberArray | Color of visual highlight of "selected" item |
 
 - `isActive` - When true, renders picking colors. Set when rendering to off-screen "picking" buffer. When false, renders normal colors, with the exception of selected object which is rendered with highlight 
 - `useByteColors` defaults to byte-compatible highlight color behavior in Phase 1.
@@ -147,9 +149,9 @@ vec4 picking_filterColor(vec4 color)
 
 | Picking Enabled | Item Highlighted | Returned color                                                        |
 | --------------- | ---------------- | --------------------------------------------------------------------- |
-| ✅               | –                | Returns picking color (representing index of this color)              |
-| ❌               | ✅                | Returns the current highlight color (to show this item as "selected") |
-| ❌               | ❌                | returns the original color (unmodified `color` argument)              |
+| ✅ | – | Returns picking color (representing index of this color) |
+| ❌ | ✅ | Returns the current highlight color (to show this item as "selected") |
+| ❌ | ❌ | returns the original color (unmodified `color` argument) |
 
 ### picking_filterHighlightColor()
 

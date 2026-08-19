@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {describe, expect, test} from 'vitest';
 
 const REPOSITORY_ROOT = new URL('../..', import.meta.url);
-const BATCH_HASH_INDEX_DOCUMENT = 'api-reference/experimental/gpu-primitives/gpu-batch-hash-index';
+const BATCH_HASH_INDEX_DOCUMENT = 'api-reference/experimental/gpu-core/gpu-batch-hash-index';
 
 function readRepositoryText(repositoryPath: string): string {
   return readFileSync(fileURLToPath(new URL(repositoryPath, REPOSITORY_ROOT)), 'utf8');
@@ -35,7 +35,7 @@ function countDocumentReferences(value: unknown, documentIdentifier: string): nu
 describe('GPU command graph feature documentation', () => {
   test('explains active physical overlap, writable aliases, and every graph command type', () => {
     const documentation = readRepositoryText(
-      'docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md'
+      'docs/api-reference/experimental/gpu-core/gpu-command-graph.md'
     );
 
     expect(documentation).toContain('Physical buffer overlap and writable aliases');
@@ -72,18 +72,18 @@ describe('GPU command graph feature documentation', () => {
     }
   });
 
-  test('exposes batch hash indexing through both reference navigation trees and graph tabs', () => {
+  test('exposes batch hash indexing through the reference navigation and graph tabs', () => {
     const tableOfContents = JSON.parse(readRepositoryText('docs/table-of-contents.json'));
-    const tabs = readRepositoryText('website/src/components/docs/gpu-primitives-docs-tabs.tsx');
-    const overview = readRepositoryText('docs/api-reference/experimental/gpu-primitives/README.md');
+    const tabs = readRepositoryText('website/src/components/docs/experimental-docs-catalog.ts');
+    const overview = readRepositoryText('docs/api-reference/experimental/gpu-core/README.md');
     const hashIndex = readRepositoryText(
-      'docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md'
+      'docs/api-reference/experimental/gpu-core/gpu-hash-index.md'
     );
 
-    expect(countDocumentReferences(tableOfContents, BATCH_HASH_INDEX_DOCUMENT)).toBe(2);
+    expect(countDocumentReferences(tableOfContents, BATCH_HASH_INDEX_DOCUMENT)).toBe(1);
     expect(tabs).toContain("id: 'batch-hash-index'");
     expect(tabs).toContain(BATCH_HASH_INDEX_DOCUMENT);
-    expect(overview).toContain(BATCH_HASH_INDEX_DOCUMENT);
+    expect(overview).toContain(`/docs/${BATCH_HASH_INDEX_DOCUMENT}`);
     expect(hashIndex).toContain(BATCH_HASH_INDEX_DOCUMENT);
   });
 });

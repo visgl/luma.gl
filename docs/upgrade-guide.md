@@ -143,18 +143,18 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 | Updated API                   | Status     | Replacement                                  | Comment                                                         |
 | ----------------------------- | ---------- | -------------------------------------------- | --------------------------------------------------------------- |
-| `luma.registerDevices()`      | Deprecated | [`luma.registerAdapters()`][adapters].       | Adapters provide a cleaner way to work with GPU backends.       |
-| `DeviceProps.canvas`          | Moved      | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.   |
-| `DeviceProps.<webgl options>` | Moved      | [`DeviceProps.webgl.<options>`][webgl].      | Move canvas related props to `props.webgl: {}`.                 |
-| `DeviceProps.break`           | Removed    |                                              | Use an alternative [debugger][debugging]                         |
-| `TextureProps.data` (Promise) | Removed    | `AsyncTexture` class                         | `Texture` no longer accept promises. Use `AsyncTexture`         |
-| `Parameters.blend`            | New        |                                              | Explicit activation of color blending                           |
-| `triangle-fan-webgl` topology | Removed    | `triangle-strip`.                            | Reorganize your geometries                                      |
-| `line-loop-webgl` topology    | Removed    | `line-list`.                                 | Reorganize your geometries                                      |
-| `glsl` shader template string | Removed    | `/* glsl */` comment                         | Enable syntax highlighting in vscode using before shader string |
-| `depth24unorm-stencil8`       | Removed    | `depth24plus-stencil8`                       | The `TextureFormat` was dropped from the WebGPU spec            |
-| `rgb8unorm-unsized`           | Removed    | `rgb8unorm`                                  | Drop support for unsized WebGL1 `TextureFormat`                 |
-| `rgba8unorm-unsized`          | Removed    | `rgb8aunorm`                                 | Drop support for unsized WebGL1 `TextureFormat`                 |
+| `luma.registerDevices()` | Deprecated | [`luma.registerAdapters()`][adapters]. | Adapters provide a cleaner way to work with GPU backends. |
+| `DeviceProps.canvas` | Moved | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`. |
+| `DeviceProps.<webgl options>` | Moved | [`DeviceProps.webgl.<options>`][webgl]. | Move canvas related props to `props.webgl: {}`. |
+| `DeviceProps.break` | Removed | — | Use an alternative [debugger][debugging] |
+| `TextureProps.data` (Promise) | Removed | `AsyncTexture` class | `Texture` no longer accept promises. Use `AsyncTexture` |
+| `Parameters.blend` | New | — | Explicit activation of color blending |
+| `triangle-fan-webgl` topology | Removed | `triangle-strip`. | Reorganize your geometries |
+| `line-loop-webgl` topology | Removed | `line-list`. | Reorganize your geometries |
+| `glsl` shader template string | Removed | `/* glsl */` comment | Enable syntax highlighting in vscode using before shader string |
+| `depth24unorm-stencil8` | Removed | `depth24plus-stencil8` | The `TextureFormat` was dropped from the WebGPU spec |
+| `rgb8unorm-unsized` | Removed | `rgb8unorm` | Drop support for unsized WebGL1 `TextureFormat` |
+| `rgba8unorm-unsized` | Removed | `rgb8aunorm` | Drop support for unsized WebGL1 `TextureFormat` |
 
 [adapters]: /docs/api-reference/core/luma#lumaregisteradapters
 [canvas]: /docs/api-reference/core/canvas-context#canvascontextprops
@@ -165,11 +165,11 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 | Updated API                          | Status  | Replacement                             | Comment                                            |
 | ------------------------------------ | ------- | --------------------------------------- | -------------------------------------------------- |
-| `ShaderModuleInstance`               | Removed | Use `ShaderModule` instead.             | Type has been removed.                             |
-| `initializeShaderModule()`           | Changed |                                         | Initializes the original shader module object      |
-| `ShaderModuleInstance.getUniforms()` | Removed | `getShaderModuleUniforms(module, ...)`. | Interact directly with the shader module           |
-| `getDependencyGraph()`               | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module           |
-| `glsl` template string               | Removed | `/* glsl */` comment                    | Enable syntax highlighting in vscode using comment |
+| `ShaderModuleInstance` | Removed | Use `ShaderModule` instead. | Type has been removed. |
+| `initializeShaderModule()` | Changed | — | Initializes the original shader module object |
+| `ShaderModuleInstance.getUniforms()` | Removed | `getShaderModuleUniforms(module, ...)`. | Interact directly with the shader module |
+| `getDependencyGraph()` | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module |
+| `glsl` template string | Removed | `/* glsl */` comment | Enable syntax highlighting in vscode using comment |
 
 **@luma.gl/effects**
 

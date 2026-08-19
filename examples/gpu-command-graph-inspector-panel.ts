@@ -134,7 +134,7 @@ export class GPUCommandGraphInspectorPanel {
     const gpuSampleCount = graph.totals.gpu.sampleCount;
     const rows = graph.nodes
       .map(
-        node => `<div class="graph-inspector-node" title="${escapeHtml(node.id)}">
+        node => `<div class="graph-inspector-node" data-full-name="${escapeHtml(node.id)}">
           <span><i>${escapeHtml(node.group ?? node.type)}</i>${escapeHtml(getShortNodeId(node.id, graph.id))}</span>
           <strong>${formatDurationPair(node.cpu)}</strong>
           <strong>${formatDurationPair(node.gpu)}</strong>
@@ -282,6 +282,7 @@ const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `
     font-weight: 600;
   }
   [data-gpu-command-graph-inspector] .graph-inspector-node {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 66px 66px;
     align-items: center;
@@ -290,6 +291,27 @@ const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `
     border-bottom: 1px solid rgb(137 166 211 / 9%);
     color: #b9c8dc;
     font: 8px/1.25 ui-monospace, monospace;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-node:not(.graph-inspector-node-header)::after {
+    position: absolute;
+    z-index: 4;
+    inset: 1px 0;
+    display: flex;
+    align-items: center;
+    padding: 3px 6px;
+    border: 1px solid rgb(114 158 212 / 30%);
+    border-radius: 4px;
+    background: rgb(8 16 27 / 98%);
+    box-shadow: 0 5px 16px rgb(0 0 0 / 35%);
+    color: #e4effc;
+    content: attr(data-full-name);
+    font: 8px/1.25 ui-monospace, monospace;
+    opacity: 0;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+  }
+  [data-gpu-command-graph-inspector] .graph-inspector-node:not(.graph-inspector-node-header):hover::after {
+    opacity: 1;
   }
   [data-gpu-command-graph-inspector] .graph-inspector-node > span {
     overflow: hidden;

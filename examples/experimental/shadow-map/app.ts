@@ -4,7 +4,13 @@
 
 import type {Buffer, Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, CubeGeometry, Model, ShaderInputs} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  CubeGeometry,
+  Model,
+  OrbitControls,
+  ShaderInputs
+} from '@luma.gl/engine';
 import {
   shadow,
   ShadowMapRenderer,
@@ -22,7 +28,6 @@ import {
   makeHtmlCustomPanel,
   makeExampleTabbedPanel
 } from '../../example-panels';
-import {OrbitController} from '../../orbit-controller';
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 150;
@@ -287,7 +292,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly shadowCasters: ShadowMapCasterModels;
   readonly panels: ExamplePanelManager;
   readonly settingsPanel: ExampleSettingsPanelManager;
-  orbitController: OrbitController | null = null;
+  orbitControls: OrbitControls | null = null;
   settings: ShadowMapSettings = {...DEFAULT_SETTINGS};
 
   constructor({device}: AnimationProps) {
@@ -311,7 +316,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
-      this.orbitController = new OrbitController(canvas, {
+      this.orbitControls = new OrbitControls(canvas, {
         target: [0, 1.8, 0],
         distance: 40.2,
         yaw: 0.75,
@@ -326,15 +331,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  onRender({device, aspect, tick}: AnimationProps): void {
-    const time = this.settings.animateSun ? tick / 1000 : 0.7;
+  onRender({device, aspect, tick, time}: AnimationProps): void {
+    const sunTime = this.settings.animateSun ? tick / 1000 : 0.7;
     const sunDirection = normalize3([
-      -0.48 + Math.sin(time * 0.7) * 0.35,
+      -0.48 + Math.sin(sunTime * 0.7) * 0.35,
       0.78,
-      -0.34 + Math.cos(time * 0.7) * 0.35
+      -0.34 + Math.cos(sunTime * 0.7) * 0.35
     ]);
-    this.orbitController?.update(tick);
-    const eye: NumberArray3 = this.orbitController?.getEyePosition() || [25, 18, 27];
+    this.orbitControls?.update(time);
+    const eye: NumberArray3 = this.orbitControls?.getEyePosition() || [25, 18, 27];
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(45),
       aspect,
@@ -385,7 +390,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize(): void {
     this.settingsPanel.finalize();
     this.panels.finalize();
-    this.orbitController?.destroy();
+    this.orbitControls?.destroy();
     this.shadowCasters.destroy();
     this.shadowRenderer.destroy();
     this.scene.destroy();
@@ -414,7 +419,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private readonly handleSettingsChange = (nextSettings: Record<string, unknown>): void => {
     this.settings = {...this.settings, ...(nextSettings as ShadowMapSettings)};
     this.shadowRenderer.setProps({quality: this.settings.quality});
-    this.orbitController?.setAutoRotate(this.settings.autoOrbitCamera);
+    this.orbitControls?.setAutoRotate(this.settings.autoOrbitCamera);
   };
 }
 

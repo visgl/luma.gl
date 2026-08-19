@@ -8,6 +8,10 @@ import {describe, expect, test} from 'vitest';
 
 const DOCUMENTATION_DIRECTORY = path.join(process.cwd(), 'docs');
 const CAPABILITIES_SOURCE_PATH = path.join(DOCUMENTATION_DIRECTORY, 'capabilities.mdx');
+const CAPABILITIES_DETAIL_PATHS = [
+  path.join(DOCUMENTATION_DIRECTORY, 'capabilities/gpu-data-compute.mdx'),
+  path.join(DOCUMENTATION_DIRECTORY, 'capabilities/rendering-visualization.mdx')
+] as const;
 const EXAMPLE_CONTENT_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/core',
@@ -26,7 +30,6 @@ const FRAMEWORK_PACKAGE_NAMES = [
 ] as const;
 const DATA_CAPABILITIES_HEADING = '## GPU-native data, compute, and visualization';
 const RENDERING_CAPABILITIES_HEADING = '## Portable GPU foundation and rendering';
-const DATA_OPPORTUNITIES_HEADING = '## Opportunities for data-intensive visualization and compute';
 
 type CapabilityTable = {
   heading: string;
@@ -175,10 +178,10 @@ describe('framework capabilities documentation', () => {
     for (const {heading, packageName, capabilities, minimumRowCount} of [
       {
         heading: /GPU dataframe analytics/i,
-        packageName: '@luma.gl/experimental/ludf',
+        packageName: '@luma.gl/experimental/gpu-dataframe',
         minimumRowCount: 7,
         capabilities: [
-          /LuDataFrame/i,
+          /GPUDataFrame/i,
           /filter|predicate/i,
           /derived|expression/i,
           /null|validity/i,
@@ -195,10 +198,10 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU graph analytics and layout/i,
-        packageName: '@luma.gl/experimental/lugraph',
+        packageName: '@luma.gl/experimental/gpu-graph',
         minimumRowCount: 5,
         capabilities: [
-          /LuGraph/i,
+          /GPUGraph/i,
           /\bCSR\b|compressed[\s-]+sparse/i,
           /breadth[\s-]+first|\bBFS\b/i,
           /connected[\s-]+components/i,
@@ -210,7 +213,7 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU raster and satellite analysis/i,
-        packageName: '@luma.gl/experimental/luraster',
+        packageName: '@luma.gl/experimental/gpu-raster',
         minimumRowCount: 7,
         capabilities: [
           /GPURaster/i,
@@ -603,10 +606,16 @@ describe('framework capabilities documentation', () => {
 
   test('accurately scopes shared glTF, material, animation, and ANARI capabilities', () => {
     const capabilitiesSource = readCapabilitiesSource();
-    const anariGuide = readFileSync(
-      path.join(DOCUMENTATION_DIRECTORY, 'api-guide/engine/anari-rendering.md'),
-      'utf8'
-    );
+    const anariGuide = [
+      'anari-rendering.md',
+      'anari-first-scene.md',
+      'anari-architecture.md',
+      'anari-json-scenes.md'
+    ]
+      .map(fileName =>
+        readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'api-guide/engine', fileName), 'utf8')
+      )
+      .join('\n');
     const ownershipDescription = capabilitiesSource.match(/ownership\s+boundaries[\s\S]*?\n\n/i);
 
     expect(ownershipDescription).not.toBeNull();
@@ -699,7 +708,7 @@ describe('framework capabilities documentation', () => {
     const capabilitiesSource = readCapabilitiesSource();
 
     expect(capabilitiesSource).toMatch(/\bexperimental\b/i);
-    expect(capabilitiesSource).toMatch(/not\s+(?:yet\s+)?published|private\s+package/i);
+    expect(capabilitiesSource).toMatch(/experimental\s*\/\s*private|private\s+(?:module|package)/i);
     expect(capabilitiesSource).toMatch(
       /(?:two[\s-]+dimensional|2D)[\s\S]{0,120}(?:MLS[\s-]*MPM|fluid|liquid)|(?:MLS[\s-]*MPM|fluid|liquid)[\s\S]{0,120}(?:two[\s-]+dimensional|2D)/i
     );
@@ -714,7 +723,6 @@ describe('framework capabilities documentation', () => {
   test('acknowledges meaningful gaps without presenting future work as existing functionality', () => {
     const capabilitiesSource = readCapabilitiesSource();
 
-    expect(capabilitiesSource).toMatch(/scientific\s+volume/i);
     expect(capabilitiesSource).toMatch(
       /(?:three[\s-]+dimensional|3D)[\s\S]{0,50}(?:liquid|fluid)|(?:liquid|fluid)[\s\S]{0,50}(?:three[\s-]+dimensional|3D)/i
     );
@@ -722,38 +730,19 @@ describe('framework capabilities documentation', () => {
     expect(capabilitiesSource).toMatch(/path[\s-]+trac(?:e|ing)|ray[\s-]+trac(?:e|ing)/i);
   });
 
-  test('frames future opportunities around massive data, GPU computation, and visualization', () => {
+  test('keeps future work factual and scoped to affected capability rows', () => {
     const capabilitiesSource = readCapabilitiesSource();
-    const opportunitiesOffset = capabilitiesSource.indexOf(DATA_OPPORTUNITIES_HEADING);
-    const dataframeJoinOpportunities = readDetailedCapabilityRows(capabilitiesSource).filter(
+    const opportunityRows = readDetailedCapabilityRows(capabilitiesSource).filter(row =>
+      /opportunity/i.test(row.status)
+    );
+    const dataframeJoinOpportunities = opportunityRows.filter(
       row =>
-        /opportunity/i.test(row.status) &&
-        row.packageName.includes('@luma.gl/experimental/ludf') &&
+        row.packageName.includes('@luma.gl/experimental/gpu-dataframe') &&
         /join/i.test(`${row.feature} ${row.details}`)
     );
 
-    expect(opportunitiesOffset).toBeGreaterThan(
-      capabilitiesSource.indexOf(RENDERING_CAPABILITIES_HEADING)
-    );
-
-    const opportunities = capabilitiesSource.slice(opportunitiesOffset);
-
-    for (const opportunity of [
-      /(?:massive|large|billion|out[\s-]+of[\s-]+core|bounded)[\s\S]{0,80}(?:data|dataset|residen)/i,
-      /stream|progressive/i,
-      /GPU[\s-]+(?:native|resident|compute)|command[\s-]+graph/i,
-      /Arrow|columnar|table/i,
-      /spatial|geospatial|projection/i,
-      /scientific\s+volume|volumetric\s+data|volume\s+render/i,
-      /visualization/i
-    ]) {
-      expect(
-        opportunities,
-        `The roadmap must prioritize data-intensive visualization: ${opportunity}`
-      ).toMatch(opportunity);
-    }
-
-    expect(opportunities).not.toMatch(
+    expect(opportunityRows.length).toBeGreaterThanOrEqual(10);
+    expect(capabilitiesSource).not.toMatch(
       /(?:expand|add|introduce|implement)\s+(?:group(?:ed|ing|By)\s+(?:queries|aggregation)|(?:stable\s+)?sort(?:ing|s)?|top[\s-]*k)/i
     );
 
@@ -780,7 +769,15 @@ describe('framework capabilities documentation', () => {
     );
 
     expect(gettingStartedIndex).toBeGreaterThanOrEqual(0);
-    expect(documentationTableOfContents[gettingStartedIndex + 1]).toBe('capabilities');
+    expect(documentationTableOfContents[gettingStartedIndex + 1]).toMatchObject({
+      type: 'category',
+      label: 'Capabilities',
+      items: [
+        'capabilities',
+        'capabilities/gpu-data-compute',
+        'capabilities/rendering-visualization'
+      ]
+    });
     expect(documentationOverview).toContain('/docs/capabilities');
     expect(gettingStartedSource).toContain('/docs/capabilities');
   });
@@ -816,7 +813,9 @@ describe('framework capabilities documentation', () => {
 });
 
 function readCapabilitiesSource(): string {
-  return readFileSync(CAPABILITIES_SOURCE_PATH, 'utf8');
+  return [CAPABILITIES_SOURCE_PATH, ...CAPABILITIES_DETAIL_PATHS]
+    .map(sourcePath => readFileSync(sourcePath, 'utf8'))
+    .join('\n');
 }
 
 function readCapabilityTables(capabilitiesSource: string): CapabilityTable[] {

@@ -76,7 +76,7 @@ steady-state dispatches. On devices with `timestamp-query`, create the command e
 Optional algorithm entry points keep specialized workflows out of the default experimental bundle:
 
 - `@luma.gl/experimental/geospatial` provides graph-native spatial operations and distance kernels.
-- `@luma.gl/experimental/luproj` compiles arbitrary CPU coordinate transformations into
+- `@luma.gl/experimental/gpu-project` compiles arbitrary CPU coordinate transformations into
   precision-preserving, GPU-evaluated local projection patches.
-- `@luma.gl/experimental/lutrace` keeps execution-trace scenes, process/thread interactions,
+- `@luma.gl/experimental/gpu-trace` keeps execution-trace scenes, process/thread interactions,
   dependency focus, and timeline picking separate from generic command-graph primitives.

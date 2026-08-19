@@ -2,7 +2,7 @@ import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-t
 
 # Rendering Techniques and Tradeoffs
 
-<ShaderLevelDocsTabs active="rendering-techniques" />
+<ShaderLevelDocsTabs group="techniques" active="rendering-techniques" />
 
 luma.gl deliberately provides several approaches to similar visual problems. A cheap effect,
 a higher-quality effect, a material shader, and a scene-aware fullscreen pipeline are not

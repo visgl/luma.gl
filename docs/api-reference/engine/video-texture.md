@@ -1,12 +1,13 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 # VideoTexture
 
 <EngineDocsTabs group="dynamic-resources" active="video-texture" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From-v9.4" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
+</DocumentationBadges>
 
 `VideoTexture` is the engine-level live video binding source. It accepts a caller-owned
 `HTMLVideoElement` or `VideoFrame` and resolves the concrete core binding that matches the shader

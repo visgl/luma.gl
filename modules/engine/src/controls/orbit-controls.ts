@@ -16,6 +16,10 @@ export type OrbitControlsProps = {
   rotateSpeed?: number;
   pitchSpeed?: number;
   zoomSpeed?: number;
+  enabled?: boolean;
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  panSpeed?: number;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
   onInteractionStart?: () => void;
@@ -37,6 +41,10 @@ const DEFAULT_PROPS: ResolvedOrbitControlsProps = {
   maxPitch: Math.PI / 2 - 0.01,
   rotateSpeed: 0.006,
   zoomSpeed: 0.001,
+  enabled: true,
+  enableZoom: true,
+  enablePan: false,
+  panSpeed: 0.0018,
   autoRotate: false,
   autoRotateSpeed: 0.1
 };
@@ -86,7 +94,12 @@ export class OrbitControls {
 
   /** Advances optional auto-rotation using an animation-loop timestamp in milliseconds. */
   update(timeMilliseconds: number): void {
-    if (this.previousTimeMilliseconds !== null && this.props.autoRotate && !this.dragging) {
+    if (
+      this.previousTimeMilliseconds !== null &&
+      this.props.enabled &&
+      this.props.autoRotate &&
+      !this.dragging
+    ) {
       const deltaSeconds = Math.min(
         Math.max(timeMilliseconds - this.previousTimeMilliseconds, 0) / 1000,
         0.1
@@ -114,6 +127,9 @@ export class OrbitControls {
   /** Updates orbit configuration and applies supplied camera state immediately. */
   setProps(props: OrbitControlsProps): void {
     Object.assign(this.props, props);
+    if (props.enabled === false && this.dragging) {
+      this.endPointerInteraction();
+    }
     if (props.target) {
       this.props.target = [...props.target];
     }
@@ -161,7 +177,7 @@ export class OrbitControls {
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (event.button !== 0) {
+    if (!this.props.enabled || event.button !== 0) {
       return;
     }
     this.props.onInteractionStart?.();
@@ -173,33 +189,49 @@ export class OrbitControls {
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.dragging || event.pointerId !== this.pointerId) {
+    if (!this.props.enabled || !this.dragging || event.pointerId !== this.pointerId) {
       return;
     }
     const deltaX = event.clientX - this.lastPointer[0];
     const deltaY = event.clientY - this.lastPointer[1];
     this.lastPointer = [event.clientX, event.clientY];
-    this.yaw -= deltaX * this.props.rotateSpeed;
-    this.pitch = clampNumber(
-      this.pitch - deltaY * (this.props.pitchSpeed ?? this.props.rotateSpeed),
-      this.props.minPitch,
-      this.props.maxPitch
-    );
+    if (this.props.enablePan && event.shiftKey) {
+      const panScale = this.distance * this.props.panSpeed;
+      this.props.target = [
+        this.props.target[0] - Math.cos(this.yaw) * deltaX * panScale,
+        this.props.target[1] + deltaY * panScale,
+        this.props.target[2] + Math.sin(this.yaw) * deltaX * panScale
+      ];
+    } else {
+      this.yaw -= deltaX * this.props.rotateSpeed;
+      this.pitch = clampNumber(
+        this.pitch - deltaY * (this.props.pitchSpeed ?? this.props.rotateSpeed),
+        this.props.minPitch,
+        this.props.maxPitch
+      );
+    }
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
     if (event.pointerId !== this.pointerId) {
       return;
     }
+    this.endPointerInteraction();
+  };
+
+  private endPointerInteraction(): void {
     this.dragging = false;
-    if (this.canvas.hasPointerCapture(event.pointerId)) {
-      this.canvas.releasePointerCapture(event.pointerId);
+    if (this.pointerId !== null && this.canvas.hasPointerCapture(this.pointerId)) {
+      this.canvas.releasePointerCapture(this.pointerId);
     }
     this.pointerId = null;
     this.canvas.style.cursor = 'grab';
-  };
+  }
 
   private readonly handleWheel = (event: WheelEvent): void => {
+    if (!this.props.enabled || !this.props.enableZoom) {
+      return;
+    }
     event.preventDefault();
     this.props.onInteractionStart?.();
     const deltaY = clampNumber(event.deltaY, -240, 240);

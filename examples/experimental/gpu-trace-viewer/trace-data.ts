@@ -5,7 +5,7 @@
 import {
   GPU_TRACE_LINK_RECORD_WORD_LENGTH,
   GPU_TRACE_SPAN_RECORD_WORD_LENGTH
-} from '@luma.gl/experimental/lutrace';
+} from '@luma.gl/experimental/gpu-trace';
 
 /** Reference duration for the smallest interactive demonstration. */
 export const TRACE_DURATION = 1000;
@@ -16,9 +16,22 @@ export const TRACE_THREADS_PER_PROCESS = 4;
 export const TRACE_LANES_PER_THREAD = 4;
 export const TRACE_THREAD_COUNT = TRACE_PROCESS_COUNT * TRACE_THREADS_PER_PROCESS;
 export const TRACE_LANE_COUNT = TRACE_THREAD_COUNT * TRACE_LANES_PER_THREAD;
+/** Empty display rows retained after every visible thread to separate thread groups. */
+export const TRACE_THREAD_GAP_LANE_COUNT = 1;
+/** Additional empty display rows inserted between process groups. */
+export const TRACE_PROCESS_GAP_LANE_COUNT = 2;
+/** Fixed density/output capacity for the fully expanded hierarchy including visual gaps. */
+export const TRACE_DISPLAY_LANE_CAPACITY =
+  TRACE_LANE_COUNT +
+  TRACE_THREAD_COUNT * TRACE_THREAD_GAP_LANE_COUNT +
+  (TRACE_PROCESS_COUNT - 1) * TRACE_PROCESS_GAP_LANE_COUNT;
 export const TRACE_SPAN_RECORD_WORD_LENGTH = GPU_TRACE_SPAN_RECORD_WORD_LENGTH;
 export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = GPU_TRACE_LINK_RECORD_WORD_LENGTH;
 export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 9;
+export const TRACE_TEMPORAL_INDEX_RECORD_WORD_LENGTH = 8;
+export const TRACE_TEMPORAL_INDEX_FANOUT = 4;
+export const TRACE_TEMPORAL_INDEX_MAXIMUM_BATCH_COUNT = 256;
+export const TRACE_TEMPORAL_INDEX_TARGET_PIXEL_WIDTH = 48;
 export const TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH = 6;
 // One span batch maps to one portable WebGPU workgroup for candidate-driven local compaction.
 export const TRACE_SPAN_BATCH_CAPACITY = 256;
@@ -26,6 +39,22 @@ export const TRACE_SPAN_BATCH_CAPACITY = 256;
 export const TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH = 64 * 1024 * 1024;
 // One dependency batch maps to one portable WebGPU workgroup for candidate-driven compaction.
 export const TRACE_DEPENDENCY_BATCH_CAPACITY = 128;
+/** Maximum dependency batches admitted to expensive visibility and endpoint work per frame. */
+export const TRACE_DEPENDENCY_FRAME_BATCH_BUDGET = 4096;
+/** Default number of viewport-intersecting dependency lines retained for display. */
+export const TRACE_DEPENDENCY_DISPLAY_BUDGET = 2048;
+/** User-selectable dependency display budgets, from sparse overview to dense inspection. */
+export const TRACE_DEPENDENCY_DISPLAY_BUDGET_OPTIONS = [512, 2048, 8192] as const;
+/** Overview views retain this fraction of the selected maximum dependency density. */
+export const TRACE_DEPENDENCY_OVERVIEW_DENSITY_FRACTION = 1 / 32;
+/** Reaching this zoom ratio admits the selected maximum dependency density. */
+export const TRACE_DEPENDENCY_FULL_DENSITY_ZOOM = 32;
+/** Keeps dependency records below the same conservative storage-binding target as spans. */
+export const TRACE_DEPENDENCY_CHUNK_TARGET_BYTE_LENGTH = 64 * 1024 * 1024;
+/** Keeps sparse adjacency topology and neighbor bindings independently bounded. */
+export const TRACE_ADJACENCY_CHUNK_TARGET_BYTE_LENGTH = 64 * 1024 * 1024;
+/** Bounds each compact focus frontier while reporting discoveries that exceed the allocation. */
+export const TRACE_FOCUS_FRONTIER_MAXIMUM_CAPACITY = 1_048_576;
 const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000];
 // Keep density scrolling visually continuous at common viewport widths while retaining a fixed,
 // allocation-stable aggregation target for the compiled GPU command graph.
@@ -124,24 +153,26 @@ export function getTraceDependencyCapacityOptions(
 ): number[] {
   const dependencyRecordByteLength =
     TRACE_DEPENDENCY_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
-  const maximumStoredDependencyCount = Math.floor(
-    Math.min(maxStorageBufferBindingSize, maxBufferSize) / dependencyRecordByteLength
+  const maximumChunkDependencyCount = Math.floor(
+    Math.min(
+      maxStorageBufferBindingSize,
+      maxBufferSize,
+      TRACE_DEPENDENCY_CHUNK_TARGET_BYTE_LENGTH
+    ) / dependencyRecordByteLength
   );
-  const maximumGeneratedDependencyCount = getMaximumGeneratedTraceDependencyCount(
-    TRACE_DEMONSTRATION_CAPACITIES.at(-1)!
-  );
-  return [
-    0,
-    ...TRACE_DEMONSTRATION_CAPACITIES.filter(
-      capacity =>
-        Math.min(capacity, maximumGeneratedDependencyCount) <= maximumStoredDependencyCount
-    )
-  ];
+  return maximumChunkDependencyCount >= TRACE_DEPENDENCY_BATCH_CAPACITY
+    ? [0, ...TRACE_DEMONSTRATION_CAPACITIES]
+    : [
+        0,
+        ...TRACE_DEMONSTRATION_CAPACITIES.filter(
+          capacity => capacity <= maximumChunkDependencyCount
+        )
+      ];
 }
 
-/** Upper bound for the example's intentionally sparse generated dependency topology. */
+/** Upper bound for the example's generated dependency topology. */
 export function getMaximumGeneratedTraceDependencyCount(spanCount: number): number {
-  return Math.ceil(spanCount / 5) + Math.ceil(spanCount / 29) + 1;
+  return spanCount > 1 ? spanCount : 0;
 }
 
 /**
@@ -151,8 +182,12 @@ export function getMaximumGeneratedTraceDependencyCount(spanCount: number): numb
  * need span-sized frontier allocations. One word is retained for an empty trace because WebGPU
  * buffers cannot be empty.
  */
-export function getTraceFocusFrontierCapacity(spanCount: number, dependencyCount: number): number {
-  return Math.max(Math.min(spanCount, dependencyCount + 1), 1);
+export function getTraceFocusFrontierCapacity(
+  spanCount: number,
+  dependencyCount: number,
+  maximumCapacity = TRACE_FOCUS_FRONTIER_MAXIMUM_CAPACITY
+): number {
+  return Math.max(Math.min(spanCount, dependencyCount + 1, maximumCapacity), 1);
 }
 
 /** Matches the GPU's exact-span versus density-rendering blend. */
@@ -171,6 +206,84 @@ export function getTraceDensityBlend(
   );
   const smoothBlend = linearBlend * linearBlend * (3 - 2 * linearBlend);
   return smoothTransition ? smoothBlend : Number(smoothBlend >= 0.5);
+}
+
+/** User-selected policy for the trace overview representation. */
+export type TraceOverviewMode = 'auto' | 'density' | 'representative';
+
+/** Effective representation dispatched for the current trace-time scale. */
+export type TraceOverviewRenderer = 'exact' | 'density' | 'representative';
+
+/** User-selected dependency routing policy for semantic zoom. */
+export type TraceDependencyRouting = 'auto' | 'exact' | 'bundled';
+
+/** Resolves the requested overview policy to the renderer active at this zoom. */
+export function getTraceOverviewRenderer(
+  timeMin: number,
+  timeMax: number,
+  viewportWidth: number,
+  overviewMode: TraceOverviewMode,
+  smoothTransition = true
+): TraceOverviewRenderer {
+  const densityBlend = getTraceDensityBlend(timeMin, timeMax, viewportWidth, smoothTransition);
+  if (densityBlend <= 0) {
+    return 'exact';
+  }
+  if (overviewMode === 'density') {
+    return 'density';
+  }
+  const timePerPixel = (timeMax - timeMin) / Math.max(viewportWidth, 1);
+  return overviewMode === 'representative' ||
+    timePerPixel < TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL * 4
+    ? 'representative'
+    : 'density';
+}
+
+/** Resolves whether visible dependencies should share quantized screen-space corridors. */
+export function isTraceDependencyBundlingEnabled(
+  timeMin: number,
+  timeMax: number,
+  viewportWidth: number,
+  routing: TraceDependencyRouting
+): boolean {
+  if (routing === 'exact') {
+    return false;
+  }
+  if (routing === 'bundled') {
+    return true;
+  }
+  const timePerPixel = (timeMax - timeMin) / Math.max(viewportWidth, 1);
+  // Start sharing corridors before the span LOD handoff. A few thousand straight edges can
+  // already obscure otherwise exact spans at this scale; the closest detail views remain exact.
+  return timePerPixel >= TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL * 0.1;
+}
+
+/**
+ * Returns a perceptually smooth dependency-line budget for the current zoom.
+ *
+ * Equal multiplicative zoom steps advance equally through the ramp. The maximum budget remains a
+ * user-selected density ceiling rather than a fixed amount of work dispatched at every scale.
+ */
+export function getTraceDependencyDisplayBudget(
+  maximumBudget: number,
+  timeMin: number,
+  timeMax: number,
+  traceDuration: number
+): number {
+  if (maximumBudget <= 0) {
+    return 0;
+  }
+  const visibleDuration = Math.max(timeMax - timeMin, Number.EPSILON);
+  const zoomRatio = Math.max(traceDuration / visibleDuration, 1);
+  const linearProgress = Math.max(
+    0,
+    Math.min(1, Math.log2(zoomRatio) / Math.log2(TRACE_DEPENDENCY_FULL_DENSITY_ZOOM))
+  );
+  const smoothProgress = linearProgress * linearProgress * (3 - 2 * linearProgress);
+  const densityFraction =
+    TRACE_DEPENDENCY_OVERVIEW_DENSITY_FRACTION +
+    (1 - TRACE_DEPENDENCY_OVERVIEW_DENSITY_FRACTION) * smoothProgress;
+  return Math.min(maximumBudget, Math.max(1, Math.round(maximumBudget * densityFraction)));
 }
 
 /** Reports the dominant LOD while both renderers overlap through the transition band. */
@@ -223,11 +336,37 @@ export type TraceSpanBatchData = {
   data: Uint32Array;
 };
 
+/** One source-ordered hierarchy level over contiguous span-batch ranges. */
+export type TraceTemporalIndexLevelData = {
+  firstNodeIndex: number;
+  nodeCount: number;
+  maximumBatchCount: number;
+  averageTimeSpan: number;
+};
+
+/** Packed persistent hierarchy summaries uploaded once with a trace dataset. */
+export type TraceTemporalIndexData = {
+  data: Uint32Array;
+  levels: TraceTemporalIndexLevelData[];
+  partitionBatchCount: number;
+  partitionCount: number;
+};
+
 /** Borrowed contiguous span rows grouped on complete candidate-batch boundaries. */
 export type TraceSpanChunkData = {
   chunkIndex: number;
   firstSpanIndex: number;
   spanCount: number;
+  firstBatchIndex: number;
+  batchCount: number;
+  data: Uint32Array;
+};
+
+/** Borrowed contiguous dependency rows grouped on complete candidate-batch boundaries. */
+export type TraceDependencyChunkData = {
+  chunkIndex: number;
+  firstDependencyIndex: number;
+  dependencyCount: number;
   firstBatchIndex: number;
   batchCount: number;
   data: Uint32Array;
@@ -253,10 +392,74 @@ export type TraceAdjacencyData = {
   neighbors: Uint32Array;
 };
 
+/** One independently bindable sparse adjacency partition with local CSR offsets. */
+export type TraceAdjacencyChunkData = {
+  chunkIndex: number;
+  firstNodeIndex: number;
+  nodeCount: number;
+  firstNeighborIndex: number;
+  neighborCount: number;
+  /** Packed global node IDs followed by partition-local CSR offsets. */
+  topology: Uint32Array;
+  /** Borrowed consecutive neighbor rows from the canonical adjacency. */
+  neighbors: Uint32Array;
+};
+
 /** Worst-case storage for both sparse adjacency directions at a dependency capacity. */
 export function getMaximumTraceAdjacencyByteLength(dependencyCount: number): number {
   const maximumWordCount = dependencyCount * 6 + 2;
   return maximumWordCount * Uint32Array.BYTES_PER_ELEMENT;
+}
+
+/** Partitions sparse CSR rows so neither the topology nor neighbor binding exceeds a byte limit. */
+export function makeTraceAdjacencyChunks(
+  adjacency: TraceAdjacencyData,
+  maximumChunkByteLength = TRACE_ADJACENCY_CHUNK_TARGET_BYTE_LENGTH
+): TraceAdjacencyChunkData[] {
+  if (!Number.isSafeInteger(maximumChunkByteLength) || maximumChunkByteLength < 1) {
+    throw new RangeError('Trace adjacency chunk byte length must be a positive safe integer');
+  }
+  if (adjacency.nodes.length === 0) {
+    return [];
+  }
+  const maximumWordCount = Math.floor(maximumChunkByteLength / Uint32Array.BYTES_PER_ELEMENT);
+  const chunks: TraceAdjacencyChunkData[] = [];
+  let firstNodeIndex = 0;
+  while (firstNodeIndex < adjacency.nodes.length) {
+    const firstNeighborIndex = adjacency.offsets[firstNodeIndex];
+    let lastNodeIndex = firstNodeIndex;
+    while (lastNodeIndex < adjacency.nodes.length) {
+      const nodeCount = lastNodeIndex - firstNodeIndex + 1;
+      const neighborCount = adjacency.offsets[lastNodeIndex + 1] - firstNeighborIndex;
+      if (nodeCount * 2 + 1 > maximumWordCount || neighborCount > maximumWordCount) {
+        break;
+      }
+      lastNodeIndex++;
+    }
+    if (lastNodeIndex === firstNodeIndex) {
+      throw new RangeError('Trace adjacency row exceeds the requested chunk byte length');
+    }
+    const nodeCount = lastNodeIndex - firstNodeIndex;
+    const lastNeighborIndex = adjacency.offsets[lastNodeIndex];
+    const neighborCount = lastNeighborIndex - firstNeighborIndex;
+    const topology = new Uint32Array(nodeCount * 2 + 1);
+    topology.set(adjacency.nodes.subarray(firstNodeIndex, lastNodeIndex));
+    for (let localNodeIndex = 0; localNodeIndex <= nodeCount; localNodeIndex++) {
+      topology[nodeCount + localNodeIndex] =
+        adjacency.offsets[firstNodeIndex + localNodeIndex] - firstNeighborIndex;
+    }
+    chunks.push({
+      chunkIndex: chunks.length,
+      firstNodeIndex,
+      nodeCount,
+      firstNeighborIndex,
+      neighborCount,
+      topology,
+      neighbors: adjacency.neighbors.subarray(firstNeighborIndex, lastNeighborIndex)
+    });
+    firstNodeIndex = lastNodeIndex;
+  }
+  return chunks;
 }
 
 /** GPU-upload-ready trace source data and hierarchy-preserving graph topology. */
@@ -269,10 +472,14 @@ export type TraceDatasetData = {
   spanBatches: TraceSpanBatchData[];
   /** Packed batch first/count, temporal bounds, lane bounds, group, and stable batch ID records. */
   spanBatchIndex: Uint32Array;
+  /** Persistent multi-level temporal summaries over canonical span batches. */
+  temporalIndex: TraceTemporalIndexData;
   /** Packed 16-byte dependency source, destination, family, and endpoint metadata records. */
   dependencies: Uint32Array;
   /** Stable dependency partitions small enough for one GPU workgroup. */
   dependencyBatches: TraceDependencyBatchData[];
+  /** Borrowed chunk views that keep complete dependency batches below binding limits. */
+  dependencyChunks: TraceDependencyChunkData[];
   /** Packed dependency first/count, conservative time bounds, family mask, and batch ID. */
   dependencyBatchIndex: Uint32Array;
   /** One cross-process-prioritized canonical parent or invalid sentinel per span. */
@@ -289,6 +496,13 @@ export type TraceDatasetData = {
   threadCount: number;
 };
 
+export type TraceDatasetGenerationPhase =
+  | 'spans'
+  | 'dependencies'
+  | 'indexes'
+  | 'adjacency'
+  | 'complete';
+
 /** Lists each unique owned allocation so a worker can transfer a dataset without copying it. */
 export function getTraceDatasetTransferables(dataset: TraceDatasetData): ArrayBuffer[] {
   const getOwnedBuffer = (array: Uint32Array): ArrayBuffer => {
@@ -302,6 +516,7 @@ export function getTraceDatasetTransferables(dataset: TraceDatasetData): ArrayBu
   return [
     getOwnedBuffer(dataset.spans),
     getOwnedBuffer(dataset.spanBatchIndex),
+    getOwnedBuffer(dataset.temporalIndex.data),
     getOwnedBuffer(dataset.dependencies),
     getOwnedBuffer(dataset.dependencyBatchIndex),
     getOwnedBuffer(dataset.parentSpans),
@@ -322,7 +537,8 @@ export function getTraceDatasetTransferables(dataset: TraceDatasetData): ArrayBu
  */
 export function makeTraceDataset(
   totalSpanCount: number,
-  maximumDependencyCount = 0xffffffff
+  maximumDependencyCount = 0xffffffff,
+  onProgress?: (phase: TraceDatasetGenerationPhase) => void
 ): TraceDatasetData {
   if (!Number.isSafeInteger(totalSpanCount) || totalSpanCount < 0 || totalSpanCount > 0xffffffff) {
     throw new RangeError('Trace span count must be a nonnegative uint32');
@@ -358,32 +574,73 @@ export function makeTraceDataset(
   }
 
   const generatedDuration = fillTraceSpans(spans, spanFloats, groups, totalSpanCount);
+  onProgress?.('spans');
 
   const topology = makeTraceDependencies(spans, totalSpanCount, maximumDependencyCount);
+  onProgress?.('dependencies');
   const dependencyCount = topology.dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
   const {spanBatches, spanBatchIndex} = makeTraceSpanBatches(spans, groups);
-  const {dependencyBatches, dependencyBatchIndex} = makeTraceDependencyBatches(
+  const temporalIndex = makeTraceTemporalIndexTopology(spanBatches);
+  const outgoingCursors = new Uint32Array(totalSpanCount);
+  const incomingCursors = new Uint32Array(totalSpanCount);
+  const {dependencyBatches, dependencyBatchIndex} = makeTraceDependencyBatchesWithScratch(
     spans,
     topology.dependencies,
-    topology.parentSpans
+    topology.parentSpans,
+    TRACE_DEPENDENCY_BATCH_CAPACITY,
+    new Float32Array(outgoingCursors.buffer),
+    new Float32Array(incomingCursors.buffer)
   );
-  return {
+  onProgress?.('indexes');
+  const dependencyChunks = makeTraceDependencyChunks(
+    topology.dependencies,
+    dependencyBatches,
+    TRACE_DEPENDENCY_CHUNK_TARGET_BYTE_LENGTH
+  );
+  const adjacency = buildTraceAdjacencies(
+    topology.dependencies,
+    totalSpanCount,
+    outgoingCursors,
+    incomingCursors
+  );
+  onProgress?.('adjacency');
+  const dataset = {
     spans,
     groups,
     spanBatches,
     spanBatchIndex,
+    temporalIndex,
     dependencies: topology.dependencies,
     dependencyBatches,
+    dependencyChunks,
     dependencyBatchIndex,
     parentSpans: topology.parentSpans,
-    outgoing: buildTraceAdjacency(topology.dependencies, 'outgoing'),
-    incoming: buildTraceAdjacency(topology.dependencies, 'incoming'),
+    outgoing: adjacency.outgoing,
+    incoming: adjacency.incoming,
     duration: Math.max(getTraceDuration(totalSpanCount), generatedDuration),
     spanCount: totalSpanCount,
     dependencyCount,
     processCount: TRACE_PROCESS_COUNT,
     threadCount: TRACE_THREAD_COUNT
   };
+  onProgress?.('complete');
+  return dataset;
+}
+
+/** Drops source-array references after their staged GPU uploads have completed. */
+export function releaseTraceDatasetStorage(dataset: TraceDatasetData): void {
+  const empty = new Uint32Array(0);
+  dataset.spans = empty;
+  dataset.spanBatchIndex = empty;
+  dataset.temporalIndex.data = empty;
+  dataset.dependencies = empty;
+  dataset.dependencyBatchIndex = empty;
+  dataset.parentSpans = empty;
+  dataset.outgoing = {nodes: empty, offsets: empty, neighbors: empty};
+  dataset.incoming = {nodes: empty, offsets: empty, neighbors: empty};
+  for (const group of dataset.groups) group.data = empty;
+  for (const batch of dataset.spanBatches) batch.data = empty;
+  for (const chunk of dataset.dependencyChunks) chunk.data = empty;
 }
 
 /**
@@ -401,14 +658,38 @@ export function makeTraceDependencyBatches(
   dependencyBatches: TraceDependencyBatchData[];
   dependencyBatchIndex: Uint32Array;
 } {
+  const spanCount = spans.length / TRACE_SPAN_RECORD_WORD_LENGTH;
+  return makeTraceDependencyBatchesWithScratch(
+    spans,
+    dependencies,
+    parentSpans,
+    batchCapacity,
+    new Float32Array(spanCount),
+    new Float32Array(spanCount)
+  );
+}
+
+/** Builds dependency bounds into caller-owned scratch that can subsequently become CSR cursors. */
+function makeTraceDependencyBatchesWithScratch(
+  spans: Uint32Array,
+  dependencies: Uint32Array,
+  parentSpans: Uint32Array,
+  batchCapacity: number,
+  envelopeTimeMin: Float32Array,
+  envelopeTimeMax: Float32Array
+): {
+  dependencyBatches: TraceDependencyBatchData[];
+  dependencyBatchIndex: Uint32Array;
+} {
   if (!Number.isSafeInteger(batchCapacity) || batchCapacity < 1) {
     throw new RangeError('Trace dependency batch capacity must be a positive safe integer');
   }
   const spanCount = spans.length / TRACE_SPAN_RECORD_WORD_LENGTH;
   const dependencyCount = dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
   const spanFloats = new Float32Array(spans.buffer, spans.byteOffset, spans.length);
-  const envelopeTimeMin = new Float32Array(spanCount);
-  const envelopeTimeMax = new Float32Array(spanCount);
+  if (envelopeTimeMin.length < spanCount || envelopeTimeMax.length < spanCount) {
+    throw new RangeError('Trace dependency scratch storage is smaller than the span count');
+  }
   for (let spanIndex = 0; spanIndex < spanCount; spanIndex++) {
     const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
     const start = spanFloats[wordOffset];
@@ -545,6 +826,154 @@ export function makeTraceSpanBatches(
   return {spanBatches, spanBatchIndex};
 }
 
+/** Builds compact source-ordered temporal summaries without touching canonical span rows. */
+export function makeTraceTemporalIndex(
+  spanBatches: readonly TraceSpanBatchData[],
+  fanout = TRACE_TEMPORAL_INDEX_FANOUT,
+  maximumBatchCount = TRACE_TEMPORAL_INDEX_MAXIMUM_BATCH_COUNT
+): TraceTemporalIndexData {
+  return makeTraceTemporalIndexData(spanBatches, fanout, maximumBatchCount, true);
+}
+
+/** Builds stable hierarchy topology while leaving summary fields for GPU construction. */
+export function makeTraceTemporalIndexTopology(
+  spanBatches: readonly TraceSpanBatchData[],
+  fanout = TRACE_TEMPORAL_INDEX_FANOUT,
+  maximumBatchCount = TRACE_TEMPORAL_INDEX_MAXIMUM_BATCH_COUNT
+): TraceTemporalIndexData {
+  return makeTraceTemporalIndexData(spanBatches, fanout, maximumBatchCount, false);
+}
+
+function makeTraceTemporalIndexData(
+  spanBatches: readonly TraceSpanBatchData[],
+  fanout: number,
+  maximumBatchCount: number,
+  includeSummaries: boolean
+): TraceTemporalIndexData {
+  if (!Number.isSafeInteger(fanout) || fanout < 2) {
+    throw new RangeError('Trace temporal index fanout must be at least two');
+  }
+  if (!Number.isSafeInteger(maximumBatchCount) || maximumBatchCount < fanout) {
+    throw new RangeError('Trace temporal index maximum batch count must cover one fanout');
+  }
+  type Node = {
+    timeMin: number;
+    timeMax: number;
+    maximumDuration: number;
+    groupIndex: number;
+    firstBatchIndex: number;
+    batchCount: number;
+    laneMin: number;
+    laneMax: number;
+  };
+  let sourceNodes: Node[] = spanBatches.map(batch => ({
+    timeMin: Math.fround(batch.timeMin),
+    timeMax: Math.fround(batch.timeMax),
+    maximumDuration: Math.fround(batch.maximumDuration),
+    groupIndex: batch.groupIndex,
+    firstBatchIndex: batch.batchIndex,
+    batchCount: 1,
+    laneMin: batch.laneMin,
+    laneMax: batch.laneMax
+  }));
+  const nodes: Node[] = [];
+  const levels: TraceTemporalIndexLevelData[] = [];
+
+  while (sourceNodes.length > 0) {
+    const levelNodes: Node[] = [];
+    let sourceIndex = 0;
+    while (sourceIndex < sourceNodes.length) {
+      const first = sourceNodes[sourceIndex];
+      let nodeCount = 1;
+      let batchCount = first.batchCount;
+      while (sourceIndex + nodeCount < sourceNodes.length && nodeCount < fanout) {
+        const candidate = sourceNodes[sourceIndex + nodeCount];
+        if (
+          candidate.groupIndex !== first.groupIndex ||
+          Math.floor(candidate.firstBatchIndex / maximumBatchCount) !==
+            Math.floor(first.firstBatchIndex / maximumBatchCount) ||
+          batchCount + candidate.batchCount > maximumBatchCount
+        ) {
+          break;
+        }
+        batchCount += candidate.batchCount;
+        nodeCount++;
+      }
+      let timeMin = first.timeMin;
+      let timeMax = first.timeMax;
+      let maximumDuration = first.maximumDuration;
+      let laneMin = first.laneMin;
+      let laneMax = first.laneMax;
+      for (let childOffset = 1; childOffset < nodeCount; childOffset++) {
+        const child = sourceNodes[sourceIndex + childOffset];
+        timeMin = Math.min(timeMin, child.timeMin);
+        timeMax = Math.max(timeMax, child.timeMax);
+        maximumDuration = Math.max(maximumDuration, child.maximumDuration);
+        laneMin = Math.min(laneMin, child.laneMin);
+        laneMax = Math.max(laneMax, child.laneMax);
+      }
+      levelNodes.push({
+        timeMin,
+        timeMax,
+        maximumDuration,
+        groupIndex: first.groupIndex,
+        firstBatchIndex: first.firstBatchIndex,
+        batchCount,
+        laneMin,
+        laneMax
+      });
+      sourceIndex += nodeCount;
+    }
+    if (levelNodes.length >= sourceNodes.length) break;
+    const firstNodeIndex = nodes.length;
+    nodes.push(...levelNodes);
+    levels.push({
+      firstNodeIndex,
+      nodeCount: levelNodes.length,
+      maximumBatchCount: Math.max(...levelNodes.map(node => node.batchCount)),
+      averageTimeSpan:
+        levelNodes.reduce((sum, node) => sum + node.timeMax - node.timeMin, 0) / levelNodes.length
+    });
+    sourceNodes = levelNodes;
+  }
+
+  const data = new Uint32Array(nodes.length * TRACE_TEMPORAL_INDEX_RECORD_WORD_LENGTH);
+  const floats = new Float32Array(data.buffer);
+  for (const [nodeIndex, node] of nodes.entries()) {
+    const wordOffset = nodeIndex * TRACE_TEMPORAL_INDEX_RECORD_WORD_LENGTH;
+    floats[wordOffset] = includeSummaries ? node.timeMin : Number.POSITIVE_INFINITY;
+    floats[wordOffset + 1] = includeSummaries ? node.timeMax : Number.NEGATIVE_INFINITY;
+    floats[wordOffset + 2] = includeSummaries ? node.maximumDuration : 0;
+    data[wordOffset + 3] = node.groupIndex;
+    data[wordOffset + 4] = node.firstBatchIndex;
+    data[wordOffset + 5] = node.batchCount;
+    data[wordOffset + 6] = includeSummaries ? node.laneMin : 0xffffffff;
+    data[wordOffset + 7] = includeSummaries ? node.laneMax : 0;
+  }
+  return {
+    data,
+    levels,
+    partitionBatchCount: maximumBatchCount,
+    partitionCount: Math.ceil(spanBatches.length / maximumBatchCount)
+  };
+}
+
+/** Chooses the coarsest hierarchy whose mean node extent stays within a screen-space budget. */
+export function getTraceTemporalIndexLevel(
+  levels: readonly TraceTemporalIndexLevelData[],
+  timePerPixel: number,
+  targetPixelWidth = TRACE_TEMPORAL_INDEX_TARGET_PIXEL_WIDTH
+): number {
+  if (levels.length === 0) return 0;
+  const safeTimePerPixel = Math.max(timePerPixel, Number.EPSILON);
+  let selectedLevel = 0;
+  for (let levelIndex = 1; levelIndex < levels.length; levelIndex++) {
+    if (levels[levelIndex].averageTimeSpan / safeTimePerPixel > targetPixelWidth) break;
+    selectedLevel = levelIndex;
+  }
+  return selectedLevel;
+}
+
 /** Splits canonical spans without repacking rows or cutting candidate batches. */
 export function makeTraceSpanChunks(
   spans: Uint32Array,
@@ -586,6 +1015,69 @@ export function makeTraceSpanChunks(
     firstBatchIndex += batchCount;
   }
   return chunks;
+}
+
+/** Splits canonical dependencies without repacking rows or cutting candidate batches. */
+export function makeTraceDependencyChunks(
+  dependencies: Uint32Array,
+  dependencyBatches: readonly TraceDependencyBatchData[],
+  maximumChunkByteLength: number
+): TraceDependencyChunkData[] {
+  const dependencyRecordByteLength =
+    TRACE_DEPENDENCY_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
+  const maximumChunkDependencyCount = Math.floor(
+    maximumChunkByteLength / dependencyRecordByteLength
+  );
+  if (maximumChunkDependencyCount < TRACE_DEPENDENCY_BATCH_CAPACITY) {
+    throw new RangeError();
+  }
+  const chunks: TraceDependencyChunkData[] = [];
+  let firstBatchIndex = 0;
+  while (firstBatchIndex < dependencyBatches.length) {
+    const firstBatch = dependencyBatches[firstBatchIndex];
+    let batchCount = 0;
+    let dependencyCount = 0;
+    while (firstBatchIndex + batchCount < dependencyBatches.length) {
+      const batch = dependencyBatches[firstBatchIndex + batchCount];
+      if (batchCount > 0 && dependencyCount + batch.count > maximumChunkDependencyCount) {
+        break;
+      }
+      dependencyCount += batch.count;
+      batchCount++;
+    }
+    const firstDependencyIndex = firstBatch.firstDependencyIndex;
+    chunks.push({
+      chunkIndex: chunks.length,
+      firstDependencyIndex,
+      dependencyCount,
+      firstBatchIndex,
+      batchCount,
+      data: dependencies.subarray(
+        firstDependencyIndex * TRACE_DEPENDENCY_RECORD_WORD_LENGTH,
+        (firstDependencyIndex + dependencyCount) * TRACE_DEPENDENCY_RECORD_WORD_LENGTH
+      )
+    });
+    firstBatchIndex += batchCount;
+  }
+  return chunks;
+}
+
+/** Re-bases packed dependency ranges so one source chunk can be processed independently. */
+export function makeTraceDependencyChunkBatchIndex(
+  dependencyBatchIndex: Uint32Array,
+  chunk: TraceDependencyChunkData
+): Uint32Array {
+  const firstWordOffset = chunk.firstBatchIndex * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH;
+  const localBatchIndex = dependencyBatchIndex.slice(
+    firstWordOffset,
+    firstWordOffset + chunk.batchCount * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH
+  );
+  for (let batchIndex = 0; batchIndex < chunk.batchCount; batchIndex++) {
+    const wordOffset = batchIndex * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH;
+    localBatchIndex[wordOffset] -= chunk.firstDependencyIndex;
+    localBatchIndex[wordOffset + 5] = batchIndex;
+  }
+  return localBatchIndex;
 }
 
 /** Maintains the original example API while retaining canonical source references. */
@@ -733,6 +1225,42 @@ function makeTraceDependencies(
     previousSpanByThread[threadIndex] = spanIndex;
   }
 
+  // Fill the requested dense demonstration capacity with deterministic causal-looking edges.
+  // The initial sparse pass above still owns hierarchy parents; these additional links provide
+  // realistic high-edge-count stress without changing parent projection semantics.
+  for (
+    let edgeOrdinal = 0;
+    dependencyCount < maximumDependencyCount;
+    edgeOrdinal++, dependencyCount++
+  ) {
+    const destinationSpanIndex = 1 + ((edgeOrdinal * 73) % (spanCount - 1));
+    const maximumDistance = Math.min(destinationSpanIndex, TRACE_LANE_COUNT * 2);
+    const distance = 1 + ((edgeOrdinal * 17) % maximumDistance);
+    let sourceSpanIndex = destinationSpanIndex - distance;
+    const destinationWordOffset = destinationSpanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
+    let sourceWordOffset = sourceSpanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
+    while (
+      sourceSpanIndex > 0 &&
+      spans[sourceWordOffset + 4] === spans[destinationWordOffset + 4] &&
+      spans[sourceWordOffset + 5] !== spans[destinationWordOffset + 5]
+    ) {
+      sourceSpanIndex--;
+      sourceWordOffset -= TRACE_SPAN_RECORD_WORD_LENGTH;
+    }
+    const family =
+      spans[sourceWordOffset + 5] === spans[destinationWordOffset + 5]
+        ? TRACE_SAME_PROCESS_DEPENDENCY
+        : TRACE_CROSS_PROCESS_DEPENDENCY;
+    writeTraceDependency(
+      data,
+      spans,
+      dependencyCount,
+      sourceSpanIndex,
+      destinationSpanIndex,
+      family
+    );
+  }
+
   return {
     dependencies: data.subarray(0, dependencyCount * TRACE_DEPENDENCY_RECORD_WORD_LENGTH),
     parentSpans
@@ -788,37 +1316,56 @@ function writeTraceDependency(
     (destinationProcessIndex << TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT);
 }
 
-/** Builds stable compressed sparse rows without materializing per-node edge arrays. */
-function buildTraceAdjacency(
+/** Builds both stable CSR directions with dense typed-array counters over canonical span IDs. */
+function buildTraceAdjacencies(
   dependencies: Uint32Array,
-  direction: 'outgoing' | 'incoming'
-): TraceAdjacencyData {
+  spanCount: number,
+  outgoingCursors = new Uint32Array(spanCount),
+  incomingCursors = new Uint32Array(spanCount)
+): {outgoing: TraceAdjacencyData; incoming: TraceAdjacencyData} {
   const edgeCount = dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
-  const sourceWord = direction === 'outgoing' ? 0 : 1;
-  const destinationWord = direction === 'outgoing' ? 1 : 0;
-  const edgeCounts = new Map<number, number>();
-
-  for (let edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
-    const source = dependencies[edgeIndex * TRACE_DEPENDENCY_RECORD_WORD_LENGTH + sourceWord];
-    edgeCounts.set(source, (edgeCounts.get(source) || 0) + 1);
+  if (outgoingCursors.length < spanCount || incomingCursors.length < spanCount) {
+    throw new RangeError('Trace adjacency scratch storage is smaller than the span count');
   }
-
-  const nodes = Uint32Array.from(edgeCounts.keys()).sort();
-  const offsets = new Uint32Array(nodes.length + 1);
-  const rowByNode = new Map<number, number>();
-  for (let rowIndex = 0; rowIndex < nodes.length; rowIndex++) {
-    const node = nodes[rowIndex];
-    rowByNode.set(node, rowIndex);
-    offsets[rowIndex + 1] = offsets[rowIndex] + (edgeCounts.get(node) || 0);
-  }
-
-  const neighbors = new Uint32Array(edgeCount);
-  const cursors = offsets.slice(0, nodes.length);
+  outgoingCursors.fill(0);
+  incomingCursors.fill(0);
   for (let edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
     const wordOffset = edgeIndex * TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
-    const source = dependencies[wordOffset + sourceWord];
-    const rowIndex = rowByNode.get(source)!;
-    neighbors[cursors[rowIndex]++] = dependencies[wordOffset + destinationWord];
+    outgoingCursors[dependencies[wordOffset]]++;
+    incomingCursors[dependencies[wordOffset + 1]]++;
   }
+  const outgoing = makeTraceAdjacencyFromCounts(outgoingCursors, edgeCount);
+  const incoming = makeTraceAdjacencyFromCounts(incomingCursors, edgeCount);
+  for (let edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
+    const wordOffset = edgeIndex * TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
+    const source = dependencies[wordOffset];
+    const destination = dependencies[wordOffset + 1];
+    outgoing.neighbors[outgoingCursors[source]++] = destination;
+    incoming.neighbors[incomingCursors[destination]++] = source;
+  }
+  return {outgoing, incoming};
+}
+
+/** Converts dense per-span counts into sparse ordered rows and in-place neighbor write cursors. */
+function makeTraceAdjacencyFromCounts(cursors: Uint32Array, edgeCount: number): TraceAdjacencyData {
+  let nodeCount = 0;
+  for (const count of cursors) {
+    nodeCount += Number(count > 0);
+  }
+  const nodes = new Uint32Array(nodeCount);
+  const offsets = new Uint32Array(nodeCount + 1);
+  const neighbors = new Uint32Array(edgeCount);
+  let rowIndex = 0;
+  let edgeOffset = 0;
+  for (let nodeIndex = 0; nodeIndex < cursors.length; nodeIndex++) {
+    const count = cursors[nodeIndex];
+    if (count === 0) continue;
+    nodes[rowIndex] = nodeIndex;
+    offsets[rowIndex] = edgeOffset;
+    cursors[nodeIndex] = edgeOffset;
+    edgeOffset += count;
+    rowIndex++;
+  }
+  offsets[nodeCount] = edgeOffset;
   return {nodes, offsets, neighbors};
 }

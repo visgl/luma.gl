@@ -1,3 +1,4 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 import {ArrowGeoArrowExample, ArrowRenderingDocsExample} from '@site/src/examples';
 
@@ -5,10 +6,10 @@ import {ArrowGeoArrowExample, ArrowRenderingDocsExample} from '@site/src/example
 
 <ArrowDocsTabs active="overview" />
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
+</DocumentationBadges>
 
 Apache Arrow utilities for luma.gl.
 
@@ -69,6 +70,15 @@ types in [`@luma.gl/tables`](/docs/api-reference/tables):
 - `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
 - `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record
   batch boundaries.
+- `makeGPUAnalyticsTableFromArrowTable()` uploads renderer-independent numeric and dictionary
+  columns into existing GPU tables while preserving source batches, validity masks, and category
+  metadata for GPU dataframe execution.
+- `makeArrowTableFromGPUAnalyticsTable()` explicitly reads a GPU analytical result back into Arrow,
+  reconstructing nullable numeric/dictionary columns and either preserved per-batch selection or
+  explicitly requested global ordering. Combined with
+  [`LuSQLContext`](/docs/api-reference/experimental/gpu-sql) from the separate
+  `@luma.gl/experimental/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution →
+  Arrow output workflow without adding Apache Arrow to generic table or SQL packages.
 - `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for
   [`@luma.gl/splats`](/docs/api-reference/splats), decoding GraphDECO encodings without
   clamping or quantizing spherical-harmonic DC radiance.

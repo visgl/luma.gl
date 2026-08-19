@@ -1,3 +1,8 @@
+---
+title: glTF
+description: Load and render standards-first glTF scenes, materials, extensions, animation, crowds, and lossless interchange.
+---
+
 import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 import {GLTFExample} from '@site/src/examples';
 

@@ -4,12 +4,14 @@
 
 import {Buffer, type CanvasContext, type Device} from '@luma.gl/core';
 import type {AnimationLoop, AnimationProps} from '@luma.gl/engine';
-import {fromHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
 
 const HIGH_DYNAMIC_RANGE_BYTES_PER_PIXEL = 8;
 const STANDARD_DYNAMIC_RANGE_BYTES_PER_PIXEL = 4;
 const STANDARD_DYNAMIC_RANGE_WHITE_NITS = 203;
 const MAXIMUM_TARGET_PEAK_NITS = 10_000;
+/** Shared authored peak keeps HDR example posters comparable in the website catalog. */
+export const HDR_GALLERY_TARGET_PEAK_NITS = 1000;
 
 /** Raw same-frame planes used to encode a gain-map JPEG outside the browser. */
 export type HDRScreenshotCapture = {
@@ -90,10 +92,10 @@ export class HDRCanvasCaptureController {
   }
 
   /** Called after example rendering and while the frame command encoder is still open. */
-  onAfterRender(animationProps: AnimationProps): void {
+  onAfterRender(animationProps: AnimationProps): boolean {
     const captureRequest = this.captureRequest;
     if (!captureRequest || captureRequest.encoded) {
-      return;
+      return false;
     }
 
     let readbackBuffer: Buffer | null = null;
@@ -143,6 +145,7 @@ export class HDRCanvasCaptureController {
       readbackBuffer?.destroy();
       this.rejectCaptureRequest(captureRequest, error);
     }
+    return true;
   }
 
   finalize(): void {
@@ -168,7 +171,8 @@ export class HDRCanvasCaptureController {
         width,
         height,
         sourceData,
-        sourceBytesPerRow: bytesPerRow
+        sourceBytesPerRow: bytesPerRow,
+        targetPeakNits: HDR_GALLERY_TARGET_PEAK_NITS
       });
       if (this.captureRequest === captureRequest) {
         this.captureRequest = null;
@@ -196,6 +200,8 @@ export function makeHDRScreenshotCapture(options: {
   height: number;
   sourceData: Uint8Array;
   sourceBytesPerRow: number;
+  /** Optional authored peak. RGB above it is clipped and dimmer frames use the available range. */
+  targetPeakNits?: number;
 }): HDRScreenshotCapture {
   const {exampleId, width, height, sourceData, sourceBytesPerRow} = options;
   validateCaptureDimensions(exampleId, width, height, sourceData, sourceBytesPerRow);
@@ -223,6 +229,44 @@ export function makeHDRScreenshotCapture(options: {
 
   for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
     const highDynamicRangePixelOffset = pixelIndex * HIGH_DYNAMIC_RANGE_BYTES_PER_PIXEL;
+    for (let channelIndex = 0; channelIndex < 3; channelIndex++) {
+      const linearValue = fromHalfFloat(
+        highDynamicRangeDataView.getUint16(
+          highDynamicRangePixelOffset + channelIndex * Uint16Array.BYTES_PER_ELEMENT,
+          true
+        )
+      );
+      if (!Number.isFinite(linearValue)) {
+        throw new Error(
+          `HDR screenshot capture for ${exampleId} contains a non-finite RGB value at pixel ${pixelIndex}.`
+        );
+      }
+      maximumRgb = Math.max(maximumRgb, linearValue);
+    }
+  }
+
+  const nativeTargetPeakNits = Math.ceil(
+    Math.max(1, maximumRgb) * STANDARD_DYNAMIC_RANGE_WHITE_NITS
+  );
+  const targetPeakNits = options.targetPeakNits ?? nativeTargetPeakNits;
+  if (
+    !Number.isSafeInteger(targetPeakNits) ||
+    targetPeakNits < STANDARD_DYNAMIC_RANGE_WHITE_NITS ||
+    targetPeakNits > MAXIMUM_TARGET_PEAK_NITS
+  ) {
+    throw new Error(
+      `HDR screenshot capture for ${exampleId} has invalid targetPeakNits ${targetPeakNits}; expected ${STANDARD_DYNAMIC_RANGE_WHITE_NITS}-${MAXIMUM_TARGET_PEAK_NITS}.`
+    );
+  }
+
+  const authoredLinearPeak = targetPeakNits / STANDARD_DYNAMIC_RANGE_WHITE_NITS;
+  const highDynamicRangeScale =
+    options.targetPeakNits && maximumRgb > 0 && maximumRgb < authoredLinearPeak
+      ? authoredLinearPeak / maximumRgb
+      : 1;
+
+  for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
+    const highDynamicRangePixelOffset = pixelIndex * HIGH_DYNAMIC_RANGE_BYTES_PER_PIXEL;
     const standardDynamicRangePixelOffset = pixelIndex * STANDARD_DYNAMIC_RANGE_BYTES_PER_PIXEL;
     for (
       let channelIndex = 0;
@@ -236,12 +280,17 @@ export function makeHDRScreenshotCapture(options: {
         )
       );
       if (channelIndex < 3) {
-        if (!Number.isFinite(linearValue)) {
-          throw new Error(
-            `HDR screenshot capture for ${exampleId} contains a non-finite RGB value at pixel ${pixelIndex}.`
+        if (options.targetPeakNits) {
+          const authoredLinearValue = Math.min(
+            linearValue * highDynamicRangeScale,
+            authoredLinearPeak
+          );
+          highDynamicRangeDataView.setUint16(
+            highDynamicRangePixelOffset + channelIndex * Uint16Array.BYTES_PER_ELEMENT,
+            toHalfFloat(authoredLinearValue),
+            true
           );
         }
-        maximumRgb = Math.max(maximumRgb, linearValue);
       }
       const encodedValue =
         channelIndex === 3 ? clampUnitInterval(linearValue) : encodeSrgbTransfer(linearValue);
@@ -249,17 +298,6 @@ export function makeHDRScreenshotCapture(options: {
         encodedValue * 255
       );
     }
-  }
-
-  const targetPeakNits = Math.ceil(Math.max(1, maximumRgb) * STANDARD_DYNAMIC_RANGE_WHITE_NITS);
-  if (
-    !Number.isFinite(targetPeakNits) ||
-    targetPeakNits < STANDARD_DYNAMIC_RANGE_WHITE_NITS ||
-    targetPeakNits > MAXIMUM_TARGET_PEAK_NITS
-  ) {
-    throw new Error(
-      `HDR screenshot capture for ${exampleId} has invalid targetPeakNits ${targetPeakNits}; expected ${STANDARD_DYNAMIC_RANGE_WHITE_NITS}-${MAXIMUM_TARGET_PEAK_NITS}.`
-    );
   }
 
   return {

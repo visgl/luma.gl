@@ -1,10 +1,12 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # ANARI Scene Schemas
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
-  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+</DocumentationBadges>
 
 `@luma.gl/anari/schemas` exposes optional Zod schemas for the experimental retained-scene JSON
 format and generates a JSON Schema suitable for Monaco, VS Code, and other schema-aware editors.
@@ -202,8 +204,8 @@ JSON Schema supplies syntax diagnostics, subtype-aware autocomplete, property do
 numeric constraints. Run `ANARISceneSchema.safeParse()` separately to add the semantic retained
 reference checks that cannot be expressed by ordinary JSON Schema alone.
 
-The [ANARI developer guide](/docs/api-guide/engine/anari-rendering#validate-scenes-with-zod-and-json-schema)
-and [JSON scene playground](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground)
+The [ANARI JSON scenes guide](/docs/api-guide/engine/anari-json-scenes#validate-scenes-with-zod-and-json-schema)
+and [JSON scene playground](/docs/api-guide/engine/anari-json-scenes#explore-the-json-scene-playground)
 show how these schemas integrate with live scene editing. See
 [ANARI animation and glTF integration](/docs/api-reference/anari/anari-animation) for retained
 playback and optional glTF adapter details.

@@ -1,12 +1,13 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 # DynamicBuffer
 
 <EngineDocsTabs group="dynamic-resources" active="dynamic-buffer" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+</DocumentationBadges>
 
 `DynamicBuffer` is the engine-level wrapper for applications that need a stable buffer object whose underlying GPU [`Buffer`](/docs/api-reference/core/resources/buffer) can grow or be replaced.
 It is useful for streaming geometry, dynamic index data, uniform data, and any workflow where the required byte length is not known up front.

@@ -12,7 +12,7 @@ import {
   type GPUCommandGraphStats,
   type GraphBufferHandle,
   type GraphTextureView
-} from '../gpu-primitives/gpu-command-graph';
+} from '../gpu-core/gpu-command-graph';
 import {
   VOLUMETRIC_FIRE_COMBUSTION_ADVECTION_BINDINGS,
   VOLUMETRIC_FIRE_COMBUSTION_ADVECTION_SHADER,

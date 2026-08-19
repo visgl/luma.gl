@@ -1,5 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {DocsPageTabs} from './docs-page-tabs';
 
 type GltfDocsTab = {id: NativeGltfDocsTabId; label: string; href: string};
 
@@ -28,22 +28,5 @@ const GLTF_DOCS_TABS: GltfDocsTab[] = [
 
 /** Renders page links with the same visual treatment as tabs for glTF documentation pages. */
 export function GltfDocsTabs({active}: {active: NativeGltfDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="glTF documentation sections">
-      {GLTF_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
-  );
+  return <DocsPageTabs active={active} group={{label: 'glTF documentation', tabs: GLTF_DOCS_TABS}} />;
 }

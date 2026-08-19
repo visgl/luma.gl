@@ -1,12 +1,13 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 # Adapter
 
 <CoreDocsTabs group="device" active="adapter" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.1-blue.svg?style=flat-square" alt="From-v9.1" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.1</DocumentationBadge>
+</DocumentationBadges>
 
 An `Adapter` is a factory that creates [`Device`](./device) instances for a specific backend (e.g. WebGPU or WebGL).
 Each GPU backend exports a singleton adapter instance that is used to create devices for that GPU backend.

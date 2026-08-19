@@ -1,5 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {DocsPageTabs} from './docs-page-tabs';
 
 type ShaderModuleDocsTab = {
   id: ShaderModuleDocsTabId;
@@ -84,21 +84,9 @@ export function ShaderModuleDocsTabs({
       : 'Built-in shader module documentation sections';
 
   return (
-    <nav className="docs-page-tabs" aria-label={ariaLabel}>
-      {SHADER_MODULE_DOCS_TABS[group].map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
+    <DocsPageTabs
+      active={active}
+      group={{label: ariaLabel, tabs: SHADER_MODULE_DOCS_TABS[group]}}
+    />
   );
 }

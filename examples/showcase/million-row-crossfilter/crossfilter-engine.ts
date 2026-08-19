@@ -9,7 +9,7 @@ import {
   type GPUCommandGraphStats,
   type GraphDataView
 } from '@luma.gl/experimental';
-import {LuxFilter} from '@luma.gl/experimental/luxfilter';
+import {GPUCrossfilter} from '@luma.gl/experimental/gpu-crossfilter';
 import {GPUData} from '@luma.gl/tables';
 import {
   CROSS_FILTER_CATEGORY_NAMES,
@@ -93,7 +93,7 @@ export type CrossfilterBounds = readonly [number, number, number, number];
 /**
  * Coordinates a resident GPU dashboard without ever reading transaction rows back to the CPU.
  *
- * The command graph is compiled exactly once. Interaction changes upload only LuxFilter's tiny
+ * The command graph is compiled exactly once. Interaction changes upload only GPUCrossfilter's tiny
  * selection controls; subsequent executions recompute a global mask, linked baseline/selection
  * histograms, dense category counts, stable visible IDs, and the exact selected-row count.
  */
@@ -104,8 +104,8 @@ export class CrossfilterEngine {
   readonly rowCount: number;
   /** Reusable graph containing every selection, aggregation, and visibility stage. */
   readonly graph: GPUCommandGraph;
-  /** Public linked-selection controller for applications that need direct LuxFilter access. */
-  readonly filter: LuxFilter;
+  /** Public linked-selection controller for applications that need direct GPUCrossfilter access. */
+  readonly filter: GPUCrossfilter;
   /** Imported plus physically allocated graph-owned GPU storage. */
   readonly residentByteLength: number;
   /** Number of compiled compute/copy nodes shared by all dashboard interactions. */
@@ -138,7 +138,7 @@ export class CrossfilterEngine {
     this.rowCount = dataset.rowCount;
     this.graph = new GPUCommandGraph(device, {id: 'million-row-crossfilter-graph'});
 
-    let initializedFilter: LuxFilter | undefined;
+    let initializedFilter: GPUCrossfilter | undefined;
     let initializedGraph: CompiledGPUCommandGraph | undefined;
     let initializedRenderer: CrossfilterRenderer | undefined;
 
@@ -175,7 +175,7 @@ export class CrossfilterEngine {
       });
       this.ownedOutputBuffers.push(this.packedSummaryBuffer);
 
-      initializedFilter = new LuxFilter(this.graph, {
+      initializedFilter = new GPUCrossfilter(this.graph, {
         id: 'million-row-crossfilter',
         dimensions: [
           {id: 'map', kind: 'bounds', x: longitude.view, y: latitude.view},

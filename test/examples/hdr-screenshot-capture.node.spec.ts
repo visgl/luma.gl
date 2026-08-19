@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {toHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
 import {makeHDRScreenshotCapture} from '../../website/src/react-luma/utils/hdr-screenshot-capture';
 
 describe('generic HDR screenshot capture', () => {
@@ -60,6 +60,30 @@ describe('generic HDR screenshot capture', () => {
     ).toThrow(/non-finite RGB/);
     expect(makeSinglePixelCapture(0.5).targetPeakNits).toBe(203);
     expect(() => makeSinglePixelCapture(64)).toThrow(/targetPeakNits 12992/);
+  });
+
+  test('aligns gallery HDR headroom without changing its SDR base exposure', () => {
+    const sourceData = new Uint8Array(16);
+    writePixel(sourceData, 0, [0.5, 0.25, 0, 1]);
+    writePixel(sourceData, 8, [2, 1, 0.5, 1]);
+
+    const capture = makeHDRScreenshotCapture({
+      exampleId: 'experimental/gallery-example',
+      width: 2,
+      height: 1,
+      sourceData,
+      sourceBytesPerRow: 16,
+      targetPeakNits: 1000
+    });
+    const highDynamicRangeDataView = new DataView(
+      capture.hdr.data.buffer,
+      capture.hdr.data.byteOffset,
+      capture.hdr.data.byteLength
+    );
+
+    expect(capture.targetPeakNits).toBe(1000);
+    expect(fromHalfFloat(highDynamicRangeDataView.getUint16(8, true))).toBeCloseTo(1000 / 203, 2);
+    expect(capture.sdr.data).toEqual(new Uint8Array([188, 137, 0, 255, 255, 255, 188, 255]));
   });
 });
 

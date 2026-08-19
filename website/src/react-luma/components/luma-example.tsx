@@ -184,12 +184,27 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
   return (
     <div
       data-luma-example-page=""
+      data-luma-embedded-example={props.embedded ? '' : undefined}
       className={
         props.className || (props.embedded ? 'docs-embedded-example' : 'luma-example-page')
+      }
+      onWheelCapture={
+        props.embedded
+          ? event => {
+              if (!event.ctrlKey && !event.metaKey) {
+                event.stopPropagation();
+              }
+            }
+          : undefined
       }
       style={{...EXAMPLE_CONTAINER_STYLE, ...embeddedStyle, ...props.style}}
     >
       {props.children}
+      {props.embedded ? (
+        <div className="docs-embedded-example-interaction-hint" aria-hidden="true">
+          Scroll page · Ctrl/⌘ + scroll to interact
+        </div>
+      ) : null}
     </div>
   );
 };

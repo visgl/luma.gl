@@ -1,6 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// Spark-compatible RAD hierarchy and foveation behavior is adapted from Spark:
+// https://github.com/sparkjsdev/spark (MIT, Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.)
 
 import type {GPUSplatData} from './splat-data';
 import {
@@ -176,6 +178,13 @@ type SplatRADFrontierCandidate = {
   parent?: SplatRADFrontierCandidate;
 };
 
+/** One resumable best-first traversal for an unchanged camera and source-page set. */
+type SplatRADIncrementalTraversal = {
+  state: SplatRADTraversalState;
+  selectedRows: Map<number, SplatRADFrontierCandidate>;
+  refinementQueue: SplatRADPriorityQueue;
+};
+
 /**
  * Selects a coherent row-level frontier from independently resident Gaussian source pages.
  *
@@ -217,6 +226,7 @@ export class SplatRADHierarchyManager {
   private culledRowCount = 0;
   private fallbackRowCount = 0;
   private requiresRefresh = true;
+  private incrementalTraversal?: SplatRADIncrementalTraversal;
   private isDestroyed = false;
 
   /** Creates a loader-neutral global-row hierarchy without fetching or decoding source pages. */
@@ -294,6 +304,14 @@ export class SplatRADHierarchyManager {
     return this.currentFrontier.map(entry => entry.data);
   }
 
+  /** Whether the current camera can advance another bounded best-first traversal slice. */
+  get hasPendingTraversal(): boolean {
+    return Boolean(
+      this.currentView &&
+        (this.requiresRefresh || (this.incrementalTraversal?.refinementQueue.length ?? 0) > 0)
+    );
+  }
+
   /** Global source rows belonging to the missing pages currently requested by this view. */
   get requestedRows(): number[] {
     return Array.from(this.pendingRequests.values(), request => request.rowIndex);
@@ -336,6 +354,7 @@ export class SplatRADHierarchyManager {
     this.assertLive();
     this.validateRootRows(rootRows);
     this.rootRows = [...rootRows];
+    this.invalidateIncrementalTraversal();
     this.requiresRefresh = true;
     this.refresh();
   }
@@ -354,6 +373,7 @@ export class SplatRADHierarchyManager {
       return;
     }
     this.maxTraversalRows = nextBudget;
+    this.invalidateIncrementalTraversal();
     this.requiresRefresh = true;
     this.refresh();
   }
@@ -401,8 +421,8 @@ export class SplatRADHierarchyManager {
     );
     this.pruneEvictedPages();
     this.pendingRequests.delete(Math.floor(page.data.rowIndexBase / this.pageSize));
+    this.invalidateIncrementalTraversal();
     this.requiresRefresh = true;
-    this.refresh();
     return true;
   }
 
@@ -419,6 +439,7 @@ export class SplatRADHierarchyManager {
     this.pagesById.delete(id);
     this.sortedPages = this.sortedPages.filter(candidate => candidate !== page);
     this.residencyManager.remove(id);
+    this.invalidateIncrementalTraversal();
     this.requiresRefresh = true;
     this.refresh();
     return true;
@@ -427,22 +448,59 @@ export class SplatRADHierarchyManager {
   /** Allows an externally cancelled or failed source-page request to be retried by the view. */
   clearRequestedPage(pageIndex: number): void {
     this.pendingRequests.delete(pageIndex);
+    this.invalidateIncrementalTraversal();
     this.requiresRefresh = true;
   }
 
   /** Computes coherent camera-selected original source rows without copying source page buffers. */
   update(view: SplatHierarchyView): readonly SplatRADHierarchyFrontierEntry[] {
     this.assertLive();
+    const sourceRowsChanged = this.haveSourceRowsChanged();
     if (
       this.currentView &&
       !this.requiresRefresh &&
       areSplatRADViewsEqual(this.currentView, view) &&
-      this.sortedPages.every(page => page.lastDataRevision === page.page.data.revision)
+      !sourceRowsChanged
     ) {
       return this.currentFrontier;
     }
+    if (!this.currentView || !areSplatRADViewsEqual(this.currentView, view) || sourceRowsChanged) {
+      this.invalidateIncrementalTraversal();
+    }
     this.currentView = view;
     this.refresh();
+    return this.currentFrontier;
+  }
+
+  /**
+   * Advances one bounded best-first slice for an unchanged camera without rebuilding prior work.
+   *
+   * The optional argument bounds this call only; it does not replace the configured camera-update
+   * budget. Callers can schedule one small slice per frame until {@link hasPendingTraversal} is
+   * false, then stop without paying another synchronous traversal cost.
+   */
+  continueTraversal(
+    maxTraversalRows: number = this.maxTraversalRows
+  ): readonly SplatRADHierarchyFrontierEntry[] {
+    this.assertLive();
+    validateSplatRADTraversalBudget(maxTraversalRows);
+    if (!this.currentView) {
+      return this.currentFrontier;
+    }
+    if (this.haveSourceRowsChanged()) {
+      this.invalidateIncrementalTraversal();
+      this.requiresRefresh = true;
+    }
+    if (this.requiresRefresh) {
+      this.refresh(maxTraversalRows);
+      return this.currentFrontier;
+    }
+    const traversal = this.incrementalTraversal;
+    if (!traversal) {
+      return this.currentFrontier;
+    }
+    this.advanceTraversal(traversal, maxTraversalRows, false);
+    this.publishTraversal(traversal);
     return this.currentFrontier;
   }
 
@@ -460,20 +518,30 @@ export class SplatRADHierarchyManager {
     this.pagesById.clear();
     this.sortedPages = [];
     this.currentFrontier = [];
+    this.incrementalTraversal = undefined;
     if (this.ownsResidencyManager) {
       this.residencyManager.destroy();
     }
   }
 
-  private refresh(): void {
+  private refresh(maxTraversalRows = this.maxTraversalRows): void {
     if (this.isDestroyed || !this.currentView) {
       return;
     }
 
     this.pruneEvictedPages();
+    this.invalidateIncrementalTraversal();
     this.visibleRowCount = 0;
     this.culledRowCount = 0;
     this.fallbackRowCount = 0;
+    const traversal = this.makeIncrementalTraversal();
+    this.incrementalTraversal = traversal;
+    this.advanceTraversal(traversal, maxTraversalRows, true);
+    this.publishTraversal(traversal);
+  }
+
+  /** Starts one deterministic best-first queue from the current roots and resident pages. */
+  private makeIncrementalTraversal(): SplatRADIncrementalTraversal {
     const rootRows = this.rootRows.slice(0, this.maximumActiveRows);
     const state: SplatRADTraversalState = {
       selectedPages: new Map(),
@@ -498,11 +566,44 @@ export class SplatRADHierarchyManager {
       }
     }
 
-    while (refinementQueue.length > 0) {
-      const candidate = refinementQueue.pop()!;
-      this.refineFrontierCandidate(candidate, selectedRows, refinementQueue, state);
-    }
+    return {state, selectedRows, refinementQueue};
+  }
 
+  /** Spends one row-evaluation slice while retaining the queue for the next settled frame. */
+  private advanceTraversal(
+    traversal: SplatRADIncrementalTraversal,
+    maxTraversalRows: number,
+    countExistingRows: boolean
+  ): void {
+    const rowCountAtSliceStart = countExistingRows ? 0 : this.visibleRowCount + this.culledRowCount;
+    const {selectedRows, refinementQueue, state} = traversal;
+    while (refinementQueue.length > 0) {
+      const evaluatedRowCount = this.visibleRowCount + this.culledRowCount - rowCountAtSliceStart;
+      if (evaluatedRowCount >= maxTraversalRows) {
+        break;
+      }
+      const candidate = refinementQueue.pop()!;
+      const remainingTraversalRows = maxTraversalRows - evaluatedRowCount;
+      if (
+        this.refineFrontierCandidate(
+          candidate,
+          selectedRows,
+          refinementQueue,
+          state,
+          remainingTraversalRows
+        )
+      ) {
+        refinementQueue.push(candidate);
+        break;
+      }
+    }
+  }
+
+  /** Publishes one coherent partial or complete frontier without changing source ownership. */
+  private publishTraversal(traversal: SplatRADIncrementalTraversal): void {
+    const {selectedRows, refinementQueue, state} = traversal;
+    state.selectedPages.clear();
+    this.fallbackRowCount = 0;
     for (const candidate of selectedRows.values()) {
       this.selectRow(
         candidate.registeredPage,
@@ -514,7 +615,7 @@ export class SplatRADHierarchyManager {
       );
     }
 
-    this.previouslyRefinedRows = state.refinedRows;
+    this.previouslyRefinedRows = new Set(state.refinedRows);
     const selectedFrontier = this.makeFrontier(state);
     const activePageIds = new Set([
       ...state.protectedPageIds,
@@ -532,6 +633,9 @@ export class SplatRADHierarchyManager {
     this.synchronizeRequests(state.requestedPages);
     for (const page of this.sortedPages) {
       page.lastDataRevision = page.page.data.revision;
+    }
+    if (refinementQueue.length === 0) {
+      this.incrementalTraversal = undefined;
     }
     this.requiresRefresh = false;
   }
@@ -591,8 +695,9 @@ export class SplatRADHierarchyManager {
     candidate: SplatRADFrontierCandidate,
     selectedRows: Map<number, SplatRADFrontierCandidate>,
     refinementQueue: SplatRADPriorityQueue,
-    state: SplatRADTraversalState
-  ): void {
+    state: SplatRADTraversalState,
+    remainingTraversalRows: number
+  ): boolean {
     const {registeredPage, globalRowIndex, localRowIndex, priority} = candidate;
     const page = registeredPage.page;
     const childCount = page.childCounts?.[localRowIndex] ?? 0;
@@ -600,11 +705,13 @@ export class SplatRADHierarchyManager {
     if (
       childCount === 0 ||
       priority <= this.getRefinementThreshold(candidate) ||
-      this.visibleRowCount + this.culledRowCount + childCount > this.maxTraversalRows ||
       !Number.isSafeInteger(childStart + childCount) ||
       childStart + childCount > 0x8000_0000
     ) {
-      return;
+      return false;
+    }
+    if (childCount > remainingTraversalRows) {
+      return true;
     }
 
     const childPages: RegisteredSplatRADPage[] = [];
@@ -633,7 +740,7 @@ export class SplatRADHierarchyManager {
 
     if (!allChildrenResident || childPages.length !== childCount) {
       candidate.isFallback = true;
-      return;
+      return false;
     }
 
     const childCandidates: SplatRADFrontierCandidate[] = [];
@@ -651,7 +758,7 @@ export class SplatRADHierarchyManager {
       childCandidates.length === 0 ||
       state.allocatedRowCount + childCandidates.length - 1 > this.maximumActiveRows
     ) {
-      return;
+      return false;
     }
 
     selectedRows.delete(globalRowIndex);
@@ -660,6 +767,7 @@ export class SplatRADHierarchyManager {
     for (const child of childCandidates) {
       this.addFrontierCandidate(child, selectedRows, refinementQueue);
     }
+    return false;
   }
 
   private getRefinementThreshold(candidate: SplatRADFrontierCandidate): number {
@@ -927,6 +1035,14 @@ export class SplatRADHierarchyManager {
     }
   }
 
+  private haveSourceRowsChanged(): boolean {
+    return this.sortedPages.some(page => page.lastDataRevision !== page.page.data.revision);
+  }
+
+  private invalidateIncrementalTraversal(): void {
+    this.incrementalTraversal = undefined;
+  }
+
   private validateRootRows(rootRows: readonly number[]): void {
     if (
       rootRows.some(
@@ -1027,6 +1143,16 @@ function compareSplatRADCandidates(
   second: SplatRADFrontierCandidate
 ): number {
   return first.priority - second.priority || second.globalRowIndex - first.globalRowIndex;
+}
+
+/** Validates one per-call row-evaluation slice before mutating traversal state. */
+function validateSplatRADTraversalBudget(maxTraversalRows: number): void {
+  if (
+    maxTraversalRows !== Number.POSITIVE_INFINITY &&
+    (!Number.isSafeInteger(maxTraversalRows) || maxTraversalRows <= 0)
+  ) {
+    throw new RangeError('Gaussian traversal capacity must be a positive safe integer');
+  }
 }
 
 function hasSplatRADAncestor(candidate: SplatRADFrontierCandidate, rowIndex: number): boolean {

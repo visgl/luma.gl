@@ -2,7 +2,7 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 # How GPU Rendering Works
 
-<GpuGuideDocsTabs group="execution" active="rendering" />
+<GpuGuideDocsTabs group="rendering" active="rendering" />
 
 See also [Issuing GPU Commands](/docs/api-guide/gpu/gpu-commands) for how render passes relate to `CommandEncoder`, `CommandBuffer`, and `device.submit()` on WebGL and WebGPU.
 
@@ -40,10 +40,10 @@ To create a texture suitable as a simple render target, call `device.createTextu
 
 | Texture parameter | Value           |
 | ----------------- | --------------- |
-| `minFilter`       | `linear`        |
-| `magFilter`       | `linear`        |
-| `addressModeU`    | `clamp-to-edge` |
-| `addressModeV`    | `clamp-to-edge` |
+| `minFilter` | `linear` |
+| `magFilter` | `linear` |
+| `addressModeU` | `clamp-to-edge` |
+| `addressModeV` | `clamp-to-edge` |
 
 
 ### Creating a Framebuffer

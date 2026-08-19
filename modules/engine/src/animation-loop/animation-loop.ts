@@ -34,6 +34,7 @@ export type AnimationLoopProps = {
 
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => Promise<unknown>;
+  /** Encode a frame. Return false when no GPU work was encoded to skip device submission. */
   onRender?: (animationProps: AnimationProps) => unknown;
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: Error) => void;
@@ -371,11 +372,11 @@ export class AnimationLoop {
     }
 
     // call callback
-    this.props.onRender(this._getAnimationProps());
+    const renderResult = this.props.onRender(this._getAnimationProps());
     // end callback
 
     // Submit commands (necessary on WebGPU).
-    if (this.device) {
+    if (this.device && renderResult !== false) {
       this.device.submit();
     }
   }

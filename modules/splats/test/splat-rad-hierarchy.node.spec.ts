@@ -63,6 +63,12 @@ test('SplatRADHierarchyManager requests the single global Spark root only once',
   const root = makeRADPage(device, {id: 'root', rowIndexBase: 0, positions: [0, 0, 0]});
   t.ok(manager.registerPage(root), 'admits the independently decoded root source page');
   t.deepEqual(
+    manager.frontier,
+    [],
+    'defers traversal until the caller batches page admissions into an explicit camera update'
+  );
+  manager.update(makeRADView());
+  t.deepEqual(
     getFrontierSourceRows(manager.frontier),
     [[0]],
     'selects the one Spark root source row after registration'
@@ -132,6 +138,7 @@ test('SplatRADHierarchyManager refines mixed parent and childless rows independe
   );
 
   manager.registerPage(children);
+  manager.update(makeRADView());
   t.deepEqual(
     getFrontierSourceRows(manager.frontier),
     [[1], [4, 5]],
@@ -204,6 +211,7 @@ test('SplatRADHierarchyManager pins partial child pages until all replacing rows
   t.ok(residency.getChunk('parent')?.pinned, 'pins the active coarse fallback source page');
 
   manager.registerPage(firstChild);
+  manager.update(makeRADView());
   t.deepEqual(
     getFrontierSourceRows(manager.frontier),
     [[0]],
@@ -216,6 +224,7 @@ test('SplatRADHierarchyManager pins partial child pages until all replacing rows
   t.deepEqual(manager.requestedRows, [3], 'keeps only the still-missing source child request');
 
   manager.registerPage(secondChild);
+  manager.update(makeRADView());
   t.deepEqual(
     getFrontierSourceRows(manager.frontier),
     [[2], [3]],
@@ -272,6 +281,7 @@ test('SplatRADHierarchyManager sends exact sparse source-page frontiers to the G
   t.equal(renderer.pages[0].data, parent.data, 'borrows the untouched parent GPU source batch');
 
   manager.registerPage(child);
+  manager.update(makeRADView());
   t.deepEqual(
     renderer.pages.map(page => Array.from(page.activeRows ?? [])),
     [[1], [0]],
@@ -433,6 +443,7 @@ test('SplatRADHierarchyManager retains fallback when protected page budgets deny
 
   manager.update(makeRADView());
   t.ok(manager.registerPage(firstChild), 'admits one child inside the independent page budget');
+  manager.update(makeRADView());
   t.notOk(
     manager.registerPage(secondChild),
     'rejects the final child when the protected parent and first sibling exhaust residency'
@@ -549,6 +560,7 @@ test('SplatRADHierarchyManager cancels stale page demand and restores evicted pa
 
   manager.update(makeRADView());
   manager.registerPage(child);
+  manager.update(makeRADView());
   t.deepEqual(getFrontierSourceRows(manager.frontier), [[4]], 'selects the restored child page');
   manager.removePage('child');
   t.deepEqual(
@@ -894,6 +906,81 @@ test('SplatRADHierarchyManager bounds synchronous camera traversal without losin
     () => new SplatRADHierarchyManager({maxTraversalRows: 0}),
     /traversal capacity/,
     'rejects an empty synchronous source-row traversal budget'
+  );
+
+  manager.destroy();
+  page.data.destroy();
+  t.end();
+});
+
+test('SplatRADHierarchyManager resumes deterministic best-first traversal in bounded slices', t => {
+  const device = new NullDevice({});
+  const totalRowCount = 4_095;
+  const positions: number[] = [];
+  const childCounts: number[] = [];
+  const childStarts: number[] = [];
+  for (let rowIndex = 0; rowIndex < totalRowCount; rowIndex++) {
+    positions.push((rowIndex % 64) / 256 - 0.125, 0, 0);
+    childCounts.push(rowIndex < 2_047 ? 2 : 0);
+    childStarts.push(rowIndex < 2_047 ? rowIndex * 2 + 1 : 0);
+  }
+  const page = makeRADPage(device, {
+    id: 'incremental-tree',
+    rowIndexBase: 0,
+    positions,
+    childCounts,
+    childStarts
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 2_048,
+    maxTraversalRows: 127
+  });
+
+  manager.update(makeRADView());
+  t.ok(manager.hasPendingTraversal, 'keeps the remaining best-first queue after one bounded slice');
+  t.ok(
+    manager.stats.activeRowCount < 2_048,
+    'does not hide a full-tree rebuild in the first slice'
+  );
+  const originalPositionBuffer = page.data.positions.data[0].buffer;
+  let previousEvaluatedRowCount = manager.stats.visibleRowCount + manager.stats.culledRowCount;
+  let previousActiveRowCount = manager.stats.activeRowCount;
+  let sliceCount = 1;
+  while (manager.hasPendingTraversal && sliceCount < 64) {
+    manager.continueTraversal(127);
+    const evaluatedRowCount = manager.stats.visibleRowCount + manager.stats.culledRowCount;
+    t.ok(
+      evaluatedRowCount - previousEvaluatedRowCount <= 127,
+      'bounds each resumed source-row evaluation slice'
+    );
+    t.ok(
+      manager.stats.activeRowCount >= previousActiveRowCount,
+      'publishes a coherent frontier that only gains settled detail'
+    );
+    previousEvaluatedRowCount = evaluatedRowCount;
+    previousActiveRowCount = manager.stats.activeRowCount;
+    sliceCount++;
+  }
+
+  t.notOk(manager.hasPendingTraversal, 'drains the retained queue without another camera update');
+  t.ok(sliceCount > 1, 'requires multiple bounded continuation slices for the large source tree');
+  t.equal(manager.stats.activeRowCount, 2_048, 'reaches the full leaf frontier beyond one slice');
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier).flat(),
+    Array.from({length: 2_048}, (_, rowOffset) => rowOffset + 2_047),
+    'matches deterministic source-order leaves after incremental best-first refinement'
+  );
+  t.equal(
+    page.data.positions.data[0].buffer,
+    originalPositionBuffer,
+    'never repacks or replaces the caller-owned source page while continuing'
+  );
+  t.throws(
+    () => manager.continueTraversal(0),
+    /traversal capacity/,
+    'rejects an empty continuation slice before changing the settled frontier'
   );
 
   manager.destroy();

@@ -71,7 +71,7 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
     <section class="dataframe-lab" aria-label="Interactive luDF derived-column lab">
       <div class="lab-heading">
         <div>
-          <p class="eyebrow">LUDF / DERIVED COLUMN LAB</p>
+          <p class="eyebrow">GPU DATAFRAME / DERIVED COLUMN LAB</p>
           <h2>Run an expression and watch your data move.</h2>
           <p>Transform and filter the exact GPU buffers already driving the charts above.</p>
         </div>
@@ -91,13 +91,13 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
         </div>
         <div class="live-expression">
           <span>LIVE EXPRESSION</span>
-          <strong data-ludf-expression>value × 2 + 1 > 1</strong>
+          <strong data-gpu-dataframe-expression>value × 2 + 1 > 1</strong>
         </div>
       </div>
 
       <div class="expression-controls">
         <label>Multiplier
-          <select data-ludf-multiplier>
+          <select data-gpu-dataframe-multiplier>
             <option value="0.5">0.5×</option>
             <option value="1">1×</option>
             <option value="2" selected>2×</option>
@@ -105,22 +105,22 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
           </select>
         </label>
         <label>Adjustment
-          <input data-ludf-adjustment type="number" value="1" step="0.25">
+          <input data-gpu-dataframe-adjustment type="number" value="1" step="0.25">
         </label>
         <label>Threshold
-          <input data-ludf-threshold type="number" value="1" step="0.25">
+          <input data-gpu-dataframe-threshold type="number" value="1" step="0.25">
         </label>
-        <button class="query-button" data-ludf-run>Execute GPU query <span>→</span></button>
+        <button class="query-button" data-gpu-dataframe-run>Execute GPU query <span>→</span></button>
       </div>
 
       <div class="query-metrics" aria-label="Derived-query results">
-        <article><span>SELECTED ROWS</span><strong data-ludf-selected>—</strong></article>
-        <article><span>SELECTION RATE</span><strong data-ludf-rate>—</strong></article>
-        <article><span>QUERY + READBACK</span><strong data-ludf-execution>—</strong></article>
-        <article class="preview-metric"><span>GPU VALUE PREVIEW</span><strong data-ludf-preview>—</strong></article>
+        <article><span>SELECTED ROWS</span><strong data-gpu-dataframe-selected>—</strong></article>
+        <article><span>SELECTION RATE</span><strong data-gpu-dataframe-rate>—</strong></article>
+        <article><span>QUERY + READBACK</span><strong data-gpu-dataframe-execution>—</strong></article>
+        <article class="preview-metric"><span>GPU VALUE PREVIEW</span><strong data-gpu-dataframe-preview>—</strong></article>
       </div>
 
-      <p class="query-status" data-ludf-result role="status" aria-live="polite">
+      <p class="query-status" data-gpu-dataframe-result role="status" aria-live="polite">
         Derive and filter existing Arrow-backed GPU columns without copying rows.
       </p>
     </section>
@@ -137,7 +137,7 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
         </div>
         <div class="benchmark-controls">
           <label>Benchmark rows
-            <select data-ludf-benchmark-rows>
+            <select data-gpu-dataframe-benchmark-rows>
               <option value="1024">1,024 rows</option>
               <option value="4096">4,096 rows</option>
               <option value="65536" selected>65,536 rows</option>
@@ -146,24 +146,24 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
             </select>
           </label>
           <label>Measured samples
-            <select data-ludf-benchmark-iterations>
+            <select data-gpu-dataframe-benchmark-iterations>
               <option value="1">1 sample</option>
               <option value="3" selected>3 samples</option>
               <option value="5">5 samples</option>
             </select>
           </label>
-          <button id="analysis-ludf-benchmark-run" class="benchmark-button" data-ludf-benchmark disabled>
+          <button id="analysis-gpu-dataframe-benchmark-run" class="benchmark-button" data-gpu-dataframe-benchmark disabled>
             Run verified benchmark <span>→</span>
           </button>
         </div>
       </div>
-      <p id="analysis-ludf-benchmark-status" class="benchmark-status" data-ludf-benchmark-status>
+      <p id="analysis-gpu-dataframe-benchmark-status" class="benchmark-status" data-gpu-dataframe-benchmark-status>
         Filter, group, stable top-K, and unique-key joins remain GPU-resident.
       </p>
       <div
-        id="analysis-ludf-benchmark-results"
+        id="analysis-gpu-dataframe-benchmark-results"
         class="benchmark-results"
-        data-ludf-benchmark-phases
+        data-gpu-dataframe-benchmark-phases
         data-state="idle"
         data-validated="false"
         aria-live="polite"

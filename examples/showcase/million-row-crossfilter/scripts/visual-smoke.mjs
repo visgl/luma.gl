@@ -25,7 +25,7 @@ assert(
 );
 const histogramDimensions = ['value', 'risk', 'hour'];
 const screenshotPath =
-  process.env.CROSSFILTER_SCREENSHOT ?? join('/private/tmp', 'luxfilter-showcase.png');
+  process.env.CROSSFILTER_SCREENSHOT ?? join('/private/tmp', 'gpu-crossfilter-showcase.png');
 const thumbnailPath = process.env.CROSSFILTER_THUMBNAIL;
 const server = await createServer({
   root,

@@ -21,31 +21,31 @@ adapts existing GPU results to real deck.gl layers; it does not replace the unde
 
 ## Graph effects and layers
 
-`LuGraphDeckEffect` composes topology, vertex degree, PageRank, weak components, deterministic
+`GPUGraphDeckEffect` composes topology, vertex degree, PageRank, weak components, deterministic
 communities, neighborhood search, and progressive force layout inside deck.gl's existing frame.
 Deck owns queue submission; the effect retains original source and target edge partitions,
 including empty batches, without staging or reading graph data back to the CPU.
 
 ```ts
 import {
-  LuGraphDeckEffect,
-  LuGraphEdgeLayer,
-  LuGraphNodeLayer,
-  type LuGraphDeckDataset
+  GPUGraphDeckEffect,
+  GPUGraphEdgeLayer,
+  GPUGraphNodeLayer,
+  type GPUGraphDeckDataset
 } from '@deck.gl-community/arrow-layers';
 
-const dataset: LuGraphDeckDataset = {
+const dataset: GPUGraphDeckDataset = {
   vertexCount,
   sourceChunks,
   targetChunks,
   positions,
   velocities
 };
-const effect = new LuGraphDeckEffect(device, dataset);
+const effect = new GPUGraphDeckEffect(device, dataset);
 ```
 
-`LuGraphNodeLayer` consumes the exact progressive position allocation alongside resident community,
-component, degree, PageRank, distance, and selection outputs. Create one `LuGraphEdgeLayer` per
+`GPUGraphNodeLayer` consumes the exact progressive position allocation alongside resident community,
+component, degree, PageRank, distance, and selection outputs. Create one `GPUGraphEdgeLayer` per
 nonempty original edge partition to render caller-owned source and target buffers directly. Large
 graphs can retain every real vertex while limiting only the number of displayed original edges.
 
@@ -57,7 +57,7 @@ keeps all 1,048,576 source vertices and 2,097,343 directed edges resident while 
 vertex and bounding visible edges to 65,536.
 
 ```ts
-const sampledEffect = new LuGraphDeckEffect(device, dataset, {
+const sampledEffect = new GPUGraphDeckEffect(device, dataset, {
   layoutMode: 'sampled',
   addSampledLayoutToGraph: addApplicationOwnedSampledLayout
 });
@@ -68,7 +68,7 @@ the supplied graph and existing layout; it does not transfer ownership or add an
 dependency to this package. Omitting the optional configuration retains the regular exact-layout
 constructor shown above.
 
-The graph algorithms remain in `@luma.gl/experimental/lugraph`; only this existing private adapter
+The graph algorithms remain in `@luma.gl/experimental/gpu-graph`; only this existing private adapter
 package depends on deck.gl. Its diagnostics report actual resident populations, visible edge
 detail, CPU encoding, and frame cadence without inventing GPU timings or claiming convergence for
 a fixed iteration budget.

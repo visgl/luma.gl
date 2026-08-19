@@ -20,26 +20,26 @@ const RAPIDS_MODULE_ATTRIBUTIONS: RapidsModuleAttribution[] = [
     repository: 'https://github.com/rapidsai/cuspatial'
   },
   {
-    directory: 'luproj',
+    directory: 'gpu-project',
     documentation: [
-      'docs/api-reference/experimental/luproj.md',
-      'modules/experimental/src/luproj/README.md'
+      'docs/api-reference/experimental/gpu-project.md',
+      'modules/experimental/src/gpu-project/README.md'
     ],
     project: 'cuProj',
     repository: 'https://github.com/rapidsai/cuspatial/tree/branch-25.04/cpp/cuproj'
   },
   {
-    directory: 'luxfilter',
+    directory: 'gpu-crossfilter',
     documentation: [
-      'docs/api-reference/experimental/luxfilter.md',
-      'modules/experimental/src/luxfilter/README.md'
+      'docs/api-reference/experimental/gpu-crossfilter.md',
+      'modules/experimental/src/gpu-crossfilter/README.md'
     ],
     project: 'cuXfilter',
     repository: 'https://github.com/rapidsai/cuxfilter'
   },
   {
-    directory: 'lugraph',
-    documentation: ['modules/experimental/src/lugraph/README.md'],
+    directory: 'gpu-graph',
+    documentation: ['modules/experimental/src/gpu-graph/README.md'],
     project: 'cuGraph',
     repository: 'https://github.com/rapidsai/cugraph'
   }

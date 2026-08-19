@@ -1,3 +1,4 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 import {VideoTextureExample} from '@site/src/examples';
 
@@ -5,9 +6,9 @@ import {VideoTextureExample} from '@site/src/examples';
 
 <GpuGuideDocsTabs group="shader-data" active="video-textures" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From-v9.4" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
+</DocumentationBadges>
 
 Video can enter a shader through more than one texture path. Start with the portable copied path
 unless the shader can accept WebGPU's more restricted native external-video sampling.

@@ -11,13 +11,13 @@
   margin: 0 1rem 1.5rem;
   padding: 21px;
   overflow: hidden;
-  border: 1px solid var(--luma-example-border, rgba(148, 163, 184, 0.2));
+  border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: var(--luma-example-radius, 16px);
   background:
-    radial-gradient(ellipse at 8% 0, rgba(56, 189, 248, 0.11), transparent 38%),
-    var(--luma-example-surface, rgba(10, 17, 29, 0.97));
-  box-shadow: var(--luma-example-shadow, 0 18px 42px rgba(2, 6, 23, 0.2));
-  color: var(--luma-example-text, #f1f5f9);
+    radial-gradient(ellipse at 8% 0, rgba(45, 212, 191, 0.09), transparent 42%),
+    var(--ifm-background-surface-color, #fff);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
+  color: var(--ifm-font-color-base);
 }
 
 .controlsHeading {
@@ -29,7 +29,7 @@
 
 .controlsEyebrow {
   margin: 0;
-  color: var(--luma-example-accent, #67e8f9);
+  color: var(--ifm-color-primary-darkest, #17806d);
   font-size: 0.72rem;
   font-weight: 760;
   letter-spacing: 0.1em;
@@ -38,17 +38,17 @@
 
 .controlsIntroduction {
   margin: 5px 0 0;
-  color: var(--luma-example-text-muted, #a3b2c5);
+  color: var(--ifm-color-emphasis-700);
   font-size: 0.84rem;
   line-height: 1.5;
 }
 
 .catalogCount {
   flex: 0 0 auto;
-  border: 1px solid rgba(103, 232, 249, 0.25);
+  border: 1px solid color-mix(in srgb, var(--ifm-color-primary) 28%, transparent);
   border-radius: 999px;
-  background: rgba(8, 47, 73, 0.56);
-  color: #bae6fd;
+  background: color-mix(in srgb, var(--ifm-color-primary) 9%, transparent);
+  color: var(--ifm-color-primary-darkest, #176d60);
   font-size: 0.7rem;
   font-weight: 700;
   padding: 6px 10px;
@@ -64,7 +64,7 @@
   left: 13px;
   width: 19px;
   height: 19px;
-  color: var(--luma-example-text-muted, #94a3b8);
+  color: var(--ifm-color-emphasis-600);
   pointer-events: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -76,10 +76,10 @@
 .catalogControls select {
   width: 100%;
   min-height: 42px;
-  border: 1px solid var(--luma-example-border, rgba(148, 163, 184, 0.22));
+  border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 9px;
-  background: var(--luma-example-surface-raised, rgba(23, 35, 53, 0.8));
-  color: var(--luma-example-text, #e2e8f0);
+  background: var(--ifm-background-color, #fff);
+  color: var(--ifm-font-color-base);
   font: inherit;
   font-size: 0.78rem;
   transition:
@@ -93,7 +93,7 @@
 }
 
 .catalogControls input::placeholder {
-  color: var(--luma-example-text-muted, #94a3b8);
+  color: var(--ifm-color-emphasis-600);
 }
 
 .catalogControls select {
@@ -102,8 +102,8 @@
 
 .catalogControls input:focus-visible,
 .catalogControls select:focus-visible {
-  border-color: var(--luma-example-accent, #67e8f9);
-  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.15);
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ifm-color-primary) 18%, transparent);
   outline: none;
 }
 

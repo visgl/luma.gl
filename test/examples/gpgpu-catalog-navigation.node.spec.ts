@@ -20,7 +20,6 @@ const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'showcase/million-row-crossfilter',
   'showcase/raster-lab',
   'showcase/billion-point-spatial-atlas',
-  'deck/luspatial-taxi',
   'experimental/gpt-2',
   'v10/gpgpu',
   'experimental/gpu-frustum-culling',
@@ -51,7 +50,7 @@ describe('GPGPU example catalog navigation', () => {
     );
   });
 
-  test('keeps LuxFilter, LuRaster, luProj, and luSpatial discoverable through their real integrations', () => {
+  test('keeps GPUCrossfilter, GPURaster, luProj, and luSpatial discoverable through their real integrations', () => {
     const category = getCategory('GPGPU');
     const graphModulesCategory = category.items.find(
       (entry): entry is ExampleCategory =>
@@ -68,7 +67,10 @@ describe('GPGPU example catalog navigation', () => {
     const crossfilterExample = getGraphModuleExample('showcase/million-row-crossfilter');
     const rasterLabExample = getGraphModuleExample('showcase/raster-lab');
     const spatialAtlasExample = getGraphModuleExample('showcase/billion-point-spatial-atlas');
-    const taxiExample = getGraphModuleExample('deck/luspatial-taxi');
+    const graphLayersCategory = getCategory('GPU Graph Layers - deck.gl v10');
+    const taxiExample = graphLayersCategory.items.find(
+      entry => typeof entry !== 'string' && entry.id === 'deck/luspatial-taxi'
+    );
     const crossfilterExampleSource = readFileSync(
       path.join(EXAMPLES_DIRECTORY, 'showcase/million-row-crossfilter.mdx'),
       'utf8'
@@ -89,7 +91,7 @@ describe('GPGPU example catalog navigation', () => {
     expect(crossfilterExample).toEqual({
       type: 'doc',
       id: 'showcase/million-row-crossfilter',
-      label: 'LuxFilter: Million-Row Crossfilter Explorer'
+      label: 'GPUCrossfilter: Million-Row Crossfilter Explorer'
     });
     expect(crossfilterExampleSource).toContain("title: 'Million-Row Crossfilter Explorer'");
     expect(crossfilterExampleSource).toContain('<MillionRowCrossfilterExample />');
@@ -104,10 +106,10 @@ describe('GPGPU example catalog navigation', () => {
     expect(rasterLabExample).toEqual({
       type: 'doc',
       id: 'showcase/raster-lab',
-      label: 'LuRaster: Satellite Raster Lab'
+      label: 'GPURaster: Satellite Raster Lab'
     });
     expect(rasterLabExampleSource).toContain('<RasterLabExample />');
-    expect(rasterLabExampleSource).toContain('@luma.gl/experimental/luraster');
+    expect(rasterLabExampleSource).toContain('@luma.gl/experimental/gpu-raster');
     expect(spatialAtlasExample).toBe('showcase/billion-point-spatial-atlas');
     expect(taxiExample).toEqual({
       type: 'doc',
@@ -115,12 +117,12 @@ describe('GPGPU example catalog navigation', () => {
       label: 'luProj + luSpatial: Taxi Explorer'
     });
     expect(spatialAtlasSource).toContain("from '@luma.gl/experimental/geospatial'");
-    expect(spatialAtlasSource).not.toContain("from '@luma.gl/experimental/luproj'");
-    expect(taxiExampleSource).toContain('@luma.gl/experimental/luproj');
+    expect(spatialAtlasSource).not.toContain("from '@luma.gl/experimental/gpu-project'");
+    expect(taxiExampleSource).toContain('@luma.gl/experimental/gpu-project');
     expect(taxiExampleSource).toContain('@luma.gl/experimental/geospatial');
   });
 
-  test('registers LuxFilter throughout experimental API navigation', () => {
+  test('registers GPUCrossfilter throughout experimental API navigation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
@@ -135,13 +137,15 @@ describe('GPGPU example catalog navigation', () => {
     };
 
     collectExperimentalCategories(documentationTableOfContents);
-    expect(experimentalCategories).toHaveLength(2);
-    for (const category of experimentalCategories) {
-      expect(category.items).toContain('api-reference/experimental/luxfilter');
-    }
+    expect(experimentalCategories).toHaveLength(1);
+    const crossfilterCategory = experimentalCategories[0].items.find(
+      entry => typeof entry !== 'string' && entry.label === 'GPU Crossfilter'
+    );
+    expect(crossfilterCategory).toBeDefined();
+    expect(crossfilterCategory?.items).toContain('api-reference/experimental/gpu-crossfilter');
 
     const documentationSource = readFileSync(
-      path.join(DOCUMENTATION_DIRECTORY, 'api-reference/experimental/luxfilter.md'),
+      path.join(DOCUMENTATION_DIRECTORY, 'api-reference/experimental/gpu-crossfilter.md'),
       'utf8'
     );
     const experimentalOverviewSource = readFileSync(
@@ -149,14 +153,16 @@ describe('GPGPU example catalog navigation', () => {
       'utf8'
     );
     const experimentalTabsSource = readFileSync(
-      path.join(process.cwd(), 'website/src/components/docs/experimental-docs-tabs.tsx'),
+      path.join(process.cwd(), 'website/src/components/docs/experimental-docs-catalog.ts'),
       'utf8'
     );
 
-    expect(documentationSource).toContain('<ExperimentalDocsTabs active="luxfilter" />');
-    expect(experimentalOverviewSource).toContain('/docs/api-reference/experimental/luxfilter');
+    expect(documentationSource).toContain('<ExperimentalDocsTabs active="gpu-crossfilter" />');
+    expect(experimentalOverviewSource).toContain(
+      '/docs/api-reference/experimental/gpu-crossfilter'
+    );
     expect(experimentalTabsSource).toMatch(
-      /id:\s*['"]luxfilter['"][^}]*href:\s*['"]\/docs\/api-reference\/experimental\/luxfilter['"]/
+      /id:\s*['"]gpu-crossfilter['"][^}]*href:\s*['"]\/docs\/api-reference\/experimental\/gpu-crossfilter['"]/
     );
   });
 
@@ -208,7 +214,7 @@ describe('GPGPU example catalog navigation', () => {
       'v10/gpgpu',
       'experimental/gpu-frustum-culling',
       'experimental/gpu-trace-viewer',
-      'experimental/lugraph-explorer',
+      'experimental/gpu-graph-explorer',
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
       'experimental/gpu-sort',
@@ -218,9 +224,22 @@ describe('GPGPU example catalog navigation', () => {
       'showcase/million-row-crossfilter',
       'showcase/raster-lab',
       'showcase/billion-point-spatial-atlas',
-      'deck/luspatial-taxi',
-      'deck/lugraph-explorer',
       'experimental/gpt-2'
+    ]);
+  });
+
+  test('ends with focused GPUGraph deck.gl integrations', () => {
+    const tableOfContents = readTableOfContents();
+    const finalEntry = tableOfContents.at(-1);
+
+    expect(finalEntry).toMatchObject({
+      type: 'category',
+      label: 'GPU Graph Layers - deck.gl v10'
+    });
+    expect(readCategoryIdentifiers(finalEntry as ExampleCategory)).toEqual([
+      'deck/luspatial-taxi',
+      'deck/gpu-graph-explorer',
+      'deck/gpu-culled-trace'
     ]);
   });
 

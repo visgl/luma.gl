@@ -58,16 +58,20 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
     t.equal(renderer.props.toneMapping, 'reinhard', 'automatically maps Float32 source radiance');
     t.ok(renderer.props.lodOpacity, 'enables nonlinear Spark parents with Float32 source colors');
     t.equal(renderer.stats.activeRowCount, 5, 'retains only requested original sparse source rows');
-    t.equal(renderer.stats.sourceSegmentCount, 3, 'splits independent bounded source projections');
+    t.equal(
+      renderer.stats.sourceSegmentCount,
+      4,
+      'retains bounded source projections while sparse row cardinality changes'
+    );
     t.ok(renderer.encode(device.commandEncoder), 'encodes the real device command graph');
     t.ok(renderer.compiledGraph, 'compiles GPU projection, global sorting, and ordered gather');
     t.ok(renderer.graphStats, 'exposes real graph diagnostics without mapping a GPU buffer');
     t.ok(renderer.lastEncoding, 'records the current sparse GPU graph encoding');
     t.ok(renderer.uniformBuffer, 'retains shared GPU camera presentation uniforms');
     t.ok(renderer.sortedIndexBuffer, 'retains one compact global GPU source permutation');
-    t.equal(renderer.projectedRecordBuffers.length, 3, 'allocates three ordered bounded outputs');
-    t.equal(renderer.stats.segmentCount, 3, 'tracks output segments independently of source pages');
-    t.equal(renderer.stats.globalSortCapacity, 5, 'sorts exactly five active cross-page rows');
+    t.equal(renderer.projectedRecordBuffers.length, 4, 'allocates bucketed ordered outputs');
+    t.equal(renderer.stats.segmentCount, 4, 'tracks output capacity independently of source pages');
+    t.equal(renderer.stats.globalSortCapacity, 8, 'buckets five active cross-page rows');
     t.ok(
       renderer.stats.rendererGpuByteLength > 0 && renderer.stats.sourceGpuByteLength > 0,
       'separates owned graph storage from original caller-owned source bytes'
@@ -126,6 +130,20 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
     ]);
     t.ok(renderer.encode(device.commandEncoder), 'updates compact sparse original source offsets');
     t.equal(renderer.compiledGraph, originalGraph, 'reuses stable-cardinality source projections');
+    device.submit();
+
+    renderer.setFrontier([
+      {id: 'browser-directional-page', data: firstPage, activeRows: new Uint32Array([2])},
+      {id: 'browser-semantic-page', data: secondPage, activeRows: new Uint32Array([1, 2])}
+    ]);
+    t.ok(renderer.encode(device.commandEncoder), 'updates a smaller sparse frontier in place');
+    t.equal(
+      renderer.compiledGraph,
+      originalGraph,
+      'reuses the compiled graph when active cardinality stays inside its bucket'
+    );
+    t.equal(renderer.stats.activeRowCount, 3, 'reports the smaller exact sparse frontier');
+    t.equal(renderer.stats.globalSortCapacity, 8, 'retains the active sort bucket');
     device.submit();
 
     firstPage.updateRows(1, {opacities: new Float32Array([0.75])});
@@ -793,6 +811,32 @@ test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and ro
       'resorts replaced original source offsets exactly across overlapping page depths'
     );
 
+    renderer.setFrontier([
+      {id: 'directional-page', data: firstPage, activeRows: new Uint32Array([2])},
+      {id: 'semantic-page', data: secondPage, activeRows: new Uint32Array([0, 1])}
+    ]);
+    t.ok(renderer.encode(device.commandEncoder), 'shrinks a stable sparse frontier in place');
+    t.equal(
+      renderer.compiledGraph,
+      originalGraph,
+      'retains graph identity while active cardinality changes inside its sort bucket'
+    );
+    t.equal(renderer.sortedIndexBuffer, originalSortedIndices, 'retains bucketed sort storage');
+    t.equal(renderer.stats.activeRowCount, 3, 'reports the exact smaller active frontier');
+    t.equal(renderer.stats.globalSortCapacity, 4, 'does not shrink the reusable sort bucket');
+    device.submit();
+    const smallerFrontierSortedBytes = await renderer.sortedIndexBuffer!.readAsync();
+    const smallerFrontierSorted = new Uint32Array(
+      smallerFrontierSortedBytes.buffer,
+      smallerFrontierSortedBytes.byteOffset,
+      smallerFrontierSortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+    );
+    t.deepEqual(
+      Array.from(smallerFrontierSorted.slice(0, 3)),
+      [1, 0, 2],
+      'keeps exact global source identities after sparse cardinality shrinks'
+    );
+
     renderer.setFrontier([]);
     t.ok(renderer.encode(device.commandEncoder), 'encodes one clear when a hierarchy empties');
     t.equal(renderer.compiledGraph, originalGraph, 'preserves graph allocations while empty');
@@ -889,7 +933,11 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
         renderer.encode(device.commandEncoder),
         'encodes aligned original source storage ranges'
       );
-      t.equal(renderer.stats.segmentCount, 7, 'splits complete output into seven bounded segments');
+      t.equal(
+        renderer.stats.segmentCount,
+        13,
+        'splits power-of-two global output capacity into bounded segments'
+      );
       device.submit();
       const completeSortedBytes = await renderer.sortedIndexBuffer!.readAsync();
       const completeSortedIndices = new Uint32Array(
@@ -898,7 +946,7 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
         completeSortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
       t.deepEqual(
-        Array.from(completeSortedIndices),
+        Array.from(completeSortedIndices.slice(0, rowCount)),
         Array.from({length: rowCount}, (_, sortedRow) => rowCount - sortedRow - 1),
         'retains exact global ordering across every aligned source and output window'
       );
@@ -915,7 +963,11 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
           activeRows: new Uint32Array([0, 65, 128])
         }
       ]);
-      t.equal(renderer.stats.sourceSegmentCount, 6, 'separates sparse rows at aligned range edges');
+      t.equal(
+        renderer.stats.sourceSegmentCount,
+        18,
+        'retains stable aligned source windows for both sparse pages'
+      );
       t.equal(
         renderer.stats.activeRowCount,
         6,
@@ -933,7 +985,7 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
         sparseSortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
       t.deepEqual(
-        Array.from(sparseSortedIndices),
+        Array.from(sparseSortedIndices.slice(0, 6)),
         [3, 2, 4, 1, 0, 5],
         'globally interleaves preserved sparse page rows across three source-binding windows'
       );

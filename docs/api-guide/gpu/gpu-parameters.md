@@ -2,7 +2,7 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 # Using GPU Parameters
 
-<GpuGuideDocsTabs group="execution" active="parameters" />
+<GpuGuideDocsTabs group="rendering" active="parameters" />
 
 luma.gl provides a unified API for controlling GPU parameters providing control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
 
@@ -71,9 +71,9 @@ Most luma.gl parameters are stored on the `RenderPipeline` or `RenderPass` class
 
 | Parameter Mutability              | Examples                                          | Constraint                                                              |
 | --------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| Dynamic `RenderPass` parameters   | `viewport`, `scissor`, `blendConstant`            | Can be freely changed between draw calls. |
-| Fixed `RenderPass` parameters     | `clearColors`, `discard`, `depthClearValue`...    | Can not be changed. A new `RenderPass` must be created.                 |
-| Fixed `RenderPipeline` parameters | `cullMode`, `frontFace`, `depthWriteEnabled`, ... | Can not be changed. A new `RenderPipeline` must be created.             |
+| Dynamic `RenderPass` parameters | `viewport`, `scissor`, `blendConstant` | Can be freely changed between draw calls. |
+| Fixed `RenderPass` parameters | `clearColors`, `discard`, `depthClearValue`... | Can not be changed. A new `RenderPass` must be created. |
+| Fixed `RenderPipeline` parameters | `cullMode`, `frontFace`, `depthWriteEnabled`, ... | Can not be changed. A new `RenderPipeline` must be created. |
 
 ## Dynamic RenderPass Parameters
 

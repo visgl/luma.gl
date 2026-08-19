@@ -233,8 +233,8 @@ describe('shader-pass reference documentation', () => {
       'Blur, Bloom and Focus',
       'Temporal and Antialiasing',
       'Lighting and Visibility',
-      'Atmosphere',
-      'Stylization and Detail',
+      'Stylization',
+      'Detail and finishing',
       'Warp and Lens'
     ]);
 

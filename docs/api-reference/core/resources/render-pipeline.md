@@ -1,4 +1,5 @@
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # RenderPipeline
 
@@ -8,6 +9,15 @@ A `RenderPipeline` combines a vertex shader, a fragment shader, a
 [`ShaderLayout`](/docs/api-reference/core/shader-layout), and fixed render
 state into a reusable, immutable pipeline descriptor. Select it on a
 [`RenderPass`](/docs/api-reference/core/resources/render-pass) before drawing.
+
+<DocumentationContract title="RenderPipeline" rows={[
+  {label: 'Creation', value: 'Device.createRenderPipeline() or PipelineFactory'},
+  {label: 'Ownership', value: 'Application-owned; factories may cache shared instances'},
+  {label: 'Usage', value: 'Select on RenderPass, bind resources, then draw'},
+  {label: 'Lifecycle', value: 'Immutable pipeline state; reuse across frames'},
+  {label: 'Backend support', value: 'Portable with backend-compatible shaders and features'},
+  {label: 'Cost', value: 'Pipeline creation can be expensive; never recreate it per frame'}
+]} />
 
 ## Deprecated pipeline-owned bindings
 

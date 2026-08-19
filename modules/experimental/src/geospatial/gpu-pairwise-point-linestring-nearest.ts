@@ -8,8 +8,8 @@ import type {
   GPUCommandGraphContributor,
   GraphBufferUse,
   GraphDataView
-} from '../gpu-primitives/gpu-command-graph';
-import {getViewElementOffset} from '../gpu-primitives/graph-data-view-utils';
+} from '../gpu-core/gpu-command-graph';
+import {getViewElementOffset} from '../gpu-core/graph-data-view-utils';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
   POSITION_FORMATS,

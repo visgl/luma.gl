@@ -11,7 +11,7 @@ import {
   type ANARIVector3,
   type ANARIWorld
 } from '@luma.gl/anari';
-import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {createANARIJSONScene, type ANARIJSONScene} from './playground-scene';
 import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
@@ -81,14 +81,10 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   >;
 
   private activeSceneIndex = 0;
-  private orbitAzimuth = 0;
-  private orbitElevation = 0;
-  private orbitDistance = 24;
-  private pointerPosition: [number, number] | null = null;
+  private orbitControls: OrbitControls | null = null;
   private bloomEnabled = true;
   private temporalAntialiasingEnabled = true;
   private lastStatisticsUpdate = 0;
-  private canvas: HTMLCanvasElement | null = null;
   private readonly deferredRendererAvailable: boolean;
   private readonly importedScenes = new Map<string, number>();
   private importRequest = 0;
@@ -131,12 +127,17 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
 
     const canvas = device.getDefaultCanvasContext().canvas;
     if (canvas instanceof HTMLCanvasElement) {
-      this.canvas = canvas;
-      canvas.addEventListener('pointerdown', this.handlePointerDown);
-      canvas.addEventListener('pointermove', this.handlePointerMove);
-      canvas.addEventListener('pointerup', this.handlePointerUp);
-      canvas.addEventListener('pointercancel', this.handlePointerUp);
-      canvas.addEventListener('wheel', this.handleWheel, {passive: false});
+      this.orbitControls = new OrbitControls(canvas, {
+        distance: 24,
+        minDistance: 8,
+        maxDistance: 75,
+        minPitch: -0.08,
+        maxPitch: 1.05,
+        rotateSpeed: 0.005,
+        pitchSpeed: -0.004,
+        autoRotate: true,
+        autoRotateSpeed: 0.035
+      });
     }
 
     window.addEventListener('keydown', this.handleKeyDown);
@@ -158,14 +159,20 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
       this.frame.setParameter('size', [width, height]).commitParameters();
     }
 
-    const azimuth = this.orbitAzimuth + elapsedSeconds * 0.035;
-    const horizontalDistance = this.orbitDistance * Math.cos(this.orbitElevation);
     const target = activeScene.target;
-    const position: ANARIVector3 = [
-      target[0] + Math.sin(azimuth) * horizontalDistance,
-      target[1] + Math.sin(this.orbitElevation) * this.orbitDistance,
-      target[2] + Math.cos(azimuth) * horizontalDistance
-    ];
+    let position: ANARIVector3;
+    if (this.orbitControls) {
+      this.orbitControls.update(time);
+      position = this.orbitControls.getEyePosition();
+    } else {
+      const azimuth = activeScene.azimuth + elapsedSeconds * 0.035;
+      const horizontalDistance = activeScene.distance * Math.cos(activeScene.elevation);
+      position = [
+        target[0] + Math.sin(azimuth) * horizontalDistance,
+        target[1] + Math.sin(activeScene.elevation) * activeScene.distance,
+        target[2] + Math.cos(azimuth) * horizontalDistance
+      ];
+    }
     const direction: ANARIVector3 = [
       target[0] - position[0],
       target[1] - position[1],
@@ -201,13 +208,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   }
 
   override onFinalize(): void {
-    if (this.canvas) {
-      this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-      this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-      this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-      this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
-      this.canvas.removeEventListener('wheel', this.handleWheel);
-    }
+    this.orbitControls?.destroy();
     window.removeEventListener('keydown', this.handleKeyDown);
     this.frame.destroy();
     this.anari.destroy();
@@ -329,9 +330,12 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private selectScene(sceneIndex: number): void {
     const scene = this.scenes[sceneIndex];
     this.activeSceneIndex = sceneIndex;
-    this.orbitAzimuth = scene.azimuth;
-    this.orbitElevation = scene.elevation;
-    this.orbitDistance = scene.distance;
+    this.orbitControls?.setProps({
+      target: scene.target,
+      yaw: scene.azimuth,
+      pitch: scene.elevation,
+      distance: scene.distance
+    });
     const rendererParameters = scene.rendererParameters || DEFAULT_RENDERER_PARAMETERS;
     this.renderers.default
       .setParameters({
@@ -438,31 +442,6 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
       setElementText('usd-import-status', `IMPORT FAILED: ${message}`);
     }
   }
-
-  private readonly handlePointerDown = (event: PointerEvent): void => {
-    this.pointerPosition = [event.clientX, event.clientY];
-    this.canvas?.setPointerCapture(event.pointerId);
-  };
-
-  private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.pointerPosition) {
-      return;
-    }
-    const horizontalChange = event.clientX - this.pointerPosition[0];
-    const verticalChange = event.clientY - this.pointerPosition[1];
-    this.orbitAzimuth -= horizontalChange * 0.005;
-    this.orbitElevation = clamp(this.orbitElevation + verticalChange * 0.004, -0.08, 1.05);
-    this.pointerPosition = [event.clientX, event.clientY];
-  };
-
-  private readonly handlePointerUp = (): void => {
-    this.pointerPosition = null;
-  };
-
-  private readonly handleWheel = (event: WheelEvent): void => {
-    event.preventDefault();
-    this.orbitDistance = clamp(this.orbitDistance * Math.exp(event.deltaY * 0.001), 8, 75);
-  };
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     if (event.key === '1' || event.key === '2' || event.key === '3') {
@@ -1194,10 +1173,6 @@ function makeSpectrumColor(hue: number, saturation: number, value: number): ANAR
 function hash(value: number): number {
   const result = Math.sin(value * 91.7341 + 19.19) * 43758.5453;
   return result - Math.floor(result);
-}
-
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, value));
 }
 
 function isTemporalAntialiasingRenderer(rendererName: string | undefined): boolean {

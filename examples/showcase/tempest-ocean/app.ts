@@ -6,6 +6,7 @@ import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   Model,
+  OrbitControls,
   ShaderInputs,
   ShaderPassRenderer,
   type AnimationProps,
@@ -15,7 +16,6 @@ import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import {SpectralOceanSimulation} from '@luma.gl/experimental';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
-import {OrbitController} from '../../orbit-controller';
 import {
   getTempestOceanSunDirection,
   TEMPEST_OCEAN_CAMERA_PROPS,
@@ -118,7 +118,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
   readonly stormIntensity: number;
 
   sceneTarget: TempestOceanSceneTarget;
-  orbitController: OrbitController | null = null;
+  orbitControls: OrbitControls | null = null;
 
   private readonly skyShaderInputs = new ShaderInputs({tempestOceanScene});
   private readonly oceanShaderInputs = new ShaderInputs({tempestOceanScene});
@@ -225,7 +225,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     // Artifact capture always starts from the authored seed so runner timing cannot change pixels.
     this.paused = true;
     this.cinematicCamera = true;
-    this.orbitController?.setAutoRotate(true);
+    this.orbitControls?.setAutoRotate(true);
     this.resetRequested = true;
     this.previousTimeMilliseconds = null;
     this.updateControlStatus();
@@ -248,7 +248,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
-      this.orbitController = new OrbitController(canvas, TEMPEST_OCEAN_CAMERA_PROPS);
+      this.orbitControls = new OrbitControls(canvas, TEMPEST_OCEAN_CAMERA_PROPS);
       canvas.addEventListener('pointerdown', this.handleAudioActivation);
       globalThis.addEventListener('keydown', this.handleKeyDown);
       globalThis.document?.addEventListener('visibilitychange', this.handleVisibilityChange);
@@ -275,16 +275,16 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     const resetFoamHistory = this.resetRequested;
     if (this.resetRequested) {
       this.simulationTimeSeconds = 0;
-      this.orbitController?.reset();
+      this.orbitControls?.reset();
       this.resetRequested = false;
     } else if (!this.paused) {
       this.simulationTimeSeconds += deltaTimeSeconds;
-      this.orbitController?.update(time);
+      this.orbitControls?.update(time);
     } else {
-      this.orbitController?.update(time);
+      this.orbitControls?.update(time);
     }
 
-    const cameraPosition = (this.orbitController?.getEyePosition() ?? [75, 26, 92]) as [
+    const cameraPosition = (this.orbitControls?.getEyePosition() ?? [75, 26, 92]) as [
       number,
       number,
       number
@@ -353,8 +353,8 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     globalThis.removeEventListener('keydown', this.handleKeyDown);
     globalThis.document?.removeEventListener('visibilitychange', this.handleVisibilityChange);
     this.canvas?.removeEventListener('pointerdown', this.handleAudioActivation);
-    this.orbitController?.destroy();
-    this.orbitController = null;
+    this.orbitControls?.destroy();
+    this.orbitControls = null;
     this.canvas = null;
     this.postprocessingRenderer.destroy();
     this.oceanModel.destroy();
@@ -498,11 +498,11 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
       this.paused = !this.paused;
     } else if (key === 'c') {
       this.cinematicCamera = !this.cinematicCamera;
-      this.orbitController?.setAutoRotate(this.cinematicCamera);
+      this.orbitControls?.setAutoRotate(this.cinematicCamera);
     } else if (key === 'r') {
       this.paused = false;
       this.cinematicCamera = true;
-      this.orbitController?.setAutoRotate(true);
+      this.orbitControls?.setAutoRotate(true);
       this.resetRequested = true;
     } else {
       return;

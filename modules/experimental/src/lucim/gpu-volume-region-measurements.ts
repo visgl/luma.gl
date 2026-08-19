@@ -10,12 +10,12 @@ import type {
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-primitives/gpu-command-graph';
+} from '../gpu-core/gpu-command-graph';
 import {
   getViewBinding,
   getViewElementOffset,
   validatePackedView
-} from '../gpu-primitives/graph-data-view-utils';
+} from '../gpu-core/graph-data-view-utils';
 import {
   assertVolumeStorageBindingFits,
   getVolumeDispatchSize,

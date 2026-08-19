@@ -28,6 +28,7 @@ export {
 export {
   createGLTFAnimatedCrowd,
   GLTFAnimatedCrowd,
+  type GLTFCrowdAnimationStats,
   type GLTFCrowdLODLevelStats,
   type GLTFCrowdLODOptions,
   type GLTFCrowdLODStats,
@@ -38,6 +39,11 @@ export {
   type GLTFCrowdClipSelectionOptions,
   type GLTFCrowdPrimitiveGroup
 } from './gltf/gltf-animated-crowd';
+export {
+  type GLTFCrowdGPUAnimationClip,
+  type GLTFCrowdGPUAnimationLayout,
+  type GLTFCrowdGPUAnimationOptions
+} from './gltf/gltf-gpu-animation';
 export {
   generateGLTFLODLevels,
   type GenerateGLTFLODLevelsOptions,

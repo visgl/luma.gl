@@ -1,4 +1,8 @@
+import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+
 # VolumetricFireSimulation
+
+<ExperimentalDocsTabs active="volumetric-fire-simulation" />
 
 `VolumetricFireSimulation` is an experimental WebGPU-only dense-grid fire and smoke simulation.
 It records a fixed-capacity sequence of 3D compute passes through `GPUCommandGraph`: velocity and
@@ -82,10 +86,10 @@ constructor rejects non-WebGPU devices and texture dimensions outside the active
 
 | Prop                 | Meaning                                                                                                                                                                                                                                                        |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                 | Optional debug-resource prefix. Defaults to `volumetric-fire-simulation`.                                                                                                                                                                                      |
-| `dimensions`         | Width, height, and depth of the dense Cartesian grid. Each entry must be an integer of at least four within `device.limits.maxTextureDimension3D`. Defaults to `[64, 96, 64]`.                                                                                 |
-| `pressureIterations` | Positive integer Jacobi iteration count recorded into each simulation step. More iterations reduce residual divergence at additional compute cost. Defaults to `6`.                                                                                            |
-| `obstacleTexture`    | Optional caller-owned, sampleable `r8unorm` 3D texture from the same device and matching `dimensions`. Zero denotes fluid space and one denotes solid cells; intermediate values are compared with `obstacleThreshold`. When omitted, the simulation creates an internally owned all-fluid texture. |
+| `id` | Optional debug-resource prefix. Defaults to `volumetric-fire-simulation`. |
+| `dimensions` | Width, height, and depth of the dense Cartesian grid. Each entry must be an integer of at least four within `device.limits.maxTextureDimension3D`. Defaults to `[64, 96, 64]`. |
+| `pressureIterations` | Positive integer Jacobi iteration count recorded into each simulation step. More iterations reduce residual divergence at additional compute cost. Defaults to `6`. |
+| `obstacleTexture` | Optional caller-owned, sampleable `r8unorm` 3D texture from the same device and matching `dimensions`. Zero denotes fluid space and one denotes solid cells; intermediate values are compared with `obstacleThreshold`. When omitted, the simulation creates an internally owned all-fluid texture. |
 
 The obstacle field is static for an encoded step. Applications that rewrite it are responsible
 for ordering that update before the next simulation submission. The simulation does
@@ -117,25 +121,25 @@ CPU.
 
 | Option                   | Meaning                                                                                                                                                        |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `deltaTime`              | Required positive finite step duration in seconds. Use a bounded fixed timestep; one step traces at most eight grid cells along a characteristic. |
-| `time`                   | Application simulation time in seconds used by time-varying turbulence. Defaults to `0`.                                                        |
-| `emitters`               | Normalized emitter records. Defaults to `[]`; at most four entries are used.                                                                     |
-| `buoyancy`               | Upward acceleration contributed by hot gas. Defaults to `2.2`.                                                                                  |
-| `smokeWeight`            | Downward force contributed by dense smoke. Defaults to `0.28`.                                                                                   |
-| `turbulence`             | Strength of the analytic divergence-free turbulence field. Defaults to `0.8`.                                                                    |
-| `vorticity`              | Small-scale rotational confinement strength. Defaults to `0.45`.                                                                                 |
-| `velocityDissipation`    | Velocity retained over one nominal 60 Hz step. Defaults to `0.997`.                                                                               |
-| `densityDissipation`     | Smoke density retained over one nominal 60 Hz step. Defaults to `0.995`.                                                                          |
-| `temperatureDissipation` | Temperature retained over one nominal 60 Hz step. Defaults to `0.99`.                                                                             |
-| `fuelDissipation`        | Fuel retained over one nominal 60 Hz step. Defaults to `0.985`.                                                                                   |
-| `reactionRate`           | Fuel consumption rate. Defaults to `2.6`.                                                                                                         |
-| `heatRelease`            | Temperature released by consumed fuel. Defaults to `1.45`.                                                                                       |
-| `smokeYield`             | Smoke produced by consumed fuel. Defaults to `0.62`.                                                                                              |
-| `cooling`                | Additional height-independent cooling rate. Defaults to `0.12`.                                                                                  |
-| `boundaryDamping`        | Velocity retained close to a solid boundary. Defaults to `0.72`.                                                                                 |
-| `obstacleThreshold`      | `r8unorm` mask value at or above which a cell is solid. Defaults to `0.5`.                                                                        |
-| `noiseScale`             | Spatial frequency of the analytic turbulence field. Defaults to `3.4`.                                                                            |
-| `reset`                  | Clears state before this step's emitters are applied. Defaults to `false`; use an empty emitter list to leave a clear domain.                     |
+| `deltaTime` | Required positive finite step duration in seconds. Use a bounded fixed timestep; one step traces at most eight grid cells along a characteristic. |
+| `time` | Application simulation time in seconds used by time-varying turbulence. Defaults to `0`. |
+| `emitters` | Normalized emitter records. Defaults to `[]`; at most four entries are used. |
+| `buoyancy` | Upward acceleration contributed by hot gas. Defaults to `2.2`. |
+| `smokeWeight` | Downward force contributed by dense smoke. Defaults to `0.28`. |
+| `turbulence` | Strength of the analytic divergence-free turbulence field. Defaults to `0.8`. |
+| `vorticity` | Small-scale rotational confinement strength. Defaults to `0.45`. |
+| `velocityDissipation` | Velocity retained over one nominal 60 Hz step. Defaults to `0.997`. |
+| `densityDissipation` | Smoke density retained over one nominal 60 Hz step. Defaults to `0.995`. |
+| `temperatureDissipation` | Temperature retained over one nominal 60 Hz step. Defaults to `0.99`. |
+| `fuelDissipation` | Fuel retained over one nominal 60 Hz step. Defaults to `0.985`. |
+| `reactionRate` | Fuel consumption rate. Defaults to `2.6`. |
+| `heatRelease` | Temperature released by consumed fuel. Defaults to `1.45`. |
+| `smokeYield` | Smoke produced by consumed fuel. Defaults to `0.62`. |
+| `cooling` | Additional height-independent cooling rate. Defaults to `0.12`. |
+| `boundaryDamping` | Velocity retained close to a solid boundary. Defaults to `0.72`. |
+| `obstacleThreshold` | `r8unorm` mask value at or above which a cell is solid. Defaults to `0.5`. |
+| `noiseScale` | Spatial frequency of the analytic turbulence field. Defaults to `3.4`. |
+| `reset` | Clears state before this step's emitters are applied. Defaults to `false`; use an empty emitter list to leave a clear domain. |
 
 All numeric step and active-emitter values must be finite. Retention values and other bounded
 shader controls are clamped where they are consumed; negative forces and source channels remain
@@ -214,7 +218,7 @@ sparse grids in later revisions.
 
 ## Related pages
 
-- [GPU Command Graph](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph)
+- [GPU Command Graph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
   documents graph ownership, hazard inference, and encoding.
 - [GBuffer](/docs/api-reference/experimental/g-buffer) provides depth, normal, and velocity
   attachments for depth-aware volume composition.

@@ -2,7 +2,7 @@ import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-t
 
 # Transparency
 
-<ShaderLevelDocsTabs active="transparency" />
+<ShaderLevelDocsTabs group="techniques" active="transparency" />
 
 Transparency has two independent concerns: how each surface is shaded and how overlapping
 fragments are ordered. Fresnel reflection or refraction does not fix incorrect fragment ordering,

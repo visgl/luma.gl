@@ -61,7 +61,10 @@ describe('live example catalog thumbnails', () => {
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/gpu-frustum-culling.jpg')
     );
     expect(resolveExampleThumbnailPath('showcase/gaussian-splat-viewer')).toBe(
-      path.join(EXAMPLE_IMAGES_DIRECTORY, 'showcase/gaussian-splats.jpg')
+      path.join(EXAMPLE_IMAGES_DIRECTORY, 'showcase/gaussian-splat-viewer.jpg')
+    );
+    expect(resolveExampleThumbnailPath('showcase/gaussian-splat-viewer')).not.toBe(
+      resolveExampleThumbnailPath('showcase/gaussian-splats')
     );
   });
 

@@ -1,14 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
-
-type GPGPUDocsTab = {
-  /** Stable tab identifier. */
-  id: GPGPUDocsTabId;
-  /** User-facing tab label. */
-  label: string;
-  /** Documentation page URL. */
-  href: string;
-};
+import {DocsPageTabs, type DocumentationTabGroup} from './docs-page-tabs';
 
 /** GPGPU documentation tab identifiers. */
 export type GPGPUDocsTabId =
@@ -21,30 +12,24 @@ export type GPGPUDocsTabId =
   | 'fp64'
   | 'fp64-arithmetic';
 
-const GPGPU_DOCS_TABS: GPGPUDocsTab[] = [
-  {id: 'overview', label: 'Overview', href: '/docs/api-reference/gpgpu'},
-  {id: 'gpu-data-evaluator', label: 'GPU Evaluators', href: '/docs/api-reference/gpgpu/gpu-data-evaluator'},
-  {id: 'operations', label: 'Operations', href: '/docs/api-reference/gpgpu/operations'},
+export const GPGPU_DOCS_TAB_GROUPS: DocumentationTabGroup<GPGPUDocsTabId>[] = [
   {
-    id: 'custom-operation',
-    label: 'Custom Operations',
-    href: '/docs/api-reference/gpgpu/custom-operation'
-  },
-  {id: 'clean-evaluate', label: 'cleanEvaluate', href: '/docs/api-reference/gpgpu/clean-evaluate'},
-  {
-    id: 'precision-guide',
-    label: 'Precision',
-    href: '/docs/api-guide/shaders/gpu-floating-point-precision'
+    label: 'GPGPU evaluators and operations',
+    tabs: [
+      {id: 'overview', label: 'Overview', href: '/docs/api-reference/gpgpu'},
+      {id: 'gpu-data-evaluator', label: 'GPU evaluators', href: '/docs/api-reference/gpgpu/gpu-data-evaluator'},
+      {id: 'operations', label: 'Operations', href: '/docs/api-reference/gpgpu/operations'},
+      {id: 'custom-operation', label: 'Custom operations', href: '/docs/api-reference/gpgpu/custom-operation'},
+      {id: 'clean-evaluate', label: 'cleanEvaluate', href: '/docs/api-reference/gpgpu/clean-evaluate'}
+    ]
   },
   {
-    id: 'fp64',
-    label: 'fp64',
-    href: '/docs/api-reference/shadertools/shader-modules/fp64'
-  },
-  {
-    id: 'fp64-arithmetic',
-    label: 'fp64 arithmetic',
-    href: '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'
+    label: 'GPU floating-point precision',
+    tabs: [
+      {id: 'precision-guide', label: 'Precision guide', href: '/docs/api-guide/shaders/gpu-floating-point-precision'},
+      {id: 'fp64', label: 'fp64', href: '/docs/api-reference/shadertools/shader-modules/fp64'},
+      {id: 'fp64-arithmetic', label: 'fp64 arithmetic', href: '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'}
+    ]
   }
 ];
 
@@ -52,22 +37,8 @@ const GPGPU_DOCS_TABS: GPGPUDocsTab[] = [
  * Renders page links with the same visual treatment as tabs for GPGPU documentation pages.
  */
 export function GPGPUDocsTabs({active}: {active: GPGPUDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="GPGPU documentation sections">
-      {GPGPU_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
+  const group = GPGPU_DOCS_TAB_GROUPS.find(candidate =>
+    candidate.tabs.some(tab => tab.id === active)
   );
+  return group ? <DocsPageTabs active={active} group={group} /> : null;
 }

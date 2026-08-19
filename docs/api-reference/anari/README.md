@@ -1,3 +1,5 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # @luma.gl/anari
 
 <p>
@@ -27,11 +29,11 @@
   </a>
 </div>
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
-  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+</DocumentationBadges>
 
 `@luma.gl/anari` provides a private, experimental, independently developed retained rendering API
 built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras,
@@ -57,7 +59,7 @@ API and supported feature set can change.
 - [Scene schemas and JSON validation](/docs/api-reference/anari/anari-schemas): optional Zod object schemas, retained-reference validation, generated JSON Schema, and editor integration.
 - [ANARI C API and THREE.js mapping](/docs/api-reference/anari/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
-- [JSON scene playground](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
+- [JSON scene playground](/docs/api-guide/engine/anari-json-scenes#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
 
 ## Private workspace availability
 
@@ -166,7 +168,7 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | Deferred fog | Supported | Not supported |
 | Extended-range, Display P3 presentation | Supported on compatible displays and browsers | Not supported; SDR fallback |
 
-See [HDR and backend selection](/docs/api-guide/engine/anari-rendering#hdr-and-backend-selection) for capability detection and canvas setup.
+See [HDR and backend selection](/docs/api-guide/engine/anari-first-scene#hdr-and-backend-selection) for capability detection and canvas setup.
 
 ## Experimental JSON playground
 
@@ -189,5 +191,5 @@ per frame. Applications can also provide explicit `skin: {jointMatrices}` surfac
 The separate `@luma.gl/anari/schemas` entry point exports experimental Zod schemas and generated
 JSON Schema for editor integration. The scene format is not an official ANARI serialization format.
 See the [schema API reference](/docs/api-reference/anari/anari-schemas) and the
-[JSON scene playground developer guide](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground)
+[JSON scene playground developer guide](/docs/api-guide/engine/anari-json-scenes#explore-the-json-scene-playground)
 for the full schema, animation vocabulary, and editing controls.

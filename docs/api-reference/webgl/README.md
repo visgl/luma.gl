@@ -1,3 +1,8 @@
+---
+title: WebGL adapter
+description: Use the luma.gl Core API through the WebGL 2 backend and its low-level integration helpers.
+---
+
 import {WebGLDocsTabs} from '@site/src/components/docs/webgl-docs-tabs';
 
 # @luma.gl/webgl

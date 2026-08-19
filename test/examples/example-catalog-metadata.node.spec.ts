@@ -138,7 +138,9 @@ describe('live example catalog metadata', () => {
     for (const {id, categories, metadata} of LIVE_EXAMPLES) {
       const expectedBackends = WEBGL_ONLY_EXAMPLES.has(id)
         ? ['webgl2']
-        : ['WebGPU', 'GPGPU'].includes(categories[0]) || WEBGPU_ONLY_EXAMPLES.has(id)
+        : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
+            categories[0].startsWith('GPU Graph Layers') ||
+            WEBGPU_ONLY_EXAMPLES.has(id)
           ? ['webgpu']
           : ['webgpu', 'webgl2'];
 

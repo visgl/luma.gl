@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # OrbitControls
+
+<EngineDocsTabs group="interaction" active="orbit-controls" />
 
 `OrbitControls` adds pointer-driven orbiting, wheel zoom, optional automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
 

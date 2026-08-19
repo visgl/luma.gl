@@ -18,7 +18,7 @@ import {
   GPUTraceInteraction,
   GPUTraceScene,
   getGPUTracePickingShader
-} from '@luma.gl/experimental/lutrace';
+} from '@luma.gl/experimental/gpu-trace';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

@@ -123,11 +123,11 @@ This data loss is usually a non-issue as resizes are usually performed between r
 
 | Property                  | Type                                | Description                          |
 | ------------------------- | ----------------------------------- | ------------------------------------ |
-| `id?`                     | `string`                            | An optional name (id) of the buffer. |
-| `width? = 1`              | `number`                            | The width of the framebuffer.        |
-| `height? = 1`             | `number`                            | The height of the framebuffer.       |
-| `colorAttachments`        | `ColorAttachment\|Texture[]`        | Array of render target textures.     |
-| `depthStencilAttachment?` | `DepthStencilAttachment\|Texture[]` | Depth/stencil texture.               |
+| `id?` | `string` | An optional name (id) of the buffer. |
+| `width? = 1` | `number` | The width of the framebuffer. |
+| `height? = 1` | `number` | The height of the framebuffer. |
+| `colorAttachments` | `ColorAttachment\|Texture[]` | Array of render target textures. |
+| `depthStencilAttachment?` | `DepthStencilAttachment\|Texture[]` | Depth/stencil texture. |
 
 ## Members
 
@@ -165,9 +165,9 @@ An application can render into an (HTML or offscreen) canvas by obtaining a
 
 ### destroy(): void
 
-Free up any GPU resources associated with this buffer immediately (instead of waiting for garbage collection).
-
-TBD - When destroying `Framebuffer` will also destroy any `Texture` that was created automatically during Framebuffer creation. Supplied textures will not be destroyed (but will eventually be garbage collected and destroyed).
+Immediately releases the backend framebuffer and attachments that the framebuffer created from
+format strings. Caller-supplied `Texture` and `TextureView` attachments are borrowed and are not
+destroyed. The caller remains responsible for destroying those resources.
 
 ### resize(width: number, height: number): void
 

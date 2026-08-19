@@ -1,13 +1,14 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 
 # GPUVectorFormat
 
 <TablesDocsTabs active="vector-format" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
+</DocumentationBadges>
 
 `GPUVectorFormat` is the canonical memory-layout string for
 [`GPUVector`](/docs/api-reference/tables/gpu-vector). [`GPUData`](/docs/api-reference/tables/gpu-data)

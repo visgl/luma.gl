@@ -1,6 +1,6 @@
 ---
-title: "LuRaster: Satellite Raster Lab"
-description: Explore GPU region measurements, bounded connected components, global raster histograms, nodata-aware overviews, seam-safe halos, NDVI, and contours.
+title: "GPURaster: Satellite Raster Lab"
+description: Explore GPU cross-tile component identities, merged region measurements, global raster histograms, nodata-aware overviews, seam-safe halos, NDVI, and contours.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -24,20 +24,21 @@ The map displays one selected **FULL**, **WEST**, or **EAST** output window.
 The sidebar reports the actual analytical values behind that map: its selected
 band, valid population, adaptive 48- or 40-bin histogram, measured extent, GPU mean, source
 identity, overview provenance, cache residency, optional contours, and sparse
-or bounded dense connected-component overlays with exact region counts and
-selected-region geometry/intensity measurements. A
+or bounded dense connected-component overlays with exact local or stitched
+dataset-wide region counts and selected-region geometry/intensity measurements. A
 control changes a histogram only when it changes the measured values or their
 selection; changing a contour level changes generated geometry without
 necessarily changing the underlying distribution.
 
 The central distinction is **where an operation gets its observations**. A
 local tile owns only its selected core; a seamless neighborhood temporarily
-borrows adjacent source pixels; and global statistics replay both source cores
-while the map still displays just one. None of these policies silently stitches
-a new full-resolution CPU image.
+borrows adjacent source pixels; global statistics replay both source cores; and
+stitched segmentation reconciles independent component identities across their
+shared edge. The map still displays one owned core, and none of these policies
+silently constructs a new full-resolution CPU image.
 
 For the underlying object model, ownership rules, and execution phases, see
-[LuRaster Concepts and Execution Model](/docs/api-reference/experimental/luraster/concepts).
+[GPURaster Concepts and Execution Model](/docs/api-reference/experimental/gpu-raster/concepts).
 
 ## Start with a five-minute walkthrough
 
@@ -72,6 +73,11 @@ For the underlying object model, ownership rules, and execution phases, see
    intensity range/mean, world centroid, and affine area. The histogram
    explicitly changes from `48 bins` to `40 bins · 8 region scalars` while
    preserving the exact same 228-byte GPU-to-CPU transfer.
+9. Choose **STITCHED DATASET**. WEST and EAST now have one shared set of
+   globally ordered dense IDs. Inspect a seam-spanning region on both sides;
+   its full-region pixel count, weighted intensity mean, world centroid, and
+   affine area agree. Reverse **WEST → EAST** and **EAST → WEST** to verify
+   that tile arrival order changes neither identities nor merged measurements.
 
 Every combination is deliberately explicit. Requesting a feature that cannot
 compose correctly with the current scope switches to a supported scope instead
@@ -134,7 +140,7 @@ neighbor. Neither policy invents an observation at an invalid center.
 | **MASK NEAREST / MASK MODE**                      | The representative categorical label versus the most frequent valid label.                 | Match discrete-class sampling to your actual cloud or classification semantics.                                  |
 | **TILE ONLY / SEAMLESS HALO**                     | Whether neighborhood operations can borrow real adjacent source pixels.                    | Compare local-border behavior with seam-correct smoothing, derivatives, or morphology.                           |
 | **TILE / FULL GLOBAL**                            | Local selected-core statistics versus replayed dataset-wide statistics.                    | Choose tile-local summaries or one consistent cross-tile domain, histogram, median, and Otsu cutoff.             |
-| **WEST → EAST / EAST → WEST**                     | The real order of global tile reduction and histogram replay.                              | Verify that valid populations, bins, extent, and Otsu do not depend on arrival order.                            |
+| **WEST → EAST / EAST → WEST**                     | The real order of global reductions or cross-tile component reconciliation.                | Verify that global summaries, component identities, and merged measurements do not depend on arrival order.      |
 | **NDVI / RED / NEAR IR**                          | The analytical scalar field, not only its display colors.                                  | Compare a derived vegetation measure with either source band.                                                    |
 | **Gaussian / box / radius / sigma**               | Validity-aware spatial smoothing.                                                          | Reduce local sensor noise or calculate a uniformly weighted local mean.                                          |
 | **Sobel / Scharr / Laplacian / direction**        | First-order boundaries, gradient magnitude, or second-order response.                      | Study edge orientation, overall boundary strength, ridges, or valleys.                                           |
@@ -142,6 +148,7 @@ neighbor. Neither policy invents an observation at an invalid center.
 | **OFF / COMPONENTS**                              | An optional GPU-colored overlay and exact connected foreground-region count.               | Inspect classified islands while preserving missing data and valid background.                                   |
 | **4-CONNECTED / 8-CONNECTED**                     | Orthogonal-only or orthogonal-plus-diagonal foreground adjacency.                          | Decide whether corners touching diagonally belong to the same component.                                         |
 | **SPARSE ROOTS / DENSE 1..N**                     | Minimum representative roots versus consecutive GPU-generated region identifiers.          | Compare stable source representatives with compact IDs suitable for bounded region-indexed outputs.              |
+| **LOCAL TILE / STITCHED DATASET**                 | Per-core component identities versus deterministic shared dense IDs across WEST and EAST.  | Measure a seam-spanning region once while continuing to display only the selected owned tile.                    |
 | **Region capacity**                               | Maximum number of published dense region IDs; exact required count remains visible.        | Verify zero capacity, explicit overflow, safe dense-overlay suppression, and the independent sparse fallback.    |
 | **OFF / INSPECT REGION**                          | Actual 40-bin analysis plus one selected dense region's eight GPU-generated scalar fields. | Inspect pixel population, intensity summary, affine centroid, and area without copying a region table or raster. |
 | **Dense region**                                  | The one-based dense component row copied from already-resident GPU measurement arrays.     | Compare individual region records without recompiling the analytical graph or increasing readback.               |
@@ -152,7 +159,7 @@ neighbor. Neither policy invents an observation at an invalid center.
 
 ## GPU execution and application ownership
 
-The demonstration uses the optional `@luma.gl/experimental/luraster` entry point.
+The demonstration uses the optional `@luma.gl/experimental/gpu-raster` entry point.
 
 ### Source, cache, and neighboring tiles
 
@@ -224,6 +231,11 @@ geometry-pixel counts, valid-intensity counts/sums/minima/maxima/means,
 pixel-column/row moments, local centroids, and affine areas. These eleven
 bounded arrays stay on the GPU; overflowed or unconverged inputs clear every
 measurement before publication.
+`GPURasterCrossTileComponents` reconciles real edge contacts between those
+independently labeled owned cores, sorts global representative roots by their
+full-raster row-major positions, publishes deterministic bounded global IDs,
+and merges all eleven local geometry/intensity columns without reading labels
+or region tables back to the CPU.
 `GPURasterOtsuThreshold` can select the threshold from a separate baseline
 histogram without introducing a CPU synchronization point.
 `GPURasterContours` classifies valid four-corner cells, resolves ambiguous
@@ -635,11 +647,57 @@ The renderer therefore cannot present plausible but incorrect unfinished
 regions.
 
 Enabling components automatically activates the existing classification
-threshold, pauses contours, and exits **FULL GLOBAL** to **TILE**. Native
-sources, source-nearest overviews, generated GPU-mean overviews, seamless halo
-preprocessing, smoothing, derivatives, grayscale/binary morphology, and local
-manual or Otsu thresholds remain available. Labeling operates on the final
-selected owned core; it does not merge root identities across tile seams.
+threshold, pauses contours, and exits **FULL GLOBAL** to **TILE**. In
+**LOCAL TILE** scope, native sources, source-nearest overviews, generated
+GPU-mean overviews, seamless halo preprocessing, smoothing, derivatives,
+grayscale/binary morphology, and local manual or Otsu thresholds remain
+available. Local labeling operates on the final selected owned core.
+
+### One region identity across neighboring tiles
+
+Select **STITCHED DATASET** to turn two independently classified WEST and EAST
+cores into one dataset-wide segmentation. The application first pins both real
+source-owned GPU tiles. Each core computes the same selected pointwise scalar,
+applies the same explicit manual threshold, finds its own sparse components,
+assigns bounded local dense IDs, and calculates all eleven local geometry and
+intensity columns. Nothing first concatenates the source bands into a larger
+CPU or GPU image.
+
+The cross-tile contributor compares only owned pixels touching the shared
+half-open edge. Four-connectivity links directly opposing foreground pixels;
+eight-connectivity also checks the diagonally shifted seam neighbors. A masked
+or nodata pixel does not become a bridge merely because its stored bytes are
+nonzero. Equivalence classes receive consecutive global IDs in the order of
+their minimum **full-raster row-major pixel position**, not WEST-first or
+EAST-first tile order. This distinction matters: an EAST region in an earlier
+row can correctly precede a WEST region that starts several rows later.
+
+For a region that spans both cores, geometry populations and areas are added;
+intensity populations, sums, minima, and maxima are merged separately. Its
+global intensity mean is `merged intensity sum / merged valid-intensity
+count`—never the average of two tile means. Local pixel-center moments are
+translated once into the common overview-level raster coordinate system before
+computing a global centroid. The original full-level affine translation is
+applied afterward in JavaScript double precision. Selecting the same global ID
+from WEST or EAST therefore returns one consistent weighted region record.
+
+Stitching always publishes **DENSE 1..N**. Selecting **SPARSE ROOTS** restores
+**LOCAL TILE** rather than describing tile-local representatives as global
+identities. Both neighboring cores require a resident-tile capacity of at
+least two; unsafe reductions are rejected without evicting a live source.
+Global output capacity is applied after reconciliation and is independent of
+the larger fixed per-core working capacity. Global overflow or failed local or
+seam convergence suppresses the dense overlay and clears selected measurements;
+the dashboard's iteration readout explicitly describes the selected tile's
+local propagation rounds.
+
+The demonstrator currently supports stitched **SOURCE NEAREST** native or
+source-provided overview samples, NDVI/RED/NEAR IR pointwise analysis,
+contrast/gamma, and one shared manual cutoff. Choosing generated overviews,
+seamless neighborhood halos, full-global statistics, local Otsu, smoothing,
+derivatives, or morphology restores a supported local scope. Those controls
+remain fully functional; combinations that would require unavailable
+cross-core spatial preprocessing are not presented as implemented.
 
 ### Inspecting one region without downloading a region table
 
@@ -658,8 +716,9 @@ not defined as `sum / region pixels` when intensity observations are missing.
 The separate intensity count remains GPU-resident alongside mergeable row and
 column moments.
 
-Centroids are first calculated in tile-local pixel-center coordinates on the
-GPU. `getRasterRegionWorldCentroid` then applies the retained affine transform
+Centroids are first calculated in tile-local or stitched full-raster
+pixel-center coordinates on the GPU. `getRasterRegionWorldCentroid` then
+applies the corresponding retained affine transform
 in JavaScript double precision. This avoids rounding a large projected origin
 to `float32` before adding small local offsets and preserves rotated,
 non-square, overview-scaled, and translated tile grids. Pixel area uses the
@@ -671,9 +730,10 @@ units²** and are never presented as square meters.
 Capacity overflow, an insufficient propagation budget, invalid labels,
 out-of-range selected IDs, and empty regions leave the inspector unavailable;
 previous region values are not reused. Switching back to **OFF**, sparse roots,
-or a non-component analysis restores a genuine 48-bin histogram. Region
-identities and measurements remain local to the selected owned core;
-cross-tile identity merging is still a separate future tranche.
+or a non-component analysis restores a genuine 48-bin histogram. In
+**LOCAL TILE**, identities and measurements describe the selected owned core;
+in **STITCHED DATASET**, the same eight-scalar inspector describes the merged
+dataset-wide region while its histogram still describes the selected core.
 
 ### Grayscale and binary morphology
 
@@ -721,15 +781,15 @@ owned cores; it does not automatically construct one global stitched output,
 deduplicate contour segments across tiles, compose global replay with seamless
 native halos or generated overviews, or provide a GeoTIFF/COG transport or
 decoder. Global statistic/histogram merging is separately and explicitly
-available in **FULL GLOBAL** mode; remaining capabilities have separate
-ownership and correctness requirements.
+available in **FULL GLOBAL** mode; deterministic cross-tile component IDs and
+merged region columns are separately available in **STITCHED DATASET** mode.
+The two operations have different scopes and are not implicitly composed.
 
 All imagery, coordinates, and terrain are synthetic. The visualization is a
 false-color illustration, not a real satellite acquisition, true-color image,
 georeferenced location, or scientifically calibrated product. Derivative
 measurements are not automatically projected into physical-world distances.
-Cross-tile component stitching, stitched contour seams, automatic full-image
-output
+Stitched contour seams, automatic full-image output
 placement, global neighborhood/overview composition, marker-based
 segmentation, and seamless native-halo-to-generated-overview processing remain
 planned capabilities.

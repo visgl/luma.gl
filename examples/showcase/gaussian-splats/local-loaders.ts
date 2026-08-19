@@ -258,7 +258,7 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
     id: 'coit',
     label: 'Spark Coit Tower RAD (50.9M)',
     sourceUrl:
-      'https://storage.googleapis.com/forge-dev-public/asundqui/rad/260217/coit-40m-sh1-lod.rad',
+      'https://storage.googleapis.com/download/storage/v1/b/forge-dev-public/o/asundqui%2Frad%2F260217%2Fcoit-40m-sh1-lod.rad?alt=media',
     expectedSplatCount: 50_937_127,
     upAxis: 'y',
     up: [0, -1, 0],

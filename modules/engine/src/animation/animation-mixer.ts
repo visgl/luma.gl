@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AnimationClip} from './animation-clip';
-import {interpolateQuaternion, type AnimationValueType} from './animation-interpolation';
+import {type AnimationValueType, interpolateQuaternion} from './animation-interpolation';
 import type {AnimationBinding} from './animation-track';
 
 /** Supported clip playback loop modes. */
@@ -272,10 +272,16 @@ export class AnimationMixer {
 
   /** Advances playback by seconds, then applies blended animation values. */
   update(deltaTime: number): this {
+    this.advance(deltaTime);
+    this.applyValues();
+    return this;
+  }
+
+  /** Advances action clocks and crossfades without evaluating CPU-side animation tracks. */
+  advance(deltaTime: number): this {
     const scaledDeltaTime = deltaTime * this.timeScale;
     this.time += scaledDeltaTime;
     this.actions.forEach(action => action.advance(scaledDeltaTime));
-    this.applyValues();
     return this;
   }
 

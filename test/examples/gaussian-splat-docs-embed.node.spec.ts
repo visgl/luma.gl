@@ -7,7 +7,11 @@ import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 
 const SPLATS_DOCUMENTATION_PATH = path.join(process.cwd(), 'docs/api-reference/splats/README.md');
-const CAPABILITIES_PATH = path.join(process.cwd(), 'docs/capabilities.mdx');
+const SPLATS_ROADMAP_PATH = path.join(
+  process.cwd(),
+  'dev-docs/roadmaps/gaussian-splats-roadmap.md'
+);
+const CAPABILITIES_PATH = path.join(process.cwd(), 'docs/capabilities/rendering-visualization.mdx');
 const WEBSITE_EXAMPLES_PATH = path.join(process.cwd(), 'website/src/examples.tsx');
 const WEBSITE_EXAMPLE_CATALOG_PATH = path.join(
   process.cwd(),
@@ -24,20 +28,19 @@ const HOMEPAGE_GPU_SCENE_PATH = path.join(
 );
 
 describe('Gaussian splat documentation showcase', () => {
-  test('embeds the live Coit Tower viewer directly in the splats API documentation', () => {
+  test('embeds the deterministic Gaussian splat showcase in the API documentation', () => {
     const documentation = readFileSync(SPLATS_DOCUMENTATION_PATH, 'utf8');
 
-    expect(documentation).toContain(
-      "import {GaussianSplatViewerExample} from '@site/src/examples';"
-    );
-    expect(documentation).toContain('## Interactive Coit Tower showcase');
-    expect(documentation).toContain('50,937,127-splat Coit Tower capture');
+    expect(documentation).toContain("import {GaussianSplatsExample} from '@site/src/examples';");
+    expect(documentation).toContain('## Interactive Gaussian splat showcase');
+    expect(documentation).toContain('deterministic generated Gaussian scene');
     expect(documentation).toMatch(
-      /<GaussianSplatViewerExample\b(?=[^>]*\bembedded\b)(?=[^>]*\bembeddedHeight=\{640\})(?=[^>]*\bdefaultScene="coit")(?=[^>]*\bshowStats=\{false\})[^>]*\/>/
+      /<GaussianSplatsExample\b(?=[^>]*\bembedded\b)(?=[^>]*\bembeddedHeight=\{640\})(?=[^>]*\bshowStats=\{false\})[^>]*\/>/
     );
     expect(documentation).toContain(
-      '[Open the full Coit Tower viewer](/examples/showcase/gaussian-splat-viewer?scene=coit)'
+      '[Open the full Gaussian splat showcase](/examples/showcase/gaussian-splats)'
     );
+    expect(documentation).not.toContain('defaultScene="coit"');
   });
 
   test('keeps the documentation scene scoped to its own viewer instance', () => {
@@ -61,28 +64,24 @@ describe('Gaussian splat documentation showcase', () => {
     expect(viewerDocumentation).toContain('741,883-splat Train');
   });
 
-  test('distinguishes implemented Gaussian splat tranches from remaining opportunities', () => {
-    const documentation = readFileSync(SPLATS_DOCUMENTATION_PATH, 'utf8');
+  test('keeps implementation status in the roadmap and public capabilities factual', () => {
+    const roadmap = readFileSync(SPLATS_ROADMAP_PATH, 'utf8');
     const capabilities = readFileSync(CAPABILITIES_PATH, 'utf8');
-    const roadmap = documentation.match(
-      /## Gaussian splat implementation roadmap\n([\s\S]*?)\n## Rendering prepared splats/
-    );
 
-    expect(roadmap).not.toBeNull();
-    expect(roadmap![1]).toContain('### Current supremacy-track status');
-    expect(roadmap![1]).toContain('| GPU graph feature parity | Implemented');
-    expect(roadmap![1]).toContain('| Out-of-core RAD rendering | Implemented');
-    expect(roadmap![1]).toContain('| 50-million-splat Spark parity | In progress');
-    expect(roadmap![1]).toContain('| 3D Tiles integration | Partial');
-    expect(roadmap![1]).toContain('https://github.com/visgl/loaders.gl/pull/3431');
-    expect(roadmap![1]).toContain('https://github.com/visgl/loaders.gl/issues/1245');
-    expect(roadmap![1]).toContain('`Tileset3D` and `Tiles3DSource` traversal');
-    expect(roadmap![1]).toContain('loaders.gl has SPZ v4 decoding, but not SPZ v2');
-    expect(roadmap![1]).toContain('existing `SplatLayer`');
-    expect(roadmap![1]).toContain('loader-computed transforms per tile/page in the renderer');
-    expect(roadmap![1]).toContain('per-tile/page renderer transforms');
-    expect(roadmap![1]).not.toContain('Add actual tileset traversal');
-    const trancheRows = roadmap![1].split('\n').filter(row => /^\| T\d/.test(row));
+    expect(roadmap).toContain('## Current implementation status');
+    expect(roadmap).toContain('| GPU graph feature parity | Implemented');
+    expect(roadmap).toContain('| Out-of-core RAD rendering | Implemented');
+    expect(roadmap).toContain('| 50-million-splat Spark parity | In progress');
+    expect(roadmap).toContain('| 3D Tiles integration | Partial');
+    expect(roadmap).toContain('https://github.com/visgl/loaders.gl/pull/3431');
+    expect(roadmap).toContain('https://github.com/visgl/loaders.gl/issues/1245');
+    expect(roadmap).toContain('`Tileset3D` and `Tiles3DSource` traversal');
+    expect(roadmap).toContain('loaders.gl has SPZ v4 decoding, but not SPZ v2');
+    expect(roadmap).toContain('existing `SplatLayer`');
+    expect(roadmap).toContain('loader-computed transforms per tile/page in the renderer');
+    expect(roadmap).toContain('per-tile/page renderer transforms');
+    expect(roadmap).not.toContain('Add actual tileset traversal');
+    const trancheRows = roadmap.split('\n').filter(row => /^\| T\d/.test(row));
     expect(trancheRows.map(row => row.match(/^\| (T\d+a?)/)?.[1])).toEqual([
       'T0',
       'T0a',
@@ -104,32 +103,25 @@ describe('Gaussian splat documentation showcase', () => {
       expect(tranche).toMatch(/\| Planned/);
     }
     for (const pullRequest of [2929, 2932, 2938, 2966, 3035, 3041, 3051, 3057]) {
-      expect(roadmap![1]).toContain(`https://github.com/visgl/luma.gl/pull/${pullRequest}`);
+      expect(roadmap).toContain(`https://github.com/visgl/luma.gl/pull/${pullRequest}`);
     }
-    expect(roadmap![1]).toContain('Implemented in this follow-up');
-    expect(roadmap![1]).toContain('33,554,432 active four-byte references');
-    expect(roadmap![1]).toContain('128 MiB storage-binding limit');
-    expect(roadmap![1]).toContain('near-linear routing');
-    expect(roadmap![1]).toContain('no measured visual or performance parity is claimed');
+    expect(roadmap).toContain('Implemented in this follow-up');
+    expect(roadmap).toContain('33,554,432 active four-byte references');
+    expect(roadmap).toContain('128 MiB storage-binding limit');
+    expect(roadmap).toContain('near-linear routing');
+    expect(roadmap).toContain('no measured visual or performance parity is claimed');
 
     expect(capabilities).toContain('| Globally sorted WebGL splat runs | Experimental | WebGL2 |');
     expect(capabilities).toContain('| Unclamped WebGL harmonic radiance | Experimental | WebGL2 |');
     expect(capabilities).toMatch(/Background RAD page decoding[^\n]*automatically fall back/);
-    expect(capabilities).toContain('Reuse existing `Tileset3D` traversal');
-    expect(capabilities).toContain(
-      'apply loader-computed transforms per tile/page in the renderer'
-    );
-    expect(capabilities).toContain(
-      '[Gaussian splat implementation roadmap](/docs/api-reference/splats#gaussian-splat-implementation-roadmap)'
-    );
-    for (const opportunity of [
-      'Incremental GPU splat hierarchy scheduling',
-      'Segmented splat picking and mesh composition',
-      'Partitioned splat sorting and scatter',
-      'Streamed 3D Tiles and glTF splat transport',
-      'Measured captured-scene visual and performance parity'
+    expect(capabilities).toContain('[`@luma.gl/splats` reference](/docs/api-reference/splats)');
+    for (const capability of [
+      'Hierarchical splat refinement',
+      'Dedicated splat picking',
+      'Mixed mesh and splat rendering',
+      'Camera-driven RAD page sources'
     ]) {
-      expect(capabilities).toContain(`| ${opportunity} | Opportunity |`);
+      expect(capabilities).toContain(`| ${capability} | Experimental |`);
     }
   });
 

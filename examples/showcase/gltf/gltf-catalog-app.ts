@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
-import {Color, Device, RenderPass, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
+import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
+import {Color, Device, log, RenderPass} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
 import {
   createGLTFAnimatedCrowd,
@@ -13,7 +14,6 @@ import {
   type GLTFCrowdActorOptions,
   type PBREnvironment
 } from '@luma.gl/gltf';
-import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
 
@@ -42,8 +42,6 @@ export const GLTF_CONTROL_ROW_STYLE =
 export const GLTF_SELECT_STYLE = 'width: 100%; min-width: 0;';
 const MAX_CAMERA_TILT = 0.7;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
-const AUTOMATIC_CAMERA_ORBIT_SPEED = 0.00012;
-const MANUAL_CAMERA_ORBIT_SPEED = 0.001;
 const MAXIMUM_GLTF_CROWD_ACTORS = 100;
 const ADDITIONAL_ANIMATED_GLTF_MODELS = new Set([
   'Fox',
@@ -171,6 +169,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   device: Device;
+  orbitControls: OrbitControls;
   availableModels: GLTFCatalogModel[] = [];
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   animatedCrowd?: GLTFAnimatedCrowd;
@@ -183,12 +182,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraHeight = 0;
-  cameraOrbitDistance = 1;
-  minCameraOrbitDistance = 0.05;
-  maxCameraOrbitDistance = 40;
   sceneRadius = 1;
-  mouseCameraTime = 0;
-  mouseCameraTilt = 0;
   options: Record<string, boolean> = {
     autoLOD: false,
     useModelLights: true,
@@ -205,6 +199,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.device = device;
     ensureLoadingIndicatorStyles();
     this.options = loadOptions(this.options);
+    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+    this.orbitControls = new OrbitControls(canvas, {
+      distance: 1,
+      minDistance: 0.05,
+      maxDistance: 40,
+      minPitch: -MAX_CAMERA_TILT,
+      maxPitch: MAX_CAMERA_TILT,
+      rotateSpeed: 0.0035,
+      pitchSpeed: 0.01,
+      zoomSpeed: 0.0015,
+      autoRotate: this.options['cameraAnimation'],
+      autoRotateSpeed: 1
+    });
+    this.cleanupCallbacks.push(() => this.orbitControls.destroy());
 
     const modelStorageKey = this.getModelStorageKey();
     window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
@@ -238,36 +246,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         }
         this.loadGLTF(initialModelName);
       });
-
-    const mouseMoveHandler = (event: Event) => {
-      const mouseEvent = event as MouseEvent;
-      if (mouseEvent.buttons) {
-        this.mouseCameraTime -= mouseEvent.movementX * 3.5;
-        this.mouseCameraTilt = clampNumber(
-          this.mouseCameraTilt - mouseEvent.movementY * 0.01,
-          -MAX_CAMERA_TILT,
-          MAX_CAMERA_TILT
-        );
-      }
-    };
-    const canvas = this.device.getDefaultCanvasContext().canvas;
-    canvas.addEventListener('mousemove', mouseMoveHandler);
-    this.cleanupCallbacks.push(() => canvas.removeEventListener('mousemove', mouseMoveHandler));
-
-    const mouseWheelHandler = (event: Event) => {
-      const wheelEvent = event as WheelEvent;
-      wheelEvent.preventDefault();
-      const zoomFactor = Math.exp(clampNumber(wheelEvent.deltaY, -240, 240) * 0.0015);
-      this.cameraOrbitDistance = clampNumber(
-        this.cameraOrbitDistance * zoomFactor,
-        this.minCameraOrbitDistance,
-        this.maxCameraOrbitDistance
-      );
-    };
-    canvas.addEventListener('wheel', mouseWheelHandler, {passive: false});
-    this.cleanupCallbacks.push(() =>
-      canvas.removeEventListener('wheel', mouseWheelHandler as EventListener)
-    );
   }
 
   onFinalize() {
@@ -374,6 +352,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.animatedCrowd = createGLTFAnimatedCrowd(this.device, this.loadedGLTF, {
           ...this.activeScenegraphOptions,
           capacity: MAXIMUM_GLTF_CROWD_ACTORS,
+          gpuAnimation: {sampleRate: 30},
           lod: {
             enabled: this.options['autoLOD'],
             autoGenerate: true,
@@ -437,7 +416,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       actorCount,
       this.animatedCrowd.lodStats.drawCount,
       this.crowdActionNames,
-      this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined
+      this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined,
+      this.animatedCrowd.animationStats
     );
   }
 
@@ -451,6 +431,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
+    this.orbitControls.setAutoRotate(this.options['cameraAnimation']);
+    this.orbitControls.update(time);
 
     const actorCount = this.getAnimationInstanceCount();
     const actorSpacing = Math.max(this.sceneRadius * 2.5, 0.75);
@@ -459,21 +441,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         ? Math.sqrt(actorCount - 1) * actorSpacing + this.sceneRadius
         : this.sceneRadius;
     const orbitDistance =
-      this.cameraOrbitDistance * Math.max(1, crowdRadius / Math.max(this.sceneRadius, 0.001));
+      this.orbitControls.distance * Math.max(1, crowdRadius / Math.max(this.sceneRadius, 0.001));
     const far = Math.max(orbitDistance + crowdRadius * 2, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const orbitAngle = this.options['cameraAnimation']
-      ? time * AUTOMATIC_CAMERA_ORBIT_SPEED
-      : this.mouseCameraTime * MANUAL_CAMERA_ORBIT_SPEED;
-    const horizontalOrbitScale = Math.cos(this.mouseCameraTilt);
-    const verticalOrbitOffset =
-      orbitDistance * CAMERA_TILT_HEIGHT_FACTOR * Math.sin(this.mouseCameraTilt);
-    const cameraPos = [
-      orbitDistance * horizontalOrbitScale * Math.sin(orbitAngle),
-      this.cameraHeight + verticalOrbitOffset,
-      orbitDistance * horizontalOrbitScale * Math.cos(orbitAngle)
-    ];
+    const cameraPos = this.orbitControls.getEyePosition();
+    const distanceScale = orbitDistance / Math.max(this.orbitControls.distance, 0.001);
+    cameraPos[0] = this.center[0] + (cameraPos[0] - this.center[0]) * distanceScale;
+    cameraPos[1] =
+      this.cameraHeight +
+      (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR * distanceScale;
+    cameraPos[2] = this.center[2] + (cameraPos[2] - this.center[2]) * distanceScale;
 
     if (this.options['gltfAnimation'] && !this.animatedCrowd) {
       this.scenegraphsFromGLTF.animator?.setTime(time);
@@ -536,7 +514,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.animatedCrowd.actorCount,
         drawCount,
         this.crowdActionNames,
-        this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined
+        this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined,
+        this.animatedCrowd.animationStats
       );
       renderPass.end();
       return;
@@ -659,18 +638,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.sceneRadius = activeSceneBounds.radius;
       const orbitDistance = activeSceneBounds.recommendedOrbitDistance;
       this.cameraHeight = this.center[1] + this.sceneRadius * 0.35;
-      this.minCameraOrbitDistance = Math.max(this.sceneRadius * 0.08, 0.025);
-      this.maxCameraOrbitDistance = Math.max(this.sceneRadius * 40, orbitDistance * 16);
-      this.cameraOrbitDistance = clampNumber(
-        orbitDistance,
-        this.minCameraOrbitDistance,
-        this.maxCameraOrbitDistance
-      );
-      this.mouseCameraTilt = clampNumber(
-        this.getDefaultCameraTilt(resolvedModelReference),
-        -MAX_CAMERA_TILT,
-        MAX_CAMERA_TILT
-      );
+      this.orbitControls.setProps({
+        target: [this.center[0], this.cameraHeight, this.center[2]],
+        distance: orbitDistance,
+        minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
+        maxDistance: Math.max(this.sceneRadius * 40, orbitDistance * 16),
+        pitch: this.getDefaultCameraTilt(resolvedModelReference)
+      });
 
       showError();
     } catch (error) {
@@ -909,10 +883,6 @@ export function saveOptions(options: Record<string, boolean>) {
   window.localStorage[GLTF_OPTIONS_STORAGE_KEY] = JSON.stringify(options);
 }
 
-function clampNumber(value: number, minValue: number, maxValue: number): number {
-  return Math.min(maxValue, Math.max(minValue, value));
-}
-
 function ensureLoadingIndicatorStyles(): void {
   if (document.getElementById(GLTF_LOADING_STYLE_ID)) {
     return;
@@ -1148,7 +1118,8 @@ function updateCrowdInfo(
   actorCount: number = 1,
   drawCount: number = 0,
   actionNames: readonly string[] = [],
-  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats']
+  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats'],
+  animationStats?: GLTFAnimatedCrowd['animationStats']
 ): void {
   const container = document.getElementById(GLTF_CROWD_INFO_ID) as HTMLDivElement | null;
   if (!container) {
@@ -1156,7 +1127,13 @@ function updateCrowdInfo(
   }
 
   container.hidden = actorCount <= 1;
-  const summary = formatGLTFCrowdInfo(actorCount, drawCount, actionNames, levelOfDetailStats);
+  const summary = formatGLTFCrowdInfo(
+    actorCount,
+    drawCount,
+    actionNames,
+    levelOfDetailStats,
+    animationStats
+  );
   if (container.textContent !== summary) {
     container.textContent = summary;
   }
@@ -1167,7 +1144,8 @@ export function formatGLTFCrowdInfo(
   actorCount: number,
   drawCount: number,
   actionNames: readonly string[] = [],
-  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats']
+  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats'],
+  animationStats?: GLTFAnimatedCrowd['animationStats']
 ): string {
   const actionSummary = actionNames.length
     ? ` · ${actionNames.length > 1 ? 'Mixed actions' : 'Action'}: ${actionNames.join(', ')}`
@@ -1197,8 +1175,16 @@ export function formatGLTFCrowdInfo(
       ` · Triangles: ${levelOfDetailStats.triangles.toLocaleString()}` +
       vertexBudgetSummary
     : '';
+  const animationSummary =
+    animationStats?.mode === 'gpu'
+      ? ` · GPU sampled: ${animationStats.frameCount.toLocaleString()} frames` +
+        (animationStats.sampleRate ? ` @ ${animationStats.sampleRate} fps` : '') +
+        (animationStats.morphGroupCount
+          ? ` · Morph groups: ${animationStats.morphGroupCount.toLocaleString()}`
+          : '')
+      : '';
   return actorCount > 1
-    ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws${actionSummary}${levelOfDetailSummary}`
+    ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws${actionSummary}${animationSummary}${levelOfDetailSummary}`
     : '';
 }
 

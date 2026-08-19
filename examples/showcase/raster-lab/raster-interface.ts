@@ -6,6 +6,7 @@ import type {RasterLabRegionMeasurement, RasterLabSummary} from './raster-engine
 import type {
   RasterLabComponentConnectivity,
   RasterLabComponentLabelMode,
+  RasterLabComponentScope,
   RasterLabDisplayMode,
   RasterLabEdgeDirection,
   RasterLabEdgeMode,
@@ -44,6 +45,7 @@ export type RasterLabInterfaceCallbacks = {
   onComponentsEnabled?: (enabled: boolean) => void;
   onComponentConnectivity?: (connectivity: RasterLabComponentConnectivity) => void;
   onComponentLabelMode?: (mode: RasterLabComponentLabelMode) => void;
+  onComponentScope?: (scope: RasterLabComponentScope) => void;
   onComponentCapacity?: (capacity: number) => void;
   onComponentMaximumIterations?: (iterations: number) => void;
   onRegionMetricsEnabled?: (enabled: boolean) => void;
@@ -133,6 +135,7 @@ export type RasterLabComponentSummary = {
   enabled: boolean;
   connectivity: RasterLabComponentConnectivity;
   labelMode: RasterLabComponentLabelMode;
+  scope: RasterLabComponentScope;
   capacity: number;
   componentCount: number;
   publishedCount: number;
@@ -169,6 +172,7 @@ export class RasterLabInterface {
   private morphologyMode: RasterLabMorphologyMode = 'grayscale';
   private morphologyBorderMode: RasterLabMorphologyBorderMode = 'clamp';
   private componentsEnabled = false;
+  private componentScope: RasterLabComponentScope = 'local';
   private threshold = 0.35;
   private automaticThreshold = false;
   private contoursEnabled = true;
@@ -329,7 +333,7 @@ export class RasterLabInterface {
         'aria-pressed',
         String(button.dataset['rasterReplayOrder'] === summary.order)
       );
-      button.disabled = !global;
+      button.disabled = !global && !(this.componentsEnabled && this.componentScope === 'stitched');
     }
     this.getElement('[data-raster-global-tiles]').textContent = global
       ? `${summary.tileCount} bounded resident cores`
@@ -358,6 +362,7 @@ export class RasterLabInterface {
 
   setComponents(summary: RasterLabComponentSummary): void {
     this.componentsEnabled = summary.enabled;
+    this.componentScope = summary.scope;
     for (const button of this.root.querySelectorAll<HTMLButtonElement>(
       '[data-raster-component-mode]'
     )) {
@@ -372,6 +377,21 @@ export class RasterLabInterface {
         String(Number(button.dataset['rasterComponentConnectivity']) === summary.connectivity)
       );
       button.disabled = !summary.enabled;
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-component-scope]'
+    )) {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset['rasterComponentScope'] === summary.scope)
+      );
+      button.disabled = !summary.enabled;
+    }
+    for (const button of this.root.querySelectorAll<HTMLButtonElement>(
+      '[data-raster-replay-order]'
+    )) {
+      button.disabled =
+        this.analysisScope !== 'global' && !(summary.enabled && summary.scope === 'stitched');
     }
     for (const button of this.root.querySelectorAll<HTMLButtonElement>(
       '[data-raster-component-labels]'
@@ -402,6 +422,8 @@ export class RasterLabInterface {
     this.getElement('[data-raster-component-rounds]').textContent = summary.enabled
       ? `${summary.iterations} / ${summary.maximumIterations}`
       : 'off';
+    this.getElement('[data-raster-component-rounds-label]').textContent =
+      summary.scope === 'stitched' ? 'Selected tile rounds' : 'Actual rounds';
     this.getElement('[data-raster-component-state]').textContent = !summary.enabled
       ? 'off'
       : !summary.converged
@@ -420,7 +442,7 @@ export class RasterLabInterface {
         ? 'NOT CONVERGED'
         : summary.overflow && summary.labelMode === 'dense'
           ? 'CAPACITY EXCEEDED'
-          : `${summary.labelMode === 'dense' ? 'DENSE' : 'ROOTS'} · ${summary.componentCount}`;
+          : `${summary.scope === 'stitched' ? 'STITCHED' : summary.labelMode === 'dense' ? 'DENSE' : 'ROOTS'} · ${summary.componentCount}`;
     for (const button of this.root.querySelectorAll<HTMLButtonElement>(
       '[data-raster-region-metrics]'
     )) {
@@ -851,6 +873,14 @@ export class RasterLabInterface {
       const componentLabelMode = componentLabelsButton?.dataset['rasterComponentLabels'];
       if (componentLabelMode === 'sparse' || componentLabelMode === 'dense') {
         this.callbacks.onComponentLabelMode?.(componentLabelMode);
+        return;
+      }
+      const componentScopeButton = target.closest<HTMLButtonElement>(
+        '[data-raster-component-scope]'
+      );
+      const componentScope = componentScopeButton?.dataset['rasterComponentScope'];
+      if (componentScope === 'local' || componentScope === 'stitched') {
+        this.callbacks.onComponentScope?.(componentScope);
         return;
       }
       const regionMetricsButton = target.closest<HTMLButtonElement>('[data-raster-region-metrics]');
@@ -1388,6 +1418,10 @@ function makeRasterLabMarkup(): string {
                 <button class="raster-mode-button" data-raster-component-labels="sparse" aria-pressed="true" disabled>SPARSE ROOTS</button>
                 <button class="raster-mode-button" data-raster-component-labels="dense" aria-pressed="false" disabled>DENSE 1..N</button>
               </div>
+              <div class="raster-component-scope-buttons" aria-label="Connected-component identity scope">
+                <button class="raster-mode-button" data-raster-component-scope="local" aria-pressed="true" disabled>LOCAL TILE</button>
+                <button class="raster-mode-button" data-raster-component-scope="stitched" aria-pressed="false" disabled>STITCHED DATASET</button>
+              </div>
               <label class="raster-component-setting">
                 <span class="raster-control-label">Region capacity <span class="raster-control-value" data-raster-component-capacity-value>1,024 max</span></span>
                 <input class="raster-slider" data-raster-control="component-capacity" aria-label="Maximum published dense component identifiers" type="range" min="0" max="2048" step="1" value="1024" disabled />
@@ -1399,7 +1433,7 @@ function makeRasterLabMarkup(): string {
               <div class="raster-component-statistics" aria-label="GPU component convergence and foreground telemetry">
                 <span>Components</span><span data-raster-component-count>off</span>
                 <span>Published IDs</span><span data-raster-component-published>off</span>
-                <span>Actual rounds</span><span data-raster-component-rounds>off</span>
+                <span data-raster-component-rounds-label>Actual rounds</span><span data-raster-component-rounds>off</span>
                 <span>Convergence</span><span data-raster-component-state>off</span>
                 <span>Valid foreground</span><span data-raster-component-foreground>classification off</span>
               </div>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Color, Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
@@ -50,17 +50,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   device: Device;
+  orbitControls: OrbitControls;
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraHeight = 0;
-  cameraOrbitDistance = 2;
-  minCameraOrbitDistance = 0.05;
-  maxCameraOrbitDistance = 40;
   sceneRadius = 1;
-  mouseCameraAngle = Math.PI / 4;
-  mouseCameraTilt = 0.18;
-  cleanupCallbacks: Array<() => void> = [];
   isFinalized = false;
 
   constructor({device}: AnimationProps) {
@@ -68,51 +63,24 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.device = device;
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
-    canvas.style.cursor = 'grab';
-
-    const mouseMoveHandler = (event: Event) => {
-      const mouseEvent = event as MouseEvent;
-      if (!mouseEvent.buttons) {
-        return;
-      }
-
-      this.mouseCameraAngle -= mouseEvent.movementX * 0.01;
-      this.mouseCameraTilt = clampNumber(
-        this.mouseCameraTilt - mouseEvent.movementY * 0.01,
-        -MAX_CAMERA_TILT,
-        MAX_CAMERA_TILT
-      );
-    };
-
-    const mouseWheelHandler = (event: Event) => {
-      const wheelEvent = event as WheelEvent;
-      wheelEvent.preventDefault();
-      const zoomFactor = Math.exp(clampNumber(wheelEvent.deltaY, -240, 240) * 0.0015);
-      this.cameraOrbitDistance = clampNumber(
-        this.cameraOrbitDistance * zoomFactor,
-        this.minCameraOrbitDistance,
-        this.maxCameraOrbitDistance
-      );
-    };
-
-    canvas.addEventListener('mousemove', mouseMoveHandler);
-    canvas.addEventListener('wheel', mouseWheelHandler, {passive: false});
-
-    this.cleanupCallbacks.push(() => canvas.removeEventListener('mousemove', mouseMoveHandler));
-    this.cleanupCallbacks.push(() =>
-      canvas.removeEventListener('wheel', mouseWheelHandler as EventListener)
-    );
+    this.orbitControls = new OrbitControls(canvas, {
+      distance: 2,
+      yaw: Math.PI / 4,
+      pitch: 0.18,
+      minDistance: 0.05,
+      maxDistance: 40,
+      minPitch: -MAX_CAMERA_TILT,
+      maxPitch: MAX_CAMERA_TILT,
+      rotateSpeed: 0.01,
+      zoomSpeed: 0.0015
+    });
 
     this.loadGLTF();
   }
 
   onFinalize(): void {
     this.isFinalized = true;
-
-    for (const cleanupCallback of this.cleanupCallbacks) {
-      cleanupCallback();
-    }
-    this.cleanupCallbacks = [];
+    this.orbitControls.destroy();
 
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
@@ -152,13 +120,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.center = [...sceneBounds.center];
       this.sceneRadius = sceneBounds.radius;
       this.cameraHeight = this.center[1] + this.sceneRadius * 0.3;
-      this.minCameraOrbitDistance = Math.max(this.sceneRadius * 0.08, 0.025);
-      this.maxCameraOrbitDistance = Math.max(this.sceneRadius * 32, 12);
-      this.cameraOrbitDistance = clampNumber(
-        sceneBounds.recommendedOrbitDistance,
-        this.minCameraOrbitDistance,
-        this.maxCameraOrbitDistance
-      );
+      this.orbitControls.setProps({
+        target: [this.center[0], this.cameraHeight, this.center[2]],
+        distance: sceneBounds.recommendedOrbitDistance,
+        minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
+        maxDistance: Math.max(this.sceneRadius * 32, 12)
+      });
 
       canvas.style.opacity = '1';
       showError();
@@ -182,19 +149,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     this.scenegraphsFromGLTF.animator?.setTime(time);
+    this.orbitControls.update(time);
 
-    const orbitDistance = this.cameraOrbitDistance;
+    const orbitDistance = this.orbitControls.distance;
     const far = Math.max(orbitDistance + this.sceneRadius * 8, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const horizontalOrbitScale = Math.cos(this.mouseCameraTilt);
-    const verticalOrbitOffset =
-      orbitDistance * CAMERA_TILT_HEIGHT_FACTOR * Math.sin(this.mouseCameraTilt);
-    const cameraPos = [
-      orbitDistance * horizontalOrbitScale * Math.sin(this.mouseCameraAngle),
-      this.cameraHeight + verticalOrbitOffset,
-      orbitDistance * horizontalOrbitScale * Math.cos(this.mouseCameraAngle)
-    ];
+    const cameraPos = this.orbitControls.getEyePosition();
+    cameraPos[1] =
+      this.cameraHeight + (cameraPos[1] - this.cameraHeight) * CAMERA_TILT_HEIGHT_FACTOR;
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
     const lighting = this.modelLights.length > 0 ? {lights: this.modelLights} : lightSources;
 
@@ -221,10 +184,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     renderPass.end();
   }
-}
-
-function clampNumber(value: number, minValue: number, maxValue: number): number {
-  return Math.min(maxValue, Math.max(minValue, value));
 }
 
 function showError(error?: unknown): void {

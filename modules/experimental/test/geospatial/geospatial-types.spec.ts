@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expectTypeOf, test} from 'vitest';
-import type {GraphDataView} from '../../src/gpu-primitives/gpu-command-graph';
+import type {GraphDataView} from '../../src/gpu-core/gpu-command-graph';
 import type {
   GPUHaversineDistanceProps,
   GPUPairwisePointDistanceProps,

@@ -56,7 +56,7 @@ type CrossfilterDebugController = {
 };
 
 type CrossfilterDebugWindow = Window & {
-  __luxFilterShowcase?: CrossfilterDebugController;
+  __gpuCrossfilterShowcase?: CrossfilterDebugController;
 };
 
 const CATEGORY_COLORS = ['#72e6d1', '#74aaff', '#ffbe72', '#a98dff', '#fb7db2', '#a6ed8d'] as const;
@@ -134,7 +134,7 @@ export function getCrossfilterPreset(
 }
 
 /**
- * Cinematic linked-map showcase backed by one reusable LuxFilter command graph.
+ * Cinematic linked-map showcase backed by one reusable GPUCrossfilter command graph.
  *
  * The initial synthetic arrays are uploaded once. Brushes only update GPU control buffers; map and
  * scatter draws consume the shared GPU selection mask, while the interface reads back compact
@@ -278,8 +278,8 @@ export default class MillionRowCrossfilterAnimationLoopTemplate extends Animatio
 
     if (typeof window !== 'undefined') {
       const debugWindow = window as CrossfilterDebugWindow;
-      if (debugWindow.__luxFilterShowcase === this.debugController) {
-        delete debugWindow.__luxFilterShowcase;
+      if (debugWindow.__gpuCrossfilterShowcase === this.debugController) {
+        delete debugWindow.__gpuCrossfilterShowcase;
       }
     }
   }
@@ -552,7 +552,7 @@ export default class MillionRowCrossfilterAnimationLoopTemplate extends Animatio
       applyPreset: identifier => viewer.applyPreset(identifier),
       clear: () => viewer.clearAllSelections()
     };
-    (window as CrossfilterDebugWindow).__luxFilterShowcase = this.debugController;
+    (window as CrossfilterDebugWindow).__gpuCrossfilterShowcase = this.debugController;
   }
 }
 

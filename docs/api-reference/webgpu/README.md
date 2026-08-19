@@ -1,3 +1,8 @@
+---
+title: WebGPU adapter
+description: Use the luma.gl Core API through the WebGPU backend, including native resource and shader-layout integration.
+---
+
 # Overview
 
 ## WebGPU Device Adapter

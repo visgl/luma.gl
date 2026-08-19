@@ -1,10 +1,12 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # ANARI C API and THREE.js Mapping
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
-  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+</DocumentationBadges>
 
 This page maps the official [ANARI 1.1 specification](https://registry.khronos.org/ANARI/specs/1.1/ANARI-1.1.html) to the experimental, private `@luma.gl/anari` implementation and, where helpful, to comparable THREE.js concepts.
 

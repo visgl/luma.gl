@@ -23,7 +23,7 @@ import {
   GPUProjection,
   type ProjectionBounds,
   type ProjectionPlan
-} from '@luma.gl/experimental/luproj';
+} from '@luma.gl/experimental/gpu-project';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const STORAGE_BUFFER_OFFSET_ALIGNMENT = 256;

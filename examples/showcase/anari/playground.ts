@@ -5,7 +5,7 @@ import {
   type ANARIVector3
 } from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
-import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
 import {
   type ANARIJSONScene,
@@ -26,15 +26,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private activePresetIndex = 0;
   private liveApplyEnabled = true;
   private pendingApply: number | null = null;
-  private pointerPosition: [number, number] | null = null;
-  private orbitAzimuth = 0;
-  private orbitElevation = 0.2;
-  private orbitDistance = 20;
   private rendererSubtype: ANARIRendererSubtype = 'default';
   private temporalAntialiasingEnabled = true;
   private lastStatisticsUpdate = 0;
   private readonly editor: ANARISceneEditor;
   private readonly canvas: HTMLCanvasElement;
+  private readonly orbitControls: OrbitControls;
   private importRequest = 0;
   private animationScrubbing = false;
 
@@ -48,6 +45,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       getRequiredElement('scene-monaco-editor', HTMLDivElement)
     );
     this.canvas = getRequiredElement('playground-canvas', HTMLCanvasElement);
+    this.orbitControls = new OrbitControls(this.canvas, {
+      distance: 20,
+      pitch: 0.2,
+      minDistance: 5,
+      maxDistance: 70,
+      minPitch: -0.06,
+      maxPitch: 1.12,
+      rotateSpeed: 0.005,
+      pitchSpeed: -0.004
+    });
 
     this.initializeControls();
     this.selectPreset(0);
@@ -71,14 +78,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       scene.frame.setParameter('size', [width, height]).commitParameters();
     }
 
-    const azimuth = this.orbitAzimuth + elapsedSeconds * scene.cameraOrbitSpeed;
-    const horizontalDistance = this.orbitDistance * Math.cos(this.orbitElevation);
+    this.orbitControls.update(time);
     const target = scene.cameraTarget;
-    const position: ANARIVector3 = [
-      target[0] + Math.sin(azimuth) * horizontalDistance,
-      target[1] + Math.sin(this.orbitElevation) * this.orbitDistance,
-      target[2] + Math.cos(azimuth) * horizontalDistance
-    ];
+    const position: ANARIVector3 = this.orbitControls.getEyePosition();
     const direction: ANARIVector3 = [
       target[0] - position[0],
       target[1] - position[1],
@@ -118,11 +120,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     if (this.pendingApply !== null) {
       window.clearTimeout(this.pendingApply);
     }
-    this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-    this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-    this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-    this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
-    this.canvas.removeEventListener('wheel', this.handleWheel);
+    this.orbitControls.destroy();
     this.editor.dispose();
     this.scene?.destroy();
     this.anari.destroy();
@@ -163,11 +161,6 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
     this.editor.onChange(this.handleEditorInput);
     this.editor.onApply(() => this.applyEditorScene());
-    this.canvas.addEventListener('pointerdown', this.handlePointerDown);
-    this.canvas.addEventListener('pointermove', this.handlePointerMove);
-    this.canvas.addEventListener('pointerup', this.handlePointerUp);
-    this.canvas.addEventListener('pointercancel', this.handlePointerUp);
-    this.canvas.addEventListener('wheel', this.handleWheel, {passive: false});
 
     getRequiredElement('apply-scene', HTMLButtonElement).addEventListener('click', () =>
       this.applyEditorScene()
@@ -457,18 +450,17 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       scene.cameraPosition[0] - scene.cameraTarget[0],
       scene.cameraPosition[2] - scene.cameraTarget[2]
     );
-    this.orbitDistance = Math.hypot(
-      horizontalDistance,
-      scene.cameraPosition[1] - scene.cameraTarget[1]
-    );
-    this.orbitAzimuth = Math.atan2(
-      scene.cameraPosition[0] - scene.cameraTarget[0],
-      scene.cameraPosition[2] - scene.cameraTarget[2]
-    );
-    this.orbitElevation = Math.atan2(
-      scene.cameraPosition[1] - scene.cameraTarget[1],
-      horizontalDistance
-    );
+    this.orbitControls.setProps({
+      target: scene.cameraTarget,
+      distance: Math.hypot(horizontalDistance, scene.cameraPosition[1] - scene.cameraTarget[1]),
+      yaw: Math.atan2(
+        scene.cameraPosition[0] - scene.cameraTarget[0],
+        scene.cameraPosition[2] - scene.cameraTarget[2]
+      ),
+      pitch: Math.atan2(scene.cameraPosition[1] - scene.cameraTarget[1], horizontalDistance),
+      autoRotate: scene.cameraOrbitSpeed !== 0,
+      autoRotateSpeed: scene.cameraOrbitSpeed
+    });
   }
 
   private readonly handleEditorInput = (): void => {
@@ -486,33 +478,6 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         this.applyEditorScene();
       }, 480);
     }
-  };
-
-  private readonly handlePointerDown = (event: PointerEvent): void => {
-    this.pointerPosition = [event.clientX, event.clientY];
-    this.canvas.setPointerCapture(event.pointerId);
-  };
-
-  private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.pointerPosition) {
-      return;
-    }
-    this.orbitAzimuth -= (event.clientX - this.pointerPosition[0]) * 0.005;
-    this.orbitElevation = clamp(
-      this.orbitElevation + (event.clientY - this.pointerPosition[1]) * 0.004,
-      -0.06,
-      1.12
-    );
-    this.pointerPosition = [event.clientX, event.clientY];
-  };
-
-  private readonly handlePointerUp = (): void => {
-    this.pointerPosition = null;
-  };
-
-  private readonly handleWheel = (event: WheelEvent): void => {
-    event.preventDefault();
-    this.orbitDistance = clamp(this.orbitDistance * Math.exp(event.deltaY * 0.001), 5, 70);
   };
 }
 
@@ -532,10 +497,6 @@ function setElementText(identifier: string, value: string): void {
   if (element) {
     element.textContent = value;
   }
-}
-
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, value));
 }
 
 function isTemporalAntialiasingRenderer(rendererName: string): boolean {

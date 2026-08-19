@@ -2,7 +2,7 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 # Choosing a GPU Data-Processing API
 
-<GpuGuideDocsTabs group="execution" active="data-processing" />
+<GpuGuideDocsTabs group="lifecycle" active="data-processing" />
 
 luma.gl offers several ways to transform data on the GPU. The right starting point depends mainly
 on whether your application must run on WebGL, how much control it needs over command submission,
@@ -13,7 +13,7 @@ and whether the computation is a single transformation or a reusable multi-pass 
 | Start with | Use it when |
 | --- | --- |
 | [`@luma.gl/gpgpu`](/docs/api-reference/gpgpu) | You want portable, composable data operations that run on CPU, WebGL, or WebGPU. |
-| [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph) | You are building a WebGPU-only, multi-pass workflow and need explicit control over resources, command encoding, and temporary memory. |
+| [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph) | You are building a WebGPU-only, multi-pass workflow and need explicit control over resources, command encoding, and temporary memory. |
 | [`Computation`](/docs/api-reference/engine/compute/computation) | You want to write and dispatch one custom WebGPU compute shader directly. |
 | [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) | You want to write a custom WebGL transform-feedback operation directly. |
 
@@ -84,7 +84,7 @@ The two APIs exchange caller-owned table resources without repacking them. A mat
 result is a `GPUVector`, which can be imported into a command graph:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
 
 const evaluatedVector = await adjusted.evaluate(webgpuDevice);
 
@@ -128,6 +128,6 @@ the explicit resource boundary described above today.
 - [GPGPU overview](/docs/api-reference/gpgpu)
 - [GPGPU operations](/docs/api-reference/gpgpu/operations)
 - [GPU evaluators](/docs/api-reference/gpgpu/gpu-data-evaluator)
-- [GPUCommandGraph](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph)
+- [GPUCommandGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)
 - [Issuing GPU commands](/docs/api-guide/gpu/gpu-commands)

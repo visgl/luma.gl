@@ -12,11 +12,11 @@ import {chromium} from 'playwright';
 import {createServer} from 'vite';
 
 const exampleDirectory = dirname(dirname(fileURLToPath(import.meta.url)));
-const screenshotPath = process.env.LURASTER_SCREENSHOT ?? join('/private/tmp', 'luraster-raster-lab.png');
-const timeoutMilliseconds = Number(process.env.LURASTER_SMOKE_TIMEOUT_MS ?? 60_000);
-const viewportWidth = Number(process.env.LURASTER_VIEWPORT_WIDTH ?? 1440);
-const viewportHeight = Number(process.env.LURASTER_VIEWPORT_HEIGHT ?? 900);
-const deviceScaleFactor = Number(process.env.LURASTER_DEVICE_SCALE_FACTOR ?? 1);
+const screenshotPath = process.env.GPURASTER_SCREENSHOT ?? join('/private/tmp', 'gpu-raster-raster-lab.png');
+const timeoutMilliseconds = Number(process.env.GPURASTER_SMOKE_TIMEOUT_MS ?? 60_000);
+const viewportWidth = Number(process.env.GPURASTER_VIEWPORT_WIDTH ?? 1440);
+const viewportHeight = Number(process.env.GPURASTER_VIEWPORT_HEIGHT ?? 900);
+const deviceScaleFactor = Number(process.env.GPURASTER_DEVICE_SCALE_FACTOR ?? 1);
 
 function assertEqualRasterSurface(actualImage, expectedImage, message) {
   const actual = PNG.sync.read(actualImage);
@@ -144,6 +144,8 @@ try {
       componentsEnabled: rasterLab.componentsEnabled,
       componentConnectivity: rasterLab.componentConnectivity,
       componentLabelMode: rasterLab.componentLabelMode,
+      componentScope: rasterLab.componentScope,
+      stitchedTileCount: rasterLab.stitchedTileCount,
       componentCapacity: rasterLab.componentCapacity,
       componentCount: rasterLab.componentCount,
       componentPublishedCount: rasterLab.componentPublishedCount,
@@ -185,6 +187,8 @@ try {
   assert.equal(initialState.componentsEnabled, false, 'sparse component overlays remain opt-in');
   assert.equal(initialState.componentConnectivity, 4, 'component labeling defaults to edge adjacency');
   assert.equal(initialState.componentLabelMode, 'sparse', 'minimum-root labels remain the default');
+  assert.equal(initialState.componentScope, 'local', 'cross-tile segmentation remains explicitly opt-in');
+  assert.equal(initialState.stitchedTileCount, 0, 'local roots do not silently pin adjacent cores');
   assert.equal(initialState.componentCapacity, 1024, 'dense IDs have an explicit bounded capacity');
   assert.equal(initialState.componentCount, 0, 'inactive dense counts are never fabricated');
   assert.equal(initialState.componentPublishedCount, 0, 'inactive bounded outputs remain empty');
@@ -1541,6 +1545,8 @@ try {
         componentsEnabled: rasterLab.componentsEnabled,
         componentConnectivity: rasterLab.componentConnectivity,
         componentLabelMode: rasterLab.componentLabelMode,
+        componentScope: rasterLab.componentScope,
+        stitchedTileCount: rasterLab.stitchedTileCount,
         componentCapacity: rasterLab.componentCapacity,
         componentCount: rasterLab.componentCount,
         componentPublishedCount: rasterLab.componentPublishedCount,
@@ -2965,6 +2971,8 @@ try {
         componentsEnabled: raster.componentsEnabled,
         componentConnectivity: raster.componentConnectivity,
         componentLabelMode: raster.componentLabelMode,
+        componentScope: raster.componentScope,
+        stitchedTileCount: raster.stitchedTileCount,
         componentCapacity: raster.componentCapacity,
         componentCount: raster.componentCount,
         componentPublishedCount: raster.componentPublishedCount,
@@ -3559,6 +3567,400 @@ try {
     'dense region arrays remain GPU-resident while eight selected scalars reuse the same 228-byte transfer'
   );
 
+  const makeCrossTileOracle = async (level, connectivity) =>
+    await page.evaluate(
+      async ({level, connectivity}) => {
+        const {makeRasterLabDataset, RASTER_LAB_NO_DATA_VALUE} = await import('/raster-data.ts');
+        const native = makeRasterLabDataset(320, 224);
+        const raster = window.__luRasterLab;
+        const downsample = level === 0 ? 1 : 2;
+        const width = Math.ceil(native.width / downsample);
+        const height = Math.ceil(native.height / downsample);
+        const seam = Math.ceil(width / 2);
+        const foreground = new Uint8Array(width * height);
+        const intensities = new Float32Array(width * height);
+        const domainMinimum = raster.mode === 'ndvi' ? -1 : 0;
+        const domainMaximum = 1;
+        const domainWidth = domainMaximum - domainMinimum;
+
+        for (let row = 0; row < height; row++) {
+          for (let column = 0; column < width; column++) {
+            const sourceIndex = row * downsample * native.width + column * downsample;
+            const red = native.red[sourceIndex];
+            const nearInfrared = native.nearInfrared[sourceIndex];
+            if (
+              native.validity[sourceIndex] === 0 ||
+              red === RASTER_LAB_NO_DATA_VALUE ||
+              nearInfrared === RASTER_LAB_NO_DATA_VALUE ||
+              Math.abs(nearInfrared + red) <= raster.epsilon
+            ) {
+              continue;
+            }
+            const observation =
+              raster.mode === 'ndvi'
+                ? (nearInfrared - red) / (nearInfrared + red)
+                : raster.mode === 'red'
+                  ? red
+                  : nearInfrared;
+            const midpoint = domainMinimum + domainWidth * 0.5;
+            const normalized = Math.max(
+              0,
+              Math.min(1, (observation - domainMinimum) / domainWidth)
+            );
+            const centered = Math.max(
+              0,
+              Math.min(1, (normalized - 0.5) * raster.contrast + 0.5)
+            );
+            const adjusted =
+              raster.gamma === 1
+                ? Math.max(
+                    domainMinimum,
+                    Math.min(domainMaximum, (observation - midpoint) * raster.contrast + midpoint)
+                  )
+                : domainMinimum + centered ** (1 / raster.gamma) * domainWidth;
+            const pixelIndex = row * width + column;
+            intensities[pixelIndex] = adjusted;
+            foreground[pixelIndex] = Number(adjusted >= raster.threshold);
+          }
+        }
+
+        const visited = new Uint8Array(foreground.length);
+        const regions = [];
+        for (let pixelIndex = 0; pixelIndex < foreground.length; pixelIndex++) {
+          if (foreground[pixelIndex] === 0 || visited[pixelIndex] !== 0) continue;
+          const queue = [pixelIndex];
+          visited[pixelIndex] = 1;
+          let intensitySum = 0;
+          let intensityMinimum = Number.POSITIVE_INFINITY;
+          let intensityMaximum = Number.NEGATIVE_INFINITY;
+          let columnSum = 0;
+          let rowSum = 0;
+          let touchesWest = false;
+          let touchesEast = false;
+          for (let queueIndex = 0; queueIndex < queue.length; queueIndex++) {
+            const index = queue[queueIndex];
+            const column = index % width;
+            const row = Math.floor(index / width);
+            const intensity = intensities[index];
+            intensitySum += intensity;
+            intensityMinimum = Math.min(intensityMinimum, intensity);
+            intensityMaximum = Math.max(intensityMaximum, intensity);
+            columnSum += column + 0.5;
+            rowSum += row + 0.5;
+            touchesWest ||= column < seam;
+            touchesEast ||= column >= seam;
+            for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
+              for (let columnOffset = -1; columnOffset <= 1; columnOffset++) {
+                if (rowOffset === 0 && columnOffset === 0) continue;
+                if (connectivity === 4 && Math.abs(rowOffset) + Math.abs(columnOffset) !== 1) {
+                  continue;
+                }
+                const neighborColumn = column + columnOffset;
+                const neighborRow = row + rowOffset;
+                if (
+                  neighborColumn < 0 ||
+                  neighborColumn >= width ||
+                  neighborRow < 0 ||
+                  neighborRow >= height
+                ) {
+                  continue;
+                }
+                const neighborIndex = neighborRow * width + neighborColumn;
+                if (foreground[neighborIndex] !== 0 && visited[neighborIndex] === 0) {
+                  visited[neighborIndex] = 1;
+                  queue.push(neighborIndex);
+                }
+              }
+            }
+          }
+          const centroidColumn = columnSum / queue.length;
+          const centroidRow = rowSum / queue.length;
+          const pixelScale = downsample * 10;
+          regions.push({
+            id: regions.length + 1,
+            rootIndex: pixelIndex,
+            pixelCount: queue.length,
+            intensitySum,
+            intensityMinimum,
+            intensityMaximum,
+            intensityMean: intensitySum / queue.length,
+            centroidColumn,
+            centroidRow,
+            worldCentroid: [552400 + centroidColumn * pixelScale, 4187600 - centroidRow * pixelScale],
+            area: queue.length * pixelScale * pixelScale,
+            touchesWest,
+            touchesEast
+          });
+        }
+        return {width, height, seam, count: regions.length, regions};
+      },
+      {level, connectivity}
+    );
+
+  const stitchedEastern = await loadSourceSelection(
+    '[data-raster-component-scope="stitched"]',
+    'east',
+    0
+  );
+  assert.equal(stitchedEastern.componentScope, 'stitched');
+  assert.equal(stitchedEastern.componentLabelMode, 'dense');
+  assert.equal(stitchedEastern.stitchedTileCount, 2);
+  assert.equal(stitchedEastern.pinnedTileCount, 2);
+  assert.equal(stitchedEastern.analysisScope, 'tile');
+  assert.equal(stitchedEastern.globalTileCount, 0);
+  assert.equal(stitchedEastern.automaticThreshold, false);
+  assert.equal(stitchedEastern.bins.length, 40);
+  assert.equal(
+    stitchedEastern.bins.reduce((total, count) => total + count, 0),
+    stitchedEastern.validPixelCount,
+    'stitched global identities retain a genuinely selected-core 40-bin histogram'
+  );
+  assert(
+    (await page.locator('[data-raster-component-rounds-label]').textContent()).includes('Selected tile'),
+    'cross-tile convergence never mislabels one selected core\'s compact propagation diagnostic'
+  );
+  const stitchedEightOracle = await makeCrossTileOracle(0, 8);
+  assert.equal(
+    stitchedEastern.componentCount,
+    stitchedEightOracle.count,
+    'global GPU dense identities exactly match monolithic row-major eight-connected topology'
+  );
+  const spanningEightRegion = stitchedEightOracle.regions.find(
+    region => region.touchesWest && region.touchesEast
+  );
+  assert(spanningEightRegion, 'the full-resolution synthetic fixture must span the owned seam');
+  const selectedEasternGlobal =
+    stitchedEastern.selectedRegionId === spanningEightRegion.id
+      ? stitchedEastern
+      : await updateComponentControl('[data-raster-control="region-id"]', spanningEightRegion.id, {
+          componentScope: 'stitched',
+          regionMetricsEnabled: true,
+          selectedRegionId: spanningEightRegion.id
+        });
+  assertRegionMatchesOracle(
+    selectedEasternGlobal.regionMeasurement,
+    spanningEightRegion,
+    'stitched eastern global dense identity and weighted merged measurements'
+  );
+
+  const stitchedWestern = await loadSourceSelection('[data-raster-source-tile="west"]', 'west', 0);
+  assert.equal(stitchedWestern.componentScope, 'stitched');
+  assert.equal(stitchedWestern.stitchedTileCount, 2);
+  assert.equal(stitchedWestern.pinnedTileCount, 2);
+  assert.equal(stitchedWestern.componentCount, stitchedEightOracle.count);
+  assertRegionMatchesOracle(
+    stitchedWestern.regionMeasurement,
+    spanningEightRegion,
+    'the opposite owned core publishes the identical globally merged region record'
+  );
+  assert.equal(
+    stitchedWestern.regionMeasurement.id,
+    selectedEasternGlobal.regionMeasurement.id,
+    'a seam-spanning component keeps one stable identifier on both selected cores'
+  );
+
+  const forwardStitched = await loadSourceSelection(
+    '[data-raster-replay-order="forward"]',
+    'west',
+    0
+  );
+  assert.equal(forwardStitched.replayOrder, 'forward');
+  assert.equal(forwardStitched.componentCount, stitchedEightOracle.count);
+  assertRegionMatchesOracle(
+    forwardStitched.regionMeasurement,
+    spanningEightRegion,
+    'WEST-to-EAST contribution order preserves canonical global root identities'
+  );
+  const reverseStitched = await loadSourceSelection(
+    '[data-raster-replay-order="reverse"]',
+    'west',
+    0
+  );
+  assert.equal(reverseStitched.replayOrder, 'reverse');
+  assert.equal(reverseStitched.componentCount, stitchedEightOracle.count);
+  assertRegionMatchesOracle(
+    reverseStitched.regionMeasurement,
+    spanningEightRegion,
+    'EAST-to-WEST arrival order preserves global roots, weighted means, and affine moments'
+  );
+
+  const stitchedFourOracle = await makeCrossTileOracle(0, 4);
+  const stitchedFour = await updateComponentControl(
+    '[data-raster-component-connectivity="4"]',
+    undefined,
+    {componentScope: 'stitched', componentConnectivity: 4, componentConverged: true}
+  );
+  assert.equal(stitchedFour.componentCount, stitchedFourOracle.count);
+  assert(
+    stitchedFourOracle.count > stitchedEightOracle.count,
+    'the independent full-raster oracle includes diagonal-only eight-connectivity joins'
+  );
+  const stitchedEightRestored = await updateComponentControl(
+    '[data-raster-component-connectivity="8"]',
+    undefined,
+    {componentScope: 'stitched', componentConnectivity: 8, componentConverged: true}
+  );
+  assert.equal(stitchedEightRestored.componentCount, stitchedEightOracle.count);
+
+  await cacheCapacityControl.fill('1');
+  await page.waitForFunction(
+    () =>
+      window.__luRasterLab.cacheCapacity === 2 &&
+      document.querySelector('[data-raster-control="cache-capacity"]').value === '2',
+    undefined,
+    {timeout: timeoutMilliseconds}
+  );
+  assert.equal(
+    await page.evaluate(() => window.__luRasterLab.pinnedTileCount),
+    2,
+    'transactional stitched-capacity rejection preserves both fenced neighboring source leases'
+  );
+
+  const stitchedOverflow = await updateComponentControl(
+    '[data-raster-control="component-capacity"]',
+    0,
+    {componentScope: 'stitched', componentCapacity: 0, componentOverflow: true}
+  );
+  assert.equal(stitchedOverflow.componentCount, stitchedEightOracle.count);
+  assert.equal(stitchedOverflow.componentPublishedCount, 0);
+  assert.equal(stitchedOverflow.regionMeasurement, null);
+  assert.equal(stitchedOverflow.bins.length, 40);
+  const stitchedUnconverged = await updateComponentControl(
+    '[data-raster-control="component-iterations"]',
+    1,
+    {componentScope: 'stitched', componentConverged: false, componentOverflow: false}
+  );
+  assert.equal(stitchedUnconverged.componentCount, 0);
+  assert.equal(stitchedUnconverged.regionMeasurement, null);
+  await updateComponentControl('[data-raster-control="component-iterations"]', 24, {
+    componentScope: 'stitched',
+    componentConverged: true,
+    componentOverflow: true
+  });
+  const stitchedRecovered = await updateComponentControl(
+    '[data-raster-control="component-capacity"]',
+    1024,
+    {componentScope: 'stitched', componentConverged: true, componentOverflow: false}
+  );
+  assert.equal(stitchedRecovered.componentCount, stitchedEightOracle.count);
+  assertRegionMatchesOracle(
+    stitchedRecovered.regionMeasurement,
+    spanningEightRegion,
+    'restoring bounded global capacity republishes the identical seam-spanning region'
+  );
+
+  const stitchedOverview = await loadSourceSelection(
+    '[data-raster-source-overview="1"]',
+    'west',
+    1
+  );
+  const stitchedOverviewOracle = await makeCrossTileOracle(1, 8);
+  assert.equal(stitchedOverview.componentScope, 'stitched');
+  assert.equal(stitchedOverview.stitchedTileCount, 2);
+  assert.equal(stitchedOverview.componentCount, stitchedOverviewOracle.count);
+  const spanningOverviewRegion = stitchedOverviewOracle.regions.find(
+    region => region.touchesWest && region.touchesEast
+  );
+  assert(spanningOverviewRegion);
+  const selectedOverviewGlobal =
+    stitchedOverview.selectedRegionId === spanningOverviewRegion.id
+      ? stitchedOverview
+      : await updateComponentControl('[data-raster-control="region-id"]', spanningOverviewRegion.id, {
+          componentScope: 'stitched',
+          regionMetricsEnabled: true,
+          selectedRegionId: spanningOverviewRegion.id
+        });
+  assertRegionMatchesOracle(
+    selectedOverviewGlobal.regionMeasurement,
+    spanningOverviewRegion,
+    'source-owned overview seam reconciliation preserves scaled affine centroids and areas'
+  );
+  const easternStitchedOverview = await loadSourceSelection(
+    '[data-raster-source-tile="east"]',
+    'east',
+    1
+  );
+  assertRegionMatchesOracle(
+    easternStitchedOverview.regionMeasurement,
+    spanningOverviewRegion,
+    'eastern overview uses full-level affine translation exactly once'
+  );
+
+  const sparseExitsStitching = await loadSourceSelection(
+    '[data-raster-component-labels="sparse"]',
+    'east',
+    1
+  );
+  assert.equal(sparseExitsStitching.componentScope, 'local');
+  assert.equal(sparseExitsStitching.componentLabelMode, 'sparse');
+  assert.equal(sparseExitsStitching.stitchedTileCount, 0);
+  assert.equal(sparseExitsStitching.regionMetricsEnabled, false);
+  assert.equal(sparseExitsStitching.bins.length, 48);
+  const stitchedForcesDense = await loadSourceSelection(
+    '[data-raster-component-scope="stitched"]',
+    'east',
+    1
+  );
+  assert.equal(stitchedForcesDense.componentLabelMode, 'dense');
+  assert.equal(stitchedForcesDense.bins.length, 48);
+  const inspectedStitchedOverview = await updateComponentControl(
+    '[data-raster-region-metrics="on"]',
+    undefined,
+    {componentScope: 'stitched', regionMetricsEnabled: true}
+  );
+  assert.equal(inspectedStitchedOverview.bins.length, 40);
+
+  const smoothingExitsStitching = await loadSourceSelection(
+    '[data-raster-smoothing="gaussian"]',
+    'east',
+    1
+  );
+  assert.equal(smoothingExitsStitching.componentScope, 'local');
+  assert.equal(smoothingExitsStitching.smoothingMode, 'gaussian');
+  const stitchingClearsSmoothing = await loadSourceSelection(
+    '[data-raster-component-scope="stitched"]',
+    'east',
+    1
+  );
+  assert.equal(stitchingClearsSmoothing.smoothingMode, 'none');
+  assert.equal(stitchingClearsSmoothing.componentCount, stitchedOverviewOracle.count);
+
+  const generatedExitsStitching = await loadSourceSelection(
+    '[data-raster-overview-policy="mean"]',
+    'east',
+    1
+  );
+  assert.equal(generatedExitsStitching.componentScope, 'local');
+  assert.equal(generatedExitsStitching.generatedOverview, true);
+  const stitchingRestoresSourceOverview = await loadSourceSelection(
+    '[data-raster-component-scope="stitched"]',
+    'east',
+    1
+  );
+  assert.equal(stitchingRestoresSourceOverview.overviewPolicy, 'source');
+  assert.equal(stitchingRestoresSourceOverview.generatedOverview, false);
+  assert.equal(stitchingRestoresSourceOverview.componentCount, stitchedOverviewOracle.count);
+
+  const otsuExitsStitching = await loadSourceSelection(
+    '[data-raster-control="otsu"]',
+    'east',
+    1
+  );
+  assert.equal(otsuExitsStitching.componentScope, 'local');
+  assert.equal(otsuExitsStitching.automaticThreshold, true);
+  const manualStitchingRestored = await loadSourceSelection(
+    '[data-raster-component-scope="stitched"]',
+    'east',
+    1
+  );
+  assert.equal(manualStitchingRestored.automaticThreshold, false);
+  assert.equal(manualStitchingRestored.componentCount, stitchedOverviewOracle.count);
+  assert.equal(manualStitchingRestored.bins.length, 40);
+  assert(
+    (await page.locator('[data-raster-region-transfer]').textContent()).includes('228 bytes'),
+    'merged global IDs and all eleven region columns publish only the existing eight selected scalars'
+  );
+
   await page.waitForFunction(
     previousFrameCount => window.__luRasterLab.frameCount > previousFrameCount,
     composedSmoothing.frameCount,
@@ -3575,8 +3977,8 @@ try {
   assert.deepEqual(consoleErrors, [], `Browser console errors: ${consoleErrors.join('\n')}`);
 
   process.stdout.write(
-    `LuRaster visual smoke passed: ${screenshotPath} ` +
-      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, 4/8-connected dense roots, bounded GPU region measurements, precise affine centroids/areas, exact 228-byte inspection, and safe overflow/convergence verified)\n`
+    `GPURaster visual smoke passed: ${screenshotPath} ` +
+      `(${initialState.validPixelCount.toLocaleString()}/${initialState.pixelCount.toLocaleString()} valid pixels, ${initialState.nodeCount} GPU graph nodes, seamless halos, GPU mean overviews, categorical policies, ordered global replay, 4/8-connected dense roots, deterministic cross-tile global IDs, weighted merged GPU region measurements, precise affine centroids/areas, exact 228-byte inspection, and safe overflow/convergence verified)\n`
   );
 } finally {
   await browser?.close();

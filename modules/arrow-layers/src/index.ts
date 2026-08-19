@@ -21,21 +21,21 @@ export {
 } from './layers/arrow-text-layer';
 export type {ArrowLayerPickingInfo} from './layers/arrow-layer-types';
 export {
-  LuGraphDeckEffect,
-  type LuGraphDeckDataset,
-  type LuGraphDeckEffectOptions,
-  type LuGraphDeckEffectStats,
-  type LuGraphDeckLayoutMode
-} from './lugraph/lugraph-effect';
+  GPUGraphDeckEffect,
+  type GPUGraphDeckDataset,
+  type GPUGraphDeckEffectOptions,
+  type GPUGraphDeckEffectStats,
+  type GPUGraphDeckLayoutMode
+} from './gpu-graph/gpu-graph-effect';
 export {
-  LUGRAPH_DECK_EDGE_SHADER,
-  LuGraphEdgeLayer,
-  type LuGraphEdgeLayerProps
-} from './lugraph/lugraph-edge-layer';
+  GPU_GRAPH_DECK_EDGE_SHADER,
+  GPUGraphEdgeLayer,
+  type GPUGraphEdgeLayerProps
+} from './gpu-graph/gpu-graph-edge-layer';
 export {
-  LUGRAPH_DECK_NODE_SHADER,
-  LuGraphNodeLayer,
-  type LuGraphDeckColorMode,
-  type LuGraphDeckNodeSizeMode,
-  type LuGraphNodeLayerProps
-} from './lugraph/lugraph-node-layer';
+  GPU_GRAPH_DECK_NODE_SHADER,
+  GPUGraphNodeLayer,
+  type GPUGraphDeckColorMode,
+  type GPUGraphDeckNodeSizeMode,
+  type GPUGraphNodeLayerProps
+} from './gpu-graph/gpu-graph-node-layer';

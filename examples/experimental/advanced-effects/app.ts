@@ -8,6 +8,7 @@ import {
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
+  OrbitControls,
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
@@ -513,6 +514,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly panels: ExamplePanelManager;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly comparisonSplitter: ComparisonSplitter | null;
+  readonly orbitControls: OrbitControls | null;
   sceneGBuffer: GBuffer;
   renderer: ShaderPassRenderer;
   settings: AdvancedEffectsSettings = {...DEFAULT_SETTINGS};
@@ -555,9 +557,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             }
           })
         : null;
+    this.orbitControls =
+      canvas instanceof HTMLCanvasElement
+        ? new OrbitControls(canvas, {
+            target: [0, 5, 0],
+            distance: Math.hypot(43, 20),
+            yaw: 0,
+            pitch: Math.atan2(20, 43),
+            minDistance: 18,
+            maxDistance: 100,
+            minPitch: 0.06,
+            maxPitch: 1.38,
+            autoRotate: this.settings.animate,
+            autoRotateSpeed: 0.055
+          })
+        : null;
   }
 
-  onRender({device, width, height, aspect, tick}: AnimationProps): void {
+  onRender({
+    device,
+    width,
+    height,
+    aspect,
+    tick,
+    time: elapsedTimeMilliseconds
+  }: AnimationProps): void {
     const framebufferSizeChanged =
       this.framebufferSize[0] !== width || this.framebufferSize[1] !== height;
     if (framebufferSizeChanged) {
@@ -571,12 +595,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.comparisonSplitter?.updateLayout();
 
     const time = this.settings.animate ? tick / 1000 : this.previousTime;
-    const cameraAngle = this.settings.animate ? time * 0.055 : 0.55;
-    const eye: [number, number, number] = [
-      Math.sin(cameraAngle) * 43,
-      25 + Math.sin(cameraAngle * 1.7) * 3,
-      Math.cos(cameraAngle) * 43
-    ];
+    this.orbitControls?.update(elapsedTimeMilliseconds);
+    const eye = this.orbitControls?.getEyePosition() || [0, 25, 43];
+    eye[1] += Math.sin((this.orbitControls?.yaw || 0) * 1.7) * 3;
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(52),
       aspect,
@@ -716,6 +737,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize(): void {
     this.comparisonSplitter?.destroy();
+    this.orbitControls?.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.shadowCasters.destroy();
@@ -801,6 +823,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       };
       this.settingsPanel.setSchemaAndSettings(makeSettingsSchema(), this.settings);
     }
+    this.orbitControls?.setAutoRotate(this.settings.animate);
     this.comparisonSplitter?.setValue(this.settings.split);
     this.comparisonSplitter?.setVisible(this.settings.debugView === 'Final');
     this.shadowRenderer.setProps({quality: this.settings.shadowQuality});

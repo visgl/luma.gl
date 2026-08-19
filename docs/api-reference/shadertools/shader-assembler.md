@@ -1,4 +1,5 @@
 import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # ShaderAssembler
 
@@ -19,6 +20,20 @@ For the assembly model, see
 see [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders).
 For WGSL binding relocation and conditionals, see
 [WGSL Support](/docs/api-reference/shadertools/wgsl-support).
+
+<DocumentationContract title="ShaderAssembler" rows={[
+  {label: 'Languages', value: 'Separate stateful GLSL and WGSL assembler implementations'},
+  {label: 'Dependencies', value: 'Initializes, resolves, de-duplicates, and orders module dependencies'},
+  {label: 'Hooks and injections', value: 'Combines registered hook contracts with ordered module and application injections'},
+  {label: 'Inputs', value: 'Application source, platform information, modules, defines, and injection maps'},
+  {label: 'Output', value: 'Assembled source, resolved modules, layout metadata, and combined uniform mapping'},
+  {label: 'Cost', value: 'Assemble when source configuration changes, before pipeline creation—not per draw'}
+]} />
+
+:::warning Common mistake
+The default assembler is shared state for one shader language. Register global hooks or default modules
+deliberately; use an isolated assembler when one application must not affect another.
+:::
 
 ## Usage
 

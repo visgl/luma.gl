@@ -4,7 +4,10 @@
 
 import {readFileSync} from 'node:fs';
 
-import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
+import {
+  makeArrowTableFromGPUAnalyticsTable,
+  makeGPUAnalyticsTableFromArrowTable
+} from '@luma.gl/arrow';
 import {Buffer, type BufferProps} from '@luma.gl/core';
 import {GPUData, GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -33,6 +36,52 @@ describe('makeGPUAnalyticsTableFromArrowTable package boundaries', () => {
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeDefined();
     expect(packageJson.dependencies?.['@luma.gl/experimental']).toBeUndefined();
     expect(packageJson.peerDependencies?.['@luma.gl/experimental']).toBeUndefined();
+  });
+});
+
+describe('makeArrowTableFromGPUAnalyticsTable explicit materialization', () => {
+  test('round-trips sliced numeric values, nullable bitmaps, ordered dictionaries, and empty batches', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-round-trip'});
+    const source = createAnalyticsTable();
+    const uploaded = makeGPUAnalyticsTableFromArrowTable(device, source);
+
+    try {
+      const result = await makeArrowTableFromGPUAnalyticsTable(uploaded);
+      expect(result.batches.map(batch => batch.numRows)).toEqual([2, 0, 3]);
+      expect(result.schema.metadata.get('dataset')).toBe('taxi-rides');
+      expect(result.schema.fields[0].metadata.get('unit')).toBe('USD');
+      expect(result.getChild('fare')?.toArray()).toEqual(source.getChild('fare')?.toArray());
+      expect(result.getChild('distance')?.toArray()).toEqual(
+        source.getChild('distance')?.toArray()
+      );
+      expect(Array.from(result.getChild('category') ?? [])).toEqual(
+        Array.from(source.getChild('category') ?? [])
+      );
+      expect(result.schema.fields[2].type).toBeInstanceOf(arrow.Dictionary);
+      expect((result.schema.fields[2].type as arrow.Dictionary).isOrdered).toBe(true);
+    } finally {
+      destroyAnalyticsResult(uploaded);
+    }
+  });
+
+  test('rejects ambiguous, incomplete, and mismatched selection metadata before readback', async () => {
+    const device = new NullDevice({id: 'arrow-analytics-readback-validation'});
+    const uploaded = makeGPUAnalyticsTableFromArrowTable(device, createAnalyticsTable());
+    const rows = uploaded.validity.fare!;
+
+    try {
+      await expect(
+        makeArrowTableFromGPUAnalyticsTable({...uploaded, rowIndices: rows})
+      ).rejects.toThrow(/indices|counts/i);
+      await expect(
+        makeArrowTableFromGPUAnalyticsTable({...uploaded, globalSelectedCount: rows})
+      ).rejects.toThrow(/global/i);
+      await expect(makeArrowTableFromGPUAnalyticsTable({table: uploaded.table})).rejects.toThrow(
+        /nullable|validity/i
+      );
+    } finally {
+      destroyAnalyticsResult(uploaded);
+    }
   });
 });
 

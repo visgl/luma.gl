@@ -1,5 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {DocsPageTabs} from './docs-page-tabs';
 
 type GpuMemoryDocsTab = {
   /** Stable tab identifier. */
@@ -36,22 +36,5 @@ const GPU_MEMORY_DOCS_TABS: GpuMemoryDocsTab[] = [
  * Renders page links with the same visual treatment as tabs for GPU memory guide pages.
  */
 export function GpuMemoryDocsTabs({active}: {active: GpuMemoryDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="GPU memory documentation sections">
-      {GPU_MEMORY_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
-  );
+  return <DocsPageTabs active={active} group={{label: 'GPU memory documentation', tabs: GPU_MEMORY_DOCS_TABS}} />;
 }

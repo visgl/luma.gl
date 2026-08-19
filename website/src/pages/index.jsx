@@ -3,6 +3,7 @@ import Layout from '@theme/Layout';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {ExampleCard} from '../components/example-card';
+import {FrameworkModuleCards} from '../components/framework-module-cards';
 import styles from './index.module.css';
 
 const HomepageGPUScene = React.lazy(() => import('../components/homepage-gpu-scene'));
@@ -23,15 +24,13 @@ const FEATURED_EXAMPLES = [
     topics: ['gltf', 'materials', 'animation']
   },
   {
-    title: 'Coit Tower · 50M Gaussian Splats',
-    route: 'showcase/gaussian-splat-viewer?scene=coit',
-    image: 'showcase/coit-tower.png',
-    imagePosition: 'left center',
-    imageScale: 1.17,
+    title: 'Gaussian Splats',
+    route: 'showcase/gaussian-splats',
+    image: 'showcase/gaussian-splats.jpg',
     description:
-      'Explore a 50.9-million-splat San Francisco capture with background RAD decoding, camera-driven detail, and globally ordered WebGPU rendering.',
+      'Explore progressive HDR Gaussian splats with GPU-native projection, ordering, and interactive rendering.',
     category: 'WebGPU',
-    backends: ['webgpu'],
+    backends: ['webgpu', 'webgl2'],
     highDynamicRange: true,
     difficulty: 'advanced',
     maturity: 'experimental',
@@ -310,6 +309,29 @@ export default function IndexPage() {
             <a className={styles.galleryAction} href={examplesUrl}>
               Explore every example <span aria-hidden="true">→</span>
             </a>
+          </div>
+        </section>
+
+        <section
+          className={styles.frameworkSection}
+          id="framework-modules"
+          aria-labelledby="framework-modules-heading"
+        >
+          <div className={styles.sectionContainer}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <p className={styles.sectionEyebrow}>Explore the framework</p>
+                <h2 className={styles.sectionTitle} id="framework-modules-heading">
+                  The GPU stack, layer by layer.
+                </h2>
+              </div>
+              <p className={styles.sectionDescription}>
+                Seven focused modules for GPU portability, rendering, shaders, effects, 3D scenes,
+                Gaussian splats, and compute.
+              </p>
+            </div>
+
+            <FrameworkModuleCards />
           </div>
         </section>
 

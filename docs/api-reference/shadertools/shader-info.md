@@ -2,7 +2,7 @@ import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-ta
 
 # Shader Parsing
 
-<ShadertoolsDocsTabs active="shader-info" />
+<ShadertoolsDocsTabs group="execution" active="shader-info" />
 
 It is sometimes useful to be able to inspect shader source code
 

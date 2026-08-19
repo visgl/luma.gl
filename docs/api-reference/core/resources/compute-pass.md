@@ -1,13 +1,14 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 # ComputePass
 
 <CoreDocsTabs group="commands" active="compute-pass" />
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
-  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="webgpu">WebGPU supported</DocumentationBadge>
+  <DocumentationBadge tone="neutral">WebGL 2 not supported</DocumentationBadge>
+</DocumentationBadges>
 
 A pass on which to run computations with compute pipelines.
 
@@ -59,9 +60,9 @@ const computedData = new Int32Array(await workBuffer.readAsync());
 
 | Property               | Type            | Default     | Description |
 | ---------------------- | --------------- | ----------- | ----------- |
-| `timestampQuerySet?`   | `QuerySet`      | `undefined` | Query set that will receive timestamps at the beginning and end of the pass. |
-| `beginTimestampIndex?` | `number`        | `undefined` | Query set index that records the timestamp when the pass begins. No timestamp is written when omitted. |
-| `endTimestampIndex?`   | `number`        | `undefined` | Query set index that records the timestamp when the pass ends. No timestamp is written when omitted. |
+| `timestampQuerySet?` | `QuerySet` | `undefined` | Query set that will receive timestamps at the beginning and end of the pass. |
+| `beginTimestampIndex?` | `number` | `undefined` | Query set index that records the timestamp when the pass begins. No timestamp is written when omitted. |
+| `endTimestampIndex?` | `number` | `undefined` | Query set index that records the timestamp when the pass ends. No timestamp is written when omitted. |
 
 ## Members
 

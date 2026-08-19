@@ -476,7 +476,7 @@ function createLoadingIndicator(container: HTMLElement): TaxiLoadingIndicator {
     background: 'radial-gradient(ellipse at center, rgba(3, 12, 19, .82), rgba(2, 6, 9, .48))'
   });
   root.innerHTML = `<div style="width:min(340px,100%);padding:20px 22px;border:1px solid rgba(84,221,243,.25);border-radius:12px;background:rgba(4,11,17,.94);box-shadow:0 18px 54px rgba(0,0,0,.36);color:#e6f6ff;font:12px/1.55 Inter,system-ui,sans-serif">
-    <div style="color:#63eaff;font:700 10px ui-monospace,monospace;letter-spacing:.12em">LUPROJ + LUSPATIAL</div>
+    <div style="color:#63eaff;font:700 10px ui-monospace,monospace;letter-spacing:.12em">GPU PROJECT + LUSPATIAL</div>
     <div data-taxi-loading-status style="margin-top:9px;font-size:14px;font-weight:650">Preparing WebGPU taxi explorer…</div>
     <div data-taxi-loading-progress role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:5px;margin-top:13px;overflow:hidden;border-radius:999px;background:rgba(108,154,177,.22)">
       <div data-taxi-loading-bar style="width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2fc9dd,#6aeeff);transition:width 120ms linear"></div>

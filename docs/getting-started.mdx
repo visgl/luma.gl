@@ -7,6 +7,7 @@ hide_table_of_contents: true
 
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import {FrameworkModuleCards} from '@site/src/components/framework-module-cards';
 
 export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
   return (
@@ -76,7 +77,7 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
         <OnboardingPoster
           alt="A luminous field of three-dimensional Gaussian splats"
           className="luma-onboarding__feature-image"
-          image="showcase/gaussian-splats.jpg"
+          image="showcase/gaussian-splat-viewer.jpg"
         />
         <div className="luma-onboarding__feature-content">
           <span className="luma-onboarding__feature-package">@luma.gl/splats</span>
@@ -278,11 +279,15 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
   <section className="luma-onboarding__section" aria-labelledby="luma-onboarding-capabilities">
     <p className="luma-onboarding__section-label">03 · Built for ambitious ideas</p>
     <h2 className="luma-onboarding__section-title" id="luma-onboarding-capabilities">
-      {'The whole GPU. Your way.'}
+      {'The luma.gl framework.'}
     </h2>
     <p className="luma-onboarding__section-description">
-      {'Behind every scene are composable building blocks for rendering, GPU-resident data, and programmable effects.'}
+      {'Seven focused modules span portable GPU access, rendering, shaders, effects, declarative scenes, Gaussian splats, and compute.'}
     </p>
+
+    <div className="luma-onboarding__framework-modules">
+      <FrameworkModuleCards />
+    </div>
 
     <div className="luma-onboarding__capabilities">
       <article className="luma-onboarding__capability">

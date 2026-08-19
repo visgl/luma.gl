@@ -1,5 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {DocsPageTabs} from './docs-page-tabs';
 
 type LegacyDocsTab = {
   /** Stable tab identifier. */
@@ -23,22 +23,5 @@ const LEGACY_DOCS_TABS: LegacyDocsTab[] = [
  * Renders page links with the same visual treatment as tabs for legacy documentation pages.
  */
 export function LegacyDocsTabs({active}: {active: LegacyDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="Legacy documentation sections">
-      {LEGACY_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
-  );
+  return <DocsPageTabs active={active} group={{label: 'Legacy documentation', tabs: LEGACY_DOCS_TABS}} />;
 }
