@@ -34,6 +34,7 @@ const config = {
       // Repo-owned shorthand aliases for website examples.
       examples: {
         animation: '/examples/api/animation',
+        'algebraic-varieties': '/examples/showcase/algebraic-varieties',
         scenes: '/examples/showcase/scene',
         'arrow-points': '/examples/arrow/arrow-points',
         'arrow-filtering': '/examples/arrow/arrow-filtering',
