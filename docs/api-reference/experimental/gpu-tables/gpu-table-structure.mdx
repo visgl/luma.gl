@@ -1,10 +1,10 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {GPUTableStructureGraphic} from '@site/src/components/docs/gpu-table-structure-graphic';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs';
 
 # GPU Table Structure
 
-<TablesDocsTabs active="structure" />
+<GPUTablesDocsTabs active="structure" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -23,12 +23,12 @@ the GPU resource model: `GPUTable`, `GPURecordBatch`, `GPUVector`, and
 
 | GPU object | Role | Important state |
 | --- | --- | --- |
-| [`GPUTable`](/docs/api-reference/tables/gpu-table) | Logical table owner and mutation surface. | `schema`, `gpuColumns`, `gpuVectors`, `gpuConstants`, `batches[]` |
-| [`GPUConstant`](/docs/api-reference/tables/gpu-constant) | One fixed-width value shared by every table row. | `format`, `value`, `byteLength` |
-| [`GPURecordBatch`](/docs/api-reference/tables/gpu-record-batch) | One preserved GPU batch with one data chunk per column. | `schema`, `numRows`, `bufferLayout`, `gpuData` |
-| [`GPUVector`](/docs/api-reference/tables/gpu-vector) | One logical typed column over one or more GPU data chunks. | `name`, `format`, `length`, `valueLength`, `stride`, `byteStride`, `data[]` |
-| [`GPUData`](/docs/api-reference/tables/gpu-data) | One GPU buffer plus typed row metadata. | `buffer`, `format`, `length`, `valueLength`, `byteOffset`, `byteStride`, `rowByteLength`, `ownsBuffer` |
-| [`GPUSchema`](/docs/api-reference/tables/gpu-schema) | Plain selected-column schema metadata. | `fields`, `metadata` |
+| [`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table) | Logical table owner and mutation surface. | `schema`, `gpuColumns`, `gpuVectors`, `gpuConstants`, `batches[]` |
+| [`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant) | One fixed-width value shared by every table row. | `format`, `value`, `byteLength` |
+| [`GPURecordBatch`](/docs/api-reference/experimental/gpu-tables/gpu-record-batch) | One preserved GPU batch with one data chunk per column. | `schema`, `numRows`, `bufferLayout`, `gpuData` |
+| [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) | One logical typed column over one or more GPU data chunks. | `name`, `format`, `length`, `valueLength`, `stride`, `byteStride`, `data[]` |
+| [`GPUData`](/docs/api-reference/gpgpu/gpu-data) | One GPU buffer plus typed row metadata. | `buffer`, `format`, `length`, `valueLength`, `byteOffset`, `byteStride`, `rowByteLength`, `ownsBuffer` |
+| [`GPUSchema`](/docs/api-reference/experimental/gpu-tables/gpu-schema) | Plain selected-column schema metadata. | `fields`, `metadata` |
 
 The table is intentionally batch-preserving. Constants live only at table level;
 they never become fake batch `GPUData`. When an Arrow table has multiple

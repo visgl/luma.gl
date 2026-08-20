@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUDataDocsTabs} from '@site/src/components/docs/gpu-data-docs-tabs';
 
 # GPUDataView
 
-<TablesDocsTabs active="data-view" />
+<GPUDataDocsTabs active="data-view" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -15,7 +15,7 @@ resource. A view has one physical format, value count, byte offset, and byte
 stride. It does not own its buffer or carry logical list topology, validity, or
 adapter metadata.
 
-[`GPUData.getChild()`](/docs/api-reference/tables/gpu-data) returns a
+[`GPUData.getChild()`](/docs/api-reference/gpgpu/gpu-data) returns a
 `GPUDataView` for one named field in an interleaved struct. Views can also be
 constructed directly or derived from an explicit `BufferLayout` attribute.
 

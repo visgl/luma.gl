@@ -13,7 +13,7 @@ import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 This page documents how Apache Arrow columns map to luma.gl GPU upload, vertex
 attributes, WebGPU storage bindings, and model-specific conversion helpers.
 For the generic GPU table ownership model, see
-[GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle).
+[GPU Table Lifecycle](/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle).
 
 ## Apache Arrow Preliminaries
 
@@ -49,7 +49,7 @@ Support depends on how the column is consumed. A column can be uploadable as a
 `GPUVector` without also being usable as a generic vertex attribute.
 
 Arrow adapters publish `GPUVector.format` strings from
-[`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/tables/gpu-vector-format). Arrow
+[`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-vector-format). Arrow
 `DataType` values are retained only as adapter/readback metadata during
 migration.
 
@@ -719,10 +719,10 @@ For portable WebGPU layouts, prefer `Float32` for `vec3<f32>` attributes or pad
 
 ## Related References
 
-- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
+- [GPU Table Lifecycle](/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle)
 - [Attributes](/docs/api-guide/gpu/gpu-attributes)
 - [Storage Buffers](/docs/api-guide/gpu/gpu-storage-buffers)
-- [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema)
+- [GPUInputSchema](/docs/api-reference/experimental/gpu-tables/gpu-input-schema)
 - [ShaderLayout](/docs/api-reference/core/shader-layout)
 - [BufferLayout](/docs/api-reference/core/buffer-layout)
 - [Vertex Formats](/docs/api-reference/core/vertex-formats)

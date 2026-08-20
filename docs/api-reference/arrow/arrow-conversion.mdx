@@ -150,9 +150,10 @@ tessellation, temporal conversion, and text glyph preparation. Do not make
 The module can derive GPU `BufferLayout` entries from Arrow schemas and create primitive GPU data
 and experimental table objects from compatible Arrow columns through
 `makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and
-`makeGPUTableFromArrowTable()`. The generic GPU table object model is documented in
-the [experimental GPU data and tables reference](/docs/api-reference/tables), with an object model overview
-in [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure).
+`makeGPUTableFromArrowTable()`. Primitive storage is documented in the
+[GPGPU data reference](/docs/api-reference/gpgpu/gpu-data), while the higher-level object model is
+documented in [Experimental GPU Tables](/docs/api-reference/experimental/gpu-tables) and
+[GPU Table Structure](/docs/api-reference/experimental/gpu-tables/gpu-table-structure).
 
 Arrow upload helpers now produce format-first GPU objects:
 

@@ -370,6 +370,21 @@
           "api-reference/experimental/README",
           {
             "type": "category",
+            "label": "GPU Tables",
+            "items": [
+              "api-reference/experimental/gpu-tables/README",
+              "api-reference/experimental/gpu-tables/gpu-table-structure",
+              "api-reference/experimental/gpu-tables/gpu-table-lifecycle",
+              "api-reference/experimental/gpu-tables/gpu-table",
+              "api-reference/experimental/gpu-tables/gpu-record-batch",
+              "api-reference/experimental/gpu-tables/gpu-schema",
+              "api-reference/experimental/gpu-tables/gpu-input-schema",
+              "api-reference/experimental/gpu-tables/gpu-table-shader-bindings",
+              "api-reference/experimental/gpu-tables/gpu-table-buffer-planner"
+            ]
+          },
+          {
+            "type": "category",
             "label": "GPU Core",
             "items": [
               {
@@ -651,48 +666,21 @@
         "label": "@luma.gl/gpgpu",
         "items": [
           "api-reference/gpgpu/README",
+          {
+            "type": "category",
+            "label": "GPU Data",
+            "items": [
+              "api-reference/gpgpu/gpu-constant",
+              "api-reference/gpgpu/gpu-vector",
+              "api-reference/gpgpu/gpu-data",
+              "api-reference/gpgpu/gpu-data-view",
+              "api-reference/gpgpu/gpu-vector-format"
+            ]
+          },
           "api-reference/gpgpu/gpu-data-evaluator",
           "api-reference/gpgpu/operations",
           "api-reference/gpgpu/custom-operation",
           "api-reference/gpgpu/clean-evaluate"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "Experimental GPU data and tables",
-        "items": [
-          "api-reference/tables/README",
-          {
-            "type": "category",
-            "label": "Structure and lifecycle",
-            "items": [
-              "api-reference/tables/gpu-table-structure",
-              "api-reference/tables/gpu-table-lifecycle"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Data objects",
-            "items": [
-              "api-reference/tables/gpu-table",
-              "api-reference/tables/gpu-constant",
-              "api-reference/tables/gpu-record-batch",
-              "api-reference/tables/gpu-vector",
-              "api-reference/tables/gpu-data",
-              "api-reference/tables/gpu-data-view"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Schemas and bindings",
-            "items": [
-              "api-reference/tables/gpu-schema",
-              "api-reference/tables/gpu-input-schema",
-              "api-reference/tables/gpu-table-shader-bindings",
-              "api-reference/tables/gpu-vector-format",
-              "api-reference/tables/gpu-table-buffer-planner"
-            ]
-          }
         ]
       },
       {

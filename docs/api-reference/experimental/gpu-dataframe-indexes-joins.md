@@ -120,4 +120,4 @@ Sharing vectors does not transfer ownership, merge source batches, or require CP
 
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU Dataframe operations index](/docs/api-reference/experimental/gpu-dataframe-operations)
-- [GPU tables](/docs/api-reference/tables)
+- [GPU tables](/docs/api-reference/experimental/gpu-tables)

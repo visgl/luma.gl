@@ -77,4 +77,4 @@ filters, null masks, derived columns, and repeated query parameters apply before
 
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU Dataframe operations index](/docs/api-reference/experimental/gpu-dataframe-operations)
-- [GPU tables](/docs/api-reference/tables)
+- [GPU tables](/docs/api-reference/experimental/gpu-tables)

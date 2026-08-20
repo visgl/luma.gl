@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs';
 
 # GPU Table Lifecycle
 
-<TablesDocsTabs active="lifecycle" />
+<GPUTablesDocsTabs active="lifecycle" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -100,11 +100,11 @@ Compatibility checks decide whether a memory format can feed a shader value. For
 example, `unorm8x4` can feed `vec4<f32>`, while `uint32x4` cannot feed
 `vec4<f32>`.
 
-See [GPUSchema](/docs/api-reference/tables/gpu-schema) and
-[GPUVectorFormat](/docs/api-reference/tables/gpu-vector-format) for the type
+See [GPUSchema](/docs/api-reference/experimental/gpu-tables/gpu-schema) and
+[GPUVectorFormat](/docs/api-reference/gpgpu/gpu-vector-format) for the type
 reference. A model's accepted prepared vector inputs are declared separately
 with
-[`GPUInputSchema`](/docs/api-reference/tables/gpu-input-schema).
+[`GPUInputSchema`](/docs/api-reference/experimental/gpu-tables/gpu-input-schema).
 
 ## Object Responsibilities
 
@@ -113,13 +113,13 @@ method signatures live on the individual reference pages:
 
 | Object | Responsibility | Detailed reference |
 | --- | --- | --- |
-| `GPUData` | One GPU buffer plus row/stride metadata and buffer ownership. | [GPUData](/docs/api-reference/tables/gpu-data) |
-| `GPUVector` | One logical column over ordered `GPUData[]` chunks. | [GPUVector](/docs/api-reference/tables/gpu-vector) |
-| `GPUConstant` | One table-wide fixed-width logical column value. | [GPUConstant](/docs/api-reference/tables/gpu-constant) |
-| `GPURecordBatch` | One immutable preserved batch with batch-local data chunks and layout metadata. | [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch) |
-| `GPUTable` | Table-level owner that preserves batches, exposes aggregate vectors, and controls packing/detach/destruction. | [GPUTable](/docs/api-reference/tables/gpu-table) |
-| `GPUSchema` | Selected-column metadata with `GPUVectorFormat` fields. | [GPUSchema](/docs/api-reference/tables/gpu-schema) |
-| `GPUInputSchema` | Runtime declaration of required and optional `GPUVector` model inputs. | [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema) |
+| `GPUData` | One GPU buffer plus row/stride metadata and buffer ownership. | [GPUData](/docs/api-reference/gpgpu/gpu-data) |
+| `GPUVector` | One logical column over ordered `GPUData[]` chunks. | [GPUVector](/docs/api-reference/gpgpu/gpu-vector) |
+| `GPUConstant` | One table-wide fixed-width logical column value. | [GPUConstant](/docs/api-reference/gpgpu/gpu-constant) |
+| `GPURecordBatch` | One immutable preserved batch with batch-local data chunks and layout metadata. | [GPURecordBatch](/docs/api-reference/experimental/gpu-tables/gpu-record-batch) |
+| `GPUTable` | Table-level owner that preserves batches, exposes aggregate vectors, and controls packing/detach/destruction. | [GPUTable](/docs/api-reference/experimental/gpu-tables/gpu-table) |
+| `GPUSchema` | Selected-column metadata with `GPUVectorFormat` fields. | [GPUSchema](/docs/api-reference/experimental/gpu-tables/gpu-schema) |
+| `GPUInputSchema` | Runtime declaration of required and optional `GPUVector` model inputs. | [GPUInputSchema](/docs/api-reference/experimental/gpu-tables/gpu-input-schema) |
 
 The important invariant is that varying buffers are reached through `GPUData`, not
 directly through `GPUVector`. Code that needs one directly bindable buffer should
@@ -285,18 +285,18 @@ storage buffers instead of expanded into per-vertex attributes.
 
 The object-model point is that planning is metadata-only. The planner does not
 create `GPUData`, `GPUVector`, or `GPUTable` instances. See
-[`GPUTableBufferPlanner`](/docs/api-reference/tables/gpu-table-buffer-planner)
+[`GPUTableBufferPlanner`](/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner)
 for modes, options, and output shapes.
 
 ## Related References
 
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
-- [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure)
-- [GPUTable](/docs/api-reference/tables/gpu-table)
-- [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch)
-- [GPUVector](/docs/api-reference/tables/gpu-vector)
-- [GPUData](/docs/api-reference/tables/gpu-data)
-- [GPUSchema](/docs/api-reference/tables/gpu-schema)
-- [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema)
-- [GPUVectorFormat](/docs/api-reference/tables/gpu-vector-format)
-- [GPUTableBufferPlanner](/docs/api-reference/tables/gpu-table-buffer-planner)
+- [GPU Table Structure](/docs/api-reference/experimental/gpu-tables/gpu-table-structure)
+- [GPUTable](/docs/api-reference/experimental/gpu-tables/gpu-table)
+- [GPURecordBatch](/docs/api-reference/experimental/gpu-tables/gpu-record-batch)
+- [GPUVector](/docs/api-reference/gpgpu/gpu-vector)
+- [GPUData](/docs/api-reference/gpgpu/gpu-data)
+- [GPUSchema](/docs/api-reference/experimental/gpu-tables/gpu-schema)
+- [GPUInputSchema](/docs/api-reference/experimental/gpu-tables/gpu-input-schema)
+- [GPUVectorFormat](/docs/api-reference/gpgpu/gpu-vector-format)
+- [GPUTableBufferPlanner](/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner)
