@@ -1334,6 +1334,13 @@ export function createCompressedTexture(
     return createCompressedTextureFallback(device, baseOptions);
   }
 
+  if (!device.isTextureFormatSupported(format)) {
+    log.warn(
+      `createCompressedTexture: ${device.type} device does not support '${format}', creating fallback`
+    )();
+    return createCompressedTextureFallback(device, baseOptions);
+  }
+
   // Validate mip levels: truncate chain at first invalid level.
   // Levels must be contiguous, so we stop at the first level that has
   // a format mismatch, missing data, non-positive dimensions, or
