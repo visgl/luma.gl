@@ -20,8 +20,8 @@ buffers and typed arrays; the
 | Need | Start with |
 | --- | --- |
 | Portable lazy vector expressions on CPU, WebGL 2, or WebGPU | [`@luma.gl/gpgpu`](/docs/api-reference/gpgpu) |
-| Primitive GPU chunks, vectors, and memory formats | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/tables) |
-| Batch-preserving GPU tables and schemas | [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/tables) |
+| Primitive GPU chunks, vectors, and memory formats | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) |
+| Batch-preserving GPU tables and schemas | [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) |
 | One explicit buffer or texture computation | [Engine compute helpers](/docs/api-guide/engine/transforms) |
 | Several dependent WebGPU operations, indirect work, or transient reuse | [GPU Core](/docs/api-reference/experimental/gpu-core) |
 

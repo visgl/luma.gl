@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs';
 
 # GPUInputSchema
 
-<TablesDocsTabs active="input-schema" />
+<GPUTablesDocsTabs active="input-schema" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -11,13 +11,13 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 </DocumentationBadges>
 
 `GPUInputSchema` is the runtime contract a model or renderer uses to declare the
-prepared varying [`GPUVector`](/docs/api-reference/tables/gpu-vector) and constant
-[`GPUConstant`](/docs/api-reference/tables/gpu-constant) inputs it accepts.
+prepared varying [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) and constant
+[`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant) inputs it accepts.
 Models expose the contract as a static `gpuInputSchema` property so renderers,
 adapters, validation helpers, and application code can inspect the same
 declaration.
 
-It is distinct from [`GPUSchema`](/docs/api-reference/tables/gpu-schema):
+It is distinct from [`GPUSchema`](/docs/api-reference/experimental/gpu-tables/gpu-schema):
 
 | Type | Describes | Used by |
 | --- | --- | --- |
@@ -179,7 +179,7 @@ can additionally require matching row counts, matching variable-length
 
 For inputs that already live in a `GPUTable` and map directly to shader
 attributes or storage bindings, use
-[`GPUTableShaderBindings`](/docs/api-reference/tables/gpu-table-shader-bindings)
+[`GPUTableShaderBindings`](/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings)
 to resolve batch-preserving draw resources.
 
 For example, one table column can map to a differently named attribute and

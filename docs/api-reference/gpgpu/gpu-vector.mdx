@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUDataDocsTabs} from '@site/src/components/docs/gpu-data-docs-tabs';
 
 # GPUVector
 
-<TablesDocsTabs active="vector" />
+<GPUDataDocsTabs active="vector" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -11,7 +11,7 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 </DocumentationBadges>
 
 `GPUVector` represents one logical typed table column over one or more
-[`GPUData`](/docs/api-reference/tables/gpu-data) chunks. It does not own a
+[`GPUData`](/docs/api-reference/gpgpu/gpu-data) chunks. It does not own a
 buffer directly; every concrete buffer lives on a `GPUData` object in
 `GPUVector.data[]`.
 

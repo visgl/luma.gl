@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs';
 
 # GPUSchema
 
-<TablesDocsTabs active="schema" />
+<GPUTablesDocsTabs active="schema" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -11,14 +11,14 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 </DocumentationBadges>
 
 `GPUSchema` is the structural schema type used by
-[`GPUTable`](/docs/api-reference/tables/gpu-table) and
-[`GPURecordBatch`](/docs/api-reference/tables/gpu-record-batch).
+[`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table) and
+[`GPURecordBatch`](/docs/api-reference/experimental/gpu-tables/gpu-record-batch).
 
 It is a plain TypeScript type, not a class. GPU table core does not depend on
 Apache Arrow schema classes.
 
 For the required and optional `GPUVector` inputs accepted by a model, see
-[`GPUInputSchema`](/docs/api-reference/tables/gpu-input-schema).
+[`GPUInputSchema`](/docs/api-reference/experimental/gpu-tables/gpu-input-schema).
 
 ## Types
 
@@ -84,7 +84,7 @@ path.
 
 Compatibility between `GPUField.format` and shader values is checked separately
 with
-[`isGPUVectorFormatCompatibleWithShaderType()`](/docs/api-reference/tables/gpu-vector-format).
+[`isGPUVectorFormatCompatibleWithShaderType()`](/docs/api-reference/gpgpu/gpu-vector-format).
 
 ### Reserved `indices` Column
 
@@ -113,12 +113,12 @@ dictionary information.
 `GPUSchema` has no behavior that needs identity, inheritance, or lifecycle
 management. The objects that need lifecycle management are GPU resource owners:
 
-- [`GPUData`](/docs/api-reference/tables/gpu-data) owns or borrows one buffer.
-- [`GPUVector`](/docs/api-reference/tables/gpu-vector) owns or borrows ordered
+- [`GPUData`](/docs/api-reference/gpgpu/gpu-data) owns or borrows one buffer.
+- [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) owns or borrows ordered
   `GPUData` chunks.
-- [`GPURecordBatch`](/docs/api-reference/tables/gpu-record-batch) owns one
+- [`GPURecordBatch`](/docs/api-reference/experimental/gpu-tables/gpu-record-batch) owns one
   batch-local `GPUData` chunk per selected column.
-- [`GPUTable`](/docs/api-reference/tables/gpu-table) owns preserved batches.
+- [`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table) owns preserved batches.
 
 Keeping schema as plain data lets Arrow, gpgpu, generated-geometry, and
 application-specific adapters create schemas without depending on a shared class

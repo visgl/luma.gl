@@ -195,5 +195,5 @@ the underlying WebGPU execution infrastructure.
 ## Related pages
 
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
-- [GPU tables](/docs/api-reference/tables)
+- [GPU tables](/docs/api-reference/experimental/gpu-tables)
 - [GPU data analysis example](/examples/experimental/gpu-data-analysis)

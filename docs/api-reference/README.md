@@ -40,7 +40,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
 - [`@luma.gl/effects`][effects] for reusable image processing, bloom, and supported screen-space effects.
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation, plus its experimental `gpu-data`, `gpu-core`, and `gpu-graph` subpaths.
-- [Experimental GPU data and tables][tables] for the 9.4 split between primitive `GPUData`/`GPUVector` and private `GPURecordBatch`/`GPUTable` APIs.
+- [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for private `GPURecordBatch`/`GPUTable` APIs.
 - [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [`@luma.gl/experimental`][experimental] for incubating v10 APIs, including experimental WebXR frame, view, and raw camera helpers.
@@ -55,7 +55,8 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 [shadertools]: /docs/api-reference/shadertools
 [effects]: /docs/api-guide/shaders/shader-passes
 [gpgpu]: /docs/api-reference/gpgpu
-[tables]: /docs/api-reference/tables
+[gpu-data]: /docs/api-reference/gpgpu/gpu-data
+[gpu-tables]: /docs/api-reference/experimental/gpu-tables
 [arrow]: /docs/api-reference/arrow
 [text]: /docs/api-reference/text
 [splats]: /docs/api-reference/splats

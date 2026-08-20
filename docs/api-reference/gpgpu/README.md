@@ -16,7 +16,38 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 - [`Operations`](/docs/api-reference/gpgpu/operations)
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation)
 - [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator)
+- [`GPU Data`](/docs/api-reference/gpgpu/gpu-data)
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
+
+## GPU Data Primitives
+
+The experimental `@luma.gl/gpgpu/gpu-data` subpath provides Arrow-independent GPU storage
+primitives for compute and rendering. It is not re-exported from the `@luma.gl/gpgpu` root in
+v9.4.
+
+- [`GPUData`](/docs/api-reference/gpgpu/gpu-data) owns or borrows one GPU buffer and its typed row
+  metadata.
+- [`GPUDataView`](/docs/api-reference/gpgpu/gpu-data-view) describes a non-owning slice or child
+  view.
+- [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) preserves an ordered list of `GPUData`
+  chunks.
+- [`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant) represents one fixed-width value shared
+  across logical rows.
+- [`GPUVectorFormat`](/docs/api-reference/gpgpu/gpu-vector-format) describes stored bytes
+  independently from shader-facing value types.
+
+Each `GPUData` owns or borrows exactly one buffer. A `GPUVector` does not own a separate raw buffer;
+it preserves its ordered `GPUData` chunks and their source batch boundaries. Packing and repacking
+are explicit higher-level operations, never side effects of append or streaming.
+
+Runtime format strings describe GPU memory, including fixed-width formats such as `float32x3`,
+normalized formats such as `unorm8x4`, and variable-length formats such as
+`vertex-list<float32x3>`. Shader compatibility is checked at adapter and model boundaries.
+
+[`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) adds record
+batches, schemas, table bindings, computations, and planners above these primitives.
+[`@luma.gl/arrow`](/docs/api-reference/arrow) converts Apache Arrow inputs to the shared GPU data
+objects; the GPU data types do not depend on Apache Arrow.
 
 ## Installing
 

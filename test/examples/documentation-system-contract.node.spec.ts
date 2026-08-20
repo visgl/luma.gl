@@ -116,6 +116,23 @@ describe('documentation system contracts', () => {
     ...generatedRoutes
   ]);
 
+  it('does not expose the removed tables package or documentation route', () => {
+    expect(existsSync(join(DOCS_DIRECTORY, 'api-reference/tables'))).toBe(false);
+
+    const upgradeGuide = join(DOCS_DIRECTORY, 'upgrade-guide.md');
+    const staleReferences = markdownFiles
+      .filter(path => path !== upgradeGuide)
+      .filter(path => {
+        const source = readFileSync(path, 'utf8');
+        return /@luma\.gl\/tables|modules\/tables|\/docs\/api-reference\/tables(?:\b|\/)/.test(
+          source
+        );
+      })
+      .map(getRouteForFile);
+
+    expect(staleReferences).toEqual([]);
+  });
+
   it('keeps every curated document reachable from the table of contents', () => {
     const allowedStandaloneRoutes = new Set(['developer/dev-tools/README']);
     const orphaned = [...curatedRoutes].filter(
@@ -214,7 +231,7 @@ describe('documentation system contracts', () => {
       'api-reference/engine/README.md',
       'api-reference/shadertools/README.md',
       'api-reference/gpgpu/README.md',
-      'api-reference/tables/README.mdx',
+      'api-reference/experimental/gpu-tables/README.mdx',
       'api-reference/gltf/README.md',
       'api-reference/test-utils/README.md'
     ];
