@@ -15,6 +15,11 @@ import {
   type QuantumGate
 } from './quantum-circuit';
 import {QuantumStateEngine} from './quantum-engine';
+import {
+  getQuantumExplanation,
+  getQuantumGateExplanation,
+  type QuantumExplanation
+} from './quantum-explanations';
 import {getQuantumBackgroundMarkup, getQuantumImplementationMarkup} from './quantum-notes';
 import {QuantumStateRenderer} from './quantum-renderer';
 
@@ -47,6 +52,9 @@ export default class QuantumStateStudioAnimationLoopTemplate extends AnimationLo
   private targetSelect: HTMLSelectElement | null = null;
   private qubitSelect: HTMLSelectElement | null = null;
   private status: HTMLElement | null = null;
+  private tooltip: HTMLElement | null = null;
+  private explainedTarget: HTMLElement | null = null;
+  private tooltipHideTimer: ReturnType<typeof setTimeout> | undefined;
   private selectedStep = 0;
   private selectedQubit = 0;
   private playing = true;
@@ -81,6 +89,7 @@ export default class QuantumStateStudioAnimationLoopTemplate extends AnimationLo
     this.targetSelect = this.root.querySelector('[data-target-qubit]');
     this.qubitSelect = this.root.querySelector('[data-observed-qubit]');
     this.status = this.root.querySelector('[data-status]');
+    this.tooltip = this.root.querySelector('[data-tooltip]');
     this.installEvents();
     this.setActiveTab('explore');
     this.refreshInterface();
@@ -95,6 +104,7 @@ export default class QuantumStateStudioAnimationLoopTemplate extends AnimationLo
   }
 
   override onFinalize(): void {
+    clearTimeout(this.tooltipHideTimer);
     this.root?.remove();
     this.root = null;
     this.renderer.destroy();
@@ -102,6 +112,38 @@ export default class QuantumStateStudioAnimationLoopTemplate extends AnimationLo
   }
 
   private installEvents(): void {
+    this.root?.addEventListener('pointerover', event => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-explain]');
+      if (target) this.showExplanation(target, event);
+    });
+    this.root?.addEventListener('pointerdown', event => {
+      if (event.pointerType !== 'touch') return;
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-explain]');
+      if (!target) return;
+      this.showExplanation(target, event);
+      clearTimeout(this.tooltipHideTimer);
+      this.tooltipHideTimer = setTimeout(() => this.hideExplanation(), 4200);
+    });
+    this.root?.addEventListener('pointermove', event => {
+      if (this.explainedTarget && event.pointerType !== 'touch') {
+        this.showExplanation(this.explainedTarget, event);
+      }
+    });
+    this.root?.addEventListener('pointerout', event => {
+      if (event.pointerType === 'touch') return;
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-explain]');
+      const relatedTarget = event.relatedTarget as Node | null;
+      if (target && (!relatedTarget || !target.contains(relatedTarget))) this.hideExplanation();
+    });
+    this.root?.addEventListener('focusin', event => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-explain]');
+      if (target) this.showExplanation(target);
+    });
+    this.root?.addEventListener('focusout', event => {
+      const target = (event.target as HTMLElement).closest<HTMLElement>('[data-explain]');
+      const relatedTarget = event.relatedTarget as Node | null;
+      if (target && (!relatedTarget || !target.contains(relatedTarget))) this.hideExplanation();
+    });
     this.root?.querySelector('[data-tabs]')?.addEventListener('click', event => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');
       const tab = button?.dataset.tab;
@@ -242,10 +284,10 @@ export default class QuantumStateStudioAnimationLoopTemplate extends AnimationLo
     }
     if (this.circuitTrack) {
       this.circuitTrack.innerHTML = [
-        '<button class="quantum-gate active initial" data-gate-step="0" title="Initial |0…0⟩ state">|0⟩</button>',
+        '<button class="quantum-gate active initial" data-gate-step="0" data-explain="gate">|0⟩</button>',
         ...this.circuit.gates.map(
           (gate, index) =>
-            `<button class="quantum-gate" data-gate-step="${index + 1}" title="${getGateTitle(gate)}"><span>${gate.label}</span><small>${gate.control === undefined ? '' : `q${gate.control}→`}q${gate.target}</small></button>`
+            `<button class="quantum-gate" data-gate-step="${index + 1}" data-explain="gate" aria-label="${getGateTitle(gate)}"><span>${gate.label}</span><small>${gate.control === undefined ? '' : `q${gate.control}→`}q${gate.target}</small></button>`
         )
       ].join('');
     }
@@ -264,6 +306,123 @@ export default class QuantumStateStudioAnimationLoopTemplate extends AnimationLo
   private setNoteText(selector: string, text: string): void {
     const element = this.root?.querySelector(selector);
     if (element) element.textContent = text;
+  }
+
+  private showExplanation(target: HTMLElement, pointerEvent?: PointerEvent): void {
+    if (!this.tooltip) return;
+    const explanation = this.getContextualExplanation(target, pointerEvent);
+    if (!explanation) return;
+    this.explainedTarget?.removeAttribute('aria-describedby');
+    this.explainedTarget = target;
+    target.setAttribute('aria-describedby', 'quantum-context-tooltip');
+    this.setTooltipText('[data-tooltip-eyebrow]', explanation.eyebrow);
+    this.setTooltipText('[data-tooltip-title]', explanation.title);
+    this.setTooltipText('[data-tooltip-body]', explanation.body);
+    this.setTooltipText('[data-tooltip-detail]', explanation.detail ?? '');
+    const detail = this.tooltip.querySelector<HTMLElement>('[data-tooltip-detail]');
+    if (detail) detail.hidden = !explanation.detail;
+    this.tooltip.hidden = false;
+    this.positionTooltip(target, pointerEvent);
+  }
+
+  private hideExplanation(): void {
+    clearTimeout(this.tooltipHideTimer);
+    if (this.tooltip) this.tooltip.hidden = true;
+    this.explainedTarget?.removeAttribute('aria-describedby');
+    this.explainedTarget = null;
+  }
+
+  private setTooltipText(selector: string, value: string): void {
+    const element = this.tooltip?.querySelector(selector);
+    if (element) element.textContent = value;
+  }
+
+  private getContextualExplanation(
+    target: HTMLElement,
+    pointerEvent?: PointerEvent
+  ): (QuantumExplanation & {detail?: string}) | undefined {
+    const identifier = target.dataset.explain;
+    if (!identifier) return undefined;
+    if (identifier === 'gate') {
+      const step = Number(target.dataset.gateStep ?? 0);
+      if (step === 0) {
+        return {
+          eyebrow: 'Initial state · slice 0',
+          title: '|0…0⟩ initialization',
+          body: 'Every qubit begins in |0⟩, so basis state zero has amplitude 1 + 0i and every other amplitude is zero. This is the only full-state CPU upload.'
+        };
+      }
+      const gate = this.circuit.gates[step - 1];
+      return gate ? getQuantumGateExplanation(gate, step) : undefined;
+    }
+    const explanation = getQuantumExplanation(identifier);
+    if (!explanation) return undefined;
+    const detail = this.getPointerDetail(identifier, target, pointerEvent);
+    return {...explanation, detail};
+  }
+
+  private getPointerDetail(
+    identifier: string,
+    target: HTMLElement,
+    pointerEvent?: PointerEvent
+  ): string | undefined {
+    if (identifier === 'bloch-sphere') {
+      return `Currently reducing q${this.selectedQubit} at snapshot ${this.selectedStep}.`;
+    }
+    if (identifier === 'scrubber' || identifier === 'circuit-track') {
+      return `Selected snapshot ${this.selectedStep} of ${this.circuit.gates.length}.`;
+    }
+    if (!pointerEvent) return undefined;
+    const bounds = target.getBoundingClientRect();
+    const horizontal = Math.max(
+      0,
+      Math.min(0.999999, (pointerEvent.clientX - bounds.left) / bounds.width)
+    );
+    const vertical = Math.max(
+      0,
+      Math.min(0.999999, (pointerEvent.clientY - bounds.top) / bounds.height)
+    );
+    if (identifier === 'probability-landscape' || identifier === 'interference-history') {
+      const basisIndex = Math.floor(horizontal * this.engine.stateCount);
+      const ket = basisIndex.toString(2).padStart(this.circuit.qubitCount, '0');
+      if (identifier === 'interference-history') {
+        const step = Math.min(
+          this.circuit.gates.length,
+          Math.floor((1 - vertical) * this.engine.snapshotCount)
+        );
+        return `Pointer: |${ket}⟩ (basis ${basisIndex}), near snapshot ${step}.`;
+      }
+      return `Pointer: |${ket}⟩ (basis index ${basisIndex}) at snapshot ${this.selectedStep}.`;
+    }
+    if (identifier === 'correlations') {
+      const column = Math.min(
+        this.circuit.qubitCount - 1,
+        Math.floor(horizontal * this.circuit.qubitCount)
+      );
+      const row = Math.min(
+        this.circuit.qubitCount - 1,
+        Math.floor(vertical * this.circuit.qubitCount)
+      );
+      return `Pointer: correlation cell q${row} × q${column} at snapshot ${this.selectedStep}.`;
+    }
+    return undefined;
+  }
+
+  private positionTooltip(target: HTMLElement, pointerEvent?: PointerEvent): void {
+    if (!this.tooltip) return;
+    const targetBounds = target.getBoundingClientRect();
+    const tooltipBounds = this.tooltip.getBoundingClientRect();
+    const padding = 12;
+    let left = pointerEvent ? pointerEvent.clientX + 18 : targetBounds.right + 14;
+    let top = pointerEvent ? pointerEvent.clientY + 18 : targetBounds.top;
+    if (left + tooltipBounds.width > window.innerWidth - padding) {
+      left = (pointerEvent ? pointerEvent.clientX : targetBounds.left) - tooltipBounds.width - 18;
+    }
+    if (top + tooltipBounds.height > window.innerHeight - padding) {
+      top = window.innerHeight - tooltipBounds.height - padding;
+    }
+    this.tooltip.style.left = `${Math.max(padding, left)}px`;
+    this.tooltip.style.top = `${Math.max(padding, top)}px`;
   }
 }
 
@@ -296,20 +455,28 @@ function getInterfaceMarkup(): string {
       ${getQuantumImplementationMarkup()}
     </section>
     <nav class="quantum-presets explore-only" data-presets aria-label="Circuit presets">
-      ${PRESET_IDENTIFIERS.map(identifier => `<button data-preset="${identifier}">${identifier === 'qft' ? 'QFT' : identifier[0]!.toUpperCase() + identifier.slice(1)}</button>`).join('')}
+      ${PRESET_IDENTIFIERS.map(identifier => `<button data-preset="${identifier}" data-explain="preset-${identifier}">${identifier === 'qft' ? 'QFT' : identifier[0]!.toUpperCase() + identifier.slice(1)}</button>`).join('')}
     </nav>
-    <section class="quantum-copy explore-only">
+    <section class="quantum-copy explore-only" data-explain="active-circuit" tabindex="0">
       <p class="eyebrow">Active circuit</p><h2 data-circuit-name></h2><p data-circuit-description></p>
     </section>
+    <div class="explain-region landscape-region explore-only" data-explain="probability-landscape" tabindex="0" aria-label="Explain the probability landscape"></div>
+    <div class="explain-region bloch-region explore-only" data-explain="bloch-sphere" tabindex="0" aria-label="Explain the reduced-qubit Bloch sphere"></div>
+    <div class="explain-region correlation-region explore-only" data-explain="correlations" tabindex="0" aria-label="Explain the connected correlation matrix"></div>
+    <div class="explain-region history-region explore-only" data-explain="interference-history" tabindex="0" aria-label="Explain the interference history"></div>
     <section class="visual-label landscape-label explore-only"><span>Probability landscape</span><small>height = probability · hue = complex phase</small></section>
     <section class="visual-label bloch-label explore-only"><span>Reduced qubit</span><small>Bloch vector · radius = purity</small></section>
     <section class="visual-label correlation-label explore-only"><span>Connected correlations</span><small>⟨Zi Zj⟩ − ⟨Zi⟩⟨Zj⟩</small></section>
     <section class="visual-label history-label explore-only"><span>Interference history</span><small>basis state → · circuit step ↑</small></section>
     <section class="quantum-controls explore-only">
-      <div class="scrubber"><button data-play>Pause</button><input data-step type="range" min="0" value="0" aria-label="Circuit step"><output data-step-value>0 / 0</output></div>
-      <div class="editor" data-gates><span>Add on</span><select data-target-qubit aria-label="Target qubit"></select>${['H', 'X', 'Y', 'Z', 'P', 'Rx', 'CX'].map(gate => `<button data-add-gate="${gate}">${gate}</button>`).join('')}<button data-undo>Undo</button></div>
-      <label class="observe">Observe <select data-observed-qubit aria-label="Observed qubit"></select></label>
+      <div class="scrubber" data-explain="scrubber"><button data-play data-explain="play">Pause</button><input data-step data-explain="scrubber" type="range" min="0" value="0" aria-label="Circuit step"><output data-step-value>0 / 0</output></div>
+      <div class="editor" data-gates data-explain="gate-editor"><span>Add on</span><select data-target-qubit data-explain="target-qubit" aria-label="Target qubit"></select>${['H', 'X', 'Y', 'Z', 'P', 'Rx', 'CX'].map(gate => `<button data-add-gate="${gate}" data-explain="gate-editor">${gate}</button>`).join('')}<button data-undo data-explain="gate-editor">Undo</button></div>
+      <label class="observe" data-explain="observed-qubit">Observe <select data-observed-qubit data-explain="observed-qubit" aria-label="Observed qubit"></select></label>
     </section>
-    <div class="quantum-circuit-scroll explore-only"><div class="quantum-circuit" data-circuit-track></div></div>
-    <footer><span data-status></span><span>State remains on GPU from gate application through rendering</span></footer>`;
+    <div class="quantum-circuit-scroll explore-only" data-explain="circuit-track"><div class="quantum-circuit" data-circuit-track></div></div>
+    <footer><span data-status data-explain="status"></span><span class="explanation-hint">Hover or focus glowing regions for an explanation</span></footer>
+    <aside id="quantum-context-tooltip" class="quantum-tooltip" data-tooltip role="tooltip" aria-live="polite" hidden>
+      <p class="eyebrow" data-tooltip-eyebrow></p><strong data-tooltip-title></strong>
+      <p data-tooltip-body></p><code data-tooltip-detail hidden></code>
+    </aside>`;
 }
