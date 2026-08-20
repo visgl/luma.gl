@@ -1235,6 +1235,22 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private readonly consumedExternalTextures = new WeakSet<ExternalTexture>();
   private destroyed = false;
 
+  /** String tag used by object inspectors and developer tools. */
+  get [Symbol.toStringTag](): string {
+    return 'CompiledGPUCommandGraph';
+  }
+
+  /** Compact graph summary that avoids recursively printing GPU resources. */
+  toString(): string {
+    const state = this.destroyed ? 'destroyed' : 'active';
+    return `${this[Symbol.toStringTag]}:"${this.id}":${this.stats.nodeOrder.length} nodes:${this.stats.physicalTransientResourceBytes}B transient:${state}`;
+  }
+
+  /** Compact serialization for assertion diffs and structured debug logs. */
+  toJSON(): string {
+    return this.toString();
+  }
+
   /** @internal */
   constructor(props: GPUCommandGraphCompilation<Parameters>) {
     this.device = props.device;

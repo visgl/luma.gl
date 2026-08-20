@@ -75,6 +75,16 @@ test('GPUCommandGraph compiles dependencies and reuses transient buffers', async
   });
 
   const compiled = graph.compile();
+  const debugString =
+    'CompiledGPUCommandGraph:"graph-scheduling-test":3 nodes:128B transient:active';
+  t.equal(
+    Object.prototype.toString.call(compiled),
+    '[object CompiledGPUCommandGraph]',
+    'exposes a compact object-inspection tag'
+  );
+  t.equal(compiled.toString(), debugString, 'summarizes graph identity, size, and lifecycle');
+  t.equal(compiled.toJSON(), debugString, 'serializes without recursive resource graphs');
+  t.equal(JSON.stringify(compiled), JSON.stringify(debugString), 'keeps JSON logs compact');
   t.deepEqual(
     compiled.stats.nodeOrder,
     ['write-first', 'write-second', 'read-second'],
@@ -108,6 +118,7 @@ test('GPUCommandGraph compiles dependencies and reuses transient buffers', async
   t.equal(encoding.stats.coalescedComputeNodeCount, 2, 'reports nodes sharing the physical pass');
   commandEncoder.destroy();
   compiled.destroy();
+  t.match(compiled.toString(), /:destroyed$/, 'reports destroyed graph state compactly');
   t.end();
 });
 
