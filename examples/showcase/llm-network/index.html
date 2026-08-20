@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07101a" />
+    <title>Inside a Transformer · luma.gl</title>
+    <link rel="stylesheet" href="./llm-network-styles.css" />
+  </head>
+  <body class="llm-network-standalone">
+    <noscript>This WebGPU showcase requires JavaScript.</noscript>
+    <main id="llm-network-startup" aria-live="polite">
+      <section><p>luma.gl · visual transformer tour</p><h1>Inside a Transformer</h1><span data-startup-status>Compiling the network visualization…</span></section>
+    </main>
+    <script type="module">
+      const startup = document.querySelector('#llm-network-startup');
+      const status = document.querySelector('[data-startup-status]');
+      try {
+        if (!navigator.gpu) throw new Error('This showcase requires WebGPU in a recent browser.');
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: LLMNetwork}] =
+          await Promise.all([
+            import('@luma.gl/core'),
+            import('@luma.gl/engine'),
+            import('@luma.gl/webgpu'),
+            import('./app.ts')
+          ]);
+        const device = await luma.createDevice({
+          id: 'llm-network',
+          adapters: [webgpuAdapter],
+          featureLevel: 'best-available',
+          powerPreference: 'high-performance',
+          waitForPageLoad: false,
+          createCanvasContext: true
+        });
+        await makeAnimationLoop(LLMNetwork, {device}).start();
+        startup.remove();
+      } catch (error) {
+        console.error('Inside a Transformer failed to start.', error);
+        status.textContent = error instanceof Error ? error.message : String(error);
+        status.dataset.state = 'error';
+      }
+    </script>
+  </body>
+</html>
