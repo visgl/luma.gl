@@ -20,7 +20,7 @@ import {
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
 import {DynamicBuffer} from '@luma.gl/engine';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 

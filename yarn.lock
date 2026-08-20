@@ -2680,24 +2680,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deck.gl-community/arrow-layers@workspace:*, @deck.gl-community/arrow-layers@workspace:modules/arrow-layers":
+"@deck.gl-community/arrow-layers@workspace:*, @deck.gl-community/arrow-layers@workspace:modules/deck-arrow-layers":
   version: 0.0.0-use.local
-  resolution: "@deck.gl-community/arrow-layers@workspace:modules/arrow-layers"
+  resolution: "@deck.gl-community/arrow-layers@workspace:modules/deck-arrow-layers"
   dependencies:
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
   languageName: unknown
   linkType: soft
 
-"@deck.gl-community/luspatial@workspace:*, @deck.gl-community/luspatial@workspace:modules/deck-luspatial":
+"@deck.gl-community/gpu-layers@workspace:*, @deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers":
   version: 0.0.0-use.local
-  resolution: "@deck.gl-community/luspatial@workspace:modules/deck-luspatial"
+  resolution: "@deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers"
   dependencies:
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
@@ -4696,34 +4696,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/anari@workspace:*, @luma.gl/anari@workspace:modules/anari":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/anari@workspace:modules/anari"
-  dependencies:
-    "@math.gl/core": "npm:^4.1.0"
-    zod: "npm:^4.4.3"
-  peerDependencies:
-    "@luma.gl/core": ~9.4.0-alpha.2
-    "@luma.gl/effects": ~9.4.0-alpha.2
-    "@luma.gl/engine": ~9.4.0-alpha.2
-    "@luma.gl/experimental": ~9.4.0-alpha.2
-    "@luma.gl/gltf": ~9.4.0-alpha.2
-    "@luma.gl/shadertools": ~9.4.0-alpha.2
-  peerDependenciesMeta:
-    "@luma.gl/gltf":
-      optional: true
-  languageName: unknown
-  linkType: soft
-
 "@luma.gl/arrow@npm:9.4.0-alpha.4, @luma.gl/arrow@workspace:*, @luma.gl/arrow@workspace:modules/arrow":
   version: 0.0.0-use.local
   resolution: "@luma.gl/arrow@workspace:modules/arrow"
   dependencies:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/splats": "workspace:*"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/text": "npm:9.4.0-alpha.4"
     "@math.gl/geoarrow": "workspace:*"
     "@math.gl/polygon": "npm:^4.1.0"
@@ -4788,7 +4770,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/experimental@workspace:modules/experimental"
   dependencies:
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
@@ -4817,7 +4799,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/gpgpu@workspace:modules/gpgpu"
   dependencies:
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/log": "npm:^4.0.8"
@@ -4827,6 +4808,25 @@ __metadata:
     "@luma.gl/engine": ~9.4.0-alpha.1
     "@luma.gl/shadertools": ~9.4.0-alpha.1
     "@luma.gl/webgpu": ~9.4.0-alpha.1
+  languageName: unknown
+  linkType: soft
+
+"@luma.gl/scene@workspace:*, @luma.gl/scene@workspace:modules/scene":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/scene@workspace:modules/scene"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+    zod: "npm:^4.4.3"
+  peerDependencies:
+    "@luma.gl/core": ~9.4.0-alpha.2
+    "@luma.gl/effects": ~9.4.0-alpha.2
+    "@luma.gl/engine": ~9.4.0-alpha.2
+    "@luma.gl/experimental": ~9.4.0-alpha.2
+    "@luma.gl/gltf": ~9.4.0-alpha.2
+    "@luma.gl/shadertools": ~9.4.0-alpha.2
+  peerDependenciesMeta:
+    "@luma.gl/gltf":
+      optional: true
   languageName: unknown
   linkType: soft
 
@@ -4848,17 +4848,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
-  languageName: unknown
-  linkType: soft
-
-"@luma.gl/tables@npm:9.4.0-alpha.4, @luma.gl/tables@workspace:modules/tables":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/tables@workspace:modules/tables"
-  dependencies:
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
   languageName: unknown
   linkType: soft
 
@@ -4882,7 +4873,8 @@ __metadata:
   resolution: "@luma.gl/text@workspace:modules/text"
   dependencies:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@mapbox/tiny-sdf": "npm:^2.0.7"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/polygon": "npm:^4.1.0"
@@ -5067,9 +5059,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/geoarrow@workspace:*, @math.gl/geoarrow@workspace:modules/geoarrow":
+"@math.gl/geoarrow@workspace:*, @math.gl/geoarrow@workspace:modules/math-geoarrow":
   version: 0.0.0-use.local
-  resolution: "@math.gl/geoarrow@workspace:modules/geoarrow"
+  resolution: "@math.gl/geoarrow@workspace:modules/math-geoarrow"
   dependencies:
     apache-arrow: "npm:^17.0.0"
   languageName: unknown
@@ -14686,8 +14678,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
     h3-js: "npm:^4.4.0"
@@ -14704,8 +14696,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
@@ -14721,8 +14714,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -14739,8 +14733,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -14757,8 +14752,8 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -14793,8 +14788,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -14811,8 +14807,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
@@ -14830,8 +14827,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
@@ -14847,8 +14845,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -14865,8 +14864,8 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -14883,8 +14882,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -14901,8 +14901,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/text": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
@@ -14920,8 +14921,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -15038,7 +15040,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi"
   dependencies:
-    "@deck.gl-community/luspatial": "workspace:*"
+    "@deck.gl-community/gpu-layers": "workspace:*"
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
@@ -15160,8 +15162,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/text": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
@@ -15178,8 +15180,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^6.0.3"
@@ -15195,8 +15197,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
@@ -15212,8 +15214,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/text": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     typescript: "npm:^6.0.3"
@@ -15246,8 +15248,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
@@ -15278,8 +15280,8 @@ __metadata:
     "@luma.gl/effects": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^6.0.3"
@@ -15295,8 +15297,8 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^6.0.3"
@@ -15313,8 +15315,8 @@ __metadata:
     "@luma.gl/effects": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^6.0.3"
@@ -15604,29 +15606,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-showcase-anari@workspace:examples/showcase/anari":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-showcase-anari@workspace:examples/showcase/anari"
-  dependencies:
-    "@loaders.gl/core": "npm:~4.4.2"
-    "@loaders.gl/gltf": "npm:~4.4.2"
-    "@luma.gl/anari": "workspace:*"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/effects": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
-    "@luma.gl/gltf": "npm:9.4.0-alpha.4"
-    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    "@math.gl/core": "npm:^4.1.0"
-    jsonc-parser: "npm:3.2.0"
-    monaco-editor: "npm:^0.53.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
 "luma.gl-examples-showcase-billion-point-spatial-atlas@workspace:examples/showcase/billion-point-spatial-atlas":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-billion-point-spatial-atlas@workspace:examples/showcase/billion-point-spatial-atlas"
@@ -15674,9 +15653,9 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/splats": "workspace:*"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
@@ -15711,8 +15690,8 @@ __metadata:
     "@luma.gl/effects": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^6.0.3"
@@ -15727,7 +15706,7 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
@@ -15747,6 +15726,29 @@ __metadata:
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-scene@workspace:examples/showcase/scene":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-scene@workspace:examples/showcase/scene"
+  dependencies:
+    "@loaders.gl/core": "npm:~4.4.2"
+    "@loaders.gl/gltf": "npm:~4.4.2"
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/effects": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gltf": "npm:9.4.0-alpha.4"
+    "@luma.gl/scene": "workspace:*"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
+    "@math.gl/core": "npm:^4.1.0"
+    jsonc-parser: "npm:3.2.0"
+    monaco-editor: "npm:^0.53.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -15896,8 +15898,9 @@ __metadata:
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/tables": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@probe.gl/log": "npm:^4.1.1"
     apache-arrow: "npm:^17.0.0"

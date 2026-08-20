@@ -4,21 +4,21 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {DrawCommandBufferView} from '../gpu-core/draw-command-buffer';
+import type {DrawCommandBufferView} from '@luma.gl/gpgpu/gpu-core';
 import type {
   GPUCommandGraph,
   GPUCommandGraphContributor,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-core/gpu-command-graph';
-import {GPUScan} from '../gpu-core/gpu-scan';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUScan} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
   getRasterDispatchSize,

@@ -66,7 +66,7 @@ published results or cross-machine performance guarantees.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUProjection, compileProjectionPlan} from '@luma.gl/experimental/gpu-project';
 import {Proj4Projection} from '@math.gl/proj4';
 

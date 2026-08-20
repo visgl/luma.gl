@@ -10,12 +10,8 @@ import {
   type GPUCommandGraph,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {
-  createTransientView,
-  getViewBinding,
-  getViewElementOffset
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 
 const SELECTION_WORKGROUP_SIZE = 256;
 const SELECTION_STATE_WORD_COUNT = 5;

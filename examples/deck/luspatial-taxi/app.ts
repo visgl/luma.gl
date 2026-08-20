@@ -9,13 +9,13 @@ import {
   type Viewport,
   type ViewStateChangeParameters
 } from '@deck.gl/core';
-import {LuSpatialPointLayer} from '@deck.gl-community/luspatial';
+import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
 import {
   LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS,
   LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS,
   LuSpatialGeographicPointQueryEffect,
   type LuSpatialGeographicPointQueryStats
-} from '@deck.gl-community/luspatial/query';
+} from '@deck.gl-community/gpu-layers/query';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';

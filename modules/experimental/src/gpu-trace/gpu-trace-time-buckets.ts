@@ -10,12 +10,12 @@ import {
   GraphVectorView,
   type GPUCommandGraphContributor,
   type GraphBufferUse
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
   type GPUBoundedDispatchLayout
-} from '../gpu-core/gpu-dispatch-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   doGraphDataViewsOverlap,
   getViewBinding,
@@ -23,7 +23,7 @@ import {
   validateMatchingVectorTopology,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUTraceAggregationColumn} from './gpu-trace-aggregation';
 
 const TIME_BUCKET_WORKGROUP_SIZE = 256;

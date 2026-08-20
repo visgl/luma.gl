@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
-import type {GraphBufferHandle, GraphDataView} from '../gpu-core/gpu-command-graph-types';
+import type {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import type {GraphBufferHandle, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 
 const WORD_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 

@@ -9,18 +9,15 @@ import {
   type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {
-  getBoundedDispatchLayout,
-  getBoundedInvocationIndexSource
-} from '../gpu-core/gpu-dispatch-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/gpgpu/gpu-core';
 import {
   doGraphDataViewsOverlap,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 
 const COMPARISON_WORKGROUP_SIZE = 256;
 const MAXIMUM_FLOAT32 = 3.402823e38;

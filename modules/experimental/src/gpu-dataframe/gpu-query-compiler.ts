@@ -11,15 +11,13 @@ import {
   type Device
 } from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
+import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUData,
   GPURecordBatch,
   GPUTable,
-  GPUVector,
-  type GPUConstant,
   type GPUField,
   type GPUTypeMap
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraph,
@@ -27,17 +25,10 @@ import {
   type GraphBufferUse,
   type GraphDataView,
   type GraphVectorView
-} from '../gpu-core/gpu-command-graph';
-import {
-  getBoundedDispatchLayout,
-  getBoundedInvocationIndexSource
-} from '../gpu-core/gpu-dispatch-utils';
-import {GPUVisibilityWorkflow} from '../gpu-core/gpu-visibility-workflow';
-import {
-  createTransientView,
-  getViewBinding,
-  getViewElementOffset
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/gpgpu/gpu-core';
+import {GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUDataFrame, GPUDataFrameDictionaries, GPUDataFrameValidity} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';

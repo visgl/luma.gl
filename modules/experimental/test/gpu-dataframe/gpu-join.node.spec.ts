@@ -15,15 +15,14 @@ import {
   type GPUDataFrameJoinOptions,
   type GPUDataFrameLookupOptions
 } from '@luma.gl/experimental/gpu-dataframe';
+import {GPUConstant, GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUConstant,
-  GPUData,
   GPURecordBatch,
   GPUTable,
   type GPUField,
   type GPURecordBatchSourceInfo,
   type GPUTypeMap
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, expectTypeOf, test, vi} from 'vitest';
 

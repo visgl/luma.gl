@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   column,
   CompiledGPUDataFrameGlobalSort,
@@ -16,14 +16,13 @@ import {
   type GPUDataFrameQueryParameters,
   type GPUDataFrameSortOptions
 } from '@luma.gl/experimental/gpu-dataframe';
+import {GPUConstant, GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUConstant,
-  GPUData,
   GPURecordBatch,
   GPUTable,
   type GPUField,
   type GPURecordBatchSourceInfo
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, expectTypeOf, test, vi} from 'vitest';
 

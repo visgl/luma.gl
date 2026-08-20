@@ -10,15 +10,15 @@ import type {
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-core/gpu-command-graph';
-import {GPUScan} from '../gpu-core/gpu-scan';
-import {GPUSort} from '../gpu-core/gpu-sort';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUScan} from '@luma.gl/gpgpu/gpu-core';
+import {GPUSort} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import type {GPURasterConnectivity} from './gpu-raster-connected-components';
 import type {GPURasterRegionMeasurementOutputs} from './gpu-raster-region-measurements';
 import type {GPURasterPixelBounds} from './gpu-raster-tile-source';

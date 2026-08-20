@@ -8,9 +8,9 @@ import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraphStats,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {GPUCrossfilter} from '@luma.gl/experimental/gpu-crossfilter';
-import {GPUData} from '@luma.gl/tables';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
   CROSS_FILTER_CATEGORY_NAMES,
   CROSS_FILTER_DOMAINS,

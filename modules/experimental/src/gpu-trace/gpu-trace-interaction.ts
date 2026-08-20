@@ -4,25 +4,21 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {DrawCommandBufferView} from '../gpu-core/draw-command-buffer';
-import {GPUAncestorProjection} from '../gpu-core/gpu-ancestor-projection';
-import {
-  GPUCommandGraph,
-  type GraphBufferUse,
-  type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {GPUGraphTraversal, type GPUGraphTraversalDirection} from '../gpu-core/gpu-graph-traversal';
-import {GPUHierarchyLayout} from '../gpu-core/gpu-hierarchy-layout';
-import {GPUSceneDrawGeneration} from '../gpu-core/gpu-scene-draw-generation';
+import type {DrawCommandBufferView} from '@luma.gl/gpgpu/gpu-core';
+import {GPUAncestorProjection} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGraphTraversal, type GPUGraphTraversalDirection} from '@luma.gl/gpgpu/gpu-core';
+import {GPUHierarchyLayout} from '@luma.gl/gpgpu/gpu-core';
+import {GPUSceneDrawGeneration} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUTraceSceneView} from './gpu-trace-scene';
-import {GPUVisibilityWorkflow} from '../gpu-core/gpu-visibility-workflow';
+import {GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
 import {
   doGraphDataViewsOverlap,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 
 const TRACE_INTERACTION_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;

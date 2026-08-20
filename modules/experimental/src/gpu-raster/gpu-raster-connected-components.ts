@@ -10,12 +10,8 @@ import type {
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-core/gpu-command-graph';
-import {
-  createTransientView,
-  getViewBinding,
-  getViewElementOffset
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
   getRasterDispatchSize,

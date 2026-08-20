@@ -27,7 +27,7 @@ feature or precision parity, NVIDIA affiliation, or NVIDIA endorsement.
 ## Compile and execute a projection
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUProjection,
   compileProjectionPlan

@@ -143,11 +143,11 @@ describe('getting-started onboarding', () => {
         route: '/examples/showcase/gaussian-splat-viewer'
       },
       {
-        modifier: 'anari',
-        packageName: '@luma.gl/anari',
+        modifier: 'scene',
+        packageName: '@luma.gl/scene',
         title: 'Declarative 3D Scenes',
-        image: 'experimental/anari-playground.jpg',
-        route: '/examples/experimental/anari-playground'
+        image: 'experimental/scene-playground.jpg',
+        route: '/examples/experimental/scene-playground'
       },
       {
         modifier: 'graph',

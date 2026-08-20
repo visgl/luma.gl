@@ -10,9 +10,10 @@
   "references": [
     {"path": "../core"},
     {"path": "../engine"},
-    {"path": "../geoarrow"},
+    {"path": "../experimental"},
+    {"path": "../gpgpu"},
+    {"path": "../math-geoarrow"},
     {"path": "../splats"},
-    {"path": "../tables"},
     {"path": "../text"}
   ]
 }

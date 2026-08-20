@@ -10,7 +10,8 @@ import * as luDataFrameModule from '@luma.gl/experimental/gpu-dataframe';
 import {GPUDataFrame as LuDataFrame} from '@luma.gl/experimental/gpu-dataframe';
 import * as sqlModule from '@luma.gl/experimental/gpu-sql';
 import {LuSQLContext, LuSQLQuery} from '@luma.gl/experimental/gpu-sql';
-import {GPUData, GPURecordBatch, GPUTable} from '@luma.gl/tables';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 

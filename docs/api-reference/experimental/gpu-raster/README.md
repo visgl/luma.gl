@@ -21,7 +21,7 @@ analytical values usually belong in a renderer or shader module instead.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPURasterBand, GPURasterStatistics} from '@luma.gl/experimental/gpu-raster';
 
 const graph = new GPUCommandGraph({device, id: 'raster-analysis'});

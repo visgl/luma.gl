@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraphAutotuningProfile} from '@luma.gl/experimental';
+import type {GPUCommandGraphAutotuningProfile} from '@luma.gl/gpgpu/gpu-core';
 import {FillPattern, type FillPatternType} from '../../fill-pattern-shader-plugin';
 
 const TRACE_AUTOTUNING_PROFILE_KEY_PREFIX = 'luma-gpu-trace-autotuning-v1';

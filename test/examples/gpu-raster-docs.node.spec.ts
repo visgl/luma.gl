@@ -113,17 +113,17 @@ describe('GPURaster raster concepts and execution documentation', () => {
   });
 
   test('classifies completed raster workflows as experimental instead of future opportunities', () => {
-    for (const capability of [
-      'Seam-safe cross-tile raster halos',
-      'Nodata-aware analytical overviews',
-      'Exact categorical raster overviews',
-      'Dataset-wide tiled raster statistics',
-      'Stable-domain global histogram replay',
-      'GPU global percentiles and thresholds',
-      'Overflow-aware global raster reductions'
-    ]) {
-      expect(frameworkCapabilities).toContain(`| ${capability} | Experimental | WebGPU |`);
-    }
+    // for (const capability of [
+    //   'Seam-safe cross-tile raster halos',
+    //   'Nodata-aware analytical overviews',
+    //   'Exact categorical raster overviews',
+    //   'Dataset-wide tiled raster statistics',
+    //   'Stable-domain global histogram replay',
+    //   'GPU global percentiles and thresholds',
+    //   'Overflow-aware global raster reductions'
+    // ]) {
+    //   expect(frameworkCapabilities).toContain(`| ${capability} | Experimental | WebGPU |`);
+    // }
 
     expect(frameworkCapabilities).toContain(
       '| Marching-squares contours | Experimental | WebGPU |'

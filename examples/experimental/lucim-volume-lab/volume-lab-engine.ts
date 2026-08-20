@@ -8,7 +8,7 @@ import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraphEncoding,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUVolume,
   GPUVolumeClosing,

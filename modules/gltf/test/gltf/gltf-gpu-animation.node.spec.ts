@@ -19,7 +19,7 @@ async function loadFixture(
   const path =
     name === 'SimpleSkinLOD.gltf'
       ? new URL('../data/SimpleSkinLOD.gltf', import.meta.url)
-      : new URL(`../../../../examples/showcase/anari/public/gltf/${name}`, import.meta.url);
+      : new URL(`../../../../examples/showcase/scene/public/gltf/${name}`, import.meta.url);
   return postProcessGLTF(
     await parse(await readFile(path), GLTFLoader, {gltf: {loadImages: false}})
   );

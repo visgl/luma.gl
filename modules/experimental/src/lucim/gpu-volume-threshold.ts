@@ -9,8 +9,8 @@ import type {
   GPUCommandGraphContributor,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-core/gpu-command-graph';
-import {getViewBinding, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVolumeBufferChannel} from './types';
 import {
   assertVolumeStorageBindingFits,

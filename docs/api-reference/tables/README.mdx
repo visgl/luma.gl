@@ -1,6 +1,6 @@
 ---
-title: GPU tables
-description: Model typed, batch-preserving GPU data, schemas, vectors, record batches, bindings, ownership, and lifecycle.
+title: Experimental GPU data and tables
+description: Model typed GPU data, batch-preserving tables, schemas, bindings, ownership, and lifecycle through the 9.4 experimental subpaths.
 ---
 
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
@@ -11,11 +11,11 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 <TablesDocsTabs active="overview" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
-Typed, batch-preserving GPU table primitives for rendering, transforms, and compute.
+Typed GPU data primitives and batch-preserving table helpers for rendering, transforms, and compute.
 
 ## Start Here
 
@@ -45,10 +45,11 @@ Typed, batch-preserving GPU table primitives for rendering, transforms, and comp
 - [GPUTableBufferPlanner](/docs/api-reference/tables/gpu-table-buffer-planner)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 
-The `@luma.gl/tables` module owns reusable table-side GPU objects such as
-`GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, and
-`GPUTable`, plus structural typing types such as `GPUSchema`, `GPUField`,
-`GPUTypeMap`, `GPUVectorFormat`, `GPUDataStructFormat`, and `VertexList`.
+The experimental `@luma.gl/gpgpu/gpu-data` subpath owns reusable primitive GPU objects such as
+`GPUData`, `GPUDataView`, `GPUVector`, and `GPUConstant`, plus memory-format types such as
+`GPUVectorFormat`, `GPUDataStructFormat`, and `VertexList`. The private experimental
+`@luma.gl/experimental/gpu-tables` subpath owns `GPURecordBatch`, `GPUTable`, `GPUSchema`,
+`GPUField`, `GPUTypeMap`, table bindings, table computations, and generic table planners.
 Physical struct formats let one `GPUData` expose named zero-copy child views
 over interleaved rows. Models can publish `GPUInputSchema` declarations for the
 prepared table inputs they accept. `GPUTableShaderBindings`
@@ -56,9 +57,9 @@ resolves those declarations into owned, batch-preserving attribute and storage
 resources for a shader layout. Table-oriented execution helpers include
 `TableTransform`,
 `GPUTableComputation`, `GPUTableBufferPlanner`, and generated-buffer batching
-utilities. `GPUTableModel` renders preserved table batches through one model
-pipeline, while `GPUTableGeometry` exposes a packed static table as ordinary GPU
-geometry.
+utilities. `GPUTableModel` renders preserved table batches through one model pipeline, while
+`GPUTableGeometry` exposes a packed static table as ordinary GPU geometry. Specialized path and
+polygon models live separately in `@luma.gl/experimental/models`.
 
 Arrow-specific construction and analysis helpers live in `@luma.gl/arrow`.
 Applications that ingest Apache Arrow data should use those adapters to build
@@ -66,6 +67,8 @@ the generic GPU table objects exposed here.
 
 ## Installing
 
+These subpaths are experimental in 9.4 and are installed with their containing packages:
+
 ```bash
-npm install @luma.gl/tables
+npm install @luma.gl/gpgpu @luma.gl/experimental
 ```

@@ -4,7 +4,8 @@
 
 import test from 'test/utils/vitest-tape';
 import {makeGPUVectorFromArrow, prepareArrowInput, type ArrowInputSchema} from '@luma.gl/arrow';
-import {GPUVector, type GPUInputVectors} from '@luma.gl/tables';
+import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUInputVectors} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 

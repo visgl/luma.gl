@@ -7,11 +7,11 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 <TablesDocsTabs active="structure" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
-This page describes the `@luma.gl/tables` object model used by Arrow adapters,
+This page describes the `@luma.gl/experimental/gpu-tables` object model used by Arrow adapters,
 table-backed rendering, and table-oriented compute helpers. The diagram is
 adapted from the loaders.gl ArrowJS table-structure docs, but the focus here is
 the GPU resource model: `GPUTable`, `GPURecordBatch`, `GPUVector`, and
@@ -55,7 +55,7 @@ columns. In Arrow JS, each cell is a CPU `Data` chunk. In luma.gl, each cell is
 a `GPUData` chunk that describes a GPU buffer.
 
 The strongest difference is operational: Arrow JS optimizes for zero-copy CPU
-views and immutable columnar data, while `@luma.gl/tables` optimizes for GPU
+views and immutable columnar data, while `@luma.gl/experimental/gpu-tables` optimizes for GPU
 binding, explicit ownership, batch-local draw/dispatch, and deterministic
 resource release.
 

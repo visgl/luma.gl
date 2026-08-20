@@ -6,7 +6,7 @@ import type {
   GPUCommandGraph,
   GPUCommandGraphContributor,
   GraphDataView
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {GPURasterBandMath} from './gpu-raster-band-math';
 import type {GPURasterBufferBand} from './types';
 

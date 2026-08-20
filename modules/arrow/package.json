@@ -23,9 +23,9 @@
   "module": "dist/index.js",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
@@ -43,9 +43,10 @@
   "dependencies": {
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/experimental": "9.4.0-alpha.4",
+    "@luma.gl/gpgpu": "9.4.0-alpha.4",
     "@luma.gl/shadertools": "9.4.0-alpha.4",
     "@luma.gl/splats": "workspace:*",
-    "@luma.gl/tables": "9.4.0-alpha.4",
     "@luma.gl/text": "9.4.0-alpha.4",
     "@math.gl/geoarrow": "workspace:*",
     "@math.gl/polygon": "^4.1.0",

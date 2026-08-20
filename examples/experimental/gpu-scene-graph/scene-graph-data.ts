@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUSceneRecord} from '@luma.gl/experimental';
+import type {GPUSceneRecord} from '@luma.gl/gpgpu/gpu-core';
 
 export const SCENE_GRAPH_GROUPS = ['terrain', 'structures', 'signals'] as const;
 export const SCENE_GRAPH_OBJECTS_PER_GROUP = 48;

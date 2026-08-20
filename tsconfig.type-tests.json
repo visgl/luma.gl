@@ -26,18 +26,24 @@
       "@luma.gl/engine/*": [
         "./modules/engine/src/*"
       ],
-      "@luma.gl/tables": [
-        "./modules/tables/src/index.ts"
+      "@luma.gl/gpgpu": [
+        "./modules/gpgpu/src/index.ts"
       ],
-      "@luma.gl/tables/*": [
-        "./modules/tables/src/*"
+      "@luma.gl/gpgpu/*": [
+        "./modules/gpgpu/src/*"
+      ],
+      "@luma.gl/experimental": [
+        "./modules/experimental/src/index.ts"
+      ],
+      "@luma.gl/experimental/*": [
+        "./modules/experimental/src/*"
       ]
     }
   },
   "include": [
     "./modules/shadertools/test/lib/uniform-types.spec.ts",
     "./modules/engine/test/shader-inputs-types.spec.ts",
-    "./modules/tables/test/table/gpu-data-types.node.spec.ts",
+    "./modules/gpgpu/test/gpu-data/gpu-data-types.node.spec.ts",
     "./modules/experimental/test/geospatial/geospatial-types.spec.ts"
   ],
   "exclude": [

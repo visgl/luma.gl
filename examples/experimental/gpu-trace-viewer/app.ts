@@ -10,8 +10,6 @@ import {
   type CompiledGPUCommandGraph,
   DispatchCommandBuffer,
   DrawCommandBuffer,
-  FlatController,
-  type FlatControllerPick,
   GPUChunkedIndexedScatter,
   GPUCommandGraph,
   GPUCommandGraphAutotuner,
@@ -35,10 +33,14 @@ import {
   type GraphBufferUse,
   type GraphDataView,
   GraphVectorView,
-  type RectangleSelection,
-  RectangleSelectController,
   decodeGPUIndexPickInfo,
   getGPUCommandGraphAdapterIdentity
+} from '@luma.gl/gpgpu/gpu-core';
+import {
+  FlatController,
+  type FlatControllerPick,
+  type RectangleSelection,
+  RectangleSelectController
 } from '@luma.gl/experimental';
 import {
   GPUTraceAggregation,

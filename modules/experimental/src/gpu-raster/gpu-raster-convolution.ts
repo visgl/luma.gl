@@ -6,8 +6,8 @@ import type {
   GPUCommandGraph,
   GPUCommandGraphContributor,
   GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {createTransientView} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterNeighborhood,
   type GPURasterBorderMode,

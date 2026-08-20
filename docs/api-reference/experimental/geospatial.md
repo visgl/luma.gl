@@ -26,7 +26,7 @@ and nearest-linestring APIs, grid index, and point query consume fixed-width fla
 objects in V1.
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUHaversineDistance} from '@luma.gl/experimental/geospatial';
 
 const graph = new GPUCommandGraph(device);

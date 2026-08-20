@@ -6,7 +6,7 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 <TablesDocsTabs active="input-schema" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
@@ -27,7 +27,7 @@ It is distinct from [`GPUSchema`](/docs/api-reference/tables/gpu-schema):
 ## Types
 
 ```ts
-import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/tables';
+import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 
 export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'matrices' | 'text' | 'time';
 
@@ -111,7 +111,7 @@ available to TypeScript while the declaration is checked against the public
 schema type:
 
 ```ts
-import type {GPUInputSchema} from '@luma.gl/tables';
+import type {GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
 
 export const PATH_GPU_INPUT_SCHEMA = [
   {
@@ -153,7 +153,7 @@ Only generated inputs need `internal: true`.
 `validateGPUInputVectors()` checks a prepared vector map against a schema:
 
 ```ts
-import {validateGPUInputVectors} from '@luma.gl/tables';
+import {validateGPUInputVectors} from '@luma.gl/experimental/gpu-tables';
 
 validateGPUInputVectors('PathModel', PathModel.gpuInputSchema, {
   paths,

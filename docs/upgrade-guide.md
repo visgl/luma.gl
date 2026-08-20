@@ -35,11 +35,6 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
 
 **@luma.gl/arrow**
-
-- Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
-  - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
-  - `TableTransform`, `GPUTableComputation`
-  - `GPUTableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
 - Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
   - `makeGPUDataFromArrowData(...)`, `makeGPUVectorFromArrow(...)`, `makeGPURecordBatchFromArrowRecordBatch(...)`, and `makeGPUTableFromArrowTable(...)`
   - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`
@@ -49,9 +44,23 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 - `GPUTableEvaluator` and `getGPUTableEvaluator()` have been removed. Use `GPUDataEvaluator` and `getGPUDataEvaluator()` for one packed fixed-width `GPUData` chunk.
 - Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
-- The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/experimental` with explicit key/value output views and command submission.
+- The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/gpgpu/gpu-core` with explicit key/value output views and command submission.
 
 ## Upgrading to v9.4
+
+**GPU compute and table imports**
+
+- `@luma.gl/tables` has been removed without compatibility re-exports. Import primitive GPU data
+  APIs (`GPUData`, `GPUDataView`, `GPUVector`, `GPUVectorFormat`, `GPUConstant`, formats, and basic
+  helpers) from `@luma.gl/gpgpu/gpu-data`.
+- Import `GPURecordBatch`, `GPUTable`, schemas, table bindings, table computations, and generic table
+  planners from `@luma.gl/experimental/gpu-tables`.
+- Import path and polygon models, their GPU input helpers, and model-specific planners from
+  `@luma.gl/experimental/models`.
+- `@luma.gl/experimental/gpu-core` and `@luma.gl/experimental/gpu-graph` have been removed without
+  compatibility re-exports. Import them from `@luma.gl/gpgpu/gpu-core` and
+  `@luma.gl/gpgpu/gpu-graph`; graph benchmarks move to
+  `@luma.gl/gpgpu/gpu-graph/benchmarks`.
 
 **@luma.gl/core**
 

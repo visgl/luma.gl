@@ -230,5 +230,5 @@ RGBA vertex colors, normalized joint weights, animation pointers, and resource o
 - `@luma.gl/gltf` interprets glTF-specific scene, material, sampler, light, and animation data.
 - `@luma.gl/engine` owns generic scenegraph, animation, and morph-target primitives.
 - `@luma.gl/shadertools` owns the shared PBR, lighting, and skinning shader modules.
-- `@luma.gl/anari/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI
+- `@luma.gl/scene/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI
   objects without making the core ANARI entry point a glTF loader.

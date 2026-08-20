@@ -12,16 +12,18 @@ import {
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
   GPUData,
-  GPURecordBatch,
-  GPUTable,
   GPUVector,
-  type GPURecordBatchSourceInfo,
-  type GPUField,
   type GPUVectorBufferProps,
   type GPUVectorFormat,
   type ValueList,
   type VertexList
-} from '@luma.gl/tables';
+} from '@luma.gl/gpgpu/gpu-data';
+import {
+  GPURecordBatch,
+  GPUTable,
+  type GPURecordBatchSourceInfo,
+  type GPUField
+} from '@luma.gl/experimental/gpu-tables';
 import {
   Data,
   DataType,

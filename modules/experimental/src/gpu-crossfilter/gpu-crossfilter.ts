@@ -3,19 +3,16 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuXfilter.
 
-import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '../gpu-core/gpu-command-graph';
-import {
-  GPUGroupAggregation,
-  type GPUGroupAggregationOperation
-} from '../gpu-core/gpu-group-aggregation';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGroupAggregation, type GPUGroupAggregationOperation} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUHistogram,
   type GPUHistogramDomain,
   type GPUHistogramEdges
-} from '../gpu-core/gpu-histogram';
-import {GPUMask} from '../gpu-core/gpu-mask';
-import {GPUVisibilityWorkflow} from '../gpu-core/gpu-visibility-workflow';
-import {createTransientView} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMask} from '@luma.gl/gpgpu/gpu-core';
+import {GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUCrossfilterSelection,
   type GPUCrossfilterDimension,

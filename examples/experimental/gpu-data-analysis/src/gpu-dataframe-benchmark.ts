@@ -9,7 +9,7 @@ import {
   GPUCommandGraph,
   GPU_HASH_INDEX_STATISTICS_LENGTH,
   type CompiledGPUCommandGraph
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUDataFrame,
   and,
@@ -21,7 +21,7 @@ import {
   type CompiledGPUDataFrameSort,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/experimental/gpu-dataframe';
-import {GPUVector, type GPUData} from '@luma.gl/tables';
+import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
 import * as arrow from 'apache-arrow';
 
 const DEFAULT_ROW_COUNT = 65_536;

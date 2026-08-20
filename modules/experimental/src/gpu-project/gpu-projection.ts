@@ -11,8 +11,8 @@ import {
   type GraphBufferUse,
   type GraphDataView,
   type GraphVectorView
-} from '../gpu-core/gpu-command-graph';
-import {getViewElementOffset, validatePackedView} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {getViewElementOffset, validatePackedView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
   POSITION_FORMATS,

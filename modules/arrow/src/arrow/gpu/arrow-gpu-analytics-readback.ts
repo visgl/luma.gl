@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import type {GPUData, GPUTable, GPUTypeMap, GPUVector} from '@luma.gl/tables';
+import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUTable, GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
 import {
   Dictionary,
   Field,

@@ -21,7 +21,7 @@ import {
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector
 } from '@luma.gl/arrow';
-import {GPUVector} from '@luma.gl/tables';
+import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';

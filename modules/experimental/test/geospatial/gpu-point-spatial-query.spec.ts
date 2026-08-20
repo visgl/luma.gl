@@ -10,7 +10,7 @@ import {
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 import {GPUPointSpatialQuery, type GPUPointSpatialQueryKind} from '../../src/geospatial';

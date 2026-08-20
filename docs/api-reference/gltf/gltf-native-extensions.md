@@ -426,7 +426,7 @@ The fixture attribution and pinned source revision are recorded in
 | `@luma.gl/engine` | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities. |
 | `@luma.gl/shadertools` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
 | `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission. |
-| `@luma.gl/anari` | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership. |
+| `@luma.gl/scene` | Optional thin retained-object orchestration through `@luma.gl/scene/gltf`; no loader or BRDF ownership. |
 
 The core ANARI package does not import glTF. Its optional glTF adapter imports the existing glTF
 parsers and engine animation primitives. Camera, punctual-light, and visibility pointer playback

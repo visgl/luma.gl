@@ -14,8 +14,8 @@
       "showcase/instancing",
       {
         "type": "doc",
-        "id": "experimental/anari-playground",
-        "label": "ANARI Playground"
+        "id": "experimental/scene-playground",
+        "label": "Scene Playground"
       },
       "showcase/globe",
       "showcase/packet-spraying",

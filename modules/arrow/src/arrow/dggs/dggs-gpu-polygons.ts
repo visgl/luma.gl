@@ -5,7 +5,7 @@
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {dggs} from '@luma.gl/shadertools';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   Data,
   DataType,

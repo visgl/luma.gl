@@ -9,7 +9,7 @@ import {
   GPUFFT2D,
   type GPUFFT2DStats,
   makeGPUFFT2DStats
-} from '../gpu-core/gpu-fft2d';
+} from '@luma.gl/gpgpu/gpu-core';
 import {makeSpectralOceanInitialSpectrum} from './spectral-ocean-initial-spectrum';
 import {
   SPECTRAL_OCEAN_ASSEMBLY_SHADER,

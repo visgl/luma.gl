@@ -184,7 +184,7 @@ punctual lights, cameras, and additional extension payloads remain intact.
 ## Resource ownership
 
 All descriptors and typed arrays remain owned by the caller. Export never destroys GPU resources,
-mutates source arrays, changes material objects, or depends on `@luma.gl/anari`.
+mutates source arrays, changes material objects, or depends on `@luma.gl/scene`.
 
 Applications using the optional ANARI playground adapt their retained descriptions into these
 format-owned descriptors. That adapter preserves animated hierarchy, morph targets, joint

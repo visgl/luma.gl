@@ -8,7 +8,7 @@ import {
   GPUGroupAggregation,
   GPUHistogram,
   GPUReduction
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import {

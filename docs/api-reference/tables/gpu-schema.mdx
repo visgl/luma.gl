@@ -6,7 +6,7 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 <TablesDocsTabs active="schema" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
@@ -24,7 +24,7 @@ For the required and optional `GPUVector` inputs accepted by a model, see
 
 ```ts
 import type {VertexFormat} from '@luma.gl/core';
-import type {GPUVectorFormat, VertexList} from '@luma.gl/tables';
+import type {GPUVectorFormat, VertexList} from '@luma.gl/gpgpu/gpu-data';
 
 export type GPUTypeMap = Record<string, GPUVectorFormat>;
 

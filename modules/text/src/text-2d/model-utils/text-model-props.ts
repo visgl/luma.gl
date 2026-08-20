@@ -3,14 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ModelProps} from '@luma.gl/engine';
+import {type GPUVector, type ValueList, type VertexList} from '@luma.gl/gpgpu/gpu-data';
 import {
   validateGPUInputVectors,
   type GPUInputSchema,
-  type GPUInputVectors,
-  type GPUVector,
-  type ValueList,
-  type VertexList
-} from '@luma.gl/tables';
+  type GPUInputVectors
+} from '@luma.gl/experimental/gpu-tables';
 import type {FontAtlas} from '../atlas/font-atlas';
 
 const TEXT_DICTIONARY_INDEX_FORMATS = [

@@ -51,12 +51,13 @@ index construction, fenced GPU execution, explicit validation readback, and CPU 
 | Execution | One browser WebGPU device and caller-owned command encoding, submission, and optional readback. |
 
 Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to
-`@luma.gl/arrow`; generic GPU storage remains in `@luma.gl/tables`. Neither `@luma.gl/tables` nor
-GPU Dataframe requires Apache Arrow as a runtime dependency.
+`@luma.gl/arrow`; generic GPU storage remains in `@luma.gl/gpgpu/gpu-data`, while record batches and
+tables come from `@luma.gl/experimental/gpu-tables`. Neither GPU package requires Apache Arrow as a
+runtime dependency.
 
 ```ts
 import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUDataFrame,
   and,

@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import type {GPUTypeMap} from '@luma.gl/tables';
-import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
+import type {GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
+import type {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUDataFrame, GPUDataFrameDictionary} from './gpu-data-frame';
 import type {GPUDataFrameQuery} from './gpu-data-frame-query';
 import {getGPUDataFrameAnalyticColumnFormat} from './gpu-global-aggregation-query';

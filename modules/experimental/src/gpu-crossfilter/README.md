@@ -15,7 +15,7 @@ values between two endpoints; a `bounds` dimension selects rows whose `x` and
 vector views and share one source-row topology.
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUCrossfilter} from '@luma.gl/experimental/gpu-crossfilter';
 
 const graph = new GPUCommandGraph(device);

@@ -257,15 +257,15 @@ module.exports = {
               alias: {
                 '@deck.gl-community/arrow-layers$': path.resolve(
                   __dirname,
-                  '../modules/arrow-layers/src/index.ts'
+                  '../modules/deck-arrow-layers/src/index.ts'
                 ),
-                '@deck.gl-community/luspatial$': path.resolve(
+                '@deck.gl-community/gpu-layers$': path.resolve(
                   __dirname,
-                  '../modules/deck-luspatial/src/index.ts'
+                  '../modules/deck-gpu-layers/src/index.ts'
                 ),
-                '@deck.gl-community/luspatial/query$': path.resolve(
+                '@deck.gl-community/gpu-layers/query$': path.resolve(
                   __dirname,
-                  '../modules/deck-luspatial/src/query/index.ts'
+                  '../modules/deck-gpu-layers/src/query/index.ts'
                 )
               }
             },

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by relational SQL semantics.
 
-import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
+import type {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUDataFrame as LuDataFrame} from '../gpu-dataframe/gpu-data-frame';
 import {GPUDataFrameQuery as LuDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
 import {

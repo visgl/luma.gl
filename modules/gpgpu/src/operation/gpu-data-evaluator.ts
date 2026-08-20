@@ -19,7 +19,7 @@ import {
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
-} from '@luma.gl/tables';
+} from '@luma.gl/gpgpu/gpu-data';
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';

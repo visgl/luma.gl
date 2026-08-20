@@ -5,30 +5,26 @@
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUData,
   GPURecordBatch,
   GPUTable,
-  GPUVector,
   type GPUField,
   type GPUTypeMap
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {
   GraphVectorView,
   type GPUCommandGraph,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {
-  getBoundedDispatchLayout,
-  getBoundedInvocationIndexSource
-} from '../gpu-core/gpu-dispatch-utils';
-import {GPUMask} from '../gpu-core/gpu-mask';
+} from '@luma.gl/gpgpu/gpu-core';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMask} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientVectorView,
   createTransientView,
   getViewBinding
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUDataFrame} from './gpu-data-frame';
 import type {
   GPUDataFrameQueryExtensionContext,

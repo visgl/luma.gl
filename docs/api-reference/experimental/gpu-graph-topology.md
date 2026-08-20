@@ -19,7 +19,7 @@ aligned `GPUVector<'uint32'>` source and target identifiers and knows how many v
 including isolated vertices that never appear in an edge.
 
 ```ts
-import {GPUGraph} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraph} from '@luma.gl/gpgpu/gpu-graph';
 
 const graph = new GPUGraph({
   vertexCount,
@@ -54,7 +54,7 @@ only the accounts directly connected to account 42. Its CSR offset interval iden
 account's neighbors without asking each later analysis to rescan the entire edge list.
 
 ```ts
-import {GPUGraphTopology} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph';
 
 const topology = new GPUGraphTopology({
   graph,
@@ -102,7 +102,7 @@ relationships does each vertex have? Use it to identify network hubs, size junct
 detect isolated accounts, or find unusually connected infrastructure and dependency nodes.
 
 ```ts
-import {GPUGraphDegree} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraphDegree} from '@luma.gl/gpgpu/gpu-graph';
 
 const degree = new GPUGraphDegree({
   topology,

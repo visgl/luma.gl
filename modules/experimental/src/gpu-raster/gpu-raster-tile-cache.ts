@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import type {CompiledGPUCommandGraph} from '../gpu-core/gpu-command-graph';
+import type {CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import type {
   GPURasterDecodedTile,
   GPURasterTileBandMetadata,

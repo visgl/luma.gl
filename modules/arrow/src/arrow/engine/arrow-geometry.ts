@@ -10,13 +10,8 @@ import {
   type VertexFormat,
   vertexFormatDecoder
 } from '@luma.gl/core';
-import {
-  GPURecordBatch,
-  GPUTable,
-  GPUTableGeometry,
-  GPUVector,
-  getGPUVectorData
-} from '@luma.gl/tables';
+import {GPUVector, getGPUVectorData} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable, GPUTableGeometry} from '@luma.gl/experimental/gpu-tables';
 import {Binary, DataType, Float, Int, Precision, Table, Vector} from 'apache-arrow';
 import type {ArrowMeshTable, ArrowMeshTopology} from './arrow-mesh-types';
 

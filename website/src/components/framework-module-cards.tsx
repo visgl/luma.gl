@@ -56,12 +56,12 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
   {
     id: 'anari',
     title: 'ANARI',
-    packageName: '@luma.gl/anari',
+    packageName: '@luma.gl/scene',
     label: 'Declarative 3D',
     description:
       'Describe declarative 3D scenes with glTF and OpenUSD, then switch renderers without rebuilding the world.',
     capabilities: ['glTF', 'OpenUSD', 'Renderers'],
-    documentationPath: 'docs/api-reference/anari'
+    documentationPath: 'docs/api-reference/scene'
   },
   {
     id: 'splats',

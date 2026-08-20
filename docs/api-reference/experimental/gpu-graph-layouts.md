@@ -27,7 +27,7 @@ layout answers where an application can draw that vertex. Your application still
 renderer, colors, labels, and interaction design.
 
 ```ts
-import {GPUGraphForceLayout} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraphForceLayout} from '@luma.gl/gpgpu/gpu-graph';
 
 const layout = new GPUGraphForceLayout({
   topology,
@@ -107,7 +107,7 @@ should not be replaced by a force-directed arrangement.
 import {
   GPUGraphForceLayout,
   GPUGraphSpatialForceLayout
-} from '@luma.gl/experimental/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph';
 
 const layout = new GPUGraphForceLayout({
   topology,
@@ -202,7 +202,7 @@ assumes that the source columns, packed result vectors, spatial index buffers, a
 vectors already exist on the same WebGPU device:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUGraph,
   GPUGraphBreadthFirstSearch,
@@ -218,7 +218,7 @@ import {
   GPUGraphSingleSourceShortestPath,
   GPUGraphSpatialForceLayout,
   GPUGraphTopology
-} from '@luma.gl/experimental/gpu-graph';
+} from '@luma.gl/gpgpu/gpu-graph';
 
 const graph = new GPUGraph({
   vertexCount,

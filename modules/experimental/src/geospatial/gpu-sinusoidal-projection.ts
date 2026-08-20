@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import {type GPUCommandGraph, type GPUCommandGraphContributor} from '../gpu-core/gpu-command-graph';
+import {type GPUCommandGraph, type GPUCommandGraphContributor} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUFloat32Positions, GPUFloat64Positions} from './types';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,

@@ -33,7 +33,7 @@ custom outputs, or only one of those stages. The workflow intentionally does not
 WGSL callbacks: fixed predicate-mask contracts remain easier to compose, validate, and reuse.
 
 ```ts
-import {GPUVisibilityWorkflow} from '@luma.gl/experimental/gpu-core';
+import {GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
 
 const count = graph.importGPUData(
   'visible-object-count',

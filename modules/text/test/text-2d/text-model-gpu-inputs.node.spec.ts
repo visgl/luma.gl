@@ -14,7 +14,7 @@ import {
   TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
   TEXT_STORAGE_GPU_INPUT_SCHEMA
 } from '@luma.gl/text/experimental';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 
 test('2D text models declare flat source-mappable GPU inputs', t => {

@@ -9,9 +9,9 @@ import {
   GraphVectorView,
   type CompiledGPUCommandGraph,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {GPUCrossfilter} from '@luma.gl/experimental/gpu-crossfilter';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 test('GPUCrossfilter coordinates linked views across reusable GPU-resident selections', async t => {

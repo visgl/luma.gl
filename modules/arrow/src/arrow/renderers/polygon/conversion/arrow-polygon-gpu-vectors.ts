@@ -3,12 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {
-  GPUConstant,
-  GPUVector,
-  type GPURecordBatchSourceInfo,
-  type VertexList
-} from '@luma.gl/tables';
+import {GPUConstant, GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {type GPURecordBatchSourceInfo} from '@luma.gl/experimental/gpu-tables';
 import {
   tesselateAsync,
   tessellateArrowPolygons,

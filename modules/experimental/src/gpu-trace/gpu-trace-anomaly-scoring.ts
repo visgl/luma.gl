@@ -10,11 +10,8 @@ import {
   type GraphBufferUse,
   type GraphDataView,
   GraphVectorView
-} from '../gpu-core/gpu-command-graph';
-import {
-  getBoundedDispatchLayout,
-  getBoundedInvocationIndexSource
-} from '../gpu-core/gpu-dispatch-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/gpgpu/gpu-core';
 import {
   doGraphDataViewsOverlap,
   getViewBinding,
@@ -22,7 +19,7 @@ import {
   validateMatchingVectorTopology,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 
 const ANOMALY_WORKGROUP_SIZE = 256;
 const DEFAULT_MAXIMUM_ROWS_PER_PASS = 0xffffffff;

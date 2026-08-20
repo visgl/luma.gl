@@ -6,12 +6,12 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 <TablesDocsTabs active="data" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
 `GPUData` describes one GPU buffer plus typed row metadata. It is the
-lowest-level storage object in `@luma.gl/tables`: each `GPUData` owns or borrows
+lowest-level storage object in `@luma.gl/gpgpu/gpu-data`: each `GPUData` owns or borrows
 its own `Buffer` or `DynamicBuffer`, and higher-level table objects refer to
 buffers through `GPUData`.
 
@@ -22,7 +22,7 @@ stride over any buffer-like resource.
 ## Usage
 
 ```ts
-import {GPUData} from '@luma.gl/tables';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 
 const gpuData = new GPUData({
   buffer,
@@ -37,7 +37,7 @@ Interleaved rows can use a physical struct format. Field declarations use the
 same fixed-width format strings as `GPUVectorFormat`:
 
 ```ts
-import {GPUData} from '@luma.gl/tables';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 
 const data = new GPUData({
   buffer,

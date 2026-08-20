@@ -10,7 +10,7 @@ import {
   GPU_SCENE_INVALID_REFERENCE,
   type CompiledGPUCommandGraph,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUTraceInteraction,
   GPUTraceScene,

@@ -8,7 +8,7 @@ import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterBandMath,
   GPURasterBoxBlur,

@@ -6,14 +6,14 @@ import {readFileSync} from 'node:fs';
 
 import {Buffer} from '@luma.gl/core';
 import * as experimentalModule from '@luma.gl/experimental';
-import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/experimental';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import * as gpuCrossfilterModule from '@luma.gl/experimental/gpu-crossfilter';
 import {
   GPUCrossfilter,
   GPUCrossfilterSelection,
   type GPUCrossfilterScalarFormat
 } from '@luma.gl/experimental/gpu-crossfilter';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 

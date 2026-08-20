@@ -25,7 +25,7 @@ are considered for stable packages.
 Install matching luma.gl package versions:
 
 ```bash
-yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
+yarn add @luma.gl/gpgpu @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
 ```
 
 ## When to use it
@@ -48,8 +48,11 @@ stable Engine models and Shadertools passes.
 
 | Module | Use it for |
 | --- | --- |
-| [GPU Core](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
-| [GPU Graph](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
+| [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/tables) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
+| [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/tables) | Private record batches, tables, schemas, bindings, computations, and generic table planners. |
+| [`@luma.gl/experimental/models`](/docs/api-reference/tables) | Private path and polygon rendering models, GPU input helpers, and model-specific planners. |
+| [`@luma.gl/gpgpu/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
+| [`@luma.gl/gpgpu/gpu-graph`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
 | [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
 | [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
 | [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |

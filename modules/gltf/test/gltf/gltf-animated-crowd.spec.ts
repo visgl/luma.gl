@@ -12,7 +12,7 @@ import test from 'test/utils/vitest-tape';
 
 test('glTF crowds draw independent SimpleSkin actors in one real WebGL and WebGPU call', async testContext => {
   const source = postProcessGLTF(
-    await load('/examples/showcase/anari/public/gltf/SimpleSkin.gltf', GLTFLoader, {
+    await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
       gltf: {loadImages: false}
     })
   );
@@ -428,7 +428,7 @@ test('glTF crowds render generated index-only skin LODs on real WebGL and WebGPU
 
 test('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', async testContext => {
   const source = postProcessGLTF(
-    await load('/examples/showcase/anari/public/gltf/SimpleSkin.gltf', GLTFLoader, {
+    await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
       gltf: {loadImages: false}
     })
   );
@@ -548,7 +548,7 @@ test('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', 
 
 test('glTF crowds render independently phased GPU morph targets in real WebGL and WebGPU', async testContext => {
   const source = postProcessGLTF(
-    await load('/examples/showcase/anari/public/gltf/AnimatedMorphCube.glb', GLTFLoader, {
+    await load('/examples/showcase/scene/public/gltf/AnimatedMorphCube.glb', GLTFLoader, {
       gltf: {loadImages: false}
     })
   );

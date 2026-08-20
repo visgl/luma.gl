@@ -11,13 +11,13 @@ import {
   type RenderPass
 } from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUData,
   GPURecordBatch,
   GPUTable,
   GPUTableModel,
   type GPUInputSchema
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {GPUSplatData} from './splat-data';
 import {projectSplatCovarianceToScreen} from './splat-covariance';
 import {acceptsSplatSemantic, type SplatSemanticFilter} from './splat-filter';

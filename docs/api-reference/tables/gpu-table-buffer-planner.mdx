@@ -6,7 +6,7 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 <TablesDocsTabs active="buffer-planner" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
@@ -23,7 +23,10 @@ their own table and shader metadata, then consume the returned plan.
 ## Usage
 
 ```ts
-import {GPUTableBufferPlanner, type GPUTableColumnDescriptor} from '@luma.gl/tables';
+import {
+  GPUTableBufferPlanner,
+  type GPUTableColumnDescriptor
+} from '@luma.gl/experimental/gpu-tables';
 
 const columns: GPUTableColumnDescriptor[] = [
   {

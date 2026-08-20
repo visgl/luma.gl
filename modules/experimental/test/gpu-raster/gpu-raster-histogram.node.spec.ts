@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {GraphBufferHandle, GraphDataView} from '@luma.gl/experimental';
+import {GraphBufferHandle, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterHistogram,
   type GPURasterBufferBand,

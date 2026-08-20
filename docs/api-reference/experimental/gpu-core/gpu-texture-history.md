@@ -65,7 +65,7 @@ type GPUTextureHistoryProps<Format extends TextureFormat = TextureFormat> = {
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
 
 const descriptor = {
   format: 'rgba16float' as const,

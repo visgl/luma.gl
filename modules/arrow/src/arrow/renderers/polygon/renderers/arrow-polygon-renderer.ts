@@ -12,7 +12,7 @@ import {
   type PolygonBatchProps,
   type PolygonShaderInputs,
   type PolygonStorageModelProps
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/models';
 import {RecordBatch, Table} from 'apache-arrow';
 import {
   clearArrowPickingState,

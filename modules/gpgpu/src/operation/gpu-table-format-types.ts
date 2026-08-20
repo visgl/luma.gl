@@ -8,7 +8,7 @@ import type {
   VertexFormat,
   VertexFormatDataTypeT
 } from '@luma.gl/core';
-import type {GPUVectorFormat, VertexList} from '@luma.gl/tables';
+import type {GPUVectorFormat, VertexList} from '@luma.gl/gpgpu/gpu-data';
 
 type ComponentCount = 1 | 2 | 3 | 4;
 type IntegerComponentCount = ComponentCount | 5 | 6 | 7 | 8;

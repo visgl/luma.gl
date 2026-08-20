@@ -11,13 +11,13 @@ import {
   parameter,
   type GPUDataFrameDerivedColumnFormatForExpression
 } from '@luma.gl/experimental/gpu-dataframe';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUData,
   GPURecordBatch,
   GPUTable,
   type GPUField,
   type GPURecordBatchSourceInfo
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, expectTypeOf, test, vi} from 'vitest';
 

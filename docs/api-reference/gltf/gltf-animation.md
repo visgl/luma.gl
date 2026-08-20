@@ -204,7 +204,7 @@ format-independent palette through its surface skin descriptor.
 
 The optional ANARI glTF integration also maps retained source skin bindings to the same generic
 joint-palette helper and updates its palettes after each animation frame. It remains an optional
-`@luma.gl/anari/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning
+`@luma.gl/scene/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning
 shader.
 
 ## Morph targets
@@ -219,4 +219,4 @@ tangent's handedness component. Shared interpolation and buffer updates are impl
 [engine morph-target utilities](/docs/api-reference/engine/animation/morph-targets).
 
 For retained JSON morph playback, see
-[ANARI animation and glTF integration](/docs/api-reference/anari/anari-animation).
+[ANARI animation and glTF integration](/docs/api-reference/scene/anari-animation).

@@ -10,7 +10,7 @@ import {
   type Device
 } from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {getGPUFFT2DSupport, GPUFFT2D, makeGPUFFT2DStats} from '../gpu-core/gpu-fft2d';
+import {getGPUFFT2DSupport, GPUFFT2D, makeGPUFFT2DStats} from '@luma.gl/gpgpu/gpu-core';
 import {
   FFT_BLOOM_COMPOSITE_SHADER,
   FFT_BLOOM_EXTRACT_SHADER,

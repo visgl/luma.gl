@@ -42,7 +42,7 @@ deterministic visit order. The bounded breadth-first contract is designed to pro
 mask for later filtering.
 
 ```ts
-import {GPUGraphTraversal} from '@luma.gl/experimental/gpu-core';
+import {GPUGraphTraversal} from '@luma.gl/gpgpu/gpu-core';
 
 new GPUGraphTraversal({
   id: 'focused-dependencies',

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GraphDataView, GraphTextureView} from '../gpu-core/gpu-command-graph';
+import type {GraphDataView, GraphTextureView} from '@luma.gl/gpgpu/gpu-core';
 import type {GPURaster} from './gpu-raster';
 
 /** Exact, fixed-width sample formats supported by graph-native raster analysis. */

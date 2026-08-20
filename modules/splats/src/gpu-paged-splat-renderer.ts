@@ -20,7 +20,7 @@ import {
   type GPUCommandGraphStats,
   type GraphBufferHandle,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUSplatGraphRendererProps} from './gpu-splat-graph-renderer';
 import {
   GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH,

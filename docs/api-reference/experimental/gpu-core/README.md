@@ -16,7 +16,7 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
 ## Overview
 
 GPU Core is the experimental WebGPU dataflow and scheduling layer in
-`@luma.gl/experimental/gpu-core`.
+`@luma.gl/gpgpu/gpu-core`.
 Applications and reusable contributors declare resources, compute/copy/render nodes, dependencies,
 conditions, and work estimates. A compiled graph allocates compatible transient resources, orders
 read/write hazards (resource conflicts), and records work into a caller-owned command encoder.
@@ -151,7 +151,7 @@ together.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph, GPUScan} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph, GPUScan} from '@luma.gl/gpgpu/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'prefix-sum'});
 const input = graph.importBuffer(
@@ -250,4 +250,4 @@ Trace-domain algorithms are indexed from the
 - [GPU Graph](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
 - [GPU Raster](/docs/api-reference/experimental/gpu-raster) provides raster and field operations.
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) provides dataframe-style GPU analysis.
-- [`@luma.gl/tables`](/docs/api-reference/tables) defines Arrow-independent GPU data containers.
+- [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/tables) defines Arrow-independent GPU data containers.

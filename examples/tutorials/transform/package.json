@@ -11,8 +11,9 @@
     "@luma.gl/arrow": "9.4.0-alpha.4",
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/experimental": "9.4.0-alpha.4",
+    "@luma.gl/gpgpu": "9.4.0-alpha.4",
     "@luma.gl/shadertools": "9.4.0-alpha.4",
-    "@luma.gl/tables": "9.4.0-alpha.4",
     "@luma.gl/webgl": "9.4.0-alpha.4",
     "@probe.gl/log": "^4.1.1",
     "apache-arrow": "^17.0.0"
