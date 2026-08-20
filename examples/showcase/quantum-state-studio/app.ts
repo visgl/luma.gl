@@ -4,6 +4,7 @@
 
 import type {CanvasContext, Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
+import './quantum-styles.css';
 import {
   getQuantumCircuitPreset,
   makeCommonGate,

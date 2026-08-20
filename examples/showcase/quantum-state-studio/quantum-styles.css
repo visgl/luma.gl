@@ -1,11 +1,11 @@
-:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; }
-* { box-sizing: border-box; }
-html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #040819; color: #eff7ff; }
-canvas { display: block; width: 100vw !important; height: 100vh !important; }
-button, select, input { font: inherit; }
-button, select { color: #dceeff; border: 1px solid rgb(107 173 255 / 24%); background: rgb(10 24 49 / 74%); border-radius: 8px; }
-button { cursor: pointer; transition: border-color 140ms, background 140ms, transform 140ms; }
-button:hover { border-color: rgb(87 222 255 / 70%); background: rgb(19 55 91 / 88%); transform: translateY(-1px); }
+.quantum-standalone { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #040819; color: #eff7ff; }
+.quantum-standalone canvas { display: block; width: 100vw !important; height: 100vh !important; }
+.quantum-interface, #quantum-startup { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; }
+.quantum-interface, .quantum-interface *, #quantum-startup, #quantum-startup * { box-sizing: border-box; }
+.quantum-interface button, .quantum-interface select, .quantum-interface input { font: inherit; }
+.quantum-interface button, .quantum-interface select { color: #dceeff; border: 1px solid rgb(107 173 255 / 24%); background: rgb(10 24 49 / 74%); border-radius: 8px; }
+.quantum-interface button { cursor: pointer; transition: border-color 140ms, background 140ms, transform 140ms; }
+.quantum-interface button:hover { border-color: rgb(87 222 255 / 70%); background: rgb(19 55 91 / 88%); transform: translateY(-1px); }
 #quantum-startup { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(circle at 60% 30%, #122d58, #040819 58%); }
 #quantum-startup section { width: min(460px, calc(100vw - 48px)); padding: 30px; border: 1px solid rgb(91 195 255 / 22%); border-radius: 20px; background: rgb(5 13 31 / 84%); box-shadow: 0 28px 100px #0009; }
 #quantum-startup p, .eyebrow { margin: 0 0 7px; color: #72dff5; font-size: 10px; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
