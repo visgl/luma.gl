@@ -49,6 +49,7 @@ Target Release Date: Q3, 2026
 - **Animated glTF properties** - `KHR_animation_pointer` channels drive supported node transforms, physical-material factors, and texture transforms through the shared engine animation mixer.
 - **[Lossless animated asset interchange](/docs/api-reference/gltf/gltf-interchange)** - Format-owned `.gltf` and `.glb` export preserves hierarchy, animation clips, material pointers, skins, inverse bind matrices, morph targets, RGBA colors, joint attributes, material variants, GPU instancing, cameras, and punctual lights.
 - **Punctual lights and source-faithful materials** - Source directional, point, and spot lights retain authored colors, intensity, and cones; generic export round-trips supported materials, all map slots, UV sets, texture transforms, and sampler settings.
+- **Portable legacy primitive modes** - glTF `LINE_LOOP` and `TRIANGLE_FAN` primitives are expanded into indexed line and triangle lists without mutating post-processed source accessors, so the same geometry runs on WebGPU and WebGL 2.
 
 **@luma.gl/scene (Experimental)**
 
