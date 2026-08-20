@@ -6,7 +6,7 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 <TablesDocsTabs active="data-view" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
@@ -22,7 +22,7 @@ constructed directly or derived from an explicit `BufferLayout` attribute.
 ## Usage
 
 ```ts
-import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/tables';
+import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/gpgpu/gpu-data';
 
 const positions = new GPUDataView({
   buffer,

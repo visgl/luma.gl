@@ -3,13 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type BufferLayout, type Device, type ShaderLayout} from '@luma.gl/core';
+import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUVector,
   planGeneratedBufferBatches,
   type GeneratedBufferBatch,
-  type GPUData,
   type GPUTableModelProps
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {expandArrowVector} from '../../../vectors/arrow-vector-utils';
 import {
   getArrowVectorBufferSource,

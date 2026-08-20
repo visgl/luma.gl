@@ -4,22 +4,17 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {Buffer, type Device} from '@luma.gl/core';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUData,
   GPURecordBatch,
   GPUTable,
-  GPUVector,
   type GPUField,
   type GPUTypeMap
-} from '@luma.gl/tables';
-import {
-  GraphVectorView,
-  type GPUCommandGraph,
-  type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {GPUGroupAggregation} from '../gpu-core/gpu-group-aggregation';
-import {GPUMask} from '../gpu-core/gpu-mask';
-import {createTransientVectorView, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/experimental/gpu-tables';
+import {GraphVectorView, type GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGroupAggregation} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMask} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientVectorView, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addGPUAnalyticsComputePass,

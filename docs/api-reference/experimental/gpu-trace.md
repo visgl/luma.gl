@@ -108,7 +108,7 @@ import trace-domain schemas or interaction policies.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUTraceAggregation,
   GPUTraceCriticalPath,

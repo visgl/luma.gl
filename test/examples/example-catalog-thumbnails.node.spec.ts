@@ -19,7 +19,7 @@ const RECOVERED_FLAGSHIP_EXAMPLES = [
   'deck/luspatial-taxi',
   'deck/gpu-culled-trace',
   'showcase/postprocessing',
-  'experimental/anari-playground'
+  'experimental/scene-playground'
 ] as const;
 const JPEG_START_OF_FRAME_MARKERS = new Set([
   0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf
@@ -31,7 +31,7 @@ describe('live example catalog thumbnails', () => {
 
     expect(exampleIdentifiers.length).toBeGreaterThan(0);
     expect(exampleIdentifiers).toContain('v10/gpgpu');
-    expect(exampleIdentifiers).toContain('experimental/anari-playground');
+    expect(exampleIdentifiers).toContain('experimental/scene-playground');
 
     for (const exampleIdentifier of exampleIdentifiers) {
       const thumbnailPath = resolveExampleThumbnailPath(exampleIdentifier);
@@ -51,8 +51,8 @@ describe('live example catalog thumbnails', () => {
     expect(resolveExampleThumbnailPath('v10/gpgpu')).toBe(
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'gpu-tables/gpu-vector-storage-particles.jpg')
     );
-    expect(resolveExampleThumbnailPath('experimental/anari-playground')).toBe(
-      path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/anari-playground.jpg')
+    expect(resolveExampleThumbnailPath('experimental/scene-playground')).toBe(
+      path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/scene-playground.jpg')
     );
     expect(resolveExampleThumbnailPath('experimental/gpu-trace-scene')).toBe(
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/gpu-trace-viewer.jpg')

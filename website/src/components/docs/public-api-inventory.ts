@@ -84,24 +84,6 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     }
   },
   {
-    packageName: '@luma.gl/tables',
-    entryPoint: 'modules/tables/src/index.ts',
-    documentation: {
-      kind: 'curated',
-      defaultRoute: '/docs/api-reference/tables',
-      routesBySourcePrefix: {
-        'gpu-table': '/docs/api-reference/tables/gpu-table',
-        'gpu-record-batch': '/docs/api-reference/tables/gpu-record-batch',
-        'gpu-vector': '/docs/api-reference/tables/gpu-vector',
-        'gpu-data-view': '/docs/api-reference/tables/gpu-data-view',
-        'gpu-data': '/docs/api-reference/tables/gpu-data',
-        'gpu-schema': '/docs/api-reference/tables/gpu-schema',
-        'gpu-input-schema': '/docs/api-reference/tables/gpu-input-schema',
-        'gpu-vector-format': '/docs/api-reference/tables/gpu-vector-format'
-      }
-    }
-  },
-  {
     packageName: '@luma.gl/test-utils',
     entryPoint: 'modules/test-utils/src/index.ts',
     documentation: {

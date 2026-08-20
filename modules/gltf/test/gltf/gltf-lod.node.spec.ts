@@ -68,7 +68,7 @@ describe('authored and automatically generated glTF node levels of detail', () =
 
   test('generates immutable index-only alternatives while preserving skins and animations', async () => {
     const gltf = await loadGLTF(
-      new URL('../../../../examples/showcase/anari/public/gltf/SimpleSkin.gltf', import.meta.url)
+      new URL('../../../../examples/showcase/scene/public/gltf/SimpleSkin.gltf', import.meta.url)
     );
     const originalNodeCount = gltf.nodes.length;
     const originalMeshCount = gltf.meshes.length;

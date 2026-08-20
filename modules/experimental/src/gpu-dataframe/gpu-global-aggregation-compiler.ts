@@ -3,15 +3,16 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {GPUVector, type GPUField, type GPUTypeMap} from '@luma.gl/tables';
+import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUField, type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
 import {
   type GPUCommandGraph,
   type GraphBufferUse,
   type GraphDataView,
   type GraphVectorView
-} from '../gpu-core/gpu-command-graph';
-import {GPUReduction} from '../gpu-core/gpu-reduction';
-import {createTransientView, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUReduction} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addGPUAnalyticsComputePass,

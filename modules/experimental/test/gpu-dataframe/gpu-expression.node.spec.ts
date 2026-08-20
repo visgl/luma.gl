@@ -14,7 +14,7 @@ import {
   parameter,
   type GPUExpressionNode
 } from '@luma.gl/experimental/gpu-dataframe';
-import {GPUTable} from '@luma.gl/tables';
+import {GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 describe('luDF immutable expression construction', () => {

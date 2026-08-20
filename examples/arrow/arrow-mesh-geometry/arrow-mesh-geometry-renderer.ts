@@ -17,7 +17,8 @@ import {
 import type {CommandEncoder, Device} from '@luma.gl/core';
 import type {AnimationProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {CubeGeometry, type PickingManager} from '@luma.gl/engine';
-import {GPURenderable, type GPUTable, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
+import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPURenderable, type GPUTable, type GPUTableModel} from '@luma.gl/experimental/gpu-tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 import {

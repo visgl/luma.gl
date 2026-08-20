@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type VertexFormat} from '@luma.gl/core';
-import {GPUCommandGraph, type GraphDataView} from '@luma.gl/experimental';
+import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUVolumeConnectedComponents,
   GPUVolumeDilation,

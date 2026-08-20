@@ -8,7 +8,7 @@ import {
   GraphDataView,
   GraphTextureHandle,
   GraphTextureView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURaster,
   GPURasterBufferToTexture,

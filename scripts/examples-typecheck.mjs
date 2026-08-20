@@ -36,7 +36,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
   'experimental/antialiasing',
-  'showcase/anari',
+  'showcase/scene',
   'showcase/dof',
   'showcase/gaussian-splats',
   'showcase/billion-point-spatial-atlas',
@@ -58,7 +58,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 ]);
 
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab']);
-const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set(['showcase/anari', 'showcase/raster-lab']);
+const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set(['showcase/scene', 'showcase/raster-lab']);
 
 const SHARED_COMPILER_OPTIONS = {
   noEmit: true,
@@ -82,18 +82,18 @@ const SHARED_COMPILER_OPTIONS = {
   paths: {
     '@luma.gl/arrow': [join(repoRoot, 'modules/arrow/src/index.ts')],
     '@luma.gl/arrow/*': [join(repoRoot, 'modules/arrow/src/*')],
-    '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/arrow-layers/src/index.ts')],
-    '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/arrow-layers/src/*')],
-    '@deck.gl-community/luspatial': [join(repoRoot, 'modules/deck-luspatial/src/index.ts')],
-    '@deck.gl-community/luspatial/*': [join(repoRoot, 'modules/deck-luspatial/src/*')],
-    '@math.gl/geoarrow': [join(repoRoot, 'modules/geoarrow/src/index.ts')],
-    '@math.gl/geoarrow/*': [join(repoRoot, 'modules/geoarrow/src/*')],
+    '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/deck-arrow-layers/src/index.ts')],
+    '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/deck-arrow-layers/src/*')],
+    '@deck.gl-community/gpu-layers': [join(repoRoot, 'modules/deck-gpu-layers/src/index.ts')],
+    '@deck.gl-community/gpu-layers/*': [join(repoRoot, 'modules/deck-gpu-layers/src/*')],
+    '@math.gl/geoarrow': [join(repoRoot, 'modules/math-geoarrow/src/index.ts')],
+    '@math.gl/geoarrow/*': [join(repoRoot, 'modules/math-geoarrow/src/*')],
     '@luma.gl/experimental': [join(repoRoot, 'modules/experimental/src/index.ts')],
     '@luma.gl/experimental/*': [join(repoRoot, 'modules/experimental/src/*')],
+    '@luma.gl/gpgpu': [join(repoRoot, 'modules/gpgpu/src/index.ts')],
+    '@luma.gl/gpgpu/*': [join(repoRoot, 'modules/gpgpu/src/*')],
     '@luma.gl/splats': [join(repoRoot, 'modules/splats/src/index.ts')],
     '@luma.gl/splats/*': [join(repoRoot, 'modules/splats/src/*')],
-    '@luma.gl/tables': [join(repoRoot, 'modules/tables/src/index.ts')],
-    '@luma.gl/tables/*': [join(repoRoot, 'modules/tables/src/*')]
   }
 };
 

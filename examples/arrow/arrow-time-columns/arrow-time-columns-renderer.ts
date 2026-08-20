@@ -9,15 +9,13 @@ import {
 } from '@luma.gl/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {type DynamicBuffer, Model, ShaderInputs} from '@luma.gl/engine';
+import {getGPUVectorBuffer, getRequiredGPUVector, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURenderable,
   GPUTable,
   GPUTableModel,
-  getGPUVectorBuffer,
-  getRequiredGPUVector,
-  type GPUTypeMap,
-  type GPUVector
-} from '@luma.gl/tables';
+  type GPUTypeMap
+} from '@luma.gl/experimental/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,

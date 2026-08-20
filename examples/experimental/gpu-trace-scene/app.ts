@@ -13,7 +13,7 @@ import {
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUTraceInteraction,
   GPUTraceScene,

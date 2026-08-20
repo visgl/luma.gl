@@ -6,7 +6,7 @@ import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 import type {Device, RenderPass, ShaderLayout} from '@luma.gl/core';
 import type {FilterShaderPluginProps, ShaderModule} from '@luma.gl/shadertools';
 import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {GPUTableModel, type GPUTable} from '@luma.gl/tables';
+import {GPUTableModel, type GPUTable} from '@luma.gl/experimental/gpu-tables';
 import type {ArrowFilteringTable} from './arrow-filtering-data';
 
 const FILTERING_SHADER_LAYOUT = {

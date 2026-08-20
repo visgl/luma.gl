@@ -15,7 +15,7 @@ import {
 
 const GEOGRAPHIC_QUERY_EFFECT_SOURCE_PATH = path.join(
   process.cwd(),
-  'modules/deck-luspatial/src/query/luspatial-geographic-point-query-effect.ts'
+  'modules/deck-gpu-layers/src/query/luspatial-geographic-point-query-effect.ts'
 );
 const TAXI_APP_SOURCE_PATH = path.join(process.cwd(), 'examples/deck/luspatial-taxi/app.ts');
 const ATLAS_APP_SOURCE_PATH = path.join(

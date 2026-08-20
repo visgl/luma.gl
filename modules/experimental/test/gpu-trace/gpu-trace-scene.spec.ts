@@ -12,7 +12,7 @@ import {
   GPU_SCENE_INVALID_REFERENCE,
   GPU_SCENE_RECORD_BYTE_LENGTH,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUTraceAggregation,
   GPUTraceAnomalyScoring,

@@ -9,13 +9,9 @@ import type {
   GPUCommandGraphContributor,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-core/gpu-command-graph';
-import {
-  createTransientView,
-  getViewBinding,
-  getViewElementOffset
-} from '../gpu-core/graph-data-view-utils';
-import {GPUReduction} from '../gpu-core/gpu-reduction';
+} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
+import {GPUReduction} from '@luma.gl/gpgpu/gpu-core';
 import {getRasterDeviceLimits} from './raster-device-limits';
 import {
   assertRasterStorageBindingFits,

@@ -10,7 +10,7 @@ import {
   GPUReduction,
   type GraphDataView,
   type GraphTextureView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterBufferToTexture,
   GPURasterTextureToBuffer,

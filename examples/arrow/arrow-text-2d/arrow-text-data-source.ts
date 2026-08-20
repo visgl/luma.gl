@@ -25,7 +25,7 @@ import {
   type PickingManager,
   type PickingShouldPickOptions
 } from '@luma.gl/engine';
-import type {GPUTable} from '@luma.gl/tables';
+import type {GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 import {

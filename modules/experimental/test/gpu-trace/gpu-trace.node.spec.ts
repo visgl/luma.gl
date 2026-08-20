@@ -5,7 +5,8 @@
 import {existsSync, readFileSync} from 'node:fs';
 
 import * as experimentalModule from '@luma.gl/experimental';
-import {GraphBufferHandle, GraphDataView} from '@luma.gl/experimental';
+import * as gpuCoreModule from '@luma.gl/gpgpu/gpu-core';
+import {GraphBufferHandle, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import * as traceModule from '@luma.gl/experimental/gpu-trace';
 import {
   GPUTraceAnalyticsOutputLayout,
@@ -82,16 +83,17 @@ describe('@luma.gl/experimental/gpu-trace package boundary', () => {
       expect(exportName in experimentalModule).toBe(false);
     }
 
-    expect(experimentalModule.GPUCommandGraph).toBeTypeOf('function');
-    expect(experimentalModule.GPUHierarchyLayout).toBeTypeOf('function');
-    expect(experimentalModule.GPUGraphTraversal).toBeTypeOf('function');
-    expect(experimentalModule.GPUGallopingSearch).toBeTypeOf('function');
-    expect(experimentalModule.GPUIndexPickingTarget).toBeTypeOf('function');
+    expect(gpuCoreModule.GPUCommandGraph).toBeTypeOf('function');
+    expect(gpuCoreModule.GPUHierarchyLayout).toBeTypeOf('function');
+    expect(gpuCoreModule.GPUGraphTraversal).toBeTypeOf('function');
+    expect(gpuCoreModule.GPUGallopingSearch).toBeTypeOf('function');
+    expect(gpuCoreModule.GPUIndexPickingTarget).toBeTypeOf('function');
+    expect('GPUCommandGraph' in experimentalModule).toBe(false);
   });
 
   test('does not leave trace implementations or reverse imports in generic graph primitives', () => {
     const primitiveExports = readFileSync(
-      new URL('../../src/gpu-core/index.ts', import.meta.url),
+      new URL('../../../gpgpu/src/gpu-core/index.ts', import.meta.url),
       'utf8'
     );
 
@@ -103,12 +105,8 @@ describe('@luma.gl/experimental/gpu-trace package boundary', () => {
     expect(primitiveExports).not.toContain('GPUTraceTemporalIndex');
     expect(primitiveExports).not.toContain('GPUTraceTemporalIndexBuilder');
     expect(primitiveExports).not.toContain('GPUTraceTimeBuckets');
-    expect(existsSync(new URL('../../src/gpu-core/gpu-trace-scene.ts', import.meta.url))).toBe(
-      false
-    );
-    expect(
-      existsSync(new URL('../../src/gpu-core/gpu-trace-interaction.ts', import.meta.url))
-    ).toBe(false);
+    expect(existsSync(new URL('../../src/gpu-core', import.meta.url))).toBe(false);
+    expect(existsSync(new URL('../../src/gpu-graph', import.meta.url))).toBe(false);
   });
 
   test('publishes canonical span and dependency schemas without example-specific constants', () => {

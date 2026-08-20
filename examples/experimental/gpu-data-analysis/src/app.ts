@@ -13,7 +13,7 @@ import {
   GPUReduction,
   GPUScan,
   type CompiledGPUCommandGraph
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   column,
   GPUDataFrame,
@@ -21,7 +21,8 @@ import {
   type CompiledGPUDataFrameQuery,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/experimental/gpu-dataframe';
-import {GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
+import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 import {GPU_DATA_ANALYSIS_STYLES, GPU_DATA_ANALYSIS_TEMPLATE} from './app-shell';

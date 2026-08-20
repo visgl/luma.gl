@@ -11,11 +11,11 @@ const alias = {
   '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/splats': `${__dirname}/../../../modules/splats/src`,
-  '@luma.gl/tables': `${__dirname}/../../../modules/tables/src`,
+  '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
   '@luma.gl/webgl/constants': `${__dirname}/../../../modules/webgl/src/constants`,
   '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,
   '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`,
-  '@math.gl/geoarrow': `${workspaceRoot}/modules/geoarrow/src`
+  '@math.gl/geoarrow': `${workspaceRoot}/modules/math-geoarrow/src`
 };
 
 export default defineConfig({

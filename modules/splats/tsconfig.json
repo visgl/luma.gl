@@ -12,6 +12,6 @@
     {"path": "../engine"},
     {"path": "../experimental"},
     {"path": "../shadertools"},
-    {"path": "../tables"}
+    {"path": "../gpgpu"}
   ]
 }

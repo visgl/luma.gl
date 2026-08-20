@@ -13,7 +13,7 @@ Each source asset is released under CC0-1.0. See the corresponding model directo
 https://github.com/KhronosGroup/glTF-Sample-Assets/tree/2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf/Models.
 
 `SimpleSkinLOD.gltf` is derived from the CC0-1.0 Simple Skin sample by Marco Hutter, already
-included at `examples/showcase/anari/public/gltf/SimpleSkin.gltf`. It adds three `MSFT_lod` mesh
+included at `examples/showcase/scene/public/gltf/SimpleSkin.gltf`. It adds three `MSFT_lod` mesh
 levels while preserving the original joint attributes, two-joint skin, and skeletal animation.
 
 `BumpMaterial.gltf` is a compact positive fixture authored by vis.gl contributors for the

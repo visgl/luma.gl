@@ -4,7 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import test from 'test/utils/vitest-tape';
-import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/experimental';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   compileProjectionPlan,
   evaluateProjectionPlan,
@@ -14,7 +14,7 @@ import {
   PROJECTION_PLAN_BOUNDS_WORD_LENGTH,
   PROJECTION_PATCH_WORD_LENGTH
 } from '@luma.gl/experimental/gpu-project';
-import type {GPUVectorFormat} from '@luma.gl/tables';
+import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 type Coordinates = readonly [number, number];

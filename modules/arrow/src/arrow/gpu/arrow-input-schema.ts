@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {validateGPUInputVectors, type GPUInputSchema, type GPUInputVectors} from '@luma.gl/tables';
+import {
+  validateGPUInputVectors,
+  type GPUInputSchema,
+  type GPUInputVectors
+} from '@luma.gl/experimental/gpu-tables';
 import type {RecordBatch, Table} from 'apache-arrow';
 
 /** Arrow table-like source accepted by generic Arrow input schemas. */

@@ -4,7 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {describe, expect, test, vi} from 'vitest';
-import type {CompiledGPUCommandGraph} from '@luma.gl/experimental';
+import type {CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterTileCache,
   GPURasterTileReader,

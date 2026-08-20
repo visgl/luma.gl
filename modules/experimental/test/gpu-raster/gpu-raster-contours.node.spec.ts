@@ -10,7 +10,7 @@ import {
   type GPUCommandGraph,
   type GPUCommandGraphComputeNode,
   type GraphBufferDescriptor
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterContourClassifier,
   GPURasterContours,

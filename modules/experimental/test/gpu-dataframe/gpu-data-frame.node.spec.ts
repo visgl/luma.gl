@@ -8,15 +8,13 @@ import type {Buffer} from '@luma.gl/core';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as gpuDataFrameModule from '@luma.gl/experimental/gpu-dataframe';
 import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
+import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  GPUConstant,
-  GPUData,
   GPURecordBatch,
   GPUTable,
-  GPUVector,
   type GPUField,
   type GPURecordBatchSourceInfo
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
@@ -39,7 +37,8 @@ describe('@luma.gl/experimental/gpu-dataframe package boundary', () => {
       require: './dist/gpu-dataframe/index.cjs',
       types: './dist/gpu-dataframe/index.d.ts'
     });
-    expect(packageJson.dependencies?.['@luma.gl/tables']).toBeDefined();
+    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBeDefined();
+    expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
     expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
     expect(packageJson.peerDependencies?.['apache-arrow']).toBeUndefined();
   });

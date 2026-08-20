@@ -8,7 +8,7 @@ import {
   GraphDataView,
   type GPUCommandGraph,
   type GPUCommandGraphComputeNode
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterDenseComponents,
   type GPURasterDenseComponentsProps,

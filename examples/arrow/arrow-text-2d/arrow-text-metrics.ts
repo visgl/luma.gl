@@ -7,7 +7,7 @@ import {
   type ArrowTextRenderer,
   type ArrowTextRendererInput
 } from '@luma.gl/arrow';
-import type {GPUVector} from '@luma.gl/tables';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {ArrowText2DControlPanelMetrics} from './control-panel';
 
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.

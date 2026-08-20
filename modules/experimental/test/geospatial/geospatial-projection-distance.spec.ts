@@ -4,9 +4,9 @@
 
 import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/experimental';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import type {GPUVectorFormat} from '@luma.gl/tables';
+import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUHaversineDistance,
   GPUPairwisePointDistance,

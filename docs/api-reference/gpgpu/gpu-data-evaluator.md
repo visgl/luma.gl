@@ -49,7 +49,7 @@ not combine streaming batches or pack buffers implicitly.
 
 ```ts
 import {add} from '@luma.gl/gpgpu';
-import {makeGPUDataViewFromAttribute} from '@luma.gl/tables';
+import {makeGPUDataViewFromAttribute} from '@luma.gl/gpgpu/gpu-data';
 
 const positions = makeGPUDataViewFromAttribute({
   buffer: interleavedBuffer,

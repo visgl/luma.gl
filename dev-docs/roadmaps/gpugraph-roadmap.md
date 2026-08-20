@@ -83,8 +83,8 @@ consumers.
 | T.2 — Interactive GPU trace policies | Implemented: time windows, process/thread expansion, linked-span focus, ancestor retention, and stable indirect draws | Tranche T.1 plus hierarchy, mask, traversal, and visibility workflows | Policy-only updates reuse one graph with GPU-tested stable masks, row IDs, hierarchy offsets, ancestry, and indirect draws | High | Large |
 | T.3 — Scene-backed trace showcase | Implemented: a bounded live trace explorer combines canonical trace scenes, GPU interactions, picking, resource groups, stable indirect drawing, and command-graph inspection | Tranche T.2 plus existing picking and graph-inspection contracts | Representative traces pan, filter, collapse, focus, and pick without CPU draw selection or graph recompilation | High | Large |
 | 7.1 — Dependency audit and API freeze | Freeze names, ownership, failures, capacities, submission, and package graph | Phase 6 exits and two consumers per graduation candidate | Acyclic dependency report and owner for every public resource boundary | High | Medium |
-| 7.2 — Scheduling-core extraction | Move table-independent graph scheduling directly to `@luma.gl/engine` | Tranche 7.1 | Engine builds without tables, gpgpu, or Arrow; all repository imports use the final owner | High | Large |
-| 7.3 — Adapter and algorithm migration | Keep table adapters in `@luma.gl/tables`; move optional workflows to `@luma.gl/gpgpu` | Tranche 7.2 | Package tests enforce dependency direction and examples use final owners | High | Large |
+| 7.2 — Scheduling-core extraction | Extract an engine-independent compute runtime beneath engine in `@luma.gl/gpgpu` | Tranche 7.1 | Graph scheduling no longer imports engine; all repository imports use the final owner | High | Large |
+| 7.3 — Adapter and algorithm migration | Keep primitive data and algorithms in `@luma.gl/gpgpu`; layer engine and table/model adapters above it | Tranche 7.2 | Package tests enforce dependency direction and examples use final owners | High | Large |
 | 7.4 — Documentation and graduation | Stable docs, release notes, and experimental-removal criteria | Tranche 7.3 | API reports and links pass; obsolete experimental exports are absent | High | Medium |
 
 ### Recommended execution order
@@ -574,11 +574,12 @@ consumers use the same storage contract.
 **Entry dependencies:** Phases 1–6 have stable failure, ownership, extension, and package-boundary
 contracts, and every candidate abstraction has at least two independent consumers.
 
-Move the table-independent scheduling core to `@luma.gl/engine`, keep generic GPU table types and
-graph adapters in `@luma.gl/tables`, and move optional algorithms and reusable workflows to
-`@luma.gl/gpgpu`. Keep Arrow conversion and readback adapters in `@luma.gl/arrow`. Audit
-`DrawCommandBuffer` and split its core from table integration if that is required to avoid an engine
-dependency on tables. These APIs are new and experimental, so graduation is a direct move: update
+Extract the table-independent scheduling core beneath engine in `@luma.gl/gpgpu`, keep primitive
+GPU data, graph structures, algorithms, and reusable workflows there, and layer engine resource
+adapters plus private table/model integrations above it. Keep Arrow conversion and readback adapters
+in `@luma.gl/arrow`. Audit `DrawCommandBuffer` and split its core from rendering integration if that
+is required to avoid a gpgpu dependency on engine. These APIs are new and experimental, so
+graduation is a direct move: update
 repository consumers atomically and do not retain compatibility exports, duplicate public paths,
 or a deprecation window.
 
@@ -588,25 +589,27 @@ Freeze ownership, naming, submission, lifetime, failure, capacity, and extension
 after every graduation candidate has at least two consumers. Produce the target package graph and
 identify every repository import that must move atomically with the implementation.
 
-**Exit evidence:** The audit demonstrates an acyclic package graph, no Arrow leakage into tables or
-gpgpu, no table dependency in the engine core, and an owner for every public resource and command
+**Exit evidence:** The audit demonstrates an acyclic package graph, no Arrow leakage into gpgpu or
+generic table layers, no engine dependency in graph scheduling, and an owner for every resource and command
 submission boundary.
 
 #### Tranche 7.2 — Scheduling-core extraction
 
-Move the table-independent command-graph core to `@luma.gl/engine`, limited to buffers, textures,
-passes, generic graph views, scheduling, hazards, and allocation. Remove its experimental exports
-in the same change so there is exactly one public owner.
+Extract the table-independent command-graph runtime beneath engine in `@luma.gl/gpgpu`, limited to
+buffers, textures, passes, generic graph views, scheduling, hazards, and allocation. Move engine
+resource and model adapters above that runtime, and remove direct engine imports from graph
+scheduling.
 
-**Exit evidence:** Engine builds without tables, gpgpu, or Arrow; all repository consumers import
-the final engine owner; direct engine consumers need no table-shaped adapter; no compatibility
-export preserves the former path.
+**Exit evidence:** Graph scheduling builds without engine, experimental tables, or Arrow; all
+repository consumers import the final gpgpu owner; engine consumers use explicit adapters; no
+compatibility export preserves the former path.
 
 #### Tranche 7.3 — Adapter and algorithm migration
 
-Keep generic GPU data and graph adapters in `@luma.gl/tables`, move optional algorithms and reusable
-workflow builders to `@luma.gl/gpgpu`, and retain Arrow conversion, upload, and readback helpers in
-`@luma.gl/arrow`. Split `DrawCommandBuffer` integration if necessary to preserve that direction.
+Keep primitive GPU data, graph structures, optional algorithms, and reusable workflow builders in
+`@luma.gl/gpgpu`; keep higher-level tables and rendering models in private experimental subpaths;
+and retain Arrow conversion, upload, and readback helpers in `@luma.gl/arrow`. Split
+`DrawCommandBuffer` rendering integration if necessary to preserve that direction.
 
 **Exit evidence:** Package-level tests and dependency checks enforce the intended arrows, public
 examples import from their final owners, and no algorithm or adapter remains exported by both its

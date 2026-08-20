@@ -12,7 +12,7 @@ import {
   resolveArrowPickInfo
 } from '@luma.gl/arrow';
 import {Buffer} from '@luma.gl/core';
-import type {GPUData} from '@luma.gl/tables';
+import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {

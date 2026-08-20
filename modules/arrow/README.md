@@ -4,7 +4,7 @@ Apache Arrow adapters for luma.gl GPU table objects.
 
 This module owns Arrow-specific upload, preparation, and compatibility metadata.
 It creates the generic `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`, and
-`GPUSchema` objects exported by `@luma.gl/tables`; it does not define parallel
+`GPUSchema` objects exported by `@luma.gl/experimental/gpu-tables`; it does not define parallel
 Arrow-side GPU table classes.
 
 The package supports Apache Arrow 17 and later. `ArrowTextRenderer` dynamically recognizes

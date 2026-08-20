@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {GPUDataEvaluator, type GPUDataEvaluatorEvaluateOptions} from './gpu-data-evaluator';
 
 /** Options for materializing one {@link GPUVectorEvaluator}. */

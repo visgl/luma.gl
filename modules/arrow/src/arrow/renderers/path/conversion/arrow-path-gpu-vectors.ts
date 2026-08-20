@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
+import {type VertexList} from '@luma.gl/gpgpu/gpu-data';
 import {
   planGeneratedBufferBatches,
-  type GeneratedBufferBatch,
-  type VertexList
-} from '@luma.gl/tables';
+  type GeneratedBufferBatch
+} from '@luma.gl/experimental/gpu-tables';
 import {
   Bool,
   BufferType,
@@ -51,7 +51,7 @@ import type {
   PathAttributeModelState,
   PathRenderBatchState,
   PathSegmentLayout
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/models';
 import {
   makeArrowPathViewOriginVector,
   type ArrowPathViewOriginType,

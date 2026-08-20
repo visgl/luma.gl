@@ -4,14 +4,15 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUDataFrame,
   column,
   literal,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/experimental/gpu-dataframe';
-import {GPUData, GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
+import {GPUData, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
 

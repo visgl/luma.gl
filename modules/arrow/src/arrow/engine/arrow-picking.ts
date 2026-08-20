@@ -13,7 +13,8 @@ import {
   type PickingShouldPickOptions,
   type ShaderInputs
 } from '@luma.gl/engine';
-import type {GPURecordBatchSourceInfo, GPUTable, GPUVector} from '@luma.gl/tables';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPURecordBatchSourceInfo, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {BufferType, Data, Uint32, Vector} from 'apache-arrow';
 import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-table-adapters';
 

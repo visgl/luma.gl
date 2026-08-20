@@ -4,7 +4,8 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
-import {GPUData, GPURecordBatch, GPUTable} from '@luma.gl/tables';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 import {vi} from 'vitest';

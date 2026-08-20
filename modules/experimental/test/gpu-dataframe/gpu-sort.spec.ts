@@ -4,7 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUDataFrame,
   column,
@@ -13,7 +13,8 @@ import {
   type CompiledGPUDataFrameGlobalSort,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/experimental/gpu-dataframe';
-import {GPUData, GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 import {vi} from 'vitest';

@@ -236,7 +236,7 @@ describe('GPU module documentation contract', () => {
   test('mentions every exported GPU module operation in its documentation family', () => {
     const contracts = [
       {
-        source: 'modules/experimental/src/gpu-core/index.ts',
+        source: 'modules/gpgpu/src/gpu-core/index.ts',
         documentation: 'docs/api-reference/experimental/gpu-core'
       },
       {
@@ -248,7 +248,7 @@ describe('GPU module documentation contract', () => {
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/experimental/src/gpu-graph/index.ts',
+        source: 'modules/gpgpu/src/gpu-graph/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {

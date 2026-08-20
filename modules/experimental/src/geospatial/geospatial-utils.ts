@@ -6,13 +6,13 @@
 import {type Binding, type Buffer} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
-import type {GPUVectorFormat} from '@luma.gl/tables';
+import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUCommandGraph,
   type GraphVectorView,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   doGraphDataViewsOverlap,
   getViewBinding,
@@ -20,7 +20,7 @@ import {
   getViewElementOffset,
   validateMatchingVectorTopology,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 
 export const GEOSPATIAL_WORKGROUP_SIZE = 256;
 export const POSITION_FORMATS = ['float32x2', 'uint32x4'] as const;

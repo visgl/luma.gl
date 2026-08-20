@@ -3,18 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {
-  GPUCommandGraph,
-  type GraphBufferHandle,
-  type GraphDataView
-} from '../gpu-core/gpu-command-graph';
+import {GPUCommandGraph, type GraphBufferHandle, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUScene,
   GPU_SCENE_ACTIVE_FLAG,
   GPU_SCENE_INVALID_REFERENCE,
   GPU_SCENE_RECORD_BYTE_LENGTH,
   type GPUSceneView
-} from '../gpu-core/gpu-scene';
+} from '@luma.gl/gpgpu/gpu-core';
 
 /**
  * Number of 32-bit words in a canonical execution span.
@@ -202,7 +198,7 @@ export type GPUTraceSceneStats = {
  *
  * @example
  * ```ts
- * import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+ * import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
  * import {GPUTraceScene} from '@luma.gl/experimental/gpu-trace';
  *
  * const trace = new GPUTraceScene(device, {

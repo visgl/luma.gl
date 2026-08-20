@@ -14,22 +14,18 @@ import {
 import {Computation, type Geometry, Model} from '@luma.gl/engine';
 import {type Light, PBR_TONE_MAP_MODE} from '@luma.gl/shadertools';
 import {Matrix4, type NumericArray} from '@math.gl/core';
-import {GPUBVH} from '../gpu-core/gpu-bvh';
+import {GPUBVH} from '@luma.gl/gpgpu/gpu-core';
 import {
   type CompiledGPUCommandGraph,
   GPUCommandGraph,
   type GPUCommandGraphEncodingStats,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {GPUSegmentedBVH, type GPUBVHSegment} from '../gpu-core/gpu-segmented-bvh';
-import {GPUSegmentedSort, type GPUSortSegment} from '../gpu-core/gpu-segmented-sort';
-import {GPUSort} from '../gpu-core/gpu-sort';
-import {GPUTextureHistory} from '../gpu-core/gpu-texture-history';
-import {
-  createTransientView,
-  getViewBinding,
-  getViewElementOffset
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUSegmentedBVH, type GPUBVHSegment} from '@luma.gl/gpgpu/gpu-core';
+import {GPUSegmentedSort, type GPUSortSegment} from '@luma.gl/gpgpu/gpu-core';
+import {GPUSort} from '@luma.gl/gpgpu/gpu-core';
+import {GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
+import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   getRayTracingScenePresentationShader,
   RAY_TRACING_BOUNDS_SHADER,

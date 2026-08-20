@@ -17,7 +17,8 @@ one-standard-deviation scales are packed XYZ `Float32Array` values; rotations ar
 `Float32Array` values; and opacities are linear `Float32Array` values. Floating-point colors
 preserve high-dynamic-range spherical-harmonic DC radiance, including values above one and below
 zero, until rendering. Prepared GPU columns use the `float32x3`, `float32x4`, `unorm8x4`, and
-`float32` memory formats provided by [`@luma.gl/tables`](/docs/api-reference/tables).
+`float32` memory formats provided by
+[`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/tables).
 
 `SplatRenderer` supports `none`, `global`, and `tile` depth-ordering modes alongside camera matrix,
 viewport, radius, opacity, and visibility controls; `GPUSplatGraphRenderer` always uses global

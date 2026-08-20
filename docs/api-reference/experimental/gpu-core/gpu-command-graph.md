@@ -233,7 +233,7 @@ replace both role bindings when encoding later frames:
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
 
 const descriptor = {
   format: 'rgba16float' as const,
@@ -755,7 +755,7 @@ routed through the handle. Optional GPU timestamp readback remains explicit and 
 the caller submits the command buffer:
 
 ```ts
-import {GPUCommandGraphInspector} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 const observation = inspector.observeGraph(compiled);

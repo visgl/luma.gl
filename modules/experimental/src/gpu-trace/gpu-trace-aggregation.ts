@@ -7,11 +7,8 @@ import {
   GraphDataView,
   GraphVectorView,
   type GPUCommandGraphContributor
-} from '../gpu-core/gpu-command-graph';
-import {
-  GPUGroupAggregation,
-  type GPUGroupAggregationOperation
-} from '../gpu-core/gpu-group-aggregation';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGroupAggregation, type GPUGroupAggregationOperation} from '@luma.gl/gpgpu/gpu-core';
 
 /** One packed canonical column or ordered chunks preserving canonical row order. */
 export type GPUTraceAggregationColumn<T extends 'uint32' | 'float32'> =

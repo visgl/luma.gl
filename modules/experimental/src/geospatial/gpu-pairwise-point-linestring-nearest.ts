@@ -8,8 +8,8 @@ import type {
   GPUCommandGraphContributor,
   GraphBufferUse,
   GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {getViewElementOffset} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
+import {getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
   POSITION_FORMATS,

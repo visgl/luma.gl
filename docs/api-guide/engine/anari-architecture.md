@@ -49,7 +49,7 @@ frame.setParameter('renderer', raymarch).commitParameters();
 ```
 
 Runtime factories are lazy and device-owned. See
-[registering renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes)
+[registering renderer runtimes](/docs/api-reference/scene/anari-device#registering-renderer-runtimes)
 for the runtime contract and ownership details.
 
 ### Ray-tracing technique background and tradeoffs
@@ -268,5 +268,5 @@ associated instance buffers.
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/anari)
+- [ANARI API reference](/docs/api-reference/scene)
 - [Engine programming](/docs/api-guide/engine)

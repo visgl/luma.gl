@@ -10,14 +10,14 @@ import type {
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-core/gpu-command-graph';
-import {GPUGroupAggregation} from '../gpu-core/gpu-group-aggregation';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGroupAggregation} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
   getRasterDispatchSize,

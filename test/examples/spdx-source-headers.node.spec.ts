@@ -172,7 +172,7 @@ describe('SPDX source headers', () => {
   });
 
   test('retains valid MIT and ISC licensing and both owners for the Mapbox earcut derivative', () => {
-    const sourceFile = 'modules/geoarrow/src/optimized-earcut.ts';
+    const sourceFile = 'modules/math-geoarrow/src/optimized-earcut.ts';
     const sourceHeader = readSourceHeader(sourceFile);
 
     expect(sourceHeader).toContain('// SPDX-License-Identifier: MIT AND ISC');

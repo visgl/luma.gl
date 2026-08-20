@@ -18,7 +18,7 @@ import {
   GPUReadbackRing,
   type GPUReadbackTicket,
   INDEX_PICKING_READBACK_BYTE_LENGTH
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUGridIndex,
   type GPUGridIndexBounds,

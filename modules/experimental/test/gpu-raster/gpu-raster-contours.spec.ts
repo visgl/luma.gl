@@ -4,7 +4,7 @@
 
 import test from '../../../../test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
-import {DrawCommandBuffer, GPUCommandGraph, type GraphDataView} from '@luma.gl/experimental';
+import {DrawCommandBuffer, GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterContourClassifier,
   GPURasterContours,

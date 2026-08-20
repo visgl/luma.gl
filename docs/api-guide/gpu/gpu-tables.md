@@ -1,6 +1,8 @@
 # GPU Tables
 
-`@luma.gl/tables` represents row-aligned application data as typed GPU columns. A
+`@luma.gl/gpgpu/gpu-data` provides primitive GPU chunks and vectors, while the private experimental
+`@luma.gl/experimental/gpu-tables` subpath represents row-aligned application data as typed GPU
+columns. A
 `GPUTable` is useful when the same data must feed rendering, transforms, or compute
 without first converting every row into JavaScript objects or one model-specific
 buffer structure.
@@ -38,7 +40,8 @@ not appear in `table.bufferLayout`.
 ## Constructing A Table
 
 ```ts
-import {GPUConstant, GPUTable} from '@luma.gl/tables';
+import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
+import {GPUTable} from '@luma.gl/experimental/gpu-tables';
 
 const table = new GPUTable({
   columns: {

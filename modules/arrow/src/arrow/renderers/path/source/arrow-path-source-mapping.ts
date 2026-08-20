@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {RecordBatch, Table, Vector, type DataType} from 'apache-arrow';
-import type {GPUInputDeclaration, GPUInputSchema} from '@luma.gl/tables';
+import type {GPUInputDeclaration, GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
 import type {ArrowPathSourceVectors} from '../conversion/arrow-path-gpu-vectors';
 import {getArrowPaths, getArrowVectorByPath} from '../../../arrow-utils/arrow-paths';
 

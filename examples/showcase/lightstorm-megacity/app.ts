@@ -18,17 +18,15 @@ import {
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {
-  ClusteredLightGrid,
   decodeGPUIndexPickInfo,
   DrawCommandBuffer,
-  GBuffer,
   GPUCommandGraph,
   GPUIndexPickingTarget,
   GPUVisibilityWorkflow,
   INDEX_PICKING_READBACK_BYTE_LENGTH,
-  makeDeferredPointLightBufferData,
   type CompiledGPUCommandGraph
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
+import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/experimental';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {

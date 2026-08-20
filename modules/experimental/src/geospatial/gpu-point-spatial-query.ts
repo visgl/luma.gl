@@ -10,8 +10,8 @@ import {
   type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import type {GPUGridIndexBounds, GPUGridIndexSize} from '../gpu-core/gpu-grid-index';
+} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUGridIndexBounds, GPUGridIndexSize} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
@@ -19,7 +19,7 @@ import {
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
   type GeospatialDispatchLayout

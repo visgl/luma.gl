@@ -13,7 +13,7 @@ import {
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GraphBufferUse
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUGraph,
   GPUGraphBreadthFirstSearch,
@@ -25,8 +25,8 @@ import {
   GPUGraphSpatialForceLayout,
   GPUGraphTopology,
   type GPUGraphAdjacency
-} from '@luma.gl/experimental/gpu-graph';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

@@ -4,7 +4,7 @@
 
 import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
 import {Buffer} from '@luma.gl/core';
-import {type GPUVector} from '@luma.gl/tables';
+import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import test from 'test/utils/vitest-tape';

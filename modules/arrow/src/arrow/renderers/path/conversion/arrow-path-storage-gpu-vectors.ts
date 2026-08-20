@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device} from '@luma.gl/core';
-import type {VertexList} from '@luma.gl/tables';
+import type {VertexList} from '@luma.gl/gpgpu/gpu-data';
 import {Bool, DataType, FixedSizeList, Float32, Float64, List, Uint8, Vector} from 'apache-arrow';
 import {closeArrowPaths} from '../transforms/close-arrow-paths';
 import {
@@ -19,13 +19,13 @@ import type {
 import {convertArrowPathFloat64ToGPUVector} from '../transforms/gpu-path-float64-deltas';
 import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
 import {isVariableLengthAttributeArrowType} from '../../../arrow-utils/arrow-types';
-import type {PathStorageInputProps} from '@luma.gl/tables';
+import type {PathStorageInputProps} from '@luma.gl/experimental/models';
 import {convertArrowTemporalToGPUVector} from '../../../vectors/arrow-temporal-gpu-vector';
 export {
   resolvePathStorageInputs,
   type PathStorageBatchInputs,
   type PathStorageInputs
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/models';
 
 type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
 type ArrowPathFloat64CoordinateType = List<FixedSizeList<Float64>>;

@@ -12,7 +12,7 @@ import {
   type GPUCommandGraphStats,
   type GraphBufferHandle,
   type GraphTextureView
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   VOLUMETRIC_FIRE_COMBUSTION_ADVECTION_BINDINGS,
   VOLUMETRIC_FIRE_COMBUSTION_ADVECTION_SHADER,

@@ -1,8 +1,8 @@
 import test from 'test/utils/vitest-tape';
-import {ANARIDevice, ANARIGroup} from '@luma.gl/anari';
+import {ANARIDevice, ANARIGroup} from '@luma.gl/scene';
 import {NullDevice} from '@luma.gl/test-utils';
-import {PLAYGROUND_PRESETS} from '../../examples/showcase/anari/playground-presets';
-import {createANARIJSONScene} from '../../examples/showcase/anari/playground-scene';
+import {PLAYGROUND_PRESETS} from '../../examples/showcase/scene/playground-presets';
+import {createANARIJSONScene} from '../../examples/showcase/scene/playground-scene';
 
 test('ANARI JSON presets reproduce the complete Observatory scenes', testContext => {
   const device = new ANARIDevice(new NullDevice({}));

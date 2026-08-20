@@ -11,7 +11,7 @@ and trace-aware picking. It builds on the generic experimental command graph and
 without adding spans, processes, threads, or dependency links to their public APIs.
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUTraceAggregation,
   GPUTraceAnalyticsOutputLayout,

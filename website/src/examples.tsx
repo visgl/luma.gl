@@ -756,7 +756,7 @@ const GPGPU_EXAMPLE_STYLE = `
 // Showcase Examples
 
 export const ANARIPlaygroundExample: React.FC = () => {
-  const source = useBaseUrl('/standalone-examples/anari/playground.html');
+  const source = useBaseUrl('/standalone-examples/scene/playground.html');
 
   return (
     <ExamplePage style={{background: '#070913', minHeight: '720px'}}>

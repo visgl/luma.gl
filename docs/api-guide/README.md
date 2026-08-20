@@ -38,8 +38,8 @@ format-independent scene descriptions instead of introducing a second glTF rende
 from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
-[Declarative Rendering with ANARI](/docs/api-guide/engine/anari-rendering). It introduces
-the experimental, private `@luma.gl/anari` workspace, scene objects, committed parameters,
+[Declarative Scene Rendering](/docs/api-guide/engine/anari-rendering). It introduces
+the experimental, private `@luma.gl/scene` workspace, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
 

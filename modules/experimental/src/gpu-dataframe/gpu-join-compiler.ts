@@ -4,26 +4,27 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData, GPUVector, type GPUTable, type GPUTypeMap} from '@luma.gl/tables';
-import {GPUBatchHashIndex} from '../gpu-core/gpu-batch-hash-index';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUTable, type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
+import {GPUBatchHashIndex} from '@luma.gl/gpgpu/gpu-core';
 import {
   type GPUCommandGraph,
   type GraphBufferUse,
   type GraphDataView,
   type GraphVectorView
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUHashIndexQuery,
   GPU_HASH_INDEX_EMPTY_KEY,
   GPU_HASH_INDEX_STATISTICS_LENGTH,
   GPU_HASH_QUERY_STATISTICS_LENGTH
-} from '../gpu-core/gpu-hash-index';
-import {GPUScan} from '../gpu-core/gpu-scan';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUScan} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientVectorView,
   createTransientView,
   getViewElementOffset
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addGPUAnalyticsComputePass,

@@ -42,7 +42,7 @@ or constraints that depend on sibling content. The primitive computes scalar row
 not choose styling or animation.
 
 ```ts
-import {GPUHierarchyLayout} from '@luma.gl/experimental/gpu-core';
+import {GPUHierarchyLayout} from '@luma.gl/gpgpu/gpu-core';
 
 new GPUHierarchyLayout({
   id: 'process-thread-layout',

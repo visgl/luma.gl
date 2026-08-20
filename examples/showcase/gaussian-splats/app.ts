@@ -6,7 +6,10 @@ import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
 import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {GPUCommandGraphInspector, type GPUCommandGraphInspectorGraph} from '@luma.gl/experimental';
+import {
+  GPUCommandGraphInspector,
+  type GPUCommandGraphInspectorGraph
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUPagedSplatRenderer,
   GPUSplatGraphRenderer,

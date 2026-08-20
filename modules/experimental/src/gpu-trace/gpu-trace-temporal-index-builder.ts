@@ -4,21 +4,14 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {
-  GPUCommandGraph,
-  type GraphBufferUse,
-  type GraphDataView
-} from '../gpu-core/gpu-command-graph';
-import {
-  getBoundedDispatchLayout,
-  getBoundedInvocationIndexSource
-} from '../gpu-core/gpu-dispatch-utils';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/gpgpu/gpu-core';
 import {
   doGraphDataViewsOverlap,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUTraceTemporalIndexLevel} from './gpu-trace-temporal-index';
 
 const TEMPORAL_INDEX_BUILD_WORKGROUP_SIZE = 256;

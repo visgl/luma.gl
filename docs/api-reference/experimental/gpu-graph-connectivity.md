@@ -23,7 +23,7 @@ group. Choose weak components when group membership matters, not the distance fr
 account or the direction in which influence flows.
 
 ```ts
-import {GPUGraphConnectedComponents} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraphConnectedComponents} from '@luma.gl/gpgpu/gpu-graph';
 
 const components = new GPUGraphConnectedComponents({
   topology,
@@ -61,7 +61,7 @@ Use weak components to find disconnected islands; use community labels to inspec
 within an island.
 
 ```ts
-import {GPUGraphLabelPropagation} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraphLabelPropagation} from '@luma.gl/gpgpu/gpu-graph';
 
 const communities = new GPUGraphLabelPropagation({
   topology,
@@ -121,7 +121,7 @@ analysis. The caller receives both the improved labels and the score of that exa
 partition.
 
 ```ts
-import {GPUGraphModularityOptimization} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraphModularityOptimization} from '@luma.gl/gpgpu/gpu-graph';
 
 const optimizedCommunities = new GPUGraphModularityOptimization({
   topology,
@@ -217,7 +217,7 @@ internal weight than expected. Scores depend on the graph and resolution paramet
 universal quality percentages or proof that one partition is objectively correct.
 
 ```ts
-import {GPUGraphModularity} from '@luma.gl/experimental/gpu-graph';
+import {GPUGraphModularity} from '@luma.gl/gpgpu/gpu-graph';
 
 const partitionQuality = new GPUGraphModularity({
   graph,

@@ -16,16 +16,15 @@ import {
   type ArrowPathPreparedState
 } from '@luma.gl/arrow';
 import {type CommandEncoder, type Device} from '@luma.gl/core';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPURenderable} from '@luma.gl/experimental/gpu-tables';
 import {
   PathAttributeModel,
-  GPURenderable,
-  GPUVector,
   PathStorageModel,
   PathTripsStorageModel,
   type PathAttributeModelProps,
-  type GPUVectorFormat,
   type PathStorageInputProps
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/models';
 import * as arrow from 'apache-arrow';
 import {
   createArrowLineShaderInputs,

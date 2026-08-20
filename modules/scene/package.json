@@ -1,0 +1,50 @@
+{
+  "name": "@luma.gl/scene",
+  "version": "9.4.0-alpha.4",
+  "private": true,
+  "description": "ANARI-inspired declarative rendering for luma.gl",
+  "type": "module",
+  "license": "MIT",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.js"
+    },
+    "./gltf": {
+      "types": "./dist/gltf.d.ts",
+      "import": "./dist/gltf.js",
+      "require": "./dist/gltf.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@luma.gl/core": "~9.4.0-alpha.2",
+    "@luma.gl/effects": "~9.4.0-alpha.2",
+    "@luma.gl/engine": "~9.4.0-alpha.2",
+    "@luma.gl/experimental": "~9.4.0-alpha.2",
+    "@luma.gl/gltf": "~9.4.0-alpha.2",
+    "@luma.gl/shadertools": "~9.4.0-alpha.2"
+  },
+  "peerDependenciesMeta": {
+    "@luma.gl/gltf": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@math.gl/core": "^4.1.0",
+    "zod": "^4.4.3"
+  }
+}

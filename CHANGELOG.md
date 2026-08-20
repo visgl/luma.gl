@@ -56,11 +56,11 @@
 - feat(experimental): add filtered GPU group counts (#2798)
 - Add LLM-friendly developer support (#2764)
 - feat(experimental): add irregular GPU histograms (#2794)
-- Add ANARI deferred renderer (#2791)
+- Add deferred renderer (#2791)
 - feat(experimental): add GPU grid statistics (#2792)
 - feat(experimental): add weighted GPU grid aggregation (#2789)
 - feat(experimental): add GPU scan variants (#2787)
-- feat: private experimental ANARI renderer, HDR showcase, and JSON playground (#2774)
+- feat: private experimental scene renderer, HDR showcase, and JSON playground (#2774)
 - feat(experimental): add reusable GPU visibility workflows (#2786)
 - feat(experimental): add GPU-native hierarchical trace manipulation (#2762)
 

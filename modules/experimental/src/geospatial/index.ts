@@ -33,14 +33,14 @@ export type {
   GPUFloat64PairwisePointLinestringNearestProps,
   GPUPairwisePointLinestringNearestProps
 } from './gpu-pairwise-point-linestring-nearest';
-export {GPUGridIndex} from '../gpu-core/gpu-grid-index';
+export {GPUGridIndex} from '@luma.gl/gpgpu/gpu-core';
 export type {
   GPUGridIndexBounds,
   GPUGridIndexPositions,
   GPUGridIndexProps,
   GPUGridIndexSize,
   GPUGridIndexSourceIds
-} from '../gpu-core/gpu-grid-index';
+} from '@luma.gl/gpgpu/gpu-core';
 export type {GPUSpatialQueryOutput} from './gpu-spatial-query-types';
 export {GPUPointSpatialQuery} from './gpu-point-spatial-query';
 export type {

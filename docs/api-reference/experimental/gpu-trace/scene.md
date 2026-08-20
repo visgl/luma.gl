@@ -123,7 +123,7 @@ allocations while keeping logical graph-view lengths at zero.
 ## Usage
 
 ```ts
-import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/gpgpu/gpu-core';
 import {GPUTraceScene} from '@luma.gl/experimental/gpu-trace';
 
 const trace = new GPUTraceScene(device, {

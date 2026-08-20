@@ -4,7 +4,8 @@
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import type {DynamicTexture, ModelProps} from '@luma.gl/engine';
-import {GPUTableModel, getGPUDataBuffersForLayout, type GPUTableModelProps} from '@luma.gl/tables';
+import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/experimental/gpu-tables';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
 import {

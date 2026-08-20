@@ -9,15 +9,15 @@ import type {
   GPUCommandGraphContributor,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
-import {GPUScan} from '../gpu-core/gpu-scan';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUScan} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
   getRasterDispatchSize,

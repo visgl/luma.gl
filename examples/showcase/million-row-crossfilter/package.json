@@ -13,7 +13,7 @@
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
     "@luma.gl/experimental": "9.4.0-alpha.4",
-    "@luma.gl/tables": "9.4.0-alpha.4",
+    "@luma.gl/gpgpu": "9.4.0-alpha.4",
     "@luma.gl/webgpu": "9.4.0-alpha.4"
   },
   "devDependencies": {

@@ -1,0 +1,385 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import test from 'test/utils/vitest-tape';
+import {
+  GPUData,
+  GPUVector,
+  getGPUVectorBuffer,
+  getGPUVectorElementFormat,
+  getGPUVectorFormatInfo,
+  getGPUVectorData,
+  getRequiredGPUVector,
+  isGPUVectorFormatCompatibleWithShaderType,
+  isValueListGPUVectorFormat,
+  isVertexListGPUVectorFormat
+} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
+import {NullDevice} from '@luma.gl/test-utils';
+
+test('GPUVector format helpers parse fixed and variable-length formats', t => {
+  const fixedInfo = getGPUVectorFormatInfo('float32x3');
+  const vertexListInfo = getGPUVectorFormatInfo('vertex-list<unorm8x4>');
+  const valueListInfo = getGPUVectorFormatInfo('value-list<uint8>');
+
+  t.equal(fixedInfo.elementFormat, 'float32x3', 'fixed vector element format is unchanged');
+  t.equal(fixedInfo.vertexList, false, 'fixed vector is not a vertex list');
+  t.equal(fixedInfo.valueList, false, 'fixed vector is not a value list');
+  t.equal(fixedInfo.byteLength, 12, 'fixed vector byte length is decoded');
+  t.equal(vertexListInfo.elementFormat, 'unorm8x4', 'vertex-list exposes its element format');
+  t.equal(vertexListInfo.vertexList, true, 'vertex-list marker is decoded');
+  t.equal(vertexListInfo.valueList, false, 'vertex-list is not a value-list');
+  t.equal(vertexListInfo.primitiveType, 'f32', 'normalized list elements expose f32 values');
+  t.equal(valueListInfo.elementFormat, 'uint8', 'value-list exposes its element format');
+  t.equal(valueListInfo.vertexList, false, 'value-list is not a vertex-list');
+  t.equal(valueListInfo.valueList, true, 'value-list marker is decoded');
+  t.equal(getGPUVectorElementFormat('vertex-list<unorm8x4>'), 'unorm8x4');
+  t.equal(getGPUVectorElementFormat('value-list<uint8>'), 'uint8');
+  t.ok(isVertexListGPUVectorFormat('vertex-list<unorm8x4>'), 'recognizes vertex-list syntax');
+  t.ok(isValueListGPUVectorFormat('value-list<uint8>'), 'recognizes value-list syntax');
+  t.notOk(isVertexListGPUVectorFormat('list<unorm8x4>'), 'generic list syntax is not accepted');
+  t.throws(
+    () => getGPUVectorFormatInfo('list<unorm8x4>' as never),
+    /Unsupported GPUVector format/,
+    'generic list syntax is reserved'
+  );
+
+  t.end();
+});
+
+test('GPUVector format helpers validate shader compatibility', t => {
+  t.ok(
+    isGPUVectorFormatCompatibleWithShaderType('unorm8x4', 'vec4<f32>'),
+    'normalized RGBA8 can feed vec4<f32>'
+  );
+  t.ok(
+    isGPUVectorFormatCompatibleWithShaderType('float32x3', 'vec3<f32>'),
+    'float32x3 can feed vec3<f32>'
+  );
+  t.notOk(
+    isGPUVectorFormatCompatibleWithShaderType('uint32x2', 'vec2<i32>'),
+    'unsigned integer memory cannot feed signed integer shader values'
+  );
+  t.notOk(
+    isGPUVectorFormatCompatibleWithShaderType('float32x3', 'vec4<f32>'),
+    'component mismatch is rejected'
+  );
+
+  t.end();
+});
+
+test('GPUVector accepts format as canonical metadata and synthesizes table layouts', t => {
+  const device = new NullDevice({});
+  const colors = new GPUVector({
+    type: 'buffer',
+    name: 'colors',
+    buffer: device.createBuffer({byteLength: 4}),
+    format: 'unorm8x4',
+    length: 1,
+    stride: 4,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const table = new GPUTable({vectors: {colors}});
+
+  t.equal(colors.format, 'unorm8x4', 'stores the canonical GPUVector format');
+  t.notOk('type' in colors, 'drops the deprecated type alias');
+  t.equal(table.bufferLayout[0].format, 'unorm8x4', 'table layout uses GPUVector.format');
+
+  table.destroy();
+  t.end();
+});
+
+test('GPUTable rejects vertex-list vectors without adapter-specific layout handling', t => {
+  const device = new NullDevice({});
+  const colors = new GPUVector({
+    type: 'buffer',
+    name: 'colors',
+    buffer: device.createBuffer({byteLength: 4}),
+    format: 'vertex-list<unorm8x4>',
+    length: 1,
+    stride: 4,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+
+  t.throws(
+    () => new GPUTable({vectors: {colors}}),
+    /cannot synthesize a generic buffer layout for vertex-list vector/,
+    'generic table layout synthesis rejects vertex lists'
+  );
+
+  colors.destroy();
+  t.end();
+});
+
+test('GPUVector rejects explicitly mismatched chunk formats', t => {
+  const device = new NullDevice({});
+  const firstBuffer = device.createBuffer({byteLength: 4});
+  const secondBuffer = device.createBuffer({byteLength: 4});
+  const firstData = new GPUData({
+    buffer: firstBuffer,
+    format: 'unorm8x4',
+    length: 1,
+    byteStride: 4
+  });
+  const secondData = new GPUData({
+    buffer: secondBuffer,
+    format: 'uint8x4',
+    length: 1,
+    byteStride: 4
+  });
+  const colors = new GPUVector({
+    type: 'data',
+    name: 'colors',
+    data: [firstData],
+    ownsData: false
+  });
+
+  t.equal(firstData.buffer, firstBuffer, 'GPUData accepts the same Buffer input as GPUVector');
+  t.throws(
+    () =>
+      new GPUVector({
+        type: 'data',
+        name: 'mixedColors',
+        data: [firstData, secondData],
+        ownsData: false
+      }),
+    /data chunks must share the declared format/,
+    'constructor rejects mixed explicit formats'
+  );
+  t.throws(
+    () => colors.addData(secondData),
+    /requires matching formats/,
+    'addData rejects mixed explicit formats'
+  );
+
+  firstBuffer.destroy();
+  secondBuffer.destroy();
+  t.end();
+});
+
+test('GPUVector honors borrowed GPUData chunk ownership', t => {
+  const device = new NullDevice({});
+  const borrowedBuffer = device.createBuffer({byteLength: 4});
+  const borrowedData = new GPUData({
+    buffer: borrowedBuffer,
+    format: 'unorm8x4',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const borrowedVector = new GPUVector({
+    type: 'data',
+    name: 'borrowedColors',
+    data: [borrowedData],
+    ownsData: false
+  });
+
+  borrowedVector.destroy();
+
+  t.notOk(borrowedVector.ownsBuffer, 'borrowed data vectors do not report retained GPU ownership');
+  t.notOk(borrowedBuffer.destroyed, 'borrowed data vector destroy leaves the buffer alive');
+
+  borrowedData.destroy();
+  t.ok(borrowedBuffer.destroyed, 'original GPUData owner can still destroy the buffer');
+
+  const ownedBuffer = device.createBuffer({byteLength: 4});
+  const ownedData = new GPUData({
+    buffer: ownedBuffer,
+    format: 'unorm8x4',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const ownedVector = new GPUVector({
+    type: 'data',
+    name: 'ownedColors',
+    data: [ownedData],
+    ownsData: true
+  });
+
+  ownedVector.destroy();
+
+  t.ok(ownedBuffer.destroyed, 'owned data vector destroy releases the buffer');
+  t.end();
+});
+
+test('GPUVector table helpers expose single-chunk vectors and required columns', t => {
+  const device = new NullDevice({});
+  const firstData = new GPUData({
+    buffer: device.createBuffer({byteLength: 8}),
+    format: 'float32x2',
+    length: 1,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const secondData = new GPUData({
+    buffer: device.createBuffer({byteLength: 8}),
+    format: 'float32x2',
+    length: 1,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const positions = new GPUVector({
+    type: 'data',
+    name: 'positions',
+    data: [firstData],
+    ownsData: false
+  });
+  const chunkedPositions = new GPUVector({
+    type: 'data',
+    name: 'chunkedPositions',
+    data: [firstData, secondData],
+    ownsData: false
+  });
+  const batch = new GPURecordBatch({gpuData: {positions: positions.data[0]}});
+  const table = new GPUTable({
+    batches: [batch]
+  });
+
+  t.equal(
+    getRequiredGPUVector(table, 'positions'),
+    table.gpuVectors.positions,
+    'finds the table aggregate vector by name'
+  );
+  t.equal(batch.gpuData.positions, firstData, 'record batch retains one GPUData per column');
+  t.equal(getGPUVectorData(positions), firstData, 'returns the single retained GPUData chunk');
+  t.equal(getGPUVectorBuffer(positions), firstData.buffer, 'returns the single retained buffer');
+  t.throws(
+    () => getRequiredGPUVector(table, 'missing', 'test table'),
+    /test table is missing GPU vector "missing"/,
+    'reports missing required columns with owner context'
+  );
+  t.throws(
+    () => getGPUVectorData(chunkedPositions),
+    /GPUVector "chunkedPositions" requires exactly one GPUData chunk/,
+    'single-chunk helpers reject aggregate vectors'
+  );
+
+  table.destroy();
+  chunkedPositions.destroy();
+  firstData.destroy();
+  secondData.destroy();
+  t.end();
+});
+
+test('GPURecordBatch owns one row-aligned GPUData chunk per column', t => {
+  const device = new NullDevice({});
+  const positionsBuffer = device.createBuffer({byteLength: 16});
+  const colorsBuffer = device.createBuffer({byteLength: 8});
+  const positions = new GPUData({
+    buffer: positionsBuffer,
+    format: 'float32x2',
+    length: 2,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const colors = new GPUData({
+    buffer: colorsBuffer,
+    format: 'unorm8x4',
+    length: 2,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const mismatchedColorsBuffer = device.createBuffer({byteLength: 4});
+  const mismatchedColors = new GPUData({
+    buffer: mismatchedColorsBuffer,
+    format: 'unorm8x4',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const batch = new GPURecordBatch({gpuData: {positions, colors}});
+
+  t.equal(batch.numRows, 2, 'derives rows from GPUData length');
+  t.deepEqual(
+    batch.schema.fields.map(field => field.name),
+    ['positions', 'colors'],
+    'synthesizes fields from keyed GPUData'
+  );
+  t.equal(batch.gpuData.positions, positions, 'retains the keyed data chunk');
+  t.throws(
+    () =>
+      new GPURecordBatch({
+        gpuData: {
+          positions,
+          colors: mismatchedColors
+        }
+      }),
+    /matching GPUData row counts/,
+    'rejects mismatched column lengths'
+  );
+
+  batch.destroy();
+  mismatchedColors.destroy();
+  t.ok(positionsBuffer.destroyed, 'destroys owned position data');
+  t.ok(colorsBuffer.destroyed, 'destroys owned color data');
+  t.end();
+});
+
+test('GPURecordBatch accepts explicit layouts for format-less interleaved GPUData', t => {
+  const device = new NullDevice({});
+  const data = new GPUData({
+    buffer: device.createBuffer({byteLength: 32}),
+    length: 2,
+    stride: 16,
+    byteStride: 16,
+    rowByteLength: 16,
+    ownsBuffer: true
+  });
+  const batch = new GPURecordBatch({
+    gpuData: {interleaved: data},
+    bufferLayout: [
+      {
+        name: 'interleaved',
+        byteStride: 16,
+        attributes: [
+          {attribute: 'positions', format: 'float32x2', byteOffset: 0},
+          {attribute: 'colors', format: 'unorm8x4', byteOffset: 8}
+        ]
+      }
+    ]
+  });
+  const emptyBatch = new GPURecordBatch({gpuData: {}, numRows: 0});
+
+  t.equal(batch.numRows, 2, 'derives interleaved row count from GPUData');
+  t.equal(batch.schema.fields[0].format, undefined, 'keeps format-less interleaved field');
+  t.equal(emptyBatch.numRows, 0, 'accepts explicit empty batches');
+
+  batch.destroy();
+  emptyBatch.destroy();
+  t.end();
+});
+
+test('GPUTable keeps storage in GPU vectors instead of cached bindings', t => {
+  const device = new NullDevice({});
+  const positions = new GPUVector({
+    type: 'buffer',
+    name: 'positions',
+    buffer: device.createBuffer({byteLength: 8}),
+    format: 'float32x2',
+    length: 1,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const weightsBuffer = device.createBuffer({byteLength: 4});
+  const weights = new GPUVector({
+    type: 'buffer',
+    name: 'weights',
+    buffer: weightsBuffer,
+    format: 'float32',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const table = new GPUTable({vectors: {positions, weights}});
+
+  t.notOk('bindings' in table, 'does not cache bindings on the table');
+  t.notOk('bindings' in table.batches[0], 'does not cache bindings on the batch');
+  t.equal(table.gpuVectors.weights.data[0].buffer, weightsBuffer, 'keeps storage on GPUData');
+
+  table.destroy();
+  t.end();
+});

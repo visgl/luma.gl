@@ -13,16 +13,14 @@ import {
 } from '@luma.gl/arrow';
 import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {getGPUVectorBuffer, type GPUData, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURenderable,
   GPUTableComputation,
   GPURecordBatch,
   GPUTable,
-  getGPUVectorBuffer,
-  type GPUData,
-  type GPUVector,
   TableTransform
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   COMPUTE_SHADER_LAYOUT,

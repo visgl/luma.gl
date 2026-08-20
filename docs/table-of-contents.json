@@ -338,27 +338,27 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/anari (Experimental)",
+        "label": "@luma.gl/scene (Experimental)",
         "items": [
-          "api-reference/anari/README",
+          "api-reference/scene/README",
           {
             "type": "category",
             "label": "Scene objects",
             "items": [
-              "api-reference/anari/anari-device",
-              "api-reference/anari/anari-geometry",
-              "api-reference/anari/anari-materials-and-lights",
-              "api-reference/anari/anari-animation",
-              "api-reference/anari/anari-scene"
+              "api-reference/scene/anari-device",
+              "api-reference/scene/anari-geometry",
+              "api-reference/scene/anari-materials-and-lights",
+              "api-reference/scene/anari-animation",
+              "api-reference/scene/anari-scene"
             ]
           },
           {
             "type": "category",
             "label": "Rendering and interchange",
             "items": [
-              "api-reference/anari/anari-rendering",
-              "api-reference/anari/anari-schemas",
-              "api-reference/anari/anari-api-mapping"
+              "api-reference/scene/anari-rendering",
+              "api-reference/scene/anari-schemas",
+              "api-reference/scene/anari-api-mapping"
             ]
           }
         ]
@@ -659,7 +659,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/tables",
+        "label": "Experimental GPU data and tables",
         "items": [
           "api-reference/tables/README",
           {

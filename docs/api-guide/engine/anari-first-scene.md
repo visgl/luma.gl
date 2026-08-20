@@ -29,7 +29,7 @@ This is particularly useful when an application should expose a stable scene con
 
 ## Use the private workspace
 
-`@luma.gl/anari` is a private luma.gl workspace and is not published to npm. Install repository
+`@luma.gl/scene` is a private luma.gl workspace and is not published to npm. Install repository
 dependencies from a luma.gl checkout:
 
 ```bash
@@ -41,7 +41,7 @@ Other in-repository workspaces can depend on the private package through:
 ```json
 {
   "dependencies": {
-    "@luma.gl/anari": "workspace:*"
+    "@luma.gl/scene": "workspace:*"
   }
 }
 ```
@@ -53,7 +53,7 @@ At least one luma.gl backend is required. Use `@luma.gl/webgpu` for modern brows
 Start with an ordinary luma.gl `Device` and wrap it in `ANARIDevice`:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/anari';
+import {ANARIDevice} from '@luma.gl/scene';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
@@ -81,7 +81,7 @@ Adapter order determines preference: this example uses WebGPU when available and
 The following complete scene adds a metallic sphere, floor, directional light, animated point light, camera, renderer, and animation loop. It assumes a page containing `<canvas></canvas>`.
 
 ```ts
-import {ANARIDevice} from '@luma.gl/anari';
+import {ANARIDevice} from '@luma.gl/scene';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
@@ -640,7 +640,7 @@ The user-visible HDR effect depends on the monitor, browser, operating-system di
 The repository showcase uses `AnimationLoopTemplate` to coordinate drawing, resizing, and cleanup:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/anari';
+import {ANARIDevice} from '@luma.gl/scene';
 import {
   AnimationLoopTemplate,
   makeAnimationLoop,
@@ -743,5 +743,5 @@ anariDevice.extensions;
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/anari)
+- [ANARI API reference](/docs/api-reference/scene)
 - [Engine programming](/docs/api-guide/engine)

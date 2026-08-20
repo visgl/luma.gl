@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraphInspectorSnapshot} from '@luma.gl/experimental';
+import type {GPUCommandGraphInspectorSnapshot} from '@luma.gl/gpgpu/gpu-core';
 import {CompactDropdown} from './compact-dropdown';
 
 const STANDARD_COUNTER_FORMATTER = new Intl.NumberFormat('en-US', {

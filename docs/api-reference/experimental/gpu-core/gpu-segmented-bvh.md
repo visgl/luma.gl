@@ -33,7 +33,7 @@ streaming chunks implicitly and never moves bounds or identities between segment
 ## Example
 
 ```ts
-import {GPUCommandGraph, GPUSegmentedBVH} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph, GPUSegmentedBVH} from '@luma.gl/gpgpu/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'packed-mesh-hierarchies'});
 

@@ -4,7 +4,7 @@
 
 import {Buffer, type CanvasContext, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import type {DrawCommandBuffer} from '@luma.gl/experimental';
+import type {DrawCommandBuffer} from '@luma.gl/gpgpu/gpu-core';
 
 export type RasterLabDisplayMode = 'ndvi' | 'red' | 'near-infrared';
 export type RasterLabSmoothingMode = 'none' | 'gaussian' | 'box';

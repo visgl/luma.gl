@@ -36,7 +36,7 @@ spatial bins, and small independent partitions inside explicitly provisioned col
 ## Example
 
 ```ts
-import {GPUCommandGraph, GPUSegmentedSort} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph, GPUSegmentedSort} from '@luma.gl/gpgpu/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'sort-packed-meshes'});
 

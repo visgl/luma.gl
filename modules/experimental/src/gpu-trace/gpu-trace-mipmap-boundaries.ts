@@ -4,24 +4,24 @@
 
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUGallopingSearch} from '../gpu-core/gpu-galloping-search';
+import {GPUGallopingSearch} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUCommandGraph,
   type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
   type GPUBoundedDispatchLayout
-} from '../gpu-core/gpu-dispatch-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 
 const MIPMAP_BOUNDARY_WORKGROUP_SIZE = 64;
 const DEFAULT_BOUNDARIES_PER_TILE = 32;

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {GPUVector} from '@luma.gl/tables';
+import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {expect, test} from 'vitest';
 import {
   add,

@@ -9,7 +9,7 @@ import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GPUCommandGraphTimingReport
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {GPUProjection} from './gpu-projection';
 import {
   getProjectionBenchmarkThroughput,

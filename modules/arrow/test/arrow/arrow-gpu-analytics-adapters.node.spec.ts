@@ -9,7 +9,8 @@ import {
   makeGPUAnalyticsTableFromArrowTable
 } from '@luma.gl/arrow';
 import {Buffer, type BufferProps} from '@luma.gl/core';
-import {GPUData, GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {describe, expect, test, vi} from 'vitest';
@@ -18,7 +19,7 @@ type AnalyticsDictionaryIndex = arrow.Int32 | arrow.Uint32;
 type AnalyticsDictionaryType = arrow.Dictionary<arrow.Utf8, AnalyticsDictionaryIndex>;
 
 describe('makeGPUAnalyticsTableFromArrowTable package boundaries', () => {
-  test('keeps Arrow ingestion in its adapter package without introducing experimental cycles', () => {
+  test('keeps Arrow ingestion in its adapter package without introducing Arrow into GPU packages', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     ) as {
@@ -33,8 +34,9 @@ describe('makeGPUAnalyticsTableFromArrowTable package boundaries', () => {
     expect(packageJson.devDependencies?.['apache-arrow']).toBe('^17.0.0');
     expect(packageJson.peerDependencies?.['apache-arrow']).toBe('>=17.0.0');
     expect(packageJson.peerDependenciesMeta?.['apache-arrow']).toBeUndefined();
-    expect(packageJson.dependencies?.['@luma.gl/tables']).toBeDefined();
-    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBeUndefined();
+    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBeDefined();
+    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBeDefined();
+    expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
     expect(packageJson.peerDependencies?.['@luma.gl/experimental']).toBeUndefined();
   });
 });

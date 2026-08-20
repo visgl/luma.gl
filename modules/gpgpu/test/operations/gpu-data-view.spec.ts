@@ -5,7 +5,7 @@
 import {beforeEach, describe, expect, test} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {add, gather} from '@luma.gl/gpgpu';
-import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/tables';
+import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/gpgpu/gpu-data';
 import {getTestDevice, verifyTableValue} from './fixtures';
 
 for (const deviceType of ['webgl', 'webgpu'] as const) {

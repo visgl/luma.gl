@@ -21,7 +21,7 @@ implicit downloads.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
 
 const graph = new GPUCommandGraph({device, id: 'dataframe-analysis'});
@@ -79,4 +79,5 @@ See the [operations reference](./gpu-dataframe-operations) for detailed executio
 
 - [GPU Core](/docs/api-reference/experimental/gpu-core) supplies scheduling and primitives.
 - [GPU Crossfilter](./gpu-crossfilter) composes linked interactive selections.
-- [`@luma.gl/tables`](/docs/api-reference/tables) defines GPU table storage.
+- [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/tables) defines primitive GPU storage, while
+  `@luma.gl/experimental/gpu-tables` defines record batches and tables.

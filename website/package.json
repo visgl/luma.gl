@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "build:standalone-examples": "yarn workspace luma.gl-examples-showcase-anari build:website",
+    "build:standalone-examples": "yarn workspace luma.gl-examples-showcase-scene build:website",
     "start": "node ./scripts/sync-example-assets.mjs && yarn build:standalone-examples && docusaurus start",
     "build": "node ./scripts/sync-example-assets.mjs && yarn build:standalone-examples && docusaurus build && node ./scripts/normalize-llm-output.mjs && node ./scripts/check-llm-output.mjs",
     "build-staging": "WEBSITE_BASE_URL=/luma.gl/ yarn build",

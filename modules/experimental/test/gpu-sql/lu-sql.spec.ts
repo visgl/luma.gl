@@ -6,7 +6,7 @@ import {
   makeArrowTableFromGPUAnalyticsTable,
   makeGPUAnalyticsTableFromArrowTable
 } from '@luma.gl/arrow';
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   CompiledGPUDataFrameAggregation as CompiledLuDataFrameAggregation,
   CompiledGPUDataFrameGlobalSort as CompiledLuDataFrameGlobalSort,

@@ -55,7 +55,7 @@ Values are row-major, so the complete field contains `width * height * 2` floats
 
 ```ts
 import {Buffer} from '@luma.gl/core';
-import {GPUFFT2D} from '@luma.gl/experimental/gpu-core';
+import {GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
 
 const width = 256;
 const height = 256;

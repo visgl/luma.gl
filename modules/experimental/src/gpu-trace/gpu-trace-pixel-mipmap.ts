@@ -9,19 +9,19 @@ import {
   type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
   type GPUBoundedDispatchLayout
-} from '../gpu-core/gpu-dispatch-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUTraceMipmapBoundaries,
   type GPUTraceMipmapBoundaryQuery

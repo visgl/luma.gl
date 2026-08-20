@@ -9,21 +9,21 @@ import {
   type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-core/gpu-command-graph';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
   type GPUBoundedDispatchLayout
-} from '../gpu-core/gpu-dispatch-utils';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from '../gpu-core/graph-data-view-utils';
-import {GPUScan} from '../gpu-core/gpu-scan';
-import {GPUSort} from '../gpu-core/gpu-sort';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUScan} from '@luma.gl/gpgpu/gpu-core';
+import {GPUSort} from '@luma.gl/gpgpu/gpu-core';
 
 const LANE_INDEX_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;

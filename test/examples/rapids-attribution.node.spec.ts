@@ -7,6 +7,7 @@ import {describe, expect, test} from 'vitest';
 
 type RapidsModuleAttribution = {
   directory: string;
+  sourceDirectory?: string;
   documentation: string[];
   project: string;
   repository: string;
@@ -39,7 +40,8 @@ const RAPIDS_MODULE_ATTRIBUTIONS: RapidsModuleAttribution[] = [
   },
   {
     directory: 'gpu-graph',
-    documentation: ['modules/experimental/src/gpu-graph/README.md'],
+    sourceDirectory: 'modules/gpgpu/src/gpu-graph',
+    documentation: ['modules/gpgpu/src/gpu-graph/README.md'],
     project: 'cuGraph',
     repository: 'https://github.com/rapidsai/cugraph'
   }
@@ -52,7 +54,7 @@ describe('RAPIDS-inspired module provenance', () => {
     describe(attribution.directory, () => {
       test('records independent MIT ownership and accurate upstream inspiration in every source file', () => {
         const sourceDirectory = new URL(
-          `modules/experimental/src/${attribution.directory}/`,
+          `${attribution.sourceDirectory ?? `modules/experimental/src/${attribution.directory}`}/`,
           REPOSITORY_ROOT
         );
         const sourceFiles = readdirSync(sourceDirectory).filter(fileName =>
