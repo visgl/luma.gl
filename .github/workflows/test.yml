@@ -209,47 +209,103 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  node_coverage:
+    name: Node coverage
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
+
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Collect focused Node coverage
+        run: yarn test-node-coverage
+
+      - name: Upload Node coverage artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: node-coverage-lcov
+          path: coverage-node/lcov.info
+          if-no-files-found: error
+          retention-days: 1
+
   test:
-    name: Aggregate browser coverage
-    needs: browser_coverage
+    name: Aggregate test coverage
+    needs: [browser_coverage, node_coverage]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
       - name: Checkout code for coverage reporting
-        if: ${{ needs.browser_coverage.result == 'success' }}
+        if: ${{ needs.browser_coverage.result == 'success' && needs.node_coverage.result == 'success' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Download browser coverage artifacts
-        if: ${{ needs.browser_coverage.result == 'success' }}
+        if: ${{ needs.browser_coverage.result == 'success' && needs.node_coverage.result == 'success' }}
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           pattern: browser-coverage-lcov-*
           path: coverage/shards
 
-      - name: Merge browser coverage reports
-        if: ${{ needs.browser_coverage.result == 'success' }}
+      - name: Download Node coverage artifact
+        if: ${{ needs.browser_coverage.result == 'success' && needs.node_coverage.result == 'success' }}
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: node-coverage-lcov
+          path: coverage/shards/node-coverage-lcov
+
+      - name: Merge browser and Node coverage reports
+        if: ${{ needs.browser_coverage.result == 'success' && needs.node_coverage.result == 'success' }}
         run: |
           node ./test/utils/merge-lcov.mjs \
             --output coverage/lcov.info \
             coverage/shards/browser-coverage-lcov-1/lcov.info \
             coverage/shards/browser-coverage-lcov-2/lcov.info \
-            coverage/shards/browser-coverage-lcov-3/lcov.info
+            coverage/shards/browser-coverage-lcov-3/lcov.info \
+            coverage/shards/node-coverage-lcov/lcov.info
 
       - name: Upload combined coverage to Coveralls
-        if: ${{ needs.browser_coverage.result == 'success' }}
+        if: ${{ needs.browser_coverage.result == 'success' && needs.node_coverage.result == 'success' }}
         uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: coverage/lcov.info
 
-      - name: Verify all browser coverage shards passed
+      - name: Verify all coverage jobs passed
         if: always()
         env:
-          SHARD_RESULT: ${{ needs.browser_coverage.result }}
+          BROWSER_COVERAGE_RESULT: ${{ needs.browser_coverage.result }}
+          NODE_COVERAGE_RESULT: ${{ needs.node_coverage.result }}
         run: |
-          if [ "$SHARD_RESULT" != "success" ]; then
-            echo "::error::Browser coverage shards finished with status: $SHARD_RESULT"
+          if [ "$BROWSER_COVERAGE_RESULT" != "success" ]; then
+            echo "::error::Browser coverage shards finished with status: $BROWSER_COVERAGE_RESULT"
+            exit 1
+          fi
+          if [ "$NODE_COVERAGE_RESULT" != "success" ]; then
+            echo "::error::Node coverage job finished with status: $NODE_COVERAGE_RESULT"
             exit 1
           fi
 
@@ -312,7 +368,7 @@ jobs:
         run: |
           yarn lint
 
-      - name: Run node tests
+      - name: Run Node tests
         run: yarn test-node
 
       - name: Typecheck examples

@@ -102,6 +102,26 @@ const nodeWrapperSourcePatterns = [
   'modules/tables/test/table/gpu-table-model.spec.{ts,js}',
   'modules/webgl/test/adapter/helpers/{parse-shader-compiler-log,webgl-topology-utils}.spec.{ts,js}'
 ];
+const nodeCoverageIncludePatterns = [
+  ...nodeOnlyTestPatterns,
+  ...nodeWrapperSourcePatterns.map(pattern => pattern.replace('.spec.', '.node.spec.'))
+];
+// These native Node suites exercise production branches that no browser-backed spec reaches. Keep
+// this list focused: Istanbul remapping for the complete Node graph takes several minutes.
+const nodeCoverageNativePatterns = [
+  'test/dev-modules/**/*.node.spec.{ts,js}',
+  'modules/gltf/test/gltf/gltf-animated-crowd.node.spec.{ts,js}',
+  'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
+  'modules/geoarrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
+  'modules/splats/test/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
+  'modules/experimental/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
+  'modules/experimental/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
+  'modules/experimental/test/gpu-sql/lu-sql.node.spec.{ts,js}'
+];
+const nodeCoveragePatterns = [
+  ...nodeCoverageIncludePatterns,
+  ...nodeCoverageNativePatterns
+];
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
@@ -112,6 +132,7 @@ const browserBenchmarkTestPatterns = [
   'modules/experimental/test/gpu-project/projection-benchmark.spec.ts'
 ];
 const runBrowserBenchmarks = process.env.LUMA_TEST_BROWSER_BENCHMARKS === 'true';
+const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
   'modules/**/*.node.spec.{ts,js}',
   'test/**/*.node.spec.{ts,js}',
@@ -145,7 +166,10 @@ const vitestConfig = getVitestConfig({
         // graph. This avoids rebuilding the full monorepo graph in a child process for every file.
         pool: 'threads',
         isolate: false,
-        include: nodeIncludePatterns,
+        // Istanbul transforms use substantial memory. Bound the focused coverage pass so it is
+        // stable on GitHub's two-core runners without changing the fast default Node command.
+        ...(runNodeCoverage ? {maxWorkers: 2} : {}),
+        include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
         exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
       }
     },
@@ -180,13 +204,17 @@ const vitestConfig = getVitestConfig({
   },
   coverage: {
     provider: 'istanbul',
-    include: ['modules/**/src/**/*.{js,ts,tsx}'],
+    // Browser coverage owns the all-files denominator. The focused Node pass only reports files
+    // loaded by its selected specs; remapping every source adds minutes of duplicate work.
+    ...(runNodeCoverage ? {} : {include: ['modules/**/src/**/*.{js,ts,tsx}']}),
     exclude: [
       '**/*.d.ts',
       '**/*.map',
       '**/*.{bundle,min}.{js,ts}',
       '**/{build,coverage,dist,node_modules,vendor,vendored}/**',
+      'dev-modules/**',
       'examples/**',
+      'scripts/**',
       'website/**',
       'test/**',
       'modules/**/test/**'

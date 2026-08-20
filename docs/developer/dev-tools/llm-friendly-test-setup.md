@@ -6,6 +6,7 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
 
 - The root package exposes the user-facing commands:
   - `yarn test-node`
+  - `yarn test-node-coverage`
   - `yarn test-browser`
   - `yarn test-browser-benchmarks`
   - `yarn test-headless`
@@ -40,6 +41,9 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
 - Browser coverage uses weighted sharding so known slow GPU specs are spread across the existing
   three CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
   instrumented browser pages to every pull request.
+- CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage
+  anchors with Istanbul coverage from the three browser shards. The complete Node suite still runs
+  separately without instrumentation so coverage remapping does not slow the build job.
 - The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
 
 ## Playwright behavior

@@ -9,11 +9,13 @@ The primary test runner is Vitest.
 ## Commands
 
 - `yarn test-node` runs the Node-only test suite.
+- `yarn test-node-coverage` collects Istanbul coverage from CPU-only specs moved out of Chromium
+  plus focused native Node suites, and writes Node LCOV.
 - `yarn test-browser` runs browser-backed tests in headed Chromium for local development.
 - `yarn test-headless` runs the browser-backed suite in headless Chromium for CI.
-- `yarn test` runs `test-node` and then `test-browser`.
+- `yarn test` runs `test-node` and then `test-headless`.
 - `yarn test-fast` runs linting and the Node-only suite.
-- `yarn test-coverage` runs the Node-only suite plus the headless browser suite with coverage enabled.
+- `yarn test-coverage` runs the headless browser suite with Istanbul coverage enabled.
 
 Vitest discovers tests directly from spec files:
 
