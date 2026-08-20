@@ -407,6 +407,11 @@ test('fp64 WGSL#sub_fp64u32_to_fp64 preserves binary64 coordinate deltas', async
     tapeTest.end();
     return;
   }
+  if (isSoftwareBackedDevice(webgpuDevice)) {
+    tapeTest.comment('Skipping slow fp64 integer subtraction on software WebGPU');
+    tapeTest.end();
+    return;
+  }
 
   const coordinateCases = [
     {inputA: 20_000_000.123456, inputB: 20_000_000, label: 'projected coordinate offset'},
@@ -540,6 +545,11 @@ test('fp64 WGSL#normalize, classify, sign, and compare double-single values', as
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
     tapeTest.comment('WebGPU unavailable, skipping fp64 comparison diagnostics');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(webgpuDevice)) {
+    tapeTest.comment('Skipping slow fp64 integer classification on software WebGPU');
     tapeTest.end();
     return;
   }

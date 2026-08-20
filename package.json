@@ -34,6 +34,7 @@
     "test": "yarn test-node && yarn test-headless",
     "test-node": "ocular-test node",
     "test-browser": "ocular-test browser",
+    "test-browser-benchmarks": "LUMA_TEST_BROWSER_BENCHMARKS=true ocular-test headless --no-coverage",
     "test-headless": "ocular-test headless",
     "test-coverage": "ocular-test headless --coverage",
     "test-geospatial-package": "node ./scripts/verify-experimental-geospatial-package.mjs",

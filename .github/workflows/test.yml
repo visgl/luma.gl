@@ -108,11 +108,6 @@ jobs:
           df -h .
           du -sh . coverage "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
-      - name: Run node tests
-        if: ${{ matrix.shard == 3 }}
-        run: |
-          yarn test-node
-
       - name: Sanitize lcov for Coveralls
         run: |
           node - <<'NODE'
@@ -215,6 +210,7 @@ jobs:
           retention-days: 7
 
   test:
+    name: Aggregate browser coverage
     needs: browser_coverage
     if: ${{ !cancelled() }}
     runs-on: ubuntu-22.04
@@ -258,6 +254,7 @@ jobs:
           fi
 
   examples:
+    name: Build, lint, Node tests, examples, and website
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -314,6 +311,9 @@ jobs:
       - name: Run lint
         run: |
           yarn lint
+
+      - name: Run node tests
+        run: yarn test-node
 
       - name: Typecheck examples
         run: |

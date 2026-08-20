@@ -20,6 +20,10 @@ Vitest discovers tests directly from spec files:
 - Use `*.spec.ts` / `*.spec.js` for the default browser-backed test path.
 - Use `*.node.spec.ts` / `*.node.spec.js` only for tests that must stay in the Node project.
 
+`vitest.config.ts` also routes an audited set of existing CPU-only specs to Node. Keep that list for
+tests that do not create a device or access browser globals; new CPU-only tests should use the
+`.node.spec` suffix directly.
+
 ## Test device creation
 
 Creating too many GPU devices in one run can cause context loss and other instability. `@luma.gl/test-utils` exports reusable test devices for WebGL and WebGPU.

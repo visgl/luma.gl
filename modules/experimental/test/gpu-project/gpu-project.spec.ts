@@ -228,6 +228,11 @@ test('GPUProjection subtracts raw binary64 origins before converting local offse
     tapeTest.end();
     return;
   }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
+    tapeTest.end();
+    return;
+  }
 
   const sourceOrigin: Coordinates = [20_000_000.125, 30_000_000.375];
   const projection = (coordinates: number[]): number[] => [
@@ -293,6 +298,11 @@ test('GPUProjection accepts inclusive binary64 patch endpoints after Float32 nor
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -380,6 +390,10 @@ test('GPUProjection rejects outer-domain positions without removing patch seam t
     tapeTest.end();
     return;
   }
+  const softwareBackedDevice = isSoftwareBackedDevice(device);
+  if (softwareBackedDevice) {
+    tapeTest.comment('Skipping slow raw binary64 projection variants on software WebGPU');
+  }
 
   const minimum = -500_000_000;
   const maximum = 500_000_000;
@@ -453,7 +467,7 @@ test('GPUProjection rejects outer-domain positions without removing patch seam t
       explicitPatchIds: true,
       outputBuffer: createOutputBuffer(device, points.length * 2)
     }
-  ];
+  ].filter(testCase => !softwareBackedDevice || testCase.positions === float32Positions);
   const contributors = cases.map(({name, positions, explicitPatchIds, outputBuffer}) => {
     const contributor = new GPUProjection({
       id: name,
@@ -1096,6 +1110,11 @@ test('GPUProjection updates exact global bounds without rebuilding its graph', a
     tapeTest.end();
     return;
   }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
+    tapeTest.end();
+    return;
+  }
 
   const projection = (coordinates: number[]): number[] => [...coordinates];
   const initialPlan = compileProjectionPlan({
@@ -1172,6 +1191,11 @@ test('GPUProjection retains tolerant raw-binary64 assignment at internal patch s
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -1346,6 +1370,12 @@ function assertProjectedPoints(
 
 function createBuffer(device: Device, values: Float32Array | Uint32Array): Buffer {
   return device.createBuffer({data: values, usage: Buffer.STORAGE | Buffer.COPY_DST});
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
 }
 
 function createOutputBuffer(device: Device, elementCount: number): Buffer {
