@@ -36,6 +36,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
   'experimental/antialiasing',
+  'showcase/algebraic-varieties',
   'showcase/scene',
   'showcase/dof',
   'showcase/gaussian-splats',
