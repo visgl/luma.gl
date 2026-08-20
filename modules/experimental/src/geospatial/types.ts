@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import type {GraphDataView, GraphVectorView} from '../gpu-primitives/gpu-command-graph';
+import type {GraphDataView, GraphVectorView} from '../gpu-core/gpu-command-graph';
 
 /** Packed two-dimensional f32 positions, either local XY or longitude/latitude values. */
 export type GPUFloat32Positions = GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;

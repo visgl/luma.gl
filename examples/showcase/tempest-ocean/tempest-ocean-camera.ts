@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {OrbitControllerProps} from '../../orbit-controller';
+import type {OrbitControlsProps} from '@luma.gl/engine';
 
 export const TEMPEST_OCEAN_FIELD_OF_VIEW_DEGREES = 54;
 
@@ -20,9 +20,9 @@ export const TEMPEST_OCEAN_CAMERA_PROPS = Object.freeze({
   zoomSpeed: 0.001,
   autoRotate: true,
   autoRotateSpeed: 0.025
-}) satisfies Readonly<OrbitControllerProps>;
+}) satisfies Readonly<OrbitControlsProps>;
 
-/** Lowest possible camera eye height under the shared orbit-controller clamps. */
+/** Lowest possible camera eye height under the shared orbit-control clamps. */
 export function getTempestOceanMinimumCameraHeight(): number {
   return (
     TEMPEST_OCEAN_CAMERA_PROPS.target[1] +

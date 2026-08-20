@@ -312,6 +312,47 @@ test('engine#makeAnimationLoop runs onAfterRender before device submission', asy
   t.end();
 });
 
+test('engine#makeAnimationLoop skips device submission when a frame is idle', async t => {
+  const device = await getWebGLTestDevice();
+  let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
+    null;
+  const animationFrameProvider = {
+    requestAnimationFrame(callback: (time: DOMHighResTimeStamp, animationFrame?: unknown) => void) {
+      scheduledCallback = callback;
+      return 1;
+    },
+    cancelAnimationFrame() {}
+  };
+
+  class IdleAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): boolean {
+      return false;
+    }
+    override onFinalize(): void {}
+  }
+
+  let submissionCount = 0;
+  const originalSubmit = device.submit;
+  device.submit = commandBuffer => {
+    submissionCount++;
+    originalSubmit.call(device, commandBuffer);
+  };
+  const animationLoop = makeAnimationLoop(IdleAnimationLoopTemplate, {
+    device,
+    animationFrameProvider
+  });
+
+  try {
+    await animationLoop.start();
+    scheduledCallback?.(123);
+    t.is(submissionCount, 0, 'idle frame does not submit an empty command buffer');
+  } finally {
+    animationLoop.destroy();
+    device.submit = originalSubmit;
+  }
+  t.end();
+});
+
 test('engine#AnimationLoop a start/stop/start should not call initialize again', async t => {
   const device = await getWebGLTestDevice();
 

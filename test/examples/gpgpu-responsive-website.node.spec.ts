@@ -47,7 +47,7 @@ describe('responsive GPGPU website examples', () => {
     expect(examplesSource).not.toMatch(
       /^import\s+(?:BillionPointSpatialAtlasApp|MillionRowCrossfilterApp|FP64App)\s+from/m
     );
-    expect(examplesSource).not.toMatch(/^import\s+\{createLuSpatialTaxiDeck\}\s+from/m);
+    expect(examplesSource).not.toMatch(/^import\s+\{createGPUSpatialTaxiDeck\}\s+from/m);
     expect(examplesSource).toContain("role={errorMessage ? 'alert' : 'status'}");
     expect(examplesSource).toContain('Preparing GPU experience');
     expect(examplesSource).toContain('window.clearTimeout(loadingTimeout)');
@@ -135,6 +135,7 @@ describe('responsive GPGPU website examples', () => {
     expect(catalogSource).toContain(
       "return category === 'GPGPU' || category.startsWith('GPGPU Graph');"
     );
+    expect(catalogSource).toContain("return category.startsWith('GPU Graph Layers');");
     expect(
       catalogSource.match(/isGeneralPurposeGPUCategory\(category\)/g)?.length
     ).toBeGreaterThanOrEqual(4);
@@ -143,6 +144,7 @@ describe('responsive GPGPU website examples', () => {
       "if (category === 'GPGPU Graph') return 'GPU data and compute pipelines'"
     );
     expect(catalogSource).toContain('Compute, projections, and GPU-native data');
+    expect(catalogSource).toContain('GPU-driven deck.gl integrations');
     expect(cardSource).toContain(
       "if (category === 'GPGPU' || category.startsWith('GPGPU Graph')) return '#a78bfa';"
     );

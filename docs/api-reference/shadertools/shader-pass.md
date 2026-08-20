@@ -1,8 +1,9 @@
 import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # ShaderPass
 
-<ShadertoolsDocsTabs active="shader-pass" />
+<ShadertoolsDocsTabs group="execution" active="shader-pass" />
 
 `ShaderPass` is a [`ShaderModule`](/docs/api-reference/shadertools/shader-module)
 that can be executed as a standalone fullscreen texture-processing stage.
@@ -12,6 +13,15 @@ is the engine class that executes them.
 
 For the authoring model, see
 [Shader Passes](/docs/api-guide/shaders/shader-passes).
+
+<DocumentationContract title="ShaderPass" rows={[
+  {label: 'Languages', value: 'ShaderModule source for each supported backend'},
+  {label: 'Dependencies', value: 'Module dependencies plus ordered subpasses'},
+  {label: 'Inputs and outputs', value: 'Original, previous, named targets, and final texture'},
+  {label: 'Execution', value: 'Executed by Engine ShaderPassRenderer'},
+  {label: 'Compatibility', value: 'Determined by source language, formats, and pass features'},
+  {label: 'Cost', value: 'Each subpass is a draw and may require transient or history textures'}
+]} />
 
 ## Usage
 

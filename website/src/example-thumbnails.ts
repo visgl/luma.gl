@@ -4,11 +4,10 @@
 
 const EXAMPLE_THUMBNAIL_ALIASES: Readonly<Record<string, string>> = {
   'v10/gpgpu': 'gpu-tables/gpu-vector-storage-particles',
-  'deck/lugraph-explorer': 'showcase/packet-spraying',
-  'experimental/lugraph-explorer': 'showcase/packet-spraying',
+  'deck/gpu-graph-explorer': 'showcase/packet-spraying',
+  'experimental/gpu-graph-explorer': 'showcase/packet-spraying',
   'experimental/gpu-trace-scene': 'experimental/gpu-trace-viewer',
-  'experimental/gpu-scene-graph': 'experimental/gpu-frustum-culling',
-  'showcase/gaussian-splat-viewer': 'showcase/gaussian-splats'
+  'experimental/gpu-scene-graph': 'experimental/gpu-frustum-culling'
 };
 
 export function getExampleThumbnailPath(exampleIdentifier: string): string {

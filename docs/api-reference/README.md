@@ -1,3 +1,8 @@
+---
+title: API reference
+description: Find the curated and generated API references for every stable and experimental luma.gl package.
+---
+
 # Overview
 
 luma.gl combines published, composable npm modules with private experimental packages under active
@@ -10,21 +15,21 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 
 | Module                                | Usage       | Description                                                                                     |
 | ------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
-| [`@luma.gl/core`][core]               | Required    | The "Abstract" `Device` API (implemented by both the `webgpu` and `webgl` modules).             |
-| [`@luma.gl/webgl`][webgl]             | Required \* | `Device` adapter implemented using the WebGL API. Enables creation of WebGL resources.          |
-| [`@luma.gl/webgpu`][webgpu]           | Required \* | `Device` adapter implemented using the WebGPU API. Enables creation of WebGPU resources.        |
-| [`@luma.gl/engine`][engine]           | Recommended | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
-| [`@luma.gl/anari`][anari]             | Experimental / Private | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR. |
-| [`@luma.gl/shadertools`][shadertools] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks.        |
-| [`@luma.gl/effects`][effects]         | Optional    | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines.  |
-| [`@luma.gl/gpgpu`][gpgpu]             | Optional    | Portable GPU data evaluation, vector operations, and backend-aware compute workflows.           |
-| [`@luma.gl/tables`][tables]           | Optional    | GPU-resident table primitives, batching, table-backed rendering, and table-oriented compute.    |
-| [`@luma.gl/arrow`][arrow]             | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data.          |
-| [`@luma.gl/text`][text]               | Experimental / Private | `TextRenderer` facade and caller-owned GPU text data.                                 |
-| [`@luma.gl/splats`][splats]           | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data.                    |
+| [`@luma.gl/core`][core] | Required | The "Abstract" `Device` API (implemented by both the `webgpu` and `webgl` modules). |
+| [`@luma.gl/webgl`][webgl] | Required \* | `Device` adapter implemented using the WebGL API. Enables creation of WebGL resources. |
+| [`@luma.gl/webgpu`][webgpu] | Required \* | `Device` adapter implemented using the WebGPU API. Enables creation of WebGPU resources. |
+| [`@luma.gl/engine`][engine] | Recommended | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
+| [`@luma.gl/anari`][anari] | Experimental / Private | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR. |
+| [`@luma.gl/shadertools`][shadertools] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
+| [`@luma.gl/effects`][effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
+| [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU data evaluation, vector operations, and backend-aware compute workflows. |
+| [`@luma.gl/tables`][tables] | Optional | GPU-resident table primitives, batching, table-backed rendering, and table-oriented compute. |
+| [`@luma.gl/arrow`][arrow] | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
+| [`@luma.gl/text`][text] | Experimental / Private | `TextRenderer` facade and caller-owned GPU text data. |
+| [`@luma.gl/splats`][splats] | Experimental / Private | Gaussian splat rendering and caller-owned prepared GPU splat data. |
 | [`@luma.gl/experimental`][experimental] | Experimental / Private | Experimental v10 APIs, including WebGPU/WebGL WebXR and WebGL raw camera helpers. |
-| [`@luma.gl/gltf`][gltf]               | Optional    | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
-| [`@luma.gl/test-utils`][test-utils]   | Optional    | Test setups, in particular support for rendering and comparing images.                          |
+| [`@luma.gl/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
+| [`@luma.gl/test-utils`][test-utils] | Optional | Test setups, in particular support for rendering and comparing images. |
 
 \* At least one backend, either WebGL or WebGPU, must be installed to enable GPU resource creation.
 
@@ -39,7 +44,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/tables`][tables] for `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`.
 - [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
-- [`@luma.gl/experimental`][experimental] for v10 work-in-progress APIs, including experimental WebXR frame, view, and raw camera helpers.
+- [`@luma.gl/experimental`][experimental] for incubating v10 APIs, including experimental WebXR frame, view, and raw camera helpers.
 - [`@luma.gl/gltf`][gltf] for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.
 - [`@luma.gl/webgl`][webgl] and [`@luma.gl/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
 - [`@luma.gl/webgl/constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.

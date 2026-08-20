@@ -1,10 +1,11 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 # TransformFeedback
 
 <CoreDocsTabs group="pipelines" active="transform-feedback" />
 
-![WebGPU not supported](https://img.shields.io/badge/webgpu-no-red.svg?style=flat-square")
+<DocumentationBadges><DocumentationBadge tone="webgpu">WebGPU not supported</DocumentationBadge></DocumentationBadges>
 
 > NOTICE: `TransformFeedback` is only available in WebGL 2. It is not recommend for applications to use these objects directly. See the `BufferTransform` class.
 
@@ -132,18 +133,18 @@ WebGL APIs [`gl.endTransformFeedback`](https://developer.mozilla.org/en-US/docs/
 
 | Primitive Mode | Compatible Topology               |
 | -------------- | --------------------------------- |
-| `GL.POINTS`    | `point-list`                      |
-| `GL.LINES`     | `line-list`, `line-strip`         |
+| `GL.POINTS` | `point-list` |
+| `GL.LINES` | `line-list`, `line-strip` |
 | `GL.TRIANGLES` | `triangle-list`, `triangle-strip` |
 
 ## Limits
 
 | Limit                                              | Value | Description                                                   |
 | -------------------------------------------------- | ----- | ------------------------------------------------------------- |
-| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS`       | >=4   | total number of variables that can be captured }              |
-| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS`    | >=4   | number of components that any particular variable can contain |
-| `GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS` | >= 64 | total number of components in interleaved capture             |
-| `GL.MAX_TRANSFORM_FEEDBACK_BUFFERS`                | TBD   | Advanced interleaving total number of buffers                 |
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS` | >=4 | total number of variables that can be captured } |
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS` | >=4 | number of components that any particular variable can contain |
+| `GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS` | >= 64 | total number of components in interleaved capture |
+| `GL.MAX_TRANSFORM_FEEDBACK_BUFFERS` | Adapter-specific | Query the WebGL 2 context; portable code should use the separate-attribute limit above |
 
 ## Remarks
 

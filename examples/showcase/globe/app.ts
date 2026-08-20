@@ -12,6 +12,7 @@ import {
   type Material,
   MaterialFactory,
   Model,
+  OrbitControls,
   ShaderInputs,
   SphereGeometry
 } from '@luma.gl/engine';
@@ -569,7 +570,6 @@ type GlobeControls = {
   lightElevation: number;
 };
 
-type CleanupCallback = () => void;
 type LandShaderInputs = {
   globeScene: typeof globeScene.props;
   lighting: typeof lighting.props;
@@ -622,12 +622,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   waterMaskTexture: DynamicTexture;
   device: Device;
   controls: GlobeControls = {...DEFAULT_CONTROLS};
+  readonly orbitControls: OrbitControls;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
-  cleanupCallbacks: CleanupCallback[] = [];
-  cameraAngle = 0.6;
-  cameraTilt = 0.28;
-  cameraDistance = 2.9;
 
   constructor({device}: AnimationProps) {
     super();
@@ -641,50 +638,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
-    canvas.style.cursor = 'grab';
-
-    const mouseMoveHandler = (event: Event) => {
-      const mouseEvent = event as MouseEvent;
-      if (!mouseEvent.buttons) {
-        return;
-      }
-
-      this.cameraAngle -= mouseEvent.movementX * 0.01;
-      this.cameraTilt = clampNumber(
-        this.cameraTilt - mouseEvent.movementY * 0.01,
-        -MAX_CAMERA_TILT,
-        MAX_CAMERA_TILT
-      );
-      canvas.style.cursor = 'grabbing';
-    };
-
-    const mouseUpHandler = () => {
-      canvas.style.cursor = 'grab';
-    };
-
-    const wheelHandler = (event: Event) => {
-      const wheelEvent = event as WheelEvent;
-      wheelEvent.preventDefault();
-
-      const zoomFactor = Math.exp(clampNumber(wheelEvent.deltaY, -240, 240) * 0.0015);
-      this.cameraDistance = clampNumber(
-        this.cameraDistance * zoomFactor,
-        MIN_CAMERA_DISTANCE,
-        MAX_CAMERA_DISTANCE
-      );
-    };
-
-    canvas.addEventListener('mousemove', mouseMoveHandler);
-    canvas.addEventListener('mouseup', mouseUpHandler);
-    canvas.addEventListener('mouseleave', mouseUpHandler);
-    canvas.addEventListener('wheel', wheelHandler, {passive: false});
-
-    this.cleanupCallbacks.push(() => canvas.removeEventListener('mousemove', mouseMoveHandler));
-    this.cleanupCallbacks.push(() => canvas.removeEventListener('mouseup', mouseUpHandler));
-    this.cleanupCallbacks.push(() => canvas.removeEventListener('mouseleave', mouseUpHandler));
-    this.cleanupCallbacks.push(() =>
-      canvas.removeEventListener('wheel', wheelHandler as EventListener)
-    );
+    this.orbitControls = new OrbitControls(canvas, {
+      yaw: 0.6,
+      pitch: 0.28,
+      distance: 2.9,
+      minDistance: MIN_CAMERA_DISTANCE,
+      maxDistance: MAX_CAMERA_DISTANCE,
+      minPitch: -MAX_CAMERA_TILT,
+      maxPitch: MAX_CAMERA_TILT,
+      rotateSpeed: 0.01,
+      zoomSpeed: 0.0015
+    });
 
     this.tychoSkyTexture = new DynamicTexture(device, {
       dimension: 'cube',
@@ -852,21 +816,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.oceanMaterial.destroy();
     this.landTexture.destroy();
     this.waterMaskTexture.destroy();
-
-    for (const cleanupCallback of this.cleanupCallbacks) {
-      cleanupCallback();
-    }
-    this.cleanupCallbacks = [];
+    this.orbitControls.destroy();
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
+    this.orbitControls.update(time);
     const projectionMatrix = new Matrix4().perspective({
       fovy: Math.PI / 3.6,
       aspect,
       near: 0.1,
       far: 100
     });
-    const cameraPosition = this.getCameraPosition();
+    const cameraPosition = this.orbitControls.getEyePosition();
     const viewMatrix = new Matrix4().lookAt({eye: cameraPosition, center: [0, 0, 0]});
     const skyboxViewMatrix = new Matrix4(viewMatrix);
     skyboxViewMatrix[12] = 0;
@@ -970,15 +931,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     }
   };
-
-  private getCameraPosition(): [number, number, number] {
-    const horizontalScale = Math.cos(this.cameraTilt);
-    return [
-      this.cameraDistance * horizontalScale * Math.sin(this.cameraAngle),
-      this.cameraDistance * Math.sin(this.cameraTilt),
-      this.cameraDistance * horizontalScale * Math.cos(this.cameraAngle)
-    ];
-  }
 
   private getLightingProps(): LightingProps {
     const lightDirection = getDirectionalLightDirection(
@@ -1136,8 +1088,4 @@ function normalizeDirection3(direction: [number, number, number]): [number, numb
   }
 
   return [direction[0] / length, direction[1] / length, direction[2] / length];
-}
-
-function clampNumber(value: number, minValue: number, maxValue: number): number {
-  return Math.min(maxValue, Math.max(minValue, value));
 }

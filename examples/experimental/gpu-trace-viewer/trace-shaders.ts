@@ -6,6 +6,7 @@ import {
   TRACE_DENSITY_BIN_COUNT,
   TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL,
   TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL,
+  TRACE_DISPLAY_LANE_CAPACITY,
   TRACE_DEPENDENCY_BATCH_CAPACITY,
   TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT,
   TRACE_DEPENDENCY_PROCESS_MASK,
@@ -23,8 +24,10 @@ import {
   TRACE_LANES_PER_THREAD,
   TRACE_OVERLAPPING_CHILD_FLAG,
   TRACE_PROCESS_COUNT,
+  TRACE_PROCESS_GAP_LANE_COUNT,
   TRACE_RUNTIME_SPAN_FLAG,
   TRACE_SIMILAR_DURATION_PARENT_FLAG,
+  TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS
 } from './trace-data';
 
@@ -86,16 +89,26 @@ struct ViewUniforms {
   pickTime: f32,
   pickLane: f32,
   visibilityGeneration: u32,
-  dependencyEndpointOffset: u32,
+  selectedDependencyIndex: u32,
   lodFadeEnabled: u32,
   labelsEnabled: u32,
   densityPattern: u32,
   densityBinOrigin: f32,
   densityBinDuration: f32,
+  dependencyDisplayBudget: u32,
+  hoveredSpanIndex: u32,
+  hoveredDependencyIndex: u32,
+  regressionGroupMask: u32,
+  regressionOverlayStrength: f32,
+  overviewMode: u32,
+  dependencyBundlingEnabled: u32,
+  anomalyOverlayEnabled: u32,
+  overviewPadding2: u32,
 };
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
 const THREADS_PER_PROCESS: u32 = ${TRACE_THREADS_PER_PROCESS}u;
+const PROCESS_GAP_LANE_COUNT: u32 = ${TRACE_PROCESS_GAP_LANE_COUNT}u;
 const DENSITY_BLEND_START_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_START_TIME_PER_PIXEL};
 const DENSITY_BLEND_END_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_BLEND_END_TIME_PER_PIXEL};
 const EXACT_SPAN_MINIMUM_PIXEL_WIDTH: f32 = ${TRACE_EXACT_SPAN_MINIMUM_PIXEL_WIDTH};
@@ -105,6 +118,20 @@ fn getVisibilityTimePadding() -> f32 {
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   return VISIBILITY_GUARD_PIXEL_WIDTH * timeRange /
     max(viewUniforms.viewportWidth, 1.0);
+}
+
+fn applyRegressionOverlay(color: vec3<f32>, group: u32) -> vec3<f32> {
+  let regressed = (viewUniforms.regressionGroupMask & (1u << group)) != 0u;
+  let regressionColor = vec3<f32>(0.88, 0.48, 0.40);
+  return select(
+    color,
+    mix(color, regressionColor, viewUniforms.regressionOverlayStrength),
+    regressed
+  );
+}
+
+fn getProcessGapLaneOffset(threadIndex: u32) -> u32 {
+  return threadIndex / THREADS_PER_PROCESS * PROCESS_GAP_LANE_COUNT;
 }
 
 fn getSpanPixelWidth(duration: f32) -> f32 {
@@ -146,12 +173,25 @@ fn isDensityMode() -> bool {
   return getDensityBlend() >= 0.5;
 }
 
-fn isExactModeActive() -> bool {
+fn isRepresentativeModeActive() -> bool {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let timePerPixel = timeRange / max(viewUniforms.viewportWidth, 1.0);
+  let autoRepresentative = viewUniforms.overviewMode == 0u &&
+    timePerPixel < DENSITY_BLEND_END_TIME_PER_PIXEL * 4.0;
+  let requested = viewUniforms.overviewMode == 2u || autoRepresentative;
+  return requested && getDensityBlend() > 0.0;
+}
+
+fn isFullExactModeActive() -> bool {
   return getDensityBlend() < 1.0;
 }
 
+fn isExactModeActive() -> bool {
+  return isFullExactModeActive() || isRepresentativeModeActive();
+}
+
 fn isDensityModeActive() -> bool {
-  return getDensityBlend() > 0.0;
+  return getDensityBlend() > 0.0 && !isRepresentativeModeActive();
 }
 
 fn getGroupColor(group: u32) -> vec3<f32> {
@@ -173,6 +213,47 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
     vec2<f32>(1.0, 1.0)
   );
   return corners[vertexIndex];
+}
+
+fn getDependencyBundleHub(position: vec2<f32>) -> vec2<f32> {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  let timeCell = timeRange / 16.0;
+  let laneCell = laneRange / 10.0;
+  return vec2<f32>(
+    viewUniforms.timeMin +
+      (floor((position.x - viewUniforms.timeMin) / timeCell) + 0.5) * timeCell,
+    viewUniforms.laneMin +
+      (floor((position.y - viewUniforms.laneMin) / laneCell) + 0.5) * laneCell
+  );
+}
+
+fn isDependencyRouteExact(canonicalDependencyIndex: u32) -> bool {
+  return viewUniforms.dependencyBundlingEnabled == 0u ||
+    viewUniforms.selectedDependencyIndex == canonicalDependencyIndex ||
+    viewUniforms.hoveredDependencyIndex == canonicalDependencyIndex;
+}
+
+fn getDependencyRoutePosition(
+  vertexIndex: u32,
+  source: vec2<f32>,
+  destination: vec2<f32>,
+  canonicalDependencyIndex: u32
+) -> vec2<f32> {
+  if (isDependencyRouteExact(canonicalDependencyIndex)) {
+    return select(source, destination, vertexIndex == 1u);
+  }
+  let sourceHub = getDependencyBundleHub(source);
+  let destinationHub = getDependencyBundleHub(destination);
+  let route = array<vec2<f32>, 6>(
+    source,
+    sourceHub,
+    sourceHub,
+    destinationHub,
+    destinationHub,
+    destination
+  );
+  return route[vertexIndex];
 }`;
 
 /** Clears the indirect glyph count before candidate spans append fitted labels. */
@@ -397,7 +478,10 @@ fn vertexMain(
     occurrence.lane % LANES_PER_THREAD,
     threadStates[occurrence.threadIndex] != 0u
   );
-  let lane = f32(threadOffsets[occurrence.threadIndex] + localLane);
+  let lane = f32(
+    threadOffsets[occurrence.threadIndex] + localLane +
+    getProcessGapLaneOffset(occurrence.threadIndex)
+  );
   let x =
     (occurrence.start - viewUniforms.timeMin) / timeRange * 2.0 - 1.0 +
     glyphPixelOffset.x * 2.0 / max(viewUniforms.viewportWidth, 1.0);
@@ -414,7 +498,7 @@ fn vertexMain(
   output.color = vec4<f32>(
     textDictionaryStyle.color.rgb,
     textDictionaryStyle.color.a * select(
-      1.0 - getDensityBlend(),
+      select(1.0 - getDensityBlend(), 1.0, isRepresentativeModeActive()),
       1.0,
       isSpanWideEnoughForExactRendering(occurrence.duration)
     )
@@ -498,11 +582,14 @@ struct SpanChunkUniforms {
   batchCount: u32,
 };
 @group(0) @binding(6) var<uniform> spanChunk: SpanChunkUniforms;
+@group(0) @binding(7) var<storage, read> anomalyMask: array<u32>;
 
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
   @location(0) color: vec4<f32>,
   @location(1) @interpolate(flat) lane: u32,
+  @location(2) @interpolate(flat) anomalous: u32,
+  @location(3) verticalFraction: f32,
 };
 
 @vertex fn vertexMain(
@@ -515,7 +602,8 @@ struct VertexOutput {
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  let lane = threadOffsets[span.threadIndex] + localLane;
+  let lane = threadOffsets[span.threadIndex] + localLane +
+    getProcessGapLaneOffset(span.threadIndex);
   let startX = ((span.start - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
   let endX = ((span.start + span.duration - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
   let laneHeight = 2.0 / laneRange;
@@ -527,7 +615,10 @@ struct VertexOutput {
   let hasSelection = viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusEnabled = viewUniforms.focusMode != 0u && hasSelection;
   let focusOpacity = select(1.0, select(0.22, 1.0, isReached), focusEnabled);
-  let baseColor = getGroupColor(span.group) * pulse;
+  let isAnomalous = viewUniforms.anomalyOverlayEnabled != 0u &&
+    (anomalyMask[sourceIndex - spanChunk.firstSpanIndex] & 1u) != 0u;
+  let groupColor = applyRegressionOverlay(getGroupColor(span.group), span.group);
+  let baseColor = select(groupColor, mix(groupColor, vec3<f32>(0.95, 0.52, 0.40), 0.38), isAnomalous) * pulse;
   // Long spans remain recognizable first; sub-pixel spans emerge only as they become readable.
   let spanPixelWidth = getSpanPixelWidth(span.duration);
   let spanReadability = smoothstep(0.6, 1.4, spanPixelWidth);
@@ -537,10 +628,16 @@ struct VertexOutput {
     viewUniforms.lodFadeEnabled != 0u
   );
   let exactOpacity = select(
-    (1.0 - getDensityBlend()) * readabilityOpacity,
+    select(
+      (1.0 - getDensityBlend()) * readabilityOpacity,
+      1.0,
+      isRepresentativeModeActive()
+    ),
     1.0,
     isSpanWideEnoughForExactRendering(span.duration)
   );
+  let isHovered = viewUniforms.hoveredSpanIndex == sourceIndex;
+  let hoverColor = select(baseColor, vec3<f32>(0.86, 0.96, 0.92), isHovered);
   let minimumClipWidth = 3.0 / max(viewUniforms.viewportWidth, 1.0);
   var output: VertexOutput;
   output.position = vec4<f32>(
@@ -550,16 +647,82 @@ struct VertexOutput {
     1.0
   );
   output.color = vec4<f32>(
-    select(baseColor, vec3<f32>(1.0, 0.94, 0.47), isSelected),
-    select(0.9, 1.0, isSelected) * focusOpacity * exactOpacity
+    select(hoverColor, vec3<f32>(1.0, 0.94, 0.47), isSelected),
+    select(0.9, 1.0, isSelected || isHovered) * focusOpacity * exactOpacity
   );
   output.lane = lane;
+  output.anomalous = select(0u, 1u, isAnomalous);
+  output.verticalFraction = corner.y;
   return output;
 }
 
 @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
   let stripe = select(0.94, 1.0, (input.lane & 1u) == 0u);
-  return vec4<f32>(input.color.rgb * stripe, input.color.a);
+  let anomalyEdge = input.anomalous != 0u && input.verticalFraction < 0.11;
+  let color = select(input.color.rgb * stripe, vec3<f32>(1.0, 0.72, 0.52), anomalyEdge);
+  return vec4<f32>(color, input.color.a);
+}`;
+
+/** Raster picking variant of the exact-span draw that preserves canonical source identity. */
+export const TRACE_PICKING_RENDER_SHADER = /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> visibleIds: array<u32>;
+@group(0) @binding(2) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(3) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(4) var<uniform> viewUniforms: ViewUniforms;
+struct SpanChunkUniforms {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  firstBatchIndex: u32,
+  batchCount: u32,
+};
+@group(0) @binding(5) var<uniform> spanChunk: SpanChunkUniforms;
+
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) @interpolate(flat) sourceIndex: u32,
+};
+
+struct FragmentOutput {
+  @location(0) color: vec4<f32>,
+  @location(1) indices: vec2<i32>,
+};
+
+@vertex fn vertexMain(
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32
+) -> VertexOutput {
+  let sourceIndex = visibleIds[instanceIndex];
+  let span = spans[sourceIndex - spanChunk.firstSpanIndex];
+  let corner = getCorner(vertexIndex);
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
+  let lane = threadOffsets[span.threadIndex] + localLane +
+    getProcessGapLaneOffset(span.threadIndex);
+  let startX = ((span.start - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
+  let endX = ((span.start + span.duration - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
+  let laneHeight = 2.0 / laneRange;
+  let laneY = 1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0;
+  let minimumClipWidth = 3.0 / max(viewUniforms.viewportWidth, 1.0);
+  var output: VertexOutput;
+  output.position = vec4<f32>(
+    mix(startX, max(endX, startX + minimumClipWidth), corner.x),
+    laneY - corner.y * laneHeight * 0.78,
+    0.0,
+    1.0
+  );
+  output.sourceIndex = sourceIndex;
+  return output;
+}
+
+@fragment fn fragmentMain(input: VertexOutput) -> FragmentOutput {
+  var output: FragmentOutput;
+  output.color = vec4<f32>(0.0);
+  output.indices = vec2<i32>(i32(input.sourceIndex), 0);
+  return output;
 }`;
 
 /** Indirect line renderer preserving original cross-process dependency endpoints. */
@@ -570,6 +733,10 @@ ${TRACE_SHADER_DECLARATIONS}
 @group(0) @binding(1) var<storage, read> visibleDependencyIds: array<u32>;
 @group(0) @binding(2) var<storage, read> dependencyEndpointPositions: array<vec2<f32>>;
 @group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+struct DependencyChunk {
+  firstDependencyIndex: u32,
+};
+@group(0) @binding(4) var<uniform> dependencyChunk: DependencyChunk;
 
 struct DependencyVertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -582,11 +749,21 @@ struct DependencyVertexOutput {
 ) -> DependencyVertexOutput {
   let dependency = dependencies[visibleDependencyIds[instanceIndex]];
   let dependencyIndex = visibleDependencyIds[instanceIndex];
-  let endpointResultIndex = dependencyIndex * 2u + select(0u, 1u, vertexIndex == 1u);
-  let endpointPosition = dependencyEndpointPositions[endpointResultIndex];
+  let source = dependencyEndpointPositions[dependencyIndex * 2u];
+  let destination = dependencyEndpointPositions[dependencyIndex * 2u + 1u];
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
   let crossProcess = dependency.family != 0u;
+  let canonicalDependencyIndex = dependencyChunk.firstDependencyIndex + dependencyIndex;
+  let endpointPosition = getDependencyRoutePosition(
+    vertexIndex,
+    source,
+    destination,
+    canonicalDependencyIndex
+  );
+  let selected = viewUniforms.selectedDependencyIndex == canonicalDependencyIndex;
+  let hovered = viewUniforms.hoveredDependencyIndex == canonicalDependencyIndex;
+  let exactRoute = isDependencyRouteExact(canonicalDependencyIndex);
   // Keep edges out of the density-to-span handoff until their endpoints are clearly legible.
   let dependencyOpacity = smoothstep(0.68, 0.92, 1.0 - getDensityBlend());
   var output: DependencyVertexOutput;
@@ -596,17 +773,171 @@ struct DependencyVertexOutput {
     0.0,
     1.0
   );
-  output.color = select(
-    vec4<f32>(0.62, 0.79, 0.96, 0.68),
-    vec4<f32>(0.95, 0.73, 0.42, 0.88),
+  let edgeColor = select(
+    vec4<f32>(0.63, 0.72, 0.78, 0.72),
+    vec4<f32>(0.72, 0.82, 0.50, 0.9),
     crossProcess
-  ) * vec4<f32>(1.0, 1.0, 1.0, dependencyOpacity);
+  );
+  output.color = select(
+    edgeColor,
+    vec4<f32>(0.84, 0.92, 0.86, 0.98),
+    hovered
+  );
+  output.color = select(
+    output.color,
+    vec4<f32>(0.94, 1.0, 0.78, 1.0),
+    selected
+  );
+  // A bundled edge contributes three segments and shares most of its path with other edges.
+  // Keep that accumulated corridor readable without letting it wash out spans and labels.
+  let routingOpacity = select(0.03, 1.0, exactRoute);
+  output.color.a *= dependencyOpacity * routingOpacity;
   return output;
 }
 
 @fragment fn fragmentMain(input: DependencyVertexOutput) -> @location(0) vec4<f32> {
   return input.color;
 }`;
+
+/** Raster picking variant of the displayed dependency draw. Dependencies render after spans. */
+export const TRACE_DEPENDENCY_PICKING_RENDER_SHADER = /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+
+@group(0) @binding(0) var<storage, read> visibleDependencyIds: array<u32>;
+@group(0) @binding(1) var<storage, read> dependencyEndpointPositions: array<vec2<f32>>;
+@group(0) @binding(2) var<uniform> viewUniforms: ViewUniforms;
+struct DependencyChunk {
+  firstDependencyIndex: u32,
+};
+@group(0) @binding(3) var<uniform> dependencyChunk: DependencyChunk;
+
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) @interpolate(flat) dependencyIndex: u32,
+};
+
+struct FragmentOutput {
+  @location(0) color: vec4<f32>,
+  @location(1) indices: vec2<i32>,
+};
+
+@vertex fn vertexMain(
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32
+) -> VertexOutput {
+  let dependencyIndex = visibleDependencyIds[instanceIndex];
+  let canonicalDependencyIndex = dependencyChunk.firstDependencyIndex + dependencyIndex;
+  let endpointPosition = getDependencyRoutePosition(
+    vertexIndex,
+    dependencyEndpointPositions[dependencyIndex * 2u],
+    dependencyEndpointPositions[dependencyIndex * 2u + 1u],
+    canonicalDependencyIndex
+  );
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  var output: VertexOutput;
+  output.position = vec4<f32>(
+    ((endpointPosition.x - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0,
+    1.0 - ((endpointPosition.y - viewUniforms.laneMin) / laneRange) * 2.0,
+    0.0,
+    1.0
+  );
+  output.dependencyIndex = canonicalDependencyIndex;
+  return output;
+}
+
+@fragment fn fragmentMain(input: VertexOutput) -> FragmentOutput {
+  var output: FragmentOutput;
+  output.color = vec4<f32>(0.0);
+  output.indices = vec2<i32>(i32(input.dependencyIndex), 1);
+  return output;
+}`;
+
+/** Draws the coarsest GPU-built temporal hierarchy as an always-available trace minimap. */
+export function getTraceMinimapRenderShader(
+  firstNodeIndex: number,
+  nodeCount: number,
+  traceDuration: number
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+
+struct TemporalIndexNode {
+  minimumTime: f32,
+  maximumTime: f32,
+  maximumDuration: f32,
+  group: u32,
+  firstBatchIndex: u32,
+  batchCount: u32,
+  minimumLane: u32,
+  maximumLane: u32,
+};
+
+const FIRST_NODE_INDEX: u32 = ${firstNodeIndex}u;
+const NODE_COUNT: u32 = ${nodeCount}u;
+const TRACE_DURATION: f32 = ${Math.max(traceDuration, Number.EPSILON)};
+const TRACE_LANE_COUNT: f32 = ${TRACE_LANE_COUNT}.0;
+@group(0) @binding(0) var<storage, read> temporalIndex: array<TemporalIndexNode>;
+@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
+
+struct MinimapVertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) color: vec4<f32>,
+};
+
+@vertex fn vertexMain(
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32
+) -> MinimapVertexOutput {
+  let corner = getCorner(vertexIndex);
+  var bounds = vec4<f32>(-1.0, -1.0, 1.0, 1.0);
+  var color = vec4<f32>(0.008, 0.014, 0.028, 0.88);
+  if (instanceIndex > 0u && instanceIndex <= NODE_COUNT) {
+    let node = temporalIndex[FIRST_NODE_INDEX + instanceIndex - 1u];
+    let laneBottom = 1.0 - clamp(f32(node.maximumLane) / TRACE_LANE_COUNT, 0.0, 1.0) * 2.0;
+    let laneTop = 1.0 - clamp(f32(node.minimumLane) / TRACE_LANE_COUNT, 0.0, 1.0) * 2.0;
+    // Give each semantic group its own sub-band inside the node's lane envelope. Coarse
+    // hierarchy rectangles often overlap in time and lane space; drawing them on top of one
+    // another would let the last group dominate and turn the overview into a single muted color.
+    let groupBandStart = f32(min(node.group, 2u)) / 3.0;
+    let groupBandEnd = groupBandStart + 1.0 / 3.0;
+    bounds = vec4<f32>(
+      clamp(node.minimumTime / TRACE_DURATION * 2.0 - 1.0, -1.0, 1.0),
+      mix(laneBottom, laneTop, groupBandStart),
+      clamp(node.maximumTime / TRACE_DURATION * 2.0 - 1.0, -1.0, 1.0),
+      mix(laneBottom, laneTop, groupBandEnd)
+    );
+    color = vec4<f32>(getGroupColor(node.group), 0.72);
+  } else if (instanceIndex == NODE_COUNT + 1u) {
+    bounds.x = clamp(viewUniforms.timeMin / TRACE_DURATION * 2.0 - 1.0, -1.0, 1.0);
+    bounds.z = clamp(viewUniforms.timeMax / TRACE_DURATION * 2.0 - 1.0, -1.0, 1.0);
+    color = vec4<f32>(0.72, 0.82, 0.88, 0.12);
+  } else if (instanceIndex > NODE_COUNT + 1u) {
+    let edgeTime = select(
+      viewUniforms.timeMin,
+      viewUniforms.timeMax,
+      instanceIndex == NODE_COUNT + 3u
+    );
+    let edgeX = clamp(edgeTime / TRACE_DURATION * 2.0 - 1.0, -1.0, 1.0);
+    bounds.x = edgeX - 0.003;
+    bounds.z = edgeX + 0.003;
+    color = vec4<f32>(0.78, 0.88, 0.94, 0.9);
+  }
+  var output: MinimapVertexOutput;
+  output.position = vec4<f32>(
+    mix(bounds.x, bounds.z, corner.x),
+    mix(bounds.y, bounds.w, corner.y),
+    0.0,
+    1.0
+  );
+  output.color = color;
+  return output;
+}
+
+@fragment fn fragmentMain(input: MinimapVertexOutput) -> @location(0) vec4<f32> {
+  return input.color;
+}`;
+}
 
 /** Renders GPU-aggregated density bins for the current visible lane layout. */
 export const TRACE_DENSITY_RENDER_SHADER = /* wgsl */ `
@@ -619,62 +950,66 @@ const DENSITY_GROUP_COUNT: u32 = ${TRACE_GROUPS.length}u;
 
 struct DensityVertexOutput {
   @builtin(position) position: vec4<f32>,
-  @location(0) color: vec4<f32>,
-  @interpolate(flat) @location(1) patternOffset: f32,
 };
 
 @vertex fn vertexMain(
-  @builtin(vertex_index) vertexIndex: u32,
-  @builtin(instance_index) instanceIndex: u32
+  @builtin(vertex_index) vertexIndex: u32
 ) -> DensityVertexOutput {
-  let lane = instanceIndex / DENSITY_BIN_COUNT;
-  let binIndex = instanceIndex % DENSITY_BIN_COUNT;
-  let densityValueOffset = instanceIndex * DENSITY_GROUP_COUNT;
+  var output: DensityVertexOutput;
+  let positions = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -1.0),
+    vec2<f32>(3.0, -1.0),
+    vec2<f32>(-1.0, 3.0)
+  );
+  output.position = vec4<f32>(positions[vertexIndex], 0.0, 1.0);
+  return output;
+}
+
+@fragment fn fragmentMain(input: DensityVertexOutput) -> @location(0) vec4<f32> {
+  let viewportSize = max(
+    vec2<f32>(viewUniforms.viewportWidth, viewUniforms.viewportHeight),
+    vec2<f32>(1.0)
+  );
+  let viewportPosition = input.position.xy / viewportSize;
+  let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  let laneCoordinate = viewUniforms.laneMin + viewportPosition.y * laneRange;
+  let lane = u32(max(floor(laneCoordinate), 0.0));
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let traceTime = viewUniforms.timeMin + viewportPosition.x * timeRange;
+  let binCoordinate =
+    (traceTime - viewUniforms.densityBinOrigin) / viewUniforms.densityBinDuration;
+  let bin = u32(max(floor(binCoordinate), 0.0));
+  if (
+    lane >= ${TRACE_DISPLAY_LANE_CAPACITY}u ||
+    binCoordinate < 0.0 ||
+    bin >= DENSITY_BIN_COUNT ||
+    fract(laneCoordinate) >= 0.72
+  ) {
+    discard;
+  }
+  let densityValueOffset =
+    (lane * DENSITY_BIN_COUNT + bin) * DENSITY_GROUP_COUNT;
   var count = 0u;
   var weightedColor = vec3<f32>(0.0);
   for (var groupIndex = 0u; groupIndex < DENSITY_GROUP_COUNT; groupIndex++) {
     let groupCount = densityBins[densityValueOffset + groupIndex];
     count += groupCount;
-    weightedColor += getGroupColor(groupIndex) * f32(groupCount);
+    weightedColor += applyRegressionOverlay(getGroupColor(groupIndex), groupIndex) * f32(groupCount);
   }
-  let corner = getCorner(vertexIndex);
-  let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
-  let laneHeight = 2.0 / laneRange;
-  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-  let binStart = viewUniforms.densityBinOrigin +
-    f32(binIndex) * viewUniforms.densityBinDuration;
-  let binEnd = binStart + viewUniforms.densityBinDuration;
-  let startX = ((binStart - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
-  let endX = ((binEnd - viewUniforms.timeMin) / timeRange) * 2.0 - 1.0;
+  if (count == 0u) {
+    discard;
+  }
   let intensity = clamp(log2(f32(count) + 1.0) * viewUniforms.activityScale, 0.0, 1.0);
-  let visible = count > 0u && f32(lane) >= viewUniforms.laneMin &&
-    f32(lane) < viewUniforms.laneMax;
-  let densityBlend = getDensityBlend();
-  let densityOpacity = select(1.0, densityBlend, isDensityModeActive());
-  var output: DensityVertexOutput;
-  output.position = vec4<f32>(
-    mix(startX, endX, corner.x),
-    1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0 -
-      corner.y * laneHeight * 0.72,
-    0.0,
-    1.0
-  );
-  let groupColor = weightedColor / max(f32(count), 1.0);
+  let densityOpacity = select(1.0, getDensityBlend(), isDensityModeActive());
+  let groupColor = weightedColor / f32(count);
   // Keep the density LOD at the same perceived brightness as exact span geometry.
   let densityColor = groupColor * (0.92 + intensity * 0.08);
-  output.color = vec4<f32>(
-    densityColor,
-    select(0.0, (0.86 + 0.04 * intensity) * densityOpacity, visible)
-  );
-  output.patternOffset = f32((lane * 3u) % 10u);
-  return output;
-}
-
-@fragment fn fragmentMain(input: DensityVertexOutput) -> @location(0) vec4<f32> {
+  let color = vec4<f32>(densityColor, (0.86 + 0.04 * intensity) * densityOpacity);
+  let patternOffset = f32((lane * 3u) % 10u);
   let patternColor = pluginApplyFillPattern(
-    vec4<f32>(input.color.rgb, 1.0),
+    vec4<f32>(color.rgb, 1.0),
     f32(viewUniforms.densityPattern),
-    input.position.xy + vec2<f32>(input.patternOffset, 0.0),
+    input.position.xy + vec2<f32>(patternOffset, 0.0),
     vec2<f32>(2.0, 8.0)
   );
   // Use thin, low-contrast marks instead of alpha gaps so the pattern cannot be mistaken for
@@ -685,8 +1020,8 @@ struct DensityVertexOutput {
     viewUniforms.densityPattern != 0u
   );
   return vec4<f32>(
-    clamp(input.color.rgb * patternBrightness, vec3<f32>(0.0), vec3<f32>(1.0)),
-    input.color.a
+    clamp(color.rgb * patternBrightness, vec3<f32>(0.0), vec3<f32>(1.0)),
+    color.a
   );
 }`;
 
@@ -724,7 +1059,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let groupVisible = (viewUniforms.enabledMask & (1u << batch.groupIndex)) != 0u;
   let candidateVisible = timeVisible && groupVisible;
   let exactCandidateVisible = candidateVisible &&
-    (isExactModeActive() || batch.maximumDuration >= getMinimumExactSpanDuration());
+    (isFullExactModeActive() || batch.maximumDuration >= getMinimumExactSpanDuration());
   candidateFlags[batchIndex] = select(0u, 1u, candidateVisible);
   exactCandidateFlags[batchIndex] = select(0u, 1u, exactCandidateVisible);
 }`;
@@ -763,6 +1098,26 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     1u,
     timeVisible && familyVisible && isExactModeActive()
   );
+}`;
+}
+
+/** Caps one dependency chunk while publishing its admitted count for workload telemetry. */
+export function getDependencyDispatchBudgetShader(batchBudget: number, chunkIndex = 0): string {
+  return /* wgsl */ `
+const WORKGROUP_SIZE: u32 = ${TRACE_DEPENDENCY_BATCH_CAPACITY}u;
+const BATCH_BUDGET: u32 = ${batchBudget}u;
+const CHUNK_INDEX: u32 = ${chunkIndex}u;
+@group(0) @binding(0) var<storage, read> candidateCount: array<u32>;
+@group(0) @binding(1) var<storage, read_write> admittedCounts: array<u32>;
+@group(0) @binding(2) var<storage, read_write> dispatchCommand: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  let admittedBatchCount = min(candidateCount[0], BATCH_BUDGET);
+  admittedCounts[CHUNK_INDEX] = admittedBatchCount;
+  dispatchCommand[0] = 1u;
+  dispatchCommand[1] = admittedBatchCount;
+  dispatchCommand[2] = 1u;
 }`;
 }
 
@@ -813,6 +1168,17 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
+/** Clears the focus traversal overflow counter before the next bounded traversal. */
+export function getFocusOverflowClearShader(): string {
+  return /* wgsl */ `
+@group(0) @binding(0) var<storage, read_write> overflowCount: array<u32>;
+
+@compute @workgroup_size(1)
+fn main() {
+  overflowCount[0] = 0u;
+}`;
+}
+
 /** Clears one compact frontier count and disables its indirect dispatch. */
 export function getFocusFrontierClearShader(): string {
   return /* wgsl */ `
@@ -856,6 +1222,7 @@ const DEPTH: u32 = ${options.depth}u;
 @group(0) @binding(5) var<storage, read_write> nextFrontierCount: array<atomic<u32>>;
 @group(0) @binding(6) var<storage, read_write> reachedSpans: array<atomic<u32>>;
 @group(0) @binding(7) var<storage, read> focusTraversalState: array<u32>;
+@group(0) @binding(8) var<storage, read_write> overflowCount: array<atomic<u32>>;
 
 fn findSparseRow(sourceIndex: u32) -> u32 {
   var low = 0u;
@@ -878,7 +1245,8 @@ fn findSparseRow(sourceIndex: u32) -> u32 {
 @compute @workgroup_size(${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let frontierIndex = globalId.x;
-  if (frontierIndex >= frontierCount[0] || DEPTH >= focusTraversalState[0]) {
+  if (frontierIndex >= min(frontierCount[0], FRONTIER_CAPACITY) ||
+    DEPTH >= focusTraversalState[0]) {
     return;
   }
   let sourceIndex = frontier[frontierIndex];
@@ -896,6 +1264,8 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
       let nextIndex = atomicAdd(&nextFrontierCount[0], 1u);
       if (nextIndex < FRONTIER_CAPACITY) {
         nextFrontier[nextIndex] = neighbor;
+      } else {
+        atomicAdd(&overflowCount[0], 1u);
       }
     }
   }
@@ -903,15 +1273,17 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }
 
 /** Publishes a compact frontier count as the next indirect dispatch. */
-export function getFocusFrontierDispatchShader(): string {
+export function getFocusFrontierDispatchShader(frontierCapacity: number): string {
   return /* wgsl */ `
 const WORKGROUP_SIZE: u32 = ${TRACE_FOCUS_FRONTIER_WORKGROUP_SIZE}u;
+const FRONTIER_CAPACITY: u32 = ${frontierCapacity}u;
 @group(0) @binding(0) var<storage, read> frontierCount: array<u32>;
 @group(0) @binding(1) var<storage, read_write> dispatchCommand: array<u32>;
 
 @compute @workgroup_size(1)
 fn main() {
-  dispatchCommand[0] = (frontierCount[0] + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
+  let boundedCount = min(frontierCount[0], FRONTIER_CAPACITY);
+  dispatchCommand[0] = (boundedCount + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
 }`;
 }
 
@@ -928,6 +1300,7 @@ export function getCandidatePassDispatchShader(
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
 const PROCESS_COUNT: u32 = ${TRACE_PROCESS_COUNT}u;
+const THREAD_COUNT: u32 = ${TRACE_THREAD_COUNT}u;
 const CHUNK_COUNT: u32 = ${chunks.length}u;
 const FIRST_BATCH_INDICES = array<u32, ${chunks.length}>(${firstBatchIndices});
 const LAST_BATCH_INDICES = array<u32, ${chunks.length}>(${lastBatchIndices});
@@ -938,6 +1311,7 @@ const LAST_BATCH_INDICES = array<u32, ${chunks.length}>(${lastBatchIndices});
 @group(0) @binding(4) var<storage, read> processStates: array<u32>;
 @group(0) @binding(5) var<storage, read> candidateBatchIds: array<u32>;
 @group(0) @binding(6) var<storage, read_write> candidateChunkOffsets: array<u32>;
+@group(0) @binding(7) var<storage, read> threadStates: array<u32>;
 
 fn lowerBoundCandidate(targetBatchIndex: u32, candidateBatchCount: u32) -> u32 {
   var low = 0u;
@@ -967,7 +1341,11 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   for (var processIndex = 0u; processIndex < PROCESS_COUNT; processIndex++) {
     hasCollapsedProcess = hasCollapsedProcess || processStates[processIndex] == 0u;
   }
-  let densityActive = densityModeActive || hasCollapsedProcess;
+  var hasCollapsedThread = false;
+  for (var threadIndex = 0u; threadIndex < THREAD_COUNT; threadIndex++) {
+    hasCollapsedThread = hasCollapsedThread || threadStates[threadIndex] == 0u;
+  }
+  let densityActive = densityModeActive || hasCollapsedProcess || hasCollapsedThread;
   let firstCandidateIndex = lowerBoundCandidate(
     FIRST_BATCH_INDICES[chunkIndex],
     candidateBatchCount
@@ -992,7 +1370,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 /** Clears the fixed-size density target without touching source-aligned span storage. */
 export function getDensityClearShader(): string {
   return /* wgsl */ `
-const DENSITY_BIN_COUNT: u32 = ${TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT * TRACE_GROUPS.length}u;
+const DENSITY_BIN_COUNT: u32 = ${TRACE_DISPLAY_LANE_CAPACITY * TRACE_DENSITY_BIN_COUNT * TRACE_GROUPS.length}u;
 @group(0) @binding(0) var<storage, read_write> densityBins: array<u32>;
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -1064,9 +1442,11 @@ fn main(
   let sourceIndex = batch.firstSpanIndex + batchRowIndex;
   let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
   let processExpanded = processStates[span.processIndex] != 0u;
-  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  let expandedLane = threadOffsets[span.threadIndex] + localLane;
-  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let threadExpanded = threadStates[span.threadIndex] != 0u;
+  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadExpanded);
+  let processGap = span.processIndex * PROCESS_GAP_LANE_COUNT;
+  let expandedLane = threadOffsets[span.threadIndex] + localLane + processGap;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS] + processGap;
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let sourceVisible = isSpanSourceVisible(span, lane);
   let focusEnabled =
@@ -1074,9 +1454,10 @@ fn main(
   let focusVisible = !focusEnabled ||
     (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
   let retainedExactSpan =
-    processExpanded && isSpanWideEnoughForExactRendering(span.duration);
+    processExpanded && threadExpanded && isSpanWideEnoughForExactRendering(span.duration);
   let densityVisible =
-    sourceVisible && (isDensityModeActive() || !processExpanded) && !retainedExactSpan;
+    sourceVisible && (isDensityModeActive() || !processExpanded || !threadExpanded) &&
+    !retainedExactSpan;
   if (densityVisible && focusVisible) {
     let maximumBin = f32(${TRACE_DENSITY_BIN_COUNT - 1}u);
     let firstBin = u32(clamp(
@@ -1176,19 +1557,20 @@ fn main(
   if (batchRowIndex >= batch.spanCount) {
     return;
   }
-  if (isDensityModeActive() && batch.maximumDuration < getMinimumExactSpanDuration()) {
+  if (!isFullExactModeActive() && batch.maximumDuration < getMinimumExactSpanDuration()) {
     return;
   }
   let sourceIndex = batch.firstSpanIndex + batchRowIndex;
   let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
   let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  let expandedLane = threadOffsets[span.threadIndex] + localLane;
-  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let processGap = span.processIndex * PROCESS_GAP_LANE_COUNT;
+  let expandedLane = threadOffsets[span.threadIndex] + localLane + processGap;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS] + processGap;
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let sourceVisible = isSpanSourceVisible(span, lane);
   let exactVisible = sourceVisible && processExpanded &&
-    (isExactModeActive() || isSpanWideEnoughForExactRendering(span.duration));
+    (isFullExactModeActive() || isSpanWideEnoughForExactRendering(span.duration));
   let focusEnabled =
     viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
   let focusVisible = !focusEnabled ||
@@ -1198,6 +1580,157 @@ fn main(
   if (exactVisible && focusVisible) {
     atomicOr(&visibilityFlags[chunkIndex >> 5u], visibilityMask);
   }
+}`;
+}
+
+/** Publishes the filter-aware source mask searched by representative-span mipmapping. */
+export function getCandidateRepresentativeSelectionShader(
+  props: TraceSpanChunkShaderProps
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+  maximumDuration: f32,
+};
+${TRACE_VISIBILITY_FILTER_DECLARATIONS}
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(6) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(7) var<storage, read> reachedSpans: array<u32>;
+@group(0) @binding(8) var<storage, read_write> selectionFlags: array<atomic<u32>>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  if (!isRepresentativeModeActive()) { return; }
+  let batchIndex = candidateBatchIds[workgroupId.y];
+  if (
+    batchIndex < CHUNK_FIRST_BATCH_INDEX ||
+    batchIndex >= CHUNK_FIRST_BATCH_INDEX + CHUNK_BATCH_COUNT
+  ) { return; }
+  let batch = spanBatches[batchIndex];
+  let batchRowIndex = globalId.x;
+  if (batchRowIndex >= batch.spanCount) { return; }
+  let sourceIndex = batch.firstSpanIndex + batchRowIndex;
+  let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
+  if (processStates[span.processIndex] == 0u || threadStates[span.threadIndex] == 0u) { return; }
+  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
+  let lane = f32(
+    threadOffsets[span.threadIndex] + localLane + span.processIndex * PROCESS_GAP_LANE_COUNT
+  );
+  let focusEnabled =
+    viewUniforms.focusMode != 0u && viewUniforms.selectedSpanIndex != 0xffffffffu;
+  let focusVisible = !focusEnabled ||
+    (reachedSpans[sourceIndex >> 5u] & (1u << (sourceIndex & 31u))) != 0u;
+  if (isSpanSourceVisible(span, lane) && focusVisible) {
+    let chunkIndex = sourceIndex - CHUNK_FIRST_SPAN_INDEX;
+    atomicOr(&selectionFlags[chunkIndex >> 5u], 1u << (chunkIndex & 31u));
+  }
+}`;
+}
+
+/** Clears the cross-chunk longest representative for each raw lane/pixel cell. */
+export function getRepresentativeBestClearShader(representativeCount: number): string {
+  return /* wgsl */ `
+const REPRESENTATIVE_COUNT: u32 = ${representativeCount}u;
+@group(0) @binding(0) var<storage, read_write> bestDurations: array<u32>;
+@group(0) @binding(1) var<storage, read_write> bestIds: array<u32>;
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  if (globalId.x >= REPRESENTATIVE_COUNT) { return; }
+  bestDurations[globalId.x] = 0u;
+  bestIds[globalId.x] = 0xffffffffu;
+}`;
+}
+
+/** Nominates each chunk's longest filtered representative by non-negative duration. */
+export function getRepresentativeDurationNominationShader(
+  props: TraceSpanChunkShaderProps,
+  representativeCount: number
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
+const REPRESENTATIVE_COUNT: u32 = ${representativeCount}u;
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> representatives: array<u32>;
+@group(0) @binding(2) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(3) var<storage, read_write> bestDurations: array<atomic<u32>>;
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let cell = globalId.x;
+  if (cell >= REPRESENTATIVE_COUNT || !isRepresentativeModeActive()) { return; }
+  let sourceIndex = representatives[cell];
+  if (sourceIndex < CHUNK_FIRST_SPAN_INDEX ||
+      sourceIndex >= CHUNK_FIRST_SPAN_INDEX + CHUNK_SPAN_COUNT) { return; }
+  let duration = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX].duration;
+  if (duration >= 0.0) { atomicMax(&bestDurations[cell], bitcast<u32>(duration)); }
+}`;
+}
+
+/** Resolves equal-duration nominations to the lowest stable canonical span ID. */
+export function getRepresentativeIdNominationShader(
+  props: TraceSpanChunkShaderProps,
+  representativeCount: number
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
+const REPRESENTATIVE_COUNT: u32 = ${representativeCount}u;
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> representatives: array<u32>;
+@group(0) @binding(2) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(3) var<storage, read> bestDurations: array<u32>;
+@group(0) @binding(4) var<storage, read_write> bestIds: array<atomic<u32>>;
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let cell = globalId.x;
+  if (cell >= REPRESENTATIVE_COUNT || !isRepresentativeModeActive()) { return; }
+  let sourceIndex = representatives[cell];
+  if (sourceIndex < CHUNK_FIRST_SPAN_INDEX ||
+      sourceIndex >= CHUNK_FIRST_SPAN_INDEX + CHUNK_SPAN_COUNT) { return; }
+  let durationBits = bitcast<u32>(spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX].duration);
+  if (durationBits == bestDurations[cell]) { atomicMin(&bestIds[cell], sourceIndex); }
+}`;
+}
+
+/** Adds globally winning canonical representatives to the existing exact visibility bitset. */
+export function getRepresentativeVisibilityPublishShader(
+  props: TraceSpanChunkShaderProps,
+  representativeCount: number
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+${getSpanChunkDeclarations(props)}
+const REPRESENTATIVE_COUNT: u32 = ${representativeCount}u;
+@group(0) @binding(0) var<storage, read> representatives: array<u32>;
+@group(0) @binding(1) var<storage, read> bestIds: array<u32>;
+@group(0) @binding(2) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(3) var<storage, read_write> visibilityFlags: array<atomic<u32>>;
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let cell = globalId.x;
+  if (cell >= REPRESENTATIVE_COUNT || !isRepresentativeModeActive()) { return; }
+  let sourceIndex = representatives[cell];
+  if (sourceIndex != bestIds[cell] || sourceIndex < CHUNK_FIRST_SPAN_INDEX ||
+      sourceIndex >= CHUNK_FIRST_SPAN_INDEX + CHUNK_SPAN_COUNT) { return; }
+  let chunkIndex = sourceIndex - CHUNK_FIRST_SPAN_INDEX;
+  atomicOr(&visibilityFlags[chunkIndex >> 5u], 1u << (chunkIndex & 31u));
 }`;
 }
 
@@ -1306,8 +1839,9 @@ fn main(
   let span = spans[sourceIndex - CHUNK_FIRST_SPAN_INDEX];
   let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  let expandedLane = threadOffsets[span.threadIndex] + localLane;
-  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let processGap = span.processIndex * PROCESS_GAP_LANE_COUNT;
+  let expandedLane = threadOffsets[span.threadIndex] + localLane + processGap;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS] + processGap;
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let end = span.start + span.duration;
   let sourceVisible = isSpanSourceVisible(span, lane);
@@ -1365,10 +1899,116 @@ export function getPickClearShader(): string {
 @compute @workgroup_size(1)
 fn main() {
   atomicStore(&pickResult[0], 0xffffffffu);
+  atomicStore(&pickResult[9], 0xffffffffu);
 }`;
 }
 
-/** Filters dependency rows and counts visible endpoints by span chunk. */
+/** Picks the nearest displayed dependency using a screen-space line tolerance. */
+export function getDependencyPickShader(
+  maximumVisibleCount: number,
+  firstDependencyIndex: number,
+  drawCountWordOffset: number
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+const MAXIMUM_VISIBLE_COUNT: u32 = ${maximumVisibleCount}u;
+const FIRST_DEPENDENCY_INDEX: u32 = ${firstDependencyIndex}u;
+const DRAW_COUNT_WORD_OFFSET: u32 = ${drawCountWordOffset}u;
+const DEPENDENCY_INDEX_MASK: u32 = 0x01ffffffu;
+@group(0) @binding(0) var<storage, read> visibleDependencyIds: array<u32>;
+@group(0) @binding(1) var<storage, read> dependencyEndpointPositions: array<vec2<f32>>;
+@group(0) @binding(2) var<storage, read> drawCommands: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read_write> pickResult: array<atomic<u32>>;
+
+fn projectToPixels(position: vec2<f32>) -> vec2<f32> {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
+  return vec2<f32>(
+    (position.x - viewUniforms.timeMin) / timeRange * viewUniforms.viewportWidth,
+    (position.y - viewUniforms.laneMin) / laneRange * viewUniforms.viewportHeight
+  );
+}
+
+fn getSegmentDistance(point: vec2<f32>, first: vec2<f32>, second: vec2<f32>) -> f32 {
+  let segment = second - first;
+  let lengthSquared = dot(segment, segment);
+  if (lengthSquared <= 0.0001) {
+    return distance(point, first);
+  }
+  let interpolation = clamp(dot(point - first, segment) / lengthSquared, 0.0, 1.0);
+  return distance(point, first + interpolation * segment);
+}
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  if (viewUniforms.pickLane < 0.0) { return; }
+  let visibleCount = min(drawCommands[DRAW_COUNT_WORD_OFFSET], MAXIMUM_VISIBLE_COUNT);
+  if (globalId.x >= visibleCount) { return; }
+  let dependencyIndex = visibleDependencyIds[globalId.x];
+  let canonicalIndex = FIRST_DEPENDENCY_INDEX + dependencyIndex;
+  let source = dependencyEndpointPositions[dependencyIndex * 2u];
+  let destination = dependencyEndpointPositions[dependencyIndex * 2u + 1u];
+  let sourceHub = getDependencyBundleHub(source);
+  let destinationHub = getDependencyBundleHub(destination);
+  let point = projectToPixels(vec2<f32>(viewUniforms.pickTime, viewUniforms.pickLane));
+  let exact = viewUniforms.dependencyBundlingEnabled == 0u ||
+    viewUniforms.selectedDependencyIndex == canonicalIndex ||
+    viewUniforms.hoveredDependencyIndex == canonicalIndex;
+  var distancePixels = getSegmentDistance(
+    point,
+    projectToPixels(source),
+    projectToPixels(destination)
+  );
+  if (!exact) {
+    distancePixels = min(
+      getSegmentDistance(point, projectToPixels(source), projectToPixels(sourceHub)),
+      min(
+        getSegmentDistance(point, projectToPixels(sourceHub), projectToPixels(destinationHub)),
+        getSegmentDistance(point, projectToPixels(destinationHub), projectToPixels(destination))
+      )
+    );
+  }
+  if (distancePixels > 6.0) { return; }
+  let distanceBucket = min(u32(distancePixels * 16.0), 127u);
+  let rank = (distanceBucket << 25u) | (canonicalIndex & DEPENDENCY_INDEX_MASK);
+  atomicMin(&pickResult[9], rank);
+}`;
+}
+
+/** Copies the winning dependency record into the shared one-shot pick result. */
+export function getDependencyPickResolveShader(firstDependencyIndex: number): string {
+  return /* wgsl */ `
+struct TraceDependency {
+  source: u32,
+  destination: u32,
+  family: u32,
+  metadata: u32,
+};
+const FIRST_DEPENDENCY_INDEX: u32 = ${firstDependencyIndex}u;
+const DEPENDENCY_INDEX_MASK: u32 = 0x01ffffffu;
+@group(0) @binding(0) var<storage, read> dependencies: array<TraceDependency>;
+@group(0) @binding(1) var<storage, read_write> pickResult: array<atomic<u32>>;
+
+@compute @workgroup_size(1)
+fn main() {
+  let rank = atomicLoad(&pickResult[9]);
+  if (rank == 0xffffffffu) { return; }
+  let canonicalIndex = rank & DEPENDENCY_INDEX_MASK;
+  if (
+    canonicalIndex < FIRST_DEPENDENCY_INDEX ||
+    canonicalIndex >= FIRST_DEPENDENCY_INDEX + arrayLength(&dependencies)
+  ) { return; }
+  let dependency = dependencies[canonicalIndex - FIRST_DEPENDENCY_INDEX];
+  atomicStore(&pickResult[10], canonicalIndex);
+  atomicStore(&pickResult[11], dependency.source);
+  atomicStore(&pickResult[12], dependency.destination);
+  atomicStore(&pickResult[13], dependency.family);
+  atomicStore(&pickResult[14], dependency.metadata);
+}`;
+}
+
+/** Selects dependency candidates and resolves filtered endpoints to visible ancestors when possible. */
 export function getCandidateDependencyVisibilityShader(
   props: TraceDependencyEndpointRoutingShaderProps
 ): string {
@@ -1385,6 +2025,7 @@ struct DependencyBatch {
   batchIndex: u32,
 };
 const SPAN_COUNT: u32 = ${firstSpanIndex + spanCount}u;
+const DEPENDENCY_COUNT: u32 = ${props.dependencyCount}u;
 const MAXIMUM_ANCESTOR_DEPTH: u32 = 32u;
 @group(0) @binding(0) var<storage, read> dependencies: array<TraceDependency>;
 @group(0) @binding(1) var<storage, read> dependencyBatches: array<DependencyBatch>;
@@ -1430,25 +2071,172 @@ fn main(
     let sourceCollapsed = processStates[sourceProcessIndex] == 0u;
     let destinationCollapsed = processStates[destinationProcessIndex] == 0u;
     let familyVisible = (viewUniforms.dependencyMask & (1u << dependency.family)) != 0u;
-    let sourceVisible =
-      spanVisibility[dependency.sourceIndex] == viewUniforms.visibilityGeneration || sourceCollapsed ||
-      projectedSource != 0xffffffffu;
-    let destinationVisible =
-      spanVisibility[dependency.destinationIndex] == viewUniforms.visibilityGeneration ||
-      destinationCollapsed || projectedDestination != 0xffffffffu;
-    let effectiveSource = select(projectedSource, dependency.sourceIndex, sourceCollapsed);
-    let effectiveDestination = select(
-      projectedDestination,
-      dependency.destinationIndex,
-      destinationCollapsed
+    let effectiveSource = select(
+      dependency.sourceIndex,
+      projectedSource,
+      !sourceCollapsed && projectedSource != 0xffffffffu
     );
-    // Retain an edge while either endpoint is visible; rasterization clips the off-screen half.
-    let visible = familyVisible && (sourceVisible || destinationVisible) &&
-      effectiveSource != effectiveDestination && isExactModeActive();
+    let effectiveDestination = select(
+      dependency.destinationIndex,
+      projectedDestination,
+      !destinationCollapsed && projectedDestination != 0xffffffffu
+    );
+    // Endpoint positions are resolved next; an exact segment/viewport test performs final culling.
+    let visible = familyVisible && effectiveSource != effectiveDestination && isExactModeActive();
     dependencyResults[index] = select(0u, 1u, visible);
-    let endpointResultOffset = viewUniforms.dependencyEndpointOffset + index * 2u;
+    let endpointResultOffset = DEPENDENCY_COUNT + index * 2u;
     dependencyResults[endpointResultOffset] = effectiveSource;
     dependencyResults[endpointResultOffset + 1u] = effectiveDestination;
+  }
+}`;
+}
+
+/** Keeps dependency candidates whose resolved line segment intersects the current viewport. */
+export function getDependencyIntersectionVisibilityShader(maximumCandidateCount: number): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+const MAXIMUM_CANDIDATE_COUNT: u32 = ${maximumCandidateCount}u;
+@group(0) @binding(0) var<storage, read> candidateIds: array<u32>;
+@group(0) @binding(1) var<storage, read> candidateCount: array<u32>;
+@group(0) @binding(2) var<storage, read> endpointPositions: array<vec2<f32>>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read_write> dependencyResults: array<u32>;
+
+fn segmentIntersectsViewport(first: vec2<f32>, second: vec2<f32>) -> bool {
+  let minimum = vec2<f32>(viewUniforms.timeMin, viewUniforms.laneMin);
+  let maximum = vec2<f32>(viewUniforms.timeMax, viewUniforms.laneMax);
+  let delta = second - first;
+  var entry = 0.0;
+  var exit = 1.0;
+
+  if (abs(delta.x) < 0.000001) {
+    if (first.x < minimum.x || first.x > maximum.x) { return false; }
+  } else {
+    let firstCrossing = (minimum.x - first.x) / delta.x;
+    let secondCrossing = (maximum.x - first.x) / delta.x;
+    entry = max(entry, min(firstCrossing, secondCrossing));
+    exit = min(exit, max(firstCrossing, secondCrossing));
+  }
+  if (abs(delta.y) < 0.000001) {
+    if (first.y < minimum.y || first.y > maximum.y) { return false; }
+  } else {
+    let firstCrossing = (minimum.y - first.y) / delta.y;
+    let secondCrossing = (maximum.y - first.y) / delta.y;
+    entry = max(entry, min(firstCrossing, secondCrossing));
+    exit = min(exit, max(firstCrossing, secondCrossing));
+  }
+  return entry <= exit;
+}
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let candidateIndex = globalId.x;
+  let count = min(candidateCount[0], MAXIMUM_CANDIDATE_COUNT);
+  if (candidateIndex >= count) { return; }
+  let dependencyIndex = candidateIds[candidateIndex];
+  let first = endpointPositions[dependencyIndex * 2u];
+  let second = endpointPositions[dependencyIndex * 2u + 1u];
+  dependencyResults[dependencyIndex] = select(
+    0u,
+    1u,
+    segmentIntersectsViewport(first, second)
+  );
+}`;
+}
+
+/** Clears one dependency draw count before stable parallel budget selection. */
+export function getDependencyDisplayBudgetClearShader(drawCountWordOffset: number): string {
+  return /* wgsl */ `
+const DRAW_COUNT_WORD_OFFSET: u32 = ${drawCountWordOffset}u;
+@group(0) @binding(0) var<storage, read_write> drawCommands: array<atomic<u32>>;
+
+@compute @workgroup_size(1)
+fn main() {
+  atomicStore(&drawCommands[DRAW_COUNT_WORD_OFFSET], 0u);
+}`;
+}
+
+/** Selects a stable hash tier of intersecting dependencies within the global display budget. */
+export function getDependencyDisplayBudgetShader(
+  maximumOutputCount: number,
+  chunkIndex: number,
+  chunkCount: number,
+  drawCountWordOffset: number
+): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+const MAXIMUM_OUTPUT_COUNT: u32 = ${maximumOutputCount}u;
+const CHUNK_INDEX: u32 = ${chunkIndex}u;
+const CHUNK_COUNT: u32 = ${chunkCount}u;
+const DRAW_COUNT_WORD_OFFSET: u32 = ${drawCountWordOffset}u;
+@group(0) @binding(0) var<storage, read> intersectingIds: array<u32>;
+@group(0) @binding(1) var<storage, read> intersectingCount: array<u32>;
+@group(0) @binding(2) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(3) var<storage, read_write> visibleIds: array<u32>;
+@group(0) @binding(4) var<storage, read_write> drawCommands: array<atomic<u32>>;
+
+fn getChunkBudget(totalBudget: u32) -> u32 {
+  let baseBudget = totalBudget / CHUNK_COUNT;
+  let remainder = totalBudget % CHUNK_COUNT;
+  return baseBudget + select(0u, 1u, CHUNK_INDEX < remainder);
+}
+
+fn stableHash(value: u32) -> u32 {
+  var result = value;
+  result ^= result >> 16u;
+  result *= 0x7feb352du;
+  result ^= result >> 15u;
+  result *= 0x846ca68bu;
+  result ^= result >> 16u;
+  return result;
+}
+
+fn getSamplingThreshold(sourceCount: u32, budget: u32) -> u32 {
+  const HASH_BUCKET_COUNT: u32 = 0x01000000u;
+  if (budget >= sourceCount) {
+    return HASH_BUCKET_COUNT;
+  }
+  let ratio = f32(budget) / f32(max(sourceCount, 1u));
+  return max(1u, u32(ceil(ratio * f32(HASH_BUCKET_COUNT))));
+}
+
+fn reserveOutputSlot(capacity: u32) -> u32 {
+  var current = atomicLoad(&drawCommands[DRAW_COUNT_WORD_OFFSET]);
+  loop {
+    if (current >= capacity) {
+      return 0xffffffffu;
+    }
+    let exchange = atomicCompareExchangeWeak(
+      &drawCommands[DRAW_COUNT_WORD_OFFSET],
+      current,
+      current + 1u
+    );
+    if (exchange.exchanged) {
+      return current;
+    }
+    current = exchange.old_value;
+  }
+}
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let sourceCount = min(intersectingCount[0], MAXIMUM_OUTPUT_COUNT);
+  if (globalId.x >= sourceCount) {
+    return;
+  }
+  let budget = getChunkBudget(viewUniforms.dependencyDisplayBudget);
+  if (budget == 0u) {
+    return;
+  }
+  let dependencyIndex = intersectingIds[globalId.x];
+  let samplingThreshold = getSamplingThreshold(sourceCount, budget);
+  let hashBucket = stableHash(dependencyIndex) >> 8u;
+  if (hashBucket >= samplingThreshold) {
+    return;
+  }
+  let outputIndex = reserveOutputSlot(budget);
+  if (outputIndex != 0xffffffffu) {
+    visibleIds[outputIndex] = dependencyIndex;
   }
 }`;
 }
@@ -1481,11 +2269,12 @@ const OFFSET_BASE: u32 = ${props.spanChunks.length}u;
 @group(0) @binding(8) var<uniform> viewUniforms: ViewUniforms;
 
 fn getEndpointLane(span: TraceSpan) -> u32 {
+  let processGap = span.processIndex * PROCESS_GAP_LANE_COUNT;
   if (processStates[span.processIndex] == 0u) {
-    return threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+    return threadOffsets[span.processIndex * THREADS_PER_PROCESS] + processGap;
   }
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  return threadOffsets[span.threadIndex] + localLane;
+  return threadOffsets[span.threadIndex] + localLane + processGap;
 }
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})

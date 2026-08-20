@@ -361,6 +361,15 @@
   transform: translateX(3px);
 }
 
+.frameworkSection {
+  scroll-margin-top: calc(var(--ifm-navbar-height, 60px) + 12px);
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  background:
+    radial-gradient(ellipse at 4% 17%, rgba(56, 189, 248, 0.09), transparent 39%),
+    radial-gradient(ellipse at 93% 76%, rgba(129, 140, 248, 0.1), transparent 42%), #0a111d;
+  color: #f1f5f9;
+}
+
 .capabilitySection {
   background:
     radial-gradient(ellipse at 0% 0%, rgba(56, 189, 248, 0.08), transparent 39%),

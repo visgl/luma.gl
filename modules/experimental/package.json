@@ -23,59 +23,69 @@
   "module": "dist/index.js",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./geospatial": {
+      "types": "./dist/geospatial/index.d.ts",
       "import": "./dist/geospatial/index.js",
-      "require": "./dist/geospatial/index.cjs",
-      "types": "./dist/geospatial/index.d.ts"
+      "require": "./dist/geospatial/index.cjs"
     },
-    "./ludf": {
-      "import": "./dist/ludf/index.js",
-      "require": "./dist/ludf/index.cjs",
-      "types": "./dist/ludf/index.d.ts"
+    "./gpu-core": {
+      "types": "./dist/gpu-core/index.d.ts",
+      "import": "./dist/gpu-core/index.js",
+      "require": "./dist/gpu-core/index.cjs"
     },
-    "./lugraph": {
-      "import": "./dist/lugraph/index.js",
-      "require": "./dist/lugraph/index.cjs",
-      "types": "./dist/lugraph/index.d.ts"
+    "./gpu-graph": {
+      "types": "./dist/gpu-graph/index.d.ts",
+      "import": "./dist/gpu-graph/index.js",
+      "require": "./dist/gpu-graph/index.cjs"
     },
-    "./lugraph/benchmarks": {
-      "import": "./dist/lugraph/benchmarks.js",
-      "require": "./dist/lugraph/benchmarks.cjs",
-      "types": "./dist/lugraph/benchmarks.d.ts"
+    "./gpu-graph/benchmarks": {
+      "types": "./dist/gpu-graph/benchmarks.d.ts",
+      "import": "./dist/gpu-graph/benchmarks.js",
+      "require": "./dist/gpu-graph/benchmarks.cjs"
+    },
+    "./gpu-raster": {
+      "types": "./dist/gpu-raster/index.d.ts",
+      "import": "./dist/gpu-raster/index.js",
+      "require": "./dist/gpu-raster/index.cjs"
     },
     "./lucim": {
+      "types": "./dist/lucim/index.d.ts",
       "import": "./dist/lucim/index.js",
-      "require": "./dist/lucim/index.cjs",
-      "types": "./dist/lucim/index.d.ts"
+      "require": "./dist/lucim/index.cjs"
     },
-    "./luraster": {
-      "import": "./dist/luraster/index.js",
-      "require": "./dist/luraster/index.cjs",
-      "types": "./dist/luraster/index.d.ts"
+    "./gpu-project": {
+      "types": "./dist/gpu-project/index.d.ts",
+      "import": "./dist/gpu-project/index.js",
+      "require": "./dist/gpu-project/index.cjs"
     },
-    "./luxfilter": {
-      "import": "./dist/luxfilter/index.js",
-      "require": "./dist/luxfilter/index.cjs",
-      "types": "./dist/luxfilter/index.d.ts"
+    "./gpu-project/benchmarks": {
+      "types": "./dist/gpu-project/benchmarks.d.ts",
+      "import": "./dist/gpu-project/benchmarks.js",
+      "require": "./dist/gpu-project/benchmarks.cjs"
     },
-    "./lutrace": {
-      "import": "./dist/lutrace/index.js",
-      "require": "./dist/lutrace/index.cjs",
-      "types": "./dist/lutrace/index.d.ts"
+    "./gpu-dataframe": {
+      "types": "./dist/gpu-dataframe/index.d.ts",
+      "import": "./dist/gpu-dataframe/index.js",
+      "require": "./dist/gpu-dataframe/index.cjs"
     },
-    "./luproj": {
-      "import": "./dist/luproj/index.js",
-      "require": "./dist/luproj/index.cjs",
-      "types": "./dist/luproj/index.d.ts"
+    "./gpu-sql": {
+      "types": "./dist/gpu-sql/index.d.ts",
+      "import": "./dist/gpu-sql/index.js",
+      "require": "./dist/gpu-sql/index.cjs"
     },
-    "./luproj/benchmarks": {
-      "import": "./dist/luproj/benchmarks.js",
-      "require": "./dist/luproj/benchmarks.cjs",
-      "types": "./dist/luproj/benchmarks.d.ts"
+    "./gpu-crossfilter": {
+      "types": "./dist/gpu-crossfilter/index.d.ts",
+      "import": "./dist/gpu-crossfilter/index.js",
+      "require": "./dist/gpu-crossfilter/index.cjs"
+    },
+    "./gpu-trace": {
+      "types": "./dist/gpu-trace/index.d.ts",
+      "import": "./dist/gpu-trace/index.js",
+      "require": "./dist/gpu-trace/index.cjs"
     }
   },
   "files": [

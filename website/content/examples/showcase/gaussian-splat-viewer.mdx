@@ -1,8 +1,8 @@
 ---
 title: Gaussian Splat Viewer
-description: Explore captured Gaussian scenes and the 50-million-splat Coit Tower RAD landscape.
+description: Explore captured Gaussian scenes and custom camera-driven RAD landscapes.
 sidebar_custom_props:
-  description: Explore complete Gaussian scenes and a worker-decoded 50M-splat RAD landscape.
+  description: Explore complete Gaussian scenes and worker-decoded custom RAD landscapes.
   backends: [webgpu, webgl2]
   display: hdr-capable
   difficulty: intermediate
@@ -38,18 +38,14 @@ reuse. Choose **CPU depth ordering** in the execution selector, or append `?rend
 compare against the original renderer. WebGL2 always retains its compatible CPU-ordered fallback.
 
 Append `?scene=truck`, `?scene=drjohnson`, `?scene=playroom`, or `?scene=train-github` to select a
-capture directly. `?scene=coit` selects the **50,937,127-splat Coit Tower RAD source** and retains
-a camera-driven, one-million-splat source-page window. A bounded background-worker pool decodes
-independently range-fetched pages while the GPU remains responsive to camera movement. Spark-style
-best-first refinement, angular foveation, nonlinear coarse-node opacity, area-preserving
-antialiasing, and a 75-degree camera recover the authored scene without loading all 50 million
-source splats. Parents remain visible until their children arrive; irrelevant requests are
-canceled and pages can be evicted or reloaded as the camera changes. Use
-`&residentSplats=250000` to choose a different whole-page residency limit. Browsers without
-module-worker support retain a clearly reported main-thread decoding fallback. The homepage
-poster uses Spark's reference view of Vincent Woo's Coit Tower capture; the interactive scene
-itself is rendered by luma.gl. Provide
-`?source=https://example.com/scene.ply` for another compatible public file.
+capture directly. Provide `?source=https://example.com/scene.rad` to exercise camera-driven RAD
+paging with a compatible source that you are authorized to use. A bounded background-worker pool
+decodes independently range-fetched pages while the GPU remains responsive to camera movement.
+Parents remain visible until their children arrive; irrelevant requests are canceled and pages
+can be evicted or reloaded as the camera changes. Use `&residentSplats=250000` to choose a
+different whole-page residency limit. Browsers without module-worker support retain a clearly
+reported main-thread decoding fallback. Other supported custom formats include `.ply`, `.splat`,
+`.ksplat`, and `.spz`.
 Choose **Synthetic chromatic showcase** in the scene selector or visit the separate
 [Gaussian Splats showcase](/examples/showcase/gaussian-splats) for the deterministic generated
 scene.

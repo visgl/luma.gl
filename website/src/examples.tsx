@@ -36,7 +36,7 @@ import GPUFrustumCullingApp from '../../examples/experimental/gpu-frustum-cullin
 import GPUSceneGraphApp from '../../examples/experimental/gpu-scene-graph/app';
 import GPUTraceSceneApp from '../../examples/experimental/gpu-trace-scene/app';
 import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
-import LuGraphExplorerApp from '../../examples/experimental/lugraph-explorer/app';
+import GPUGraphExplorerApp from '../../examples/experimental/gpu-graph-explorer/app';
 import LuCIMVolumeLabApp from '../../examples/experimental/lucim-volume-lab/app';
 import {
   initializeGPUSortExample,
@@ -120,8 +120,8 @@ const loadBillionPointSpatialAtlasExample = () =>
 const loadMillionRowCrossfilterExample = () =>
   import('../../examples/showcase/million-row-crossfilter/app');
 const loadRasterLabExample = () => import('../../examples/showcase/raster-lab/app');
-const loadLuSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
-const loadLuGraphExplorerDeckExample = () => import('../../examples/deck/lugraph-explorer/app');
+const loadGPUSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
+const loadGPUGraphExplorerDeckExample = () => import('../../examples/deck/gpu-graph-explorer/app');
 const loadFP64Example = () => import('../../examples/experimental/fp64/app');
 
 type WebsiteExampleProps = React.PropsWithChildren<
@@ -438,15 +438,15 @@ export const DeckGPUCulledTraceExample: React.FC<DeckArrowLayerExampleProps> = (
   />
 );
 
-export const DeckLuSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
+export const DeckGPUSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
   embedded = false
 }) => {
-  const {module, errorMessage} = useDeferredExampleModule(loadLuSpatialTaxiExample);
+  const {module, errorMessage} = useDeferredExampleModule(loadGPUSpatialTaxiExample);
 
   if (!module) {
     return (
       <DeferredGPUExampleStatus
-        title="luProj + luSpatial Taxi Explorer"
+        title="GPU Project + luSpatial Taxi Explorer"
         description="Loading the projection, spatial-query, and interactive map tools."
         errorMessage={errorMessage}
         embedded={embedded}
@@ -459,10 +459,10 @@ export const DeckLuSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
     <ReactExample
       component={DeckArrowLayerCanvas}
       componentProps={{
-        createDeck: module.createLuSpatialTaxiDeck,
+        createDeck: module.createGPUSpatialTaxiDeck,
         panel: {
           id: 'luspatial-taxi',
-          title: 'luProj + luSpatial Taxi Explorer',
+          title: 'GPU Project + luSpatial Taxi Explorer',
           devices: ['webgpu']
         }
       }}
@@ -473,15 +473,15 @@ export const DeckLuSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
 };
 
 /** Loads the optional deck.gl graph integration only when its WebGPU example is opened. */
-export const DeckLuGraphExplorerExample: React.FC<DeckArrowLayerExampleProps> = ({
+export const DeckGPUGraphExplorerExample: React.FC<DeckArrowLayerExampleProps> = ({
   embedded = false
 }) => {
-  const {module, errorMessage} = useDeferredExampleModule(loadLuGraphExplorerDeckExample);
+  const {module, errorMessage} = useDeferredExampleModule(loadGPUGraphExplorerDeckExample);
 
   if (!module) {
     return (
       <DeferredGPUExampleStatus
-        title="luGraph + deck.gl Network Explorer"
+        title="GPU Graph + deck.gl Network Explorer"
         description="Loading GPU graph analytics, progressive layout, and direct deck.gl layers."
         errorMessage={errorMessage}
         embedded={embedded}
@@ -494,10 +494,10 @@ export const DeckLuGraphExplorerExample: React.FC<DeckArrowLayerExampleProps> = 
     <ReactExample
       component={DeckArrowLayerCanvas}
       componentProps={{
-        createDeck: module.createLuGraphExplorerDeck,
+        createDeck: module.createGPUGraphExplorerDeck,
         panel: {
-          id: 'lugraph-explorer',
-          title: 'luGraph + deck.gl Network Explorer',
+          id: 'gpu-graph-explorer',
+          title: 'GPU Graph + deck.gl Network Explorer',
           devices: ['webgpu']
         }
       }}
@@ -902,7 +902,7 @@ export const MillionRowCrossfilterExample: React.FC<WebsiteExampleProps> = props
     return (
       <DeferredGPUExampleStatus
         {...props}
-        title="LuxFilter: Million-Row Crossfilter Explorer"
+        title="GPUCrossfilter: Million-Row Crossfilter Explorer"
         description="Loading the million-row linked dashboard and GPU filtering pipeline."
         errorMessage={errorMessage}
       />
@@ -930,7 +930,7 @@ export const RasterLabExample: React.FC<WebsiteExampleProps> = props => {
     return (
       <DeferredGPUExampleStatus
         {...props}
-        title="LuRaster: Satellite Raster Lab"
+        title="GPURaster: Satellite Raster Lab"
         description="Loading synthetic satellite bands and the GPU-native raster-analysis graph."
         errorMessage={errorMessage}
       />
@@ -1761,21 +1761,21 @@ export const GPUTraceViewerExample: React.FC = props => (
     id="gpu-trace-viewer"
     title="GPU Hierarchical Trace Viewer"
     directory="experimental"
-    devices={['webgpu']}
+    devices={['webgpu-max']}
     template={GPUTraceViewerApp}
     config={exampleConfig}
     {...props}
   />
 );
 
-export const LuGraphExplorerExample: React.FC<WebsiteExampleProps> = props => (
+export const GPUGraphExplorerExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
-    id="lugraph-explorer"
-    title="luGraph Interactive Graph Explorer"
+    id="gpu-graph-explorer"
+    title="GPU Graph Interactive Graph Explorer"
     subtitle="GPU-native topology, analytics, selection, and progressive force layout"
     directory="experimental"
     devices={['webgpu']}
-    template={LuGraphExplorerApp}
+    template={GPUGraphExplorerApp}
     config={exampleConfig}
     {...props}
   />

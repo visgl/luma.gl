@@ -4,7 +4,7 @@
 
 import {existsSync, readFileSync} from 'node:fs';
 import {describe, expect, test} from 'vitest';
-import {GPURasterTileReader} from '../../modules/experimental/src/luraster/gpu-raster-tile-source';
+import {GPURasterTileReader} from '../../modules/experimental/src/gpu-raster/gpu-raster-tile-source';
 import {
   makeRasterLabDataset,
   RASTER_LAB_NO_DATA_VALUE
@@ -15,7 +15,7 @@ import {
   RasterLabTileSource
 } from '../../examples/showcase/raster-lab/raster-tile-source';
 
-describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
+describe('GPURaster Satellite Raster Lab synthetic imagery', () => {
   test('creates deterministic, source-aligned red, infrared, and validity bands', () => {
     const firstDataset = makeRasterLabDataset(96, 64);
     const secondDataset = makeRasterLabDataset(96, 64);
@@ -716,5 +716,58 @@ describe('LuRaster Satellite Raster Lab synthetic imagery', () => {
     expect(rasterInterface).toContain('data-raster-histogram-bin-count');
     expect(rasterInterface).toContain('only 228 summary bytes are read');
     expect(rasterInterface).not.toContain('data-raster-region-table');
+  });
+
+  test('stitches pinned tile-local regions and measurements without downloading any labels', () => {
+    const rasterApplication = readFileSync(
+      new URL('../../examples/showcase/raster-lab/app.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterEngine = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-engine.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterRenderer = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-renderer.ts', import.meta.url),
+      'utf8'
+    );
+    const rasterInterface = readFileSync(
+      new URL('../../examples/showcase/raster-lab/raster-interface.ts', import.meta.url),
+      'utf8'
+    );
+    const crossTileComponents = rasterEngine.slice(
+      rasterEngine.indexOf('private addCrossTileComponents('),
+      rasterEngine.indexOf('private importRegionOutputs(')
+    );
+
+    expect(crossTileComponents).toContain('new GPURasterThreshold({');
+    expect(crossTileComponents).toContain('new GPURasterConnectedComponents({');
+    expect(crossTileComponents).toContain('new GPURasterDenseComponents({');
+    expect(crossTileComponents).toContain('new GPURasterRegionMeasurements({');
+    expect(crossTileComponents).toContain('new GPURasterCrossTileComponents({');
+    expect(crossTileComponents).toContain('metadata: global.metadata');
+    expect(crossTileComponents).toContain('pixelBounds: tile.pixelBounds');
+    expect(crossTileComponents).toContain('capacity: REGION_RESULT_CAPACITY');
+    expect(crossTileComponents).toContain(
+      'capacity: Math.min(this.settings.componentCapacity, REGION_RESULT_CAPACITY)'
+    );
+    expect(crossTileComponents).toContain('requiredComponentCount: published.requiredCount');
+    expect(crossTileComponents).toContain('output: this.importRegionOutputs(graph)');
+    expect(rasterEngine.match(/\.readAsync\(/g)).toHaveLength(1);
+    expect(rasterApplication).toContain("this.display.componentScope === 'stitched'");
+    expect(rasterApplication).toContain("kind: statistics ? 'statistics' : 'components'");
+    expect(rasterApplication).toContain(
+      'Cross-tile segmentation requires two resident source tiles'
+    );
+    expect(rasterApplication).toContain('this.resetStitchedComponents()');
+    expect(rasterApplication).toContain('lease.releaseAfter(fence)');
+    expect(rasterRenderer).toContain('@group(0) @binding(7)');
+    expect(rasterRenderer).not.toContain('@binding(8) var<storage');
+    expect(rasterInterface).toContain('data-raster-component-scope="local"');
+    expect(rasterInterface).toContain('data-raster-component-scope="stitched"');
+    expect(rasterInterface).toContain('LOCAL TILE');
+    expect(rasterInterface).toContain('STITCHED DATASET');
+    expect(rasterInterface).toContain('40 bins · 8 region scalars · 228 bytes');
+    expect(rasterInterface).toContain('only 228 summary bytes are read');
   });
 });

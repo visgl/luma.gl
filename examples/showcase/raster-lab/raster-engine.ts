@@ -17,6 +17,7 @@ import {
   GPURasterConnectedComponents,
   GPURasterContrast,
   GPURasterContours,
+  GPURasterCrossTileComponents,
   GPURasterDenseComponents,
   GPURasterDilation,
   GPURasterErosion,
@@ -45,8 +46,9 @@ import {
   type GPURasterMetadata,
   type GPURasterOverviewCategoricalPolicy,
   type GPURasterPixelBounds,
+  type GPURasterRegionMeasurementOutputs,
   type GPURasterTileHaloPlan
-} from '@luma.gl/experimental/luraster';
+} from '@luma.gl/experimental/gpu-raster';
 import {RASTER_LAB_NO_DATA_VALUE, type RasterLabDataset} from './raster-data';
 import {
   RasterLabRenderer,
@@ -115,6 +117,7 @@ export type RasterLabSummary = {
   componentsEnabled: boolean;
   componentConnectivity: RasterLabDisplaySettings['componentConnectivity'];
   componentLabelMode: RasterLabDisplaySettings['componentLabelMode'];
+  componentScope: RasterLabDisplaySettings['componentScope'];
   componentCapacity: number;
   componentCount: number;
   componentPublishedCount: number;
@@ -203,12 +206,17 @@ export type RasterLabGeneratedOverviewSources = {
   categoryPolicy: GPURasterOverviewCategoricalPolicy;
 };
 
-/** Two borrowed canonical source cores are replayed without stitching or CPU pixel transfers. */
+/** Canonical borrowed cores support either global reductions or GPU cross-tile segmentation. */
 export type RasterLabGlobalSources = {
+  kind: 'statistics' | 'components';
+  metadata: GPURasterMetadata;
+  selectedTile: 'west' | 'east';
   tiles: readonly {
     name: 'west' | 'east';
     width: number;
     height: number;
+    metadata: GPURasterMetadata;
+    pixelBounds: GPURasterPixelBounds;
     sources: RasterLabResidentSources;
   }[];
   order: 'forward' | 'reverse';
@@ -258,6 +266,7 @@ export class RasterLabEngine {
     componentsEnabled: false,
     componentConnectivity: 4,
     componentLabelMode: 'sparse',
+    componentScope: 'local',
     componentCapacity: 1024,
     componentMaximumIterations: 24,
     regionMetricsEnabled: false,
@@ -630,6 +639,7 @@ export class RasterLabEngine {
       settings.componentsEnabled === this.settings.componentsEnabled &&
       settings.componentConnectivity === this.settings.componentConnectivity &&
       settings.componentLabelMode === this.settings.componentLabelMode &&
+      settings.componentScope === this.settings.componentScope &&
       settings.componentCapacity === this.settings.componentCapacity &&
       settings.componentMaximumIterations === this.settings.componentMaximumIterations &&
       settings.regionMetricsEnabled === this.settings.regionMetricsEnabled &&
@@ -739,7 +749,10 @@ export class RasterLabEngine {
       destinationOffset: MEAN_BYTE_OFFSET,
       size: Float32Array.BYTES_PER_ELEMENT
     });
-    if ((this.settings.automaticThreshold && this.settings.thresholdEnabled) || this.global) {
+    if (
+      (this.settings.automaticThreshold && this.settings.thresholdEnabled) ||
+      this.global?.kind === 'statistics'
+    ) {
       encoder.copyBufferToBuffer({
         sourceBuffer: this.buffers.automaticThreshold,
         destinationBuffer: this.buffers.summaryReadback,
@@ -811,8 +824,12 @@ export class RasterLabEngine {
           true
         )
       : Number.NaN;
+    const measurementMetadata =
+      this.settings.componentScope === 'stitched'
+        ? (this.global?.metadata ?? this.dataset.metadata)
+        : this.dataset.metadata;
     const coordinateReferenceAuthority =
-      this.dataset.metadata?.coordinateReferenceSystem?.authority ?? '';
+      measurementMetadata?.coordinateReferenceSystem?.authority ?? '';
     const regionMeasurement: RasterLabRegionMeasurement | null = regionAvailable
       ? {
           id: selectedRegionId,
@@ -836,7 +853,7 @@ export class RasterLabEngine {
           centroidColumn,
           centroidRow,
           worldCentroid: getRasterRegionWorldCentroid(
-            this.dataset.metadata!,
+            measurementMetadata!,
             centroidColumn,
             centroidRow
           ),
@@ -877,12 +894,13 @@ export class RasterLabEngine {
       thresholdEnabled: this.settings.thresholdEnabled,
       automaticThreshold: this.settings.automaticThreshold,
       globalMedian:
-        this.global && !this.settings.automaticThreshold
+        this.global?.kind === 'statistics' && !this.settings.automaticThreshold
           ? aggregateView.getFloat32(THRESHOLD_BYTE_OFFSET, true)
           : null,
       componentsEnabled: this.settings.componentsEnabled,
       componentConnectivity: this.settings.componentConnectivity,
       componentLabelMode: this.settings.componentLabelMode,
+      componentScope: this.settings.componentScope,
       componentCapacity: this.settings.componentCapacity,
       componentCount,
       componentPublishedCount: Math.min(componentCount, this.settings.componentCapacity),
@@ -1660,7 +1678,7 @@ export class RasterLabEngine {
 
     if (this.settings.thresholdEnabled || binaryMorphologyEnabled) {
       if (this.settings.automaticThreshold) {
-        if (this.global) {
+        if (this.global?.kind === 'statistics') {
           const baselineAccumulator: GPURasterGlobalAccumulator = {
             extent: baselineDomain,
             count: this.createTransientView(graph, 'global-baseline-count', 'uint32', 1),
@@ -1806,7 +1824,15 @@ export class RasterLabEngine {
       }
     }
 
-    if (this.settings.componentsEnabled) {
+    if (this.settings.componentsEnabled && this.global?.kind === 'components') {
+      this.addCrossTileComponents(graph, globalBands, {
+        labels: componentLabels,
+        validity: componentValidity,
+        requiredCount: contourSegmentCount,
+        converged: contourOverflow,
+        selectedIterations: contourRequiredSegmentCount
+      });
+    } else if (this.settings.componentsEnabled) {
       const denseLabelMode = this.settings.componentLabelMode === 'dense';
       const sparseComponentLabels = denseLabelMode
         ? this.createTransientView(
@@ -1904,85 +1930,7 @@ export class RasterLabEngine {
           componentCount: boundedComponentCount,
           overflow: componentOverflow,
           intensity: analyzedBand,
-          output: {
-            pixelCounts: this.importView(
-              graph,
-              'region-pixel-counts',
-              this.buffers.regionPixelCounts,
-              'uint32',
-              REGION_RESULT_CAPACITY
-            ),
-            intensityCounts: this.importView(
-              graph,
-              'region-intensity-counts',
-              this.buffers.regionIntensityCounts,
-              'uint32',
-              REGION_RESULT_CAPACITY
-            ),
-            intensitySums: this.importView(
-              graph,
-              'region-intensity-sums',
-              this.buffers.regionIntensitySums,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            intensityMinimums: this.importView(
-              graph,
-              'region-intensity-minimums',
-              this.buffers.regionIntensityMinimums,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            intensityMaximums: this.importView(
-              graph,
-              'region-intensity-maximums',
-              this.buffers.regionIntensityMaximums,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            intensityMeans: this.importView(
-              graph,
-              'region-intensity-means',
-              this.buffers.regionIntensityMeans,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            columnSums: this.importView(
-              graph,
-              'region-column-sums',
-              this.buffers.regionColumnSums,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            rowSums: this.importView(
-              graph,
-              'region-row-sums',
-              this.buffers.regionRowSums,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            centroidColumns: this.importView(
-              graph,
-              'region-centroid-columns',
-              this.buffers.regionCentroidColumns,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            centroidRows: this.importView(
-              graph,
-              'region-centroid-rows',
-              this.buffers.regionCentroidRows,
-              'float32',
-              REGION_RESULT_CAPACITY
-            ),
-            areas: this.importView(
-              graph,
-              'region-affine-areas',
-              this.buffers.regionAreas,
-              'float32',
-              REGION_RESULT_CAPACITY
-            )
-          },
+          output: this.importRegionOutputs(graph),
           capacity: componentCapacity
         }).addToGraph(graph);
       }
@@ -2021,7 +1969,7 @@ export class RasterLabEngine {
           : analyzedValidity
     };
 
-    if (this.global) {
+    if (this.global?.kind === 'statistics') {
       const selectedGlobalBands = globalBands.map(tile => {
         if (!this.settings.thresholdEnabled) return tile;
         const selection = this.createTransientView(
@@ -2099,6 +2047,304 @@ export class RasterLabEngine {
     }
 
     return graph.compile();
+  }
+
+  /** Label each owned core locally, then reconcile and measure global identities entirely on GPU. */
+  private addCrossTileComponents(
+    graph: GPUCommandGraph,
+    bands: readonly RasterLabGlobalBand[],
+    published: {
+      labels: GraphDataView<'uint32'>;
+      validity: GraphDataView<'uint32'>;
+      requiredCount: GraphDataView<'uint32'>;
+      converged: GraphDataView<'uint32'>;
+      selectedIterations: GraphDataView<'uint32'>;
+    }
+  ): void {
+    const global = this.global;
+    if (!global || global.kind !== 'components') {
+      throw new Error('Cross-tile component reconciliation requires two resident cores');
+    }
+    const tiles = bands.map(band => {
+      const tile = global.tiles.find(candidate => candidate.name === band.name);
+      if (!tile) throw new Error('Cross-tile component source is unavailable');
+      const pixelCount = tile.width * tile.height;
+      const prefix = `cross-tile-${tile.name}`;
+      const selection = this.createTransientView(
+        graph,
+        `${prefix}-threshold`,
+        'uint32',
+        pixelCount
+      );
+      new GPURasterThreshold({
+        id: `raster-lab-${prefix}-threshold`,
+        width: tile.width,
+        height: tile.height,
+        input: band.input,
+        output: selection,
+        threshold: this.settings.threshold,
+        operation: 'above',
+        inclusive: true
+      }).addToGraph(graph);
+      const sparseLabels = this.createTransientView(
+        graph,
+        `${prefix}-sparse-labels`,
+        'uint32',
+        pixelCount
+      );
+      const sparseValidity = this.createTransientView(
+        graph,
+        `${prefix}-sparse-validity`,
+        'uint32',
+        pixelCount
+      );
+      const convergence = this.createTransientView(graph, `${prefix}-converged`, 'uint32', 1);
+      const selected = tile.name === this.dataset.tile;
+      new GPURasterConnectedComponents({
+        id: `raster-lab-${prefix}-components`,
+        width: tile.width,
+        height: tile.height,
+        input: {
+          id: `${prefix}-classified-foreground`,
+          format: 'uint32',
+          storage: {kind: 'buffer', values: selection},
+          validity: band.input.validity
+        },
+        output: sparseLabels,
+        outputValidity: sparseValidity,
+        converged: convergence,
+        ...(selected ? {iterationCount: published.selectedIterations} : {}),
+        connectivity: this.settings.componentConnectivity,
+        maximumIterations: this.settings.componentMaximumIterations
+      }).addToGraph(graph);
+      const denseLabels = this.createTransientView(
+        graph,
+        `${prefix}-dense-labels`,
+        'uint32',
+        pixelCount
+      );
+      const denseValidity = this.createTransientView(
+        graph,
+        `${prefix}-dense-validity`,
+        'uint32',
+        pixelCount
+      );
+      const componentCount = this.createTransientView(graph, `${prefix}-count`, 'uint32', 1);
+      const overflow = this.createTransientView(graph, `${prefix}-overflow`, 'uint32', 1);
+      new GPURasterDenseComponents({
+        id: `raster-lab-${prefix}-dense-components`,
+        width: tile.width,
+        height: tile.height,
+        input: sparseLabels,
+        inputValidity: sparseValidity,
+        converged: convergence,
+        output: denseLabels,
+        outputValidity: denseValidity,
+        componentCount,
+        overflow,
+        capacity: REGION_RESULT_CAPACITY
+      }).addToGraph(graph);
+      const measurements = this.createTransientRegionOutputs(graph, prefix);
+      new GPURasterRegionMeasurements({
+        id: `raster-lab-${prefix}-measurements`,
+        metadata: tile.metadata,
+        labels: denseLabels,
+        labelValidity: denseValidity,
+        converged: convergence,
+        componentCount,
+        overflow,
+        intensity: band.input,
+        output: measurements,
+        capacity: REGION_RESULT_CAPACITY
+      }).addToGraph(graph);
+      return {
+        metadata: tile.metadata,
+        pixelBounds: tile.pixelBounds,
+        labels: denseLabels,
+        labelValidity: denseValidity,
+        componentCount,
+        converged: convergence,
+        overflow,
+        measurements,
+        outputLabels: selected
+          ? published.labels
+          : this.createTransientView(graph, `${prefix}-global-labels`, 'uint32', pixelCount),
+        outputValidity: selected
+          ? published.validity
+          : this.createTransientView(graph, `${prefix}-global-validity`, 'uint32', pixelCount)
+      };
+    });
+    new GPURasterCrossTileComponents({
+      id: 'raster-lab-cross-tile-components',
+      metadata: global.metadata,
+      tiles,
+      connectivity: this.settings.componentConnectivity,
+      maximumIterations: this.settings.componentMaximumIterations,
+      componentCount: this.createTransientView(graph, 'cross-tile-global-count', 'uint32', 1),
+      requiredComponentCount: published.requiredCount,
+      converged: published.converged,
+      overflow: this.createTransientView(graph, 'cross-tile-global-overflow', 'uint32', 1),
+      output: this.importRegionOutputs(graph),
+      capacity: Math.min(this.settings.componentCapacity, REGION_RESULT_CAPACITY)
+    }).addToGraph(graph);
+  }
+
+  /** Import the fixed-size, explicitly cache-accounted global/selected region result columns. */
+  private importRegionOutputs(graph: GPUCommandGraph): GPURasterRegionMeasurementOutputs {
+    return {
+      pixelCounts: this.importView(
+        graph,
+        'region-pixel-counts',
+        this.buffers.regionPixelCounts,
+        'uint32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityCounts: this.importView(
+        graph,
+        'region-intensity-counts',
+        this.buffers.regionIntensityCounts,
+        'uint32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensitySums: this.importView(
+        graph,
+        'region-intensity-sums',
+        this.buffers.regionIntensitySums,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityMinimums: this.importView(
+        graph,
+        'region-intensity-minimums',
+        this.buffers.regionIntensityMinimums,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityMaximums: this.importView(
+        graph,
+        'region-intensity-maximums',
+        this.buffers.regionIntensityMaximums,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityMeans: this.importView(
+        graph,
+        'region-intensity-means',
+        this.buffers.regionIntensityMeans,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      columnSums: this.importView(
+        graph,
+        'region-column-sums',
+        this.buffers.regionColumnSums,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      rowSums: this.importView(
+        graph,
+        'region-row-sums',
+        this.buffers.regionRowSums,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      centroidColumns: this.importView(
+        graph,
+        'region-centroid-columns',
+        this.buffers.regionCentroidColumns,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      centroidRows: this.importView(
+        graph,
+        'region-centroid-rows',
+        this.buffers.regionCentroidRows,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      areas: this.importView(
+        graph,
+        'region-affine-areas',
+        this.buffers.regionAreas,
+        'float32',
+        REGION_RESULT_CAPACITY
+      )
+    };
+  }
+
+  /** Local partials stay graph-owned; the final bounded columns alone outlive this encoding. */
+  private createTransientRegionOutputs(
+    graph: GPUCommandGraph,
+    prefix: string
+  ): GPURasterRegionMeasurementOutputs {
+    return {
+      pixelCounts: this.createTransientView(
+        graph,
+        `${prefix}-region-pixel-counts`,
+        'uint32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityCounts: this.createTransientView(
+        graph,
+        `${prefix}-region-intensity-counts`,
+        'uint32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensitySums: this.createTransientView(
+        graph,
+        `${prefix}-region-intensity-sums`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityMinimums: this.createTransientView(
+        graph,
+        `${prefix}-region-intensity-minimums`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityMaximums: this.createTransientView(
+        graph,
+        `${prefix}-region-intensity-maximums`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      intensityMeans: this.createTransientView(
+        graph,
+        `${prefix}-region-intensity-means`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      columnSums: this.createTransientView(
+        graph,
+        `${prefix}-region-column-sums`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      rowSums: this.createTransientView(
+        graph,
+        `${prefix}-region-row-sums`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      centroidColumns: this.createTransientView(
+        graph,
+        `${prefix}-region-centroid-columns`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      centroidRows: this.createTransientView(
+        graph,
+        `${prefix}-region-centroid-rows`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      ),
+      areas: this.createTransientView(
+        graph,
+        `${prefix}-region-affine-areas`,
+        'float32',
+        REGION_RESULT_CAPACITY
+      )
+    };
   }
 
   /** Recompute the exact selected pointwise quantity from each bounded, GPU-resident core. */

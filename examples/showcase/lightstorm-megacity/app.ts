@@ -14,6 +14,7 @@ import {
   Computation,
   CubeGeometry,
   Model,
+  OrbitControls,
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {
@@ -78,6 +79,10 @@ const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const UNIFORM_BYTE_LENGTH = 240;
 const NEAR_PLANE = 0.1;
 const TRIANGLES_PER_INSTANCE = 12;
+const DEFAULT_CAMERA_TARGET: [number, number, number] = [0, 20, 0];
+const DEFAULT_CAMERA_YAW = 0.64;
+const DEFAULT_CAMERA_PITCH = 0.28;
+const DEFAULT_CAMERA_DISTANCE = 300;
 
 type LightstormDataLayer = 'all' | 'towers' | 'transit';
 
@@ -148,10 +153,6 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
   };
   private capacity = DEFAULT_CAPACITY;
   private dataLayer: LightstormDataLayer = 'all';
-  private cameraTarget: [number, number, number] = [0, 20, 0];
-  private yaw = 0.64;
-  private pitch = 0.28;
-  private distance = 300;
   private guidedCamera = true;
   private guidedCameraStartMilliseconds: number | null = null;
   private currentTimeMilliseconds = 0;
@@ -171,9 +172,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
   private lightstormEnabled = true;
   private cullingEnabled = true;
   private comparisonView = false;
-  private dragging = false;
   private pointerDirty = false;
-  private lastPointer: [number, number] = [0, 0];
   private sampledVisibleCount = 0;
   private hasVisibilitySample = false;
   private countReadPending = false;
@@ -186,6 +185,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
   private cpuFrameTimeMilliseconds = 0;
   private gpuFrameTimeMilliseconds = 0;
   private canvas: HTMLCanvasElement | null = null;
+  private orbitControls: OrbitControls | null = null;
 
   private capacityElement: HTMLElement | null = null;
   private statsElement: HTMLElement | null = null;
@@ -347,12 +347,22 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
-      canvas.style.cursor = 'grab';
-      canvas.addEventListener('pointerdown', this.handlePointerDown);
+      canvas.addEventListener('pointerdown', this.handleThunderPointerDown, {capture: true});
+      this.orbitControls = new OrbitControls(canvas, {
+        target: DEFAULT_CAMERA_TARGET,
+        yaw: DEFAULT_CAMERA_YAW,
+        pitch: DEFAULT_CAMERA_PITCH,
+        distance: DEFAULT_CAMERA_DISTANCE,
+        minDistance: 12,
+        maxDistance: Math.max(500, this.cityMetadata.fieldHalfExtent * 2.2),
+        minPitch: -1.2,
+        maxPitch: 1.35,
+        pitchSpeed: -0.006,
+        enablePan: true,
+        panSpeed: 0.0018,
+        onInteractionStart: () => this.switchToExplore()
+      });
       canvas.addEventListener('pointermove', this.handlePointerMove);
-      canvas.addEventListener('pointerup', this.handlePointerUp);
-      canvas.addEventListener('pointercancel', this.handlePointerUp);
-      canvas.addEventListener('wheel', this.handleWheel, {passive: false});
     }
     window.addEventListener('keydown', this.handleThunderActivation, {capture: true});
     this.mountThunderActivationButton();
@@ -371,6 +381,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       return;
     }
     this.currentTimeMilliseconds = time;
+    this.orbitControls?.update(time);
     const deviceSize = device.getDefaultCanvasContext().getDevicePixelSize();
     if (resources.pickingWidth !== deviceSize[0] || resources.pickingHeight !== deviceSize[1]) {
       this.rebuild(this.capacity);
@@ -514,12 +525,12 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
 
   override onFinalize(): void {
     if (this.canvas) {
-      this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
+      this.canvas.removeEventListener('pointerdown', this.handleThunderPointerDown, {
+        capture: true
+      });
       this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-      this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-      this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
-      this.canvas.removeEventListener('wheel', this.handleWheel);
     }
+    this.orbitControls?.destroy();
     window.removeEventListener('keydown', this.handleThunderActivation, {capture: true});
     this.unmountThunderActivationButton();
     this.panels.finalize();
@@ -550,6 +561,9 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       towerCount: city.towerCount,
       transitCount: city.transitCount
     };
+    this.orbitControls?.setProps({
+      maxDistance: Math.max(500, this.cityMetadata.fieldHalfExtent * 2.2)
+    });
     const instances = this.device.createBuffer({
       id: 'lightstorm-megacity-instances',
       data: city.instances,
@@ -1032,9 +1046,15 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     );
     this.thunderAudio.update(lightningTimeSeconds, this.lightstormEnabled);
     const perspectiveAspect = getViewportAspect(parameters.perspectiveViewport);
+    const controls = this.orbitControls;
     const cameraPose = this.guidedCamera
       ? getLightstormGuidedCameraSample(this.guidedCameraTour, guidedCameraTimeSeconds)
-      : makeOrbitCameraSample(this.cameraTarget, this.yaw, this.pitch, this.distance);
+      : makeOrbitCameraSample(
+          controls ? [...controls.props.target] : [...DEFAULT_CAMERA_TARGET],
+          controls?.yaw ?? DEFAULT_CAMERA_YAW,
+          controls?.pitch ?? DEFAULT_CAMERA_PITCH,
+          controls?.distance ?? DEFAULT_CAMERA_DISTANCE
+        );
     this.currentCameraPose = cameraPose;
     const eye = cameraPose.eye;
     const viewMatrix = new Matrix4().lookAt({eye, center: cameraPose.target, up: [0, 1, 0]});
@@ -1356,10 +1376,12 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
 
   private switchToExplore(): void {
     if (this.guidedCamera) {
-      this.cameraTarget = [...this.currentCameraPose.target];
-      this.yaw = this.currentCameraPose.yaw;
-      this.pitch = this.currentCameraPose.pitch;
-      this.distance = this.currentCameraPose.distance;
+      this.orbitControls?.setProps({
+        target: this.currentCameraPose.target,
+        yaw: this.currentCameraPose.yaw,
+        pitch: this.currentCameraPose.pitch,
+        distance: this.currentCameraPose.distance
+      });
     }
     this.guidedCamera = false;
     this.previousViewProjectionMatrix = null;
@@ -1498,17 +1520,11 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     return `#${this.pickedObjectIndex} · ${recordKind}`;
   }
 
-  private readonly handlePointerDown = (event: PointerEvent): void => {
+  private readonly handleThunderPointerDown = (event: PointerEvent): void => {
     if (this.thunderAudio.status === 'waiting') {
+      // Unlock thunder with the first gesture without interrupting the guided camera tour.
+      event.stopImmediatePropagation();
       this.activateThunderAudio(true);
-      return;
-    }
-    this.switchToExplore();
-    this.dragging = true;
-    this.lastPointer = [event.clientX, event.clientY];
-    this.canvas?.setPointerCapture(event.pointerId);
-    if (this.canvas) {
-      this.canvas.style.cursor = 'grabbing';
     }
   };
 
@@ -1522,41 +1538,8 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     this.activateThunderAudio(true);
   };
 
-  private readonly handlePointerMove = (event: PointerEvent): void => {
+  private readonly handlePointerMove = (): void => {
     this.pointerDirty = true;
-    if (!this.dragging) {
-      return;
-    }
-    const deltaX = event.clientX - this.lastPointer[0];
-    const deltaY = event.clientY - this.lastPointer[1];
-    this.lastPointer = [event.clientX, event.clientY];
-    if (event.shiftKey) {
-      const panScale = this.distance * 0.0018;
-      this.cameraTarget[0] -= Math.cos(this.yaw) * deltaX * panScale;
-      this.cameraTarget[2] += Math.sin(this.yaw) * deltaX * panScale;
-      this.cameraTarget[1] += deltaY * panScale;
-    } else {
-      this.yaw -= deltaX * 0.006;
-      this.pitch = Math.max(-1.2, Math.min(1.35, this.pitch + deltaY * 0.006));
-    }
-  };
-
-  private readonly handlePointerUp = (event: PointerEvent): void => {
-    this.dragging = false;
-    this.canvas?.releasePointerCapture(event.pointerId);
-    if (this.canvas) {
-      this.canvas.style.cursor = 'grab';
-    }
-  };
-
-  private readonly handleWheel = (event: WheelEvent): void => {
-    event.preventDefault();
-    this.switchToExplore();
-    const maximumDistance = Math.max(500, this.cityMetadata.fieldHalfExtent * 2.2);
-    this.distance = Math.max(
-      12,
-      Math.min(maximumDistance, this.distance * Math.exp(event.deltaY * 0.001))
-    );
   };
 }
 

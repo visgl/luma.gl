@@ -1,9 +1,11 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # WebXRCameraTexture
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
+</DocumentationBadges>
 
 `WebXRCameraTexture` is the experimental `@luma.gl/experimental` binding source for WebXR Raw Camera Access. It wraps the browser-owned camera `WebGLTexture` for one `XRView` as a borrowed read-only luma [`Texture`](/docs/api-reference/core/resources/texture).
 
@@ -34,7 +36,7 @@ vec4 color = texture(uTexture, uv);
 
 ## Behavior
 
-- WebGL-only in v10 work in progress.
+- WebGL-only in the current v10 API.
 - Resolves only ordinary texture bindings such as GLSL `sampler2D`.
 - `setView(view)` selects `view.camera` and advances the source generation for the next draw.
 - `resolveTextureBinding()` calls `XRWebGLBinding.getCameraImage(camera)` at most once per source generation.

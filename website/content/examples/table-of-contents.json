@@ -91,7 +91,7 @@
           "v10/gpgpu",
           "experimental/gpu-frustum-culling",
           "experimental/gpu-trace-viewer",
-          "experimental/lugraph-explorer",
+          "experimental/gpu-graph-explorer",
           "experimental/gpu-trace-scene",
           "experimental/gpu-scene-graph",
           "experimental/gpu-sort",
@@ -105,24 +105,14 @@
           {
             "type": "doc",
             "id": "showcase/million-row-crossfilter",
-            "label": "LuxFilter: Million-Row Crossfilter Explorer"
+            "label": "GPUCrossfilter: Million-Row Crossfilter Explorer"
           },
           {
             "type": "doc",
             "id": "showcase/raster-lab",
-            "label": "LuRaster: Satellite Raster Lab"
+            "label": "GPURaster: Satellite Raster Lab"
           },
           "showcase/billion-point-spatial-atlas",
-          {
-            "type": "doc",
-            "id": "deck/luspatial-taxi",
-            "label": "luProj + luSpatial: Taxi Explorer"
-          },
-          {
-            "type": "doc",
-            "id": "deck/lugraph-explorer",
-            "label": "luGraph + deck.gl: Network Explorer"
-          },
           "experimental/gpt-2"
         ]
       }
@@ -233,7 +223,23 @@
     "items": [
       "deck/arrow-path-layer",
       "deck/arrow-polygon-layer",
-      "deck/arrow-text-layer",
+      "deck/arrow-text-layer"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "GPU Graph Layers - deck.gl v10",
+    "items": [
+      {
+        "type": "doc",
+        "id": "deck/luspatial-taxi",
+        "label": "luProj + luSpatial: Taxi Explorer"
+      },
+      {
+        "type": "doc",
+        "id": "deck/gpu-graph-explorer",
+        "label": "GPU Graph + deck.gl: Network Explorer"
+      },
       "deck/gpu-culled-trace"
     ]
   }

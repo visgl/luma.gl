@@ -1,4 +1,5 @@
 import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # ShaderPlugin
 
@@ -13,6 +14,15 @@ cross-stage varyings, or backend-specific shader source.
 
 For the authoring model, see
 [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders).
+
+<DocumentationContract title="ShaderPlugin" rows={[
+  {label: 'Languages', value: 'Shared contributions plus optional WGSL and GLSL variants'},
+  {label: 'Dependencies', value: 'Composes ShaderModules selected by the plugin'},
+  {label: 'Hooks and injections', value: 'Targets named vertex and fragment extension points'},
+  {label: 'Props and bindings', value: 'Declares vertex inputs, varyings, modules, and defines'},
+  {label: 'Assembly output', value: 'Resolved modules, defines, injections, inputs, and varyings'},
+  {label: 'Cost', value: 'Resolve when configuration changes, not for every draw'}
+]} />
 
 ## Usage
 

@@ -4,6 +4,7 @@
 
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {assert, Buffer, type Device, type RenderPass, Texture} from '@luma.gl/core';
+import type {Model} from '@luma.gl/engine';
 import {
   type AnimationLoopMode,
   type AnimationMixer,
@@ -11,12 +12,18 @@ import {
   ModelNode,
   updateSkinJointMatrices
 } from '@luma.gl/engine';
-import type {Model} from '@luma.gl/engine';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import type {ParseGLTFOptions} from '../parsers/parse-gltf';
-import {createScenegraphsFromGLTF, type GLTFScenegraphs} from './create-scenegraph-from-gltf';
 import type {GLTFCrowdModelConfiguration, GLTFCrowdModelResources} from './create-gltf-model';
+import {createScenegraphsFromGLTF, type GLTFScenegraphs} from './create-scenegraph-from-gltf';
 import {type GLTFAnimationSelectionOptions, GLTFAnimator} from './gltf-animator';
+import {
+  createGLTFCrowdGPUAnimationLayout,
+  type GLTFCrowdGPUAnimationClip,
+  type GLTFCrowdGPUAnimationLayout,
+  type GLTFCrowdGPUAnimationOptions,
+  getGLTFCrowdGPUAnimationFrames
+} from './gltf-gpu-animation';
 import {generateGLTFLODLevels, getGLTFNodeLODs} from './gltf-lod';
 import {GLTFSkinController} from './gltf-skin';
 
@@ -77,6 +84,17 @@ export type GLTFAnimatedCrowdOptions = ParseGLTFOptions & {
   capacity?: number;
   /** Optional portable per-actor authored or generated screen-space level-of-detail selection. */
   lod?: GLTFCrowdLODOptions;
+  /** Optional one-time baked clip preparation followed by GPU skeletal and morph sampling. */
+  gpuAnimation?: GLTFCrowdGPUAnimationOptions;
+};
+
+/** Runtime ownership and workload diagnostics for accelerated crowd animation. */
+export type GLTFCrowdAnimationStats = {
+  mode: 'cpu' | 'gpu';
+  sampleRate?: number;
+  frameCount: number;
+  clipCount: number;
+  morphGroupCount: number;
 };
 
 /** Initial placement and independent playback controls for one lightweight crowd actor. */
@@ -123,6 +141,16 @@ export type GLTFCrowdPrimitiveGroup = {
   jointMatrices?: Float32Array;
   /** WebGPU read-only storage buffer or WebGL float-texture palette atlas. */
   skinJointMatrices?: Buffer | Texture;
+  /** Number of source morph targets independently blended for every actor. */
+  morphTargetCount: number;
+  /** Immutable WebGPU storage buffer or WebGL float-texture morph target atlas. */
+  morphTargetData?: Buffer | Texture;
+  /** Per-instance packed morph weights for the existing CPU action-sampling mode. */
+  morphWeights?: Float32Array;
+  /** Immutable baked clip frames when GPU action sampling is enabled. */
+  animationFrames?: Buffer | Texture;
+  /** Dense per-instance current frame addresses and interpolation factors. */
+  animationParameters?: Float32Array;
 };
 
 type GLTFCrowdActorNodes = {
@@ -189,7 +217,7 @@ export class GLTFCrowdActor {
       }
       if (options.time !== undefined || options.phase !== undefined) {
         this.seek(options.time ?? (options.phase || 0) * (action?.clip.duration || 0));
-      } else {
+      } else if (!crowd.gpuAnimationEnabled) {
         this.animator.update(0);
       }
     }
@@ -257,7 +285,9 @@ export class GLTFCrowdActor {
         clip.action.setTime(timeSeconds);
       }
     }
-    this.animator.update(0);
+    if (!this.crowd.gpuAnimationEnabled) {
+      this.animator.update(0);
+    }
     this.crowd.refresh();
     return this;
   }
@@ -311,7 +341,11 @@ export class GLTFCrowdActor {
   /** @internal Allows the crowd to upload all actors together after one shared frame update. */
   advance(deltaSeconds: number): void {
     if (this.isPlaying && !this.isDestroyed) {
-      this.animator.update(deltaSeconds);
+      if (this.crowd.gpuAnimationEnabled) {
+        this.mixer.advance(deltaSeconds);
+      } else {
+        this.animator.update(deltaSeconds);
+      }
     }
   }
 
@@ -348,9 +382,9 @@ export class GLTFCrowdActor {
 /**
  * Draws independently animated glTF actors through one shared instanced Model per primitive.
  *
- * The source is parsed once. Every actor owns only CPU transforms, animation actions, and joint
- * staging palettes; immutable geometry, materials, pipelines, instance buffers, and draw calls
- * are shared across the entire crowd.
+ * The source is parsed once. Every actor owns only CPU clocks, control state, and optional CPU
+ * pose staging; immutable geometry, materials, pipelines, instance buffers, baked frames, and
+ * draw calls are shared across the entire crowd.
  */
 export class GLTFAnimatedCrowd {
   readonly device: Device;
@@ -359,6 +393,8 @@ export class GLTFAnimatedCrowd {
   readonly capacity: number;
   readonly primitiveGroups: readonly GLTFCrowdPrimitiveGroup[];
   readonly models: readonly Model[];
+  /** Whether clip interpolation, rigid transforms, skin palettes, and morph weights are GPU-read. */
+  readonly gpuAnimationEnabled: boolean;
 
   private readonly actorsById = new Map<string, GLTFCrowdActor>();
   private readonly actorLODLevels = new Map<string, number>();
@@ -369,6 +405,8 @@ export class GLTFAnimatedCrowd {
   private readonly lodScreenCoverage: readonly number[];
   private readonly maximumLODLevel: number;
   private readonly lodVertexCounts: readonly number[];
+  private readonly gpuAnimationLayout: GLTFCrowdGPUAnimationLayout | null;
+  private readonly gpuAnimationClips: ReadonlyMap<string, GLTFCrowdGPUAnimationClip>;
   private currentLODView: GLTFCrowdLODView | null = null;
   private currentVertexBudget?: number;
   private isLODEnabled: boolean;
@@ -379,7 +417,7 @@ export class GLTFAnimatedCrowd {
   private suspendedRefreshCount = 0;
 
   constructor(device: Device, gltf: GLTFPostprocessed, options: GLTFAnimatedCrowdOptions = {}) {
-    const {capacity = 16, lod, ...parseOptions} = options;
+    const {capacity = 16, lod, gpuAnimation, ...parseOptions} = options;
     // Fixed capacity keeps GPU instance and joint-palette buffers stable for the crowd lifetime.
     assert(Number.isSafeInteger(capacity) && capacity > 0);
     this.device = device;
@@ -409,12 +447,36 @@ export class GLTFAnimatedCrowd {
           })
         : gltf;
     this.lodSource = authoredLOD ? 'authored' : this.gltf !== gltf ? 'generated' : 'none';
-
+    const requestedGPUAnimationLayout = gpuAnimation
+      ? createGLTFCrowdGPUAnimationLayout(this.gltf, gpuAnimation)
+      : null;
     const jointsPerInstance = Math.max(
       0,
       ...(this.gltf.skins || []).map(skin => skin.joints.length)
     );
-    const configuration: GLTFCrowdModelConfiguration = {capacity, jointsPerInstance};
+    const maximumMorphTargetCount = Math.max(
+      0,
+      ...this.gltf.nodes.flatMap(node =>
+        (node.mesh?.primitives || []).map(primitive => primitive.targets?.length || 0)
+      )
+    );
+    const maximumAnimationFrameStride = 4 + jointsPerInstance * 4 + maximumMorphTargetCount;
+    this.gpuAnimationLayout =
+      requestedGPUAnimationLayout &&
+      (device.type === 'webgpu' ||
+        (maximumAnimationFrameStride <= device.limits.maxTextureDimension2D &&
+          requestedGPUAnimationLayout.frameCount <= device.limits.maxTextureDimension2D))
+        ? requestedGPUAnimationLayout
+        : null;
+    this.gpuAnimationEnabled = Boolean(this.gpuAnimationLayout);
+    this.gpuAnimationClips = new Map(
+      (this.gpuAnimationLayout?.clips || []).map(clip => [clip.name, clip])
+    );
+    const configuration: GLTFCrowdModelConfiguration = {
+      capacity,
+      jointsPerInstance,
+      ...(this.gpuAnimationLayout ? {gpuAnimation: this.gpuAnimationLayout} : {})
+    };
     this.scenegraphs = createScenegraphsFromGLTF(device, this.gltf, {
       ...parseOptions,
       modelOptions: {
@@ -455,6 +517,10 @@ export class GLTFAnimatedCrowd {
       budgetSatisfied: true,
       levels: []
     };
+
+    if (this.gpuAnimationLayout) {
+      this.bakeGPUAnimationFrames();
+    }
   }
 
   get actors(): readonly GLTFCrowdActor[] {
@@ -477,6 +543,17 @@ export class GLTFAnimatedCrowd {
   /** Current visible actor buckets and actual per-level instanced draw work. */
   get lodStats(): GLTFCrowdLODStats {
     return this.currentLODStats;
+  }
+
+  /** Current baked animation ownership, clip size, and independently deformed source groups. */
+  get animationStats(): GLTFCrowdAnimationStats {
+    return {
+      mode: this.gpuAnimationEnabled ? 'gpu' : 'cpu',
+      ...(this.gpuAnimationLayout ? {sampleRate: this.gpuAnimationLayout.sampleRate} : {}),
+      frameCount: this.gpuAnimationLayout?.frameCount || 0,
+      clipCount: this.gpuAnimationLayout?.clips.length || 0,
+      morphGroupCount: this.primitiveGroups.filter(group => group.morphTargetCount > 0).length
+    };
   }
 
   /** Enables or disables per-actor LOD without recreating actors, models, or GPU resources. */
@@ -622,11 +699,13 @@ export class GLTFAnimatedCrowd {
     }
 
     const actors = [...this.actorsById.values()];
-    const actorWorldMatrices = actors.map(actor => {
-      const worldMatrices = collectNodeWorldMatrices(actor.root);
-      actor.updateSkinMatrices(worldMatrices);
-      return worldMatrices;
-    });
+    const actorWorldMatrices = this.gpuAnimationEnabled
+      ? []
+      : actors.map(actor => {
+          const worldMatrices = collectNodeWorldMatrices(actor.root);
+          actor.updateSkinMatrices(worldMatrices);
+          return worldMatrices;
+        });
     const idealLevels = actors.map(actor => this.selectActorLOD(actor));
     const {levels: selectedLevels, demotedActors} = this.applyVertexBudget(actors, idealLevels);
     const visibleActors = selectedLevels.filter(level => level !== null).length;
@@ -662,11 +741,28 @@ export class GLTFAnimatedCrowd {
         }
         const actor = actors[actorIndex];
         const actorNode = actor.getNode(group.nodeIndex);
-        const matrix = actorNode && actorWorldMatrices[actorIndex].get(actorNode);
+        const matrix = this.gpuAnimationEnabled
+          ? actor.root.matrix
+          : actorNode && actorWorldMatrices[actorIndex].get(actorNode);
         for (let columnIndex = 0; columnIndex < 4; columnIndex++) {
           for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
             resources.transformColumns[columnIndex][instanceCount * 4 + rowIndex] =
               matrix?.[columnIndex * 4 + rowIndex] || 0;
+          }
+        }
+
+        if (resources.animationParameters && resources.animationBlend) {
+          this.writeGPUAnimationParameters(actor, resources, instanceCount);
+        }
+
+        if (resources.morphWeights) {
+          const targetCount = resources.morphTargetCount;
+          const packedTargetCount = Math.ceil(targetCount / 4);
+          const offset = instanceCount * packedTargetCount * 4;
+          resources.morphWeights.fill(0, offset, offset + packedTargetCount * 4);
+          const weights = actorNode?.userData['morphWeights'];
+          if (Array.isArray(weights)) {
+            resources.morphWeights.set(weights.slice(0, targetCount), offset);
           }
         }
 
@@ -686,6 +782,28 @@ export class GLTFAnimatedCrowd {
           resources.transformBuffers[columnIndex].write(
             resources.transformColumns[columnIndex].subarray(0, instanceCount * 4)
           );
+        }
+        if (resources.animationParameterBuffer && resources.animationParameters) {
+          resources.animationParameterBuffer.write(
+            resources.animationParameters.subarray(0, instanceCount * 4)
+          );
+        }
+        if (resources.animationBlendBuffer && resources.animationBlend) {
+          resources.animationBlendBuffer.write(
+            resources.animationBlend.subarray(0, instanceCount * 4)
+          );
+        }
+        if (resources.morphWeights && resources.morphWeightData) {
+          const packedTargetCount = Math.ceil(resources.morphTargetCount / 4);
+          const weights = resources.morphWeights.subarray(0, instanceCount * packedTargetCount * 4);
+          if (resources.morphWeightData instanceof Buffer) {
+            resources.morphWeightData.write(weights);
+          } else {
+            resources.morphWeightData.writeData(weights, {
+              width: packedTargetCount,
+              height: instanceCount
+            });
+          }
         }
         if (resources.jointMatrices && resources.skinJointMatrices) {
           const jointMatrices = resources.jointMatrices.subarray(
@@ -729,6 +847,131 @@ export class GLTFAnimatedCrowd {
         !this.isLODEnabled || !this.currentVertexBudget || vertices <= this.currentVertexBudget,
       levels: [...levelStats.values()].sort((first, second) => first.level - second.level)
     };
+  }
+
+  private bakeGPUAnimationFrames(): void {
+    const layout = this.gpuAnimationLayout;
+    if (!layout) {
+      return;
+    }
+
+    this.suspendedRefreshCount++;
+    const bakingActor = new GLTFCrowdActor(this, '__gltf-gpu-animation-baker__', {playing: false});
+    try {
+      for (const clip of layout.clips) {
+        const animation = bakingActor.animator.selectClip(clip.name);
+        animation.action.setLoop('once', 1);
+        for (let clipFrame = 0; clipFrame < clip.frameCount; clipFrame++) {
+          const time = Math.min(clipFrame / layout.sampleRate, clip.duration);
+          animation.action.setTime(time);
+          bakingActor.animator.update(0);
+          const worldMatrices = collectNodeWorldMatrices(bakingActor.root);
+          bakingActor.updateSkinMatrices(worldMatrices);
+
+          for (const group of this.primitiveGroups) {
+            const modelNode = findCrowdModelNode(
+              this.scenegraphs,
+              group.sourceNodeIndex,
+              group.model
+            );
+            if (!modelNode) {
+              continue;
+            }
+            const resources = modelNode.userData['gltfAnimatedCrowd'] as GLTFCrowdModelResources;
+            const values = resources.animationFrameValues;
+            const frameStride = resources.animationFrameStride;
+            if (!values || !frameStride) {
+              continue;
+            }
+
+            const frameOffset = (clip.frameOffset + clipFrame) * frameStride * 4;
+            const node = bakingActor.getNode(group.nodeIndex);
+            const nodeMatrix = node && worldMatrices.get(node);
+            if (nodeMatrix) {
+              values.set(nodeMatrix, frameOffset);
+            }
+
+            const jointPalette = bakingActor.skins.getBinding(group.nodeIndex)?.jointMatrices;
+            if (jointPalette) {
+              values.set(jointPalette, frameOffset + 16);
+            }
+
+            const weights = node?.userData['morphWeights'];
+            if (Array.isArray(weights)) {
+              for (let targetIndex = 0; targetIndex < resources.morphTargetCount; targetIndex++) {
+                const offset =
+                  frameOffset + (4 + resources.animationJointCount * 4 + targetIndex) * 4;
+                values[offset] = Number(weights[targetIndex] || 0);
+              }
+            }
+          }
+        }
+      }
+    } finally {
+      bakingActor.destroy();
+      this.suspendedRefreshCount--;
+    }
+
+    for (const group of this.primitiveGroups) {
+      const modelNode = findCrowdModelNode(this.scenegraphs, group.sourceNodeIndex, group.model);
+      if (!modelNode) {
+        continue;
+      }
+      const resources = modelNode.userData['gltfAnimatedCrowd'] as GLTFCrowdModelResources;
+      if (!resources.animationFrames || !resources.animationFrameValues) {
+        continue;
+      }
+      if (resources.animationFrames instanceof Buffer) {
+        resources.animationFrames.write(resources.animationFrameValues);
+      } else {
+        resources.animationFrames.writeData(resources.animationFrameValues, {
+          width: resources.animationFrameStride,
+          height: layout.frameCount
+        });
+      }
+    }
+  }
+
+  private writeGPUAnimationParameters(
+    actor: GLTFCrowdActor,
+    resources: GLTFCrowdModelResources,
+    instanceIndex: number
+  ): void {
+    const layout = this.gpuAnimationLayout;
+    if (!layout || !resources.animationParameters || !resources.animationBlend) {
+      return;
+    }
+
+    const animations = actor.animator
+      .getAnimations()
+      .filter(animation => animation.action.shouldApply && animation.action.weight > 0);
+    const primary =
+      animations.find(animation => animation.name === actor.activeClip) || animations[0];
+    const primaryClip = (primary && this.gpuAnimationClips.get(primary.name)) || layout.clips[0];
+    const primaryFrames = getGLTFCrowdGPUAnimationFrames(
+      primaryClip,
+      primary?.action.time || 0,
+      layout.sampleRate
+    );
+    const offset = instanceIndex * 4;
+    resources.animationParameters.set([...primaryFrames, primary?.action.weight || 1], offset);
+
+    const secondary = animations.find(animation => animation !== primary);
+    const secondaryClip = secondary && this.gpuAnimationClips.get(secondary.name);
+    if (secondary && secondaryClip) {
+      const frames = getGLTFCrowdGPUAnimationFrames(
+        secondaryClip,
+        secondary.action.time,
+        layout.sampleRate
+      );
+      const totalWeight = (primary?.action.weight || 0) + secondary.action.weight;
+      resources.animationBlend.set(
+        [...frames, totalWeight > 0 ? secondary.action.weight / totalWeight : 0],
+        offset
+      );
+    } else {
+      resources.animationBlend.fill(0, offset, offset + 4);
+    }
   }
 
   private getAuthoredScreenCoverage(): readonly number[] {
@@ -1043,8 +1286,15 @@ function createPrimitiveGroups(
           model: child.model,
           transformBuffers: resources.transformBuffers,
           jointCount: skinBinding?.joints.length || 0,
+          morphTargetCount: resources.morphTargetCount,
           ...(resources.jointMatrices ? {jointMatrices: resources.jointMatrices} : {}),
-          ...(resources.skinJointMatrices ? {skinJointMatrices: resources.skinJointMatrices} : {})
+          ...(resources.skinJointMatrices ? {skinJointMatrices: resources.skinJointMatrices} : {}),
+          ...(resources.morphTargetData ? {morphTargetData: resources.morphTargetData} : {}),
+          ...(resources.morphWeights ? {morphWeights: resources.morphWeights} : {}),
+          ...(resources.animationFrames ? {animationFrames: resources.animationFrames} : {}),
+          ...(resources.animationParameters
+            ? {animationParameters: resources.animationParameters}
+            : {})
         });
       }
     }

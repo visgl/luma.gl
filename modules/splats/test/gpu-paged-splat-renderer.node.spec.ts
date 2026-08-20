@@ -153,7 +153,11 @@ test('GPUPagedSplatRenderer retains sparse independent pages and bounded source 
   t.equal(renderer.stats.rowCount, 7, 'reports the complete borrowed loaded source row count');
   t.equal(renderer.stats.activeRowCount, 4, 'projects only four caller-selected page-local rows');
   t.equal(renderer.stats.splatCount, 4, 'reports the actual sparse visible-work upper bound');
-  t.equal(renderer.stats.sourceSegmentCount, 3, 'splits sources into bounded projection segments');
+  t.equal(
+    renderer.stats.sourceSegmentCount,
+    4,
+    'retains one bounded source topology independent of sparse frontier cardinality'
+  );
   t.equal(renderer.stats.maxProjectedSplatsPerSegment, 2, 'honors the forced segment limit');
   t.equal(renderer.stats.segmentCount, 0, 'keeps output segment allocation deferred');
   t.equal(renderer.stats.sortMode, 'global', 'plans one exact cross-page global depth ordering');
@@ -250,7 +254,11 @@ test('GPUPagedSplatRenderer plans aligned source ranges beyond one storage bindi
       activeRows: new Uint32Array([65, 127, 3, 128])
     }
   ]);
-  t.equal(renderer.stats.sourceSegmentCount, 3, 'groups sparse rows by aligned source windows');
+  t.equal(
+    renderer.stats.sourceSegmentCount,
+    9,
+    'retains every aligned source window while sparse row counts change'
+  );
   t.equal(renderer.stats.activeRowCount, 4, 'keeps sparse work proportional to active rows');
   renderer.destroy();
   t.notOk(sourcePage.destroyed, 'never destroys the oversized borrowed source allocation');

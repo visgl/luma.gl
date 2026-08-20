@@ -17,6 +17,7 @@ export type RasterLabMorphologyNoDataPolicy = 'propagate' | 'ignore';
 export type RasterLabMorphologyBorderMode = 'clamp' | 'reflect' | 'constant' | 'nodata';
 export type RasterLabComponentConnectivity = 4 | 8;
 export type RasterLabComponentLabelMode = 'sparse' | 'dense';
+export type RasterLabComponentScope = 'local' | 'stitched';
 
 /** Canvas-backed rectangle in physical pixels, measured from the upper-left corner. */
 export type RasterLabViewport = {x: number; y: number; width: number; height: number};
@@ -58,6 +59,7 @@ export type RasterLabDisplaySettings = {
   componentsEnabled: boolean;
   componentConnectivity: RasterLabComponentConnectivity;
   componentLabelMode: RasterLabComponentLabelMode;
+  componentScope: RasterLabComponentScope;
   componentCapacity: number;
   componentMaximumIterations: number;
   regionMetricsEnabled: boolean;

@@ -18,7 +18,7 @@ export type MakeAnimationLoopProps = Omit<
   onAfterRender?: (
     animationProps: AnimationProps,
     animationLoopTemplate: AnimationLoopTemplate | null
-  ) => void;
+  ) => unknown;
 };
 
 /** Animation loop created from a template, with access to the active template instance. */
@@ -68,9 +68,12 @@ export function makeAnimationLoop(
       }
     },
 
-    onRender(animationProps: AnimationProps): void {
-      renderLoop?.onRender(animationProps);
-      props?.onAfterRender?.(animationProps, renderLoop);
+    onRender(animationProps: AnimationProps): unknown {
+      const renderResult = renderLoop?.onRender(animationProps);
+      const afterRenderResult = props?.onAfterRender?.(animationProps, renderLoop);
+      return props?.onAfterRender
+        ? renderResult !== false || afterRenderResult !== false
+        : renderResult;
     },
 
     onFinalize(animationProps: AnimationProps): void {

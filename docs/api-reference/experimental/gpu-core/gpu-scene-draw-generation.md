@@ -1,0 +1,155 @@
+import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+import {GPUSceneGraphExample} from '@site/src/examples';
+
+# GPUSceneDrawGeneration
+
+<GPUCoreDocsTabs active="scene-draw-generation" />
+
+## Overview
+
+`GPUSceneDrawGeneration` turns active, visible `GPUScene` records into bounded indirect draw
+commands. It is the bridge between GPU visibility decisions and rendering: the CPU can encode the
+same graph and the same fixed set of indirect draws each frame while compute updates which command
+slots actually draw an instance.
+
+This is useful when visibility changes much more often than geometry or pipeline setup. Frustum
+culling, spatial queries, hierarchy expansion, and selection masks can remain GPU-resident instead
+of forcing a readback, rebuilding a CPU draw list, and uploading counts again. Geometry arguments
+remain stable; the workflow changes only `instanceCount` and `firstInstance`.
+
+<GPUSceneGraphExample embedded />
+
+<GPUOperationContract operation="gpu-scene-draw-generation" />
+
+## Concepts
+
+### Explicit slots separate selection from renderer policy
+
+Each scene row carries a `commandSlot`. A visible active row requests that slot, while
+`GPU_SCENE_INVALID_REFERENCE` means that the row intentionally has no draw command. The command
+buffer is initialized by the renderer with stable geometry arguments such as vertex or index count
+and starting offsets. Draw generation does not infer materials, pipelines, or resource bindings.
+
+This division lets applications choose their own slot assignment and issue indirect calls in the
+order required by their renderer. It also keeps this primitive useful before pipeline/resource
+grouping is standardized.
+
+The live scene-graph example records every renderer-owned slot once in a reusable render bundle.
+Changing a group checkbox alters only the GPU visibility mask; moving or removing a selected
+object updates its ordinary scene record. The same compiled graph then republishes counts and
+source-indexed indirect commands without the application constructing a CPU-selected draw list.
+
+### Fixed capacity is observable
+
+The workflow publishes three GPU-resident scalar results:
+
+| Result | Meaning |
+| --- | --- |
+| `requiredCount` | Active, visible rows that request a command slot, including invalid capacity requests and collisions |
+| `publishedCount` | Unique in-range command slots that received a draw |
+| `overflow` | Nonzero when a requested slot is out of range or more than one row requests the same slot |
+
+These values distinguish an empty result from an incomplete result without requiring hidden
+allocation. A renderer can size conservatively, inspect diagnostics asynchronously, or treat
+overflow as a signal to rebuild its slot assignment at a deliberate boundary.
+
+### Collisions are deterministic, not silently racy
+
+When multiple visible rows request one slot, the lowest scene-record index owns it. The command is
+therefore repeatable across runs, while `overflow` records that some requested work was not
+published. Inactive, invisible, invalid-reference, and losing rows cannot leave a stale draw:
+every encoding first clears all command instance counts and first-instance fields.
+
+The winner's scene-record index becomes `firstInstance`. Shaders can use that index to fetch the
+record's transform, bounds, stable object ID, or renderer-owned references from the scene buffer.
+Because scene rows beyond zero produce nonzero `firstInstance` values, the device must expose the
+optional WebGPU `indirect-first-instance` feature. `addToGraph()` rejects unsupported devices
+before adding passes; applications should request the feature when creating their device.
+
+### Visibility is optional and parameter-only
+
+Without a visibility view, every active row participates. With one, each packed `uint32` row is a
+source-aligned flag and nonzero means visible. The view must cover the scene's entire reserved
+capacity, including currently inactive rows. The visibility contents may change between graph
+encodings; the graph does not need to be rebuilt or recompiled.
+
+Dispatch also covers the full reserved capacity rather than just the active prefix captured when
+the scene was imported. Records inserted later with `scene.mutate()` therefore participate in the
+same compiled graph immediately, while inactive spare slots remain suppressed by their scene flags.
+
+The scene and command capacities remain compile-time topology. Changing either requires building a
+new workflow so allocation, dispatch, and overflow behavior remain inspectable.
+
+### Submission and draw recording stay with the application
+
+`addToGraph()` adds initialization, eligibility, ownership, and publication passes but does not
+compile, encode, submit, or read back. After the graph runs, the application still records one
+indirect draw for each renderer-owned command slot. Slots with `instanceCount === 0` do no visible
+work.
+
+WebGPU does not provide a portable bindless multi-draw contract that would let this primitive
+choose arbitrary pipelines and bindings.
+[`GPUSceneResourceGroups`](/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups)
+therefore adds explicit renderer-owned binding windows as a separate workflow rather than hiding
+pipeline policy inside draw generation.
+
+## Usage
+
+```ts
+const graph = new GPUCommandGraph(device);
+const sceneView = scene.importToGraph(graph);
+const commandView = commands.importToGraph(graph);
+
+const generation = new GPUSceneDrawGeneration({
+  scene: sceneView,
+  visibility,
+  commands: commandView,
+  requiredCount,
+  publishedCount,
+  overflow
+});
+
+generation.addToGraph(graph);
+
+// The application compiles, encodes, and submits the graph, then records its stable slots.
+for (let slot = 0; slot < commands.capacity; slot++) {
+  commands.draw(renderPass, slot);
+}
+```
+
+`commands` may contain either `draw` or `draw-indexed` records. Its backing buffer must have both
+storage and indirect usage. The three diagnostic outputs are distinct packed `uint32` graph views
+and may not overlap the scene, visibility, command, or one another.
+
+## Methods
+
+### `addToGraph(graph)`
+
+Adds the fixed-capacity draw-generation passes to the target graph. Every supplied view must belong
+to that graph.
+
+## Properties
+
+`stats` reports the imported scene row count, reserved scene capacity, command capacity, record
+size, transient ownership storage, and total output bytes without GPU readback.
+
+## Performance notes
+
+### Subgroup acceleration
+
+When the device exposes WebGPU subgroups, draw generation combines eligible and published rows
+within each subgroup before updating the global diagnostic counters. Dense visible scenes therefore
+perform substantially fewer contended atomic operations while preserving deterministic slot
+ownership, exact counts, and overflow reporting. Devices without subgroup support record the
+portable per-row counter path automatically.
+
+## Current scope
+
+This operation provides deterministic explicit-slot publication and overflow reporting. It does
+not allocate slots, issue render calls, or mutate scene records. Resource grouping remains a
+separate renderer-owned contract implemented by `GPUSceneResourceGroups`.
+
+See also [`GPUScene`](/docs/api-reference/experimental/gpu-core/gpu-scene),
+[`GPUVisibilityWorkflow`](/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow),
+and [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-core/draw-command-buffer).

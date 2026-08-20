@@ -1,10 +1,12 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # ANARI Cameras, Renderers, and Frames
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
-  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+</DocumentationBadges>
 
 An `ANARICamera` describes the view, an `ANARIRenderer` selects shading and presentation settings, and an `ANARIFrame` combines both with a world to produce an image.
 
@@ -237,8 +239,8 @@ Indirect multi-bounce path tracing, denoising, and volumes are also unsupported.
 accepted for forward compatibility but does not enable indirect bounces.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
-and temporal reconstruction roadmap, see
-[ray-tracing technique background and tradeoffs](/docs/api-guide/engine/anari-rendering#ray-tracing-technique-background-and-tradeoffs).
+and temporal reconstruction policy, see
+[ray-tracing technique background and tradeoffs](/docs/api-guide/engine/anari-architecture#ray-tracing-technique-background-and-tradeoffs).
 
 Applications can also
 [register custom renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes).

@@ -234,6 +234,10 @@ export {
   type GPUAnalyticsTypeMapForArrow
 } from './arrow/gpu/arrow-gpu-analytics-adapters';
 export {
+  makeArrowTableFromGPUAnalyticsTable,
+  type ArrowTableFromGPUAnalyticsTableProps
+} from './arrow/gpu/arrow-gpu-analytics-readback';
+export {
   getRequiredArrowGPUVectorDataType,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,

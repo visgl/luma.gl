@@ -12,7 +12,7 @@ import {
   type GraphVectorView,
   type GraphBufferUse,
   type GraphDataView
-} from '../gpu-primitives/gpu-command-graph';
+} from '../gpu-core/gpu-command-graph';
 import {
   doGraphDataViewsOverlap,
   getViewBinding,
@@ -20,7 +20,7 @@ import {
   getViewElementOffset,
   validateMatchingVectorTopology,
   validatePackedView
-} from '../gpu-primitives/graph-data-view-utils';
+} from '../gpu-core/graph-data-view-utils';
 
 export const GEOSPATIAL_WORKGROUP_SIZE = 256;
 export const POSITION_FORMATS = ['float32x2', 'uint32x4'] as const;

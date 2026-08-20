@@ -9,13 +9,13 @@ sidebar_custom_props:
   topics: [compute, projection, geospatial, gpgpu, deck.gl]
 ---
 
-import {DeckLuSpatialTaxiExample} from '@site/src/examples';
+import {DeckGPUSpatialTaxiExample} from '@site/src/examples';
 
-<DeckLuSpatialTaxiExample />
+<DeckGPUSpatialTaxiExample />
 
 This focused integration keeps projection, spatial compute, and map rendering in their natural
 layers. The deck.gl `MapView` owns pan, zoom, picking, and the camera; MapLibre supplies a
-synchronized dark basemap; `@luma.gl/experimental/luproj` projects the source coordinates; and
+synchronized dark basemap; `@luma.gl/experimental/gpu-project` projects the source coordinates; and
 `@luma.gl/experimental/geospatial` indexes and queries the resident points.
 
 The uniform grid stores position-row indices, keeping candidate addressing distinct from optional

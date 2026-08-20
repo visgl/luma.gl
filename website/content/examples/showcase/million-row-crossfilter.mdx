@@ -1,6 +1,6 @@
 ---
 title: 'Million-Row Crossfilter Explorer'
-description: Brush one million GPU-resident points with LuxFilter across linked maps, scatterplots, histograms, and categorical distributions without CPU readback.
+description: Brush one million GPU-resident points with GPUCrossfilter across linked maps, scatterplots, histograms, and categorical distributions without CPU readback.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
@@ -20,9 +20,9 @@ histogram range to narrow the visible points, or apply a preset brush to inspect
 a meaningful slice immediately. Multiple active dimensions intersect without
 moving those rows back to the CPU.
 
-The example is built on the optional `@luma.gl/experimental/luxfilter` entry
+The example is built on the optional `@luma.gl/experimental/gpu-crossfilter` entry
 point. Each dimension evaluates its current range or rectangular bounds into a
-source-aligned GPU mask. `LuxFilter` combines those masks, updates linked
+source-aligned GPU mask. `GPUCrossfilter` combines those masks, updates linked
 histograms and grouped summaries, and publishes compacted, stable source-row
 identifiers for downstream consumers on one reusable `GPUCommandGraph`. The map
 and scatterplot renderer draws source rows directly using the shared,

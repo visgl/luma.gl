@@ -47,6 +47,162 @@ export const TRACE_PANEL_STYLE = /* css */ `
     margin: 4px 0 0;
     color: #bcc9dc;
   }
+  [data-trace-dashboard] .trace-capability-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  [data-trace-dashboard] .trace-capability-list span {
+    padding: 2px 5px;
+    border: 1px solid rgb(125 211 252 / 16%);
+    border-radius: 999px;
+    background: rgb(24 54 78 / 38%);
+    color: #a9c7de;
+    font: 650 8px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-load-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 31px;
+    padding: 7px 9px;
+    border: 1px solid rgb(125 211 252 / 25%);
+    border-radius: 7px;
+    background: rgb(17 39 59 / 68%);
+    color: #c1d7e9;
+    font: 9px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-load-banner[data-phase='error'] {
+    border-color: rgb(227 151 99 / 42%);
+    background: rgb(91 45 28 / 32%);
+    color: #f1c7aa;
+  }
+  [data-trace-dashboard] .trace-load-banner[hidden] { display: none; }
+  [data-trace-dashboard] .trace-load-spinner {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border: 2px solid rgb(125 211 252 / 18%);
+    border-top-color: #7dc7eb;
+    border-radius: 50%;
+    animation: trace-load-spin .8s linear infinite;
+  }
+  [data-trace-dashboard] .trace-load-banner[data-phase='error'] .trace-load-spinner {
+    border-color: rgb(227 151 99 / 18%);
+    border-top-color: #e39763;
+    animation: none;
+  }
+  @keyframes trace-load-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    [data-trace-dashboard] .trace-load-spinner { animation-duration: 1.8s; }
+  }
+  [data-trace-dashboard] .trace-showcase-card,
+  [data-trace-dashboard] .trace-analysis-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 10px;
+    border: 1px solid rgb(125 211 252 / 22%);
+    border-radius: 8px;
+    background:
+      linear-gradient(135deg, rgb(27 66 91 / 40%), transparent 60%),
+      rgb(9 18 31 / 82%);
+  }
+  [data-trace-dashboard] .trace-showcase-card strong,
+  [data-trace-dashboard] .trace-analysis-hero > strong {
+    display: block;
+    margin-top: 3px;
+    color: #e6f0fb;
+    font-size: 12px;
+    font-weight: 650;
+  }
+  [data-trace-dashboard] .trace-showcase-card p,
+  [data-trace-dashboard] .trace-analysis-hero p {
+    margin: 4px 0 8px;
+    color: #9fb2c9;
+    font-size: 9px;
+  }
+  [data-trace-dashboard] .trace-showcase-card button {
+    border-color: rgb(125 211 252 / 28%);
+    background: rgb(41 90 120 / 50%);
+    color: #dcefff;
+  }
+  [data-trace-dashboard] .trace-live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: #6dc59a;
+    box-shadow: 0 0 0 3px rgb(109 197 154 / 10%);
+  }
+  [data-trace-dashboard] .trace-analysis-pipeline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    overflow-x: auto;
+  }
+  [data-trace-dashboard] .trace-analysis-pipeline span {
+    flex: 0 0 auto;
+    padding: 4px 5px;
+    border: 1px solid var(--trace-border-soft);
+    border-radius: 5px;
+    background: rgb(10 23 39 / 72%);
+    color: #adc1d7;
+    font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-analysis-pipeline b {
+    color: #78bfe6;
+    font-weight: 750;
+  }
+  [data-trace-dashboard] .trace-analysis-pipeline i {
+    color: #58738f;
+    font-style: normal;
+  }
+  [data-trace-dashboard] .trace-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+    white-space: nowrap;
+  }
+  [data-trace-dashboard] .trace-scope-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+  [data-trace-dashboard] .trace-scope-options button {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+    padding: 6px 5px;
+    background: rgb(10 20 34 / 64%);
+    text-align: left;
+  }
+  [data-trace-dashboard] .trace-scope-options button strong {
+    overflow: hidden;
+    font-size: 9px;
+    text-overflow: ellipsis;
+  }
+  [data-trace-dashboard] .trace-scope-options button span {
+    overflow: hidden;
+    color: #7287a1;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-trace-dashboard] .trace-scope-options button[aria-pressed='true'] {
+    border-color: rgb(125 211 252 / 45%);
+    background: rgb(45 84 113 / 58%);
+    box-shadow: inset 0 0 0 1px rgb(125 211 252 / 8%);
+  }
+  [data-trace-dashboard] .trace-scope-options button[aria-pressed='true'] span {
+    color: #a8c3da;
+  }
   [data-trace-dashboard] .trace-section {
     min-width: 0;
     padding: 8px;
@@ -94,6 +250,16 @@ export const TRACE_PANEL_STYLE = /* css */ `
     padding: 6px;
   }
   [data-trace-dashboard] .trace-frame-metric-grid .trace-metric-value { font-size: 12px; }
+  [data-trace-dashboard] .trace-graph-diagnostic {
+    padding: 7px 8px;
+    border: 1px solid rgb(227 151 99 / 42%);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: rgb(91 45 28 / 32%);
+    color: #f1c7aa;
+    font: 9px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-graph-diagnostic[hidden] { display: none; }
   [data-trace-dashboard] .trace-tabs {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -125,6 +291,40 @@ export const TRACE_PANEL_STYLE = /* css */ `
     min-width: 0;
   }
   [data-trace-dashboard] .trace-tab-panel[hidden] { display: none; }
+  [data-trace-dashboard] .trace-feature-hero { border-color: rgb(124 153 194 / 28%); }
+  [data-trace-dashboard] .trace-feature-list {
+    display: grid;
+    gap: 5px;
+  }
+  [data-trace-dashboard] .trace-feature-card {
+    display: grid;
+    gap: 4px;
+    padding: 7px 8px;
+    border: 1px solid var(--trace-border-soft);
+    border-radius: 6px;
+    background: linear-gradient(145deg, rgb(20 31 48 / 72%), rgb(9 16 27 / 60%));
+  }
+  [data-trace-dashboard] .trace-feature-card > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  [data-trace-dashboard] .trace-feature-card strong {
+    color: var(--trace-text);
+    font: 650 10px/1.3 system-ui, sans-serif;
+  }
+  [data-trace-dashboard] .trace-feature-card span {
+    max-width: 48%;
+    color: #8eb8d8;
+    font: 8px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-align: right;
+  }
+  [data-trace-dashboard] .trace-feature-card p {
+    margin: 0;
+    color: var(--trace-text-muted);
+    font: 9px/1.4 system-ui, sans-serif;
+  }
   [data-trace-dashboard] .trace-metric-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
@@ -135,10 +335,40 @@ export const TRACE_PANEL_STYLE = /* css */ `
     min-width: 0;
     min-height: 54px;
     padding: 7px 8px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid var(--trace-border-soft);
     border-radius: 6px;
     background: linear-gradient(145deg, rgb(22 35 55 / 74%), rgb(10 18 30 / 62%));
+  }
+  [data-trace-dashboard] .trace-metric-card:hover,
+  [data-trace-dashboard] .trace-metric-card:focus-visible { z-index: 20; outline: none; }
+  [data-trace-dashboard] .trace-metric-card::before {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 50%;
+    width: min(230px, calc(100vw - 42px));
+    padding: 7px 8px;
+    border: 1px solid rgb(125 211 252 / 30%);
+    border-radius: 6px;
+    background: rgb(6 12 22 / 97%);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 42%);
+    color: #c9d8ea;
+    content: attr(data-tooltip);
+    font: 9px/1.4 system-ui, sans-serif;
+    letter-spacing: normal;
+    opacity: 0;
+    pointer-events: none;
+    text-align: left;
+    text-transform: none;
+    transform: translate(-50%, -3px);
+    transition: opacity 100ms ease, transform 100ms ease;
+    white-space: normal;
+  }
+  [data-trace-dashboard] .trace-metric-card:hover::before,
+  [data-trace-dashboard] .trace-metric-card:focus-visible::before {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
   [data-trace-dashboard] .trace-metric-card::after {
     position: absolute;
@@ -293,6 +523,179 @@ export const TRACE_PANEL_STYLE = /* css */ `
     color: #d8e5f5;
     font: 600 9px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
     text-align: right;
+  }
+  [data-trace-dashboard] .trace-analysis-histogram {
+    display: grid;
+    gap: 3px;
+  }
+  [data-trace-dashboard] .trace-analysis-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  [data-trace-dashboard] .trace-group-profile {
+    display: grid;
+    gap: 7px;
+  }
+  [data-trace-dashboard] .trace-analysis-subheader { margin-top: 10px; }
+  [data-trace-dashboard] .trace-status-profile {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  [data-trace-dashboard] .trace-status-card {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    padding: 5px;
+    border: 1px solid color-mix(in srgb, var(--trace-status-color), transparent 72%);
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--trace-status-color), transparent 92%);
+  }
+  [data-trace-dashboard] .trace-status-card span {
+    overflow: hidden;
+    color: #aabbd0;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+  }
+  [data-trace-dashboard] .trace-status-card i {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin-right: 4px;
+    border-radius: 50%;
+    background: var(--trace-status-color);
+  }
+  [data-trace-dashboard] .trace-status-card strong {
+    color: #e1ebf7;
+    font: 650 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-status-card small {
+    color: #7489a2;
+    font: 7px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-group-row {
+    display: grid;
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid var(--trace-border-soft);
+    border-radius: 6px;
+    background: rgb(9 18 31 / 56%);
+  }
+  [data-trace-dashboard] .trace-group-heading,
+  [data-trace-dashboard] .trace-group-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  [data-trace-dashboard] .trace-group-heading span {
+    color: #c5d4e6;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+  [data-trace-dashboard] .trace-group-heading i {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 5px;
+    border-radius: 2px;
+    background: var(--trace-group-color);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--trace-group-color), transparent 55%);
+  }
+  [data-trace-dashboard] .trace-group-heading strong {
+    color: #e4eef9;
+    font: 650 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-group-track {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgb(83 107 134 / 18%);
+  }
+  [data-trace-dashboard] .trace-group-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--trace-group-color);
+    opacity: .78;
+  }
+  [data-trace-dashboard] .trace-group-details {
+    color: #7489a2;
+    font: 7px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  [data-trace-dashboard] .trace-analysis-row {
+    display: grid;
+    grid-template-columns: 62px minmax(30px, 1fr) 58px;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 2px 3px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--trace-text-muted);
+    font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-align: left;
+  }
+  [data-trace-dashboard] .trace-analysis-row:hover,
+  [data-trace-dashboard] .trace-analysis-row[aria-pressed='true'] {
+    border-color: rgb(125 211 252 / 24%);
+    background: rgb(32 57 84 / 42%);
+  }
+  [data-trace-dashboard] .trace-analysis-row strong {
+    overflow: hidden;
+    color: #cbd8e9;
+    font-weight: 550;
+    text-align: right;
+    text-overflow: ellipsis;
+  }
+  [data-trace-dashboard] .trace-analysis-label { white-space: nowrap; }
+  [data-trace-dashboard] .trace-analysis-track {
+    height: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgb(81 107 139 / 18%);
+  }
+  [data-trace-dashboard] .trace-analysis-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #629abe;
+  }
+  [data-trace-dashboard] .trace-utilization-chart {
+    display: grid;
+    grid-template-columns: repeat(32, minmax(2px, 1fr));
+    align-items: end;
+    gap: 2px;
+    height: 70px;
+    padding: 6px 5px 4px;
+    border: 1px solid var(--trace-border-soft);
+    border-radius: 6px;
+    background:
+      linear-gradient(to top, rgb(125 211 252 / 7%) 1px, transparent 1px) 0 50% / 100% 50%,
+      rgb(7 14 24 / 48%);
+  }
+  [data-trace-dashboard] .trace-utilization-chart button {
+    display: flex;
+    align-items: end;
+    height: 100%;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 2px 2px 0 0;
+    background: transparent;
+  }
+  [data-trace-dashboard] .trace-utilization-chart button:hover {
+    background: rgb(125 211 252 / 10%);
+  }
+  [data-trace-dashboard] .trace-utilization-chart button span {
+    width: 100%;
+    border-radius: 2px 2px 0 0;
+    background: linear-gradient(to top, #315f78, #72aac7);
   }
   [data-trace-dashboard] .trace-hierarchy-row {
     display: grid;

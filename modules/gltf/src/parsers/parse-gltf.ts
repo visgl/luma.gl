@@ -10,6 +10,7 @@ import {
 } from '@loaders.gl/gltf';
 import {Device, type PrimitiveTopology, type Texture} from '@luma.gl/core';
 import {
+  decodeMorphTargetAttribute,
   Geometry,
   GeometryAttribute,
   GroupNode,
@@ -17,12 +18,11 @@ import {
   MaterialFactory,
   ModelNode,
   type ModelProps,
-  type MorphTargetAttributes,
-  decodeMorphTargetAttribute
+  type MorphTargetAttributes
 } from '@luma.gl/engine';
 import {pbrMaterial} from '@luma.gl/shadertools';
 import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
-import {getGLTFNodeInstancing, type GLTFGPUInstancing} from '../gltf/gltf-instancing';
+import {type GLTFGPUInstancing, getGLTFNodeInstancing} from '../gltf/gltf-instancing';
 import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
 import {type PBREnvironment} from '../pbr/pbr-environment';
@@ -196,7 +196,11 @@ export function parseGLTF(
         const weights =
           gltfNode.weights || sourceMesh.weights || new Array<number>(targetCount).fill(0);
         node.userData['morphMeshes'] = [ownedMesh];
-        setGLTFMorphWeights(node, weights);
+        if (combinedOptions.modelOptions?.userData?.['gltfAnimatedCrowd']) {
+          node.userData['morphWeights'] = [...weights];
+        } else {
+          setGLTFMorphWeights(node, weights);
+        }
       }
     }
   });
@@ -315,6 +319,7 @@ function createNodeForGLTFPrimitive({
     : getVertexCount(gltfPrimitive.attributes);
 
   const geometry = createGeometry(id, gltfPrimitive, topology);
+  const morphTargetState = createGLTFMorphTargetState(gltfPrimitive, gltf, geometry);
 
   const parsedPPBRMaterial = parseOwnedPBRMaterial(
     device,
@@ -333,7 +338,8 @@ function createNodeForGLTFPrimitive({
     modelOptions: options.modelOptions,
     vertexCount,
     bounds: [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max],
-    instanceMatrices: instancing?.matrices
+    instanceMatrices: instancing?.matrices,
+    morphTargets: morphTargetState?.targets
   });
 
   if (instancing) {
@@ -379,42 +385,51 @@ function createNodeForGLTFPrimitive({
     } satisfies GLTFPrimitiveMaterialVariants;
   }
 
-  if (gltfPrimitive.targets?.length) {
-    const baseAttributes: MorphTargetAttributes = {};
-    for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
-      const values = geometry.attributes[attributeName]?.value;
-      if (values instanceof Float32Array) {
-        baseAttributes[attributeName] = new Float32Array(values);
-      }
-    }
-
-    const targets = gltfPrimitive.targets.map(
-      (target: Record<string, number | {value?: Float32Array}>) => {
-        const attributes: MorphTargetAttributes = {};
-        for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
-          const accessorReference = target[attributeName];
-          const accessor =
-            typeof accessorReference === 'number'
-              ? gltf.accessors[accessorReference]
-              : accessorReference;
-          if (accessor?.value && ArrayBuffer.isView(accessor.value)) {
-            attributes[attributeName] = decodeMorphTargetAttribute(accessor as GeometryAttribute);
-          }
-        }
-        return attributes;
-      }
-    );
-    modelNode.userData['morphTargets'] = {
-      geometry,
-      baseAttributes,
-      targets
-    } satisfies GLTFMorphTargetState;
+  if (morphTargetState) {
+    modelNode.userData['morphTargets'] = morphTargetState;
   }
 
   // TODO this holds on to all the CPU side texture and attribute data
   // modelNode.material =  gltfPrimitive.material;
 
   return modelNode;
+}
+
+function createGLTFMorphTargetState(
+  gltfPrimitive: any,
+  gltf: GLTFPostprocessed,
+  geometry: Geometry
+): GLTFMorphTargetState | undefined {
+  if (!gltfPrimitive.targets?.length) {
+    return undefined;
+  }
+
+  const baseAttributes: MorphTargetAttributes = {};
+  for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
+    const values = geometry.attributes[attributeName]?.value;
+    if (values instanceof Float32Array) {
+      baseAttributes[attributeName] = new Float32Array(values);
+    }
+  }
+
+  const targets = gltfPrimitive.targets.map(
+    (target: Record<string, number | {value?: Float32Array}>) => {
+      const attributes: MorphTargetAttributes = {};
+      for (const attributeName of ['POSITION', 'NORMAL', 'TANGENT'] as const) {
+        const accessorReference = target[attributeName];
+        const accessor =
+          typeof accessorReference === 'number'
+            ? gltf.accessors[accessorReference]
+            : accessorReference;
+        if (accessor?.value && ArrayBuffer.isView(accessor.value)) {
+          attributes[attributeName] = decodeMorphTargetAttribute(accessor as GeometryAttribute);
+        }
+      }
+      return attributes;
+    }
+  );
+
+  return {geometry, baseAttributes, targets};
 }
 
 /** Computes the vertex count for a primitive without indices. */

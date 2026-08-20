@@ -1,3 +1,8 @@
+---
+title: Developer guide
+description: Set up, test, debug, profile, document, and ship luma.gl applications and contributions.
+---
+
 import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
 
 # Developer Guide

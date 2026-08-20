@@ -111,6 +111,20 @@ const {
 module.exports = {
   ...baseConfig,
   baseUrl: websiteBaseUrl,
+  themeConfig: {
+    ...baseConfig.themeConfig,
+    footer: baseConfig.themeConfig?.footer
+      ? {
+          ...baseConfig.themeConfig.footer,
+          links: baseConfig.themeConfig.footer.links.map(section => ({
+            ...section,
+            items: section.items.map(item =>
+              item.label === 'deck.gl' ? {...item, href: 'https://deck.gl'} : item
+            )
+          }))
+        }
+      : undefined
+  },
   staticDirectories: [...staticDirectories, '.generated/example-assets'],
   presets: basePresets.map(preset => {
     if (Array.isArray(preset) && preset[0] === 'classic') {
@@ -196,6 +210,42 @@ module.exports = {
         sidebar: {
           autoConfiguration: false
         }
+      }
+    ],
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        id: 'engine-api-reference',
+        name: '@luma.gl/engine generated API',
+        entryPoints: ['../modules/engine/src/index.ts'],
+        tsconfig: '../modules/engine/tsconfig.json',
+        out: '../docs/api-reference/generated/engine',
+        docsPath: '../docs',
+        readme: 'none',
+        excludeInternal: true,
+        excludePrivate: true,
+        excludeProtected: true,
+        blockTags: [...typedocOptionDefaults.blockTags, '@note', '@todo'],
+        gitRevision: 'master',
+        sidebar: {autoConfiguration: false}
+      }
+    ],
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        id: 'shadertools-api-reference',
+        name: '@luma.gl/shadertools generated API',
+        entryPoints: ['../modules/shadertools/src/index.ts'],
+        tsconfig: '../modules/shadertools/tsconfig.json',
+        out: '../docs/api-reference/generated/shadertools',
+        docsPath: '../docs',
+        readme: 'none',
+        excludeInternal: true,
+        excludePrivate: true,
+        excludeProtected: true,
+        blockTags: [...typedocOptionDefaults.blockTags, '@note', '@todo'],
+        gitRevision: 'master',
+        sidebar: {autoConfiguration: false}
       }
     ],
     function deckCommunitySourceAliases() {

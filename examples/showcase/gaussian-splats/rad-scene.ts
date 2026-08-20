@@ -50,6 +50,28 @@ export type GaussianSplatRADSceneControllerProps = {
   onError?: (error: unknown) => void;
 };
 
+/** CPU traversal, source-page demand, and exact residency measurements for one RAD scene. */
+export type GaussianSplatRADSceneDiagnostics = SplatRADHierarchyStats & {
+  /** Page fetch/decode/upload operations still in flight outside hierarchy traversal. */
+  pendingPageCount: number;
+  /** Whether another bounded unchanged-camera traversal slice can improve this frontier. */
+  hasPendingTraversal: boolean;
+  /** Number of bounded hierarchy update or continuation slices spent for this scene. */
+  traversalPassCount: number;
+  /** CPU time spent by the most recent bounded hierarchy slice. */
+  lastTraversalDurationMilliseconds: number;
+  /** Number of complete source pages admitted after range fetch, decode, and GPU upload. */
+  loadedPageCount: number;
+  /** Time spent fetching, decoding, uploading, and admitting the most recent source page. */
+  lastPageLoadDurationMilliseconds: number;
+  /** Intact source pages retained by the exact residency window. */
+  residentPageCount: number;
+  /** Original source rows retained by the exact residency window. */
+  residentSplatCount: number;
+  /** Exact retained source GPU allocation across independent pages. */
+  residentGpuByteLength: number;
+};
+
 /**
  * Loads only camera-requested RAD pages and preserves their original row hierarchy.
  *
@@ -70,11 +92,38 @@ export class GaussianSplatRADSceneController {
   private readonly rejectedPageIndices = new Set<number>();
   private currentView?: SplatHierarchyView;
   private demandRefreshScheduled = false;
+  private hierarchyRefreshScheduled = false;
+  private traversalPassCount = 0;
+  private lastTraversalDurationMilliseconds = 0;
+  private loadedPageCount = 0;
+  private lastPageLoadDurationMilliseconds = 0;
   private isDestroyed = false;
 
   /** Number of independently requested source pages still fetching, decoding, or uploading. */
   get pendingPageCount(): number {
     return this.pendingPageLoads.size;
+  }
+
+  /** Whether another unchanged-camera hierarchy slice can improve the current frontier. */
+  get hasPendingTraversal(): boolean {
+    return this.hierarchy.hasPendingTraversal;
+  }
+
+  /** Current traversal, demand, page-load, and exact source-residency measurements. */
+  get diagnostics(): GaussianSplatRADSceneDiagnostics {
+    const residencyStats = this.hierarchy.residencyManager.stats;
+    return {
+      ...this.hierarchy.stats,
+      pendingPageCount: this.pendingPageLoads.size,
+      hasPendingTraversal: this.hierarchy.hasPendingTraversal,
+      traversalPassCount: this.traversalPassCount,
+      lastTraversalDurationMilliseconds: this.lastTraversalDurationMilliseconds,
+      loadedPageCount: this.loadedPageCount,
+      lastPageLoadDurationMilliseconds: this.lastPageLoadDurationMilliseconds,
+      residentPageCount: residencyStats.residentChunkCount,
+      residentSplatCount: residencyStats.residentSplatCount,
+      residentGpuByteLength: residencyStats.residentGpuByteLength
+    };
   }
 
   constructor(props: GaussianSplatRADSceneControllerProps) {
@@ -109,13 +158,12 @@ export class GaussianSplatRADSceneController {
     if (view) {
       this.currentView = view;
     }
-    const admitted = await this.loadSourcePage(0, Number.MAX_SAFE_INTEGER);
+    const admitted = await this.loadSourcePage(0, Number.MAX_SAFE_INTEGER, false);
     if (!admitted && !this.isDestroyed) {
       throw new RangeError('The RAD root page exceeds the resident source budget.');
     }
     if (this.currentView && !this.isDestroyed) {
-      this.hierarchy.update(this.currentView);
-      this.scheduleDemandRefresh();
+      this.refreshHierarchyNow();
     }
   }
 
@@ -126,9 +174,15 @@ export class GaussianSplatRADSceneController {
     }
     this.currentView = view;
     this.rejectedPageIndices.clear();
-    const frontier = this.hierarchy.update(view);
-    this.scheduleDemandRefresh();
-    return frontier;
+    return this.runHierarchyTraversal(() => this.hierarchy.update(view));
+  }
+
+  /** Advances one bounded unchanged-camera refinement slice without restarting prior work. */
+  continueTraversal(maxTraversalRows?: number): readonly SplatRADHierarchyFrontierEntry[] {
+    if (this.isDestroyed) {
+      return [];
+    }
+    return this.runHierarchyTraversal(() => this.hierarchy.continueTraversal(maxTraversalRows));
   }
 
   /** Updates synchronous traversal bounds without replacing independently resident source pages. */
@@ -136,13 +190,20 @@ export class GaussianSplatRADSceneController {
     if (this.isDestroyed) {
       return;
     }
-    this.hierarchy.setTraversalBudget(maxTraversalRows);
-    this.scheduleDemandRefresh();
+    this.runHierarchyTraversal(() => {
+      this.hierarchy.setTraversalBudget(maxTraversalRows);
+      return this.hierarchy.frontier;
+    });
   }
 
   /** Waits for the currently requested page queue; useful for deterministic integration tests. */
   async waitForIdle(): Promise<void> {
-    while (!this.isDestroyed && (this.demandRefreshScheduled || this.pendingPageLoads.size > 0)) {
+    while (
+      !this.isDestroyed &&
+      (this.demandRefreshScheduled ||
+        this.hierarchyRefreshScheduled ||
+        this.pendingPageLoads.size > 0)
+    ) {
       await Promise.resolve();
       const pendingPageLoads = [...this.pendingPageLoads.values()];
       if (pendingPageLoads.length > 0) {
@@ -161,6 +222,44 @@ export class GaussianSplatRADSceneController {
     this.hierarchy.destroy();
     this.pendingPageLoads.clear();
     this.rejectedPageIndices.clear();
+  }
+
+  /** Coalesces page admissions into one bounded hierarchy refresh on the next microtask. */
+  private scheduleHierarchyRefresh(): void {
+    if (this.isDestroyed || !this.currentView || this.hierarchyRefreshScheduled) {
+      return;
+    }
+    this.hierarchyRefreshScheduled = true;
+    queueMicrotask(() => {
+      if (!this.hierarchyRefreshScheduled) {
+        return;
+      }
+      this.hierarchyRefreshScheduled = false;
+      if (!this.isDestroyed && this.currentView) {
+        this.runHierarchyTraversal(() => this.hierarchy.update(this.currentView!));
+      }
+    });
+  }
+
+  /** Refreshes the latest camera immediately when startup or an explicit caller needs it. */
+  private refreshHierarchyNow(): readonly SplatRADHierarchyFrontierEntry[] {
+    if (!this.currentView) {
+      return [];
+    }
+    return this.runHierarchyTraversal(() => this.hierarchy.update(this.currentView!));
+  }
+
+  /** Runs one hierarchy slice, records its CPU cost, and refreshes page demand once afterward. */
+  private runHierarchyTraversal(
+    traverse: () => readonly SplatRADHierarchyFrontierEntry[]
+  ): readonly SplatRADHierarchyFrontierEntry[] {
+    this.hierarchyRefreshScheduled = false;
+    const startMilliseconds = performance.now();
+    const frontier = traverse();
+    this.lastTraversalDurationMilliseconds = performance.now() - startMilliseconds;
+    this.traversalPassCount++;
+    this.scheduleDemandRefresh();
+    return frontier;
   }
 
   private scheduleDemandRefresh(): void {
@@ -227,12 +326,17 @@ export class GaussianSplatRADSceneController {
     }
   }
 
-  private async loadSourcePage(chunkIndex: number, priority: number): Promise<boolean> {
+  private async loadSourcePage(
+    chunkIndex: number,
+    priority: number,
+    scheduleRefresh = true
+  ): Promise<boolean> {
     const sourceChunk = this.source.metadata.chunks[chunkIndex];
     if (!sourceChunk) {
       return false;
     }
 
+    const startMilliseconds = performance.now();
     const sourcePageId = `rad:${chunkIndex}`;
     const sourceHarmonicDegree = Math.min(Math.max(this.source.metadata.maxSh ?? 0, 0), 3);
     const coefficientCount = ((sourceHarmonicDegree + 1) ** 2 - 1) * 3;
@@ -269,11 +373,12 @@ export class GaussianSplatRADSceneController {
       return false;
     }
 
+    this.loadedPageCount++;
+    this.lastPageLoadDurationMilliseconds = performance.now() - startMilliseconds;
     this.onPageLoad?.(page, this.hierarchy.stats);
-    if (this.currentView) {
-      this.hierarchy.update(this.currentView);
+    if (scheduleRefresh) {
+      this.scheduleHierarchyRefresh();
     }
-    this.scheduleDemandRefresh();
     return true;
   }
 }

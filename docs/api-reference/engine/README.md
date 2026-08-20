@@ -1,30 +1,93 @@
-# Overview
+---
+title: Engine
+description: Render models with geometry and shader inputs, manage redraw and interaction, and compose animation, scenes, compute, and passes.
+---
 
-The `@luma.gl/engine` module contains higher-level rendering and application framework classes built on top of `@luma.gl/core`.
+import {HelloTriangleGeometryExample} from '@site/src/examples';
+import {ClientOnlyLiveExample} from '@site/src/components/docs/client-only-live-example';
+import {DocumentationExampleCard} from '@site/src/components/docs/documentation-example-card';
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+import {EngineCoreMapping, FoundationAdjacency, FoundationAPIIndex, FoundationFeatureCard, FoundationReadingPath, FoundationTerminology} from '@site/src/components/docs/foundation-docs';
 
-Use the engine module when you want luma.gl to manage the common rendering workflow for you:
-creating pipelines from shaders, binding buffers and textures, handling redraw state, and issuing draw calls through a small set of reusable classes.
+# Engine
 
-## Start Here
+<EngineDocsTabs group="starting" active="engine-reference" />
 
-- [`Model`](/docs/api-reference/engine/model) is the central rendering class and the page most users are looking for when they want the main luma.gl drawing API.
-- [`Materials`](/docs/api-guide/engine/materials) explains what `Material` and `MaterialFactory` represent in the engine layer.
-- [`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer), [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture), and [`VideoTexture`](/docs/api-reference/engine/video-texture) provide stable engine-level wrappers for GPU resources and live texture sources that can be replaced or initialized over time. Experimental v10 [`@luma.gl/experimental`](/docs/api-reference/experimental) WebXR helpers use the same binding-source path for WebXR Raw Camera Access without making WebXR part of the engine module.
-- [`ClipSpace`](/docs/api-reference/engine/clip-space) and [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model) provide ready-made fullscreen rendering helpers.
-- [`AnimationLoop`](/docs/api-reference/engine/animation-loop) manages per-frame rendering and animation state.
-- [`OrbitControls`](/docs/api-reference/engine/orbit-controls) adds pointer-driven camera orbit, wheel zoom, configurable pitch and distance limits, and optional automatic rotation to an HTML canvas.
-- [`AnimationMixer`, `AnimationClip`, and `AnimationTrack`](/docs/api-reference/engine/animation/animation-mixer) provide reusable keyframe playback, looping, interpolation, blending, and crossfades. The [animation programming guide](/docs/api-guide/engine/animation) covers complete playback examples.
-- [`Geometry`](/docs/api-reference/engine/geometry) and [`Geometries`](/docs/api-reference/engine/geometry/geometries) provide reusable mesh and attribute helpers.
-- [`Morph-target helpers`](/docs/api-reference/engine/animation/morph-targets) apply weighted vertex deformation and update existing model buffers without rebuilding rendering pipelines.
-- [`GPUGeometry`](/docs/api-reference/engine/geometry/gpu-geometry) describes already-uploaded geometry buffers.
-- [`Scenegraph`](/docs/api-guide/engine/scenegraph), [`GroupNode`](/docs/api-reference/engine/scenegraph/group-node), and [`ModelNode`](/docs/api-reference/engine/scenegraph/model-node) cover scenegraph organization.
-- [`PickingManager`](/docs/api-reference/engine/picking-manager) handles object picking and highlight state for models that use the engine picking shader modules.
-- [`Computation`](/docs/api-reference/engine/compute/computation), [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), and [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) cover engine-level compute workflows.
-- [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) applies shader passes to textures for postprocessing pipelines.
+## Overview
 
-## Remarks
+`@luma.gl/engine` turns common rendering patterns into reusable classes. `Geometry` describes
+CPU-side attributes, `ShaderInputs` manages shader-module values, and `Model` connects them to
+Core resources, pipelines, bindings, and draw calls while tracking redraw needs.
+The generated Engine API index at `/docs/api-reference/generated/engine` contains every public
+value and TypeScript type with source links.
 
-- The engine classes are built on top of the abstract API in `@luma.gl/core` and are portable between WebGPU and WebGL backends.
-- If you are coming from older luma.gl docs and are looking for `Program`, the current v9 API usually maps that workflow to [`Model`](/docs/api-reference/engine/model) for higher-level rendering or [`RenderPipeline`](/docs/api-reference/core/resources/render-pipeline) for lower-level pipeline control.
-- If you specifically need legacy `Program` documentation, use the [porting guide](/docs/legacy/porting-guide) and other legacy docs rather than treating it as the primary v9 API surface.
-- If you are coming from older docs looking for `Transform`, the current v9 engine APIs are [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform), and [`Computation`](/docs/api-reference/engine/compute/computation), depending on whether you are targeting WebGL transform feedback, texture-based transforms, or WebGPU compute passes.
+## When to use it
+
+Use Engine for most rendered applications. Drop to [Core](/docs/api-reference/core) when you
+need exact resource or command control. Use [Shadertools](/docs/api-reference/shadertools) to
+make shader behavior reusable. Add GPU Core only when work becomes a scheduled GPU dataflow;
+a single `Model` does not need a graph.
+
+## Live example
+
+This portable example maps the Engine objects to the Core work they manage.
+
+<DocumentationExampleCard
+  rows={[
+    {label: 'Engine', value: 'Geometry data + ShaderInputs-compatible shaders + Model + redraw lifecycle'},
+    {label: 'Core equivalents', value: 'Buffer + layouts/bindings + RenderPipeline + RenderPass'},
+    {label: 'Backend', value: 'best-available with WGSL and GLSL shader paths'},
+    {label: 'Lifecycle', value: 'Create once, draw on demand, destroy on finalize'}
+  ]}
+  fullPageHref="/examples/tutorials/hello-triangle-geometry"
+  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry"
+/>
+
+<ClientOnlyLiveExample
+  activationLabel="Run the Engine model example"
+  description="The example creates no GPU device or animation loop before activation."
+  height={420}
+>
+  <HelloTriangleGeometryExample />
+</ClientOnlyLiveExample>
+
+## Core concepts
+
+<FoundationTerminology module="engine" />
+
+The learning spine is: geometry, shader inputs, models, redraw/frame lifecycle, dynamic
+resources, interaction and picking, scenegraphs, animation, compute helpers, and
+postprocessing. Engine objects wrap Core resources but do not make ownership disappear.
+
+<EngineCoreMapping />
+
+## Feature card
+
+<FoundationFeatureCard module="engine" />
+
+## Workflows
+
+<FoundationReadingPath module="engine" />
+
+The [Engine cookbook](/docs/api-guide/engine/cookbook) covers rendering, updates, on-demand
+animation, picking and highlighting, scenes, and shader passes.
+
+## API index
+
+<FoundationAPIIndex module="engine" />
+
+## Limits and compatibility
+
+- Engine is portable where its underlying Core resources and shaders are portable.
+- Provide WGSL and GLSL when the same application must run on WebGPU and WebGL.
+- A redraw flag avoids unnecessary rendering only when the application honors it.
+- Experimental helpers are labeled in their individual references and may have narrower
+  backend support.
+
+## Related modules
+
+<FoundationAdjacency current="engine" />
+
+- Use [Core](/docs/api-reference/core) for direct resource and command control.
+- Use [Shadertools](/docs/api-reference/shadertools) for modules, hooks, and plugins.
+- Use [GPU Core](/docs/api-reference/experimental/gpu-core) for scheduled multi-stage GPU work.

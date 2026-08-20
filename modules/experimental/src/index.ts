@@ -263,12 +263,14 @@ export {OrbitControls} from './controls/orbit-controls';
 export type {
   FlatControllerPick,
   FlatControllerProps,
-  FlatViewState
+  FlatViewState,
+  RectangleSelection,
+  RectangleSelectControllerProps
 } from './controls/flat-controller';
-export {FlatController} from './controls/flat-controller';
+export {FlatController, RectangleSelectController} from './controls/flat-controller';
 
 export * from './webxr/index';
 
-export * from './gpu-primitives/index';
+export * from './gpu-core/index';
 
 export * from './simulation/index';

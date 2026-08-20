@@ -1,3 +1,5 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # PipelineFactory
 
 `PipelineFactory` caches and reuses [`RenderPipeline`](/docs/api-reference/core/resources/render-pipeline) and [`ComputePipeline`](/docs/api-reference/core/resources/compute-pipeline) instances for one device.
@@ -44,10 +46,10 @@ Returns a render pipeline. If caching is enabled and an equivalent cached wrappe
 
 ### `createComputePipeline(props: ComputePipelineProps): ComputePipeline`
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
-  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="webgpu">WebGPU supported</DocumentationBadge>
+  <DocumentationBadge tone="neutral">WebGL 2 not supported</DocumentationBadge>
+</DocumentationBadges>
 
 Equivalent cache-aware constructor for compute pipelines.
 

@@ -1,12 +1,13 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 # Shader Types
 
 <CoreDocsTabs group="shader-types" active="shader-types" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+</DocumentationBadges>
 
 The `@luma.gl/core` module defines the portable shader type descriptors used by
 luma.gl to describe uniform buffers, vertex attributes, and texture formats

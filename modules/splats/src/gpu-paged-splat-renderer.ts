@@ -129,6 +129,8 @@ type PlannedSourceSegment = {
   id: string;
   page: GPUPagedSplatPage;
   activeRows?: Uint32Array;
+  /** Stable source-window capacity retained while sparse frontier cardinality changes. */
+  capacityRowCount: number;
   activeRowCount: number;
   sourceRowOffset: number;
   sourceBindingRowOffset: number;
@@ -339,15 +341,20 @@ export class GPUPagedSplatRenderer {
     }
 
     const nextSegments = this.planSourceSegments(pages);
+    const nextActiveRowCount = nextSegments.reduce(
+      (totalRowCount, segment) => totalRowCount + segment.activeRowCount,
+      0
+    );
     const canReuseGraph =
       this.compiledGraph !== undefined &&
+      nextActiveRowCount <= this.globalSortCapacity &&
       nextSegments.length === this.sourceSegments.length &&
       nextSegments.every((segment, index) => {
         const previousSegment = this.sourceSegments[index];
         return (
           segment.id === previousSegment.id &&
           segment.page.data === previousSegment.page.data &&
-          segment.activeRowCount === previousSegment.activeRowCount &&
+          segment.capacityRowCount === previousSegment.capacityRowCount &&
           segment.sourceRowOffset === previousSegment.sourceRowOffset &&
           segment.sourceBindingRowOffset === previousSegment.sourceBindingRowOffset &&
           segment.sourceRowCount === previousSegment.sourceRowCount &&
@@ -474,7 +481,11 @@ export class GPUPagedSplatRenderer {
     if (this.isDestroyed) {
       return undefined;
     }
-    if (this.plannedSegments.length === 0) {
+    const activeRowCount = this.plannedSegments.reduce(
+      (totalRowCount, segment) => totalRowCount + segment.activeRowCount,
+      0
+    );
+    if (activeRowCount === 0) {
       if (!this.requiresEncoding || !this.hasPresentedContent) {
         return undefined;
       }
@@ -583,6 +594,7 @@ export class GPUPagedSplatRenderer {
   }
 
   private rebuildGraph(): void {
+    const previousGlobalSortCapacity = this.globalSortCapacity;
     this.releaseCompiledGraph();
     const activeRowCount = this.plannedSegments.reduce(
       (totalRowCount, segment) => totalRowCount + segment.activeRowCount,
@@ -599,9 +611,14 @@ export class GPUPagedSplatRenderer {
     ) {
       throw new Error('Paged Gaussian global sorting exceeds the device storage binding limit');
     }
-    this.globalSortCapacity = activeRowCount;
+    this.globalSortCapacity = Math.max(
+      previousGlobalSortCapacity,
+      getPagedSortCapacity(activeRowCount, maximumStorageByteLength)
+    );
     const graph = new GPUCommandGraph(this.device, {id: 'paged-gaussian-splat-render-graph'});
-    const outputSegmentCount = Math.ceil(activeRowCount / this.getMaximumProjectedSegmentRows());
+    const outputSegmentCount = Math.ceil(
+      this.globalSortCapacity / this.getMaximumProjectedSegmentRows()
+    );
     if (this.drawCommands.capacity < outputSegmentCount + 1) {
       this.drawCommands.destroy();
       this.drawCommands = this.createDrawCommands(outputSegmentCount + 1);
@@ -609,28 +626,32 @@ export class GPUPagedSplatRenderer {
 
     const depthKeys = this.importUint32Buffer(
       graph,
-      this.createOwnedBuffer('paged-gaussian-depth-keys', activeRowCount * 4),
-      activeRowCount
+      this.createOwnedBuffer('paged-gaussian-depth-keys', this.globalSortCapacity * 4),
+      this.globalSortCapacity
     );
     const sourceIndices = this.importUint32Buffer(
       graph,
-      this.createOwnedBuffer('paged-gaussian-source-indices', activeRowCount * 4),
-      activeRowCount
+      this.createOwnedBuffer('paged-gaussian-source-indices', this.globalSortCapacity * 4),
+      this.globalSortCapacity
     );
     const sortedKeys = this.importUint32Buffer(
       graph,
-      this.createOwnedBuffer('paged-gaussian-sorted-depths', activeRowCount * 4),
-      activeRowCount
+      this.createOwnedBuffer('paged-gaussian-sorted-depths', this.globalSortCapacity * 4),
+      this.globalSortCapacity
     );
     this.sortedValuesBuffer = this.createOwnedBuffer(
       'paged-gaussian-sorted-indices',
-      activeRowCount * 4
+      this.globalSortCapacity * 4
     );
-    const sortedIndices = this.importUint32Buffer(graph, this.sortedValuesBuffer, activeRowCount);
+    const sortedIndices = this.importUint32Buffer(
+      graph,
+      this.sortedValuesBuffer,
+      this.globalSortCapacity
+    );
     const inverseIndices = this.importUint32Buffer(
       graph,
-      this.createOwnedBuffer('paged-gaussian-inverse-indices', activeRowCount * 4),
-      activeRowCount
+      this.createOwnedBuffer('paged-gaussian-inverse-indices', this.globalSortCapacity * 4),
+      this.globalSortCapacity
     );
     this.semanticSelectionCapacity = Math.max(
       MINIMUM_SEMANTIC_SELECTION_CAPACITY,
@@ -666,7 +687,7 @@ export class GPUPagedSplatRenderer {
     for (let segmentIndex = 0; segmentIndex < outputSegmentCount; segmentIndex++) {
       const globalRowOffset = segmentIndex * this.getMaximumProjectedSegmentRows();
       const rowCount = Math.min(
-        activeRowCount - globalRowOffset,
+        this.globalSortCapacity - globalRowOffset,
         this.getMaximumProjectedSegmentRows()
       );
       const projectedRecordBuffer = this.createOwnedBuffer(
@@ -697,11 +718,11 @@ export class GPUPagedSplatRenderer {
   ): SourceSegment {
     const activeRowBuffer = this.createOwnedBuffer(
       `paged-gaussian-active-rows-${planned.id}`,
-      Math.max(planned.activeRows?.byteLength ?? 0, 4)
+      Math.max(planned.capacityRowCount * Uint32Array.BYTES_PER_ELEMENT, 4)
     );
     const projectedRecordBuffer = this.createOwnedBuffer(
       `paged-gaussian-projected-${planned.id}`,
-      planned.activeRowCount * GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
+      planned.capacityRowCount * GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
     );
     const uniformBuffer = this.createUniformBuffer(
       `paged-gaussian-uniforms-${planned.id}`,
@@ -826,7 +847,10 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
               activeRows: getBuffer(segment.graphActiveRows),
               graphUniforms: getBuffer(segment.graphUniforms)
             });
-            computation.dispatch(computePass, Math.ceil(segment.activeRowCount / WORKGROUP_SIZE));
+            computation.dispatch(
+              computePass,
+              Math.max(1, Math.ceil(segment.activeRowCount / WORKGROUP_SIZE))
+            );
           },
           destroy: () => computation.destroy()
         };
@@ -888,7 +912,10 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
               graphUniforms: getBuffer(segment.graphUniforms),
               featureUniforms: getBuffer(segment.graphFeatureUniforms)
             });
-            computation.dispatch(computePass, Math.ceil(segment.activeRowCount / WORKGROUP_SIZE));
+            computation.dispatch(
+              computePass,
+              Math.max(1, Math.ceil(segment.activeRowCount / WORKGROUP_SIZE))
+            );
           },
           destroy: () => computation.destroy()
         };
@@ -1013,7 +1040,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
             });
             computation.dispatch(
               computePass,
-              Math.ceil(sourceSegment.activeRowCount / WORKGROUP_SIZE)
+              Math.max(1, Math.ceil(sourceSegment.activeRowCount / WORKGROUP_SIZE))
             );
           },
           destroy: () => computation.destroy()
@@ -1267,7 +1294,7 @@ fn main() {
     const plannedSegments: PlannedSourceSegment[] = [];
     let globalRowOffset = 0;
     for (const page of pages) {
-      if (page.activeRows?.length === 0 || page.data.length === 0) {
+      if (page.data.length === 0) {
         continue;
       }
       const maximumStorageByteLength = this.device.limits.maxStorageBufferBindingSize;
@@ -1296,77 +1323,56 @@ fn main() {
       if (sourceWindowCapacity <= 0) {
         throw new Error('Paged Gaussian source columns exceed device storage range alignment');
       }
-      let pageSegmentIndex = 0;
-      if (page.activeRows) {
-        let activeRows: number[] = [];
-        let sourceWindowStart = -1;
-        const appendSparseSegment = (): void => {
-          if (activeRows.length === 0) {
-            return;
-          }
-          const offset = usesSourceRanges ? sourceWindowStart : 0;
-          const selectedRows = Uint32Array.from(activeRows, rowIndex => rowIndex - offset);
-          const sourceRowCount = usesSourceRanges
-            ? Math.min(sourceWindowCapacity, page.data.length - sourceWindowStart)
-            : page.data.length;
-          plannedSegments.push({
-            id: `${page.id}-${pageSegmentIndex++}`,
-            page,
-            activeRows: selectedRows,
-            activeRowCount: selectedRows.length,
-            sourceRowOffset: offset,
-            sourceBindingRowOffset: offset,
-            sourceRowCount,
-            usesSourceRanges,
-            globalRowOffset
-          });
-          globalRowOffset += selectedRows.length;
-          activeRows = [];
-        };
-        for (const rowIndex of page.activeRows) {
-          if (rowIndex >= page.data.length) {
-            throw new RangeError('Paged Gaussian active rows must be source-page-local indices');
-          }
-          const nextWindowStart = usesSourceRanges
-            ? Math.floor(rowIndex / sourceWindowCapacity) * sourceWindowCapacity
-            : 0;
-          if (
-            activeRows.length > 0 &&
-            (nextWindowStart !== sourceWindowStart ||
-              activeRows.length >= this.getMaximumProjectedSegmentRows())
-          ) {
-            appendSparseSegment();
-          }
-          sourceWindowStart = nextWindowStart;
-          activeRows.push(rowIndex);
+      for (const rowIndex of page.activeRows ?? []) {
+        if (rowIndex >= page.data.length) {
+          throw new RangeError('Paged Gaussian active rows must be source-page-local indices');
         }
-        appendSparseSegment();
-        continue;
       }
 
-      for (let sourceRowOffset = 0; sourceRowOffset < page.data.length; ) {
-        const sourceWindowStart = usesSourceRanges
-          ? Math.floor(sourceRowOffset / sourceWindowCapacity) * sourceWindowCapacity
-          : sourceRowOffset;
+      let pageSegmentIndex = 0;
+      const maximumProjectedSegmentRows = this.getMaximumProjectedSegmentRows();
+      for (let sourceWindowStart = 0; sourceWindowStart < page.data.length; ) {
         const sourceWindowEnd = usesSourceRanges
           ? Math.min(sourceWindowStart + sourceWindowCapacity, page.data.length)
           : page.data.length;
-        const activeRowCount = Math.min(
-          sourceWindowEnd - sourceRowOffset,
-          this.getMaximumProjectedSegmentRows()
-        );
-        plannedSegments.push({
-          id: `${page.id}-${pageSegmentIndex++}`,
-          page,
-          activeRowCount,
-          sourceRowOffset,
-          sourceBindingRowOffset: usesSourceRanges ? sourceWindowStart : 0,
-          sourceRowCount: usesSourceRanges ? sourceWindowEnd - sourceWindowStart : activeRowCount,
-          usesSourceRanges,
-          globalRowOffset
-        });
-        sourceRowOffset += activeRowCount;
-        globalRowOffset += activeRowCount;
+        for (
+          let segmentSourceRowStart = sourceWindowStart;
+          segmentSourceRowStart < sourceWindowEnd;
+          segmentSourceRowStart += maximumProjectedSegmentRows
+        ) {
+          const segmentSourceRowEnd = Math.min(
+            segmentSourceRowStart + maximumProjectedSegmentRows,
+            sourceWindowEnd
+          );
+          const capacityRowCount = segmentSourceRowEnd - segmentSourceRowStart;
+          const selectedRows = page.activeRows
+            ? Uint32Array.from(
+                Array.from(page.activeRows).filter(
+                  rowIndex => rowIndex >= segmentSourceRowStart && rowIndex < segmentSourceRowEnd
+                ),
+                rowIndex => rowIndex - (usesSourceRanges ? sourceWindowStart : 0)
+              )
+            : undefined;
+          const activeRowCount = selectedRows?.length ?? capacityRowCount;
+          plannedSegments.push({
+            id: `${page.id}-${pageSegmentIndex++}`,
+            page,
+            ...(selectedRows ? {activeRows: selectedRows} : {}),
+            capacityRowCount,
+            activeRowCount,
+            sourceRowOffset: usesSourceRanges
+              ? segmentSourceRowStart - sourceWindowStart
+              : segmentSourceRowStart,
+            sourceBindingRowOffset: usesSourceRanges ? sourceWindowStart : 0,
+            sourceRowCount: usesSourceRanges
+              ? sourceWindowEnd - sourceWindowStart
+              : page.data.length,
+            usesSourceRanges,
+            globalRowOffset
+          });
+          globalRowOffset += activeRowCount;
+        }
+        sourceWindowStart = sourceWindowEnd;
       }
     }
     return plannedSegments;
@@ -1470,6 +1476,19 @@ function getPagedDispatch(rowCount: number, device: Device): {x: number; y: numb
   const maximumDimension = device.limits.maxComputeWorkgroupsPerDimension || 65535;
   const x = Math.min(workgroups, maximumDimension);
   return {x, y: Math.ceil(workgroups / x)};
+}
+
+/** Keeps active sparse sorting within amortized power-of-two buckets without reserving all pages. */
+function getPagedSortCapacity(activeRowCount: number, maximumStorageByteLength: number): number {
+  const maximumRowCount =
+    maximumStorageByteLength > 0
+      ? Math.floor(maximumStorageByteLength / Uint32Array.BYTES_PER_ELEMENT)
+      : Number.MAX_SAFE_INTEGER;
+  let capacity = 1;
+  while (capacity < activeRowCount && capacity < maximumRowCount) {
+    capacity = Math.min(capacity * 2, maximumRowCount);
+  }
+  return capacity;
 }
 
 function getPagedSourceRowByteLength(

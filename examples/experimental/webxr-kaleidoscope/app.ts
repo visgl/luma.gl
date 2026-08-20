@@ -567,6 +567,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           : null;
       this.xrSession = session;
       this.xrSessionMode = sessionMode;
+      this.orbitControls?.setProps({enabled: false});
       session.addEventListener('end', this._xrSessionEndListener);
       session.addEventListener('selectend', this._xrSelectEndListener);
       session.addEventListener('squeezeend', this._xrSqueezeEndListener);
@@ -882,6 +883,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cameraTexture = null;
     this.webXRManager.clearSession();
     if (!this._isFinalized) {
+      this.orbitControls?.setProps({enabled: true});
       this.animationLoop.setProps({animationFrameProvider: undefined});
     }
   }

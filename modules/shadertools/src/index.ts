@@ -140,6 +140,11 @@ export type {ClipShaderPluginProps} from './modules/engine/clip/clip';
 export {clipShaderPlugin} from './modules/engine/clip/clip';
 export type {SkinProps, SkinUniforms} from './modules/engine/skin/skin';
 export {skin, SKIN_MAX_JOINTS} from './modules/engine/skin/skin';
+export type {
+  GPUAnimationBindings,
+  GPUAnimationProps
+} from './modules/engine/gpu-animation/gpu-animation';
+export {gpuAnimation} from './modules/engine/gpu-animation/gpu-animation';
 
 // lighting
 export {

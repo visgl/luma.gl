@@ -1,6 +1,10 @@
-import {describe, expect, test, vi} from 'vitest';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
+import {describe, expect, test, vi} from 'vitest';
+import {
+  ArrowExamplePanelManager,
+  makeArrowExamplePanelHostHtml
+} from '../../examples/arrow/arrow-example-panels';
 import {
   configurePanelHostElement,
   ExamplePanelManager,
@@ -12,29 +16,25 @@ import {
   makeInlineSettingsSchema
 } from '../../examples/example-panels';
 import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../examples/example-theme';
-import {
-  ArrowExamplePanelManager,
-  makeArrowExamplePanelHostHtml
-} from '../../examples/arrow/arrow-example-panels';
-import {
-  getTextSpaceCrawlColorKind,
-  setTextSpaceCrawlColorKind
-} from '../../examples/text-space-crawl-color';
 import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
 import {
   formatGLTFCrowdInfo,
   isAnimatedGLTFCatalogModel
 } from '../../examples/showcase/gltf/gltf-catalog-app';
 import {
+  type EffectState,
   flattenEffectSettings,
   getEffectResolutionScale,
   getInitialPostprocessingPassNames,
   makePostprocessingUniforms,
   reorderEffectPassNames,
   unflattenEffectSettings,
-  updateEffectPassNames,
-  type EffectState
+  updateEffectPassNames
 } from '../../examples/showcase/postprocessing/app';
+import {
+  getTextSpaceCrawlColorKind,
+  setTextSpaceCrawlColorKind
+} from '../../examples/text-space-crawl-color';
 
 const TEST_SETTINGS_SCHEMA: SettingsSchema = {
   title: 'Settings',
@@ -915,6 +915,19 @@ describe('glTF controls', () => {
 
     expect(summary).toContain('Authored LOD');
     expect(summary).not.toContain('Generated LOD');
+  });
+
+  test('reports baked GPU clip sampling and independently deformed morph groups', () => {
+    const summary = formatGLTFCrowdInfo(6, 2, ['Walking', 'Wave'], undefined, {
+      mode: 'gpu',
+      sampleRate: 30,
+      frameCount: 462,
+      clipCount: 14,
+      morphGroupCount: 3
+    });
+
+    expect(summary).toContain('GPU sampled: 462 frames @ 30 fps');
+    expect(summary).toContain('Morph groups: 3');
   });
 
   test('reports an impossible vertex budget without implying actors were silently culled', () => {

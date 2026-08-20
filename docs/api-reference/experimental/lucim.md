@@ -1,13 +1,15 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # LuCIM GPU Volume Algorithms
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
-  <img src="https://img.shields.io/badge/Experimental-orange.svg?style=flat-square" alt="Experimental" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="webgpu">WebGPU required</DocumentationBadge>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+</DocumentationBadges>
 
 `@luma.gl/experimental/lucim` contributes three-dimensional image-processing algorithms to a
-caller-owned [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph).
+caller-owned [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph).
 LuCIM is inspired by [RAPIDS cuCIM](https://docs.rapids.ai/api/cucim/stable/) and its GPU-accelerated
 n-dimensional image-processing categories. It is not a JavaScript port or an API-compatibility
 layer: cuCIM targets CUDA arrays and a scikit-image-compatible Python surface, while LuCIM targets

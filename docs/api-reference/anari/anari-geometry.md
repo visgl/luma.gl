@@ -1,10 +1,12 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # ANARI Arrays and Geometry
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
-  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+</DocumentationBadges>
 
 `ANARIArray` describes shared application data, and `ANARIGeometry` describes one reusable geometric primitive. Geometry becomes visible when paired with a material in an [`ANARISurface`](/docs/api-reference/anari/anari-scene).
 

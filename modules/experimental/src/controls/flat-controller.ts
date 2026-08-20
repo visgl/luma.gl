@@ -29,6 +29,23 @@ export type FlatControllerProps = {
   zoomSpeed?: number;
 };
 
+export type RectangleSelection = FlatViewState & {
+  clientLeft: number;
+  clientTop: number;
+  clientWidth: number;
+  clientHeight: number;
+};
+
+export type RectangleSelectControllerProps = {
+  getView: () => FlatViewState;
+  onSelect: (selection: RectangleSelection) => void;
+  onSelectionChange?: (selection: RectangleSelection | null) => void;
+  onInteractionStart?: () => void;
+  /** Defaults to primary-button Shift+drag so ordinary canvas interaction remains available. */
+  isActivationEvent?: (event: PointerEvent) => boolean;
+  minimumPixelSize?: number;
+};
+
 /** Pointer controller for flat timelines and other bounded two-dimensional data views. */
 export class FlatController {
   readonly canvas: HTMLCanvasElement;
@@ -132,7 +149,6 @@ export class FlatController {
 
   private readonly handleWheel = (event: WheelEvent): void => {
     event.preventDefault();
-    this.props.onInteractionStart?.();
     const rectangle = this.canvas.getBoundingClientRect();
     const horizontalFraction = clamp(
       (event.clientX - rectangle.left) / Math.max(rectangle.width, 1),
@@ -143,6 +159,10 @@ export class FlatController {
     const bounds = this.props.getBounds();
     const previousRange = view.xMax - view.xMin;
     const maximumRange = bounds.xMax - bounds.xMin;
+    const rangeTolerance = Math.max(maximumRange, 1) * Number.EPSILON * 8;
+    if (event.deltaY > 0 && previousRange >= maximumRange - rangeTolerance) {
+      return;
+    }
     const nextRange = clamp(
       previousRange * Math.exp(event.deltaY * this.props.zoomSpeed),
       Math.min(this.props.minimumXRange, maximumRange),
@@ -151,7 +171,12 @@ export class FlatController {
     const anchor = view.xMin + previousRange * horizontalFraction;
     const requestedXMin = anchor - nextRange * horizontalFraction;
     const xMin = clamp(requestedXMin, bounds.xMin, Math.max(bounds.xMin, bounds.xMax - nextRange));
-    this.props.onViewChange({...view, xMin, xMax: xMin + nextRange});
+    const xMax = xMin + nextRange;
+    if (xMin === view.xMin && xMax === view.xMax) {
+      return;
+    }
+    this.props.onInteractionStart?.();
+    this.props.onViewChange({...view, xMin, xMax});
   };
 
   private emitPick(event: PointerEvent, intent: FlatControllerPick['intent']): void {
@@ -182,6 +207,131 @@ export class FlatController {
       this.canvas.releasePointerCapture(event.pointerId);
     }
     this.canvas.style.cursor = 'grab';
+  }
+}
+
+/** Capture-phase rectangle selector that can coexist with an ordinary canvas controller. */
+export class RectangleSelectController {
+  readonly canvas: HTMLCanvasElement;
+  readonly props: Required<
+    Pick<RectangleSelectControllerProps, 'isActivationEvent' | 'minimumPixelSize'>
+  > &
+    Omit<RectangleSelectControllerProps, 'isActivationEvent' | 'minimumPixelSize'>;
+
+  private pointerId: number | null = null;
+  private startClientPosition: [number, number] = [0, 0];
+  private currentClientPosition: [number, number] = [0, 0];
+  private startView: FlatViewState | null = null;
+  private previousCursor = '';
+
+  constructor(canvas: HTMLCanvasElement, props: RectangleSelectControllerProps) {
+    this.canvas = canvas;
+    this.props = {
+      isActivationEvent: props.isActivationEvent ?? (event => event.button === 0 && event.shiftKey),
+      minimumPixelSize: props.minimumPixelSize ?? 3,
+      ...props
+    };
+    canvas.addEventListener('pointerdown', this.handlePointerDown, true);
+    canvas.addEventListener('pointermove', this.handlePointerMove, true);
+    canvas.addEventListener('pointerup', this.handlePointerUp, true);
+    canvas.addEventListener('pointercancel', this.handlePointerCancel, true);
+  }
+
+  destroy(): void {
+    this.canvas.removeEventListener('pointerdown', this.handlePointerDown, true);
+    this.canvas.removeEventListener('pointermove', this.handlePointerMove, true);
+    this.canvas.removeEventListener('pointerup', this.handlePointerUp, true);
+    this.canvas.removeEventListener('pointercancel', this.handlePointerCancel, true);
+    this.finishSelection();
+  }
+
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    if (this.pointerId !== null || !this.props.isActivationEvent(event)) return;
+    this.captureEvent(event);
+    this.pointerId = event.pointerId;
+    this.startClientPosition = this.getClampedClientPosition(event);
+    this.currentClientPosition = this.startClientPosition;
+    this.startView = {...this.props.getView()};
+    this.previousCursor = this.canvas.style.cursor;
+    this.canvas.style.cursor = 'crosshair';
+    this.canvas.setPointerCapture(event.pointerId);
+    this.props.onInteractionStart?.();
+    this.props.onSelectionChange?.(this.getSelection());
+  };
+
+  private readonly handlePointerMove = (event: PointerEvent): void => {
+    if (event.pointerId !== this.pointerId) return;
+    this.captureEvent(event);
+    this.currentClientPosition = this.getClampedClientPosition(event);
+    this.props.onSelectionChange?.(this.getSelection());
+  };
+
+  private readonly handlePointerUp = (event: PointerEvent): void => {
+    if (event.pointerId !== this.pointerId) return;
+    this.captureEvent(event);
+    this.currentClientPosition = this.getClampedClientPosition(event);
+    const selection = this.getSelection();
+    if (Math.max(selection.clientWidth, selection.clientHeight) >= this.props.minimumPixelSize) {
+      this.props.onSelect(selection);
+    }
+    this.finishSelection();
+  };
+
+  private readonly handlePointerCancel = (event: PointerEvent): void => {
+    if (event.pointerId !== this.pointerId) return;
+    this.captureEvent(event);
+    this.finishSelection();
+  };
+
+  private captureEvent(event: PointerEvent): void {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
+  private getClampedClientPosition(event: PointerEvent): [number, number] {
+    const rectangle = this.canvas.getBoundingClientRect();
+    return [
+      clamp(event.clientX, rectangle.left, rectangle.right ?? rectangle.left + rectangle.width),
+      clamp(event.clientY, rectangle.top, rectangle.bottom ?? rectangle.top + rectangle.height)
+    ];
+  }
+
+  private getSelection(): RectangleSelection {
+    const rectangle = this.canvas.getBoundingClientRect();
+    const view = this.startView ?? this.props.getView();
+    const firstHorizontalFraction =
+      (this.startClientPosition[0] - rectangle.left) / Math.max(rectangle.width, 1);
+    const secondHorizontalFraction =
+      (this.currentClientPosition[0] - rectangle.left) / Math.max(rectangle.width, 1);
+    const firstVerticalFraction =
+      (this.startClientPosition[1] - rectangle.top) / Math.max(rectangle.height, 1);
+    const secondVerticalFraction =
+      (this.currentClientPosition[1] - rectangle.top) / Math.max(rectangle.height, 1);
+    const firstX = view.xMin + firstHorizontalFraction * (view.xMax - view.xMin);
+    const secondX = view.xMin + secondHorizontalFraction * (view.xMax - view.xMin);
+    const firstY = view.yMin + firstVerticalFraction * (view.yMax - view.yMin);
+    const secondY = view.yMin + secondVerticalFraction * (view.yMax - view.yMin);
+    return {
+      xMin: Math.min(firstX, secondX),
+      xMax: Math.max(firstX, secondX),
+      yMin: Math.min(firstY, secondY),
+      yMax: Math.max(firstY, secondY),
+      clientLeft: Math.min(this.startClientPosition[0], this.currentClientPosition[0]),
+      clientTop: Math.min(this.startClientPosition[1], this.currentClientPosition[1]),
+      clientWidth: Math.abs(this.currentClientPosition[0] - this.startClientPosition[0]),
+      clientHeight: Math.abs(this.currentClientPosition[1] - this.startClientPosition[1])
+    };
+  }
+
+  private finishSelection(): void {
+    const pointerId = this.pointerId;
+    this.pointerId = null;
+    this.startView = null;
+    if (pointerId !== null && this.canvas.hasPointerCapture(pointerId)) {
+      this.canvas.releasePointerCapture(pointerId);
+    }
+    if (pointerId !== null) this.canvas.style.cursor = this.previousCursor;
+    this.props.onSelectionChange?.(null);
   }
 }
 

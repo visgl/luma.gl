@@ -3,11 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {GraphBufferHandle, GraphDataView} from '../gpu-primitives/gpu-command-graph';
-import {
-  validatePackedUint32View,
-  validatePackedView
-} from '../gpu-primitives/graph-data-view-utils';
+import type {GraphBufferHandle, GraphDataView} from '../gpu-core/gpu-command-graph';
+import {validatePackedUint32View, validatePackedView} from '../gpu-core/graph-data-view-utils';
 import type {GPUVolumeBufferChannel, GPUVolumeMetadata, GPUVolumeScalarFormat} from './types';
 
 export const VOLUME_WORKGROUP_DIMENSION = 4;

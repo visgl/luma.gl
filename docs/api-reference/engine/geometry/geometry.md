@@ -1,4 +1,5 @@
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # Geometry
 
@@ -9,6 +10,15 @@ It stores typed-array attributes, optional indices, and a `bufferLayout`.
 When a layout is not supplied, `Geometry` creates a one-buffer-per-attribute layout automatically.
 Use `makeInterleavedGeometry()` to pack multiple CPU attributes into one vertex buffer while still
 representing the result as a normal `Geometry`.
+
+<DocumentationContract title="Geometry" rows={[
+  {label: 'Role', value: 'CPU-side attributes, indices, topology, and buffer layout'},
+  {label: 'Construction', value: 'GeometryProps with typed arrays or explicit attributes'},
+  {label: 'Updates', value: 'Create a new Geometry or update uploaded Model buffers'},
+  {label: 'Ownership', value: 'Owns CPU arrays; the consuming Model owns uploaded internal buffers'},
+  {label: 'Portability', value: 'Preserves source semantics and maps them at the rendering boundary'},
+  {label: 'Performance', value: 'Interleave explicitly when fewer GPU buffers improve the workload'}
+]} />
 
 ## Usage
 

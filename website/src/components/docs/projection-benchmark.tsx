@@ -1,12 +1,12 @@
 import React, {useEffect, useState, type ReactNode} from 'react';
 
-import {createWebMercatorProjection} from '@luma.gl/experimental/luproj';
+import {createWebMercatorProjection} from '@luma.gl/experimental/gpu-project';
 import {
   runGPUProjectionBenchmark,
   type GPUProjectionBenchmarkPathReport,
   type GPUProjectionBenchmarkReport,
   type ProjectionBenchmarkPathReport
-} from '@luma.gl/experimental/luproj/benchmarks';
+} from '@luma.gl/experimental/gpu-project/benchmarks';
 
 import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';

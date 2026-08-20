@@ -1,5 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {DocsPageTabs} from './docs-page-tabs';
 
 type TutorialDocsTab = {
   id: TutorialDocsTabId;
@@ -55,21 +55,9 @@ export function TutorialDocsTabs({
   active: TutorialDocsTabId;
 }): ReactNode {
   return (
-    <nav className="docs-page-tabs" aria-label="Tutorial documentation sections">
-      {TUTORIAL_DOCS_TABS[group].map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
+    <DocsPageTabs
+      active={active}
+      group={{label: 'Tutorial sections', tabs: TUTORIAL_DOCS_TABS[group]}}
+    />
   );
 }

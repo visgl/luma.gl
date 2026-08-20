@@ -425,3 +425,234 @@ test('glTF crowds render generated index-only skin LODs on real WebGL and WebGPU
   testContext.ok(devices.length > 0, 'at least one real backend exercises generated skin LOD');
   testContext.end();
 });
+
+test('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', async testContext => {
+  const source = postProcessGLTF(
+    await load('/examples/showcase/anari/public/gltf/SimpleSkin.gltf', GLTFLoader, {
+      gltf: {loadImages: false}
+    })
+  );
+  const [webglDevice, webgpuDevices] = await Promise.all([
+    getWebGLTestDevice(),
+    getTestDevices(['webgpu'])
+  ]);
+  const devices = webglDevice ? [webglDevice, ...webgpuDevices] : webgpuDevices;
+
+  for (const device of devices) {
+    const crowd = createGLTFAnimatedCrowd(device, source, {
+      capacity: 4,
+      gpuAnimation: {sampleRate: 12}
+    });
+    const colorTexture = device.createTexture({
+      width: 32,
+      height: 32,
+      format: device.preferredColorFormat,
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const depthTexture = device.createTexture({
+      width: 32,
+      height: 32,
+      format: 'depth24plus',
+      usage: Texture.RENDER
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 32,
+      height: 32,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: depthTexture
+    });
+
+    try {
+      const [first, second] = crowd.addActors([
+        {id: 'left', phase: 0.1, transform: new Matrix4().translate([-0.35, 0, 0])},
+        {id: 'right', phase: 0.65, speed: 1.5, transform: new Matrix4().translate([0.35, 0, 0])}
+      ]);
+      const model = crowd.models[0];
+      const identity = Array.from(new Matrix4());
+      model.shaderInputs.setProps({
+        pbrProjection: {
+          modelViewProjectionMatrix: identity,
+          modelMatrix: identity,
+          normalMatrix: identity,
+          camera: [0, 0, 4]
+        }
+      });
+
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: 1
+      });
+      const drawCount = crowd.draw(renderPass);
+      renderPass.end();
+      device.submit();
+
+      const group = crowd.primitiveGroups[0];
+      testContext.equal(drawCount, 1, `${device.type} keeps baked skin clips in one draw`);
+      testContext.equal(crowd.animationStats.mode, 'gpu', `${device.type} reports GPU sampling`);
+      testContext.equal(
+        group.skinJointMatrices,
+        undefined,
+        `${device.type} avoids CPU skin palettes`
+      );
+      testContext.ok(
+        device.type === 'webgpu'
+          ? group.animationFrames instanceof Buffer
+          : group.animationFrames instanceof Texture,
+        `${device.type} binds its native baked frame resource`
+      );
+      testContext.notDeepEqual(
+        Array.from(group.animationParameters!.subarray(0, 3)),
+        Array.from(group.animationParameters!.subarray(4, 7)),
+        `${device.type} preserves independent actor frame addresses`
+      );
+
+      const firstTime = first.time;
+      const secondTime = second.time;
+      crowd.update(0.1);
+      testContext.ok(first.time > firstTime, `${device.type} advances the first GPU clock`);
+      testContext.ok(second.time > secondTime, `${device.type} advances the second GPU clock`);
+
+      if (
+        device.info.gpu !== 'software' &&
+        device.info.gpuType !== 'cpu' &&
+        !device.info.fallback
+      ) {
+        const memoryLayout = colorTexture.computeMemoryLayout({width: 32, height: 32});
+        const readbackBuffer = device.createBuffer({
+          byteLength: memoryLayout.byteLength,
+          usage: Buffer.COPY_DST | Buffer.MAP_READ
+        });
+        try {
+          colorTexture.readBuffer({width: 32, height: 32}, readbackBuffer);
+          const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
+          testContext.ok(
+            pixels.some((value, index) => index % 4 === 3 && value > 0),
+            `${device.type} writes GPU-sampled skin geometry into the framebuffer`
+          );
+        } finally {
+          readbackBuffer.destroy();
+        }
+      }
+    } finally {
+      crowd.destroy();
+      framebuffer.destroy();
+      colorTexture.destroy();
+      depthTexture.destroy();
+    }
+  }
+
+  testContext.ok(devices.length > 0, 'at least one real backend samples baked skin clips');
+  testContext.end();
+});
+
+test('glTF crowds render independently phased GPU morph targets in real WebGL and WebGPU', async testContext => {
+  const source = postProcessGLTF(
+    await load('/examples/showcase/anari/public/gltf/AnimatedMorphCube.glb', GLTFLoader, {
+      gltf: {loadImages: false}
+    })
+  );
+  const [webglDevice, webgpuDevices] = await Promise.all([
+    getWebGLTestDevice(),
+    getTestDevices(['webgpu'])
+  ]);
+  const devices = webglDevice ? [webglDevice, ...webgpuDevices] : webgpuDevices;
+
+  for (const device of devices) {
+    const crowd = createGLTFAnimatedCrowd(device, source, {
+      capacity: 4,
+      gpuAnimation: {sampleRate: 20}
+    });
+    const colorTexture = device.createTexture({
+      width: 64,
+      height: 64,
+      format: device.preferredColorFormat,
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const depthTexture = device.createTexture({
+      width: 64,
+      height: 64,
+      format: 'depth24plus',
+      usage: Texture.RENDER
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 64,
+      height: 64,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: depthTexture
+    });
+
+    try {
+      crowd.addActors([
+        {id: 'left', phase: 0.1, transform: new Matrix4().translate([-0.45, 0, 0])},
+        {id: 'right', phase: 0.65, transform: new Matrix4().translate([0.45, 0, 0])}
+      ]);
+      const model = crowd.models[0];
+      const identity = Array.from(new Matrix4());
+      model.shaderInputs.setProps({
+        pbrProjection: {
+          modelViewProjectionMatrix: identity,
+          modelMatrix: identity,
+          normalMatrix: identity,
+          camera: [0, 0, 4]
+        }
+      });
+
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: 1
+      });
+      const drawCount = crowd.draw(renderPass);
+      renderPass.end();
+      device.submit();
+
+      const group = crowd.primitiveGroups[0];
+      testContext.equal(drawCount, 1, `${device.type} draws phased morph actors together`);
+      testContext.equal(crowd.animationStats.mode, 'gpu', `${device.type} bakes morph clips`);
+      testContext.equal(group.morphTargetCount, 2, `${device.type} retains both morph targets`);
+      testContext.equal(group.morphWeights, undefined, `${device.type} avoids CPU morph uploads`);
+      testContext.ok(
+        device.type === 'webgpu'
+          ? group.morphTargetData instanceof Buffer
+          : group.morphTargetData instanceof Texture,
+        `${device.type} binds immutable native morph deltas`
+      );
+      testContext.notDeepEqual(
+        Array.from(group.animationParameters!.subarray(0, 3)),
+        Array.from(group.animationParameters!.subarray(4, 7)),
+        `${device.type} sends distinct morph frame addresses per actor`
+      );
+
+      if (
+        device.info.gpu !== 'software' &&
+        device.info.gpuType !== 'cpu' &&
+        !device.info.fallback
+      ) {
+        const memoryLayout = colorTexture.computeMemoryLayout({width: 64, height: 64});
+        const readbackBuffer = device.createBuffer({
+          byteLength: memoryLayout.byteLength,
+          usage: Buffer.COPY_DST | Buffer.MAP_READ
+        });
+        try {
+          colorTexture.readBuffer({width: 64, height: 64}, readbackBuffer);
+          const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
+          testContext.ok(
+            pixels.some((value, index) => index % 4 === 3 && value > 0),
+            `${device.type} writes GPU-morphed geometry into the framebuffer`
+          );
+        } finally {
+          readbackBuffer.destroy();
+        }
+      }
+    } finally {
+      crowd.destroy();
+      framebuffer.destroy();
+      colorTexture.destroy();
+      depthTexture.destroy();
+    }
+  }
+
+  testContext.ok(devices.length > 0, 'at least one real backend samples independent morph clips');
+  testContext.end();
+});

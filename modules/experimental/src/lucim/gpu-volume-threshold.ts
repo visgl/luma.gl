@@ -9,8 +9,8 @@ import type {
   GPUCommandGraphContributor,
   GraphDataView,
   GraphResourceUse
-} from '../gpu-primitives/gpu-command-graph';
-import {getViewBinding, getViewElementOffset} from '../gpu-primitives/graph-data-view-utils';
+} from '../gpu-core/gpu-command-graph';
+import {getViewBinding, getViewElementOffset} from '../gpu-core/graph-data-view-utils';
 import type {GPUVolumeBufferChannel} from './types';
 import {
   assertVolumeStorageBindingFits,

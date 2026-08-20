@@ -10,7 +10,7 @@ import {
   GraphDataView,
   GraphVectorView,
   type GraphImportedBuffer
-} from '../../src/gpu-primitives/gpu-command-graph';
+} from '../../src/gpu-core/gpu-command-graph';
 import {validateDisjointGeospatialViews} from '../../src/geospatial/geospatial-utils';
 
 const BUFFER_BYTE_LENGTH = 1024;

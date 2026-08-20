@@ -54,6 +54,7 @@
     adapters: [webgpuAdapter],
     createCanvasContext: true,
     featureLevel: 'max',
+    debugGPUTime: true,
     _disabledFeatures: forcePortableScan ? {subgroups: true} : undefined
   });
   const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});

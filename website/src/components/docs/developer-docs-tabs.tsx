@@ -1,16 +1,11 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
-
-type DeveloperDocsTab = {
-  id: DeveloperDocsTabId;
-  label: string;
-  href: string;
-};
+import {DocsPageTabs, type DocumentationTabGroup} from './docs-page-tabs';
 
 /** Developer documentation tab identifiers. */
 export type DeveloperDocsTabId =
   | 'overview'
   | 'installing'
+  | 'documentation'
   | 'ai'
   | 'contributing'
   | 'editing'
@@ -19,40 +14,33 @@ export type DeveloperDocsTabId =
   | 'profiling'
   | 'bundling';
 
-const DEVELOPER_DOCS_TABS: DeveloperDocsTab[] = [
-  {id: 'overview', label: 'Overview', href: '/docs/developer-guide'},
-  {id: 'installing', label: 'Installing', href: '/docs/developer-guide/installing'},
+export const DEVELOPER_DOCS_TAB_GROUPS: DocumentationTabGroup<DeveloperDocsTabId>[] = [
   {
-    id: 'ai',
-    label: 'AI Agents',
-    href: '/docs/developer-guide/working-with-ai'
+    label: 'Developer setup and contribution',
+    tabs: [
+      {id: 'overview', label: 'Overview', href: '/docs/developer-guide'},
+      {id: 'installing', label: 'Installing', href: '/docs/developer-guide/installing'},
+      {id: 'editing', label: 'Editing', href: '/docs/developer-guide/editing'},
+      {id: 'contributing', label: 'Contributing', href: '/docs/developer-guide/contributing'},
+      {id: 'documentation', label: 'Documentation', href: '/docs/developer-guide/documentation'}
+    ]
   },
-  {id: 'contributing', label: 'Contributing', href: '/docs/developer-guide/contributing'},
-  {id: 'editing', label: 'Editing', href: '/docs/developer-guide/editing'},
-  {id: 'testing', label: 'Testing', href: '/docs/developer-guide/testing'},
-  {id: 'debugging', label: 'Debugging', href: '/docs/developer-guide/debugging'},
-  {id: 'profiling', label: 'Profiling', href: '/docs/developer-guide/profiling'},
-  {id: 'bundling', label: 'Bundling', href: '/docs/developer-guide/bundling'}
+  {
+    label: 'Developer quality and delivery',
+    tabs: [
+      {id: 'testing', label: 'Testing', href: '/docs/developer-guide/testing'},
+      {id: 'debugging', label: 'Debugging', href: '/docs/developer-guide/debugging'},
+      {id: 'profiling', label: 'Profiling', href: '/docs/developer-guide/profiling'},
+      {id: 'bundling', label: 'Bundling', href: '/docs/developer-guide/bundling'},
+      {id: 'ai', label: 'AI agents', href: '/docs/developer-guide/working-with-ai'}
+    ]
+  }
 ];
 
 /** Renders page links with the same visual treatment as tabs for developer documentation pages. */
 export function DeveloperDocsTabs({active}: {active: DeveloperDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="Developer documentation sections">
-      {DEVELOPER_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
+  const group = DEVELOPER_DOCS_TAB_GROUPS.find(candidate =>
+    candidate.tabs.some(tab => tab.id === active)
   );
+  return group ? <DocsPageTabs active={active} group={group} /> : null;
 }

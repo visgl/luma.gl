@@ -334,6 +334,7 @@ export const RASTER_LAB_STYLES = /* css */ `
 .raster-component-buttons,
 .raster-component-connectivity-buttons,
 .raster-component-label-buttons,
+.raster-component-scope-buttons,
 .raster-region-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,14 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
-
-type TablesDocsTab = {
-  /** Stable tab identifier. */
-  id: TablesDocsTabId;
-  /** User-facing tab label. */
-  label: string;
-  /** Documentation page URL. */
-  href: string;
-};
+import {DocsPageTabs, type DocumentationTabGroup} from './docs-page-tabs';
 
 /** Tables documentation tab identifiers. */
 export type TablesDocsTabId =
@@ -27,51 +18,44 @@ export type TablesDocsTabId =
   | 'vector-format'
   | 'buffer-planner';
 
-const TABLES_DOCS_TABS: TablesDocsTab[] = [
-  {id: 'overview', label: 'Overview', href: '/docs/api-reference/tables'},
-  {id: 'structure', label: 'Structure', href: '/docs/api-reference/tables/gpu-table-structure'},
-  {id: 'lifecycle', label: 'Lifecycle', href: '/docs/api-reference/tables/gpu-table-lifecycle'},
-  {id: 'table', label: 'GPUTable', href: '/docs/api-reference/tables/gpu-table'},
-  {id: 'constant', label: 'GPUConstant', href: '/docs/api-reference/tables/gpu-constant'},
-  {id: 'record-batch', label: 'GPURecordBatch', href: '/docs/api-reference/tables/gpu-record-batch'},
-  {id: 'vector', label: 'GPUVector', href: '/docs/api-reference/tables/gpu-vector'},
-  {id: 'data', label: 'GPUData', href: '/docs/api-reference/tables/gpu-data'},
-  {id: 'data-view', label: 'GPUDataView', href: '/docs/api-reference/tables/gpu-data-view'},
-  {id: 'schema', label: 'GPUSchema', href: '/docs/api-reference/tables/gpu-schema'},
+export const TABLES_DOCS_TAB_GROUPS: DocumentationTabGroup<TablesDocsTabId>[] = [
   {
-    id: 'input-schema',
-    label: 'GPUInputSchema',
-    href: '/docs/api-reference/tables/gpu-input-schema'
+    label: 'GPU table starting points',
+    tabs: [
+      {id: 'overview', label: 'Overview', href: '/docs/api-reference/tables'},
+      {id: 'structure', label: 'Structure', href: '/docs/api-reference/tables/gpu-table-structure'},
+      {id: 'lifecycle', label: 'Lifecycle', href: '/docs/api-reference/tables/gpu-table-lifecycle'}
+    ]
   },
   {
-    id: 'shader-bindings',
-    label: 'Shader Bindings',
-    href: '/docs/api-reference/tables/gpu-table-shader-bindings'
+    label: 'GPU table data objects',
+    tabs: [
+      {id: 'table', label: 'GPUTable', href: '/docs/api-reference/tables/gpu-table'},
+      {id: 'constant', label: 'GPUConstant', href: '/docs/api-reference/tables/gpu-constant'},
+      {id: 'record-batch', label: 'GPURecordBatch', href: '/docs/api-reference/tables/gpu-record-batch'},
+      {id: 'vector', label: 'GPUVector', href: '/docs/api-reference/tables/gpu-vector'},
+      {id: 'data', label: 'GPUData', href: '/docs/api-reference/tables/gpu-data'},
+      {id: 'data-view', label: 'GPUDataView', href: '/docs/api-reference/tables/gpu-data-view'}
+    ]
   },
-  {id: 'vector-format', label: 'GPUVectorFormat', href: '/docs/api-reference/tables/gpu-vector-format'},
-  {id: 'buffer-planner', label: 'Buffer Planner', href: '/docs/api-reference/tables/gpu-table-buffer-planner'}
+  {
+    label: 'GPU table schemas and bindings',
+    tabs: [
+      {id: 'schema', label: 'GPUSchema', href: '/docs/api-reference/tables/gpu-schema'},
+      {id: 'input-schema', label: 'GPUInputSchema', href: '/docs/api-reference/tables/gpu-input-schema'},
+      {id: 'shader-bindings', label: 'Shader bindings', href: '/docs/api-reference/tables/gpu-table-shader-bindings'},
+      {id: 'vector-format', label: 'GPUVectorFormat', href: '/docs/api-reference/tables/gpu-vector-format'},
+      {id: 'buffer-planner', label: 'Buffer planner', href: '/docs/api-reference/tables/gpu-table-buffer-planner'}
+    ]
+  }
 ];
 
 /**
  * Renders page links with the same visual treatment as tabs for Tables documentation pages.
  */
 export function TablesDocsTabs({active}: {active: TablesDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="Tables documentation sections">
-      {TABLES_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
+  const group = TABLES_DOCS_TAB_GROUPS.find(candidate =>
+    candidate.tabs.some(tab => tab.id === active)
   );
+  return group ? <DocsPageTabs active={active} group={group} /> : null;
 }

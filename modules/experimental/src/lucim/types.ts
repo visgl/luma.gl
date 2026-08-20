@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GraphDataView} from '../gpu-primitives/gpu-command-graph';
+import type {GraphDataView} from '../gpu-core/gpu-command-graph';
 
 /** Exact, fixed-width sample formats supported by graph-native volume analysis. */
 export type GPUVolumeScalarFormat = 'float32' | 'uint32' | 'sint32';

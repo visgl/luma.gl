@@ -125,6 +125,30 @@ describe('homepage navigation', () => {
     expect(examplesLandingSource).not.toContain('luma-example-catalog-capabilities');
   });
 
+  test('introduces the framework modules between featured examples and capability stories', () => {
+    const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
+    const homepageStyles = readFileSync(HOMEPAGE_STYLES_PATH, 'utf8');
+
+    expect(homepageSource).toMatch(
+      /import\s+\{FrameworkModuleCards\}\s+from\s+['"]\.\.\/components\/framework-module-cards['"]/
+    );
+    expect(homepageSource).toMatch(
+      /<section\b(?=[^>]*\bclassName=\{styles\.frameworkSection\})(?=[^>]*\bid="framework-modules")(?=[^>]*\baria-labelledby="framework-modules-heading")[^>]*>/
+    );
+    expect(homepageSource).toContain('Explore the framework');
+    expect(homepageSource).toContain('The GPU stack, layer by layer.');
+    expect(homepageSource).toContain('<FrameworkModuleCards />');
+    expect(homepageSource.indexOf('<FrameworkModuleCards />')).toBeGreaterThan(
+      homepageSource.indexOf('id="flagship-examples"')
+    );
+    expect(homepageSource.indexOf('<FrameworkModuleCards />')).toBeLessThan(
+      homepageSource.indexOf('aria-labelledby="capabilities-heading"')
+    );
+    expect(homepageStyles).toMatch(
+      /\.frameworkSection\s*\{[^}]*\bscroll-margin-top:\s*calc\(var\(--ifm-navbar-height/
+    );
+  });
+
   test('continues from the community showcase into first-party discovery and live examples', () => {
     const communityShowcaseSource = readFileSync(COMMUNITY_SHOWCASE_SOURCE_PATH, 'utf8');
 
@@ -174,22 +198,21 @@ describe('homepage navigation', () => {
     }
   });
 
-  test('features the bounded Coit Tower capture as a direct WebGPU showcase option', () => {
+  test('features the generated Gaussian splat showcase without promoting the remote capture', () => {
     const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
-    const coitShowcase = homepageSource.match(
-      /\{\s*title:\s*['"]Coit Tower[^'"]*['"]([\s\S]*?)\n\s*\}/
+    const gaussianSplatShowcase = homepageSource.match(
+      /\{\s*title:\s*['"]Gaussian Splats['"]([\s\S]*?)\n\s*\}/
     );
 
-    expect(coitShowcase).not.toBeNull();
-    expect(coitShowcase![1]).toContain("route: 'showcase/gaussian-splat-viewer?scene=coit'");
-    expect(coitShowcase![1]).toContain("image: 'showcase/coit-tower.png'");
-    expect(coitShowcase![1]).toContain("imagePosition: 'left center'");
-    expect(coitShowcase![1]).toContain("backends: ['webgpu']");
-    expect(coitShowcase![1]).toMatch(/50\.9-million-splat/);
-    expect(coitShowcase![1]).toMatch(/background RAD decoding/);
+    expect(gaussianSplatShowcase).not.toBeNull();
+    expect(gaussianSplatShowcase![1]).toContain("route: 'showcase/gaussian-splats'");
+    expect(gaussianSplatShowcase![1]).toContain("image: 'showcase/gaussian-splats.jpg'");
+    expect(gaussianSplatShowcase![1]).toContain("backends: ['webgpu', 'webgl2']");
+    expect(gaussianSplatShowcase![1]).toMatch(/GPU-native projection/);
+    expect(homepageSource).not.toContain('showcase/gaussian-splat-viewer?scene=coit');
     expect(
       existsSync(path.join(process.cwd(), 'website/static/images/examples/showcase/coit-tower.png'))
-    ).toBe(true);
+    ).toBe(false);
   });
 
   test('features cinematic bloom in the showcase catalog and homepage gallery', () => {

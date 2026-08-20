@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import type {GraphDataView} from '../gpu-primitives/gpu-command-graph';
+import type {GraphDataView} from '../gpu-core/gpu-command-graph';
 
 /**
  * Caller-owned, capacity-bounded output shared by GPU spatial queries.

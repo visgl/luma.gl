@@ -1,13 +1,14 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 # PresentationContext
 
 <CoreDocsTabs group="presentation" active="presentation-context" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-  <img src="https://img.shields.io/badge/Experimental-orange.svg?style=flat-square" alt="Experimental" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+  <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
+</DocumentationBadges>
 
 `PresentationContext` is intended for multi-canvas presentation workflows that are portable across both WebGPU and WebGL.
 
@@ -72,18 +73,18 @@ Because of this design, WebGL presentation contexts are sequential and require t
 
 | Property               | Type                                                 | Description                                                     |
 | ---------------------- | ---------------------------------------------------- | --------------------------------------------------------------- |
-| `autoResize?`          | `boolean`                                            | Whether to resize the tracked drawing buffer when canvas size changes |
-| `useDevicePixels?`     | `boolean \| number`                                  | Whether to size the drawing buffer from device pixels or a fixed pixel ratio |
-| `width?`               | `number`                                             | Width in pixels of a newly created destination canvas           |
-| `height?`              | `number`                                             | Height in pixels of a newly created destination canvas          |
-| `canvas?`              | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | Destination canvas to present into                              |
-| `container?`           | `HTMLElement` \| `string`                            | Parent DOM element for a newly created destination canvas       |
-| `visible?`             | `boolean`                                            | Visibility for a newly created destination canvas               |
-| `alphaMode?`           | `'opaque' \| 'premultiplied'`                        | Canvas alpha mode metadata                                      |
-| `colorSpace?`          | `'srgb' \| 'display-p3'`                             | Presentation color space                                        |
-| `colorFormat?`         | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'`      | Requested WebGPU presentation texture format                    |
-| `toneMapping?`         | `'standard' \| 'extended'`                           | Whether WebGPU presentation preserves HDR luminance             |
-| `trackPosition?`       | `boolean`                                            | Whether to track destination canvas position                    |
+| `autoResize?` | `boolean` | Whether to resize the tracked drawing buffer when canvas size changes |
+| `useDevicePixels?` | `boolean \| number` | Whether to size the drawing buffer from device pixels or a fixed pixel ratio |
+| `width?` | `number` | Width in pixels of a newly created destination canvas |
+| `height?` | `number` | Height in pixels of a newly created destination canvas |
+| `canvas?` | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | Destination canvas to present into |
+| `container?` | `HTMLElement` \| `string` | Parent DOM element for a newly created destination canvas |
+| `visible?` | `boolean` | Visibility for a newly created destination canvas |
+| `alphaMode?` | `'opaque' \| 'premultiplied'` | Canvas alpha mode metadata |
+| `colorSpace?` | `'srgb' \| 'display-p3'` | Presentation color space |
+| `colorFormat?` | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'` | Requested WebGPU presentation texture format |
+| `toneMapping?` | `'standard' \| 'extended'` | Whether WebGPU presentation preserves HDR luminance |
+| `trackPosition?` | `boolean` | Whether to track destination canvas position |
 
 ## Fields
 

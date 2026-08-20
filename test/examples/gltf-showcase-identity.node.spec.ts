@@ -65,7 +65,10 @@ describe('glTF module and showcase identity', () => {
       path.join(process.cwd(), 'modules/gltf/README.md'),
       'utf8'
     );
-    const capabilities = readFileSync(path.join(process.cwd(), 'docs/capabilities.mdx'), 'utf8');
+    const capabilities = readFileSync(
+      path.join(process.cwd(), 'docs/capabilities/rendering-visualization.mdx'),
+      'utf8'
+    );
 
     expect(overview).toMatch(/^## What loaders\.gl already provides$/m);
     for (const capability of [

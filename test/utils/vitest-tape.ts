@@ -62,6 +62,10 @@ function isPromiseLike(value: unknown): value is Promise<unknown> {
   return Boolean(value) && typeof (value as Promise<unknown>).then === 'function';
 }
 
+function isReferenceValue(value: unknown): value is object | ((...args: never[]) => unknown) {
+  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+}
+
 function normalizeThrowsArgs(
   expectedOrMessage?: MatchPattern | (new (...args: never[]) => Error) | string,
   message?: string
@@ -161,6 +165,10 @@ class VitestTape implements Test {
 
   equal(actual: unknown, expected: unknown, message?: string): void {
     this.countAssertion();
+    if (isReferenceValue(actual) || isReferenceValue(expected)) {
+      expect(Object.is(actual, expected), message).toBe(true);
+      return;
+    }
     expect(actual, message).toBe(expected);
   }
 
@@ -207,6 +215,10 @@ class VitestTape implements Test {
 
   notEqual(actual: unknown, expected: unknown, message?: string): void {
     this.countAssertion();
+    if (isReferenceValue(actual) || isReferenceValue(expected)) {
+      expect(Object.is(actual, expected), message).toBe(false);
+      return;
+    }
     expect(actual, message).not.toBe(expected);
   }
 

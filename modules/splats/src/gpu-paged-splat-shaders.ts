@@ -1,6 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// Spark-compatible RAD opacity and support behavior is adapted from Spark:
+// https://github.com/sparkjsdev/spark (MIT, Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.)
 
 import type {ShaderLayout} from '@luma.gl/core';
 import {

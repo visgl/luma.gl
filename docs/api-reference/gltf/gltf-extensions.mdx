@@ -3,6 +3,7 @@ sidebar_label: Extension Support
 ---
 
 import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
+import {MarkdownTable} from '@site/src/components/docs/markdown-table';
 
 export const GLTF_EXTENSION_SPEC_BASE_URL =
   'https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0';
@@ -110,8 +111,8 @@ Status meanings:
 - `✅`: works end-to-end in the default luma.gl glTF pipeline.
 - `✅ *️⃣`: works in the default pipeline, with low-level decoding handled by
   `@loaders.gl/gltf` during load.
-- `🚧`: work in progress for this release; implemented paths are still under active
-  validation.
+- `🚧`: partially implemented; the linked row states which paths are available and which
+  limitations remain.
 - `*️⃣`: extension data is preserved or exposed, but applications still need to
   decide how to use it at runtime.
 - `App`: applications are responsible for selecting and applying the feature.
@@ -123,7 +124,7 @@ conditional WebP selection, and supported 3D Tiles feature/structural metadata. 
 package consumes those results; it does not need independent mesh codecs, accessor decoders, or
 GLB container serialization. `postProcessGLTF()` must still be called explicitly in loaders.gl v4.
 
-<table style={{width: '100%'}}>
+<MarkdownTable style={{width: '100%'}}>
   <thead>
     <tr>
       <th>Extension</th>
@@ -304,7 +305,7 @@ GLB container serialization. `postProcessGLTF()` must still be called explicitly
       implemented.
     </SupportRow>
   </tbody>
-</table>
+</MarkdownTable>
 
 ## Inspect runtime capabilities
 

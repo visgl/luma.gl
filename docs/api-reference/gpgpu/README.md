@@ -1,3 +1,8 @@
+---
+title: GPGPU
+description: Evaluate portable GPU data operations and compose vectors, custom operations, and precision-aware compute workflows.
+---
+
 import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
 # Overview

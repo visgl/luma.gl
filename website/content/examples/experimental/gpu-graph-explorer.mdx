@@ -1,0 +1,113 @@
+---
+title: GPU Graph Interactive Graph Explorer
+sidebar_label: GPU Graph explorer
+description: Explore up to 1,048,576 actual GPU vertices and 2,097,343 resident edges through communities, PageRank, neighborhood selection, and bounded force layout.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, visualization, command-graphs, picking, graph-analytics]
+---
+
+import {GPUGraphExplorerExample} from '@site/src/examples';
+
+## Overview
+
+A list of relationships can tell you which two entities are connected, but it cannot immediately
+show which account influences a network, how far a problem can spread, or which tightly connected
+groups exist inside a larger network. This WebGPU-only explorer opens with **1,024 real vertices**
+and offers fourteen resident graph populations from **128 to 1,048,576 vertices**. At its largest
+setting, all **1,048,576 actual vertices and 2,097,343 original directed edges** remain genuine GPU
+graph data; displayed population is never extrapolated from a smaller sample.
+
+<GPUGraphExplorerExample />
+
+## How to read the network
+
+The graph contains four intentionally generated source groups, unequal-importance hubs, a single
+bridge connecting the first two groups, and one isolated final vertex. Its graph inspector compares
+five actual GPU-computed perspectives:
+
+- **Label-propagation communities** reveal locally cohesive groups. The two groups joined by one
+  narrow bridge can receive separate community colors even though they share a weak component.
+  Community labels are deterministic, bounded heuristic results, not a guarantee of convergence
+  or clustering quality.
+- **Weak components** show which entities remain connected when relationship direction is ignored.
+  A bridge merges its two source groups into one component, while disconnected groups and the
+  isolated vertex remain separate. This is connectivity, not the separate community-detection mode.
+- **Vertex degree** counts immediate relationships, revealing directly connected local hubs.
+- **PageRank importance** reflects influence arriving from other important vertices, which is not
+  equivalent to simply counting direct edges.
+- **Neighborhood distance** shows bounded shortest-path distance from the selected vertex.
+
+Node size can independently represent **PageRank**, **vertex degree**, or a **uniform radius**.
+All color and sizing modes consume existing GPU result buffers; they do not download graph columns
+to JavaScript.
+
+## Try the controls
+
+- **Click a node** to select its stable original vertex identifier and highlight its neighborhood.
+- **Choose a graph size** to rebuild the complete resident graph from 128 through 1,048,576
+  original vertices.
+- **Choose a layout mode** to select automatic, exact, flat-grid spatial, or sampled GPU forces.
+- **Choose a node color mode** to compare communities, weak components, direct degree, PageRank
+  influence, or shortest-path distance.
+- **Choose a node size mode** to compare PageRank, degree, or uniform-size vertices.
+- **Adjust neighborhood depth** to include more or fewer unweighted relationship hops.
+- **Toggle original edges** to inspect vertices without hiding or repacking source edge batches.
+- **Pause or resume the layout** while keeping the graph, selection, and rendering interactive.
+- **Drag a selected node** to move it and pin its position while the rest of the graph evolves.
+- **Release pins** to allow pinned vertices to move again.
+- **Reset layout** to restore deterministic initial positions and restart the progressive layout.
+- **Hold Shift and drag** to pan; use the scroll wheel to zoom.
+
+These interactions are useful when exploring social relationships, tracing service dependencies,
+investigating transactions, or explaining why a structurally important account differs from one
+that simply has many direct connections.
+
+The graph inspector opens automatically for this example. Its accessible color legend, live graph
+status, actual WebGPU adapter, frame cadence, measured CPU encoding, and owned or transient GPU
+memory make the active pipeline understandable without fabricated GPU timing. Resident vertex and
+edge totals remain distinct from bounded visible edge counts.
+
+## What actually stays on the GPU
+
+The original source and target edge columns remain in their aligned nonempty, empty, and nonempty
+batches throughout adjacency construction and rendering. GPU-built forward and reverse compressed
+adjacency feeds exact vertex degree, bounded breadth-first selection, weakly connected components,
+label-propagation communities, normalized PageRank, and progressive force simulation. Node models
+bind the same writable position buffer directly as a vertex attribute, and edge models consume
+their original source batches; no implicit source concatenation, copied render attribute, or
+per-frame CPU position readback is required.
+
+Picking renders stable vertex identifiers into an integer attachment. Only an explicitly requested
+single-pixel selection copies one **8-byte** result back asynchronously through a caller-owned
+readback ring; ordinary analytics, simulation, and drawing remain GPU-resident.
+
+## How scale changes the real GPU workload
+
+The automatic layout policy chooses an actual algorithm appropriate to the selected population:
+
+- **Through 512 vertices:** exact force-directed layout evaluates every vertex pair and costs
+  `O(V² + E)` per iteration.
+- **From 1,024 through 8,192 vertices:** the optional flat-grid spatial approximation keeps nearby
+  forces exact while representing sufficiently distant cells by their population and center.
+- **From 16,384 vertices:** a separate sampled approximation processes every real edge and four
+  deterministic repulsion samples per original vertex, costing `O(E + 4V)` per iteration.
+- **From 65,536 vertices:** every source vertex remains rendered as one GPU point; only visible
+  original edges are capped at 65,536.
+
+At the maximum graph size, **1,048,576 vertices** and **2,097,343 original directed edges** remain
+resident even when only **65,536 edges** are drawn. Four deterministic source-community anchors,
+degree-normalized attraction, and population-independent repulsion keep the full point cloud
+legible without replacing real vertices with representative samples.
+
+Adjacency construction, degree, and a breadth-first traversal are `O(V + E)`; bounded PageRank and
+weak components require `O(K × (V + E))`, while deterministic label propagation requires
+`O(K × sum(degree²))`. Exact pairwise repulsion is the quadratic workload that changes with scale;
+graph analytics themselves are not automatically quadratic. Bounded iterations do not prove
+community, component, or PageRank convergence. Sampled layout is not Barnes–Hut, an exact force
+solver, or fabricated GPU timing; WebGPU is required.
+
+See the [GPU Graph API guide](/docs/api-reference/experimental/gpu-graph) for ownership, overflow,
+selection, convergence, and force-layout contracts.

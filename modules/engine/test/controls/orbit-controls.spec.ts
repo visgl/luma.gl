@@ -153,6 +153,124 @@ test('OrbitControls consumes wheel gestures and keeps zoom inside configured bou
   t.end();
 });
 
+test('OrbitControls optionally pans its target while shift-dragging', t => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas, {
+    target: [1, 2, 3],
+    yaw: 0,
+    pitch: 0,
+    distance: 10,
+    enablePan: true,
+    panSpeed: 0.01
+  });
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 3,
+    clientX: 0,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointermove', {
+    pointerId: 3,
+    clientX: 2,
+    clientY: 3,
+    shiftKey: true
+  });
+
+  t.deepEqual(controls.props.target, [0.8, 2.3, 3], 'pans the target in camera space');
+  t.equal(controls.yaw, 0, 'does not rotate while panning');
+
+  controls.destroy();
+  t.end();
+});
+
+test('OrbitControls disables camera interactions and wheel zoom independently', t => {
+  const canvas = makeTestCanvas();
+  let interactionCount = 0;
+  let preventedWheelCount = 0;
+  const controls = new OrbitControls(canvas, {
+    yaw: 0,
+    distance: 10,
+    enabled: false,
+    autoRotate: true,
+    autoRotateSpeed: 0.08,
+    onInteractionStart: () => interactionCount++
+  });
+  const wheelEvent = {
+    deltaY: 100,
+    preventDefault: () => preventedWheelCount++
+  };
+
+  controls.update(1000);
+  controls.update(1100);
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 9,
+    clientX: 5,
+    clientY: 6
+  });
+  canvas.dispatchTestEvent('wheel', wheelEvent);
+
+  t.equal(controls.yaw, 0, 'disabled controls do not auto-rotate');
+  t.equal(canvas.hasPointerCapture(9), false, 'disabled controls do not capture pointers');
+  t.equal(preventedWheelCount, 0, 'disabled controls do not consume wheel events');
+  t.equal(interactionCount, 0, 'disabled controls do not notify interactions');
+
+  controls.setProps({enabled: true, enableZoom: false});
+  canvas.dispatchTestEvent('wheel', wheelEvent);
+  t.equal(preventedWheelCount, 0, 'disabled zoom does not consume wheel events');
+
+  controls.setProps({enableZoom: true});
+  canvas.dispatchTestEvent('wheel', wheelEvent);
+  t.equal(preventedWheelCount, 1, 'enabled zoom consumes wheel events');
+  t.equal(interactionCount, 1, 'enabled zoom notifies the interaction');
+  t.ok(controls.distance > 10, 'enabled zoom changes the camera distance');
+
+  controls.update(1200);
+  t.equal(controls.yaw, 0.008, 're-enabled controls resume auto-rotation');
+
+  controls.destroy();
+  t.end();
+});
+
+test('OrbitControls cancels active pointer capture when disabled', t => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas, {
+    yaw: 0,
+    autoRotate: true,
+    autoRotateSpeed: 1
+  });
+
+  controls.update(1000);
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 12,
+    clientX: 10,
+    clientY: 20
+  });
+  t.equal(canvas.hasPointerCapture(12), true, 'captures the active pointer');
+  t.equal(canvas.style.cursor, 'grabbing', 'shows the active drag cursor');
+
+  controls.setProps({enabled: false});
+  t.equal(canvas.hasPointerCapture(12), false, 'releases pointer capture while disabling');
+  t.equal(canvas.style.cursor, 'grab', 'restores the idle orbit cursor');
+
+  canvas.dispatchTestEvent('pointermove', {
+    pointerId: 12,
+    clientX: 30,
+    clientY: 40
+  });
+  controls.update(1100);
+  t.equal(controls.yaw, 0, 'disabled controls ignore movement and auto-rotation');
+
+  controls.setProps({enabled: true});
+  controls.update(1200);
+  t.equal(controls.yaw, 0.1, 're-enabled controls resume without a stale drag');
+
+  controls.destroy();
+  t.end();
+});
+
 test('OrbitControls updates camera configuration, preserves live state, and resets fitted poses', t => {
   const controls = new OrbitControls(makeTestCanvas(), {
     yaw: 0.1,

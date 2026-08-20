@@ -139,7 +139,7 @@ describe('getting-started onboarding', () => {
         modifier: 'splats',
         packageName: '@luma.gl/splats',
         title: 'Gaussian Splats',
-        image: 'showcase/gaussian-splats.jpg',
+        image: 'showcase/gaussian-splat-viewer.jpg',
         route: '/examples/showcase/gaussian-splat-viewer'
       },
       {
@@ -202,15 +202,43 @@ describe('getting-started onboarding', () => {
     expect(onboardingSource).toContain('Build your first project');
   });
 
+  test('introduces the complete framework module stack before optional project setup', () => {
+    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
+    const websiteStyles = readFileSync(WEBSITE_STYLES_PATH, 'utf8');
+    const capabilitySectionOffset = onboardingSource.indexOf('03 · Built for ambitious ideas');
+    const frameworkModuleCardsOffset = onboardingSource.indexOf('<FrameworkModuleCards />');
+    const learningPathsOffset = onboardingSource.indexOf('04 · Find your starting point');
+
+    expect(onboardingSource).toContain(
+      "import {FrameworkModuleCards} from '@site/src/components/framework-module-cards';"
+    );
+    expect(onboardingSource).toContain('The luma.gl framework.');
+    expect(onboardingSource).toContain('Gaussian splats, and compute.');
+    expect(onboardingSource).toContain('className="luma-onboarding__framework-modules"');
+    expect(websiteStyles).toMatch(/\.luma-onboarding__framework-modules\s*\{[^}]*margin-top:/);
+    expect(frameworkModuleCardsOffset).toBeGreaterThan(capabilitySectionOffset);
+    expect(frameworkModuleCardsOffset).toBeLessThan(learningPathsOffset);
+  });
+
   test('keeps tutorial and developer navigation consistent with the onboarding journey', () => {
     const tutorialTabsSource = readFileSync(TUTORIAL_DOCS_TABS_SOURCE_PATH, 'utf8');
     const websiteStyles = readFileSync(WEBSITE_STYLES_PATH, 'utf8');
     const tableOfContents = JSON.parse(
       readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
-    ) as Array<string | {label?: string; items?: string[]}>;
+    ) as Array<
+      | string
+      | {
+          label?: string;
+          items?: Array<string | {label?: string; items?: string[]}>;
+        }
+    >;
     const developerGuide = tableOfContents.find(
-      (item): item is {label: string; items: string[]} =>
-        typeof item !== 'string' && item.label === 'Developer Guide' && Array.isArray(item.items)
+      (
+        item
+      ): item is {
+        label: string;
+        items: Array<string | {label?: string; items?: string[]}>;
+      } => typeof item !== 'string' && item.label === 'Developer Guide' && Array.isArray(item.items)
     );
 
     expect(tutorialTabsSource).toMatch(
@@ -218,10 +246,39 @@ describe('getting-started onboarding', () => {
     );
     expect(tutorialTabsSource).not.toMatch(/label:\s*'Setup'/);
     expect(websiteStyles).toContain('.container:has(.luma-example-page):not(:has(> .row))');
-    expect(developerGuide?.items.slice(0, 3)).toEqual([
+    expect(developerGuide?.items).toEqual([
       'developer-guide/README',
-      'developer-guide/installing',
-      'developer-guide/working-with-ai'
+      {
+        type: 'category',
+        label: 'Setup and contribution',
+        items: [
+          'developer-guide/installing',
+          'developer-guide/editing',
+          'developer-guide/multiple-canvases',
+          'developer-guide/contributing',
+          'developer-guide/documentation'
+        ]
+      },
+      {
+        type: 'category',
+        label: 'Quality and delivery',
+        items: [
+          'developer-guide/testing',
+          'developer-guide/debugging',
+          'developer-guide/profiling',
+          'developer-guide/bundling',
+          'developer-guide/working-with-ai'
+        ]
+      },
+      {
+        type: 'category',
+        label: 'Test tooling',
+        items: [
+          'developer/dev-tools/llm-friendly-test-setup',
+          'developer/dev-tools/playwright',
+          'developer/dev-tools/browser-debug'
+        ]
+      }
     ]);
   });
 
@@ -230,9 +287,21 @@ describe('getting-started onboarding', () => {
     const documentationOverview = readFileSync(path.join(process.cwd(), 'docs/README.mdx'), 'utf8');
     const tableOfContents = JSON.parse(
       readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
-    ) as Array<string | {label?: string}>;
+    ) as Array<string | {label?: string; items?: string[]}>;
 
-    expect(tableOfContents.slice(0, 3)).toEqual(['README', 'getting-started', 'capabilities']);
+    expect(tableOfContents.slice(0, 3)).toEqual([
+      'README',
+      'getting-started',
+      {
+        type: 'category',
+        label: 'Capabilities',
+        items: [
+          'capabilities',
+          'capabilities/gpu-data-compute',
+          'capabilities/rendering-visualization'
+        ]
+      }
+    ]);
     expect(documentationOverview).toMatch(
       /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/capabilities")[^>]*>/
     );

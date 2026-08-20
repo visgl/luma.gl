@@ -217,7 +217,9 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerPanel).toContain('data-gaussian-splats-pipeline');
     expect(viewerPanel).toContain('data-gaussian-splats-execution');
     expect(viewerPanel).toContain('data-gaussian-splats-graph-inspector');
+    expect(viewerPanel).toContain('data-gaussian-splats-rad-diagnostics');
     expect(viewerSource).toContain('activeRenderer.encode(device.commandEncoder)');
+    expect(viewerSource).toContain('continueTraversal(RAD_TRAVERSAL_SLICE_ROWS)');
     expect(viewerSource).toContain('this.localLoadersConfiguration?.maxResidentSplatCount');
     expect(viewerSource).toContain('this.localLoadersConfiguration?.expectedSplatCount');
     expect(viewerSource).not.toContain('this.activateGraphRenderer()');
@@ -259,7 +261,7 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerDocumentation).toContain(SYNTHETIC_SHOWCASE_ROUTE);
     expect(syntheticDocumentation).toContain(WEBSITE_VIEWER_ROUTE);
     expect(getExampleThumbnailPath('showcase/gaussian-splat-viewer')).toBe(
-      'showcase/gaussian-splats.jpg'
+      'showcase/gaussian-splat-viewer.jpg'
     );
   });
 
@@ -348,8 +350,13 @@ describe('published Gaussian splat viewer', () => {
     expect(getLocalGaussianSplatLoadersConfiguration()?.sourceUrls).toHaveLength(2);
 
     installViewerWindow('?scene=coit');
-    expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
+    const expectedCoitSourceUrl =
+      'https://storage.googleapis.com/download/storage/v1/b/forge-dev-public/o/asundqui%2Frad%2F260217%2Fcoit-40m-sh1-lod.rad?alt=media';
+    const coitConfiguration = getLocalGaussianSplatLoadersConfiguration();
+    expect(coitConfiguration).toMatchObject({
       sceneId: 'coit',
+      sourceUrl: expectedCoitSourceUrl,
+      sourceUrls: [expectedCoitSourceUrl],
       sourceFormat: 'RAD',
       expectedSplatCount: 50_937_127,
       expectedBatchCount: 16,
@@ -361,6 +368,11 @@ describe('published Gaussian splat viewer', () => {
         target: [0.0226670563, -0.1886351632, 0.0141479052]
       }
     });
+    const coitSourceUrl = new URL(coitConfiguration!.sourceUrl);
+    expect(coitSourceUrl.searchParams.get('alt')).toBe('media');
+    expect(coitSourceUrl.pathname).toBe(
+      '/download/storage/v1/b/forge-dev-public/o/asundqui%2Frad%2F260217%2Fcoit-40m-sh1-lod.rad'
+    );
 
     installViewerWindow('?scene=coit&residentSplats=250000');
     expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
@@ -1058,6 +1070,15 @@ describe('published Gaussian splat viewer', () => {
     expect(scene.hierarchy.residencyManager.stats.residentSplatCount).toBe(4);
     expect(scene.hierarchy.residencyManager.stats.evictedChunkCount).toBe(1);
     expect(requestedRanges).toHaveLength(3);
+    expect(scene.diagnostics).toMatchObject({
+      activeRowCount: 2,
+      pendingPageCount: 0,
+      loadedPageCount: 2,
+      residentPageCount: 2,
+      residentSplatCount: 4
+    });
+    expect(scene.diagnostics.traversalPassCount).toBeGreaterThan(0);
+    expect(scene.diagnostics.lastTraversalDurationMilliseconds).toBeGreaterThanOrEqual(0);
 
     scene.destroy();
     expect(loadedPages.every(page => page.destroyed)).toBe(true);

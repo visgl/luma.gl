@@ -9,6 +9,7 @@ import {
   BackgroundTextureModel,
   SphereGeometry,
   Model,
+  OrbitControls,
   ShaderInputs
 } from '@luma.gl/engine';
 import {
@@ -251,8 +252,7 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   opacity = 0.34;
   sphereSize = 6.5;
   rotationEnabled = true;
-  orbitRadians = Math.PI / 6;
-  lastRenderTimeSeconds: number | null = null;
+  orbitControls: OrbitControls | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -337,7 +337,18 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     });
   }
 
-  override async onInitialize(): Promise<void> {
+  override async onInitialize({canvas}: AnimationProps): Promise<void> {
+    if (canvas instanceof HTMLCanvasElement) {
+      this.orbitControls = new OrbitControls(canvas, {
+        distance: Math.hypot(45, 15),
+        yaw: (Math.PI * 5) / 6,
+        pitch: Math.atan2(15, 45),
+        minDistance: 18,
+        maxDistance: 90,
+        autoRotate: this.rotationEnabled,
+        autoRotateSpeed: (-Math.PI * 2) / ORBIT_DURATION_SECONDS
+      });
+    }
     this.panels.mount();
   }
 
@@ -422,6 +433,7 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   override onFinalize(): void {
     this.panels.finalize();
     this.settingsPanel.finalize();
+    this.orbitControls?.destroy();
     this.opaqueModel.destroy();
     this.alphaModel.destroy();
     this.wboitModel?.destroy();
@@ -492,21 +504,8 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   }
 
   private getViewProjectionMatrix(aspect: number, time: number): Matrix4 {
-    const timeSeconds = time / 1000;
-    if (this.lastRenderTimeSeconds === null) {
-      this.lastRenderTimeSeconds = timeSeconds;
-    }
-    const elapsedSeconds = Math.max(timeSeconds - this.lastRenderTimeSeconds, 0);
-    this.lastRenderTimeSeconds = timeSeconds;
-    if (this.rotationEnabled) {
-      this.orbitRadians += (elapsedSeconds * Math.PI * 2) / ORBIT_DURATION_SECONDS;
-    }
-
-    const cameraPosition: [number, number, number] = [
-      Math.sin(this.orbitRadians) * 45,
-      15,
-      -Math.cos(this.orbitRadians) * 45
-    ];
+    this.orbitControls?.update(time);
+    const cameraPosition = this.orbitControls?.getEyePosition() || [22.5, 15, -Math.sqrt(3) * 22.5];
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(58),
       aspect,
@@ -541,6 +540,7 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     }
     if (typeof rotationEnabled === 'boolean') {
       this.rotationEnabled = rotationEnabled;
+      this.orbitControls?.setAutoRotate(rotationEnabled);
     }
   };
 }
