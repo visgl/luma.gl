@@ -178,11 +178,18 @@ type SplatRADFrontierCandidate = {
   parent?: SplatRADFrontierCandidate;
 };
 
+type SplatRADRefinementProgress = {
+  nextChildOffset: number;
+  residentChildCount: number;
+  childCandidates: SplatRADFrontierCandidate[];
+};
+
 /** One resumable best-first traversal for an unchanged camera and source-page set. */
 type SplatRADIncrementalTraversal = {
   state: SplatRADTraversalState;
   selectedRows: Map<number, SplatRADFrontierCandidate>;
   refinementQueue: SplatRADPriorityQueue;
+  refinementProgress: Map<number, SplatRADRefinementProgress>;
 };
 
 /**
@@ -552,6 +559,7 @@ export class SplatRADHierarchyManager {
     };
     const selectedRows = new Map<number, SplatRADFrontierCandidate>();
     const refinementQueue = new SplatRADPriorityQueue();
+    const refinementProgress = new Map<number, SplatRADRefinementProgress>();
 
     for (const rootRow of rootRows) {
       const rootPage = this.getRegisteredPageForRow(rootRow);
@@ -566,7 +574,7 @@ export class SplatRADHierarchyManager {
       }
     }
 
-    return {state, selectedRows, refinementQueue};
+    return {state, selectedRows, refinementQueue, refinementProgress};
   }
 
   /** Spends one row-evaluation slice while retaining the queue for the next settled frame. */
@@ -576,7 +584,7 @@ export class SplatRADHierarchyManager {
     countExistingRows: boolean
   ): void {
     const rowCountAtSliceStart = countExistingRows ? 0 : this.visibleRowCount + this.culledRowCount;
-    const {selectedRows, refinementQueue, state} = traversal;
+    const {selectedRows, refinementQueue, refinementProgress, state} = traversal;
     while (refinementQueue.length > 0) {
       const evaluatedRowCount = this.visibleRowCount + this.culledRowCount - rowCountAtSliceStart;
       if (evaluatedRowCount >= maxTraversalRows) {
@@ -589,6 +597,7 @@ export class SplatRADHierarchyManager {
           candidate,
           selectedRows,
           refinementQueue,
+          refinementProgress,
           state,
           remainingTraversalRows
         )
@@ -695,6 +704,7 @@ export class SplatRADHierarchyManager {
     candidate: SplatRADFrontierCandidate,
     selectedRows: Map<number, SplatRADFrontierCandidate>,
     refinementQueue: SplatRADPriorityQueue,
+    refinementProgress: Map<number, SplatRADRefinementProgress>,
     state: SplatRADTraversalState,
     remainingTraversalRows: number
   ): boolean {
@@ -708,27 +718,31 @@ export class SplatRADHierarchyManager {
       !Number.isSafeInteger(childStart + childCount) ||
       childStart + childCount > 0x8000_0000
     ) {
+      refinementProgress.delete(globalRowIndex);
       return false;
     }
-    if (childCount > remainingTraversalRows) {
-      return true;
-    }
 
-    const childPages: RegisteredSplatRADPage[] = [];
-    let allChildrenResident = true;
-    for (let childOffset = 0; childOffset < childCount; childOffset++) {
+    const progress = refinementProgress.get(globalRowIndex) ?? {
+      nextChildOffset: 0,
+      residentChildCount: 0,
+      childCandidates: []
+    };
+    const childOffsetLimit = Math.min(
+      childCount,
+      progress.nextChildOffset + remainingTraversalRows
+    );
+    for (; progress.nextChildOffset < childOffsetLimit; progress.nextChildOffset++) {
+      const childOffset = progress.nextChildOffset;
       const childRowIndex = childStart + childOffset;
       const childPage = this.getRegisteredPageForRow(childRowIndex);
       if (hasSplatRADAncestor(candidate, childRowIndex)) {
-        allChildrenResident = false;
         continue;
       }
       if (!childPage) {
-        allChildrenResident = false;
         this.requestRow(state, childRowIndex, priority, globalRowIndex);
         continue;
       }
-      childPages.push(childPage);
+      progress.residentChildCount++;
       if (childPage.page.id !== page.id) {
         const chunk = this.residencyManager.getChunk(childPage.page.id);
         if (chunk) {
@@ -736,24 +750,23 @@ export class SplatRADHierarchyManager {
           state.protectedPageIds.add(chunk.id);
         }
       }
+      const child = this.makeFrontierCandidate(childPage, childStart + childOffset, candidate);
+      if (child) {
+        progress.childCandidates.push(child);
+      }
     }
 
-    if (!allChildrenResident || childPages.length !== childCount) {
+    if (progress.nextChildOffset < childCount) {
+      refinementProgress.set(globalRowIndex, progress);
+      return true;
+    }
+    refinementProgress.delete(globalRowIndex);
+    if (progress.residentChildCount !== childCount) {
       candidate.isFallback = true;
       return false;
     }
 
-    const childCandidates: SplatRADFrontierCandidate[] = [];
-    for (let childOffset = 0; childOffset < childCount; childOffset++) {
-      const child = this.makeFrontierCandidate(
-        childPages[childOffset],
-        childStart + childOffset,
-        candidate
-      );
-      if (child) {
-        childCandidates.push(child);
-      }
-    }
+    const {childCandidates} = progress;
     if (
       childCandidates.length === 0 ||
       state.allocatedRowCount + childCandidates.length - 1 > this.maximumActiveRows

@@ -134,11 +134,11 @@ export class GPUTraceTimeBuckets implements GPUCommandGraphContributor {
           throw new Error(`${this.id} occupancy outputs must match the time-bucket count`);
         }
       });
-      const derivedViews = [this.durationOutput, ...occupancyOutputs];
-      for (let firstIndex = 0; firstIndex < derivedViews.length; firstIndex++) {
-        for (let secondIndex = firstIndex + 1; secondIndex < derivedViews.length; secondIndex++) {
-          if (doGraphDataViewsOverlap(derivedViews[firstIndex], derivedViews[secondIndex])) {
-            throw new Error(`${this.id} duration and occupancy outputs must not overlap`);
+      const outputViews = [this.countOutput, this.durationOutput, ...occupancyOutputs];
+      for (let firstIndex = 0; firstIndex < outputViews.length; firstIndex++) {
+        for (let secondIndex = firstIndex + 1; secondIndex < outputViews.length; secondIndex++) {
+          if (doGraphDataViewsOverlap(outputViews[firstIndex], outputViews[secondIndex])) {
+            throw new Error(`${this.id} time-bucket outputs must not overlap`);
           }
         }
       }

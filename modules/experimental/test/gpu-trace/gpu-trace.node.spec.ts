@@ -5,9 +5,11 @@
 import {existsSync, readFileSync} from 'node:fs';
 
 import * as experimentalModule from '@luma.gl/experimental';
+import {GraphBufferHandle, GraphDataView} from '@luma.gl/experimental';
 import * as traceModule from '@luma.gl/experimental/gpu-trace';
 import {
   GPUTraceAnalyticsOutputLayout,
+  GPUTraceTimeBuckets,
   GPU_TRACE_LINK_RECORD_WORD_LENGTH,
   GPU_TRACE_SPAN_RECORD_WORD_LENGTH,
   getGPUTracePickingShader
@@ -137,6 +139,52 @@ describe('@luma.gl/experimental/gpu-trace package boundary', () => {
           {id: 'duplicate', format: 'float32', length: 1}
         ])
     ).toThrow();
+  });
+
+  test('rejects occupancy output ranges that overlap the count output', () => {
+    const owner = {id: 'time-bucket-overlap-test'};
+    const sourceHandle = new GraphBufferHandle(
+      owner,
+      {id: 'time-bucket-source', byteLength: 16, usage: 0},
+      false
+    );
+    const outputHandle = new GraphBufferHandle(
+      owner,
+      {id: 'time-bucket-output', byteLength: 32, usage: 0},
+      false
+    );
+    const makeView = <Format extends 'float32' | 'uint32'>(
+      buffer: GraphBufferHandle,
+      format: Format,
+      byteOffset: number
+    ): GraphDataView<Format> =>
+      new GraphDataView(buffer, {
+        format,
+        length: 2,
+        byteOffset,
+        byteStride: 4,
+        rowByteLength: 4
+      });
+    const countOutput = makeView(outputHandle, 'uint32', 0);
+
+    expect(
+      () =>
+        new GPUTraceTimeBuckets({
+          trace: {
+            startTimes: makeView(sourceHandle, 'float32', 0),
+            durations: makeView(sourceHandle, 'float32', 8)
+          },
+          domain: [0, 1],
+          countOutput,
+          durationOutput: makeView(outputHandle, 'float32', 8),
+          occupancy: {
+            laneCount: 1,
+            averageConcurrencyOutput: makeView(outputHandle, 'float32', 0),
+            laneUtilizationOutput: makeView(outputHandle, 'float32', 16),
+            idleLaneTimeOutput: makeView(outputHandle, 'float32', 24)
+          }
+        })
+    ).toThrow(/outputs must not overlap/);
   });
 
   test('generates visible-row picking with caller-defined capacities and lane topology', () => {

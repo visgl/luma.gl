@@ -7,6 +7,7 @@ import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
 import {Texture} from '@luma.gl/core';
+import {AnimationAction} from '@luma.gl/engine';
 import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
@@ -99,6 +100,41 @@ describe('GPU-resident independently animated glTF crowds', () => {
     }
   });
 
+  test('bakes the actual final clip pose without repeat-loop wrapping', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const device = new NullDevice({});
+    const sampledTimes: Array<{requested: number; resolved: number; duration: number}> = [];
+    const originalSetTime = AnimationAction.prototype.setTime;
+    const setTimeSpy = vi.spyOn(AnimationAction.prototype, 'setTime').mockImplementation(function (
+      time: number
+    ) {
+      const result = originalSetTime.call(this, time);
+      sampledTimes.push({requested: time, resolved: this.time, duration: this.clip.duration});
+      return result;
+    });
+    let crowd: ReturnType<typeof createGLTFAnimatedCrowd> | undefined;
+
+    try {
+      crowd = createGLTFAnimatedCrowd(device, source, {
+        capacity: 1,
+        gpuAnimation: {sampleRate: 12}
+      });
+
+      expect(
+        sampledTimes.some(
+          sample =>
+            sample.duration > 0 &&
+            sample.requested === sample.duration &&
+            sample.resolved === sample.duration
+        )
+      ).toBe(true);
+    } finally {
+      crowd?.destroy();
+      setTimeSpy.mockRestore();
+      device.destroy();
+    }
+  });
+
   test('samples independent animated morph weights from baked GPU clip frames', async () => {
     const source = await loadFixture('AnimatedMorphCube.glb');
     const device = new NullDevice({});
@@ -183,6 +219,25 @@ describe('GPU-resident independently animated glTF crowds', () => {
     const crowd = createGLTFAnimatedCrowd(device, source, {
       capacity: 2,
       gpuAnimation: {sampleRate: 30, maxFrames: 1}
+    });
+
+    try {
+      expect(crowd.gpuAnimationEnabled).toBe(false);
+      expect(crowd.animationStats.mode).toBe('cpu');
+      expect(crowd.primitiveGroups[0].skinJointMatrices).toBeInstanceOf(Texture);
+    } finally {
+      crowd.destroy();
+      device.destroy();
+    }
+  });
+
+  test('retains CPU playback when the WebGL animation atlas exceeds texture limits', async () => {
+    const source = await loadFixture('SimpleSkin.gltf');
+    const device = new NullDevice({});
+    device.limits.maxTextureDimension2D = 16;
+    const crowd = createGLTFAnimatedCrowd(device, source, {
+      capacity: 2,
+      gpuAnimation: {sampleRate: 120}
     });
 
     try {

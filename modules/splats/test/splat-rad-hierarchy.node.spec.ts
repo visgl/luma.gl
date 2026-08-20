@@ -988,6 +988,45 @@ test('SplatRADHierarchyManager resumes deterministic best-first traversal in bou
   t.end();
 });
 
+test('SplatRADHierarchyManager resumes a child list wider than one traversal slice', t => {
+  const device = new NullDevice({});
+  const childCount = 128;
+  const page = makeRADPage(device, {
+    id: 'high-fanout-tree',
+    rowIndexBase: 0,
+    positions: Array.from({length: childCount + 1}, (_, rowIndex) => [
+      (rowIndex % 16) / 64 - 0.125,
+      0,
+      0
+    ]).flat(),
+    childCounts: [childCount, ...Array.from({length: childCount}, () => 0)],
+    childStarts: [1, ...Array.from({length: childCount}, () => 0)]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: childCount,
+    maxTraversalRows: 127
+  });
+
+  manager.update(makeRADView());
+  t.ok(manager.hasPendingTraversal, 'retains partial progress through the wide child list');
+  t.deepEqual(getFrontierSourceRows(manager.frontier), [[0]], 'keeps parent coverage mid-slice');
+
+  manager.continueTraversal(127);
+  t.notOk(manager.hasPendingTraversal, 'finishes the wide child list on the next slice');
+  t.deepEqual(
+    getFrontierSourceRows(manager.frontier).flat(),
+    Array.from({length: childCount}, (_, childOffset) => childOffset + 1),
+    'publishes every child after the resumable refinement completes'
+  );
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  t.end();
+});
+
 test('SplatRADHierarchyManager skips unchanged camera traversal but detects dynamic source rows', t => {
   const device = new NullDevice({});
   const parent = makeRADPage(device, {

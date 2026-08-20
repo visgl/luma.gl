@@ -447,17 +447,30 @@ export class GLTFAnimatedCrowd {
           })
         : gltf;
     this.lodSource = authoredLOD ? 'authored' : this.gltf !== gltf ? 'generated' : 'none';
-    this.gpuAnimationLayout = gpuAnimation
+    const requestedGPUAnimationLayout = gpuAnimation
       ? createGLTFCrowdGPUAnimationLayout(this.gltf, gpuAnimation)
       : null;
-    this.gpuAnimationEnabled = Boolean(this.gpuAnimationLayout);
-    this.gpuAnimationClips = new Map(
-      (this.gpuAnimationLayout?.clips || []).map(clip => [clip.name, clip])
-    );
-
     const jointsPerInstance = Math.max(
       0,
       ...(this.gltf.skins || []).map(skin => skin.joints.length)
+    );
+    const maximumMorphTargetCount = Math.max(
+      0,
+      ...this.gltf.nodes.flatMap(node =>
+        (node.mesh?.primitives || []).map(primitive => primitive.targets?.length || 0)
+      )
+    );
+    const maximumAnimationFrameStride = 4 + jointsPerInstance * 4 + maximumMorphTargetCount;
+    this.gpuAnimationLayout =
+      requestedGPUAnimationLayout &&
+      (device.type === 'webgpu' ||
+        (maximumAnimationFrameStride <= device.limits.maxTextureDimension2D &&
+          requestedGPUAnimationLayout.frameCount <= device.limits.maxTextureDimension2D))
+        ? requestedGPUAnimationLayout
+        : null;
+    this.gpuAnimationEnabled = Boolean(this.gpuAnimationLayout);
+    this.gpuAnimationClips = new Map(
+      (this.gpuAnimationLayout?.clips || []).map(clip => [clip.name, clip])
     );
     const configuration: GLTFCrowdModelConfiguration = {
       capacity,
@@ -847,13 +860,10 @@ export class GLTFAnimatedCrowd {
     try {
       for (const clip of layout.clips) {
         const animation = bakingActor.animator.selectClip(clip.name);
+        animation.action.setLoop('once', 1);
         for (let clipFrame = 0; clipFrame < clip.frameCount; clipFrame++) {
           const time = Math.min(clipFrame / layout.sampleRate, clip.duration);
-          animation.action.setTime(
-            time === clip.duration && clip.duration > 0
-              ? Math.max(0, clip.duration - Number.EPSILON)
-              : time
-          );
+          animation.action.setTime(time);
           bakingActor.animator.update(0);
           const worldMatrices = collectNodeWorldMatrices(bakingActor.root);
           bakingActor.updateSkinMatrices(worldMatrices);
