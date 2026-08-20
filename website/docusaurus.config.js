@@ -65,8 +65,67 @@ const config = getDocusaurusConfig({
             to: '/examples/api/video-texture'
           },
           {
-            from: ['/docs/api-reference/tables/gpu-table-object-model'],
-            to: '/docs/api-reference/tables/gpu-table-lifecycle'
+            from: [
+              '/docs/api-reference/tables/gpu-table-object-model',
+              '/docs/api-reference/experimental/gpu-tables/gpu-table-object-model'
+            ],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle'
+          },
+          {
+            from: ['/docs/api-reference/tables'],
+            to: '/docs/api-reference/experimental/gpu-tables'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-constant'],
+            to: '/docs/api-reference/gpgpu/gpu-constant'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-data'],
+            to: '/docs/api-reference/gpgpu/gpu-data'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-data-view'],
+            to: '/docs/api-reference/gpgpu/gpu-data-view'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-vector'],
+            to: '/docs/api-reference/gpgpu/gpu-vector'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-vector-format'],
+            to: '/docs/api-reference/gpgpu/gpu-vector-format'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-record-batch'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-record-batch'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-schema'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-schema'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-input-schema'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-input-schema'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-structure'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-structure'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-lifecycle'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-shader-bindings'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-buffer-planner'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner'
           },
           {
             from: [

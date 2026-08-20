@@ -11,6 +11,7 @@ import {
   LumaExample,
   ReactExample,
   type ExampleDisplayProps,
+  type LumaExampleProps,
   useStore
 } from './react-luma';
 import type {Device} from '@luma.gl/core';
@@ -86,6 +87,7 @@ import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
 import VectorFieldLabApp from '../../examples/showcase/vector-field-lab/app';
+import QuantumStateStudioApp from '../../examples/showcase/quantum-state-studio/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
@@ -771,18 +773,44 @@ export const ANARIPlaygroundExample: React.FC = () => {
   );
 };
 
-export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="gltf"
-    title="glTF Asset Studio"
-    subtitle="Physical materials · animated characters · standards-native glTF"
-    directory="showcase"
-    template={GLTFApp}
-    config={exampleConfig}
-    canvasContextProfile="high-dynamic-range"
-    {...props}
-  />
-);
+export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
+  const referenceDevice = getGLTFReferenceDeviceSelection();
+
+  return (
+    <LumaExample
+      id="gltf"
+      title="glTF Asset Studio"
+      subtitle="Physical materials · animated characters · standards-native glTF"
+      directory="showcase"
+      template={GLTFApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      devices={referenceDevice ? [referenceDevice] : undefined}
+      {...props}
+    />
+  );
+};
+
+function getGLTFReferenceDeviceSelection(): NonNullable<LumaExampleProps['devices']>[number] | null {
+  if (
+    typeof window === 'undefined' ||
+    new URLSearchParams(window.location.search).get('gltf-reference') !== '1'
+  ) {
+    return null;
+  }
+
+  const deviceType = window.localStorage.getItem('luma-device-type');
+  switch (deviceType) {
+    case 'webgpu-core':
+    case 'webgpu-max':
+    case 'webgpu-compatibility':
+      return deviceType;
+    case 'webgl':
+      return 'webgl2';
+    default:
+      return null;
+  }
+}
 
 export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
   if (typeof window !== 'undefined') {
@@ -876,6 +904,20 @@ export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
     devices={['webgpu']}
     template={VectorFieldLabApp}
     config={exampleConfig}
+    {...props}
+  />
+);
+
+export const QuantumStateStudioExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="quantum-state-studio"
+    title="Quantum State Studio"
+    subtitle="GPU-resident state vectors · linked probability, phase, Bloch, and correlation views"
+    directory="showcase"
+    devices={['webgpu']}
+    template={QuantumStateStudioApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );

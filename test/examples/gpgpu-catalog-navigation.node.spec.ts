@@ -219,6 +219,7 @@ describe('GPGPU example catalog navigation', () => {
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
       'showcase/vector-field-lab',
+      'showcase/quantum-state-studio',
       'experimental/gpu-sort',
       'experimental/gpu-data-analysis'
     ]);

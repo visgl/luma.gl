@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import {chromium} from 'playwright';
 
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
@@ -7,6 +11,7 @@ const DEFAULT_DEBUG_PORT = 9222;
 export async function launchDebugBrowser(options = {}) {
   const debugPort = options.debugPort || DEFAULT_DEBUG_PORT;
   const launchOptions = getPlaywrightLaunchOptions({
+    backend: options.backend,
     ocularConfig: options.ocularConfig,
     channel: options.channel,
     headless: options.headless,

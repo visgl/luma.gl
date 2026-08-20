@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUDataDocsTabs} from '@site/src/components/docs/gpu-data-docs-tabs';
 
 # GPUData
 
-<TablesDocsTabs active="data" />
+<GPUDataDocsTabs active="data" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -15,7 +15,7 @@ lowest-level storage object in `@luma.gl/gpgpu/gpu-data`: each `GPUData` owns or
 its own `Buffer` or `DynamicBuffer`, and higher-level table objects refer to
 buffers through `GPUData`.
 
-[`GPUDataView`](/docs/api-reference/tables/gpu-data-view) is the non-owning
+[`GPUDataView`](/docs/api-reference/gpgpu/gpu-data-view) is the non-owning
 physical counterpart: one fixed-width format, value count, byte offset, and byte
 stride over any buffer-like resource.
 

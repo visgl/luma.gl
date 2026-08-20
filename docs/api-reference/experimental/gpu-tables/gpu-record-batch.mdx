@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs';
 
 # GPURecordBatch
 
-<TablesDocsTabs active="record-batch" />
+<GPUTablesDocsTabs active="record-batch" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -11,8 +11,8 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 </DocumentationBadges>
 
 `GPURecordBatch` represents one immutable preserved GPU batch. It owns one
-batch-local [`GPUData`](/docs/api-reference/tables/gpu-data) chunk per selected column,
-[`GPUSchema`](/docs/api-reference/tables/gpu-schema) metadata, and buffer-layout
+batch-local [`GPUData`](/docs/api-reference/gpgpu/gpu-data) chunk per selected column,
+[`GPUSchema`](/docs/api-reference/experimental/gpu-tables/gpu-schema) metadata, and buffer-layout
 metadata.
 
 ## Usage

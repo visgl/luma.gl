@@ -99,6 +99,11 @@
             "id": "showcase/vector-field-lab",
             "label": "GPUCommandGraph: Vector Field Lab"
           },
+          {
+            "type": "doc",
+            "id": "showcase/quantum-state-studio",
+            "label": "GPUCommandGraph: Quantum State Studio"
+          },
           "experimental/gpu-sort",
           "experimental/gpu-data-analysis"
         ]

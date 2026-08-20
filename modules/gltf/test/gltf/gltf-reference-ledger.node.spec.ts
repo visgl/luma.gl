@@ -8,6 +8,10 @@ import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
 import {assertSupportedGLTFExtensions, getRegisteredGLTFExtensions} from '@luma.gl/gltf';
 import {getGLTFReferenceLedger} from '../../../../examples/showcase/gltf/gltf-reference-ledger';
+import {
+  getGLTFReferenceCaptureOptions,
+  getGLTFReferenceDrawMetrics
+} from '../../../../examples/showcase/gltf/gltf-reference-evidence';
 
 describe('glTF reference ledger', () => {
   test('pins the Khronos assets and viewer revisions', () => {
@@ -15,8 +19,10 @@ describe('glTF reference ledger', () => {
 
     expect(ledger.sampleAssetsRevision).toMatch(/^[0-9a-f]{40}$/);
     expect(ledger.sampleViewerRevision).toMatch(/^[0-9a-f]{40}$/);
+    expect(ledger.sampleViewerReleaseRevision).toMatch(/^[0-9a-f]{40}$/);
     expect(ledger.sampleAssetsSource).toContain(ledger.sampleAssetsRevision);
     expect(ledger.sampleViewerSource).toContain(ledger.sampleViewerRevision);
+    expect(ledger.sampleViewerReleaseSource).toContain(ledger.sampleViewerReleaseRevision);
   });
 
   test('provides a licensed positive fixture for every supported extension', () => {
@@ -58,5 +64,46 @@ describe('glTF reference ledger', () => {
     expect(() => assertSupportedGLTFExtensions(fixture)).toThrow(
       `Unsupported required glTF extensions: ${unsupportedExtensionNames.join(', ')}`
     );
+  });
+
+  test('parses deterministic capture options without accepting invalid numeric values', () => {
+    expect(getGLTFReferenceCaptureOptions('?other=1')).toBeUndefined();
+    expect(
+      getGLTFReferenceCaptureOptions(
+        '?gltf-reference=1&model=Triangle&variant=glTF-Binary&file=fixture.glb&yaw=0.5&pitch=bad&distance=0'
+      )
+    ).toEqual({
+      modelName: 'Triangle',
+      variant: 'glTF-Binary',
+      fileName: 'fixture.glb',
+      yaw: 0.5,
+      pitch: -0.15,
+      distanceMultiplier: 0.05
+    });
+  });
+
+  test('counts indexed and non-indexed submitted geometry across instances', () => {
+    expect(
+      getGLTFReferenceDrawMetrics([
+        {
+          topology: 'triangle-list',
+          isInstanced: true,
+          instanceCount: 2,
+          vertexCount: 0,
+          indexBuffer: {byteLength: 12, indexType: 'uint16'}
+        },
+        {
+          topology: 'triangle-strip',
+          instanceCount: 0,
+          vertexCount: 5,
+          indexBuffer: null
+        }
+      ])
+    ).toEqual({
+      drawCount: 2,
+      submittedIndexReferences: 12,
+      submittedVertexReferences: 5,
+      triangleCount: 7
+    });
   });
 });

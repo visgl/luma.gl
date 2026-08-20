@@ -157,9 +157,10 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       this.extensionDemos.map(extensionDemo => extensionDemo.extensionName)
     );
     const storedExtension = window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY];
-    this.extensionName = activeExtensionNames.has(storedExtension)
-      ? storedExtension
-      : ALL_EXTENSIONS_FILTER;
+    this.extensionName =
+      !this.isReferenceCapture() && activeExtensionNames.has(storedExtension)
+        ? storedExtension
+        : ALL_EXTENSIONS_FILTER;
     this.modelOptions = getModelOptionsForExtension(
       this.extensionName,
       getAllModelOptions(models),
@@ -179,6 +180,9 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   async getImageBasedLightingEnvironment(): Promise<PBREnvironment | undefined> {
+    if (this.isReferenceCapture()) {
+      return undefined;
+    }
     if (this.imageBasedLightingEnvironment) {
       return this.imageBasedLightingEnvironment;
     }

@@ -221,7 +221,7 @@ payload bytes plus any backend alignment or multiplier-buffer overhead.
 - **Growing memory:** destroy superseded binding objects and tables; neither relies on
   garbage collection for GPU resources.
 
-See the [`GPUTable`](/docs/api-reference/tables/gpu-table),
-[`GPUConstant`](/docs/api-reference/tables/gpu-constant), and
-[`GPUTableShaderBindings`](/docs/api-reference/tables/gpu-table-shader-bindings)
+See the [`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table),
+[`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant), and
+[`GPUTableShaderBindings`](/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings)
 references for exact contracts.

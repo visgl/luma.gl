@@ -1,9 +1,9 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
-import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+import {GPUDataDocsTabs} from '@site/src/components/docs/gpu-data-docs-tabs';
 
 # GPUVectorFormat
 
-<TablesDocsTabs active="vector-format" />
+<GPUDataDocsTabs active="vector-format" />
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
@@ -11,7 +11,7 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 </DocumentationBadges>
 
 `GPUVectorFormat` is the canonical memory-layout string for
-[`GPUVector`](/docs/api-reference/tables/gpu-vector). [`GPUData`](/docs/api-reference/tables/gpu-data)
+[`GPUVector`](/docs/api-reference/gpgpu/gpu-vector). [`GPUData`](/docs/api-reference/gpgpu/gpu-data)
 also accepts an inline record of physical field formats and retains the resulting
 `GPUDataStructFormat` in its broader `GPUDataFormat` property.
 
