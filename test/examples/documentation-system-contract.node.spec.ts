@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {readFileSync, readdirSync, statSync} from 'node:fs';
+import {existsSync, readFileSync, readdirSync, statSync} from 'node:fs';
 import {dirname, extname, join, relative} from 'node:path';
 import ts from 'typescript';
 import {FOUNDATION_DOCS_CATALOG} from '../../website/src/components/docs/foundation-docs-catalog';
@@ -34,6 +34,8 @@ function collectTocRoutes(items: readonly TocItem[], routes = new Set<string>())
 }
 
 function collectMarkdownFiles(directory: string, files: string[] = []): string[] {
+  if (!existsSync(directory)) return files;
+
   for (const entry of readdirSync(directory)) {
     const path = join(directory, entry);
     if (statSync(path).isDirectory()) {
@@ -104,7 +106,15 @@ describe('documentation system contracts', () => {
   const markdownFiles = collectMarkdownFiles(DOCS_DIRECTORY);
   const curatedRoutes = new Set(markdownFiles.map(getRouteForFile));
   const generatedIndexFiles = collectMarkdownFiles(join(DOCS_DIRECTORY, 'api-reference/generated'));
-  const knownRoutes = new Set([...markdownFiles, ...generatedIndexFiles].flatMap(getRouteAliases));
+  const generatedRoutes = PUBLIC_PACKAGE_API_INVENTORY.flatMap(item => {
+    if (item.documentation.kind !== 'generated') return [];
+    const route = resolveInternalRoute(item.documentation.routePrefix);
+    return route ? [route] : [];
+  });
+  const knownRoutes = new Set([
+    ...[...markdownFiles, ...generatedIndexFiles].flatMap(getRouteAliases),
+    ...generatedRoutes
+  ]);
 
   it('keeps every curated document reachable from the table of contents', () => {
     const allowedStandaloneRoutes = new Set(['developer/dev-tools/README']);
