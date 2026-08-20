@@ -73,6 +73,22 @@
 .quantum-gate.active { border-color: #72e4ff; background: rgb(28 92 133 / 86%); box-shadow: 0 0 22px rgb(74 218 255 / 22%), inset 0 0 14px rgb(109 224 255 / 12%); }
 .quantum-gate.initial { color: #f0b3ff; }
 footer { position: absolute; left: 34px; right: 34px; bottom: 15px; display: flex; justify-content: space-between; color: #526981; font: 9px ui-monospace, SFMono-Regular, monospace; letter-spacing: .03em; }
+.explain-region { position: absolute; z-index: 1; border: 1px solid transparent; border-radius: 18px; outline: none; pointer-events: auto; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; }
+.explain-region::after { position: absolute; top: 9px; right: 10px; display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid rgb(110 220 255 / 25%); border-radius: 50%; background: rgb(5 17 38 / 64%); color: rgb(139 229 255 / 62%); content: 'i'; font: 700 9px ui-serif, Georgia, serif; opacity: .58; box-shadow: 0 0 16px rgb(72 216 255 / 8%); transition: opacity 160ms ease, box-shadow 160ms ease; }
+.explain-region:hover, .explain-region:focus-visible { border-color: rgb(98 223 255 / 26%); background: rgb(50 178 224 / 2.5%); box-shadow: inset 0 0 48px rgb(67 205 255 / 4%); }
+.explain-region:hover::after, .explain-region:focus-visible::after { opacity: 1; box-shadow: 0 0 18px rgb(72 216 255 / 28%); }
+.landscape-region { top: 15%; right: 2%; bottom: 31%; left: 27%; }
+.bloch-region { top: 20%; bottom: 50%; left: 2%; width: 24%; }
+.correlation-region { top: 54%; bottom: 31%; left: 2%; width: 24%; }
+.history-region { right: 2%; bottom: 16%; left: 27%; height: 13%; }
+.quantum-tooltip { position: fixed; z-index: 40; width: min(340px, calc(100vw - 24px)); padding: 16px 18px; border: 1px solid rgb(104 220 255 / 34%); border-radius: 14px; background: linear-gradient(145deg, rgb(6 20 42 / 96%), rgb(13 18 45 / 96%)); color: #dcefff; box-shadow: 0 20px 70px rgb(0 0 0 / 56%), 0 0 34px rgb(72 216 255 / 9%), inset 0 1px rgb(255 255 255 / 5%); backdrop-filter: blur(22px) saturate(125%); pointer-events: none; }
+.quantum-tooltip[hidden] { display: none; }
+.quantum-tooltip strong { display: block; color: #effcff; font-size: 14px; font-weight: 650; letter-spacing: -.015em; }
+.quantum-tooltip > p:not(.eyebrow) { margin: 8px 0 0; color: #9eb2c9; font-size: 11px; line-height: 1.58; }
+.quantum-tooltip code { display: block; margin-top: 10px; padding-top: 9px; border-top: 1px solid rgb(102 189 227 / 14%); color: #72dff5; font: 9px/1.45 ui-monospace, SFMono-Regular, monospace; white-space: normal; }
+.explanation-hint::before { margin-right: 6px; color: #66d9f2; content: 'ⓘ'; }
+[data-explain]:focus-visible:not(.explain-region) { outline: 1px solid rgb(104 224 255 / 70%); outline-offset: 3px; }
+.implementation-metrics [data-explain], .graph-notes [data-explain] { cursor: help; }
 @media (max-width: 900px) { .disclaimer { display: none; }.quantum-tabs { right: 18px; }.quantum-tabs button span { display: none; }.editor span { display: none; }.quantum-controls { grid-template-columns: 1fr auto; }.editor { position: absolute; right: 0; bottom: 42px; }.quantum-copy { display: none; }.visual-label small { display: none; }.notes-hero, .preset-field-guide { grid-template-columns: 1fr; gap: 18px; }.concept-grid, .implementation-grid { grid-template-columns: 1fr; }.implementation-metrics { grid-template-columns: repeat(3, 1fr); }.graph-flow { display: flex; overflow-x: auto; }.graph-node { min-width: 140px; } }
 @media (max-width: 700px) {
   .quantum-header { top: 14px; left: 14px; right: 14px; }
@@ -89,6 +105,11 @@ footer { position: absolute; left: 34px; right: 34px; bottom: 15px; display: fle
   .bloch-label { top: 57%; left: 5%; }
   .correlation-label { top: 57%; right: 5%; left: auto; text-align: right; }
   .history-label { top: 71%; bottom: auto; left: 5%; }
+  .landscape-region { top: 20%; right: 3%; bottom: auto; left: 3%; width: auto; height: 34%; }
+  .bloch-region { top: 54%; bottom: auto; left: 3%; width: 51%; height: 17%; }
+  .correlation-region { top: 54%; right: 3%; bottom: auto; left: auto; width: 42%; height: 17%; }
+  .history-region { top: 71%; right: 3%; bottom: auto; left: 3%; height: 10%; }
+  .explain-region::after { top: 6px; right: 7px; }
   .quantum-circuit-scroll { right: 10px; bottom: 101px; left: 10px; padding-bottom: 5px; }
   .quantum-controls { right: 10px; bottom: 10px; left: 10px; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; }
   .scrubber { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr) 48px; }
