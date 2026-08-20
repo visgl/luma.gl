@@ -94,6 +94,11 @@
           "experimental/gpu-graph-explorer",
           "experimental/gpu-trace-scene",
           "experimental/gpu-scene-graph",
+          {
+            "type": "doc",
+            "id": "showcase/quantum-state-studio",
+            "label": "GPUCommandGraph: Quantum State Studio"
+          },
           "experimental/gpu-sort",
           "experimental/gpu-data-analysis"
         ]
