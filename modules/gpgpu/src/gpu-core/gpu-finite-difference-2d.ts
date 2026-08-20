@@ -81,6 +81,8 @@ export class GPUFiniteDifference2D {
       [props.operator === 'gradient' ? 'float32x2' : 'float32'],
       `${this.id} output`
     );
+    getArrayElementOffset(this.input, this.stats.inputComponentCount, `${this.id} input`);
+    getArrayElementOffset(this.output, this.stats.outputComponentCount, `${this.id} output`);
     if (
       this.input.length < this.stats.elementCount ||
       this.output.length < this.stats.elementCount
@@ -297,8 +299,8 @@ const HEIGHT: u32 = ${stats.height}u;
 const ELEMENT_COUNT: u32 = ${stats.elementCount}u;
 const DX: f32 = ${stats.spacing[0]};
 const DY: f32 = ${stats.spacing[1]};
-const INPUT_OFFSET: u32 = ${getViewElementOffset(difference.input)}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(difference.output)}u;
+const INPUT_OFFSET: u32 = ${getArrayElementOffset(difference.input, stats.inputComponentCount, 'input')}u;
+const OUTPUT_OFFSET: u32 = ${getArrayElementOffset(difference.output, stats.outputComponentCount, 'output')}u;
 @group(0) @binding(0) var<storage, read> inputValues: array<${inputType}>;
 @group(0) @binding(1) var<storage, read_write> outputValues: array<${outputType}>;
 
@@ -324,4 +326,12 @@ fn secondDerivative(coordinate: vec2i, axis: vec2i, spacing: f32) -> ${inputType
   let coordinate = vec2i(i32(index % WIDTH), i32(index / WIDTH));
   outputValues[OUTPUT_OFFSET + index] = ${expression};
 }`;
+}
+
+function getArrayElementOffset(view: GraphDataView, componentCount: 1 | 2, name: string): number {
+  const componentOffset = getViewElementOffset(view);
+  if (componentOffset % componentCount !== 0) {
+    throw new Error(`${name} byteOffset must align with its WGSL array element type`);
+  }
+  return componentOffset / componentCount;
 }

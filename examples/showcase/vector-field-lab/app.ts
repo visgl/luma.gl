@@ -25,7 +25,7 @@ type VectorFieldLabProps = AnimationProps & {resolution?: number};
 
 /** Interactive differential-operator showcase backed by one graph-native compute pipeline. */
 export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeExamplePanelHostHtml();
+  static info = `${makeExamplePanelHostHtml()}${getFieldOverlayHtml()}`;
   static props = {debug: true};
 
   readonly device: Device;
@@ -39,6 +39,8 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
   private canvas: HTMLCanvasElement | null = null;
   private probeElement: HTMLElement | null = null;
   private formulaElement: HTMLElement | null = null;
+  private animationSeconds = 0;
+  private previousFrameTime: number | null = null;
   private finalized = false;
 
   constructor({device, resolution = 128}: VectorFieldLabProps) {
@@ -71,7 +73,11 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
   }
 
   override onRender({time}: AnimationProps): void {
-    const seconds = this.playing ? time * 0.001 : 0;
+    if (this.previousFrameTime !== null && this.playing) {
+      this.animationSeconds += Math.max(0, time - this.previousFrameTime) * 0.001;
+    }
+    this.previousFrameTime = time;
+    const seconds = this.animationSeconds;
     this.engine.update(this.preset, seconds);
     this.renderer.render({
       time: seconds,
@@ -111,6 +117,7 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
       .querySelector<HTMLSelectElement>('[data-field-preset]')
       ?.addEventListener('change', event => {
         this.preset = getVectorFieldPreset((event.currentTarget as HTMLSelectElement).value);
+        this.animationSeconds = 0;
         this.engine.update(this.preset, 0, true);
         this.updatePanelLabels();
       });
@@ -171,6 +178,32 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
         <div class="card">Move over any view to pin one world-space probe across all four panels.</div>
       </div>`;
   }
+}
+
+function getFieldOverlayHtml(): string {
+  return `
+  <style>
+    #field-overlay { position:fixed; inset:0; pointer-events:none; color:#e7f7ff; z-index:2; }
+    .field-title { position:absolute; left:22px; top:18px; padding:12px 15px; border:1px solid rgb(99 199 224 / 25%); border-radius:10px; background:rgb(3 12 25 / 74%); backdrop-filter:blur(12px); }
+    .field-title h1 { margin:0; font:600 17px/1.2 inherit; letter-spacing:.01em; }
+    .field-title p { margin:5px 0 0; color:#8ec5d6; font:12px/1.3 ui-monospace,monospace; }
+    .panel-label { position:absolute; padding:6px 9px; border-radius:5px; background:rgb(1 9 19 / 72%); color:#d9f6ff; font:600 11px/1 ui-sans-serif,sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+    .panel-label:nth-child(2) { left:14px; top:112px; }
+    .panel-label:nth-child(3) { left:calc(50% + 14px); top:14px; }
+    .panel-label:nth-child(4) { left:14px; top:calc(50% + 14px); }
+    .panel-label:nth-child(5) { left:calc(50% + 14px); top:calc(50% + 14px); }
+    .field-probe { position:absolute; right:18px; bottom:18px; display:grid; gap:3px; min-width:290px; padding:10px 12px; border:1px solid rgb(255 219 99 / 28%); border-radius:8px; background:rgb(4 12 25 / 82%); color:#a9c9d7; font:11px/1.35 ui-monospace,monospace; backdrop-filter:blur(10px); }
+    .field-probe strong { color:#ffe28a; }
+    @media (max-width:760px) { .field-title { display:none; } .field-probe { min-width:0; max-width:70vw; } }
+  </style>
+  <div id="field-overlay">
+    <div class="field-title"><h1>Differential Field Observatory</h1><p data-field-formula>F(x,y) = (x, y)</p></div>
+    <div data-field-panel-label class="panel-label">Vector field F</div>
+    <div data-field-panel-label class="panel-label">Divergence ∇·F</div>
+    <div data-field-panel-label class="panel-label">Curl (∇×F)z</div>
+    <div data-field-panel-label class="panel-label">Flow topology</div>
+    <div data-field-probe class="field-probe"></div>
+  </div>`;
 }
 
 function format(value: number): string {

@@ -61,6 +61,10 @@ test('GPUFiniteDifference2D validates topology and generated WGSL', t => {
   const scalarOutput = makeView(graph, 'scalar-output', 'float32', 64);
   const vectorInput = makeView(graph, 'vector-input', 'float32x2', 64);
   const vectorOutput = makeView(graph, 'vector-output', 'float32x2', 64);
+  const offsetScalarInput = makeView(graph, 'offset-scalar-input', 'float32', 64, 4);
+  const offsetVectorInput = makeView(graph, 'offset-vector-input', 'float32x2', 64, 8);
+  const offsetScalarOutput = makeView(graph, 'offset-scalar-output', 'float32', 64, 4);
+  const offsetVectorOutput = makeView(graph, 'offset-vector-output', 'float32x2', 64, 8);
   const gradient = new GPUFiniteDifference2D({
     input: scalarInput,
     output: vectorOutput,
@@ -95,6 +99,27 @@ test('GPUFiniteDifference2D validates topology and generated WGSL', t => {
     /% i32\(WIDTH\)/,
     'periodic wrapping is explicit'
   );
+  const offsetGradient = new GPUFiniteDifference2D({
+    input: offsetScalarInput,
+    output: offsetVectorOutput,
+    width: 8,
+    height: 8,
+    spacing: [0.25, 0.25],
+    operator: 'gradient'
+  });
+  const offsetCurl = new GPUFiniteDifference2D({
+    input: offsetVectorInput,
+    output: offsetScalarOutput,
+    width: 8,
+    height: 8,
+    spacing: [0.25, 0.25],
+    operator: 'curl'
+  });
+  for (const operation of [offsetGradient, offsetCurl]) {
+    const source = getGPUFiniteDifference2DShaderSource(operation, {x: 1, y: 1, z: 1});
+    t.match(source, /INPUT_OFFSET: u32 = 1u/, 'input offset uses WGSL array elements');
+    t.match(source, /OUTPUT_OFFSET: u32 = 1u/, 'output offset uses WGSL array elements');
+  }
   t.throws(
     () =>
       new GPUFiniteDifference2D({
@@ -114,15 +139,16 @@ function makeView(
   graph: GPUCommandGraph,
   id: string,
   format: 'float32' | 'float32x2',
-  length: number
+  length: number,
+  byteOffset = 0
 ) {
   const components = format === 'float32' ? 1 : 2;
   const handle = graph.importBuffer({
     id,
-    byteLength: length * components * Float32Array.BYTES_PER_ELEMENT,
+    byteLength: byteOffset + length * components * Float32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE
   });
-  return graph.createDataView(handle, {format, length});
+  return graph.createDataView(handle, {format, length, byteOffset});
 }
 
 function makeSupportDevice(): Device {
