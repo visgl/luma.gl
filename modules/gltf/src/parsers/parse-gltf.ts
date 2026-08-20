@@ -8,7 +8,7 @@ import {
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
 } from '@loaders.gl/gltf';
-import {Device, type PrimitiveTopology, type Texture} from '@luma.gl/core';
+import {Device, type Texture} from '@luma.gl/core';
 import {
   decodeMorphTargetAttribute,
   Geometry,
@@ -26,7 +26,10 @@ import {type GLTFGPUInstancing, getGLTFNodeInstancing} from '../gltf/gltf-instan
 import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
 import {type GLTFMorphTargetState, setGLTFMorphWeights} from '../gltf/morph-targets';
 import {type PBREnvironment} from '../pbr/pbr-environment';
-import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
+import {
+  normalizeGLTFTopology,
+  type NormalizedGLTFTopology
+} from '../webgl-to-webgpu/convert-webgl-topology';
 
 import {parsePBRMaterial} from './parse-pbr-material';
 
@@ -313,12 +316,15 @@ function createNodeForGLTFPrimitive({
   instancing
 }: CreateNodeForGLTFPrimitiveOptions): ModelNode {
   const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${primitiveIndex}`;
-  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode ?? 4);
-  const vertexCount = gltfPrimitive.indices
-    ? gltfPrimitive.indices.count
-    : getVertexCount(gltfPrimitive.attributes);
+  const sourceVertexCount = getVertexCount(gltfPrimitive.attributes);
+  const normalizedTopology = normalizeGLTFTopology(
+    gltfPrimitive.mode ?? 4,
+    gltfPrimitive.indices?.value,
+    sourceVertexCount
+  );
 
-  const geometry = createGeometry(id, gltfPrimitive, topology);
+  const geometry = createGeometry(id, gltfPrimitive, normalizedTopology);
+  const vertexCount = geometry.vertexCount;
   const morphTargetState = createGLTFMorphTargetState(gltfPrimitive, gltf, geometry);
 
   const parsedPPBRMaterial = parseOwnedPBRMaterial(
@@ -451,7 +457,11 @@ function getVertexCount(attributes: any) {
 }
 
 /** Converts glTF primitive attributes and indices into a luma.gl `Geometry`. */
-function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
+function createGeometry(
+  id: string,
+  gltfPrimitive: any,
+  normalizedTopology: NormalizedGLTFTopology
+): Geometry {
   const attributes: Record<string, GeometryAttribute> = {};
   for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
     const {components, size, value, normalized} = attribute as GeometryAttribute;
@@ -470,8 +480,8 @@ function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopol
 
   return new Geometry({
     id,
-    topology,
-    indices: gltfPrimitive.indices?.value,
+    topology: normalizedTopology.topology,
+    indices: normalizedTopology.indices ?? gltfPrimitive.indices?.value,
     attributes
   });
 }
