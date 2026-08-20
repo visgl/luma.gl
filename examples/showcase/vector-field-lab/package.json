@@ -1,0 +1,21 @@
+{
+  "name": "luma.gl-examples-showcase-vector-field-lab",
+  "version": "9.4.0-alpha.4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/core": "9.4.0-alpha.4",
+    "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/gpgpu": "9.4.0-alpha.4",
+    "@luma.gl/webgpu": "9.4.0-alpha.4"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}

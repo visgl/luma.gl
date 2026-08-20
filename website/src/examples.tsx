@@ -85,6 +85,7 @@ import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
+import VectorFieldLabApp from '../../examples/showcase/vector-field-lab/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
@@ -862,6 +863,19 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
     template={LightstormMegacityApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="vector-field-lab"
+    title="Vector Field Lab"
+    subtitle="Linked gradient, divergence, curl, and Laplacian views"
+    directory="showcase"
+    devices={['webgpu']}
+    template={VectorFieldLabApp}
+    config={exampleConfig}
     {...props}
   />
 );

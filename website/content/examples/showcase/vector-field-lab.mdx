@@ -1,0 +1,43 @@
+---
+title: 'Vector Field Lab'
+description: Compare a sampled scalar or vector field with GPU-computed gradient, divergence, curl, and Laplacian views.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, simulation, vector-fields]
+---
+
+import {VectorFieldLabExample} from '@site/src/examples';
+
+<VectorFieldLabExample />
+
+Vector Field Lab makes differential operators visible as local changes in one shared field. Its
+four linked panels bind the same GPU-resident samples and derived buffers, so moving the probe in
+any panel identifies the same world-space point everywhere else.
+
+Scalar presets show the original potential, gradient magnitude and direction, signed Laplacian,
+and gradient arrows crossing level sets orthogonally. Vector presets show velocity glyphs and flow
+streaks beside signed divergence, signed two-dimensional curl, and a combined topology view. The
+radial source, rigid-body vortex, saddle, Taylor–Green cells, Gaussian potential, and animated
+multi-well presets give each operator an immediately recognizable mathematical signature.
+
+The reusable `GPUFiniteDifference2D` primitive lives in `@luma.gl/gpgpu/gpu-core`. It contributes
+one compute node for gradient, divergence, curl, or Laplacian evaluation to a caller-owned
+`GPUCommandGraph`. Inputs are regular `float32` or `float32x2` sampled fields with explicit physical
+spacing. Outputs remain in caller-provided storage buffers that render models can consume directly.
+
+Interior samples use second-order centered differences. The default one-sided boundary policy uses
+second-order forward or backward stencils on the outer rows and columns; periodic wrapping is also
+available. The showcase uses a `128 × 128` grid over `[-1, 1]²`, making
+`dx = dy = 2 / 127`. All calculations use `f32`, and derivative units follow the input units divided
+by distance—or distance squared for the Laplacian.
+
+Each animated refresh executes four independent `O(N²)` compute nodes. No complete derived field is
+read back to JavaScript: the fullscreen renderer bilinearly samples the resulting storage buffers.
+The analytic probe values make the known derivatives visible alongside their finite-difference
+renderings.
+
+Natural extensions include higher-order stencils, Jacobian and Hessian tensors, three-dimensional
+vorticity, GPU particle integration, spectral derivatives through FFTs, Helmholtz decomposition,
+Poisson solvers, and coupled fluid or PDE visualization.

@@ -26,6 +26,7 @@ const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'experimental/gpu-trace-viewer',
   'experimental/gpu-trace-scene',
   'experimental/gpu-scene-graph',
+  'showcase/vector-field-lab',
   'experimental/gpu-sort',
   'experimental/gpu-data-analysis'
 ] as const;
@@ -217,6 +218,7 @@ describe('GPGPU example catalog navigation', () => {
       'experimental/gpu-graph-explorer',
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
+      'showcase/vector-field-lab',
       'experimental/gpu-sort',
       'experimental/gpu-data-analysis'
     ]);

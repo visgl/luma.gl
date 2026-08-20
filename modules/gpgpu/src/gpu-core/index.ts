@@ -313,6 +313,21 @@ export type {
   GPUConvolutionBenchmarkStrategy
 } from './gpu-convolution-benchmark';
 
+export {
+  getGPUFiniteDifference2DSupport,
+  GPUFiniteDifference2D,
+  GPU_FINITE_DIFFERENCE_2D_WORKGROUP_SIZE,
+  makeGPUFiniteDifference2DStats
+} from './gpu-finite-difference-2d';
+export type {
+  GPUFiniteDifference2DBoundary,
+  GPUFiniteDifference2DOperator,
+  GPUFiniteDifference2DPlanProps,
+  GPUFiniteDifference2DProps,
+  GPUFiniteDifference2DStats,
+  GPUFiniteDifference2DSupport
+} from './gpu-finite-difference-2d';
+
 export {GPUHistogram} from './gpu-histogram';
 export type {
   GPUHistogramDomain,

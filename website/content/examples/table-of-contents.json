@@ -94,6 +94,11 @@
           "experimental/gpu-graph-explorer",
           "experimental/gpu-trace-scene",
           "experimental/gpu-scene-graph",
+          {
+            "type": "doc",
+            "id": "showcase/vector-field-lab",
+            "label": "GPUCommandGraph: Vector Field Lab"
+          },
           "experimental/gpu-sort",
           "experimental/gpu-data-analysis"
         ]
