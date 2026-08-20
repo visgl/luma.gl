@@ -594,6 +594,7 @@ export class GPUPagedSplatRenderer {
   }
 
   private rebuildGraph(): void {
+    const previousGlobalSortCapacity = this.globalSortCapacity;
     this.releaseCompiledGraph();
     const activeRowCount = this.plannedSegments.reduce(
       (totalRowCount, segment) => totalRowCount + segment.activeRowCount,
@@ -610,7 +611,10 @@ export class GPUPagedSplatRenderer {
     ) {
       throw new Error('Paged Gaussian global sorting exceeds the device storage binding limit');
     }
-    this.globalSortCapacity = getPagedSortCapacity(activeRowCount, maximumStorageByteLength);
+    this.globalSortCapacity = Math.max(
+      previousGlobalSortCapacity,
+      getPagedSortCapacity(activeRowCount, maximumStorageByteLength)
+    );
     const graph = new GPUCommandGraph(this.device, {id: 'paged-gaussian-splat-render-graph'});
     const outputSegmentCount = Math.ceil(
       this.globalSortCapacity / this.getMaximumProjectedSegmentRows()
