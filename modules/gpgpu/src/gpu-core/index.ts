@@ -328,6 +328,21 @@ export type {
   GPUFiniteDifference2DSupport
 } from './gpu-finite-difference-2d';
 
+export {
+  getGPUFiniteDifference3DSupport,
+  GPUFiniteDifference3D,
+  GPU_FINITE_DIFFERENCE_3D_WORKGROUP_SIZE,
+  makeGPUFiniteDifference3DStats
+} from './gpu-finite-difference-3d';
+export type {
+  GPUFiniteDifference3DBoundary,
+  GPUFiniteDifference3DOperator,
+  GPUFiniteDifference3DPlanProps,
+  GPUFiniteDifference3DProps,
+  GPUFiniteDifference3DStats,
+  GPUFiniteDifference3DSupport
+} from './gpu-finite-difference-3d';
+
 export {GPUHistogram} from './gpu-histogram';
 export type {
   GPUHistogramDomain,

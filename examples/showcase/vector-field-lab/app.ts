@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -19,7 +19,7 @@ import {VectorFieldRenderer} from './vector-field-renderer';
 
 export const title = 'Vector Field Lab';
 export const description =
-  'Linked, GPU-computed views make gradient, divergence, curl, and Laplacian visible in one field.';
+  'Orbit linked 3D volumes for a field and its GPU-computed gradient, divergence, curl, and Laplacian.';
 
 type VectorFieldLabProps = AnimationProps & {resolution?: number};
 
@@ -35,15 +35,14 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
 
   private preset: VectorFieldPreset = VECTOR_FIELD_PRESETS[0];
   private playing = true;
-  private probe: [number, number] | null = [0.32, 0.18];
-  private canvas: HTMLCanvasElement | null = null;
+  private orbitControls: OrbitControls | null = null;
   private probeElement: HTMLElement | null = null;
   private formulaElement: HTMLElement | null = null;
   private animationSeconds = 0;
   private previousFrameTime: number | null = null;
   private finalized = false;
 
-  constructor({device, resolution = 128}: VectorFieldLabProps) {
+  constructor({device, resolution = 40}: VectorFieldLabProps) {
     super();
     if (device.type !== 'webgpu') throw new Error('Vector Field Lab requires WebGPU.');
     this.device = device;
@@ -62,10 +61,19 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
-      this.canvas = canvas;
-      canvas.addEventListener('pointermove', this.handlePointerMove);
-      canvas.addEventListener('pointerleave', this.handlePointerLeave);
-      canvas.addEventListener('click', this.handlePointerMove);
+      this.orbitControls = new OrbitControls(canvas, {
+        target: [0, 0, 0],
+        distance: 4.3,
+        yaw: 0.68,
+        pitch: 0.38,
+        minDistance: 2.35,
+        maxDistance: 7,
+        minPitch: -1.35,
+        maxPitch: 1.35,
+        autoRotate: true,
+        autoRotateSpeed: 0.1,
+        onInteractionStart: () => this.orbitControls?.setAutoRotate(false)
+      });
     }
     this.probeElement = document.querySelector('[data-field-probe]');
     this.formulaElement = document.querySelector('[data-field-formula]');
@@ -73,6 +81,7 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
   }
 
   override onRender({time}: AnimationProps): void {
+    this.orbitControls?.update(time);
     if (this.previousFrameTime !== null && this.playing) {
       this.animationSeconds += Math.max(0, time - this.previousFrameTime) * 0.001;
     }
@@ -82,7 +91,7 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
     this.renderer.render({
       time: seconds,
       scalarMode: this.preset.kind === 'scalar',
-      probe: this.probe
+      eye: this.orbitControls?.getEyePosition() ?? [2.5, 1.6, 3.1]
     });
     this.updateOverlay(seconds);
   }
@@ -90,27 +99,11 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
   override onFinalize(): void {
     if (this.finalized) return;
     this.finalized = true;
-    this.canvas?.removeEventListener('pointermove', this.handlePointerMove);
-    this.canvas?.removeEventListener('pointerleave', this.handlePointerLeave);
-    this.canvas?.removeEventListener('click', this.handlePointerMove);
+    this.orbitControls?.destroy();
     this.panels.finalize();
     this.renderer.destroy();
     this.engine.destroy();
   }
-
-  private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.canvas) return;
-    const bounds = this.canvas.getBoundingClientRect();
-    const screenX = (event.clientX - bounds.left) / bounds.width;
-    const screenY = (event.clientY - bounds.top) / bounds.height;
-    const panelX = (screenX * 2) % 1;
-    const panelY = (screenY * 2) % 1;
-    this.probe = [panelX * 2 - 1, (1 - panelY) * 2 - 1];
-  };
-
-  private readonly handlePointerLeave = (): void => {
-    // Retain the last point: it makes cross-panel comparison possible after moving to the panel UI.
-  };
 
   private attachControls(root: HTMLElement): void {
     root
@@ -127,7 +120,8 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
         this.playing = (event.currentTarget as HTMLInputElement).checked;
       });
     root.querySelector<HTMLButtonElement>('[data-field-center]')?.addEventListener('click', () => {
-      this.probe = [0, 0];
+      this.orbitControls?.reset();
+      this.orbitControls?.setAutoRotate(true);
     });
     this.updatePanelLabels();
   }
@@ -135,8 +129,8 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
   private updatePanelLabels(): void {
     const labels =
       this.preset.kind === 'scalar'
-        ? ['Scalar field φ', 'Gradient ∇φ', 'Laplacian ∇²φ', 'Level sets + ∇φ']
-        : ['Vector field F', 'Divergence ∇·F', 'Curl (∇×F)z', 'Flow topology'];
+        ? ['Scalar volume φ', 'Gradient volume ∇φ', 'Laplacian volume ∇²φ', 'Curvature topology']
+        : ['Vector volume F', 'Divergence volume ∇·F', 'Curl / vorticity ∇×F', 'Flow topology'];
     document.querySelectorAll<HTMLElement>('[data-field-panel-label]').forEach((element, index) => {
       element.textContent = labels[index] ?? '';
     });
@@ -144,14 +138,14 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
 
   private updateOverlay(time: number): void {
     if (this.formulaElement) this.formulaElement.textContent = this.preset.formula;
-    if (!this.probeElement || !this.probe) return;
-    const value = this.preset.probe(this.probe[0], this.probe[1], time);
+    if (!this.probeElement) return;
+    const value = this.preset.probe(0, 0, 0, time);
     const vector = this.preset.kind === 'scalar' ? value.gradient : value.vector;
     this.probeElement.innerHTML =
-      `<strong>p = (${format(this.probe[0])}, ${format(this.probe[1])})</strong>` +
-      `<span>${this.preset.kind === 'scalar' ? 'φ' : 'F'} = ${this.preset.kind === 'scalar' ? format(value.scalar) : `(${format(value.vector[0])}, ${format(value.vector[1])})`}</span>` +
-      `<span>${this.preset.kind === 'scalar' ? '∇φ' : 'velocity'} = (${format(vector[0])}, ${format(vector[1])})</span>` +
-      `<span>∇·F ${format(value.divergence)} · curl ${format(value.curl)} · ∇²φ ${format(value.laplacian)}</span>`;
+      `<strong>center probe · p = (0, 0, 0)</strong>` +
+      `<span>${this.preset.kind === 'scalar' ? 'φ' : 'F'} = ${this.preset.kind === 'scalar' ? format(value.scalar) : formatVector(value.vector)}</span>` +
+      `<span>${this.preset.kind === 'scalar' ? '∇φ' : 'velocity'} = ${formatVector(vector)}</span>` +
+      `<span>∇·F ${format(value.divergence)} · curl ${formatVector(value.curl)} · ∇²φ ${format(value.laplacian)}</span>`;
   }
 
   private getControlsHtml(): string {
@@ -168,14 +162,14 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
         [data-vector-field-lab] .card strong { color:#68e0d2; }
       </style>
       <div data-vector-field-lab>
-        <p>One sampled field feeds four second-order WGSL operators. Every panel reads the same GPU-resident buffers.</p>
+        <p>Orbit four synchronized ray-marched volumes. One sampled 3D field feeds four second-order WGSL operators.</p>
         <label>Field preset<select data-field-preset>
           ${VECTOR_FIELD_PRESETS.map((preset, index) => `<option value="${preset.id}"${index === 0 ? ' selected' : ''}>${preset.name}</option>`).join('')}
         </select></label>
         <label class="toggle"><input type="checkbox" data-field-playing checked /> Animate time-varying fields</label>
-        <button type="button" data-field-center>Probe the origin</button>
-        <div class="card"><strong>${this.engine.resolution}² samples · ${graphStats.nodeOrder.length} compute nodes</strong><br />Centered O(h²) interior · O(h²) one-sided edges · f32 storage · no result readback</div>
-        <div class="card">Move over any view to pin one world-space probe across all four panels.</div>
+        <button type="button" data-field-center>Reset orbit camera</button>
+        <div class="card"><strong>${this.engine.resolution}³ voxels · ${graphStats.nodeOrder.length} compute nodes</strong><br />Centered O(h²) interior · O(h²) one-sided edges · f32 storage · no volume readback</div>
+        <div class="card">Drag to orbit every volume together. Use the wheel to fly closer or farther.</div>
       </div>`;
   }
 }
@@ -197,10 +191,10 @@ function getFieldOverlayHtml(): string {
     @media (max-width:760px) { .field-title { display:none; } .field-probe { min-width:0; max-width:70vw; } }
   </style>
   <div id="field-overlay">
-    <div class="field-title"><h1>Differential Field Observatory</h1><p data-field-formula>F(x,y) = (x, y)</p></div>
-    <div data-field-panel-label class="panel-label">Vector field F</div>
-    <div data-field-panel-label class="panel-label">Divergence ∇·F</div>
-    <div data-field-panel-label class="panel-label">Curl (∇×F)z</div>
+    <div class="field-title"><h1>Differential Field Observatory</h1><p data-field-formula>F(x,y,z) = (x, y, z)</p></div>
+    <div data-field-panel-label class="panel-label">Vector volume F</div>
+    <div data-field-panel-label class="panel-label">Divergence volume ∇·F</div>
+    <div data-field-panel-label class="panel-label">Curl / vorticity ∇×F</div>
     <div data-field-panel-label class="panel-label">Flow topology</div>
     <div data-field-probe class="field-probe"></div>
   </div>`;
@@ -208,4 +202,8 @@ function getFieldOverlayHtml(): string {
 
 function format(value: number): string {
   return Math.abs(value) < 0.0005 ? '0.000' : value.toFixed(3);
+}
+
+function formatVector(vector: readonly [number, number, number]): string {
+  return `(${format(vector[0])}, ${format(vector[1])}, ${format(vector[2])})`;
 }

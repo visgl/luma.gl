@@ -4,16 +4,17 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import {Matrix4, radians} from '@math.gl/core';
 import type {VectorFieldBuffers} from './vector-field-engine';
 import {VECTOR_FIELD_SHADER} from './vector-field-shaders';
 
 export type VectorFieldRenderOptions = {
   time: number;
   scalarMode: boolean;
-  probe: readonly [number, number] | null;
+  eye: readonly [number, number, number];
 };
 
-/** Fullscreen four-panel field renderer consuming compute outputs without readback. */
+/** Synchronized four-panel ray marcher consuming graph-derived 3D volumes without readback. */
 export class VectorFieldRenderer {
   readonly device: Device;
   readonly model: Model;
@@ -24,12 +25,12 @@ export class VectorFieldRenderer {
     this.device = device;
     this.resolution = resolution;
     this.uniformBuffer = device.createBuffer({
-      id: 'vector-field-render-uniforms',
-      byteLength: 32,
+      id: 'vector-field-volume-uniforms',
+      byteLength: 112,
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
     this.model = new Model(device, {
-      id: 'vector-field-linked-views',
+      id: 'vector-field-linked-volumes',
       source: VECTOR_FIELD_SHADER,
       vertexCount: 3,
       bindings: {
@@ -60,24 +61,25 @@ export class VectorFieldRenderer {
   render(options: VectorFieldRenderOptions): void {
     const canvasContext = this.device.getDefaultCanvasContext();
     const [width, height] = canvasContext.getDrawingBufferSize();
-    const probe = options.probe ?? [0, 0];
-    this.uniformBuffer.write(
-      new Float32Array([
-        width,
-        height,
-        this.resolution,
-        options.scalarMode ? 1 : 0,
-        options.time,
-        probe[0],
-        probe[1],
-        options.probe ? 1 : 0
-      ])
-    );
+    const projection = new Matrix4().perspective({
+      fovy: radians(46),
+      aspect: width / Math.max(height, 1),
+      near: 0.1,
+      far: 20
+    });
+    const view = new Matrix4().lookAt({eye: options.eye, center: [0, 0, 0], up: [0, 1, 0]});
+    const inverseViewProjection = new Matrix4(projection).multiplyRight(view).invert();
+    const values = new Float32Array(28);
+    values.set(inverseViewProjection, 0);
+    values.set([...options.eye, options.time], 16);
+    values.set([width, height, this.resolution, options.scalarMode ? 1 : 0], 20);
+    values.set([72, 1.0, 0, 0], 24);
+    this.uniformBuffer.write(values);
     this.model.predraw(this.device.commandEncoder);
     const pass = this.device.beginRenderPass({
-      id: 'vector-field-linked-view-pass',
+      id: 'vector-field-volume-pass',
       framebuffer: canvasContext.getCurrentFramebuffer(),
-      clearColor: [0.01, 0.015, 0.03, 1]
+      clearColor: [0.004, 0.008, 0.018, 1]
     });
     this.model.draw(pass);
     pass.end();

@@ -899,7 +899,7 @@ export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="vector-field-lab"
     title="Vector Field Lab"
-    subtitle="Linked gradient, divergence, curl, and Laplacian views"
+    subtitle="Orbit linked 3D gradient, divergence, curl, and Laplacian volumes"
     directory="showcase"
     devices={['webgpu']}
     template={VectorFieldLabApp}
