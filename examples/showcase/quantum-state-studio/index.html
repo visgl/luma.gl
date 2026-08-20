@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#040819" />
+    <title>Quantum State Studio · luma.gl WebGPU</title>
+    <link rel="stylesheet" href="./quantum-styles.css" />
+  </head>
+  <body>
+    <noscript>This WebGPU showcase requires JavaScript.</noscript>
+    <main id="quantum-startup" aria-live="polite">
+      <section><p>luma.gl · WebGPU</p><h1>Quantum State Studio</h1><span data-startup-status>Acquiring the GPU and compiling state evolution…</span></section>
+    </main>
+    <script type="module">
+      const startup = document.querySelector('#quantum-startup');
+      const status = document.querySelector('[data-startup-status]');
+      try {
+        if (!navigator.gpu) throw new Error('This showcase requires WebGPU in a recent browser.');
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: QuantumStateStudio}] =
+          await Promise.all([
+            import('@luma.gl/core'),
+            import('@luma.gl/engine'),
+            import('@luma.gl/webgpu'),
+            import('./app.ts')
+          ]);
+        const supportsHighDynamicRange =
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(dynamic-range: high)').matches;
+        const device = await luma.createDevice({
+          id: 'quantum-state-studio',
+          adapters: [webgpuAdapter],
+          featureLevel: 'best-available',
+          powerPreference: 'high-performance',
+          waitForPageLoad: false,
+          createCanvasContext: supportsHighDynamicRange
+            ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+            : true
+        });
+        status.textContent = 'Building the GPU-resident circuit history…';
+        await makeAnimationLoop(QuantumStateStudio, {device}).start();
+        startup.remove();
+      } catch (error) {
+        console.error('Quantum State Studio failed to start.', error);
+        status.textContent = error instanceof Error ? error.message : String(error);
+        status.dataset.state = 'error';
+      }
+    </script>
+  </body>
+</html>

@@ -85,6 +85,7 @@ import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
+import QuantumStateStudioApp from '../../examples/showcase/quantum-state-studio/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
@@ -860,6 +861,20 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
     directory="showcase"
     devices={['webgpu']}
     template={LightstormMegacityApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const QuantumStateStudioExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="quantum-state-studio"
+    title="Quantum State Studio"
+    subtitle="GPU-resident state vectors · linked probability, phase, Bloch, and correlation views"
+    directory="showcase"
+    devices={['webgpu']}
+    template={QuantumStateStudioApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}

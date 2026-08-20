@@ -1,0 +1,114 @@
+:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; }
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #040819; color: #eff7ff; }
+canvas { display: block; width: 100vw !important; height: 100vh !important; }
+button, select, input { font: inherit; }
+button, select { color: #dceeff; border: 1px solid rgb(107 173 255 / 24%); background: rgb(10 24 49 / 74%); border-radius: 8px; }
+button { cursor: pointer; transition: border-color 140ms, background 140ms, transform 140ms; }
+button:hover { border-color: rgb(87 222 255 / 70%); background: rgb(19 55 91 / 88%); transform: translateY(-1px); }
+#quantum-startup { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(circle at 60% 30%, #122d58, #040819 58%); }
+#quantum-startup section { width: min(460px, calc(100vw - 48px)); padding: 30px; border: 1px solid rgb(91 195 255 / 22%); border-radius: 20px; background: rgb(5 13 31 / 84%); box-shadow: 0 28px 100px #0009; }
+#quantum-startup p, .eyebrow { margin: 0 0 7px; color: #72dff5; font-size: 10px; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
+#quantum-startup h1 { margin: 0 0 10px; font-size: 30px; letter-spacing: -.05em; }
+#quantum-startup span { color: #92a8c3; font-size: 13px; } #quantum-startup span[data-state='error'] { color: #ff9eae; }
+.quantum-interface { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+.quantum-interface button, .quantum-interface select, .quantum-interface input { pointer-events: auto; }
+.quantum-header { position: absolute; top: 20px; left: 34px; right: 34px; display: flex; align-items: flex-start; justify-content: space-between; }
+.quantum-header h1 { margin: 0; font-size: clamp(23px, 2.2vw, 38px); font-weight: 660; letter-spacing: -.055em; }
+.disclaimer { max-width: 380px; margin: 5px 0 0; color: #8294ac; font: 10px/1.5 ui-monospace, SFMono-Regular, monospace; text-align: right; text-transform: uppercase; letter-spacing: .09em; }
+.quantum-tabs { position: absolute; z-index: 8; top: 78px; right: 34px; display: flex; gap: 4px; padding: 4px; border: 1px solid rgb(111 178 255 / 18%); border-radius: 12px; background: rgb(5 13 31 / 72%); box-shadow: 0 16px 48px rgb(0 0 0 / 24%); backdrop-filter: blur(18px); pointer-events: auto; }
+.quantum-tabs button { min-height: 32px; padding: 6px 11px; border-color: transparent; color: #8095ae; font-size: 10px; font-weight: 680; letter-spacing: .045em; }
+.quantum-tabs button span { margin-right: 5px; color: #526d89; font: 8px ui-monospace, SFMono-Regular, monospace; }
+.quantum-tabs button[aria-selected='true'] { border-color: rgb(93 219 255 / 46%); background: linear-gradient(135deg, rgb(29 105 147 / 76%), rgb(20 47 89 / 82%)); color: #effbff; box-shadow: 0 0 24px rgb(69 216 255 / 14%); }
+.quantum-tabs button[aria-selected='true'] span { color: #7deaff; }
+.explore-only { transition: opacity 180ms ease, visibility 180ms ease; }
+.quantum-interface:not([data-active-tab='explore']) .explore-only { visibility: hidden; opacity: 0; pointer-events: none; }
+.quantum-notes-panel[hidden] { display: none !important; }
+.quantum-notes-panel { position: absolute; z-index: 6; top: 126px; right: 34px; bottom: 39px; left: 34px; overflow: auto; padding: clamp(22px, 3vw, 42px); border: 1px solid rgb(103 181 255 / 19%); border-radius: 24px; background: linear-gradient(145deg, rgb(5 14 32 / 94%), rgb(7 18 39 / 88%) 56%, rgb(13 17 43 / 92%)); box-shadow: 0 32px 100px rgb(0 0 0 / 48%), inset 0 1px rgb(255 255 255 / 4%); backdrop-filter: blur(26px) saturate(120%); pointer-events: auto; scrollbar-color: #315b7f #081429; }
+.quantum-notes-panel::before { position: fixed; z-index: -1; width: 36vw; height: 36vw; border-radius: 50%; background: radial-gradient(circle, rgb(46 176 222 / 12%), transparent 66%); content: ''; transform: translate(52vw, -18vw); pointer-events: none; }
+.notes-hero { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(300px, 1.1fr); gap: clamp(28px, 7vw, 110px); align-items: end; max-width: 1260px; margin: 0 auto 30px; padding-bottom: 27px; border-bottom: 1px solid rgb(116 170 225 / 15%); }
+.notes-hero h2 { max-width: 660px; margin: 0; font-size: clamp(29px, 4vw, 58px); font-weight: 590; line-height: .98; letter-spacing: -.06em; }
+.notes-hero > p { max-width: 640px; margin: 0; color: #9aabc0; font-size: clamp(12px, 1.2vw, 16px); line-height: 1.7; }
+.concept-grid, .implementation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 1260px; margin: 0 auto; }
+.concept-card, .implementation-grid article { position: relative; min-height: 220px; overflow: hidden; padding: 26px 28px; border: 1px solid rgb(101 170 226 / 14%); border-radius: 17px; background: linear-gradient(145deg, rgb(15 33 61 / 72%), rgb(7 18 38 / 56%)); }
+.concept-card::after { position: absolute; right: -70px; bottom: -100px; width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, rgb(77 215 247 / 11%), transparent 68%); content: ''; }
+.concept-card h3, .implementation-grid h3, .preset-field-guide h3, .graph-notes h3 { margin: 0 0 13px; font-size: clamp(17px, 1.6vw, 24px); font-weight: 610; letter-spacing: -.035em; }
+.concept-card p:last-child, .implementation-grid article p:last-child { position: relative; z-index: 1; max-width: 620px; margin: 15px 0 0; color: #91a3b9; font-size: 12px; line-height: 1.65; }
+.concept-card strong { color: #d9f9ff; }
+.concept-index { position: absolute; top: 19px; right: 22px; color: rgb(115 210 241 / 25%); font: 28px/1 ui-monospace, SFMono-Regular, monospace; }
+.formula { display: inline-block; padding: 10px 13px; border: 1px solid rgb(103 213 255 / 17%); border-radius: 10px; background: rgb(5 14 32 / 58%); color: #bcefff; font: 15px ui-serif, Georgia, serif; letter-spacing: .03em; }
+.phase-orbit { position: relative; width: 104px; height: 58px; margin: 8px 0; border: 1px solid rgb(94 196 238 / 25%); border-radius: 50%; transform: rotate(-9deg); }
+.phase-orbit::after { position: absolute; top: 50%; left: 50%; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 14px #f8f, 0 0 30px #5df; content: ''; }
+.phase-orbit i { position: absolute; top: 50%; left: 50%; width: 42px; height: 1px; transform-origin: left; background: linear-gradient(90deg, #fff, #f35ecb); }
+.phase-orbit i:nth-child(2) { transform: rotate(121deg); background: linear-gradient(90deg, #fff, #4ee8ff); }.phase-orbit i:nth-child(3) { transform: rotate(236deg); background: linear-gradient(90deg, #fff, #755dff); }
+.basis-strip { display: flex; gap: 5px; flex-wrap: wrap; margin: 10px 0; }.basis-strip span { padding: 7px 9px; border: 1px solid rgb(90 198 238 / 18%); border-radius: 8px; background: rgb(5 17 37 / 67%); color: #a7dff3; font: 11px ui-monospace, monospace; }
+.preset-field-guide { display: grid; grid-template-columns: minmax(220px, .65fr) minmax(360px, 1.35fr); gap: 40px; max-width: 1260px; margin: 12px auto 0; padding: 28px; border: 1px solid rgb(113 177 235 / 14%); border-radius: 17px; background: rgb(7 18 38 / 62%); }
+.preset-field-guide dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; margin: 0; }.preset-field-guide dl div { padding-left: 13px; border-left: 2px solid rgb(91 217 255 / 29%); }.preset-field-guide dt { color: #def8ff; font-size: 11px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }.preset-field-guide dd { margin: 4px 0 0; color: #8195ad; font-size: 11px; line-height: 1.5; }
+.implementation-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-width: 1260px; margin: 0 auto 12px; }.implementation-metrics div { padding: 17px 18px; border: 1px solid rgb(100 185 232 / 15%); border-radius: 13px; background: rgb(8 22 44 / 72%); }.implementation-metrics strong { display: block; color: #a7edff; font: 18px/1.1 ui-monospace, SFMono-Regular, monospace; }.implementation-metrics span { display: block; margin-top: 7px; color: #657d98; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.graph-notes { max-width: 1260px; margin: 0 auto 12px; padding: 26px 28px; border: 1px solid rgb(97 192 238 / 17%); border-radius: 17px; background: linear-gradient(140deg, rgb(8 25 48 / 86%), rgb(9 17 37 / 80%)); }.graph-title { display: flex; align-items: baseline; justify-content: space-between; }.graph-title h3 { margin-bottom: 18px; }.graph-flow { display: grid; grid-template-columns: 1fr auto 1.3fr auto 1.2fr auto 1fr auto 1fr; gap: 7px; align-items: stretch; }.graph-flow > b { align-self: center; color: #3d7693; font-weight: 400; }.graph-node { display: flex; min-height: 96px; flex-direction: column; justify-content: center; padding: 12px; border: 1px solid rgb(90 183 230 / 20%); border-radius: 11px; background: rgb(7 18 38 / 74%); }.graph-node small { color: #59748f; font: 8px ui-monospace, monospace; text-transform: uppercase; }.graph-node strong { margin: 5px 0; color: #d7f8ff; font-size: 12px; }.graph-node span { color: #71869e; font: 9px ui-monospace, monospace; }.graph-node.repeated { border-color: rgb(238 91 184 / 32%); box-shadow: inset 0 0 30px rgb(232 61 177 / 5%); }.graph-node.publication { border-color: rgb(76 220 255 / 36%); }.graph-node.render { border-color: rgb(130 110 255 / 34%); }.analysis-branch { display: flex; gap: 9px; align-items: center; margin-top: 12px; padding: 11px 13px; border-radius: 10px; background: rgb(13 35 61 / 62%); color: #718ba5; font: 9px ui-monospace, monospace; }.analysis-branch span { margin-right: auto; color: #668099; text-transform: uppercase; }.analysis-branch b { color: #b6deeb; font-weight: 550; }.analysis-branch i { color: #4c8eaa; font-style: normal; }
+.implementation-grid article { min-height: 190px; }.implementation-grid code { display: block; overflow-x: auto; padding: 10px 12px; border-radius: 9px; background: rgb(3 12 27 / 78%); color: #8fe7f7; font: 10px/1.5 ui-monospace, SFMono-Regular, monospace; white-space: nowrap; }
+.quantum-presets { position: absolute; z-index: 2; top: 88px; left: 34px; display: flex; gap: 6px; }
+.quantum-presets button { padding: 7px 10px; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.quantum-presets button:first-child { border-color: #65d7ef88; color: #94edff; }
+.quantum-copy { position: absolute; top: 126px; left: 34px; width: 23%; max-width: 300px; }
+.quantum-copy h2 { margin: 0 0 6px; font-size: clamp(18px, 1.55vw, 26px); letter-spacing: -.04em; }
+.quantum-copy > p:last-child { margin: 0; color: #899bb3; font-size: 11px; line-height: 1.55; }
+.visual-label { position: absolute; color: #dceeff; text-transform: uppercase; letter-spacing: .10em; }
+.visual-label span { display: block; font-size: 10px; font-weight: 750; }
+.visual-label small { display: block; margin-top: 4px; color: #7086a1; font: 9px/1.3 ui-monospace, SFMono-Regular, monospace; letter-spacing: .04em; text-transform: none; }
+.landscape-label { left: 29%; top: 12%; }.bloch-label { left: 4.5%; top: 43%; }.correlation-label { left: 4.5%; bottom: 39%; }.history-label { left: 29%; bottom: 28%; }
+.quantum-controls { position: absolute; left: 29%; right: 3%; bottom: 18px; display: grid; grid-template-columns: minmax(260px, 1fr) auto auto; gap: 12px; align-items: center; }
+.scrubber { display: grid; grid-template-columns: auto 1fr 54px; gap: 9px; align-items: center; }
+.scrubber button, .editor button { min-height: 30px; padding: 5px 9px; font-size: 10px; }
+.scrubber input { width: 100%; accent-color: #54d9f5; }
+.scrubber output { color: #9fb3ca; font: 10px ui-monospace, monospace; }
+.editor { display: flex; align-items: center; gap: 4px; color: #72879e; font-size: 10px; }
+.editor select, .observe select { min-height: 30px; padding: 4px 6px; font-size: 10px; }
+.observe { display: flex; align-items: center; gap: 6px; color: #8298b2; font-size: 10px; text-transform: uppercase; letter-spacing: .09em; }
+.quantum-circuit-scroll { position: absolute; left: 29%; right: 3%; bottom: 62px; overflow-x: auto; padding: 6px 1px 9px; pointer-events: auto; scrollbar-width: thin; }
+.quantum-circuit { display: flex; gap: 5px; min-width: max-content; }
+.quantum-gate { position: relative; display: grid; min-width: 43px; height: 40px; place-content: center; padding: 3px 7px; border-radius: 9px; box-shadow: inset 0 0 16px rgb(36 111 174 / 7%); }
+.quantum-gate::after { content: ''; position: absolute; top: 50%; left: 100%; width: 6px; height: 1px; background: #4f6d8c88; }
+.quantum-gate:last-child::after { display: none; }.quantum-gate span { color: #e9f7ff; font-size: 11px; font-weight: 750; }.quantum-gate small { color: #7090ab; font-size: 8px; }
+.quantum-gate.active { border-color: #72e4ff; background: rgb(28 92 133 / 86%); box-shadow: 0 0 22px rgb(74 218 255 / 22%), inset 0 0 14px rgb(109 224 255 / 12%); }
+.quantum-gate.initial { color: #f0b3ff; }
+footer { position: absolute; left: 34px; right: 34px; bottom: 15px; display: flex; justify-content: space-between; color: #526981; font: 9px ui-monospace, SFMono-Regular, monospace; letter-spacing: .03em; }
+@media (max-width: 900px) { .disclaimer { display: none; }.quantum-tabs { right: 18px; }.quantum-tabs button span { display: none; }.editor span { display: none; }.quantum-controls { grid-template-columns: 1fr auto; }.editor { position: absolute; right: 0; bottom: 42px; }.quantum-copy { display: none; }.visual-label small { display: none; }.notes-hero, .preset-field-guide { grid-template-columns: 1fr; gap: 18px; }.concept-grid, .implementation-grid { grid-template-columns: 1fr; }.implementation-metrics { grid-template-columns: repeat(3, 1fr); }.graph-flow { display: flex; overflow-x: auto; }.graph-node { min-width: 140px; } }
+@media (max-width: 700px) {
+  .quantum-header { top: 14px; left: 14px; right: 14px; }
+  .quantum-header .eyebrow { font-size: 8px; }
+  .quantum-header h1 { font-size: clamp(22px, 7vw, 28px); }
+  .quantum-tabs { top: 76px; right: 8px; left: 8px; gap: 2px; padding: 3px; overflow-x: auto; }
+  .quantum-tabs button { flex: 1 0 auto; min-height: 34px; padding: 6px 9px; white-space: nowrap; }
+  .quantum-presets { top: 121px; right: 10px; left: 10px; gap: 5px; overflow-x: auto; padding-bottom: 4px; }
+  .quantum-presets button { flex: 0 0 auto; padding: 6px 9px; font-size: 9px; }
+  .quantum-copy { display: block; top: 160px; right: 14px; left: 14px; width: auto; max-width: none; }
+  .quantum-copy .eyebrow, .quantum-copy > p:last-child { display: none; }
+  .quantum-copy h2 { font-size: 16px; }
+  .landscape-label { top: 24%; left: 5%; }
+  .bloch-label { top: 57%; left: 5%; }
+  .correlation-label { top: 57%; right: 5%; left: auto; text-align: right; }
+  .history-label { top: 71%; bottom: auto; left: 5%; }
+  .quantum-circuit-scroll { right: 10px; bottom: 101px; left: 10px; padding-bottom: 5px; }
+  .quantum-controls { right: 10px; bottom: 10px; left: 10px; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; }
+  .scrubber { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr) 48px; }
+  .editor { position: static; min-width: 0; overflow-x: auto; }
+  .editor button { flex: 0 0 auto; }
+  .observe { align-self: stretch; }
+  .observe { font-size: 0; }
+  .observe select { font-size: 10px; }
+  footer { display: none; }
+  .quantum-notes-panel { top: 121px; right: 8px; bottom: 8px; left: 8px; padding: 20px 16px; border-radius: 17px; }
+  .notes-hero { gap: 15px; margin-bottom: 16px; padding-bottom: 18px; }
+  .notes-hero h2 { font-size: clamp(28px, 10vw, 40px); line-height: 1; }
+  .notes-hero > p { font-size: 12px; }
+  .concept-card, .implementation-grid article, .graph-notes, .preset-field-guide { padding: 20px; }
+  .implementation-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .implementation-metrics div:last-child { grid-column: 1 / -1; }
+  .graph-title { display: block; }
+  .graph-flow { padding-bottom: 7px; }
+  .analysis-branch { align-items: flex-start; overflow-x: auto; }
+  .analysis-branch > * { flex: 0 0 auto; }
+  .preset-field-guide dl { grid-template-columns: 1fr; }
+}
+@media (max-height: 690px) { .quantum-copy, .visual-label { display: none; }.quantum-presets { top: 66px; }.quantum-tabs { top: 58px; }.quantum-notes-panel { top: 104px; }.quantum-circuit-scroll { bottom: 52px; }.quantum-controls { bottom: 10px; } footer { display: none; } }
