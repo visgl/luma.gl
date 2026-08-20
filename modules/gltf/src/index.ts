@@ -25,6 +25,7 @@ export {
   GLTFAnimator,
   type GLTFAnimatorProps
 } from './gltf/gltf-animator';
+export {type GLTFMorphTargetState, setGLTFMorphWeights} from './gltf/morph-targets';
 export {
   createGLTFAnimatedCrowd,
   GLTFAnimatedCrowd,

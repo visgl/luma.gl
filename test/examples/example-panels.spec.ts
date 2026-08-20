@@ -832,13 +832,74 @@ describe('glTF controls', () => {
   test('exposes a genuinely instanced animated crowd of up to one hundred actors', () => {
     expect(getSettingDefinitions(makeGltfSettingsSchema()).get('instanceCount')).toEqual(
       expect.objectContaining({
-        label: 'GPU Crowd Actors',
+        label: 'Independent Characters',
         type: 'number',
         min: 1,
         max: 100,
         step: 1
       })
     );
+  });
+
+  test('surfaces clip, actor, crossfade, morph, material, and authored-camera controls', () => {
+    const definitions = getSettingDefinitions(
+      makeGltfSettingsSchema(
+        [],
+        [],
+        'studio',
+        {
+          clipNames: ['Idle', 'Walking'],
+          selectedClip: 'Idle',
+          duration: 2,
+          time: 0.5,
+          playing: true,
+          speed: 1,
+          crossFadeDuration: 0.35,
+          loop: 'repeat',
+          actors: [
+            {index: 0, id: 'left', clip: 'Idle', time: 0.5, speed: 1, playing: true},
+            {index: 1, id: 'right', clip: 'Walking', time: 1, speed: 1.2, playing: true}
+          ],
+          selectedActorIndex: 0,
+          variants: ['Red', 'Blue'],
+          selectedVariant: 'Red',
+          morphTargets: [
+            {identifier: '13:0', nodeIndex: 13, targetIndex: 0, label: 'Angry', value: 0}
+          ],
+          skinCount: 2,
+          jointCount: 86,
+          cameraCount: 1
+        },
+        [{name: 'Studio Camera'}]
+      )
+    );
+
+    expect(definitions.get('animationClip')?.options).toEqual([
+      {label: 'Idle', value: 'Idle'},
+      {label: 'Walking', value: 'Walking'}
+    ]);
+    expect(definitions.get('animationActor')?.options).toEqual([
+      {label: 'Actor 1 · Idle', value: '0'},
+      {label: 'Actor 2 · Walking', value: '1'}
+    ]);
+    expect(definitions.get('animationCrossFade')).toEqual(
+      expect.objectContaining({label: 'Crossfade Seconds', max: 2})
+    );
+    expect(definitions.get('instanceCount')).toEqual(
+      expect.objectContaining({label: 'Independent Characters', max: 100})
+    );
+    expect(definitions.get('morph__13__0')).toEqual(
+      expect.objectContaining({label: 'Angry', min: 0, max: 1})
+    );
+    expect(definitions.get('materialVariant')?.options).toEqual([
+      {label: 'Original materials', value: '__default__'},
+      {label: 'Red', value: 'Red'},
+      {label: 'Blue', value: 'Blue'}
+    ]);
+    expect(definitions.get('cameraSelection')?.options).toEqual([
+      {label: 'Studio orbit camera', value: '__orbit-camera__'},
+      {label: 'Studio Camera', value: '0'}
+    ]);
   });
 
   test('exposes automatic per-actor LOD and bounded screen-space detail bias', () => {

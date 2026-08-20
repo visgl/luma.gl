@@ -18,9 +18,9 @@ import {runWebsiteExample} from '../playwright/run-website-example.mjs';
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, '..', '..');
 const CAPTURE_MANIFEST_SCHEMA = 'luma.gl/gltf-reference-capture-manifest';
-const CAPTURE_MANIFEST_VERSION = 1;
+const CAPTURE_MANIFEST_VERSION = 2;
 const EVIDENCE_SCHEMA = 'luma.gl/gltf-reference-evidence';
-const EVIDENCE_VERSION = 1;
+const EVIDENCE_VERSION = 2;
 const DEFAULT_ARTIFACT_BASE = '.playwright-artifacts/gltf-reference';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
 const DEFAULT_CHANNEL_TOLERANCE = 12;
@@ -30,8 +30,53 @@ const READY_TIMEOUT_MILLISECONDS = 120_000;
 const SAMPLE_ASSETS_REVISION = '723ffc6706725b618b8c14ceb82e3e6904b08a76';
 const SAMPLE_VIEWER_REVISION = 'f9fce9ee7bc62c5433d2a1bf84be229225c7bd19';
 const SAMPLE_VIEWER_RELEASE_REVISION = 'dd024e4726c9e73f3dc87cccb4ab317a5cff7c3d';
-const CAPTURE_ROUTE =
-  '/examples/showcase/gltf?gltf-reference=1&model=BumpMaterial&variant=glTF&file=BumpMaterial.gltf&yaw=0.35&pitch=-0.15&distance=1';
+const ROBOT_EXPRESSIVE_REVISION = '24595fb65bb662ea1e70984bb18301af06637b07';
+export const GLTF_REFERENCE_CAPTURE_SCENARIOS = [
+  {
+    id: 'material-extension',
+    model: 'BumpMaterial',
+    route:
+      '/examples/showcase/gltf?gltf-reference=1&model=BumpMaterial&variant=glTF&file=BumpMaterial.gltf&yaw=0.35&pitch=-0.15&distance=1',
+    camera: {yaw: 0.35, pitch: -0.15, distanceMultiplier: 1},
+    rendering: {
+      animation: 'disabled',
+      automaticLevelOfDetail: 'disabled',
+      environment: 'fixed-fallback-lights',
+      exposure: 1,
+      toneMapping: 'none',
+      outputColorSpace: 'srgb'
+    }
+  },
+  {
+    id: 'animation-studio',
+    model: 'RobotExpressive',
+    route:
+      '/examples/showcase/gltf?gltf-reference=1&model=RobotExpressive&variant=glTF-Binary&file=RobotExpressive.glb&yaw=0.2&pitch=-0.1&distance=1.4&studio=1&actors=3&actor=1&clip=Walking&animation-time=0.65&speed=1.25&loop=repeat&morph=Angry&morph-weight=0.6',
+    camera: {yaw: 0.2, pitch: -0.1, distanceMultiplier: 1.4},
+    rendering: {
+      animation: 'fixed-studio-state',
+      automaticLevelOfDetail: 'disabled',
+      environment: 'fixed-fallback-lights',
+      exposure: 1,
+      toneMapping: 'none',
+      outputColorSpace: 'srgb'
+    },
+    studio: {
+      actorCount: 3,
+      selectedActorIndex: 1,
+      clipName: 'Walking',
+      time: 0.65,
+      speed: 1.25,
+      morphTarget: 'Angry',
+      morphWeight: 0.6
+    },
+    source: {
+      name: 'three.js RobotExpressive',
+      revision: ROBOT_EXPRESSIVE_REVISION,
+      license: 'CC0-1.0'
+    }
+  }
+];
 const BACKENDS = [
   {id: 'webgpu-core', deviceType: 'webgpu'},
   {id: 'webgl2', deviceType: 'webgl'}
@@ -52,10 +97,11 @@ Options:
   --max-differing-pixel-ratio <number>   Dual-backend failure budget (default: ${DEFAULT_MAXIMUM_DIFFERING_PIXEL_RATIO}).
   --help                                 Show this help message.
 
-The runner captures only the luma.gl canvas at 1280x720. It stores per-backend evidence and
-diagnostics, a highlighted pixel diff, and a versioned manifest. The Khronos Sample Viewer source
-and deployment revisions are pinned in that manifest; its external reference frame remains a
-separate approval-controlled capture.
+The runner captures only the luma.gl canvas at 1280x720. It stores per-scenario, per-backend
+evidence and diagnostics, highlighted pixel diffs, and a versioned manifest. The scenarios cover
+an extension material plus a fixed Animation Studio crowd pose with skinning and a facial morph.
+The Khronos Sample Viewer source and deployment revisions are pinned in that manifest; its external
+reference frame remains a separate approval-controlled capture.
 `;
 
 /** Capture both graphics backends and enforce the configured pixel-difference budget. */
@@ -83,89 +129,94 @@ export async function captureGLTFReferenceEvidence(options = {}, dependencies = 
   }
   const captures = [];
 
-  for (const [backendIndex, backend] of BACKENDS.entries()) {
-    logger.log(`[gltf-reference] Capturing ${backendIndex + 1}/${BACKENDS.length}: ${backend.id}`);
-    const artifactDirectory = path.join(runDirectory, backend.id);
-    const captureResult = await captureWebsiteExample({
-      artifactDir: artifactDirectory,
-      backend: backend.id,
-      baseUrl,
-      channel: options.channel,
-      collectPageData: collectReferenceEvidence,
-      cwd: repositoryRoot,
-      example: CAPTURE_ROUTE,
-      headless: Boolean(options.headless),
-      keepOpen: false,
-      logger,
-      ocularConfig,
-      preparePage: waitForReferenceEvidence,
-      screenshotSelector: 'canvas',
-      softwareGpu: Boolean(options.softwareGpu),
-      viewportHeight: 720,
-      viewportWidth: 1280,
-      websiteServerMode: 'static'
-    });
-    assertCleanCaptureDiagnostics(captureResult.diagnostics, backend.id);
-    assertReferenceEvidence(captureResult.pageData, backend);
+  for (const [scenarioIndex, scenario] of GLTF_REFERENCE_CAPTURE_SCENARIOS.entries()) {
+    for (const [backendIndex, backend] of BACKENDS.entries()) {
+      const captureIndex = scenarioIndex * BACKENDS.length + backendIndex + 1;
+      const captureCount = GLTF_REFERENCE_CAPTURE_SCENARIOS.length * BACKENDS.length;
+      logger.log(
+        `[gltf-reference] Capturing ${captureIndex}/${captureCount}: ${scenario.id}/${backend.id}`
+      );
+      const artifactDirectory = path.join(runDirectory, scenario.id, backend.id);
+      const captureResult = await captureWebsiteExample({
+        artifactDir: artifactDirectory,
+        backend: backend.id,
+        baseUrl,
+        channel: options.channel,
+        collectPageData: collectReferenceEvidence,
+        cwd: repositoryRoot,
+        example: scenario.route,
+        headless: Boolean(options.headless),
+        keepOpen: false,
+        logger,
+        ocularConfig,
+        preparePage: waitForReferenceEvidence,
+        screenshotSelector: 'canvas',
+        softwareGpu: Boolean(options.softwareGpu),
+        viewportHeight: 720,
+        viewportWidth: 1280,
+        websiteServerMode: 'static'
+      });
+      assertCleanCaptureDiagnostics(captureResult.diagnostics, `${scenario.id}/${backend.id}`);
+      assertReferenceEvidence(captureResult.pageData, backend, scenario);
 
-    const evidencePath = path.join(artifactDirectory, 'gltf-reference-evidence.json');
-    await writeJson(evidencePath, captureResult.pageData);
-    captures.push({
-      backend: backend.id,
-      deviceType: captureResult.pageData.renderer.backend,
-      evidence: captureResult.pageData,
-      evidencePath: path.relative(runDirectory, evidencePath),
-      screenshotPath: path.relative(runDirectory, captureResult.screenshotPath)
-    });
+      const evidencePath = path.join(artifactDirectory, 'gltf-reference-evidence.json');
+      await writeJson(evidencePath, captureResult.pageData);
+      captures.push({
+        scenario: scenario.id,
+        backend: backend.id,
+        deviceType: captureResult.pageData.renderer.backend,
+        evidence: captureResult.pageData,
+        evidencePath: path.relative(runDirectory, evidencePath),
+        screenshotPath: path.relative(runDirectory, captureResult.screenshotPath)
+      });
+    }
   }
 
-  const webgpuScreenshot = await readFile(path.join(runDirectory, captures[0].screenshotPath));
-  const webglScreenshot = await readFile(path.join(runDirectory, captures[1].screenshotPath));
-  const comparison = comparePNGScreenshots(webgpuScreenshot, webglScreenshot, {
-    channelTolerance: options.channelTolerance ?? DEFAULT_CHANNEL_TOLERANCE,
-    maximumDifferingPixelRatio:
-      options.maximumDifferingPixelRatio ?? DEFAULT_MAXIMUM_DIFFERING_PIXEL_RATIO
-  });
-  const differencePath = path.join(runDirectory, 'webgpu-webgl2-difference.png');
-  await writeFile(differencePath, comparison.differencePNG);
+  const comparisons = [];
+  for (const scenario of GLTF_REFERENCE_CAPTURE_SCENARIOS) {
+    const scenarioCaptures = captures.filter(capture => capture.scenario === scenario.id);
+    const webgpuScreenshot = await readFile(
+      path.join(runDirectory, scenarioCaptures[0].screenshotPath)
+    );
+    const webglScreenshot = await readFile(
+      path.join(runDirectory, scenarioCaptures[1].screenshotPath)
+    );
+    const comparison = comparePNGScreenshots(webgpuScreenshot, webglScreenshot, {
+      channelTolerance: options.channelTolerance ?? DEFAULT_CHANNEL_TOLERANCE,
+      maximumDifferingPixelRatio:
+        options.maximumDifferingPixelRatio ?? DEFAULT_MAXIMUM_DIFFERING_PIXEL_RATIO
+    });
+    const differencePath = path.join(
+      runDirectory,
+      scenario.id,
+      'webgpu-webgl2-difference.png'
+    );
+    await writeFile(differencePath, comparison.differencePNG);
+    comparisons.push({
+      scenario: scenario.id,
+      ...comparison,
+      differencePath: path.relative(runDirectory, differencePath)
+    });
+  }
 
   const manifest = {
     schema: CAPTURE_MANIFEST_SCHEMA,
     version: CAPTURE_MANIFEST_VERSION,
     createdAt: new Date().toISOString(),
     repositoryCommit: process.env.GITHUB_SHA || null,
-    capture: {
-      route: CAPTURE_ROUTE,
-      width: comparison.width,
-      height: comparison.height,
-      model: 'BumpMaterial',
-      sampleAssetsRevision: SAMPLE_ASSETS_REVISION,
-      camera: {yaw: 0.35, pitch: -0.15, distanceMultiplier: 1},
-      rendering: {
-        animation: 'disabled',
-        automaticLevelOfDetail: 'disabled',
-        environment: 'fixed-fallback-lights',
-        exposure: 1,
-        toneMapping: 'none',
-        outputColorSpace: 'srgb'
-      }
-    },
+    viewport: {width: comparisons[0].width, height: comparisons[0].height},
+    sampleAssetsRevision: SAMPLE_ASSETS_REVISION,
+    scenarios: GLTF_REFERENCE_CAPTURE_SCENARIOS,
     captures: captures.map(capture => ({
+      scenario: capture.scenario,
       backend: capture.backend,
       deviceType: capture.deviceType,
       evidencePath: capture.evidencePath,
       screenshotPath: capture.screenshotPath
     })),
-    dualBackendComparison: {
-      channelTolerance: comparison.channelTolerance,
-      maximumDifferingPixelRatio: comparison.maximumDifferingPixelRatio,
-      differingPixelCount: comparison.differingPixelCount,
-      differingPixelRatio: comparison.differingPixelRatio,
-      meanAbsoluteChannelDifference: comparison.meanAbsoluteChannelDifference,
-      maximumAbsoluteChannelDifference: comparison.maximumAbsoluteChannelDifference,
-      differencePath: path.relative(runDirectory, differencePath),
-      passed: comparison.passed
-    },
+    dualBackendComparisons: comparisons.map(
+      ({differencePNG: _differencePNG, ...comparison}) => comparison
+    ),
     referenceRenderer: {
       name: 'Khronos glTF Sample Viewer',
       sourceRevision: SAMPLE_VIEWER_REVISION,
@@ -178,15 +229,17 @@ export async function captureGLTFReferenceEvidence(options = {}, dependencies = 
   const manifestPath = path.join(runDirectory, 'manifest.json');
   await writeJson(manifestPath, manifest);
 
-  if (!comparison.passed) {
+  const failedComparison = comparisons.find(comparison => !comparison.passed);
+  if (failedComparison) {
     throw new Error(
-      `WebGPU/WebGL2 differing-pixel ratio ${comparison.differingPixelRatio.toFixed(6)} exceeds ` +
-        `${comparison.maximumDifferingPixelRatio}; retained evidence: ${runDirectory}`
+      `${failedComparison.scenario} WebGPU/WebGL2 differing-pixel ratio ` +
+        `${failedComparison.differingPixelRatio.toFixed(6)} exceeds ` +
+        `${failedComparison.maximumDifferingPixelRatio}; retained evidence: ${runDirectory}`
     );
   }
 
   logger.log(`[gltf-reference] Evidence retained in ${runDirectory}`);
-  return {captures, comparison, manifest, manifestPath, runDirectory};
+  return {captures, comparisons, manifest, manifestPath, runDirectory};
 }
 
 /** Compare two same-sized RGBA PNG captures and create a highlighted difference image. */
@@ -353,7 +406,7 @@ async function isServerReady(url) {
   }
 }
 
-function assertReferenceEvidence(evidence, backend) {
+function assertReferenceEvidence(evidence, backend, scenario) {
   if (!evidence || evidence.schema !== EVIDENCE_SCHEMA || evidence.version !== EVIDENCE_VERSION) {
     throw new Error(`${backend.id} did not publish versioned glTF reference evidence.`);
   }
@@ -365,12 +418,32 @@ function assertReferenceEvidence(evidence, backend) {
   if (evidence.metrics?.frameCount < READY_FRAME_COUNT) {
     throw new Error(`${backend.id} captured before ${READY_FRAME_COUNT} completed frames.`);
   }
-  if (
-    evidence.metrics.drawCount !== 1 ||
-    evidence.metrics.submittedIndexReferences !== 3 ||
-    evidence.metrics.triangleCount !== 1
+  if (evidence.model?.name !== scenario.model) {
+    throw new Error(`${backend.id} published evidence for ${evidence.model?.name}, not ${scenario.model}.`);
+  }
+  if (scenario.id === 'material-extension') {
+    if (
+      evidence.metrics.drawCount !== 1 ||
+      evidence.metrics.submittedIndexReferences !== 3 ||
+      evidence.metrics.triangleCount !== 1
+    ) {
+      throw new Error(`${backend.id} did not render the complete indexed BumpMaterial fixture.`);
+    }
+  } else if (
+    evidence.studio?.actorCount !== scenario.studio.actorCount ||
+    evidence.studio?.selectedActorIndex !== scenario.studio.selectedActorIndex ||
+    evidence.studio?.selectedClip !== scenario.studio.clipName ||
+    Math.abs(evidence.studio?.time - scenario.studio.time) > 1e-4 ||
+    evidence.studio?.speed !== scenario.studio.speed ||
+    evidence.studio?.playing !== false ||
+    evidence.studio?.skinCount !== 2 ||
+    evidence.studio?.jointCount !== 86 ||
+    evidence.studio?.morphTargets?.find(target => target.label === scenario.studio.morphTarget)
+      ?.value !== scenario.studio.morphWeight ||
+    evidence.metrics.drawCount < 1 ||
+    evidence.metrics.triangleCount < 1
   ) {
-    throw new Error(`${backend.id} did not render the complete indexed BumpMaterial fixture.`);
+    throw new Error(`${backend.id} did not render the complete fixed Animation Studio state.`);
   }
 }
 
