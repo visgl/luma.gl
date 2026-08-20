@@ -33,13 +33,14 @@ test('LuSpatialGeographicPointQueryEffect validates props before browser GPU all
   expect(() => new LuSpatialGeographicPointQueryEffect(device, props)).toThrow(allocationSentinel);
 });
 
-test('LuSpatialGeographicPointQueryEffect supports a browser-safe software WebGPU lifecycle', async () => {
+test('LuSpatialGeographicPointQueryEffect supports a browser WebGPU lifecycle on hardware', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return;
-
+  // Constructing this graph compiles its integer-fp64 pipelines and leaves SwiftShader busy for
+  // minutes during browser teardown. Real hardware still covers the lifecycle and submitted results.
+  if (!device || isSoftwareBackedDevice(device)) return;
   const publishedStats: unknown[] = [];
   const effect = new LuSpatialGeographicPointQueryEffect(device, {
-    id: 'luspatial-geographic-query-software-lifecycle-test',
+    id: 'luspatial-geographic-query-hardware-lifecycle-test',
     longitudeLatitudes: new Float32Array([-73.97, 40.75, -73.99, 40.74]),
     sourceBounds: [-74, 40.72, -73.94, 40.78],
     projectionOrigin: [-73.97, 40.75],
@@ -80,13 +81,13 @@ test('LuSpatialGeographicPointQueryEffect supports a browser-safe software WebGP
     effect.setSelectionRadius(0.01);
     expect(effect.getSelection().radiusKilometres).toBe(0.1);
     expect(redrawReasons).toEqual([
-      'luspatial-geographic-query-software-lifecycle-test selection changed',
-      'luspatial-geographic-query-software-lifecycle-test selection radius changed'
+      'luspatial-geographic-query-hardware-lifecycle-test selection changed',
+      'luspatial-geographic-query-hardware-lifecycle-test selection radius changed'
     ]);
 
     const defaultCommandEncoder = device.commandEncoder;
     const lifecycleCommandEncoder = device.createCommandEncoder({
-      id: 'luspatial-geographic-query-software-lifecycle-test'
+      id: 'luspatial-geographic-query-hardware-lifecycle-test'
     });
     device.commandEncoder = lifecycleCommandEncoder;
     try {

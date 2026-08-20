@@ -28,6 +28,11 @@ Creating too many GPU devices in one run can cause context loss and other instab
 
 Browser-backed tests run through Vitest Browser Mode with Playwright/Chromium. This is the default path for active WebGL and WebGPU tests in CI.
 
+Node test workers reuse their module graph to keep the large monorepo suite fast. A Node test that
+replaces a global, changes an environment variable, or mutates shared module state must restore it
+before the file finishes. Browser test files remain isolated because GPU resources and pending queue
+work cannot safely be reused across files.
+
 ## Legacy render and perf tests
 
 `test/render/**` snapshot tests and `test/perf/**` benchmarks are still on the legacy browser harness in this phase of the migration. They are excluded from Vitest and continue to rely on `BrowserTestDriver` utilities.
