@@ -127,8 +127,7 @@ class GPUDataAnalysisExample {
       control.addEventListener('change', this.handleGPUDataFrameChange);
     }
     this.updateGPUDataFrameExpression();
-    this.elements.gpu -
-      dataframeBenchmark.addEventListener('click', this.handleGPUDataFrameBenchmark);
+    this.elements.gpuDataFrameBenchmark.addEventListener('click', this.handleGPUDataFrameBenchmark);
   }
 
   async initialize(): Promise<void> {
@@ -165,8 +164,10 @@ class GPUDataAnalysisExample {
       control.removeEventListener('input', this.handleGPUDataFrameInput);
       control.removeEventListener('change', this.handleGPUDataFrameChange);
     }
-    this.elements.gpu -
-      dataframeBenchmark.removeEventListener('click', this.handleGPUDataFrameBenchmark);
+    this.elements.gpuDataFrameBenchmark.removeEventListener(
+      'click',
+      this.handleGPUDataFrameBenchmark
+    );
     for (const element of [
       this.elements.dataset,
       this.elements.bins,
