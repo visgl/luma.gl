@@ -82,10 +82,15 @@ remain separate work.
 
 **Priority:** P0. **Owners:** `@luma.gl/gltf`, `@luma.gl/shadertools`, shared test infrastructure.
 
-**Status:** In progress. The executable ledger now derives extension coverage from the runtime
-registry, pins the Khronos Sample Assets and Sample Viewer revisions, records asset-specific license
-sources, and rejects drift between supported extensions and positive fixtures or between unsupported
-required extensions and the negative fixture. Deterministic image and performance artifacts remain.
+**Status:** In progress. [PR #3087](https://github.com/visgl/luma.gl/pull/3087) landed the executable
+ledger: it derives extension coverage from the runtime registry, pins the Khronos Sample Assets and
+Sample Viewer revisions, records asset-specific license sources, and rejects drift between supported
+extensions and positive fixtures or between unsupported required extensions and the negative
+fixture. The current follow-on adds a deterministic, CI-retained WebGPU/WebGL2 capture for the local
+bump-material fixture with explicit camera, lighting, image-tolerance, transfer, CPU, GPU-residency,
+draw, index-reference, and triangle evidence. A pinned Sample Viewer reference frame, the full
+fixture image matrix, and backend-neutral shader-compilation timing remain before this tranche can
+be marked complete.
 
 - Curate pinned, correctly licensed Khronos assets covering every supported material extension,
   compressed geometry, 64+/256-joint rigs, sparse/interleaved accessors, eight-influence skinning,
@@ -120,6 +125,32 @@ stacked dependency [PR #3044](https://github.com/visgl/luma.gl/pull/3044).
 
 **Exit criteria:** the code is on `master`, both graphics backends pass the authored/generated LOD
 fixtures, budgets never silently cull actors, and public capability rows reflect the landed state.
+
+### Tranche 1A — Refresh the Animation Studio and curated asset experience
+
+**Priority:** P1. **Owners:** `@luma.gl/gltf`, showcase infrastructure, retained scene adapters.
+
+**Starting point:** [draft PR #2995](https://github.com/visgl/luma.gl/pull/2995) is still open but is
+based on an obsolete `master`, currently cannot merge, and predates the landed ledger, panel system,
+source-faithful exporter, and animated crowd/LOD work. Refresh it on current `master`; do not merge
+or mechanically rebase the old patch wholesale.
+
+- Preserve its useful user-facing goals: a correctly attributed CC0 `RobotExpressive` fixture;
+  named clip selection, speed, seek, loop, and crossfade controls; facial morph weights; authored
+  cameras; material variants; and independently animated characters on WebGPU and WebGL2.
+- Build the gallery and feature labels from the landed reference ledger (plus an explicitly licensed
+  offline subset where justified), instead of maintaining a second hard-coded compatibility
+  manifest that can drift from runtime support.
+- Reuse the current mixer, crowd, LOD, panel, morph-weight, and export APIs. Audit the old draft's
+  runtime changes against features that have since landed elsewhere, keeping only missing public API
+  or retained-scene/GLB export work.
+- Feed the refreshed studio into the Tranche 0 evidence route and the Tranche 13 diagnostic viewer so
+  its controls, provenance, extension maturity, geometry budgets, and backend behavior stay
+  machine-verifiable.
+
+**Exit criteria:** a replacement PR based on current `master` delivers the studio without duplicate
+runtime abstractions or feature manifests; the real expressive asset and every retained control have
+license/provenance tests, focused WebGPU/WebGL2 coverage, user documentation, and reference evidence.
 
 ### Tranche 2 — Close real glTF codec and primitive compatibility gaps
 
@@ -326,7 +357,7 @@ without claiming complete game-engine functionality.
 
 | Wave | Tranches | Primary outcome |
 | --- | --- | --- |
-| Measure and unblock | 0, 1, 2 | Trustworthy evidence, already-reviewed LOD, and real release-candidate Meshopt assets. |
+| Measure and unblock | 0, 1, 1A, 2 | Trustworthy evidence, landed LOD, a refreshed user-facing Animation Studio, and real release-candidate Meshopt assets. |
 | Improve rendering and character fidelity | 3, 4, 5, 6 | Reference-grade materials, large rigs, GPU morphing, and genuinely GPU-sampled character animation. |
 | Expand full scene workflows | 7, 8, 9 | Layered animation, authored environments/lights, and progressive node/material residency. |
 | Scale mixed-scene GPU rendering | 10, 11 | GPU-driven budgeted skin+morph crowds and seamless mixed mesh/splat documents. |
