@@ -16,6 +16,10 @@ Vector Field Lab makes differential operators visible as local changes inside on
 Its four linked ray-marched views bind the same GPU-resident samples, derived buffers, and orbit
 camera, so dragging or zooming preserves the same perspective everywhere.
 
+Small solid 3D arrow glyphs make vector, gradient, and curl directions readable inside the volume.
+Because their shafts and tapered heads are evaluated by the ray marcher, they retain correct
+orientation, occlusion, and perspective as the camera moves.
+
 Scalar presets show nested potential clouds, gradient magnitude and direction, signed Laplacian,
 and combined curvature topology. Vector presets show velocity direction beside signed divergence,
 vector curl/vorticity, and combined flow topology. The radial source, vortex column, volumetric

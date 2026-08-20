@@ -90,6 +90,40 @@ fn directionColor(vector: vec3f) -> vec3f {
   return 0.18 + 0.82 * (direction * 0.5 + 0.5);
 }
 
+fn segmentDistance(point: vec3f, start: vec3f, end: vec3f) -> f32 {
+  let segment = end - start;
+  let fraction = clamp(dot(point - start, segment) / max(dot(segment, segment), 0.000001), 0.0, 1.0);
+  return length(point - (start + segment * fraction));
+}
+
+// A small solid 3D arrow evaluated as a shaft plus tapered cone. Glyph centers are
+// deliberately sparse so the field remains legible through the translucent volume.
+fn arrowGlyph(position: vec3f, bufferId: u32) -> VolumeSample {
+  let glyphCoordinate = clamp(round((position + 0.8) / 0.32), vec3f(0.0), vec3f(5.0));
+  let center = glyphCoordinate * 0.32 - 0.8;
+  let vector = sampleVectorBuffer(center, bufferId);
+  let magnitude = length(vector);
+  if (magnitude < 0.001) { return VolumeSample(vec3f(0.0), 0.0); }
+
+  let direction = vector / magnitude;
+  let arrowLength = 0.115 + 0.07 * (1.0 - exp(-magnitude * 0.7));
+  let tail = center - direction * arrowLength * 0.48;
+  let shoulder = center + direction * arrowLength * 0.18;
+  let tip = center + direction * arrowLength * 0.52;
+  let shaftDistance = segmentDistance(position, tail, shoulder) - 0.012;
+  let headVector = position - shoulder;
+  let headLength = max(length(tip - shoulder), 0.000001);
+  let headPosition = dot(headVector, direction);
+  let headRadius = 0.038 * (1.0 - clamp(headPosition / headLength, 0.0, 1.0));
+  let radialDistance = length(headVector - direction * headPosition);
+  let headDistance = max(radialDistance - headRadius, max(-headPosition, headPosition - headLength));
+  let distance = min(shaftDistance, headDistance);
+  let coverage = 1.0 - smoothstep(0.0, 0.018, distance);
+  let headHighlight = 1.0 - smoothstep(-0.006, 0.012, headDistance);
+  let color = mix(directionColor(vector) * 1.15, vec3f(1.0, 0.92, 0.62), headHighlight * 0.45);
+  return VolumeSample(color, coverage * 26.0);
+}
+
 fn fieldSample(position: vec3f, panel: u32, scalarMode: bool) -> VolumeSample {
   let grid = pow(max(0.0, 0.5 + 0.5 * sin((position.x + position.y * 1.3 + position.z * 0.7) * 18.0 - uniforms.cameraAndTime.w * 1.5)), 10.0);
   if (scalarMode) {
@@ -145,7 +179,16 @@ fn hash(point: vec2f) -> f32 { return fract(sin(dot(point, vec2f(12.9898, 78.233
     var distance = start + hash(input.position.xy) * stepLength;
     for (var step = 0u; step < 72u; step++) {
       let position = rayOrigin + rayDirection * distance;
-      let sample = fieldSample(position, panel, uniforms.viewport.w > 0.5);
+      let scalarMode = uniforms.viewport.w > 0.5;
+      var sample = fieldSample(position, panel, scalarMode);
+      var glyph = VolumeSample(vec3f(0.0), 0.0);
+      if (scalarMode && panel == 1u) { glyph = arrowGlyph(position, 1u); }
+      if (!scalarMode && panel == 0u) { glyph = arrowGlyph(position, 0u); }
+      if (!scalarMode && panel == 2u) { glyph = arrowGlyph(position, 2u); }
+      if (glyph.density > 0.0) {
+        sample.color = mix(sample.color, glyph.color, glyph.density / (sample.density + glyph.density));
+        sample.density += glyph.density;
+      }
       let alpha = 1.0 - exp(-sample.density * stepLength * 2.2);
       color += transmittance * alpha * sample.color * 1.35;
       transmittance *= 1.0 - alpha;
