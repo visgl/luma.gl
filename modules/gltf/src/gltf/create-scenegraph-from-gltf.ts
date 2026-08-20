@@ -79,7 +79,7 @@ export function createScenegraphsFromGLTF(
   options?: ParseGLTFOptions
 ): GLTFScenegraphs {
   if (options?.strictExtensions) {
-    assertSupportedGLTFExtensions(gltf);
+    assertSupportedGLTFExtensions(gltf, device);
   }
 
   const {
@@ -130,7 +130,7 @@ export function createScenegraphsFromGLTF(
     materials
   });
   const variants = new GLTFMaterialVariants(gltf, scenes);
-  const extensionSupport = getGLTFExtensionSupport(gltf);
+  const extensionSupport = getGLTFExtensionSupport(gltf, device);
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);
   const skins = new GLTFSkinController({gltf, scenes, gltfNodeIndexToNodeMap});
