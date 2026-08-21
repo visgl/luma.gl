@@ -1,7 +1,8 @@
 # Vector Field Lab
 
 A WebGPU showcase for navigating a sampled three-dimensional field and its differential operators.
-Four synchronized ray-marched volumes consume the same GPU-resident buffers and orbit camera.
+Four synchronized `StructuredVolumeRenderer` instances imported from `@luma.gl/scene/raymarch`
+consume the same GPU-resident buffers and orbit camera.
 Vector-valued views add small solid 3D arrow glyphs on a sparse 6³ lattice. Their shafts and tapered
 heads are evaluated volumetrically, preserving orientation, occlusion, and perspective while orbiting.
 
@@ -23,7 +24,9 @@ readback. `GPUFiniteDifference2D` remains available for planar analysis workflow
   units divided by distance, or distance squared for the Laplacian.
 
 The six presets have analytic derivatives used by the center probe and focused primitive tests.
-Animated fields update at 30 Hz inside one caller-owned graph encode.
+Every preset evolves over time: sources breathe, vortices accelerate, the incompressible lattice
+translates, and scalar potentials change shape or move. Updates run at 30 Hz inside one
+caller-owned graph encode; pause freezes every linked view at the same instant.
 
 ## Performance envelope
 

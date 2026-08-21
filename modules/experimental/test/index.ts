@@ -16,6 +16,7 @@ import './rendering/deferred-lighting.spec';
 import './rendering/fft-bloom.spec';
 import './rendering/g-buffer.spec';
 import './rendering/volumetric-fire-simulation.spec';
+import './rendering/structured-volume-renderer.spec';
 
 import './controls/orbit-controls.spec';
 

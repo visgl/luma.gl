@@ -32,49 +32,67 @@ export const VECTOR_FIELD_PRESETS: readonly VectorFieldPreset[] = [
     id: 'radial-source',
     name: 'Radial source volume',
     kind: 'vector',
-    summary: 'Every streamline escapes the origin; positive divergence fills the volume.',
-    formula: 'F(x,y,z) = (x, y, z)',
-    sample: (x, y, z) => ({scalar: 0, vector: [x, y, z]}),
-    probe: (x, y, z) => ({
-      scalar: 0,
-      vector: [x, y, z],
-      gradient: zero3,
-      divergence: 3,
-      curl: zero3,
-      laplacian: 0
-    })
+    summary: 'A breathing source makes positive divergence pulse throughout the volume.',
+    formula: 'F(x,y,z,t) = (1 + 0.35 sin 0.8t)(x, y, z)',
+    sample: (x, y, z, time) => {
+      const strength = 1 + 0.35 * Math.sin(time * 0.8);
+      return {scalar: 0, vector: [strength * x, strength * y, strength * z]};
+    },
+    probe: (x, y, z, time) => {
+      const strength = 1 + 0.35 * Math.sin(time * 0.8);
+      return {
+        scalar: 0,
+        vector: [strength * x, strength * y, strength * z],
+        gradient: zero3,
+        divergence: 3 * strength,
+        curl: zero3,
+        laplacian: 0
+      };
+    }
   },
   {
     id: 'rigid-vortex',
     name: 'Rigid vortex column',
     kind: 'vector',
-    summary: 'A vortex column with zero divergence and constant axial curl.',
-    formula: 'F(x,y,z) = (−y, x, 0)',
-    sample: (x, y) => ({scalar: 0, vector: [-y, x, 0]}),
-    probe: (x, y) => ({
-      scalar: 0,
-      vector: [-y, x, 0],
-      gradient: zero3,
-      divergence: 0,
-      curl: [0, 0, 2],
-      laplacian: 0
-    })
+    summary: 'A vortex column accelerates and relaxes while divergence remains zero.',
+    formula: 'F(x,y,z,t) = (1 + 0.4 sin 0.7t)(−y, x, 0)',
+    sample: (x, y, _z, time) => {
+      const strength = 1 + 0.4 * Math.sin(time * 0.7);
+      return {scalar: 0, vector: [-strength * y, strength * x, 0]};
+    },
+    probe: (x, y, _z, time) => {
+      const strength = 1 + 0.4 * Math.sin(time * 0.7);
+      return {
+        scalar: 0,
+        vector: [-strength * y, strength * x, 0],
+        gradient: zero3,
+        divergence: 0,
+        curl: [0, 0, 2 * strength],
+        laplacian: 0
+      };
+    }
   },
   {
     id: 'saddle',
     name: 'Volumetric saddle',
     kind: 'vector',
-    summary: 'Stretching in x and z balances compression in y.',
-    formula: 'F(x,y,z) = (x, −2y, z)',
-    sample: (x, y, z) => ({scalar: 0, vector: [x, -2 * y, z]}),
-    probe: (x, y, z) => ({
-      scalar: 0,
-      vector: [x, -2 * y, z],
-      gradient: zero3,
-      divergence: 0,
-      curl: zero3,
-      laplacian: 0
-    })
+    summary: 'Oscillating stretch and compression stay perfectly divergence-free.',
+    formula: 'F(x,y,z,t) = a(t)(x, −2y, z)',
+    sample: (x, y, z, time) => {
+      const strength = 1 + 0.35 * Math.sin(time * 0.65);
+      return {scalar: 0, vector: [strength * x, -2 * strength * y, strength * z]};
+    },
+    probe: (x, y, z, time) => {
+      const strength = 1 + 0.35 * Math.sin(time * 0.65);
+      return {
+        scalar: 0,
+        vector: [strength * x, -2 * strength * y, strength * z],
+        gradient: zero3,
+        divergence: 0,
+        curl: zero3,
+        laplacian: 0
+      };
+    }
   },
   {
     id: 'taylor-green',
@@ -124,20 +142,27 @@ export const VECTOR_FIELD_PRESETS: readonly VectorFieldPreset[] = [
     id: 'gaussian',
     name: 'Gaussian potential cloud',
     kind: 'scalar',
-    summary:
-      'Gradient radiates through nested isosurfaces; the Laplacian flips at the cloud shoulder.',
-    formula: 'φ(x,y,z) = exp(−4(x²+y²+z²))',
-    sample: (x, y, z) => ({scalar: Math.exp(-4 * (x * x + y * y + z * z)), vector: zero3}),
-    probe: (x, y, z) => {
+    summary: 'A breathing cloud reveals how gradient and Laplacian follow changing curvature.',
+    formula: 'φ(x,y,z,t) = exp(−a(t)(x²+y²+z²))',
+    sample: (x, y, z, time) => {
+      const sharpness = 4 + 1.25 * Math.sin(time * 0.7);
+      return {scalar: Math.exp(-sharpness * (x * x + y * y + z * z)), vector: zero3};
+    },
+    probe: (x, y, z, time) => {
       const radiusSquared = x * x + y * y + z * z;
-      const scalar = Math.exp(-4 * radiusSquared);
+      const sharpness = 4 + 1.25 * Math.sin(time * 0.7);
+      const scalar = Math.exp(-sharpness * radiusSquared);
       return {
         scalar,
         vector: zero3,
-        gradient: [-8 * x * scalar, -8 * y * scalar, -8 * z * scalar],
+        gradient: [
+          -2 * sharpness * x * scalar,
+          -2 * sharpness * y * scalar,
+          -2 * sharpness * z * scalar
+        ],
         divergence: 0,
         curl: zero3,
-        laplacian: (64 * radiusSquared - 24) * scalar
+        laplacian: (4 * sharpness * sharpness * radiusSquared - 6 * sharpness) * scalar
       };
     }
   },

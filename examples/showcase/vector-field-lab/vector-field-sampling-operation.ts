@@ -102,17 +102,18 @@ fn gaussian(point: vec3f, center: vec3f, sharpness: f32) -> f32 {
   var scalar = 0.0;
   var vector = vec3f(0.0);
   if (preset == 0u) {
-    vector = point;
+    vector = point * (1.0 + 0.35 * sin(sampling.time * 0.8));
   } else if (preset == 1u) {
-    vector = vec3f(-point.y, point.x, 0.0);
+    vector = vec3f(-point.y, point.x, 0.0) * (1.0 + 0.4 * sin(sampling.time * 0.7));
   } else if (preset == 2u) {
-    vector = vec3f(point.x, -2.0 * point.y, point.z);
+    vector = vec3f(point.x, -2.0 * point.y, point.z) * (1.0 + 0.35 * sin(sampling.time * 0.65));
   } else if (preset == 3u) {
     let phase = sampling.time * 0.13;
     let angles = 3.14159265 * (point + vec3f(phase, -phase * 0.7, phase * 0.35));
     vector = vec3f(sin(angles.x) * cos(angles.y) * cos(angles.z), -cos(angles.x) * sin(angles.y) * cos(angles.z), 0.0);
   } else if (preset == 4u) {
-    scalar = exp(-4.0 * dot(point, point));
+    let sharpness = 4.0 + 1.25 * sin(sampling.time * 0.7);
+    scalar = exp(-sharpness * dot(point, point));
   } else {
     let centerA = vec3f(0.34 * cos(sampling.time * 0.35), 0.25 * sin(sampling.time * 0.3), 0.24 * sin(sampling.time * 0.23));
     let centerB = vec3f(-0.4, 0.25 * cos(sampling.time * 0.27), -0.22);

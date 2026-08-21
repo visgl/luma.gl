@@ -22,6 +22,7 @@ export const description =
   'Orbit linked 3D volumes for a field and its GPU-computed gradient, divergence, curl, and Laplacian.';
 
 type VectorFieldLabProps = AnimationProps & {resolution?: number};
+const DEFAULT_PRESET_INDEX = 3;
 
 /** Interactive differential-operator showcase backed by one graph-native compute pipeline. */
 export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -33,7 +34,7 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
   readonly renderer: VectorFieldRenderer;
   readonly panels: ExamplePanelManager;
 
-  private preset: VectorFieldPreset = VECTOR_FIELD_PRESETS[0];
+  private preset: VectorFieldPreset = VECTOR_FIELD_PRESETS[DEFAULT_PRESET_INDEX];
   private playing = true;
   private orbitControls: OrbitControls | null = null;
   private probeElement: HTMLElement | null = null;
@@ -89,7 +90,6 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
     const seconds = this.animationSeconds;
     this.engine.update(this.preset, seconds);
     this.renderer.render({
-      time: seconds,
       scalarMode: this.preset.kind === 'scalar',
       eye: this.orbitControls?.getEyePosition() ?? [2.5, 1.6, 3.1]
     });
@@ -164,9 +164,9 @@ export default class VectorFieldLabAnimationLoopTemplate extends AnimationLoopTe
       <div data-vector-field-lab>
         <p>Orbit four synchronized ray-marched volumes. One sampled 3D field feeds four second-order WGSL operators.</p>
         <label>Field preset<select data-field-preset>
-          ${VECTOR_FIELD_PRESETS.map((preset, index) => `<option value="${preset.id}"${index === 0 ? ' selected' : ''}>${preset.name}</option>`).join('')}
+          ${VECTOR_FIELD_PRESETS.map((preset, index) => `<option value="${preset.id}"${index === DEFAULT_PRESET_INDEX ? ' selected' : ''}>${preset.name}</option>`).join('')}
         </select></label>
-        <label class="toggle"><input type="checkbox" data-field-playing checked /> Animate time-varying fields</label>
+        <label class="toggle"><input type="checkbox" data-field-playing checked /> Animate field evolution</label>
         <button type="button" data-field-center>Reset orbit camera</button>
         <div class="card"><strong>${this.engine.resolution}³ voxels · ${graphStats.nodeOrder.length} compute nodes</strong><br />Centered O(h²) interior · O(h²) one-sided edges · f32 storage · no volume readback</div>
         <div class="card">Drag to orbit every volume together. Use the wheel to fly closer or farther.</div>

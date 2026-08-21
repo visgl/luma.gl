@@ -79,7 +79,7 @@ export class VectorFieldEngine {
 
   /** Uploads a sampled field and encodes all four operators when the sample changes. */
   update(preset: VectorFieldPreset, time: number, force = false): boolean {
-    const sampleTime = preset.id === 'taylor-green' || preset.id === 'multi-well' ? time : 0;
+    const sampleTime = time;
     if (
       !force &&
       preset.id === this.lastPresetId &&

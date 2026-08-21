@@ -119,6 +119,13 @@ test('ANARI remains a declarative facade over shared rendering implementations',
     'shared implementation owners are explicit peer dependencies'
   );
   testContext.ok('./schemas' in packageManifest.exports, 'JSON schemas retain an isolated export');
+  testContext.deepEqual(
+    ['./forward', './deferred', './raytrace', './raymarch'].filter(
+      exportPath => exportPath in packageManifest.exports
+    ),
+    ['./forward', './deferred', './raytrace', './raymarch'],
+    'shared renderers have stable scene facade entry points'
+  );
   testContext.notOk(publicSource.includes('./schemas'), 'core imports do not eagerly load schemas');
   testContext.end();
 });
