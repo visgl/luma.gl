@@ -36,10 +36,6 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 * `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
 
-**@luma.gl/arrow**
-
-* Arrow 2D text clip rectangles now require `FixedSizeList<Float32>[4]` columns, and GPU-backed clip rectangles require `GPUVector<'float32x4'>`. Rebuild any previous `FixedSizeList<Int16>[4]` or `GPUVector<'sint16x4'>` inputs as 32-bit floats. Rectangle values are interpreted as `[x, y, width, height]` offsets in the text anchor's world coordinate space.
-
 ## Upgrading to v9.3[​](#upgrading-to-v93 "Direct link to Upgrading to v9.3")
 
 **Potentially breaking behavior**

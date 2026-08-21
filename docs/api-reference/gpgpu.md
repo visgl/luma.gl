@@ -26,7 +26,7 @@ Each `GPUData` owns or borrows exactly one buffer. A `GPUVector` does not own a 
 
 Runtime format strings describe GPU memory, including fixed-width formats such as `float32x3`, normalized formats such as `unorm8x4`, and variable-length formats such as `vertex-list<float32x3>`. Shader compatibility is checked at adapter and model boundaries.
 
-[`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) adds record batches, schemas, table bindings, computations, and planners above these primitives. [`@luma.gl/arrow`](https://luma.gl/docs/api-reference/arrow.md) converts Apache Arrow inputs to the shared GPU data objects; the GPU data types do not depend on Apache Arrow.
+[`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) adds record batches, schemas, table bindings, computations, and planners above these primitives.
 
 ## Installing[​](#installing "Direct link to Installing")
 

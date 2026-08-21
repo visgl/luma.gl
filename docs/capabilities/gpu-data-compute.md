@@ -26,27 +26,13 @@ This matrix groups the GPU-resident data and analytical capabilities that compos
 
 See [GPU table structure and lifecycle](https://luma.gl/docs/api-reference/experimental/gpu-tables.md).
 
-### Apache Arrow, geometry, and text[​](#apache-arrow-geometry-and-text "Direct link to Apache Arrow, geometry, and text")
+### Text and path models[​](#text-and-path-models "Direct link to Text and path models")
 
-| Feature                                | Status       | Backend         | Package                        | Details                                                                                                                           |
-| -------------------------------------- | ------------ | --------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| Apache Arrow uploads                   | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Convert supported Arrow tables, batches, vectors, and numeric columns into GPU data.                                              |
-| Original batch boundaries              | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Preserve source chunks and batch ownership instead of flattening streamed input.                                                  |
-| Renderer-independent Arrow analytics   | Experimental | WebGPU          | `@luma.gl/arrow`               | Use `makeGPUAnalyticsTableFromArrowTable()` to create storage-backed analytical tables without renderer-specific shader metadata. |
-| Arrow analytics validity masks         | Experimental | WebGPU          | `@luma.gl/arrow`               | Preserve compatible Arrow nullability as explicit GPU-resident validity data and independent source batches.                      |
-| Dictionary-backed analytics categories | Experimental | WebGPU          | `@luma.gl/arrow`               | Preserve CPU-owned UTF-8 dictionary labels and ordering metadata with signed or unsigned 32-bit GPU category indices.             |
-| Fixed-size vector columns              | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Adapt supported fixed-size lists into typed GPU vectors and shader bindings.                                                      |
-| Variable-length paths                  | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Preserve offsets for row-oriented path data.                                                                                      |
-| Normalized and HDR colors              | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Adapt normalized colors and supported floating-point color inputs without promising universal zero-copy uploads.                  |
-| Temporal and matrix metadata           | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Carry supported timestamps, time origins, and matrix-oriented source metadata.                                                    |
-| Arrow path rendering                   | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Draw Arrow-backed paths with portable attributes or WebGPU storage strategies.                                                    |
-| Arrow text rendering                   | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Render supported string and dictionary-encoded label columns.                                                                     |
-| Source-row picking                     | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow`               | Map visible geometry and labels back to their original Arrow rows.                                                                |
-| Text and glyph atlases                 | Experimental | WebGPU + WebGL2 | `@luma.gl/text`                | Render bitmap, SDF, or MSDF glyphs with supported Unicode layout, kerning, and clipping.                                          |
-| Dictionary-compressed labels           | Experimental | WebGPU          | `@luma.gl/text`                | Reuse repeated label values through WebGPU storage-based text strategies.                                                         |
-| Animated path visualization            | Experimental | WebGPU          | `@luma.gl/experimental/models` | Render GPU-resident trips and variable-length paths through storage-backed models.                                                |
-
-See [supported Arrow types and representations](https://luma.gl/docs/api-reference/arrow.md).
+| Feature                      | Status       | Backend         | Package                        | Details                                                                                  |
+| ---------------------------- | ------------ | --------------- | ------------------------------ | ---------------------------------------------------------------------------------------- |
+| Text and glyph atlases       | Experimental | WebGPU + WebGL2 | `@luma.gl/text`                | Render bitmap, SDF, or MSDF glyphs with supported Unicode layout, kerning, and clipping. |
+| Dictionary-compressed labels | Experimental | WebGPU          | `@luma.gl/text`                | Reuse repeated label values through WebGPU storage-based text strategies.                |
+| Animated path visualization  | Experimental | WebGPU          | `@luma.gl/experimental/models` | Render GPU-resident trips and variable-length paths through storage-backed models.       |
 
 ### Portable data operations[​](#portable-data-operations "Direct link to Portable data operations")
 

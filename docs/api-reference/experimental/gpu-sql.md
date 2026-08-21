@@ -12,7 +12,7 @@ Use GPU SQL when an application already has GPU dataframe inputs and a constrain
 
 ## Execution boundary[​](#execution-boundary "Direct link to Execution boundary")
 
-The execution boundary is explicit: Arrow input → GPU dataframe execution → Arrow output. Use `makeGPUAnalyticsTableFromArrowTable()` to upload input, construct a `GPUDataFrame`, register it with `LuSQLContext`, compile the query into a caller-owned `GPUCommandGraph`, encode and submit the graph, then call `makeArrowTableFromGPUAnalyticsTable()` for explicit result readback.
+The execution boundary is explicit: caller-owned GPU table input → GPU dataframe execution → caller-owned output. Construct a `GPUDataFrame`, register it with `LuSQLContext`, compile the query into a caller-owned `GPUCommandGraph`, encode and submit the graph, then explicitly read back only the results the application needs.
 
 ## Supported grammar[​](#supported-grammar "Direct link to Supported grammar")
 
@@ -30,4 +30,3 @@ Unsupported statements, unknown columns, unregistered tables, unsupported string
 
 * [GPU Dataframe](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md)
 * GPU scheduling
-* [Arrow](https://luma.gl/docs/api-reference/arrow.md)

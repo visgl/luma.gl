@@ -218,7 +218,7 @@ Simulate, filter, and visualize millions of records without shuttling data back 
 
 ### One API. Two ways to render.
 
-Share portable rendering across WebGPU and WebGL2, connect with deck.gl and Apache Arrow, and use WebGPU for compute shaders.
+Share portable rendering across WebGPU and WebGL2, connect with deck.gl, and use WebGPU for compute shaders.
 
 [Explore the complete feature set→](https://luma.gl/docs/capabilities.md)
 

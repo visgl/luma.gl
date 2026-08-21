@@ -60,8 +60,6 @@ const b = data.getChild('b'); // GPUDataView<'float32'> | null
 
 `getChild()` follows the Apache Arrow-style child API. It creates a borrowed strided view of the selected field without allocating storage or copying bytes.
 
-When the input starts as Apache Arrow, prefer [`makeGPUDataFromArrowData()`](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md) from `@luma.gl/arrow`; it uploads Arrow values into GPU buffers and fills in the required format, layout, and readback metadata.
-
 ## Struct Formats[​](#struct-formats "Direct link to Struct Formats")
 
 An object passed to `GPUData.format` describes several named fixed-width fields stored in each row. `GPUData` resolves the physical offsets and retains the canonical `GPUDataStructFormat` in its `format` property. The declaration describes bytes in the buffer and does not declare a parallel shader struct type.

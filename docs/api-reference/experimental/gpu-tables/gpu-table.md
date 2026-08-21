@@ -137,4 +137,4 @@ Destroys retained physical batches according to `GPUData.ownsBuffer`. Constants 
 * `bufferLayout` intentionally excludes constants because their backend layout is not known until shader binding preparation.
 * Table constants cannot differ between record batches. Use separate tables or a varying vector for batch-specific values.
 * `GPUTable` owns retained batches but not resources created by shader binding preparation.
-* Arrow-specific conversion and readback remain in `@luma.gl/arrow`.
+* Source-specific conversion and readback remain in application adapters.

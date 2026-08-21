@@ -16,7 +16,6 @@ If you are looking for `Model`, start with [`@luma.gl/engine`](https://luma.gl/d
 | [`@luma.gl/shadertools`](https://luma.gl/docs/api-reference/shadertools.md)   | Recommended  | Reusable shader modules, portable shader assembly, and application-defined shader hooks.        |
 | [`@luma.gl/effects`](https://luma.gl/docs/api-guide/shaders/shader-passes.md) | Optional     | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines.  |
 | [`@luma.gl/gpgpu`](https://luma.gl/docs/api-reference/gpgpu.md)               | Optional     | Portable GPU evaluation plus the experimental `gpu-data` subpath.                               |
-| [`@luma.gl/arrow`](https://luma.gl/docs/api-reference/arrow.md)               | Experimental | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data.                    |
 | [`@luma.gl/text`](https://luma.gl/docs/api-reference/text.md)                 | Experimental | `TextRenderer` facade and caller-owned GPU text data.                                           |
 | [`@luma.gl/splats`](https://luma.gl/docs/api-reference/splats.md)             | Experimental | Gaussian splat rendering and caller-owned prepared GPU splat data.                              |
 | [`@luma.gl/experimental`](https://luma.gl/docs/api-reference/experimental.md) | Experimental | Incubating APIs, including `gpu-tables`, rendering `models`, WebXR, and GPU analytics.          |
@@ -34,7 +33,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`](https://luma.gl/d
 * [`@luma.gl/effects`](https://luma.gl/docs/api-guide/shaders/shader-passes.md) for reusable image processing, bloom, and supported screen-space effects.
 * [`@luma.gl/gpgpu`](https://luma.gl/docs/api-reference/gpgpu.md) for portable GPU evaluation and its experimental `gpu-data` subpath.
 * [GPGPU data](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md) for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) for `GPURecordBatch`/`GPUTable` APIs.
-* [`@luma.gl/text`](https://luma.gl/docs/api-reference/text.md) for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`](https://luma.gl/docs/api-reference/arrow.md) for Arrow conversion.
+* [`@luma.gl/text`](https://luma.gl/docs/api-reference/text.md) for `TextRenderer` and caller-owned GPU text data.
 * [`@luma.gl/splats`](https://luma.gl/docs/api-reference/splats.md) for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 * [`@luma.gl/experimental`](https://luma.gl/docs/api-reference/experimental.md) for incubating APIs, including experimental WebXR frame, view, and raw camera helpers.
 * [`@luma.gl/gltf`](https://luma.gl/docs/api-reference/gltf.md) for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.

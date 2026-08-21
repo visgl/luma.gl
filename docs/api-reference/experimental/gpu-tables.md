@@ -11,7 +11,6 @@ From v9.4Experimental API
 * Read the [GPU Tables guide](https://luma.gl/docs/api-guide/gpu/gpu-tables.md) for end-to-end attribute and storage workflows.
 * Read [GPU Table Structure](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-structure.md) for the logical-column and physical-batch object model.
 * Use [`GPUTable`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table.md) for data ownership and [`GPUTableShaderBindings`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings.md) for backend-specific shader resources.
-* Use `@luma.gl/arrow` adapters when source data is Apache Arrow.
 
 ## API Reference[​](#api-reference "Direct link to API Reference")
 
@@ -24,11 +23,10 @@ From v9.4Experimental API
 * [GPUTable Shader Bindings](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings.md)
 * [GPUTableBufferPlanner](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner.md)
 * [GPGPU Data Primitives](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md)
-* [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)
 
 The subpath owns `GPURecordBatch`, `GPUTable`, `GPUSchema`, `GPUField`, `GPUTypeMap`, table bindings, table computations, and generic table planners. Models can publish `GPUInputSchema` declarations for the prepared table inputs they accept. `GPUTableShaderBindings` resolves those declarations into owned, batch-preserving attribute and storage resources for a shader layout. Table-oriented execution helpers include `TableTransform`, `GPUTableComputation`, `GPUTableBufferPlanner`, and generated-buffer batching utilities. `GPUTableModel` renders preserved table batches through one model pipeline, while `GPUTableGeometry` exposes a packed static table as ordinary GPU geometry. Specialized path and polygon models live separately in `@luma.gl/experimental/models`.
 
-Arrow-specific construction and analysis helpers live in `@luma.gl/arrow`. Applications that ingest Apache Arrow data should use those adapters to build the generic GPU table objects exposed here.
+Source-specific construction and analysis belongs in application adapters that build the generic GPU table objects exposed here.
 
 ## Installing[​](#installing "Direct link to Installing")
 

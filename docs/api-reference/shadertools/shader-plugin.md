@@ -340,4 +340,4 @@ const tintPlugin: ShaderPlugin = {
 };
 ```
 
-For runnable examples, see [Shader Plugins](https://luma.gl/docs/tutorials/shader-plugins.md) and [Arrow ShaderPlugin Filtering](https://luma.gl/examples/arrow/arrow-filtering).
+For a runnable example, see [Shader Plugins](https://luma.gl/docs/tutorials/shader-plugins.md).

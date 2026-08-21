@@ -102,18 +102,6 @@ This is not the same thing as vertex attribute layout:
 
 When one logical row may need both interpretations, choose names and row layouts with the record view in mind. Describe attribute-side views directly with `BufferLayout`; keep the corresponding WGSL struct or matrix layout explicit in the shader.
 
-## Columnar Arrow Data[​](#columnar-arrow-data "Direct link to Columnar Arrow Data")
-
-`@luma.gl/arrow` can upload numeric Arrow columns through `GPUVector`, preserve them in `GPUTable`, and bind selected columns as storage buffers when the shader layout declares `storage` or `read-only-storage` inputs.
-
-That supports patterns such as:
-
-* one Arrow matrix column bound as `array<mat4x4<f32>>` for rendering;
-* particle positions and velocities updated in place by compute;
-* batch-preserving compute dispatch through `GPUTableComputation`.
-
-See [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md) and [GPU Table Lifecycle](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md) for the full columnar workflow.
-
 ## Compute Pattern[​](#compute-pattern "Direct link to Compute Pattern")
 
 For table vectors, use `GPUTableComputation` when storage bindings should come from `GPUVector` objects:
@@ -163,5 +151,4 @@ Single-buffer vectors bind directly. Aggregate multi-batch vectors are rebound b
 * [Attributes](https://luma.gl/docs/api-guide/gpu/gpu-attributes.md)
 * [Tabular Data in WGSL](https://luma.gl/docs/api-guide/gpu/tabular-data-in-wgsl.md)
 * [GPU Tables](https://luma.gl/docs/api-guide/gpu/gpu-tables.md)
-* [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)
 * [GPU Table Lifecycle](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md)

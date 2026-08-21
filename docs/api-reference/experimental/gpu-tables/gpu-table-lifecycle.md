@@ -4,11 +4,11 @@
 
 From v9.4Experimental API
 
-This page documents the lifecycle of generic GPU table objects in `@luma.gl/experimental/gpu-tables`: ownership, batching, packing, table-backed rendering, transform, compute, and buffer planning. For Apache Arrow column compatibility and preparation helpers, see [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md).
+This page documents the lifecycle of generic GPU table objects in `@luma.gl/experimental/gpu-tables`: ownership, batching, packing, table-backed rendering, transform, compute, and buffer planning.
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, `GPUTable`, and `GPUSchema` are GPU-side representations for typed table columns and batches. Arrow vectors, record batches, and tables are common construction inputs through `@luma.gl/arrow`; the generic GPU objects do not retain references to those sources after extracting the buffer data and metadata they need.
+`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, `GPUTable`, and `GPUSchema` are GPU-side representations for typed table columns and batches. The generic GPU objects do not retain references to adapter-owned sources after extracting the buffer data and metadata they need.
 
 The object model is batch-preserving by default:
 
@@ -18,13 +18,9 @@ The object model is batch-preserving by default:
 * `GPUData` is the chunk primitive. It owns or borrows one `Buffer` or `DynamicBuffer`.
 * `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one compatible layout/pipeline and deriving each batch's attribute buffers and reserved `indices` index buffer from its `gpuData`.
 
-This means a multi-batch Arrow table stays multi-batch after GPU upload. If the application prefers fewer draw units, it packs explicitly:
+This means a multi-batch source stays multi-batch after GPU upload. If the application prefers fewer draw units, it packs explicitly:
 
 ```
-const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
-
-
-
 // Replace preserved batches with one packed batch.
 
 gpuTable.packBatches();
@@ -40,7 +36,7 @@ Packing mutates the table in place. It rebuilds `batches[]` and table-level `gpu
 
 ### Ownership Rules[​](#ownership-rules "Direct link to Ownership Rules")
 
-* GPU objects created from Arrow data own the GPU storage they allocate.
+* GPU objects created by source adapters own the GPU storage they allocate.
 * GPU objects wrapping caller-supplied buffers are non-owning by default unless `ownsBuffer` is requested.
 * `GPUData` is the storage-owning layer. A chunk may own its buffer or borrow an existing one, but `GPUVector` never owns raw buffers directly.
 * `GPUVector` owns or borrows ordered `GPUData[]` chunks. Code that needs one directly bindable buffer should require exactly one chunk and bind `vector.data[0].buffer`.
@@ -99,25 +95,21 @@ The important invariant is that varying buffers are reached through `GPUData`, n
 
 Low-level incremental assembly stays ownership-explicit with `gpuTable.addBatch(gpuRecordBatch)` and `gpuVector.addData(gpuData)`. These operations aggregate existing GPU objects instead of allocating replacement tables.
 
-When streaming Arrow data, create one immutable GPU batch per Arrow record batch and add it to the table:
+When streaming source data, create one immutable GPU batch per source batch and add it to the table:
 
 ```
-const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstRecordBatch]), {
-
-  shaderLayout
-
-});
+const gpuTable = new GPUTable({batches: [firstGPURecordBatch]});
 
 
 
-for await (const recordBatch of remainingRecordBatches) {
+for await (const gpuRecordBatch of remainingGPURecordBatches) {
 
-  gpuTable.addBatch(makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {shaderLayout}));
+  gpuTable.addBatch(gpuRecordBatch);
 
 }
 ```
 
-Each converted batch uploads source chunks into new `GPUData` buffers and preserves previous batches. To reduce draw or dispatch units, call `packBatches()` on the table explicitly.
+Each prepared batch preserves previous batches. To reduce draw or dispatch units, call `packBatches()` on the table explicitly.
 
 ## Table-Backed Render, Transform, and Compute Helpers[​](#table-backed-render-transform-and-compute-helpers "Direct link to Table-Backed Render, Transform, and Compute Helpers")
 
@@ -125,20 +117,16 @@ The table APIs are meant to feed more than one execution style.
 
 ### `GPUTableModel`[​](#gputablemodel "Direct link to gputablemodel")
 
-Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering. If the source data starts as an Arrow table, convert it first with `makeGPUTableFromArrowTable()` in layer/data-preparation code:
+Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering:
 
 ```
-const table = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
-
-
-
 const model = new GPUTableModel(device, {
 
   source,
 
   shaderLayout,
 
-  table,
+  table: preparedTable,
 
   tableCount: 'instance'
 
@@ -153,7 +141,7 @@ For preserved indexed batches, call `drawBatches(renderPass)`. Each batch keeps 
 
 ### `TableTransform`[​](#tabletransform "Direct link to tabletransform")
 
-`TableTransform` is the WebGL transform-feedback counterpart. It consumes a generic `GPUTable`, merges the table attribute layouts into the underlying `BufferTransform`, accepts already-created `GPUVector` inputs, and can run one preserved GPU batch at a time. Use `makeGPUTableFromArrowTable()` before construction when the source data starts as an Arrow table:
+`TableTransform` is the WebGL transform-feedback counterpart. It consumes a generic `GPUTable`, merges the table attribute layouts into the underlying `BufferTransform`, accepts already-created `GPUVector` inputs, and can run one preserved GPU batch at a time:
 
 ```
 const transform = new TableTransform(device, {
@@ -164,7 +152,7 @@ const transform = new TableTransform(device, {
 
   shaderLayout,
 
-  table: makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout}),
+  table: preparedTable,
 
   tableCount: 'vertex'
 
@@ -259,7 +247,6 @@ The object-model point is that planning is metadata-only. The planner does not c
 
 ## Related References[​](#related-references "Direct link to Related References")
 
-* [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)
 * [GPU Table Structure](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-structure.md)
 * [GPUTable](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table.md)
 * [GPURecordBatch](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md)

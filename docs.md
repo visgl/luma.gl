@@ -18,7 +18,7 @@ When you are ready to turn an idea into your own application, the [Installing gu
 * **Low-level access without raw-API duplication** — retain explicit buffers, textures, shaders, bindings, passes, and pipelines while sharing most application code.
 * **Engine building blocks** — use `Model`, `AnimationLoop`, geometry, transforms, and scenegraph helpers when raw resource management is unnecessary.
 * **Composable shaders** — package shader functions, typed inputs, hooks, and injections into reusable modules and plugins.
-* **Visualization-scale data** — luma.gl is the rendering foundation for deck.gl and includes dedicated support for GPU tables and Apache Arrow workflows.
+* **Visualization-scale data** — luma.gl is the rendering foundation for deck.gl and includes dedicated support for GPU-resident tables and compute workflows.
 
 ## Is luma.gl the right level?[​](#is-lumagl-the-right-level "Direct link to Is luma.gl the right level?")
 

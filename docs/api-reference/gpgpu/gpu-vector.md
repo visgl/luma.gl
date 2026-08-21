@@ -34,8 +34,6 @@ const gpuVector = new GPUVector({
 gpuVector.data[0].buffer; // the bindable storage
 ```
 
-When the input starts as Apache Arrow, prefer [`makeGPUVectorFromArrow()`](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md) from `@luma.gl/arrow`.
-
 ## Constructor Modes[​](#constructor-modes "Direct link to Constructor Modes")
 
 `GPUVector` uses a discriminated constructor prop union.

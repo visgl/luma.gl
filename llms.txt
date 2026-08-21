@@ -23,9 +23,9 @@ Detailed feature matrices for GPU-native dataframes, graph and raster analytics,
 
 #### gpu-data-compute
 
-GPU tables, Arrow, dataframe, raster, query, and visualization capabilities in luma.gl.
+GPU tables, dataframe, raster, query, and visualization capabilities in luma.gl.
 
-- [GPU data and compute capabilities](https://luma.gl/docs/capabilities/gpu-data-compute.md): GPU tables, Arrow, dataframe, raster, query, and visualization capabilities in luma.gl.
+- [GPU data and compute capabilities](https://luma.gl/docs/capabilities/gpu-data-compute.md): GPU tables, dataframe, raster, query, and visualization capabilities in luma.gl.
 
 #### rendering-visualization
 
@@ -187,16 +187,6 @@ luma.gl applications must provide the shader source code that will ultimately
 Find the curated and generated API references for every stable and experimental luma.gl package.
 
 - [Overview](https://luma.gl/docs/api-reference.md): Find the curated and generated API references for every stable and experimental luma.gl package.
-
-#### arrow
-
-From v9.4
-
-- [Overview](https://luma.gl/docs/api-reference/arrow.md): From v9.4
-- [Arrow Table Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md): Arrow Vector Factories
-- [Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md): From v9.4
-- [Arrow Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md): From v9.4
-- [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md): From v9.4
 
 #### constants
 
@@ -676,7 +666,7 @@ GPU-native Gaussian splat rendering, streaming, shading, picking, and formats in
 
 - [@luma.gl/splats](https://luma.gl/docs/api-reference/splats.md): GPU-native Gaussian splat rendering, streaming, shading, picking, and formats in luma.gl.
 - [Gaussian splat data and shading](https://luma.gl/docs/api-reference/splats/data-and-shading.md): Source columns, covariance projection, spherical harmonics, semantic filtering, and updates.
-- [Gaussian splat formats and loaders](https://luma.gl/docs/api-reference/splats/formats-and-loaders.md): Khronos glTF splats, 3D Tiles, SPZ, Arrow conversion, loaders, and package boundaries.
+- [Gaussian splat formats and loaders](https://luma.gl/docs/api-reference/splats/formats-and-loaders.md): Khronos glTF splats, 3D Tiles, SPZ, loaders, and package boundaries.
 - [Gaussian splat picking and scenes](https://luma.gl/docs/api-reference/splats/picking-and-scenes.md): GPU picking and mixed mesh-and-splat scene integration.
 - [Gaussian splat renderers](https://luma.gl/docs/api-reference/splats/renderers.md): Prepared, command-graph, segmented, and paged Gaussian splat rendering contracts.
 - [Gaussian splat streaming and residency](https://luma.gl/docs/api-reference/splats/streaming-and-residency.md): Bounded residency, hierarchical paging, and foveated level of detail.

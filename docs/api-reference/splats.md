@@ -20,7 +20,7 @@ Explore the complete 741,883-splat Train capture with progressive loading, GPU d
 | [Data and shading](https://luma.gl/docs/api-reference/splats/data-and-shading.md)               | Source columns, covariance, spherical harmonics, semantics, and updates. |
 | [Picking and scenes](https://luma.gl/docs/api-reference/splats/picking-and-scenes.md)           | GPU picking and mixed mesh-and-splat scenes.                             |
 | [Streaming and residency](https://luma.gl/docs/api-reference/splats/streaming-and-residency.md) | Bounded residency, hierarchy traversal, and foveated LOD.                |
-| [Formats and loaders](https://luma.gl/docs/api-reference/splats/formats-and-loaders.md)         | Khronos glTF splats, 3D Tiles, SPZ, Arrow, and loaders.                  |
+| [Formats and loaders](https://luma.gl/docs/api-reference/splats/formats-and-loaders.md)         | Khronos glTF splats, 3D Tiles, SPZ, and loaders.                         |
 
 ## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
 
@@ -29,5 +29,4 @@ The graph renderer, GPU ordering, hierarchy traversal, and storage-backed featur
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
 * [glTF](https://luma.gl/docs/api-reference/gltf.md)
-* [Arrow](https://luma.gl/docs/api-reference/arrow.md)
 * Experimental GPU primitives

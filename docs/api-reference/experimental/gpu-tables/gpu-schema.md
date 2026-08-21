@@ -123,20 +123,8 @@ The tables-core format is `vertex-list<uint32>`. The vector represents one batch
 * [`GPURecordBatch`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md) owns one batch-local `GPUData` chunk per selected column.
 * [`GPUTable`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table.md) owns preserved batches.
 
-Keeping schema as plain data lets Arrow, gpgpu, generated-geometry, and application-specific adapters create schemas without depending on a shared class hierarchy.
+Keeping schema as plain data lets gpgpu, generated-geometry, and application-specific adapters create schemas without depending on a shared class hierarchy.
 
-## Arrow Interop[​](#arrow-interop "Direct link to Arrow Interop")
+## Source Interop[​](#source-interop "Direct link to Source Interop")
 
-`@luma.gl/arrow` creates `GPUSchema` objects from selected Arrow fields. Arrow `DataType` values may still be retained on `GPUData` or `GPUVector` as adapter/readback metadata during migration, but tables and record batches expose `GPUSchema` instead of `arrow.Schema`.
-
-For example:
-
-```
-const gpuTable = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
-
-
-
-gpuTable.schema.fields[0].name; // shader/table column name
-
-gpuTable.schema.fields[0].format; // GPUVectorFormat, e.g. 'unorm8x4'
-```
+Source adapters can create `GPUSchema` objects while retaining their source type information as adapter or readback metadata. Tables and record batches expose `GPUSchema` as the canonical GPU schema.
