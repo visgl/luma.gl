@@ -775,7 +775,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
       ...(morphTargetData
         ? {HAS_INSTANCED_MORPH: true, CROWD_MORPH_TARGET_COUNT: morphTargetCount}
         : {}),
-      ...(crowd ? {CROWD_ANIMATION_JOINT_COUNT: animationJointCount} : {})
+      ...(crowd || morphTargetData ? {CROWD_ANIMATION_JOINT_COUNT: animationJointCount} : {})
     },
     parameters: {...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters}
   };
