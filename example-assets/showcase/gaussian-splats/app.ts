@@ -252,6 +252,11 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     if (this.localLoadersConfiguration?.upAxis === 'y') {
       this.cameraHomePitch = REAL_SCENE_CAMERA_PITCH;
     }
+    if (this.localLoadersConfiguration?.cameraOrientation) {
+      const {yaw, pitch} = this.localLoadersConfiguration.cameraOrientation;
+      this.cameraHomeYaw = yaw;
+      this.cameraHomePitch = pitch;
+    }
     if (this.localLoadersConfiguration?.camera) {
       const {position, target} = this.localLoadersConfiguration.camera;
       this.cameraTarget = [...target];
@@ -954,15 +959,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       const shouldUseLocalLoaders =
         this.localLoadersConfiguration?.loaderMode === 'local' ||
         (!hasBundledLoaders && hasLocalLoaders);
-      const sceneOptions: PanelSelectOption[] = [
-        {value: 'synthetic', label: 'Synthetic chromatic showcase'},
-        ...GAUSSIAN_SPLAT_SOURCE_CATALOG.filter(
-          source => shouldUseLocalLoaders || source.id !== 'fixture'
-        ).map(source => ({
-          value: source.id,
-          label: source.label
-        }))
-      ];
+      const sceneOptions: PanelSelectOption[] = GAUSSIAN_SPLAT_SOURCE_CATALOG.filter(
+        source => shouldUseLocalLoaders || source.id !== 'fixture'
+      ).map(source => ({
+        value: source.id,
+        label: source.label
+      }));
       if (
         this.localLoadersConfiguration &&
         !GAUSSIAN_SPLAT_SOURCE_CATALOG.some(
@@ -982,17 +984,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
           onChange: value => {
             const nextUrl = new URL(window.location.href);
             nextUrl.searchParams.delete('mode');
-            if (value === 'synthetic') {
-              nextUrl.searchParams.set('loaders', 'synthetic');
-              nextUrl.searchParams.delete('scene');
+            if (shouldUseLocalLoaders) {
+              nextUrl.searchParams.set('loaders', 'local');
             } else {
-              if (shouldUseLocalLoaders) {
-                nextUrl.searchParams.set('loaders', 'local');
-              } else {
-                nextUrl.searchParams.delete('loaders');
-              }
-              nextUrl.searchParams.set('scene', String(value));
+              nextUrl.searchParams.delete('loaders');
             }
+            nextUrl.searchParams.set('scene', String(value));
             nextUrl.searchParams.delete('source');
             window.location.assign(nextUrl.toString());
           }

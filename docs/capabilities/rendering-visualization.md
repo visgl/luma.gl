@@ -154,22 +154,22 @@ See the [glTF extension support matrix](https://luma.gl/docs/api-reference/gltf/
 
 ### Declarative scenes and asset integration[​](#declarative-scenes-and-asset-integration "Direct link to Declarative scenes and asset integration")
 
-| Feature                               | Status       | Backend         | Package          | Details                                                                                            |
-| ------------------------------------- | ------------ | --------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
-| ANARI-inspired retained objects       | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Manage retained cameras, geometry, materials, lights, surfaces, instances, and worlds.             |
-| Perspective and orthographic cameras  | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Configure supported camera models through the retained scene API.                                  |
-| Shared geometry instances             | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Reuse compatible surfaces, groups, and geometry across retained instances.                         |
-| Physically based scene materials      | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Describe supported matte and physically based material parameters.                                 |
-| Scene light types                     | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Configure supported ambient, directional, point, and spot lights.                                  |
-| Switchable scene renderers            | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Select supported forward or debug views; deferred and ray-tracing renderers require WebGPU.        |
-| Retained animation playback           | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Play supported transform, material, texture-coordinate, skeletal, and morph-target animations.     |
-| Editable JSON scenes                  | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Inspect and edit supported retained scene descriptions interactively.                              |
-| Experimental OpenUSD import           | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | The ANARI Playground imports supported ASCII USD and ASCII-root USDZ examples.                     |
-| Scene-level skeletal animation        | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Automatically evaluate imported skeletal clips and bind independent mesh-local joint palettes.     |
-| Retained morph-target animation       | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Update supported POSITION, NORMAL, and TANGENT morph targets through retained scene playback.      |
-| Camera-reprojected scene antialiasing | Experimental | WebGPU          | `@luma.gl/scene` | Stabilize compatible forward and deferred raster views with persistent camera-reprojected history. |
+| Feature                               | Status       | Backend         | Package          | Details                                                                                                             |
+| ------------------------------------- | ------------ | --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| ANARI-inspired retained objects       | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Manage retained cameras, geometry, materials, lights, surfaces, instances, and worlds.                              |
+| Perspective and orthographic cameras  | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Configure supported camera models through the retained scene API.                                                   |
+| Shared geometry instances             | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Reuse compatible surfaces, groups, and geometry across retained instances.                                          |
+| Physically based scene materials      | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Describe supported matte and physically based material parameters.                                                  |
+| Scene light types                     | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Configure supported ambient, directional, point, and spot lights.                                                   |
+| Switchable scene renderers            | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Select supported forward or debug views; deferred and ray-tracing renderers require WebGPU.                         |
+| Retained animation playback           | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Play supported transform, material, texture-coordinate, skeletal, and morph-target animations.                      |
+| Editable JSON scenes                  | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Inspect and edit supported retained scene descriptions interactively.                                               |
+| Experimental OpenUSD import           | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Scene Playground imports supported ASCII USD and ASCII-root USDZ examples through its ANARI-inspired scene adapter. |
+| Scene-level skeletal animation        | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Automatically evaluate imported skeletal clips and bind independent mesh-local joint palettes.                      |
+| Retained morph-target animation       | Experimental | WebGPU + WebGL2 | `@luma.gl/scene` | Update supported POSITION, NORMAL, and TANGENT morph targets through retained scene playback.                       |
+| Camera-reprojected scene antialiasing | Experimental | WebGPU          | `@luma.gl/scene` | Stabilize compatible forward and deferred raster views with persistent camera-reprojected history.                  |
 
-This is an ANARI-inspired proof of concept, not a claim of complete standards conformance. Explore the [ANARI Playground](https://luma.gl/examples/experimental/scene-playground), or read about [retained animation](https://luma.gl/docs/api-reference/scene/anari-animation.md) and [switchable scene renderers](https://luma.gl/docs/api-reference/scene/anari-rendering.md).
+This is an ANARI-inspired proof of concept, not a claim of complete standards conformance. Explore the [Scene Playground](https://luma.gl/examples/experimental/scene-playground), or read about [retained animation](https://luma.gl/docs/api-reference/scene/anari-animation.md) and [switchable scene renderers](https://luma.gl/docs/api-reference/scene/anari-rendering.md).
 
 ### GPU ray tracing and progressive rendering[​](#gpu-ray-tracing-and-progressive-rendering "Direct link to GPU ray tracing and progressive rendering")
 

@@ -85,5 +85,5 @@ Updates preserve buffer identities, source-batch boundaries, and stable row indi
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
 * [Gaussian splats overview](https://luma.gl/docs/api-reference/splats.md)
-* [Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats)
+* [Gaussian Splat Viewer](https://luma.gl/examples/showcase/gaussian-splat-viewer)
 * GPU scheduling

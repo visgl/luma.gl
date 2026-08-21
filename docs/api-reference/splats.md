@@ -6,47 +6,11 @@
 
 Install the published experimental module with `yarn add @luma.gl/splats`. Its APIs may evolve without a 9.4 semver compatibility promise.
 
-## Interactive Gaussian splat showcase[​](#interactive-gaussian-splat-showcase "Direct link to Interactive Gaussian splat showcase")
+## Interactive Gaussian splat viewer[​](#interactive-gaussian-splat-viewer "Direct link to Interactive Gaussian splat viewer")
 
-Explore a deterministic generated Gaussian scene without downloading a third-party capture. WebGPU projects, orders, and draws each progressively added batch through a GPU command graph.
+Explore the complete 741,883-splat Train capture with progressive loading, GPU depth ordering, and WebGL2 fallback. The viewer also includes Truck, Dr Johnson, Playroom, and custom authorized source URLs.
 
-### Gaussian Splats
-
-Progressive HDR Gaussian splat rendering
-
-[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/showcase/gaussian-splats)Info
-
-InfoSource
-
-Four independent GPU batches reveal a chromatic observatory of rotated, anisotropic Gaussians. Drag to orbit; scroll to zoom.
-
-Visible splats**0 / 0**
-
-Source batches**0 / 4**
-
-Backend**Detecting…**
-
-Pipeline**Preparing…**
-
-Source**Synthetic**
-
-Execution pipelineGaussian splat scene
-
-**Preparing scene…**
-
-✓
-
-Transparency orderingGaussian radius **1.35×** 1.35 Opacity **90%** 0.9 \[x] Cinematic orbit
-
-GPU graph inspector
-
-```
-// Loading source…
-```
-
-Scroll page · Ctrl/⌘ + scroll to interact
-
-[Open the full Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats).
+[Open the Gaussian Splat Viewer](https://luma.gl/examples/showcase/gaussian-splat-viewer).
 
 ## Choose a topic[​](#choose-a-topic "Direct link to Choose a topic")
 
