@@ -37,7 +37,6 @@ import {
 import {getExampleThumbnailPath} from '../../website/src/example-thumbnails';
 
 const WEBSITE_VIEWER_ROUTE = '/examples/showcase/gaussian-splat-viewer';
-const SYNTHETIC_SHOWCASE_ROUTE = '/examples/showcase/gaussian-splats';
 const DEPLOYED_LOADER_BUNDLE_URL = '/luma.gl/standalone-examples/gaussian-splats/loaders-gl.mjs';
 const GAUSSIAN_RAD_WORKER_WAIT_OPTIONS = {timeout: 10_000, interval: 25};
 
@@ -70,6 +69,22 @@ describe('published Gaussian splat viewer', () => {
     if (animation.renderer instanceof GPUSplatGraphRenderer) {
       expect(animation.renderer.compiledGraph).toBeUndefined();
     }
+
+    animation.renderer.destroy();
+    device.destroy();
+  });
+
+  test('starts the Train scene at its authored low viewing angle', () => {
+    installViewerWindow();
+    const device = makeViewerWebGPUDevice();
+    const animation = new GaussianSplatsAnimationLoopTemplate({
+      device,
+      width: 640,
+      height: 480
+    } as AnimationProps);
+
+    expect(animation['cameraHomeYaw']).toBeCloseTo((25 * Math.PI) / 180);
+    expect(animation['cameraHomePitch']).toBeCloseTo((14 * Math.PI) / 180);
 
     animation.renderer.destroy();
     device.destroy();
@@ -230,14 +245,16 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerDocumentation).toContain('WebGL2');
   });
 
-  test('links the captured-scene viewer while preserving the synthetic showcase', () => {
+  test('keeps the captured-scene viewer as the only public Gaussian splat example', () => {
     const tableOfContents = JSON.parse(
       readFileSync(
         path.join(process.cwd(), 'website/content/examples/table-of-contents.json'),
         'utf8'
       )
     ) as Array<{label?: string; items?: string[]}>;
-    const showcaseEntries = tableOfContents.find(category => category.label === 'Showcase')?.items;
+    const experimentalEntries = tableOfContents.find(
+      category => category.label === 'Experimental'
+    )?.items;
     const onboardingSource = readFileSync(
       path.join(process.cwd(), 'docs/getting-started.mdx'),
       'utf8'
@@ -246,20 +263,12 @@ describe('published Gaussian splat viewer', () => {
       path.join(process.cwd(), 'website/content/examples/showcase/gaussian-splat-viewer.mdx'),
       'utf8'
     );
-    const syntheticDocumentation = readFileSync(
-      path.join(process.cwd(), 'website/content/examples/showcase/gaussian-splats.mdx'),
-      'utf8'
-    );
-
-    expect(showcaseEntries?.slice(0, 2)).toEqual([
-      'showcase/gaussian-splat-viewer',
-      'showcase/gaussian-splats'
-    ]);
+    expect(experimentalEntries?.[0]).toBe('showcase/gaussian-splat-viewer');
+    expect(experimentalEntries).not.toContain('showcase/gaussian-splats');
     expect(onboardingSource).toContain(`to="${WEBSITE_VIEWER_ROUTE}"`);
     expect(viewerDocumentation).toContain('<GaussianSplatViewerExample />');
     expect(viewerDocumentation).toContain('741,883-splat Train');
-    expect(viewerDocumentation).toContain(SYNTHETIC_SHOWCASE_ROUTE);
-    expect(syntheticDocumentation).toContain(WEBSITE_VIEWER_ROUTE);
+    expect(viewerDocumentation).not.toContain('Synthetic chromatic showcase');
     expect(getExampleThumbnailPath('showcase/gaussian-splat-viewer')).toBe(
       'showcase/gaussian-splat-viewer.jpg'
     );
@@ -275,12 +284,6 @@ describe('published Gaussian splat viewer', () => {
       viewerStart,
       websiteExamples.indexOf('\n};', viewerStart)
     );
-    const syntheticStart = websiteExamples.indexOf('export const GaussianSplatsExample');
-    const syntheticSource = websiteExamples.slice(
-      syntheticStart,
-      websiteExamples.indexOf('\n};', syntheticStart)
-    );
-
     expect(viewerStart).toBeGreaterThan(0);
     expect(viewerSource).toContain(
       "useBaseUrl('/standalone-examples/gaussian-splats/loaders-gl.mjs')"
@@ -288,8 +291,7 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerSource).toContain('window.__lumaGaussianSplatsLoaderBundleUrl = loaderBundleUrl');
     expect(viewerSource).toContain('id="gaussian-splat-viewer"');
     expect(viewerSource).toContain('sourcePath="examples/showcase/gaussian-splats/app.ts"');
-    expect(syntheticSource).toContain('delete window.__lumaGaussianSplatsLoaderBundleUrl');
-    expect(syntheticSource).toContain('id="gaussian-splats"');
+    expect(websiteExamples).not.toContain('export const GaussianSplatsExample');
   });
 
   test('defaults to the complete Hugging Face Train capture with GitHub fallback', () => {
@@ -304,7 +306,8 @@ describe('published Gaussian splat viewer', () => {
       sourceFormat: 'PLY',
       expectedSplatCount: 741_883,
       expectedBatchCount: 12,
-      up: [0, -1, 0]
+      up: [0, -1, 0],
+      cameraOrientation: {yaw: (25 * Math.PI) / 180, pitch: (14 * Math.PI) / 180}
     });
     expect(configuration?.sourceUrl).toBe(
       'https://huggingface.co/datasets/Voxel51/gaussian_splatting/resolve/main/FO_dataset/train/point_cloud/iteration_7000/point_cloud.ply'

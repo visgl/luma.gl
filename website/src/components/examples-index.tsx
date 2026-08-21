@@ -368,6 +368,8 @@ function groupByCategory(items: CatalogItem[]): Array<[string, CatalogItem[]]> {
 
 function getCategoryEyebrow(category: string): string {
   if (category === 'WebGPU') return 'Next-generation graphics';
+  if (category === 'Effects') return 'Image, lighting, and post-processing';
+  if (category === 'Simulation and data') return 'Interactive simulations and GPU-native data';
   if (isGeneralPurposeGPUCategory(category)) {
     return 'Compute, projections, and GPU-native data';
   }

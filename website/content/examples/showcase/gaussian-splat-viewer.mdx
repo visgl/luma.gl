@@ -46,10 +46,6 @@ can be evicted or reloaded as the camera changes. Use `&residentSplats=250000` t
 different whole-page residency limit. Browsers without module-worker support retain a clearly
 reported main-thread decoding fallback. Other supported custom formats include `.ply`, `.splat`,
 `.ksplat`, and `.spz`.
-Choose **Synthetic chromatic showcase** in the scene selector or visit the separate
-[Gaussian Splats showcase](/examples/showcase/gaussian-splats) for the deterministic generated
-scene.
-
 Local development can still override the bundled parser with a neighboring loaders.gl checkout:
 start the standalone example with `VITE_LOADERS_GL_ROOT=/path/to/loaders.gl` and open
 `?loaders=local`. The lightweight parser fixture remains available as `?loaders=local&scene=fixture`.

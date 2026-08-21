@@ -7110,6 +7110,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/virtual-core@npm:^3.16.0":
+  version: 3.17.8
+  resolution: "@tanstack/virtual-core@npm:3.17.8"
+  checksum: 10c0/0889044d89d1c403939f3984017857c68c54769e538e7bac52d8af6a3feaa20a6a9ffd627cadd95a7cdd0136856a03d8eb8302d0e53a53910fdb05916d7b4a79
+  languageName: node
+  linkType: hard
+
 "@tsconfig/node10@npm:^1.0.7":
   version: 1.0.11
   resolution: "@tsconfig/node10@npm:1.0.11"
@@ -15024,6 +15031,25 @@ __metadata:
     "@vitejs/plugin-react": "npm:^6.0.1"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-experimental-gpgpu@workspace:examples/experimental/gpgpu":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-gpgpu@workspace:examples/experimental/gpgpu"
+  dependencies:
+    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
+    "@tanstack/virtual-core": "npm:^3.16.0"
+    acorn: "npm:^8.16.0"
+    apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

@@ -39,6 +39,10 @@ import {
   initializeGPUDataAnalysisExample,
   type GPUDataAnalysisExampleHandle
 } from '../../examples/experimental/gpu-data-analysis/src/app';
+import {
+  initializeGPGPUShowcase,
+  type GPGPUShowcaseHandle
+} from '../../examples/experimental/gpgpu/src/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/api/video-texture/app';
 import WebXRKaleidoscopeApp from '../../examples/experimental/webxr-kaleidoscope/app';
@@ -273,27 +277,6 @@ function getGLTFReferenceDeviceSelection(): NonNullable<LumaExampleProps['device
       return null;
   }
 }
-
-export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
-  if (typeof window !== 'undefined') {
-    delete window.__lumaGaussianSplatsLoaderBundleUrl;
-  }
-
-  return (
-    <LumaExample
-      id="gaussian-splats"
-      title="Gaussian Splats"
-      subtitle="Progressive HDR Gaussian splat rendering"
-      directory="showcase"
-      devices={['webgpu', 'webgl2']}
-      template={GaussianSplatsApp}
-      config={exampleConfig}
-      canvasContextProfile="high-dynamic-range"
-      showStats
-      {...props}
-    />
-  );
-};
 
 export const GaussianSplatViewerExample: React.FC<
   WebsiteExampleProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}
@@ -664,6 +647,37 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
       style={{background: '#f6f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-data-analysis-app" />
+      {errorMessage ? (
+        <p role="alert" style={{padding: 22}}>
+          {errorMessage}
+        </p>
+      ) : null}
+    </ExamplePage>
+  );
+};
+
+/** Docusaurus wrapper for the GPU table evaluation example. */
+export const GPGPUExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let handle: GPGPUShowcaseHandle | null = null;
+    try {
+      handle = initializeGPGPUShowcase();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      logError('Failed to initialize GPGPU table evaluation example', error);
+    }
+    return () => handle?.destroy();
+  }, []);
+
+  return (
+    <ExamplePage
+      {...props}
+      embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      style={{background: '#f7f8fb', overflow: 'hidden', ...props.style}}
+    >
+      <main id="app" />
       {errorMessage ? (
         <p role="alert" style={{padding: 22}}>
           {errorMessage}

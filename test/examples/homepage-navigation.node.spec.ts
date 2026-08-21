@@ -198,17 +198,17 @@ describe('homepage navigation', () => {
     }
   });
 
-  test('features the generated Gaussian splat showcase without promoting the remote capture', () => {
+  test('features the captured Train Gaussian splat viewer', () => {
     const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
     const gaussianSplatShowcase = homepageSource.match(
       /\{\s*title:\s*['"]Gaussian Splats['"]([\s\S]*?)\n\s*\}/
     );
 
     expect(gaussianSplatShowcase).not.toBeNull();
-    expect(gaussianSplatShowcase![1]).toContain("route: 'showcase/gaussian-splats'");
-    expect(gaussianSplatShowcase![1]).toContain("image: 'showcase/gaussian-splats.jpg'");
+    expect(gaussianSplatShowcase![1]).toContain("route: 'showcase/gaussian-splat-viewer'");
+    expect(gaussianSplatShowcase![1]).toContain("image: 'showcase/gaussian-splat-viewer.jpg'");
     expect(gaussianSplatShowcase![1]).toContain("backends: ['webgpu', 'webgl2']");
-    expect(gaussianSplatShowcase![1]).toMatch(/GPU-native projection/);
+    expect(gaussianSplatShowcase![1]).toMatch(/captured Train scene/);
     expect(homepageSource).not.toContain('showcase/gaussian-splat-viewer?scene=coit');
     expect(
       existsSync(path.join(process.cwd(), 'website/static/images/examples/showcase/coit-tower.png'))
@@ -220,17 +220,17 @@ describe('homepage navigation', () => {
     const tableOfContents = JSON.parse(
       readFileSync(path.join(EXAMPLE_CONTENT_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const showcaseCategory = tableOfContents.find(
-      entry => typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Showcase'
+    const effectsCategory = tableOfContents.find(
+      entry => typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Effects'
     );
 
-    expect(showcaseCategory).toBeDefined();
+    expect(effectsCategory).toBeDefined();
     if (
-      showcaseCategory &&
-      typeof showcaseCategory !== 'string' &&
-      showcaseCategory.type === 'category'
+      effectsCategory &&
+      typeof effectsCategory !== 'string' &&
+      effectsCategory.type === 'category'
     ) {
-      expect(showcaseCategory.items).toContainEqual({
+      expect(effectsCategory.items).toContainEqual({
         type: 'doc',
         id: 'experimental/bloom',
         label: 'Effects: Bloom'

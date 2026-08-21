@@ -30,14 +30,27 @@ type LiveExample = {
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
   'api/render-bundles',
-  'arrow/arrow-columns',
-  'arrow/arrow-dggs-polygons'
+  'experimental/advanced-effects',
+  'experimental/deferred-rendering',
+  'experimental/shadow-map',
+  'experimental/spectral-caustics',
+  'experimental/volumetric-fire-forge'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
   'integrations/external-context',
   'integrations/react-strict-mode',
   'tutorials/transform-feedback',
   'tutorials/transform'
+]);
+const HIDDEN_EXAMPLES = new Set([
+  'experimental/gpu-sort',
+  'experimental/gpu-data-analysis',
+  'showcase/million-row-crossfilter',
+  'showcase/raster-lab',
+  'showcase/billion-point-spatial-atlas',
+  'experimental/lucim-volume-lab',
+  'experimental/gpu-trace-scene',
+  'showcase/packet-spraying'
 ]);
 const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
@@ -137,7 +150,7 @@ describe('live example catalog metadata', () => {
     for (const {id, categories, metadata} of LIVE_EXAMPLES) {
       const expectedBackends = WEBGL_ONLY_EXAMPLES.has(id)
         ? ['webgl2']
-        : ['WebGPU', 'Compute and analytics'].includes(categories[0]) ||
+        : ['WebGPU', 'Compute and analytics', 'Simulation and data'].includes(categories[0]) ||
             WEBGPU_ONLY_EXAMPLES.has(id)
           ? ['webgpu']
           : ['webgpu', 'webgl2'];
@@ -184,8 +197,15 @@ describe('live example catalog metadata', () => {
       ...websiteExamples.matchAll(/canvasContextProfile="high-dynamic-range"/g)
     ].length;
     expect(highDynamicRangeExampleIds).toHaveLength(highDynamicRangeCanvasCount);
-    expect(highDynamicRangeExampleIds).toContain('showcase/billion-point-spatial-atlas');
+    expect(catalogById.has('showcase/billion-point-spatial-atlas')).toBe(false);
     for (const exampleId of highDynamicRangeExampleIds) {
+      if (!catalogById.has(exampleId)) {
+        expect(
+          HIDDEN_EXAMPLES.has(exampleId),
+          `${exampleId} is not an approved hidden example`
+        ).toBe(true);
+        continue;
+      }
       expect(
         catalogById.get(exampleId),
         `${exampleId} is missing from the live sidebar`

@@ -146,5 +146,5 @@ window must prevent both unnecessary requests and transient GPU overcommit.
 ## Related pages
 
 - [Gaussian splats overview](/docs/api-reference/splats)
-- [Gaussian splat showcase](/examples/showcase/gaussian-splats)
+- [Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer)
 - GPU scheduling

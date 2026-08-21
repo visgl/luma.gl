@@ -28,19 +28,15 @@ const HOMEPAGE_GPU_SCENE_PATH = path.join(
 );
 
 describe('Gaussian splat documentation showcase', () => {
-  test('embeds the deterministic Gaussian splat showcase in the API documentation', () => {
+  test('links the captured Train viewer from the API documentation', () => {
     const documentation = readFileSync(SPLATS_DOCUMENTATION_PATH, 'utf8');
 
-    expect(documentation).toContain("import {GaussianSplatsExample} from '@site/src/examples';");
-    expect(documentation).toContain('## Interactive Gaussian splat showcase');
-    expect(documentation).toContain('deterministic generated Gaussian scene');
-    expect(documentation).toMatch(
-      /<GaussianSplatsExample\b(?=[^>]*\bembedded\b)(?=[^>]*\bembeddedHeight=\{640\})(?=[^>]*\bshowStats=\{false\})[^>]*\/>/
-    );
+    expect(documentation).not.toContain('GaussianSplatsExample');
+    expect(documentation).toContain('## Interactive Gaussian splat viewer');
+    expect(documentation).toContain('741,883-splat Train capture');
     expect(documentation).toContain(
-      '[Open the full Gaussian splat showcase](/examples/showcase/gaussian-splats)'
+      '[Open the Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer)'
     );
-    expect(documentation).not.toContain('defaultScene="coit"');
   });
 
   test('keeps the documentation scene scoped to its own viewer instance', () => {
@@ -130,12 +126,14 @@ describe('Gaussian splat documentation showcase', () => {
       label?: string;
       items?: unknown[];
     }>;
-    const showcaseEntries = exampleCatalog.find(category => category.label === 'Showcase')?.items;
+    const experimentalEntries = exampleCatalog.find(
+      category => category.label === 'Experimental'
+    )?.items;
     const homepage = readFileSync(HOMEPAGE_PATH, 'utf8');
     const homepageScene = readFileSync(HOMEPAGE_GPU_SCENE_PATH, 'utf8');
 
-    expect(showcaseEntries).toContain('showcase/gaussian-splat-viewer');
-    expect(showcaseEntries).toContain('showcase/gaussian-splats');
+    expect(experimentalEntries).toContain('showcase/gaussian-splat-viewer');
+    expect(experimentalEntries).not.toContain('showcase/gaussian-splats');
     expect(homepage).toContain("React.lazy(() => import('../components/homepage-gpu-scene'))");
     expect(homepageScene).toContain(
       "import InstancingApp from '../../../examples/showcase/instancing/app';"

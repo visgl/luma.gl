@@ -25,10 +25,10 @@ const FEATURED_EXAMPLES = [
   },
   {
     title: 'Gaussian Splats',
-    route: 'showcase/gaussian-splats',
-    image: 'showcase/gaussian-splats.jpg',
+    route: 'showcase/gaussian-splat-viewer',
+    image: 'showcase/gaussian-splat-viewer.jpg',
     description:
-      'Explore progressive HDR Gaussian splats with GPU-native projection, ordering, and interactive rendering.',
+      'Explore a captured Train scene with streamed HDR Gaussian splats, GPU-native projection, ordering, and interactive rendering.',
     category: 'WebGPU',
     backends: ['webgpu', 'webgl2'],
     highDynamicRange: true,

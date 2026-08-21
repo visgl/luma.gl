@@ -23,6 +23,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/advanced-effects',
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
+  'experimental/gpgpu',
   'experimental/gpu-trace-viewer',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',

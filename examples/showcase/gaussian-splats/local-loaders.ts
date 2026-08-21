@@ -17,7 +17,13 @@ export type GaussianSplatCameraPreset = {
   target: readonly [number, number, number];
 };
 
-/** Complete public reference scenes shared with the loaders.gl Gaussian splat showcase. */
+/** Initial orbit orientation for scenes that rely on bounds-based distance fitting. */
+export type GaussianSplatCameraOrientation = {
+  yaw: number;
+  pitch: number;
+};
+
+/** Complete public reference scenes shared with the loaders.gl Gaussian splat viewer. */
 export type GaussianSplatSourceCatalogEntry = {
   id: 'train' | 'drjohnson' | 'playroom' | 'truck' | 'coit' | 'train-github' | 'fixture';
   label: string;
@@ -28,6 +34,7 @@ export type GaussianSplatSourceCatalogEntry = {
   upAxis: 'y' | 'z';
   up: readonly [number, number, number];
   camera?: GaussianSplatCameraPreset;
+  cameraOrientation?: GaussianSplatCameraOrientation;
 };
 
 /** Isolated loaders.gl bundle or local checkout and optional selected Gaussian source. */
@@ -48,6 +55,7 @@ export type LocalGaussianSplatLoadersConfiguration = {
   upAxis: 'y' | 'z';
   up: readonly [number, number, number];
   camera?: GaussianSplatCameraPreset;
+  cameraOrientation?: GaussianSplatCameraOrientation;
 };
 
 /** Download, parsing, and fallback progress reported by the real-scene source iterator. */
@@ -224,7 +232,9 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
     fallbackSourceUrls: TRAIN_GITHUB_SOURCE_URLS,
     expectedSplatCount: 741_883,
     upAxis: 'y',
-    up: GRAPHDECO_CAMERA_UP
+    up: GRAPHDECO_CAMERA_UP,
+    // A low perspective resolves the locomotive before the broad reconstructed background.
+    cameraOrientation: {yaw: (25 * Math.PI) / 180, pitch: (14 * Math.PI) / 180}
   },
   {
     id: 'drjohnson',
@@ -366,7 +376,8 @@ export function getLocalGaussianSplatLoadersConfiguration(
     ...(maxResidentSplatCount === undefined ? {} : {maxResidentSplatCount}),
     upAxis: scene.upAxis,
     up: scene.up,
-    camera: scene.camera
+    camera: scene.camera,
+    cameraOrientation: scene.cameraOrientation
   };
 }
 

@@ -17,32 +17,57 @@ const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 
 describe('9.4 compute example catalog navigation', () => {
   test('groups retained showcases by user outcome', () => {
-    const computeCategory = getCategory('Compute and analytics');
-    const nestedCategories = computeCategory.items.filter(
-      (entry): entry is ExampleCategory => typeof entry !== 'string' && entry.type === 'category'
+    expect(readCategoryIdentifiers(getCategory('Effects'))).toEqual(
+      expect.arrayContaining([
+        'showcase/dof',
+        'showcase/postprocessing',
+        'experimental/bloom',
+        'experimental/deferred-rendering',
+        'experimental/shadow-map',
+        'experimental/a-buffer'
+      ])
     );
 
-    expect(nestedCategories.map(({label}) => label)).toEqual([
-      'Rendering and inspection',
-      'Simulation and data'
-    ]);
-    expect(readCategoryIdentifiers(nestedCategories[0])).toEqual(
+    expect(readCategoryIdentifiers(getCategory('API'))).toEqual(
+      expect.arrayContaining(['experimental/antialiasing'])
+    );
+
+    expect(readCategoryIdentifiers(getCategory('GPGPU'))).toEqual(['experimental/gpgpu']);
+
+    expect(readCategoryIdentifiers(getCategory('Experimental'))).toEqual(
+      expect.arrayContaining(['showcase/gaussian-splat-viewer'])
+    );
+    expect(readCategoryIdentifiers(getCategory('Experimental'))).not.toContain(
+      'showcase/gaussian-splats'
+    );
+
+    expect(readCategoryIdentifiers(getCategory('Simulation and data'))).toEqual(
       expect.arrayContaining([
-        'experimental/gpu-frustum-culling',
-        'experimental/gpu-trace-viewer',
-        'experimental/gpu-trace-scene',
-        'experimental/gpu-scene-graph'
+        'showcase/vector-field-lab',
+        'showcase/quantum-state-studio',
+        'showcase/llm-network',
+        'experimental/gpt-2'
       ])
     );
-    expect(readCategoryIdentifiers(nestedCategories[1])).toEqual(
-      expect.arrayContaining([
-        'showcase/million-row-crossfilter',
-        'showcase/raster-lab',
-        'showcase/billion-point-spatial-atlas',
-        'showcase/vector-field-lab',
-        'experimental/gpu-sort',
-        'experimental/gpu-data-analysis'
-      ])
+
+    const categoryLabels = readTableOfContents()
+      .filter(
+        (entry): entry is ExampleCategory => typeof entry !== 'string' && entry.type === 'category'
+      )
+      .map(({label}) => label);
+    expect(categoryLabels).not.toContain('Apache Arrow (Experimental)');
+    expect(categoryLabels.slice(0, 8)).toEqual([
+      'Showcase',
+      'API',
+      'GPGPU',
+      'Effects',
+      'Tutorials',
+      'Integrations',
+      'WebGPU',
+      'Experimental'
+    ]);
+    expect(categoryLabels.indexOf('Simulation and data')).toBeGreaterThan(
+      categoryLabels.indexOf('Experimental')
     );
   });
 
@@ -59,6 +84,18 @@ describe('9.4 compute example catalog navigation', () => {
       expect(exampleIdentifier).not.toBe('experimental/gpu-graph-explorer');
       expect(exampleIdentifier).not.toMatch(/^arrow\/arrow-(?:geoarrow|polygons)$/);
     }
+
+    expect(exampleIdentifiers).not.toEqual(
+      expect.arrayContaining([
+        'experimental/gpu-sort',
+        'experimental/gpu-data-analysis',
+        'showcase/million-row-crossfilter',
+        'showcase/raster-lab',
+        'showcase/billion-point-spatial-atlas',
+        'experimental/lucim-volume-lab',
+        'experimental/gpu-trace-scene'
+      ])
+    );
 
     expect(existsSync(path.join(process.cwd(), 'examples/deck'))).toBe(false);
     expect(existsSync(path.join(process.cwd(), 'examples/v10'))).toBe(false);

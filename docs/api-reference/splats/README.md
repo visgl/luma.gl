@@ -3,7 +3,6 @@ title: Gaussian splats
 description: GPU-native Gaussian splat rendering, streaming, shading, picking, and formats in luma.gl.
 ---
 
-import {GaussianSplatsExample} from '@site/src/examples';
 import {SplatsDocsTabs} from '@site/src/components/docs/splats-docs-tabs';
 
 # @luma.gl/splats
@@ -18,14 +17,13 @@ render models without depending on Apache Arrow, loaders.gl, glTF packages, or d
 Install the published experimental module with `yarn add @luma.gl/splats`. Its APIs may evolve
 without a 9.4 semver compatibility promise.
 
-## Interactive Gaussian splat showcase
+## Interactive Gaussian splat viewer
 
-Explore a deterministic generated Gaussian scene without downloading a third-party capture.
-WebGPU projects, orders, and draws each progressively added batch through a GPU command graph.
+Explore the complete 741,883-splat Train capture with progressive loading, GPU depth ordering,
+and WebGL2 fallback. The viewer also includes Truck, Dr Johnson, Playroom, and custom authorized
+source URLs.
 
-<GaussianSplatsExample embedded embeddedHeight={640} showStats={false} />
-
-[Open the full Gaussian splat showcase](/examples/showcase/gaussian-splats).
+[Open the Gaussian Splat Viewer](/examples/showcase/gaussian-splat-viewer).
 
 ## Choose a topic
 

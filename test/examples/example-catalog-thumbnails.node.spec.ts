@@ -14,10 +14,21 @@ type ExampleSidebarEntry =
 
 const EXAMPLE_IMAGES_DIRECTORY = path.join(process.cwd(), 'website/static/images/examples');
 const RECOVERED_FLAGSHIP_EXAMPLES = [
-  'showcase/globe',
   'showcase/billion-point-spatial-atlas',
   'showcase/postprocessing',
   'experimental/scene-playground'
+] as const;
+const SDR_POSTER_EXAMPLES = [
+  'experimental/deferred-rendering',
+  'experimental/fluid-foundry',
+  'experimental/spectral-caustics',
+  'experimental/volumetric-fire-forge',
+  'showcase/globe',
+  'showcase/gltf',
+  'showcase/instancing',
+  'showcase/lightstorm-megacity',
+  'showcase/packet-spraying',
+  'showcase/tempest-ocean'
 ] as const;
 const JPEG_START_OF_FRAME_MARKERS = new Set([
   0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf
@@ -58,9 +69,6 @@ describe('live example catalog thumbnails', () => {
     expect(resolveExampleThumbnailPath('showcase/gaussian-splat-viewer')).toBe(
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'showcase/gaussian-splat-viewer.jpg')
     );
-    expect(resolveExampleThumbnailPath('showcase/gaussian-splat-viewer')).not.toBe(
-      resolveExampleThumbnailPath('showcase/gaussian-splats')
-    );
   });
 
   test('keeps recovered flagship posters as genuine widescreen JPEG images', () => {
@@ -72,21 +80,23 @@ describe('live example catalog thumbnails', () => {
     }
   });
 
-  test('keeps the HDR Globe visibly rendered with interoperable gain-map metadata', () => {
-    const globeImageBytes = readFileSync(resolveExampleThumbnailPath('showcase/globe'));
+  test('keeps HDR example posters in the interoperable SDR format', () => {
+    for (const exampleIdentifier of SDR_POSTER_EXAMPLES) {
+      const imageBytes = readFileSync(resolveExampleThumbnailPath(exampleIdentifier));
 
-    expect(
-      globeImageBytes.includes(Buffer.from('urn:iso:std:iso:ts:21496:-1')),
-      'The Globe poster must preserve ISO 21496-1 gain-map metadata'
-    ).toBe(true);
-    expect(
-      globeImageBytes.includes(Buffer.from('http://ns.adobe.com/hdr-gain-map/1.0/')),
-      'The Globe poster must preserve Ultra HDR XMP gain-map metadata'
-    ).toBe(true);
-    expect(
-      countDistinctJpegScanByteValues(globeImageBytes),
-      'The Globe poster must contain visibly rendered content instead of a flat-color JPEG scan'
-    ).toBeGreaterThan(32);
+      expect(
+        imageBytes.includes(Buffer.from('urn:iso:std:iso:ts:21496:-1')),
+        `${exampleIdentifier} must not include ISO 21496-1 gain-map metadata`
+      ).toBe(false);
+      expect(
+        imageBytes.includes(Buffer.from('http://ns.adobe.com/hdr-gain-map/1.0/')),
+        `${exampleIdentifier} must not include Ultra HDR XMP gain-map metadata`
+      ).toBe(false);
+      expect(
+        countDistinctJpegScanByteValues(imageBytes),
+        `${exampleIdentifier} must contain visibly rendered content`
+      ).toBeGreaterThan(32);
+    }
   });
 });
 

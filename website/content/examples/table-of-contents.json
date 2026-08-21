@@ -8,8 +8,6 @@
     "type": "category",
     "label": "Showcase",
     "items": [
-      "showcase/gaussian-splat-viewer",
-      "showcase/gaussian-splats",
       "showcase/gltf",
       "showcase/instancing",
       {
@@ -17,114 +15,7 @@
         "id": "experimental/scene-playground",
         "label": "Scene Playground"
       },
-      "showcase/globe",
-      "showcase/packet-spraying",
-      {
-        "type": "doc",
-        "id": "showcase/dof",
-        "label": "Effects: Depth of Field"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/bloom",
-        "label": "Effects: Bloom"
-      },
-      {
-        "type": "doc",
-        "id": "showcase/persistence",
-        "label": "Effects: Persistence"
-      }
-    ]
-  },
-  {
-    "type": "category",
-    "label": "WebGPU",
-    "items": [
-      "showcase/lightstorm-megacity",
-      "showcase/llm-network",
-      "experimental/lucim-volume-lab",
-      "experimental/volumetric-fire-forge",
-      {
-        "type": "doc",
-        "id": "showcase/tempest-ocean",
-        "label": "Tempest Ocean: Spectral Stormfront"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/spectral-caustics",
-        "label": "Spectral Caustics: Prism Cathedral"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/fluid-foundry",
-        "label": "Fluid Foundry: Liquid Metal Press"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/virtual-geometry-canyon",
-        "label": "Virtual Geometry Canyon"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/advanced-effects",
-        "label": "Effects: Visualization City"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/deferred-rendering",
-        "label": "Deferred Rendering: Illumination Lab"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/shadow-map",
-        "label": "Effects: Shadow Map Quality"
-      }
-    ]
-  },
-  {
-    "type": "category",
-    "label": "Compute and analytics",
-    "items": [
-      {
-        "type": "category",
-        "label": "Rendering and inspection",
-        "items": [
-          "experimental/gpu-frustum-culling",
-          "experimental/gpu-trace-viewer",
-          "experimental/gpu-trace-scene",
-          "experimental/gpu-scene-graph"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "Simulation and data",
-        "items": [
-          {
-            "type": "doc",
-            "id": "showcase/vector-field-lab",
-            "label": "Vector Field Lab"
-          },
-          {
-            "type": "doc",
-            "id": "showcase/quantum-state-studio",
-            "label": "Quantum State Studio"
-          },
-          "experimental/gpu-sort",
-          "experimental/gpu-data-analysis",
-          {
-            "type": "doc",
-            "id": "showcase/million-row-crossfilter",
-            "label": "Million-Row Crossfilter Explorer"
-          },
-          {
-            "type": "doc",
-            "id": "showcase/raster-lab",
-            "label": "Satellite Raster Lab"
-          },
-          "showcase/billion-point-spatial-atlas",
-          "experimental/gpt-2"
-        ]
-      }
+      "showcase/globe"
     ]
   },
   {
@@ -132,11 +23,6 @@
     "label": "API",
     "items": [
       "api/animation",
-      {
-        "type": "doc",
-        "id": "showcase/postprocessing",
-        "label": "Effects: Image Processing"
-      },
       {
         "type": "doc",
         "id": "api/blending",
@@ -156,13 +42,72 @@
         "id": "api/video-texture",
         "label": "Texture Video"
       },
-      "api/render-bundles"
+      "api/render-bundles",
+      "experimental/antialiasing"
     ]
   },
   {
     "type": "category",
-    "label": "Integrations",
-    "items": ["integrations/external-context", "integrations/react-strict-mode"]
+    "label": "GPGPU",
+    "items": [
+      {
+        "type": "doc",
+        "id": "experimental/gpgpu",
+        "label": "GPUTable Evaluation"
+      }
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Effects",
+    "items": [
+      {
+        "type": "doc",
+        "id": "showcase/dof",
+        "label": "Effects: Depth of Field"
+      },
+      {
+        "type": "doc",
+        "id": "showcase/persistence",
+        "label": "Effects: Persistence"
+      },
+      {
+        "type": "doc",
+        "id": "showcase/postprocessing",
+        "label": "Effects: Image Processing"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/bloom",
+        "label": "Effects: Bloom"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/advanced-effects",
+        "label": "Effects: Visualization City"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/deferred-rendering",
+        "label": "Deferred Rendering: Illumination Lab"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/shadow-map",
+        "label": "Effects: Shadow Map Quality"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/spectral-caustics",
+        "label": "Spectral Caustics: Prism Cathedral"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/volumetric-fire-forge",
+        "label": "Volumetric Fire Forge"
+      },
+      "experimental/a-buffer"
+    ]
   },
   {
     "type": "category",
@@ -185,14 +130,28 @@
   },
   {
     "type": "category",
-    "label": "Experimental",
+    "label": "Integrations",
+    "items": ["integrations/external-context", "integrations/react-strict-mode"]
+  },
+  {
+    "type": "category",
+    "label": "WebGPU",
     "items": [
-      "experimental/a-buffer",
+      "showcase/lightstorm-megacity",
       {
         "type": "doc",
-        "id": "experimental/antialiasing",
-        "label": "Antialiasing Techniques"
+        "id": "showcase/tempest-ocean",
+        "label": "Tempest Ocean: Spectral Stormfront"
       },
+      "experimental/fluid-foundry",
+      "experimental/virtual-geometry-canyon"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Experimental",
+    "items": [
+      "showcase/gaussian-splat-viewer",
       "experimental/fp64",
       "experimental/text-space-crawl",
       {
@@ -209,19 +168,20 @@
   },
   {
     "type": "category",
-    "label": "Apache Arrow (Experimental)",
+    "label": "Simulation and data",
     "items": [
-      "arrow/arrow-points",
-      "arrow/arrow-filtering",
-      "arrow/arrow-lines",
-      "arrow/arrow-float64-precision",
-      "arrow/arrow-text-2d",
-      "arrow/arrow-temporal-starfield",
-      "arrow/arrow-time-columns",
-      "arrow/arrow-mesh-geometry",
-      "arrow/arrow-particles",
-      "arrow/arrow-dggs-polygons",
-      "arrow/arrow-columns"
+      {
+        "type": "doc",
+        "id": "showcase/vector-field-lab",
+        "label": "Vector Field Lab"
+      },
+      {
+        "type": "doc",
+        "id": "showcase/quantum-state-studio",
+        "label": "Quantum State Studio"
+      },
+      "showcase/llm-network",
+      "experimental/gpt-2"
     ]
   }
 ]

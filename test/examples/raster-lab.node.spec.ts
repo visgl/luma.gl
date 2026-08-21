@@ -195,7 +195,7 @@ describe('GPURaster Satellite Raster Lab synthetic imagery', () => {
     await expect(request).rejects.toMatchObject({name: 'AbortError'});
   });
 
-  test('registers the interactive raster lab in the website example catalog', () => {
+  test('keeps the v10 raster lab implementation out of the 9.4 website catalog', () => {
     const exampleCatalog = readFileSync(
       new URL('../../website/content/examples/table-of-contents.json', import.meta.url),
       'utf8'
@@ -214,7 +214,7 @@ describe('GPURaster Satellite Raster Lab synthetic imagery', () => {
     );
 
     expect(JSON.parse(exampleCatalog)).toBeDefined();
-    expect(exampleCatalog).toContain('"id": "showcase/raster-lab"');
+    expect(exampleCatalog).not.toContain('"id": "showcase/raster-lab"');
     expect(websiteExamples).toContain("import('../../examples/showcase/raster-lab/app')");
     expect(examplePage).toContain('<RasterLabExample />');
     expect(exampleTypecheck).toContain("'showcase/raster-lab'");
